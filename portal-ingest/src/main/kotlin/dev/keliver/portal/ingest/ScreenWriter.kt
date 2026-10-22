@@ -85,12 +85,19 @@ object ScreenWriter {
      * brings back a read the last write deleted is written.
      */
     readText: String? = null,
+    /**
+     * E14: the file is a component's and the document is its body
+     * ([Recognizer.recognize] `asComponent`). Written only surgically: a
+     * component's signature is its contract with every screen that calls it,
+     * so there is no Bindings pass, no full export and no new file.
+     */
+    asComponent: Boolean = false,
   ): Plan = planFor(
     onDisk,
     // The document as the CURRENT token table values it: a value that changed
     // since it was read or chosen is the one the file now reads as (S-c).
     withCurrentTokens(doc, tokens, fileName),
-    base, baseText, components, tokens, fileName, functionName, packageName, readText,
+    base, baseText, components, tokens, fileName, functionName, packageName, readText, asComponent,
   )
 
   private fun planFor(
@@ -104,16 +111,19 @@ object ScreenWriter {
     functionName: String,
     packageName: String?,
     readText: String?,
+    asComponent: Boolean,
   ): Plan {
     val tree = doc.toWidgetTree()
+    val what = if (asComponent) "component" else "screen"
     // Every text written is read back — after the Bindings pass — as the document.
     fun readsBack(text: String): String? {
-      val back = runCatching { Recognizer.recognize(fileName, text, components, tokens) }.getOrNull()
-        ?: return "it does not read as a screen"
+      val back = runCatching { Recognizer.recognize(fileName, text, components, tokens, asComponent) }.getOrNull()
+        ?: return "it does not read as a $what"
       return if (WriteBack.sameTree(back.root, doc.root)) null
       else WriteBack.firstDifference(back.root, doc.root) ?: "it reads back differently"
     }
     if (onDisk == null) {
+      if (asComponent) return Refuse("the component's file is gone")
       val text = export(doc, packageName, functionName, components)
       readsBack(text)?.let { return Refuse("a new file written from the document would not read back as it: $it") }
       return Write(text, How.CREATED)
@@ -123,8 +133,8 @@ object ScreenWriter {
     fun restored(text: String, how: How): Plan = LineEndings.restore(onDisk, text)?.let { Write(it, how) }
       ?: Refuse("the file mixes CRLF and LF line endings and the change would rewrite a CRLF line")
 
-    val asIs = runCatching { Recognizer.recognize(fileName, lf, components, tokens) }.getOrNull()
-      ?: return Refuse("the file has no @Composable screen function the editor can read, so it is not rewritten")
+    val asIs = runCatching { Recognizer.recognize(fileName, lf, components, tokens, asComponent) }.getOrNull()
+      ?: return Refuse("the file has no @Composable $what function the editor can read, so it is not rewritten")
     // B1: write only onto the file the relay last wrote or read. A file that
     // changed since (an IDE save, an IDE undo of an edit that was read) pairs
     // with the document only by position — which deletes whatever the
@@ -138,13 +148,21 @@ object ScreenWriter {
     val fileBase = if (baseText != null && LineEndings.toLf(baseText) == lf) {
       if (WriteBack.sameTree(asIs.root, base.root)) base
       else rehandled(asIs.root, base.root)?.let { base.copy(root = it) }
-        ?: return Reread("a component or design token the screen uses changed since it was last read")
+        ?: return Reread("a component or design token the $what uses changed since it was last read")
     } else {
       if (!WriteBack.sameTree(asIs.root, base.root)) return Reread("the file changed since it was last read")
       base
     }
     // S5 (the relay refuses such a move as an op; this holds for any other way here, e.g. an undo).
     DeclarationScope.problem(fileBase, doc)?.let { return Refuse(it) }
+    if (asComponent) {
+      if (doc.contract != asIs.contract) return Refuse("a component's parameters are changed in code — every screen that calls it passes them")
+      return when (val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, fileBase, asComponent = true)) {
+        is WriteBack.Outcome.Merged -> readsBack(surgical.text)?.let { Refuse("the edited component would not read back as the document: $it") }
+          ?: restored(surgical.text, How.SURGICAL)
+        is WriteBack.Outcome.NotSurgical -> Refuse(surgical.reason)
+      }
+    }
     // U37: a member the screen would read that its file cannot vouch for — the interface
     // is not read whole (declared elsewhere, or extending a type declared elsewhere) and
     // the file neither declares nor reads it — is neither declared (it could redeclare an

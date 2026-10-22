@@ -91,6 +91,18 @@ internal val portalTree = mutableStateOf(initialTree())
 private var selectedId: Int? = null
 internal var currentProject = "default"
 private var currentScreen = "main"
+  set(v) {
+    field = v
+    openComponents = emptyList() // E14: another screen is edited from its own root
+  }
+
+/** E14: the components opened from the screen, in turn (empty = the screen itself is edited). */
+private var openComponents: List<String> = emptyList()
+
+/** E14: the selection at each crumb when the next one was opened — selected again on the way back. */
+private var crumbSelections: List<Int?> = emptyList()
+
+private fun editTarget() = EditTarget(currentProject, currentScreen, openComponents)
 
 // V2 M1: the SERVER owns the document; the editor is an op-emitting client.
 // portalTree is a projection with WidgetNode.id == document HANDLE.
@@ -221,7 +233,7 @@ private fun loadTemplate(doc: UiDocument, mocks: Map<String, String>) {
 
 /** A template's own sample values become the screen's State (what the State panel applies). */
 private fun seedScreenState(values: Map<String, String>) {
-  runCatching { localStorage.setItem("portal.state.$currentProject/$currentScreen", encodeScreenState(ScreenState(values = values))) }
+  runCatching { localStorage.setItem("portal.state.${editTarget().key}", encodeScreenState(ScreenState(values = values))) }
 }
 
 private val demoMocks = mapOf(
@@ -235,7 +247,7 @@ private fun localRefresh(refreshPanels: Boolean) {
   docVersion = localDoc.version
   portalTree.value = localDoc.toWidgetTree(handleIds = true)
   Snapshot.sendApplyNotifications()
-  if (refreshPanels) refresh()
+  if (refreshPanels) refresh() else renderOutline()
 }
 
 private fun enterPlayground() {
@@ -350,7 +362,7 @@ private fun pumpOps() {
   saveTextEl.textContent = "Saving…"
   val batch = OpBatch(docVersion, OpEnvelope(SESSION, 0), ops)
   val xhr = XMLHttpRequest()
-  xhr.open("POST", "$SERVER/ops?project=$currentProject&screen=$currentScreen")
+  xhr.open("POST", "$SERVER/ops?${editTarget().query}")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.timeout = 15_000
   var settled = false
@@ -454,9 +466,18 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   // K4: `templates=1&lists=1` — and PropValue.Template / PropValue.ListOf (else text / a resolved list).
   // K6: `extendedConditions=1` — and equality / compound conditionals (a K3 editor is served the true branch).
   // K7: `arithmetic=1` — and PropValue.Arith / PropValue.IntDp (an older editor gets the computed literal, or no prop).
-  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&$DOC_FEATURES")
+  val target = editTarget()
+  xhr.open("GET", "$SERVER/doc?${target.query}&$DOC_FEATURES")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.addEventListener("load", { _ ->
+    if (target != editTarget()) return@addEventListener // another document was opened meanwhile
+    if (xhr.status.toInt() == 404 && target.component != null) {
+      // E14: a component whose body is edited in code (or that is gone) — say why, and go back.
+      val why = Regex("\"error\":\"([^\"]*)\"").find(xhr.responseText)?.groupValues?.get(1) ?: "it cannot be opened"
+      showCanvasHint(why)
+      goToCrumb(target.components.size - 1)
+      return@addEventListener
+    }
     readStackDepths(xhr)
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
@@ -470,7 +491,8 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
       }
       if (LiveEngine.isRunning) LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
       Snapshot.sendApplyNotifications()
-      if (refreshPanels) refresh()
+      // A typed edit keeps the field being typed in; the outline's labels follow it.
+      if (refreshPanels) refresh() else renderOutline()
       cb?.invoke()
     }
   })
@@ -482,17 +504,16 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
 private fun subscribeDocEvents() {
   if (playground) return
   eventSource?.close()
-  val project = currentProject
-  val screen = currentScreen
-  if (writeBackScreen != "$project/$screen") { // another screen: its own write-back status
-    writeBackScreen = "$project/$screen"
+  val target = editTarget()
+  if (writeBackScreen != target.key) { // another document: its own write-back status
+    writeBackScreen = target.key
     writeBackWarnings = WriteBackWarnings()
     writeBackBanner?.remove()
     writeBackBanner = null
     // The pill was the other screen's: start this one idle (its first event sets its own).
     WriteBackWarnings.IDLE.let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
   }
-  eventSource = EventSource("$SERVER/doc-events?project=$project&screen=$screen").also { es ->
+  eventSource = EventSource("$SERVER/doc-events?${target.query}").also { es ->
     es.onmessage = { ev ->
       val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
       // C3 master updates: a component edit re-ingests screens (doc bumps) — refresh
@@ -510,7 +531,7 @@ private fun subscribeDocEvents() {
     }
     es.onerror = { _ ->
       // Server restart kills the stream; recreate after a beat (fresh subscribe).
-      if (project == currentProject && screen == currentScreen) {
+      if (target == editTarget()) {
         window.setTimeout({ if (eventSource == es) subscribeDocEvents(); null }, 2000)
       }
       null
@@ -527,7 +548,7 @@ private fun startVersionPoll() {
   window.setInterval({
     if (!opInFlight && opQueue.isEmpty()) {
       val xhr = XMLHttpRequest()
-      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&$DOC_FEATURES")
+      xhr.open("GET", "$SERVER/doc?${editTarget().query}&$DOC_FEATURES")
       xhr.addEventListener("load", { _ ->
         val v = Regex("\"version\":(\\d+)").find(xhr.responseText)?.groupValues?.get(1)?.toLongOrNull()
         if (v != null && v != docVersion) refetchDoc(true)
@@ -566,7 +587,7 @@ private fun redo() {
 
 private fun serverPost(path: String, cb: () -> Unit) {
   val xhr = XMLHttpRequest()
-  xhr.open("POST", "$SERVER$path?project=$currentProject&screen=$currentScreen")
+  xhr.open("POST", "$SERVER$path?${editTarget().query}")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.addEventListener("load", { _ ->
     readStackDepths(xhr)
@@ -974,7 +995,7 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
           downX = me.clientX.toDouble()
           downY = me.clientY.toDouble()
         }
-        "dblclick" -> hitAt(me.clientX.toDouble(), me.clientY.toDouble())?.let { editTextInline(it) }
+        "dblclick" -> hitAt(me.clientX.toDouble(), me.clientY.toDouble())?.let(::openOrEditInline)
         "pointerup" -> {
           if (!pressed) return@addEventListener
           pressed = false
@@ -1210,7 +1231,9 @@ private fun installMockActionSink() {
 // ── M8: capability-driven live preview ──────────────────────────────────────
 
 private fun toggleLive() {
-  if (LiveEngine.request.value != null || liveBtn.textContent == "■ Stop") disableLive() else enableLive()
+  if (LiveEngine.request.value != null || liveBtn.textContent == "■ Stop") disableLive()
+  else if (openComponents.isNotEmpty()) showCanvasHint("Live runs the screen's presenter — go back to “$currentScreen” to run it")
+  else enableLive()
 }
 
 private var liveRequiredCapabilities: List<String> = emptyList()
@@ -1568,6 +1591,61 @@ private fun closeTopmostLayer(): Boolean {
   return false
 }
 
+/** E14: double-click / Enter — open a component instance, edit a text in place. */
+private fun openOrEditInline(handle: Int) {
+  val node = portalTree.value.findNode(handle)
+  if (isComponentInstance(node, editorComponents)) openComponent(node!!.type) else editTextInline(handle)
+}
+
+/** E14: edit component [name]'s insides; the breadcrumb leads back. */
+private fun openComponent(name: String) {
+  if (playground) return
+  if (LiveEngine.isRunning) disableLive()
+  val next = editTarget().open(name)
+  crumbSelections = (crumbSelections.take(openComponents.size) + selectedId).take(next.components.size)
+  openComponents = next.components
+  loadDraft()
+}
+
+/** E14: back to the crumb at [depth] (0 = the screen), its selection as it was. */
+private fun goToCrumb(depth: Int) {
+  val back = editTarget().backTo(depth)
+  if (back == editTarget()) return
+  val reselect = crumbSelections.getOrNull(back.components.size)
+  openComponents = back.components
+  crumbSelections = crumbSelections.take(back.components.size)
+  // The registry first: an instance shows the component as it was just edited.
+  fetchComponents {
+    loadDraft {
+      if (reselect != null && portalTree.value.findNode(reselect) != null) {
+        selectedId = reselect
+        refresh()
+        revealOnCanvas(reselect)
+      }
+    }
+  }
+}
+
+private var crumbsEl: HTMLElement? = null
+
+/** E14: the breadcrumb — shown only inside a component: the screen › each component opened. */
+private fun renderCrumbs() {
+  val target = editTarget()
+  document.body?.classList?.toggle("editing-component", target.component != null)
+  if (target.component == null) { crumbsEl?.style?.display = "none"; return }
+  val bar = crumbsEl ?: Ui.el("div", "crumbs").also { crumbsEl = it; document.body?.appendChild(it) }
+  Ui.clear(bar)
+  bar.style.display = "flex"
+  target.crumbs.forEachIndexed { depth, label ->
+    if (depth > 0) bar.appendChild(Ui.el("span", "crumb-sep", "›"))
+    val last = depth == target.crumbs.lastIndex
+    val item = if (last) Ui.el("span", "crumb here", "◇ $label") else Ui.button(if (depth == 0) "▢ $label" else "◇ $label", "crumb") { goToCrumb(depth) }
+    item.setAttribute("title", if (last) "Editing $label — every instance changes" else "Back to $label")
+    bar.appendChild(item)
+  }
+  bar.appendChild(Ui.button("Done", "crumb done") { goToCrumb(0) }.also { it.setAttribute("title", "Back to the screen (Esc)") })
+}
+
 /** E21: keyboard editing on the selection (outside text fields). */
 private fun handleEditorKey(e: KeyboardEvent) {
   val tree = portalTree.value
@@ -1597,7 +1675,7 @@ private fun handleEditorKey(e: KeyboardEvent) {
     }
     mod && e.key.lowercase() == "c" && sel != null -> clipboardNode = sel
     mod && e.key.lowercase() == "v" -> clipboardNode?.let { addToSelectedOrRoot(deepCopy(it)) }
-    (e.key == "Enter" || e.key == "F2") && sel != null -> editTextInline(sel.id)
+    (e.key == "Enter" || e.key == "F2") && sel != null -> openOrEditInline(sel.id)
     else -> return
   }
   e.preventDefault()
@@ -1616,7 +1694,9 @@ private fun installKeyboard() {
     if (e.key == "Escape") {
       // E36: Escape closes the topmost popover/overlay first, then deselects.
       if (closeTopmostLayer()) { ev.preventDefault(); return@addEventListener }
-      if (!typing && selectedId != null) { selectedId = null; refresh() }
+      if (!typing && selectedId != null) { selectedId = null; refresh(); return@addEventListener }
+      // E14: with nothing selected, Escape steps out of an opened component.
+      if (!typing && openComponents.isNotEmpty()) goToCrumb(openComponents.size - 1)
       return@addEventListener
     }
     if (typing) return@addEventListener
@@ -1797,6 +1877,7 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
 private fun loadDraft(cb: (() -> Unit)? = null) {
   // V2 M1: the server document is the truth — fetch it and subscribe to changes.
   selectedId = null
+  renderCrumbs()
   dropQueuedOps()
   refetchDoc(true) { subscribeDocEvents(); cb?.invoke() }
   updateUndoButtons()
@@ -1995,6 +2076,12 @@ private fun renderProps() {
     propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id} · component" +
       (if (comp.slots.size == 1) " · content slot" else "") +
       (if (!comp.transparent) " (opaque)" else "")))
+    // E14: its insides are edited in the component itself (every instance changes).
+    propsEl.appendChild(
+      Ui.button("Edit component ↗", "btn") { openComponent(node.type) }.also {
+        it.setAttribute("title", "Edit ${node.type}'s insides — every ${node.type} changes (double-click or Enter)")
+      },
+    )
   } else {
     propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id}"))
   }
@@ -2078,7 +2165,7 @@ private fun renderBindings() {
   Ui.clear(bindingsEl)
   val contract = collectContract(portalTree.value, editorComponents)
   val fields = stateFields(portalTree.value, contract)
-  val key = "portal.state.$currentProject/$currentScreen"
+  val key = "portal.state.${editTarget().key}"
   var state = decodeScreenState(runCatching { localStorage.getItem(key) }.getOrNull())
   fun save() { runCatching { localStorage.setItem(key, encodeScreenState(state)) } }
   fun apply() {

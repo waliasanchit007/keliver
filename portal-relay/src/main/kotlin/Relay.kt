@@ -565,7 +565,7 @@ private fun handle(ex: HttpExchange, block: () -> Unit) {
   runCatching(block).onFailure {
     // A named screen that does not exist is a client error, and saying so is
     // the point: it used to be answered by inventing the screen.
-    val code = if (it is UnknownScreen) 404 else 500
+    val code = if (it is UnknownScreen || it is UnknownComponent) 404 else 500
     println("portal-server: ${ex.requestURI} failed: $it")
     runCatching { respond(ex, code, "{\"error\":\"${it.message?.replace("\"", "'")}\"}") }
   }
@@ -703,6 +703,44 @@ class UnknownScreen(val project: String, val screen: String, val known: List<Str
       else "; known screens: ${known.joinToString(", ")}",
   )
 
+/** E14: raised when a request opens a component the app does not have, or one whose body is edited in code. */
+class UnknownComponent(project: String, name: String, why: String) :
+  IllegalArgumentException("component '$name' in project '$project' cannot be opened: $why")
+
+/**
+ * E14: the file that declares component [name] in [dir] — `<name>.kt` by
+ * convention, else the file whose component (its first `@Composable`) it is.
+ */
+private fun componentFile(dir: File, name: String): File? {
+  val named = File(dir, "$name.kt")
+  if (named.isFile) return named
+  val declares = Regex("@Composable[^{]*?\\bfun\\s+" + Regex.escape(name) + "\\s*\\(")
+  return (dir.listFiles { f -> f.name.endsWith(".kt") } ?: emptyArray()).sorted()
+    .firstOrNull { f -> runCatching { declares.containsMatchIn(f.readText()) }.getOrDefault(false) }
+}
+
+/**
+ * E14: one engine per component opened for editing (`/doc?component=<Name>`),
+ * keyed `<project>/component:<Name>`. Its document is the component's body and
+ * its edits are written to the component's own file; the registry rebuild that
+ * write triggers ([ingestComponentFile]) re-renders every screen that uses it.
+ */
+private fun componentDocFor(project: String, name: String): DocumentService {
+  if (!Regex("[A-Za-z_][A-Za-z0-9_]*").matches(name)) throw UnknownComponent(project, name, "not a component name")
+  val dir = componentsDirFor(project)
+  return documents.getOrPut("$project/component:$name") {
+    val spec = Components.registry(project).spec(name) ?: throw UnknownComponent(project, name, "the app has no such component")
+    val file = componentFile(dir, name) ?: throw UnknownComponent(project, name, "its file is not in ${dir.name}/")
+    DocumentService.forComponent(
+      "$project/component:$name", file, name,
+      components = { Components.registry(project) },
+      tokens = { Tokens.table(project) },
+      tokenFileId = tokenFileId(file),
+      tokensVersion = { Tokens.version(project) },
+    ) ?: throw UnknownComponent(project, name, spec.diagnostic ?: "its body is not one the editor can read")
+  }
+}
+
 /**
  * True when the screen exists either as a store document or as a `.kt` in the
  * app's screens dir. The `.kt` check matters on a cold store: the boot scan has
@@ -724,6 +762,7 @@ private fun docFor(q: Map<String, String>): DocumentService {
   // merely opening the editor.
   val (activeProject, activeScreenName) = activeScreen()
   val project = safe(q["project"] ?: activeProject)
+  q["component"]?.let { return componentDocFor(project, it) }
   val screen = safe(q["screen"] ?: activeScreenName)
   // A screen this app does not have is an ERROR, not an invitation to invent
   // one. Minting on read is how a foreign screen name — from a shared store, a
@@ -952,6 +991,14 @@ private fun ingestComponentFile(f: File) {
     val tokensChanged = rebuildTokens(project)
     val reg = Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
     println("ingest(component): $project -> ${reg.names().sorted()} (${f.name} changed)")
+    // E14: an open component document reads its own file again (not its own write), and the
+    // others re-read theirs under the new registry (a component they call changed).
+    documents.filter { (k, _) -> k.startsWith("$project/component:") }.forEach { (k, svc) ->
+      runCatching {
+        val own = f.exists() && componentFile(dir, k.substringAfter("component:"))?.absolutePath == f.absolutePath
+        if (own) svc.fileChanged(f.readText()) else svc.reingest()
+      }.onFailure { println("component document $k: re-read failed: $it") }
+    }
     // Always forced: a screen's text is unchanged, so the watcher path would
     // skip it as already read, and its tree would stay read under the old registry.
     reingestScreens(project, force = true)
