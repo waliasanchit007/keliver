@@ -37,6 +37,8 @@ object RawCodeEdit {
     fileName: String,
     components: ComponentRegistry = EmptyComponentRegistry,
     tokens: TokenTable = TokenTable.EMPTY,
+    /** E14: [fileText]'s component is the document, not a screen ([Recognizer.recognize]). */
+    asComponent: Boolean = false,
   ): String? {
     val block = runCatching { PsiEnv.factory.createBlock(text) }.getOrNull()
       ?: return "the code does not parse as Kotlin"
@@ -56,7 +58,7 @@ object RawCodeEdit {
 
     if (fileText == null) return null
     val lf = LineEndings.toLf(fileText)
-    val rec = Recognizer.recognize(fileName, lf, components, tokens) ?: return null
+    val rec = Recognizer.recognize(fileName, lf, components, tokens, asComponent) ?: return null
     val fn = rec.file?.declarations?.filterIsInstance<KtNamedFunction>()
       ?.firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } } ?: return null
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
@@ -70,7 +72,7 @@ object RawCodeEdit {
       if (w.type == "Repeat") {
         val items = (w.props["items"] as? dev.keliver.portal.document.PropValue.Lit)?.s ?: return null
         val item = (w.props["item"] as? dev.keliver.portal.document.PropValue.Lit)?.s ?: return null
-        "$param.$items.forEach { $item ->"
+        (if (param == COMPONENT_PARAMS) "" else "$param.") + "$items.forEach { $item ->"
       } else {
         "${w.type} {"
       }
@@ -79,7 +81,7 @@ object RawCodeEdit {
     val probeBody = "{\n" + wrappers.joinToString("") { "$it\n" } + text.trim() + "\n" + "}\n".repeat(wrappers.size) + "Unit\n}"
     val range = body.textRange
     val probe = runCatching {
-      Recognizer.recognize(fileName, lf.substring(0, range.startOffset) + probeBody + lf.substring(range.endOffset), components, tokens)
+      Recognizer.recognize(fileName, lf.substring(0, range.startOffset) + probeBody + lf.substring(range.endOffset), components, tokens, asComponent)
     }.getOrNull() ?: return null
     var node: DocNode = probe.root.children.firstOrNull() ?: return null
     repeat(wrappers.size) { node = (node as? DocNode.Widget)?.children?.singleOrNull() ?: return null }

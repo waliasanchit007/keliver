@@ -218,7 +218,7 @@ class DocumentService(
     var d = doc
     for (op in batch.ops) {
       if (op is DocOp.ReplaceRaw) {
-        dev.keliver.portal.ingest.RawCodeEdit.problem(op.text, d, op.target, fileText, tokenFileId, components(), tokens())
+        dev.keliver.portal.ingest.RawCodeEdit.problem(op.text, d, op.target, fileText, tokenFileId, components(), tokens(), asComponent)
           ?.let { return "code edit refused: $it" }
       }
       d = d.tryApply(op).result?.doc ?: return null // the batch itself fails later, with its own error
@@ -793,6 +793,8 @@ class DocumentService(
       val rec = runCatching {
         dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens(), asComponent = true)
       }.getOrNull() ?: return null
+      // The file's component must be the one asked for: never edit (and write) another function.
+      if (rec.screenName != functionName) return null
       val (root, next) = renumbered(rec.root)
       val doc = UiDocument(key, root, rec.contract, version = 0, nextHandle = next)
       return DocumentService(

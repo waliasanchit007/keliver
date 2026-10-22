@@ -962,6 +962,10 @@ private fun refreshProject(project: String, why: String) {
   if (dir.exists()) Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
   println("ingest(tokens): $project -> ${Tokens.table(project).offered.size} token(s) ($why)")
   reingestScreens(project, force = true)
+  // An open component reads its file again under the new table, as a screen does.
+  documents.filter { (k, _) -> k.startsWith("$project/component:") }.values.forEach { svc ->
+    runCatching { svc.reingest() }.onFailure { println("component document re-read failed: $it") }
+  }
   // Open editors refresh their token picker even when no document changed.
   documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
 }

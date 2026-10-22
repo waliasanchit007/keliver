@@ -136,18 +136,31 @@ object NodeEmitter {
         else -> false
       } && !shadowed(ref, stmt)
     }
-    val out = StringBuilder(text)
-    for (ref in refs.sortedByDescending { it.textRange.startOffset }) {
+    // E14: in a component an action is its event parameter itself — `{ b.onTap() }` is `onTap`, as
+    // its authors write it. A call `onTap()` would not compile for an optional (nullable) event.
+    val forwards = if (param != COMPONENT_PARAMS) emptyList() else
+      PsiTreeUtil.collectElementsOfType(stmt, org.jetbrains.kotlin.psi.KtLambdaExpression::class.java).mapNotNull { lambda ->
+        val only = lambda.bodyExpression?.statements?.singleOrNull() as? KtDotQualifiedExpression ?: return@mapNotNull null
+        val call = only.selectorExpression as? org.jetbrains.kotlin.psi.KtCallExpression ?: return@mapNotNull null
+        val receiver = only.receiverExpression as? KtNameReferenceExpression ?: return@mapNotNull null
+        val args = call.valueArguments.map { it.text }
+        val forwardsItsParameter = lambda.valueParameters.isEmpty() && (args.isEmpty() || args == listOf("it"))
+        if (receiver.getReferencedName() != "b" || !forwardsItsParameter) return@mapNotNull null
+        Triple(lambda.textRange.startOffset - base, lambda.textRange.endOffset - base, call.calleeExpression!!.text)
+      }
+    val renames = refs.filter { r -> forwards.none { (from, to, _) -> r.textRange.startOffset - base in from until to } }.map { ref ->
       val at = ref.textRange.startOffset - base
       // E14: a component's parameters are read by their bare names — `b.title` is `title`, `b::onTap` is `onTap`.
       if (param == COMPONENT_PARAMS) {
-        val p = ref.parent
-        val sep = if (p is KtCallableReferenceExpression) "::" else "."
-        out.replace(at, at + 1 + sep.length, "")
+        val sep = if (ref.parent is KtCallableReferenceExpression) "::" else "."
+        Triple(at, at + 1 + sep.length, "")
       } else {
-        out.replace(at, at + 1, param)
+        Triple(at, at + 1, param)
       }
     }
+    val out = StringBuilder(text)
+    // One pass from the end: every edit's offsets are the original text's.
+    for ((from, to, with) in (forwards + renames).sortedByDescending { it.first }) out.replace(from, to, with)
     return out.toString()
   }
 

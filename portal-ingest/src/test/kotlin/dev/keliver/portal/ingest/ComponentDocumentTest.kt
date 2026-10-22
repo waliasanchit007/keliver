@@ -109,4 +109,72 @@ class ComponentDocumentTest {
     val noBody = component.replace(Regex("\\{\\n  Column[\\s\\S]*\\n}\\n$"), "= Unit\n")
     assertNull(Recognizer.recognize(file, noBody, asComponent = true))
   }
+
+  private val tap = """
+    package app.components
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import dev.keliver.material.compose.Button
+
+    @Composable
+    fun Tap(label: String, onTap: (() -> Unit)? = null) {
+      Column {
+        Button(text = label, onClick = onTap)
+      }
+    }
+  """.trimIndent() + "\n"
+
+  private val buttonStub = "package dev.keliver.material.compose\n\nfun Button(text: String, onClick: (() -> Unit)? = null, enabled: Boolean = true) {}\n"
+
+  private fun tapDoc(text: String): UiDocument =
+    Recognizer.recognize("app/components/Tap.kt", text, asComponent = true)!!.let { UiDocument("component:Tap", it.root, it.contract, 0, 1000) }
+
+  private fun writeTap(text: String, target: UiDocument, base: UiDocument): String =
+    when (val o = WriteBack.attempt(text, target, fileName = "app/components/Tap.kt", base = base, asComponent = true)) {
+      is WriteBack.Outcome.Merged -> o.text
+      is WriteBack.Outcome.NotSurgical -> throw AssertionError("the change is written surgically, not: ${o.reason}")
+    }
+
+  @Test fun anOptionalEventIsForwardedAsItselfAndTheComponentStillCompiles() {
+    val d0 = tapDoc(tap)
+    val button = (d0.root as DocNode.Widget).children[0]
+    // A new argument re-emits the whole list: the event the author forwarded stays `onClick = onTap`.
+    val edited = writeTap(tap, d0.apply(DocOp.SetProp(button.handle, "enabled", lit(false))).doc, d0)
+    assertTrue("onClick = onTap" in edited && "enabled = false" in edited, edited)
+    assertNull(KotlinCompileCheck.errors(mapOf("Tap.kt" to edited, "Button.kt" to buttonStub)))
+
+    // An event wired in the editor is written as the parameter itself, never `{ onTap() }`.
+    val unwired = tap.replace("Button(text = label, onClick = onTap)", "Button(text = label)")
+    val u0 = tapDoc(unwired)
+    val wired = writeTap(unwired, u0.apply(DocOp.SetProp((u0.root as DocNode.Widget).children[0].handle, "onClick", PropValue.Action("onTap"))).doc, u0)
+    assertTrue("onClick = onTap" in wired, wired)
+    assertNull(KotlinCompileCheck.errors(mapOf("Tap.kt" to wired, "Button.kt" to buttonStub)))
+  }
+
+  @Test fun removingAComponentsContentSlotIsRefused() {
+    val block = """
+      package app.components
+
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun InfoBlock(title: String, content: @Composable () -> Unit) {
+        Column {
+          StyledText(text = title)
+          content()
+        }
+      }
+    """.trimIndent() + "\n"
+    val rec = Recognizer.recognize("app/components/InfoBlock.kt", block, asComponent = true)!!
+    val d0 = UiDocument("component:InfoBlock", rec.root, rec.contract, 0, 1000)
+    val slot = (d0.root as DocNode.Widget).children.single { (it as DocNode.Widget).type == "Slot" }
+    val plan = ScreenWriter.plan(
+      onDisk = block, doc = d0.apply(DocOp.DeleteNode(slot.handle)).doc, base = d0, baseText = block,
+      fileName = "app/components/InfoBlock.kt", functionName = "InfoBlock", packageName = null, asComponent = true,
+    )
+    assertTrue("content slot" in assertIs<ScreenWriter.Refuse>(plan).reason)
+  }
 }

@@ -464,7 +464,13 @@ object WriteBack {
         val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType, bindings.get())
         var callText = emitted.text
         if ('\n' !in oldList.text) callText = collapseCall(callText)
-        val newCall = factory.createExpression(keepArgumentOrder(oldList, callText, factory)) as? KtCallExpression ?: return false
+        // An argument whose value did not change keeps the author's text (`onClick = b::go` is not
+        // re-spelled `{ b.go() }`), so an edit and its undo give the file back byte for byte.
+        fun untouched(name: String): Boolean =
+          if (name == "modifier") sameModifiers(parsed.modifiers, target.modifiers)
+          else parsed.props[name] != null && parsed.props[name] == target.props[name] &&
+            (parsed.props.keys + target.props.keys).filter { it.startsWith("$name.") }.all { parsed.props[it] == target.props[it] }
+        val newCall = factory.createExpression(keepArgumentOrder(oldList, callText, factory, ::untouched)) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
         oldList.replace(newList)
         need(emitted.imports)
@@ -485,22 +491,33 @@ object WriteBack {
    * [callText] (a whole-list re-emission, in the exporter's canonical order) with its named
    * arguments in the order [oldList] had them: the arguments the author kept stay where they were,
    * and new ones follow, in the emitter's order. Each argument keeps its emitted slot's formatting;
-   * only which argument sits in which slot changes. Unchanged when an argument is positional.
+   * only which argument sits in which slot changes — and an argument [untouched] by the edit is
+   * the author's own text. Unchanged when an argument is positional.
    */
-  private fun keepArgumentOrder(oldList: org.jetbrains.kotlin.psi.KtValueArgumentList, callText: String, factory: KtPsiFactory): String {
+  private fun keepArgumentOrder(
+    oldList: org.jetbrains.kotlin.psi.KtValueArgumentList,
+    callText: String,
+    factory: KtPsiFactory,
+    untouched: (String) -> Boolean = { false },
+  ): String {
     val call = factory.createExpression(callText) as? KtCallExpression ?: return callText
     val args = call.valueArgumentList?.arguments ?: return callText
     val oldNames = oldList.arguments.map { it.getArgumentName()?.asName?.asString() ?: return callText }
     val names = args.map { it.getArgumentName()?.asName?.asString() ?: return callText }
     val rank = oldNames.withIndex().associate { (i, n) -> n to i }
+    val oldByName = oldList.arguments.associateBy { it.getArgumentName()!!.asName.asString() }
     val ordered = args.withIndex().sortedWith(compareBy({ rank[names[it.index]] ?: Int.MAX_VALUE }, { it.index })).map { it.value }
-    if (ordered == args) return callText
+    fun textOf(a: org.jetbrains.kotlin.psi.KtValueArgument): String {
+      val name = a.getArgumentName()?.asName?.asString()
+      return name?.let { n -> oldByName[n]?.takeIf { untouched(n) }?.text } ?: a.text
+    }
+    if (ordered == args && ordered.all { textOf(it) == it.text }) return callText
     // Replace slot by slot from the end, so earlier offsets stay valid.
     val base = call.textRange.startOffset
     var out = callText
     for (i in args.indices.reversed()) {
       val r = args[i].textRange
-      out = out.substring(0, r.startOffset - base) + ordered[i].text + out.substring(r.endOffset - base)
+      out = out.substring(0, r.startOffset - base) + textOf(ordered[i]) + out.substring(r.endOffset - base)
     }
     return out
   }
