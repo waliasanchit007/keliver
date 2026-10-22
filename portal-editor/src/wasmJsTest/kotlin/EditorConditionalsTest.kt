@@ -21,10 +21,17 @@ import kotlin.test.assertTrue
 class EditorConditionalsTest {
   init {
     // E27: a conditional value's field is chosen from the open document's contract.
-    openContract = { Contract(fields = mapOf("open" to "Boolean", "shown" to "Boolean", "enabled" to "Boolean", "note" to "String")) }
+    openContract = { Contract(fields = mapOf("open" to "Boolean", "shown" to "Boolean", "enabled" to "Boolean", "note" to "String"), actions = listOf("tap", "go", "stop")) }
   }
 
   /** Chooses [field] in the condition's field dropdown, as a user does. */
+  /** Chooses action [name] ("" = no action) in the [i]th action dropdown, as a user does (E28). */
+  private fun pickAction(row: org.w3c.dom.Element, i: Int, name: String) {
+    val sel = row.querySelectorAll("select[aria-label$=action]").item(i) as org.w3c.dom.HTMLSelectElement
+    sel.value = name
+    sel.dispatchEvent(Event("change"))
+  }
+
   private fun pickField(row: org.w3c.dom.Element, field: String) {
     val sel = row.querySelector(".cond-editor select") as org.w3c.dom.HTMLSelectElement
     sel.value = field
@@ -70,11 +77,8 @@ class EditorConditionalsTest {
   @Test fun aConditionalEventSendsNullForAnEmptyActionName() {
     val sent = mutableListOf<DocOp>()
     val row = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _, _ -> sent += op }
-    val inputs = row.querySelectorAll("input")
-    val thenInput = inputs.item(0) as HTMLInputElement
-    assertEquals("tap", thenInput.value)
-    thenInput.value = ""
-    thenInput.dispatchEvent(Event("input")); thenInput.dispatchEvent(Event("change")) /* E11: committed */
+    assertEquals("tap", (row.querySelector("select[aria-label$=action]") as org.w3c.dom.HTMLSelectElement).value)
+    pickAction(row, 0, "")
     assertEquals(DocOp.SetProp(Handle(5), "onClick", PropValue.Conditional("enabled")), sent.single())
   }
 
@@ -98,9 +102,8 @@ class EditorConditionalsTest {
     // The same for a conditional event.
     val events = mutableListOf<DocOp>()
     val ev = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _, _ -> events += op }
-    val evInputs = ev.querySelectorAll("input")
-    (evInputs.item(1) as HTMLInputElement).let { it.value = "stop"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
-    (evInputs.item(0) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    pickAction(ev, 1, "stop")
+    pickAction(ev, 0, "go")
     assertEquals(
       DocOp.SetProp(Handle(5), "onClick", PropValue.Conditional("enabled", whenTrue = PropValue.Action("go"), whenFalse = PropValue.Action("stop"))),
       events.last(),

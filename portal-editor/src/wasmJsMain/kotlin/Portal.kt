@@ -2437,42 +2437,29 @@ private fun renderProps() {
   if (events.isNotEmpty()) {
     propsEl.appendChild(Ui.el("div", "section", "Events"))
     events.forEach { evName ->
-      val rowEl = Ui.el("div", "row")
-      val lab = Ui.el("label", "", evName)
-      lab.setAttribute("title", evName)
-      rowEl.appendChild(lab)
       // K3: a conditional event — `if (b.enabled) b::tap else null`.
       (node.props[evName] as? Conditional)?.let { c ->
         propsEl.appendChild(conditionalEventRow(node.id, evName, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() })
         return@forEach
       }
+      // E28: the action from the contract's list (with its signature), full width; never free text.
       val current = node.props[evName] as? Action
-      val nameIn = Ui.input()
-      nameIn.setAttribute("type", "text")
-      nameIn.setAttribute("placeholder", "action name")
-      nameIn.value = current?.name ?: ""
-      // P2: the action's single arg — "it" (event payload) or "item.field".
-      val argIn = Ui.input()
-      argIn.setAttribute("type", "text")
-      argIn.setAttribute("placeholder", "arg")
-      argIn.setAttribute("title", "arg: it (event payload) or item.field (inside a Repeat)")
-      argIn.setAttribute("style", "flex: 0 1 90px;")
-      argIn.value = current?.arg ?: ""
-      fun sendNow() {
-        val name = nameIn.value.trim()
-        val op = if (name.isEmpty()) {
-          DocOp.RemoveProp(Handle(node.id.toLong()), evName)
-        } else {
-          DocOp.SetProp(Handle(node.id.toLong()), evName, PropValue.Action(name, argIn.value.trim().ifEmpty { null }))
-        }
-        sendOps(listOf(op), refreshPanels = false)
-        renderBindings()
-      }
-      nameIn.addEventListener("input", { _ -> sendNow() })
-      argIn.addEventListener("input", { _ -> sendNow() })
-      rowEl.appendChild(nameIn)
-      rowEl.appendChild(argIn)
-      propsEl.appendChild(rowEl)
+      val slot = Ui.el("div", "token-picker")
+      val component = editTarget().component
+      propsEl.appendChild(
+        PropRow(evName).control(
+          eventControl(docContract, current, canDeclare = component == null, newSlot = slot) { name, arg ->
+            val op = if (name == null) {
+              DocOp.RemoveProp(Handle(node.id.toLong()), evName)
+            } else {
+              DocOp.SetProp(Handle(node.id.toLong()), evName, PropValue.Action(name, arg))
+            }
+            sendOps(listOf(op), refreshPanels = false)
+            renderBindings()
+          },
+        ).root,
+      )
+      propsEl.appendChild(slot)
     }
   }
 }

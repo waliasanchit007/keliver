@@ -124,16 +124,14 @@ internal fun conditionalEventRow(nodeId: Int, evName: String, cur: Conditional, 
     val row = Ui.el("div", "row")
     row.appendChild(Ui.el("label", "", if (branch) "then" else "else"))
     val action = (if (branch) cur.whenTrue else cur.whenFalse) as? Action
-    val input = Ui.input()
-    input.setAttribute("type", "text")
-    input.setAttribute("placeholder", "action name (empty = null)")
-    input.value = action?.name ?: ""
-    input.addEventListener("input", { _ ->
-      val name = input.value.trim()
-      val v = if (name.isEmpty()) null else PropValue.Action(name, action?.arg)
+    // E28: each branch's action from the contract's list; "no action" is `null` there.
+    val sel = actionSelect(openContract(), action?.name, canDeclare = false)
+    sel.setAttribute("aria-label", "${if (branch) "then" else "else"} action")
+    sel.addEventListener("change", { _ ->
+      val v = sel.value.takeIf { it.isNotEmpty() }?.let { PropValue.Action(it, action?.arg) }
       sendValue(withBranch(latest.value, branch, v))
     })
-    row.appendChild(input)
+    row.appendChild(sel)
     wrap.appendChild(row)
   }
   return wrap
