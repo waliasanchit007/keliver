@@ -728,7 +728,10 @@ private fun componentFile(dir: File, name: String): File? {
 private fun componentDocFor(project: String, name: String): DocumentService {
   if (!Regex("[A-Za-z_][A-Za-z0-9_]*").matches(name)) throw UnknownComponent(project, name, "not a component name")
   val dir = componentsDirFor(project)
-  return documents.getOrPut("$project/component:$name") {
+  val key = "$project/component:$name"
+  // A component whose file is gone (deleted, renamed) is no longer served from the document it had.
+  documents[key]?.let { open -> if (!open.file.isFile) documents.remove(key, open) }
+  return documents.getOrPut(key) {
     val spec = Components.registry(project).spec(name) ?: throw UnknownComponent(project, name, "the app has no such component")
     val file = componentFile(dir, name) ?: throw UnknownComponent(project, name, "its file is not in ${dir.name}/")
     DocumentService.forComponent(
