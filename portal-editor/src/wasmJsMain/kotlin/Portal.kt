@@ -38,7 +38,6 @@ import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
 import dev.keliver.portal.updateProps
 import dev.keliver.portal.acceptsModifier
-import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.propSourceType
@@ -2734,28 +2733,28 @@ private fun propRowInner(
       .root
   }
 
+  // E11: a number is validated as it is typed (K1: a Dp is never negative) and
+  // written once, valid, on Enter or leaving the field — never per keystroke.
+  if (kind == PropKind.Int || kind == PropKind.Double) {
+    val current: Number
+    if (kind == PropKind.Int) current = props[key] as? Int ?: 0 else current = props[key] as? Double ?: 0.0
+    return PropRow(label, PropRow.Layout.Compact)
+      .control(
+        numberField(
+          current, numberRule(nodeType, key, kind),
+          onPreview = { previewProp(nodeId, key, it) },
+          onCommit = { editProp(nodeId, key, it) },
+        ),
+      )
+      .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .root
+  }
+
   val input = Ui.input()
   var layout = PropRow.Layout.Compact
   when (kind) {
-    PropKind.Text, PropKind.Color -> Unit // textField / colorControl, above
-    PropKind.Int -> {
-      input.setAttribute("type", "number")
-      input.value = (props[key] as? Int ?: 0).toString()
-      input.addEventListener("input", { _ -> editProp(nodeId, key, input.value.toIntOrNull() ?: 0) })
-    }
-    PropKind.Double -> {
-      input.setAttribute("type", "number")
-      input.setAttribute("step", "0.1")
-      // K1: a Dp (Dp prop, Margin side, Dp modifier arg) is never negative —
-      // the document clamps it too, so input, canvas and saved file agree.
-      val nonNegative = isDpProp(nodeType, key)
-      if (nonNegative) input.setAttribute("min", "0")
-      input.value = (props[key] as? Double ?: 0.0).toString()
-      input.addEventListener("input", { _ ->
-        val v = input.value.toDoubleOrNull() ?: 0.0
-        editProp(nodeId, key, if (nonNegative) v.coerceAtLeast(0.0) else v)
-      })
-    }
+    PropKind.Text, PropKind.Color, PropKind.Int, PropKind.Double -> Unit // textField / colorControl / numberField, above
     PropKind.Bool -> {
       layout = PropRow.Layout.Inline
       input.setAttribute("type", "checkbox")

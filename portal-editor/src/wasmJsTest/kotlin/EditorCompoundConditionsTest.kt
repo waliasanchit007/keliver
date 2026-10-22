@@ -41,7 +41,7 @@ class EditorCompoundConditionsTest {
     val inputs = row.querySelectorAll("input")
     // No field / negate editor: just the two branches.
     assertEquals(2, inputs.length)
-    (inputs.item(1) as HTMLInputElement).let { it.value = "Cash"; it.dispatchEvent(Event("input")) }
+    (inputs.item(1) as HTMLInputElement).let { it.value = "Cash"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
     assertEquals(
       DocOp.SetProp(
         Handle(7), "text",
@@ -57,7 +57,7 @@ class EditorCompoundConditionsTest {
     val ev = conditionalEventRow(5, "onClick", Conditional(compound, Action("tap"), null)) { op, _, _ -> events += op }
     val evInputs = ev.querySelectorAll("input")
     assertEquals(2, evInputs.length)
-    (evInputs.item(0) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")) }
+    (evInputs.item(0) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
     assertEquals(PropValue.Action("go"), ((events.single() as DocOp.SetProp).value as PropValue.Conditional).whenTrue)
     assertEquals("or", ((events.single() as DocOp.SetProp).value as PropValue.Conditional).join)
   }

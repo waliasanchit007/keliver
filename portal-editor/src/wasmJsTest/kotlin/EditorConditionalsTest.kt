@@ -43,7 +43,7 @@ class EditorConditionalsTest {
     val elseInput = inputs.item(3) as HTMLInputElement
     assertEquals("Closed", elseInput.value)
     elseInput.value = "Shut"
-    elseInput.dispatchEvent(Event("input"))
+    elseInput.dispatchEvent(Event("input")); elseInput.dispatchEvent(Event("change")) /* E11: committed */
     assertEquals(
       DocOp.SetProp(Handle(7), "text", PropValue.Conditional("open", whenTrue = lit("Open"), whenFalse = lit("Shut"))),
       sent.single(),
@@ -61,7 +61,7 @@ class EditorConditionalsTest {
     val thenInput = inputs.item(2) as HTMLInputElement
     assertEquals("tap", thenInput.value)
     thenInput.value = ""
-    thenInput.dispatchEvent(Event("input"))
+    thenInput.dispatchEvent(Event("input")); thenInput.dispatchEvent(Event("change")) /* E11: committed */
     assertEquals(DocOp.SetProp(Handle(5), "onClick", PropValue.Conditional("enabled")), sent.single())
   }
 
@@ -70,7 +70,7 @@ class EditorConditionalsTest {
     val sent = mutableListOf<DocOp>()
     val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), "Open", "Closed")) { op, _, _ -> sent += op }
     val inputs = row.querySelectorAll("input")
-    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")) }
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
     type(2, "Yes")
     type(3, "No")
     assertEquals(
@@ -86,8 +86,8 @@ class EditorConditionalsTest {
     val events = mutableListOf<DocOp>()
     val ev = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _, _ -> events += op }
     val evInputs = ev.querySelectorAll("input")
-    (evInputs.item(3) as HTMLInputElement).let { it.value = "stop"; it.dispatchEvent(Event("input")) }
-    (evInputs.item(2) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")) }
+    (evInputs.item(3) as HTMLInputElement).let { it.value = "stop"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    (evInputs.item(2) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
     assertEquals(
       DocOp.SetProp(Handle(5), "onClick", PropValue.Conditional("enabled", whenTrue = PropValue.Action("go"), whenFalse = PropValue.Action("stop"))),
       events.last(),
@@ -104,7 +104,7 @@ class EditorConditionalsTest {
       results += done
     }
     val inputs = row.querySelectorAll("input")
-    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")) }
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
     type(2, "Yes")
     results.last()(true)
     type(3, "No")
@@ -133,10 +133,10 @@ class EditorConditionalsTest {
     val bound = row.querySelectorAll("input").item(2) as HTMLInputElement
     assertEquals("title", bound.value)
     bound.value = "  "
-    bound.dispatchEvent(Event("input"))
+    bound.dispatchEvent(Event("input")); bound.dispatchEvent(Event("change")) /* E11: committed */
     assertTrue(sent.isEmpty(), sent.toString())
     bound.value = "name"
-    bound.dispatchEvent(Event("input"))
+    bound.dispatchEvent(Event("input")); bound.dispatchEvent(Event("change")) /* E11: committed */
     assertEquals(DocOp.SetProp(Handle(7), "text", PropValue.Conditional("open", whenTrue = PropValue.Bind("name"), whenFalse = lit("-"))), sent.single())
   }
 
