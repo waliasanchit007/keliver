@@ -45,4 +45,27 @@ class EditorTokensTest {
     val reg = MapComponentRegistry(listOf(ComponentSpec("MenuRow", listOf(PropSpec("title", PropKind.Text, "Title")), emptyList(), emptyMap())))
     assertEquals(listOf("C.Title"), refs("MenuRow", "title", reg = reg))
   }
+
+  /** E13: an Int prop is offered the Int tokens of its meaning — colours for a colour, numbers otherwise. */
+  @Test fun aColourTokenIsNeverOfferedForANumberAndANumberNeverForAColour() {
+    val mixed = parseTokens(
+      """
+      [{"ref":"C.Ink","kind":"Int","value":-14737633,"ambiguous":false},
+       {"ref":"C.Veil","kind":"Int","value":520093696,"ambiguous":false},
+       {"ref":"T.Body","kind":"Int","value":14,"ambiguous":false},
+       {"ref":"T.Heavy","kind":"Int","value":700,"ambiguous":false}]
+      """.trimIndent(),
+    )
+    fun refs(type: String, key: String, reg: dev.keliver.portal.ComponentRegistry = EmptyComponentRegistry) = tokensFor(type, key, reg, mixed).map { it.ref }
+    assertEquals(listOf("T.Body", "T.Heavy"), refs("StyledText", "fontSize"))
+    assertEquals(listOf("T.Body", "T.Heavy"), refs("StyledText", "weight"))
+    assertEquals(listOf("C.Ink", "C.Veil"), refs("StyledText", "colorArgb")) // 0x1F000000 (12% black) is a colour
+    assertEquals(listOf("C.Ink", "C.Veil"), refs("StyledText", "mod.Background.colorArgb"))
+    // A component's colour parameter (E10) and its plain Int one.
+    val reg = MapComponentRegistry(listOf(ComponentSpec("Tag", listOf(PropSpec("tintArgb", PropKind.Color, "Tint"), PropSpec("size", PropKind.Int, "Size")), emptyList(), emptyMap())))
+    assertEquals(listOf("C.Ink", "C.Veil"), refs("Tag", "tintArgb", reg))
+    assertEquals(listOf("T.Body", "T.Heavy"), refs("Tag", "size", reg))
+    assertEquals(true, isColorValue(-1))
+    assertEquals(false, isColorValue(0xFFFFFF))
+  }
 }

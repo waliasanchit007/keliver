@@ -10,9 +10,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
+import dev.keliver.portal.CondTest
 import dev.keliver.portal.Conditional
 import dev.keliver.portal.condOf
 import dev.keliver.portal.ELSE_TYPE
+import dev.keliver.portal.PropChoice
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
@@ -21,6 +23,7 @@ import dev.keliver.portal.tokenValue
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.collectContract
 import dev.keliver.portal.collectPreviewBindingKeys
+import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
@@ -35,10 +38,11 @@ import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.editableProps
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
+import dev.keliver.portal.updateProps
 import dev.keliver.portal.acceptsModifier
-import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.modifierSpecs
+import dev.keliver.portal.propSourceType
 import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
 import dev.keliver.portal.render.resolvePersona
@@ -155,6 +159,9 @@ private const val SESSION = "editor"
 // The SAME UiDocument apply/invert engine runs locally; edits stay in-memory.
 private var playground = false
 private var localDoc = demoTemplate()
+
+/** E12: the open document's contract as its file declares it — what `@` offers to bind. */
+private var docContract = Contract()
 private val localUndo = ArrayDeque<List<DocOp>>()
 private val localRedo = ArrayDeque<List<DocOp>>()
 private var runtimeMetadataLoad: RuntimeMetadataLoad = RuntimeMetadataLoad.Loading
@@ -253,6 +260,7 @@ private val demoMocks = mapOf(
 
 private fun localRefresh(refreshPanels: Boolean) {
   docVersion = localDoc.version
+  docContract = localDoc.contract
   portalTree.value = localDoc.toWidgetTree(handleIds = true)
   Snapshot.sendApplyNotifications()
   if (refreshPanels) refresh() else renderOutline()
@@ -515,6 +523,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       appliedSeq = seq
       docVersion = doc.version
+      docContract = doc.contract
       portalTree.value = doc.toWidgetTree(handleIds = true)
       // E15: select what was just inserted (its handle is the relay's to assign).
       pendingInsertPlace?.let { (parent, after) ->
@@ -709,6 +718,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
 // Chrome
 
 internal fun mountPortalChrome() {
+  openContract = { docContract } // E27: conditional values pick their field from it
   Ui.installStylesheet()
   if (evidenceMode()) installEvidenceStylesheet()
   buildTopbar()
@@ -2363,6 +2373,7 @@ private fun handleDrop(payload: String?, targetId: Int, zone: DropZone = DropZon
 }
 
 private fun renderProps() {
+  flushPendingField() // a focused field removed below would lose its typed edit
   Ui.clear(propsEl)
   val node = selectedId?.let { portalTree.value.findNode(it) }
   if (node == null) {
@@ -2403,53 +2414,64 @@ private fun renderProps() {
     })
     propsEl.appendChild(Ui.el("div", "muted", "an equality or compound condition is edited in code"))
   }
-  val specs = if (readOnlyCond != null) emptyList() else comp?.props ?: editableProps(node.type)
-  if (specs.isEmpty() && readOnlyCond == null) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
+  // E27: a Condition reads "Show when [field] [is true]": both chosen from lists, no free text.
+  if (node.type == "Condition" && readOnlyCond == null) {
+    val c = condOf(node)
+    val slot = Ui.el("div", "token-picker")
+    propsEl.appendChild(
+      PropRow("Show when").control(
+        // In an opened component a new field would be a new parameter: added in code, not here.
+        conditionEditor(docContract, c?.field ?: "", c?.test ?: CondTest.Bool, c?.negate ?: false, newFieldSlot = slot.takeIf { editTarget().component == null }) { f, t, n ->
+          sendOps(conditionOps(node.id, c, f, t, n))
+        },
+      ).root,
+    )
+    propsEl.appendChild(slot)
+  }
+  val specs = if (readOnlyCond != null || node.type == "Condition") emptyList() else comp?.props ?: editableProps(node.type)
+  if (specs.isEmpty() && readOnlyCond == null && node.type != "Condition") propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
   specs.forEach { s ->
-    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = ""))
+    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = "", choices = s.choices))
   }
   // P3: events — each wires to a named Action.
   val events = comp?.events?.map { it.name } ?: spec?.events ?: emptyList()
   if (events.isNotEmpty()) {
     propsEl.appendChild(Ui.el("div", "section", "Events"))
     events.forEach { evName ->
-      val rowEl = Ui.el("div", "row")
-      val lab = Ui.el("label", "", evName)
-      lab.setAttribute("title", evName)
-      rowEl.appendChild(lab)
       // K3: a conditional event — `if (b.enabled) b::tap else null`.
       (node.props[evName] as? Conditional)?.let { c ->
         propsEl.appendChild(conditionalEventRow(node.id, evName, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() })
         return@forEach
       }
+      // E28: the action from the contract's list (with its signature), full width; never free text.
       val current = node.props[evName] as? Action
-      val nameIn = Ui.input()
-      nameIn.setAttribute("type", "text")
-      nameIn.setAttribute("placeholder", "action name")
-      nameIn.value = current?.name ?: ""
-      // P2: the action's single arg — "it" (event payload) or "item.field".
-      val argIn = Ui.input()
-      argIn.setAttribute("type", "text")
-      argIn.setAttribute("placeholder", "arg")
-      argIn.setAttribute("title", "arg: it (event payload) or item.field (inside a Repeat)")
-      argIn.setAttribute("style", "flex: 0 1 90px;")
-      argIn.value = current?.arg ?: ""
-      fun sendNow() {
-        val name = nameIn.value.trim()
-        val op = if (name.isEmpty()) {
-          DocOp.RemoveProp(Handle(node.id.toLong()), evName)
-        } else {
-          DocOp.SetProp(Handle(node.id.toLong()), evName, PropValue.Action(name, argIn.value.trim().ifEmpty { null }))
-        }
-        sendOps(listOf(op), refreshPanels = false)
-        renderBindings()
-      }
-      nameIn.addEventListener("input", { _ -> sendNow() })
-      argIn.addEventListener("input", { _ -> sendNow() })
-      rowEl.appendChild(nameIn)
-      rowEl.appendChild(argIn)
-      propsEl.appendChild(rowEl)
+      val slot = Ui.el("div", "token-picker")
+      val component = editTarget().component
+      propsEl.appendChild(
+        PropRow(evName).control(
+          eventControl(docContract, current, canDeclare = component == null, newSlot = slot) { name, arg ->
+            val op = if (name == null) {
+              DocOp.RemoveProp(Handle(node.id.toLong()), evName)
+            } else {
+              DocOp.SetProp(Handle(node.id.toLong()), evName, PropValue.Action(name, arg))
+            }
+            sendOps(listOf(op), refreshPanels = false)
+            renderBindings()
+          },
+        ).root,
+      )
+      propsEl.appendChild(slot)
     }
+  }
+}
+
+/** E27: the ops turning Condition [id]'s [cur] condition into `field`/`test`/`negate` — only what changed. */
+private fun conditionOps(id: Int, cur: dev.keliver.portal.Cond?, field: String, test: CondTest, negate: Boolean): List<DocOp> {
+  val h = Handle(id.toLong())
+  return buildList {
+    if (cur?.field != field) add(DocOp.SetProp(h, "field", lit(field)))
+    if (cur?.test != test) add(DocOp.SetProp(h, "test", lit(test.wire ?: "")))
+    if ((cur?.negate ?: false) != negate) add(DocOp.SetProp(h, "negate", lit(negate)))
   }
 }
 
@@ -2581,12 +2603,32 @@ private val BINDABLE = setOf(PropKind.Text, PropKind.Int, PropKind.Bool, PropKin
  * One editable property row; [keyPrefix] namespaces modifier props ("mod.X.").
  * K2: wrapped with the row's design-token picker (opened from the ◆ button).
  */
-private fun propRow(nodeId: Int, nodeType: String, props: Map<String, Any?>, name: String, kind: PropKind, label: String, keyPrefix: String): HTMLElement {
+private fun propRow(
+  nodeId: Int,
+  nodeType: String,
+  props: Map<String, Any?>,
+  name: String,
+  kind: PropKind,
+  label: String,
+  keyPrefix: String,
+  choices: List<PropChoice> = emptyList(),
+): HTMLElement {
   val wrap = Ui.el("div")
   val picker = Ui.el("div", "token-picker")
-  wrap.appendChild(propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker))
+  wrap.appendChild(propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker, choices))
   wrap.appendChild(picker)
   return wrap
+}
+
+/**
+ * E9: the canvas follows a typed value before it is committed — the open
+ * tree's copy changes, nothing is sent or written. The commit (or the next
+ * document) replaces it.
+ */
+private fun previewProp(nodeId: Int, key: String, value: Any?) {
+  val node = portalTree.value.findNode(nodeId) ?: return
+  portalTree.value = portalTree.value.updateProps(nodeId, node.props + (key to value))
+  Snapshot.sendApplyNotifications()
 }
 
 private fun propRowInner(
@@ -2598,25 +2640,26 @@ private fun propRowInner(
   label: String,
   keyPrefix: String,
   picker: HTMLElement,
+  choices: List<PropChoice>,
 ): HTMLElement {
   val key = keyPrefix + name
-  val rowEl = Ui.el("div", "row")
-  val lab = Ui.el("label", "", label)
-  lab.setAttribute("title", label)
-  rowEl.appendChild(lab)
+  // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
+  val bindable = kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name
 
   // K2: a prop bound to a design token shows the token (reference + value),
   // can switch token, or detach to the literal value.
   val token = props[key] as? Token
   if (token != null) {
-    rowEl.appendChild(tokenChip(token.ref, token.value, kind))
-    rowEl.appendChild(tokenButton(nodeId, nodeType, key, picker))
-    rowEl.appendChild(
-      Ui.button("detach", "btn icon") { sendOps(listOf(literalOp(nodeId, key, token.value))) }
-        .also { it.setAttribute("title", "replace ${token.ref} with its value (${token.value})") },
-    )
-    if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
-    return rowEl
+    val shown = if (kind == PropKind.Color && token.value is Int) argbHex(token.value as Int) else token.value.toString()
+    return PropRow(label)
+      .control(tokenChip(token.ref, token.value, kind))
+      .action(tokenButton(nodeId, nodeType, key, picker))
+      .action(
+        Ui.button("detach", "btn icon") { sendOps(listOf(literalOp(nodeId, key, token.value))) }
+          .also { it.setAttribute("title", "replace ${token.ref} with its value ($shown)") },
+      )
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
+      .root
   }
 
   // K3: a conditional value: its condition and both branches, each edited in place.
@@ -2626,89 +2669,105 @@ private fun propRowInner(
 
   // K7: an arithmetic value — read-only source; replaced whole by a value, or (@) a binding.
   if (isArithmeticValue(props[key])) {
-    rowEl.appendChild(arithmeticEditor(props[key]) { sendOps(listOf(arithmeticLiteralOp(nodeId, key, props[key]))) })
-    if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
-    return rowEl
+    return PropRow(label)
+      .control(arithmeticEditor(props[key]) { sendOps(listOf(arithmeticLiteralOp(nodeId, key, props[key]))) })
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
+      .root
   }
 
   // K4: a template — its text with {references}; an edit is validated before it is sent.
-  (props[key] as? Template)?.let { t -> return templateRow(rowEl, nodeId, key, t, picker) }
+  (props[key] as? Template)?.let { t -> return templateRow(PropRow(label), nodeId, key, t, picker) }
   // K4: an Int or String list — its elements, each a literal, a ◆token or an @binding.
   // A list bound as a whole (`options = b.options`) keeps the binding row below.
   if (editsAsList(kind, props[key]) && keyPrefix.isEmpty()) {
-    return listRow(rowEl, nodeId, key, props[key], kind, picker)
+    return listRow(PropRow(label), nodeId, key, props[key], kind, picker)
   }
 
-  // P3: bound props show a field-name input instead of a literal editor.
+  // P3: a bound prop shows its field. E12: another field is chosen from the
+  // contract (the picker), never typed — a typed name silently declared one.
   val bound = props[key] as? Bind
   if (bound != null) {
-    val fieldInput = Ui.input()
-    fieldInput.setAttribute("type", "text")
-    fieldInput.setAttribute("style", "border-color:var(--accent); color:var(--accent);")
-    fieldInput.value = bound.field
-    fieldInput.addEventListener("input", { _ ->
-      sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(fieldInput.value.trim()))), refreshPanels = false)
-      renderBindings()
-    })
-    rowEl.appendChild(fieldInput)
-    rowEl.appendChild(
-      Ui.button("@", "btn icon") {
-        sendOps(listOf(DocOp.RemoveProp(Handle(nodeId.toLong()), key))) // back to literal default
-      }.also { it.setAttribute("style", "border-color:var(--accent); color:var(--accent);") },
-    )
-    return rowEl
+    val chip = Ui.el("span", "pill bound", "@ ${bound.field}")
+    chip.setAttribute("title", "bound to ${bound.field}" + (docContract.fields[bound.field]?.let { ": $it" } ?: ""))
+    return PropRow(label)
+      .control(chip)
+      .action(bindButton(nodeId, key, kind, label, picker, current = bound.field, glyph = "⇄", title = "bind to another field"))
+      .action(
+        Ui.button("unbind", "btn icon") {
+          sendOps(listOf(DocOp.RemoveProp(Handle(nodeId.toLong()), key))) // back to literal default
+        }.also { it.setAttribute("title", "unbind (back to the literal default)") },
+      )
+      .root
   }
 
   // Text is a <textarea>: an <input type=text> strips newlines from its value,
   // so the first keystroke would join a multi-line text's lines, and a first
-  // line break could never be typed (U33).
+  // line break could never be typed (U33). E9: full width, growing with its text.
   if (kind == PropKind.Text) {
-    val text = props[key] as? String ?: ""
-    val area = Ui.textarea()
-    area.rows = text.lines().size.coerceIn(1, 6)
-    area.value = text
-    area.addEventListener("input", { _ -> editProp(nodeId, key, area.value) })
-    rowEl.appendChild(area)
-    tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
+    val area = textField(
+      props[key] as? String ?: "",
+      onPreview = { previewProp(nodeId, key, it) },
+      onCommit = { editProp(nodeId, key, it) },
+    )
+    val row = PropRow(label).control(area).action(tokenButtonIfAny(nodeId, nodeType, key, picker))
     if (keyPrefix.isEmpty()) {
-      rowEl.appendChild(bindButton(nodeId, key, name))
-      // K4: start a template — the text so far, then a binding named like the prop.
-      rowEl.appendChild(
-        Ui.button("{}", "btn icon") {
-          val parts = listOfNotNull(text.takeIf { it.isNotEmpty() }?.let { lit(it) }, PropValue.Bind(name))
-          sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Template(parts))))
-        }.also { it.setAttribute("title", "template: text with {bindings} and {◆tokens}") },
+      row.action(bindButton(nodeId, key, kind, label, picker))
+      // K4: start a template — the text so far, then a binding picked from the contract (E12).
+      // E48: "so far" is the field's text when the field is picked, typed or not.
+      row.action(
+        bindButton(nodeId, key, kind, label, picker, glyph = "{}", title = "template: this text, then a field of the contract") { field ->
+          clearPending(area)
+          startTemplate(area.value, field)
+        },
       )
     }
-    return rowEl
+    return row.root
+  }
+
+  // E8: an Int-coded prop (a layout enum, a KDoc-listed code) is a dropdown of its names.
+  if (kind == PropKind.Int && choices.isNotEmpty()) {
+    // A layout enum (`Constraint`, …) is no Int in source: a binding would not compile.
+    val enumBindable = bindable && propSourceType(nodeType, key, editorComponents) == "Int"
+    return PropRow(label, PropRow.Layout.Compact)
+      .control(choiceSelect(choices, props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v))) })
+      .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+      .action(if (enumBindable) bindButton(nodeId, key, kind, label, picker) else null)
+      .root
+  }
+
+  // E10: a colour — swatch, #AARRGGBB and opacity; the alpha byte survives every edit.
+  if (kind == PropKind.Color) {
+    return PropRow(label)
+      .control(colorControl(props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v)), refreshPanels = false) })
+      .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
+      .root
+  }
+
+  // E11: a number is validated as it is typed (K1: a Dp is never negative) and
+  // written once, valid, on Enter or leaving the field — never per keystroke.
+  if (kind == PropKind.Int || kind == PropKind.Double) {
+    val current: Number
+    if (kind == PropKind.Int) current = props[key] as? Int ?: 0 else current = props[key] as? Double ?: 0.0
+    return PropRow(label, PropRow.Layout.Compact)
+      .control(
+        numberField(
+          current, numberRule(nodeType, key, kind),
+          onPreview = { previewProp(nodeId, key, it) },
+          onCommit = { editProp(nodeId, key, it) },
+        ),
+      )
+      .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
+      .root
   }
 
   val input = Ui.input()
+  var layout = PropRow.Layout.Compact
   when (kind) {
-    PropKind.Text -> {
-      input.setAttribute("type", "text")
-      input.value = props[key] as? String ?: ""
-      input.addEventListener("input", { _ -> editProp(nodeId, key, input.value) })
-    }
-    PropKind.Int -> {
-      input.setAttribute("type", "number")
-      input.value = (props[key] as? Int ?: 0).toString()
-      input.addEventListener("input", { _ -> editProp(nodeId, key, input.value.toIntOrNull() ?: 0) })
-    }
-    PropKind.Double -> {
-      input.setAttribute("type", "number")
-      input.setAttribute("step", "0.1")
-      // K1: a Dp (Dp prop, Margin side, Dp modifier arg) is never negative —
-      // the document clamps it too, so input, canvas and saved file agree.
-      val nonNegative = isDpProp(nodeType, key)
-      if (nonNegative) input.setAttribute("min", "0")
-      input.value = (props[key] as? Double ?: 0.0).toString()
-      input.addEventListener("input", { _ ->
-        val v = input.value.toDoubleOrNull() ?: 0.0
-        editProp(nodeId, key, if (nonNegative) v.coerceAtLeast(0.0) else v)
-      })
-    }
+    PropKind.Text, PropKind.Color, PropKind.Int, PropKind.Double -> Unit // textField / colorControl / numberField, above
     PropKind.Bool -> {
+      layout = PropRow.Layout.Inline
       input.setAttribute("type", "checkbox")
       input.className = ""
       val fromWeight = if (nodeType == "StyledText" && key == "bold") boldFromWeight(props) else null
@@ -2722,40 +2781,38 @@ private fun propRowInner(
         input.addEventListener("change", { _ -> editProp(nodeId, key, input.checked) })
       }
     }
-    PropKind.Color -> {
-      input.setAttribute("type", "color")
-      input.setAttribute("style", "padding:1px; height:26px;")
-      input.value = argbToHex(props[key] as? Int ?: 0xFF000000.toInt())
-      input.addEventListener("input", { _ -> editProp(nodeId, key, hexToArgb(input.value)) })
-    }
     PropKind.IntList, PropKind.FloatList -> {
+      layout = PropRow.Layout.Stacked
       input.setAttribute("type", "text")
       input.setAttribute("disabled", "disabled")
       input.value = (props[key] as? List<*>)?.joinToString(", ") ?: "(list)"
     }
     PropKind.StringList -> {
-      // Editable string lists (Dropdown/SegmentedButton options): pipe-separated.
+      // Editable string lists (Dropdown/SegmentedButton options): pipe-separated, sent once committed.
+      layout = PropRow.Layout.Stacked
       input.setAttribute("type", "text")
       input.setAttribute("placeholder", "options: a|b|c")
-      input.value = (props[key] as? List<*>)?.joinToString("|") ?: ""
-      input.addEventListener("input", { _ ->
+      val shown = (props[key] as? List<*>)?.joinToString("|") ?: ""
+      input.value = shown
+      input.addEventListener("change", { _ ->
         val items = input.value.split('|').map { it.trim() }.filter { it.isNotEmpty() }
         sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Lit("ls", ls = items))), refreshPanels = false)
       })
+      commitKeys(input) { input.value = shown }
     }
   }
-  rowEl.appendChild(input)
-  tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
-  // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
-  if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
-  return rowEl
+  return PropRow(label, layout)
+    .control(input)
+    .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+    .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
+    .root
 }
 
 /** K4: the `/doc` features this editor decodes (an older relay ignores what it does not know). */
 private const val DOC_FEATURES = "tokens=1&conditionals=1&extendedConditions=1&templates=1&lists=1&arithmetic=1"
 
 /** K4: a template prop row — the template's text, and ◆ to insert a design token. */
-private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {
+private fun templateRow(row: PropRow, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {
   val (field, append) = refValueEditor(
     templateSource(t), multiline = true,
     placeholder = "text with {field}, {item.x}, {◆C.Name}; {{ and }} are braces",
@@ -2764,20 +2821,20 @@ private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Templat
     sendOps(listOf(valueOp(nodeId, key, v)), refreshPanels = false)
     renderBindings()
   }
-  rowEl.appendChild(field)
+  row.control(field)
   if (knownTokens(t).isNotEmpty()) {
-    rowEl.appendChild(
+    row.action(
       Ui.button("◆", "btn icon") {
         // A template reads String, Int and Boolean tokens — never a Double (the device prints 1.0 as "1").
         if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, ::templateTokenOffered) { ref -> append("{◆$ref}") }
       }.also { it.setAttribute("title", "insert a design token") },
     )
   }
-  return rowEl
+  return row.root
 }
 
 /** K4: an Int / String list prop row — its elements, and ◆ to add a design token of the element kind. */
-private fun listRow(rowEl: HTMLElement, nodeId: Int, key: String, value: Any?, kind: PropKind, picker: HTMLElement): HTMLElement {
+private fun listRow(row: PropRow, nodeId: Int, key: String, value: Any?, kind: PropKind, picker: HTMLElement): HTMLElement {
   val strings = kind == PropKind.StringList
   val (field, append) = refValueEditor(
     listSource(value, kind), multiline = false,
@@ -2787,18 +2844,18 @@ private fun listRow(rowEl: HTMLElement, nodeId: Int, key: String, value: Any?, k
     sendOps(listOf(valueOp(nodeId, key, v)), refreshPanels = false)
     renderBindings()
   }
-  rowEl.appendChild(field)
+  row.control(field)
   val fits = { t: EditorToken -> t.kind == if (strings) "String" else "Int" }
   if (editorTokens.any { !it.ambiguous && fits(it) }) {
-    rowEl.appendChild(
+    row.action(
       Ui.button("◆", "btn icon") {
         if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, fits, colours = true) { ref ->
-          append((if (listSource(value, kind).isEmpty() && (field as? HTMLInputElement)?.value.isNullOrBlank()) "" else if (strings) "|" else ", ") + "◆$ref")
+          append((if ((field as? HTMLInputElement)?.value.isNullOrBlank()) "" else if (strings) "|" else ", ") + "◆$ref")
         }
       }.also { it.setAttribute("title", "add a design token element") },
     )
   }
-  return rowEl
+  return row.root
 }
 
 /** K4: a searchable list of the tokens [fits] accepts; choosing one hands its reference to [onPick]. */
@@ -2839,15 +2896,11 @@ private fun renderInsertTokenPicker(picker: HTMLElement, fits: (EditorToken) -> 
 /** K2: a token's chip — a colour swatch for a colour, its reference, and its value. */
 private fun tokenChip(ref: String, value: Any?, kind: PropKind): HTMLElement {
   val chip = Ui.el("span", "pill")
-  chip.setAttribute("style", "flex:1; min-width:0; border-color:var(--accent); color:var(--text); overflow:hidden;")
+  chip.setAttribute("style", "flex:1; min-width:0; border-color:var(--accent); color:var(--text); overflow:hidden; white-space:nowrap;")
   chip.setAttribute("title", "$ref = $value")
-  if (kind == PropKind.Color && value is Int) {
-    val sw = Ui.el("span")
-    sw.setAttribute("style", "width:12px; height:12px; border-radius:3px; flex-shrink:0; border:1px solid var(--border); background:${argbToHex(value)};")
-    chip.appendChild(sw)
-  }
+  if (kind == PropKind.Color && value is Int) chip.appendChild(colorSwatch(value, 12))
   chip.appendChild(Ui.el("span", "", "◆ $ref"))
-  val shown = if (kind == PropKind.Color && value is Int) argbToHex(value) else value.toString()
+  val shown = if (kind == PropKind.Color && value is Int) argbHex(value) else value.toString()
   chip.appendChild(Ui.el("span", "muted", shown).also { it.setAttribute("style", "overflow:hidden; text-overflow:ellipsis; white-space:nowrap;") })
   return chip
 }
@@ -2871,11 +2924,7 @@ private fun renderTokenPicker(nodeId: Int, nodeType: String, key: String, picker
   search.setAttribute("style", "width:100%; margin-bottom:4px;")
   val list = Ui.el("div")
   list.setAttribute("style", "max-height:180px; overflow:auto;")
-  val kind = when (key.startsWith("mod.")) {
-    true -> modifierSpecs.firstOrNull { it.name == key.removePrefix("mod.").substringBefore('.') }
-      ?.props?.firstOrNull { it.name == key.removePrefix("mod.").substringAfter('.') }?.kind
-    false -> (editorComponents.spec(nodeType)?.props ?: editableProps(nodeType)).firstOrNull { it.name == key }?.kind
-  } ?: PropKind.Text
+  val kind = propKindOf(nodeType, key, editorComponents) ?: PropKind.Text
   fun fill() {
     Ui.clear(list)
     val fits = tokensFor(nodeType, key, editorComponents, query = search.value)
@@ -2904,16 +2953,44 @@ private fun renderTokenPicker(nodeId: Int, nodeType: String, key: String, picker
   search.focus()
 }
 
-private fun bindButton(nodeId: Int, key: String, name: String): HTMLElement =
-  Ui.button("@", "btn icon") {
-    sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(name))))
-  }
+/**
+ * E12: `@` opens the binding picker in [picker] — never a write by itself.
+ * Choosing a field binds [key] to it ([bind] builds the value, a plain
+ * binding by default); a new field is declared only on its explicit confirm.
+ */
+private fun bindButton(
+  nodeId: Int,
+  key: String,
+  kind: PropKind,
+  label: String,
+  picker: HTMLElement,
+  current: String? = null,
+  glyph: String = "@",
+  title: String = "bind to a field of the screen's contract",
+  bind: (String) -> PropValue = { PropValue.Bind(it) },
+): HTMLElement =
+  Ui.button(glyph, "btn icon") {
+    if (picker.firstChild != null) { Ui.clear(picker); return@button }
+    val component = editTarget().component
+    renderBindPicker(
+      picker, docContract, kotlinTypeOf(kind), suggest = label, current = current,
+      owner = component ?: "the screen's Bindings",
+      canDeclare = component == null,
+    ) { field, _ -> sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, bind(field)))) }
+  }.also { it.setAttribute("title", title) }
 
 private fun renderMods() {
+  flushPendingField()
   Ui.clear(modsEl)
   val node = selectedId?.let { portalTree.value.findNode(it) }
   if (node == null) {
     modsEl.appendChild(Ui.el("div", "muted", "—"))
+    return
+  }
+
+  // E27: a logic node (an `if`, an else branch, a Repeat) draws nothing — a modifier has nothing to apply to.
+  if (node.type == "Condition" || node.type == ELSE_TYPE || node.type == "Repeat") {
+    modsEl.appendChild(Ui.el("div", "muted", "${if (node.type == "Repeat") "A Repeat" else "A condition"} draws nothing itself: put modifiers on the widgets inside it."))
     return
   }
 
@@ -2952,7 +3029,7 @@ private fun renderMods() {
     head.appendChild(x)
     chip.appendChild(head)
     spec?.props?.forEach { p ->
-      chip.appendChild(propRow(node.id, node.type, node.props, p.name, p.kind, p.label, keyPrefix = "mod.$name."))
+      chip.appendChild(propRow(node.id, node.type, node.props, p.name, p.kind, p.label, keyPrefix = "mod.$name.", choices = p.choices))
     }
     modsEl.appendChild(chip)
   }
@@ -2984,9 +3061,9 @@ private fun renderMods() {
       } else {
         spec.props.associate { p ->
           "$name.${p.name}" to when {
-            // flex/grow/shrink weights start at 1; alignments at Start (0).
+            // flex/grow/shrink weights start at 1; a named code (an alignment) at its first.
             p.kind == PropKind.Double && p.name == "value" -> 1.0
-            p.kind == PropKind.Int && "Alignment" in spec.argTypes.joinToString() -> 0
+            p.choices.isNotEmpty() -> p.choices.first().value
             else -> when (p.kind) {
               PropKind.Int -> 8
               PropKind.Double -> 8.0
@@ -3048,5 +3125,3 @@ private fun literalOp(id: Int, name: String, value: Any?): DocOp =
     DocOp.SetProp(Handle(id.toLong()), name, lit(value))
   }
 
-private fun argbToHex(argb: Int): String = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')
-private fun hexToArgb(hex: String): Int = (0xFF shl 24) or (hex.removePrefix("#").toIntOrNull(16) ?: 0)

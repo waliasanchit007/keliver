@@ -77,7 +77,7 @@ export default [
       await page.click(tile.cx, tile.cy);
       ok(/^StatTile #\d+ · component$/.test(await editor.propsHeader() ?? ''), 'clicking the Visits tile selects that StatTile');
       equal((await editor.propField('Label'))?.value, 'Visits', "the StatTile's Label field shows its argument");
-      await editor.appendToField('Label', '!');
+      await editor.appendToField('Label', '!', { commit: true });
       await waitForFile(componentFile, (t) => t !== original, { message: 'the edit was never written to SummaryCard.kt' });
       const changes = changedSources(pristine, snapshot(fixtureDir));
       log(`write-back: ${JSON.stringify(changes)}`);
@@ -169,18 +169,18 @@ export default [
     async run({ page, editor, fixtureDir, log }) {
       await editor.open('overview', { readyColor: COLORS.summaryCard });
       const pristine = snapshot(fixtureDir);
-      // Inside CardTitle, binding Font size (@) would need a new parameter: a
-      // change to the component's signature, which every caller passes. Refused.
+      // Inside CardTitle, the StyledText's Text is bound to the `text` parameter;
+      // unbinding it would leave the required `text` argument out. Refused.
       await editor.clickOutlineRowOf('CardTitle', 'Recent sites');
       await page.press('Enter');
       await waitCrumbs(page, ['overview', 'CardTitle'], 'Enter on the selected CardTitle opens it');
       await editor.clickOutlineRowOf('StyledText');
       const at = await page.eval(`(() => {
-        const row = [...document.querySelectorAll('.pane.right .row')].find(r => r.querySelector('label')?.textContent === 'Font size');
-        const b = row && [...row.querySelectorAll('button')].find(b => b.textContent.trim() === '@');
+        const row = [...document.querySelectorAll('.pane.right .prop')].find(r => r.querySelector('.prop-label')?.textContent === 'Text');
+        const b = row && [...row.querySelectorAll('button')].find(b => b.textContent.trim() === 'unbind');
         if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
       })()`);
-      ok(at, 'the Font size row has a binding (@) button');
+      ok(at, 'the bound Text row has an unbind button');
       await page.click(at.x, at.y);
       await page.waitFor(`document.querySelector('.topbar .pill')?.textContent === 'Change refused'`,
         { timeout: 5000, message: 'the pill never said "Change refused"' });

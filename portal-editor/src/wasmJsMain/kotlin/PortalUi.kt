@@ -90,6 +90,47 @@ internal object Ui {
       text-overflow: ellipsis; white-space: nowrap; }
     .row .input, .row .select { flex: 1; min-width: 0; }
     textarea.input { resize: vertical; line-height: 1.35; }
+    .pane.right { container-type: inline-size; }
+    .prop { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "label actions" "ctl ctl";
+      align-items: center; column-gap: 6px; row-gap: 3px; margin: 7px 0; min-height: 24px; }
+    .prop > .prop-label { grid-area: label; color: var(--muted); min-width: 0; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .prop > .prop-ctl { grid-area: ctl; display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .prop > .prop-actions { grid-area: actions; display: flex; align-items: center; gap: 2px; }
+    .prop-ctl > .input, .prop-ctl > .select, .prop-ctl > .pill, .prop-ctl > .row { flex: 1; min-width: 0; width: 100%; }
+    .prop-ctl > .row { margin: 0; }
+    .prop-actions .btn.icon { min-width: 24px; height: 24px; padding: 0 5px; font-size: 12px; line-height: 1; }
+    .prop.inline { grid-template-columns: clamp(84px, 38%, 150px) minmax(0, 1fr) auto; grid-template-areas: "label ctl actions"; }
+    @container (min-width: 250px) {
+      .prop.compact { grid-template-columns: clamp(84px, 38%, 150px) minmax(0, 1fr) auto; grid-template-areas: "label ctl actions"; }
+    }
+    textarea.input.grow { resize: vertical; overflow-y: auto; min-height: 30px; max-height: 240px; white-space: pre-wrap; }
+    .ctl-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .color-ctl { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .swatch { display: inline-block; flex-shrink: 0; border-radius: 4px; border: 1px solid var(--border); box-sizing: border-box; }
+    .swatch-btn { position: relative; display: inline-flex; cursor: pointer; padding: 3px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
+    .swatch-btn:hover, .swatch-btn:focus-within { border-color: var(--accent); }
+    .swatch-picker { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; padding: 0; border: 0; }
+    .color-ctl .input.hex { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+    .color-ctl .input.alpha { width: 46px; flex: 0 0 46px; padding: 5px 4px; }
+    .color-ctl .unit { margin-left: -2px; }
+    .event-ctl { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .event-ctl .select, .event-ctl .input { width: 100%; }
+    .event-ctl .input[hidden] { display: none; }
+    .cond-editor { display: flex; gap: 4px; flex: 1; min-width: 0; flex-wrap: wrap; }
+    .cond-editor .select { flex: 1 1 90px; min-width: 0; }
+    .pill.bound { border-color: var(--accent); color: var(--accent); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+    .bind-picker { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 6px; }
+    .bind-list { max-height: 180px; overflow: auto; }
+    .bind-list .pal-row { cursor: pointer; }
+    .pal-row.selected { background: var(--sel); outline: 1px solid var(--accent); }
+    .bind-new { display: flex; flex-direction: column; gap: 4px; }
+    .bind-new[hidden] { display: none; }
+    .bind-preview { font-size: 11px; color: var(--good); word-break: break-all; }
+    .input.invalid, .select.invalid { border-color: var(--danger); }
+    .field-err { color: var(--danger); font-size: 11px; line-height: 1.3; }
+    .field-err:empty { display: none; }
     .tree-row { display: flex; align-items: center; padding: 3px 6px; border-radius: 5px;
       cursor: pointer; white-space: nowrap; user-select: none; }
     .tree-row:hover { background: var(--sel); }

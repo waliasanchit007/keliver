@@ -39,9 +39,9 @@ export default [
       log(`fresh: ${JSON.stringify(b)}`);
       ok(/0 steps/.test(b.undo.title) && /0 steps/.test(b.redo.title), `their titles say 0 steps (${b.undo.title} / ${b.redo.title})`);
 
-      // One edit (a key typed into the title's Text field) enables Undo, with one step.
+      // One edit (a key typed into the title's Text field, committed with Enter) enables Undo, with one step.
       await editor.clickOutlineRowOf('StyledText', 'Logbook');
-      await editor.appendToField('Text', '!');
+      await editor.appendToField('Text', '!', { commit: true });
       await waitForFile(file, (t) => t.includes('"Logbook!"'), { message: 'the edit was never written' });
       b = await waitButtons(editor, { undo: false, redo: true }, 'after one edit Undo is enabled and Redo is not');
       ok(/\b1 step\b/.test(b.undo.title), `Undo's title counts one step (${b.undo.title})`);
@@ -71,10 +71,12 @@ export default [
       const original = fs.readFileSync(file, 'utf8');
       await editor.clickOutlineRowOf('StyledText', 'Synced this morning');
       const before = await editor.appendToField('Text', 'XY');
-      await waitForFile(file, (t) => t.includes('"Synced this morningXY"'), { message: 'the typed text was never written' });
       const focused = () => page.eval(`(() => { const e = document.activeElement;
         return e && /^(INPUT|TEXTAREA)$/.test(e.tagName) ? e.value : null; })()`);
       equal(await focused(), `${before}XY`, 'the Text field has focus and the typed text');
+      // E11: typing is not written; the edit is written once, when committed.
+      await sleep(600);
+      await expectBytes(file, original, 'typing in the Text field wrote to overview.kt before the edit was committed');
 
       await page.undoKey();
       await sleep(300);
@@ -123,6 +125,7 @@ export default [
       await page.press('Backspace');
       await page.press('Backspace');
       await page.type('2');
+      await page.press('Enter'); // E11: a number is written once, when committed
       const edited = await waitForFile(file, (t) => t.includes('maxLines = 2'), { message: 'maxLines was never written' });
       log(`maxLines: ${JSON.stringify(changedSources(pristine, snapshot(fixtureDir)))}`);
       ok(edited.includes('maxLines = 2'), 'the new argument is in the file');
