@@ -7,12 +7,18 @@
  *   tree (MutableState) --RenderNode--> guest composition --protocol--> host (canvas)
  *   edit the tree --recompose--> minimal changes --> live preview update
  */
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.BroadcastFrameClock
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -20,12 +26,12 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
+import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.portal.onDependencyCycle
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
 import dev.keliver.portal.render.resolvePersona
 import dev.keliver.portal.render.validatePersonaCatalog
-import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
@@ -40,8 +46,8 @@ import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
 import dev.keliver.widget.compose.ComposeWidgetChildren
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +64,24 @@ private val JSON = Json { ignoreUnknownKeys = true }
  * handle, so clicking any row selects the template (the editable thing).
  */
 private val UNRENDERED_TYPES = setOf("Repeat", "Condition", dev.keliver.portal.ELSE_TYPE, "RawCode")
+
+/** Widgets that scroll vertically on their own; the canvas must not wrap them in another scroller. */
+private val VERTICAL_SCROLLERS = setOf("ScrollableColumn", "LazyVerticalGrid", "VerticalPager")
+
+/**
+ * Whether [n] (with the bodies of the project components it uses) scrolls
+ * vertically by itself: a vertical scroller, or a Column with overflow Scroll.
+ */
+internal fun screenScrollsItself(
+  n: dev.keliver.portal.WidgetNode,
+  seen: MutableSet<String> = mutableSetOf(),
+): Boolean {
+  if (n.type in VERTICAL_SCROLLERS) return true
+  if (n.type == "Column" && (n.props["overflow"] as? Number)?.toInt() == 1) return true
+  val body = editorComponents.spec(n.type)?.body
+  if (body != null && seen.add(n.type) && screenScrollsItself(body, seen)) return true
+  return n.children.any { screenScrollsItself(it, seen) }
+}
 
 internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
   val tagged = if (n.type in UNRENDERED_TYPES) n
@@ -235,7 +259,16 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
     // The DOM chrome (mountPortalChrome) drives edits to portalTree; the canvas
     // just shows the live preview. K5: inside the app's host wrapper (its
     // MaterialTheme), as the native host does on a device.
+    // The canvas scrolls like the phone: a screen taller than the frame scrolls
+    // (wheel, trackpad), as the app's route scrolls it on a device. A screen
+    // that scrolls itself keeps its own scrolling: a vertical scroller measured
+    // inside another one fails.
     val hostWrapper = entry.hostWrapper
-    if (hostWrapper != null) hostWrapper.Wrap { root.Render() } else root.Render()
+    val canvasScroll = rememberScrollState()
+    val scrollsItself = screenScrollsItself(portalTree.value)
+    val content: @Composable () -> Unit = {
+      Box(if (scrollsItself) Modifier.fillMaxSize() else Modifier.fillMaxSize().verticalScroll(canvasScroll)) { root.Render() }
+    }
+    if (hostWrapper != null) hostWrapper.Wrap { content() } else content()
   }
 }
