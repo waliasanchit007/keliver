@@ -85,6 +85,8 @@ internal object Ui {
     .tree-row.droptarget { outline: 1px dashed var(--accent); }
     .tree-row.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
     .tree-row.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+    .drop-line { position: absolute; z-index: 6; pointer-events: none; background: #4f8cff; border-radius: 2px; }
+    .drop-line.inside { background: rgba(79,140,255,.12); border: 2px dashed #4f8cff; box-sizing: border-box; }
     .tree-row .twisty { width: 12px; flex-shrink: 0; color: var(--muted); font-size: 10px; text-align: center; cursor: pointer; }
     .inline-edit { position: absolute; z-index: 7; box-sizing: border-box; resize: none; font: inherit; font-size: 14px;
       padding: 2px 4px; border: 2px solid #4f8cff; border-radius: 3px; background: #fff; color: #111; outline: none; }
