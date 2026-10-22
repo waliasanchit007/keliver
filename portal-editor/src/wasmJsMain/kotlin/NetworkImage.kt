@@ -96,6 +96,22 @@ internal object ImageLoadFailures {
   internal fun clear() = byHost.clear()
 }
 
+/** [url]'s body, or null when it cannot be fetched (no relay, a non-2xx answer). */
+internal suspend fun fetchBytes(url: String): ByteArray? = try {
+  val response: Response = kotlinx.browser.window.fetch(url).await()
+  if (!response.ok) {
+    null
+  } else {
+    val arrayBuffer: ArrayBuffer = response.arrayBuffer().await()
+    val view = Int8Array(arrayBuffer)
+    ByteArray(view.length) { view[it] }
+  }
+} catch (e: CancellationException) {
+  throw e
+} catch (e: Throwable) {
+  null
+}
+
 /** The host of an http(s) URL (null for anything else). */
 internal fun imageHost(url: String): String? =
   Regex("^https?://([^/:?#]+)", RegexOption.IGNORE_CASE).find(url)?.groupValues?.get(1)?.lowercase()

@@ -2038,7 +2038,7 @@ private fun fetchComponents(then: (() -> Unit)? = null) {
     setEditorComponents(parseComponents(txt))
     if (txt != componentsJsonSeen) {
       componentsJsonSeen = txt
-      componentsGeneration.value++ // the canvas redraws every instance from the new definitions
+      canvasGeneration.value++ // the canvas redraws every instance from the new definitions
       Snapshot.sendApplyNotifications() // the guest composition sees state changes only once applied
     }
     renderPalette(paletteFilter)
