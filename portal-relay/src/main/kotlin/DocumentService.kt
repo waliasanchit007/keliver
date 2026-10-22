@@ -47,6 +47,8 @@ class DocumentService(
   private val tokenFileId: String = kotlinFile.name,
   /** K2: the project's token-table version, sent with every change event (editors refresh their picker). */
   private val tokensVersion: () -> Long = { 0L },
+  /** E14: the document is a component's body ([kotlinFile] is its file), not a screen ([forComponent]). */
+  private val asComponent: Boolean = false,
 ) {
   @Volatile var doc: UiDocument = initial
     private set
@@ -339,6 +341,7 @@ class DocumentService(
       when (val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
         onDisk = file, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
         fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
+        asComponent = asComponent,
       )) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> plan.reason
         else -> null
@@ -549,7 +552,7 @@ class DocumentService(
     if (!kotlinFile.isFile) return true
     // Unreadable for a moment (an IDE's atomic save): not done, the caller retries.
     val text = fileTextOrNull() ?: return false
-    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
+    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens(), asComponent)
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
     if (next.root != doc.root || next.contract != doc.contract) {
@@ -582,7 +585,7 @@ class DocumentService(
     if (text == fileText) return FileChange.ALREADY_READ
     // C1: recognize with the project's component registry so component calls
     // become editable Widget nodes instead of RawCode.
-    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
+    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens(), asComponent)
       ?: return FileChange.NOT_A_SCREEN
     acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, recognized), text = text)
     return FileChange.INGESTED
@@ -633,6 +636,7 @@ class DocumentService(
       val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
         onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
         fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
+        asComponent = asComponent,
       )
       when (plan) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> {
@@ -732,7 +736,7 @@ class DocumentService(
     if (fileDoc !== base) return null // already read meanwhile
     val text = if (kotlinFile.exists()) kotlinFile.readText() else null
     val rec = text?.let {
-      runCatching { dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, it, components(), tokens()) }.getOrNull()
+      runCatching { dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, it, components(), tokens(), asComponent) }.getOrNull()
     } ?: return WriteBackStatus(
       doc.version, "refused",
       "this change could not be written to ${kotlinFile.name}: $reason, and it does not read as a screen; it is left as it is",
@@ -746,6 +750,42 @@ class DocumentService(
 
   companion object {
     private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
+
+    /**
+     * E14: a component's document, read from its file (a component is never
+     * created from a tree, and its file is never rewritten whole). Null when
+     * the component's body cannot be read as a document.
+     */
+    fun forComponent(
+      key: String,
+      kotlinFile: File,
+      functionName: String,
+      components: () -> dev.keliver.portal.ComponentRegistry,
+      tokens: () -> TokenTable,
+      tokenFileId: String,
+      tokensVersion: () -> Long,
+      onChanged: () -> Unit = {},
+    ): DocumentService? {
+      val text = kotlinFile.takeIf { it.isFile }?.readText() ?: return null
+      val rec = runCatching {
+        dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens(), asComponent = true)
+      }.getOrNull() ?: return null
+      val (root, next) = renumbered(rec.root)
+      val doc = UiDocument(key, root, rec.contract, version = 0, nextHandle = next)
+      return DocumentService(
+        key, doc, { onChanged() }, kotlinFile, functionName, null, components, tokens, tokenFileId, tokensVersion, asComponent = true,
+      ).also { it.fileDoc = doc; it.fileText = text; it.readText = text }
+    }
+
+    /** [root] with handles 1, 2, 3… in document order, and the next free handle. */
+    private fun renumbered(root: DocNode): Pair<DocNode, Long> {
+      var next = 1L
+      fun renumber(n: DocNode): DocNode = when (n) {
+        is DocNode.RawCode -> n.copy(handle = Handle(next++))
+        is DocNode.Widget -> n.copy(handle = Handle(next++), children = n.children.map { renumber(it) })
+      }
+      return renumber(root) to next
+    }
 
     /** M6: the canonical .kt file bootstraps the document when it exists (file = truth). */
     fun fromFileOrTree(

@@ -139,7 +139,14 @@ object NodeEmitter {
     val out = StringBuilder(text)
     for (ref in refs.sortedByDescending { it.textRange.startOffset }) {
       val at = ref.textRange.startOffset - base
-      out.replace(at, at + 1, param)
+      // E14: a component's parameters are read by their bare names — `b.title` is `title`, `b::onTap` is `onTap`.
+      if (param == COMPONENT_PARAMS) {
+        val p = ref.parent
+        val sep = if (p is KtCallableReferenceExpression) "::" else "."
+        out.replace(at, at + 1 + sep.length, "")
+      } else {
+        out.replace(at, at + 1, param)
+      }
     }
     return out.toString()
   }

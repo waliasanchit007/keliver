@@ -24,6 +24,13 @@ import org.jetbrains.kotlin.psi.KtUserType
 internal const val UNKNOWN_TYPE = "<unknown>"
 
 /**
+ * E14: the bindings parameter of a component's document — none: the body
+ * reads its parameters by their bare names (`title`, `onClick`), so write-back
+ * spells a field or an action without a receiver.
+ */
+internal const val COMPONENT_PARAMS = ""
+
+/**
  * The declared member types of a class or interface: each property (and
  * `val`/`var` constructor parameter) → its type text, or [UNKNOWN_TYPE]
  * when it declares none. [outside] names a supertype not declared in the

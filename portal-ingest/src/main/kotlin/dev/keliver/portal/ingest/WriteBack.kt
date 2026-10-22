@@ -41,7 +41,8 @@ object WriteBack {
     tokens: TokenTable = TokenTable.EMPTY,
     fileName: String = "Screen.kt",
     base: UiDocument? = null,
-  ): String? = (attempt(fileText, target, components, tokens, fileName, base) as? Outcome.Merged)?.text
+    asComponent: Boolean = false,
+  ): String? = (attempt(fileText, target, components, tokens, fileName, base, asComponent) as? Outcome.Merged)?.text
 
   fun attempt(
     fileText: String,
@@ -62,10 +63,12 @@ object WriteBack {
      * never merges without a base ([ScreenWriter.plan] re-reads the file).
      */
     base: UiDocument? = null,
+    /** E14: [fileText]'s component is the document (its parameters read by bare name), not a screen. */
+    asComponent: Boolean = false,
   ): Outcome {
     fun no(reason: String) = Outcome.NotSurgical(reason)
-    val rec = Recognizer.recognize(fileName, fileText, components, tokens)
-      ?: return no("the file has no @Composable screen function the editor can read")
+    val rec = Recognizer.recognize(fileName, fileText, components, tokens, asComponent)
+      ?: return no("the file has no @Composable ${if (asComponent) "component" else "screen"} function the editor can read")
     val file = rec.file ?: return no("the file could not be parsed")
     val factory = PsiEnv.factory
     // The text before the splices edit the PSI in place (file.text is the edited text after them).
@@ -116,7 +119,7 @@ object WriteBack {
     val out = pruneImports(parsedText, ensureImports(file.text, written)).let { afterSpliceForTest.get()?.invoke(it) ?: it }
     // Safety net (K3 review): the surgical text is written only when it reads
     // back as the target — one more parse per write.
-    val back = runCatching { Recognizer.recognize(fileName, out, components, tokens) }.getOrNull()
+    val back = runCatching { Recognizer.recognize(fileName, out, components, tokens, asComponent) }.getOrNull()
       ?: return no("the edited file would no longer read as a screen")
     if (!sameTree(back.root, targetRoot)) {
       val diff = firstDifference(back.root, targetRoot) ?: "it reads back differently"
@@ -273,7 +276,7 @@ object WriteBack {
    */
   private fun condText(c: dev.keliver.portal.Cond): String {
     val param = bindings.get() ?: "b"
-    return c.kotlin { if ('.' in it) it else "$param.$it" }
+    return c.kotlin { if ('.' in it || param == COMPONENT_PARAMS) it else "$param.$it" }
   }
 
   /**
@@ -282,7 +285,7 @@ object WriteBack {
    * is, a design token by its reference; null for anything else.
    */
   private fun refText(v: PropValue): String? = when (v) {
-    is PropValue.Bind -> if ('.' in v.field) v.field else "${bindings.get() ?: "b"}.${v.field}"
+    is PropValue.Bind -> (bindings.get() ?: "b").let { p -> if ('.' in v.field || p == COMPONENT_PARAMS) v.field else "$p.${v.field}" }
     is PropValue.Token -> v.ref
     else -> null
   }

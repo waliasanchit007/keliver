@@ -52,6 +52,16 @@ internal object Ui {
     .canvas-toolbar .zoom-level { min-width: 42px; text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
     .canvas-hint { position: fixed; top: 92px; left: calc(var(--left-w) + 12px); z-index: 22; max-width: 340px;
       padding: 6px 10px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--warn); color: var(--text); }
+    .crumbs { position: fixed; top: 54px; right: calc(var(--right-w) + 12px); z-index: 22; display: none;
+      align-items: center; gap: 2px; padding: 3px; background: var(--panel); border: 1px solid var(--accent2);
+      border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 46vw; overflow: hidden; }
+    .crumbs .crumb { background: transparent; color: var(--muted); border: 0; border-radius: 6px; padding: 3px 8px;
+      cursor: pointer; font: inherit; white-space: nowrap; }
+    .crumbs .crumb:hover { color: var(--text); background: var(--panel2); }
+    .crumbs .crumb.here { color: var(--text); font-weight: 600; cursor: default; }
+    .crumbs .crumb.done { color: #fff; background: var(--accent2); margin-left: 6px; }
+    .crumbs .crumb-sep { color: var(--muted); }
+    body.editing-component .frame { box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 0 2px var(--accent2); }
     .sel-overlay.flash { animation: sel-flash .9s ease-out; }
     @keyframes sel-flash { 0% { box-shadow: 0 0 0 6px rgba(79,140,255,.55); } 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0); } }
     .frame { background: #ffffff; border-radius: 18px; overflow: hidden;

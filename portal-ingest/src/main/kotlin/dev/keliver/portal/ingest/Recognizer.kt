@@ -118,6 +118,10 @@ data class RecognizedComponent(
   val functionName: String,
   val psiByHandle: Map<Long, KtExpression> = emptyMap(),
   val file: KtFile? = null,
+  /** E14: the file's tokens and conditions as the body reads them — for [Recognizer.recognize] `asComponent`. */
+  internal val tokenLookup: TokenLookup? = null,
+  internal val condParser: CondParser? = null,
+  internal val rawReasons: List<String> = emptyList(),
 )
 
 object Recognizer {
@@ -132,7 +136,10 @@ object Recognizer {
     source: String,
     components: ComponentRegistry = EmptyComponentRegistry,
     tokens: TokenTable = TokenTable.EMPTY,
+    /** E14: read the file's component (its first `@Composable`) as a document, not a screen ([componentDocument]). */
+    asComponent: Boolean = false,
   ): Recognized? {
+    if (asComponent) return componentDocument(fileName, source, components, tokens)
     val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
     val fn = screenFunction(file) ?: return null
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
@@ -178,6 +185,34 @@ object Recognizer {
         (CondReader(screenCtx, lookup, { f -> if ('.' in f) null else screenCtx.fieldTypes[f] ?: screenCtx.undeclared }).read(t) as? CondRead.Ok)?.cond
       },
       bindingsParam, walk.rawReasons.toList(),
+    )
+  }
+
+  /**
+   * E14: a component's body as a document the editor edits as it edits a
+   * screen's. Its parameters are the contract — value parameters as fields,
+   * event parameters as actions — and the body reads them by their bare names
+   * (the document's bindings parameter is [COMPONENT_PARAMS]). Null when the
+   * body cannot be read (no block body, a signature the portal does not
+   * support): such a component is edited in code.
+   */
+  private fun componentDocument(
+    fileName: String,
+    source: String,
+    components: ComponentRegistry,
+    tokens: TokenTable,
+  ): Recognized? {
+    val rc = recognizeComponent(fileName, source, components, tokens) ?: return null
+    val root = rc.root ?: return null
+    val spec = rc.spec
+    val contract = Contract(
+      fields = spec.props.associate { it.name to (spec.paramTypes[it.name] ?: UNKNOWN_TYPE) },
+      actions = spec.events.map { it.name },
+      actionParams = spec.events.mapNotNull { e -> e.paramType?.let { e.name to it } }.toMap(),
+    )
+    return Recognized(
+      root, contract, rc.functionName, rc.psiByHandle, rc.file, null, rc.tokenLookup, rc.condParser,
+      COMPONENT_PARAMS, rc.rawReasons,
     )
   }
 
@@ -297,12 +332,13 @@ object Recognizer {
       )
     }
     val acceptsModifier = paramTypes["modifier"]?.let(::isModifierType) == true
+    val ctx = NameCtx.Component(
+      valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
+      modifierParam = acceptsModifier,
+      paramTypes = paramTypes,
+    )
     val walk = Walker(
-      NameCtx.Component(
-        valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
-        modifierParam = acceptsModifier,
-        paramTypes = paramTypes,
-      ),
+      ctx,
       components,
       lookup,
       typeDecls(file),
@@ -335,7 +371,7 @@ object Recognizer {
       diagnostic = invalidSlotUse ?: if (hasRaw) rawDiagnostic else null,
       packageName = pkg,
     )
-    return RecognizedComponent(spec, root, name, walk.psiByHandle, file)
+    return RecognizedComponent(spec, root, name, walk.psiByHandle, file, lookup, walk.condParser(), walk.rawReasons.toList())
   }
 
   private fun containsRawCode(n: DocNode): Boolean = when (n) {
@@ -415,6 +451,9 @@ object Recognizer {
         is CondRead.Ok -> r.cond
         is CondRead.No -> null.also { condWhy = r.why }
       }
+
+    /** E14: conditions as this body reads them (its parameters and locals) — for write-back. */
+    fun condParser(): CondParser = CondParser { t -> cond(t, emptySet()) }
 
     private fun reader(readOnly: Set<String> = emptySet(), known: Map<String, Cond> = locals) =
       CondReader(ctx, tokens, { f -> declaredType(PropValue.Bind(f)) }, known, pendingLocals, readOnly)
