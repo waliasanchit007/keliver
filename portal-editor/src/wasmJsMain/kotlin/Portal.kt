@@ -36,6 +36,7 @@ import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.editableProps
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
+import dev.keliver.portal.updateProps
 import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
@@ -2365,6 +2366,7 @@ private fun handleDrop(payload: String?, targetId: Int, zone: DropZone = DropZon
 }
 
 private fun renderProps() {
+  flushPendingField() // a focused field removed below would lose its typed edit
   Ui.clear(propsEl)
   val node = selectedId?.let { portalTree.value.findNode(it) }
   if (node == null) {
@@ -2600,6 +2602,17 @@ private fun propRow(
   return wrap
 }
 
+/**
+ * E9: the canvas follows a typed value before it is committed — the open
+ * tree's copy changes, nothing is sent or written. The commit (or the next
+ * document) replaces it.
+ */
+private fun previewProp(nodeId: Int, key: String, value: Any?) {
+  val node = portalTree.value.findNode(nodeId) ?: return
+  portalTree.value = portalTree.value.updateProps(nodeId, node.props + (key to value))
+  Snapshot.sendApplyNotifications()
+}
+
 private fun propRowInner(
   nodeId: Int,
   nodeType: String,
@@ -2612,23 +2625,23 @@ private fun propRowInner(
   choices: List<PropChoice>,
 ): HTMLElement {
   val key = keyPrefix + name
-  val rowEl = Ui.el("div", "row")
-  val lab = Ui.el("label", "", label)
-  lab.setAttribute("title", label)
-  rowEl.appendChild(lab)
+  // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
+  val bindable = kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name
 
   // K2: a prop bound to a design token shows the token (reference + value),
   // can switch token, or detach to the literal value.
   val token = props[key] as? Token
   if (token != null) {
     val shown = if (kind == PropKind.Color && token.value is Int) argbHex(token.value as Int) else token.value.toString()
-    return stackedRow(
-      rowEl, tokenChip(token.ref, token.value, kind),
-      tokenButton(nodeId, nodeType, key, picker),
-      Ui.button("detach", "btn icon") { sendOps(listOf(literalOp(nodeId, key, token.value))) }
-        .also { it.setAttribute("title", "replace ${token.ref} with its value ($shown)") },
-      if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) bindButton(nodeId, key, name) else null,
-    )
+    return PropRow(label)
+      .control(tokenChip(token.ref, token.value, kind))
+      .action(tokenButton(nodeId, nodeType, key, picker))
+      .action(
+        Ui.button("detach", "btn icon") { sendOps(listOf(literalOp(nodeId, key, token.value))) }
+          .also { it.setAttribute("title", "replace ${token.ref} with its value ($shown)") },
+      )
+      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .root
   }
 
   // K3: a conditional value: its condition and both branches, each edited in place.
@@ -2638,17 +2651,18 @@ private fun propRowInner(
 
   // K7: an arithmetic value — read-only source; replaced whole by a value, or (@) a binding.
   if (isArithmeticValue(props[key])) {
-    rowEl.appendChild(arithmeticEditor(props[key]) { sendOps(listOf(arithmeticLiteralOp(nodeId, key, props[key]))) })
-    if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
-    return rowEl
+    return PropRow(label)
+      .control(arithmeticEditor(props[key]) { sendOps(listOf(arithmeticLiteralOp(nodeId, key, props[key]))) })
+      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .root
   }
 
   // K4: a template — its text with {references}; an edit is validated before it is sent.
-  (props[key] as? Template)?.let { t -> return templateRow(rowEl, nodeId, key, t, picker) }
+  (props[key] as? Template)?.let { t -> return templateRow(PropRow(label), nodeId, key, t, picker) }
   // K4: an Int or String list — its elements, each a literal, a ◆token or an @binding.
   // A list bound as a whole (`options = b.options`) keeps the binding row below.
   if (editsAsList(kind, props[key]) && keyPrefix.isEmpty()) {
-    return listRow(rowEl, nodeId, key, props[key], kind, picker)
+    return listRow(PropRow(label), nodeId, key, props[key], kind, picker)
   }
 
   // P3: bound props show a field-name input instead of a literal editor.
@@ -2658,70 +2672,72 @@ private fun propRowInner(
     fieldInput.setAttribute("type", "text")
     fieldInput.setAttribute("style", "border-color:var(--accent); color:var(--accent);")
     fieldInput.value = bound.field
-    fieldInput.addEventListener("input", { _ ->
-      sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(fieldInput.value.trim()))), refreshPanels = false)
-      renderBindings()
+    fieldInput.addEventListener("change", { _ ->
+      val f = fieldInput.value.trim()
+      if (f.isNotEmpty() && f != bound.field) {
+        sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(f))), refreshPanels = false)
+        renderBindings()
+      }
     })
-    rowEl.appendChild(fieldInput)
-    rowEl.appendChild(
-      Ui.button("@", "btn icon") {
-        sendOps(listOf(DocOp.RemoveProp(Handle(nodeId.toLong()), key))) // back to literal default
-      }.also { it.setAttribute("style", "border-color:var(--accent); color:var(--accent);") },
-    )
-    return rowEl
+    commitKeys(fieldInput) { fieldInput.value = bound.field }
+    return PropRow(label)
+      .control(fieldInput)
+      .action(
+        Ui.button("@", "btn icon") {
+          sendOps(listOf(DocOp.RemoveProp(Handle(nodeId.toLong()), key))) // back to literal default
+        }.also { it.setAttribute("style", "border-color:var(--accent); color:var(--accent);"); it.setAttribute("title", "unbind (back to the literal default)") },
+      )
+      .root
   }
 
   // Text is a <textarea>: an <input type=text> strips newlines from its value,
   // so the first keystroke would join a multi-line text's lines, and a first
-  // line break could never be typed (U33).
+  // line break could never be typed (U33). E9: full width, growing with its text.
   if (kind == PropKind.Text) {
-    val text = props[key] as? String ?: ""
-    val area = Ui.textarea()
-    area.rows = text.lines().size.coerceIn(1, 6)
-    area.value = text
-    area.addEventListener("input", { _ -> editProp(nodeId, key, area.value) })
-    rowEl.appendChild(area)
-    tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
+    val area = textField(
+      props[key] as? String ?: "",
+      onPreview = { previewProp(nodeId, key, it) },
+      onCommit = { editProp(nodeId, key, it) },
+    )
+    val row = PropRow(label).control(area).action(tokenButtonIfAny(nodeId, nodeType, key, picker))
     if (keyPrefix.isEmpty()) {
-      rowEl.appendChild(bindButton(nodeId, key, name))
+      row.action(bindButton(nodeId, key, name))
       // K4: start a template — the text so far, then a binding named like the prop.
-      rowEl.appendChild(
+      // E48: "so far" is the field's text now, typed or not, never the text it was rendered with.
+      row.action(
         Ui.button("{}", "btn icon") {
-          val parts = listOfNotNull(text.takeIf { it.isNotEmpty() }?.let { lit(it) }, PropValue.Bind(name))
-          sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Template(parts))))
+          clearPending(area)
+          sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, startTemplate(area.value, name))))
         }.also { it.setAttribute("title", "template: text with {bindings} and {◆tokens}") },
       )
     }
-    return rowEl
+    return row.root
   }
 
   // E8: an Int-coded prop (a layout enum, a KDoc-listed code) is a dropdown of its names.
   if (kind == PropKind.Int && choices.isNotEmpty()) {
-    rowEl.appendChild(choiceSelect(choices, props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v))) })
-    tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
     // A layout enum (`Constraint`, …) is no Int in source: a binding would not compile.
-    if (keyPrefix.isEmpty() && '.' !in name && propSourceType(nodeType, key, editorComponents) == "Int") {
-      rowEl.appendChild(bindButton(nodeId, key, name))
-    }
-    return rowEl
+    val enumBindable = bindable && propSourceType(nodeType, key, editorComponents) == "Int"
+    return PropRow(label, PropRow.Layout.Compact)
+      .control(choiceSelect(choices, props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v))) })
+      .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+      .action(if (enumBindable) bindButton(nodeId, key, name) else null)
+      .root
   }
 
   // E10: a colour — swatch, #AARRGGBB and opacity; the alpha byte survives every edit.
   if (kind == PropKind.Color) {
-    return stackedRow(
-      rowEl, colorControl(props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v)), refreshPanels = false) },
-      tokenButtonIfAny(nodeId, nodeType, key, picker),
-      if (keyPrefix.isEmpty() && '.' !in name) bindButton(nodeId, key, name) else null,
-    )
+    return PropRow(label)
+      .control(colorControl(props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v)), refreshPanels = false) })
+      .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .root
   }
 
   val input = Ui.input()
+  var layout = PropRow.Layout.Compact
   when (kind) {
-    PropKind.Text -> {
-      input.setAttribute("type", "text")
-      input.value = props[key] as? String ?: ""
-      input.addEventListener("input", { _ -> editProp(nodeId, key, input.value) })
-    }
+    PropKind.Text, PropKind.Color -> Unit // textField / colorControl, above
     PropKind.Int -> {
       input.setAttribute("type", "number")
       input.value = (props[key] as? Int ?: 0).toString()
@@ -2741,6 +2757,7 @@ private fun propRowInner(
       })
     }
     PropKind.Bool -> {
+      layout = PropRow.Layout.Inline
       input.setAttribute("type", "checkbox")
       input.className = ""
       val fromWeight = if (nodeType == "StyledText" && key == "bold") boldFromWeight(props) else null
@@ -2754,50 +2771,38 @@ private fun propRowInner(
         input.addEventListener("change", { _ -> editProp(nodeId, key, input.checked) })
       }
     }
-    PropKind.Color -> Unit // colorControl, above
     PropKind.IntList, PropKind.FloatList -> {
+      layout = PropRow.Layout.Stacked
       input.setAttribute("type", "text")
       input.setAttribute("disabled", "disabled")
       input.value = (props[key] as? List<*>)?.joinToString(", ") ?: "(list)"
     }
     PropKind.StringList -> {
-      // Editable string lists (Dropdown/SegmentedButton options): pipe-separated.
+      // Editable string lists (Dropdown/SegmentedButton options): pipe-separated, sent once committed.
+      layout = PropRow.Layout.Stacked
       input.setAttribute("type", "text")
       input.setAttribute("placeholder", "options: a|b|c")
-      input.value = (props[key] as? List<*>)?.joinToString("|") ?: ""
-      input.addEventListener("input", { _ ->
+      val shown = (props[key] as? List<*>)?.joinToString("|") ?: ""
+      input.value = shown
+      input.addEventListener("change", { _ ->
         val items = input.value.split('|').map { it.trim() }.filter { it.isNotEmpty() }
         sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Lit("ls", ls = items))), refreshPanels = false)
       })
+      commitKeys(input) { input.value = shown }
     }
   }
-  rowEl.appendChild(input)
-  tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
-  // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
-  if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
-  return rowEl
-}
-
-/**
- * E9/E10: a wide value under its label — the label row [head] carries the
- * row's [buttons], and [control] takes the full width of the panel below it.
- */
-private fun stackedRow(head: HTMLElement, control: HTMLElement, vararg buttons: HTMLElement?): HTMLElement {
-  val box = Ui.el("div", "prop-stack")
-  head.classList.add("prop-head")
-  buttons.filterNotNull().forEach(head::appendChild)
-  val body = Ui.el("div", "prop-ctl")
-  body.appendChild(control)
-  box.appendChild(head)
-  box.appendChild(body)
-  return box
+  return PropRow(label, layout)
+    .control(input)
+    .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
+    .action(if (bindable) bindButton(nodeId, key, name) else null)
+    .root
 }
 
 /** K4: the `/doc` features this editor decodes (an older relay ignores what it does not know). */
 private const val DOC_FEATURES = "tokens=1&conditionals=1&extendedConditions=1&templates=1&lists=1&arithmetic=1"
 
 /** K4: a template prop row — the template's text, and ◆ to insert a design token. */
-private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {
+private fun templateRow(row: PropRow, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {
   val (field, append) = refValueEditor(
     templateSource(t), multiline = true,
     placeholder = "text with {field}, {item.x}, {◆C.Name}; {{ and }} are braces",
@@ -2806,20 +2811,20 @@ private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Templat
     sendOps(listOf(valueOp(nodeId, key, v)), refreshPanels = false)
     renderBindings()
   }
-  rowEl.appendChild(field)
+  row.control(field)
   if (knownTokens(t).isNotEmpty()) {
-    rowEl.appendChild(
+    row.action(
       Ui.button("◆", "btn icon") {
         // A template reads String, Int and Boolean tokens — never a Double (the device prints 1.0 as "1").
         if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, ::templateTokenOffered) { ref -> append("{◆$ref}") }
       }.also { it.setAttribute("title", "insert a design token") },
     )
   }
-  return rowEl
+  return row.root
 }
 
 /** K4: an Int / String list prop row — its elements, and ◆ to add a design token of the element kind. */
-private fun listRow(rowEl: HTMLElement, nodeId: Int, key: String, value: Any?, kind: PropKind, picker: HTMLElement): HTMLElement {
+private fun listRow(row: PropRow, nodeId: Int, key: String, value: Any?, kind: PropKind, picker: HTMLElement): HTMLElement {
   val strings = kind == PropKind.StringList
   val (field, append) = refValueEditor(
     listSource(value, kind), multiline = false,
@@ -2829,18 +2834,18 @@ private fun listRow(rowEl: HTMLElement, nodeId: Int, key: String, value: Any?, k
     sendOps(listOf(valueOp(nodeId, key, v)), refreshPanels = false)
     renderBindings()
   }
-  rowEl.appendChild(field)
+  row.control(field)
   val fits = { t: EditorToken -> t.kind == if (strings) "String" else "Int" }
   if (editorTokens.any { !it.ambiguous && fits(it) }) {
-    rowEl.appendChild(
+    row.action(
       Ui.button("◆", "btn icon") {
         if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, fits, colours = true) { ref ->
-          append((if (listSource(value, kind).isEmpty() && (field as? HTMLInputElement)?.value.isNullOrBlank()) "" else if (strings) "|" else ", ") + "◆$ref")
+          append((if ((field as? HTMLInputElement)?.value.isNullOrBlank()) "" else if (strings) "|" else ", ") + "◆$ref")
         }
       }.also { it.setAttribute("title", "add a design token element") },
     )
   }
-  return rowEl
+  return row.root
 }
 
 /** K4: a searchable list of the tokens [fits] accepts; choosing one hands its reference to [onPick]. */
@@ -2948,6 +2953,7 @@ private fun bindButton(nodeId: Int, key: String, name: String): HTMLElement =
   }
 
 private fun renderMods() {
+  flushPendingField()
   Ui.clear(modsEl)
   val node = selectedId?.let { portalTree.value.findNode(it) }
   if (node == null) {
