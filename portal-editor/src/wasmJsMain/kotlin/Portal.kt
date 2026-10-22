@@ -615,7 +615,7 @@ private fun installEvidenceStylesheet() {
   val style = document.createElement("style")
   style.textContent = """
     html, body { width: 100%; height: 100%; background: #fff; }
-    .topbar, .pane, .sel-toggle { display: none !important; }
+    .topbar, .pane, .splitter, .canvas-toolbar, .canvas-hint { display: none !important; }
     .center {
       inset: 0 !important; padding: 0 !important; overflow: hidden !important;
       align-items: flex-start !important; justify-content: flex-start !important;
@@ -798,8 +798,12 @@ private fun buildCenter() {
   host.setAttribute("style", "width:100%; height:100%;")
   frame.appendChild(host)
   installClickToSelect(frame, host)
-  center.appendChild(frame)
+  // The zoom wrapper takes the frame's SCALED size, so the center scrolls to it.
+  val zoomBox = Ui.el("div", "frame-zoom")
+  zoomBox.appendChild(frame)
+  center.appendChild(zoomBox)
   document.body?.appendChild(center)
+  if (!evidenceMode()) installCanvasToolbar(center, zoomBox, frame, w, h)
   // The legacy fixed-size canvas from index.html is unused now.
   (document.getElementById("ComposeTarget") as? HTMLElement)?.setAttribute("style", "display:none;")
 }
@@ -808,12 +812,25 @@ private fun buildCenter() {
 // with its handle (SelectionTag modifier); the ComposeUi host reports bounds
 // into SelectionRegistry (compose px, canvas-root coords). The chrome
 // hit-tests DOM events against it and mirrors selection/hover as overlay divs.
+//
+// Select mode owns the pointer: button presses are captured before they reach
+// the Compose canvas, so selecting never also fires the widget's action (in
+// Live mode that would run the app's logic). Interact mode hands them back.
 private var selectMode = true
 private lateinit var selOverlay: HTMLElement
 private lateinit var hoverOverlay: HTMLElement
+private lateinit var canvasHint: HTMLElement
+
+/** Pointer button events the canvas must not see while selecting. */
+private val CAPTURED_POINTER_EVENTS = listOf(
+  "pointerdown", "pointerup", "mousedown", "mouseup", "click", "dblclick", "touchstart", "touchend", "contextmenu",
+)
+
+/** Movement (CSS px) past which a press is a drag, not a click. */
+private const val CLICK_SLOP_PX = 5.0
 
 private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
-  selOverlay = Ui.el("div").also {
+  selOverlay = Ui.el("div", "sel-overlay").also {
     it.setAttribute("style", "position:absolute; pointer-events:none; border:2px solid #4f8cff; border-radius:3px; display:none; z-index:5;")
     frame.appendChild(it)
   }
@@ -821,41 +838,48 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     it.setAttribute("style", "position:absolute; pointer-events:none; border:1px dashed rgba(79,140,255,.7); border-radius:3px; display:none; z-index:4;")
     frame.appendChild(it)
   }
-  val toggle = Ui.el("div", "sel-toggle", "🎯 select")
-  toggle.setAttribute(
-    "style",
-    "position:absolute; top:6px; right:6px; z-index:6; padding:2px 8px; border-radius:6px; " +
-      "font-size:11px; cursor:pointer; background:rgba(79,140,255,.85); color:#fff; user-select:none;",
-  )
-  toggle.addEventListener("click", { _ ->
-    selectMode = !selectMode
-    toggle.setAttribute(
-      "style",
-      toggle.getAttribute("style")!!.replace(
-        Regex("background:[^;]+;"),
-        if (selectMode) "background:rgba(79,140,255,.85);" else "background:rgba(120,120,120,.6);",
-      ),
-    )
-    if (!selectMode) { hideOverlay(selOverlay); hideOverlay(hoverOverlay) }
-  })
-  frame.appendChild(toggle)
 
-  fun hitAt(ev: org.w3c.dom.events.Event): Int? {
-    val me = ev as org.w3c.dom.events.MouseEvent
+  fun hitAt(clientX: Double, clientY: Double): Int? {
     val r = host.getBoundingClientRect()
     val dpr = kotlinx.browser.window.devicePixelRatio
-    val x = ((me.clientX - r.left) * dpr).toFloat()
-    val y = ((me.clientY - r.top) * dpr).toFloat()
+    // The frame may be zoomed (a CSS scale): the host's client rect is scaled, compose px are not.
+    val x = ((clientX - r.left) / canvasZoom * dpr).toFloat()
+    val y = ((clientY - r.top) / canvasZoom * dpr).toFloat()
     val h = dev.keliver.material.composeui.SelectionRegistry.hitTest(x, y) ?: return null
     return if (portalTree.value.findNode(h) != null) h else null // ignore stale handles
   }
-  host.addEventListener("click", { ev ->
-    if (!selectMode) return@addEventListener
-    hitAt(ev)?.let { selectedId = it; refresh() }
-  })
+
+  var downX = 0.0
+  var downY = 0.0
+  var pressed = false
+  CAPTURED_POINTER_EVENTS.forEach { type ->
+    host.addEventListener(type, { ev ->
+      if (!selectMode) return@addEventListener
+      ev.stopPropagation()
+      if (type != "pointerdown" && type != "touchstart") ev.preventDefault()
+      val me = ev as? org.w3c.dom.events.MouseEvent ?: return@addEventListener
+      when (type) {
+        "pointerdown" -> {
+          pressed = true
+          downX = me.clientX.toDouble()
+          downY = me.clientY.toDouble()
+        }
+        "pointerup" -> {
+          if (!pressed) return@addEventListener
+          pressed = false
+          val moved = kotlin.math.hypot(me.clientX - downX, me.clientY - downY)
+          if (moved > CLICK_SLOP_PX) return@addEventListener // a drag selects nothing
+          // A miss (empty canvas) clears the selection.
+          selectedId = hitAt(me.clientX.toDouble(), me.clientY.toDouble())
+          refresh()
+        }
+      }
+    }, true)
+  }
   host.addEventListener("mousemove", { ev ->
     if (!selectMode) { hideOverlay(hoverOverlay); return@addEventListener }
-    val h = hitAt(ev)
+    val me = ev as org.w3c.dom.events.MouseEvent
+    val h = hitAt(me.clientX.toDouble(), me.clientY.toDouble())
     if (h == null || h == selectedId) hideOverlay(hoverOverlay) else positionOverlay(hoverOverlay, h)
   })
   host.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
@@ -869,6 +893,58 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     }
     null
   }, 120)
+}
+
+/** Select (click selects, the app does not see it) or Interact (the app gets the pointer). */
+internal fun setSelectMode(on: Boolean) {
+  selectMode = on
+  if (!on) { hideOverlay(selOverlay); hideOverlay(hoverOverlay) }
+  canvasToolbarSync()
+}
+
+/**
+ * E25: after the outline selects [handle], bring it into view on the canvas and
+ * flash its box; if it is not drawn at all (an else branch, a false condition,
+ * a Repeat with no rows), say so instead of doing nothing.
+ */
+internal fun revealOnCanvas(handle: Int) {
+  val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[handle]
+  if (rect == null) {
+    val node = portalTree.value.findNode(handle)
+    showCanvasHint(
+      if (node?.type in setOf("Condition", "Repeat", ELSE_TYPE)) "${node?.type} is logic: it draws only its children"
+      else "Not drawn in the current preview state (a false condition, an else branch, or an empty list)",
+    )
+    return
+  }
+  val host = document.getElementById(PREVIEW_HOST_ID) as? HTMLElement
+  val dpr = kotlinx.browser.window.devicePixelRatio
+  val visible = (host?.clientHeight ?: 0) * dpr
+  val margin = 24 * dpr
+  val dy = when {
+    rect.top < 0f -> rect.top - margin
+    rect.bottom > visible -> minOf(rect.top - margin, rect.bottom - visible + margin)
+    else -> 0.0f
+  }
+  if (dy != 0.0f) canvasScroller?.invoke(dy.toFloat())
+  if (selectMode) {
+    selOverlay.classList.remove("flash")
+    kotlinx.browser.window.setTimeout({ selOverlay.classList.add("flash"); null }, 10)
+  }
+}
+
+/** Set by the canvas composition: scroll the canvas by compose px (null when the screen scrolls itself). */
+internal var canvasScroller: ((Float) -> Unit)? = null
+
+internal fun selectModeOn(): Boolean = selectMode
+
+internal fun canvasHintElement(el: HTMLElement) { canvasHint = el }
+
+private fun showCanvasHint(text: String) {
+  if (!::canvasHint.isInitialized) return
+  canvasHint.textContent = text
+  canvasHint.style.display = "block"
+  kotlinx.browser.window.setTimeout({ canvasHint.style.display = "none"; null }, 3500)
 }
 
 private fun positionOverlay(el: HTMLElement, handle: Int) {
@@ -1276,6 +1352,12 @@ private fun installKeyboard() {
       ev.preventDefault()
       if (e.shiftKey) redo() else undo()
     }
+    // E34: Escape clears the selection (not while typing in a field).
+    val typing = (document.activeElement as? HTMLElement)?.tagName?.lowercase() in setOf("input", "textarea", "select")
+    if (e.key == "Escape" && !typing && selectedId != null) {
+      selectedId = null
+      refresh()
+    }
   })
 }
 
@@ -1563,7 +1645,11 @@ private fun renderOutline() {
     r.setAttribute("style", "padding-left:${6 + depth * 14}px;")
     r.appendChild(Ui.el("span", "t", node.type))
     (tokenValue(node.props["text"]) as? String)?.let { r.appendChild(Ui.el("span", "hint", "“$it”")) }
-    r.addEventListener("click", { _ -> selectedId = node.id; refresh() })
+    r.addEventListener("click", { _ ->
+      selectedId = node.id
+      refresh()
+      revealOnCanvas(node.id)
+    })
     r.setAttribute("draggable", "true")
     r.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "move:${node.id}"); ev.stopPropagation() })
     r.addEventListener("dragover", { ev -> ev.preventDefault(); r.className += " droptarget" })

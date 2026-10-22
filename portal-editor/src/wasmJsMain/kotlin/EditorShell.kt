@@ -7,15 +7,18 @@
  *   tree (MutableState) --RenderNode--> guest composition --protocol--> host (canvas)
  *   edit the tree --recompose--> minimal changes --> live preview update
  */
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -51,6 +54,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 private val JSON = Json { ignoreUnknownKeys = true }
@@ -275,6 +279,12 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
     val hostWrapper = entry.hostWrapper
     val canvasScroll = rememberScrollState()
     val scrollsItself = screenScrollsItself(portalTree.value)
+    // E25: the outline reveals an off-screen node by scrolling the canvas.
+    val scrollScope = rememberCoroutineScope()
+    DisposableEffect(scrollsItself) {
+      canvasScroller = if (scrollsItself) null else { dy -> scrollScope.launch { canvasScroll.animateScrollBy(dy) } }
+      onDispose { canvasScroller = null }
+    }
     val content: @Composable () -> Unit = {
       Box(if (scrollsItself) Modifier.fillMaxSize() else Modifier.fillMaxSize().verticalScroll(canvasScroll)) { root.Render() }
     }

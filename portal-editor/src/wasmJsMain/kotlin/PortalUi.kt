@@ -40,6 +40,20 @@ internal object Ui {
     body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
     .center { position: fixed; top: 46px; left: var(--left-w); right: var(--right-w); bottom: 0; overflow: auto;
       display: flex; align-items: flex-start; justify-content: center; padding: 28px 16px; box-sizing: border-box; }
+    .frame-zoom { flex-shrink: 0; margin-top: 30px; }
+    .canvas-toolbar { position: fixed; top: 54px; left: calc(var(--left-w) + 12px); z-index: 22; display: flex;
+      align-items: center; gap: 2px; padding: 3px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+    .canvas-toolbar .seg { background: transparent; color: var(--muted); border: 0; border-radius: 6px;
+      padding: 3px 9px; cursor: pointer; font: inherit; }
+    .canvas-toolbar .seg:hover { color: var(--text); background: var(--panel2); }
+    .canvas-toolbar .seg.on { color: #fff; background: var(--accent2); }
+    .canvas-toolbar .sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
+    .canvas-toolbar .zoom-level { min-width: 42px; text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
+    .canvas-hint { position: fixed; top: 92px; left: calc(var(--left-w) + 12px); z-index: 22; max-width: 340px;
+      padding: 6px 10px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--warn); color: var(--text); }
+    .sel-overlay.flash { animation: sel-flash .9s ease-out; }
+    @keyframes sel-flash { 0% { box-shadow: 0 0 0 6px rgba(79,140,255,.55); } 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0); } }
     .frame { background: #ffffff; border-radius: 18px; overflow: hidden;
       box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 0 1px var(--border); }
     .section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
