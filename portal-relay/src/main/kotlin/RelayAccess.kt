@@ -127,6 +127,8 @@ internal object RelayAccess {
     ex.responseHeaders.set("Access-Control-Allow-Origin", origin)
     ex.responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
     ex.responseHeaders.set("Access-Control-Allow-Headers", "*")
+    // The editor reads its undo/redo depths from these (an editor on another loopback port).
+    ex.responseHeaders.set("Access-Control-Expose-Headers", "X-Undo-Depth, X-Redo-Depth")
     return true
   }
 

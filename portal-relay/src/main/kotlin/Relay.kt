@@ -752,6 +752,16 @@ private fun docFor(q: Map<String, String>): DocumentService {
   }
 }
 
+/**
+ * The session's undo/redo depths as response headers (`X-Undo-Depth`, `X-Redo-Depth`), so the
+ * editor can disable Undo/Redo when there is nothing to step. Additive: an older editor ignores them.
+ */
+private fun sendStackDepths(ex: HttpExchange, svc: DocumentService, session: String) {
+  val (undo, redo) = svc.stackDepths(session)
+  ex.responseHeaders.set("X-Undo-Depth", "$undo")
+  ex.responseHeaders.set("X-Redo-Depth", "$redo")
+}
+
 private fun session(ex: HttpExchange): String =
   ex.requestHeaders.getFirst("X-Portal-Session") ?: "anon"
 
@@ -1290,7 +1300,9 @@ fun main(args: Array<String>) {
       // K7: PropValue.Arith / PropValue.IntDp only with `arithmetic=1`; else the computed literal
       // (a prop whose expression reads a binding is left out) — applied before everything else.
       val q = query(ex)
-      respond(ex, 200, DocJson.encodeToString(docView(docFor(q).doc, q)))
+      val svc = docFor(q)
+      sendStackDepths(ex, svc, session(ex))
+      respond(ex, 200, DocJson.encodeToString(docView(svc.doc, q)))
     }
   }
   server.createContext("/ops") { ex ->
@@ -1301,6 +1313,7 @@ fun main(args: Array<String>) {
       val svc = docFor(q)
       val ack = if (q["dryRun"] == "1") svc.dryRun(batch) else svc.submit(batch)
       val code = if (ack.ok) 200 else if (ack.error?.startsWith("stale") == true) 409 else 422
+      sendStackDepths(ex, svc, batch.envelope.session)
       respond(ex, code, DocJson.encodeToString(ack))
     }
   }
@@ -1308,13 +1321,19 @@ fun main(args: Array<String>) {
   server.createContext("/undo") { ex ->
     handle(ex) {
       if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
-      respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).undo(session(ex))))
+      val svc = docFor(query(ex))
+      val ack = svc.undo(session(ex))
+      sendStackDepths(ex, svc, session(ex))
+      respond(ex, 200, DocJson.encodeToString(ack))
     }
   }
   server.createContext("/redo") { ex ->
     handle(ex) {
       if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
-      respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).redo(session(ex))))
+      val svc = docFor(query(ex))
+      val ack = svc.redo(session(ex))
+      sendStackDepths(ex, svc, session(ex))
+      respond(ex, 200, DocJson.encodeToString(ack))
     }
   }
   server.createContext("/doc-events") { ex -> // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back
