@@ -87,14 +87,18 @@ and fails if they do not.
 | `20-canvas-scroll` | E3 | The wheel scrolls a screen taller than the frame; a click after scrolling selects the right node |
 | `30-panels` | E7 | Splitter drag resizes; double-click collapses and restores; widths and collapsed state persist across reload |
 | `40-undo-writeback` | E30 | Undo and Redo are disabled at depth 0, count their steps, and step one edit each |
-| | E31 | The undo key inside a field is the field's own: focus stays |
+| | E31 | The undo key inside a field is the field's own: focus stays; typing is not written until the edit is committed |
 | | E19 | An insert (a new import) and a new argument, each undone, leave the file byte-identical |
 | `50-palette-drop` | E15 | A palette item dragged onto the canvas shows a drop line, inserts there, and the new node is selected |
 | `60-components` | E14 | Double-click opens a component: the breadcrumb, and its body in the outline. An internal edit goes to `components/<Name>.kt` only. The crumb returns with the instance selected and drawing the edit. Enter re-opens; Escape steps out. |
 | | E14n | A nested component extends the breadcrumb; the crumb and Escape step out one level at a time |
 | | E14r | *Known bug.* Returning from a component claims the re-selected instance is "not drawn". |
-| | E18 | A refused edit leaves "Change refused" (not "Saved") and no file changed |
+| | E18 | A refused edit (unbinding a required argument inside a component) leaves "Change refused" (not "Saved") and no file changed |
 | | E14x | `/doc?component=Nope` is a 404. Opening a component deleted on disk shows a hint and stays on the screen. |
+| `70-properties` | E11 | A number field: `abc` and `-5` are refused inline and never written; `18` + Enter is written once (one undo step, one line) |
+| | E10 | A colour shows `#AARRGGBB`; opacity 50 writes the same RGB with alpha `0x80`; Undo is byte-exact |
+| | E8 | Layout enums and KDoc-listed codes are dropdowns of names; choosing Center writes `align = 1` only. *macOS headless cannot drive a native select's list: there the value is set by script and a `change` dispatched (logged); on Linux ArrowDown does it.* |
+| | E12 | `@` opens a picker of declared fields and writes nothing; picking one changes only the argument (no Bindings member added) |
 
 The relay keeps its undo stacks per document for its whole life, and the
 editor's session is constant. A test that asserts an untouched stack (E30)
@@ -141,6 +145,8 @@ What a test's `run()` gets:
     `appendToField`, `clearSelection`, `clickUndo`, `clickRedo`.
 - `relay`: the relay's view, for expectations: `doc(screen)` and
   `components()`. Use `setActive` only on this scratch relay.
+- A typed edit is written when committed (Enter or leaving the field), not per keystroke:
+  `appendToField(label, text, { commit: true })` presses Enter after typing.
 - `fixtureDir`: the fixture copy the relay writes to. `lib/fixture.mjs` has
   `snapshot`, `changedSources`, `waitForFile` and `expectBytes`.
 - `artifacts` and `log(msg)`: evidence that is kept with the test's results.
