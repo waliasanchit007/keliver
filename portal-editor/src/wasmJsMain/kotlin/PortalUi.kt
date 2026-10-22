@@ -115,6 +115,14 @@ internal object Ui {
     .color-ctl .input.hex { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
     .color-ctl .input.alpha { width: 46px; flex: 0 0 46px; padding: 5px 4px; }
     .color-ctl .unit { margin-left: -2px; }
+    .pill.bound { border-color: var(--accent); color: var(--accent); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+    .bind-picker { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 6px; }
+    .bind-list { max-height: 180px; overflow: auto; }
+    .bind-list .pal-row { cursor: pointer; }
+    .pal-row.selected { background: var(--sel); outline: 1px solid var(--accent); }
+    .bind-new { display: flex; flex-direction: column; gap: 4px; }
+    .bind-new[hidden] { display: none; }
+    .bind-preview { font-size: 11px; color: var(--good); word-break: break-all; }
     .input.invalid, .select.invalid { border-color: var(--danger); }
     .field-err { color: var(--danger); font-size: 11px; line-height: 1.3; }
     .field-err:empty { display: none; }
