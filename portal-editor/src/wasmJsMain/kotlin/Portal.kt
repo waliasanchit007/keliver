@@ -686,6 +686,7 @@ internal fun mountPortalChrome() {
   if (!evidenceMode()) installPanelResizers()
   buildExportOverlay()
   installKeyboard()
+  watchImageFailures()
   loadWorkspace()
 }
 
@@ -1338,6 +1339,35 @@ private fun renderMockFidelity() {
   Ui.clear(fidelityEl)
   fidelityEl.appendChild(Ui.el("div", "muted", "Mock mode — press ▶ Live to run real logic"))
   appendRuntimeCompatibility()
+  appendImageFailures()
+}
+
+/** E29: each image host the canvas could not load from, why, and what to do about it. */
+private fun appendImageFailures() {
+  val hosts = ImageLoadFailures.hosts()
+  if (hosts.isEmpty()) return
+  val title = Ui.el("div", "", "⚠ Images not shown from ${hosts.size} host${if (hosts.size == 1) "" else "s"}")
+  title.setAttribute("style", "font-weight:600; margin-top:7px; color:var(--warn, #e0a030);")
+  fidelityEl.appendChild(title)
+  hosts.forEach { (host, why) ->
+    fidelityEl.appendChild(Ui.el("div", "", host).also { it.setAttribute("style", "font-family:ui-monospace,monospace;") })
+    fidelityEl.appendChild(Ui.el("div", "muted", why))
+  }
+  fidelityEl.appendChild(
+    Ui.el(
+      "div", "muted",
+      "Add ${hosts.keys.joinToString(", ") { "\"$it\"" }} to \"previewAssetHosts\" in keliver.portal.json and restart the relay: " +
+        "it then serves those images to the canvas. The device loads them directly and is not affected.",
+    ),
+  )
+}
+
+/** E29: a newly failing image host re-renders the fidelity panel and is pointed out once. */
+private fun watchImageFailures() {
+  ImageLoadFailures.onChange = {
+    if (LiveEngine.isRunning) renderFidelity(liveRequiredCapabilities, livePresenterLabel()) else renderMockFidelity()
+    showCanvasHint("Some images can't load in the editor — Preview fidelity (right) says why and how to fix it")
+  }
 }
 
 private fun renderFidelity(required: List<String>, livePresenter: String? = null) {
@@ -1347,6 +1377,7 @@ private fun renderFidelity(required: List<String>, livePresenter: String? = null
   pres.setAttribute("style", "color:" + (if (livePresenter != null) "var(--good)" else "var(--warn, #e0a030)") + ";")
   fidelityEl.appendChild(pres)
   appendRuntimeCompatibility()
+  appendImageFailures()
   val persona = dev.keliver.portal.render.appPreviewEntry?.resolvePersona(LiveEngine.personaId.value)
   if (persona != null) {
     val row = Ui.el("div", "", "👤 ${persona.label}")
@@ -1410,11 +1441,20 @@ private fun appendRuntimeCompatibility() {
       val (label, color, help) = when (report.status) {
         RuntimeCompatibilityStatus.Match ->
           Triple("● Runtime versions match", "var(--good)", null)
+        // E46: an app on an older release with the same widget protocol is supported — say so, once.
+        RuntimeCompatibilityStatus.AppOlder ->
+          Triple(
+            "● Compatible (same widget protocol)",
+            "var(--good)",
+            "The app is on Keliver ${report.app.keliverVersion}; the preview runs ${report.editor.keliverVersion}. " +
+              "Layout is the same; a fix made after ${report.app.keliverVersion} shows here before the app updates.",
+          )
         RuntimeCompatibilityStatus.KeliverSkew ->
           Triple(
-            "⚠ Keliver version skew",
+            "⚠ Editor older than the app",
             "var(--warn, #e0a030)",
-            "Preview behavior may differ from the app/device runtime.",
+            "The app is on Keliver ${report.app.keliverVersion}, newer than this editor (${report.editor.keliverVersion}): " +
+              "the preview may miss what changed since. Update the portal tools to ${report.app.keliverVersion} or later.",
           )
         RuntimeCompatibilityStatus.WidgetMismatch ->
           Triple(
