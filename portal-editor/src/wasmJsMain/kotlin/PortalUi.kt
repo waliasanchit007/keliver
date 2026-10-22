@@ -16,6 +16,7 @@ internal object Ui {
       --bg: #16171b; --panel: #1f2026; --panel2: #26272e; --border: #34353e;
       --text: #e6e7ec; --muted: #9a9ba6; --accent: #8b7cf7; --accent2: #6f5ff0;
       --good: #4cc38a; --warn: #f0a05f; --danger: #e5534b; --sel: #2f3040;
+      --left-w: 272px; --right-w: 300px;
     }
     html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
       font: 13px/1.45 -apple-system, 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
@@ -27,9 +28,17 @@ internal object Ui {
     .grow { flex: 1; }
     .pane { position: fixed; top: 46px; bottom: 0; overflow: auto; background: var(--panel);
       box-sizing: border-box; z-index: 20; }
-    .pane.left { left: 0; width: 272px; border-right: 1px solid var(--border); padding: 10px; }
-    .pane.right { right: 0; width: 300px; border-left: 1px solid var(--border); padding: 10px; }
-    .center { position: fixed; top: 46px; left: 272px; right: 300px; bottom: 0; overflow: auto;
+    .pane.left { left: 0; width: var(--left-w); border-right: 1px solid var(--border); padding: 10px; }
+    .pane.right { right: 0; width: var(--right-w); border-left: 1px solid var(--border); padding: 10px; }
+    .pane.collapsed { display: none; }
+    .splitter { position: fixed; top: 46px; bottom: 0; width: 7px; z-index: 25; cursor: col-resize;
+      touch-action: none; }
+    .splitter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; background: transparent; }
+    .splitter:hover::after, .splitter.dragging::after { background: var(--accent); width: 2px; left: 2px; }
+    .splitter.left { left: calc(var(--left-w) - 4px); }
+    .splitter.right { right: calc(var(--right-w) - 4px); }
+    body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
+    .center { position: fixed; top: 46px; left: var(--left-w); right: var(--right-w); bottom: 0; overflow: auto;
       display: flex; align-items: flex-start; justify-content: center; padding: 28px 16px; box-sizing: border-box; }
     .frame { background: #ffffff; border-radius: 18px; overflow: hidden;
       box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 0 1px var(--border); }
@@ -48,7 +57,7 @@ internal object Ui {
       border-radius: 6px; padding: 5px 8px; font: inherit; box-sizing: border-box; }
     .input:focus, .select:focus { outline: none; border-color: var(--accent); }
     .row { display: flex; gap: 6px; align-items: center; margin: 4px 0; }
-    .row label { width: 96px; color: var(--muted); flex-shrink: 0; overflow: hidden;
+    .row label { width: clamp(84px, 36%, 180px); color: var(--muted); flex-shrink: 0; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; }
     .row .input, .row .select { flex: 1; min-width: 0; }
     textarea.input { resize: vertical; line-height: 1.35; }
@@ -74,7 +83,7 @@ internal object Ui {
     .mod-head { display: flex; align-items: center; }
     .mod-head .x { margin-left: auto; color: var(--muted); cursor: pointer; padding: 0 4px; }
     .mod-head .x:hover { color: var(--danger); }
-    .overlay { position: fixed; right: 310px; bottom: 12px; width: 520px; max-height: 60%;
+    .overlay { position: fixed; right: calc(var(--right-w) + 10px); bottom: 12px; width: 520px; max-height: 60%;
       background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
       box-shadow: 0 16px 50px rgba(0,0,0,.6); z-index: 40; display: flex; flex-direction: column; }
     .overlay pre { margin: 0; padding: 12px; overflow: auto; font-size: 11px; color: var(--text); }

@@ -605,6 +605,7 @@ internal fun mountPortalChrome() {
   buildLeftPane()
   buildCenter()
   buildRightPane()
+  if (!evidenceMode()) installPanelResizers()
   buildExportOverlay()
   installKeyboard()
   loadWorkspace()
