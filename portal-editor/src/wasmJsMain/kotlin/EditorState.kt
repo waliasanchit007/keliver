@@ -121,7 +121,7 @@ internal fun sampleText(name: String): String {
 }
 
 /**
- * A visible ARGB sample for a colour field (`alertBgArgb`, `labelColor`, `ringTint`), chosen by
+ * A visible ARGB sample for a colour field (`noticeBgArgb`, `labelColor`, `ringTint`), chosen by
  * its name — a background light, a text dark, anything else an accent — or null when the name
  * is not a colour's. An Int colour's other default, 1, is transparent: the element vanished.
  */

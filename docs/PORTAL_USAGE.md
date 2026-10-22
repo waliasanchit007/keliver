@@ -40,7 +40,9 @@ never touches the hand-owned files. Editing a screen in the portal produces a
 ## Three ways to edit — all converge on the same document
 
 1. **Portal UI** (`:8096`) — drag, tweak props, bind fields (`@`), wire actions,
-   add `if`/`forEach` from the Logic palette.
+   add `if`/`forEach` from the Logic palette, open a component to edit its
+   insides. How the canvas, outline, State panel and component editing work:
+   [`PORTAL_ADOPTER_GUIDE.md` → Working in the editor](PORTAL_ADOPTER_GUIDE.md#working-in-the-editor).
 2. **Any code editor** — edit `screens/main.kt` directly; the file-watcher
    ingests it and the portal + devices update live (no portal restart).
 3. **AI agent** — the `portal-mcp` stdio server exposes `get_catalog`,
@@ -297,6 +299,8 @@ them under **"Project components"** in the palette. See
   a trailing lambda. Its children
   stay editable, selectable, draggable, exportable, and surgically writable.
 - Edit the definition file → every instance's preview updates live (no reload).
+  Or edit it in the editor: double-click an instance (or Enter, or **Edit
+  component ↗**) to open the component; its edits go to its own file.
 - Endpoint: `GET /components?project=<p>` returns each spec + body tree.
 - Optional/defaulted, wrapperless, and multiple slots are not guessed: those
   definitions are **opaque** with a diagnostic. Any other non-grammar body is likewise opaque (renders on

@@ -25,7 +25,7 @@ class EditorStateTest {
       WidgetNode("Repeat", mapOf("items" to "rows"), listOf(cond("item.flag"))),
     ),
   )
-  private val contract = ScreenContract(mapOf("heroRate" to PropKind.Text, "showContent" to PropKind.Bool), listOf("retry"))
+  private val contract = ScreenContract(mapOf("headlineRate" to PropKind.Text, "showContent" to PropKind.Bool), listOf("retry"))
 
   @Test fun conditionFieldsAreListedWithTheirKindsBeforePropsAndLists() {
     val fields = stateFields(tree, contract)
@@ -35,7 +35,7 @@ class EditorStateTest {
         StateField("showContent", StateKind.Bool, StateSource.Condition),
         StateField("showEmptyState", StateKind.Bool, StateSource.Condition),
         StateField("errorMessage", StateKind.Text, StateSource.Condition),
-        StateField("heroRate", StateKind.Text, StateSource.Prop),
+        StateField("headlineRate", StateKind.Text, StateSource.Prop),
         StateField("rows", StateKind.Rows, StateSource.List),
       ),
       fields,
@@ -49,7 +49,7 @@ class EditorStateTest {
     assertEquals("true", m["showContent"])
     assertEquals("false", m["showEmptyState"])
     assertEquals("", m["errorMessage"], "no error text: the error banner is hidden")
-    assertEquals("12.5%", m["heroRate"], "a realistic sample, not {heroRate}")
+    assertEquals("12.5%", m["headlineRate"], "a realistic sample, not {headlineRate}")
     assertEquals("3", m["rows"])
   }
 
@@ -77,12 +77,12 @@ class EditorStateTest {
   }
 
   @Test fun samplesFollowTheFieldName() {
-    assertEquals("1,250", sampleText("statUsers"))
+    assertEquals("1,250", sampleText("memberCount"))
     assertEquals("12 Jan 2027", sampleText("maturityDate"))
     assertEquals("AB", sampleText("initials"))
     assertEquals("", sampleText("logoUrl"))
     assertEquals("Broker name", sampleText("brokerName"))
-    assertFalse(sampleText("heroRate").startsWith("{"))
+    assertFalse(sampleText("headlineRate").startsWith("{"))
   }
 
   @Test fun aScreensStateRoundTripsAndBadStorageFallsBack() {
@@ -94,11 +94,11 @@ class EditorStateTest {
   }
 
   @Test fun aColourFieldShowsAVisibleSampleColour() {
-    assertEquals(0xFFEEF2F7.toInt(), sampleColor("alertBgArgb"))
+    assertEquals(0xFFEEF2F7.toInt(), sampleColor("noticeBgArgb"))
     assertEquals(0xFF1F2937.toInt(), sampleColor("labelArgb"))
     assertEquals(0xFF4F6BED.toInt(), sampleColor("ringArgb"))
     assertEquals(null, sampleColor("count"))
-    assertEquals("${0xFF4F6BED.toInt()}", defaultValue(StateField("alertIconArgb", StateKind.Int, StateSource.Prop), Scenario.Loaded))
+    assertEquals("${0xFF4F6BED.toInt()}", defaultValue(StateField("noticeIconArgb", StateKind.Int, StateSource.Prop), Scenario.Loaded))
     assertEquals("1", defaultValue(StateField("step", StateKind.Int, StateSource.Prop), Scenario.Loaded))
   }
 }

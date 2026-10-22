@@ -178,9 +178,76 @@ The field is **`target`**, not `handle`. Other ops: `InsertNode` (`parent`,
 Nothing else in the file moves, and `logic/` is untouched. `undo` reverses it.
 
 Two things to expect alongside it: the generated `Compiled_home.kt` stamp
-appears (see above), and after a portal restart the document version numbering
-starts again from the freshly ingested `.kt` — so always read `baseVersion`
-from the `get_document` you just made, never a remembered one.
+appears (see above), and after a portal restart the document is read again from
+the `.kt` (its version continues from that stamp) — so always read
+`baseVersion` from the `get_document` you just made, never a remembered one.
+
+## Working in the editor
+
+The editor at `:8096` edits the same document as your IDE and an agent; every
+change is written to the screen's `.kt` surgically, and an edit followed by its
+undo gives the file back byte for byte.
+
+**Canvas.**
+- **🎯 Select** (the default): a click selects the innermost widget or component
+  instance under it, and the app does not see the click. Click empty space to
+  deselect.
+- **☝ Interact**: clicks, typing and scrolling go to the app, as on a device.
+- The wheel scrolls a screen taller than the frame, and a horizontal wheel or
+  drag scrolls a carousel.
+- **− / + / Fit** zoom the frame. The device preset beside them sets its size,
+  and **⟲** rotates it.
+- Double-click a text to edit it in place.
+
+**Components.** Double-click an instance, press Enter on it, or use **Edit
+component ↗** in its properties to open the component itself:
+- The outline, canvas and State panel then show its body, with its parameters
+  as sample data.
+- Edits are written to the component's own file, and every screen using it
+  redraws at once.
+- A breadcrumb (`home › SummaryCard › StatTile`) leads back; Esc steps out one
+  level.
+- A component's parameters are its contract with every caller, so an edit that
+  would change them is refused: change the signature in code.
+
+**Outline and palette.**
+- Drag a palette item onto the canvas (a line shows where it lands) or onto an
+  outline row: its top or bottom quarter drops before or after the row, its
+  middle inside it.
+- Clicking a palette item inserts it inside the selected container, or after
+  the selection.
+- What you insert is selected.
+- Keys:
+  - ↑/↓ move the selection; ←/→ collapse, expand or go to the parent or child;
+  - Delete removes;
+  - ⌘D duplicates;
+  - ⌘C/⌘V copy and paste;
+  - Enter or F2 edits the text or opens the component.
+
+**State.**
+- The State panel lists every value the screen reads: the fields its `if`
+  blocks test, its bound props, and its lists' row counts.
+- It offers the scenarios the screen's flags allow (Loaded, Loading, Error,
+  Empty), and sample values chosen by each field's name.
+- What you set is kept per screen in this browser and is never written to
+  source.
+
+**Undo.** Undo and Redo are per editing session, and their tooltips count the
+steps. ⌘Z inside a text field undoes the field's typing, not the document.
+
+**Export Kotlin** shows the screen's (or opened component's) file exactly as it
+is on disk, with Copy and Download.
+
+**Preview fidelity**, in the right panel:
+- It says whether the app's Keliver runtime matches the editor's: an older app
+  release with the same widget protocol is compatible.
+- It lists any image host the canvas cannot load from (one that sends no CORS
+  headers), with the fix: add the host to `previewAssetHosts` in
+  `keliver.portal.json`. Such images are drawn as a crossed frame, never as
+  empty space.
+
+**Panels** resize by dragging their inner edge; double-click the edge to
+collapse or restore. Widths are remembered.
 
 ## Build and run
 

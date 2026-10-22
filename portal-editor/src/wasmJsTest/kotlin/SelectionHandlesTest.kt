@@ -12,7 +12,7 @@ class SelectionHandlesTest {
   @Test fun aNestedComponentInsideAnExpansionSelectsTheOuterInstance() {
     // A stats card (screen handle 12) whose definition holds a stat-column component with
     // definition-local id 2 — the same number as the screen's root column.
-    val nested = WidgetNode("StatColumn", emptyMap(), emptyList(), id = 2)
+    val nested = WidgetNode("StatTile", emptyMap(), emptyList(), id = 2)
     val expansion = WidgetNode("StyledBox", emptyMap(), listOf(nested), id = 1)
     val tagged = tagWith(expansion, 12)
     val nestedTagged = tagged.children.single()
@@ -21,7 +21,7 @@ class SelectionHandlesTest {
   }
 
   @Test fun aScreenLevelInstanceKeepsItsOwnHandle() {
-    val instance = selectionTagged(WidgetNode("StatsCard", emptyMap(), emptyList(), id = 12))
+    val instance = selectionTagged(WidgetNode("SummaryCard", emptyMap(), emptyList(), id = 12))
     assertEquals(12, instanceHandle(instance))
   }
 }
