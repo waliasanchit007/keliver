@@ -69,7 +69,12 @@ export async function launch({ profileDir, width = 1440, height = 900, artifacts
   }
   if (!target) { proc.kill('SIGKILL'); throw new Error('no page target'); }
   const page = new Page(proc, target.webSocketDebuggerUrl, { width, height, artifacts });
-  await page.open();
+  try {
+    await page.open();
+  } catch (e) {
+    proc.kill('SIGKILL'); // a page that never opened must not leave its Chrome running
+    throw e;
+  }
   return page;
 }
 
