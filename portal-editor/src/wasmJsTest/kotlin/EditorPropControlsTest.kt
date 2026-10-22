@@ -205,4 +205,71 @@ class EditorPropControlsTest {
     assertEquals(1, row.root.querySelectorAll(".prop-actions button").length)
     assertEquals("prop compact", PropRow("Width", PropRow.Layout.Compact).root.className)
   }
+
+  @Test fun numbersAreReadStrictlyAndRangeChecked() {
+    val int = NumberRule(whole = true)
+    assertEquals(24, parseNumber(" 24 ", int).getOrNull())
+    assertEquals(-5, parseNumber("-5", int).getOrNull())
+    for (bad in listOf("", "abc", "1.5", "12px", "9999999999")) assertTrue(parseNumber(bad, int).isFailure, bad)
+    assertEquals("That number is too large", parseNumber("9999999999", int).exceptionOrNull()?.message)
+    val dp = numberRule("Spacer", "height", dev.keliver.portal.PropKind.Double)
+    assertEquals(9.0, parseNumber("9", dp).getOrNull())
+    assertEquals("A size can't be negative", parseNumber("-1", dp).exceptionOrNull()?.message)
+    val fontSize = numberRule("StyledText", "fontSize", dev.keliver.portal.PropKind.Int)
+    assertEquals("Font size must be at least 1", parseNumber("0", fontSize).exceptionOrNull()?.message)
+    assertEquals("Font size must be at least 1", parseNumber("-5", fontSize).exceptionOrNull()?.message)
+    assertTrue(numberRule("StyledText", "maxLines", dev.keliver.portal.PropKind.Int).min == null)
+    assertEquals("8", showNumber(8.0))
+    assertEquals("0.5", showNumber(0.5))
+  }
+
+  @Test fun aNumberFieldWritesOnlyAValidCommittedValueOnce() {
+    val previews = mutableListOf<Number>()
+    val commits = mutableListOf<Number>()
+    val ctl = numberField(24, numberRule("StyledText", "fontSize", dev.keliver.portal.PropKind.Int), { previews += it }) { commits += it }
+    val input = ctl.querySelector("input") as HTMLInputElement
+    val err = ctl.querySelector(".field-err")!!
+    fun type(v: String) { input.value = v; input.dispatchEvent(Event("input")) }
+    fun leave() = input.dispatchEvent(Event("change"))
+
+    type(""); type("abc"); leave()
+    assertTrue(commits.isEmpty()) // the empty field is not 0, and abc is nothing
+    assertTrue(input.classList.contains("invalid"))
+    assertEquals("Enter a whole number", err.textContent)
+    type("-5"); leave()
+    assertTrue(commits.isEmpty())
+    assertEquals("Font size must be at least 1", err.textContent)
+
+    type("1"); type("18") // typing a two-digit value previews, writes nothing
+    assertEquals(listOf<Number>(1, 18), previews)
+    assertTrue(commits.isEmpty())
+    input.dispatchEvent(key("Enter"))
+    leave() // Enter blurs, which fires change
+    assertEquals(listOf<Number>(18), commits) // one write, one undo step
+    assertTrue(!input.classList.contains("invalid"))
+    assertEquals("", err.textContent)
+    leave()
+    assertEquals(1, commits.size)
+
+    // Arrows step (Shift: 10), Escape puts the committed value back.
+    input.dispatchEvent(KeyboardEvent("keydown", KeyboardEventInit(key = "ArrowUp", shiftKey = true, cancelable = true)))
+    assertEquals("28", input.value)
+    input.dispatchEvent(key("Escape"))
+    assertEquals("18", input.value)
+    assertEquals(18, previews.last())
+    assertEquals(1, commits.size)
+  }
+
+  @Test fun aDpFieldTakesDecimalsAndNeverGoesBelowZero() {
+    val commits = mutableListOf<Number>()
+    val ctl = numberField(8.0, numberRule("Spacer", "height", dev.keliver.portal.PropKind.Double)) { commits += it }
+    val input = ctl.querySelector("input") as HTMLInputElement
+    assertEquals("8", input.value)
+    input.dispatchEvent(KeyboardEvent("keydown", KeyboardEventInit(key = "ArrowDown", shiftKey = true, cancelable = true)))
+    assertEquals("0", input.value) // clamped at the minimum
+    input.value = "9"
+    input.dispatchEvent(Event("input"))
+    input.dispatchEvent(Event("change"))
+    assertEquals(listOf<Number>(9.0), commits)
+  }
 }

@@ -4,6 +4,8 @@
  * committed new value through a callback, so it can be tested without a relay.
  */
 import dev.keliver.portal.PropChoice
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.isDpProp
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
@@ -308,4 +310,110 @@ internal fun textField(value: String, onPreview: (String) -> Unit = {}, onCommit
   }
   window.requestAnimationFrame { fitToContent(area) }
   return area
+}
+
+/**
+ * E11: what a numeric prop accepts — a whole number ([whole]) or any number,
+ * and at least [min] ([minWhy] says why). Out-of-range and non-numeric text
+ * is never sent.
+ */
+internal data class NumberRule(val whole: Boolean, val min: Double? = null, val minWhy: String? = null)
+
+/**
+ * The rule for wire key [key] of a [kind] prop on a [nodeType] node: a Dp
+ * (a Dp prop, a Margin side, a Dp modifier argument) is never negative — its
+ * constructor requires it; a `fontSize` (sp) of 0 or less draws nothing.
+ */
+internal fun numberRule(nodeType: String, key: String, kind: PropKind): NumberRule {
+  val whole = kind == PropKind.Int
+  return when {
+    isDpProp(nodeType, key) -> NumberRule(whole, 0.0, "A size can't be negative")
+    key.substringAfterLast('.') == "fontSize" -> NumberRule(whole, 1.0, "Font size must be at least 1")
+    else -> NumberRule(whole)
+  }
+}
+
+/** [text] read under [rule]: the value (an Int or a Double), or why it is refused. */
+internal fun parseNumber(text: String, rule: NumberRule): Result<Number> {
+  val t = text.trim()
+  if (t.isEmpty()) return Result.failure(IllegalArgumentException("Enter a number"))
+  // Statements, not one `if` expression typed Number: Kotlin/Wasm emits invalid
+  // code for an `if` whose branches box an Int and a Double.
+  val v: Number
+  if (rule.whole) {
+    val i: Int = t.toIntOrNull() ?: return Result.failure(
+      IllegalArgumentException(if (t.toLongOrNull() != null) "That number is too large" else "Enter a whole number"),
+    )
+    v = i
+  } else {
+    val d: Double = t.toDoubleOrNull()?.takeIf { it.isFinite() } ?: return Result.failure(IllegalArgumentException("Enter a number"))
+    v = d
+  }
+  val min = rule.min
+  if (min != null && v.toDouble() < min) return Result.failure(IllegalArgumentException(rule.minWhy ?: "Must be at least ${showNumber(min)}"))
+  return Result.success(v)
+}
+
+/** A number as a field shows it: `8`, not `8.0`. */
+internal fun showNumber(v: Number): String {
+  val d = v.toDouble()
+  return if (v is Int || (d % 1.0 == 0.0 && kotlin.math.abs(d) < 1e15)) d.toLong().toString() else d.toString()
+}
+
+/**
+ * E11: a numeric prop's field. Typing validates (an error shows inline, under
+ * the field) and previews a valid value on the canvas through [onPreview];
+ * nothing is written until the edit is committed — Enter or leaving the
+ * field — and then only a valid, changed value, once, through [onCommit].
+ * ↑/↓ step by 1 (Shift: 10). Escape puts the committed value back.
+ */
+internal fun numberField(value: Number, rule: NumberRule, onPreview: (Number) -> Unit = {}, onCommit: (Number) -> Unit): HTMLElement {
+  var committed: Number = value
+  val wrap = Ui.el("div", "ctl-wrap")
+  val input = Ui.input("input num")
+  input.setAttribute("type", "text")
+  input.setAttribute("inputmode", if (rule.whole) "numeric" else "decimal")
+  input.setAttribute("spellcheck", "false")
+  input.value = showNumber(value)
+  val err = Ui.el("div", "field-err")
+  fun same(a: Number, b: Number) = a.toDouble() == b.toDouble()
+  fun validate(): Number? {
+    val r = parseNumber(input.value, rule)
+    markInvalid(input, r.exceptionOrNull()?.message, err)
+    return r.getOrNull()
+  }
+  fun commit() {
+    clearPending(input)
+    val v = validate() ?: return // stays marked; nothing is sent
+    input.value = showNumber(v)
+    if (same(v, committed)) return
+    committed = v
+    onCommit(v)
+  }
+  input.addEventListener("input", { _ ->
+    validate()?.let(onPreview)
+    markPending(input, ::commit)
+  })
+  input.addEventListener("change", { _ -> commit() })
+  input.addEventListener("keydown", { ev ->
+    val e = ev as KeyboardEvent
+    if (e.key != "ArrowUp" && e.key != "ArrowDown") return@addEventListener
+    e.preventDefault()
+    val base = parseNumber(input.value, rule.copy(min = null)).getOrNull() ?: committed
+    val step = (if (e.shiftKey) 10 else 1) * (if (e.key == "ArrowUp") 1 else -1)
+    var next = base.toDouble() + step
+    rule.min?.let { next = maxOf(next, it) }
+    input.value = if (rule.whole) showNumber(next.toInt()) else showNumber(next)
+    validate()?.let(onPreview)
+    markPending(input, ::commit)
+  })
+  commitKeys(input) {
+    clearPending(input)
+    input.value = showNumber(committed)
+    markInvalid(input, null, err)
+    onPreview(committed)
+  }
+  wrap.appendChild(input)
+  wrap.appendChild(err)
+  return wrap
 }

@@ -9,7 +9,6 @@ import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toPropValue
-import dev.keliver.portal.isDpProp
 import kotlinx.browser.document
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLOptionElement
@@ -211,32 +210,23 @@ private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: A
     input.setAttribute("type", "text")
     input.setAttribute("style", "border-color:var(--accent); color:var(--accent);")
     input.value = value.field
-    // An empty field name is no binding: wait for one (never `Bind("")`).
-    input.addEventListener("input", { _ -> input.value.trim().takeIf { it.isNotEmpty() }?.let { onChange(PropValue.Bind(it)) } })
+    // E11: sent once committed. An empty field name is no binding (never `Bind("")`).
+    input.addEventListener("change", { _ -> input.value.trim().takeIf { it.isNotEmpty() && it != value.field }?.let { onChange(PropValue.Bind(it)) } })
+    commitKeys(input) { input.value = value.field }
     return input
   }
   when (kind) {
     PropKind.Text -> {
       input.setAttribute("type", "text")
-      input.value = value as? String ?: ""
-      input.addEventListener("input", { _ -> onChange(lit(input.value)) })
+      val text = value as? String ?: ""
+      input.value = text
+      // E11: sent once committed — Enter or leaving the field.
+      input.addEventListener("change", { _ -> onChange(lit(input.value)) })
+      commitKeys(input) { input.value = text }
     }
-    PropKind.Int -> {
-      input.setAttribute("type", "number")
-      input.value = (value as? Int ?: 0).toString()
-      input.addEventListener("input", { _ -> onChange(lit(input.value.toIntOrNull() ?: 0)) })
-    }
-    PropKind.Double -> {
-      input.setAttribute("type", "number")
-      input.setAttribute("step", "0.1")
-      val nonNegative = isDpProp(nodeType, key)
-      if (nonNegative) input.setAttribute("min", "0")
-      input.value = (value as? Double ?: 0.0).toString()
-      input.addEventListener("input", { _ ->
-        val v = input.value.toDoubleOrNull() ?: 0.0
-        onChange(lit(if (nonNegative) v.coerceAtLeast(0.0) else v))
-      })
-    }
+    // E11: validated as typed (K1: a Dp is never negative), sent once committed.
+    PropKind.Int -> return numberField(value as? Int ?: 0, numberRule(nodeType, key, kind)) { onChange(lit(it.toInt())) }
+    PropKind.Double -> return numberField(value as? Double ?: 0.0, numberRule(nodeType, key, kind)) { onChange(lit(it.toDouble())) }
     PropKind.Bool -> {
       input.setAttribute("type", "checkbox")
       input.className = ""
