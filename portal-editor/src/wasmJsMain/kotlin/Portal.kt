@@ -1026,10 +1026,12 @@ private const val CLICK_SLOP_PX = 5.0
 private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
   selOverlay = Ui.el("div", "sel-overlay").also {
     it.setAttribute("style", "position:absolute; pointer-events:none; border:2px solid #4f8cff; border-radius:3px; display:none; z-index:5;")
+    it.appendChild(Ui.el("span", "overlay-tag"))
     frame.appendChild(it)
   }
   hoverOverlay = Ui.el("div").also {
     it.setAttribute("style", "position:absolute; pointer-events:none; border:1px dashed rgba(79,140,255,.7); border-radius:3px; display:none; z-index:4;")
+    it.appendChild(Ui.el("span", "overlay-tag hover"))
     frame.appendChild(it)
   }
 
@@ -1261,6 +1263,14 @@ private fun positionOverlay(el: HTMLElement, handle: Int) {
   el.style.top = "${rect.top / dpr}px"
   el.style.width = "${rect.width / dpr}px"
   el.style.height = "${rect.height / dpr}px"
+  // What the box is: its type (an instance says so), and on the selection its size.
+  (el.querySelector(".overlay-tag") as? HTMLElement)?.let { tag ->
+    val node = portalTree.value.findNode(handle)
+    val size = if (el === selOverlay) (rect.width / dpr) to (rect.height / dpr) else null
+    tag.textContent = node?.let { overlayLabel(it.type, isComponentInstance(it, editorComponents), size) }.orEmpty()
+    // A box at the frame's top edge carries its tag inside (above it would be clipped).
+    tag.classList.toggle("inside", rect.top / dpr < 18)
+  }
 }
 
 private fun hideOverlay(el: HTMLElement) {
