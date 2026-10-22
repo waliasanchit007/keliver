@@ -58,14 +58,18 @@ public object SelectionRegistry {
     bounds.clear()
   }
 
-  /** Every rect currently drawing [handle] (a component's widgets, a Repeat's rows). */
+  /**
+   * Every rect currently drawing [handle] (a component's widgets, a Repeat's rows). Empty rects
+   * (an image that has not loaded, a zero-width spacer) are left out: they draw nothing, and one
+   * reported at the root's origin would stretch the handle's bounds across the screen.
+   */
   public fun rectsOf(handle: Int): List<Rect> =
-    reportersOf[handle].orEmpty().mapNotNull { parts[it]?.second }
+    reportersOf[handle].orEmpty().mapNotNull { parts[it]?.second }.filter { !it.isEmpty }
 
   /** The innermost (smallest-area) tagged widget containing the point, or null. */
   public fun hitTest(x: Float, y: Float): Int? =
     parts.values
-      .filter { (_, r) -> x >= r.left && x <= r.right && y >= r.top && y <= r.bottom }
+      .filter { (_, r) -> !r.isEmpty && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom }
       .minByOrNull { (_, r) -> r.width * r.height }
       ?.first
 

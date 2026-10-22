@@ -89,4 +89,11 @@ class SelectionRegistryTest {
     SelectionRegistry.report(2, Rect(30f, 30f, 40f, 40f))
     assertEquals(1, SelectionRegistry.rectsOf(2).size, "a report without a reporter replaces the handle's rect")
   }
+
+  @Test fun anEmptyRectNeitherAnswersAClickNorStretchesTheBounds() {
+    SelectionRegistry.report(7, "a", Rect(100f, 100f, 200f, 150f))
+    SelectionRegistry.report(7, "unloaded image", Rect(0f, 0f, 0f, 0f))
+    assertEquals(Rect(100f, 100f, 200f, 150f), SelectionRegistry.bounds[7])
+    assertNull(SelectionRegistry.hitTest(0f, 0f))
+  }
 }
