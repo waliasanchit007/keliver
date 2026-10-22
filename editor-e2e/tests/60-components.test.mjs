@@ -147,8 +147,6 @@ export default [
   },
   {
     id: 'E14r',
-    knownBug: 'returning from a component reveals the re-selected instance before the canvas has drawn it, ' +
-      'so the canvas says "Not drawn in the current preview state" about a node it is drawing',
     title: 'returning from a component does not claim the re-selected instance is not drawn',
     async run({ page, editor }) {
       await editor.open('overview', { readyColor: COLORS.summaryCard });
