@@ -72,6 +72,8 @@ class ComponentDocumentRelayTest {
     // E20: what Export shows is the file itself, byte for byte.
     assertEquals(f, svc.file)
     assertEquals(f.readText(), svc.sourceText())
+    // E43: a component's file has no compiled-version stamp beside it.
+    assertEquals(listOf("LabelPill.kt"), f.parentFile.list()!!.sorted())
   }
 
   @Test fun anEditThatChangesTheSignatureIsRefusedAndTheFileIsLeftAsItIs() {

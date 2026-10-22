@@ -705,18 +705,20 @@ class DocumentService(
     fileDoc = doc
     fileText = plan.text
     firstRefused = null
+    val how = plan.how.name.lowercase()
+    // E43: a component has no compiled-version stamp (only a screen is routed by one).
+    if (asComponent) return WriteBackStatus(doc.version, how, "written to ${kotlinFile.name} ($how)")
     // M9 versioned catch-up: bake the doc version this screen was written at
     // into a sibling const. Rebuilding the dev bundle (serve --continuous)
     // picks it up; the device router compares it to the live doc version.
-    val how = plan.how.name.lowercase()
-    val compiled = File(kotlinFile.parentFile, "Compiled_${kotlinFile.nameWithoutExtension}.kt")
+    val compiled = compiledStamp(kotlinFile)
     // The screen IS written now: a failure below is reported as that, never as "not in the file".
     val versionFailure = runCatching {
       (PKG_RE.find(plan.text)?.groupValues?.get(1) ?: packageName)?.let { p ->
         val screen = kotlinFile.nameWithoutExtension
-        compiled.writeText(
-          "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
-        )
+        val stamp = "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n"
+        // E43: an unchanged stamp is not rewritten (no churn for a tool watching the tree).
+        if (!compiled.isFile || compiled.readText() != stamp) compiled.writeText(stamp)
       }
     }.exceptionOrNull()
     if (versionFailure != null) {
@@ -754,6 +756,20 @@ class DocumentService(
 
   companion object {
     private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
+    private val STAMP_RE = Regex("""COMPILED_VERSION_\w+\s*:\s*Int\s*=\s*(\d+)""")
+
+    /** M9: the `Compiled_<screen>.kt` stamp beside a screen file. */
+    fun compiledStamp(kotlinFile: File): File = File(kotlinFile.parentFile, "Compiled_${kotlinFile.nameWithoutExtension}.kt")
+
+    /**
+     * E43: the version a screen's stamp holds (0 = none). A document read from
+     * its file starts there, so its version — and the stamp written from it —
+     * never goes back on a new relay or store: a stamp that went back from 4 to 1
+     * hid the dev overlay (it shows only while the live version is ahead).
+     */
+    fun stampedVersion(kotlinFile: File): Long = runCatching {
+      compiledStamp(kotlinFile).takeIf { it.isFile }?.readText()?.let { STAMP_RE.find(it)?.groupValues?.get(1)?.toLongOrNull() }
+    }.getOrNull() ?: 0L
 
     /**
      * E14: a component's document, read from its file (a component is never
@@ -817,7 +833,7 @@ class DocumentService(
               n.copy(handle = Handle(next++), children = n.children.map { renumber(it) })
           }
           val root = renumber(rec.root)
-          val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
+          val doc = UiDocument(screenKey, root, rec.contract, version = stampedVersion(kotlinFile), nextHandle = next)
           return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
             .also { it.fileDoc = doc; it.fileText = text; it.readText = text } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
