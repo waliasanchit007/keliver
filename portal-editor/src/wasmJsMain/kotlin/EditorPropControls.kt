@@ -113,6 +113,7 @@ internal fun colorControl(argb: Int, onCommit: (Int) -> Unit): HTMLElement {
   swatchWrap.appendChild(swatch)
   swatchWrap.appendChild(picker)
   swatchWrap.setAttribute("role", "button")
+  swatchWrap.setAttribute("aria-label", "pick a colour")
   swatchWrap.setAttribute("tabindex", "0")
   swatchWrap.addEventListener("click", { e -> if (e.target != picker) picker.click() })
   swatchWrap.addEventListener("keydown", { e -> if ((e as KeyboardEvent).key == "Enter" || e.key == " ") { e.preventDefault(); picker.click() } })
@@ -234,21 +235,38 @@ internal class PropRow(label: String, layout: Layout = Layout.Stacked) {
   enum class Layout(val css: String) { Stacked("prop"), Compact("prop compact"), Inline("prop inline") }
 
   val root: HTMLElement = Ui.el("div", layout.css)
+  private val lab = Ui.el("label", "prop-label", label)
   private val ctl = Ui.el("div", "prop-ctl")
   private val actions = Ui.el("div", "prop-actions")
 
   init {
-    val lab = Ui.el("label", "prop-label", label)
     lab.setAttribute("title", label)
     root.appendChild(lab)
     root.appendChild(ctl)
     root.appendChild(actions)
   }
 
-  fun control(e: HTMLElement): PropRow = apply { ctl.appendChild(e) }
+  /**
+   * Adds the row's control. Its first field is the label's (`for`): screen
+   * readers name it, and a click on the label focuses it — a dropdown without
+   * opening its list, so the keyboard picks a value.
+   */
+  fun control(e: HTMLElement): PropRow = apply {
+    ctl.appendChild(e)
+    if (lab.getAttribute("for") == null) {
+      val field = if (e.matches(FIELD)) e else e.querySelector(FIELD) as? HTMLElement
+      if (field != null) {
+        val id = field.id.ifEmpty { "prop-field-${++propFieldIds}".also { field.id = it } }
+        lab.setAttribute("for", id)
+      }
+    }
+  }
 
   fun action(e: HTMLElement?): PropRow = apply { if (e != null) actions.appendChild(e) }
 }
+
+private const val FIELD = "input:not([type=color]):not([hidden]), select, textarea"
+private var propFieldIds = 0
 
 /** The field holding a typed edit not yet committed, and how to commit it. */
 private var pendingField: Pair<HTMLElement, () -> Unit>? = null

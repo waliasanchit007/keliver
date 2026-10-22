@@ -204,6 +204,10 @@ class EditorPropControlsTest {
     assertEquals("prop", row.root.className)
     assertEquals(1, row.root.querySelectorAll(".prop-actions button").length)
     assertEquals("prop compact", PropRow("Width", PropRow.Layout.Compact).root.className)
+    // The label names (and focuses) the row's first field.
+    val area = row.root.querySelector("textarea")!!
+    assertTrue(area.id.isNotEmpty())
+    assertEquals(area.id, row.root.querySelector("label")!!.getAttribute("for"))
   }
 
   @Test fun numbersAreReadStrictlyAndRangeChecked() {

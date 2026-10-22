@@ -2420,7 +2420,8 @@ private fun renderProps() {
     val slot = Ui.el("div", "token-picker")
     propsEl.appendChild(
       PropRow("Show when").control(
-        conditionEditor(docContract, c?.field ?: "", c?.test ?: CondTest.Bool, c?.negate ?: false, newFieldSlot = slot) { f, t, n ->
+        // In an opened component a new field would be a new parameter: added in code, not here.
+        conditionEditor(docContract, c?.field ?: "", c?.test ?: CondTest.Bool, c?.negate ?: false, newFieldSlot = slot.takeIf { editTarget().component == null }) { f, t, n ->
           sendOps(conditionOps(node.id, c, f, t, n))
         },
       ).root,
