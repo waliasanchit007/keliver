@@ -1406,6 +1406,21 @@ fun main(args: Array<String>) {
       respond(ex, 200, body.toString())
     }
   }
+  // E42: a symbol font the editor's canvas falls back to for glyphs its own font lacks (✓ ✕ ★ …),
+  // so a symbol in an app's text is drawn, not a box. Noto Sans Symbols 2, under the SIL OFL
+  // (editor-fonts/OFL.txt). Read-only and the same for every app.
+  server.createContext("/editor-font") { ex ->
+    handle(ex) {
+      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
+      val bytes = Thread.currentThread().contextClassLoader.getResourceAsStream("editor-fonts/NotoSansSymbols2-Regular.ttf")
+        ?.use { it.readBytes() }
+      if (bytes == null) { respond(ex, 404); return@handle }
+      ex.responseHeaders.set("Content-Type", "font/ttf")
+      ex.responseHeaders.set("Cache-Control", "public, max-age=86400")
+      ex.sendResponseHeaders(200, bytes.size.toLong())
+      ex.responseBody.use { it.write(bytes) }
+    }
+  }
   server.createContext("/doc-events") { ex -> // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")

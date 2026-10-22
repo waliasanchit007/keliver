@@ -181,6 +181,17 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
   // ComposeViewport sizes the composition to the device-frame host div (and
   // observes its size), unlike CanvasBasedWindow which fills the window.
   ComposeViewport(viewportContainer = kotlinx.browser.document.getElementById(PREVIEW_HOST_ID)!!) {
+    // E42: a glyph the canvas font lacks (✓ ✕ ★ …) falls back to the relay's symbol font — a box
+    // ("tofu") in its place said nothing about what the app shows. Without a relay: no fallback.
+    val fonts = androidx.compose.ui.platform.LocalFontFamilyResolver.current
+    LaunchedEffect(fonts) {
+      val bytes = fetchBytes("$SERVER/editor-font") ?: return@LaunchedEffect
+      fonts.preload(
+        androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.platform.Font("KeliverSymbolFallback", bytes)),
+      )
+      canvasGeneration.value++ // text already laid out is drawn again, with the fallback
+      androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+    }
     val widgetSystem = remember {
       ComposeUiKeliverMaterialWidgetSystem(
         ImageLoader.Builder(PlatformContext.INSTANCE)
@@ -260,7 +271,7 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
         LivePresenterHost()
         // K5: inside the app's own screen wrapper (its Theme), as on a device.
         dev.keliver.portal.render.AppScreenFrame(entry) {
-          androidx.compose.runtime.key(componentsGeneration.value) {
+          androidx.compose.runtime.key(canvasGeneration.value) {
             RenderNode(selectionTagged(portalTree.value))
           }
         }
