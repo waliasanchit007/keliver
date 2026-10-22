@@ -377,6 +377,7 @@ private fun pumpOps() {
         q.onResult?.invoke(false)
         dropQueuedOps()
         Ui.toast(reply.error ?: "edit rejected")
+        saveTextEl.setAttribute("title", reply.error ?: "edit rejected")
         refetchDoc(true)
       }
       OpsReply.Unknown -> {
@@ -395,7 +396,10 @@ private fun pumpOps() {
       }
     }
   }
-  xhr.addEventListener("load", { _ -> settle(opsReply(xhr.status.toInt(), xhr.responseText)) })
+  xhr.addEventListener("load", { _ ->
+    readStackDepths(xhr)
+    settle(opsReply(xhr.status.toInt(), xhr.responseText))
+  })
   for (event in listOf("error", "timeout", "abort")) xhr.addEventListener(event, { _ -> settle(replyWithoutLoad(event)) })
   xhr.send(DocJson.encodeToString(batch))
 }
@@ -451,7 +455,9 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   // K6: `extendedConditions=1` — and equality / compound conditionals (a K3 editor is served the true branch).
   // K7: `arithmetic=1` — and PropValue.Arith / PropValue.IntDp (an older editor gets the computed literal, or no prop).
   xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&$DOC_FEATURES")
+  xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.addEventListener("load", { _ ->
+    readStackDepths(xhr)
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
       portalTree.value = doc.toWidgetTree(handleIds = true)
@@ -555,14 +561,37 @@ private fun serverPost(path: String, cb: () -> Unit) {
   val xhr = XMLHttpRequest()
   xhr.open("POST", "$SERVER$path?project=$currentProject&screen=$currentScreen")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
-  xhr.addEventListener("load", { _ -> cb() })
+  xhr.addEventListener("load", { _ ->
+    readStackDepths(xhr)
+    cb()
+  })
   xhr.send()
 }
 
+/** E30: the session's undo/redo depths the relay reports (null = a relay that does not say). */
+private var undoDepth: Int? = null
+private var redoDepth: Int? = null
+
+private fun readStackDepths(xhr: XMLHttpRequest) {
+  undoDepth = xhr.getResponseHeader("X-Undo-Depth")?.toIntOrNull()
+  redoDepth = xhr.getResponseHeader("X-Redo-Depth")?.toIntOrNull()
+  updateUndoButtons()
+}
+
 private fun updateUndoButtons() {
-  // Server-side stacks: buttons stay enabled; the server acks "nothing to undo".
-  undoBtn.removeAttribute("disabled")
-  redoBtn.removeAttribute("disabled")
+  // Disabled when the relay says there is nothing to step; a relay that does not
+  // report depths keeps them enabled (it acks "nothing to undo" itself).
+  fun set(btn: HTMLElement, depth: Int?, verb: String) {
+    if (depth == 0) btn.setAttribute("disabled", "") else btn.removeAttribute("disabled")
+    btn.setAttribute("title", if (depth == null) verb else "$verb ($depth step${if (depth == 1) "" else "s"})")
+  }
+  if (playground) {
+    set(undoBtn, localUndo.size, "Undo")
+    set(redoBtn, localRedo.size, "Redo")
+    return
+  }
+  set(undoBtn, undoDepth, "Undo")
+  set(redoBtn, redoDepth, "Redo")
 }
 
 /** Anchor for append-to-end inserts: the parent's last child handle (excluding [excludeId]). */
@@ -1516,7 +1545,8 @@ private fun installKeyboard() {
   document.addEventListener("keydown", { ev ->
     val e = ev as KeyboardEvent
     val mod = e.metaKey || e.ctrlKey
-    if (mod && e.key.lowercase() == "z") {
+    val inField = (document.activeElement as? HTMLElement)?.tagName?.lowercase() in setOf("input", "textarea")
+    if (mod && e.key.lowercase() == "z" && !inField) { // E31: in a field, the field's own undo
       ev.preventDefault()
       if (e.shiftKey) redo() else undo()
     }

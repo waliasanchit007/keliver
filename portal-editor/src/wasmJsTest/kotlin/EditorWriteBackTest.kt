@@ -94,5 +94,8 @@ class EditorWriteBackTest {
     assertEquals(Pill("dot error", "Not written"), pillAfterReply(OpsReply.Rejected("x"), notWritten = true))
     assertEquals(Pill("dot", "Unconfirmed"), pillAfterReply(OpsReply.Unknown, notWritten = false))
     assertEquals(Pill("dot error", "Not saved"), pillAfterReply(OpsReply.NetworkError, notWritten = true))
+    // E18: a refused edit is not "Saved" — the author's change did not happen.
+    assertEquals(Pill("dot saving", "Change refused"), pillAfterReply(OpsReply.Rejected("x"), notWritten = false))
+    assertEquals(Pill("dot saving", "Reloaded"), pillAfterReply(OpsReply.Rebase, notWritten = false))
   }
 }

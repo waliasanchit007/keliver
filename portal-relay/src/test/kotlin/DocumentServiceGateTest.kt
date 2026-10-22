@@ -82,4 +82,16 @@ class DocumentServiceGateTest {
     assertTrue(svc.dryRun(batch(svc, ok)).ok)
     assertTrue(svc.submit(batch(svc, ok)).ok)
   }
+
+  @Test fun stackDepthsFollowEditsUndoAndRedoPerSession() {
+    val svc = service()
+    assertEquals(0 to 0, svc.stackDepths("t"))
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(Handle(3), "text", PropValue.Lit("s", s = "b")))).ok)
+    assertEquals(1 to 0, svc.stackDepths("t"))
+    assertEquals(0 to 0, svc.stackDepths("other"), "another session has its own stacks")
+    assertTrue(svc.undo("t").ok)
+    assertEquals(0 to 1, svc.stackDepths("t"))
+    assertTrue(svc.redo("t").ok)
+    assertEquals(1 to 0, svc.stackDepths("t"))
+  }
 }

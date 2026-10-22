@@ -394,6 +394,10 @@ class DocumentService(
     return OpAck(true, doc.version)
   }
 
+  /** How many undo and redo steps [session] has, for the editor's Undo/Redo buttons. */
+  @Synchronized
+  fun stackDepths(session: String): Pair<Int, Int> = (undoStacks[session]?.size ?: 0) to (redoStacks[session]?.size ?: 0)
+
   @Synchronized
   fun undo(session: String): OpAck = step("undo", undoStacks[session]) { redoStacks.getOrPut(session) { ArrayDeque() } }
 
