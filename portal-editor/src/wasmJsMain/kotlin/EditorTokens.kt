@@ -1,4 +1,7 @@
 import dev.keliver.portal.ComponentRegistry
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.editableProps
+import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.lit
 import dev.keliver.portal.propSourceType
@@ -60,9 +63,28 @@ internal fun parseTokens(json: String): List<EditorToken> = runCatching {
 }.getOrDefault(emptyList())
 
 /**
+ * E13: whether an Int token's value is a colour — an ARGB with a non-zero
+ * alpha byte (≥ 0x01000000 or negative). No size, count, weight or code is
+ * that large, and an Int constant written as `0xFF…` is exactly that; a fully
+ * transparent colour (`0x00RRGGBB`) reads as a number.
+ */
+internal fun isColorValue(value: Any?): Boolean = value is Int && (value ushr 24) != 0
+
+/** The catalog kind of wire key [key] on a [nodeType] node (a widget prop, a modifier argument, a component parameter). */
+internal fun propKindOf(nodeType: String, key: String, components: ComponentRegistry): PropKind? =
+  if (key.startsWith("mod.")) {
+    modifierSpecs.firstOrNull { it.name == key.removePrefix("mod.").substringBefore('.') }
+      ?.props?.firstOrNull { it.name == key.removePrefix("mod.").substringAfter('.') }?.kind
+  } else {
+    (components.spec(nodeType)?.props ?: editableProps(nodeType)).firstOrNull { it.name == key }?.kind
+  }
+
+/**
  * The tokens that may stand for wire key [key] on a node of [nodeType]: of
  * exactly the prop's plain literal type (never a Dp, Float or enum prop), not
- * ambiguous, matching [query] (by reference or value), by reference.
+ * ambiguous, matching [query] (by reference or value), by reference. E13: of
+ * the prop's meaning too — a colour prop takes colour tokens, any other Int
+ * prop only Int tokens that are not colours ([isColorValue]).
  */
 internal fun tokensFor(
   nodeType: String,
@@ -73,8 +95,10 @@ internal fun tokensFor(
 ): List<EditorToken> {
   val type = propSourceType(nodeType, key, components)
   val q = query.trim().lowercase()
+  val kind = propKindOf(nodeType, key, components)
   return tokens
     .filter { !it.ambiguous && tokenFits(type, it.value) }
+    .filter { type != "Int" || kind == null || isColorValue(it.value) == (kind == PropKind.Color) }
     .filter { q.isEmpty() || q in it.ref.lowercase() || q in it.value.toString().lowercase() }
     .sortedBy { it.ref }
 }
