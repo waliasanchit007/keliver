@@ -26,6 +26,12 @@ internal var editorComponents: ComponentRegistry = EmptyComponentRegistry
 
 internal fun setEditorComponents(reg: ComponentRegistry) { editorComponents = reg }
 
+/**
+ * Bumped when the registry's definitions change: the canvas reads it, so an instance whose
+ * component changed is drawn again (the screen's own tree, and so RenderNode's input, did not).
+ */
+internal val componentsGeneration = androidx.compose.runtime.mutableIntStateOf(0)
+
 internal fun parseComponents(json: String): ComponentRegistry = runCatching {
   val arr = Json.parseToJsonElement(json).jsonArray
   val specs = arr.map { el ->

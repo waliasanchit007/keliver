@@ -740,6 +740,7 @@ private fun componentDocFor(project: String, name: String): DocumentService {
       tokens = { Tokens.table(project) },
       tokenFileId = tokenFileId(file),
       tokensVersion = { Tokens.version(project) },
+      componentsVersion = { Components.version(project) },
     ) ?: throw UnknownComponent(project, name, spec.diagnostic ?: "its body is not one the editor can read")
   }
 }
@@ -790,6 +791,7 @@ private fun docFor(q: Map<String, String>): DocumentService {
       tokens = { Tokens.table(project) },
       tokenFileId = tokenFileId(File(screensDirFor(project), "$screen.kt")),
       tokensVersion = { Tokens.version(project) },
+      componentsVersion = { Components.version(project) },
     ).also { it.ensureKotlinFile() }
   }
 }
@@ -1005,7 +1007,9 @@ private fun ingestComponentFile(f: File) {
     // Always forced: a screen's text is unchanged, so the watcher path would
     // skip it as already read, and its tree would stay read under the old registry.
     reingestScreens(project, force = true)
-    if (tokensChanged) documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
+    // Every open editor of the project redraws its instances: a screen's own document does not
+    // change when only a component it uses does, so without this the canvas kept the old one.
+    documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
   }.onFailure { println("component ingest failed for $f: $it") }
 }
 
