@@ -69,6 +69,9 @@ class ComponentDocumentRelayTest {
     assertEquals("surgical", status.outcome, status.message)
     assertEquals(source.replace("\"New\"", "\"Hot\""), f.readText())
     assertEquals(DocumentService.FileChange.SELF_WRITE, svc.fileChanged(f.readText()))
+    // E20: what Export shows is the file itself, byte for byte.
+    assertEquals(f, svc.file)
+    assertEquals(f.readText(), svc.sourceText())
   }
 
   @Test fun anEditThatChangesTheSignatureIsRefusedAndTheFileIsLeftAsItIs() {

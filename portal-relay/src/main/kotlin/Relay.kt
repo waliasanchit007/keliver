@@ -1383,6 +1383,22 @@ fun main(args: Array<String>) {
       respond(ex, 200, DocJson.encodeToString(ack))
     }
   }
+  // E20: the open document's own .kt file exactly as it is on disk — Export shows this, never a
+  // re-export from the tree (which loses the package, imports, names and declared types). GET only.
+  server.createContext("/source") { ex ->
+    handle(ex) {
+      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
+      val svc = docFor(query(ex))
+      val rel = runCatching { svc.file.canonicalFile.relativeTo(repoDir.canonicalFile).path }.getOrDefault(svc.file.name)
+      val body = kotlinx.serialization.json.buildJsonObject {
+        put("file", kotlinx.serialization.json.JsonPrimitive(rel))
+        put("text", svc.sourceText()?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+        put("version", kotlinx.serialization.json.JsonPrimitive(svc.doc.version))
+        put("writeBack", svc.writeBack?.json()?.let { kotlinx.serialization.json.Json.parseToJsonElement(it) } ?: kotlinx.serialization.json.JsonNull)
+      }
+      respond(ex, 200, body.toString())
+    }
+  }
   server.createContext("/doc-events") { ex -> // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")

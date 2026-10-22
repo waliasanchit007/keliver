@@ -49,6 +49,8 @@ import kotlinx.browser.document
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -289,6 +291,14 @@ private fun serverGet(path: String, cb: (String) -> Unit) {
   xhr.open("GET", "$SERVER$path")
   xhr.addEventListener("load", { _ -> cb(xhr.responseText) })
   xhr.send()
+}
+
+private fun copyToClipboard(text: String) {
+  js("navigator.clipboard && navigator.clipboard.writeText(text).catch(function(){})")
+}
+
+private fun downloadText(name: String, text: String) {
+  js("(function(){ var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); })()")
 }
 
 private fun sendBody(url: String, m: String, body: String) {
@@ -1461,11 +1471,23 @@ private fun renderInspector() {
 private fun buildExportOverlay() {
   exportOverlay = Ui.el("div", "overlay")
   exportOverlay.setAttribute("style", "display:none;")
-  val head = Ui.el("div", "head", "Exported Kotlin")
+  val head = Ui.el("div", "head")
+  exportTitle = Ui.el("span", "export-title", "Kotlin")
+  head.appendChild(exportTitle)
+  val copy = Ui.button("Copy", "btn") {
+    copyToClipboard(exportText)
+    showCanvasHint("Copied ${exportName.ifEmpty { "the source" }}")
+  }
+  copy.setAttribute("style", "margin-left:auto;")
+  head.appendChild(copy)
+  head.appendChild(Ui.button("Download", "btn") { if (exportText.isNotEmpty()) downloadText(exportName.ifEmpty { "Screen.kt" }, exportText) })
   val close = Ui.button("✕", "btn icon") { exportOverlay.setAttribute("style", "display:none;") }
-  close.setAttribute("style", "margin-left:auto;")
+  close.setAttribute("title", "Close (Esc)")
   head.appendChild(close)
   exportOverlay.appendChild(head)
+  exportNote = Ui.el("div", "export-note")
+  exportNote.style.display = "none"
+  exportOverlay.appendChild(exportNote)
   exportPre = Ui.el("pre")
   exportOverlay.appendChild(exportPre)
   document.body?.appendChild(exportOverlay)
@@ -1484,10 +1506,52 @@ private fun buildExportOverlay() {
   document.body?.appendChild(flowGraphOverlay)
 }
 
+/**
+ * E20: Export shows the document's own file, exactly as the relay keeps it — the package,
+ * imports, function, Bindings interface and declared types are the app's. Only the
+ * playground, which saves no file, shows the tree's export, and says it is a snippet.
+ */
 private fun showExport() {
   flowGraphOverlay.setAttribute("style", "display:none;") // E36: one overlay at a time
-  exportPre.textContent = exportKotlin(portalTree.value)
   exportOverlay.removeAttribute("style")
+  if (playground) {
+    showExportText("Kotlin snippet — the playground saves no file", null, exportKotlin(portalTree.value), "Screen.kt")
+    return
+  }
+  showExportText("Loading…", null, "", "")
+  val target = editTarget()
+  serverGet("/source?${target.query}") { txt ->
+    if (target != editTarget()) return@serverGet
+    val o = runCatching { Json.parseToJsonElement(txt).jsonObject }.getOrNull()
+    val file = o?.get("file")?.jsonPrimitive?.content
+    if (o == null || file == null) {
+      showExportText("Export failed", "the relay did not return the file: ${txt.take(160)}", "", "")
+      return@serverGet
+    }
+    val text = (o["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+    val wb = o["writeBack"] as? JsonObject
+    val behind = wb?.get("written")?.jsonPrimitive?.content == "false"
+    showExportText(
+      file,
+      if (behind) "⚠ the file is behind the editor: ${wb?.get("message")?.jsonPrimitive?.content}" else null,
+      text ?: "(no file yet)",
+      file.substringAfterLast('/'),
+    )
+  }
+}
+
+private lateinit var exportTitle: HTMLElement
+private lateinit var exportNote: HTMLElement
+private var exportText = ""
+private var exportName = ""
+
+private fun showExportText(title: String, note: String?, text: String, fileName: String) {
+  exportTitle.textContent = title
+  exportNote.textContent = note.orEmpty()
+  exportNote.style.display = if (note == null) "none" else "block"
+  exportText = text
+  exportName = fileName
+  exportPre.textContent = text
 }
 
 /**
