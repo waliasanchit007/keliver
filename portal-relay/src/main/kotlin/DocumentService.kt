@@ -594,7 +594,8 @@ class DocumentService(
       acceptExternal(next, "a component or design token it uses changed", text)
     } else {
       // The same document: the stacks stay, and so does what the last read vouched for (U37).
-      remember(doc, text, fileChangedInCode = text != fileText)
+      // A component or token it uses changed: an earlier text may import or spell it as it was.
+      remember(doc, text, fileChangedInCode = true)
       fileDoc = doc
       fileText = text
     }
@@ -736,11 +737,14 @@ class DocumentService(
     if (fileDoc !== base) return null // the file was read meanwhile: that read set the status
     val now = if (kotlinFile.exists()) kotlinFile.readText() else null
     if (now != onDisk) return reread("the file changed while the change was being written", base)
+    // Merged onto a file changed in code since the last write or read (the same tree, e.g. a
+    // comment or a helper): no earlier text holds that change, so none may be written back.
+    val changedInCode = onDisk != fileText
     lastWrittenText = plan.text
     kotlinFile.writeText(plan.text)
     fileDoc = doc
     fileText = plan.text
-    remember(doc, plan.text)
+    remember(doc, plan.text, fileChangedInCode = changedInCode)
     firstRefused = null
     val how = plan.how.name.lowercase()
     // E43: a component has no compiled-version stamp (only a screen is routed by one).

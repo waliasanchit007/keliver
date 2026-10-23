@@ -98,4 +98,16 @@ class UndoExactTextRelayTest {
     submit(svc, DocOp.SetProp(children(svc)[2].handle, "text", lit("New")))
     assertEquals(source.replace("    Divider()\n", "    Divider() // keep me\n"), awaitWritten(svc), "the comment made in code is kept")
   }
+
+  @Test fun aChangeInCodeTheWatcherHasNotReadYetIsKeptByALaterUndo() {
+    val (svc, f) = open(source)
+    // The author saves a comment; before the watcher reads it, an edit is merged onto that file.
+    f.writeText(source.replace("    Divider()\n", "    Divider() // keep me\n"))
+    submit(svc, DocOp.SetProp(children(svc)[2].handle, "text", lit("Hot")))
+    assertTrue("// keep me" in awaitWritten(svc))
+    // The watcher's read of the relay's own write changes nothing; the undo keeps the comment.
+    assertEquals(DocumentService.FileChange.SELF_WRITE, svc.fileChanged(f.readText()))
+    assertTrue(svc.undo("t").ok)
+    assertEquals(source.replace("    Divider()\n", "    Divider() // keep me\n"), awaitWritten(svc))
+  }
 }
