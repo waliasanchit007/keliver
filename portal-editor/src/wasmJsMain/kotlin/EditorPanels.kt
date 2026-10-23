@@ -1,8 +1,8 @@
 /*
  * Resizable, collapsible side panels. Each panel's inner edge is a splitter:
  * drag it to resize (within [PANEL_MIN_PX, PANEL_MAX_PX]), double-click it to
- * collapse the panel (or bring it back). Widths and collapsed state persist in
- * this browser (localStorage), per side.
+ * collapse the panel (or bring it back); a hidden panel shows a tab at the window's edge that
+ * brings it back. Widths and collapsed state persist in this browser (localStorage), per side.
  */
 import kotlinx.browser.document
 import kotlinx.browser.localStorage
@@ -53,9 +53,16 @@ private fun installResizer(side: PanelSide) {
   splitter.setAttribute("aria-orientation", "vertical")
   splitter.setAttribute("title", "Drag to resize · double-click to ${if (collapsed) "show" else "hide"} the panel")
 
+  // F16: a hidden panel leaves a visible tab at its edge that brings it back.
+  val name = if (side == PanelSide.Left) "palette and outline" else "properties"
+  val reveal = Ui.button(if (side == PanelSide.Left) "›" else "‹", "panel-reveal ${side.cls}") {}
+  reveal.setAttribute("title", "Show the $name panel")
+  reveal.setAttribute("aria-label", "Show the $name panel")
+
   fun apply() {
     root.style.setProperty(side.cssVar, if (collapsed) "0px" else "${width}px")
     if (collapsed) pane.classList.add("collapsed") else pane.classList.remove("collapsed")
+    reveal.classList.toggle("shown", collapsed)
     splitter.setAttribute("aria-valuenow", if (collapsed) "0" else "$width")
     splitter.setAttribute("title", "Drag to resize · double-click to ${if (collapsed) "show" else "hide"} the panel")
     // The canvas's frame and overlays are positioned from the center's box.
@@ -100,7 +107,14 @@ private fun installResizer(side: PanelSide) {
     apply()
   })
 
+  reveal.addEventListener("click", { _ ->
+    collapsed = false
+    store(collapsedKey, "false")
+    apply()
+  })
+
   document.body?.appendChild(splitter)
+  document.body?.appendChild(reveal)
   apply()
 }
 

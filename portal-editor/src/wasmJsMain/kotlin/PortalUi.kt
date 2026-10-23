@@ -37,6 +37,12 @@ internal object Ui {
     .splitter:hover::after, .splitter.dragging::after { background: var(--accent); width: 2px; left: 2px; }
     .splitter.left { left: calc(var(--left-w) - 4px); }
     .splitter.right { right: calc(var(--right-w) - 4px); }
+    .panel-reveal { position: fixed; top: 50%; z-index: 26; width: 18px; height: 56px; padding: 0; display: none;
+      background: var(--panel); color: var(--muted); border: 1px solid var(--border); cursor: pointer; font-size: 12px; }
+    .panel-reveal:hover { color: var(--text); border-color: var(--accent); }
+    .panel-reveal.left { left: 0; border-left: none; border-radius: 0 6px 6px 0; }
+    .panel-reveal.right { right: 0; border-right: none; border-radius: 6px 0 0 6px; }
+    .panel-reveal.shown { display: block; }
     body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
     .center { position: fixed; top: 46px; left: var(--left-w); right: var(--right-w); bottom: 0; overflow: auto;
       display: flex; align-items: flex-start; justify-content: center; padding: 28px 16px; box-sizing: border-box; }

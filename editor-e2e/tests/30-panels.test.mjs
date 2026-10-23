@@ -47,6 +47,20 @@ export default [
       log(`widths after reload: ${JSON.stringify(w)}`);
       near(w.left, resized.left, 1, 'after a reload the left panel keeps its dragged width');
       equal(w.right, 0, 'after a reload the right panel is still collapsed');
+      // F16: a hidden panel leaves a visible tab at the window's edge; a click on it brings the panel back.
+      const tab = await page.eval(`(() => { const t = document.querySelector('.panel-reveal.right');
+        if (!t || getComputedStyle(t).display === 'none') return null;
+        const b = t.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, label: t.getAttribute('aria-label') }; })()`);
+      ok(tab, 'the collapsed right panel shows a tab at the window edge');
+      log(`reveal tab: ${JSON.stringify(tab)}`);
+      ok(!(await page.eval(`(() => { const t = document.querySelector('.panel-reveal.left'); return t && getComputedStyle(t).display !== 'none'; })()`)),
+        'the open left panel shows no tab');
+      await page.click(tab.x, tab.y);
+      w = await editor.paneWidths();
+      near(w.right, resized.right, 1, 'clicking the tab restores the right panel at its width');
+      // Double-clicking the collapsed edge still works too.
+      await page.dblclick(W - resized.right + 1, y);
+      equal((await editor.paneWidths()).right, 0, 'collapsed again');
       await page.dblclick(W - 2, y);
       w = await editor.paneWidths();
       near(w.right, resized.right, 1, 'double-clicking the collapsed right edge restores the panel at its width');
