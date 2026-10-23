@@ -244,6 +244,9 @@ class EditorPropControlsTest {
     assertTrue(commits.isEmpty())
     assertEquals("Font size must be at least 1", err.textContent)
 
+    // Each invalid commit put the canvas back to the written value (24), sending nothing.
+    assertEquals(listOf<Number>(24, 24), previews)
+    previews.clear()
     type("1"); type("18") // typing a two-digit value previews, writes nothing
     assertEquals(listOf<Number>(1, 18), previews)
     assertTrue(commits.isEmpty())

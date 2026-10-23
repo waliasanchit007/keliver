@@ -190,6 +190,7 @@ internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario): WidgetNode? {
   val roles = scenario.on - StateRole.Content
   if (roles.isEmpty()) return null
   fun find(n: WidgetNode): WidgetNode? {
+    if (n.type == ELSE_TYPE) return null // the scenario turns content on: an else branch is not drawn
     if (n.type == "Condition" && condOf(n)?.terms?.any { !it.negate && roleOf(it.field) in roles } == true) return n
     return n.children.firstNotNullOfOrNull(::find)
   }

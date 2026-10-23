@@ -40,6 +40,7 @@ internal fun actionSelect(contract: Contract, current: String?, canDeclare: Bool
 internal fun newActionProblem(contract: Contract, name: String): String? = when {
   name.isEmpty() -> "Type a name for the action"
   !Regex("[A-Za-z_][A-Za-z0-9_]*").matches(name) -> "An action name is letters, digits and _ (not starting with a digit)"
+  name in KOTLIN_KEYWORDS -> "\"$name\" is a Kotlin keyword"
   name in contract.actions -> "$name is already an action: choose it from the list"
   name in contract.fields -> "$name is already a field"
   else -> null

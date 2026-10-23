@@ -68,4 +68,14 @@ class EditorTokensTest {
     assertEquals(true, isColorValue(-1))
     assertEquals(false, isColorValue(0xFFFFFF))
   }
+
+  @Test fun aSentinelOrAnAmountTokenIsANumberAndAColourNamedOneIsAColour() {
+    assertEquals(true, isColorToken("C.Blue600", 0xFF2563EB.toInt()))
+    assertEquals(true, isColorToken("C.White", -1))
+    assertEquals(false, isColorToken("Limits.UNLIMITED", -1), "a sentinel")
+    assertEquals(false, isColorToken("Limits.MAX_LINES", -1))
+    assertEquals(false, isColorToken("Money.AMOUNT_CAP", 20_000_000), "a large amount")
+    assertEquals(true, isColorToken("C.ScrimArgb", 0x40000000), "a translucent colour named so")
+    assertEquals(false, isColorToken("C.Gap", 16), "no alpha byte: a number")
+  }
 }

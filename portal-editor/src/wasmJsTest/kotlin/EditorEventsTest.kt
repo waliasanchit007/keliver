@@ -72,4 +72,9 @@ class EditorEventsTest {
     confirm.click()
     assertEquals(listOf<Pair<String?, String?>>("notifyMe" to null), sets)
   }
+
+  @Test fun aNewActionNamedAfterAKotlinKeywordIsRefusedBeforeItIsWritten() {
+    assertEquals("\"in\" is a Kotlin keyword", newActionProblem(contract, "in"))
+    assertEquals(null, newActionProblem(contract, "share"))
+  }
 }

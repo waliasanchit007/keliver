@@ -9,7 +9,7 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.KeyboardEvent
 
 /** Kotlin's hard keywords: not a field name (`val in: Int` does not compile). */
-private val KOTLIN_KEYWORDS = setOf(
+internal val KOTLIN_KEYWORDS = setOf(
   "as", "break", "class", "continue", "do", "else", "false", "for", "fun", "if", "in", "interface", "is", "null",
   "object", "package", "return", "super", "this", "throw", "true", "try", "typealias", "typeof", "val", "var", "when", "while",
 )

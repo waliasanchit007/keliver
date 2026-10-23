@@ -194,11 +194,11 @@ export default [
       const r = await row(page, 'Text');
       ok(r?.buttons['@'], 'the Text row has an @ button');
       await page.click(r.buttons['@'].x, r.buttons['@'].y);
-      const offered = await page.eval(`[...document.querySelectorAll('.pane.right [data-field]')].map(e => e.getAttribute('data-field'))`);
+      const offered = await page.eval(`[...document.querySelectorAll('.pane.right .bind-list [data-field]')].map(e => e.getAttribute('data-field'))`);
       equal(offered, ['subtitle'], "the picker offers the screen's String fields");
       await sleep(600);
       await expectBytes(file, original, 'opening the picker wrote to overview.kt');
-      await editor.clickOn('.pane.right [data-field]', 'subtitle');
+      await editor.clickOn('.pane.right .bind-list [data-field]', 'subtitle');
       await waitForFile(file, (t) => t.includes('text = b.subtitle,') && !t.includes('"Synced this morning"'), { message: 'the binding was never written' });
       const changes = changedSources(pristine, snapshot(fixtureDir));
       log(`write-back: ${JSON.stringify(changes)}`);

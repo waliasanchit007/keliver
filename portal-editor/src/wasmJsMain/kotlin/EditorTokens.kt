@@ -70,6 +70,31 @@ internal fun parseTokens(json: String): List<EditorToken> = runCatching {
  */
 internal fun isColorValue(value: Any?): Boolean = value is Int && (value ushr 24) != 0
 
+private val NUMBER_WORDS = setOf(
+  "max", "min", "limit", "count", "size", "unlimited", "none", "amount", "total", "lines", "weight",
+  "index", "id", "code", "duration", "ms", "millis", "seconds", "dp", "px", "step", "cap", "threshold",
+  "price", "fee", "balance", "budget",
+)
+private val COLOR_WORDS = setOf(
+  "color", "colour", "argb", "tint", "bg", "background", "ink", "fill", "stroke", "border", "scrim", "overlay", "shadow",
+)
+
+/**
+ * Review: whether Int token [ref] = [value] is a colour. Its value must be one ([isColorValue]);
+ * then a name that says number wins — `UNLIMITED = -1`, `AMOUNT_CAP = 20_000_000` — unless it
+ * also says colour (`BorderMaxArgb`). Any other value with an alpha byte is a colour (`Veil`).
+ */
+internal fun isColorToken(ref: String, value: Any?): Boolean {
+  if (!isColorValue(value)) return false
+  val words = ref.substringAfterLast('.').replace(Regex("([a-z0-9])([A-Z])"), "$1 $2").lowercase()
+    .split(' ', '_', '-').filter { it.isNotEmpty() }
+  return when {
+    words.any { it in COLOR_WORDS } -> true
+    words.any { it in NUMBER_WORDS } -> false
+    else -> true
+  }
+}
+
 /** The catalog kind of wire key [key] on a [nodeType] node (a widget prop, a modifier argument, a component parameter). */
 internal fun propKindOf(nodeType: String, key: String, components: ComponentRegistry): PropKind? =
   if (key.startsWith("mod.")) {
@@ -84,7 +109,7 @@ internal fun propKindOf(nodeType: String, key: String, components: ComponentRegi
  * exactly the prop's plain literal type (never a Dp, Float or enum prop), not
  * ambiguous, matching [query] (by reference or value), by reference. E13: of
  * the prop's meaning too — a colour prop takes colour tokens, any other Int
- * prop only Int tokens that are not colours ([isColorValue]).
+ * prop only Int tokens that are not colours ([isColorToken]).
  */
 internal fun tokensFor(
   nodeType: String,
@@ -98,7 +123,7 @@ internal fun tokensFor(
   val kind = propKindOf(nodeType, key, components)
   return tokens
     .filter { !it.ambiguous && tokenFits(type, it.value) }
-    .filter { type != "Int" || kind == null || isColorValue(it.value) == (kind == PropKind.Color) }
+    .filter { type != "Int" || kind == null || isColorToken(it.ref, it.value) == (kind == PropKind.Color) }
     .filter { q.isEmpty() || q in it.ref.lowercase() || q in it.value.toString().lowercase() }
     .sortedBy { it.ref }
 }

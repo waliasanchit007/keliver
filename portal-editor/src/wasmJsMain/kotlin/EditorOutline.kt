@@ -79,7 +79,7 @@ internal fun canvasDropPlace(
   val kids = node.children.mapNotNull { c -> box(c)?.let { c to it } }
   if (accepts(node) && kids.isNotEmpty()) {
     kids.firstOrNull { it.second.contains(x, y) }?.let { return canvasDropPlace(root, it.first.id, x, y, box, accepts) }
-    val sideBySide = kids.size > 1 && kids.zipWithNext().all { (a, b) -> b.second.left >= a.second.right - 1 }
+    val sideBySide = sideBySide(kids.map { it.second })
     fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) lo - p else if (p > hi) p - hi else 0.0
     val (kid, b) = kids.minBy { (_, b) -> if (sideBySide) gap(b.left, b.right, x) else gap(b.top, b.bottom, y) }
     val before = if (sideBySide) x < (b.left + b.right) / 2 else y < (b.top + b.bottom) / 2
@@ -87,8 +87,18 @@ internal fun canvasDropPlace(
   }
   if (hit == root.id) return hit to DropZone.Inside
   val b = box(node) ?: return hit to DropZone.Inside
-  return hit to dropZone(y - b.top, b.bottom - b.top, accepts(node))
+  // In a row, before and after are left and right.
+  return hit to if (laidOutAcross(root, hit, box)) dropZone(x - b.left, b.right - b.left, accepts(node))
+    else dropZone(y - b.top, b.bottom - b.top, accepts(node))
 }
+
+/** Whether [boxes] (siblings, in order) are laid out side by side, left to right. */
+internal fun sideBySide(boxes: List<DropBox>): Boolean =
+  boxes.size > 1 && boxes.zipWithNext().all { (a, b) -> b.left >= a.right - 1 }
+
+/** Whether node [id] and its laid-out siblings are side by side (a row): its drop line is then vertical. */
+internal fun laidOutAcross(root: WidgetNode, id: Int, box: (WidgetNode) -> DropBox?): Boolean =
+  parentOf(root, id)?.children?.mapNotNull(box)?.let(::sideBySide) == true
 
 internal fun parentOf(root: WidgetNode, id: Int): WidgetNode? {
   if (root.children.any { it.id == id }) return root

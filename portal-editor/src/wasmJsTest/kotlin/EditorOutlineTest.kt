@@ -85,6 +85,11 @@ class EditorOutlineTest {
   @Test fun inARowTheGapIsReadAcrossNotDown() {
     assertEquals(17 to DropZone.Before, drop(15, 180.0, 530.0))
     assertEquals(16 to DropZone.After, drop(15, 120.0, 530.0))
+    // On a child of a row, its left and right halves (not its top and bottom).
+    assertEquals(16 to DropZone.After, drop(16, 90.0, 505.0))
+    assertEquals(17 to DropZone.Before, drop(17, 210.0, 555.0))
+    assertTrue(laidOutAcross(page, 16) { boxes[it.id] })
+    assertTrue(!laidOutAcross(page, 12) { boxes[it.id] })
   }
 
   @Test fun aConditionWithoutBoundsOfItsOwnIsPlacedByWhatItDraws() {

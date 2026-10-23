@@ -402,7 +402,8 @@ internal fun numberField(value: Number, rule: NumberRule, onPreview: (Number) ->
   }
   fun commit() {
     clearPending(input)
-    val v = validate() ?: return // stays marked; nothing is sent
+    // Stays marked and nothing is sent; the canvas goes back to the value that is written.
+    val v = validate() ?: return onPreview(committed)
     input.value = showNumber(v)
     if (same(v, committed)) return
     committed = v

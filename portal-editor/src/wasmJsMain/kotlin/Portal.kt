@@ -400,6 +400,7 @@ private fun pumpOps() {
     // Another document was opened meanwhile: this reply is about the old one (its version is not this one's).
     if (target != editTarget()) {
       q.onResult?.invoke(reply is OpsReply.Accepted)
+      pumpOps() // an edit queued meanwhile is the new document's: send it now, not with the next one
       return
     }
     // A refusal that is still current keeps the pill "Not written" (settling never hides it).
@@ -409,7 +410,8 @@ private fun pumpOps() {
         docVersion = reply.version
         staleUpTo = refetchSeq // a document fetched before this edit is older than it
         q.onResult?.invoke(true)
-        refetchDoc(refreshPanels)
+        // A field the user went on typing in is not rebuilt (that would commit its half-typed text).
+        refetchDoc(refreshPanels && !typingInAField())
         pumpOps()
       }
       OpsReply.Rebase -> { // raced an external edit — rebase on server state
@@ -579,7 +581,8 @@ private fun subscribeDocEvents() {
       when {
         // Our own edit's change: its reply refreshes the panels (refreshing now would rebuild the field being typed in).
         v != null && v != docVersion -> if (!opInFlight && opQueue.isEmpty()) fetchComponents { refetchDoc(refreshPanels = !typingInAField()) }
-        tokensChanged || componentsChanged -> fetchComponents { refresh() } // the document did not change: redraw what uses them
+        // The document did not change: redraw what uses them (the panels too, unless a field is being typed in).
+        tokensChanged || componentsChanged -> fetchComponents { if (typingInAField()) renderOutline() else refresh() }
       }
     }
     es.onerror = { _ ->
@@ -712,8 +715,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
       ?: return
     else -> (portalTree.value.children.firstOrNull()?.id ?: portalTree.value.id).let { it to lastChildHandle(it)?.v?.toInt() }
   }
-  pendingInsertPlace = place
-  sendOps(listOf(insertOp(place, node.toDocNode())))
+  sendOps(listOf(insertOp(place, node.toDocNode())), onResult = selectInsertedAt(place))
 }
 
 // ---------------------------------------------------------------------------
@@ -1146,7 +1148,14 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
         dropLine.style.top = "${rect.top / dpr}px"
         dropLine.style.height = "${(rect.bottom - rect.top) / dpr}px"
       }
-      else -> {
+      // In a row the line stands on the child's left or right edge.
+      else -> if (laidOutAcross(portalTree.value, h, ::boxOf)) {
+        dropLine.className = "drop-line"
+        dropLine.style.left = "${(if (zone == DropZone.Before) rect.left else rect.right) / dpr - 1}px"
+        dropLine.style.width = "3px"
+        dropLine.style.top = "${rect.top / dpr}px"
+        dropLine.style.height = "${(rect.bottom - rect.top) / dpr}px"
+      } else {
         dropLine.className = "drop-line"
         dropLine.style.top = "${(if (zone == DropZone.Before) rect.top else rect.bottom) / dpr - 1}px"
         dropLine.style.height = "3px"
@@ -1905,8 +1914,8 @@ private fun handleEditorKey(e: KeyboardEvent) {
     }
     mod && e.key.lowercase() == "d" && sel != null && sel.id != tree.id -> {
       val parentId = parentOf(tree, sel.id)?.id ?: return
-      pendingInsertPlace = parentId to sel.id // F22: the copy is selected, as a new node from the palette is
-      sendOps(listOf(DocOp.InsertNode(Handle(parentId.toLong()), Handle(sel.id.toLong()), deepCopy(sel).toDocNode())))
+      // F22: the copy is selected, as a new node from the palette is.
+      sendOps(listOf(DocOp.InsertNode(Handle(parentId.toLong()), Handle(sel.id.toLong()), deepCopy(sel).toDocNode())), onResult = selectInsertedAt(parentId to sel.id))
     }
     mod && e.key.lowercase() == "c" && sel != null -> clipboardNode = sel
     mod && e.key.lowercase() == "v" -> clipboardNode?.let { addToSelectedOrRoot(deepCopy(it)) }
@@ -2335,6 +2344,16 @@ private val collapsedRows = mutableSetOf<Int>()
 /** E15: where the last insert went (parent, the sibling it follows), to select it once the document reloads. */
 private var pendingInsertPlace: Pair<Int, Int?>? = null
 
+/**
+ * Review: the insert at [place] is selected once the relay accepted it — set from its own reply,
+ * so the document fetched for that reply selects it (not an earlier fetch, and nothing after a
+ * refusal).
+ */
+private fun selectInsertedAt(place: Pair<Int, Int?>): (Boolean) -> Unit {
+  val target = editTarget()
+  return { ok -> pendingInsertPlace = if (ok && editTarget() == target) place else null }
+}
+
 /** Whether [node] can hold children in the editor (a container, an Else, a one-slot component). */
 private fun acceptsChildrenNode(node: WidgetNode): Boolean =
   widgetSpec(node.type)?.acceptsChildren == true || node.type == ELSE_TYPE || node.type == "Condition" ||
@@ -2415,8 +2434,7 @@ private fun handleDrop(payload: String?, targetId: Int, zone: DropZone = DropZon
   if (parentComponent != null && parentComponent.slots.size != 1) return
   when {
     payload.startsWith("new:") -> {
-      pendingInsertPlace = place
-      sendOps(listOf(insertOp(place, newNode(payload.removePrefix("new:")).toDocNode())))
+      sendOps(listOf(insertOp(place, newNode(payload.removePrefix("new:")).toDocNode())), onResult = selectInsertedAt(place))
     }
     payload.startsWith("move:") -> {
       val id = payload.removePrefix("move:").toIntOrNull() ?: return
@@ -2490,7 +2508,9 @@ private fun renderProps() {
         forwardedChoices(comp, s.name, editorComponents, { t, p -> widgetSpec(t)?.props?.firstOrNull { it.name == p }?.choices.orEmpty() })
       } else emptyList()
     }
-    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = "", choices = choices))
+    // An instance that leaves a parameter at its default shows that default (not the first choice).
+    val shown = comp?.defaults?.takeIf { s.name !in node.props && s.name in it }?.let { node.props + (s.name to it[s.name]) } ?: node.props
+    propsEl.appendChild(propRow(node.id, node.type, shown, s.name, s.kind, s.label, keyPrefix = "", choices = choices))
   }
   // P3: events — each wires to a named Action.
   val events = comp?.events?.map { it.name } ?: spec?.events ?: emptyList()

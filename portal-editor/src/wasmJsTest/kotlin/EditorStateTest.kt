@@ -126,7 +126,7 @@ class EditorStateTest {
 
   @Test fun aScenarioScrollsToTheBlockItIsAbout() {
     assertEquals("isLoading", scenarioFocus(sectioned, Scenario.Loading)?.props?.get("field"))
-    assertEquals("hasError", scenarioFocus(sectioned, Scenario.Error)?.props?.get("field"))
+    assertEquals(sectioned.children[3], scenarioFocus(sectioned, Scenario.Error), "the drawn error block, not the one in an else branch")
     assertEquals(null, scenarioFocus(sectioned, Scenario.Loaded))
   }
 
