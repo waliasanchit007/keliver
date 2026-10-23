@@ -1119,29 +1119,32 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
   val dropLine = Ui.el("div", "drop-line")
   dropLine.style.display = "none"
   frame.appendChild(dropLine)
+  // A node's box: its own bounds, else (a condition, a list) the union of what it draws.
+  fun boxOf(n: WidgetNode): DropBox? =
+    dev.keliver.material.composeui.SelectionRegistry.bounds[n.id]
+      ?.let { DropBox(it.left.toDouble(), it.top.toDouble(), it.right.toDouble(), it.bottom.toDouble()) }
+      ?: n.children.mapNotNull { boxOf(it) }.reduceOrNull { a, b -> a union b }
   fun canvasDrop(ev: org.w3c.dom.events.Event): Pair<Int, DropZone>? {
     val me = ev as org.w3c.dom.events.MouseEvent
-    val h = hitAt(me.clientX.toDouble(), me.clientY.toDouble()) ?: portalTree.value.id
-    val node = portalTree.value.findNode(h) ?: return null
-    val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[h] ?: return h to DropZone.Inside
+    val tree = portalTree.value
+    val h = hitAt(me.clientX.toDouble(), me.clientY.toDouble()) ?: tree.id
     val dpr = kotlinx.browser.window.devicePixelRatio
     val hr = host.getBoundingClientRect()
+    val x = (me.clientX - hr.left) / canvasZoom * dpr
     val y = (me.clientY - hr.top) / canvasZoom * dpr
-    val zone = if (h == portalTree.value.id) DropZone.Inside
-      else dropZone(y - rect.top, rect.height.toDouble(), acceptsChildrenNode(node))
-    return h to zone
+    return canvasDropPlace(tree, h, x, y, ::boxOf, ::acceptsChildrenNode)
   }
   fun showDropMark(h: Int, zone: DropZone) {
-    val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[h] ?: run { dropLine.style.display = "none"; return }
+    val rect = portalTree.value.findNode(h)?.let(::boxOf) ?: run { dropLine.style.display = "none"; return }
     val dpr = kotlinx.browser.window.devicePixelRatio
     dropLine.style.display = "block"
     dropLine.style.left = "${rect.left / dpr}px"
-    dropLine.style.width = "${rect.width / dpr}px"
+    dropLine.style.width = "${(rect.right - rect.left) / dpr}px"
     when (zone) {
       DropZone.Inside -> {
         dropLine.className = "drop-line inside"
         dropLine.style.top = "${rect.top / dpr}px"
-        dropLine.style.height = "${rect.height / dpr}px"
+        dropLine.style.height = "${(rect.bottom - rect.top) / dpr}px"
       }
       else -> {
         dropLine.className = "drop-line"

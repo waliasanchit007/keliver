@@ -52,6 +52,44 @@ internal fun dropZone(offsetY: Double, height: Double, targetAcceptsChildren: Bo
   else -> DropZone.Inside
 }
 
+/** A node's laid-out box on the canvas (compose px). */
+internal class DropBox(val left: Double, val top: Double, val right: Double, val bottom: Double) {
+  fun contains(x: Double, y: Double): Boolean = x in left..right && y in top..bottom
+  infix fun union(o: DropBox): DropBox =
+    DropBox(minOf(left, o.left), minOf(top, o.top), maxOf(right, o.right), maxOf(bottom, o.bottom))
+}
+
+/**
+ * F3: where a canvas drop at ([x], [y]) on [hit] (the node under the pointer) lands. A container
+ * with laid-out children takes it between them — before or after the child nearest the pointer,
+ * along the way they are laid out — not appended after its last child (out of sight in a long
+ * column; in a box, drawn over the others). A point inside a child the hit test passed over goes
+ * into that child. An empty container takes the drop inside (by its quarters); a leaf before or
+ * after itself (by its halves).
+ */
+internal fun canvasDropPlace(
+  root: WidgetNode,
+  hit: Int,
+  x: Double,
+  y: Double,
+  box: (WidgetNode) -> DropBox?,
+  accepts: (WidgetNode) -> Boolean,
+): Pair<Int, DropZone>? {
+  val node = root.findNode(hit) ?: return null
+  val kids = node.children.mapNotNull { c -> box(c)?.let { c to it } }
+  if (accepts(node) && kids.isNotEmpty()) {
+    kids.firstOrNull { it.second.contains(x, y) }?.let { return canvasDropPlace(root, it.first.id, x, y, box, accepts) }
+    val sideBySide = kids.size > 1 && kids.zipWithNext().all { (a, b) -> b.second.left >= a.second.right - 1 }
+    fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) lo - p else if (p > hi) p - hi else 0.0
+    val (kid, b) = kids.minBy { (_, b) -> if (sideBySide) gap(b.left, b.right, x) else gap(b.top, b.bottom, y) }
+    val before = if (sideBySide) x < (b.left + b.right) / 2 else y < (b.top + b.bottom) / 2
+    return kid.id to if (before) DropZone.Before else DropZone.After
+  }
+  if (hit == root.id) return hit to DropZone.Inside
+  val b = box(node) ?: return hit to DropZone.Inside
+  return hit to dropZone(y - b.top, b.bottom - b.top, accepts(node))
+}
+
 internal fun parentOf(root: WidgetNode, id: Int): WidgetNode? {
   if (root.children.any { it.id == id }) return root
   root.children.forEach { c -> parentOf(c, id)?.let { return it } }
