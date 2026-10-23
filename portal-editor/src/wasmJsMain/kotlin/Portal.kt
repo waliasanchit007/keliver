@@ -64,6 +64,8 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.HTMLTextAreaElement
+import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.xhr.XMLHttpRequest
 
@@ -1874,6 +1876,8 @@ private fun renderCrumbs() {
 private fun handleEditorKey(e: KeyboardEvent) {
   val tree = portalTree.value
   val mod = e.metaKey || e.ctrlKey
+  // F1: only from the canvas or outline — a field that went away leaves its keys on the page body.
+  if (changesTheTree(e.key, mod) && !treeKeyAllowed(keyScope, e.repeat)) return
   val sel = selectedId?.let { tree.findNode(it) }
   fun select(id: Int?) { if (id != null) { selectedId = id; refresh(); revealOnCanvas(id) } }
   when {
@@ -1905,7 +1909,19 @@ private fun handleEditorKey(e: KeyboardEvent) {
   e.preventDefault()
 }
 
+/** F1: where the author last pointed or focused — tree-changing keys act only from the tree. */
+private var keyScope = KeyScope.Elsewhere
+
+private fun noteKeyScope(target: EventTarget?) {
+  val el = target as? HTMLElement ?: return
+  val onTree = outlineEl.contains(el) || (document.querySelector(".center") as? HTMLElement)?.contains(el) == true
+  val isField = el.tagName.lowercase() in setOf("input", "textarea", "select") || el.isContentEditable
+  keyScope = keyScopeOf(onTree, isField)
+}
+
 private fun installKeyboard() {
+  document.addEventListener("pointerdown", { ev -> noteKeyScope(ev.target) }, true)
+  document.addEventListener("focusin", { ev -> noteKeyScope(ev.target) })
   document.addEventListener("keydown", { ev ->
     val e = ev as KeyboardEvent
     val mod = e.metaKey || e.ctrlKey
@@ -2237,7 +2253,37 @@ private fun promptCreate(project: Boolean) {
 // Panels
 
 private fun refresh() {
+  val keep = focusedPanelField()
   renderOutline(); renderProps(); renderMods(); renderOps(); renderBindings()
+  keep?.restore()
+}
+
+/** F1: a panel field that had the keyboard when the panels were re-rendered (for the same selection). */
+private class FocusedField(val panel: HTMLElement, val label: String?, val index: Int, val count: Int, val node: Int?)
+
+private fun panelFields(panel: HTMLElement): List<HTMLElement> {
+  val found = panel.querySelectorAll("input, textarea, select")
+  return (0 until found.length).mapNotNull { found.item(it) as? HTMLElement }
+}
+
+private fun focusedPanelField(): FocusedField? {
+  val active = document.activeElement as? HTMLElement ?: return null
+  val panel = listOf(propsEl, modsEl, bindingsEl).firstOrNull { it.contains(active) } ?: return null
+  val fields = panelFields(panel)
+  return FocusedField(panel, active.getAttribute("aria-label"), fields.indexOf(active), fields.size, selectedId)
+}
+
+/** Gives the keyboard back to the same field when the re-render took it away (else it lands on the page body). */
+private fun FocusedField.restore() {
+  if (selectedId != node) return
+  val active = document.activeElement
+  if (active != null && active != document.body && document.contains(active)) return
+  val fields = panelFields(panel)
+  val i = refocusIndex(label, index, fields.map { it.getAttribute("aria-label") }, count) ?: return
+  val field = fields[i]
+  field.focus()
+  (field as? HTMLInputElement)?.takeIf { it.type == "text" }?.let { it.setSelectionRange(it.value.length, it.value.length) }
+  (field as? HTMLTextAreaElement)?.let { it.setSelectionRange(it.value.length, it.value.length) }
 }
 
 private var paletteFilter = ""

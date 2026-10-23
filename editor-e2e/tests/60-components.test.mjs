@@ -192,6 +192,46 @@ export default [
     },
   },
   {
+    id: 'F1',
+    title: 'after a refusal re-renders the panel, Backspace and Delete delete nothing; from the outline Delete deletes and Undo restores',
+    async run({ page, editor, fixtureDir, log }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      const pristine = snapshot(fixtureDir);
+      const file = path.join(fixtureDir, 'src/components/CardTitle.kt');
+      const original = fs.readFileSync(file, 'utf8');
+      await editor.clickOutlineRowOf('CardTitle', 'Recent sites');
+      await page.press('Enter');
+      await waitCrumbs(page, ['overview', 'CardTitle'], 'Enter on the selected CardTitle opens it');
+      await editor.clickOutlineRowOf('StyledText');
+      const rows = (await editor.outline()).length;
+      // The refused unbind (as in E18) re-reads the document and re-renders the panel it was clicked in.
+      const at = await page.eval(`(() => {
+        const row = [...document.querySelectorAll('.pane.right .prop')].find(r => r.querySelector('.prop-label')?.textContent === 'Text');
+        const b = row && [...row.querySelectorAll('button')].find(b => b.textContent.trim() === 'unbind');
+        if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      })()`);
+      ok(at, 'the bound Text row has an unbind button');
+      await page.click(at.x, at.y);
+      await page.waitFor(`document.querySelector('.topbar .pill')?.textContent === 'Change refused'`,
+        { timeout: 5000, message: 'the pill never said "Change refused"' });
+      await sleep(500);
+      log(`focus after the refusal: ${await page.eval('document.activeElement?.tagName')}`);
+      for (const key of ['Backspace', 'Backspace', 'Delete']) await page.press(key, { settle: 400 });
+      await sleep(1500);
+      await page.screenshot('F1-keys-after-refusal');
+      equal((await editor.outline()).length, rows, 'Backspace/Delete after the refusal deleted no node');
+      equal(changedSources(pristine, snapshot(fixtureDir)), [], 'no source file changed');
+
+      // Pointing at the tree again, Delete deletes the selection; Undo gives the file back byte for byte.
+      await editor.clickOutlineRowOf('StyledText');
+      await page.press('Delete');
+      await waitForFile(file, (t) => !t.includes('StyledText('), { message: 'Delete on the selected outline row did not delete it' });
+      equal((await editor.outline()).length, rows - 1, 'the outline lost the deleted row');
+      await editor.clickUndo();
+      await expectBytes(file, original, 'Undo did not restore CardTitle.kt byte for byte');
+    },
+  },
+  {
     id: 'E14x',
     title: 'an unknown component is a 404; a component deleted on disk reads as code and Enter stays on the screen',
     async run({ page, editor, relay, fixtureDir }) {
