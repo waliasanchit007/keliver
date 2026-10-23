@@ -189,9 +189,17 @@ internal fun defaultValue(field: StateField, scenario: Scenario): String = when 
 internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario): WidgetNode? {
   val roles = scenario.on - StateRole.Content
   if (roles.isEmpty()) return null
+  // Review 3: under a condition, only the branch the scenario draws — the then-branch when its
+  // flag's role is on in the scenario, else the else branch.
+  val carried = carriedRoles(tree)
+  fun isOn(field: String) = roleOf(field) in scenario.on || carried[field].orEmpty().any { it in scenario.on }
+  fun drawn(c: WidgetNode): Boolean = condOf(c)?.terms?.any { t -> isOn(t.field) != t.negate } ?: true
   fun find(n: WidgetNode): WidgetNode? {
-    if (n.type == ELSE_TYPE) return null // the scenario turns content on: an else branch is not drawn
     if (n.type == "Condition" && condOf(n)?.terms?.any { !it.negate && roleOf(it.field) in roles } == true) return n
+    if (n.type == "Condition") {
+      val on = drawn(n)
+      return n.children.filter { (it.type == ELSE_TYPE) != on }.firstNotNullOfOrNull(::find)
+    }
     return n.children.firstNotNullOfOrNull(::find)
   }
   return find(tree)

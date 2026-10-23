@@ -81,16 +81,18 @@ private val COLOR_WORDS = setOf(
 
 /**
  * Review: whether Int token [ref] = [value] is a colour. Its value must be one ([isColorValue]);
- * then a name that says number wins — `UNLIMITED = -1`, `AMOUNT_CAP = 20_000_000` — unless it
- * also says colour (`BorderMaxArgb`). Any other value with an alpha byte is a colour (`Veil`).
+ * a name that says number makes a sentinel or a positive value a number, unless it also says
+ * colour (`BorderMaxArgb`). Any other value with an alpha byte is a colour (`Veil`).
  */
 internal fun isColorToken(ref: String, value: Any?): Boolean {
   if (!isColorValue(value)) return false
   val words = ref.substringAfterLast('.').replace(Regex("([a-z0-9])([A-Z])"), "$1 $2").lowercase()
     .split(' ', '_', '-').filter { it.isNotEmpty() }
+  // Review 3: a name says number only for a sentinel (-1) or a positive value — `AmountNegative`
+  // = 0xFFC62828 is a colour; `UNLIMITED = -1`, `AMOUNT_CAP = 20_000_000` are numbers.
   return when {
     words.any { it in COLOR_WORDS } -> true
-    words.any { it in NUMBER_WORDS } -> false
+    words.any { it in NUMBER_WORDS } -> (value as Int) < -1
     else -> true
   }
 }

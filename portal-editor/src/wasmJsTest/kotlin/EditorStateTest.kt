@@ -136,4 +136,13 @@ class EditorStateTest {
     assertTrue(isCustomState(fields, mapOf("isLoading" to "false")))
     assertFalse(isCustomState(stateFields(tree, contract), mapOf("headlineRate" to "9%")), "a text the user typed is not a flag")
   }
+
+  @Test fun aScenarioRevealsABlockInTheBranchItDraws() {
+    // if (hasContent) Text else { if (isLoading) Shimmer }: Loading draws the else branch.
+    val t = WidgetNode("Column", emptyMap(), listOf(
+      cond("hasContent", null, WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("isLoading", null, WidgetNode("Shimmer"))))),
+    ))
+    assertEquals("isLoading", scenarioFocus(t, Scenario.Loading)?.props?.get("field"))
+    assertEquals(null, scenarioFocus(t, Scenario.Error))
+  }
 }

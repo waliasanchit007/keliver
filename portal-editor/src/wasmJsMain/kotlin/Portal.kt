@@ -102,6 +102,7 @@ private var currentScreen = "main"
   set(v) {
     field = v
     openComponents = emptyList() // E14: another screen is edited from its own root
+    sessionHistory.clear() // review 3: undo never reaches back into a screen no longer open
   }
 
 /** E14: the components opened from the screen, in turn (empty = the screen itself is edited). */
@@ -126,7 +127,7 @@ private var componentsVersionSeen: Long = -1
 private var componentsJsonSeen: String? = null
 private var eventSource: EventSource? = null
 /** One queued edit: its ops, whether panels re-render after it, and who hears if the relay accepted it. */
-private class QueuedOps(val ops: List<DocOp>, val refreshPanels: Boolean, val onResult: ((Boolean) -> Unit)?)
+private class QueuedOps(val ops: List<DocOp>, val refreshPanels: Boolean, val onResult: ((Boolean) -> Unit)?, val target: EditTarget)
 private val opQueue = ArrayDeque<QueuedOps>()
 
 /** Drops every queued edit, telling each sender it was not applied. */
@@ -357,7 +358,7 @@ private lateinit var flowGraphBody: HTMLElement
 
 /** Queues [ops]; [onResult] (if any) hears whether the document accepted them. */
 private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true, onResult: ((Boolean) -> Unit)? = null) {
-  opQueue.addLast(QueuedOps(ops, refreshPanels, onResult))
+  opQueue.addLast(QueuedOps(ops, refreshPanels, onResult, editTarget()))
   pumpOps()
 }
 
@@ -380,6 +381,9 @@ private fun pumpOps() {
     return
   }
   if (opInFlight) return
+  // Review 3: an edit queued for a document no longer open is never sent to the one that is
+  // (its handles and base version are the other document's).
+  while (opQueue.firstOrNull()?.let { it.target != editTarget() } == true) opQueue.removeFirst().onResult?.invoke(false)
   val q = opQueue.removeFirstOrNull() ?: return
   val ops = q.ops
   val refreshPanels = q.refreshPanels
@@ -413,7 +417,7 @@ private fun pumpOps() {
         staleUpTo = refetchSeq // a document fetched before this edit is older than it
         q.onResult?.invoke(true)
         // A field the user went on typing in is not rebuilt (that would commit its half-typed text).
-        refetchDoc(refreshPanels && !typingInAField())
+        refetchDoc(refreshPanels && !typingPending())
         pumpOps()
       }
       OpsReply.Rebase -> { // raced an external edit — rebase on server state
@@ -582,9 +586,9 @@ private fun subscribeDocEvents() {
       data?.let { showWriteBack(writeBackOf(it)) }
       when {
         // Our own edit's change: its reply refreshes the panels (refreshing now would rebuild the field being typed in).
-        v != null && v != docVersion -> if (!opInFlight && opQueue.isEmpty()) fetchComponents { refetchDoc(refreshPanels = !typingInAField()) }
+        v != null && v != docVersion -> if (!opInFlight && opQueue.isEmpty()) fetchComponents { refetchDoc(refreshPanels = !typingPending()) }
         // The document did not change: redraw what uses them (the panels too, unless a field is being typed in).
-        tokensChanged || componentsChanged -> fetchComponents { if (typingInAField()) renderOutline() else refresh() }
+        tokensChanged || componentsChanged -> fetchComponents { if (typingPending()) renderOutline() else refresh() }
       }
     }
     es.onerror = { _ ->
@@ -652,29 +656,39 @@ private val sessionHistory = SessionHistory()
  * from the relay's registry event.
  */
 private fun stepHistory(path: String, target: EditTarget, verb: String, done: (EditTarget) -> Unit) {
-  if (target == editTarget()) {
-    serverPost(path) { done(target); refetchDoc(true) }
+  val undo = path == "/undo"
+  // Review 3: only a step the relay took moves the history (a refused one is dropped, said so).
+  fun stepped(text: String?): Boolean =
+    runCatching { Json.parseToJsonElement(text ?: "").jsonObject["ok"]?.jsonPrimitive?.content == "true" }.getOrDefault(false)
+  if (target.key == editTarget().key) {
+    serverPost(path) { text -> if (stepped(text)) done(target) else sessionHistory.skipped(target, undo); refetchDoc(true) }
     return
   }
   val xhr = XMLHttpRequest()
   xhr.open("POST", "$SERVER$path?${target.query}")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.addEventListener("load", { _ ->
-    done(target)
-    Ui.toast("$verb your last edit, in ${target.component ?: target.screen}")
-    fetchComponents { refresh(); canvasGeneration.value++; Snapshot.sendApplyNotifications() }
+    val where = target.component ?: target.screen
+    if (stepped(xhr.responseText)) {
+      done(target)
+      Ui.toast("$verb your last edit, in $where")
+      fetchComponents { refresh(); canvasGeneration.value++; Snapshot.sendApplyNotifications() }
+    } else {
+      sessionHistory.skipped(target, undo)
+      Ui.toast("Nothing to ${if (undo) "undo" else "redo"} in $where any more")
+    }
     updateUndoButtons()
   })
   xhr.send()
 }
 
-private fun serverPost(path: String, cb: () -> Unit) {
+private fun serverPost(path: String, cb: (String?) -> Unit) {
   val xhr = XMLHttpRequest()
   xhr.open("POST", "$SERVER$path?${editTarget().query}")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.addEventListener("load", { _ ->
     readStackDepths(xhr)
-    cb()
+    cb(xhr.responseText)
   })
   xhr.send()
 }
@@ -1910,10 +1924,6 @@ private fun closeTopmostLayer(): Boolean {
   return false
 }
 
-/** Whether a text field, number field or picker has the keyboard (a re-render would take it away). */
-private fun typingInAField(): Boolean =
-  (document.activeElement as? HTMLElement)?.tagName?.lowercase() in setOf("input", "textarea", "select")
-
 /** E14: double-click / Enter — open a component instance, edit a text in place. */
 private fun openOrEditInline(handle: Int) {
   val node = portalTree.value.findNode(handle) ?: return
@@ -2479,6 +2489,7 @@ private fun renderOutline() {
     outlineHint(node)?.let { r.appendChild(Ui.el("span", "hint", it)) }
     r.addEventListener("click", { _ ->
       selectedId = node.id
+      selectedAt = null // review 3: picked in the outline, not at a point on the canvas
       refresh()
       revealOnCanvas(node.id)
     })
@@ -2809,6 +2820,14 @@ private fun propRow(
  * tree's copy changes, nothing is sent or written. The commit (or the next
  * document) replaces it.
  */
+/** The open tree's copy of [nodeId] without [key] again (a preview of an unset prop undone). */
+private fun previewUnset(nodeId: Int, key: String) {
+  val node = portalTree.value.findNode(nodeId) ?: return
+  if (key !in node.props) return
+  portalTree.value = portalTree.value.updateProps(nodeId, node.props - key)
+  Snapshot.sendApplyNotifications()
+}
+
 private fun previewProp(nodeId: Int, key: String, value: Any?) {
   val node = portalTree.value.findNode(nodeId) ?: return
   portalTree.value = portalTree.value.updateProps(nodeId, node.props + (key to value))
@@ -2931,13 +2950,15 @@ private fun propRowInner(
   // E11: a number is validated as it is typed (K1: a Dp is never negative) and
   // written once, valid, on Enter or leaving the field — never per keystroke.
   if (kind == PropKind.Int || kind == PropKind.Double) {
-    val current: Number
-    if (kind == PropKind.Int) current = props[key] as? Int ?: 0 else current = props[key] as? Double ?: 0.0
+    // Review 3: null when the call does not pass it (then any value typed, 0 too, is written).
+    val current: Number?
+    if (kind == PropKind.Int) current = props[key] as? Int else current = props[key] as? Double
     return PropRow(label, PropRow.Layout.Compact)
       .control(
         numberField(
           current, numberRule(nodeType, key, kind),
           onPreview = { previewProp(nodeId, key, it) },
+          onUnsetPreview = { previewUnset(nodeId, key) },
           onCommit = { editProp(nodeId, key, it) },
         ),
       )

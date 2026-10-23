@@ -208,4 +208,25 @@ export default [
       await expectBytes(file, original, 'Undo did not restore overview.kt byte for byte');
     },
   },
+  {
+    id: 'R3',
+    title: 'a condition changed twice in its dropdown, without leaving it, writes both changes',
+    async run({ page, editor, fixtureDir, log }) {
+      await editor.open('logbook', { readyColor: COLORS.entryRow });
+      const file = path.join(fixtureDir, 'src/screens/logbook.kt');
+      const original = fs.readFileSync(file, 'utf8');
+      await editor.clickOutlineRowOf('Condition', 'syncPending');
+      // Native dropdowns cannot be driven over CDP: focus it as a click does, pick by script, fire `change`.
+      const pick = (label) => page.eval(`(() => {
+        const s = [...document.querySelectorAll('.pane.right select')].find(s => [...s.options].some(o => o.text === ${JSON.stringify(label)}));
+        if (!s) return false; s.focus(); s.value = [...s.options].find(o => o.text === ${JSON.stringify(label)}).value;
+        s.dispatchEvent(new Event('change')); return document.activeElement === s; })()`);
+      ok(await pick('is false'), 'the test dropdown is focused when "is false" is picked');
+      await waitForFile(file, (t) => t.includes('if (!b.syncPending)'), { message: '"is false" was never written' });
+      await sleep(800); // its reply has come back; the dropdown still has the keyboard
+      ok(await pick('is true'), 'still in the dropdown, "is true" is picked');
+      await waitForFile(file, (t) => t === original, { message: 'the second change (back to "is true") was lost' });
+      log('both changes written');
+    },
+  },
 ];

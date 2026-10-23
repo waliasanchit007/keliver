@@ -253,7 +253,9 @@ window's edge that brings it back.
 
 **Undo.** Undo and Redo are per editing session, and their tooltips count the
 steps. Undoing back to a state the file was already in writes that exact
-text: your argument order, imports and formatting. ⌘Z inside a text field
+text (your argument order, imports and formatting), unless the file, a
+component or a design token changed in the meantime; then the undo is merged
+onto the file as it is now. ⌘Z inside a text field
 undoes the field's typing, not the document.
 
 **Export Kotlin** shows the screen's (or opened component's) file exactly as it

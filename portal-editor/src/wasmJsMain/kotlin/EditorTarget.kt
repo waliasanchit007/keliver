@@ -35,10 +35,12 @@ internal fun isComponentInstance(node: WidgetNode?, components: ComponentRegistr
   node != null && components.spec(node.type) != null
 
 /**
- * G1 (feedback round 2): the order of this session's edits across the documents it edited — a
- * screen and the components opened from it. Undo steps the newest edit wherever it was made
- * (the relay keeps one stack per document); before, ⌘Z back on a screen undid an older edit of
- * the screen and left the component edit just made in place.
+ * G1 (feedback round 2): the order of this session's edits across the documents it edited on one
+ * screen — the screen and the components opened from it. Undo steps the newest edit wherever it
+ * was made (the relay keeps one stack per document); before, ⌘Z back on a screen undid an older
+ * edit of the screen and left the component edit just made in place. Documents are told apart by
+ * their [EditTarget.key] (a component is the same document however it was opened); the history
+ * starts over on another screen.
  */
 internal class SessionHistory(private val limit: Int = 200) {
   private val undos = ArrayDeque<EditTarget>()
@@ -56,18 +58,27 @@ internal class SessionHistory(private val limit: Int = 200) {
 
   fun redoTarget(current: EditTarget): EditTarget = redos.lastOrNull() ?: current
 
-  /** [target]'s newest edit was undone (or could not be: either way it is no longer next). */
+  /** [target]'s newest edit was undone: it can be redone. */
   fun undone(target: EditTarget) {
-    if (undos.lastOrNull() == target) undos.removeLast()
+    if (undos.lastOrNull()?.key == target.key) undos.removeLast()
     redos.addLast(target)
   }
 
   fun redone(target: EditTarget) {
-    if (redos.lastOrNull() == target) redos.removeLast()
+    if (redos.lastOrNull()?.key == target.key) redos.removeLast()
     undos.addLast(target)
   }
 
+  /** Review 3: the relay had nothing to step in [target] (re-read, restarted): that entry is gone, nothing moves. */
+  fun skipped(target: EditTarget, undo: Boolean) {
+    val from = if (undo) undos else redos
+    if (from.lastOrNull()?.key == target.key) from.removeLast()
+  }
+
+  /** Another screen (or project) was opened: its edits start a history of their own. */
+  fun clear() { undos.clear(); redos.clear() }
+
   /** Whether the next undo (or redo) is of a document other than [current]. */
-  fun undoElsewhere(current: EditTarget): Boolean = undos.lastOrNull()?.let { it != current } == true
-  fun redoElsewhere(current: EditTarget): Boolean = redos.lastOrNull()?.let { it != current } == true
+  fun undoElsewhere(current: EditTarget): Boolean = undos.lastOrNull()?.let { it.key != current.key } == true
+  fun redoElsewhere(current: EditTarget): Boolean = redos.lastOrNull()?.let { it.key != current.key } == true
 }

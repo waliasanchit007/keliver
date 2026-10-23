@@ -77,5 +77,7 @@ class EditorTokensTest {
     assertEquals(false, isColorToken("Money.AMOUNT_CAP", 20_000_000), "a large amount")
     assertEquals(true, isColorToken("C.ScrimArgb", 0x40000000), "a translucent colour named so")
     assertEquals(false, isColorToken("C.Gap", 16), "no alpha byte: a number")
+    assertEquals(true, isColorToken("C.AmountNegative", 0xFFC62828.toInt()), "an opaque colour named for what it colours")
+    assertEquals(true, isColorToken("C.PriceUp", 0xFF2E7D32.toInt()))
   }
 }

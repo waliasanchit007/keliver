@@ -304,6 +304,13 @@ internal fun flushPendingField() {
 
 internal fun markPending(field: HTMLElement, commit: () -> Unit) { pendingField = field to commit }
 
+/**
+ * Review 3: whether a field holds typed text not yet committed — what a panel rebuild must wait
+ * for (it would commit it half-typed). A focused dropdown or a field with nothing typed is
+ * rebuilt as usual (the keyboard goes back to it), so the panel never shows a stale value.
+ */
+internal fun typingPending(): Boolean = pendingField != null
+
 internal fun clearPending(field: HTMLElement) { if (pendingField?.first == field) pendingField = null }
 
 /** Grows [area] to its content (up to [maxPx]); a textarea needs to be in the document to be measured. */
@@ -414,25 +421,36 @@ internal fun showNumber(v: Number): String {
  * field — and then only a valid, changed value, once, through [onCommit].
  * ↑/↓ step by 1 (Shift: 10). Escape puts the committed value back.
  */
-internal fun numberField(value: Number, rule: NumberRule, onPreview: (Number) -> Unit = {}, onCommit: (Number) -> Unit): HTMLElement {
-  var committed: Number = value
+internal fun numberField(
+  value: Number?,
+  rule: NumberRule,
+  onPreview: (Number) -> Unit = {},
+  /** Review 3: the canvas back to "not set" (for a [value] of null, the widget's default). */
+  onUnsetPreview: () -> Unit = {},
+  onCommit: (Number) -> Unit,
+): HTMLElement {
+  // null: the call does not pass it — any valid value typed is written, 0 included.
+  var committed: Number? = value
   val wrap = Ui.el("div", "ctl-wrap")
   val input = Ui.input("input num")
   input.setAttribute("type", "text")
   input.setAttribute("inputmode", if (rule.whole) "numeric" else "decimal")
   input.setAttribute("spellcheck", "false")
-  input.value = showNumber(value)
+  input.value = value?.let(::showNumber) ?: ""
+  if (value == null) input.placeholder = "default"
   val err = Ui.el("div", "field-err")
-  fun same(a: Number, b: Number) = a.toDouble() == b.toDouble()
+  fun same(a: Number, b: Number?) = b != null && a.toDouble() == b.toDouble()
   fun validate(): Number? {
     val r = parseNumber(input.value, rule)
     markInvalid(input, r.exceptionOrNull()?.message, err)
     return r.getOrNull()
   }
+  // The canvas back to what is written (or to not set).
+  fun revertPreview() { committed?.let(onPreview) ?: onUnsetPreview() }
   fun commit() {
     clearPending(input)
     // Stays marked and nothing is sent; the canvas goes back to the value that is written.
-    val v = validate() ?: return onPreview(committed)
+    val v = validate() ?: return revertPreview()
     input.value = showNumber(v)
     if (same(v, committed)) return
     committed = v
@@ -447,19 +465,20 @@ internal fun numberField(value: Number, rule: NumberRule, onPreview: (Number) ->
     val e = ev as KeyboardEvent
     if (e.key != "ArrowUp" && e.key != "ArrowDown") return@addEventListener
     e.preventDefault()
-    val base = parseNumber(input.value, rule.copy(min = null)).getOrNull() ?: committed
+    val base = parseNumber(input.value, rule.copy(min = null, max = null)).getOrNull() ?: committed ?: rule.min ?: 0
     val step = (if (e.shiftKey) 10 else 1) * (if (e.key == "ArrowUp") 1 else -1)
     var next = base.toDouble() + step
     rule.min?.let { next = maxOf(next, it) }
+    rule.max?.let { next = minOf(next, it) }
     input.value = if (rule.whole) showNumber(next.toInt()) else showNumber(next)
     validate()?.let(onPreview)
     markPending(input, ::commit)
   })
   commitKeys(input) {
     clearPending(input)
-    input.value = showNumber(committed)
+    input.value = committed?.let(::showNumber) ?: ""
     markInvalid(input, null, err)
-    onPreview(committed)
+    revertPreview()
   }
   wrap.appendChild(input)
   wrap.appendChild(err)

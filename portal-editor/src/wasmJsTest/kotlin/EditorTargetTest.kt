@@ -64,4 +64,15 @@ class SessionHistoryTest {
     assertFalse(h.redoElsewhere(home))
     assertEquals(home, h.redoTarget(home))
   }
+
+  @Test fun aComponentIsOneDocumentHoweverItWasOpenedAndAFailedStepMovesNothing() {
+    val h = SessionHistory()
+    h.edited(home.open("Row").open("Card"))
+    assertFalse(h.undoElsewhere(home.open("Card")), "Card opened directly is the same document")
+    h.skipped(card, undo = true)
+    assertEquals(home, h.undoTarget(home), "a step the relay could not take is dropped, not redone")
+    assertEquals(home, h.redoTarget(home))
+    h.edited(card); h.clear()
+    assertEquals(home, h.undoTarget(home), "another screen starts over")
+  }
 }
