@@ -692,8 +692,18 @@ private fun screensPackageFor(project: String): String {
   return sibling ?: "dev.keliver.portalpublished.screens"
 }
 
-private fun screenFunctionName(screen: String): String =
-  screen.replaceFirstChar { it.uppercase() } + "Screen"
+/**
+ * G9: a NEW screen's function: `home` → `HomeScreen`, `order_status` → `OrderStatusScreen` (not
+ * `Order_statusScreen`). An existing file keeps the function it declares ([declaredScreenFunction]).
+ */
+internal fun screenFunctionName(screen: String): String =
+  screen.split('_', '-').filter { it.isNotEmpty() }.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) } + "Screen"
+
+private val COMPOSABLE_FUN = Regex("""@Composable\s+(?:(?:public|internal|private)\s+)?fun\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(""")
+
+/** The screen function [file] declares (its first `@Composable fun`), or null when there is no such file. */
+internal fun declaredScreenFunction(file: File): String? =
+  file.takeIf { it.isFile }?.let { f -> runCatching { COMPOSABLE_FUN.find(f.readText())?.groupValues?.get(1) }.getOrNull() }
 
 /** Raised when a request names a screen the app does not have. */
 class UnknownScreen(val project: String, val screen: String, val known: List<String>) :
@@ -785,7 +795,7 @@ private fun docFor(q: Map<String, String>): DocumentService {
         f.writeText(serializeTree(tree))
       },
       kotlinFile = File(screensDirFor(project), "$screen.kt"),
-      functionName = screenFunctionName(screen),
+      functionName = declaredScreenFunction(File(screensDirFor(project), "$screen.kt")) ?: screenFunctionName(screen),
       packageName = if (inProject) screensPackageFor(project) else null,
       components = { Components.registry(project) },
       tokens = { Tokens.table(project) },
