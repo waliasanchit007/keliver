@@ -323,3 +323,7 @@ private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: A
   }
   return input
 }
+
+/** G2: the field a new condition tests — the screen's first Boolean field by name — or null when it has none. */
+internal fun newConditionField(contract: Contract): String? =
+  contract.fields.filter { (_, t) -> t == "Boolean" }.keys.minOrNull()

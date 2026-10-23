@@ -27,6 +27,10 @@ export default [
       near(w.right, start.right + 150, 3, 'dragging the right panel edge 150 px to the left widens it by 150 px');
       equal(await textSelection(page), '', 'dragging the right edge selects no text');
       await page.screenshot('E7-resized');
+      // G6: a drag from the canvas background into the properties panel selects no text.
+      const frame = await editor.frameRect();
+      await page.drag(frame.x + frame.width + 40, y, W - w.right + 150, y);
+      equal(await textSelection(page), '', 'dragging from the canvas into the panel selects no text');
       const resized = w;
 
       // Double-click the left edge: the panel collapses; again: it comes back at its width.

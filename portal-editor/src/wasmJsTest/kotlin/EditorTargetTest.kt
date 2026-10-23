@@ -37,3 +37,31 @@ class EditorTargetTest {
     assertFalse(isComponentInstance(null, reg))
   }
 }
+
+/** G1: undo follows the session's edits across the screen and the components opened from it. */
+class SessionHistoryTest {
+  private val home = EditTarget("default", "home")
+  private val card = home.open("Card")
+
+  @Test fun undoStepsTheNewestEditWhereverItWasMade() {
+    val h = SessionHistory()
+    h.edited(home) // an older screen edit
+    h.edited(card) // then an edit inside the component
+    assertTrue(h.undoElsewhere(home))
+    assertEquals(card, h.undoTarget(home), "back on the screen, the component's edit is undone first")
+    h.undone(card)
+    assertEquals(home, h.undoTarget(home))
+    assertEquals(card, h.redoTarget(home))
+    h.redone(card)
+    assertEquals(card, h.undoTarget(home))
+  }
+
+  @Test fun aNewEditClearsRedoAndAnEmptyHistoryUndoesTheOpenDocument() {
+    val h = SessionHistory()
+    assertEquals(home, h.undoTarget(home), "after a reload: the open document's own stack")
+    h.edited(card); h.undone(card)
+    h.edited(home)
+    assertFalse(h.redoElsewhere(home))
+    assertEquals(home, h.redoTarget(home))
+  }
+}

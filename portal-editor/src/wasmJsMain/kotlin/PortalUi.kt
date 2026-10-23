@@ -31,6 +31,9 @@ internal object Ui {
     .pane.left { left: 0; width: var(--left-w); border-right: 1px solid var(--border); padding: 10px; }
     .pane.right { right: 0; width: var(--right-w); border-left: 1px solid var(--border); padding: 10px; }
     .pane.collapsed { display: none; }
+    /* G6: a drag across the editor selects no chrome text; fields and code stay selectable. */
+    .pane, .topbar, .center, .crumbs { -webkit-user-select: none; user-select: none; }
+    .pane input, .pane textarea, .pane code, .pane pre { -webkit-user-select: text; user-select: text; }
     .splitter { position: fixed; top: 46px; bottom: 0; width: 7px; z-index: 25; cursor: col-resize;
       touch-action: none; }
     .splitter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; background: transparent; }

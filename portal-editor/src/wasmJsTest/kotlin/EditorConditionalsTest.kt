@@ -203,4 +203,9 @@ class EditorConditionalsTest {
     assertTrue(changes.isEmpty())
     assertTrue(slot.querySelector(".bind-picker") != null)
   }
+
+  @Test fun aNewConditionTestsABooleanTheScreenHasAndNeverInventsOne() {
+    assertEquals("loading", newConditionField(Contract(fields = mapOf("note" to "String", "ready" to "Boolean", "loading" to "Boolean"))))
+    assertEquals(null, newConditionField(Contract(fields = mapOf("note" to "String"))))
+  }
 }

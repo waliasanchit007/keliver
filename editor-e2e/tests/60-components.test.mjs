@@ -94,7 +94,7 @@ export default [
       await editor.clickOn('.crumbs .crumb', '▢ overview');
       await waitCrumbs(page, null, 'the "▢ overview" crumb returns to the screen');
       // F14: back on the screen, Undo there is the screen's: the editor says where the component's edits are undone.
-      ok(await page.eval(`[...document.querySelectorAll('div')].some(d => d.style.position === 'fixed' && /open SummaryCard again/.test(d.textContent))`),
+      ok(await page.eval(`[...document.querySelectorAll('div')].some(d => d.style.position === 'fixed' && /Undo here still undoes them/.test(d.textContent))`),
         'a message says how to undo the edits made inside SummaryCard');
       await waitHeader(editor, `SummaryCard #${summary.handle} · component`, 'back on the screen, the SummaryCard instance is selected again');
       const end = Date.now() + 5000;
@@ -236,6 +236,44 @@ export default [
       equal((await editor.outline()).length, rows - 1, 'the outline lost the deleted row');
       await editor.clickUndo();
       await expectBytes(file, original, 'Undo did not restore CardTitle.kt byte for byte');
+    },
+  },
+  {
+    id: 'G1',
+    title: 'back on the screen after a component edit, Undo undoes that edit first, then the older screen edit',
+    async run({ page, editor, fixtureDir, log }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      const screenFile = path.join(fixtureDir, 'src/screens/overview.kt');
+      const componentFile = path.join(fixtureDir, 'src/components/SummaryCard.kt');
+      const screenOriginal = fs.readFileSync(screenFile, 'utf8');
+      const componentOriginal = fs.readFileSync(componentFile, 'utf8');
+      // 1. A screen edit.
+      await editor.clickOutlineRowOf('StyledText', 'Field station');
+      await editor.appendToField('Text', '!', { commit: true });
+      await waitForFile(screenFile, (t) => t.includes('"Field station!"'), { message: 'the screen edit was never written' });
+      // 2. An edit inside SummaryCard.
+      await page.click(1, 1);
+      const card = await editor.findColor(COLORS.summaryCard);
+      await page.dblclick(card.cx, card.top + 8);
+      await waitCrumbs(page, ['overview', 'SummaryCard'], 'double-clicking the instance opens SummaryCard');
+      const tile = await editor.findColor(COLORS.statVisits);
+      await page.click(tile.cx, tile.cy);
+      await editor.appendToField('Label', '?', { commit: true });
+      await waitForFile(componentFile, (t) => t.includes('"Visits?"'), { message: 'the component edit was never written' });
+      // 3. Back on the screen, the platform's undo key: the component edit goes first.
+      await page.click(1, 1);
+      await page.press('Escape'); // deselects the tile
+      await page.press('Escape'); // steps out of SummaryCard
+      await waitCrumbs(page, null, 'Escape returns to the screen');
+      const b = await editor.undoRedo();
+      log(`Undo on the screen: ${JSON.stringify(b.undo)}`);
+      ok(/SummaryCard/.test(b.undo?.title ?? ''), `Undo's tooltip names SummaryCard (${b.undo?.title})`);
+      await page.undoKey();
+      await expectBytes(componentFile, componentOriginal, 'the first undo did not give SummaryCard.kt back');
+      ok(fs.readFileSync(screenFile, 'utf8').includes('"Field station!"'), 'the older screen edit is still there');
+      await sleep(600);
+      await page.undoKey();
+      await expectBytes(screenFile, screenOriginal, 'the second undo did not give overview.kt back');
     },
   },
   {

@@ -399,6 +399,7 @@ private fun pumpOps() {
     opInFlight = false
     // Another document was opened meanwhile: this reply is about the old one (its version is not this one's).
     if (target != editTarget()) {
+      if (reply is OpsReply.Accepted) sessionHistory.edited(target) // G1: still this session's newest edit
       q.onResult?.invoke(reply is OpsReply.Accepted)
       pumpOps() // an edit queued meanwhile is the new document's: send it now, not with the next one
       return
@@ -407,6 +408,7 @@ private fun pumpOps() {
     pillAfterReply(reply, writeBackWarnings.showing).let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
     when (reply) {
       is OpsReply.Accepted -> {
+        sessionHistory.edited(target)
         docVersion = reply.version
         staleUpTo = refetchSeq // a document fetched before this edit is older than it
         q.onResult?.invoke(true)
@@ -625,7 +627,7 @@ private fun undo() {
     localRefresh(true)
     return
   }
-  serverPost("/undo") { refetchDoc(true) }
+  stepHistory("/undo", sessionHistory.undoTarget(editTarget()), "Undid") { sessionHistory.undone(it) }
 }
 
 private fun redo() {
@@ -638,7 +640,32 @@ private fun redo() {
     localRefresh(true)
     return
   }
-  serverPost("/redo") { refetchDoc(true) }
+  stepHistory("/redo", sessionHistory.redoTarget(editTarget()), "Redid") { sessionHistory.redone(it) }
+}
+
+/** G1: this session's edits, in order, across the screen and the components opened from it. */
+private val sessionHistory = SessionHistory()
+
+/**
+ * G1: undo or redo ([path]) the newest step of [target]. The open document: as before. Another
+ * one (a component edited, then left): stepped there, said in a toast; its instances redraw
+ * from the relay's registry event.
+ */
+private fun stepHistory(path: String, target: EditTarget, verb: String, done: (EditTarget) -> Unit) {
+  if (target == editTarget()) {
+    serverPost(path) { done(target); refetchDoc(true) }
+    return
+  }
+  val xhr = XMLHttpRequest()
+  xhr.open("POST", "$SERVER$path?${target.query}")
+  xhr.setRequestHeader("X-Portal-Session", SESSION)
+  xhr.addEventListener("load", { _ ->
+    done(target)
+    Ui.toast("$verb your last edit, in ${target.component ?: target.screen}")
+    fetchComponents { refresh(); canvasGeneration.value++; Snapshot.sendApplyNotifications() }
+    updateUndoButtons()
+  })
+  xhr.send()
 }
 
 private fun serverPost(path: String, cb: () -> Unit) {
@@ -674,8 +701,12 @@ private fun updateUndoButtons() {
     set(redoBtn, localRedo.size, "Redo")
     return
   }
-  set(undoBtn, undoDepth, "Undo")
-  set(redoBtn, redoDepth, "Redo")
+  // G1: a step waiting in another document (a component edited, then left) is the next one.
+  val here = editTarget()
+  if (sessionHistory.undoElsewhere(here)) set(undoBtn, null, "Undo your last edit, in ${sessionHistory.undoTarget(here).let { it.component ?: it.screen }}")
+  else set(undoBtn, undoDepth, "Undo")
+  if (sessionHistory.redoElsewhere(here)) set(redoBtn, null, "Redo, in ${sessionHistory.redoTarget(here).let { it.component ?: it.screen }}")
+  else set(redoBtn, redoDepth, "Redo")
 }
 
 /** Anchor for append-to-end inserts: the parent's last child handle (excluding [excludeId]). */
@@ -697,6 +728,11 @@ private fun newNode(type: String): WidgetNode {
     // action — ContractWriteBack adds the defaulted TODO(portal) member.
     c.events.forEach { e -> if (e.required) props[e.name] = Action(e.name) }
     return WidgetNode(type, props)
+  }
+  // G2: a new condition tests a Boolean the screen already has — it never declares one by itself.
+  if (type == "Condition") {
+    newConditionField(docContract)?.let { return WidgetNode(type, mapOf("field" to it)) }
+    Ui.toast("This screen has no Boolean field yet: the condition adds one (showThis) — rename it in its properties")
   }
   return WidgetNode(type, widgetSpec(type)?.sampleProps ?: emptyMap())
 }
@@ -1906,7 +1942,7 @@ private fun goToCrumb(depth: Int) {
   if (back == editTarget()) return
   // F14: undo is per document — say where this component's edits are undone, once back on the screen.
   val left = editTarget().component
-  if (left != null && (undoDepth ?: 0) > 0) Ui.toast("Your edits to $left are saved in its file; to undo them, open $left again (double-click it) and press Undo")
+  if (left != null && (undoDepth ?: 0) > 0) Ui.toast("Your edits to $left are saved in its file; Undo here still undoes them, newest first")
   val reselect = crumbSelections.getOrNull(back.components.size)
   openComponents = back.components
   crumbSelections = crumbSelections.take(back.components.size)
