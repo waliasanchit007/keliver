@@ -211,7 +211,9 @@ component ↗** in its properties to open the component itself:
   redraws at once.
 - A breadcrumb (`home › SummaryCard › StatTile`) leads back; Esc steps out one
   level.
-- Undo is per document: undo a component's edits inside the component.
+- Undo steps your edits newest first, across the screen and the components you
+  opened from it; back on the screen, it says when the next step is a
+  component's.
 - A component's parameters are its contract with every caller, so an edit that
   would change them is refused: change the signature in code.
 
