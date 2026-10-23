@@ -26,10 +26,14 @@ internal fun nextZoom(current: Double, up: Boolean): Double =
 /** The largest zoom (at most 100%) at which a [w]×[h] frame fits in [availW]×[availH]. */
 /**
  * The zoom after a Cmd/Ctrl+wheel (a trackpad pinch arrives as one too): continuous, by
- * [deltaY] (negative = in), clamped to the zoom range.
+ * [deltaY] (negative = in; in lines when [lines], as some mice report), clamped to the zoom
+ * range. F19: one event moves at most ~13% — a mouse notch (deltaY 100–300) is one step, not a
+ * jump to 200%; a pinch's small deltas are unchanged.
  */
-internal fun wheelZoom(current: Double, deltaY: Double): Double =
-  (current * kotlin.math.exp(-deltaY * 0.0025)).coerceIn(ZOOM_MIN, ZOOM_MAX)
+internal fun wheelZoom(current: Double, deltaY: Double, lines: Boolean = false): Double {
+  val px = (if (lines) deltaY * 16 else deltaY).coerceIn(-50.0, 50.0)
+  return (current * kotlin.math.exp(-px * 0.0025)).coerceIn(ZOOM_MIN, ZOOM_MAX)
+}
 
 /** The zoom a keyboard shortcut asks for (⌘= / ⌘−, ⇧1 fit, ⇧0 100%), or null when the keys are not one. */
 internal fun zoomForKeys(code: String, key: String, mod: Boolean, shift: Boolean, current: Double, fit: () -> Double): Double? = when {
@@ -126,7 +130,14 @@ internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, fra
     if (we.ctrlKey || we.metaKey) {
       ev.preventDefault()
       ev.stopPropagation()
-      applyZoom(wheelZoom(canvasZoom, we.deltaY), zoomBox, frame)
+      // F19: the point under the pointer stays under it (as far as the canvas can scroll).
+      val before = frame.getBoundingClientRect()
+      val old = canvasZoom
+      applyZoom(wheelZoom(canvasZoom, we.deltaY, lines = we.deltaMode == 1), zoomBox, frame)
+      val after = frame.getBoundingClientRect()
+      val k = canvasZoom / old
+      center.scrollLeft += (after.left + (we.clientX - before.left) * k) - we.clientX
+      center.scrollTop += (after.top + (we.clientY - before.top) * k) - we.clientY
     }
   }, nonPassiveCapture())
   zoomOut.setAttribute("title", "Zoom out (⌘−)")

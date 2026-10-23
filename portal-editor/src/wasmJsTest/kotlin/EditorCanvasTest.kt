@@ -36,7 +36,7 @@ class EditorCanvasTest {
     assertTrue(wheelZoom(1.0, -10.0) > 1.0, "a wheel up (pinch out) zooms in")
     assertTrue(wheelZoom(1.0, 10.0) < 1.0)
     assertEquals(ZOOM_MAX, wheelZoom(1.9, -1000.0))
-    assertEquals(ZOOM_MIN, wheelZoom(0.3, 1000.0))
+    assertEquals(ZOOM_MIN, wheelZoom(0.26, 1000.0))
   }
 
   @Test fun zoomShortcutsStepFitAndReset() {
@@ -52,5 +52,11 @@ class EditorCanvasTest {
     assertEquals(TagPlace.Above, tagPlace(top = 40.0, bottom = 80.0, frameHeight = 780.0))
     assertEquals(TagPlace.Below, tagPlace(top = 0.0, bottom = 40.0, frameHeight = 780.0), "the headline at the very top")
     assertEquals(TagPlace.Inside, tagPlace(top = 0.0, bottom = 775.0, frameHeight = 780.0), "a box filling the frame")
+  }
+
+  @Test fun aMouseNotchZoomsOneStepNotToDouble() {
+    assertTrue(wheelZoom(1.0, -300.0) in 1.1..1.15, "a notch reported as 300 px")
+    assertTrue(wheelZoom(1.0, -3.0, lines = true) in 1.1..1.15, "a notch reported as 3 lines")
+    assertEquals(1.0 * kotlin.math.exp(0.01), wheelZoom(1.0, -4.0), 1e-9) // a pinch's small delta is as before
   }
 }
