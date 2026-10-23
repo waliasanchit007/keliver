@@ -72,7 +72,8 @@ internal object Ui {
       background: #2563eb; color: #fff; font: 600 10px/16px system-ui, sans-serif; white-space: nowrap; }
     .overlay-tag:empty { display: none; }
     .overlay-tag.hover { background: rgba(37,99,235,.85); }
-    .overlay-tag.inside { top: 0; left: 0; }
+    .overlay-tag.below { top: calc(100% + 2px); }
+    .overlay-tag.inside { top: auto; bottom: 0; left: auto; right: 0; }
     .sel-overlay.flash { animation: sel-flash .9s ease-out; }
     @keyframes sel-flash { 0% { box-shadow: 0 0 0 6px rgba(79,140,255,.55); } 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0); } }
     .frame { background: #ffffff; border-radius: 18px; overflow: hidden;

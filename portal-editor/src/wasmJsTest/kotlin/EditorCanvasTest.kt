@@ -47,4 +47,10 @@ class EditorCanvasTest {
     assertEquals(1.0, zoomForKeys("Digit0", ")", mod = false, shift = true, current = 0.5, fit = fit))
     assertEquals(null, zoomForKeys("KeyD", "d", mod = true, shift = false, current = 1.0, fit = fit), "⌘D is not a zoom")
   }
+
+  @Test fun theSelectionTagNeverCoversATopEdgeNode() {
+    assertEquals(TagPlace.Above, tagPlace(top = 40.0, bottom = 80.0, frameHeight = 780.0))
+    assertEquals(TagPlace.Below, tagPlace(top = 0.0, bottom = 40.0, frameHeight = 780.0), "the headline at the very top")
+    assertEquals(TagPlace.Inside, tagPlace(top = 0.0, bottom = 775.0, frameHeight = 780.0), "a box filling the frame")
+  }
 }

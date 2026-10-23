@@ -1301,8 +1301,11 @@ private fun positionOverlay(el: HTMLElement, handle: Int) {
     val node = portalTree.value.findNode(handle)
     val size = if (el === selOverlay) (rect.width / dpr) to (rect.height / dpr) else null
     tag.textContent = node?.let { overlayLabel(it.type, isComponentInstance(it, editorComponents), size) }.orEmpty()
-    // A box at the frame's top edge carries its tag inside (above it would be clipped).
-    tag.classList.toggle("inside", rect.top / dpr < 18)
+    // F12: above the box; at the frame's top edge below it; inside only when it fills the frame.
+    val frameHeight = (document.getElementById(PREVIEW_HOST_ID) as? HTMLElement)?.clientHeight?.toDouble() ?: Double.MAX_VALUE
+    val place = tagPlace(rect.top / dpr.toDouble(), rect.bottom / dpr.toDouble(), frameHeight)
+    tag.classList.toggle("below", place == TagPlace.Below)
+    tag.classList.toggle("inside", place == TagPlace.Inside)
   }
 }
 

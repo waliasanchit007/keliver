@@ -147,4 +147,20 @@ export default [
       equal(changedSources(before, snapshot(fixtureDir)), [], 'after Undo every source file is byte-identical');
     },
   },
+  {
+    id: 'F12',
+    title: 'the selection tag of a node at the frame\'s top edge sits below it, not over it',
+    async run({ page, editor, log }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      await editor.clickOutlineRowOf('StyledText', 'Field station');
+      await page.waitFor(`!!document.querySelector('.overlay-tag:not(.hover)')?.textContent`, { message: 'the selection has no tag' });
+      const box = await editor.selectionOverlay();
+      const tag = await page.eval(`(() => { const t = [...document.querySelectorAll('.overlay-tag:not(.hover)')].find(e => e.textContent);
+        const b = t.getBoundingClientRect(); return { cls: t.className, top: b.y, bottom: b.y + b.height, text: t.textContent }; })()`);
+      log(`box ${JSON.stringify(box)}; tag ${JSON.stringify(tag)}`);
+      ok(box && box.y - (await editor.frameRect()).y < 18, 'the title is at the frame\'s top edge');
+      ok(tag.top >= box.y + box.height - 1, `the tag (${tag.top}) starts below the title's box (${box.y + box.height})`);
+      await page.screenshot('F12-tag-below');
+    },
+  },
 ];

@@ -90,6 +90,19 @@ internal fun overlayLabel(type: String, component: Boolean, size: Pair<Double, D
   type + (if (component) " · component" else "") +
     (size?.let { (w, h) -> "  ${kotlin.math.round(w).toInt()}×${kotlin.math.round(h).toInt()}" } ?: "")
 
+/** Where an overlay's tag goes: above its box, else below it, else (the box fills the frame) inside. */
+internal enum class TagPlace { Above, Below, Inside }
+
+/**
+ * F12: the tag must not cover what it names — a box at the frame's top edge carries it below
+ * (above it would be clipped); only a box with no room on either side carries it inside.
+ */
+internal fun tagPlace(top: Double, bottom: Double, frameHeight: Double, tagHeight: Double = 18.0): TagPlace = when {
+  top >= tagHeight -> TagPlace.Above
+  bottom + tagHeight <= frameHeight -> TagPlace.Below
+  else -> TagPlace.Inside
+}
+
 internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, frame: HTMLElement, w: Int, h: Int) {
   frameW = w
   frameH = h
