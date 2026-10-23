@@ -130,12 +130,27 @@ export default [
       const file = overviewKt(fixtureDir);
       const original = fs.readFileSync(file, 'utf8');
       const pristine = snapshot(fixtureDir);
-      // The layout enums, by name (read only: a first argument on `Column { … }` is refused
-      // by write-back as not surgical, a separate issue).
+      // The layout enums, by name.
       await editor.clickOutlineRow(0); // the root Column
       equal((await row(page, 'Horizontal alignment'))?.options, ['Start', 'Center', 'End', 'Stretch'], 'Horizontal alignment lists CrossAxisAlignment by name');
       equal((await row(page, 'Width'))?.options, ['Wrap', 'Fill'], 'Width is Wrap / Fill');
       equal((await row(page, 'Overflow'))?.options, ['Clip', 'Scroll'], 'Overflow is Clip / Scroll');
+      // A first argument on `Column { … }` (no argument list) goes in a new list after its name;
+      // its undo gives the file back as it was.
+      await editor.clickOn('.pane.right .prop-label', 'Width', { exact: true });
+      const width = `document.getElementById([...document.querySelectorAll('.pane.right .prop-label')]
+        .find(l => l.textContent === 'Width').getAttribute('for'))`;
+      await page.press('ArrowDown');
+      await sleep(800);
+      if (fs.readFileSync(file, 'utf8') === original) {
+        log('native select: ArrowDown wrote nothing (macOS headless) — Width set by script + change event');
+        await page.eval(`(() => { const s = ${width}; s.value = '1'; s.dispatchEvent(new Event('change')); })()`);
+      }
+      await waitForFile(file, (t) => /Column\(width = Constraint\.Fill\) \{/.test(t), { message: 'Width = Fill was never written as Column(width = Constraint.Fill) {' });
+      log(`first argument: ${JSON.stringify(changedSources(pristine, snapshot(fixtureDir)))}`);
+      await page.click(1, 1);
+      await editor.clickUndo();
+      await waitForFile(file, (t) => t === original, { message: 'undoing Width did not give the file back' });
 
       // A KDoc-listed code (StyledText.align: 0 start, 1 center, 2 end, 3 justify), chosen.
       await editor.clickOutlineRowOf('StyledText', 'Synced this morning');

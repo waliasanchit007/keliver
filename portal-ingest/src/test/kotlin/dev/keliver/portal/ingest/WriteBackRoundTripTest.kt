@@ -111,4 +111,10 @@ class WriteBackRoundTripTest {
     assertTrue("onClick = b::go" in mid, mid)
     assertEquals(withRef, end)
   }
+
+  @Test fun aFirstArgumentGoesInANewListAfterTheNameAndItsUndoRemovesIt() {
+    val (mid, end) = roundTrip(screen) { d -> DocOp.SetProp(d.root.handle, "width", lit(1)) }
+    assertTrue(Regex("""\n  Column\(width = Constraint\.Fill\) \{\n""").containsMatchIn(mid), mid)
+    assertEquals(screen, end)
+  }
 }

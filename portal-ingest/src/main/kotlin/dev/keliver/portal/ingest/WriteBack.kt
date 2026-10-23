@@ -460,6 +460,9 @@ object WriteBack {
     // re-indented to the call's depth (and kept single-line if the source was).
     if (parsed.props != target.props || !sameModifiers(parsed.modifiers, target.modifiers)) {
       if (!editArgumentValues(call, parsed, target, factory, components, parentType)) {
+        // `Column { … }` has no argument list: its first arguments get one, after the name (the
+        // block stays as the author wrote it).
+        if (call.valueArgumentList == null) return addArgumentList(call, target, factory, components, parentType)
         val oldList = call.valueArgumentList ?: return false
         val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType, bindings.get())
         var callText = emitted.text
@@ -473,6 +476,8 @@ object WriteBack {
         val newCall = factory.createExpression(keepArgumentOrder(oldList, callText, factory, ::untouched)) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
         oldList.replace(newList)
+        // No arguments left before a trailing block: `Column { … }`, not `Column() { … }`.
+        call.valueArgumentList?.takeIf { it.arguments.isEmpty() && call.lambdaArguments.isNotEmpty() }?.delete()
         need(emitted.imports)
       }
     }
@@ -485,6 +490,28 @@ object WriteBack {
       ?: return target.children.isEmpty() || bail("${target.type} has no `{ … }` block in the file to put children in")
 
     return mergeChildren(parsed.children, target.children, block, psi, factory, components, parsed.type)
+  }
+
+  /** [call] (`Column { … }`) given [target]'s arguments in a new list after its name, on one line when short. */
+  private fun addArgumentList(
+    call: KtCallExpression,
+    target: DocNode.Widget,
+    factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
+    parentType: String?,
+  ): Boolean {
+    val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType, bindings.get())
+    val multiLine = (factory.createExpression(emitted.text) as? KtCallExpression)?.valueArgumentList ?: return false
+    if (multiLine.arguments.isEmpty()) return true // nothing to add: the call stays `Column { … }`
+    val oneLine = "(" + multiLine.arguments.joinToString(", ") { it.text } + ")"
+    val newList = if (indentOf(call).length + call.calleeExpression!!.textLength + oneLine.length <= 100 && '\n' !in oneLine) {
+      (factory.createExpression("X$oneLine") as KtCallExpression).valueArgumentList!!
+    } else {
+      multiLine
+    }
+    call.addAfter(newList, call.typeArgumentList ?: call.calleeExpression ?: return false)
+    need(emitted.imports)
+    return true
   }
 
   /**
