@@ -101,4 +101,39 @@ class EditorStateTest {
     assertEquals("${0xFF4F6BED.toInt()}", defaultValue(StateField("noticeIconArgb", StateKind.Int, StateSource.Prop), Scenario.Loaded))
     assertEquals("1", defaultValue(StateField("step", StateKind.Int, StateSource.Prop), Scenario.Loaded))
   }
+
+  // F7: a section whose name reads as content but which holds the loading skeleton.
+  private val sectioned = WidgetNode(
+    "Column", emptyMap(),
+    listOf(
+      cond("showListSection", null, cond("isLoading", null, WidgetNode("Shimmer")), WidgetNode("Repeat", mapOf("items" to "rows"))),
+      cond("showSummary", null, WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("hasError", null, WidgetNode("StyledText"))))),
+      WidgetNode("Spacer"),
+      cond("hasError", null, WidgetNode("StyledText")),
+    ),
+  )
+  private val none = ScreenContract(emptyMap(), emptyList())
+
+  @Test fun aSectionHoldingTheLoadingSkeletonIsShownWhileLoading() {
+    val fields = stateFields(sectioned, none)
+    assertEquals(setOf(StateRole.Loading), fields.single { it.name == "showListSection" }.carries)
+    val loading = effectiveMocks(fields, Scenario.Loading, emptyMap())
+    assertEquals("true", loading["showListSection"], "its skeleton is inside it")
+    assertEquals("true", loading["isLoading"])
+    assertEquals("false", loading["showSummary"], "a role in its else branch does not keep it on")
+    assertEquals("true", effectiveMocks(fields, Scenario.Loaded, emptyMap())["showListSection"])
+  }
+
+  @Test fun aScenarioScrollsToTheBlockItIsAbout() {
+    assertEquals("isLoading", scenarioFocus(sectioned, Scenario.Loading)?.props?.get("field"))
+    assertEquals("hasError", scenarioFocus(sectioned, Scenario.Error)?.props?.get("field"))
+    assertEquals(null, scenarioFocus(sectioned, Scenario.Loaded))
+  }
+
+  @Test fun aFlagSetByHandMakesThePreviewCustom() {
+    val fields = stateFields(sectioned, none)
+    assertFalse(isCustomState(fields, emptyMap()))
+    assertTrue(isCustomState(fields, mapOf("isLoading" to "false")))
+    assertFalse(isCustomState(stateFields(tree, contract), mapOf("headlineRate" to "9%")), "a text the user typed is not a flag")
+  }
 }

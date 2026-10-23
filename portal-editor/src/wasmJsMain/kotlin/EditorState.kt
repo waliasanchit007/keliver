@@ -10,6 +10,7 @@
  * in this browser. Nothing here is written to the app's source.
  */
 import dev.keliver.portal.CondTest
+import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.ScreenContract
 import dev.keliver.portal.WidgetNode
@@ -21,7 +22,17 @@ internal enum class StateKind { Bool, Text, Int, Double, Rows }
 /** Where a value is read: an `if` block, a bound prop, or a list's row count. */
 internal enum class StateSource { Condition, Prop, List }
 
-internal data class StateField(val name: String, val kind: StateKind, val source: StateSource)
+/**
+ * [carries]: F7 — for a flag an `if` block tests (as itself, not negated), the roles of the flags
+ * tested by the `if` blocks inside it (not in its else). A section that holds the loading
+ * skeletons is shown while loading, although its name reads as content.
+ */
+internal data class StateField(
+  val name: String,
+  val kind: StateKind,
+  val source: StateSource,
+  val carries: Set<StateRole> = emptySet(),
+)
 
 /** Every value the canvas reads for [tree]: condition fields first, then bound props, then lists. */
 internal fun stateFields(tree: WidgetNode, contract: ScreenContract): List<StateField> {
@@ -47,6 +58,7 @@ internal fun stateFields(tree: WidgetNode, contract: ScreenContract): List<State
     n.children.forEach(::visit)
   }
   visit(tree)
+  carriedRoles(tree).forEach { (name, roles) -> out[name]?.let { out[name] = it.copy(carries = roles) } }
   contract.fields.forEach { (name, kind) ->
     if (name in out) return@forEach
     val k = when (kind) {
@@ -67,6 +79,29 @@ internal fun stateFields(tree: WidgetNode, contract: ScreenContract): List<State
   }
   lists(tree)
   return out.values.toList()
+}
+
+/** F7: each plainly tested flag → the non-content roles of the flags tested inside its block (its then-branch). */
+private fun carriedRoles(tree: WidgetNode): Map<String, Set<StateRole>> {
+  val out = LinkedHashMap<String, MutableSet<StateRole>>()
+  fun inner(n: WidgetNode, into: MutableSet<StateRole>) {
+    if (n.type == ELSE_TYPE) return
+    if (n.type == "Condition") condOf(n)?.terms?.forEach { t -> roleOf(t.field).takeIf { it != StateRole.Content }?.let(into::add) }
+    n.children.forEach { inner(it, into) }
+  }
+  fun visit(n: WidgetNode) {
+    if (n.type == "Condition") {
+      val roles = mutableSetOf<StateRole>()
+      n.children.forEach { inner(it, roles) }
+      if (roles.isNotEmpty()) {
+        condOf(n)?.terms?.filter { it.test == CondTest.Bool && !it.negate && '.' !in it.field }
+          ?.forEach { t -> out.getOrPut(t.field) { mutableSetOf() } += roles }
+      }
+    }
+    n.children.forEach(::visit)
+  }
+  visit(tree)
+  return out
 }
 
 /** What a flag means for the screen's state, read from its name. */
@@ -138,7 +173,7 @@ internal fun sampleColor(name: String): Int? {
 
 /** The value a field shows under [scenario] when the user has not set it. */
 internal fun defaultValue(field: StateField, scenario: Scenario): String = when (field.kind) {
-  StateKind.Bool -> (roleOf(field.name) in scenario.on).toString()
+  StateKind.Bool -> (roleOf(field.name) in scenario.on || field.carries.any { it in scenario.on }).toString()
   // A text a condition tests (`isNotBlank()`): present when its role is on in this scenario.
   StateKind.Text -> if (field.source == StateSource.Condition && roleOf(field.name) !in scenario.on) "" else sampleText(field.name)
   StateKind.Int -> sampleColor(field.name)?.toString()
@@ -146,6 +181,24 @@ internal fun defaultValue(field: StateField, scenario: Scenario): String = when 
   StateKind.Double -> "1.5"
   StateKind.Rows -> if (scenario == Scenario.Empty || scenario == Scenario.Loading) "0" else "3"
 }
+
+/**
+ * F7: the first `if` block [scenario] is about — one testing a flag of a role it turns on (not
+ * content) — so the canvas can scroll to it (an error banner below the fold); null for Loaded.
+ */
+internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario): WidgetNode? {
+  val roles = scenario.on - StateRole.Content
+  if (roles.isEmpty()) return null
+  fun find(n: WidgetNode): WidgetNode? {
+    if (n.type == "Condition" && condOf(n)?.terms?.any { !it.negate && roleOf(it.field) in roles } == true) return n
+    return n.children.firstNotNullOfOrNull(::find)
+  }
+  return find(tree)
+}
+
+/** F7: whether the user changed a flag the scenario decides — the preview is then their own, not the scenario. */
+internal fun isCustomState(fields: List<StateField>, user: Map<String, String>): Boolean =
+  fields.any { (it.kind == StateKind.Bool || it.source != StateSource.Prop) && it.name in user }
 
 /** The mocks the canvas reads: [user] overrides on top of [scenario]'s defaults. */
 internal fun effectiveMocks(fields: List<StateField>, scenario: Scenario, user: Map<String, String>): Map<String, String> {

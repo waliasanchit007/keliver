@@ -2560,16 +2560,26 @@ private fun renderBindings() {
   val scenarios = scenariosFor(fields)
   if (scenarios.size > 1) {
     val chips = Ui.el("div", "state-scenarios")
+    // F7: once a flag is set by hand, the preview is no scenario's: no chip claims it.
+    val custom = isCustomState(fields, state.values)
     scenarios.forEach { sc ->
-      val chip = Ui.button(sc.label, if (sc == state.scenario) "chip on" else "chip") {
+      val chip = Ui.button(sc.label, if (sc == state.scenario && !custom) "chip on" else "chip") {
         // A scenario resets what it decides: the flags. Texts and numbers the user typed stay.
         val flags = fields.filter { it.kind == StateKind.Bool || it.source != StateSource.Prop }.map { it.name }.toSet()
         state = ScreenState(sc, state.values - flags)
         save(); renderBindings()
+        // F7: show what the scenario is about, even below the fold (an error banner).
+        scenarioFocus(portalTree.value, sc)?.let { n -> (n.children.firstOrNull() ?: n).id.let { selectedId = it; refresh(); revealWhenDrawn(it) } }
       }
-      chip.setAttribute("title", "Preview the screen ${sc.label.lowercase()}")
+      chip.setAttribute("title", "Preview the screen ${sc.label.lowercase()}: " + when (sc) {
+        Scenario.Loaded -> "content flags on, loading/error/empty off"
+        Scenario.Loading -> "loading flags on (and the sections that hold them); lists empty"
+        Scenario.Error -> "error flags on, with the content"
+        Scenario.Empty -> "empty flags on, with the content; lists empty"
+      } + " — read from the flags' names, not the app's logic")
       chips.appendChild(chip)
     }
+    if (custom) chips.appendChild(Ui.el("span", "muted", "Custom").also { it.setAttribute("title", "A flag was set by hand; pick a scenario to reset the flags") })
     bindingsEl.appendChild(chips)
   }
 
