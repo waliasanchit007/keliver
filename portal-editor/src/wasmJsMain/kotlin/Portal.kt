@@ -2481,7 +2481,13 @@ private fun renderProps() {
   val specs = if (readOnlyCond != null || node.type == "Condition") emptyList() else comp?.props ?: editableProps(node.type)
   if (specs.isEmpty() && readOnlyCond == null && node.type != "Condition") propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
   specs.forEach { s ->
-    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = "", choices = s.choices))
+    // F8: a component's Int parameter that it passes to a widget's named values shows those names.
+    val choices = s.choices.ifEmpty {
+      if (comp != null && s.kind == PropKind.Int) {
+        forwardedChoices(comp, s.name, editorComponents, { t, p -> widgetSpec(t)?.props?.firstOrNull { it.name == p }?.choices.orEmpty() })
+      } else emptyList()
+    }
+    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = "", choices = choices))
   }
   // P3: events — each wires to a named Action.
   val events = comp?.events?.map { it.name } ?: spec?.events ?: emptyList()

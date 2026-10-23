@@ -1,3 +1,4 @@
+import dev.keliver.portal.Bind
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.ComponentSpec
@@ -5,7 +6,9 @@ import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropKind
+import dev.keliver.portal.PropChoice
 import dev.keliver.portal.PropSpec
+import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.isColorParamName
 import kotlinx.serialization.json.Json
@@ -33,6 +36,32 @@ internal fun setEditorComponents(reg: ComponentRegistry) { editorComponents = re
  * canvas is drawn again (RenderNode's input, the screen's tree, did not change).
  */
 internal val canvasGeneration = androidx.compose.runtime.mutableIntStateOf(0)
+
+/**
+ * F8: the named values a component's [param] takes when its body passes it straight to a widget
+ * property that has them — `StyledText(textAlign = align)` → Start, Center, End — also through
+ * another component it passes the parameter on to. Empty when the parameter is used otherwise.
+ */
+internal fun forwardedChoices(
+  spec: ComponentSpec,
+  param: String,
+  registry: ComponentRegistry,
+  widgetChoices: (type: String, prop: String) -> List<PropChoice>,
+  seen: Set<String> = emptySet(),
+): List<PropChoice> {
+  if (spec.name in seen) return emptyList()
+  fun walk(n: WidgetNode): List<PropChoice>? {
+    for ((key, value) in n.props) {
+      if (value != Bind(param)) continue
+      widgetChoices(n.type, key).takeIf { it.isNotEmpty() }?.let { return it }
+      registry.spec(n.type)?.let { inner ->
+        forwardedChoices(inner, key, registry, widgetChoices, seen + spec.name).takeIf { it.isNotEmpty() }?.let { return it }
+      }
+    }
+    return n.children.firstNotNullOfOrNull(::walk)
+  }
+  return spec.body?.let(::walk).orEmpty()
+}
 
 internal fun parseComponents(json: String): ComponentRegistry = runCatching {
   val arr = Json.parseToJsonElement(json).jsonArray
