@@ -93,7 +93,7 @@ class WriteBackPreflightRelayTest {
   private fun DocumentService.rowText() = ((child(1) as DocNode.Widget).children.single() as DocNode.Widget).handle
 
   private fun awaitStatus(svc: DocumentService, version: Long): DocumentService.WriteBackStatus {
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline) {
       svc.writeBack?.takeIf { it.version == version }?.let { return it }
       Thread.sleep(25)

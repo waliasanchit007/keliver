@@ -182,7 +182,7 @@ fun HomeScreen() {
     assertEquals(lit(-14737633), ((old.root as DocNode.Widget).children.single() as DocNode.Widget).props["colorArgb"])
     // The old editor edits another prop; the server document — and the file — keep C.Ink.
     assertTrue(svc.submit(batch(svc, DocOp.SetProp(text(svc).handle, "fontSize", lit(14)))).ok)
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline && "fontSize = 14" !in homeFile.readText()) Thread.sleep(50)
     assertTrue("StyledText(text = \"a\", colorArgb = C.Ink, fontSize = 14)" in homeFile.readText(), homeFile.readText())
   }

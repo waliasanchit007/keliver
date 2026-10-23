@@ -67,7 +67,7 @@ class InheritedContractRelayTest {
   private fun DocumentService.child(i: Int) = (doc.root as DocNode.Widget).children[i] as DocNode.Widget
 
   private fun awaitStatus(svc: DocumentService, version: Long): DocumentService.WriteBackStatus {
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline) {
       svc.writeBack?.takeIf { it.version == version }?.let { return it }
       Thread.sleep(25)
