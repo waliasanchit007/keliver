@@ -52,6 +52,17 @@ object NodeEmitter {
     bindingsParam: String? = null,
   ): String = statement(node, indent, components, parentType, bindingsParam).text
 
+  private val EMPTY_ARGS_BEFORE_LAMBDA = Regex("""(\w)\(\n[ \t]*\) \{""")
+  private val EMPTY_ARGS = Regex("""(\w)\(\n[ \t]*\)""")
+
+  /**
+   * F20: [text] with each call that has no arguments written as `Divider()` (and `Column {` before
+   * its content), not as the exporter writes it, with its parentheses on two lines. Before any
+   * RawCode's own text is put back (that is the author's, as written).
+   */
+  private fun compactEmptyCalls(text: String): String =
+    text.replace(EMPTY_ARGS_BEFORE_LAMBDA, "$1 {").replace(EMPTY_ARGS, "$1()")
+
   /** A statement's text plus the imports it needs — taken from the exporter's structural set. */
   data class Emitted(val text: String, val imports: Set<String>)
 
@@ -62,6 +73,8 @@ object NodeEmitter {
     parentType: String? = null,
     /** The file's bindings parameter (null or `b` = as the exporter writes it). */
     bindingsParam: String? = null,
+    /** F20: write a call without arguments as `Divider()` / `Column {` — for new code only. */
+    compact: Boolean = false,
   ): Emitted {
     // A RawCode statement is its own text: nothing to export, nothing to import.
     if (node is DocNode.RawCode) return Emitted(node.text, emptySet())
@@ -69,7 +82,7 @@ object NodeEmitter {
     val marked = markRaw(node, raws)
     val (lifted, imports) = lift(marked, components, parentType, bindingsParam)
     val (text, srcIndent) = lifted
-    var out = reindent(text, srcIndent, indent)
+    var out = reindent(text, srcIndent, indent).let { if (compact) compactEmptyCalls(it) else it }
     // After the re-indent: a RawCode's own lines are its source, never shifted.
     raws.forEachIndexed { i, raw -> out = out.replace("${marker(i)}()", raw) }
     return Emitted(out, imports)

@@ -1068,7 +1068,7 @@ object WriteBack {
     parentType: String?,
   ): KtExpression? = place(block, after, factory) { indent ->
     // P0 indent fix: the statement text is emitted re-indented to the destination depth.
-    val emitted = NodeEmitter.statement(node, indent, components, parentType, bindings.get())
+    val emitted = NodeEmitter.statement(node, indent, components, parentType, bindings.get(), compact = true)
     need(emitted.imports)
     statementOf(factory, emitted.text)
   }

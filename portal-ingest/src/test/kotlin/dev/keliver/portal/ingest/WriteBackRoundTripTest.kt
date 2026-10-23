@@ -69,7 +69,16 @@ class WriteBackRoundTripTest {
       DocOp.InsertNode(d.root.handle, column(d).children[0].handle, DocNode.Widget(Handle(0), "Divider"))
     }
     assertTrue("import dev.keliver.material.compose.Divider" in mid, mid)
+    // F20: a widget with no arguments is written `Divider()`, not with its parentheses on two lines.
+    assertTrue(Regex("""\n\s*Divider\(\)\n""").containsMatchIn(mid), mid)
     assertEquals(screen, end)
+  }
+
+  @Test fun aNewContainerWithoutArgumentsIsWrittenWithoutParentheses() {
+    val inserted = doc(screen).let { d ->
+      merge(screen, d.apply(DocOp.InsertNode(d.root.handle, null, DocNode.Widget(Handle(0), "Column", children = listOf(DocNode.Widget(Handle(0), "Divider"))))).doc, d)
+    }
+    assertTrue(Regex("""\n\s*Column \{\n\s*Divider\(\)\n\s*\}""").containsMatchIn(inserted), inserted)
   }
 
   @Test fun addingThenRemovingAModifierGivesTheFileBack() {

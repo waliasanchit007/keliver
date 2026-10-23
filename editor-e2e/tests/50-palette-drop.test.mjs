@@ -43,7 +43,7 @@ export default [
 
       // The drop inserted a Divider right after the title (and imported it).
       const text = await waitForFile(file, (t) => t !== original, { message: 'the drop was never written to overview.kt' });
-      ok(/tintArgb = -5051406,\n {4}\)\n {4}Divider\(\n {4}\)\n/.test(text), 'the Divider call follows the "Recent sites" title in overview.kt');
+      ok(/tintArgb = -5051406,\n {4}\)\n {4}Divider\(\)\n/.test(text), 'the Divider call follows the "Recent sites" title in overview.kt');
       ok(/\nimport dev\.keliver\.material\.compose\.Divider\n/.test(text), 'overview.kt imports Divider');
 
       // ... and selected it.
@@ -91,7 +91,7 @@ export default [
       ok(marker && marker.cls === 'drop-line', 'an insertion line shows (not the whole root as a box)');
       near(marker.y + marker.height / 2, title.bottom, 3, 'the line sits on the title\'s bottom edge');
       const text = await waitForFile(file, (t) => t !== original, { message: 'the drop was never written to overview.kt' });
-      ok(/tintArgb = -5051406,\n {4}\)\n {4}Divider\(\n {4}\)\n/.test(text), 'the Divider follows the "Recent sites" title, not the end of the screen');
+      ok(/tintArgb = -5051406,\n {4}\)\n {4}Divider\(\)\n/.test(text), 'the Divider follows the "Recent sites" title, not the end of the screen');
       await page.click(1, 1);
       await editor.clickUndo();
       await expectBytes(file, original, 'Undo did not give overview.kt back byte for byte');
