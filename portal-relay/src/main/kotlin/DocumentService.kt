@@ -85,6 +85,34 @@ class DocumentService(
   @Volatile private var readText: String? = null
 
   /**
+   * F4: the file's text at each document this service wrote or read since the file last changed
+   * in code, newest last. An undo or redo that brings the document back to one of them (the very
+   * same tree and contract) writes that text again, byte for byte: re-emitting a deleted node would
+   * put its arguments, and the import it needed, in canonical order. Used only while the file is
+   * what the relay last wrote or read. Handles aside (an undone delete inserts the node anew),
+   * the document must be exactly the same.
+   */
+  private val knownTexts = ArrayDeque<Pair<Pair<DocNode, Contract>, String>>()
+
+  private fun contentOf(d: UiDocument): Pair<DocNode, Contract> = withoutHandles(d.root) to d.contract
+
+  private fun withoutHandles(n: DocNode): DocNode = when (n) {
+    is DocNode.RawCode -> n.copy(handle = Handle(0))
+    is DocNode.Widget -> n.copy(handle = Handle(0), children = n.children.map(::withoutHandles))
+  }
+
+  private fun knownText(d: UiDocument): String? = contentOf(d).let { c -> knownTexts.lastOrNull { it.first == c }?.second }
+
+  private fun remember(d: UiDocument, text: String?, fileChangedInCode: Boolean = false) {
+    if (fileChangedInCode || text == null) knownTexts.clear()
+    if (text == null) return
+    val c = contentOf(d)
+    knownTexts.removeAll { it.first == c }
+    knownTexts.addLast(c to text)
+    while (knownTexts.size > 100) knownTexts.removeFirst()
+  }
+
+  /**
    * K3 last review round: what the last write-back of this screen did —
    * [outcome] `surgical` (in place), `export` (the whole file, which held
    * nothing the export drops), `created`, `refused` (NOT written: it would
@@ -509,6 +537,7 @@ class DocumentService(
     fileDoc = newDoc
     fileText = text
     readText = text
+    remember(newDoc, text, fileChangedInCode = true)
     lastWrittenText = null
     pendingWrite?.cancel(false)
     firstRefused = null
@@ -565,6 +594,7 @@ class DocumentService(
       acceptExternal(next, "a component or design token it uses changed", text)
     } else {
       // The same document: the stacks stay, and so does what the last read vouched for (U37).
+      remember(doc, text, fileChangedInCode = text != fileText)
       fileDoc = doc
       fileText = text
     }
@@ -636,10 +666,14 @@ class DocumentService(
     // One snapshot: what is merged, exported and recorded as the file's base is the same document.
     val (doc, base, texts) = synchronized(this) { Triple(this.doc, fileDoc, fileText to readText) }
     val (baseText, readText) = texts
+    val known = synchronized(this) { knownText(doc) }
     val status = try {
       kotlinFile.parentFile.mkdirs()
       val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
-      val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
+      // F4: back at a document the file was already written or read as (an undo, a redo) — that text.
+      val plan = if (known != null && onDisk != null && onDisk == baseText) {
+        dev.keliver.portal.ingest.ScreenWriter.Write(known, dev.keliver.portal.ingest.ScreenWriter.How.SURGICAL)
+      } else dev.keliver.portal.ingest.ScreenWriter.plan(
         onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
         fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
         asComponent = asComponent,
@@ -706,6 +740,7 @@ class DocumentService(
     kotlinFile.writeText(plan.text)
     fileDoc = doc
     fileText = plan.text
+    remember(doc, plan.text)
     firstRefused = null
     val how = plan.how.name.lowercase()
     // E43: a component has no compiled-version stamp (only a screen is routed by one).
@@ -800,7 +835,7 @@ class DocumentService(
       return DocumentService(
         key, doc, { onChanged() }, kotlinFile, functionName, null, components, tokens, tokenFileId, tokensVersion, asComponent = true,
         componentsVersion = componentsVersion,
-      ).also { it.fileDoc = doc; it.fileText = text; it.readText = text }
+      ).also { it.fileDoc = doc; it.fileText = text; it.readText = text; it.remember(doc, text) }
     }
 
     /** [root] with handles 1, 2, 3… in document order, and the next free handle. */
@@ -842,7 +877,7 @@ class DocumentService(
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = stampedVersion(kotlinFile), nextHandle = next)
           return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion = componentsVersion)
-            .also { it.fileDoc = doc; it.fileText = text; it.readText = text } // the file IS this document
+            .also { it.fileDoc = doc; it.fileText = text; it.readText = text; it.remember(doc, text) } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }

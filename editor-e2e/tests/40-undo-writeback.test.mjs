@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { equal, ok } from '../lib/assert.mjs';
-import { changedSources, expectBytes, snapshot, waitForFile } from '../lib/fixture.mjs';
+import { changedLines, changedSources, expectBytes, snapshot, waitForFile } from '../lib/fixture.mjs';
 import { sleep } from '../lib/browser.mjs';
 import { COLORS } from './fixture-map.mjs';
 
@@ -136,6 +136,38 @@ export default [
       }
       await expectBytes(file, original, 'undoing the new argument did not give overview.kt back byte for byte');
       equal(changedSources(pristine, snapshot(fixtureDir)), [], 'every source file is byte-identical to the start');
+    },
+  },
+  {
+    id: 'F4',
+    title: 'deleting a node written in the author\'s own argument order, then Undo, gives the file back byte for byte',
+    async run({ page, editor, relay, fixtureDir, log }) {
+      const file = path.join(fixtureDir, 'src/screens/logbook.kt');
+      const fixture = fs.readFileSync(file, 'utf8');
+      // The author's order and layout, not the editor's: one line, size first.
+      const authored = fixture.replace(
+        'StyledText(\n        text = "Archive",\n        fontSize = 14,\n        colorArgb = -15000801,\n      )',
+        'StyledText(fontSize = 14, text = "Archive", colorArgb = -15000801)',
+      );
+      ok(authored !== fixture, 'the fixture has the Archive text to rewrite');
+      const version = async () => JSON.parse(await relay.get('/doc?project=default&screen=logbook')).version;
+      const before = await version();
+      fs.writeFileSync(file, authored);
+      try {
+        // The relay reads the change in code (a new document version) before the page opens.
+        const end = Date.now() + 15000;
+        while (Date.now() < end && (await version()) === before) await sleep(200);
+        ok((await version()) !== before, 'the relay read the change made in code');
+        await editor.open('logbook', { readyColor: COLORS.entryRow });
+        await editor.clickOutlineRowOf('StyledText', 'Archive');
+        await page.press('Delete');
+        await waitForFile(file, (t) => !t.includes('"Archive"'), { message: 'Delete on the selected row was never written' });
+        log(`after delete: ${JSON.stringify(changedLines(authored, fs.readFileSync(file, 'utf8')))}`);
+        await editor.clickUndo();
+        await expectBytes(file, authored, 'Undo of the delete did not give logbook.kt back byte for byte (argument order?)');
+      } finally {
+        fs.writeFileSync(file, fixture);
+      }
     },
   },
 ];
