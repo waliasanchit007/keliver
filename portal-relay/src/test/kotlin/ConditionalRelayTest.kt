@@ -100,7 +100,8 @@ class ConditionalRelayTest {
   private fun batch(svc: DocumentService, vararg ops: DocOp) = OpBatch(svc.doc.version, OpEnvelope("t", 0L), ops.toList())
 
   private fun awaitFile(f: File, predicate: (String) -> Boolean): String {
-    val deadline = System.currentTimeMillis() + 5_000
+    // Generous: a write-back on a loaded machine (a parallel build) can take several seconds.
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline) {
       val t = f.readText()
       if (predicate(t)) return t
