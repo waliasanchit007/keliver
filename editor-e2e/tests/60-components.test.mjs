@@ -68,6 +68,10 @@ export default [
       const card = await editor.findColor(COLORS.summaryCard);
       await page.dblclick(card.cx, card.top + 8);
       await waitCrumbs(page, ['overview', 'SummaryCard'], 'double-clicking the instance opens SummaryCard (breadcrumb overview › SummaryCard)');
+      // F13: no dashed hover box is left where the instance was drawn on the screen.
+      equal(await page.eval(`(() => { const host = document.getElementById('PreviewHost');
+        const h = [...host.parentElement.children].find(e => e !== host && e.style.borderTopStyle === 'dashed');
+        return h ? getComputedStyle(h).display : 'none'; })()`), 'none', 'the hover box of the screen\'s instance is gone');
       equal((await editor.outline()).map((r) => r.type), types(await componentTree(relay, 'SummaryCard')),
         "the outline is SummaryCard's body");
       await page.screenshot('E14-opened');
@@ -89,6 +93,9 @@ export default [
       await page.click(1, 1);
       await editor.clickOn('.crumbs .crumb', '▢ overview');
       await waitCrumbs(page, null, 'the "▢ overview" crumb returns to the screen');
+      // F14: back on the screen, Undo there is the screen's: the editor says where the component's edits are undone.
+      ok(await page.eval(`[...document.querySelectorAll('div')].some(d => d.style.position === 'fixed' && /open SummaryCard again/.test(d.textContent))`),
+        'a message says how to undo the edits made inside SummaryCard');
       await waitHeader(editor, `SummaryCard #${summary.handle} · component`, 'back on the screen, the SummaryCard instance is selected again');
       const end = Date.now() + 5000;
       let changed = 0;

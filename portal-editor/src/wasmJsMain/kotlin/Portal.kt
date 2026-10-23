@@ -1852,6 +1852,9 @@ private fun openComponent(name: String) {
 private fun goToCrumb(depth: Int) {
   val back = editTarget().backTo(depth)
   if (back == editTarget()) return
+  // F14: undo is per document — say where this component's edits are undone, once back on the screen.
+  val left = editTarget().component
+  if (left != null && (undoDepth ?: 0) > 0) Ui.toast("Your edits to $left are saved in its file; to undo them, open $left again (double-click it) and press Undo")
   val reselect = crumbSelections.getOrNull(back.components.size)
   openComponents = back.components
   crumbSelections = crumbSelections.take(back.components.size)
@@ -2139,6 +2142,8 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
 private fun loadDraft(cb: (() -> Unit)? = null) {
   // V2 M1: the server document is the truth — fetch it and subscribe to changes.
   selectedId = null
+  // F13: no hover box is left where an instance of the previous document was drawn.
+  if (::hoverOverlay.isInitialized) hideOverlay(hoverOverlay)
   pendingInsertPlace = null // an insert into the previous document selects nothing in this one
   staleUpTo = refetchSeq // replies to fetches of the previous document are not this one's
   renderCrumbs()
