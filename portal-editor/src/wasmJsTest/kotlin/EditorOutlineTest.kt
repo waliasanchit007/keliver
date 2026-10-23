@@ -23,6 +23,7 @@ class EditorOutlineTest {
     assertEquals("↕16", outlineHint(n(9, "Spacer", props = mapOf("height" to 16.0))))
     assertEquals("“Hello”", outlineHint(n(9, "StyledText", props = mapOf("text" to "Hello"))))
     assertEquals("else", outlineHint(n(9, "Else")))
+    assertEquals("@meta", outlineHint(n(9, "Button", props = mapOf("text" to dev.keliver.portal.Bind("meta")))))
   }
 
   @Test fun collapsedContainersHideTheirRows() {

@@ -355,7 +355,13 @@ internal fun textField(value: String, onPreview: (String) -> Unit = {}, onCommit
  * and at least [min] ([minWhy] says why). Out-of-range and non-numeric text
  * is never sent.
  */
-internal data class NumberRule(val whole: Boolean, val min: Double? = null, val minWhy: String? = null)
+internal data class NumberRule(
+  val whole: Boolean,
+  val min: Double? = null,
+  val minWhy: String? = null,
+  val max: Double? = null,
+  val maxWhy: String? = null,
+)
 
 /**
  * The rule for wire key [key] of a [kind] prop on a [nodeType] node: a Dp
@@ -366,7 +372,8 @@ internal fun numberRule(nodeType: String, key: String, kind: PropKind): NumberRu
   val whole = kind == PropKind.Int
   return when {
     isDpProp(nodeType, key) -> NumberRule(whole, 0.0, "A size can't be negative")
-    key.substringAfterLast('.') == "fontSize" -> NumberRule(whole, 1.0, "Font size must be at least 1")
+    // G10: a typo (2428 for 24) is caught, not written; no screen text is that large.
+    key.substringAfterLast('.') == "fontSize" -> NumberRule(whole, 1.0, "Font size must be at least 1", 400.0, "Font size must be at most 400")
     else -> NumberRule(whole)
   }
 }
@@ -389,6 +396,8 @@ internal fun parseNumber(text: String, rule: NumberRule): Result<Number> {
   }
   val min = rule.min
   if (min != null && v.toDouble() < min) return Result.failure(IllegalArgumentException(rule.minWhy ?: "Must be at least ${showNumber(min)}"))
+  val max = rule.max
+  if (max != null && v.toDouble() > max) return Result.failure(IllegalArgumentException(rule.maxWhy ?: "Must be at most ${showNumber(max)}"))
   return Result.success(v)
 }
 

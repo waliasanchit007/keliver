@@ -24,7 +24,9 @@ internal fun outlineHint(node: WidgetNode): String? = when (node.type) {
     (node.props["height"] as? Number)?.let { "↕${trimNumber(it.toDouble())}" },
     (node.props["width"] as? Number)?.let { "↔${trimNumber(it.toDouble())}" },
   ).joinToString(" ").ifEmpty { null }
-  else -> (tokenValue(node.props["text"]) as? String)?.let { "“$it”" }
+  // G10: a text bound to a field shows the field.
+  else -> (node.props["text"] as? dev.keliver.portal.Bind)?.let { "@${it.field}" }
+    ?: (tokenValue(node.props["text"]) as? String)?.let { "“$it”" }
     ?: node.props.values.firstNotNullOfOrNull { (tokenValue(it) as? String)?.takeIf { s -> s.isNotBlank() && s.length <= 40 } }?.let { "“$it”" }
 }
 

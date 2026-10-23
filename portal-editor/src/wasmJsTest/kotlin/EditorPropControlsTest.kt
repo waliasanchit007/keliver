@@ -303,4 +303,10 @@ class EditorPropControlsTest {
     assertTrue(sel.classList.contains("unset"))
     assertEquals("Wrap", (sel.querySelector("select") as org.w3c.dom.HTMLSelectElement).let { it.options.item(it.selectedIndex)?.textContent }, "its first name, a coded enum's default")
   }
+
+  @Test fun aFontSizeTypoIsCaughtNotWritten() {
+    val rule = numberRule("StyledText", "fontSize", dev.keliver.portal.PropKind.Int)
+    assertEquals("Font size must be at most 400", parseNumber("2428", rule).exceptionOrNull()?.message)
+    assertEquals(24, parseNumber("24", rule).getOrNull())
+  }
 }
