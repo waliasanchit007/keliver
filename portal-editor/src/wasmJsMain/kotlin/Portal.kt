@@ -1902,6 +1902,7 @@ private fun handleEditorKey(e: KeyboardEvent) {
     }
     mod && e.key.lowercase() == "d" && sel != null && sel.id != tree.id -> {
       val parentId = parentOf(tree, sel.id)?.id ?: return
+      pendingInsertPlace = parentId to sel.id // F22: the copy is selected, as a new node from the palette is
       sendOps(listOf(DocOp.InsertNode(Handle(parentId.toLong()), Handle(sel.id.toLong()), deepCopy(sel).toDocNode())))
     }
     mod && e.key.lowercase() == "c" && sel != null -> clipboardNode = sel
