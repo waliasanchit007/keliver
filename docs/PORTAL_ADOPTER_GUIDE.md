@@ -192,11 +192,14 @@ undo gives the file back byte for byte.
 - **🎯 Select** (the default): a click selects the innermost widget or component
   instance under it, and the app does not see the click. Click empty space to
   deselect.
+- In a list, a click outlines the row you clicked; the list's other rows are
+  outlined faintly, because they are the same node.
 - **☝ Interact**: clicks, typing and scrolling go to the app, as on a device.
 - The wheel scrolls a screen taller than the frame, and a horizontal wheel or
   drag scrolls a carousel.
 - **− / + / Fit** zoom the frame, as do ⌘/Ctrl + wheel, a trackpad pinch,
-  ⌘= / ⌘−, ⇧1 (fit) and ⇧0 (100%). The device preset beside them sets the
+  ⌘= / ⌘−, ⇧1 (fit) and ⇧0 (100%). Wheel and pinch zoom keep the point under
+  the pointer in place. The device preset beside them sets the
   frame's size, and **⟲** rotates it.
 - Double-click a text to edit it in place.
 
@@ -208,19 +211,23 @@ component ↗** in its properties to open the component itself:
   redraws at once.
 - A breadcrumb (`home › SummaryCard › StatTile`) leads back; Esc steps out one
   level.
+- Undo is per document: undo a component's edits inside the component.
 - A component's parameters are its contract with every caller, so an edit that
   would change them is refused: change the signature in code.
 
 **Outline and palette.**
-- Drag a palette item onto the canvas (a line shows where it lands) or onto an
-  outline row: its top or bottom quarter drops before or after the row, its
-  middle inside it.
+- Drag a palette item onto the canvas or onto an outline row; a line shows
+  where it will land.
+  - On the canvas, a drop in the gap between two elements lands between them.
+  - On an outline row, its top or bottom quarter drops before or after the
+    row, and its middle drops inside it.
 - Clicking a palette item inserts it inside the selected container, or after
   the selection.
 - What you insert is selected.
 - Keys:
   - ↑/↓ move the selection; ←/→ collapse, expand or go to the parent or child;
-  - Delete removes;
+  - Delete removes the selection. Delete, ⌘D and ⌘V act only after you click
+    the canvas or the outline, never while a property field had the keyboard;
   - ⌘D duplicates;
   - ⌘C/⌘V copy and paste;
   - Enter or F2 edits the text or opens the component.
@@ -230,11 +237,22 @@ component ↗** in its properties to open the component itself:
   blocks test, its bound props, and its lists' row counts.
 - It offers the scenarios the screen's flags allow (Loaded, Loading, Error,
   Empty), and sample values chosen by each field's name.
+- A flag whose `if` block holds the loading (or error, or empty) blocks stays
+  on in that scenario, and choosing a scenario scrolls the canvas to what it
+  shows. Once you set a flag by hand, the state reads "Custom".
 - What you set is kept per screen in this browser and is never written to
   source.
 
+**Properties.** A property the call does not pass is marked *default*: the
+widget's own default applies until you set it. A component's number parameter
+that it passes on to a named setting (an alignment, an overflow) offers the
+names. A side panel hidden by double-clicking its edge leaves a tab at the
+window's edge that brings it back.
+
 **Undo.** Undo and Redo are per editing session, and their tooltips count the
-steps. ⌘Z inside a text field undoes the field's typing, not the document.
+steps. Undoing back to a state the file was already in writes that exact
+text: your argument order, imports and formatting. ⌘Z inside a text field
+undoes the field's typing, not the document.
 
 **Export Kotlin** shows the screen's (or opened component's) file exactly as it
 is on disk, with Copy and Download.
