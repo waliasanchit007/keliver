@@ -9,6 +9,7 @@ import dev.keliver.portal.isDpProp
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.HTMLTextAreaElement
@@ -231,6 +232,25 @@ internal fun markInvalid(input: HTMLElement, why: String?, message: HTMLElement)
  * panel is wide enough (a CSS container query on the right pane); an
  * [Layout.Inline] row (a checkbox) always does.
  */
+/** F15: a prop the call does not pass — its control would otherwise show `false`, `0` or black. */
+internal fun isUnset(props: Map<String, Any?>, key: String, kind: PropKind): Boolean =
+  kind in setOf(PropKind.Bool, PropKind.Color, PropKind.Int, PropKind.Double) && props[key] == null && key !in props
+
+/**
+ * F15: shows [row] as not set — the widget's own default applies, which the editor does not
+ * know: a "default" tag on the label, a dimmed control, a checkbox neither on nor off and an
+ * empty number field. Setting it writes the argument.
+ */
+internal fun markUnset(row: HTMLElement) {
+  val prop = (if (row.classList.contains("prop")) row else row.querySelector(".prop") as? HTMLElement) ?: return
+  prop.classList.add("unset")
+  prop.setAttribute("title", "Not set: the widget's own default applies")
+  (prop.querySelector("input[type=checkbox]") as? HTMLInputElement)?.indeterminate = true
+  val inputs = prop.querySelectorAll("input:not([type=checkbox]):not([type=color])")
+  for (i in 0 until inputs.length) (inputs.item(i) as? HTMLInputElement)?.let { it.value = ""; it.placeholder = "default" }
+  // A dropdown keeps showing its first name: a coded enum's default (Start, Wrap, Clip).
+}
+
 internal class PropRow(label: String, layout: Layout = Layout.Stacked) {
   enum class Layout(val css: String) { Stacked("prop"), Compact("prop compact"), Inline("prop inline") }
 

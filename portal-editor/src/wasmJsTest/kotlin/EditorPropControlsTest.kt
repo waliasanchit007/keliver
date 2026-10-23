@@ -279,4 +279,28 @@ class EditorPropControlsTest {
     input.dispatchEvent(Event("change"))
     assertEquals(listOf<Number>(9.0), commits)
   }
+
+  @Test fun aPropTheCallDoesNotPassShowsAsTheDefaultNotFalseOrBlack() {
+    assertTrue(isUnset(emptyMap(), "enabled", dev.keliver.portal.PropKind.Bool))
+    assertTrue(!isUnset(mapOf("enabled" to false), "enabled", dev.keliver.portal.PropKind.Bool))
+    assertTrue(!isUnset(emptyMap(), "text", dev.keliver.portal.PropKind.Text), "an empty text is shown as empty")
+
+    val box = PropRow("Enabled", PropRow.Layout.Inline).control(
+      (kotlinx.browser.document.createElement("input") as HTMLInputElement).also { it.type = "checkbox" },
+    ).root
+    markUnset(box)
+    assertTrue(box.classList.contains("unset"))
+    assertTrue((box.querySelector("input") as HTMLInputElement).indeterminate)
+
+    val size = PropRow("Size", PropRow.Layout.Compact).control(numberField(0, numberRule("StyledText", "fontSize", dev.keliver.portal.PropKind.Int)) {}).root
+    markUnset(size)
+    val input = size.querySelector("input") as HTMLInputElement
+    assertEquals("", input.value)
+    assertEquals("default", input.placeholder)
+
+    val sel = PropRow("Width").control(choiceSelect(listOf(dev.keliver.portal.PropChoice(0, "Wrap"), dev.keliver.portal.PropChoice(1, "Fill")), null) {}).root
+    markUnset(sel)
+    assertTrue(sel.classList.contains("unset"))
+    assertEquals("Wrap", (sel.querySelector("select") as org.w3c.dom.HTMLSelectElement).let { it.options.item(it.selectedIndex)?.textContent }, "its first name, a coded enum's default")
+  }
 }

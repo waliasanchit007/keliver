@@ -106,6 +106,8 @@ internal object Ui {
     .prop > .prop-actions { grid-area: actions; display: flex; align-items: center; gap: 2px; }
     .prop-ctl > .input, .prop-ctl > .select, .prop-ctl > .pill, .prop-ctl > .row { flex: 1; min-width: 0; width: 100%; }
     .prop-ctl > .row { margin: 0; }
+    .prop.unset > .prop-label::after { content: " · default"; color: var(--muted); font-style: italic; opacity: .8; }
+    .prop.unset > .prop-ctl { opacity: .6; }
     .prop-actions .btn.icon { min-width: 24px; height: 24px; padding: 0 5px; font-size: 12px; line-height: 1; }
     .prop.inline { grid-template-columns: clamp(84px, 38%, 150px) minmax(0, 1fr) auto; grid-template-areas: "label ctl actions"; }
     @container (min-width: 250px) {

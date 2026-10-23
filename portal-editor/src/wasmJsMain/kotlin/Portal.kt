@@ -1429,8 +1429,10 @@ private fun enableLiveWithFixtureCatalog() {
         Snapshot.sendApplyNotifications()
       }
     } else {
+      // F18: no presenter for this screen — the State panel's values stay (clearing them drew
+      // every branch at once, with {placeholders}).
       LiveEngine.stop()
-      PreviewBindings.mocks.clear()
+      renderBindings()
     }
     liveBtn.textContent = "■ Stop"
     liveBtn.className = "btn primary"
@@ -1517,13 +1519,18 @@ private fun renderFidelity(required: List<String>, livePresenter: String? = null
       fidelityEl.appendChild(Ui.el("div", "muted", "  $name — $state"))
     }
   }
+  // F18: full fidelity needs the app's presenter; without one the values are the State panel's.
+  val mocked = livePresenter == null
   if (required.isEmpty()) {
-    fidelityEl.appendChild(Ui.el("div", "", "✅ Full fidelity — no host capabilities required"))
+    fidelityEl.appendChild(
+      if (mocked) Ui.el("div", "muted", "No host capabilities required; the values are the State panel's")
+      else Ui.el("div", "", "✅ Full fidelity — no host capabilities required"),
+    )
     return
   }
   val report = PreviewCapabilities.report(required, persona)
-  val full = report.all { it.real }
-  val head = Ui.el("div", "", if (full) "✅ Full fidelity" else "⚠ Reduced fidelity")
+  val full = report.all { it.real } && !mocked
+  val head = Ui.el("div", "", if (full) "✅ Full fidelity" else if (report.all { it.real }) "Host capabilities available; the values are the State panel's" else "⚠ Reduced fidelity")
   head.setAttribute("style", "color:" + (if (full) "var(--good)" else "var(--warn, #e0a030)") + "; font-weight:600; margin-bottom:4px;")
   fidelityEl.appendChild(head)
   report.forEach { c ->
@@ -2709,7 +2716,9 @@ private fun propRow(
 ): HTMLElement {
   val wrap = Ui.el("div")
   val picker = Ui.el("div", "token-picker")
-  wrap.appendChild(propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker, choices))
+  val row = propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker, choices)
+  if (isUnset(props, keyPrefix + name, kind)) markUnset(row)
+  wrap.appendChild(row)
   wrap.appendChild(picker)
   return wrap
 }
