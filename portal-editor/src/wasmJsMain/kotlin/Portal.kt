@@ -1045,6 +1045,19 @@ private fun buildCenter() {
 private var selectMode = true
 private lateinit var selOverlay: HTMLElement
 private lateinit var hoverOverlay: HTMLElement
+
+/** F11: the selected node and where on the canvas it was clicked (compose px); null = from the outline. */
+private var selectedAt: Pair<Int, Pair<Double, Double>>? = null
+
+/** F11: the other instances of the selected node (a list's other rows), drawn faintly. */
+private val instanceGhosts = mutableListOf<HTMLElement>()
+
+/** A client point as compose px on the canvas (the frame may be zoomed). */
+private fun composePoint(clientX: Double, clientY: Double): Pair<Double, Double> {
+  val r = (document.getElementById(PREVIEW_HOST_ID) as HTMLElement).getBoundingClientRect()
+  val dpr = kotlinx.browser.window.devicePixelRatio
+  return (clientX - r.left) / canvasZoom * dpr to (clientY - r.top) / canvasZoom * dpr
+}
 private lateinit var canvasHint: HTMLElement
 
 /** Pointer button events the canvas must not see while selecting. */
@@ -1101,6 +1114,8 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
           if (moved > CLICK_SLOP_PX) return@addEventListener // a drag selects nothing
           // A miss (empty canvas) clears the selection.
           selectedId = hitAt(me.clientX.toDouble(), me.clientY.toDouble())
+          // F11: which of the node's instances (a list's rows) was clicked.
+          selectedAt = selectedId?.let { it to composePoint(me.clientX.toDouble(), me.clientY.toDouble()) }
           refresh()
         }
       }
@@ -1110,7 +1125,8 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     if (!selectMode) { hideOverlay(hoverOverlay); return@addEventListener }
     val me = ev as org.w3c.dom.events.MouseEvent
     val h = hitAt(me.clientX.toDouble(), me.clientY.toDouble())
-    if (h == null || h == selectedId) hideOverlay(hoverOverlay) else positionOverlay(hoverOverlay, h)
+    if (h == null || h == selectedId) hideOverlay(hoverOverlay)
+    else positionOverlay(hoverOverlay, h, composePoint(me.clientX.toDouble(), me.clientY.toDouble()))
   })
   host.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
 
@@ -1297,9 +1313,19 @@ private fun showCanvasHint(text: String) {
   kotlinx.browser.window.setTimeout({ canvasHint.style.display = "none"; null }, 3500)
 }
 
-private fun positionOverlay(el: HTMLElement, handle: Int) {
-  val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[handle] ?: run { hideOverlay(el); return }
+private fun positionOverlay(el: HTMLElement, handle: Int, at: Pair<Double, Double>? = null) {
+  val union = dev.keliver.material.composeui.SelectionRegistry.bounds[handle] ?: run { hideOverlay(el); return }
   val dpr = kotlinx.browser.window.devicePixelRatio
+  // F11: a node drawn several times (a list's rows) is outlined where it was clicked (or its first
+  // instance); the selection shows the others faintly.
+  val instances = instanceBoxes(
+    dev.keliver.material.composeui.SelectionRegistry.rectsOf(handle).map { DropBox(it.left.toDouble(), it.top.toDouble(), it.right.toDouble(), it.bottom.toDouble()) },
+  )
+  val point = at ?: selectedAt?.takeIf { el === selOverlay && it.first == handle }?.second
+  val box = (if (instances.size > 1) point?.let { (x, y) -> instances.firstOrNull { it.contains(x, y) } } ?: instances.first() else null)
+    ?: DropBox(union.left.toDouble(), union.top.toDouble(), union.right.toDouble(), union.bottom.toDouble())
+  if (el === selOverlay) showInstanceGhosts(el, if (instances.size > 1) instances.filter { it !== box } else emptyList())
+  val rect = androidx.compose.ui.geometry.Rect(box.left.toFloat(), box.top.toFloat(), box.right.toFloat(), box.bottom.toFloat())
   el.style.display = "block"
   el.style.left = "${rect.left / dpr}px"
   el.style.top = "${rect.top / dpr}px"
@@ -1320,6 +1346,25 @@ private fun positionOverlay(el: HTMLElement, handle: Int) {
 
 private fun hideOverlay(el: HTMLElement) {
   el.style.display = "none"
+  if (el === selOverlay) showInstanceGhosts(el, emptyList())
+}
+
+/** F11: faint boxes on [boxes] (compose px), beside the selection overlay [sel]. */
+private fun showInstanceGhosts(sel: HTMLElement, boxes: List<DropBox>) {
+  val frame = sel.parentElement as? HTMLElement ?: return
+  val dpr = kotlinx.browser.window.devicePixelRatio
+  while (instanceGhosts.size < boxes.size) {
+    instanceGhosts += Ui.el("div", "instance-ghost").also { frame.appendChild(it) }
+  }
+  instanceGhosts.forEachIndexed { i, g ->
+    val b = boxes.getOrNull(i)
+    if (b == null) { g.style.display = "none"; return@forEachIndexed }
+    g.style.display = "block"
+    g.style.left = "${b.left / dpr}px"
+    g.style.top = "${b.top / dpr}px"
+    g.style.width = "${(b.right - b.left) / dpr}px"
+    g.style.height = "${(b.bottom - b.top) / dpr}px"
+  }
 }
 
 private fun buildRightPane() {

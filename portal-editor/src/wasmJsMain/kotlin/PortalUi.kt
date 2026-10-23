@@ -73,6 +73,7 @@ internal object Ui {
     .overlay-tag:empty { display: none; }
     .overlay-tag.hover { background: rgba(37,99,235,.85); }
     .overlay-tag.below { top: calc(100% + 2px); }
+    .instance-ghost { position: absolute; pointer-events: none; border: 1px solid rgba(79,140,255,.45); border-radius: 3px; display: none; z-index: 4; }
     .overlay-tag.inside { top: auto; bottom: 0; left: auto; right: 0; }
     .sel-overlay.flash { animation: sel-flash .9s ease-out; }
     @keyframes sel-flash { 0% { box-shadow: 0 0 0 6px rgba(79,140,255,.55); } 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0); } }

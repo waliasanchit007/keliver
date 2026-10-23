@@ -99,4 +99,16 @@ class EditorOutlineTest {
     val accepts = { node: WidgetNode -> node.type == "Column" || node.type == "Condition" }
     assertEquals(3 to DropZone.Before, canvasDropPlace(tree, 1, 50.0, 180.0, ::box, accepts), "above the condition's content: before the condition")
   }
+
+  @Test fun aListsRowsAreSeparateInstancesAndACardsWidgetsAreOne() {
+    // Three cards, each a background holding two texts, 20 px apart.
+    val rects = (0 until 3).flatMap { r ->
+      val top = r * 120.0
+      listOf(DropBox(0.0, top, 300.0, top + 100), DropBox(10.0, top + 10, 200.0, top + 40), DropBox(10.0, top + 50, 250.0, top + 90))
+    }
+    assertEquals(listOf(DropBox(0.0, 0.0, 300.0, 100.0), DropBox(0.0, 120.0, 300.0, 220.0), DropBox(0.0, 240.0, 300.0, 340.0)).map { listOf(it.left, it.top, it.right, it.bottom) },
+      instanceBoxes(rects.reversed()).map { listOf(it.left, it.top, it.right, it.bottom) })
+    // Rows that only touch are separate; an empty rect draws nothing.
+    assertEquals(2, instanceBoxes(listOf(DropBox(0.0, 0.0, 100.0, 50.0), DropBox(0.0, 50.0, 100.0, 100.0), DropBox(0.0, 0.0, 0.0, 0.0))).size)
+  }
 }

@@ -163,4 +163,25 @@ export default [
       await page.screenshot('F12-tag-below');
     },
   },
+  {
+    id: 'F11',
+    title: 'clicking one row of a list outlines that row, with the other rows shown faintly',
+    async run({ page, editor, log }) {
+      await editor.open('logbook', { readyColor: COLORS.entryRow });
+      const rows = await editor.findColor(COLORS.entryRow);
+      ok(rows && rows.height > 200, 'the EntryRow rows are drawn (several of them)');
+      // EntryRow is 110 dp tall with 8 dp between rows: the second row's middle.
+      const y = rows.top + 110 + 8 + 55;
+      await page.click(rows.cx, y);
+      ok(/^EntryRow #\d+ · component$/.test(await editor.propsHeader() ?? ''), 'the click selects the EntryRow');
+      const box = await editor.selectionOverlay();
+      const ghosts = await page.eval(`[...document.querySelectorAll('.instance-ghost')].filter(g => g.style.display !== 'none')
+        .map(g => { const b = g.getBoundingClientRect(); return { y: b.y, height: b.height }; })`);
+      log(`selection ${JSON.stringify(box)}; ghosts ${JSON.stringify(ghosts)}; rows drawn ${JSON.stringify(rows)}`);
+      ok(Math.abs(box.height - 110) <= 3, `the selection is one row tall (${box.height}), not the whole list`);
+      ok(box.y <= y && y <= box.y + box.height, 'the outlined row is the one clicked');
+      ok(ghosts.length >= 1 && ghosts.every((g) => Math.abs(g.height - 110) <= 3), 'the other rows are shown faintly, one box each');
+      await page.screenshot('F11-row');
+    },
+  },
 ];

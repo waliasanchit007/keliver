@@ -100,6 +100,30 @@ internal fun sideBySide(boxes: List<DropBox>): Boolean =
 internal fun laidOutAcross(root: WidgetNode, id: Int, box: (WidgetNode) -> DropBox?): Boolean =
   parentOf(root, id)?.children?.mapNotNull(box)?.let(::sideBySide) == true
 
+/**
+ * F11: the instances drawing one node — a list's rows, a component used in each of them — from
+ * the rects of every widget drawing it. Rects that overlap (a card's background holds its
+ * texts) are one instance; rects that only touch or stand apart are separate ones. In reading
+ * order, each as the box around its widgets.
+ */
+internal fun instanceBoxes(rects: List<DropBox>): List<DropBox> {
+  fun overlaps(a: DropBox, b: DropBox) = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+  val groups = rects.filter { it.right > it.left && it.bottom > it.top }.toMutableList()
+  var merged = true
+  while (merged) {
+    merged = false
+    loop@ for (i in groups.indices) for (j in i + 1 until groups.size) {
+      if (overlaps(groups[i], groups[j])) {
+        groups[i] = groups[i] union groups[j]
+        groups.removeAt(j)
+        merged = true
+        break@loop
+      }
+    }
+  }
+  return groups.sortedWith(compareBy({ it.top }, { it.left }))
+}
+
 internal fun parentOf(root: WidgetNode, id: Int): WidgetNode? {
   if (root.children.any { it.id == id }) return root
   root.children.forEach { c -> parentOf(c, id)?.let { return it } }
