@@ -166,5 +166,11 @@ class EditorStateTest {
     assertEquals("1", sampleSize("strokeWidthDp"))
     assertEquals("16", sampleSize("textSizeSp"))
     assertEquals("48", sampleSize("iconWidth"))
+    // Review 6
+    assertEquals("8", sampleSize("borderRadius"))
+    assertEquals("8", sampleSize("dividerPadding"))
+    assertEquals("48", sampleSize("outlinedButtonHeight"))
+    assertEquals(null, sampleColor("colorCount"), "a number about colours")
+    assertEquals(null, sampleColor("tintIndex"))
   }
 }

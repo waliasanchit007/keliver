@@ -100,7 +100,7 @@ internal val portalTree = mutableStateOf(initialTree())
 internal val canvasShowsComponent = mutableStateOf(false)
 
 private var selectedId: Int? = null
-  set(v) { field = v; if (v != null) deletedPlace = null } // a selection is where the arrows go on from
+  set(v) { field = v; deletedPlace = null } // a selection (or none, chosen) is where the arrows go on from
 internal var currentProject = "default"
 private var currentScreen = "main"
   set(v) {
@@ -539,17 +539,19 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
       // E14: a component whose body is edited in code (or that is gone) — say why, and go back.
       val why = Regex("\"error\":\"([^\"]*)\"").find(xhr.responseText)?.groupValues?.get(1) ?: "it cannot be opened"
       showCanvasHint(why)
-      goToCrumb(target.components.size - 1)
+      goToCrumb(target.components.size - 1, opened = false)
+      return@addEventListener
+    }
+    val decoded = runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }
+    if (decoded.getOrNull()?.let { !target.isAnsweredBy(it.screen) } == true) {
+      // K1: a relay older than component editing sent its screen — never show (and edit) it as the
+      // component. Review 6: checked before its undo depths are read (they are the screen's).
+      showCanvasHint("${target.component} cannot be opened: this relay is older than the editor. Update the Keliver tools to edit components.", millis = 9000)
+      goToCrumb(target.components.size - 1, opened = false)
       return@addEventListener
     }
     readStackDepths(xhr)
-    runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
-      if (!target.isAnsweredBy(doc.screen)) {
-        // K1: a relay older than component editing sent its screen — never show (and edit) it as the component.
-        showCanvasHint("${target.component} cannot be opened: this relay is older than the editor. Update the Keliver tools to edit components.", millis = 9000)
-        goToCrumb(target.components.size - 1)
-        return@onSuccess
-      }
+    decoded.onSuccess { doc ->
       appliedSeq = seq
       docVersion = doc.version
       docContract = doc.contract
@@ -568,7 +570,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
       if (LiveEngine.isRunning) LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
       Snapshot.sendApplyNotifications()
       // A typed edit keeps the field being typed in; the outline's labels follow it.
-      if (refreshPanels) refresh() else renderOutline()
+      if (refreshPanels) refresh() else { renderOutline(); makeUpPanels() }
       cb?.invoke()
     }
   })
@@ -702,17 +704,23 @@ private fun saveHistory() { runCatching { localStorage.setItem(historyKey(), ses
  */
 private fun stepHistory(path: String, target: EditTarget, verb: String, done: (EditTarget) -> Unit) {
   val undo = path == "/undo"
-  // Review 3: only a step the relay took moves the history (a refused one is dropped, said so).
-  fun stepped(text: String?): Boolean =
-    runCatching { Json.parseToJsonElement(text ?: "").jsonObject["ok"]?.jsonPrimitive?.content == "true" }.getOrDefault(false)
+  val nothing = "Nothing left to ${if (undo) "undo" else "redo"}"
+  // Review 3: only a step the relay took moves the history. Review 4 #11: one it blocked but KEPT
+  // stays the next step (said why); one it no longer has, or dropped, is gone (said so).
+  fun settled(reply: StepReply, where: String?) = when (reply) {
+    StepReply.Stepped -> done(target)
+    is StepReply.Kept -> Ui.toast(reply.why)
+    is StepReply.Gone -> {
+      changeHistoryOf(target) { it.skipped(target, undo) }
+      Ui.toast(reply.why ?: if (where == null) "$nothing here" else "$nothing in $where")
+    }
+  }
   if (target.key == editTarget().key) {
     serverPost(path) { text ->
-      if (stepped(text)) done(target)
-      else {
-        changeHistoryOf(target) { it.skipped(target, undo) }
-        // Review 4 #3: a step the relay no longer has (it restarted, or the file was re-read) says so.
-        if (target.key == editTarget().key) Ui.toast("Nothing left to ${if (undo) "undo" else "redo"} here")
-      }
+      val reply = stepReplyOf(text)
+      // Review 4 #3: said only while that document is still the one open.
+      if (reply !is StepReply.Stepped && target.key != editTarget().key) changeHistoryOf(target) { if (reply is StepReply.Gone) it.skipped(target, undo) }
+      else settled(reply, null)
       refetchDoc(true)
     }
     return
@@ -722,13 +730,11 @@ private fun stepHistory(path: String, target: EditTarget, verb: String, done: (E
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.addEventListener("load", { _ ->
     val where = target.component ?: target.screen
-    if (stepped(xhr.responseText)) {
-      done(target)
+    val reply = stepReplyOf(xhr.responseText)
+    settled(reply, where)
+    if (reply is StepReply.Stepped) {
       Ui.toast("$verb your last edit, in $where")
       fetchComponents { refresh(); canvasGeneration.value++; Snapshot.sendApplyNotifications() }
-    } else {
-      changeHistoryOf(target) { it.skipped(target, undo) }
-      Ui.toast("Nothing to ${if (undo) "undo" else "redo"} in $where any more")
     }
     updateUndoButtons()
   })
@@ -835,7 +841,7 @@ internal fun mountPortalChrome() {
   if (!evidenceMode()) installPanelResizers()
   buildExportOverlay()
   installKeyboard()
-  installTypingTracker { if (panelsStale && !typingPending()) refresh() }
+  installPanelMakeUp()
   installOutlinePress()
   watchImageFailures()
   nameIconButtons()
@@ -2055,12 +2061,13 @@ private fun openComponent(name: String) {
 }
 
 /** E14: back to the crumb at [depth] (0 = the screen), its selection as it was. */
-private fun goToCrumb(depth: Int) {
+private fun goToCrumb(depth: Int, opened: Boolean = true) {
   val back = editTarget().backTo(depth)
   if (back == editTarget()) return
   // F14: undo is per document — say where this component's edits are undone, once back on the screen.
+  // Review 6: not for a component that could not be opened (no edit of it was made here).
   val left = editTarget().component
-  if (left != null && (undoDepth ?: 0) > 0) Ui.toast("Your edits to $left are saved in its file; Undo here still undoes them, newest first")
+  if (opened && left != null && (undoDepth ?: 0) > 0) Ui.toast("Your edits to $left are saved in its file; Undo here still undoes them, newest first")
   val reselect = crumbSelections.getOrNull(back.components.size)
   openComponents = back.components
   crumbSelections = crumbSelections.take(back.components.size)
@@ -2108,8 +2115,8 @@ private fun handleEditorKey(e: KeyboardEvent) {
     e.key == "ArrowDown" || e.key == "ArrowUp" -> {
       val order = visibleOrder(tree, collapsedRows)
       // Review 4 #8: right after a delete, the arrows go on from where the deleted node was.
-      val resume = deletedPlace?.takeIf { sel == null && it in order }
-      deletedPlace = null
+      val place = deletedPlace?.takeIf { sel == null }
+      val resume = (if (e.key == "ArrowDown") place?.next ?: place?.previous else place?.previous ?: place?.next)?.takeIf { it in order }
       if (resume != null) { select(resume); e.preventDefault(); return }
       val i = order.indexOf(sel?.id ?: -1)
       select(if (i < 0) order.firstOrNull() else order.getOrNull(if (e.key == "ArrowDown") i + 1 else i - 1) ?: order[i])
@@ -2123,8 +2130,9 @@ private fun handleEditorKey(e: KeyboardEvent) {
       // H3: nothing is selected after a delete — selecting the next node (then its parent) made a
       // few presses of Backspace delete whole sections.
       selectedId = null
-      deletedPlace = placeAfterDelete(tree, sel.id)
-      sendOps(listOf(DocOp.DeleteNode(Handle(sel.id.toLong()))))
+      deletedPlace = placeAfterDelete(tree, collapsedRows, sel.id)
+      // Review 6: a delete the relay refused leaves the node there — the arrows go on from it as before.
+      sendOps(listOf(DocOp.DeleteNode(Handle(sel.id.toLong())))) { ok -> if (!ok) deletedPlace = null }
     }
     mod && e.key.lowercase() == "d" && sel != null && sel.id != tree.id -> {
       val parentId = parentOf(tree, sel.id)?.id ?: return
@@ -2143,7 +2151,7 @@ private fun handleEditorKey(e: KeyboardEvent) {
 private var keyScope = KeyScope.Elsewhere
 
 /** Review 4 #8: the node in the place of the one just deleted (see [placeAfterDelete]), until anything is selected. */
-private var deletedPlace: Int? = null
+private var deletedPlace: DeletedPlace? = null
 
 private fun noteKeyScope(target: EventTarget?) {
   val el = target as? HTMLElement ?: return
@@ -2493,6 +2501,31 @@ private var panelsStale = false
 
 /** Whether the panels may be rebuilt now; if not (a field is being typed in), they are rebuilt when it is left. */
 private fun panelsRebuildNow(): Boolean = !typingPending().also { typing -> if (typing) panelsStale = true }
+
+/** Review 6: whether a pointer is pressed — its click is on its way to a panel control. */
+private var pointerPressed = false
+
+/**
+ * Review 5/6: a panel rebuild held off for typing, made up once nothing is in its way — no field
+ * typed in, no pointer pressed (its click would land on a control the rebuild removed), no edit
+ * awaiting its reply (the panel would show the value from before it). Each of those ends by
+ * calling this again.
+ */
+private fun makeUpPanels() {
+  if (!panelsStale || typingPending() || pointerPressed || opInFlight || opQueue.isNotEmpty()) return
+  refresh()
+}
+
+private fun installPanelMakeUp() {
+  installTypingTracker { makeUpPanels() }
+  document.addEventListener("pointerdown", { _ -> pointerPressed = true }, true)
+  for (end in listOf("pointerup", "pointercancel")) {
+    document.addEventListener(end, { _ ->
+      pointerPressed = false
+      kotlinx.browser.window.setTimeout({ makeUpPanels(); null }, 0) // after the click had its turn
+    }, true)
+  }
+}
 
 private fun refresh() {
   panelsStale = false

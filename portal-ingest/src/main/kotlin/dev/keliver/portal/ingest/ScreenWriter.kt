@@ -186,10 +186,11 @@ object ScreenWriter {
     val pkg = PKG_RE.find(lf)?.groupValues?.get(1) ?: packageName
     val asIsDoc = UiDocument(doc.screen, asIs.root, asIs.contract, 0, 0)
     fun exportsAs(compact: Boolean) = export(asIsDoc, pkg, functionName, components, compact).trimEnd('\n') == lf.trimEnd('\n')
-    // H12: a file the editor created is the export with its empty calls compacted — and stays so.
+    // H12: a file the editor created is the export with its empty calls compacted — and stays so
+    // (review 6: compact first — a file with no empty call yet is both, and stays compact).
     val compact = when {
-      exportsAs(compact = false) -> false
       exportsAs(compact = true) -> true
+      exportsAs(compact = false) -> false
       else -> return Refuse(why)
     }
     val text = export(doc, pkg, functionName, components, compact)

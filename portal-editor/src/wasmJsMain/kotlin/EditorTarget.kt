@@ -39,6 +39,30 @@ internal data class EditTarget(val project: String, val screen: String, val comp
   fun isAnsweredBy(docScreen: String): Boolean = component == null || docScreen == key
 }
 
+/** What an undo or redo reply says happened to the step (review 4 #11). */
+internal sealed interface StepReply {
+  /** The relay took the step. */
+  data object Stepped : StepReply
+
+  /** The relay refused it for now and KEPT it ("blocked (step kept)"): it stays the next step. */
+  data class Kept(val why: String) : StepReply
+
+  /** The relay had nothing to step, or dropped the step: it is gone. [why] is null for "nothing to …". */
+  data class Gone(val why: String?) : StepReply
+}
+
+/** The [StepReply] in an undo/redo reply [text] (`{"ok":…,"error":…}`); an unreadable reply is a step gone. */
+internal fun stepReplyOf(text: String?): StepReply {
+  val o = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(text ?: "").jsonObject }.getOrNull() ?: return StepReply.Gone(null)
+  if (o["ok"]?.jsonPrimitive?.content == "true") return StepReply.Stepped
+  val error = (o["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+  return when {
+    error != null && "blocked (step kept)" in error -> StepReply.Kept(error)
+    error == null || error.startsWith("nothing to") -> StepReply.Gone(null)
+    else -> StepReply.Gone(error)
+  }
+}
+
 /** Whether [node] is an instance of a project component (double-click and Enter open it). */
 internal fun isComponentInstance(node: WidgetNode?, components: ComponentRegistry): Boolean =
   node != null && components.spec(node.type) != null

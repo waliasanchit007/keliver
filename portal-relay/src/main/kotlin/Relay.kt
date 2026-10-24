@@ -699,22 +699,13 @@ private fun screensPackageFor(project: String): String {
 internal fun screenFunctionName(screen: String): String =
   screen.split('_', '-').filter { it.isNotEmpty() }.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) } + "Screen"
 
-// A top-level `@Composable` function (the annotation may be qualified, other annotations and
-// modifiers may follow it); comments are blanked out first.
-private val COMPOSABLE_FUN = Regex(
-  """(?m)^@(?:androidx\.compose\.runtime\.)?Composable\b(?:\s+@[\w.]+(?:\([^)]*\))?)*\s+(?:(?:public|internal|private|inline|actual)\s+)*fun\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(""",
-)
-private val COMMENTS = Regex("""/\*[\s\S]*?\*/|//[^\n]*""")
-
 /**
  * The screen function [file] declares, or null when there is no such file: its first top-level
- * `@Composable fun` that is not private (a helper), else its first one.
+ * `@Composable fun` that is not private (a helper), else its first one — as the file parses.
  */
 internal fun declaredScreenFunction(file: File): String? {
   val text = file.takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() } ?: return null
-  val code = COMMENTS.replace(text) { m -> m.value.replace(Regex("[^\n]"), " ") }
-  val found = COMPOSABLE_FUN.findAll(code).toList()
-  return (found.firstOrNull { "private" !in it.value } ?: found.firstOrNull())?.groupValues?.get(1)
+  return dev.keliver.portal.ingest.declaredScreenFunctionName(file.name, text)
 }
 
 /** Raised when a request names a screen the app does not have. */

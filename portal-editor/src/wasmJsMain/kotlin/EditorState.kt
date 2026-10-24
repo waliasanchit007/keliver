@@ -164,6 +164,8 @@ internal fun sampleColor(name: String): Int? {
   val w = words(name)
   fun any(vararg k: String) = w.any { word -> k.any { word.startsWith(it) } }
   if (!any("argb", "color", "colour", "tint")) return null
+  // Review 6: `colorCount`, `colorIndex` are numbers about colours, not colours.
+  if (any("count", "index", "size", "total", "number", "num", "id")) return null
   return when {
     any("bg", "background", "fill", "surface", "container", "card") -> 0xFFEEF2F7.toInt()
     any("label", "text", "title", "ink", "foreground", "content") -> 0xFF1F2937.toInt()
@@ -179,10 +181,12 @@ internal fun sampleSize(name: String): String? {
   val w = words(name)
   fun any(vararg k: String) = w.any { word -> k.any { word.startsWith(it) } }
   // Review 5: the most specific words first — `spacing` is no font size, `borderWidth` no box width.
+  // Review 6: a border's radius or a divider's padding is a radius or a padding (8), and `outline`
+  // is a whole word (`outlinedButtonHeight` is a height).
   return when {
     any("weight") -> "500"
-    any("border", "stroke", "outline", "divider", "hairline") -> "1"
     any("radius", "corner", "padding", "margin", "gap", "spacing", "inset") -> "8"
+    any("border", "stroke", "divider", "hairline") || "outline" in w -> "1"
     any("size", "font") || "sp" in w -> "16"
     any("width", "height", "dp") -> "48"
     any("lines") -> "2"

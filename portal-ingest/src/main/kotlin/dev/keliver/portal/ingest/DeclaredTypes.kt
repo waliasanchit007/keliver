@@ -100,6 +100,19 @@ internal fun sameFileClass(ref: KtTypeReference?, decls: Map<String, KtClass>): 
   return cur as? KtClass
 }
 
+/**
+ * The name of the screen function [text] (a file named [fileName]) declares, as parsed: its first
+ * top-level `@Composable` function that is not private (a helper), else its first one; null when
+ * it declares none. Review 4 #9: read from the file's syntax, so an annotation on the same line,
+ * a comment, or a string holding a comment opener cannot hide or invent one.
+ */
+fun declaredScreenFunctionName(fileName: String, text: String): String? {
+  val composables = runCatching { PsiEnv.parse(fileName, text) }.getOrNull()?.declarations.orEmpty()
+    .filterIsInstance<KtNamedFunction>()
+    .filter { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
+  return (composables.firstOrNull { !it.hasModifier(org.jetbrains.kotlin.lexer.KtTokens.PRIVATE_KEYWORD) } ?: composables.firstOrNull())?.name
+}
+
 /** A screen file's screen function: its first `@Composable` function (null = not a screen). */
 internal fun screenFunction(file: KtFile): KtNamedFunction? = file.declarations.filterIsInstance<KtNamedFunction>()
   .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }

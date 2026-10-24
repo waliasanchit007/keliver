@@ -45,4 +45,30 @@ class ScreenFunctionNameTest {
     }
     assertEquals("HomeScreen", declaredScreenFunction(f))
   }
+
+  @Test fun anAnnotationOnTheSameLineOrAStringHoldingACommentOpenerDoesNotHideTheScreen() {
+    val dir = Files.createTempDirectory("screen-name").toFile().apply { deleteOnExit() }
+    // Review 4 #9: the regex missed `@OptIn(…) @Composable` on one line, and a "/*" in a string
+    // blanked the text up to the next "*/".
+    val f = dir.resolve("home.kt").apply {
+      writeText(
+        """
+        package app.screens
+
+        import androidx.compose.runtime.Composable
+
+        private const val ASSETS = "assets/*"
+
+        /** The home screen. */
+        @OptIn(ExperimentalStdlibApi::class) @Composable
+        fun HomeScreen(b: HomeBindings) {
+        }
+
+        @Composable
+        private fun Badge(text: String) {}
+        """.trimIndent(),
+      )
+    }
+    assertEquals("HomeScreen", declaredScreenFunction(f))
+  }
 }

@@ -149,10 +149,13 @@ class EditorOutlineTest {
   }
 
   @Test fun afterADeleteTheArrowsGoOnFromTheDeletedNodesPlace() {
+    // 1 Column: 2 Text, 3 Box (4 Text), 5 Button — in reading order 1 2 3 4 5.
     val tree = n(1, "Column", n(2, "StyledText"), n(3, "Box", n(4, "StyledText")), n(5, "Button"))
-    assertEquals(3, placeAfterDelete(tree, 2), "its next sibling took its place")
-    assertEquals(3, placeAfterDelete(tree, 5), "the last child: the one before it")
-    assertEquals(3, placeAfterDelete(tree, 4), "an only child: its parent")
-    assertEquals(null, placeAfterDelete(tree, 1), "the root has no place")
+    assertEquals(DeletedPlace(next = 3, previous = 1), placeAfterDelete(tree, emptySet(), 2))
+    assertEquals(DeletedPlace(next = 5, previous = 2), placeAfterDelete(tree, emptySet(), 3), "its subtree goes with it")
+    assertEquals(DeletedPlace(next = null, previous = 4), placeAfterDelete(tree, emptySet(), 5), "the last row: only ↑ has a row")
+    assertEquals(DeletedPlace(next = 5, previous = 3), placeAfterDelete(tree, emptySet(), 4))
+    assertEquals(DeletedPlace(next = 5, previous = 2), placeAfterDelete(tree, setOf(3), 3), "a folded box's rows are not rows")
+    assertEquals(null, placeAfterDelete(tree, emptySet(), 1), "the root has no place")
   }
 }

@@ -40,6 +40,17 @@ class EditorTargetTest {
     assertTrue(home.isAnsweredBy("home"))
   }
 
+  @Test fun anUndoReplySaysWhetherTheStepWasTakenKeptOrIsGone() {
+    assertEquals(StepReply.Stepped, stepReplyOf("""{"ok":true,"version":4}"""))
+    // Review 4 #11: blocked but kept — it stays the next step.
+    assertEquals(StepReply.Kept("undo blocked (step kept): C.Ink is not declared"),
+      stepReplyOf("""{"ok":false,"version":4,"error":"undo blocked (step kept): C.Ink is not declared"}"""))
+    assertEquals(StepReply.Gone(null), stepReplyOf("""{"ok":false,"version":4,"error":"nothing to undo"}"""))
+    assertEquals(StepReply.Gone("undo failed (step dropped): no such node"),
+      stepReplyOf("""{"ok":false,"version":4,"error":"undo failed (step dropped): no such node"}"""))
+    assertEquals(StepReply.Gone(null), stepReplyOf(null), "no readable reply")
+  }
+
   @Test fun onlyAProjectComponentsInstanceOpens() {
     val reg = MapComponentRegistry(listOf(ComponentSpec("SummaryCard", emptyList(), emptyList(), emptyMap())))
     assertTrue(isComponentInstance(WidgetNode("SummaryCard"), reg))

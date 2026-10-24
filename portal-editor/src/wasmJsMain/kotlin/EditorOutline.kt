@@ -107,14 +107,19 @@ internal fun canvasDropPlace(
     else dropZone(y - b.top, b.bottom - b.top, accepts(node))
 }
 
+/** Review 4 #8: the outline rows on either side of a deleted node (and its subtree), in reading order. */
+internal data class DeletedPlace(val next: Int?, val previous: Int?)
+
 /**
- * Review 4 #8: where the outline's place is after deleting [id] — its next sibling, else the one
- * before it, else its parent — so the arrow keys go on from there (not from the top).
+ * Review 4 #8: where the outline's place is after deleting [id] from [root] (rows under [collapsed]
+ * hidden) — so ↓ goes on to the row after it and ↑ to the row before it, not from the top.
  */
-internal fun placeAfterDelete(root: WidgetNode, id: Int): Int? {
-  val parent = parentOf(root, id) ?: return null
-  val i = parent.children.indexOfFirst { it.id == id }
-  return parent.children.getOrNull(i + 1)?.id ?: parent.children.getOrNull(i - 1)?.id ?: parent.id
+internal fun placeAfterDelete(root: WidgetNode, collapsed: Set<Int>, id: Int): DeletedPlace? {
+  if (id == root.id) return null
+  val order = visibleOrder(root, collapsed)
+  val i = order.indexOf(id).takeIf { it >= 0 } ?: return null
+  val gone = HashSet<Int>().also { ids -> fun add(n: WidgetNode) { ids += n.id; n.children.forEach(::add) }; root.findNode(id)?.let(::add) }
+  return DeletedPlace(next = order.drop(i).firstOrNull { it !in gone }, previous = order.take(i).lastOrNull())
 }
 
 /** Children a drop in their parent's padding never passes into: a list's row template, a condition's branch. */
