@@ -158,4 +158,24 @@ class EditorOutlineTest {
     assertEquals(DeletedPlace(next = 5, previous = 2), placeAfterDelete(tree, setOf(3), 3), "a folded box's rows are not rows")
     assertEquals(null, placeAfterDelete(tree, emptySet(), 1), "the root has no place")
   }
+
+  @Test fun aDropBelowAShortScreenInARootBoxLandsAtTheEndOfItsColumn() {
+    // Round 5 (L1): 1 StyledBox (the screen, 0..390 × 0..780) padding a short 2 Column (24..366 × 24..300):
+    // 3 Text, 4 Button. A drop far below the content is no second child of the box (drawn over the top).
+    val screen = n(1, "StyledBox", n(2, "Column", n(3, "StyledText"), n(4, "Button")))
+    val b = mapOf(1 to DropBox(0.0, 0.0, 390.0, 780.0), 2 to DropBox(24.0, 24.0, 366.0, 300.0),
+      3 to DropBox(24.0, 24.0, 366.0, 80.0), 4 to DropBox(24.0, 250.0, 366.0, 300.0))
+    val accepts = { node: WidgetNode -> node.type == "StyledBox" || node.type == "Column" }
+    assertEquals(4 to DropZone.After, canvasDropPlace(screen, 1, 195.0, 600.0, { b[it.id] }, accepts))
+  }
+
+  @Test fun aDropInTheGapBetweenAListsRowsGoesBesideTheListNotIntoEveryRow() {
+    // Round 5 (L3): 1 Column holding 2 Repeat whose row 3 Box is drawn twice (0..100, 120..220).
+    val page = n(1, "Column", n(2, "Repeat", n(3, "Box", n(4, "StyledText"))))
+    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 400.0), 2 to DropBox(0.0, 0.0, 300.0, 220.0), 3 to DropBox(0.0, 0.0, 300.0, 220.0),
+      4 to DropBox(10.0, 10.0, 290.0, 40.0))
+    val accepts = { node: WidgetNode -> node.type in setOf("Column", "Repeat", "Box") }
+    assertEquals(2 to DropZone.After, canvasDropPlace(page, 1, 150.0, 110.0, { b[it.id] }, accepts), "the gap between the rows")
+    assertEquals(4 to DropZone.After, canvasDropPlace(page, 3, 150.0, 60.0, { b[it.id] }, accepts), "a row's insides, hit, still take it")
+  }
 }

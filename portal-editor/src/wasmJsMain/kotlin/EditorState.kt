@@ -238,6 +238,18 @@ internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario, values: Map<Str
 internal fun isCustomState(fields: List<StateField>, user: Map<String, String>): Boolean =
   fields.any { (it.kind == StateKind.Bool || it.source != StateSource.Prop) && it.name in user }
 
+/**
+ * Round 5 (L7): the scenario the preview is — [current] when no flag was set by hand, else the one
+ * of [scenarios] whose flags the hand-set preview has exactly (ticking `loading` is the Loading
+ * preset); null when it is none of them (Custom).
+ */
+internal fun scenarioShown(fields: List<StateField>, scenarios: List<Scenario>, current: Scenario, user: Map<String, String>): Scenario? {
+  if (!isCustomState(fields, user)) return current
+  val flags = fields.filter { it.kind == StateKind.Bool || it.source != StateSource.Prop }
+  val shown = effectiveMocks(fields, current, user)
+  return (listOf(current) + scenarios).firstOrNull { sc -> flags.all { f -> shown[f.name] == defaultValue(f, sc) } }
+}
+
 /** The mocks the canvas reads: [user] overrides on top of [scenario]'s defaults. */
 internal fun effectiveMocks(fields: List<StateField>, scenario: Scenario, user: Map<String, String>): Map<String, String> {
   val out = LinkedHashMap<String, String>()

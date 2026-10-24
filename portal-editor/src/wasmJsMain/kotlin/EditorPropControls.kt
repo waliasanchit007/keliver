@@ -247,9 +247,11 @@ internal fun markUnset(row: HTMLElement) {
   val prop = (if (row.classList.contains("prop")) row else row.querySelector(".prop") as? HTMLElement) ?: return
   prop.classList.add("unset")
   prop.setAttribute("title", "Not set: the widget's own default applies")
+  setByHandEndsDefault(prop)
   (prop.querySelector("input[type=checkbox]") as? HTMLInputElement)?.indeterminate = true
   val inputs = prop.querySelectorAll("input:not([type=checkbox]):not([type=color])")
-  for (i in 0 until inputs.length) (inputs.item(i) as? HTMLInputElement)?.let { it.value = ""; it.placeholder = "default" }
+  // Round 5 (L8): a narrow field (an opacity %) shows a dash; the row's mark already says "default".
+  for (i in 0 until inputs.length) (inputs.item(i) as? HTMLInputElement)?.let { it.value = ""; it.placeholder = if (it.classList.contains("alpha")) "–" else "default" }
   // A dropdown keeps showing its first name: a coded enum's default (Start, Wrap, Clip).
 }
 
@@ -261,6 +263,12 @@ internal fun markComponentDefault(row: HTMLElement) {
   val prop = (if (row.classList.contains("prop")) row else row.querySelector(".prop") as? HTMLElement) ?: return
   prop.classList.add("unset")
   prop.setAttribute("title", "Not passed: the component's own default applies")
+  setByHandEndsDefault(prop)
+}
+
+/** Round 5 (L5): a value chosen in [prop] (a checkbox ticked, a name picked) is no longer the default — at once, not at the next rebuild. */
+private fun setByHandEndsDefault(prop: HTMLElement) {
+  prop.addEventListener("change", { _ -> prop.classList.remove("unset"); prop.removeAttribute("title") })
 }
 
 internal class PropRow(label: String, layout: Layout = Layout.Stacked) {

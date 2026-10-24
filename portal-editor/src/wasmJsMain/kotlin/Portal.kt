@@ -1378,8 +1378,13 @@ internal fun revealOnCanvas(handle: Int) {
   if (rect == null) {
     val node = portalTree.value.findNode(handle)
     showCanvasHint(
-      if (node?.type in setOf("Condition", "Repeat", ELSE_TYPE)) "${node?.type} is logic: it draws only its children"
-      else "Not drawn in the current preview state (a false condition, an else branch, or an empty list)",
+      when {
+        node?.type in setOf("Condition", "Repeat", ELSE_TYPE) -> "${node?.type} is logic: it draws only its children"
+        // Round 5 (L9): an empty container takes no space — it is not hidden by the state.
+        node != null && node.children.isEmpty() && acceptsChildrenNode(node) ->
+          "This ${node.type} is empty, so it takes no space: drop widgets onto its outline row"
+        else -> "Not drawn in the current preview state (a false condition, an else branch, or an empty list)"
+      },
     )
     return
   }
@@ -2887,9 +2892,10 @@ private fun renderBindings() {
   if (scenarios.size > 1) {
     val chips = Ui.el("div", "state-scenarios")
     // F7: once a flag is set by hand, the preview is no scenario's: no chip claims it.
-    val custom = isCustomState(fields, state.values)
+    val shownAs = scenarioShown(fields, scenarios, state.scenario, state.values)
+    val custom = shownAs == null
     scenarios.forEach { sc ->
-      val chip = Ui.button(sc.label, if (sc == state.scenario && !custom) "chip on" else "chip") {
+      val chip = Ui.button(sc.label, if (sc == shownAs) "chip on" else "chip") {
         // A scenario resets what it decides: the flags. Texts and numbers the user typed stay.
         val flags = fields.filter { it.kind == StateKind.Bool || it.source != StateSource.Prop }.map { it.name }.toSet()
         state = ScreenState(sc, state.values - flags)

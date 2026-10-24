@@ -130,6 +130,16 @@ class EditorStateTest {
     assertEquals(null, scenarioFocus(sectioned, Scenario.Loaded))
   }
 
+  @Test fun aHandSetStateThatIsExactlyAPresetShowsAsThatPreset() {
+    val fields = stateFields(sectioned, none)
+    val scenarios = scenariosFor(fields)
+    // Round 5 (L7): what the Loading preset sets, set by hand from Loaded, is Loading — not Custom.
+    val asLoading = fields.filter { it.kind == StateKind.Bool || it.source != StateSource.Prop }
+      .associate { it.name to defaultValue(it, Scenario.Loading) }
+    assertEquals(Scenario.Loading, scenarioShown(fields, scenarios, Scenario.Loaded, asLoading))
+    assertEquals(Scenario.Loaded, scenarioShown(fields, scenarios, Scenario.Loaded, emptyMap()))
+  }
+
   @Test fun aFlagSetByHandMakesThePreviewCustom() {
     val fields = stateFields(sectioned, none)
     assertFalse(isCustomState(fields, emptyMap()))

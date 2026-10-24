@@ -126,4 +126,12 @@ class WriteBackRoundTripTest {
     assertTrue(Regex("""\n  Column\(width = Constraint\.Fill\) \{\n""").containsMatchIn(mid), mid)
     assertEquals(screen, end)
   }
+
+  @Test fun aSecondArgumentAddedToAOneLineListStaysOneLineWithoutATrailingComma() {
+    val (first, _) = roundTrip(screen) { d -> DocOp.SetProp(d.root.handle, "width", lit(1)) }
+    val (mid, end) = roundTrip(first) { d -> DocOp.SetProp(d.root.handle, "height", lit(1)) }
+    // Round 5 (L4): not `Column(width = Constraint.Fill, height = Constraint.Fill, ) {`.
+    assertTrue(Regex("""\n  Column\(width = Constraint\.Fill, height = Constraint\.Fill\) \{\n""").containsMatchIn(mid), mid)
+    assertEquals(first, end)
+  }
 }

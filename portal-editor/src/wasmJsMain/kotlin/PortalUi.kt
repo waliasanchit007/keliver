@@ -151,6 +151,10 @@ internal object Ui {
       cursor: pointer; white-space: nowrap; user-select: none; }
     .tree-row:hover { background: var(--sel); }
     .tree-row.selected { background: var(--sel); outline: 1px solid var(--accent); }
+    /* Round 5 (L6): where the keyboard is is not a selection — a quiet bar, not a selection-like ring. */
+    .tree-row:focus { outline: none; }
+    .tree-row.selected:focus { outline: 1px solid var(--accent); }
+    .tree-row:focus-visible:not(.selected) { box-shadow: inset 2px 0 0 var(--muted); }
     .tree-row .t { color: var(--text); }
     .tree-row .hint { color: var(--muted); margin-left: 6px; overflow: hidden;
       text-overflow: ellipsis; max-width: 120px; }

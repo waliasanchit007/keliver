@@ -81,13 +81,22 @@ internal fun canvasDropPlace(
   val node = root.findNode(hit) ?: return null
   val kids = node.children.mapNotNull { c -> box(c)?.let { c to it } }
   if (accepts(node) && kids.isNotEmpty()) {
-    kids.firstOrNull { it.second.contains(x, y) }?.let { return canvasDropPlace(root, it.first.id, x, y, box, accepts, padding) }
+    kids.firstOrNull { it.second.contains(x, y) }?.let { (kid, b) ->
+      // Round 5 (L3): the gap between a list's rows is no place in its row template (that would put
+      // the widget in every row) — the drop goes before or after the list. A row's own insides,
+      // hit directly, still take it.
+      if (kid.type == "Repeat") return kid.id to if (y < (b.top + b.bottom) / 2) DropZone.Before else DropZone.After
+      return canvasDropPlace(root, kid.id, x, y, box, accepts, padding)
+    }
     // J1: a box that only pads one container (a card around its column) passes a drop in that
     // padding to the column, at the point nearest the pointer — after the column, a box draws it
     // over the card. Review 5: only a tight wrapper does (a tall column holding one card takes a
     // drop below the card after it), and never into a list's row or a condition's branch.
+    // Round 5 (L1): a box that STACKS its children always does — after its one child, a new widget
+    // is drawn on top of it (a screen's root box: drawn over the top of the screen).
     val wrapped = kids.singleOrNull()?.takeIf { (kid, b) ->
-      accepts(kid) && kid.type !in PASS_THROUGH_EXCLUDED && box(node)?.let { it.contains(x, y) && it.pads(b, padding) } == true
+      accepts(kid) && kid.type !in PASS_THROUGH_EXCLUDED &&
+        (node.type in STACKING_TYPES || box(node)?.let { it.contains(x, y) && it.pads(b, padding) } == true)
     }
     wrapped?.let { (kid, b) ->
       // Review 5: an empty column takes the drop inside it, not beside it (over the card again).
@@ -121,6 +130,9 @@ internal fun placeAfterDelete(root: WidgetNode, collapsed: Set<Int>, id: Int): D
   val gone = HashSet<Int>().also { ids -> fun add(n: WidgetNode) { ids += n.id; n.children.forEach(::add) }; root.findNode(id)?.let(::add) }
   return DeletedPlace(next = order.drop(i).firstOrNull { it !in gone }, previous = order.take(i).lastOrNull())
 }
+
+/** Containers that draw their children on top of each other (not one after another). */
+private val STACKING_TYPES = setOf("Box", "StyledBox", "Surface")
 
 /** Children a drop in their parent's padding never passes into: a list's row template, a condition's branch. */
 private val PASS_THROUGH_EXCLUDED = setOf("Repeat", "Condition", ELSE_TYPE)
