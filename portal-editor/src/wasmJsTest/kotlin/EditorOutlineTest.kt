@@ -112,4 +112,14 @@ class EditorOutlineTest {
     // Rows that only touch are separate; an empty rect draws nothing.
     assertEquals(2, instanceBoxes(listOf(DropBox(0.0, 0.0, 100.0, 50.0), DropBox(0.0, 50.0, 100.0, 100.0), DropBox(0.0, 0.0, 0.0, 0.0))).size)
   }
+
+  @Test fun aDropInACardsPaddingLandsInItsColumnNotOverIt() {
+    // 1 Box (card, 0..300 × 0..220) holding 2 Column (10..290 × 10..200): 3 Text (y 10..60), 4 Button (y 150..200).
+    val card = n(1, "Box", n(2, "Column", n(3, "StyledText"), n(4, "Button")))
+    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 220.0), 2 to DropBox(10.0, 10.0, 290.0, 200.0),
+      3 to DropBox(10.0, 10.0, 290.0, 60.0), 4 to DropBox(10.0, 150.0, 290.0, 200.0))
+    val accepts = { node: WidgetNode -> node.type == "Box" || node.type == "Column" }
+    assertEquals(4 to DropZone.After, canvasDropPlace(card, 1, 150.0, 212.0, { b[it.id] }, accepts), "below the last button, in the padding")
+    assertEquals(3 to DropZone.Before, canvasDropPlace(card, 1, 150.0, 4.0, { b[it.id] }, accepts), "above the first text, in the padding")
+  }
 }

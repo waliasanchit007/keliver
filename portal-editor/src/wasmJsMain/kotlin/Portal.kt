@@ -790,6 +790,7 @@ internal fun mountPortalChrome() {
   buildExportOverlay()
   installKeyboard()
   installTypingTracker()
+  installOutlinePress()
   watchImageFailures()
   nameIconButtons()
   loadWorkspace()
@@ -1037,7 +1038,8 @@ private fun buildLeftPane() {
   search.addEventListener("input", { _ -> renderPalette(search.value) })
   pane.appendChild(search)
   paletteListEl = Ui.el("div", "card")
-  paletteListEl.setAttribute("style", "max-height:34vh; overflow:auto;")
+  // J7: a fixed height — shrinking to the search results moved the outline under the pointer.
+  paletteListEl.setAttribute("style", "height:34vh; min-height:120px; overflow:auto;")
   pane.appendChild(paletteListEl)
   renderPalette("")
 
@@ -1354,18 +1356,28 @@ private fun scrollCanvasTo(rect: androidx.compose.ui.geometry.Rect) {
  * H4: scrolls the canvas to [handle] once it is drawn and outlines it for a moment — without
  * selecting it (a selection grows the panels above the State panel, moving what was clicked).
  */
-private fun showOnCanvasWhenDrawn(handle: Int, framesLeft: Int = 90) {
+private fun showOnCanvasWhenDrawn(
+  handle: Int,
+  framesLeft: Int = 90,
+  settle: Int = 3,
+  last: androidx.compose.ui.geometry.Rect? = null,
+  target: EditTarget = editTarget(),
+) {
   kotlinx.browser.window.requestAnimationFrame {
+    if (target != editTarget()) return@requestAnimationFrame // another document was opened meanwhile
     val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[handle]
     when {
-      rect != null -> {
+      // J4: after the new state is drawn — a few frames, then the same rect twice (a rect read
+      // right after the switch was where the block had been in the state before).
+      settle > 0 -> showOnCanvasWhenDrawn(handle, framesLeft, settle - 1, rect, target)
+      rect != null && rect == last -> {
         scrollCanvasTo(rect)
         kotlinx.browser.window.requestAnimationFrame {
           positionOverlay(hoverOverlay, handle)
           kotlinx.browser.window.setTimeout({ hideOverlay(hoverOverlay); null }, 1500)
         }
       }
-      framesLeft > 0 -> showOnCanvasWhenDrawn(handle, framesLeft - 1)
+      framesLeft > 0 -> showOnCanvasWhenDrawn(handle, framesLeft - 1, 0, rect, target)
     }
   }
 }
@@ -1569,6 +1581,7 @@ private fun enableLiveWithFixtureCatalog() {
       Ui.toast("No presenter for '$currentScreen' in this editor: Live runs on the State panel's values")
     }
     liveBtn.textContent = "■ Stop"
+    liveBtn.setAttribute("title", if (flowRegistered || registered) "Stop the app's presenter" else "Stop Live — it runs on the State panel's values (this editor has no presenter for '$currentScreen')")
     liveBtn.className = "btn primary"
     renderInspector()
     Snapshot.sendApplyNotifications()
@@ -1589,6 +1602,7 @@ private fun disableLive() {
   PreviewBindings.mocks.clear()
   installMockActionSink()
   liveBtn.textContent = "▶ Live"
+  liveBtn.removeAttribute("title")
   liveBtn.className = "btn"
   renderMockFidelity()
   inspectorEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "—")) }
@@ -2527,12 +2541,10 @@ private fun renderOutline() {
     r.appendChild(twisty)
     r.appendChild(Ui.el("span", "t", node.type))
     outlineHint(node)?.let { r.appendChild(Ui.el("span", "hint", it)) }
-    r.addEventListener("click", { _ ->
-      selectedId = node.id
-      selectedAt = null // review 3: picked in the outline, not at a point on the canvas
-      refresh()
-      revealOnCanvas(node.id)
-    })
+    r.addEventListener("click", { _ -> pressedRow = null; selectRow(node.id) })
+    // J5: a press whose click never arrives — a field left by this press committed, and the
+    // outline was redrawn under the pointer — still selects the row (see installOutlinePress).
+    r.addEventListener("pointerdown", { ev -> if ((ev as org.w3c.dom.pointerevents.PointerEvent).button.toInt() == 0) pressedRow = node.id })
     // Hovering a row outlines its node on the canvas, as hovering the canvas does.
     r.addEventListener("mouseenter", { _ -> if (selectMode && node.id != selectedId) positionOverlay(hoverOverlay, node.id) })
     r.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
@@ -2567,6 +2579,31 @@ private fun renderOutline() {
     val pane = outlineEl.getBoundingClientRect() // the outline scrolls on its own (H5)
     if (box.top < pane.top || box.bottom > pane.bottom) el.scrollIntoView(false)
   }
+}
+
+/** J5: the outline row pressed and not yet clicked (null once its click arrived). */
+private var pressedRow: Int? = null
+
+private fun selectRow(id: Int) {
+  selectedId = id
+  selectedAt = null // review 3: picked in the outline, not at a point on the canvas
+  refresh()
+  revealOnCanvas(id)
+}
+
+/** J5: after a release, a pressed row whose click was lost is selected (once the click had its turn). */
+private fun installOutlinePress() {
+  document.addEventListener("pointerup", { _ ->
+    val id = pressedRow ?: return@addEventListener
+    kotlinx.browser.window.setTimeout({
+      if (pressedRow == id) {
+        pressedRow = null
+        if (selectedId != id && portalTree.value.findNode(id) != null) selectRow(id)
+      }
+      null
+    }, 0)
+  })
+  document.addEventListener("dragstart", { _ -> pressedRow = null }) // a drag is not a click
 }
 
 private fun handleDrop(payload: String?, targetId: Int, zone: DropZone = DropZone.Inside) {

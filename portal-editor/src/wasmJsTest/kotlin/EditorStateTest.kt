@@ -145,4 +145,10 @@ class EditorStateTest {
     assertEquals("isLoading", scenarioFocus(t, Scenario.Loading)?.props?.get("field"))
     assertEquals(null, scenarioFocus(t, Scenario.Error))
   }
+
+  @Test fun aSizeLikeIntPreviewsAVisibleSize() {
+    assertEquals("16", defaultValue(StateField("size", StateKind.Int, StateSource.Prop), Scenario.Loaded))
+    assertEquals("500", defaultValue(StateField("titleWeight", StateKind.Int, StateSource.Prop), Scenario.Loaded))
+    assertEquals("1", defaultValue(StateField("level", StateKind.Int, StateSource.Prop), Scenario.Loaded))
+  }
 }

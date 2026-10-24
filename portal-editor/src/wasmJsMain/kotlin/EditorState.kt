@@ -171,13 +171,31 @@ internal fun sampleColor(name: String): Int? {
   }
 }
 
+/**
+ * J6: a visible sample for a size-like Int (a component's `size`, `weight`, `radius`…), or null:
+ * 1 drew a text 1 sp tall — a component opened for editing looked empty.
+ */
+internal fun sampleSize(name: String): String? {
+  val w = words(name)
+  fun any(vararg k: String) = w.any { word -> k.any { word.startsWith(it) } }
+  return when {
+    any("weight") -> "500"
+    any("size", "font", "sp") -> "16"
+    any("width", "height", "dp") -> "48"
+    any("radius", "corner", "padding", "margin", "gap", "spacing", "inset") -> "8"
+    any("lines") -> "2"
+    else -> null
+  }
+}
+
 /** The value a field shows under [scenario] when the user has not set it. */
 internal fun defaultValue(field: StateField, scenario: Scenario): String = when (field.kind) {
   StateKind.Bool -> (roleOf(field.name) in scenario.on || field.carries.any { it in scenario.on }).toString()
   // A text a condition tests (`isNotBlank()`): present when its role is on in this scenario.
   StateKind.Text -> if (field.source == StateSource.Condition && roleOf(field.name) !in scenario.on) "" else sampleText(field.name)
   StateKind.Int -> sampleColor(field.name)?.toString()
-    ?: if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) "3" else "1"
+    ?: if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) "3"
+    else sampleSize(field.name) ?: "1"
   StateKind.Double -> "1.5"
   StateKind.Rows -> if (scenario == Scenario.Empty || scenario == Scenario.Loading) "0" else "3"
 }

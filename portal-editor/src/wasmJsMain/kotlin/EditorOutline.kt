@@ -81,6 +81,11 @@ internal fun canvasDropPlace(
   val kids = node.children.mapNotNull { c -> box(c)?.let { c to it } }
   if (accepts(node) && kids.isNotEmpty()) {
     kids.firstOrNull { it.second.contains(x, y) }?.let { return canvasDropPlace(root, it.first.id, x, y, box, accepts) }
+    // J1: a box around one container (a card's padding around its column) passes the drop to it,
+    // at the point nearest the pointer — after that one child, a box would draw it over the card.
+    kids.singleOrNull()?.takeIf { (kid, _) -> accepts(kid) && box(kid) != null }?.let { (kid, b) ->
+      return canvasDropPlace(root, kid.id, x.coerceIn(b.left, b.right), y.coerceIn(b.top, b.bottom), box, accepts)
+    }
     val sideBySide = sideBySide(kids.map { it.second })
     fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) lo - p else if (p > hi) p - hi else 0.0
     val (kid, b) = kids.minBy { (_, b) -> if (sideBySide) gap(b.left, b.right, x) else gap(b.top, b.bottom, y) }
