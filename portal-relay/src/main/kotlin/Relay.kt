@@ -611,6 +611,9 @@ private fun respondRecording(ex: HttpExchange, result: HttpRecordingResult) {
 
 private val documents = java.util.concurrent.ConcurrentHashMap<String, DocumentService>()
 
+/** L2: each screen's cross-document undo order, for every editor on it (see [SessionHistories]). */
+private val sessionHistories = SessionHistories()
+
 /**
  * M6 app project model: the "default" project's canonical screens live INSIDE
  * the guest Gradle module (git-versioned); other projects use the legacy dir.
@@ -1337,6 +1340,21 @@ fun main(args: Array<String>) {
           f.writeText(ex.requestBody.readBytes().decodeToString())
           respond(ex, 204)
         }
+        else -> respond(ex, 405)
+      }
+    }
+  }
+
+  // L2 (feedback round 5): a screen's cross-document undo order (the editor's SessionHistory), kept
+  // in memory beside the undo stacks it describes. GET: 200 with it, 204 when none is kept.
+  server.createContext("/history") { ex ->
+    handle(ex) {
+      val q = query(ex)
+      val project = safe(q["project"] ?: "default")
+      val screen = safe(q["screen"] ?: "main")
+      when (ex.requestMethod) {
+        "GET" -> sessionHistories.get(project, screen)?.let { respond(ex, 200, it) } ?: respond(ex, 204)
+        "PUT" -> respond(ex, if (sessionHistories.put(project, screen, ex.requestBody.readBytes().decodeToString())) 204 else 400)
         else -> respond(ex, 405)
       }
     }

@@ -44,6 +44,18 @@ internal fun zoomForKeys(code: String, key: String, mod: Boolean, shift: Boolean
   else -> null
 }
 
+/**
+ * L10 (feedback round 5): the zoom an opened component gets — a small one drawn at 100% was a few
+ * tiny rows at the top of an empty phone. As large as the frame's width ([frameW]) and the
+ * component's drawn height ([contentBottom], CSS px at 100%) allow in [availW]×[availH], at most
+ * 200%; never below 100% (a tall component opens as before).
+ */
+internal fun componentZoom(frameW: Int, contentBottom: Double, availW: Double, availH: Double): Double {
+  if (frameW <= 0 || contentBottom <= 0 || availW <= 0 || availH <= 0) return 1.0
+  val z = minOf(ZOOM_MAX, availW / frameW, availH / contentBottom)
+  return (kotlin.math.floor(z * 100) / 100).coerceAtLeast(1.0)
+}
+
 internal fun fitZoom(w: Int, h: Int, availW: Double, availH: Double): Double {
   if (w <= 0 || h <= 0 || availW <= 0 || availH <= 0) return 1.0
   val z = minOf(1.0, availW / w, availH / h)
@@ -188,7 +200,26 @@ internal fun handleZoomKeys(e: org.w3c.dom.events.KeyboardEvent): Boolean {
 // A plain object: the generated AddEventListenerOptions() passes unset options as null.
 private fun nonPassiveCapture(): org.w3c.dom.AddEventListenerOptions = js("({ passive: false, capture: true })")
 
-private fun applyZoom(z: Double, zoomBox: HTMLElement, frame: HTMLElement) {
+/** L10: the zoom before a component was opened (restored on the way back), null on a screen. */
+private var zoomBeforeComponent: Double? = null
+
+/** L10: zooms to an opened component drawn down to [contentBottom] (CSS px at 100%); not kept as the author's zoom. */
+internal fun zoomToComponent(contentBottom: Double) {
+  val box = canvasZoomBox ?: return
+  val frame = canvasFrame ?: return
+  val center = canvasCenter ?: return
+  if (zoomBeforeComponent == null) zoomBeforeComponent = canvasZoom
+  applyZoom(componentZoom(frameW, contentBottom, center.clientWidth - 40.0, center.clientHeight - 72.0), box, frame, keep = false)
+}
+
+/** L10: back on the screen, the zoom the author had there. */
+internal fun zoomBackFromComponent() {
+  val z = zoomBeforeComponent ?: return
+  zoomBeforeComponent = null
+  applyZoom(z, canvasZoomBox ?: return, canvasFrame ?: return)
+}
+
+private fun applyZoom(z: Double, zoomBox: HTMLElement, frame: HTMLElement, keep: Boolean = true) {
   val w = frameW
   val h = frameH
   canvasZoom = z
@@ -197,6 +228,6 @@ private fun applyZoom(z: Double, zoomBox: HTMLElement, frame: HTMLElement) {
   frame.style.setProperty("transform-origin", "top left")
   zoomBox.style.width = "${w * z}px"
   zoomBox.style.height = "${h * z}px"
-  runCatching { localStorage.setItem("portal.zoom", "$z") }
+  if (keep) runCatching { localStorage.setItem("portal.zoom", "$z") }
   canvasToolbarSync()
 }

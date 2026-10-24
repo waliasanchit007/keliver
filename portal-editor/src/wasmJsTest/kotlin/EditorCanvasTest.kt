@@ -69,4 +69,13 @@ class EditorCanvasTest {
     assertTrue("mod.SelectionTag.handle" !in stage.props, "a click on the stage selects nothing")
     assertTrue(stage.id < 0, "the stage's id is no document handle")
   }
+
+  @Test fun aSmallComponentOpensZoomedInAndATallOneAsBefore() {
+    // L10: the frame's width and the component's drawn height decide, at most 200%.
+    assertEquals(2.0, componentZoom(390, 172.0, 1000.0, 860.0), "a short component in a wide canvas: 200%")
+    assertEquals(1.53, componentZoom(390, 172.0, 600.0, 860.0), "as wide as the canvas allows")
+    assertEquals(1.43, componentZoom(390, 600.0, 1000.0, 860.0), "as tall as it allows")
+    assertEquals(1.0, componentZoom(390, 1400.0, 1000.0, 860.0), "a tall component is never zoomed out")
+    assertEquals(1.0, componentZoom(0, 172.0, 1000.0, 860.0), "nothing measured: 100%")
+  }
 }

@@ -106,8 +106,10 @@ private var currentScreen = "main"
   set(v) {
     field = v
     openComponents = emptyList() // E14: another screen is edited from its own root
+    zoomBackFromComponent() // L10
     // H2: each screen's undo order is its own, kept across a reload as the relay's stacks are.
     sessionHistory.load(runCatching { localStorage.getItem(historyKey()) }.getOrNull())
+    takeHistoryFromRelay() // L2: the relay's copy, which every browser shares
   }
 
 /** E14: the components opened from the screen, in turn (empty = the screen itself is edited). */
@@ -686,16 +688,56 @@ private fun historyKey() = historyKeyOf(currentProject, currentScreen)
  */
 private fun changeHistoryOf(target: EditTarget, change: (SessionHistory) -> Unit) {
   if (target.project == currentProject && target.screen == currentScreen) { change(sessionHistory); saveHistory(); return }
-  val key = historyKeyOf(target.project, target.screen)
-  runCatching {
-    val kept = SessionHistory().apply { load(localStorage.getItem(key)) }
-    change(kept)
-    localStorage.setItem(key, kept.encode())
-  }
+  // L2: the relay's copy of that screen's history (every browser's), else this browser's.
+  val local = runCatching { localStorage.getItem(historyKeyOf(target.project, target.screen)) }.getOrNull()
+  fun apply(text: String?) = SessionHistory().apply { load(text) }.also { change(it); keepHistory(target.project, target.screen, it) }
+  if (playground) { apply(local); return }
+  val xhr = XMLHttpRequest()
+  xhr.open("GET", "$SERVER/history?project=${target.project}&screen=${target.screen}")
+  xhr.addEventListener("load", { _ -> apply(if (xhr.status.toInt() == 200) xhr.responseText else local) })
+  xhr.addEventListener("error", { _ -> apply(local) })
+  xhr.send()
 }
 
-/** H2: kept in this browser after every change, for the next load of this screen. */
-private fun saveHistory() { runCatching { localStorage.setItem(historyKey(), sessionHistory.encode()) } }
+/** H2/L2: kept by the relay (for every browser) and in this browser after every change. */
+private fun saveHistory() = keepHistory(currentProject, currentScreen, sessionHistory)
+
+/** L2: [history] as [screen]'s, kept by the relay and in this browser (its copy for a relay without one). */
+private fun keepHistory(project: String, screen: String, history: SessionHistory) {
+  val text = history.encode()
+  runCatching { localStorage.setItem(historyKeyOf(project, screen), text) }
+  if (playground) return
+  val xhr = XMLHttpRequest()
+  xhr.open("PUT", "$SERVER/history?project=$project&screen=$screen")
+  xhr.send(text)
+}
+
+/**
+ * L2 (feedback round 5): the open screen's undo order as the relay keeps it — the same for every
+ * browser (one of its own had an empty history and undid the screen's older steps before a
+ * component edit). A relay that keeps none for it has no undo stacks for it either (it started
+ * since): this browser's copy is stale and is dropped. A relay too old to keep one (404) leaves
+ * this browser's copy in charge. An answer that arrives after an edit, or another screen, is old.
+ */
+private fun takeHistoryFromRelay() {
+  if (playground) return
+  val project = currentProject
+  val screen = currentScreen
+  val asLoaded = sessionHistory.encode()
+  val xhr = XMLHttpRequest()
+  xhr.open("GET", "$SERVER/history?project=$project&screen=$screen")
+  xhr.addEventListener("load", { _ ->
+    if (project != currentProject || screen != currentScreen || sessionHistory.encode() != asLoaded) return@addEventListener
+    when (xhr.status.toInt()) {
+      200 -> sessionHistory.load(xhr.responseText)
+      204 -> sessionHistory.clear()
+      else -> return@addEventListener
+    }
+    runCatching { localStorage.setItem(historyKey(), sessionHistory.encode()) }
+    updateUndoButtons()
+  })
+  xhr.send()
+}
 
 /**
  * G1: undo or redo ([path]) the newest step of [target]. The open document: as before. Another
@@ -2062,7 +2104,20 @@ private fun openComponent(name: String) {
   val next = editTarget().open(name)
   crumbSelections = (crumbSelections.take(openComponents.size) + selectedId).take(next.components.size)
   openComponents = next.components
-  loadDraft()
+  loadDraft { zoomToComponentWhenDrawn(next) }
+}
+
+/** L10: once the opened component is drawn (the same box two frames running), the canvas zooms to it. */
+private fun zoomToComponentWhenDrawn(target: EditTarget, framesLeft: Int = 60, last: androidx.compose.ui.geometry.Rect? = null) {
+  kotlinx.browser.window.requestAnimationFrame {
+    if (target != editTarget() || target.component == null) return@requestAnimationFrame
+    val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[portalTree.value.id]
+    when {
+      // Its bottom in CSS px at 100%, with the stage's margin below it (K2).
+      rect != null && rect == last -> zoomToComponent(rect.bottom / kotlinx.browser.window.devicePixelRatio + 24.0)
+      framesLeft > 0 -> zoomToComponentWhenDrawn(target, framesLeft - 1, rect)
+    }
+  }
 }
 
 /** E14: back to the crumb at [depth] (0 = the screen), its selection as it was. */
@@ -2074,11 +2129,13 @@ private fun goToCrumb(depth: Int, opened: Boolean = true) {
   val left = editTarget().component
   if (opened && left != null && (undoDepth ?: 0) > 0) Ui.toast("Your edits to $left are saved in its file; Undo here still undoes them, newest first")
   val reselect = crumbSelections.getOrNull(back.components.size)
+  if (back.component == null) zoomBackFromComponent() // L10: the screen at the zoom the author had there
   openComponents = back.components
   crumbSelections = crumbSelections.take(back.components.size)
   // The registry first: an instance shows the component as it was just edited.
   fetchComponents {
     loadDraft {
+      if (back.component != null) zoomToComponentWhenDrawn(back) // L10: an outer component, fitted again
       if (reselect != null && portalTree.value.findNode(reselect) != null) {
         selectedId = reselect
         refresh()
