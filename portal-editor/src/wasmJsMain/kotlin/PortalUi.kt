@@ -31,6 +31,8 @@ internal object Ui {
     .pane.left { left: 0; width: var(--left-w); border-right: 1px solid var(--border); padding: 10px; }
     .pane.right { right: 0; width: var(--right-w); border-left: 1px solid var(--border); padding: 10px; }
     .pane.collapsed { display: none; }
+    .pane.left.stack:not(.collapsed) { display: flex; flex-direction: column; overflow: hidden; }
+    .pane.left.stack > .card.outline { flex: 1 1 auto; min-height: 120px; overflow: auto; }
     /* G6: a drag across the editor selects no chrome text; fields and code stay selectable. */
     .pane, .topbar, .center, .crumbs { -webkit-user-select: none; user-select: none; }
     .pane input, .pane textarea, .pane code, .pane pre { -webkit-user-select: text; user-select: text; }

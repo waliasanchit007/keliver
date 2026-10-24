@@ -75,4 +75,13 @@ class SessionHistoryTest {
     h.edited(card); h.clear()
     assertEquals(home, h.undoTarget(home), "another screen starts over")
   }
+
+  @Test fun theHistoryIsKeptAcrossAReload() {
+    val h = SessionHistory()
+    h.edited(home); h.edited(home.open("Card").open("Row")); h.undone(home.open("Card").open("Row"))
+    val back = SessionHistory().also { it.load(h.encode()) }
+    assertEquals(home, back.undoTarget(home))
+    assertEquals(home.open("Card").open("Row"), back.redoTarget(home))
+    assertEquals(home, SessionHistory().also { it.load("not json") }.undoTarget(home))
+  }
 }

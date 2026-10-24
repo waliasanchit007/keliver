@@ -265,8 +265,12 @@ export default [
       await page.press('Escape'); // deselects the tile
       await page.press('Escape'); // steps out of SummaryCard
       await waitCrumbs(page, null, 'Escape returns to the screen');
+      // H2: the order survives a reload, as the relay's stacks do.
+      await page.reload();
+      await page.waitFor(`document.querySelectorAll('.tree-row').length > 0`, { timeout: 60000 });
+      await sleep(1000);
       const b = await editor.undoRedo();
-      log(`Undo on the screen: ${JSON.stringify(b.undo)}`);
+      log(`Undo on the screen, after a reload: ${JSON.stringify(b.undo)}`);
       ok(/SummaryCard/.test(b.undo?.title ?? ''), `Undo's tooltip names SummaryCard (${b.undo?.title})`);
       await page.undoKey();
       await expectBytes(componentFile, componentOriginal, 'the first undo did not give SummaryCard.kt back');

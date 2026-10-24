@@ -6,6 +6,8 @@
  */
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.WidgetNode
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** The document the editor has open: [screen]'s, or the last of [components] opened from it. */
 internal data class EditTarget(val project: String, val screen: String, val components: List<String> = emptyList()) {
@@ -39,8 +41,8 @@ internal fun isComponentInstance(node: WidgetNode?, components: ComponentRegistr
  * screen — the screen and the components opened from it. Undo steps the newest edit wherever it
  * was made (the relay keeps one stack per document); before, ⌘Z back on a screen undid an older
  * edit of the screen and left the component edit just made in place. Documents are told apart by
- * their [EditTarget.key] (a component is the same document however it was opened); the history
- * starts over on another screen.
+ * their [EditTarget.key] (a component is the same document however it was opened). Each screen
+ * has its own history, kept with the relay's stacks across a reload (H2: [encode], [load]).
  */
 internal class SessionHistory(private val limit: Int = 200) {
   private val undos = ArrayDeque<EditTarget>()
@@ -77,6 +79,29 @@ internal class SessionHistory(private val limit: Int = 200) {
 
   /** Another screen (or project) was opened: its edits start a history of their own. */
   fun clear() { undos.clear(); redos.clear() }
+
+  /** H2: this history as text, to keep across a reload: `undo` and `redo`, each a list of documents. */
+  fun encode(): String = kotlinx.serialization.json.buildJsonObject {
+    fun list(q: ArrayDeque<EditTarget>) = kotlinx.serialization.json.JsonArray(
+      q.map { t -> kotlinx.serialization.json.JsonArray((listOf(t.project, t.screen) + t.components).map { kotlinx.serialization.json.JsonPrimitive(it) }) },
+    )
+    put("undo", list(undos))
+    put("redo", list(redos))
+  }.toString()
+
+  /** H2: the history [text] ([encode]) held, replacing this one; an unreadable text is an empty history. */
+  fun load(text: String?) {
+    clear()
+    val o = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(text ?: return).jsonObject }.getOrNull() ?: return
+    fun read(key: String, into: ArrayDeque<EditTarget>) {
+      (o[key] as? kotlinx.serialization.json.JsonArray)?.forEach { e ->
+        val parts = (e as? kotlinx.serialization.json.JsonArray)?.map { it.jsonPrimitive.content } ?: return@forEach
+        if (parts.size >= 2) into.addLast(EditTarget(parts[0], parts[1], parts.drop(2)))
+      }
+    }
+    read("undo", undos)
+    read("redo", redos)
+  }
 
   /** Whether the next undo (or redo) is of a document other than [current]. */
   fun undoElsewhere(current: EditTarget): Boolean = undos.lastOrNull()?.let { it.key != current.key } == true

@@ -107,7 +107,8 @@ export class Editor {
       const r = document.querySelectorAll('.tree-row')[${index}];
       if (!r) return null;
       const b = (r.querySelector('.t') ?? r).getBoundingClientRect();
-      const pane = r.closest('.pane').getBoundingClientRect();
+      // The outline scrolls on its own (in an older editor, the whole pane does).
+      const pane = (r.closest('[role=tree]') ?? r.closest('.pane')).getBoundingClientRect();
       return { x: b.x + Math.min(b.width / 2, 30), y: b.y + b.height / 2,
         above: b.top < pane.top, below: b.bottom > Math.min(pane.bottom, innerHeight) };
     })()`);

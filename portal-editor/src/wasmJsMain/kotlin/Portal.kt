@@ -102,7 +102,8 @@ private var currentScreen = "main"
   set(v) {
     field = v
     openComponents = emptyList() // E14: another screen is edited from its own root
-    sessionHistory.clear() // review 3: undo never reaches back into a screen no longer open
+    // H2: each screen's undo order is its own, kept across a reload as the relay's stacks are.
+    sessionHistory.load(runCatching { localStorage.getItem(historyKey()) }.getOrNull())
   }
 
 /** E14: the components opened from the screen, in turn (empty = the screen itself is edited). */
@@ -403,7 +404,8 @@ private fun pumpOps() {
     opInFlight = false
     // Another document was opened meanwhile: this reply is about the old one (its version is not this one's).
     if (target != editTarget()) {
-      if (reply is OpsReply.Accepted) sessionHistory.edited(target) // G1: still this session's newest edit
+      // G1: still this screen's newest edit (one of another screen's is in that screen's relay stack only).
+      if (reply is OpsReply.Accepted && target.project == currentProject && target.screen == currentScreen) { sessionHistory.edited(target); saveHistory() }
       q.onResult?.invoke(reply is OpsReply.Accepted)
       pumpOps() // an edit queued meanwhile is the new document's: send it now, not with the next one
       return
@@ -412,7 +414,7 @@ private fun pumpOps() {
     pillAfterReply(reply, writeBackWarnings.showing).let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
     when (reply) {
       is OpsReply.Accepted -> {
-        sessionHistory.edited(target)
+        sessionHistory.edited(target); saveHistory()
         docVersion = reply.version
         staleUpTo = refetchSeq // a document fetched before this edit is older than it
         q.onResult?.invoke(true)
@@ -540,7 +542,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
         pendingInsertPlace = null
         val siblings = portalTree.value.findNode(parent)?.children.orEmpty()
         val i = if (after == null) 0 else siblings.indexOfFirst { it.id == after } + 1
-        siblings.getOrNull(i)?.let { selectedId = it.id }
+        siblings.getOrNull(i)?.let { selectedId = it.id; revealWhenDrawn(it.id) } // H5: shown, even below the fold
       }
       if (LiveEngine.isRunning) LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
       Snapshot.sendApplyNotifications()
@@ -631,7 +633,7 @@ private fun undo() {
     localRefresh(true)
     return
   }
-  stepHistory("/undo", sessionHistory.undoTarget(editTarget()), "Undid") { sessionHistory.undone(it) }
+  stepHistory("/undo", sessionHistory.undoTarget(editTarget()), "Undid") { sessionHistory.undone(it); saveHistory() }
 }
 
 private fun redo() {
@@ -644,11 +646,16 @@ private fun redo() {
     localRefresh(true)
     return
   }
-  stepHistory("/redo", sessionHistory.redoTarget(editTarget()), "Redid") { sessionHistory.redone(it) }
+  stepHistory("/redo", sessionHistory.redoTarget(editTarget()), "Redid") { sessionHistory.redone(it); saveHistory() }
 }
 
 /** G1: this session's edits, in order, across the screen and the components opened from it. */
 private val sessionHistory = SessionHistory()
+
+private fun historyKey() = "portal.history.$currentProject/$currentScreen"
+
+/** H2: kept in this browser after every change, for the next load of this screen. */
+private fun saveHistory() { runCatching { localStorage.setItem(historyKey(), sessionHistory.encode()) } }
 
 /**
  * G1: undo or redo ([path]) the newest step of [target]. The open document: as before. Another
@@ -661,7 +668,7 @@ private fun stepHistory(path: String, target: EditTarget, verb: String, done: (E
   fun stepped(text: String?): Boolean =
     runCatching { Json.parseToJsonElement(text ?: "").jsonObject["ok"]?.jsonPrimitive?.content == "true" }.getOrDefault(false)
   if (target.key == editTarget().key) {
-    serverPost(path) { text -> if (stepped(text)) done(target) else sessionHistory.skipped(target, undo); refetchDoc(true) }
+    serverPost(path) { text -> if (stepped(text)) done(target) else sessionHistory.skipped(target, undo); saveHistory(); refetchDoc(true) }
     return
   }
   val xhr = XMLHttpRequest()
@@ -674,7 +681,7 @@ private fun stepHistory(path: String, target: EditTarget, verb: String, done: (E
       Ui.toast("$verb your last edit, in $where")
       fetchComponents { refresh(); canvasGeneration.value++; Snapshot.sendApplyNotifications() }
     } else {
-      sessionHistory.skipped(target, undo)
+      sessionHistory.skipped(target, undo); saveHistory()
       Ui.toast("Nothing to ${if (undo) "undo" else "redo"} in $where any more")
     }
     updateUndoButtons()
@@ -1019,6 +1026,8 @@ private fun buildLeftPane() {
   val pane = Ui.el("div", "pane left")
   pane.setAttribute("role", "region")
   pane.setAttribute("aria-label", "Palette and outline")
+  // H5: the palette (and its search box) stays in place; the outline scrolls on its own.
+  pane.classList.add("stack")
 
   pane.appendChild(Ui.section("Palette"))
   val search = Ui.input()
@@ -1032,7 +1041,7 @@ private fun buildLeftPane() {
   renderPalette("")
 
   pane.appendChild(Ui.section("Outline"))
-  outlineEl = Ui.el("div", "card")
+  outlineEl = Ui.el("div", "card outline")
   outlineEl.setAttribute("role", "tree")
   outlineEl.setAttribute("aria-label", "Outline")
   pane.appendChild(outlineEl)
@@ -1286,7 +1295,9 @@ internal fun editTextInline(handle: Int) {
   }
   input.addEventListener("keydown", { ev ->
     val k = ev as KeyboardEvent
-    if (k.key == "Enter" && !k.shiftKey) { k.preventDefault(); finish(true) }
+    // H1: the Enter that commits is this field's alone — reaching the editor's Enter (edit the
+    // selection in place) reopened this box over the old text and left the panel showing it.
+    if (k.key == "Enter" && !k.shiftKey) { k.preventDefault(); k.stopPropagation(); finish(true) }
     if (k.key == "Escape") { k.preventDefault(); k.stopPropagation(); finish(false) }
   })
   input.addEventListener("blur", { _ -> finish(true) })
@@ -1317,6 +1328,15 @@ internal fun revealOnCanvas(handle: Int) {
     )
     return
   }
+  scrollCanvasTo(rect)
+  if (selectMode) {
+    selOverlay.classList.remove("flash")
+    kotlinx.browser.window.setTimeout({ selOverlay.classList.add("flash"); null }, 10)
+  }
+}
+
+/** Scrolls the canvas so [rect] (compose px) is in view, with a margin. */
+private fun scrollCanvasTo(rect: androidx.compose.ui.geometry.Rect) {
   val host = document.getElementById(PREVIEW_HOST_ID) as? HTMLElement
   val dpr = kotlinx.browser.window.devicePixelRatio
   val visible = (host?.clientHeight ?: 0) * dpr
@@ -1327,9 +1347,25 @@ internal fun revealOnCanvas(handle: Int) {
     else -> 0.0f
   }
   if (dy != 0.0f) canvasScroller?.invoke(dy.toFloat())
-  if (selectMode) {
-    selOverlay.classList.remove("flash")
-    kotlinx.browser.window.setTimeout({ selOverlay.classList.add("flash"); null }, 10)
+}
+
+/**
+ * H4: scrolls the canvas to [handle] once it is drawn and outlines it for a moment — without
+ * selecting it (a selection grows the panels above the State panel, moving what was clicked).
+ */
+private fun showOnCanvasWhenDrawn(handle: Int, framesLeft: Int = 90) {
+  kotlinx.browser.window.requestAnimationFrame {
+    val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[handle]
+    when {
+      rect != null -> {
+        scrollCanvasTo(rect)
+        kotlinx.browser.window.requestAnimationFrame {
+          positionOverlay(hoverOverlay, handle)
+          kotlinx.browser.window.setTimeout({ hideOverlay(hoverOverlay); null }, 1500)
+        }
+      }
+      framesLeft > 0 -> showOnCanvasWhenDrawn(handle, framesLeft - 1)
+    }
   }
 }
 
@@ -1528,6 +1564,8 @@ private fun enableLiveWithFixtureCatalog() {
       // every branch at once, with {placeholders}).
       LiveEngine.stop()
       renderBindings()
+      // H8: said where it is seen — the fidelity panel's line is below the fold.
+      Ui.toast("No presenter for '$currentScreen' in this editor: Live runs on the State panel's values")
     }
     liveBtn.textContent = "■ Stop"
     liveBtn.className = "btn primary"
@@ -2008,9 +2046,9 @@ private fun handleEditorKey(e: KeyboardEvent) {
     e.key == "ArrowRight" && sel != null ->
       if (sel.id in collapsedRows) { collapsedRows -= sel.id; renderOutline() } else select(sel.children.firstOrNull()?.id)
     (e.key == "Delete" || e.key == "Backspace") && sel != null && sel.id != tree.id -> {
-      val order = visibleOrder(tree, collapsedRows)
-      val next = parentOf(tree, sel.id)?.let { p -> p.children.getOrNull(p.children.indexOf(sel) + 1)?.id ?: p.id }
-      selectedId = next ?: order.firstOrNull()
+      // H3: nothing is selected after a delete — selecting the next node (then its parent) made a
+      // few presses of Backspace delete whole sections.
+      selectedId = null
       sendOps(listOf(DocOp.DeleteNode(Handle(sel.id.toLong()))))
     }
     mod && e.key.lowercase() == "d" && sel != null && sel.id != tree.id -> {
@@ -2418,6 +2456,7 @@ private fun renderPalette(filter: String) {
     row.setAttribute("draggable", "true")
     row.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "new:$type") })
     row.addEventListener("click", { _ -> addToSelectedOrRoot(newNode(type)) })
+    row.setAttribute("title", "Click: add $type after the selection (or inside it). Drag: drop it where the line shows")
     paletteListEl.appendChild(row)
   }
   // C3: project components FIRST — the app's own vocabulary is what authors reach for.
@@ -2524,8 +2563,8 @@ private fun renderOutline() {
   // Keep the selected row in view (keyboard navigation, a canvas click).
   (outlineEl.querySelector(".tree-row.selected") as? HTMLElement)?.let { el ->
     val box = el.getBoundingClientRect()
-    val pane = (outlineEl.closest(".pane") as? HTMLElement)?.getBoundingClientRect()
-    if (pane != null && (box.top < pane.top || box.bottom > pane.bottom)) el.scrollIntoView(false)
+    val pane = outlineEl.getBoundingClientRect() // the outline scrolls on its own (H5)
+    if (box.top < pane.top || box.bottom > pane.bottom) el.scrollIntoView(false)
   }
 }
 
@@ -2702,7 +2741,7 @@ private fun renderBindings() {
         state = ScreenState(sc, state.values - flags)
         save(); renderBindings()
         // F7: show what the scenario is about, even below the fold (an error banner).
-        scenarioFocus(portalTree.value, sc)?.let { n -> (n.children.firstOrNull() ?: n).id.let { selectedId = it; refresh(); revealWhenDrawn(it) } }
+        scenarioFocus(portalTree.value, sc)?.let { n -> showOnCanvasWhenDrawn((n.children.firstOrNull() ?: n).id) }
       }
       chip.setAttribute("title", "Preview the screen ${sc.label.lowercase()}: " + when (sc) {
         Scenario.Loaded -> "content flags on, loading/error/empty off"
@@ -2744,6 +2783,7 @@ private fun renderBindings() {
           box.addEventListener("change", { _ ->
             val v = box.checked.toString()
             setValue(f.name, if (v == default) null else v)
+            renderBindings() // H6: the chips follow (Custom once a flag is set by hand)
           })
           rowEl.appendChild(box)
         }

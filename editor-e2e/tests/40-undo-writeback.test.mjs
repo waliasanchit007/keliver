@@ -170,4 +170,27 @@ export default [
       }
     },
   },
+  {
+    id: 'H3',
+    title: 'Backspace on a selected row deletes that one node; pressing it again deletes nothing more',
+    async run({ page, editor, fixtureDir, log }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      const file = overviewKt(fixtureDir);
+      const original = fs.readFileSync(file, 'utf8');
+      const rows = (await editor.outline()).length;
+      await editor.clickOutlineRowOf('StyledText', 'Synced this morning');
+      for (let i = 0; i < 3; i++) await page.press('Backspace', { settle: 700 });
+      await waitForFile(file, (t) => !t.includes('Synced this morning'), { message: 'Backspace never deleted the row' });
+      await sleep(1500);
+      const removed = changedLines(original, fs.readFileSync(file, 'utf8'));
+      log(`removed: ${JSON.stringify(removed)}`);
+      equal((await editor.outline()).length, rows - 1, 'three presses deleted one node');
+      equal(removed.added, [], 'nothing was added');
+      ok(removed.removed.length === 5 && removed.removed.some((l) => l.includes('Synced this morning')), `only the one StyledText call was removed (${removed.removed.length} lines)`);
+      equal(await editor.selectedRows(), [], 'nothing is selected after the delete');
+      await page.click(1, 1);
+      await editor.clickUndo();
+      await expectBytes(file, original, 'Undo did not give overview.kt back byte for byte');
+    },
+  },
 ];

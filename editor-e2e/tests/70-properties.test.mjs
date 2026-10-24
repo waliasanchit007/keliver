@@ -229,4 +229,26 @@ export default [
       log('both changes written');
     },
   },
+  {
+    id: 'H1',
+    title: 'a text edited in place on the canvas is committed by Enter once; the panel then shows the new text',
+    async run({ page, editor, fixtureDir, log }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      const file = overviewKt(fixtureDir);
+      const original = fs.readFileSync(file, 'utf8');
+      await editor.clickOutlineRowOf('StyledText', 'Synced this morning');
+      await page.press('Enter'); // edit the selected text in place
+      await page.waitFor(`document.activeElement?.classList.contains('inline-edit')`, { message: 'Enter did not open the in-place editor' });
+      await page.caretToEnd();
+      await page.type('!');
+      await page.press('Enter');
+      await waitForFile(file, (t) => t.includes('"Synced this morning!"'), { message: 'the in-place edit was never written' });
+      await sleep(800);
+      equal(await page.eval(`!!document.querySelector('.inline-edit')`), false, 'the in-place editor is closed, not reopened over the old text');
+      equal((await editor.propField('Text'))?.value, 'Synced this morning!', 'the panel shows the text just written');
+      await page.click(1, 1);
+      await editor.clickUndo();
+      await expectBytes(file, original, 'Undo did not give overview.kt back byte for byte');
+    },
+  },
 ];
