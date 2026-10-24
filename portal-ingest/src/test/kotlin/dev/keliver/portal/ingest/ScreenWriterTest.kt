@@ -129,6 +129,13 @@ class ScreenWriterTest {
     assertTrue(WriteBack.sameTree(Recognizer.recognize(file, w.text)!!.root, d.root), w.text)
   }
 
+  @Test fun aNewFileWritesCallsWithoutArgumentsAsAnAuthorWould() {
+    val d = UiDocument("home", DocNode.Widget(Handle(1), "Column", children = listOf(DocNode.Widget(Handle(2), "Divider"))), dev.keliver.portal.document.Contract(), 0, 10)
+    val w = assertIs<ScreenWriter.Write>(plan(null, d, null))
+    // H12: not `Column(\n  ) {` and `Divider(\n)`.
+    assertTrue("Column {" in w.text && "Divider()" in w.text && "Column(\n" !in w.text && "Divider(\n" !in w.text, w.text)
+  }
+
   @Test fun aNewFileThatWouldNotReadBackIsRefused() {
     val d = UiDocument("home", DocNode.Widget(Handle(1), "Column", children = listOf(DocNode.Widget(Handle(2), "NotAWidget"))), dev.keliver.portal.document.Contract(), 0, 10)
     val r = assertIs<ScreenWriter.Refuse>(plan(null, d, null))
@@ -152,7 +159,7 @@ class ScreenWriterTest {
     val target = d.apply(DocOp.InsertNode(d.root.handle, null, DocNode.RawCode(Handle(0), "Legacy(1)"))).doc
     val w = assertIs<ScreenWriter.Write>(plan(text, target, d))
     assertEquals(ScreenWriter.How.SURGICAL, w.how)
-    assertTrue("  ) {\n    Legacy(1)\n" in w.text, w.text)
+    assertTrue("  Column {\n    Legacy(1)\n" in w.text, w.text) // H12: the file was created compact
   }
 
   // ── B1: the file changed since it was last read ──────────────────────────

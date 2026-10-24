@@ -121,7 +121,8 @@ class WriteBackSpellingTest {
     val row = DocNode.Widget(Handle(0), "Row", children = listOf(DocNode.RawCode(Handle(0), "Legacy(bindings.title, 2)")))
     val target = d.apply(DocOp.InsertNode(d.root.handle, raw.handle, row)).doc
     val out = merge(reviewer, target, d)
-    assertTrue("    Row(\n    ) {\n      Legacy(bindings.title, 2)\n    }\n" in out, out)
+    // F20: no arguments, so `Row {`; the RawCode child is its own text.
+    assertTrue("    Row {\n      Legacy(bindings.title, 2)\n    }\n" in out, out)
     assertFalse("RawCode(" in out, out)
     assertReingests(target, out)
   }

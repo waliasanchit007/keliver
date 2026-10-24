@@ -24,6 +24,13 @@ import org.jetbrains.kotlin.psi.KtUserType
 internal const val UNKNOWN_TYPE = "<unknown>"
 
 /**
+ * E14: the bindings parameter of a component's document — none: the body
+ * reads its parameters by their bare names (`title`, `onClick`), so write-back
+ * spells a field or an action without a receiver.
+ */
+internal const val COMPONENT_PARAMS = ""
+
+/**
  * The declared member types of a class or interface: each property (and
  * `val`/`var` constructor parameter) → its type text, or [UNKNOWN_TYPE]
  * when it declares none. [outside] names a supertype not declared in the
@@ -91,6 +98,19 @@ internal fun sameFileClass(ref: KtTypeReference?, decls: Map<String, KtClass>): 
     cur = cur.declarations.filterIsInstance<KtClassOrObject>().firstOrNull { it.name == seg } ?: return null
   }
   return cur as? KtClass
+}
+
+/**
+ * The name of the screen function [text] (a file named [fileName]) declares, as parsed: its first
+ * top-level `@Composable` function that is not private (a helper), else its first one; null when
+ * it declares none. Review 4 #9: read from the file's syntax, so an annotation on the same line,
+ * a comment, or a string holding a comment opener cannot hide or invent one.
+ */
+fun declaredScreenFunctionName(fileName: String, text: String): String? {
+  val composables = runCatching { PsiEnv.parse(fileName, text) }.getOrNull()?.declarations.orEmpty()
+    .filterIsInstance<KtNamedFunction>()
+    .filter { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
+  return (composables.firstOrNull { !it.hasModifier(org.jetbrains.kotlin.lexer.KtTokens.PRIVATE_KEYWORD) } ?: composables.firstOrNull())?.name
 }
 
 /** A screen file's screen function: its first `@Composable` function (null = not a screen). */

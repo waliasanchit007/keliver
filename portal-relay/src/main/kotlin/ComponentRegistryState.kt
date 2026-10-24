@@ -20,8 +20,20 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object Components {
   private val byProject = ConcurrentHashMap<String, ComponentRegistry>()
+  private val versions = ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicLong>()
 
   fun registry(project: String): ComponentRegistry = byProject[project] ?: EmptyComponentRegistry
+
+  /** How many times [project]'s definitions have changed — sent with change events, so editors redraw instances. */
+  fun version(project: String): Long = versions[project]?.get() ?: 0L
+
+  private fun publish(project: String, reg: ComponentRegistry?) {
+    val old = registry(project)
+    val next = reg ?: EmptyComponentRegistry
+    val same = old.names() == next.names() && next.names().all { old.spec(it) == next.spec(it) }
+    if (reg == null) byProject.remove(project) else byProject[project] = reg
+    if (!same) versions.getOrPut(project) { java.util.concurrent.atomic.AtomicLong() }.incrementAndGet()
+  }
 
   /**
    * Rebuild [project]'s registry from all .kt files in [dir]. Returns the new
@@ -37,7 +49,7 @@ object Components {
     val files = (dir.listFiles { f -> f.name.endsWith(".kt") } ?: emptyArray())
       .sortedBy { it.name } // deterministic order
     if (files.isEmpty()) {
-      byProject.remove(project)
+      publish(project, null)
       return EmptyComponentRegistry
     }
     // Pass 1: names only (nested calls may RawCode here — we just need the set).
@@ -53,7 +65,7 @@ object Components {
     }
     val withCycles = flagCycles(specs)
     val reg = MapComponentRegistry(withCycles.values)
-    byProject[project] = reg
+    publish(project, reg)
     return reg
   }
 

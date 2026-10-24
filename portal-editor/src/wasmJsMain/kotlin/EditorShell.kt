@@ -7,12 +7,21 @@
  *   tree (MutableState) --RenderNode--> guest composition --protocol--> host (canvas)
  *   edit the tree --recompose--> minimal changes --> live preview update
  */
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.BroadcastFrameClock
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -20,12 +29,12 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
+import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.portal.onDependencyCycle
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
 import dev.keliver.portal.render.resolvePersona
 import dev.keliver.portal.render.validatePersonaCatalog
-import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
@@ -40,11 +49,12 @@ import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
 import dev.keliver.widget.compose.ComposeWidgetChildren
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 private val JSON = Json { ignoreUnknownKeys = true }
@@ -58,6 +68,40 @@ private val JSON = Json { ignoreUnknownKeys = true }
  * handle, so clicking any row selects the template (the editable thing).
  */
 private val UNRENDERED_TYPES = setOf("Repeat", "Condition", dev.keliver.portal.ELSE_TYPE, "RawCode")
+
+/** Widgets that scroll vertically on their own; the canvas must not wrap them in another scroller. */
+private val VERTICAL_SCROLLERS = setOf("ScrollableColumn", "LazyVerticalGrid", "VerticalPager")
+
+/**
+ * Whether [n] (with the bodies of the project components it uses) scrolls
+ * vertically by itself: a vertical scroller, or a Column with overflow Scroll.
+ */
+internal fun screenScrollsItself(
+  n: dev.keliver.portal.WidgetNode,
+  seen: MutableSet<String> = mutableSetOf(),
+): Boolean {
+  if (n.type in VERTICAL_SCROLLERS) return true
+  if (n.type == "Column" && (n.props["overflow"] as? Number)?.toInt() == 1) return true
+  val body = editorComponents.spec(n.type)?.body
+  if (body != null && seen.add(n.type) && screenScrollsItself(body, seen)) return true
+  return n.children.any { screenScrollsItself(it, seen) }
+}
+
+/** The selectable handle of a component instance being expanded on the canvas (see installComponentPreview). */
+internal fun instanceHandle(node: dev.keliver.portal.WidgetNode): Int =
+  (node.props["mod.SelectionTag.handle"] as? Int) ?: node.id
+
+/**
+ * K2: an opened component sits inset on the canvas, as it does inside a screen, not flush with the
+ * frame's edges. The stage is no node of the document: it has no selection tag, so nothing selects it.
+ */
+internal fun componentStage(root: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode =
+  dev.keliver.portal.WidgetNode(
+    "Column",
+    mapOf("width" to 1, "margin.start" to 16.0, "margin.end" to 16.0, "margin.top" to 24.0, "margin.bottom" to 24.0),
+    listOf(root),
+    id = -1,
+  )
 
 internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
   val tagged = if (n.type in UNRENDERED_TYPES) n
@@ -97,11 +141,16 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
     // compiled: the canvas keeps its placeholder rather than risk recursing.
     val registry = editorComponents
     val compiled = adapters.filterKeys { name -> registry.spec(name)?.onDependencyCycle != true }
+    // The handle the canvas selects for this instance: the one it was tagged
+    // with (its screen handle, or, nested inside another component's
+    // definition, the outer instance's). [node.id] is only right at screen
+    // level: inside a definition it is the definition's own id, which can
+    // equal an unrelated screen node's handle.
+    val handle = instanceHandle(node)
     when (val e = dev.keliver.portal.expandForPreview(node, registry, compiled.keys)) {
-      is dev.keliver.portal.Expansion.Transparent -> RenderNode(tagWith(e.tree, node.id), scope)
+      is dev.keliver.portal.Expansion.Transparent -> RenderNode(tagWith(e.tree, handle), scope)
       is dev.keliver.portal.Expansion.Opaque -> {
         val adapter = compiled[e.name]
-        val handle = (node.props["mod.SelectionTag.handle"] as? Int) ?: node.id
         if (adapter == null) {
           RenderNode(tagWith(dev.keliver.portal.placeholder(e.name, e.reason), handle), scope)
         } else {
@@ -112,7 +161,7 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
           }
         }
       }
-      is dev.keliver.portal.Expansion.Cycle -> RenderNode(tagWith(dev.keliver.portal.cycleChip(e.path), node.id), scope)
+      is dev.keliver.portal.Expansion.Cycle -> RenderNode(tagWith(dev.keliver.portal.cycleChip(e.path), handle), scope)
     }
   }
 }
@@ -144,11 +193,24 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
   // ComposeViewport sizes the composition to the device-frame host div (and
   // observes its size), unlike CanvasBasedWindow which fills the window.
   ComposeViewport(viewportContainer = kotlinx.browser.document.getElementById(PREVIEW_HOST_ID)!!) {
+    // E42: a glyph the canvas font lacks (✓ ✕ ★ …) falls back to the relay's symbol font — a box
+    // ("tofu") in its place said nothing about what the app shows. Without a relay: no fallback.
+    val fonts = androidx.compose.ui.platform.LocalFontFamilyResolver.current
+    LaunchedEffect(fonts) {
+      val bytes = fetchBytes("$SERVER/editor-font") ?: return@LaunchedEffect
+      fonts.preload(
+        androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.platform.Font("KeliverSymbolFallback", bytes)),
+      )
+      canvasGeneration.value++ // text already laid out is drawn again, with the fallback
+      androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+    }
     val widgetSystem = remember {
       ComposeUiKeliverMaterialWidgetSystem(
         ImageLoader.Builder(PlatformContext.INSTANCE)
           // wasm has no built-in Coil network stack — register the browser-fetch one.
           .components { add(BrowserFetchFetcher.Factory()) }
+          // E29: an image that did not load is drawn as one, never as empty space.
+          .error { brokenImage }
           .build(),
       )
     }
@@ -221,7 +283,10 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
         LivePresenterHost()
         // K5: inside the app's own screen wrapper (its Theme), as on a device.
         dev.keliver.portal.render.AppScreenFrame(entry) {
-          RenderNode(selectionTagged(portalTree.value))
+          androidx.compose.runtime.key(canvasGeneration.value) {
+            val tree = selectionTagged(portalTree.value)
+            RenderNode(if (canvasShowsComponent.value) componentStage(tree) else tree)
+          }
         }
       }
       guestAdapter.emitChanges() // initial render
@@ -235,7 +300,22 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
     // The DOM chrome (mountPortalChrome) drives edits to portalTree; the canvas
     // just shows the live preview. K5: inside the app's host wrapper (its
     // MaterialTheme), as the native host does on a device.
+    // The canvas scrolls like the phone: a screen taller than the frame scrolls
+    // (wheel, trackpad), as the app's route scrolls it on a device. A screen
+    // that scrolls itself keeps its own scrolling: a vertical scroller measured
+    // inside another one fails.
     val hostWrapper = entry.hostWrapper
-    if (hostWrapper != null) hostWrapper.Wrap { root.Render() } else root.Render()
+    val canvasScroll = rememberScrollState()
+    val scrollsItself = screenScrollsItself(portalTree.value)
+    // E25: the outline reveals an off-screen node by scrolling the canvas.
+    val scrollScope = rememberCoroutineScope()
+    DisposableEffect(scrollsItself) {
+      canvasScroller = if (scrollsItself) null else { dy -> scrollScope.launch { canvasScroll.animateScrollBy(dy) } }
+      onDispose { canvasScroller = null }
+    }
+    val content: @Composable () -> Unit = {
+      Box(if (scrollsItself) Modifier.fillMaxSize() else Modifier.fillMaxSize().verticalScroll(canvasScroll)) { root.Render() }
+    }
+    if (hostWrapper != null) hostWrapper.Wrap { content() } else content()
   }
 }

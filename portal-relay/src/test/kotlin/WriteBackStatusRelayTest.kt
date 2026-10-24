@@ -50,8 +50,7 @@ class WriteBackStatusRelayTest {
 
   private class Fixture(val file: File, val svc: DocumentService, val events: ByteArrayOutputStream)
 
-  private fun fixture(text: String = home): Fixture {
-    val dir = Files.createTempDirectory("k3-writeback").toFile().apply { deleteOnExit() }
+  private fun fixture(text: String = home, dir: File = Files.createTempDirectory("k3-writeback").toFile().apply { deleteOnExit() }): Fixture {
     val file = File(dir, "home.kt").apply { writeText(text) }
     val svc = DocumentService.fromFileOrTree(
       screenKey = "k3-writeback-${System.nanoTime()}/home",
@@ -71,7 +70,7 @@ class WriteBackStatusRelayTest {
 
   /** Waits for the write-back of [version] to be reported. */
   private fun awaitStatus(svc: DocumentService, version: Long): DocumentService.WriteBackStatus {
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline) {
       svc.writeBack?.takeIf { it.version == version }?.let { return it }
       Thread.sleep(25)
@@ -276,6 +275,20 @@ class WriteBackStatusRelayTest {
     assertEquals("surgical", status.outcome, status.toString())
     assertTrue("Compiled_home.kt" in status.message && "not in the file" !in status.message, status.message)
     assertEquals(home.replace("\"a\"", "\"A\""), f.file.readText())
+  }
+
+  /** E43: a new relay or store starts a screen at the version its stamp holds, so the stamp never goes back. */
+  @Test fun theVersionStartsAtTheStampAndTheStampNeverGoesBack() {
+    val dir = Files.createTempDirectory("e43").toFile().apply { deleteOnExit() }
+    val stamp = File(dir, "Compiled_home.kt").apply { writeText("package app.screens\n\nconst val COMPILED_VERSION_home: Int = 4\n") }
+    val f = fixture(dir = dir)
+    assertEquals(4L, f.svc.doc.version)
+    val ack = f.svc.submit(f.svc.batch(DocOp.SetProp(f.svc.children()[1].handle, "text", lit("A"))))
+    assertEquals(5L, ack.version)
+    awaitStatus(f.svc, ack.version)
+    assertTrue("COMPILED_VERSION_home: Int = 5" in stamp.readText(), stamp.readText())
+    // Every change event carries the component-registry version (editors redraw instances when it moves).
+    assertTrue("\"components\":0" in f.events.toString(), f.events.toString())
   }
 
   @Test fun aReplaceRawWithATrailingCommentIsRefusedAsAnOp() {

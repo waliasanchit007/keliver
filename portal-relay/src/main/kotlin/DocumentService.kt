@@ -47,6 +47,10 @@ class DocumentService(
   private val tokenFileId: String = kotlinFile.name,
   /** K2: the project's token-table version, sent with every change event (editors refresh their picker). */
   private val tokensVersion: () -> Long = { 0L },
+  /** E14: the document is a component's body ([kotlinFile] is its file), not a screen ([forComponent]). */
+  private val asComponent: Boolean = false,
+  /** The project's component-registry version, sent with every change event (editors redraw instances). */
+  private val componentsVersion: () -> Long = { 0L },
 ) {
   @Volatile var doc: UiDocument = initial
     private set
@@ -79,6 +83,34 @@ class DocumentService(
    * inherited field is written, not refused.
    */
   @Volatile private var readText: String? = null
+
+  /**
+   * F4: the file's text at each document this service wrote or read since the file last changed
+   * in code, newest last. An undo or redo that brings the document back to one of them (the very
+   * same tree and contract) writes that text again, byte for byte: re-emitting a deleted node would
+   * put its arguments, and the import it needed, in canonical order. Used only while the file is
+   * what the relay last wrote or read. Handles aside (an undone delete inserts the node anew),
+   * the document must be exactly the same.
+   */
+  private val knownTexts = ArrayDeque<Pair<Pair<DocNode, Contract>, String>>()
+
+  private fun contentOf(d: UiDocument): Pair<DocNode, Contract> = withoutHandles(d.root) to d.contract
+
+  private fun withoutHandles(n: DocNode): DocNode = when (n) {
+    is DocNode.RawCode -> n.copy(handle = Handle(0))
+    is DocNode.Widget -> n.copy(handle = Handle(0), children = n.children.map(::withoutHandles))
+  }
+
+  private fun knownText(d: UiDocument): String? = contentOf(d).let { c -> knownTexts.lastOrNull { it.first == c }?.second }
+
+  private fun remember(d: UiDocument, text: String?, fileChangedInCode: Boolean = false) {
+    if (fileChangedInCode || text == null) knownTexts.clear()
+    if (text == null) return
+    val c = contentOf(d)
+    knownTexts.removeAll { it.first == c }
+    knownTexts.addLast(c to text)
+    while (knownTexts.size > 100) knownTexts.removeFirst()
+  }
 
   /**
    * K3 last review round: what the last write-back of this screen did —
@@ -214,7 +246,7 @@ class DocumentService(
     var d = doc
     for (op in batch.ops) {
       if (op is DocOp.ReplaceRaw) {
-        dev.keliver.portal.ingest.RawCodeEdit.problem(op.text, d, op.target, fileText, tokenFileId, components(), tokens())
+        dev.keliver.portal.ingest.RawCodeEdit.problem(op.text, d, op.target, fileText, tokenFileId, components(), tokens(), asComponent)
           ?.let { return "code edit refused: $it" }
       }
       d = d.tryApply(op).result?.doc ?: return null // the batch itself fails later, with its own error
@@ -339,6 +371,7 @@ class DocumentService(
       when (val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
         onDisk = file, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
         fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
+        asComponent = asComponent,
       )) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> plan.reason
         else -> null
@@ -393,6 +426,10 @@ class DocumentService(
     changed()
     return OpAck(true, doc.version)
   }
+
+  /** How many undo and redo steps [session] has, for the editor's Undo/Redo buttons. */
+  @Synchronized
+  fun stackDepths(session: String): Pair<Int, Int> = (undoStacks[session]?.size ?: 0) to (redoStacks[session]?.size ?: 0)
 
   @Synchronized
   fun undo(session: String): OpAck = step("undo", undoStacks[session]) { redoStacks.getOrPut(session) { ArrayDeque() } }
@@ -500,6 +537,7 @@ class DocumentService(
     fileDoc = newDoc
     fileText = text
     readText = text
+    remember(newDoc, text, fileChangedInCode = true)
     lastWrittenText = null
     pendingWrite?.cancel(false)
     firstRefused = null
@@ -539,19 +577,25 @@ class DocumentService(
       null
     }
 
+  /** E20: the document's own file, and its text as it is on disk (null = none yet) — what Export shows. */
+  val file: File get() = kotlinFile
+  fun sourceText(): String? = fileTextOrNull()
+
   @Synchronized
   fun reingest(): Boolean {
     if (pendingWrite?.isDone == false) return false
     if (!kotlinFile.isFile) return true
     // Unreadable for a moment (an IDE's atomic save): not done, the caller retries.
     val text = fileTextOrNull() ?: return false
-    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
+    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens(), asComponent)
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
     if (next.root != doc.root || next.contract != doc.contract) {
       acceptExternal(next, "a component or design token it uses changed", text)
     } else {
       // The same document: the stacks stay, and so does what the last read vouched for (U37).
+      // A component or token it uses changed: an earlier text may import or spell it as it was.
+      remember(doc, text, fileChangedInCode = true)
       fileDoc = doc
       fileText = text
     }
@@ -578,7 +622,7 @@ class DocumentService(
     if (text == fileText) return FileChange.ALREADY_READ
     // C1: recognize with the project's component registry so component calls
     // become editable Widget nodes instead of RawCode.
-    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
+    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens(), asComponent)
       ?: return FileChange.NOT_A_SCREEN
     acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, recognized), text = text)
     return FileChange.INGESTED
@@ -603,7 +647,7 @@ class DocumentService(
 
   private fun sendEvent(out: OutputStream, version: Long) {
     val wb = writeBack?.let { ",\"writeBack\":${it.json()}" } ?: ""
-    out.write("data: {\"version\":$version,\"tokens\":${tokensVersion()}$wb}\n\n".toByteArray())
+    out.write("data: {\"version\":$version,\"tokens\":${tokensVersion()},\"components\":${componentsVersion()}$wb}\n\n".toByteArray())
     out.flush()
   }
 
@@ -623,12 +667,17 @@ class DocumentService(
     // One snapshot: what is merged, exported and recorded as the file's base is the same document.
     val (doc, base, texts) = synchronized(this) { Triple(this.doc, fileDoc, fileText to readText) }
     val (baseText, readText) = texts
+    val known = synchronized(this) { knownText(doc) }
     val status = try {
       kotlinFile.parentFile.mkdirs()
       val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
-      val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
+      // F4: back at a document the file was already written or read as (an undo, a redo) — that text.
+      val plan = if (known != null && onDisk != null && onDisk == baseText) {
+        dev.keliver.portal.ingest.ScreenWriter.Write(known, dev.keliver.portal.ingest.ScreenWriter.How.SURGICAL)
+      } else dev.keliver.portal.ingest.ScreenWriter.plan(
         onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
         fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
+        asComponent = asComponent,
       )
       when (plan) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> {
@@ -688,23 +737,29 @@ class DocumentService(
     if (fileDoc !== base) return null // the file was read meanwhile: that read set the status
     val now = if (kotlinFile.exists()) kotlinFile.readText() else null
     if (now != onDisk) return reread("the file changed while the change was being written", base)
+    // Merged onto a file changed in code since the last write or read (the same tree, e.g. a
+    // comment or a helper): no earlier text holds that change, so none may be written back.
+    val changedInCode = onDisk != fileText
     lastWrittenText = plan.text
     kotlinFile.writeText(plan.text)
     fileDoc = doc
     fileText = plan.text
+    remember(doc, plan.text, fileChangedInCode = changedInCode)
     firstRefused = null
+    val how = plan.how.name.lowercase()
+    // E43: a component has no compiled-version stamp (only a screen is routed by one).
+    if (asComponent) return WriteBackStatus(doc.version, how, "written to ${kotlinFile.name} ($how)")
     // M9 versioned catch-up: bake the doc version this screen was written at
     // into a sibling const. Rebuilding the dev bundle (serve --continuous)
     // picks it up; the device router compares it to the live doc version.
-    val how = plan.how.name.lowercase()
-    val compiled = File(kotlinFile.parentFile, "Compiled_${kotlinFile.nameWithoutExtension}.kt")
+    val compiled = compiledStamp(kotlinFile)
     // The screen IS written now: a failure below is reported as that, never as "not in the file".
     val versionFailure = runCatching {
       (PKG_RE.find(plan.text)?.groupValues?.get(1) ?: packageName)?.let { p ->
         val screen = kotlinFile.nameWithoutExtension
-        compiled.writeText(
-          "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
-        )
+        val stamp = "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n"
+        // E43: an unchanged stamp is not rewritten (no churn for a tool watching the tree).
+        if (!compiled.isFile || compiled.readText() != stamp) compiled.writeText(stamp)
       }
     }.exceptionOrNull()
     if (versionFailure != null) {
@@ -728,7 +783,7 @@ class DocumentService(
     if (fileDoc !== base) return null // already read meanwhile
     val text = if (kotlinFile.exists()) kotlinFile.readText() else null
     val rec = text?.let {
-      runCatching { dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, it, components(), tokens()) }.getOrNull()
+      runCatching { dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, it, components(), tokens(), asComponent) }.getOrNull()
     } ?: return WriteBackStatus(
       doc.version, "refused",
       "this change could not be written to ${kotlinFile.name}: $reason, and it does not read as a screen; it is left as it is",
@@ -742,6 +797,60 @@ class DocumentService(
 
   companion object {
     private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
+    private val STAMP_RE = Regex("""COMPILED_VERSION_\w+\s*:\s*Int\s*=\s*(\d+)""")
+
+    /** M9: the `Compiled_<screen>.kt` stamp beside a screen file. */
+    fun compiledStamp(kotlinFile: File): File = File(kotlinFile.parentFile, "Compiled_${kotlinFile.nameWithoutExtension}.kt")
+
+    /**
+     * E43: the version a screen's stamp holds (0 = none). A document read from
+     * its file starts there, so its version — and the stamp written from it —
+     * never goes back on a new relay or store: a stamp that went back from 4 to 1
+     * hid the dev overlay (it shows only while the live version is ahead).
+     */
+    fun stampedVersion(kotlinFile: File): Long = runCatching {
+      compiledStamp(kotlinFile).takeIf { it.isFile }?.readText()?.let { STAMP_RE.find(it)?.groupValues?.get(1)?.toLongOrNull() }
+    }.getOrNull() ?: 0L
+
+    /**
+     * E14: a component's document, read from its file (a component is never
+     * created from a tree, and its file is never rewritten whole). Null when
+     * the component's body cannot be read as a document.
+     */
+    fun forComponent(
+      key: String,
+      kotlinFile: File,
+      functionName: String,
+      components: () -> dev.keliver.portal.ComponentRegistry,
+      tokens: () -> TokenTable,
+      tokenFileId: String,
+      tokensVersion: () -> Long,
+      onChanged: () -> Unit = {},
+      componentsVersion: () -> Long = { 0L },
+    ): DocumentService? {
+      val text = kotlinFile.takeIf { it.isFile }?.readText() ?: return null
+      val rec = runCatching {
+        dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens(), asComponent = true)
+      }.getOrNull() ?: return null
+      // The file's component must be the one asked for: never edit (and write) another function.
+      if (rec.screenName != functionName) return null
+      val (root, next) = renumbered(rec.root)
+      val doc = UiDocument(key, root, rec.contract, version = 0, nextHandle = next)
+      return DocumentService(
+        key, doc, { onChanged() }, kotlinFile, functionName, null, components, tokens, tokenFileId, tokensVersion, asComponent = true,
+        componentsVersion = componentsVersion,
+      ).also { it.fileDoc = doc; it.fileText = text; it.readText = text; it.remember(doc, text) }
+    }
+
+    /** [root] with handles 1, 2, 3… in document order, and the next free handle. */
+    private fun renumbered(root: DocNode): Pair<DocNode, Long> {
+      var next = 1L
+      fun renumber(n: DocNode): DocNode = when (n) {
+        is DocNode.RawCode -> n.copy(handle = Handle(next++))
+        is DocNode.Widget -> n.copy(handle = Handle(next++), children = n.children.map { renumber(it) })
+      }
+      return renumber(root) to next
+    }
 
     /** M6: the canonical .kt file bootstraps the document when it exists (file = truth). */
     fun fromFileOrTree(
@@ -755,6 +864,7 @@ class DocumentService(
       tokens: () -> TokenTable = { TokenTable.EMPTY },
       tokenFileId: String = kotlinFile.name,
       tokensVersion: () -> Long = { 0L },
+      componentsVersion: () -> Long = { 0L },
     ): DocumentService {
       if (kotlinFile.exists()) {
         val text = kotlinFile.readText()
@@ -769,13 +879,13 @@ class DocumentService(
               n.copy(handle = Handle(next++), children = n.children.map { renumber(it) })
           }
           val root = renumber(rec.root)
-          val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
-          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
-            .also { it.fileDoc = doc; it.fileText = text; it.readText = text } // the file IS this document
+          val doc = UiDocument(screenKey, root, rec.contract, version = stampedVersion(kotlinFile), nextHandle = next)
+          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion = componentsVersion)
+            .also { it.fileDoc = doc; it.fileText = text; it.readText = text; it.remember(doc, text) } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }
-      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
+      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion)
     }
 
     /** M1 bootstrap: lift an existing V1 draft tree into a Document. */
@@ -790,6 +900,7 @@ class DocumentService(
       tokens: () -> TokenTable = { TokenTable.EMPTY },
       tokenFileId: String = kotlinFile.name,
       tokensVersion: () -> Long = { 0L },
+      componentsVersion: () -> Long = { 0L },
     ): DocumentService {
       var next = 1L
       fun lift(n: WidgetNode): DocNode.Widget = DocNode.Widget(
@@ -810,7 +921,7 @@ class DocumentService(
         ?.let { lift(deserializeTree(it)) }
         ?: DocNode.Widget(Handle(next++), "Column")
       val doc = UiDocument(screenKey, root, Contract(), version = 0, nextHandle = next)
-      return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
+      return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion = componentsVersion)
     }
   }
 }

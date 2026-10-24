@@ -31,6 +31,8 @@ dependencies {
   schemaClasspath projects.keliverMaterialSchema
   schemaClasspath projects.keliverLayoutSchema
 }
+// E8: tests read the layout enums' names from the value classes, as generation does.
+sourceSets.test.runtimeClasspath += configurations.schemaClasspath
 
 def codegenArgs = { extra ->
   [

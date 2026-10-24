@@ -176,3 +176,74 @@ jobs:
             :keliver-treehouse-host:jvmTest \
             :keliver-treehouse-guest:jsTest \
             -DRELEASE_SIGNING_ENABLED=false
+
+  # Which parts of the tree a pull request touches: the editor end-to-end suite
+  # below runs only when the editor, what it renders with, or the relay it
+  # talks to changed (every push to main and every manual run runs it).
+  editor-e2e-changes:
+    name: Editor E2E — changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.paths.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          changed="$(git diff --name-only "$BASE" HEAD)"
+          echo "$changed" | sed 's/^/  /'
+          if echo "$changed" | grep -Eq '^(portal-[^/]+|keliver-[^/]+|web-spike|editor-e2e|gradle|build-support[^/]*|kotlin-js-store)/|^(build\.gradle|settings\.gradle|gradle\.properties|\.github/workflows/ci\.yml)$'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The web editor driven by REAL input (CDP mouse, wheel, keys and drag) in
+  # headless Chrome against a scratch relay on the public fixture app
+  # (editor-e2e/fixture): canvas selection of component instances, scrolling,
+  # panels, undo/redo, palette drops, component editing, and byte-exact
+  # write-back of every edit and its undo. editor-e2e/README.md says how to run
+  # and extend it. Linux, like portal-tools.yml's editor build: ubuntu-latest has
+  # Chrome, JDK and Node; no Gradle cache (the restore step hung Linux runs, see
+  # the build job), so the editor and relay build from scratch.
+  editor-e2e:
+    name: Editor E2E (real input, headless Chrome)
+    needs: editor-e2e-changes
+    if: needs.editor-e2e-changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Chrome
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          "$chrome" --version
+          echo "CHROME=$chrome" >> "$GITHUB_ENV"
+      - name: Build the generic editor and the relay
+        run: ./gradlew --console=plain -Pkeliver.genericEditor=true :web-spike:wasmJsBrowserDistribution :portal-relay:installDist -DRELEASE_SIGNING_ENABLED=false
+      - name: Run the editor E2E suite
+        run: editor-e2e/run.sh --no-build
+        env:
+          E2E_OUT: ${{ github.workspace }}/build/editor-e2e
+      - name: Upload screenshots and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/editor-e2e
+          retention-days: 14

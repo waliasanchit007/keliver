@@ -36,6 +36,15 @@ internal sealed interface RuntimeMetadataLoad {
 
 internal enum class RuntimeCompatibilityStatus {
   Match,
+
+  /**
+   * E46: the app is on an older Keliver release with the same widget protocol —
+   * a supported setup (the editor renders what the app's widgets render), not a
+   * warning. Only behaviour fixed after the app's release can differ.
+   */
+  AppOlder,
+
+  /** The editor is older than the app (or a version cannot be read): it may not know what the app's runtime does. */
   KeliverSkew,
   WidgetMismatch,
 }
@@ -62,6 +71,29 @@ internal fun parseRuntimeMetadata(raw: String): RuntimeMetadataLoad =
     )
   }.getOrElse { RuntimeMetadataLoad.Unavailable(it.message ?: "invalid response") }
 
+/**
+ * E46: [a] against [b] as release versions (`1.2.3`, `1.2.3-SNAPSHOT`: a pre-release
+ * is below its release) — negative, zero or positive; null when either is not one.
+ */
+internal fun compareVersions(a: String, b: String): Int? {
+  fun parse(v: String): Pair<List<Int>, Boolean>? {
+    val core = v.trim().substringBefore('-').substringBefore('+')
+    val parts = core.split('.').map { it.toIntOrNull() ?: return null }
+    return if (parts.isEmpty()) null else parts to ('-' in v)
+  }
+  val (pa, preA) = parse(a) ?: return null
+  val (pb, preB) = parse(b) ?: return null
+  for (i in 0 until maxOf(pa.size, pb.size)) {
+    val c = (pa.getOrElse(i) { 0 }).compareTo(pb.getOrElse(i) { 0 })
+    if (c != 0) return c
+  }
+  return when {
+    preA == preB -> 0
+    preA -> -1
+    else -> 1
+  }
+}
+
 internal fun compareRuntimeMetadata(
   editor: AppRuntimeMetadata,
   app: AppRuntimeMetadata,
@@ -69,8 +101,9 @@ internal fun compareRuntimeMetadata(
   RuntimeCompatibility(
     status = when {
       editor.widgetVersion != app.widgetVersion -> RuntimeCompatibilityStatus.WidgetMismatch
-      editor.keliverVersion != app.keliverVersion -> RuntimeCompatibilityStatus.KeliverSkew
-      else -> RuntimeCompatibilityStatus.Match
+      editor.keliverVersion == app.keliverVersion -> RuntimeCompatibilityStatus.Match
+      (compareVersions(editor.keliverVersion, app.keliverVersion) ?: 0) > 0 -> RuntimeCompatibilityStatus.AppOlder
+      else -> RuntimeCompatibilityStatus.KeliverSkew
     },
     editor = editor,
     app = app,
