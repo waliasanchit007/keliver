@@ -309,4 +309,18 @@ class EditorPropControlsTest {
     assertEquals("Font size must be at most 400", parseNumber("2428", rule).exceptionOrNull()?.message)
     assertEquals(24, parseNumber("24", rule).getOrNull())
   }
+
+  @Test fun aFieldTypedInHoldsOffAPanelRebuildOnlyWhileItHasTheKeyboard() {
+    installTypingTracker()
+    val doc = kotlinx.browser.document
+    val field = (doc.createElement("input") as HTMLInputElement).also { it.type = "text"; doc.body!!.appendChild(it) }
+    val other = (doc.createElement("input") as HTMLInputElement).also { it.type = "text"; doc.body!!.appendChild(it) }
+    field.focus()
+    assertTrue(!typingPending(), "focused, nothing typed: a rebuild may go ahead")
+    field.value = "ab"; field.dispatchEvent(Event("input"))
+    assertTrue(typingPending(), "typed and still focused: the rebuild waits")
+    other.focus() // the field loses the keyboard without a change (nothing committed)
+    assertTrue(!typingPending(), "left: no longer holds the panel")
+    field.remove(); other.remove()
+  }
 }

@@ -789,6 +789,7 @@ internal fun mountPortalChrome() {
   if (!evidenceMode()) installPanelResizers()
   buildExportOverlay()
   installKeyboard()
+  installTypingTracker()
   watchImageFailures()
   nameIconButtons()
   loadWorkspace()
@@ -1297,7 +1298,7 @@ internal fun editTextInline(handle: Int) {
     val k = ev as KeyboardEvent
     // H1: the Enter that commits is this field's alone — reaching the editor's Enter (edit the
     // selection in place) reopened this box over the old text and left the panel showing it.
-    if (k.key == "Enter" && !k.shiftKey) { k.preventDefault(); k.stopPropagation(); finish(true) }
+    if (k.key == "Enter" && !k.shiftKey && !k.isComposing) { k.preventDefault(); k.stopPropagation(); finish(true) }
     if (k.key == "Escape") { k.preventDefault(); k.stopPropagation(); finish(false) }
   })
   input.addEventListener("blur", { _ -> finish(true) })

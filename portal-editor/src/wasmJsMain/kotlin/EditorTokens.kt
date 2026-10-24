@@ -92,7 +92,8 @@ internal fun isColorToken(ref: String, value: Any?): Boolean {
   // = 0xFFC62828 is a colour; `UNLIMITED = -1`, `AMOUNT_CAP = 20_000_000` are numbers.
   return when {
     words.any { it in COLOR_WORDS } -> true
-    words.any { it in NUMBER_WORDS } -> (value as Int) < -1
+    // Only an opaque colour (alpha 0xFF but not one of the 65 536 values just below 0) beats a number name.
+    words.any { it in NUMBER_WORDS } -> (value as Int) < -65536
     else -> true
   }
 }

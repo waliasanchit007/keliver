@@ -79,5 +79,6 @@ class EditorTokensTest {
     assertEquals(false, isColorToken("C.Gap", 16), "no alpha byte: a number")
     assertEquals(true, isColorToken("C.AmountNegative", 0xFFC62828.toInt()), "an opaque colour named for what it colours")
     assertEquals(true, isColorToken("C.PriceUp", 0xFF2E7D32.toInt()))
+    assertEquals(false, isColorToken("Layout.MinOffset", -8), "a small negative number named as one")
   }
 }

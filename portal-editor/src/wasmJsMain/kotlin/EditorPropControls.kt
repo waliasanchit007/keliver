@@ -309,7 +309,34 @@ internal fun markPending(field: HTMLElement, commit: () -> Unit) { pendingField 
  * for (it would commit it half-typed). A focused dropdown or a field with nothing typed is
  * rebuilt as usual (the keyboard goes back to it), so the panel never shows a stale value.
  */
-internal fun typingPending(): Boolean = pendingField != null
+internal fun typingPending(): Boolean {
+  val active = document.activeElement
+  return (pendingField?.first?.let { it == active } == true) || (typedField?.let { it == active } == true)
+}
+
+/**
+ * Review 4: the text field typed in last, while it keeps the keyboard — every field, also those
+ * that commit on `change` without marking themselves pending (a branch's text, a new field's
+ * name, a token search). Cleared when it commits or loses the keyboard.
+ */
+private var typedField: org.w3c.dom.Element? = null
+
+private fun isTextField(e: org.w3c.dom.Element?): Boolean = when (e?.tagName?.lowercase()) {
+  "textarea" -> true
+  "input" -> (e as HTMLInputElement).type.lowercase() in setOf("text", "number", "search", "")
+  else -> false
+}
+
+/** Installs the document-level tracking behind [typingPending] (once, at start). */
+internal fun installTypingTracker() {
+  document.addEventListener("input", { ev -> (ev.target as? org.w3c.dom.Element)?.takeIf(::isTextField)?.let { typedField = it } }, true)
+  document.addEventListener("change", { ev -> if (ev.target == typedField) typedField = null }, true)
+  document.addEventListener("focusout", { ev ->
+    if (ev.target == typedField) typedField = null
+    // A pending field left without a change (typed, then put back as it was) is no longer pending.
+    if (ev.target == pendingField?.first) pendingField = null
+  }, true)
+}
 
 internal fun clearPending(field: HTMLElement) { if (pendingField?.first == field) pendingField = null }
 
