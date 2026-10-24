@@ -51,6 +51,35 @@ async function waitHeader(editor, want, message) {
 
 export default [
   {
+    id: 'K1',
+    title: 'a relay that cannot open components is never shown as one: the editor says so and stays on the screen',
+    async run({ page, editor, relay }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      const screenTypes = (await editor.outline()).map((r) => r.type);
+      // An older relay ignores `component=` and sends its screen: answer the component's documents that way.
+      const asOlderRelay = (d) => {
+        if (d.method !== 'Fetch.requestPaused') return;
+        const url = d.params.request.url.replace(/component=[^&]+/, 'screen=overview');
+        page.send('Fetch.continueRequest', { requestId: d.params.requestId, url }).catch(() => {});
+      };
+      page.listeners.push(asOlderRelay);
+      await page.send('Fetch.enable', { patterns: [{ urlPattern: '*component=*', requestStage: 'Request' }] });
+      try {
+        const card = await editor.findColor(COLORS.summaryCard);
+        await page.dblclick(card.cx, card.top + 8);
+        let hint = null;
+        for (const end = Date.now() + 5000; !hint && Date.now() < end;) { hint = await editor.canvasHint(); if (!hint) await sleep(100); }
+        ok(/older than the editor/.test(hint ?? ''), `the editor says the relay cannot open SummaryCard (hint: ${hint})`);
+        await waitCrumbs(page, null, 'the breadcrumb goes back to the screen');
+        equal((await editor.outline()).map((r) => r.type), screenTypes, "the outline is still the screen's");
+        ok(await editor.findColor(COLORS.summaryCard), 'the screen is still drawn');
+      } finally {
+        await page.send('Fetch.disable');
+        page.listeners.splice(page.listeners.indexOf(asOlderRelay), 1);
+      }
+    },
+  },
+  {
     id: 'E14',
     title: 'double-click opens a component; an internal edit goes to its file only; the crumb returns with the edit shown',
     async run({ page, editor, relay, fixtureDir, log }) {
@@ -74,6 +103,10 @@ export default [
         return h ? getComputedStyle(h).display : 'none'; })()`), 'none', 'the hover box of the screen\'s instance is gone');
       equal((await editor.outline()).map((r) => r.type), types(await componentTree(relay, 'SummaryCard')),
         "the outline is SummaryCard's body");
+      // K2: the opened component sits inset, not flush with the frame's top edge.
+      const frame = await editor.frameRect();
+      const opened = await editor.waitForColor(COLORS.summaryCard, { message: 'the opened SummaryCard is drawn' });
+      ok(opened.top - frame.y >= 16, `K2: the opened component starts below the frame's top edge (${Math.round(opened.top - frame.y)} px down)`);
       await page.screenshot('E14-opened');
 
       // Click the Visits tile (a nested StatTile instance) and add "!" to its label.

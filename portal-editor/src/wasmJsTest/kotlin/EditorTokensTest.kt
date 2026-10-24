@@ -80,5 +80,8 @@ class EditorTokensTest {
     assertEquals(true, isColorToken("C.AmountNegative", 0xFFC62828.toInt()), "an opaque colour named for what it colours")
     assertEquals(true, isColorToken("C.PriceUp", 0xFF2E7D32.toInt()))
     assertEquals(false, isColorToken("Layout.MinOffset", -8), "a small negative number named as one")
+    // Review 5: an opaque colour whose red is 0xFF stays a colour under a number name.
+    assertEquals(true, isColorToken("C.PriceDownRed", 0xFFFF1744.toInt()))
+    assertEquals(true, isColorToken("C.BalanceHighlight", 0xFFFFF8E1.toInt()))
   }
 }

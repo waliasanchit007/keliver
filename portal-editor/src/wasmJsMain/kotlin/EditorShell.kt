@@ -91,6 +91,18 @@ internal fun screenScrollsItself(
 internal fun instanceHandle(node: dev.keliver.portal.WidgetNode): Int =
   (node.props["mod.SelectionTag.handle"] as? Int) ?: node.id
 
+/**
+ * K2: an opened component sits inset on the canvas, as it does inside a screen, not flush with the
+ * frame's edges. The stage is no node of the document: it has no selection tag, so nothing selects it.
+ */
+internal fun componentStage(root: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode =
+  dev.keliver.portal.WidgetNode(
+    "Column",
+    mapOf("width" to 1, "margin.start" to 16.0, "margin.end" to 16.0, "margin.top" to 24.0, "margin.bottom" to 24.0),
+    listOf(root),
+    id = -1,
+  )
+
 internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
   val tagged = if (n.type in UNRENDERED_TYPES) n
   else n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
@@ -272,7 +284,8 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
         // K5: inside the app's own screen wrapper (its Theme), as on a device.
         dev.keliver.portal.render.AppScreenFrame(entry) {
           androidx.compose.runtime.key(canvasGeneration.value) {
-            RenderNode(selectionTagged(portalTree.value))
+            val tree = selectionTagged(portalTree.value)
+            RenderNode(if (canvasShowsComponent.value) componentStage(tree) else tree)
           }
         }
       }

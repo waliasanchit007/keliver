@@ -82,6 +82,36 @@ class EditorPropControlsTest {
     assertEquals(0xFF112233.toInt(), withRgb(0, 0x112233))
   }
 
+  @Test fun aComponentParameterLeftOutShowsItsDefaultMarkedSo() {
+    val row = PropRow("Max lines").control(Ui.input().also { it.value = "0" }).root
+    markComponentDefault(row)
+    assertTrue(row.classList.contains("unset"), "marked default")
+    assertEquals("0", (row.querySelector("input") as HTMLInputElement).value, "the known default still shows")
+  }
+
+  @Test fun anUnsetColourShowsNoColourAndItsFirstValueIsOpaque() {
+    val sent = mutableListOf<Int>()
+    val row = PropRow("Tint").control(colorControl(null) { sent += it }).root
+    markUnset(row)
+    val inputs = row.querySelectorAll("input")
+    val picker = inputs.item(0) as HTMLInputElement
+    val hex = inputs.item(1) as HTMLInputElement
+    val swatch = row.querySelector(".swatch") as org.w3c.dom.HTMLElement
+    // Review 4 #11: never transparent black — no colour, and the field says the default applies.
+    assertTrue(swatch.classList.contains("none"))
+    assertEquals("", hex.value)
+    assertEquals("default", hex.placeholder)
+    assertEquals("", (inputs.item(2) as HTMLInputElement).value)
+    picker.value = "#112233"
+    picker.dispatchEvent(Event("change"))
+    assertEquals(listOf(0xFF112233.toInt()), sent, "the first colour picked is opaque")
+    assertTrue(!swatch.classList.contains("none"))
+    assertTrue(!row.classList.contains("unset"), "set now: no longer marked default")
+    hex.value = "#ABCDEF"
+    hex.dispatchEvent(Event("change"))
+    assertEquals(0xFFABCDEF.toInt(), sent.last())
+  }
+
   @Test fun theColourControlCommitsOnlyValidValuesAndKeepsAlpha() {
     val sent = mutableListOf<Int>()
     val ctl = colorControl(0x99FFFFFF.toInt()) { sent += it }
@@ -311,7 +341,8 @@ class EditorPropControlsTest {
   }
 
   @Test fun aFieldTypedInHoldsOffAPanelRebuildOnlyWhileItHasTheKeyboard() {
-    installTypingTracker()
+    var ended = 0
+    installTypingTracker { ended++ }
     val doc = kotlinx.browser.document
     val field = (doc.createElement("input") as HTMLInputElement).also { it.type = "text"; doc.body!!.appendChild(it) }
     val other = (doc.createElement("input") as HTMLInputElement).also { it.type = "text"; doc.body!!.appendChild(it) }
@@ -321,6 +352,8 @@ class EditorPropControlsTest {
     assertTrue(typingPending(), "typed and still focused: the rebuild waits")
     other.focus() // the field loses the keyboard without a change (nothing committed)
     assertTrue(!typingPending(), "left: no longer holds the panel")
+    // Review 5: a rebuild held off meanwhile is made up after the field's own handlers ran, not inside them.
+    assertEquals(0, ended, "told only once the field's own focusout and change handlers had their turn")
     field.remove(); other.remove()
   }
 }

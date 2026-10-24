@@ -162,6 +162,9 @@ internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, fra
   }
   val stored = runCatching { localStorage.getItem("portal.zoom")?.toDoubleOrNull() }.getOrNull()
   applyZoom(stored?.coerceIn(ZOOM_MIN, ZOOM_MAX) ?: 1.0, zoomBox, frame)
+  // H12: a first visit shows the whole phone — fitted (never above 100%) once the canvas is laid
+  // out; a 1280×720 window cut it off at 100%. A zoom the author chose is kept on later visits.
+  if (stored == null) kotlinx.browser.window.requestAnimationFrame { applyZoom(currentFitZoom(), zoomBox, frame) }
 }
 
 private var canvasZoomIsSet = false

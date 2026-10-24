@@ -112,7 +112,7 @@ internal object Ui {
     .prop > .prop-actions { grid-area: actions; display: flex; align-items: center; gap: 2px; }
     .prop-ctl > .input, .prop-ctl > .select, .prop-ctl > .pill, .prop-ctl > .row { flex: 1; min-width: 0; width: 100%; }
     .prop-ctl > .row { margin: 0; }
-    .prop.unset > .prop-label::after { content: " · default"; color: var(--muted); font-style: italic; opacity: .8; }
+    .prop.unset > .prop-actions::before { content: "default"; color: var(--muted); font-style: italic; opacity: .8; font-size: 11px; padding: 0 4px; white-space: nowrap; }
     .prop.unset > .prop-ctl { opacity: .6; }
     .prop-actions .btn.icon { min-width: 24px; height: 24px; padding: 0 5px; font-size: 12px; line-height: 1; }
     .prop.inline { grid-template-columns: clamp(84px, 38%, 150px) minmax(0, 1fr) auto; grid-template-areas: "label ctl actions"; }
@@ -123,6 +123,7 @@ internal object Ui {
     .ctl-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .color-ctl { display: flex; align-items: center; gap: 4px; min-width: 0; }
     .swatch { display: inline-block; flex-shrink: 0; border-radius: 4px; border: 1px solid var(--border); box-sizing: border-box; }
+    .swatch.none { background: linear-gradient(to top right, transparent calc(50% - 1px), #e5484d calc(50% - 1px), #e5484d calc(50% + 1px), transparent calc(50% + 1px)), #fff !important; }
     .swatch-btn { position: relative; display: inline-flex; cursor: pointer; padding: 3px; border-radius: 6px;
       border: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
     .swatch-btn:hover, .swatch-btn:focus-within { border-color: var(--accent); }

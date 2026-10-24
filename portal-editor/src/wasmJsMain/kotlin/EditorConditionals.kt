@@ -271,7 +271,8 @@ internal fun conditionEditor(
 private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: Any?, onChange: (PropValue?) -> Unit): HTMLElement {
   if (value is Token) {
     val box = Ui.el("span", "row")
-    box.appendChild(Ui.el("span", "pill", "◆ ${value.ref}").also { it.setAttribute("title", "${value.ref} = ${value.value}") })
+    val shown = (value.value as? Int)?.takeIf { kind == PropKind.Color }?.let(::argbHex) ?: value.value.toString()
+    box.appendChild(Ui.el("span", "pill", "◆ ${value.ref}").also { it.setAttribute("title", "${value.ref} = $shown") })
     box.appendChild(Ui.button("detach", "btn icon") { onChange(lit(value.value)) })
     return box
   }

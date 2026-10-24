@@ -30,6 +30,13 @@ internal data class EditTarget(val project: String, val screen: String, val comp
 
   /** The breadcrumb's labels: the screen, then each component opened in turn. */
   val crumbs: List<String> get() = listOf(screen) + components
+
+  /**
+   * K1: whether the document the relay sent as [docScreen] is this one. A relay older than
+   * component editing ignores `component=` and sends its active screen: shown under the component's
+   * breadcrumb, that screen's edits would be written to the screen's file.
+   */
+  fun isAnsweredBy(docScreen: String): Boolean = component == null || docScreen == key
 }
 
 /** Whether [node] is an instance of a project component (double-click and Enter open it). */

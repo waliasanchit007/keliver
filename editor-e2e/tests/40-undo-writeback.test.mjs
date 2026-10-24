@@ -188,6 +188,10 @@ export default [
       equal(removed.added, [], 'nothing was added');
       ok(removed.removed.length === 5 && removed.removed.some((l) => l.includes('Synced this morning')), `only the one StyledText call was removed (${removed.removed.length} lines)`);
       equal(await editor.selectedRows(), [], 'nothing is selected after the delete');
+      // Review 4 #8: the arrows go on from where the deleted row was (the Row after it), not from the top.
+      await page.press('ArrowDown', { settle: 500 });
+      const resumed = await editor.selectedRows();
+      ok(resumed.length === 1 && /^\W*Row/.test(resumed[0]), `↓ selects the row that took the deleted one's place (${JSON.stringify(resumed)})`);
       await page.click(1, 1);
       await editor.clickUndo();
       await expectBytes(file, original, 'Undo did not give overview.kt back byte for byte');

@@ -59,4 +59,14 @@ class EditorCanvasTest {
     assertTrue(wheelZoom(1.0, -3.0, lines = true) in 1.1..1.15, "a notch reported as 3 lines")
     assertEquals(1.0 * kotlin.math.exp(0.01), wheelZoom(1.0, -4.0), 1e-9) // a pinch's small delta is as before
   }
+
+  @Test fun anOpenedComponentSitsInsetOnAStageNothingSelects() {
+    val body = selectionTagged(dev.keliver.portal.WidgetNode("Column", id = 7))
+    val stage = componentStage(body)
+    assertEquals(listOf(body), stage.children, "the component's body is drawn whole, inside the stage")
+    assertEquals(16.0, stage.props["margin.start"])
+    assertEquals(24.0, stage.props["margin.top"], "not flush with the frame's top edge")
+    assertTrue("mod.SelectionTag.handle" !in stage.props, "a click on the stage selects nothing")
+    assertTrue(stage.id < 0, "the stage's id is no document handle")
+  }
 }

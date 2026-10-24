@@ -76,15 +76,23 @@ internal fun canvasDropPlace(
   y: Double,
   box: (WidgetNode) -> DropBox?,
   accepts: (WidgetNode) -> Boolean,
+  padding: Double = 32.0,
 ): Pair<Int, DropZone>? {
   val node = root.findNode(hit) ?: return null
   val kids = node.children.mapNotNull { c -> box(c)?.let { c to it } }
   if (accepts(node) && kids.isNotEmpty()) {
-    kids.firstOrNull { it.second.contains(x, y) }?.let { return canvasDropPlace(root, it.first.id, x, y, box, accepts) }
-    // J1: a box around one container (a card's padding around its column) passes the drop to it,
-    // at the point nearest the pointer — after that one child, a box would draw it over the card.
-    kids.singleOrNull()?.takeIf { (kid, _) -> accepts(kid) && box(kid) != null }?.let { (kid, b) ->
-      return canvasDropPlace(root, kid.id, x.coerceIn(b.left, b.right), y.coerceIn(b.top, b.bottom), box, accepts)
+    kids.firstOrNull { it.second.contains(x, y) }?.let { return canvasDropPlace(root, it.first.id, x, y, box, accepts, padding) }
+    // J1: a box that only pads one container (a card around its column) passes a drop in that
+    // padding to the column, at the point nearest the pointer — after the column, a box draws it
+    // over the card. Review 5: only a tight wrapper does (a tall column holding one card takes a
+    // drop below the card after it), and never into a list's row or a condition's branch.
+    val wrapped = kids.singleOrNull()?.takeIf { (kid, b) ->
+      accepts(kid) && kid.type !in PASS_THROUGH_EXCLUDED && box(node)?.let { it.contains(x, y) && it.pads(b, padding) } == true
+    }
+    wrapped?.let { (kid, b) ->
+      // Review 5: an empty column takes the drop inside it, not beside it (over the card again).
+      if (kid.children.none { box(it) != null }) return kid.id to DropZone.Inside
+      return canvasDropPlace(root, kid.id, x.coerceIn(b.left, b.right), y.coerceIn(b.top, b.bottom), box, accepts, padding)
     }
     val sideBySide = sideBySide(kids.map { it.second })
     fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) lo - p else if (p > hi) p - hi else 0.0
@@ -98,6 +106,23 @@ internal fun canvasDropPlace(
   return hit to if (laidOutAcross(root, hit, box)) dropZone(x - b.left, b.right - b.left, accepts(node))
     else dropZone(y - b.top, b.bottom - b.top, accepts(node))
 }
+
+/**
+ * Review 4 #8: where the outline's place is after deleting [id] — its next sibling, else the one
+ * before it, else its parent — so the arrow keys go on from there (not from the top).
+ */
+internal fun placeAfterDelete(root: WidgetNode, id: Int): Int? {
+  val parent = parentOf(root, id) ?: return null
+  val i = parent.children.indexOfFirst { it.id == id }
+  return parent.children.getOrNull(i + 1)?.id ?: parent.children.getOrNull(i - 1)?.id ?: parent.id
+}
+
+/** Children a drop in their parent's padding never passes into: a list's row template, a condition's branch. */
+private val PASS_THROUGH_EXCLUDED = setOf("Repeat", "Condition", ELSE_TYPE)
+
+/** Whether this box surrounds [inner] by at most [padding] on every side (a card around its content). */
+private fun DropBox.pads(inner: DropBox, padding: Double): Boolean =
+  inner.left - left <= padding && right - inner.right <= padding && inner.top - top <= padding && bottom - inner.bottom <= padding
 
 /** Whether [boxes] (siblings, in order) are laid out side by side, left to right. */
 internal fun sideBySide(boxes: List<DropBox>): Boolean =

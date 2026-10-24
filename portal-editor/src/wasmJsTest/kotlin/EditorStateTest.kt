@@ -137,6 +137,16 @@ class EditorStateTest {
     assertFalse(isCustomState(stateFields(tree, contract), mapOf("headlineRate" to "9%")), "a text the user typed is not a flag")
   }
 
+  @Test fun aScenarioFindsItsBlockUnderACompoundCondition() {
+    // Review 4 #4: if (!isLoading && !hasError) Content else { if (hasError) ErrorBanner }
+    val outer = WidgetNode("Condition", mapOf("field" to "isLoading", "negate" to true, "field.1" to "hasError", "negate.1" to true),
+      listOf(WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("hasError", null, WidgetNode("Banner"))))))
+    val t = WidgetNode("Column", emptyMap(), listOf(outer))
+    val error = mapOf("isLoading" to "false", "hasError" to "true")
+    assertEquals("hasError", scenarioFocus(t, Scenario.Error, error)?.props?.get("field"), "the else branch is drawn: its error block")
+    assertEquals(null, scenarioFocus(t, Scenario.Error, mapOf("isLoading" to "false", "hasError" to "false")), "content drawn: no error block shows")
+  }
+
   @Test fun aScenarioRevealsABlockInTheBranchItDraws() {
     // if (hasContent) Text else { if (isLoading) Shimmer }: Loading draws the else branch.
     val t = WidgetNode("Column", emptyMap(), listOf(
@@ -150,5 +160,11 @@ class EditorStateTest {
     assertEquals("16", defaultValue(StateField("size", StateKind.Int, StateSource.Prop), Scenario.Loaded))
     assertEquals("500", defaultValue(StateField("titleWeight", StateKind.Int, StateSource.Prop), Scenario.Loaded))
     assertEquals("1", defaultValue(StateField("level", StateKind.Int, StateSource.Prop), Scenario.Loaded))
+    // Review 5: the most specific word wins.
+    assertEquals("8", sampleSize("itemSpacing"), "a spacing, not a font size")
+    assertEquals("1", sampleSize("borderWidth"), "a border, not a box width")
+    assertEquals("1", sampleSize("strokeWidthDp"))
+    assertEquals("16", sampleSize("textSizeSp"))
+    assertEquals("48", sampleSize("iconWidth"))
   }
 }

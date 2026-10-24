@@ -178,11 +178,13 @@ internal fun sampleColor(name: String): Int? {
 internal fun sampleSize(name: String): String? {
   val w = words(name)
   fun any(vararg k: String) = w.any { word -> k.any { word.startsWith(it) } }
+  // Review 5: the most specific words first — `spacing` is no font size, `borderWidth` no box width.
   return when {
     any("weight") -> "500"
-    any("size", "font", "sp") -> "16"
-    any("width", "height", "dp") -> "48"
+    any("border", "stroke", "outline", "divider", "hairline") -> "1"
     any("radius", "corner", "padding", "margin", "gap", "spacing", "inset") -> "8"
+    any("size", "font") || "sp" in w -> "16"
+    any("width", "height", "dp") -> "48"
     any("lines") -> "2"
     else -> null
   }
@@ -204,14 +206,19 @@ internal fun defaultValue(field: StateField, scenario: Scenario): String = when 
  * F7: the first `if` block [scenario] is about — one testing a flag of a role it turns on (not
  * content) — so the canvas can scroll to it (an error banner below the fold); null for Loaded.
  */
-internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario): WidgetNode? {
+internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario, values: Map<String, String>? = null): WidgetNode? {
   val roles = scenario.on - StateRole.Content
   if (roles.isEmpty()) return null
   // Review 3: under a condition, only the branch the scenario draws — the then-branch when its
   // flag's role is on in the scenario, else the else branch.
   val carried = carriedRoles(tree)
   fun isOn(field: String) = roleOf(field) in scenario.on || carried[field].orEmpty().any { it in scenario.on }
-  fun drawn(c: WidgetNode): Boolean = condOf(c)?.terms?.any { t -> isOn(t.field) != t.negate } ?: true
+  // Review 4 #4: with the scenario's preview [values], a condition is decided as the canvas decides
+  // it — compound (`!loading && !error`) and Empty/Null/Eq tests included.
+  fun drawn(c: WidgetNode): Boolean {
+    val cond = condOf(c) ?: return true
+    return if (values != null) cond.holdsIn(values) else cond.terms.any { t -> isOn(t.field) != t.negate }
+  }
   fun find(n: WidgetNode): WidgetNode? {
     if (n.type == "Condition" && condOf(n)?.terms?.any { !it.negate && roleOf(it.field) in roles } == true) return n
     if (n.type == "Condition") {

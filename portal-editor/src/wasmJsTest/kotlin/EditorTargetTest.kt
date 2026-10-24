@@ -30,6 +30,16 @@ class EditorTargetTest {
     assertEquals(listOf("Card"), inner.components)
   }
 
+  @Test fun aComponentIsOnlyShownWhenTheRelaySentThatComponent() {
+    val card = home.open("SummaryCard")
+    assertTrue(card.isAnsweredBy("default/component:SummaryCard"))
+    // K1: a relay that cannot open components sends its active screen instead.
+    assertFalse(card.isAnsweredBy("default/home"))
+    assertFalse(card.isAnsweredBy("default/component:StatTile"))
+    // A screen is shown as the relay names it (older relays name screens their own way).
+    assertTrue(home.isAnsweredBy("home"))
+  }
+
   @Test fun onlyAProjectComponentsInstanceOpens() {
     val reg = MapComponentRegistry(listOf(ComponentSpec("SummaryCard", emptyList(), emptyList(), emptyMap())))
     assertTrue(isComponentInstance(WidgetNode("SummaryCard"), reg))

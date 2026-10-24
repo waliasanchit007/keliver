@@ -96,7 +96,11 @@ private fun initialTree(): WidgetNode = WidgetNode(
 /** The single source of truth, observed by the canvas composition (RenderNode). */
 internal val portalTree = mutableStateOf(initialTree())
 
+/** K2: whether [portalTree] is a component's body (drawn on its stage), set with the tree itself. */
+internal val canvasShowsComponent = mutableStateOf(false)
+
 private var selectedId: Int? = null
+  set(v) { field = v; if (v != null) deletedPlace = null } // a selection is where the arrows go on from
 internal var currentProject = "default"
 private var currentScreen = "main"
   set(v) {
@@ -130,6 +134,13 @@ private var eventSource: EventSource? = null
 /** One queued edit: its ops, whether panels re-render after it, and who hears if the relay accepted it. */
 private class QueuedOps(val ops: List<DocOp>, val refreshPanels: Boolean, val onResult: ((Boolean) -> Unit)?, val target: EditTarget)
 private val opQueue = ArrayDeque<QueuedOps>()
+
+/**
+ * Review 4 #10: the document the canvas and panels show — set with its tree. An edit is made on
+ * what is shown, so it is stamped with this, not with the target just opened: between a crumb
+ * click and the new document's arrival, the old panel is still there to be used.
+ */
+private var shownTarget: EditTarget? = null
 
 /** Drops every queued edit, telling each sender it was not applied. */
 private fun dropQueuedOps() {
@@ -359,7 +370,7 @@ private lateinit var flowGraphBody: HTMLElement
 
 /** Queues [ops]; [onResult] (if any) hears whether the document accepted them. */
 private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true, onResult: ((Boolean) -> Unit)? = null) {
-  opQueue.addLast(QueuedOps(ops, refreshPanels, onResult, editTarget()))
+  opQueue.addLast(QueuedOps(ops, refreshPanels, onResult, shownTarget ?: editTarget()))
   pumpOps()
 }
 
@@ -405,7 +416,7 @@ private fun pumpOps() {
     // Another document was opened meanwhile: this reply is about the old one (its version is not this one's).
     if (target != editTarget()) {
       // G1: still this screen's newest edit (one of another screen's is in that screen's relay stack only).
-      if (reply is OpsReply.Accepted && target.project == currentProject && target.screen == currentScreen) { sessionHistory.edited(target); saveHistory() }
+      if (reply is OpsReply.Accepted) changeHistoryOf(target) { it.edited(target) }
       q.onResult?.invoke(reply is OpsReply.Accepted)
       pumpOps() // an edit queued meanwhile is the new document's: send it now, not with the next one
       return
@@ -414,12 +425,12 @@ private fun pumpOps() {
     pillAfterReply(reply, writeBackWarnings.showing).let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
     when (reply) {
       is OpsReply.Accepted -> {
-        sessionHistory.edited(target); saveHistory()
+        changeHistoryOf(target) { it.edited(target) }
         docVersion = reply.version
         staleUpTo = refetchSeq // a document fetched before this edit is older than it
         q.onResult?.invoke(true)
         // A field the user went on typing in is not rebuilt (that would commit its half-typed text).
-        refetchDoc(refreshPanels && !typingPending())
+        refetchDoc(refreshPanels && panelsRebuildNow())
         pumpOps()
       }
       OpsReply.Rebase -> { // raced an external edit — rebase on server state
@@ -533,10 +544,20 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     }
     readStackDepths(xhr)
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
+      if (!target.isAnsweredBy(doc.screen)) {
+        // K1: a relay older than component editing sent its screen — never show (and edit) it as the component.
+        showCanvasHint("${target.component} cannot be opened: this relay is older than the editor. Update the Keliver tools to edit components.", millis = 9000)
+        goToCrumb(target.components.size - 1)
+        return@onSuccess
+      }
       appliedSeq = seq
       docVersion = doc.version
       docContract = doc.contract
+      shownTarget = target
+      canvasShowsComponent.value = target.component != null
       portalTree.value = doc.toWidgetTree(handleIds = true)
+      // H12: no hover box is left where a deleted node was (its row went away under the pointer).
+      hoverHandle?.let { if (portalTree.value.findNode(it) == null) hideOverlay(hoverOverlay) }
       // E15: select what was just inserted (its handle is the relay's to assign).
       pendingInsertPlace?.let { (parent, after) ->
         pendingInsertPlace = null
@@ -588,9 +609,9 @@ private fun subscribeDocEvents() {
       data?.let { showWriteBack(writeBackOf(it)) }
       when {
         // Our own edit's change: its reply refreshes the panels (refreshing now would rebuild the field being typed in).
-        v != null && v != docVersion -> if (!opInFlight && opQueue.isEmpty()) fetchComponents { refetchDoc(refreshPanels = !typingPending()) }
+        v != null && v != docVersion -> if (!opInFlight && opQueue.isEmpty()) fetchComponents { refetchDoc(refreshPanels = panelsRebuildNow()) }
         // The document did not change: redraw what uses them (the panels too, unless a field is being typed in).
-        tokensChanged || componentsChanged -> fetchComponents { if (typingPending()) renderOutline() else refresh() }
+        tokensChanged || componentsChanged -> fetchComponents { if (panelsRebuildNow()) refresh() else renderOutline() }
       }
     }
     es.onerror = { _ ->
@@ -633,7 +654,7 @@ private fun undo() {
     localRefresh(true)
     return
   }
-  stepHistory("/undo", sessionHistory.undoTarget(editTarget()), "Undid") { sessionHistory.undone(it); saveHistory() }
+  stepHistory("/undo", sessionHistory.undoTarget(editTarget()), "Undid") { t -> changeHistoryOf(t) { it.undone(t) } }
 }
 
 private fun redo() {
@@ -646,13 +667,30 @@ private fun redo() {
     localRefresh(true)
     return
   }
-  stepHistory("/redo", sessionHistory.redoTarget(editTarget()), "Redid") { sessionHistory.redone(it); saveHistory() }
+  stepHistory("/redo", sessionHistory.redoTarget(editTarget()), "Redid") { t -> changeHistoryOf(t) { it.redone(t) } }
 }
 
 /** G1: this session's edits, in order, across the screen and the components opened from it. */
 private val sessionHistory = SessionHistory()
 
-private fun historyKey() = "portal.history.$currentProject/$currentScreen"
+private fun historyKeyOf(project: String, screen: String) = "portal.history.$project/$screen"
+
+private fun historyKey() = historyKeyOf(currentProject, currentScreen)
+
+/**
+ * Review 4 #3: [change] made to the history of [target]'s screen — the one loaded, or the one this
+ * browser keeps for it. A reply that arrives after another screen was opened changes its own
+ * screen's history, never the one open now.
+ */
+private fun changeHistoryOf(target: EditTarget, change: (SessionHistory) -> Unit) {
+  if (target.project == currentProject && target.screen == currentScreen) { change(sessionHistory); saveHistory(); return }
+  val key = historyKeyOf(target.project, target.screen)
+  runCatching {
+    val kept = SessionHistory().apply { load(localStorage.getItem(key)) }
+    change(kept)
+    localStorage.setItem(key, kept.encode())
+  }
+}
 
 /** H2: kept in this browser after every change, for the next load of this screen. */
 private fun saveHistory() { runCatching { localStorage.setItem(historyKey(), sessionHistory.encode()) } }
@@ -668,7 +706,15 @@ private fun stepHistory(path: String, target: EditTarget, verb: String, done: (E
   fun stepped(text: String?): Boolean =
     runCatching { Json.parseToJsonElement(text ?: "").jsonObject["ok"]?.jsonPrimitive?.content == "true" }.getOrDefault(false)
   if (target.key == editTarget().key) {
-    serverPost(path) { text -> if (stepped(text)) done(target) else sessionHistory.skipped(target, undo); saveHistory(); refetchDoc(true) }
+    serverPost(path) { text ->
+      if (stepped(text)) done(target)
+      else {
+        changeHistoryOf(target) { it.skipped(target, undo) }
+        // Review 4 #3: a step the relay no longer has (it restarted, or the file was re-read) says so.
+        if (target.key == editTarget().key) Ui.toast("Nothing left to ${if (undo) "undo" else "redo"} here")
+      }
+      refetchDoc(true)
+    }
     return
   }
   val xhr = XMLHttpRequest()
@@ -681,7 +727,7 @@ private fun stepHistory(path: String, target: EditTarget, verb: String, done: (E
       Ui.toast("$verb your last edit, in $where")
       fetchComponents { refresh(); canvasGeneration.value++; Snapshot.sendApplyNotifications() }
     } else {
-      sessionHistory.skipped(target, undo); saveHistory()
+      changeHistoryOf(target) { it.skipped(target, undo) }
       Ui.toast("Nothing to ${if (undo) "undo" else "redo"} in $where any more")
     }
     updateUndoButtons()
@@ -789,7 +835,7 @@ internal fun mountPortalChrome() {
   if (!evidenceMode()) installPanelResizers()
   buildExportOverlay()
   installKeyboard()
-  installTypingTracker()
+  installTypingTracker { if (panelsStale && !typingPending()) refresh() }
   installOutlinePress()
   watchImageFailures()
   nameIconButtons()
@@ -1212,7 +1258,7 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     val hr = host.getBoundingClientRect()
     val x = (me.clientX - hr.left) / canvasZoom * dpr
     val y = (me.clientY - hr.top) / canvasZoom * dpr
-    return canvasDropPlace(tree, h, x, y, ::boxOf, ::acceptsChildrenNode)
+    return canvasDropPlace(tree, h, x, y, ::boxOf, ::acceptsChildrenNode, padding = 32.0 * dpr)
   }
   fun showDropMark(h: Int, zone: DropZone) {
     val rect = portalTree.value.findNode(h)?.let(::boxOf) ?: run { dropLine.style.display = "none"; return }
@@ -1373,8 +1419,12 @@ private fun showOnCanvasWhenDrawn(
       rect != null && rect == last -> {
         scrollCanvasTo(rect)
         kotlinx.browser.window.requestAnimationFrame {
-          positionOverlay(hoverOverlay, handle)
-          kotlinx.browser.window.setTimeout({ hideOverlay(hoverOverlay); null }, 1500)
+          // Review 4 #7: a moment's outline only where hovering would show one (Select mode, not the
+          // selection), and its timer hides only that outline — not one the author hovers by then.
+          if (selectMode && handle != selectedId && target == editTarget()) {
+            positionOverlay(hoverOverlay, handle)
+            kotlinx.browser.window.setTimeout({ if (hoverHandle == handle) hideOverlay(hoverOverlay); null }, 1500)
+          }
         }
       }
       framesLeft > 0 -> showOnCanvasWhenDrawn(handle, framesLeft - 1, 0, rect, target)
@@ -1405,15 +1455,19 @@ internal fun selectModeOn(): Boolean = selectMode
 
 internal fun canvasHintElement(el: HTMLElement) { canvasHint = el }
 
-private fun showCanvasHint(text: String) {
+private fun showCanvasHint(text: String, millis: Int = 3500) {
   if (!::canvasHint.isInitialized) return
   canvasHint.textContent = text
   canvasHint.style.display = "block"
-  kotlinx.browser.window.setTimeout({ canvasHint.style.display = "none"; null }, 3500)
+  kotlinx.browser.window.setTimeout({ if (canvasHint.textContent == text) canvasHint.style.display = "none"; null }, millis)
 }
+
+/** The node the hover box outlines (null while it is hidden). */
+private var hoverHandle: Int? = null
 
 private fun positionOverlay(el: HTMLElement, handle: Int, at: Pair<Double, Double>? = null) {
   val union = dev.keliver.material.composeui.SelectionRegistry.bounds[handle] ?: run { hideOverlay(el); return }
+  if (el === hoverOverlay) hoverHandle = handle
   val dpr = kotlinx.browser.window.devicePixelRatio
   // F11: a node drawn several times (a list's rows) is outlined where it was clicked (or its first
   // instance); the selection shows the others faintly.
@@ -1445,6 +1499,7 @@ private fun positionOverlay(el: HTMLElement, handle: Int, at: Pair<Double, Doubl
 
 private fun hideOverlay(el: HTMLElement) {
   el.style.display = "none"
+  if (el === hoverOverlay) hoverHandle = null
   if (el === selOverlay) showInstanceGhosts(el, emptyList())
 }
 
@@ -2052,6 +2107,10 @@ private fun handleEditorKey(e: KeyboardEvent) {
   when {
     e.key == "ArrowDown" || e.key == "ArrowUp" -> {
       val order = visibleOrder(tree, collapsedRows)
+      // Review 4 #8: right after a delete, the arrows go on from where the deleted node was.
+      val resume = deletedPlace?.takeIf { sel == null && it in order }
+      deletedPlace = null
+      if (resume != null) { select(resume); e.preventDefault(); return }
       val i = order.indexOf(sel?.id ?: -1)
       select(if (i < 0) order.firstOrNull() else order.getOrNull(if (e.key == "ArrowDown") i + 1 else i - 1) ?: order[i])
     }
@@ -2064,6 +2123,7 @@ private fun handleEditorKey(e: KeyboardEvent) {
       // H3: nothing is selected after a delete — selecting the next node (then its parent) made a
       // few presses of Backspace delete whole sections.
       selectedId = null
+      deletedPlace = placeAfterDelete(tree, sel.id)
       sendOps(listOf(DocOp.DeleteNode(Handle(sel.id.toLong()))))
     }
     mod && e.key.lowercase() == "d" && sel != null && sel.id != tree.id -> {
@@ -2081,6 +2141,9 @@ private fun handleEditorKey(e: KeyboardEvent) {
 
 /** F1: where the author last pointed or focused — tree-changing keys act only from the tree. */
 private var keyScope = KeyScope.Elsewhere
+
+/** Review 4 #8: the node in the place of the one just deleted (see [placeAfterDelete]), until anything is selected. */
+private var deletedPlace: Int? = null
 
 private fun noteKeyScope(target: EventTarget?) {
   val el = target as? HTMLElement ?: return
@@ -2296,6 +2359,7 @@ private fun loadDraft(cb: (() -> Unit)? = null) {
   // F13: no hover box is left where an instance of the previous document was drawn.
   if (::hoverOverlay.isInitialized) hideOverlay(hoverOverlay)
   pendingInsertPlace = null // an insert into the previous document selects nothing in this one
+  deletedPlace = null
   staleUpTo = refetchSeq // replies to fetches of the previous document are not this one's
   renderCrumbs()
   dropQueuedOps()
@@ -2424,7 +2488,14 @@ private fun promptCreate(project: Boolean) {
 // ---------------------------------------------------------------------------
 // Panels
 
+/** Review 5: a panel rebuild was held off for typing — made up once the typing ends. */
+private var panelsStale = false
+
+/** Whether the panels may be rebuilt now; if not (a field is being typed in), they are rebuilt when it is left. */
+private fun panelsRebuildNow(): Boolean = !typingPending().also { typing -> if (typing) panelsStale = true }
+
 private fun refresh() {
+  panelsStale = false
   val keep = focusedPanelField()
   renderOutline(); renderProps(); renderMods(); renderOps(); renderBindings()
   keep?.restore()
@@ -2533,6 +2604,8 @@ private fun renderOutline() {
     r.tabIndex = if (node.id == focusable) 0 else -1
     r.setAttribute("style", "padding-left:${4 + depth * 14}px;")
     val twisty = Ui.el("span", "twisty", if (node.children.isEmpty()) "" else if (node.id in collapsedRows) "▸" else "▾")
+    // Review 5: pressing the twisty only folds — it is no press of the row (J5 would select it).
+    twisty.addEventListener("pointerdown", { ev -> ev.stopPropagation() })
     twisty.addEventListener("click", { ev ->
       ev.stopPropagation()
       if (!collapsedRows.remove(node.id)) collapsedRows += node.id
@@ -2544,7 +2617,7 @@ private fun renderOutline() {
     r.addEventListener("click", { _ -> pressedRow = null; selectRow(node.id) })
     // J5: a press whose click never arrives — a field left by this press committed, and the
     // outline was redrawn under the pointer — still selects the row (see installOutlinePress).
-    r.addEventListener("pointerdown", { ev -> if ((ev as org.w3c.dom.pointerevents.PointerEvent).button.toInt() == 0) pressedRow = node.id })
+    r.addEventListener("pointerdown", { ev -> if ((ev as org.w3c.dom.pointerevents.PointerEvent).button.toInt() == 0) pressedRow = node.id to r })
     // Hovering a row outlines its node on the canvas, as hovering the canvas does.
     r.addEventListener("mouseenter", { _ -> if (selectMode && node.id != selectedId) positionOverlay(hoverOverlay, node.id) })
     r.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
@@ -2581,8 +2654,8 @@ private fun renderOutline() {
   }
 }
 
-/** J5: the outline row pressed and not yet clicked (null once its click arrived). */
-private var pressedRow: Int? = null
+/** J5: the outline row pressed and not yet clicked (null once its click arrived), and its element. */
+private var pressedRow: Pair<Int, HTMLElement>? = null
 
 private fun selectRow(id: Int) {
   selectedId = id
@@ -2591,19 +2664,26 @@ private fun selectRow(id: Int) {
   revealOnCanvas(id)
 }
 
-/** J5: after a release, a pressed row whose click was lost is selected (once the click had its turn). */
+/**
+ * J5: after a release, a pressed row whose click was lost — the outline was redrawn under the
+ * pointer, so the row pressed is gone — is selected (once the click had its turn). Review 5: a
+ * press lasts from the row's pointerdown to the next release; any other press, a cancelled
+ * pointer or a drag ends it, so an old press never selects its row on a later, unrelated click.
+ */
 private fun installOutlinePress() {
+  document.addEventListener("pointerdown", { _ -> pressedRow = null }, true) // before the row's own handler
   document.addEventListener("pointerup", { _ ->
-    val id = pressedRow ?: return@addEventListener
+    val (id, row) = pressedRow ?: return@addEventListener
     kotlinx.browser.window.setTimeout({
-      if (pressedRow == id) {
+      if (pressedRow?.first == id) {
         pressedRow = null
-        if (selectedId != id && portalTree.value.findNode(id) != null) selectRow(id)
+        if (!row.isConnected && selectedId != id && portalTree.value.findNode(id) != null) selectRow(id)
       }
       null
     }, 0)
   })
-  document.addEventListener("dragstart", { _ -> pressedRow = null }) // a drag is not a click
+  document.addEventListener("pointercancel", { _ -> pressedRow = null }, true)
+  document.addEventListener("dragstart", { _ -> pressedRow = null }, true) // a drag is not a click (rows stop its bubbling)
 }
 
 private fun handleDrop(payload: String?, targetId: Int, zone: DropZone = DropZone.Inside) {
@@ -2690,8 +2770,11 @@ private fun renderProps() {
       } else emptyList()
     }
     // An instance that leaves a parameter at its default shows that default (not the first choice).
-    val shown = comp?.defaults?.takeIf { s.name !in node.props && s.name in it }?.let { node.props + (s.name to it[s.name]) } ?: node.props
-    propsEl.appendChild(propRow(node.id, node.type, shown, s.name, s.kind, s.label, keyPrefix = "", choices = choices))
+    val defaulted = comp != null && s.name !in node.props && s.name in comp.defaults
+    val shown = if (defaulted) node.props + (s.name to comp!!.defaults[s.name]) else node.props
+    val row = propRow(node.id, node.type, shown, s.name, s.kind, s.label, keyPrefix = "", choices = choices)
+    if (defaulted) markComponentDefault(row) // H12: what the call leaves out reads "default"
+    propsEl.appendChild(row)
   }
   // P3: events — each wires to a named Action.
   val events = comp?.events?.map { it.name } ?: spec?.events ?: emptyList()
@@ -2779,7 +2862,7 @@ private fun renderBindings() {
         state = ScreenState(sc, state.values - flags)
         save(); renderBindings()
         // F7: show what the scenario is about, even below the fold (an error banner).
-        scenarioFocus(portalTree.value, sc)?.let { n -> showOnCanvasWhenDrawn((n.children.firstOrNull() ?: n).id) }
+        scenarioFocus(portalTree.value, sc, effectiveMocks(fields, sc, state.values))?.let { n -> showOnCanvasWhenDrawn((n.children.firstOrNull() ?: n).id) }
       }
       chip.setAttribute("title", "Preview the screen ${sc.label.lowercase()}: " + when (sc) {
         Scenario.Loaded -> "content flags on, loading/error/empty off"
@@ -2813,17 +2896,33 @@ private fun renderBindings() {
       rowEl.appendChild(lab)
       val default = defaultValue(f, state.scenario)
       val userSet = f.name in state.values
-      when (f.kind) {
-        StateKind.Bool -> {
+      when {
+        f.kind == StateKind.Bool -> {
           val box = document.createElement("input") as HTMLInputElement
           box.type = "checkbox"
+          box.setAttribute("aria-label", f.name)
           box.checked = (state.values[f.name] ?: default) == "true"
           box.addEventListener("change", { _ ->
             val v = box.checked.toString()
             setValue(f.name, if (v == default) null else v)
-            renderBindings() // H6: the chips follow (Custom once a flag is set by hand)
+            // H6: the chips follow (Custom once a flag is set by hand). Review 4 #6: the keyboard
+            // stays on this flag, so Space toggles it again (it fell to the page body).
+            val keep = focusedPanelField()
+            renderBindings()
+            keep?.restore()
           })
           rowEl.appendChild(box)
+        }
+        // H12: a colour field previews as a colour (swatch, #AARRGGBB, opacity), not as an Int.
+        f.kind == StateKind.Int && sampleColor(f.name) != null -> {
+          val ctl = colorControl((state.values[f.name] ?: default).toIntOrNull()) { v ->
+            setValue(f.name, v.toString().takeIf { it != default })
+            val keep = focusedPanelField()
+            renderBindings() // its ↺ follows
+            keep?.restore()
+          }
+          ctl.setAttribute("aria-label", f.name)
+          rowEl.appendChild(ctl)
         }
         else -> {
           val input = Ui.input()
@@ -3019,7 +3118,7 @@ private fun propRowInner(
   // E10: a colour — swatch, #AARRGGBB and opacity; the alpha byte survives every edit.
   if (kind == PropKind.Color) {
     return PropRow(label)
-      .control(colorControl(props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v)), refreshPanels = false) })
+      .control(colorControl(props[key] as? Int) { v -> sendOps(listOf(literalOp(nodeId, key, v)), refreshPanels = false) })
       .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
       .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
       .root
@@ -3180,10 +3279,10 @@ private fun renderInsertTokenPicker(picker: HTMLElement, fits: (EditorToken) -> 
 private fun tokenChip(ref: String, value: Any?, kind: PropKind): HTMLElement {
   val chip = Ui.el("span", "pill")
   chip.setAttribute("style", "flex:1; min-width:0; border-color:var(--accent); color:var(--text); overflow:hidden; white-space:nowrap;")
-  chip.setAttribute("title", "$ref = $value")
+  val shown = if (kind == PropKind.Color && value is Int) argbHex(value) else value.toString()
+  chip.setAttribute("title", "$ref = $shown") // H12: a colour as #AARRGGBB, not its Int
   if (kind == PropKind.Color && value is Int) chip.appendChild(colorSwatch(value, 12))
   chip.appendChild(Ui.el("span", "", "◆ $ref"))
-  val shown = if (kind == PropKind.Color && value is Int) argbHex(value) else value.toString()
   chip.appendChild(Ui.el("span", "muted", shown).also { it.setAttribute("style", "overflow:hidden; text-overflow:ellipsis; white-space:nowrap;") })
   return chip
 }

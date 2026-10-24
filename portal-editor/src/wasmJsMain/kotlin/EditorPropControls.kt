@@ -101,16 +101,16 @@ internal fun colorSwatch(argb: Int, size: Int = 14): HTMLElement {
  * A typed value commits on Enter or blur (Escape reverts); one that is not a
  * colour is not sent and marks the field invalid.
  */
-internal fun colorControl(argb: Int, onCommit: (Int) -> Unit): HTMLElement {
-  var current = argb
+internal fun colorControl(argb: Int?, onCommit: (Int) -> Unit): HTMLElement {
+  // Review 4 #11: null = not set — the widget's own default, shown as no colour (never as transparent black).
+  var current: Int? = argb
   val box = Ui.el("span", "color-ctl")
   val swatchWrap = Ui.el("span", "swatch-btn")
   swatchWrap.setAttribute("title", "pick a colour (keeps the opacity)")
-  val swatch = colorSwatch(current, 18)
+  val swatch = colorSwatch(current ?: 0, 18)
   val picker = Ui.input()
   picker.setAttribute("type", "color")
   picker.className = "swatch-picker"
-  picker.value = argbRgbHex(current)
   swatchWrap.appendChild(swatch)
   swatchWrap.appendChild(picker)
   swatchWrap.setAttribute("role", "button")
@@ -122,37 +122,39 @@ internal fun colorControl(argb: Int, onCommit: (Int) -> Unit): HTMLElement {
   hex.setAttribute("type", "text")
   hex.setAttribute("spellcheck", "false")
   hex.className = "input hex"
-  hex.value = argbHex(current)
   hex.setAttribute("title", "#AARRGGBB, as the source's 0xAARRGGBB; #RRGGBB keeps the opacity")
   val alpha = Ui.input()
   alpha.setAttribute("type", "number")
   alpha.setAttribute("min", "0")
   alpha.setAttribute("max", "100")
   alpha.className = "input alpha"
-  alpha.value = opacityPercent(current).toString()
   alpha.setAttribute("title", "opacity %")
   val pct = Ui.el("span", "muted unit", "%")
   val err = Ui.el("div", "field-err")
 
-  fun show(v: Int) {
+  fun show(v: Int?) {
     current = v
-    swatch.setAttribute("style", colorSwatch(v, 18).getAttribute("style") ?: "")
-    swatch.setAttribute("title", argbHex(v))
-    hex.value = argbHex(v)
-    alpha.value = opacityPercent(v).toString()
-    picker.value = argbRgbHex(v)
+    swatch.setAttribute("style", colorSwatch(v ?: 0, 18).getAttribute("style") ?: "")
+    swatch.classList.toggle("none", v == null)
+    swatch.setAttribute("title", v?.let(::argbHex) ?: "Not set: the widget's own colour")
+    hex.value = v?.let(::argbHex) ?: ""
+    hex.placeholder = if (v == null) "default" else ""
+    alpha.value = v?.let { opacityPercent(it).toString() } ?: ""
+    picker.value = argbRgbHex(v ?: 0)
     markInvalid(hex, null, err)
     markInvalid(alpha, null, err)
   }
+  show(current)
   fun commit(v: Int) {
     if (v == current) { show(v); return }
     show(v)
+    (box.closest(".prop") as? HTMLElement)?.let { it.classList.remove("unset"); it.removeAttribute("title") } // set now
     onCommit(v)
   }
-  picker.addEventListener("change", { _ -> picker.value.removePrefix("#").toIntOrNull(16)?.let { commit(withRgb(current, it)) } })
+  picker.addEventListener("change", { _ -> picker.value.removePrefix("#").toIntOrNull(16)?.let { commit(withRgb(current ?: 0, it)) } })
   fun commitHex() {
     clearPending(hex)
-    val v = parseArgbHex(hex.value, current)
+    val v = parseArgbHex(hex.value, current ?: 0)
     if (v == null) markInvalid(hex, "Not a colour: type #AARRGGBB, #RRGGBB or #RGB", err) else commit(v)
   }
   hex.addEventListener("input", { _ -> markPending(hex, ::commitHex) })
@@ -161,7 +163,7 @@ internal fun colorControl(argb: Int, onCommit: (Int) -> Unit): HTMLElement {
   fun commitAlpha() {
     clearPending(alpha)
     val p = alpha.value.trim().toIntOrNull()
-    if (p == null || p !in 0..100) markInvalid(alpha, "Opacity is a whole percent from 0 to 100", err) else commit(withOpacity(current, p))
+    if (p == null || p !in 0..100) markInvalid(alpha, "Opacity is a whole percent from 0 to 100", err) else commit(withOpacity(current ?: 0, p))
   }
   alpha.addEventListener("input", { _ -> markPending(alpha, ::commitAlpha) })
   alpha.addEventListener("change", { _ -> commitAlpha() })
@@ -251,6 +253,16 @@ internal fun markUnset(row: HTMLElement) {
   // A dropdown keeps showing its first name: a coded enum's default (Start, Wrap, Clip).
 }
 
+/**
+ * H12: shows [row] as a component parameter the call does not pass — its declared default shows,
+ * marked "default" like an unset widget property (the values stay: this default is known).
+ */
+internal fun markComponentDefault(row: HTMLElement) {
+  val prop = (if (row.classList.contains("prop")) row else row.querySelector(".prop") as? HTMLElement) ?: return
+  prop.classList.add("unset")
+  prop.setAttribute("title", "Not passed: the component's own default applies")
+}
+
 internal class PropRow(label: String, layout: Layout = Layout.Stacked) {
   enum class Layout(val css: String) { Stacked("prop"), Compact("prop compact"), Inline("prop inline") }
 
@@ -327,12 +339,18 @@ private fun isTextField(e: org.w3c.dom.Element?): Boolean = when (e?.tagName?.lo
   else -> false
 }
 
-/** Installs the document-level tracking behind [typingPending] (once, at start). */
-internal fun installTypingTracker() {
+/**
+ * Installs the document-level tracking behind [typingPending] (once, at start). [typingEnded] runs
+ * after a field typed in commits or is left (review 5: a panel rebuild held off meanwhile is made up).
+ */
+internal fun installTypingTracker(typingEnded: () -> Unit) {
+  fun ended() { kotlinx.browser.window.setTimeout({ typingEnded(); null }, 0) }
   document.addEventListener("input", { ev -> (ev.target as? org.w3c.dom.Element)?.takeIf(::isTextField)?.let { typedField = it } }, true)
-  document.addEventListener("change", { ev -> if (ev.target == typedField) typedField = null }, true)
+  document.addEventListener("change", { ev -> if (ev.target == typedField) { typedField = null; ended() } }, true)
   document.addEventListener("focusout", { ev ->
-    if (ev.target == typedField) typedField = null
+    // Review 5: the window losing focus (a switch to the IDE) keeps the field — it still has the keyboard here.
+    if (document.activeElement == ev.target || !document.hasFocus()) return@addEventListener
+    if (ev.target == typedField) { typedField = null; ended() }
     // A pending field left without a change (typed, then put back as it was) is no longer pending.
     if (ev.target == pendingField?.first) pendingField = null
   }, true)

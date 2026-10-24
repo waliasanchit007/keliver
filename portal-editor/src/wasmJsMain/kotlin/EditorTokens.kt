@@ -77,6 +77,9 @@ private val NUMBER_WORDS = setOf(
 )
 private val COLOR_WORDS = setOf(
   "color", "colour", "argb", "tint", "bg", "background", "ink", "fill", "stroke", "border", "scrim", "overlay", "shadow",
+  // Review 5: a hue named is a colour (`PriceDownRed`, `BalanceHighlight` = 0xFFFFF8E1, near white).
+  "red", "green", "blue", "yellow", "orange", "white", "black", "gray", "grey", "pink", "purple", "violet", "amber",
+  "teal", "cyan", "brown", "highlight", "accent",
 )
 
 /**
@@ -92,8 +95,9 @@ internal fun isColorToken(ref: String, value: Any?): Boolean {
   // = 0xFFC62828 is a colour; `UNLIMITED = -1`, `AMOUNT_CAP = 20_000_000` are numbers.
   return when {
     words.any { it in COLOR_WORDS } -> true
-    // Only an opaque colour (alpha 0xFF but not one of the 65 536 values just below 0) beats a number name.
-    words.any { it in NUMBER_WORDS } -> (value as Int) < -65536
+    // A small negative (-4096..-1) is a sentinel or an offset (`MinOffset = -8`); any other opaque
+    // colour beats a number name — review 5: `PriceDownRed = 0xFFFF1744` is a colour.
+    words.any { it in NUMBER_WORDS } -> (value as Int) < -4096
     else -> true
   }
 }

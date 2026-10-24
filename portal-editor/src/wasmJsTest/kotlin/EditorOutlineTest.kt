@@ -122,4 +122,37 @@ class EditorOutlineTest {
     assertEquals(4 to DropZone.After, canvasDropPlace(card, 1, 150.0, 212.0, { b[it.id] }, accepts), "below the last button, in the padding")
     assertEquals(3 to DropZone.Before, canvasDropPlace(card, 1, 150.0, 4.0, { b[it.id] }, accepts), "above the first text, in the padding")
   }
+
+  @Test fun aDropBelowALoneCardInATallColumnLandsAfterTheCardNotInsideIt() {
+    // Review 5: 1 Column (the screen, 0..300 × 0..780) holding only 2 Box (a card, 16..284 × 16..236)
+    // around 3 Column (26..274 × 26..226): 4 Text, 5 Button.
+    val page = n(1, "Column", n(2, "Box", n(3, "Column", n(4, "StyledText"), n(5, "Button"))))
+    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 780.0), 2 to DropBox(16.0, 16.0, 284.0, 236.0),
+      3 to DropBox(26.0, 26.0, 274.0, 226.0), 4 to DropBox(26.0, 26.0, 274.0, 76.0), 5 to DropBox(26.0, 176.0, 274.0, 226.0))
+    val accepts = { node: WidgetNode -> node.type == "Box" || node.type == "Column" }
+    assertEquals(2 to DropZone.After, canvasDropPlace(page, 1, 150.0, 400.0, { b[it.id] }, accepts), "well below the card: after it")
+    assertEquals(5 to DropZone.After, canvasDropPlace(page, 2, 150.0, 232.0, { b[it.id] }, accepts), "in the card's padding: still inside it")
+  }
+
+  @Test fun aDropInTheCardsPaddingAroundAnEmptyColumnGoesIntoTheColumn() {
+    val card = n(1, "Box", n(2, "Column"))
+    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 100.0), 2 to DropBox(10.0, 10.0, 290.0, 90.0))
+    val accepts = { node: WidgetNode -> node.type == "Box" || node.type == "Column" }
+    assertEquals(2 to DropZone.Inside, canvasDropPlace(card, 1, 150.0, 95.0, { b[it.id] }, accepts))
+  }
+
+  @Test fun aDropInTheCardsPaddingNeverGoesIntoAListsRowTemplate() {
+    val card = n(1, "Box", n(2, "Repeat", n(3, "StyledText")))
+    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 220.0), 2 to DropBox(10.0, 10.0, 290.0, 210.0), 3 to DropBox(10.0, 10.0, 290.0, 60.0))
+    val accepts = { node: WidgetNode -> node.type in setOf("Box", "Column", "Repeat") }
+    assertEquals(2 to DropZone.After, canvasDropPlace(card, 1, 150.0, 215.0, { b[it.id] }, accepts), "after the list, not into every row")
+  }
+
+  @Test fun afterADeleteTheArrowsGoOnFromTheDeletedNodesPlace() {
+    val tree = n(1, "Column", n(2, "StyledText"), n(3, "Box", n(4, "StyledText")), n(5, "Button"))
+    assertEquals(3, placeAfterDelete(tree, 2), "its next sibling took its place")
+    assertEquals(3, placeAfterDelete(tree, 5), "the last child: the one before it")
+    assertEquals(3, placeAfterDelete(tree, 4), "an only child: its parent")
+    assertEquals(null, placeAfterDelete(tree, 1), "the root has no place")
+  }
 }
