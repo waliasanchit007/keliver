@@ -93,10 +93,11 @@ object NodeEmitter {
    * written as its own source text, not the exporter's `RawCode(text = …)`
    * placeholder (which does not compile, and does not read back as code).
    */
-  fun screen(doc: UiDocument, functionName: String, components: ComponentRegistry = EmptyComponentRegistry): String {
+  fun screen(doc: UiDocument, functionName: String, components: ComponentRegistry = EmptyComponentRegistry, compact: Boolean = false): String {
     val raws = mutableListOf<String>()
     val marked = doc.copy(root = markRaw(doc.root, raws))
     var out = exportKotlin(marked.toWidgetTree(), functionName = functionName, components = components)
+      .let { if (compact) compactEmptyCalls(it) else it }
     raws.forEachIndexed { i, raw -> out = out.replace("${marker(i)}()", raw) }
     return out
   }

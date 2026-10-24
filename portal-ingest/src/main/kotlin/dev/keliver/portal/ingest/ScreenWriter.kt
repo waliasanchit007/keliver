@@ -124,7 +124,8 @@ object ScreenWriter {
     }
     if (onDisk == null) {
       if (asComponent) return Refuse("the component's file is gone")
-      val text = export(doc, packageName, functionName, components)
+      // H12: a new file is written as an author would — `Column {`, not `Column(\n) {}`.
+      val text = export(doc, packageName, functionName, components, compact = true)
       readsBack(text)?.let { return Refuse("a new file written from the document would not read back as it: $it") }
       return Write(text, How.CREATED)
     }
@@ -183,9 +184,15 @@ object ScreenWriter {
 
     // The full export only when it is lossless: the file is the export of its own tree.
     val pkg = PKG_RE.find(lf)?.groupValues?.get(1) ?: packageName
-    val asIsExport = export(UiDocument(doc.screen, asIs.root, asIs.contract, 0, 0), pkg, functionName, components)
-    if (asIsExport.trimEnd('\n') != lf.trimEnd('\n')) return Refuse(why)
-    val text = export(doc, pkg, functionName, components)
+    val asIsDoc = UiDocument(doc.screen, asIs.root, asIs.contract, 0, 0)
+    fun exportsAs(compact: Boolean) = export(asIsDoc, pkg, functionName, components, compact).trimEnd('\n') == lf.trimEnd('\n')
+    // H12: a file the editor created is the export with its empty calls compacted — and stays so.
+    val compact = when {
+      exportsAs(compact = false) -> false
+      exportsAs(compact = true) -> true
+      else -> return Refuse(why)
+    }
+    val text = export(doc, pkg, functionName, components, compact)
     readsBack(text)?.let { return Refuse("$why, and the full export would not read back as the document either: $it") }
     return restored(text, How.EXPORT)
   }
@@ -231,9 +238,9 @@ object ScreenWriter {
    * The full export of [doc] as a screen file (package line, Bindings
    * interface kept in sync; RawCode as its own text — [NodeEmitter.screen]).
    */
-  private fun export(doc: UiDocument, pkg: String?, functionName: String, components: ComponentRegistry): String {
+  private fun export(doc: UiDocument, pkg: String?, functionName: String, components: ComponentRegistry, compact: Boolean = false): String {
     val header = pkg?.let { "package $it\n\n" } ?: ""
-    return contract(header + NodeEmitter.screen(doc, functionName, components), doc.toWidgetTree(), functionName, components)
+    return contract(header + NodeEmitter.screen(doc, functionName, components, compact), doc.toWidgetTree(), functionName, components)
   }
 
   /**
