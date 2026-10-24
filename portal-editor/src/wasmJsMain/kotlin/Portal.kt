@@ -694,7 +694,8 @@ private fun changeHistoryOf(target: EditTarget, change: (SessionHistory) -> Unit
   if (playground) { apply(local); return }
   val xhr = XMLHttpRequest()
   xhr.open("GET", "$SERVER/history?project=${target.project}&screen=${target.screen}")
-  xhr.addEventListener("load", { _ -> apply(if (xhr.status.toInt() == 200) xhr.responseText else local) })
+  // Review 7: a relay that keeps none (204) started since — its stacks are empty, this browser's copy stale.
+  xhr.addEventListener("load", { _ -> apply(when (xhr.status.toInt()) { 200 -> xhr.responseText; 204 -> null; else -> local }) })
   xhr.addEventListener("error", { _ -> apply(local) })
   xhr.send()
 }

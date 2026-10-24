@@ -134,4 +134,20 @@ class WriteBackRoundTripTest {
     assertTrue(Regex("""\n  Column\(width = Constraint\.Fill, height = Constraint\.Fill\) \{\n""").containsMatchIn(mid), mid)
     assertEquals(first, end)
   }
+
+  @Test fun aLongOneLineCallStaysOneLineSoItsUndoGivesTheFileBackByteForByte() {
+    // Review 7: an argument added to (or removed from) a one-line call near 100 columns.
+    val long = screen.replace(
+      "    StyledText(\n      text = \"Monthly\",\n      fontSize = 24,\n      weight = 700,\n      colorArgb = -16777216,\n      align = 1,\n    )\n",
+      "    StyledText(text = \"Monthly returns on every bond\", fontSize = 24, weight = 700, colorArgb = -16777216)\n",
+    )
+    assertTrue("returns on every bond\", fontSize" in long, "the fixture has its one-line call")
+    val text = { d: UiDocument -> column(d).children[0].handle }
+    val (added, afterAdd) = roundTrip(long) { d -> DocOp.SetProp(text(d), "align", lit(1)) }
+    assertTrue(Regex("""StyledText\(text = "Monthly returns on every bond", [^\n]*align = 1\)\n""").containsMatchIn(added), added)
+    assertEquals(long, afterAdd)
+    val (removed, afterRemove) = roundTrip(long) { d -> DocOp.RemoveProp(text(d), "colorArgb") }
+    assertTrue("weight = 700)\n" in removed, removed)
+    assertEquals(long, afterRemove)
+  }
 }

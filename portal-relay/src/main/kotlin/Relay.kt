@@ -1354,7 +1354,7 @@ fun main(args: Array<String>) {
       val screen = safe(q["screen"] ?: "main")
       when (ex.requestMethod) {
         "GET" -> sessionHistories.get(project, screen)?.let { respond(ex, 200, it) } ?: respond(ex, 204)
-        "PUT" -> respond(ex, if (sessionHistories.put(project, screen, ex.requestBody.readBytes().decodeToString())) 204 else 400)
+        "PUT" -> respond(ex, if (runCatching { readBoundedBody(ex, 64 * 1024) }.getOrNull()?.let { sessionHistories.put(project, screen, it) } == true) 204 else 400)
         else -> respond(ex, 405)
       }
     }

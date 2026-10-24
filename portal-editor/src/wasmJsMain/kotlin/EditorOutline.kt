@@ -85,7 +85,12 @@ internal fun canvasDropPlace(
       // Round 5 (L3): the gap between a list's rows is no place in its row template (that would put
       // the widget in every row) — the drop goes before or after the list. A row's own insides,
       // hit directly, still take it.
-      if (kid.type == "Repeat") return kid.id to if (y < (b.top + b.bottom) / 2) DropZone.Before else DropZone.After
+      if (kid.type == "Repeat") {
+        // Review 7: a list laid out across (chips in a row) splits left/right, not by height.
+        val across = (b.right - b.left) > 2 * (b.bottom - b.top)
+        val before = if (across) x < (b.left + b.right) / 2 else y < (b.top + b.bottom) / 2
+        return kid.id to if (before) DropZone.Before else DropZone.After
+      }
       return canvasDropPlace(root, kid.id, x, y, box, accepts, padding)
     }
     // J1: a box that only pads one container (a card around its column) passes a drop in that

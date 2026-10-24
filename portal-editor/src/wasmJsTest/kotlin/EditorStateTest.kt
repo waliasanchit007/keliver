@@ -182,5 +182,9 @@ class EditorStateTest {
     assertEquals("48", sampleSize("outlinedButtonHeight"))
     assertEquals(null, sampleColor("colorCount"), "a number about colours")
     assertEquals(null, sampleColor("tintIndex"))
+    // Review 7: by the name's last word — these are colours.
+    assertTrue(sampleColor("totalAmountColor") != null)
+    assertTrue(sampleColor("idleColor") != null)
+    assertTrue(sampleColor("countBadgeColor") != null)
   }
 }

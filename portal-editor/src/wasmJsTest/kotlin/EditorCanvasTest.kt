@@ -77,5 +77,8 @@ class EditorCanvasTest {
     assertEquals(1.43, componentZoom(390, 600.0, 1000.0, 860.0), "as tall as it allows")
     assertEquals(1.0, componentZoom(390, 1400.0, 1000.0, 860.0), "a tall component is never zoomed out")
     assertEquals(1.0, componentZoom(0, 172.0, 1000.0, 860.0), "nothing measured: 100%")
+    // Review 7: never below the author's zoom — a fitted window stays fitted, 150% is not pulled out.
+    assertEquals(0.83, componentZoom(390, 1400.0, 1000.0, 860.0, current = 0.83))
+    assertEquals(1.5, componentZoom(390, 600.0, 1000.0, 720.0, current = 1.5))
   }
 }

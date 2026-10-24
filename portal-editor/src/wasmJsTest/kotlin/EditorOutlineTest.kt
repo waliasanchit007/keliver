@@ -178,4 +178,13 @@ class EditorOutlineTest {
     assertEquals(2 to DropZone.After, canvasDropPlace(page, 1, 150.0, 110.0, { b[it.id] }, accepts), "the gap between the rows")
     assertEquals(4 to DropZone.After, canvasDropPlace(page, 3, 150.0, 60.0, { b[it.id] }, accepts), "a row's insides, hit, still take it")
   }
+
+  @Test fun aDropInTheGapOfAListLaidOutAcrossSplitsLeftAndRight() {
+    // Review 7: 1 Row holding 2 Repeat of chips 3 (drawn at 0..80, 90..170, 180..260; 40 tall).
+    val row = n(1, "Row", n(2, "Repeat", n(3, "Box")))
+    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 40.0), 2 to DropBox(0.0, 0.0, 260.0, 40.0), 3 to DropBox(0.0, 0.0, 260.0, 40.0))
+    val accepts = { node: WidgetNode -> node.type in setOf("Row", "Repeat", "Box") }
+    assertEquals(2 to DropZone.Before, canvasDropPlace(row, 1, 85.0, 35.0, { b[it.id] }, accepts), "left half, low pointer: before")
+    assertEquals(2 to DropZone.After, canvasDropPlace(row, 1, 175.0, 5.0, { b[it.id] }, accepts), "right half, high pointer: after")
+  }
 }

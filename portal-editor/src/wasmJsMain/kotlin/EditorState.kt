@@ -164,8 +164,9 @@ internal fun sampleColor(name: String): Int? {
   val w = words(name)
   fun any(vararg k: String) = w.any { word -> k.any { word.startsWith(it) } }
   if (!any("argb", "color", "colour", "tint")) return null
-  // Review 6: `colorCount`, `colorIndex` are numbers about colours, not colours.
-  if (any("count", "index", "size", "total", "number", "num", "id")) return null
+  // Review 6: `colorCount`, `colorIndex` are numbers about colours, not colours. Review 7: by the
+  // name's last word (its head) — `totalAmountColor`, `idleColor` are colours.
+  if (w.lastOrNull()?.let { last -> listOf("count", "index", "size", "total", "number", "num").any { last.startsWith(it) } || last == "id" } == true) return null
   return when {
     any("bg", "background", "fill", "surface", "container", "card") -> 0xFFEEF2F7.toInt()
     any("label", "text", "title", "ink", "foreground", "content") -> 0xFF1F2937.toInt()

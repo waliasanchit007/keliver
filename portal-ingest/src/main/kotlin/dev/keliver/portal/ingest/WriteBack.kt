@@ -466,7 +466,7 @@ object WriteBack {
         val oldList = call.valueArgumentList ?: return false
         val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType, bindings.get())
         var callText = emitted.text
-        if ('\n' !in oldList.text) callText = collapseCall(callText, factory, indentOf(call).length)
+        if ('\n' !in oldList.text) callText = collapseCall(callText, factory)
         // An argument whose value did not change keeps the author's text (`onClick = b::go` is not
         // re-spelled `{ b.go() }`), so an edit and its undo give the file back byte for byte.
         fun untouched(name: String): Boolean =
@@ -1275,17 +1275,16 @@ object WriteBack {
   }
 
   /** `Foo(\n  a = 1,\n  b = 2,\n)` → `Foo(a = 1, b = 2)` (grammar props never hold raw newlines). */
-  private fun collapseCall(text: String, factory: KtPsiFactory, indent: Int): String {
+  private fun collapseCall(text: String, factory: KtPsiFactory): String {
     // Round 5 (L4): from the parsed call — its arguments' own texts, joined, no trailing comma (was
-    // `StyledBox(a = 1, b = 2, ) {`). A list that would not fit on one line (100 columns), or an
-    // argument written over several lines, stays as the exporter writes it, one argument a line.
+    // `StyledBox(a = 1, b = 2, ) {`). The author's one-line list stays one line however long it
+    // gets (review 7: splitting it past a width made its undo give back a different file). Only an
+    // argument written over several lines keeps the exporter's one-argument-a-line form.
     val call = factory.createExpression(text) as? KtCallExpression ?: return text
     val args = call.valueArgumentList?.arguments ?: return text
     if (args.isEmpty() || args.any { '\n' in it.text }) return text
     val head = (call.calleeExpression?.text ?: return text) + (call.typeArgumentList?.text ?: "")
-    val list = "(" + args.joinToString(", ") { it.text } + ")"
-    if (indent + head.length + list.length + (if (call.lambdaArguments.isEmpty()) 0 else 2) > 100) return text
-    return head + list + call.lambdaArguments.joinToString("") { " " + it.text }
+    return head + "(" + args.joinToString(", ") { it.text } + ")" + call.lambdaArguments.joinToString("") { " " + it.text }
   }
 
   /** Leading whitespace of the line [element] starts on (its splice depth). */

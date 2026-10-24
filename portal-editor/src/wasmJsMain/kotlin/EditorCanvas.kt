@@ -48,12 +48,13 @@ internal fun zoomForKeys(code: String, key: String, mod: Boolean, shift: Boolean
  * L10 (feedback round 5): the zoom an opened component gets — a small one drawn at 100% was a few
  * tiny rows at the top of an empty phone. As large as the frame's width ([frameW]) and the
  * component's drawn height ([contentBottom], CSS px at 100%) allow in [availW]×[availH], at most
- * 200%; never below 100% (a tall component opens as before).
+ * 200%; never below the zoom the author had ([current]: review 7 — a tall component in a fitted
+ * window was not pushed to 100%, nor one at 150% pulled out).
  */
-internal fun componentZoom(frameW: Int, contentBottom: Double, availW: Double, availH: Double): Double {
-  if (frameW <= 0 || contentBottom <= 0 || availW <= 0 || availH <= 0) return 1.0
+internal fun componentZoom(frameW: Int, contentBottom: Double, availW: Double, availH: Double, current: Double = 1.0): Double {
+  if (frameW <= 0 || contentBottom <= 0 || availW <= 0 || availH <= 0) return current
   val z = minOf(ZOOM_MAX, availW / frameW, availH / contentBottom)
-  return (kotlin.math.floor(z * 100) / 100).coerceAtLeast(1.0)
+  return maxOf(kotlin.math.floor(z * 100) / 100, current)
 }
 
 internal fun fitZoom(w: Int, h: Int, availW: Double, availH: Double): Double {
@@ -209,7 +210,7 @@ internal fun zoomToComponent(contentBottom: Double) {
   val frame = canvasFrame ?: return
   val center = canvasCenter ?: return
   if (zoomBeforeComponent == null) zoomBeforeComponent = canvasZoom
-  applyZoom(componentZoom(frameW, contentBottom, center.clientWidth - 40.0, center.clientHeight - 72.0), box, frame, keep = false)
+  applyZoom(componentZoom(frameW, contentBottom, center.clientWidth - 40.0, center.clientHeight - 72.0, zoomBeforeComponent ?: canvasZoom), box, frame, keep = false)
 }
 
 /** L10: back on the screen, the zoom the author had there. */
