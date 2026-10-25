@@ -258,8 +258,18 @@ component or a design token changed in the meantime; then the undo is merged
 onto the file as it is now. ⌘Z inside a text field
 undoes the field's typing, not the document.
 
-**Export Kotlin** shows the screen's (or opened component's) file exactly as it
+**</> Code** shows the screen's (or opened component's) file exactly as it
 is on disk, with Copy and Download.
+
+The top bar says what each action does under its name: **▶ Live** *run its
+logic*, **</> Code** *this screen's .kt*, **⬆ Publish** *to devices*. Next to
+Publish, **On devices** names the newest bundle published, and when. A publish
+reports in a small card (*Published v4*, or *Not published* and why); the full
+build log is behind its **Log** button.
+
+**Palette preview.** Hovering a palette row shows what it adds, drawn by the
+canvas's own renderer: a project component with its sample values, a widget as
+it is inserted, an empty container with three sample items.
 
 **Preview fidelity**, in the right panel:
 - It says whether the app's Keliver runtime matches the editor's: an older app

@@ -832,6 +832,61 @@ private fun lastChildHandle(parentId: Int, excludeId: Int? = null): Handle? =
 private fun deepCopy(n: WidgetNode): WidgetNode =
   WidgetNode(n.type, n.props, n.children.map { deepCopy(it) }) // fresh ids via default
 
+private lateinit var paletteCard: HTMLElement
+private var palettePreviewTimer = 0
+
+/** The palette's preview card (its canvas is mounted by [mountPalettePreview]); never in the way of the pointer. */
+private fun buildPaletteCard() {
+  paletteCard = Ui.el("div", "palette-card")
+  paletteCard.setAttribute("aria-hidden", "true")
+  val head = Ui.el("div", "pcard-head")
+  head.appendChild(Ui.el("span", "pcard-name", ""))
+  head.appendChild(Ui.el("span", "pcard-kind", ""))
+  paletteCard.appendChild(head)
+  val frame = Ui.el("div", "pcard-frame")
+  frame.appendChild(Ui.el("div", "pcard-canvas").also { it.id = PALETTE_PREVIEW_HOST_ID })
+  paletteCard.appendChild(frame)
+  paletteCard.appendChild(Ui.el("div", "pcard-foot", "Click: add after the selection · Drag: drop where the line shows"))
+  document.body?.appendChild(paletteCard)
+}
+
+/** What [type] is, for the preview card: a project component (and its parameters), or a widget's category. */
+private fun paletteKind(type: String): String = editorComponents.spec(type)?.let { c ->
+  "Project component" + (if (c.slots.size == 1) " · container" else "") + " · " +
+    (if (c.props.isEmpty()) "no parameters" else "${c.props.size} parameter" + (if (c.props.size == 1) "" else "s"))
+} ?: widgetSpec(type)?.let { it.category + if (it.acceptsChildren) " · container" else "" } ?: ""
+
+private fun schedulePalettePreview(type: String, row: HTMLElement) {
+  kotlinx.browser.window.clearTimeout(palettePreviewTimer)
+  palettePreviewTimer = kotlinx.browser.window.setTimeout({ showPalettePreview(type, row); null }, 180)
+}
+
+private fun showPalettePreview(type: String, row: HTMLElement) {
+  // Logic draws nothing by itself, and a Spacer is empty space: no picture to show.
+  if (type in setOf("Condition", "Repeat", ELSE_TYPE, "Spacer") || !::paletteCard.isInitialized) return hidePalettePreview()
+  val accepts = widgetSpec(type)?.acceptsChildren == true || editorComponents.spec(type)?.slots?.size == 1
+  palettePreview.value = previewOf(newNode(type), accepts)
+  Snapshot.sendApplyNotifications()
+  (paletteCard.querySelector(".pcard-name") as? HTMLElement)?.textContent = type
+  (paletteCard.querySelector(".pcard-kind") as? HTMLElement)?.textContent = paletteKind(type)
+  // Beside the palette, level with the row, inside the window.
+  val r = row.getBoundingClientRect()
+  val pane = (row.closest(".pane") as? HTMLElement)?.getBoundingClientRect()
+  val height = paletteCard.offsetHeight.takeIf { it > 0 } ?: 320
+  val top = (r.top - 24).coerceIn(54.0, maxOf(54.0, kotlinx.browser.window.innerHeight - height - 8.0))
+  paletteCard.style.left = "${(pane?.right ?: r.right) + 10}px"
+  paletteCard.style.top = "${top}px"
+  paletteCard.classList.add("on")
+}
+
+private fun hidePalettePreview() {
+  kotlinx.browser.window.clearTimeout(palettePreviewTimer)
+  if (!::paletteCard.isInitialized) return
+  paletteCard.classList.remove("on")
+  palettePreview.value = null
+  Snapshot.sendApplyNotifications()
+}
+
 private fun newNode(type: String): WidgetNode {
   // C3: a project-component instance starts with sample values for REQUIRED
   // scalar props (optional ones use the signature default = omitted); events
@@ -974,20 +1029,88 @@ private fun nameIconButtons() {
 private fun runPublish() {
   publishing = true
   publishBtn.setAttribute("disabled", "")
-  publishBtn.textContent = "Publishing…"
-  showExportText("Publish", null, "Publishing… (compiles + signs the bundle, ~1-2 min)", "")
-  exportOverlay.removeAttribute("style")
+  setTopAction(publishBtn, "Publishing…", "building + signing")
+  // Owner, 25 Oct: a small card, not the whole build log over the editor — the log is one click away.
+  showPublishCard(PublishCard.Busy, "Publishing “$currentProject”…", "Compiling and signing every screen — usually under a minute", null)
   val xhr = XMLHttpRequest()
   xhr.open("POST", "$SERVER/publish?project=$currentProject")
-  fun done(text: String) {
+  fun done(ok: Boolean, text: String) {
     publishing = false
     publishBtn.removeAttribute("disabled")
-    publishBtn.textContent = "Publish"
-    showExportText("Publish", null, text, "publish.log")
+    setTopAction(publishBtn, "⬆ Publish", "to devices")
+    val s = publishSummary(ok, text)
+    if (s.ok) showPublishCard(PublishCard.Done, "Published v${s.version}", "Devices running this app load it on their next update check", text)
+    else showPublishCard(PublishCard.Failed, "Not published", s.reason, text)
+    refreshDevicesChip()
   }
-  xhr.addEventListener("load", { _ -> done((if (xhr.status.toInt() == 200) "✅ " else "❌ ") + xhr.responseText) })
-  xhr.addEventListener("error", { _ -> done("❌ The relay did not answer the publish request.") })
+  xhr.addEventListener("load", { _ -> done(xhr.status.toInt() == 200, xhr.responseText) })
+  xhr.addEventListener("error", { _ -> done(false, "The relay did not answer the publish request.") })
   xhr.send()
+}
+
+private enum class PublishCard(val css: String, val icon: String) { Busy("busy", "⏳"), Done("ok", "✓"), Failed("fail", "✕") }
+
+private var publishCardEl: HTMLElement? = null
+
+/** The publish card under the top bar: what is happening, or what happened, and the log one click away. */
+private fun showPublishCard(state: PublishCard, title: String, detail: String?, log: String?) {
+  publishCardEl?.remove()
+  val card = Ui.el("div", "publish-card ${state.css}")
+  card.setAttribute("role", "status")
+  card.setAttribute("aria-live", "polite")
+  card.appendChild(Ui.el("span", "pc-icon", state.icon))
+  val body = Ui.el("div", "pc-body")
+  body.appendChild(Ui.el("div", "pc-title", title))
+  detail?.let { body.appendChild(Ui.el("div", "pc-detail", it)) }
+  card.appendChild(body)
+  if (log != null) {
+    card.appendChild(Ui.button("Log", "btn mini") {
+      showExportText("Publish log", null, log, "publish.log")
+      exportOverlay.removeAttribute("style")
+    }.also { it.setAttribute("title", "The full build and signing output") })
+  }
+  if (state != PublishCard.Busy) card.appendChild(Ui.button("✕", "btn icon mini") { card.remove() }.also { it.setAttribute("title", "Close") })
+  document.body?.appendChild(card)
+  publishCardEl = card
+  // A success goes by itself; a failure stays until it is read.
+  if (state == PublishCard.Done) kotlinx.browser.window.setTimeout({ if (publishCardEl === card) card.remove(); null }, 12_000)
+}
+
+private lateinit var devicesChip: HTMLElement
+
+/** Which bundle devices get now — the newest one published — next to Publish. */
+private fun refreshDevicesChip() {
+  if (playground) return
+  serverGet("/bundles/index.json") { txt ->
+    val newest = newestBundle(txt)
+    devicesChip.textContent = newest?.let { (v, at) -> "On devices: v$v · ${localTime(at)}" } ?: "Not published yet"
+    devicesChip.setAttribute("title", if (newest == null) "No bundle published from this app yet: devices have nothing to load"
+      else "The newest published bundle (v${newest.first}): devices running this app load it on their next update check")
+  }
+}
+
+/** [iso] as a short local date and time ("25 Oct, 18:44"). */
+private fun localTime(iso: String): String =
+  js("new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })")
+
+private const val LIVE_TIP = "Live preview: run this screen's own logic (its presenter) in the canvas, as on a device — loading, taps, navigation. Without a presenter in this editor it runs on the State panel's values."
+
+private fun liveOn(): Boolean = liveBtn.getAttribute("aria-pressed") == "true"
+
+/** A top-bar action: its [label], under it a [caption] saying what it acts on, and a fuller [tip]. */
+private fun topAction(label: String, caption: String, tip: String, cls: String, onClick: () -> Unit): HTMLElement {
+  val b = Ui.button("", "$cls top-action") { onClick() }
+  b.appendChild(Ui.el("span", "ta-label", label))
+  b.appendChild(Ui.el("span", "ta-caption", caption))
+  b.setAttribute("title", tip)
+  b.setAttribute("aria-label", "$label — $caption")
+  return b
+}
+
+private fun setTopAction(b: HTMLElement, label: String, caption: String) {
+  (b.querySelector(".ta-label") as? HTMLElement)?.textContent = label
+  (b.querySelector(".ta-caption") as? HTMLElement)?.textContent = caption
+  b.setAttribute("aria-label", "$label — $caption")
 }
 
 private fun buildTopbar() {
@@ -1098,7 +1221,9 @@ private fun buildTopbar() {
     bar.appendChild(Ui.button("⛓", "btn icon") { showFlowGraph() }
       .also { it.setAttribute("title", "Nav graph: the flow's screens + navigations (click a node to open it)") })
   }
-  liveBtn = Ui.button("▶ Live", "btn") { toggleLive() }
+  // Owner, 25 Oct: each action says what it does — its name, and under it what it acts on.
+  liveBtn = topAction("▶ Live", "run its logic", LIVE_TIP, "btn") { toggleLive() }
+  liveBtn.setAttribute("aria-pressed", "false")
   bar.appendChild(liveBtn)
   // Follow the live flow: when its current screen changes, load that screen's
   // tree (the flow composition itself is keyed by FLOW and survives the swap).
@@ -1107,10 +1232,17 @@ private fun buildTopbar() {
   buildChip.setAttribute("style", "font-size:11px; padding:2px 8px; border-radius:8px; margin-left:6px;")
   bar.appendChild(buildChip)
 
-  bar.appendChild(Ui.button("Export Kotlin", "btn") { showExport() })
-  publishBtn = Ui.button("Publish", "btn primary") { confirmPublish() }
-  publishBtn.setAttribute("title", "Build, sign and store a new bundle for devices")
+  bar.appendChild(
+    topAction("</> Code", "this screen's .kt", "This screen's Kotlin file exactly as it is on disk — copy or download it. " +
+      "Your edits are written to it as you make them; nothing to export.", "btn") { showExport() },
+  )
+  bar.appendChild(Ui.el("span", "topbar-sep"))
+  devicesChip = Ui.el("span", "devices-chip", "")
+  bar.appendChild(devicesChip)
+  publishBtn = topAction("⬆ Publish", "to devices", "Build and sign every screen of this app and store it as the next bundle. " +
+    "Devices running the app load it on their next update check.", "btn primary") { confirmPublish() }
   bar.appendChild(publishBtn)
+  refreshDevicesChip()
   // E41: the topbar is first in the tab order (it is first on screen), and says what it is.
   bar.setAttribute("role", "toolbar")
   bar.setAttribute("aria-label", "Editor")
@@ -1136,6 +1268,7 @@ private fun buildLeftPane() {
   // J7: a fixed height — shrinking to the search results moved the outline under the pointer.
   paletteListEl.setAttribute("style", "height:34vh; min-height:120px; overflow:auto;")
   pane.appendChild(paletteListEl)
+  buildPaletteCard()
   renderPalette("")
 
   pane.appendChild(Ui.section("Outline"))
@@ -1621,7 +1754,7 @@ private fun installMockActionSink() {
 // ── M8: capability-driven live preview ──────────────────────────────────────
 
 private fun toggleLive() {
-  if (LiveEngine.request.value != null || liveBtn.textContent == "■ Stop") disableLive()
+  if (LiveEngine.request.value != null || liveOn()) disableLive()
   else if (openComponents.isNotEmpty()) showCanvasHint("Live runs the screen's presenter — go back to “$currentScreen” to run it")
   else enableLive()
 }
@@ -1689,9 +1822,10 @@ private fun enableLiveWithFixtureCatalog() {
       // H8: said where it is seen — the fidelity panel's line is below the fold.
       Ui.toast("No presenter for '$currentScreen' in this editor: Live runs on the State panel's values")
     }
-    liveBtn.textContent = "■ Stop"
+    setTopAction(liveBtn, "■ Stop", "live preview is on")
+    liveBtn.setAttribute("aria-pressed", "true")
     liveBtn.setAttribute("title", if (flowRegistered || registered) "Stop the app's presenter" else "Stop Live — it runs on the State panel's values (this editor has no presenter for '$currentScreen')")
-    liveBtn.className = "btn primary"
+    liveBtn.className = "btn primary top-action"
     renderInspector()
     Snapshot.sendApplyNotifications()
   }
@@ -1710,9 +1844,10 @@ private fun disableLive() {
   LiveEngine.stop()
   PreviewBindings.mocks.clear()
   installMockActionSink()
-  liveBtn.textContent = "▶ Live"
-  liveBtn.removeAttribute("title")
-  liveBtn.className = "btn"
+  setTopAction(liveBtn, "▶ Live", "run its logic")
+  liveBtn.setAttribute("aria-pressed", "false")
+  liveBtn.setAttribute("title", LIVE_TIP)
+  liveBtn.className = "btn top-action"
   renderMockFidelity()
   inspectorEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "—")) }
   refresh()
@@ -2356,7 +2491,7 @@ private fun loadRuntimeMetadata() {
   xhr.open("GET", "$SERVER/runtime-metadata")
   xhr.addEventListener("load", { _ ->
     runtimeMetadataLoad = parseRuntimeMetadata(xhr.responseText)
-    if (liveBtn.textContent == "■ Stop") {
+    if (liveOn()) {
       renderFidelity(liveRequiredCapabilities, livePresenterLabel())
     } else {
       renderMockFidelity()
@@ -2636,8 +2771,11 @@ private fun renderPalette(filter: String) {
     row.appendChild(Ui.el("span", "t", type))
     if (tag != null) row.appendChild(Ui.el("span", "cat", tag))
     row.setAttribute("draggable", "true")
-    row.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "new:$type") })
+    row.addEventListener("dragstart", { ev -> hidePalettePreview(); (ev as DragEvent).dataTransfer?.setData("text", "new:$type") })
     row.addEventListener("click", { _ -> addToSelectedOrRoot(newNode(type)) })
+    // Owner, 25 Oct: hovering a row shows what it adds, drawn by the canvas's own renderer.
+    row.addEventListener("mouseenter", { _ -> schedulePalettePreview(type, row) })
+    row.addEventListener("mouseleave", { _ -> hidePalettePreview() })
     row.setAttribute("title", "Click: add $type after the selection (or inside it). Drag: drop it where the line shows")
     paletteListEl.appendChild(row)
   }
@@ -2686,6 +2824,9 @@ private fun acceptsChildrenNode(node: WidgetNode): Boolean =
 private fun renderOutline() {
   // E41: keyboard focus stays on the outline when it is re-rendered (arrow keys move the selection).
   val hadFocus = (document.activeElement as? HTMLElement)?.classList?.contains("tree-row") == true
+  // The outline scrolls on its own: emptying it to redraw the rows scrolled it to the top on every
+  // selection — a row picked far down jumped out of sight (owner, 25 Oct). It keeps its place.
+  val keptScroll = outlineEl.scrollTop
   Ui.clear(outlineEl)
   val focusable = selectedId?.takeIf { portalTree.value.findNode(it) != null } ?: portalTree.value.id
   fun row(node: WidgetNode, depth: Int) {
@@ -2741,7 +2882,8 @@ private fun renderOutline() {
     if (node.id !in collapsedRows) node.children.forEach { row(it, depth + 1) }
   }
   row(portalTree.value, 0)
-  if (hadFocus) (outlineEl.querySelector(".tree-row[tabindex='0']") as? HTMLElement)?.focus()
+  outlineEl.scrollTop = keptScroll
+  if (hadFocus) (outlineEl.querySelector(".tree-row[tabindex='0']") as? HTMLElement)?.let(::focusWithoutScrolling)
   // Keep the selected row in view (keyboard navigation, a canvas click).
   (outlineEl.querySelector(".tree-row.selected") as? HTMLElement)?.let { el ->
     val box = el.getBoundingClientRect()
@@ -2749,6 +2891,9 @@ private fun renderOutline() {
     if (box.top < pane.top || box.bottom > pane.bottom) el.scrollIntoView(false)
   }
 }
+
+/** Gives [el] the keyboard without scrolling it into view (the outline keeps its place). */
+private fun focusWithoutScrolling(el: HTMLElement): Unit = js("el.focus({ preventScroll: true })")
 
 /** J5: the outline row pressed and not yet clicked (null once its click arrived), and its element. */
 private var pressedRow: Pair<Int, HTMLElement>? = null

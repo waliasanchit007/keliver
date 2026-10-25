@@ -9,8 +9,8 @@ reference, see [USAGE.md](USAGE.md); for the app architecture, see
 
 **▶ [The Keliver Portal playground](http://keliver.me/keliver/)** — the real
 visual editor running entirely in your browser, no checkout and no server. Drag
-widgets, bind fields, hit **Export Kotlin** and read what comes out. That
-exported Kotlin is the same thing steps 1–4 below put under git.
+widgets, bind fields, hit **</> Code** and read what comes out. That
+Kotlin is the same thing steps 1–4 below put under git.
 
 ## What you're building
 
