@@ -315,6 +315,16 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /** What screens show; they only observe it. */
   val state: StateFlow<KeliverHostState> = mutableState.asStateFlow()
 
+  private val mutableResumeCheck = MutableStateFlow(false)
+
+  /**
+   * True while a check [resumed] started runs — until it finds nothing newer, or the update it
+   * found is applied or fails. A screen created meanwhile waits for it ([KeliverScreen]): bound to
+   * the running code first, it was drawn, then drawn again by the update (a reopen from recents
+   * after the system had destroyed the screen showed the old bundle, then the new one).
+   */
+  val resumeCheckRunning: StateFlow<Boolean> = mutableResumeCheck.asStateFlow()
+
   private val mutableBundle = MutableStateFlow<KeliverBundle?>(null)
 
   /** The bundle running now, or null before any has loaded (W5). */
@@ -686,6 +696,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             if (p != null && url == p.url) {
               pending = null
               Log.d(TAG, "update applied: sequence $sequence")
+              mutableResumeCheck.value = false
               mutableEvents.tryEmit(KeliverUpdateEvent.Applied(sequence))
               report("update-applied", sequence, "network")
             } else if (first) {
@@ -724,6 +735,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               pending = null
               failedUpdates += p.url
               Log.d(TAG, "update failed: sequence ${p.sequence} did not load ($reason); the running bundle stays")
+              mutableResumeCheck.value = false
               mutableEvents.tryEmit(KeliverUpdateEvent.Failed(p.sequence, reason))
               report("update-failed", p.sequence, "network", reason)
               return@launch
@@ -820,7 +832,12 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       Log.d(TAG, "update check skipped: the last lookup was ${since / 1000} s ago (at most one every 30 s)")
       return
     }
-    scope.launch { checkForUpdate() }
+    mutableResumeCheck.value = true // before the screen being resumed composes for the first time
+    scope.launch {
+      val check = runCatching { checkForUpdate() }.getOrNull()
+      // An update being applied clears it when it is applied or fails.
+      if (!(check is KeliverUpdateCheck.Available && check.applying)) mutableResumeCheck.value = false
+    }
   }
 
   companion object {
