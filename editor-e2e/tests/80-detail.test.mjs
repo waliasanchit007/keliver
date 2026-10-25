@@ -30,7 +30,7 @@ export default [
     async run({ page, editor }) {
       await editor.open('overview', { readyColor: COLORS.summaryCard });
       const bar = await page.eval(`[...document.querySelectorAll('.top-action')].map(b => b.innerText.split('\\n').join(' / '))`);
-      ok(bar.some((t) => /Publish \/ to devices/.test(t)) && bar.some((t) => /Live \/ run its logic/.test(t)) && bar.some((t) => /Code \/ /.test(t)),
+      ok(bar.some((t) => /Publish \/ to devices/.test(t)) && bar.some((t) => /Live \/ (run its logic|not in this editor)/.test(t)) && bar.some((t) => /Code \/ /.test(t)),
         `each top-bar action says what it does (${JSON.stringify(bar)})`);
       await editor.clickOn('.topbar .top-action', '⬆ Publish');
       await editor.clickOn('.modal-actions button', 'Publish', { exact: true });

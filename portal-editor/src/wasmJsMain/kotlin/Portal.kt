@@ -1217,6 +1217,7 @@ private fun buildTopbar() {
     sel.setAttribute("title", "Flow walkthrough: Live follows the flow's navigation")
     bar.appendChild(sel)
     flowSel = sel
+    sel.addEventListener("change", { _ -> syncLiveButton() })
     // #13 F3: open the derived nav-graph view (nodes = screens, edges = navs).
     bar.appendChild(Ui.button("⛓", "btn icon") { showFlowGraph() }
       .also { it.setAttribute("title", "Nav graph: the flow's screens + navigations (click a node to open it)") })
@@ -1756,7 +1757,30 @@ private fun installMockActionSink() {
 private fun toggleLive() {
   if (LiveEngine.request.value != null || liveOn()) disableLive()
   else if (openComponents.isNotEmpty()) showCanvasHint("Live runs the screen's presenter — go back to “$currentScreen” to run it")
+  // Owner, 25 Oct: with nothing to run, Live said "on" and changed nothing. It says why instead.
+  else if (!liveAvailable()) showCanvasHint(liveUnavailableWhy(), millis = 9000)
   else enableLive()
+}
+
+/** Whether this editor build can run anything Live for the open screen: its presenter, or a flow chosen. */
+private fun liveAvailable(): Boolean {
+  val flowName = flowSel?.value?.takeIf { it != "—" }
+  val flowRegistered = flowName != null && dev.keliver.portal.render.appFlowEntry?.flows?.get(flowName) != null
+  return flowRegistered || dev.keliver.portal.render.appPreviewEntry?.screens?.get(currentScreen) != null
+}
+
+private fun liveUnavailableWhy(): String =
+  "Live runs the app's own logic (its presenter for “$currentScreen”), and this editor has none: it is the generic editor. " +
+    "Build the app's own editor (keliver-new-editor.sh) — its logic must also build for wasmJs — to run it here. " +
+    "The State panel sets what the canvas shows meanwhile."
+
+/** Owner, 25 Oct: the Live button says up front whether there is anything to run on this screen. */
+private fun syncLiveButton() {
+  if (!::liveBtn.isInitialized || liveOn()) return
+  val available = liveAvailable()
+  setTopAction(liveBtn, "▶ Live", if (available) "run its logic" else "not in this editor")
+  liveBtn.classList.toggle("unavailable", !available)
+  liveBtn.setAttribute("title", if (available) LIVE_TIP else liveUnavailableWhy())
 }
 
 private var liveRequiredCapabilities: List<String> = emptyList()
@@ -1848,6 +1872,7 @@ private fun disableLive() {
   liveBtn.setAttribute("aria-pressed", "false")
   liveBtn.setAttribute("title", LIVE_TIP)
   liveBtn.className = "btn top-action"
+  syncLiveButton()
   renderMockFidelity()
   inspectorEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "—")) }
   refresh()
@@ -2568,6 +2593,7 @@ private fun loadDraft(cb: (() -> Unit)? = null) {
   deletedPlace = null
   staleUpTo = refetchSeq // replies to fetches of the previous document are not this one's
   renderCrumbs()
+  syncLiveButton()
   dropQueuedOps()
   refetchDoc(true) { subscribeDocEvents(); cb?.invoke() }
   updateUndoButtons()

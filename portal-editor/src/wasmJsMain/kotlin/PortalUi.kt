@@ -192,6 +192,7 @@ internal object Ui {
       line-height: 1.15; padding: 3px 10px; min-height: 34px; text-align: left; white-space: nowrap; }
     .top-action .ta-label { font-weight: 600; }
     .top-action .ta-caption { font-size: 10px; opacity: .72; font-weight: 400; }
+    .top-action.unavailable { opacity: .55; }
     .topbar-sep { width: 1px; align-self: stretch; margin: 9px 2px; background: var(--border); }
     .devices-chip { font-size: 11px; color: var(--muted); white-space: nowrap; }
     .publish-card { position: fixed; top: 54px; right: 16px; z-index: 60; display: flex; align-items: center; gap: 10px;
