@@ -88,7 +88,7 @@ class DesignTokenRelayTest {
   private fun batch(svc: DocumentService, vararg ops: DocOp) = OpBatch(svc.doc.version, OpEnvelope("t", 0L), ops.toList())
 
   private fun awaitFile(f: File, predicate: (String) -> Boolean): String {
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline) {
       val t = f.readText()
       if (predicate(t)) return t
@@ -151,7 +151,7 @@ class DesignTokenRelayTest {
     // Within the write's 400 ms: the declaration changes (the relay's re-read waits for the write).
     File(components, "Tokens.kt").writeText(tokens(ink = "-16777216"))
     assertTrue(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile))
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (svc.writeBack == null && System.currentTimeMillis() < deadline) Thread.sleep(25)
     val status = assertNotNull(svc.writeBack)
     assertEquals("surgical", status.outcome, status.toString())

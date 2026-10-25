@@ -61,6 +61,10 @@ internal fun pillAfterReply(reply: OpsReply, notWritten: Boolean): Pill = when {
   reply == OpsReply.NetworkError -> Pill("dot error", "Not saved")
   notWritten -> Pill("dot error", "Not written")
   reply == OpsReply.Unknown -> Pill("dot", "Unconfirmed")
+  // E18: the edit was refused and not applied: the file is unchanged, but the
+  // author's change did not happen — say so (the toast fades; the pill stays).
+  reply is OpsReply.Rejected -> Pill("dot saving", "Change refused")
+  reply == OpsReply.Rebase -> Pill("dot saving", "Reloaded")
   else -> Pill("dot", "Saved")
 }
 

@@ -8,4 +8,6 @@
  * runPortalEditor + the entries are all in the root package (the shell across
  * the module boundary, the app in this module), so none needs an import.
  */
-fun main() = runPortalEditor(AppLibPreview, flows = AppLibFlows)
+// The flavour (web-spike/build.gradle) picks the entry: this repo's sample app,
+// or none for the tools bundle's generic editor.
+fun main() = runPortalEditor(flavorEntry, flows = flavorFlows)

@@ -229,9 +229,10 @@ internal fun knownTokens(current: Any?, tokens: List<EditorToken> = editorTokens
   tokens.filter(::templateTokenOffered).associate { it.ref to it.toPropValue() } + tokensIn(current)
 
 /**
- * A text field for a template or a list: it shows [source], sends each valid
- * edit through [send], and marks an invalid one (red, with the reason as its
- * tooltip) without sending it. [extra] adds buttons beside it.
+ * A text field for a template or a list: it shows [source], marks an invalid
+ * edit (red, with the reason as its tooltip) as it is typed, and sends a valid
+ * one through [send] once it is committed — Enter or leaving the field (a
+ * multi-line field takes Shift+Enter as a line break; Escape reverts).
  */
 internal fun refValueEditor(
   source: String,
@@ -244,12 +245,15 @@ internal fun refValueEditor(
   val read: () -> String
   val write: (String) -> Unit
   if (multiline) {
-    val area = Ui.textarea()
-    area.rows = source.lines().size.coerceIn(1, 6)
+    val area = Ui.textarea("input grow")
+    area.rows = 1
     area.value = source
     field = area
     read = { area.value }
     write = { area.value = it }
+    area.addEventListener("input", { _ -> fitToContent(area) })
+    area.addEventListener("focus", { _ -> fitToContent(area) })
+    kotlinx.browser.window.requestAnimationFrame { fitToContent(area) }
   } else {
     val input = Ui.input()
     input.setAttribute("type", "text")
@@ -259,20 +263,40 @@ internal fun refValueEditor(
     write = { input.value = it }
   }
   field.setAttribute("placeholder", placeholder)
-  fun check() {
+  var committed = source
+  /** Marks the field valid or not; the parsed value when valid. */
+  fun check(): PropValue? {
     val p = parse(read())
     if (p.error != null) {
       field.setAttribute("style", "border-color:#e5484d;")
       field.setAttribute("title", p.error)
-    } else {
-      field.setAttribute("style", "border-color:var(--accent);")
-      field.setAttribute("title", placeholder)
-      send(p.value!!)
+      return null
     }
+    field.setAttribute("style", "border-color:var(--accent);")
+    field.setAttribute("title", placeholder)
+    return p.value
   }
-  field.addEventListener("input", { _ -> check() })
+  // E11: a keystroke only validates; the value is sent once — on Enter or
+  // leaving the field — and never while it does not parse.
+  fun commit() {
+    clearPending(field)
+    if (read() == committed) return
+    val v = check() ?: return
+    committed = read()
+    send(v)
+  }
+  field.addEventListener("input", { _ -> check(); markPending(field, ::commit) })
+  field.addEventListener("change", { _ -> commit() })
+  commitKeys(field, newlineOnShiftEnter = multiline) { clearPending(field); write(committed); check() }
   field.setAttribute("style", "border-color:var(--accent);")
   field.setAttribute("title", placeholder)
   // Append text (a picked token) and send.
-  return field to { more -> write(read() + more); check() }
+  return field to { more -> write(read() + more); commit() }
 }
+
+/**
+ * K4: the template a Text prop's {} button starts — [text] (the field's text
+ * when the button is pressed, typed or not: E48) then a binding named [field].
+ */
+internal fun startTemplate(text: String, field: String): PropValue.Template =
+  PropValue.Template(listOfNotNull(text.takeIf { it.isNotEmpty() }?.let { lit(it) }, PropValue.Bind(field)))

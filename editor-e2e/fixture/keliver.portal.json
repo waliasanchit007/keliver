@@ -1,0 +1,5 @@
+{
+  "port": 8099,
+  "screensDir": "src/screens",
+  "componentsDir": "src/components"
+}

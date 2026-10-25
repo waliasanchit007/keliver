@@ -17,6 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.GlobalPositionAwareModifierNode
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -47,7 +53,6 @@ import dev.keliver.material.modifier.SelectionTag
 import dev.keliver.material.modifier.Shadow
 import dev.keliver.material.modifier.Size
 import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import dev.keliver.Modifier as RedwoodModifier
 
 /**
@@ -99,11 +104,43 @@ public fun Modifier.applyKeliverVisuals(keliver: RedwoodModifier): Modifier {
       is AnimateContentSize -> m.animateContentSize()
       is Alpha -> m.alpha(element.pct / 100f)
       // P3-11: editor-injected geometry reporter (never present on devices).
-      is SelectionTag -> m.onGloballyPositioned { c -> SelectionRegistry.report(element.handle, c.boundsInRoot()) }
+      is SelectionTag -> m.then(SelectionTagElement(element.handle))
       is Padding -> m.padding(element.allDp.dp)
       is PaddingEach -> m.padding(element.startDp.dp, element.topDp.dp, element.endDp.dp, element.bottomDp.dp)
       else -> m // Reuse + any modifier this host doesn't render: ignore.
     }
   }
   return m
+}
+
+/**
+ * P3-11: reports this widget's bounds for [handle] as its own reporter, and
+ * withdraws them when the widget leaves the composition, so a handle drawn by
+ * several widgets (a component instance, a Repeat's rows) keeps every rect.
+ */
+private data class SelectionTagElement(val handle: Int) : ModifierNodeElement<SelectionTagNode>() {
+  override fun create(): SelectionTagNode = SelectionTagNode(handle)
+  override fun update(node: SelectionTagNode) {
+    node.retag(handle)
+  }
+}
+
+private class SelectionTagNode(private var handle: Int) : Modifier.Node(), GlobalPositionAwareModifierNode {
+  override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
+    // The full rect also off screen (boundsInRoot clips to what is visible, which is empty
+    // below the fold), and the visible part separately: only that answers a click.
+    val full = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
+    SelectionRegistry.report(handle, this, full, coordinates.boundsInRoot())
+  }
+
+  override fun onDetach() {
+    SelectionRegistry.remove(this)
+  }
+
+  fun retag(newHandle: Int) {
+    if (newHandle != handle) {
+      SelectionRegistry.remove(this)
+      handle = newHandle
+    }
+  }
 }

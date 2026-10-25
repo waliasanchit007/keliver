@@ -41,7 +41,8 @@ object WriteBack {
     tokens: TokenTable = TokenTable.EMPTY,
     fileName: String = "Screen.kt",
     base: UiDocument? = null,
-  ): String? = (attempt(fileText, target, components, tokens, fileName, base) as? Outcome.Merged)?.text
+    asComponent: Boolean = false,
+  ): String? = (attempt(fileText, target, components, tokens, fileName, base, asComponent) as? Outcome.Merged)?.text
 
   fun attempt(
     fileText: String,
@@ -62,12 +63,16 @@ object WriteBack {
      * never merges without a base ([ScreenWriter.plan] re-reads the file).
      */
     base: UiDocument? = null,
+    /** E14: [fileText]'s component is the document (its parameters read by bare name), not a screen. */
+    asComponent: Boolean = false,
   ): Outcome {
     fun no(reason: String) = Outcome.NotSurgical(reason)
-    val rec = Recognizer.recognize(fileName, fileText, components, tokens)
-      ?: return no("the file has no @Composable screen function the editor can read")
+    val rec = Recognizer.recognize(fileName, fileText, components, tokens, asComponent)
+      ?: return no("the file has no @Composable ${if (asComponent) "component" else "screen"} function the editor can read")
     val file = rec.file ?: return no("the file could not be parsed")
     val factory = PsiEnv.factory
+    // The text before the splices edit the PSI in place (file.text is the edited text after them).
+    val parsedText = file.text
 
     // P2b-a: contract drift no longer forces a full regen — ContractWriteBack
     // maintains the Bindings interface as a separate pass after every write.
@@ -111,10 +116,10 @@ object WriteBack {
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
     // Each splice reports its imports STRUCTURALLY (exporter / grammar).
-    val out = ensureImports(file.text, written).let { afterSpliceForTest.get()?.invoke(it) ?: it }
+    val out = pruneImports(parsedText, ensureImports(file.text, written)).let { afterSpliceForTest.get()?.invoke(it) ?: it }
     // Safety net (K3 review): the surgical text is written only when it reads
     // back as the target — one more parse per write.
-    val back = runCatching { Recognizer.recognize(fileName, out, components, tokens) }.getOrNull()
+    val back = runCatching { Recognizer.recognize(fileName, out, components, tokens, asComponent) }.getOrNull()
       ?: return no("the edited file would no longer read as a screen")
     if (!sameTree(back.root, targetRoot)) {
       val diff = firstDifference(back.root, targetRoot) ?: "it reads back differently"
@@ -271,7 +276,7 @@ object WriteBack {
    */
   private fun condText(c: dev.keliver.portal.Cond): String {
     val param = bindings.get() ?: "b"
-    return c.kotlin { if ('.' in it) it else "$param.$it" }
+    return c.kotlin { if ('.' in it || param == COMPONENT_PARAMS) it else "$param.$it" }
   }
 
   /**
@@ -280,7 +285,7 @@ object WriteBack {
    * is, a design token by its reference; null for anything else.
    */
   private fun refText(v: PropValue): String? = when (v) {
-    is PropValue.Bind -> if ('.' in v.field) v.field else "${bindings.get() ?: "b"}.${v.field}"
+    is PropValue.Bind -> (bindings.get() ?: "b").let { p -> if ('.' in v.field || p == COMPONENT_PARAMS) v.field else "$p.${v.field}" }
     is PropValue.Token -> v.ref
     else -> null
   }
@@ -317,6 +322,46 @@ object WriteBack {
    * scope bind them).
    * Each lands at its sorted position among the imports. Adds only.
    */
+  /**
+   * Removes the imports this edit left unused: one whose name (its alias, or its simple name) the
+   * code of [before] used and the code of [after] no longer mentions anywhere. An import the author
+   * already had unused stays, and so does one named like an operator convention (`getValue` for
+   * `by`, `plus` for `+`, …), which code uses without naming it. So an edit and its undo give the
+   * file back byte for byte. Names are matched as whole words over the code outside the import
+   * lines, strings and comments included — when in doubt, the import stays.
+   */
+  internal fun pruneImports(before: String, after: String): String {
+    val importLine = Regex("""^import\s+([\w.`]+?)(\.\*)?(?:\s+as\s+(`?\w+`?))?\s*;?\s*(?://.*|/\*.*)?$""")
+    fun code(text: String) = text.lines().filterNot { it.trimStart().startsWith("import ") }.joinToString("\n")
+    val beforeCode = code(before)
+    val afterCode = code(after)
+    fun uses(code: String, name: String) = Regex("""(?<![\w`])`?${Regex.escape(name)}`?(?![\w`])""").containsMatchIn(code)
+    val lines = after.lines()
+    val kept = lines.filter { line ->
+      val m = importLine.matchEntire(line.trim()) ?: return@filter true
+      if (m.groupValues[2].isNotEmpty()) return@filter true // a star import
+      val name = m.groupValues[3].replace("`", "").ifEmpty { m.groupValues[1].replace("`", "").substringAfterLast('.') }
+      name in OPERATOR_CONVENTIONS || !uses(beforeCode, name) || uses(afterCode, name)
+    }
+    if (kept.size == lines.size) return after
+    // Removing the last import also removes the blank line that set the block off.
+    val out = kept.toMutableList()
+    if (out.none { it.startsWith("import ") } && lines.any { it.startsWith("import ") }) {
+      val first = lines.indexOfFirst { it.startsWith("import ") }
+      val at = first - (lines.size - out.size).coerceAtMost(0)
+      if (at in out.indices && out[at].isBlank() && (at == 0 || out[at - 1].isBlank())) out.removeAt(at)
+    }
+    return out.joinToString("\n")
+  }
+
+  /** Functions code calls through an operator or a language convention, without naming them. */
+  private val OPERATOR_CONVENTIONS = setOf(
+    "getValue", "setValue", "provideDelegate", "invoke", "get", "set", "contains", "iterator", "next", "hasNext",
+    "plus", "minus", "times", "div", "rem", "rangeTo", "rangeUntil", "unaryPlus", "unaryMinus", "not", "inc", "dec",
+    "plusAssign", "minusAssign", "timesAssign", "divAssign", "remAssign", "compareTo", "equals",
+    "component1", "component2", "component3", "component4", "component5",
+  )
+
   internal fun ensureImports(text: String, fqs: Set<String>): String {
     if (fqs.isEmpty()) return text
     // `import a.b.C`, `import a.b.*`, `import a.b.C as D` — with backticked
@@ -415,13 +460,24 @@ object WriteBack {
     // re-indented to the call's depth (and kept single-line if the source was).
     if (parsed.props != target.props || !sameModifiers(parsed.modifiers, target.modifiers)) {
       if (!editArgumentValues(call, parsed, target, factory, components, parentType)) {
+        // `Column { … }` has no argument list: its first arguments get one, after the name (the
+        // block stays as the author wrote it).
+        if (call.valueArgumentList == null) return addArgumentList(call, target, factory, components, parentType)
         val oldList = call.valueArgumentList ?: return false
         val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType, bindings.get())
         var callText = emitted.text
-        if ('\n' !in oldList.text) callText = collapseCall(callText)
-        val newCall = factory.createExpression(callText) as? KtCallExpression ?: return false
+        if ('\n' !in oldList.text) callText = collapseCall(callText, factory)
+        // An argument whose value did not change keeps the author's text (`onClick = b::go` is not
+        // re-spelled `{ b.go() }`), so an edit and its undo give the file back byte for byte.
+        fun untouched(name: String): Boolean =
+          if (name == "modifier") sameModifiers(parsed.modifiers, target.modifiers)
+          else parsed.props[name] != null && parsed.props[name] == target.props[name] &&
+            (parsed.props.keys + target.props.keys).filter { it.startsWith("$name.") }.all { parsed.props[it] == target.props[it] }
+        val newCall = factory.createExpression(keepArgumentOrder(oldList, callText, factory, ::untouched)) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
         oldList.replace(newList)
+        // No arguments left before a trailing block: `Column { … }`, not `Column() { … }`.
+        call.valueArgumentList?.takeIf { it.arguments.isEmpty() && call.lambdaArguments.isNotEmpty() }?.delete()
         need(emitted.imports)
       }
     }
@@ -434,6 +490,63 @@ object WriteBack {
       ?: return target.children.isEmpty() || bail("${target.type} has no `{ … }` block in the file to put children in")
 
     return mergeChildren(parsed.children, target.children, block, psi, factory, components, parsed.type)
+  }
+
+  /** [call] (`Column { … }`) given [target]'s arguments in a new list after its name, on one line when short. */
+  private fun addArgumentList(
+    call: KtCallExpression,
+    target: DocNode.Widget,
+    factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
+    parentType: String?,
+  ): Boolean {
+    val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType, bindings.get())
+    val multiLine = (factory.createExpression(emitted.text) as? KtCallExpression)?.valueArgumentList ?: return false
+    if (multiLine.arguments.isEmpty()) return true // nothing to add: the call stays `Column { … }`
+    val oneLine = "(" + multiLine.arguments.joinToString(", ") { it.text } + ")"
+    val newList = if (indentOf(call).length + call.calleeExpression!!.textLength + oneLine.length <= 100 && '\n' !in oneLine) {
+      (factory.createExpression("X$oneLine") as KtCallExpression).valueArgumentList!!
+    } else {
+      multiLine
+    }
+    call.addAfter(newList, call.typeArgumentList ?: call.calleeExpression ?: return false)
+    need(emitted.imports)
+    return true
+  }
+
+  /**
+   * [callText] (a whole-list re-emission, in the exporter's canonical order) with its named
+   * arguments in the order [oldList] had them: the arguments the author kept stay where they were,
+   * and new ones follow, in the emitter's order. Each argument keeps its emitted slot's formatting;
+   * only which argument sits in which slot changes — and an argument [untouched] by the edit is
+   * the author's own text. Unchanged when an argument is positional.
+   */
+  private fun keepArgumentOrder(
+    oldList: org.jetbrains.kotlin.psi.KtValueArgumentList,
+    callText: String,
+    factory: KtPsiFactory,
+    untouched: (String) -> Boolean = { false },
+  ): String {
+    val call = factory.createExpression(callText) as? KtCallExpression ?: return callText
+    val args = call.valueArgumentList?.arguments ?: return callText
+    val oldNames = oldList.arguments.map { it.getArgumentName()?.asName?.asString() ?: return callText }
+    val names = args.map { it.getArgumentName()?.asName?.asString() ?: return callText }
+    val rank = oldNames.withIndex().associate { (i, n) -> n to i }
+    val oldByName = oldList.arguments.associateBy { it.getArgumentName()!!.asName.asString() }
+    val ordered = args.withIndex().sortedWith(compareBy({ rank[names[it.index]] ?: Int.MAX_VALUE }, { it.index })).map { it.value }
+    fun textOf(a: org.jetbrains.kotlin.psi.KtValueArgument): String {
+      val name = a.getArgumentName()?.asName?.asString()
+      return name?.let { n -> oldByName[n]?.takeIf { untouched(n) }?.text } ?: a.text
+    }
+    if (ordered == args && ordered.all { textOf(it) == it.text }) return callText
+    // Replace slot by slot from the end, so earlier offsets stay valid.
+    val base = call.textRange.startOffset
+    var out = callText
+    for (i in args.indices.reversed()) {
+      val r = args[i].textRange
+      out = out.substring(0, r.startOffset - base) + textOf(ordered[i]) + out.substring(r.endOffset - base)
+    }
+    return out
   }
 
   /**
@@ -955,7 +1068,7 @@ object WriteBack {
     parentType: String?,
   ): KtExpression? = place(block, after, factory) { indent ->
     // P0 indent fix: the statement text is emitted re-indented to the destination depth.
-    val emitted = NodeEmitter.statement(node, indent, components, parentType, bindings.get())
+    val emitted = NodeEmitter.statement(node, indent, components, parentType, bindings.get(), compact = true)
     need(emitted.imports)
     statementOf(factory, emitted.text)
   }
@@ -1162,11 +1275,16 @@ object WriteBack {
   }
 
   /** `Foo(\n  a = 1,\n  b = 2,\n)` → `Foo(a = 1, b = 2)` (grammar props never hold raw newlines). */
-  private fun collapseCall(text: String): String {
-    val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
-    if (lines.size <= 1) return text
-    val body = lines.drop(1).dropLast(1).joinToString(" ").removeSuffix(",")
-    return lines.first() + body + lines.last()
+  private fun collapseCall(text: String, factory: KtPsiFactory): String {
+    // Round 5 (L4): from the parsed call — its arguments' own texts, joined, no trailing comma (was
+    // `StyledBox(a = 1, b = 2, ) {`). The author's one-line list stays one line however long it
+    // gets (review 7: splitting it past a width made its undo give back a different file). Only an
+    // argument written over several lines keeps the exporter's one-argument-a-line form.
+    val call = factory.createExpression(text) as? KtCallExpression ?: return text
+    val args = call.valueArgumentList?.arguments ?: return text
+    if (args.isEmpty() || args.any { '\n' in it.text }) return text
+    val head = (call.calleeExpression?.text ?: return text) + (call.typeArgumentList?.text ?: "")
+    return head + "(" + args.joinToString(", ") { it.text } + ")" + call.lambdaArguments.joinToString("") { " " + it.text }
   }
 
   /** Leading whitespace of the line [element] starts on (its splice depth). */

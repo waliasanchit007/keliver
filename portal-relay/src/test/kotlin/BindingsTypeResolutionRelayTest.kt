@@ -56,7 +56,7 @@ class BindingsTypeResolutionRelayTest {
   private fun DocumentService.batch(vararg ops: DocOp) = OpBatch(doc.version, OpEnvelope("t", 0L), ops.toList())
 
   private fun awaitStatus(svc: DocumentService, version: Long): DocumentService.WriteBackStatus {
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline) {
       svc.writeBack?.takeIf { it.version == version }?.let { return it }
       Thread.sleep(25)

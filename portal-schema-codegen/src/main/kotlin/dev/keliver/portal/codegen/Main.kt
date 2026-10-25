@@ -31,17 +31,22 @@ internal fun parseSchemas(args: Args): Pair<ProtocolSchemaSet, ProtocolSchemaSet
 
 fun main(argv: Array<String>) {
   val args = Args(argv)
+  // E8: KDoc-listed codes ("0 start, 1 center") — read before the FIR parse, which drops KDoc.
+  val materialDocs = readPropDocs(args.materialSources)
+  val layoutDocs = readPropDocs(args.layoutSources)
   val (material, layout) = parseSchemas(args)
+  // E8: the layout enums' names, from the value classes on the schema classpath.
+  val enums = layoutEnumChoices(Thread.currentThread().contextClassLoader)
 
   // simple name -> plan; layout wins collisions (matches existing tree semantics).
   val plans = mutableMapOf<String, WidgetPlan>()
   for (w in material.schema.widgets) {
-    plans[w.type.names.last()] = planWidget("dev.keliver.material.compose", "Material", w)
+    plans[w.type.names.last()] = planWidget("dev.keliver.material.compose", "Material", w).withChoices(materialDocs, enums)
   }
   for (w in layout.schema.widgets) {
     val name = w.type.names.last()
     if (name in plans) println("collision: '$name' defined in material too — layout wins")
-    plans[name] = planWidget("dev.keliver.layout.compose", "Layout", w)
+    plans[name] = planWidget("dev.keliver.layout.compose", "Layout", w).withChoices(layoutDocs, enums)
   }
   val includes = plans.values.filterIsInstance<WidgetPlan.Include>()
   val excluded = plans.values.filterIsInstance<WidgetPlan.Exclude>()
@@ -51,9 +56,9 @@ fun main(argv: Array<String>) {
   // collides with an unscoped one (layout Size vs material Size) is renamed.
   val mods = disambiguateModifiers(
     (
-      material.schema.modifiers.map { it to "dev.keliver.material.compose" } +
-        layout.schema.modifiers.map { it to "dev.keliver.layout.compose" }
-      ).mapNotNull { (m, pkg) -> planModifier(pkg, m) },
+      material.schema.modifiers.map { Triple(it, "dev.keliver.material.compose", materialDocs) } +
+        layout.schema.modifiers.map { Triple(it, "dev.keliver.layout.compose", layoutDocs) }
+      ).mapNotNull { (m, pkg, docs) -> planModifier(pkg, m)?.withChoices(m.type.names.last(), docs, enums) },
   )
 
   // P3-11: portal-INTERNAL modifiers render in the preview (RenderNode) but are

@@ -565,7 +565,7 @@ private fun handle(ex: HttpExchange, block: () -> Unit) {
   runCatching(block).onFailure {
     // A named screen that does not exist is a client error, and saying so is
     // the point: it used to be answered by inventing the screen.
-    val code = if (it is UnknownScreen) 404 else 500
+    val code = if (it is UnknownScreen || it is UnknownComponent) 404 else 500
     println("portal-server: ${ex.requestURI} failed: $it")
     runCatching { respond(ex, code, "{\"error\":\"${it.message?.replace("\"", "'")}\"}") }
   }
@@ -610,6 +610,9 @@ private fun respondRecording(ex: HttpExchange, result: HttpRecordingResult) {
 // ── V2 M1: the live document engine ─────────────────────────────────────────
 
 private val documents = java.util.concurrent.ConcurrentHashMap<String, DocumentService>()
+
+/** L2: each screen's cross-document undo order, for every editor on it (see [SessionHistories]). */
+private val sessionHistories = SessionHistories()
 
 /**
  * M6 app project model: the "default" project's canonical screens live INSIDE
@@ -692,8 +695,21 @@ private fun screensPackageFor(project: String): String {
   return sibling ?: "dev.keliver.portalpublished.screens"
 }
 
-private fun screenFunctionName(screen: String): String =
-  screen.replaceFirstChar { it.uppercase() } + "Screen"
+/**
+ * G9: a NEW screen's function: `home` → `HomeScreen`, `order_status` → `OrderStatusScreen` (not
+ * `Order_statusScreen`). An existing file keeps the function it declares ([declaredScreenFunction]).
+ */
+internal fun screenFunctionName(screen: String): String =
+  screen.split('_', '-').filter { it.isNotEmpty() }.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) } + "Screen"
+
+/**
+ * The screen function [file] declares, or null when there is no such file: its first top-level
+ * `@Composable fun` that is not private (a helper), else its first one — as the file parses.
+ */
+internal fun declaredScreenFunction(file: File): String? {
+  val text = file.takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() } ?: return null
+  return dev.keliver.portal.ingest.declaredScreenFunctionName(file.name, text)
+}
 
 /** Raised when a request names a screen the app does not have. */
 class UnknownScreen(val project: String, val screen: String, val known: List<String>) :
@@ -702,6 +718,48 @@ class UnknownScreen(val project: String, val screen: String, val known: List<Str
       if (known.isEmpty()) " (this app has no screens yet)"
       else "; known screens: ${known.joinToString(", ")}",
   )
+
+/** E14: raised when a request opens a component the app does not have, or one whose body is edited in code. */
+class UnknownComponent(project: String, name: String, why: String) :
+  IllegalArgumentException("component '$name' in project '$project' cannot be opened: $why")
+
+/**
+ * E14: the file that declares component [name] in [dir] — `<name>.kt` by
+ * convention, else the file whose component (its first `@Composable`) it is.
+ */
+private fun componentFile(dir: File, name: String): File? {
+  val named = File(dir, "$name.kt")
+  if (named.isFile) return named
+  val declares = Regex("@Composable[^{]*?\\bfun\\s+" + Regex.escape(name) + "\\s*\\(")
+  return (dir.listFiles { f -> f.name.endsWith(".kt") } ?: emptyArray()).sorted()
+    .firstOrNull { f -> runCatching { declares.containsMatchIn(f.readText()) }.getOrDefault(false) }
+}
+
+/**
+ * E14: one engine per component opened for editing (`/doc?component=<Name>`),
+ * keyed `<project>/component:<Name>`. Its document is the component's body and
+ * its edits are written to the component's own file; the registry rebuild that
+ * write triggers ([ingestComponentFile]) re-renders every screen that uses it.
+ */
+private fun componentDocFor(project: String, name: String): DocumentService {
+  if (!Regex("[A-Za-z_][A-Za-z0-9_]*").matches(name)) throw UnknownComponent(project, name, "not a component name")
+  val dir = componentsDirFor(project)
+  val key = "$project/component:$name"
+  // A component whose file is gone (deleted, renamed) is no longer served from the document it had.
+  documents[key]?.let { open -> if (!open.file.isFile) documents.remove(key, open) }
+  return documents.getOrPut(key) {
+    val spec = Components.registry(project).spec(name) ?: throw UnknownComponent(project, name, "the app has no such component")
+    val file = componentFile(dir, name) ?: throw UnknownComponent(project, name, "its file is not in ${dir.name}/")
+    DocumentService.forComponent(
+      "$project/component:$name", file, name,
+      components = { Components.registry(project) },
+      tokens = { Tokens.table(project) },
+      tokenFileId = tokenFileId(file),
+      tokensVersion = { Tokens.version(project) },
+      componentsVersion = { Components.version(project) },
+    ) ?: throw UnknownComponent(project, name, spec.diagnostic ?: "its body is not one the editor can read")
+  }
+}
 
 /**
  * True when the screen exists either as a store document or as a `.kt` in the
@@ -724,6 +782,7 @@ private fun docFor(q: Map<String, String>): DocumentService {
   // merely opening the editor.
   val (activeProject, activeScreenName) = activeScreen()
   val project = safe(q["project"] ?: activeProject)
+  q["component"]?.let { return componentDocFor(project, it) }
   val screen = safe(q["screen"] ?: activeScreenName)
   // A screen this app does not have is an ERROR, not an invitation to invent
   // one. Minting on read is how a foreign screen name — from a shared store, a
@@ -742,14 +801,25 @@ private fun docFor(q: Map<String, String>): DocumentService {
         f.writeText(serializeTree(tree))
       },
       kotlinFile = File(screensDirFor(project), "$screen.kt"),
-      functionName = screenFunctionName(screen),
+      functionName = declaredScreenFunction(File(screensDirFor(project), "$screen.kt")) ?: screenFunctionName(screen),
       packageName = if (inProject) screensPackageFor(project) else null,
       components = { Components.registry(project) },
       tokens = { Tokens.table(project) },
       tokenFileId = tokenFileId(File(screensDirFor(project), "$screen.kt")),
       tokensVersion = { Tokens.version(project) },
+      componentsVersion = { Components.version(project) },
     ).also { it.ensureKotlinFile() }
   }
+}
+
+/**
+ * The session's undo/redo depths as response headers (`X-Undo-Depth`, `X-Redo-Depth`), so the
+ * editor can disable Undo/Redo when there is nothing to step. Additive: an older editor ignores them.
+ */
+private fun sendStackDepths(ex: HttpExchange, svc: DocumentService, session: String) {
+  val (undo, redo) = svc.stackDepths(session)
+  ex.responseHeaders.set("X-Undo-Depth", "$undo")
+  ex.responseHeaders.set("X-Redo-Depth", "$redo")
 }
 
 private fun session(ex: HttpExchange): String =
@@ -908,6 +978,10 @@ private fun refreshProject(project: String, why: String) {
   if (dir.exists()) Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
   println("ingest(tokens): $project -> ${Tokens.table(project).offered.size} token(s) ($why)")
   reingestScreens(project, force = true)
+  // An open component reads its file again under the new table, as a screen does.
+  documents.filter { (k, _) -> k.startsWith("$project/component:") }.values.forEach { svc ->
+    runCatching { svc.reingest() }.onFailure { println("component document re-read failed: $it") }
+  }
   // Open editors refresh their token picker even when no document changed.
   documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
 }
@@ -942,10 +1016,20 @@ private fun ingestComponentFile(f: File) {
     val tokensChanged = rebuildTokens(project)
     val reg = Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
     println("ingest(component): $project -> ${reg.names().sorted()} (${f.name} changed)")
+    // E14: an open component document reads its own file again (not its own write), and the
+    // others re-read theirs under the new registry (a component they call changed).
+    documents.filter { (k, _) -> k.startsWith("$project/component:") }.forEach { (k, svc) ->
+      runCatching {
+        val own = f.exists() && componentFile(dir, k.substringAfter("component:"))?.absolutePath == f.absolutePath
+        if (own) svc.fileChanged(f.readText()) else svc.reingest()
+      }.onFailure { println("component document $k: re-read failed: $it") }
+    }
     // Always forced: a screen's text is unchanged, so the watcher path would
     // skip it as already read, and its tree would stay read under the old registry.
     reingestScreens(project, force = true)
-    if (tokensChanged) documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
+    // Every open editor of the project redraws its instances: a screen's own document does not
+    // change when only a component it uses does, so without this the canvas kept the old one.
+    documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
   }.onFailure { println("component ingest failed for $f: $it") }
 }
 
@@ -1261,6 +1345,21 @@ fun main(args: Array<String>) {
     }
   }
 
+  // L2 (feedback round 5): a screen's cross-document undo order (the editor's SessionHistory), kept
+  // in memory beside the undo stacks it describes. GET: 200 with it, 204 when none is kept.
+  server.createContext("/history") { ex ->
+    handle(ex) {
+      val q = query(ex)
+      val project = safe(q["project"] ?: "default")
+      val screen = safe(q["screen"] ?: "main")
+      when (ex.requestMethod) {
+        "GET" -> sessionHistories.get(project, screen)?.let { respond(ex, 200, it) } ?: respond(ex, 204)
+        "PUT" -> respond(ex, if (runCatching { readBoundedBody(ex, 64 * 1024) }.getOrNull()?.let { sessionHistories.put(project, screen, it) } == true) 204 else 400)
+        else -> respond(ex, 405)
+      }
+    }
+  }
+
   server.createContext("/active") { ex ->
     handle(ex) {
       when (ex.requestMethod) {
@@ -1290,7 +1389,9 @@ fun main(args: Array<String>) {
       // K7: PropValue.Arith / PropValue.IntDp only with `arithmetic=1`; else the computed literal
       // (a prop whose expression reads a binding is left out) — applied before everything else.
       val q = query(ex)
-      respond(ex, 200, DocJson.encodeToString(docView(docFor(q).doc, q)))
+      val svc = docFor(q)
+      sendStackDepths(ex, svc, session(ex))
+      respond(ex, 200, DocJson.encodeToString(docView(svc.doc, q)))
     }
   }
   server.createContext("/ops") { ex ->
@@ -1301,6 +1402,7 @@ fun main(args: Array<String>) {
       val svc = docFor(q)
       val ack = if (q["dryRun"] == "1") svc.dryRun(batch) else svc.submit(batch)
       val code = if (ack.ok) 200 else if (ack.error?.startsWith("stale") == true) 409 else 422
+      sendStackDepths(ex, svc, batch.envelope.session)
       respond(ex, code, DocJson.encodeToString(ack))
     }
   }
@@ -1308,13 +1410,50 @@ fun main(args: Array<String>) {
   server.createContext("/undo") { ex ->
     handle(ex) {
       if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
-      respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).undo(session(ex))))
+      val svc = docFor(query(ex))
+      val ack = svc.undo(session(ex))
+      sendStackDepths(ex, svc, session(ex))
+      respond(ex, 200, DocJson.encodeToString(ack))
     }
   }
   server.createContext("/redo") { ex ->
     handle(ex) {
       if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
-      respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).redo(session(ex))))
+      val svc = docFor(query(ex))
+      val ack = svc.redo(session(ex))
+      sendStackDepths(ex, svc, session(ex))
+      respond(ex, 200, DocJson.encodeToString(ack))
+    }
+  }
+  // E20: the open document's own .kt file exactly as it is on disk — Export shows this, never a
+  // re-export from the tree (which loses the package, imports, names and declared types). GET only.
+  server.createContext("/source") { ex ->
+    handle(ex) {
+      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
+      val svc = docFor(query(ex))
+      val rel = runCatching { svc.file.canonicalFile.relativeTo(repoDir.canonicalFile).path }.getOrDefault(svc.file.name)
+      val body = kotlinx.serialization.json.buildJsonObject {
+        put("file", kotlinx.serialization.json.JsonPrimitive(rel))
+        put("text", svc.sourceText()?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+        put("version", kotlinx.serialization.json.JsonPrimitive(svc.doc.version))
+        put("writeBack", svc.writeBack?.json()?.let { kotlinx.serialization.json.Json.parseToJsonElement(it) } ?: kotlinx.serialization.json.JsonNull)
+      }
+      respond(ex, 200, body.toString())
+    }
+  }
+  // E42: a symbol font the editor's canvas falls back to for glyphs its own font lacks (✓ ✕ ★ …),
+  // so a symbol in an app's text is drawn, not a box. Noto Sans Symbols 2, under the SIL OFL
+  // (editor-fonts/OFL.txt). Read-only and the same for every app.
+  server.createContext("/editor-font") { ex ->
+    handle(ex) {
+      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
+      val bytes = Thread.currentThread().contextClassLoader.getResourceAsStream("editor-fonts/NotoSansSymbols2-Regular.ttf")
+        ?.use { it.readBytes() }
+      if (bytes == null) { respond(ex, 404); return@handle }
+      ex.responseHeaders.set("Content-Type", "font/ttf")
+      ex.responseHeaders.set("Cache-Control", "public, max-age=86400")
+      ex.sendResponseHeaders(200, bytes.size.toLong())
+      ex.responseBody.use { it.write(bytes) }
     }
   }
   server.createContext("/doc-events") { ex -> // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back

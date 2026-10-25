@@ -1,10 +1,21 @@
-import dev.keliver.portal.render.CompiledComponent
+import dev.keliver.portal.render.AppFlowEntry
+import dev.keliver.portal.render.AppPreviewEntry
+import dev.keliver.portal.render.ScreenPreview
 
 /**
  * The tools bundle's GENERIC editor, served for any app without its own
- * editor: no compiled adapters, because they are looked up by component name
- * and these would draw this repo's sample components in place of an app's
- * same-named opaque ones. Opaque components stay placeholders here; an app's
- * own editor (keliver-new-editor.sh) draws them. See web-spike/build.gradle.
+ * editor. It carries none of this repo's sample app: compiled adapters are
+ * looked up by component name and would draw the sample's components in place
+ * of an app's same-named ones, and the sample's presenters, personas and flows
+ * would offer (and run, on Live) another app's logic for an app whose screens
+ * share their names. Opaque components stay placeholders; an app's own editor
+ * (keliver-new-editor.sh) brings its presenters. See web-spike/build.gradle.
  */
-internal val flavorCompiledComponents: Map<String, CompiledComponent> = emptyMap()
+internal object GenericPreviewEntry : AppPreviewEntry {
+  override val label: String = "app"
+  override val screens: Map<String, ScreenPreview> = emptyMap()
+}
+
+internal val flavorEntry: AppPreviewEntry = GenericPreviewEntry
+
+internal val flavorFlows: AppFlowEntry? = null

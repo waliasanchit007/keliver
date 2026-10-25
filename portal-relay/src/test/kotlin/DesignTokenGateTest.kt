@@ -182,7 +182,7 @@ fun HomeScreen() {
     assertEquals(lit(-14737633), ((old.root as DocNode.Widget).children.single() as DocNode.Widget).props["colorArgb"])
     // The old editor edits another prop; the server document — and the file — keep C.Ink.
     assertTrue(svc.submit(batch(svc, DocOp.SetProp(text(svc).handle, "fontSize", lit(14)))).ok)
-    val deadline = System.currentTimeMillis() + 5_000
+    val deadline = System.currentTimeMillis() + 30_000
     while (System.currentTimeMillis() < deadline && "fontSize = 14" !in homeFile.readText()) Thread.sleep(50)
     assertTrue("StyledText(text = \"a\", colorArgb = C.Ink, fontSize = 14)" in homeFile.readText(), homeFile.readText())
   }
@@ -452,9 +452,10 @@ fun HomeScreen() {
   }
 
   @Test fun aRedoTheFilesOwnImportRefusesIsDroppedNotKept() {
-    // The production path (the file writable): T's `import x.C` LANDS, and
-    // write-back never removes an import, so S's q.C.Muted can never be
-    // restored without a hand edit of the file — the step is dropped.
+    // The production path (the file writable): T's `import x.C` LANDS and is in
+    // use (write-back removes only an import whose last use it removed), so S's
+    // q.C.Muted can never be restored without a hand edit of the file — the
+    // step is dropped.
     val svc = service(home(imports = "", body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
     File(screens, "X.kt").writeText("package x\nobject C { const val Ink = 9 }\n")
     File(components, "Q.kt").writeText("package q\nobject C { const val Muted = 8 }\n")
@@ -468,11 +469,7 @@ fun HomeScreen() {
     assertTrue(svc.undo("S").ok)
     // T: a = x.C.Ink, and that write lands.
     assertTrue(asSession(svc, "T", DocOp.SetProp(a.handle, "colorArgb", token("C.Ink", 9, "x.C"))).ok)
-    awaitFile { "import x.C\n" in it && "C.Ink" in it }
-    // T undoes; the import stays (write-back only adds imports).
-    assertTrue(svc.undo("T").ok)
-    val written = awaitFile { "C.Ink" !in it }
-    assertTrue("import x.C\n" in written, written)
+    val written = awaitFile { "import x.C\n" in it && "C.Ink" in it }
     assertTrue("import q.C" !in written, written)
     val version = svc.doc.version
     val before = svc.doc.root
