@@ -878,7 +878,7 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U38. After switching to an app's own editor, the browser can keep running the bundled one — OPEN (found 2026-10-21)
+### U38. After switching to an app's own editor, the browser can keep running the bundled one — FIXED for tools 0.3.13, browser re-run pending (found 2026-10-21)
 
 **What happened.** `keliver-portal` serves the editor on :8096 with
 `python3 -m http.server`, which sends `Last-Modified` and no cache headers. A
@@ -895,10 +895,16 @@ loaded the app's loader and wasm and drew the compiled component.
 **Workaround.** A hard reload (or a private window) after changing which
 editor `keliver-portal` serves.
 
-**Fix direction.** Serve the editor with `Cache-Control: no-cache` (a small
-server instead of `http.server`, as the relay's own promote step stamps
-`?v=<millis>` on the loader), or stamp the loader reference in the served
-`index.html` the same way.
+**Fix (2026-10-27).** `keliver-portal` serves the editor with a small
+`http.server` subclass: every response says `Cache-Control: no-store`, and a
+conditional request is answered in full. `no-cache` alone was not enough
+(review of #143): the browser revalidates with `If-Modified-Since`, and since
+the bundled editor and an app's own one share file names and either can be the
+older file, `http.server` answered 304 and the first editor stayed. Checked
+with curl: `no-store` on every response, and a request carrying a later
+`If-Modified-Since` gets 200 with the file. Not yet re-run in a browser against
+the 0.3.12 reproduction (a headless Chrome profile that opened the bundled
+editor first).
 
 ### U37. Any edit of a screen whose Bindings interface extends one from another file broke its compile — FIXED in tools 0.3.12 (found 2026-10-20)
 
