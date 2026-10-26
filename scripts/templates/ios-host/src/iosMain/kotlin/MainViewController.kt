@@ -40,9 +40,12 @@
  *
  * Updates (W5): checkForUpdate() looks up again and, after a network start,
  * applies a newer bundle in place (Zipline loads it while the old code runs; a
- * failure leaves the old one). With UPDATES = "on-resume" in HostConfig.kt (by
- * default in a DEBUG build) the host does that each time the app returns to the
- * foreground. A DEBUG build also checks when told to from the computer
+ * failure leaves the old one). With UPDATES = "on-resume" in HostConfig.kt the
+ * host does that each time the app returns to the foreground. With "live" (by
+ * default in a DEBUG build; a DEBUG build only) it also listens to the bundle
+ * server's /bundles/events while a Keliver screen is in the window and the app
+ * is in the foreground (BundleEvents.kt), so a publish reaches an open app. A
+ * DEBUG build also checks when told to from the computer
  * (debugCheckForUpdateName()).
  *
  * Reports (W6): every outcome (loaded, fell back, update applied or failed,
@@ -62,6 +65,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -100,7 +104,12 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -118,6 +127,9 @@ import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSThread
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIViewController
 import platform.darwin.NOTIFY_STATUS_OK
@@ -290,10 +302,17 @@ public object Keliver {
     KeliverTiming.start() // Debug and Benchmark builds only (M0); nothing elsewhere
     // Once: a start that created nothing runs again (started is reset), and a
     // second observer would make every foreground check twice.
-    if (updatesMode() == "on-resume" && !resumeObserved) {
+    if (updatesMode() != "next-launch" && !resumeObserved) {
       resumeObserved = true
+      foreground = UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateBackground
       NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue) { _ ->
         resumed()
+        foreground = true
+        syncLiveListener()
+      }
+      NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationDidEnterBackgroundNotification, null, NSOperationQueue.mainQueue) { _ ->
+        foreground = false
+        syncLiveListener()
       }
     }
     registerDebugCheckForUpdate()
@@ -432,7 +451,7 @@ public object Keliver {
     if (status != NOTIFY_STATUS_OK.toUInt()) log("could not register $name (notify status $status)")
   }
 
-  /** With UPDATES = "on-resume" (by default in a DEBUG build): check and apply, at most every 30 s (the host observes the foreground itself). */
+  /** With UPDATES = "on-resume" or "live": check and apply, at most every 30 s (the host observes the foreground itself). */
   private fun resumed() {
     val since = lastLookup.elapsedNow()
     if (since < 30.seconds) {
@@ -444,6 +463,88 @@ public object Keliver {
 
   /** Whether any code has loaded in this process (main thread). */
   internal fun hasLoaded(): Boolean = loaded
+
+  /** Keliver screens in the window ([viewController] counts them); the live listener runs while there is one. Main thread. */
+  private var screensShown = 0
+  /** Whether the app is in the foreground; the live listener stops in the background. Main thread. */
+  private var foreground = true
+  private var liveListener: Job? = null
+  /** Set when the bundle server has no event stream (a static server): not asked again in this process. */
+  private var liveUnsupported = false
+
+  private fun screenShown() {
+    screensShown++
+    syncLiveListener()
+  }
+
+  private fun screenHidden() {
+    screensShown = (screensShown - 1).coerceAtLeast(0)
+    syncLiveListener()
+  }
+
+  /** UPDATES = "live" in a DEBUG binary ([updatesMode] makes it "on-resume" in a release one). */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  private fun liveUpdatesAllowed(): Boolean = updatesMode() == "live" && !liveUnsupported && kotlin.native.Platform.isDebugBinary
+
+  private fun syncLiveListener() {
+    if (screensShown > 0 && foreground && liveUpdatesAllowed()) {
+      if (liveListener?.isActive != true) liveListener = appScope.launch { listenForBundles() }
+    } else {
+      if (liveListener?.isActive == true) {
+        log("live updates: stopped listening (${if (screensShown == 0) "no screen on show" else "the app is in the background"})")
+      }
+      liveListener?.cancel()
+      liveListener = null
+    }
+  }
+
+  /**
+   * Holds `/bundles/events` open and runs [checkForUpdate] on each event, until
+   * cancelled (no screen on show, or the app in the background). An event is
+   * only a nudge: what is applied is what the index names and the manifest's
+   * signature allows, as on any update. Checks run one at a time; events that
+   * arrive during one ask for one more. Before the first bundle has loaded
+   * ("No bundle"), an event starts the host again instead, so the first publish
+   * reaches the open app too. A dropped stream is retried after 2 s, doubling
+   * to 30 s; the delay goes back to 2 s only once an event has arrived. Main thread.
+   */
+  private suspend fun listenForBundles() = coroutineScope {
+    val checks = Channel<Unit>(Channel.CONFLATED)
+    launch {
+      for (ignored in checks) {
+        if (session == null) start() else runCatching { checkOnMain(apply = true) }
+      }
+    }
+    var retry = 2.seconds
+    while (true) {
+      // The server the session runs on; before one exists, the one a start would use.
+      val base = session?.lookup?.server?.base
+        ?: bundleServerSetting().first.takeIf { '?' !in it && '#' !in it }?.let { BundleServer.parse(it) }?.base
+      if (base == null) {
+        checks.close()
+        return@coroutineScope
+      }
+      val url = "$base/bundles/events"
+      val end = runCatching {
+        readBundleEvents(url, onListening = { log("live updates: listening to $url") }) { data ->
+          log("live updates: the bundle server says $data")
+          checks.trySend(Unit)
+        }
+      }
+      ensureActive()
+      val stream = end.getOrNull()
+      if (stream?.kind == LiveStream.NOT_SERVED) {
+        log("live updates: $url is not served (a static bundle server); updates apply on resume")
+        liveUnsupported = true
+        checks.close()
+        return@coroutineScope
+      }
+      if (stream?.kind == LiveStream.HEARD) retry = 2.seconds
+      log("live updates: the stream ended (${end.exceptionOrNull()?.message ?: stream?.error ?: "closed"}); again in ${retry.inWholeSeconds} s")
+      delay(retry)
+      retry = (retry * 2).coerceAtMost(30.seconds)
+    }
+  }
 
   /** Called on the main thread when a code load failed: before any code ran, say so instead of a blank screen. */
   internal fun codeLoadFailed(reason: String) {
@@ -460,6 +561,10 @@ public object Keliver {
   public fun viewController(safeArea: Boolean = true): UIViewController = ComposeUIViewController {
     remember { KeliverTiming.mark("open") } // Debug and Benchmark builds only (M0)
     LaunchedEffect(Unit) { start() }
+    DisposableEffect(Unit) {
+      screenShown()
+      onDispose { screenHidden() }
+    }
     val current by state.collectAsState()
     val modifier = if (safeArea) Modifier.fillMaxSize().safeDrawingPadding() else Modifier.fillMaxSize()
     when (val s = current) {
@@ -497,9 +602,15 @@ internal fun bundleServerSetting(): Pair<String, Boolean> {
   return if (fromLaunch.isNullOrEmpty()) BUNDLE_SERVER to false else fromLaunch to true
 }
 
-/** UPDATES, or when it is empty: "on-resume" in a DEBUG binary and "next-launch" in a release one. */
+/**
+ * UPDATES, or when it is empty: "live" in a DEBUG binary and "next-launch" in a release one.
+ * "live" is a DEBUG binary's only: in a release one it is "on-resume".
+ */
 @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
-internal fun updatesMode(): String = UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "on-resume" else "next-launch" }
+internal fun updatesMode(): String {
+  val mode = UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "live" else "next-launch" }
+  return if (mode == "live" && !kotlin.native.Platform.isDebugBinary) "on-resume" else mode
+}
 
 /** The Darwin notification a DEBUG binary checks for an update on: `<bundle id>.keliver.check-for-update`. */
 internal fun debugCheckForUpdateName(): String = "${NSBundle.mainBundle.bundleIdentifier ?: "keliver"}.keliver.check-for-update"

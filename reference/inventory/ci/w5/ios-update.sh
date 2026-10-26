@@ -14,12 +14,20 @@
 #   L1-L3  a debug host takes its bundle server from the launch environment
 #       (KELIVER_BUNDLE_SERVER), refuses a malformed one, and without it uses
 #       its built-in server again
+#   LV1-LV3  live updates (a debug host from 2026-10-27 on, UPDATES empty):
+#       a static server has no /bundles/events, so U1's host says so and
+#       updates on resume; against a server that announces bundles, a publish
+#       is applied in the open app with no resume; in the background the host
+#       stops listening
 echo "--- W5: an update applied when the app comes back to the foreground"
 app_pid(){ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="UIKitApplication:$BID" 'index($3, b) == 1 { print $1 }' | head -1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 # A host with a debug default (tools 0.3.10 on) is built with UPDATES empty, so
 # U1 shows that default; an older one is set to on-resume.
 if grep -qs 'fun updatesMode' "$(dirname "$CFG")/MainViewController.kt"; then U1_UPDATES=""; else U1_UPDATES="on-resume"; fi
+# A host with live updates runs U1 live (its debug default) against a static
+# server, which has no /bundles/events: LV1 is that fallback to on-resume.
+if [ -z "$U1_UPDATES" ] && grep -qs 'bundles/events' "$(dirname "$CFG")/MainViewController.kt"; then W5_LIVE=1; else W5_LIVE=0; fi
 sed -i '' -e "s|UPDATES: String = \"[^\"]*\"|UPDATES: String = \"$U1_UPDATES\"|" \
   -e 's|REPORT_URL: String = "[^"]*"|REPORT_URL: String = "https://localhost:8443/report"|' "$CFG"
 grep -q "UPDATES: String = \"$U1_UPDATES\"" "$CFG" && grep -q 'REPORT_URL: String = "https://localhost:8443/report"' "$CFG" \
@@ -44,8 +52,16 @@ sleep 30
 C="$EV/U1.console.txt"
 grep -q "loading https://localhost:8443/bundles/v8/manifest.zipline.json (index sequence 8," "$C" && grep -q "codeLoadSuccess modules=[0-9]* sequence=8" "$C" \
   && ok "U1: the host started on v8" || bad "U1: v8 did not load: $(grep -E 'KeliverHost' "$C" | head -3 | tr '\n' ' ')"
-grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates on-resume" "$C" \
-  && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$C")"
+if [ "$W5_LIVE" = 1 ]; then
+  grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates live" "$C" \
+    && ok "U1: the debug host runs with updates live (the default)" || bad "U1: the host is not set to live: $(grep -m1 'verifying manifests' "$C")"
+  grep -q "KeliverHost: live updates: https://localhost:8443/bundles/events is not served (a static bundle server); updates apply on resume" "$C" \
+    && ok "LV1: a static server has no /bundles/events; the host says so and falls back to on-resume" \
+    || bad "LV1: no fallback line: $(grep -E 'KeliverHost: live updates' "$C" | head -3 | tr '\n' ' ')"
+else
+  grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates on-resume" "$C" \
+    && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$C")"
+fi
 xcrun simctl io "$UDID" screenshot "$EV/U1-before.png" > /dev/null 2>&1
 swift "$HERE/ocr.swift" "$EV/U1-before.png" > "$EV/U1-before.ocr.txt" 2>"$EV/U1-before.ocr.err"
 pid_before="$(app_pid)"
@@ -144,5 +160,70 @@ if grep -rqs KELIVER_BUNDLE_SERVER "$APP/host-ios/src/iosMain/kotlin"; then
   xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
 else
   echo "  SKIP  L1-L3: this host predates the launch-environment bundle server (not counted)"
+fi
+
+# LV2-LV3: live updates against a server that announces bundles. Its own copy of
+# the site and its own port (from the launch environment, as L1), so v10 here
+# never reaches the main site, whose v10 is W8's. The app is reinstalled
+# afterwards: this copy's v10 raises the rollback floor to 10.
+if [ "$W5_LIVE" = 1 ] && grep -rqs KELIVER_BUNDLE_SERVER "$APP/host-ios/src/iosMain/kotlin"; then
+  echo "--- live updates: a publish reaches the open app"
+  rm -rf "$W3/site-live" && cp -R "$W3/site" "$W3/site-live"
+  python3 "$HERE/w3/static_https.py" "$W3/site-live" 8445 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/lv-server.log" events &
+  LVPID=$!
+  for _ in $(seq 1 30); do curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8445/bundles/index.json && break; sleep 1; done
+  xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+  SIMCTL_CHILD_KELIVER_BUNDLE_SERVER=https://localhost:8445 xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/LV.console.txt" 2>&1 &
+  CPID=$!
+  sleep 25
+  C="$EV/LV.console.txt"
+  grep -q "KeliverHost: live updates: listening to https://localhost:8445/bundles/events" "$C" \
+    && grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" \
+    && ok "LV2: the debug host runs v9 and listens to /bundles/events while its screen shows" \
+    || bad "LV2: not listening: $(grep -E 'KeliverHost' "$C" | tail -4 | tr '\n' ' ')"
+  xcrun simctl io "$UDID" screenshot "$EV/LV2-before.png" > /dev/null 2>&1
+  swift "$HERE/ocr.swift" "$EV/LV2-before.png" > "$EV/LV2-before.ocr.txt" 2>"$EV/LV2-before.ocr.err"
+  reads LV2-before Cellar && ok "LV2: v9 shows 'Cellar'" || bad "LV2: 'Cellar' is not on the screen: $(tr '\n' '|' < "$EV/LV2-before.ocr.txt" | cut -c1-200)"
+  pid_live="$(app_pid)"
+  lines_before="$(wc -l < "$C")"
+  # The edit and publish a developer makes while the app is open; nothing on the simulator is touched.
+  w3_title Cellar Loft \
+    && ( cd "$APP" && "$PUBLISH" . --out "$W3/site-live" --public-key-file "$STORE/keys/ed25519.pub" ) > "$EV/w3-publish-v10-live.log" 2>&1 \
+    && grep -q "published v10 (sequence 10, channel stable" "$EV/w3-publish-v10-live.log" \
+    && ok "LV2: keliver-publish wrote v10 (\"Loft\") to the live server's site while the app showed v9" \
+    || { bad "LV2: publish v10 to the live site"; tail -20 "$EV/w3-publish-v10-live.log"; }
+  sleep 20
+  L="$EV/LV2.console.txt"; tail -n +"$((lines_before + 1))" "$C" > "$L"
+  grep -q 'KeliverHost: live updates: the bundle server says {"version":10}' "$L" \
+    && grep -q "KeliverHost: update check: sequence 10 is available (running 9); applying https://localhost:8445/bundles/v10/manifest.zipline.json" "$L" \
+    && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$L" && grep -q "KeliverHost: update applied: sequence 10" "$L" \
+    && ok "LV2: the server announced v10 and the open app looked it up, verified it and applied it" \
+    || bad "LV2: v10 was not applied live: $(grep -E 'KeliverHost|codeLoad' "$L" | tail -5 | tr '\n' ' ')"
+  [ -n "$pid_live" ] && [ "$(app_pid)" = "$pid_live" ] && ! grep -q "KeliverHost: verifying manifests" "$L" \
+    && ! grep -q "update check skipped" "$L" \
+    && ok "LV2: the same process (pid $pid_live), no restart and no resume" || bad "LV2: the process changed or restarted"
+  xcrun simctl io "$UDID" screenshot "$EV/LV2-after.png" > /dev/null 2>&1
+  swift "$HERE/ocr.swift" "$EV/LV2-after.png" > "$EV/LV2-after.ocr.txt" 2>"$EV/LV2-after.ocr.err"
+  reads LV2-after Loft && ok "LV2: the open app now reads 'Loft' (v10)" || bad "LV2: 'Loft' is not on the screen: $(tr '\n' '|' < "$EV/LV2-after.ocr.txt" | cut -c1-200)"
+  closed_before="$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")"
+  # To the background: Settings comes forward.
+  xcrun simctl launch "$UDID" com.apple.Preferences > /dev/null 2>&1
+  # The server notices a closed connection only when a keep-alive write fails,
+  # 15-30 s after the close. Wait up to 45 s for it.
+  for _ in $(seq 1 45); do
+    [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] && break
+    sleep 1
+  done
+  grep -q "KeliverHost: live updates: stopped listening (the app is in the background)" "$C" \
+    && [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] \
+    && ok "LV3: in the background the host stops listening, and its connection is closed (the server saw it go)" \
+    || bad "LV3: still listening in the background: $(grep -E 'KeliverHost: live' "$C" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"
+  kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
+  kill "$LVPID" 2>/dev/null; wait "$LVPID" 2>/dev/null
+  w3_title Loft Cellar || bad "LV: could not put the title back to Cellar for W8"
+  xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+  xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
+else
+  echo "  SKIP  LV2-LV3: this host predates live updates or the launch-environment bundle server (not counted)"
 fi
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
