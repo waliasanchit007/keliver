@@ -22,6 +22,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,19 +46,30 @@ fun KeliverScreen(host: KeliverHost, modifier: Modifier = Modifier) {
       when (val s = state) {
         is KeliverHostState.Message -> MessageScreen(s.title, s.message)
         is KeliverHostState.Running -> {
-          val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
-          val contentSource = remember {
-            object : TreehouseContentSource<PortalPresenter> {
-              // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
-              override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(app.launch())
+          // A screen created while a resume update check runs waits for it (at most 5 s): bound to
+          // the running code at once, it was drawn twice — the old bundle, then the update.
+          val checking by host.resumeCheckRunning.collectAsState()
+          var waited by remember { mutableStateOf(false) }
+          var shown by remember { mutableStateOf(false) }
+          LaunchedEffect(Unit) { kotlinx.coroutines.delay(5_000); waited = true }
+          if (checking && !shown && !waited) {
+            MessageScreen("Updating", "Loading the newest version…")
+          } else {
+            SideEffect { shown = true } // once drawn, an update swaps in place
+            val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
+            val contentSource = remember {
+              object : TreehouseContentSource<PortalPresenter> {
+                // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
+                override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(app.launch())
+              }
             }
+            TreehouseContent(
+              treehouseApp = s.app,
+              widgetSystem = widgetSystem,
+              contentSource = contentSource,
+              modifier = Modifier.fillMaxSize(),
+            )
           }
-          TreehouseContent(
-            treehouseApp = s.app,
-            widgetSystem = widgetSystem,
-            contentSource = contentSource,
-            modifier = Modifier.fillMaxSize(),
-          )
         }
       }
     }

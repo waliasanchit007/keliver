@@ -25,6 +25,50 @@ const stateFlag = (page, field) => page.eval(`(() => {
 
 export default [
   {
+    id: 'P1',
+    title: 'a publish is said in a small card with its reason — the build log stays one click away, not over the editor',
+    async run({ page, editor }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      const bar = await page.eval(`[...document.querySelectorAll('.top-action')].map(b => b.innerText.split('\\n').join(' / '))`);
+      ok(bar.some((t) => /Publish \/ to devices/.test(t)) && bar.some((t) => /Live \/ (run its logic|not in this editor)/.test(t)) && bar.some((t) => /Code \/ /.test(t)),
+        `each top-bar action says what it does (${JSON.stringify(bar)})`);
+      await editor.clickOn('.topbar .top-action', '⬆ Publish');
+      await editor.clickOn('.modal-actions button', 'Publish', { exact: true });
+      // This fixture app has no publish task: the relay refuses it, and the card says so.
+      let card = null;
+      for (const end = Date.now() + 30000; !card && Date.now() < end;) {
+        card = await page.eval(`(() => { const c = document.querySelector('.publish-card.fail, .publish-card.ok');
+          return c ? { state: c.className, title: c.querySelector('.pc-title').textContent, detail: c.querySelector('.pc-detail')?.textContent ?? '' } : null; })()`);
+        if (!card) await sleep(250);
+      }
+      ok(card && /fail/.test(card.state), `a card says it was not published (${JSON.stringify(card)})`);
+      equal(card.title, 'Not published');
+      ok(card.detail.length > 0 && card.detail.length <= 240, `with its reason in one line (${card.detail})`);
+      equal(await page.eval(`(() => { const o = [...document.querySelectorAll('pre')].find(p => p.offsetParent !== null); return !!o; })()`), false,
+        'no build log is laid over the editor');
+      await editor.clickOn('.publish-card button', 'Log', { exact: true });
+      ok(await page.eval(`[...document.querySelectorAll('pre')].some(p => p.offsetParent !== null && p.textContent.length > 0)`), 'Log opens the full output');
+    },
+  },
+  {
+    id: 'O1',
+    title: 'picking a row far down the outline keeps the outline where it was (it jumped to the top)',
+    async run({ page, editor }) {
+      await editor.open('overview', { readyColor: COLORS.summaryCard });
+      // A short outline, so this screen's rows scroll, scrolled part way down.
+      const scrolled = await page.eval(`(() => { const o = document.querySelector('.card.outline');
+        o.style.maxHeight = '180px'; o.style.flex = 'none'; o.scrollTop = 120; return o.scrollTop; })()`);
+      ok(scrolled > 0, `the outline scrolls (${scrolled})`);
+      const row = await page.eval(`(() => { const o = document.querySelector('.card.outline').getBoundingClientRect();
+        const r = [...document.querySelectorAll('.tree-row')].find(r => { const b = r.getBoundingClientRect();
+          return !r.classList.contains('selected') && b.top > o.top + 20 && b.bottom < o.bottom - 20; });
+        const b = r.querySelector('.t').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, text: r.textContent }; })()`);
+      await page.click(row.x, row.y, { settle: 800 });
+      equal((await editor.selectedRows()).length, 1, `the row was selected (${row.text})`);
+      equal(await page.eval(`document.querySelector('.card.outline').scrollTop`), scrolled, 'the outline did not move');
+    },
+  },
+  {
     id: 'R5a',
     title: 'clicking a twisty folds the subtree and leaves the selection where it was',
     async run({ page, editor }) {

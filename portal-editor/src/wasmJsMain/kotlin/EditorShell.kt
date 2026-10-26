@@ -204,69 +204,12 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       canvasGeneration.value++ // text already laid out is drawn again, with the fallback
       androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
     }
-    val widgetSystem = remember {
-      ComposeUiKeliverMaterialWidgetSystem(
-        ImageLoader.Builder(PlatformContext.INSTANCE)
-          // wasm has no built-in Coil network stack — register the browser-fetch one.
-          .components { add(BrowserFetchFetcher.Factory()) }
-          // E29: an image that did not load is drawn as one, never as empty space.
-          .error { brokenImage }
-          .build(),
-      )
-    }
+    val widgetSystem = remember { editorWidgetSystem() }
     val root = remember { ComposeWidgetChildren() }
 
     // Stand up the fat client: a guest composition + a host renderer, talking via
     // the in-memory protocol. Runs once; stays live for the page's lifetime.
     LaunchedEffect(Unit) {
-      val hostProtocol = KeliverMaterialHostProtocol.Factory.create(JSON, ProtocolMismatchHandler.Throwing)
-
-      val guestAdapter = DefaultGuestProtocolAdapter(
-        hostVersion = guestRedwoodVersion,
-        widgetSystemFactory = KeliverMaterialProtocolWidgetSystemFactory,
-      )
-
-      // Host side. Its event sink is the REVERSE CHANNEL: a tap on a rendered widget
-      // becomes a UiEvent, which we hand straight back to the guest as a protocol Event.
-      val hostAdapter = HostProtocolAdapter(
-        guestVersion = guestRedwoodVersion,
-        container = root,
-        protocol = hostProtocol,
-        widgetSystem = widgetSystem,
-        eventSink = UiEventSink { uiEvent -> guestAdapter.sendEvent(uiEvent.toProtocol()) },
-        leakDetector = LeakDetector.none(),
-      )
-
-      // Guest -> host: every batch of guest Changes is applied to the host tree in
-      // memory (no JSON document; the Changes already carry encoded property values).
-      guestAdapter.initChangesSink(
-        object : ChangesSink {
-          override fun sendChanges(changes: List<Change>) {
-            hostAdapter.sendChanges(changes.mapNotNull { UiChange.fromProtocol(hostProtocol, it) })
-          }
-        },
-      )
-
-      // The guest composition runs on its own frame clock, which we tick from the
-      // host's real frames — so guest recomposition AND animations stay in sync.
-      val guestClock = BroadcastFrameClock()
-      // Keep a bad consumer presenter/render from cancelling the editor shell.
-      // Compose does not permit a try/catch directly around @Composable calls;
-      // its recomposer reports the failure through this isolated child scope.
-      val guestErrors = CoroutineExceptionHandler { _, error ->
-        LiveEngine.compositionFailed("live preview", error)
-      }
-      val guestScope = CoroutineScope(
-        this.coroutineContext + SupervisorJob(this.coroutineContext[Job]) + guestClock + guestErrors,
-      )
-      val composition = ProtocolRedwoodComposition(
-        scope = guestScope,
-        guestAdapter = guestAdapter,
-        widgetVersion = EDITOR_WIDGET_VERSION.toUInt(),
-        onBackPressedDispatcher = NoBackPressedDispatcher,
-        saveableStateRegistry = null,
-        uiConfigurations = MutableStateFlow(UiConfiguration()),
-      )
       // C3: component instances render via transparent expansion; the whole
       // expansion carries the INSTANCE handle so click-to-select picks the
       // instance (one selectable unit), never an internal expanded primitive.
@@ -276,10 +219,9 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       // adapter for draws the app's own compiled component instead of a
       // placeholder (docs/COMPILED_COMPONENT_PREVIEW.md).
       installComponentPreview(entry)
-      // P3-12: register the per-app preview entry (the app's REAL presenters are
-      // compiled in) and host the live presenter INSIDE the guest composition,
-      // before RenderNode reads the mocks it feeds.
-      composition.setContent {
+      runGuest(root, widgetSystem, onError = { LiveEngine.compositionFailed("live preview", it) }) {
+        // P3-12: the per-app preview entry (the app's REAL presenters are compiled in) hosts the
+        // live presenter INSIDE the guest composition, before RenderNode reads the mocks it feeds.
         LivePresenterHost()
         // K5: inside the app's own screen wrapper (its Theme), as on a device.
         dev.keliver.portal.render.AppScreenFrame(entry) {
@@ -288,12 +230,6 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
             RenderNode(if (canvasShowsComponent.value) componentStage(tree) else tree)
           }
         }
-      }
-      guestAdapter.emitChanges() // initial render
-
-      while (true) {
-        withFrameNanos { nanos -> guestClock.sendFrame(nanos) }
-        guestAdapter.emitChanges() // flush whatever the recomposition produced
       }
     }
 
@@ -318,4 +254,86 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
     }
     if (hostWrapper != null) hostWrapper.Wrap { content() } else content()
   }
+  // Owner, 25 Oct: the palette's preview, drawn by this same renderer in a second canvas.
+  mountPalettePreview(entry)
 }
+
+/**
+ * A guest composition of [content] rendered into [root] (host widgets of [widgetSystem]) through
+ * the in-memory protocol, ticked by the host's frames — until the calling scope is cancelled.
+ * [onError]: a failure inside the composition (it never cancels the editor).
+ */
+internal suspend fun CoroutineScope.runGuest(
+  root: ComposeWidgetChildren,
+  widgetSystem: EditorWidgetSystem,
+  onError: (Throwable) -> Unit,
+  content: @Composable () -> Unit,
+) {
+  val hostProtocol = KeliverMaterialHostProtocol.Factory.create(JSON, ProtocolMismatchHandler.Throwing)
+
+  val guestAdapter = DefaultGuestProtocolAdapter(
+    hostVersion = guestRedwoodVersion,
+    widgetSystemFactory = KeliverMaterialProtocolWidgetSystemFactory,
+  )
+
+  // Host side. Its event sink is the REVERSE CHANNEL: a tap on a rendered widget
+  // becomes a UiEvent, which we hand straight back to the guest as a protocol Event.
+  val hostAdapter = HostProtocolAdapter(
+    guestVersion = guestRedwoodVersion,
+    container = root,
+    protocol = hostProtocol,
+    widgetSystem = widgetSystem,
+    eventSink = UiEventSink { uiEvent -> guestAdapter.sendEvent(uiEvent.toProtocol()) },
+    leakDetector = LeakDetector.none(),
+  )
+
+  // Guest -> host: every batch of guest Changes is applied to the host tree in
+  // memory (no JSON document; the Changes already carry encoded property values).
+  guestAdapter.initChangesSink(
+    object : ChangesSink {
+      override fun sendChanges(changes: List<Change>) {
+        hostAdapter.sendChanges(changes.mapNotNull { UiChange.fromProtocol(hostProtocol, it) })
+      }
+    },
+  )
+
+  // The guest composition runs on its own frame clock, which we tick from the
+  // host's real frames — so guest recomposition AND animations stay in sync.
+  val guestClock = BroadcastFrameClock()
+  // Keep a bad consumer presenter/render from cancelling the editor shell.
+  // Compose does not permit a try/catch directly around @Composable calls;
+  // its recomposer reports the failure through this isolated child scope.
+  val guestErrors = CoroutineExceptionHandler { _, error -> onError(error) }
+  val guestScope = CoroutineScope(
+    this.coroutineContext + SupervisorJob(this.coroutineContext[Job]) + guestClock + guestErrors,
+  )
+  val composition = ProtocolRedwoodComposition(
+    scope = guestScope,
+    guestAdapter = guestAdapter,
+    widgetVersion = EDITOR_WIDGET_VERSION.toUInt(),
+    onBackPressedDispatcher = NoBackPressedDispatcher,
+    saveableStateRegistry = null,
+    uiConfigurations = MutableStateFlow(UiConfiguration()),
+  )
+  composition.setContent(content)
+  guestAdapter.emitChanges() // initial render
+
+  while (true) {
+    withFrameNanos { nanos -> guestClock.sendFrame(nanos) }
+    guestAdapter.emitChanges() // flush whatever the recomposition produced
+  }
+}
+
+/** The canvas's host widgets. */
+internal typealias EditorWidgetSystem = dev.keliver.material.widget.KeliverMaterialWidgetSystem<@Composable (Modifier) -> Unit>
+
+/** The canvas's host widgets: Keliver material, with the browser's fetch for images. */
+internal fun editorWidgetSystem(): EditorWidgetSystem =
+  ComposeUiKeliverMaterialWidgetSystem(
+    ImageLoader.Builder(PlatformContext.INSTANCE)
+      // wasm has no built-in Coil network stack — register the browser-fetch one.
+      .components { add(BrowserFetchFetcher.Factory()) }
+      // E29: an image that did not load is drawn as one, never as empty space.
+      .error { brokenImage }
+      .build(),
+  )

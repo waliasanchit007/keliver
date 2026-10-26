@@ -184,6 +184,44 @@ internal object Ui {
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
     .topbar { overflow: hidden; }
     .topbar .select { min-width: 0; }
+    /* Nothing in the bar wraps or squeezes: only the dropdowns narrow when it is crowded. */
+    .topbar > * { flex-shrink: 0; white-space: nowrap; }
+    .topbar > .select { flex-shrink: 1; }
+    /* Owner, 25 Oct: a top-bar action says what it does — its name, and under it what it acts on. */
+    .top-action { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center;
+      line-height: 1.15; padding: 3px 10px; min-height: 34px; text-align: left; white-space: nowrap; }
+    .top-action .ta-label { font-weight: 600; }
+    .top-action .ta-caption { font-size: 10px; opacity: .72; font-weight: 400; }
+    .top-action.unavailable { opacity: .55; }
+    .topbar-sep { width: 1px; align-self: stretch; margin: 9px 2px; background: var(--border); }
+    .devices-chip { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .publish-card { position: fixed; top: 54px; right: 16px; z-index: 60; display: flex; align-items: center; gap: 10px;
+      max-width: min(420px, calc(100vw - 32px)); padding: 10px 12px; background: var(--panel); color: var(--text);
+      border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+    .publish-card .pc-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+    .publish-card .pc-body { flex: 1; min-width: 0; }
+    .publish-card .pc-title { font-weight: 600; }
+    .publish-card .pc-detail { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+    .publish-card.ok { border-color: var(--good); }
+    .publish-card.ok .pc-icon { color: var(--good); }
+    .publish-card.fail { border-color: var(--danger); }
+    .publish-card.fail .pc-icon { color: var(--danger); }
+    /* Owner, 25 Oct: the palette's preview — what a row adds, drawn by the canvas's renderer. */
+    .palette-card { position: fixed; z-index: 55; width: 324px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: 0 14px 40px rgba(0,0,0,.5); padding: 10px; pointer-events: none;
+      visibility: hidden; opacity: 0; transform: translateX(-4px); transition: opacity .12s, transform .12s, visibility 0s .12s; }
+    .palette-card.on { visibility: visible; opacity: 1; transform: none; transition: opacity .12s, transform .12s; }
+    .pcard-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+    .pcard-name { font-weight: 700; }
+    .pcard-kind { font-size: 11px; color: var(--muted); }
+    .pcard-frame { width: 304px; height: 234px; overflow: hidden; border-radius: 8px; background: #fff;
+      border: 1px solid var(--border); }
+    .pcard-canvas { width: 390px; height: 300px; transform: scale(.78); transform-origin: top left; }
+    .pcard-foot { font-size: 11px; color: var(--muted); margin-top: 8px; }
+    @media (max-width: 1280px) {
+      .top-action .ta-caption, .devices-chip { display: none; }
+      .top-action { min-height: 0; }
+    }
     @media (max-width: 1400px) {
       .topbar { gap: 6px; padding: 0 8px; }
       .topbar .brand { display: none; }
