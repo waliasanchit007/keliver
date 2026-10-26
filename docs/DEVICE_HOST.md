@@ -180,8 +180,11 @@ that opens.
   state may restart with the new code. The portal relay serves the stream (and
   `/devstate` counts the devices listening, which the editor's devices chip
   shows); a static server has none, so the host logs that once and stays
-  `on-resume`. A dropped stream is retried after 2 s, doubling to 30 s; with
-  no screen on show the host stops listening. Outside a debuggable DEBUG build
+  `on-resume` (so does a 4xx, or a 200 that is not `text/event-stream`). A
+  dropped stream is retried after 2 s, doubling to 30 s; with no screen on
+  show the host closes the connection. Before the first bundle has loaded
+  ("No bundle"), an event starts the host again, so the first publish reaches
+  the open app too. The relay accepts at most 32 listeners. Outside a debuggable DEBUG build
   `live` is `on-resume` (the template's other build types get `on-resume` when
   you set `live`), so it never reaches a store build.
 - `keliver.updates=on-resume` (Android, in `gradle.properties` or

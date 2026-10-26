@@ -55,7 +55,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             stamp = os.stat(index).st_mtime_ns if os.path.exists(index) else 0
             v = newest_version()
-            send(f"event: bundle\ndata: {json.dumps({'version': v})}\n\n")
+            send(f"event: bundle\ndata: {json.dumps({'version': v}, separators=(',', ':'))}\n\n")
             out.write(f"EVENT bundle {v} (on connect)\n")
             beat = time.monotonic()
             while True:
@@ -64,7 +64,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 if now != stamp:
                     stamp = now
                     v = newest_version()
-                    send(f"event: bundle\ndata: {json.dumps({'version': v})}\n\n")
+                    send(f"event: bundle\ndata: {json.dumps({'version': v}, separators=(',', ':'))}\n\n")
                     out.write(f"EVENT bundle {v}\n")
                 elif time.monotonic() - beat > 15:
                     send(": keep-alive\n\n")

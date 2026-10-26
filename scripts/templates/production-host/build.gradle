@@ -40,9 +40,10 @@ if (reportUrl && !(reportUrl ==~ reportUrlPattern)) {
 if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
   throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")
 }
-// Empty (the default): on-resume in DEBUG builds, so a bundle published while
-// you work shows when you switch back to the app; next-launch in every other
-// build type. A value set here applies to every build type.
+// Empty (the default): live in DEBUG builds, so a bundle published while you
+// work shows in the open app (and on-resume against a server without
+// /bundles/events); next-launch in every other build type. A value set here
+// applies to every build type, except that live is on-resume outside debug.
 if (updates && !(updates in ['next-launch', 'on-resume', 'live'])) {
   throw new GradleException("keliver.updates must be next-launch, on-resume, live or empty (got '$updates').")
 }

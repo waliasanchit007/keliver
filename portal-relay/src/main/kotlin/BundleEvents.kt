@@ -16,53 +16,76 @@ import java.util.concurrent.TimeUnit
  * manifest's signature as on any other update, so a forged or replayed event
  * can at most make it look again. The stream is read-only and lives under
  * `/bundles/`, like everything a device may be given.
+ *
+ * Every write happens on this class's own thread, never on the relay's request
+ * thread: a phone that stops reading (its send buffer full) can delay events,
+ * but never a publish or any other request.
  */
 internal class BundleEvents(
   /** The newest bundle version in the store, or null when there is none. */
   private val newest: () -> Int?,
   heartbeatSeconds: Long = 15,
+  /** At most this many devices listen at once; more are refused (503). */
+  private val maxListeners: Int = 32,
 ) {
-  private val listeners = CopyOnWriteArrayList<OutputStream>()
+  /** A listening device: its stream, and how to close its connection (the exchange, not just the stream). */
+  private class Listener(val out: OutputStream, val close: () -> Unit)
 
-  /**
-   * A comment line every [heartbeatSeconds]: proxies and phones drop an idle
-   * connection, and a write is how a listener that went away is noticed.
-   */
-  private val heartbeat = Executors.newSingleThreadScheduledExecutor { r ->
+  private val listeners = CopyOnWriteArrayList<Listener>()
+
+  private val writer = Executors.newSingleThreadScheduledExecutor { r ->
     Thread(r, "bundle-events").apply { isDaemon = true }
-  }.also { it.scheduleAtFixedRate({ sendAll(": keep-alive\n\n") }, heartbeatSeconds, heartbeatSeconds, TimeUnit.SECONDS) }
+  }.also {
+    // A comment every heartbeatSeconds: proxies and phones drop an idle
+    // connection, and a write is how a listener that went away is noticed.
+    it.scheduleAtFixedRate({ sendAll(": keep-alive\n\n") }, heartbeatSeconds, heartbeatSeconds, TimeUnit.SECONDS)
+  }
 
   /** How many devices are listening now (the editor's devices chip shows it). */
   val listening: Int get() = listeners.size
 
-  /** Adds [out] and sends it the store's newest version at once. */
-  fun subscribe(out: OutputStream) {
-    listeners += out
-    if (!send(out, event(newest()))) listeners -= out
+  /** Whether one more device may listen. */
+  fun hasRoom(): Boolean = listeners.size < maxListeners
+
+  /** Adds [out] and sends it the store's newest version; [close] closes its connection when it goes away. */
+  fun subscribe(out: OutputStream, close: () -> Unit = { out.close() }) {
+    val listener = Listener(out, close)
+    listeners += listener
+    writer.execute { if (!send(listener, event(newest()))) drop(listener) }
   }
 
-  /** Tells every listener the store changed; call after a bundle is completely stored. */
-  fun announce() = sendAll(event(newest()))
+  /** Tells every listener the store changed; call after a bundle is completely stored. Returns at once. */
+  fun announce() = writer.execute { sendAll(event(newest())) }
+
+  /** Waits until every write asked for so far has been made (tests). */
+  internal fun drain() = writer.submit {}.get(5, TimeUnit.SECONDS)
 
   fun close() {
-    heartbeat.shutdownNow()
+    writer.shutdownNow()
     listeners.forEach { runCatching { it.close() } }
     listeners.clear()
   }
 
   private fun sendAll(text: String) {
-    for (out in listeners) if (!send(out, text)) listeners -= out
+    for (l in listeners) if (!send(l, text)) drop(l)
   }
 
-  private fun send(out: OutputStream, text: String): Boolean = try {
-    synchronized(out) {
-      out.write(text.toByteArray())
-      out.flush()
-    }
+  private fun send(l: Listener, text: String): Boolean = try {
+    l.out.write(text.toByteArray())
+    l.out.flush()
     true
   } catch (_: IOException) {
-    runCatching { out.close() }
     false
+  }
+
+  /**
+   * Forgets [l] and closes its connection. Through the exchange: closing only
+   * the stream of a broken connection throws before the connection is released,
+   * and its file descriptor stayed open for the relay's lifetime.
+   */
+  private fun drop(l: Listener) {
+    listeners -= l
+    runCatching { l.close() }
   }
 
   internal companion object {

@@ -1507,10 +1507,11 @@ fun main(args: Array<String>) {
   // longer context wins over "/bundles" below.
   server.createContext("/bundles/events") { ex ->
     if (ex.requestMethod != "GET") { respond(ex, 405); return@createContext }
+    if (!bundleEvents.hasRoom()) { respond(ex, 503, "too many devices listening"); return@createContext }
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
     ex.sendResponseHeaders(200, 0)
-    bundleEvents.subscribe(ex.responseBody) // stream stays open
+    bundleEvents.subscribe(ex.responseBody) { ex.close() } // stream stays open
   }
 
   // /bundles/index.json -> every bundle (W3); /bundles/latest?widgetVersion=W -> newest compatible

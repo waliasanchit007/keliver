@@ -99,10 +99,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -844,8 +845,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /**
    * Call on the main thread when the app comes back to the foreground, after
    * [start] (the standalone host's activity does, in onResume). With
-   * [KeliverUpdates.ON_RESUME] it checks for a newer bundle and applies it, at
-   * most every 30 s; otherwise it does nothing.
+   * [KeliverUpdates.ON_RESUME] or [KeliverUpdates.LIVE] it checks for a newer
+   * bundle and applies it, at most every 30 s; with NEXT_LAUNCH it does nothing.
    */
   fun resumed() {
     if (config.updates == KeliverUpdates.NEXT_LAUNCH) return
@@ -887,8 +888,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private fun syncLiveListener() {
     if (screensShown > 0 && liveUpdatesAllowed()) {
       if (liveListener?.isActive != true) liveListener = scope.launch { listenForBundles() }
-    } else if (liveListener != null) {
-      Log.d(TAG, "live updates: stopped listening (no screen on show)")
+    } else {
+      if (liveListener?.isActive == true) Log.d(TAG, "live updates: stopped listening (no screen on show)")
       liveListener?.cancel()
       liveListener = null
     }
@@ -896,53 +897,88 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
   /**
    * Holds `/bundles/events` open and runs [checkForUpdate] on each event, until
-   * cancelled (no screen on show). A dropped connection is retried after 2 s,
-   * doubling to 30 s. An event is only a nudge: what is applied is what the
-   * index names and the manifest's signature allows, as on any update.
+   * cancelled (no screen on show). An event is only a nudge: what is applied is
+   * what the index names and the manifest's signature allows, as on any update.
+   * Checks run one at a time; events that arrive during one ask for one more.
+   * Before the first bundle has loaded ("No bundle"), an event starts the host
+   * again instead, so the first publish reaches the open app too. A dropped
+   * stream is retried after 2 s, doubling to 30 s; the delay goes back to 2 s
+   * only once an event has arrived.
    */
-  private suspend fun listenForBundles() {
+  private suspend fun listenForBundles() = coroutineScope {
+    val checks = Channel<Unit>(Channel.CONFLATED)
+    launch {
+      for (ignored in checks) {
+        if (session == null) start() else runCatching { checkForUpdate() }
+      }
+    }
     var retryMillis = 2_000L
     while (true) {
-      val s = session
-      if (s == null) {
-        delay(1_000) // the first load is still under way
-        continue
+      val server = session?.lookup?.server ?: config.bundleServer.toHttpUrlOrNull()
+      if (server == null) {
+        checks.close()
+        return@coroutineScope
       }
-      val url = s.lookup.server.newBuilder().addPathSegments("bundles/events").build()
+      val url = server.newBuilder().addPathSegments("bundles/events").build()
       // No call timeout; the server sends a comment every 15 s, so a read that waits 45 s is a dead link.
-      val client = s.lookup.client.newBuilder().callTimeout(0, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
+      val client = (session?.lookup?.client ?: OkHttpClient()).newBuilder()
+        .connectTimeout(5, TimeUnit.SECONDS).callTimeout(0, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
       val call = client.newCall(Request.Builder().url(url).header("Accept", "text/event-stream").build())
-      val listening = currentCoroutineContext().job.invokeOnCompletion { call.cancel() }
-      val outcome = runCatching {
-        withContext(Dispatchers.IO) {
-          call.execute().use { response ->
-            if (response.code == 404 || response.code == 405) return@withContext false
-            check(response.isSuccessful) { "HTTP ${response.code}" }
-            Log.d(TAG, "live updates: listening to $url")
-            retryMillis = 2_000L
-            val source = response.body.source()
-            while (true) {
-              val line = source.readUtf8Line() ?: break
-              if (line.startsWith("data:")) {
-                Log.d(TAG, "live updates: the bundle server says ${line.removePrefix("data:").trim()}")
-                scope.launch { runCatching { checkForUpdate() } }
-              }
-            }
-            true
-          }
+      // Cancelling this coroutine does not interrupt a blocking read; cancelling the call does.
+      val canceller = launch {
+        try {
+          awaitCancellation()
+        } finally {
+          call.cancel()
         }
       }
-      listening.dispose()
-      currentCoroutineContext().ensureActive()
-      if (outcome.getOrNull() == false) {
+      val outcome = try {
+        runCatching { withContext(Dispatchers.IO) { readBundleEvents(call, url) { checks.trySend(Unit) } } }
+      } finally {
+        canceller.cancel()
+      }
+      ensureActive()
+      val stream = outcome.getOrNull()
+      if (stream == LiveStream.NOT_SERVED) {
         Log.i(TAG, "live updates: $url is not served (a static bundle server); updates apply on resume")
         liveUnsupported = true
-        return
+        checks.close()
+        return@coroutineScope
       }
+      if (stream == LiveStream.HEARD) retryMillis = 2_000L
       Log.d(TAG, "live updates: the stream ended (${outcome.exceptionOrNull()?.message ?: "closed"}); again in ${retryMillis / 1000} s")
       delay(retryMillis)
       retryMillis = (retryMillis * 2).coerceAtMost(30_000L)
     }
+  }
+
+  private enum class LiveStream { NOT_SERVED, HEARD, SILENT }
+
+  /** Reads [call]'s event stream to its end, calling [onEvent] for each event. Blocking: IO only. */
+  private fun readBundleEvents(call: Call, url: HttpUrl, onEvent: () -> Unit): LiveStream = call.execute().use { response ->
+    val type = response.header("Content-Type").orEmpty()
+    // A server without the stream: a 4xx (S3 and CloudFront answer 403 for a missing
+    // key), or a page that is not an event stream (a catch-all rewrite answering 200).
+    if (response.code in 400..499 && response.code != 408 && response.code != 429) return LiveStream.NOT_SERVED
+    if (response.isSuccessful && !type.startsWith("text/event-stream")) return LiveStream.NOT_SERVED
+    check(response.isSuccessful) { "HTTP ${response.code}" }
+    Log.d(TAG, "live updates: listening to $url")
+    var heard = false
+    val source = response.body.source()
+    while (true) {
+      // A line longer than any event this protocol sends is not one of its events.
+      val line = try {
+        source.readUtf8LineStrict(4_096)
+      } catch (_: java.io.EOFException) {
+        break
+      }
+      if (line.startsWith("data:")) {
+        heard = true
+        Log.d(TAG, "live updates: the bundle server says ${line.removePrefix("data:").trim()}")
+        onEvent()
+      }
+    }
+    if (heard) LiveStream.HEARD else LiveStream.SILENT
   }
 
   companion object {

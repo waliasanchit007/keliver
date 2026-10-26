@@ -186,11 +186,15 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     && ok "LV2: the same process (pid $pid_live), no restart and no resume" || bad "LV2: the process changed or restarted"
   drive title Loft LV2after; fold "LV2: the open app now shows Loft (v10)" $?
   adb -s "$SERIAL" logcat -c || true
-  adb -s "$SERIAL" shell input keyevent KEYCODE_HOME; sleep 4
+  closed_before="$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")"
+  adb -s "$SERIAL" shell input keyevent KEYCODE_HOME
+  # Past the server's 15 s keep-alive: a write to a connection the host closed fails, and is logged.
+  sleep 20
   adb -s "$SERIAL" logcat -d > "$EV/logcat-LV3.txt"
   grep -q "$HOST_TAG: live updates: stopped listening (no screen on show)" "$EV/logcat-LV3.txt" \
-    && ok "LV3: in the background the host stops listening" \
-    || bad "LV3: still listening in the background: $(grep -E "$HOST_TAG: live" "$EV/logcat-LV3.txt" | tail -3 | tr '\n' ' ')"
+    && [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] \
+    && ok "LV3: in the background the host stops listening, and its connection is closed (the server saw it go)" \
+    || bad "LV3: still listening in the background: $(grep -E "$HOST_TAG: live" "$EV/logcat-LV3.txt" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"
   kill "$LVPID" 2>/dev/null; wait "$LVPID" 2>/dev/null
   w3_title Loft Cellar || bad "LV: could not put the title back to Cellar for W8"
   adb -s "$SERIAL" shell am force-stop "$PROD_ID"
