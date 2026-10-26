@@ -206,7 +206,19 @@ say "portal-server against $APP_DIR (:$PORT)"
 echo $! >> "$PIDFILE"
 
 say "editor (:$EDITOR_PORT) from $EDITOR_DIR"
-( cd "$EDITOR_DIR" && python3 -m http.server --bind 127.0.0.1 "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
+# U38: every response says Cache-Control: no-cache, so a browser asks again
+# for index.html (it names the loader) after keliver-portal starts serving a
+# different editor on this port — the bundled one, then the app's own — instead
+# of running the one it cached. http.server alone sends Last-Modified and no
+# cache headers, which browsers may reuse without asking.
+( cd "$EDITOR_DIR" && exec python3 -c '
+import http.server, sys
+class NoCache(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), NoCache).serve_forever()
+' "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
 echo $! >> "$PIDFILE"
 
 # --- health-wait: don't claim success until the server actually answers ------
