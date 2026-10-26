@@ -251,8 +251,9 @@ echo "    keliver.portal.json  publishTask $PUBLISH_TASK, publishOutput $PUBLISH
 echo "    build.gradle         signing block appended"
 echo
 echo "Next:"
+RELAY_PORT="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("port",8077))' "$APP/keliver.portal.json" 2>/dev/null || echo 8077)"
 echo "  keliver-portal                     # start it once; the first start creates the app's key"
-echo "  curl -X POST http://localhost:8077/publish"
+echo "  curl -X POST http://localhost:$RELAY_PORT/publish      # or ⬆ Publish in the editor"
 echo "                                     # refused, and nothing stored, unless the bundle is signed"
 echo "A production host must trust the same key: keliver-new-production-host.sh copies"
 echo "this app's keys/ed25519.pub into it."

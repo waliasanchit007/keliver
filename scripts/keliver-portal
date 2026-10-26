@@ -16,6 +16,11 @@
 #   --rerun-tasks       force a clean editor rebuild (webpack can serve a stale
 #                       distribution otherwise)
 #
+# Ports: the server on keliver.portal.json's "port" (default 8077), the editor
+# on its "editorPort" (default: port + 19, so 8096 beside 8077). Two apps can
+# run portals at once with different ports; the editor URL printed at start
+# names the server's port (?relay=) whenever it is not 8077.
+#
 # If <app>/editor exists (scaffolded by keliver-new-editor.sh) it is built and
 # served, so the preview runs the app's REAL presenters. Otherwise the
 # prebuilt editor shipped in this bundle is served.
@@ -58,7 +63,13 @@ APP_DIR="$(cd "${APP_ARG:-$PWD}" 2>/dev/null && pwd)" || {
   echo "keliver-portal: no such directory: ${APP_ARG}" >&2; exit 2; }
 
 PORT="$(python3 -c "import json;print(json.load(open('$APP_DIR/keliver.portal.json')).get('port',8077))" 2>/dev/null || echo 8077)"
-EDITOR_PORT=8096
+# The editor's own port: "editorPort", else port + 19 (8096 beside 8077). It
+# used to be 8096 always, so a second app's portal could never start, and
+# changing "port" did not help.
+EDITOR_PORT="$(python3 -c "import json,sys;c=json.load(open(sys.argv[1]));print(int(c.get('editorPort',int(c.get('port',8077))+19)))" "$APP_DIR/keliver.portal.json" 2>/dev/null || echo $((PORT + 19)))"
+# The editor asks the server on 8077 unless its URL names another (?relay=).
+EDITOR_URL="http://localhost:$EDITOR_PORT"
+[ "$PORT" = 8077 ] || EDITOR_URL="$EDITOR_URL/?relay=$PORT"
 
 # Per-app run state, so `stop` can find exactly what this app started and we
 # never kill a port that belongs to somebody else's project.
@@ -140,11 +151,8 @@ if healthy; then
   die "a portal server is already answering on :$PORT — 'keliver-portal stop' first, or use a different port in keliver.portal.json"
 fi
 if stop_instance; then warn "cleaned up a previous instance that had exited uncleanly"; fi
-for p in "$PORT" "$EDITOR_PORT"; do
-  if port_in_use "$p"; then
-    die "port $p is already in use by another process. Free it, or change 'port' in keliver.portal.json."
-  fi
-done
+port_in_use "$PORT" && die "port $PORT (the server) is already in use by another process. Free it, or set another 'port' in keliver.portal.json."
+port_in_use "$EDITOR_PORT" && die "port $EDITOR_PORT (the editor) is already in use by another process. Free it, or set another 'editorPort' (or 'port') in keliver.portal.json."
 
 : > "$PIDFILE"
 cleaned=false
@@ -231,7 +239,7 @@ $READY || {
 }
 
 printf "\n\033[1;32m✓ keliver portal is live\033[0m\n\n"
-printf "  Editor   →  http://localhost:%s\n" "$EDITOR_PORT"
+printf "  Editor   →  %s\n" "$EDITOR_URL"
 printf "  Server   →  http://localhost:%s\n" "$PORT"
 [ "$RELAY_BIND" = all ] && printf "  \033[1;33mServer listens on every network interface (KELIVER_RELAY_BIND=all)\033[0m\n"
 printf "  MCP      →  PORTAL_REPO=%s %s/mcp/bin/portal-mcp   (stdio, for AI agents)\n" "$APP_DIR" "$BUNDLE"
