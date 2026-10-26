@@ -13,8 +13,8 @@ them visually in a web portal that round-trips to the .kt files in git.
 - `docs/ROADMAP.md` — prioritized backlog with evidence. Pick work from here.
 - `docs/SCREEN_ARCHITECTURE.md` — Style B (Screen/Presenter/Bindings) in detail.
 - `docs/PORTAL_USAGE.md`, `docs/KNOWN_BUGS.md`.
-- Reference adoption: **there is currently no external adopter.** `stashfin-sdui`
-  (the app every historical "Stashfin" gate below was recorded against) was lost
+- Reference adoption: **there is currently no external adopter.** The first adopter app
+  (the app every historical adopter gate below was recorded against) was lost
   with the previous machine and was never pushed. Treat those gates as evidence
   that the path worked, not as something you can re-run. Two runnable references
   exist today, and **both are dogfooding, not adoption**: the in-repo
@@ -45,7 +45,7 @@ clone without it fails checkout partway.
 (tree + ops engine), `portal-render` (shared RenderNode), `portal-editor` (the
 REUSABLE editor shell — `runPortalEditor(entry: AppPreviewEntry)`; a consumer
 app ships a per-app editor by depending on it + supplying its own AppPreviewEntry),
-`web-spike` (konduit's OWN thin editor executable = shell + AppLibPreview → :8096),
+`web-spike` (Keliver's OWN thin editor executable = shell + AppLibPreview → :8096),
 `portal-schema-codegen` (schemas → catalog/exporter/RenderNode — regenerate when
 schemas change, CI has a staleness guard).
 

@@ -196,7 +196,7 @@ the visual graph is polish.
     (capability vocabulary + named state fixtures). PreviewEnv.flowStart is the
     start-STATE seam personas will build on. Tracked in #16.
 
-Dogfood target: stashfin Profile → "App Settings" → a new `SettingsScreen`
+Dogfood target: the adopter app's Profile → "App Settings" → a new `SettingsScreen`
 (2-node flow), then feed→detail on konduit. Device parity: FlowScope is a normal
 guest presenter, so it runs on device unchanged (like every Style-B presenter).
 

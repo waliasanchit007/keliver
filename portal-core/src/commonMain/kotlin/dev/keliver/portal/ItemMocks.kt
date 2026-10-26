@@ -23,7 +23,7 @@ public fun resolveItemRow(
   fun resolved(field: String, key: String): String {
       // Namespace row content by the LIST field ("accountItems.item.title") so
       // several lists that reuse the same itemVar ("item") don't collide — the
-      // single-list dogfood never hit this, but real screens (Stashfin Profile:
+      // single-list dogfood never hit this, but real screens (the adopter app's Profile:
       // account/security/support) do. Fall back to the un-namespaced key for
       // editor per-item mocks and single-list back-compat.
       val raw = mockOf("$itemsField.$field") ?: mockOf(field)

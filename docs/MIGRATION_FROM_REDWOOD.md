@@ -30,8 +30,10 @@ Upstream Redwood is no longer being actively developed by Cash App. The
 last upstream release is `0.18.0` (August 2025). Keliver picks up where
 that left off:
 
-1. **Continued maintenance.** The fork's `1.0.0-caliclan.N` line ships
-   regular fixes against real-world integration breakage. See
+1. **Continued maintenance.** The fork ships regular fixes against
+   real-world integration breakage: first as the `1.0.0-caliclan.N` line
+   (historical), now as `dev.keliver:*` releases on Maven Central (0.4.0
+   is the newest). See
    [`CHANGELOG.md`](../CHANGELOG.md) for the full history.
 2. **Production-hardening for silent-failure shapes** — `Spec.retain`,
    `Spec.bindWithTimeout`, `Spec.requireSerializerOf`, and others that

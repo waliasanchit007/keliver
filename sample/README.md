@@ -28,7 +28,10 @@ the example is verified running on both.)
 It's deliberately small. The goal is to be the smallest faithful
 demonstration of every required moving part: schema, codegen,
 guest bundle, host renderer, and the cross-platform Compose mount
-point. If you're new to Keliver, this is the file tree to copy.
+point. It is a demo of the runtime with its **own widget schema**: if you are
+building your own schema, this is the file tree to copy. A new app on
+Keliver's `keliver-material` widgets starts with `keliver-init` from the
+portal tools bundle instead ([docs/GETTING_STARTED.md](../docs/GETTING_STARTED.md)).
 
 ## Module map
 
@@ -89,12 +92,14 @@ same `SampleHostApp` composable.
 
 1. **JDK 17+** on your PATH.
 2. **Android SDK** (`ANDROID_HOME` set) for `:host-android`.
-3. **No credentials needed.** Keliver is published on **Maven Central**
-   (`dev.keliver:keliver-*:0.4.0`), so `mavenCentral()` in
-   `settings.gradle.kts` resolves every artifact — no GitHub token, no
-   `gpr.user`/`gpr.token`. Just clone and build.
+3. **No credentials needed.** Keliver is published on **Maven Central**,
+   so `mavenCentral()` in `settings.gradle.kts` resolves every artifact —
+   no GitHub token, no `gpr.user`/`gpr.token`. Just clone and build. The
+   sample pins **`keliver = "0.1.0"`** in `gradle/libs.versions.toml`, not
+   the newest release (0.4.0); it has not been moved forward.
 
-4. (iOS only) **Xcode 15+** and CocoaPods / KMP-direct framework
+4. (iOS only) **Xcode** (the iOS run below was tested with Xcode 26.3; other
+   versions are unverified) and CocoaPods / KMP-direct framework
    integration of your choice.
 
 ## Run it on Android
@@ -123,10 +128,9 @@ cd sample
 adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 ```
 
-You should see "Hello, Keliver!" rendered at top-start — the
-guest's `@Composable fun Show() { Box { Text("Hello, Keliver!") } }`
-made it through Zipline and the host's `CmpWidgetFactory` painted
-it. Verify in `adb logcat` under the `KeliverSample` tag — the
+You should see the **Workouts** screen — the guest's `Show()` in
+`guest/.../Main.kt` runs `WorkoutsPresenter` and `WorkoutsScreen`, made it
+through Zipline, and the host's `CmpWidgetFactory` painted it. Verify in `adb logcat` under the `KeliverSample` tag — the
 expected sequence is `manifestReady` → `ziplineCreated` →
 `mainFunctionStart`/`End` → `codeLoadSuccess` → `takeService
 name=app`.
@@ -181,7 +185,7 @@ xcrun simctl install "$SIM_UDID" \
 xcrun simctl launch --console "$SIM_UDID" dev.keliver.sample.KeliverSample
 ```
 
-You'll see "Hello, Keliver!" render in the simulator and the same
+You'll see the Workouts screen render in the simulator and the same
 `manifestReady` → `ziplineCreated` → `mainFunctionStart` →
 `codeLoadSuccess` → `takeService name=app` sequence in the
 console.
@@ -288,14 +292,16 @@ debugging log lives in [TESTING.md](TESTING.md).
 To keep the sample focused, none of these are wired up — but each is
 documented in the main Keliver repo under `docs/` if you need them:
 
-- **Hot reload** (WebSocket-driven manifest refetch). See
-  ServerDrivenUI's `HotReloadManager` for the reference impl;
-  pairs with `dev.keliver:keliver-dev-server` artifact.
-- **Dev overlay** (error fallback, retry buttons, etc.). See
-  `KeliverDevController` / `KeliverDevOverlay` in ServerDrivenUI.
-- **Host-side services** (HostConsole, HostSnackbar, HostHttp).
-  All bundled in `dev.keliver:keliver-host` — add the dep and bind
-  them in `Spec.bindServices`.
+(Hot reload *is* wired: see gotcha 5 above.)
+
+- **Dev overlay** (error fallback, retry buttons, etc.). The sample has
+  none; a failure shows only through its logging `EventListener`
+  (gotcha 4).
+- **Host-side services beyond HTTP and favorites.** The sample binds
+  `HostHttpProvider` (`keliver-http`) and its own `HostFavoritesStore`
+  in `SampleHostServices`. Storage (`keliver-storage`) and logging
+  (`keliver-console`) are re-exported from `dev.keliver:keliver-host`
+  — add the dep and bind them in `Spec.bindServices`.
 - **Image loading** (`keliver-image` + Coil). The schema doesn't
   declare an `@Widget(N) Image` here; if you add one, plug in the
   matching `CmpImage` impl.
@@ -304,10 +310,14 @@ documented in the main Keliver repo under `docs/` if you need them:
 
 This sample is a standalone Gradle build inside the Keliver repo —
 its `settings.gradle.kts` is independent of the parent. By default it
-resolves the released `dev.keliver:*:0.4.0` artifacts from Maven
-Central, so it builds with no extra setup.
+resolves the released `dev.keliver:*` artifacts at the version its
+`gradle/libs.versions.toml` pins (`0.1.0`) from Maven Central, so it
+builds with no extra setup.
 
 If you're hacking on Keliver itself and want the sample to pick up
 **unreleased** changes, run `./gradlew publishToMavenLocal` from the
-Keliver root (one level up) — the sample's `mavenLocal()` repo is
-checked first, so a local build wins over Central.
+Keliver root (one level up; it publishes `KELIVER_VERSION` from
+`RedwoodBuildPlugin.kt`, or `-PkeliverVersion=X.Y.Z`), then set `keliver`
+in `sample/gradle/libs.versions.toml` to that version. The sample's
+`mavenLocal()` repo is checked first, so the local build then wins over
+Central; without the version change the sample keeps resolving 0.1.0.

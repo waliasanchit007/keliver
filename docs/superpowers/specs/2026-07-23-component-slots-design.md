@@ -7,7 +7,7 @@
 
 Component v1 (C1–C4) is **leaf-only**: a component's `@Composable` signature
 maps scalar params → editor props and `() -> Unit` params → events, and its body
-is a fixed tree. That covers MenuRow / SectionHeader. But the **stashfin Profile
+is a fixed tree. That covers MenuRow / SectionHeader. But the **adopter app's Profile
 dogfood hit the wall immediately**: its white "section card" wrapper —
 
 ```kotlin
@@ -133,9 +133,9 @@ as a container.
   trailing lambda. Gate: `expandForPreview` on a `SectionCard{MenuRow×2}` yields
   the wrapper + 2 ListItems; `exportKotlin` round-trips byte-stably (extend the
   ComponentRecognizerTest round-trip).
-- **CS3 — editor + stashfin dogfood.** Palette/outline/insert for slotted
-  instances; refactor stashfin Profile's 5 card wrappers into `SectionCard`.
-  Gate: in stashfin's editor, Profile renders identically with SectionCard
+- **CS3 — editor + the adopter app dogfood.** Palette/outline/insert for slotted
+  instances; refactor the adopter app's Profile's 5 card wrappers into `SectionCard`.
+  Gate: in the adopter app's editor, Profile renders identically with SectionCard
   instances (0 RawCode), components expand, ▶ Live through them; then on-device
   (Android + iOS sims) — the card is a plain guest `@Composable`, renders native.
 - **CS4 — scaffold + docs.** `keliver-new-component --slot` flag; PORTAL_USAGE +
@@ -161,6 +161,6 @@ write-back round-trip.
 ## 6. Outcome
 
 CS1–CS4 shipped as designed. The in-repo Settings screen and the motivating
-Stashfin Profile both use SectionCard with zero RawCode. Web editor behavior,
+adopter-app Profile both use SectionCard with zero RawCode. Web editor behavior,
 real-presenter preview, palette insertion/undo, signed Android rendering, and
 signed iOS rendering are recorded in `docs/CURRENT_STATE.md`.
