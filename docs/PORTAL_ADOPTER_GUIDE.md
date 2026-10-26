@@ -66,7 +66,9 @@ side; a port already taken is refused at start, naming which. The editor finds
 its own app's server through the `?relay=<port>` in its URL: `keliver-portal`
 prints the URL with it, and the editor's server adds it to a URL opened
 without it, so a bookmark cannot open one app's editor on another app's
-screens. Each app keeps its own document store.
+screens. Each app keeps its own document store. A setting that names the
+editor's origin (`httpRecording.allowedOrigins`) must use that app's editor
+port.
 
 A fresh scaffold is a normal Gradle project:
 
