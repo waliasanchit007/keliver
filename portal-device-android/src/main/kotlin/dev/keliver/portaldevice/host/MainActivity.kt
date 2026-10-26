@@ -42,7 +42,7 @@ import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.modules.EmptySerializersModule
@@ -109,7 +109,9 @@ class MainActivity : ComponentActivity() {
 
     // Prod mode resolves the newest COMPATIBLE bundle from the store; the flow
     // updates once the lookup completes (Treehouse reloads on flow emissions).
-    val manifestFlow = MutableStateFlow(if (prodMode) "" else MANIFEST_URL)
+    // U28: nothing is emitted before the lookup has a URL — an empty one made
+    // every production start log a false codeLoadFailed ("no scheme was found").
+    val manifestFlow = MutableStateFlow<String?>(if (prodMode) null else MANIFEST_URL)
     if (prodMode) {
       lifecycleScope.launch(Dispatchers.IO) {
         runCatching {
@@ -132,7 +134,7 @@ class MainActivity : ComponentActivity() {
 
     val spec = object : TreehouseApp.Spec<PortalPresenter>() {
       override val name = "portal-device"
-      override val manifestUrl = manifestFlow.asStateFlow()
+      override val manifestUrl = manifestFlow.filterNotNull()
       override val serializersModule = EmptySerializersModule()
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
