@@ -214,6 +214,12 @@ jobs:
           KELIVER_PUBLISH_TARGET_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-publish-target.sh" \
             scripts/keliver-new-publish-target-selftest.sh "$RUNNER_TEMP/publish-target-pkg"
           echo "::endgroup::"
+          echo "::group::the screen and component scaffolders, from the package"
+          # The candidate zip's own bin/ copies write into the app they are run
+          # from (an app fixture), and nothing next to themselves.
+          scripts/keliver-new-scaffolders-selftest.sh "$RUNNER_TEMP/scaffolders-pkg" \
+            --package "$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*)"
+          echo "::endgroup::"
           echo "::group::keliver-publish (static publishing, W3/W4), from the package"
           # The candidate zip's own bin/keliver-publish and relay/: publish,
           # refusals, --republish, --promote and constraints, through the wrapper.

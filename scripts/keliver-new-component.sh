@@ -2,11 +2,13 @@
 # keliver new-component — scaffold a portal-recognizable project component
 # ("molecule") built from keliver primitives. Its Kotlin SIGNATURE is its
 # portal spec; screens can call it and edit/preview it in the portal.
-# Usage: scripts/keliver-new-component.sh [--slot] <ComponentName>
-#   leaf: scripts/keliver-new-component.sh MenuRow
-#   slot: scripts/keliver-new-component.sh --slot SectionCard
+# Usage, from the app's root (where keliver.portal.json is):
+#   leaf: keliver-new-component.sh MenuRow
+#   slot: keliver-new-component.sh --slot SectionCard
+# The APP is the working directory (or KELIVER_APP_DIR), never the script's
+# parent: shipped in the tools bundle's bin/, the parent is the bundle.
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="${KELIVER_APP_DIR:-$PWD}"
 SLOT=false
 NAME=""
 for arg in "$@"; do
@@ -25,14 +27,15 @@ for arg in "$@"; do
 done
 [ -n "$NAME" ] || { echo "usage: keliver-new-component.sh [--slot] <ComponentName>"; exit 1; }
 [[ "$NAME" =~ ^[A-Z][A-Za-z0-9]*$ ]] || { echo "ComponentName must be UpperCamelCase (got: $NAME)"; exit 1; }
+[ -f "$ROOT/keliver.portal.json" ] || {
+  echo "no keliver.portal.json in $ROOT — run this from the app's root, or set KELIVER_APP_DIR" >&2
+  exit 1
+}
 
 # Resolve componentsDir from keliver.portal.json (default: sibling of screensDir).
 read -r SCREENS_REL COMPS_REL < <(python3 - "$ROOT/keliver.portal.json" <<'PY'
 import json, sys, os
-try:
-    c = json.load(open(sys.argv[1]))
-except Exception:
-    c = {}
+c = json.load(open(sys.argv[1]))
 screens = c.get("screensDir", "portal-app-lib/src/jsMain/kotlin/screens")
 comps = c.get("componentsDir")
 if not comps:
@@ -44,21 +47,27 @@ PY
 COMPS_DIR="$ROOT/$COMPS_REL"
 FILE="$COMPS_DIR/$NAME.kt"
 [ -e "$FILE" ] && { echo "refusing to overwrite $FILE"; exit 1; }
-mkdir -p "$COMPS_DIR"
 
 # Derive the package from an existing sibling component, else from a screen, else
 # from the components path — never hardcode a foreign package.
-pkg_from() { grep -m1 -E '^package ' "$1" 2>/dev/null | sed 's/^package //'; }
+pkg_from() { grep -m1 -E '^[[:space:]]*package[[:space:]]' "$1" 2>/dev/null | tr -d '\r' | sed -E 's/^[[:space:]]*package[[:space:]]+//; s/[[:space:];].*$//' || true; }
+# The package for a path relative to the app: what follows kotlin/ (or the
+# whole path), each segment kept only if it is a Kotlin identifier.
+pkg_of_path() { echo "$1" | sed -E 's#^(.*/)?kotlin/##; s#/+$##' | tr '/' '\n' | grep -E '^[A-Za-z_][A-Za-z0-9_]*$' | paste -sd. - || true; }
 PKG=""
-for f in "$COMPS_DIR"/*.kt; do [ -e "$f" ] && { PKG="$(pkg_from "$f")"; break; }; done
+for f in "$COMPS_DIR"/*.kt; do [ -e "$f" ] || continue; PKG="$(pkg_from "$f")"; [ -n "$PKG" ] && break; done
 if [ -z "$PKG" ]; then
   # sibling screen package with the trailing segment swapped to .components
   for f in "$ROOT/$SCREENS_REL"/*.kt; do
     [ -e "$f" ] || continue
-    sp="$(pkg_from "$f")"; [ -n "$sp" ] && { PKG="${sp%.*}.components"; break; }
+    sp="$(pkg_from "$f")"; [ -n "$sp" ] || continue
+    case "$sp" in *.*) PKG="${sp%.*}.components" ;; *) PKG="components" ;; esac
+    break
   done
 fi
-[ -z "$PKG" ] && PKG="$(echo "$COMPS_REL" | sed -E 's#.*/kotlin/##; s#/#.#g')"
+[ -z "$PKG" ] && PKG="$(pkg_of_path "$COMPS_REL")"
+[ -n "$PKG" ] || { echo "cannot derive a Kotlin package from componentsDir '$COMPS_REL': add a component or screen with a package line first" >&2; exit 1; }
+mkdir -p "$COMPS_DIR"
 
 if $SLOT; then
 cat > "$FILE" <<EOF

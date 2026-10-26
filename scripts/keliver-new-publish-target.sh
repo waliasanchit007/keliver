@@ -231,7 +231,7 @@ done
 
 if [ -n "$UPGRADED" ] && [ "$UPGRADED" != signing-0.3.6.gradle ]; then
   echo "==> the signing block in $APP/build.gradle (${UPGRADED%.gradle}) was replaced by the current one"
-  echo "    Nothing else was changed. Restart the portal so /publish builds with the new block."
+  echo "    Nothing else was changed. The next /publish builds with the new block (no restart needed)."
   exit 0
 fi
 if [ -n "$UPGRADED" ]; then
@@ -243,7 +243,7 @@ if [ -n "$UPGRADED" ]; then
   echo "      rm -rf \"$APP\"/.gradle/*/executionHistory"
   echo "    (keep $APP/.gradle/keliver-store-path: it binds this app to its store)."
   echo "    If other local users, CI logs or a cached .gradle/ could have read the key,"
-  echo "    treat it as exposed. Restart the portal so /publish builds with the new block."
+  echo "    treat it as exposed. The next /publish builds with the new block (no restart needed)."
   exit 0
 fi
 echo "==> publishing wired for $APP"

@@ -1,12 +1,33 @@
 # Change Log
 
 > Keliver's history begins with a fork from CashApp Redwood `0.18.0`.
-> Entries below `0.18.0` are from upstream Redwood. Keliver-only entries
-> use the `1.0.0-caliclan.N` versioning scheme — see
-> `docs/KELIVER_PLAN.md` (in the Caliclan repo) for the full versioning
-> and wire-format compatibility policy.
+> Entries below `0.18.0` are from upstream Redwood. Keliver's libraries are
+> versioned `0.x` on Maven Central (`dev.keliver:*`; the earlier
+> `1.0.0-caliclan.N` entries below are pre-Maven history); the tools bundle has
+> its own line (`docs/RELEASE_NOTES_TOOLS_*.md`). Compatibility policy:
+> `docs/API_STABILITY.md`.
 
 ## [Unreleased]
+
+Merged after 0.4.0, in no library release yet. Every published API change is
+additive (the `apiDump` files grew; nothing was removed or changed).
+
+- **portal-editor** (#140, #141): the visual editor you work in — selection and
+  hover boxes, components opened and edited in place, typed property controls,
+  cross-document undo whose order is the relay's, the outline keeping its place,
+  a top bar that says what each action does and which bundle devices get, a
+  palette preview drawn by the canvas, a compact publish card, and Live saying
+  when an editor has nothing to run. A per-app editor gets these from the next
+  `portal-editor` release; the tools bundle's generic editor from the next tools
+  release.
+- **portal-core**: `PropChoice` and the `choices` of a property spec (named
+  dropdowns generated from the schemas), `isColorParamName`.
+- **keliver-material-composeui**: `SelectionRegistry` gains `hitTest`,
+  `rectsOf`, `remove` and `report` (the editor's selection and hover boxes).
+- Not on Maven, shipped by the next tools release: the relay's `/history`
+  (cross-document undo order) and byte-exact undo of write-back; new screen
+  files written compactly; the production-host template's screen waiting for an
+  on-resume update being applied, so it is drawn once (#141).
 
 ## Keliver 0.4.0 - 2026-10-21
 
@@ -16,7 +37,7 @@ The portal grammar and editor-canvas libraries. Hand-written sources changed onl
 moved (Kotlin 2.2.0). The relay, ingest and tools-bundle entries below are not on Maven:
 everything in this section except K6, K7, the compiled component preview's tools side (the
 adapter generator, the bundled editor's hook, the relay step) and U37 already shipped in tools
-0.3.10/0.3.11; those four wait for the next tools release (they shipped in tools 0.3.12, 2026-10-21).
+0.3.10/0.3.11; those four shipped in tools 0.3.12 (2026-10-21).
 
 **Source-incompatible with 0.3.4** for code that matches on the portal document model:
 `PropValue` (portal-document) gains `Token`, `Conditional`, `Template`, `ListOf`, `Arith` and
@@ -633,7 +654,7 @@ Distribution and correctness:
 First Maven Central release to bundle the **`keliver-material`** widget library
 (`dev.keliver:keliver-*:0.2.0`, no auth). Released via the
 `publish-maven-central.yml` workflow; dogfooded end-to-end (Android APK + guest
-bundle) by the stashfin-sdui consumer against the published artifacts.
+bundle) by the first adopter app's consumer against the published artifacts.
 
 Added:
 - **`keliver-material` — ~60 Compose/Material3-parity widgets** so adopters can

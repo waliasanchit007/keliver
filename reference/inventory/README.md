@@ -97,10 +97,13 @@ Each of these was hit building this app; see
 
 * **Production needed the Keliver repository — fixed in tools 0.3.6/0.3.7.**
   The 0.3.5 bundle's `host/README.md` said to copy `sample/host-android`, which
-  renders the sample's own widget schema, not keliver-material. CI now runs the
-  0.3.7 zip's `bin/keliver-new-production-host.sh` (Android) and
+  renders the sample's own widget schema, not keliver-material. CI now pins the
+  published 0.3.12 zip (`bootstrap.sh`, `.github/workflows/reference-app.yml`,
+  `ci/ios.sh`), runs its `bin/keliver-new-production-host.sh` (Android) and
   `bin/keliver-new-ios-host.sh` (iOS) in the app, and builds both hosts from
-  Maven Central.
+  Maven Central. (A pull-request run of `reference-app.yml` uses this
+  checkout's `scripts/` scaffolders instead, to test the change under review;
+  a run started by hand uses only the zip's.)
 * **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, whose
   default is Keliver's own `:portal-published-guest:…`, so on a scaffolded app it
   failed, and nothing signed. This app used to carry both settings and a

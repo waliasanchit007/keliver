@@ -2,7 +2,7 @@
 
 Finalized decisions with rationale. Each is **settled** — reopen only with new
 evidence, in a PR against this file. Newest architectural review: 2026-07-12
-(application-scale assessment against the Stashfin adoption).
+(application-scale assessment against the first adopter app).
 
 ## Runtime & distribution
 
@@ -14,8 +14,10 @@ interpreter exists ONLY as the portal's authoring/preview overlay — production
 always compiled code (SOTA decision, P4).
 
 **D2. Production bundles are compiled, Ed25519-SIGNED, versioned, compat-gated.**
-`/publish` → gradle compile → sign → versioned store; hosts fetch
-`/bundles/latest?widgetVersion=W&caps=…`. A bundle never reaches a host that lacks
+`/publish` → gradle compile → sign → versioned store; hosts read the static
+`bundles/index.json` (W3, tools 0.3.8 on; any static server, or the relay),
+falling back to `/bundles/latest?widgetVersion=W&caps=…` on a relay from tools
+0.3.7 or earlier. A bundle never reaches a host that lacks
 its widget version or capabilities. Tamper → codeLoadFailed. (P4, M7.)
 
 **D3. Deployment unit = feature bundle** (10–25 screens), not screen, not app.
@@ -88,7 +90,8 @@ types, parsing. Suspend services must not return `List<@Serializable>` (U1 hang)
 0 RawCode (for grammar screens) → device render screenshot → surgical write-back
 round-trip. Claims without these four are not "done".
 
-**D15. Docs layout:** platform decisions/roadmap here (`konduit/docs`); each
+**D15. Docs layout:** platform decisions/roadmap here (this repository's `docs/`); each
 consumer app repo carries its own CLAUDE.md + ARCHITECTURE.md + WORKFLOW.md so
-agents and new engineers onboard without oral history. stashfin-sdui is the
-reference adoption.
+agents and new engineers onboard without oral history. `reference/inventory` is the
+runnable reference today (the first adopter app, which this decision was
+written for, was lost on 2026-09-05; amended 2026-10-27).
