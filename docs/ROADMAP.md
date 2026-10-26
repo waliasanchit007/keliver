@@ -1,8 +1,9 @@
 # Keliver — Roadmap & improvement backlog
 
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
-its evidence — nothing here is speculative. **Status: 2026-10-15**: "Adoption
-findings (2026-10)" below is the newest list and comes first. The rest was written
+its evidence — nothing here is speculative. **Status: 2026-10-27.** "Current
+priorities" (below the adoption findings) is the ranked list to pick work from;
+"Adoption findings (2026-10)" carries a status line per item. The rest was written
 2026-09-23, after tools
 0.3.5 and the first reference app whose development route uses only published
 artifacts (`reference/inventory`, `docs/REFERENCE_APP.md`; its production host
@@ -38,6 +39,8 @@ run alongside item 2.
      `ComposeWidgetChildren` (merged, unreleased);
    - a `ScrollableColumn` with unbounded height is caught at ingest, or rendered
      bounded, instead of crashing on device.
+   **Status 2026-10-27: done.** #103 and #105 are released in libraries 0.3.4
+   (2026-10-16); see CHANGELOG 0.3.4.
 2. **Startup and memory.** On Android (debug builds) the native screen reached
    content in 1.5 s cold against 1.1 s for the cached web page it replaced (equal
    on a reopen, 0.6 s); on an iPhone 13 a warm open takes ≈ 1.5 s, ≈ 1 s of it
@@ -47,6 +50,13 @@ run alongside item 2.
    screen opens; profile the guest's frame work in QuickJS; find the iOS
    memory. Make Production bundles the default `publishTask` (Development is
    the default today: 4.3 MB against 2.4 MB, and slower to evaluate).
+   **Status 2026-10-27:**
+   - **done:** M0 (#116: timing marks, a benchmark build type), M1 (#110:
+     Production bundles by default) and M2 on Android (#119: release-build
+     start-up numbers on the reference app); iOS M2 is deferred (it needs a
+     signing team);
+   - **open:** M3 (start the code load at host start), M4 (a guest frame
+     profile) and M5 (the iOS memory breakdown). See ADOPTION_PLAN item 2.
 3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
    start; each host then needed ≈ 900 lines of glue, and every serious defect
    (no web fallback, a bypassable request block, an authenticated client that
@@ -72,6 +82,20 @@ run alongside item 2.
    keep the full Gradle output); the relay reads `keliver.portal.json` only at
    start; a new bundle needs an app restart; an iPhone needs a tunnel because of
    the Local Network prompt, and the debug bundle origin is compiled in.
+   **Status 2026-10-27:**
+   - **done:**
+     - #108: the full Gradle output of every publish is kept;
+     - #115 (U34): a publish is built once more after a compiler crash;
+     - #109: publish reads `keliver.portal.json` each time;
+     - #111: a debug host takes its bundle server at launch;
+     - #114: debug hosts check for updates on resume, with a debug check-now hook;
+     - #141: a screen opened while a resume update is applied waits for it,
+       and is drawn once.
+   - **open:**
+     - the device proxy;
+     - a debug host that picks up a publish **while it is open**, with no
+       reopen. It would reuse #114's in-place update, triggered by a publish
+       event from the relay; signed bundles only, debug builds only.
 7. **Bundle delivery.** A download is one request per module, three in flight,
    so it is latency-bound; a one-line guest change re-downloaded the
    stdlib module too. Measure more parallelism or an archive, and why stdlib
@@ -100,6 +124,61 @@ run alongside item 2.
      relay restart, so the stamp the guide says to commit churns in git;
    - the publish dialog is titled "Exported Kotlin" and names only the active
      screen's file.
+   **Status 2026-10-27.**
+   - **Released in tools 0.3.12:** the generic editor carries no sample app's
+     adapters (2150b4fa6).
+   - **Merged, not released** (on `main` after tools 0.3.12):
+     - the generic editor carries no sample app's personas or flows either,
+       and Publish confirms once (47f9b3b9b);
+     - text and number edits are written once, on Enter or blur (#140), so an
+       undo steps back a whole edit;
+     - the compiled-version stamp never goes back after a relay restart
+       (d51a3a155);
+     - Publish reports in a compact card naming the bundle version (#141).
+   - **Still true:** the stamp changes on every edit.
+   - **The editor program after this finding** (feedback rounds 1–5 by a
+     user-role agent, seven independent reviews, a real-input E2E suite in CI):
+     - typed property controls (E8–E13, E27, E28, E48);
+     - K1–K7 grammar (layout modifiers, design tokens, conditions, templates
+       and lists, compound conditions, Int arithmetic);
+     - canvas fidelity (K5) and the compiled component preview (#132);
+     - #140: selection, components, properties, cross-document undo, write-back
+       that compacts new files and keeps undo byte-exact;
+     - #141: the outline keeps its place, a top bar that says what each action
+       does and which bundle devices get, a palette preview drawn by the canvas,
+       and a compact publish card.
+   - The whole loop was checked on a physical Android phone: editor edit,
+     write-back, signed bundle, device render.
+   - **Not yet released.** #140 and #141 reach the tools bundle's generic
+     editor with the next tools release. A per-app editor compiles against the
+     published `dev.keliver:portal-editor` (`keliver-new-editor.sh`), so it
+     gets them only with a libraries release too.
+9. **▶ Live for an adopter's own presenters — deferred (decided 2026-10-26).**
+   On the product proof, Live had nothing to run: the tools bundle's generic
+   editor has no presenters, and the button now says so ("not in this editor").
+   Making it run the app's presenters was planned and not started:
+   - **What it would take.** A per-app editor (`keliver-new-editor.sh`) with
+     the app's logic compiled for wasmJs. Today each screen also needs a
+     hand-written `PreviewFrame` mapper (values and dispatch), and on that app
+     it would have been 13 mappers over about 150 fields and 60 actions. The
+     plan replaced them with **generated live adapters**: one typed
+     `xLive { … }` helper per Bindings interface, emitted by PSI the way
+     `CompiledAdapterGenerator` emits compiled-component adapters. It also
+     needed:
+     - `keliver-nav` with a wasmJs target (it has none);
+     - the serialization plugin in the scaffolded editor;
+     - in the app, a plain capability interface in front of its
+       Zipline-typed bridge, and named presenter functions where routes built
+       their bindings inline.
+   - **Why it is deferred.** About 9–12 hours, half of it changes to the
+     adopter's app, and the result would show the app's own fixtures in the
+     canvas. A phone in debug mode already shows those fixtures with full
+     fidelity, so the dev loop (item 6, a device that picks up a publish while
+     open) comes first.
+   - **When to pick it up.** When Live inside the editor matters to an
+     adopter. Build the generated adapters first and prove them on
+     `reference/inventory` by replacing its hand-written mapper, then on an
+     adopter's app.
 
 ## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 
@@ -112,7 +191,7 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    whole-list replace re-indented to the call's depth (single-line preserved);
    inserts land at sibling depth with proper leading whitespace. Byte-idempotency
    (edit + undo == original bytes) is unit-tested (WriteBackTest, 7 green) and was
-   live-verified on stashfin ProfileScreen/ProfileLiteScreen.
+   live-verified on the adopter app's ProfileScreen/ProfileLiteScreen.
 2. ✅ **/undo** — re-diagnosed: undo always wrote the file. The observed failure
    was a SESSION mismatch (undo stacks are per-session; `/undo` without an
    `X-Portal-Session` header matching the ops envelope hits an empty stack and
@@ -121,7 +200,7 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 3. ✅ **packageName** — FIXED: writeKotlin (and the Compiled_ sibling) derive the
    package from the EXISTING file; the constructor default is only a fallback.
    Severity confirmed in the wild: before the fix, a full-export fallback
-   regenerated stashfin's ProfileScreen into dev.keliver.portalpublished.screens
+   regenerated the adopter app's ProfileScreen into dev.keliver.portalpublished.screens
    and broke the guest compile. Follow-up: log when the non-surgical fallback
    fires so full regens are observable.
 
@@ -132,7 +211,7 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    `{ _ -> ... }` exporter form), the exporter already emitted verbatim, and
    collectContract types the param from the literal (String/Int/Double/Boolean).
    Round-trip tested (RecognizerTest.literalArgActionsRoundTrip) + live-verified
-   ingesting a probe screen in stashfin-sdui (0 RawCode).
+   ingesting a probe screen in the first adopter app (0 RawCode).
 5. ✅ **Field-aware Repeat mock defaults** (DONE 2026-07-16): unmocked item binds
    preview as realistic values — icon props get VALID icon names (never ⓘ),
    image/url fields a picsum URL (AsyncImage renders), amount/date/phone/email
@@ -180,11 +259,11 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     not duplicated). The contract-mismatch full-regen bail in WriteBack is
     gone. Fixed en route: collectContract leaked item-scoped binds as invalid
     dotted interface members (`val item.label: String`) — latent PUBLISH-path
-    exporter bug. Live-verified on stashfin ProfileScreen: insert Repeat over
+    exporter bug. Live-verified on the adopter app's ProfileScreen: insert Repeat over
     a new field → guest build GREEN with 2 markers → undo → byte-identical.
     Follow-up: the publish verifier should reject bundles whose contract still
     carries TODO(portal) markers (drafts must not ship to prod).
-10b. ✅ (mitigated 2026-07-16) **serve dies on compile error** — stashfin's
+10b. ✅ (mitigated 2026-07-16) **serve dies on compile error** — the adopter app's
     dev.sh now supervises and restarts it (5s backoff). Root-cause fix in the
     zipline serve task's continuous-mode failure handling still open (P4-ish).
 
@@ -218,7 +297,7 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     lambda export (including required empty slots); surgical insertion into an
     empty slot; editor container palette/outline/drop/props behavior; relay
     `/components` slots; `keliver-new-component --slot`. Dogfood: canonical
-    Settings = 3 SectionCard + 4 MenuRow, zero RawCode; Stashfin Profile = five
+    Settings = 3 SectionCard + 4 MenuRow, zero RawCode; the adopter app's Profile = five
     repeated white wrappers replaced by SectionCard, zero RawCode. Gates: focused
     and broad API/codegen/core/document/render tests green (1,453 actions),
     editor real-presenter + palette insert/undo verified with byte-identical
@@ -249,7 +328,7 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     promote didn't cache-bust the constant-named web-spike.js → browsers ran a
     stale editor+wasm across rebuilds (silently defeated promote-on-success —
     cost a full detour). NOTE: :8096 must serve build/portal-editor-live (the
-    PROMOTED dist). Stashfin external-app enablement is complete through a
+    PROMOTED dist). External-app enablement is complete through a
     composite build; publishing the editor's full transitive module graph is a
     separate productization milestone. **2026-07-23 hardening:** live binding
     keys are pre-seeded before the first presenter frame, canvas event payloads
@@ -327,10 +406,53 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## Current priorities
 
+**Ranked 2026-10-27**, by user impact, correctness, security, then dependency
+order. Every item comes from the adoption findings above, `KNOWN_BUGS.md`, or
+the 2026-10-27 documentation audit. No security or data-loss defect is open
+(U35/U36 fixed in tools 0.3.11, U27/U29 in 0.3.6, U30 in 0.3.9).
+
+1. **Ship what is merged: tools 0.3.13.** Adopters get none of the editor
+   program yet (#140, #141), nor the production-host fix for a screen drawn
+   twice after a resume update. Gate: `scripts/build-portal-tools.sh`, the
+   adopter acceptance, the identity check, device verify, then the release
+   procedure in `PORTAL_TOOLS_RELEASE.md`. It carries items 2–4.
+2. **A debug host picks up a publish while it is open** (adoption item 6's
+   open row; owner's request 2026-10-26). The relay announces each stored
+   bundle on `GET /bundles/events`; a debug host listens while a screen is on
+   show and runs its ordinary, verified update check. Android first, then iOS.
+3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
+   into the tools bundle, not the app** (found by the 2026-10-27 audit): run
+   from the zip's `bin/`, they resolve the app as the script's parent. Every
+   adopter who follows `PORTAL_TOOLS_README.md` to add a screen hits it.
+4. **U38: the browser keeps running a cached editor** after switching to an
+   app's own one. Small; serve the editor with `Cache-Control: no-cache`.
+5. **A libraries release (0.4.1)** so per-app editors get #140/#141: the
+   published `portal-editor`, `portal-core`, `keliver-material-composeui`
+   changed. **Needs the owner's go** (Maven Central).
+6. **U28: a false `codeLoadFailed` on every production-host start.** It sends
+   developers chasing a failure that did not happen.
+7. **Brownfield host kit** (adoption item 3): the glue each embed needed (a
+   fallback hook, a status API, user-safe states, a request allow-list hook).
+   The proof's serious defects were all in that glue.
+8. **Bridge generator / HostHttp through the app's client** (adoption item 4).
+9. **Start-up** (adoption item 2, M3: start the code load at host start), then
+   M4 (guest frame profile) and M5 (iOS memory).
+10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
+    delivery (item 7); the device proxy (item 6's last row).
+11. **W7, the physical-device proof** (a real-certificate HTTPS server, a
+    release-signed APK and IPA, an iPhone): needs the owner's hardware and
+    signing team.
+12. U19, U20 (editor re-render and frame rate), then the depth candidates.
+
+### Priorities of 2026-09-23 (superseded)
+
 Refreshed 2026-09-23 from the reference-app run (`docs/REFERENCE_APP.md`), the
-0.3.5 release, and the open defects. The July list (preview hardening, Project
-Components v2, editor distribution, K1–K4, personas, replay #16) is **complete**
-and kept under "Completed priorities" below.
+0.3.5 release, and the open defects. Status 2026-10-27: items 1–4 are done
+(tools 0.3.6–0.3.9: scaffolded Android and iOS production hosts, scaffolded
+publishing with Production bundles by default, U27/U29, #77's scaffolded-host
+fix, U30); item 6's physical Android device is done (S25 Ultra, tools 0.3.10;
+a Galaxy A12 in 2026-10), an iPhone run of the reference app is not; items 5,
+7 (in part), 8 and 9 remain and are folded into the list above.
 
 1. **An adopter cannot ship to production without a Keliver checkout.** The
    first reference app, developed only from the published tools and Maven
@@ -401,11 +523,11 @@ and kept under "Completed priorities" below.
 2. ✅ **Project Components v2 — one required content slot** — complete and tri-platform
    verified 2026-07-23; evidence is in `CURRENT_STATE.md` and item 11c.
 3. ✅ **Editor/flow distribution productization** — DONE + LOCALLY PROVEN
-   2026-07-24 (f1a85a36a, b8697b7b6, stashfin d8ebe46; design + release
+   2026-07-24 (f1a85a36a, b8697b7b6, first adopter app d8ebe46; design + release
    checklist in docs/superpowers/specs/2026-07-24-editor-distribution-design.md).
    The 7 artifacts a consumer editor needs (portal-core/-document/-render/-flow/
    -editor + the renamed keliver-material-protocol-{host,guest}-web) are now
-   publishable: explicit API, committed apiDump, apiCheck green. PROOF: stashfin
+   publishable: explicit API, committed apiDump, apiCheck green. PROOF: the adopter app
    DELETED its composite build and its editor compiled, built a wasm dist, and
    ran in-browser against dev.keliver:*:0.3.1-SNAPSHOT from mavenLocal with the
    real presenter + slotted SectionCard. The Maven Central push is IRREVERSIBLE
@@ -452,9 +574,9 @@ and kept under "Completed priorities" below.
     document permanently in the shapes plugin lint.
 21. @Modifier lambdas broken on JS (widget @Property events only).
 22. WebSocket code-push for the web target (dev experience only; runtime is local).
-23. ~~keliver-portal launcher: fold the stashfin `scripts/dev.sh` improvements
+23. ~~keliver-portal launcher: fold the first adopter app's `scripts/dev.sh` improvements
     back into the bundled launcher (health-wait, stop, editor auto-build).~~
-    **Done 2026-09-05.** `stashfin-sdui` was gone, so the behaviour was
+    **Done 2026-09-05.** The first adopter app was gone, so the behaviour was
     re-derived from `scripts/keliver-dev.sh` rather than ported. `keliver-portal`
     now health-waits on `/devstate` (failing fast with the server log instead of
     a blind `sleep 3`), gains `stop`/`status` subcommands backed by per-app-dir
@@ -469,10 +591,17 @@ and kept under "Completed priorities" below.
 
 ## Recently completed (context for readers)
 
+- 2026-10 (newest first):
+  - the editor program #140/#141 (adoption item 8's status);
+  - tools 0.3.10–0.3.12 and libraries 0.4.0 (the grammar and canvas work,
+    with the compiled component preview);
+  - adoption items 1, 2 (M0–M2) and 6 (most rows): see their status lines;
+  - libraries 0.3.4.
+
 - 0.3.1 on Maven Central (2026-07-27), including the five publishable `portal-*`
   editor artifacts — consumer editors no longer need a Keliver checkout.
 - 0.3.0 on Maven Central; keliver-init scaffolder; portal tools bundle (R1–R6).
-- Stashfin adoption: real app on Android + iOS + web from one guest source;
+- First adopter app: real app on Android + iOS + web from one guest source;
   Profile ported to Style B with 0 RawCode; hot reload verified ~15–25s (S1–S6).
 - Application-scale architecture review: presenter/bindings seam holds; missing
   scopes (flow, transparent components, capability breadth) identified → P3 above.

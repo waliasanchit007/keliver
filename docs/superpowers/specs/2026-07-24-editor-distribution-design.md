@@ -69,7 +69,7 @@ the preview/flow contracts; the DOM chrome and LiveEngine internals become
   violations fixed in the codegen emitters (+ `checkPortalCode` stays green).
   Then `publishing()` + `apiDump` per module. Gate: `apiCheck` green.
 - **D4 — the proof** (the gate that matters): `publishToMavenLocal` at a
-  snapshot version, then flip `stashfin-sdui/editor/settings.gradle.kts` from
+  snapshot version, then flip the first adopter app's `editor/settings.gradle.kts` from
   `includeBuild(konduit)` to plain mavenLocal coordinates, DELETE the composite
   build, and verify the editor builds and runs in-browser (relay, ProfileScreen,
   components, ▶ Live). A consumer editor with zero Keliver checkout.
@@ -99,7 +99,7 @@ that failure actually occurs.
   in the EMITTERS, not the output. `portal-editor`'s public API is deliberately
   5 declarations: `runPortalEditor` + the capability-preview surface
   (`PreviewCapabilities`/`PreviewSqlHost`/`PreviewSqlDriver`/`CapStatus`).
-- D4 **the proof**: stashfin-sdui `d8ebe46` deleted its composite build; its
+- D4 **the proof**: the first adopter app (`d8ebe46`) deleted its composite build; its
   editor compiled, built a full wasm distribution, and RAN in-browser against
   `dev.keliver:*:0.3.1-SNAPSHOT` from mavenLocal — real ProfilePresenter data,
   all three project components including the slotted `SectionCard`.

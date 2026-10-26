@@ -209,8 +209,11 @@ curl -sSL -o public.zip https://github.com/<owner>/<repo>/releases/download/port
 shasum -a 256 public.zip
 ```
 
-`--latest=false` keeps GitHub's "Latest" badge on the library release; a tools
-release is not the project's latest release.
+`--latest=false` keeps GitHub's "Latest" badge off the tools release: a tools
+release is not the project's latest library release. Library releases are
+tags only (`vX.Y.Z`, no GitHub release since 0.3.3), so the badge still sits on
+the 0.3.3 release; that is expected, and Maven Central is the library
+release's record.
 
 ### 5. Restore
 

@@ -287,7 +287,7 @@ For each of `StyledText, Card, Switch, Checkbox, TextField, Chip, IconButton, As
 ### Task 18: Publish keliver-material to Maven Central (with 0.2.0 line)
 
 - [ ] **Step 1:** Confirm the 7 modules are wired into the Central publishing config (they inherit `redwoodBuild { publishing() }` from the clone) + the BOM.
-- [ ] **Step 2:** Defer the actual Central release to the 0.2.0 cut; `publishToMavenLocal` is sufficient to unblock Track B (Stashfin) now.
+- [ ] **Step 2:** Defer the actual Central release to the 0.2.0 cut; `publishToMavenLocal` is sufficient to unblock Track B (the adopter app) now.
 
 ---
 

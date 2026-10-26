@@ -22,12 +22,14 @@ implement the data/logic behind the generated contract by hand.**
 A portal project is a real Gradle project in git:
 
 ```
+portal-app-lib/src/commonMain/kotlin/
+├── screens/     main.kt          ← canonical, portal-editable (edit here OR in the portal — both sync)
+│                Compiled_main.kt  ← generated version stamp (M9 overlay catch-up); don't edit
+│                capabilities.txt  ← host capabilities this app needs (e.g. HostSqlDriver@1)
+├── logic/       MainPresenter.kt  ← hand-owned presenter → produces the screen's Bindings (Style B)
+│                TapStore.kt        ← hand-owned data layer (schema + queries ship OTA)
+└── components/  MenuRow.kt, …     ← project components (molecules)
 portal-app-lib/src/jsMain/kotlin/
-├── screens/  main.kt          ← canonical, portal-editable (edit here OR in the portal — both sync)
-│             Compiled_main.kt  ← generated version stamp (M9 overlay catch-up); don't edit
-│             capabilities.txt  ← host capabilities this app needs (e.g. HostSqlDriver@1)
-├── logic/    MainPresenter.kt  ← hand-owned presenter → produces the screen's Bindings (Style B)
-│             TapStore.kt        ← hand-owned data layer (schema + queries ship OTA)
 └── dev/keliver/portalpublished/PublishedEntry.kt  ← hand-owned: wires presenter → screen
 ```
 
@@ -53,8 +55,9 @@ never touches the hand-owned files. Editing a screen in the portal produces a
 
 The editor deploys to GitHub Pages (`.github/workflows/pages.yml`). With no
 portal-server reachable it enters **playground mode**: the full editor — 60+
-widget palette, props/modifiers, bindings, Repeat mock rows, undo/redo, Export
-Kotlin — backed by a local in-browser document engine. Edits stay in the tab;
+widget palette, props/modifiers, bindings, Repeat mock rows, undo/redo, the
+**</> Code** view (the screen as Kotlin; the playground's strip calls it
+"Export Kotlin") — backed by a local in-browser document engine. Edits stay in the tab;
 publish/devices/`.kt` sync need the real stack below.
 
 ## Start the stack
@@ -65,7 +68,7 @@ scripts/keliver-dev.sh --android  # …and install + launch the Android host
 ```
 
 Open **http://localhost:8096**. Ctrl-C stops everything. Everything you author
-is saved into the app project (`portal-app-lib/src/jsMain/kotlin/screens/`).
+is saved into the app project (`portal-app-lib/src/commonMain/kotlin/screens/`).
 
 ## Layout / styling / bindings → edit the SCREEN (portal or file — both sync)
 
@@ -98,7 +101,7 @@ row has a small **arg** input (`it` or `item.field`); item-carrying args also
 add the field to the item interface (`Note.id`).
 
 **Repeat preview mock rows:** the preview renders **3 mock rows** per `forEach`
-by default. In the Bindings panel:
+by default. In the State panel:
 
 - the items field's mock (`notes`) sets the **row count** (`2` → two rows),
 - an item field's mock (`note.title`) holds **per-row values**: `First|Second`
@@ -247,8 +250,14 @@ the app repo it serves: `port`, `screensDir`, `componentsDir`, `flowsDir`,
 `previewDist`, `previewServeDir`, `httpFixturesDir`, optional `httpRecording`,
 `appRuntime`, optional `tokensDirs` (extra design-token directories), and
 optional `previewAssetHosts` (image hosts the canvas loads through the relay;
-see [Editor canvas fidelity](EDITOR_FIDELITY.md#images-through-the-relay-previewassethosts)).
+see [Editor canvas fidelity](EDITOR_FIDELITY.md#images-through-the-relay-previewassethosts)),
+and optional `compiledComponents` (`out`, `packageName`, `valName`,
+`sameModule`: where the compiled-component preview adapters are generated; see
+[`COMPILED_COMPONENT_PREVIEW.md`](COMPILED_COMPONENT_PREVIEW.md)).
 Path fields default relative to `screensDir`, so the file can stay small.
+**Unknown keys are ignored, not rejected:** a misspelled key (`componentDir`,
+`publishtask`) is silently dropped and its default applies, so check spelling
+when a setting seems to have no effect.
 `PORTAL_REPO` can point one relay at an external app checkout.
 
 Declare the app/device runtime target explicitly; the editor cannot infer it
@@ -256,7 +265,7 @@ reliably from Gradle catalogs, BOMs, or composite substitution:
 
 ```json
 "appRuntime": {
-  "keliverVersion": "0.3.1-SNAPSHOT",
+  "keliverVersion": "0.4.0",
   "widgetVersion": 1
 }
 ```

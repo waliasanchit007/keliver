@@ -2,7 +2,7 @@
 
 **Status:** Design — approved to plan
 **Date:** 2026-06-10
-**Tracking:** Track A of the Stashfin SDUI program. Track B (the Stashfin
+**Tracking:** Track A of the first adopter SDUI program. Track B (the adopter app
 Android/iOS integration) consumes this library; it is specced separately.
 
 ---
@@ -159,7 +159,7 @@ per-widget cost after is small.
   modules; port the proven seed — `AsyncImage, Card, Switch, Checkbox, TextField,
   StyledText, Divider, Chip, IconButton, ScrollableColumn, BottomSheet` (11
   widgets, all verified on-device in ServerDrivenUI main / sample). Publish
-  `keliver-material` = a usable set + the foundation. **Unblocks Track B (Stashfin).**
+  `keliver-material` = a usable set + the foundation. **Unblocks Track B (the adopter app).**
 - **Batch 1 — Buttons & inputs parity:** button variants, FAB, RadioButton,
   Slider, OutlinedTextField, DropdownMenu.
 - **Batch 2 — Containers & layout parity:** Surface, card variants, FlowRow/Column, grids.
@@ -182,7 +182,7 @@ overrides.
 - Unit/snapshot tests via `keliver-material-testing` (mirror `ui-basic-testing`).
 - **Dogfood:** add each batch's widgets to keliver `sample/` and render on an
   emulator/simulator.
-- **Real proof:** Track B (Stashfin) renders the seed set on-device, Android first.
+- **Real proof:** Track B (the adopter app) renders the seed set on-device, Android first.
 
 ## 8. Risks & open questions
 - **iOS rendering parity:** some Material3 components behave differently under CMP
