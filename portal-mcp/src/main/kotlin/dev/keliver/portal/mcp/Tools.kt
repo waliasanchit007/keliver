@@ -301,12 +301,23 @@ object Tools {
       "Screenshot the connected Android dev device/emulator (mirrors the active screen ~1s after edits). Best-effort: errors if no device.",
       emptyMap(),
     ) {
-      val adb = File(System.getProperty("user.home"), "Library/Android/sdk/platform-tools/adb")
-      val proc = ProcessBuilder(adb.absolutePath, "exec-out", "screencap", "-p").start()
+      val proc = runCatching { ProcessBuilder(adbPath(), "exec-out", "screencap", "-p").start() }.getOrNull()
+        ?: return@Tool toolText("adb not found: set ANDROID_HOME (or ANDROID_SDK_ROOT), or put adb on PATH", isError = true)
       val bytes = proc.inputStream.readBytes()
       proc.waitFor()
       if (bytes.size < 1000) toolText("no device or screencap failed", isError = true)
       else toolImage(Base64.getEncoder().encodeToString(bytes))
     },
   )
+}
+
+/**
+ * adb: `$ANDROID_HOME`/`$ANDROID_SDK_ROOT`'s platform-tools, else the Android Studio default on
+ * macOS (`~/Library/Android/sdk`) and Linux (`~/Android/Sdk`), else `adb` on PATH.
+ */
+internal fun adbPath(env: (String) -> String? = System::getenv, home: String = System.getProperty("user.home")): String {
+  val exe = if (System.getProperty("os.name").orEmpty().startsWith("Windows")) "adb.exe" else "adb"
+  val sdks = listOfNotNull(env("ANDROID_HOME"), env("ANDROID_SDK_ROOT")) +
+    listOf("$home/Library/Android/sdk", "$home/Android/Sdk")
+  return sdks.map { File(it, "platform-tools/$exe") }.firstOrNull { it.isFile }?.absolutePath ?: exe
 }
