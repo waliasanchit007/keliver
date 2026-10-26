@@ -1275,7 +1275,7 @@ replaces the pair with two renames; interrupted between them it leaves a
 mismatched pair, and says to check `keys/` when either rename fails. `SigningKeysTest.halfAnIdentityIsReportedAndLeftAsItWas`,
 and the check's section E, both directions.
 
-### U28. The production host logs a false `codeLoadFailed` on every start — OPEN
+### U28. The generic host's production mode logged a false `codeLoadFailed` on every start — FIXED for tools 0.3.13
 
 Found in the reference app's production run, 2026-09-22. In production mode
 `portal-device-android`'s `MainActivity.kt:112` starts the manifest flow at `""`
@@ -1291,6 +1291,18 @@ anything that reports `codeLoadFailed` — an adopter's crash reporting, or a
 check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
+
+**Scope.** The generic hosts built from source have a production mode:
+`portal-device-android` without `keliver.devOnlyHost`, and `portal-device-ios`
+launched with `prod`. Both had the bug. The tools bundle's host is
+development-only (it refuses `mode=prod`), and the scaffolded production hosts
+create their Treehouse app only once the URL is known (the reference app's P2
+asserts it). **Fix (2026-10-27):** in both generic hosts the manifest flow
+starts empty-handed (`MutableStateFlow<String?>(null)`, `filterNotNull()`), so
+nothing is emitted before the lookup has a URL. Checked by compiling
+(`:portal-device-android:compileDebugKotlin`,
+`:portal-device-ios:compileKotlinIosSimulatorArm64`); no device run of that
+mode on either platform.
 
 ### U32. The iOS host's `TEAM_ID` setting did nothing, and `Config.local.xcconfig` was never read — FIXED in tools 0.3.9 (found 2026-10-12)
 

@@ -191,6 +191,7 @@ for us.
    them was not traced.
 8. **The production host logs a false `codeLoadFailed` on every start** — an
    empty manifest URL, before the bundle lookup answers (see *Production OTA*).
+   Fixed for tools 0.3.13 (KNOWN_BUGS U28).
 9. **The Bindings panel lags by one update — in every Live capture.** The
    Live-preview checks read the canvas and the State Inspector, which agree;
    the editor's *Bindings* panel shows the value before:
@@ -305,7 +306,7 @@ are in the run's artifact only, which expires 30 days after the run.
 — an empty URL. `MainActivity.kt:112` starts the manifest flow at `""` in
 production mode and only sets the real URL once `/bundles/latest` answers, and
 Treehouse tries to load the empty one. Harmless to what loads, but an adopter's
-crash reporting on `codeLoadFailed` gets a false failure on every start.
+crash reporting on `codeLoadFailed` gets a false failure on every start. (Fixed for tools 0.3.13: KNOWN_BUGS U28.)
 
 **What this does not show.** A production host an adopter could get without
 this repository (there is none — finding 1); a production host built from the
