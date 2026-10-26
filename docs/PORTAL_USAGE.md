@@ -171,7 +171,9 @@ fresh replay session.
 
 Replay never has an outbound fallback. Secure capture is a separate, explicit
 local workflow and is disabled by default. Add reviewed upstream IDs to
-`keliver.portal.json`:
+`keliver.portal.json`. `allowedOrigins` must name the editor's own origin, which
+is matched exactly: `http://localhost:8096` for an app on the default port, and
+otherwise the app's `editorPort` (by default its `port` + 19):
 
 ```json
 "httpRecording": {
