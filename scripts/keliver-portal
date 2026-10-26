@@ -206,18 +206,22 @@ say "portal-server against $APP_DIR (:$PORT)"
 echo $! >> "$PIDFILE"
 
 say "editor (:$EDITOR_PORT) from $EDITOR_DIR"
-# U38: every response says Cache-Control: no-cache, so a browser asks again
-# for index.html (it names the loader) after keliver-portal starts serving a
-# different editor on this port — the bundled one, then the app's own — instead
-# of running the one it cached. http.server alone sends Last-Modified and no
-# cache headers, which browsers may reuse without asking.
-( cd "$EDITOR_DIR" && exec python3 -c '
+# U38: nothing the editor server sends may be reused. The bundled editor and
+# an app's own one share file names (index.html names the loader), and either
+# can be the older file, so a revalidation by date (Last-Modified, which
+# http.server answers 304) can keep the editor the browser saw first. Every
+# response says Cache-Control: no-store, and a conditional request is answered
+# in full. -I: nothing in the served directory is imported.
+( cd "$EDITOR_DIR" && exec python3 -I -c '
 import http.server, sys
-class NoCache(http.server.SimpleHTTPRequestHandler):
+class NoStore(http.server.SimpleHTTPRequestHandler):
+    def send_head(self):
+        del self.headers["If-Modified-Since"]
+        return super().send_head()
     def end_headers(self):
-        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Cache-Control", "no-store")
         super().end_headers()
-http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), NoCache).serve_forever()
+http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), NoStore).serve_forever()
 ' "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
 echo $! >> "$PIDFILE"
 
