@@ -38,6 +38,8 @@ run alongside item 2.
      `ComposeWidgetChildren` (merged, unreleased);
    - a `ScrollableColumn` with unbounded height is caught at ingest, or rendered
      bounded, instead of crashing on device.
+   **Status 2026-10-27: done.** #103 and #105 are released in libraries 0.3.4
+   (2026-10-16); see CHANGELOG 0.3.4.
 2. **Startup and memory.** On Android (debug builds) the native screen reached
    content in 1.5 s cold against 1.1 s for the cached web page it replaced (equal
    on a reopen, 0.6 s); on an iPhone 13 a warm open takes ≈ 1.5 s, ≈ 1 s of it
@@ -47,6 +49,12 @@ run alongside item 2.
    screen opens; profile the guest's frame work in QuickJS; find the iOS
    memory. Make Production bundles the default `publishTask` (Development is
    the default today: 4.3 MB against 2.4 MB, and slower to evaluate).
+   **Status 2026-10-27:**
+   - **done:** M0 (#116: timing marks, a benchmark build type), M1 (#110:
+     Production bundles by default) and M2 (#119: release-build start-up
+     numbers on the reference app);
+   - **open:** M3 (start the code load at host start), M4 (a guest frame
+     profile) and M5 (the iOS memory breakdown). See ADOPTION_PLAN item 2.
 3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
    start; each host then needed ≈ 900 lines of glue, and every serious defect
    (no web fallback, a bypassable request block, an authenticated client that
@@ -72,6 +80,20 @@ run alongside item 2.
    keep the full Gradle output); the relay reads `keliver.portal.json` only at
    start; a new bundle needs an app restart; an iPhone needs a tunnel because of
    the Local Network prompt, and the debug bundle origin is compiled in.
+   **Status 2026-10-27:**
+   - **done:**
+     - #108: the full Gradle output of every publish is kept;
+     - #115 (U34): a publish is built once more after a compiler crash;
+     - #109: publish reads `keliver.portal.json` each time;
+     - #111: a debug host takes its bundle server at launch;
+     - #114: debug hosts check for updates on resume, with a debug check-now hook;
+     - #141: a screen opened while a resume update is applied waits for it,
+       and is drawn once.
+   - **open:**
+     - the device proxy;
+     - a debug host that picks up a publish **while it is open**, with no
+       reopen. It would reuse #114's in-place update, triggered by a publish
+       event from the relay; signed bundles only, debug builds only.
 7. **Bundle delivery.** A download is one request per module, three in flight,
    so it is latency-bound; a one-line guest change re-downloaded the
    stdlib module too. Measure more parallelism or an archive, and why stdlib
@@ -100,6 +122,31 @@ run alongside item 2.
      relay restart, so the stamp the guide says to commit churns in git;
    - the publish dialog is titled "Exported Kotlin" and names only the active
      screen's file.
+   **Status 2026-10-27.**
+   - **Fixed since:**
+     - the generic editor carries no sample app (no foreign personas, flows or
+       adapters);
+     - text and number edits are written once, on Enter or blur (#140), so an
+       undo steps back a whole edit;
+     - the compiled-version stamp never goes back after a relay restart;
+     - Publish confirms once, and reports in a compact card naming the bundle
+       version (#141).
+   - **Still true:** the stamp changes on every edit.
+   - **The editor program after this finding** (feedback rounds 1–5 by a
+     user-role agent, seven independent reviews, a real-input E2E suite in CI):
+     - typed property controls (E8–E13, E27, E28, E48);
+     - K1–K7 grammar (layout modifiers, design tokens, conditions, templates
+       and lists, compound conditions, Int arithmetic);
+     - canvas fidelity (K5) and the compiled component preview (#132);
+     - #140: selection, components, properties, cross-document undo, write-back
+       that compacts new files and keeps undo byte-exact;
+     - #141: the outline keeps its place, a top bar that says what each action
+       does and which bundle devices get, a palette preview drawn by the canvas,
+       and a compact publish card.
+   - The whole loop was checked on a physical Android phone: editor edit,
+     write-back, signed bundle, device render.
+   - **Not yet released:** #140 and #141 reach adopters with the next tools
+     release.
 9. **▶ Live for an adopter's own presenters — deferred (decided 2026-10-26).**
    On the product proof, Live had nothing to run: the tools bundle's generic
    editor has no presenters, and the button now says so ("not in this editor").
@@ -494,6 +541,13 @@ and kept under "Completed priorities" below.
     issues 1–5 were closed by the 2026-07-23 consolidation pass.
 
 ## Recently completed (context for readers)
+
+- 2026-10 (newest first):
+  - the editor program #140/#141 (adoption item 8's status);
+  - tools 0.3.10–0.3.12 and libraries 0.4.0 (the grammar and canvas work,
+    with the compiled component preview);
+  - adoption items 1, 2 (M0–M2) and 6 (most rows): see their status lines;
+  - libraries 0.3.4.
 
 - 0.3.1 on Maven Central (2026-07-27), including the five publishable `portal-*`
   editor artifacts — consumer editors no longer need a Keliver checkout.
