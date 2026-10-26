@@ -921,7 +921,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       }
       val url = server.newBuilder().addPathSegments("bundles/events").build()
       // No call timeout; the server sends a comment every 15 s, so a read that waits 45 s is a dead link.
-      val client = (session?.lookup?.client ?: OkHttpClient()).newBuilder()
+      val client = (session?.lookup?.client ?: noSessionClient).newBuilder()
         .connectTimeout(5, TimeUnit.SECONDS).callTimeout(0, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
       val call = client.newCall(Request.Builder().url(url).header("Accept", "text/event-stream").build())
       // Cancelling this coroutine does not interrupt a blocking read; cancelling the call does.
@@ -953,6 +953,9 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   }
 
   private enum class LiveStream { NOT_SERVED, HEARD, SILENT }
+
+  /** The live listener's client before a session exists ("No bundle"): one, not one per reconnect. */
+  private val noSessionClient by lazy { OkHttpClient() }
 
   /** Reads [call]'s event stream to its end, calling [onEvent] for each event. Blocking: IO only. */
   private fun readBundleEvents(call: Call, url: HttpUrl, onEvent: () -> Unit): LiveStream = call.execute().use { response ->

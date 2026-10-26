@@ -188,8 +188,13 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
   adb -s "$SERIAL" logcat -c || true
   closed_before="$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")"
   adb -s "$SERIAL" shell input keyevent KEYCODE_HOME
-  # Past the server's 15 s keep-alive: a write to a connection the host closed fails, and is logged.
-  sleep 20
+  # The server notices a closed connection only when a keep-alive write fails:
+  # the first write after the close still goes out (the peer answers it with a
+  # reset), the second fails, so 15-30 s later. Wait up to 45 s for it.
+  for _ in $(seq 1 45); do
+    [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] && break
+    sleep 1
+  done
   adb -s "$SERIAL" logcat -d > "$EV/logcat-LV3.txt"
   grep -q "$HOST_TAG: live updates: stopped listening (no screen on show)" "$EV/logcat-LV3.txt" \
     && [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] \
