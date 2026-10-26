@@ -1,37 +1,37 @@
 # Releasing
 
-1. Update `redwoodVersion` in `RedwoodBuildPlugin.kt` to the release version.
+Keliver has **two independent release lines**. Never bump one to name the
+other.
 
-2. Update the `CHANGELOG.md`:
-   1. Change the `Unreleased` header to the release version.
-   2. Add a link URL to ensure the header link works.
-   3. Add a new `Unreleased` section to the top.
+## Libraries (`dev.keliver:*` on Maven Central)
 
-3. Commit
+1. Bump `KELIVER_VERSION` in
+   `build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt`.
+2. Move `CHANGELOG.md`'s `[Unreleased]` entries under a `Keliver X.Y.Z - <date>`
+   heading.
+3. Pre-gate locally:
+   `./gradlew publishToMavenLocal -PkeliverVersion=X.Y.Z -DRELEASE_SIGNING_ENABLED=false`
+   and `apiCheck`.
+4. Merge, then tag the merge commit `vX.Y.Z` (annotated) and push the tag.
+   A `v*` tag also runs `publish.yml` (GitHub Packages).
+5. Publish to Maven Central by hand:
+   `gh workflow run publish-maven-central.yml -f ref=vX.Y.Z`
+   (it refuses a tag that does not match `KELIVER_VERSION`).
+6. Check that every published pom resolves from `repo1.maven.org`, and record
+   the release in `docs/CURRENT_STATE.md` and `docs/DELIVERY_PLAN.md`.
 
-   ```
-   $ git commit -am "Prepare version X.Y.Z"
-   ```
+Pushing a tag does **not** create a GitHub release.
 
-4. Tag
+## Tools bundle (`keliver-portal-tools-X.Y.Z.zip`, a GitHub release asset)
 
-   ```
-   $ git tag -am "Version X.Y.Z" X.Y.Z
-   ```
+Bump `build-support/portal-tools.version` and tag `portal-tools-vX.Y.Z`. That
+tag runs `portal-tools.yml`, which only rebuilds and checks: no job in it can
+publish. The asset is attached **by hand, from the retained artifact that was
+verified**, never from a rebuild at the tag. The full procedure, its gates
+(`scripts/build-portal-tools.sh`, `scripts/keliver-adopter-acceptance.sh`,
+`scripts/keliver-acceptance-identity-check.sh`, `scripts/keliver-device-verify.sh`)
+and how the stored asset is checked are in
+[`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Each release
+gets a `docs/RELEASE_NOTES_TOOLS_X.Y.Z.md` record.
 
-5. Update `redwoodVersion` in `RedwoodBuildPlugin.kt` to the next "SNAPSHOT" version.
-
-6. Commit
-
-   ```
-   $ git commit -am "Prepare next development version"
-   ```
-
-7. Push!
-
-   ```
-   $ git push && git push --tags
-   ```
-
-   The tag will trigger a GitHub Action workflow which will upload the artifacts to Maven Central,
-   create a GitHub release, and deploy the documentation to the website.
+Never move or recreate a released tag.

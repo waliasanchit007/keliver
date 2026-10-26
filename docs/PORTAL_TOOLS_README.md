@@ -11,10 +11,31 @@ bin/keliver-init <AppName> [dir]   # scaffold a new keliver SDUI project
 bin/keliver-portal [app-dir]       # run the visual editor + server against an app
 bin/keliver-portal stop [app-dir]  # stop a running instance
 bin/keliver-portal status [app-dir]# is it up?
+bin/keliver-new-screen.sh          # (app root) a portal-editable screen + its presenter
+bin/keliver-new-component.sh       # (app root) a project component ("molecule")
+bin/keliver-new-editor.sh          # (app root) the app's own editor, previewing its real presenters
+bin/keliver-new-device-target.sh   # (app root) the bundle entry point a device host loads
+bin/keliver-install-device-host.sh # install host/'s development device host APK
+bin/keliver-new-publish-target.sh  # (app root) wire POST /publish + bundle signing
+bin/keliver-publish                # publish a signed bundle to a static host/CDN, no relay
+bin/keliver-new-production-host.sh # (app root) your own production Android host
+bin/keliver-new-ios-host.sh        # (app root) your own production iOS host
+bin/keliver-store-path.sh          # print the document store an app resolves to
+bin/keliver-store-recover.sh       # rebind a store to an app that moved or was renamed
+bin/keliver-adopt-legacy-store.sh  # copy the old shared ~/.keliver-portal store into one app's
+bin/keliver-record-http.sh         # local client for recording HostHttp fixtures
 relay/bin/portal-relay             # the portal server alone
 mcp/bin/portal-mcp                 # stdio MCP surface (for AI agents)
 editor/                            # the wasm editor (static)
+host/                              # the development-only device host APK (below)
+templates/, wrapper/               # what the scaffolders copy into your app
 ```
+
+The full adopter guide — setup, the edit loops, devices, publishing, production
+hosts — is
+[`docs/PORTAL_ADOPTER_GUIDE.md`](https://github.com/waliasanchit007/keliver/blob/main/docs/PORTAL_ADOPTER_GUIDE.md)
+on GitHub; an agent connected to `mcp/bin/portal-mcp` gets the same guide from
+its `get_guide` tool.
 
 `keliver-portal` waits for the server to actually answer before reporting
 success, and prints the server log if it doesn't — it will not hand you a URL
@@ -216,15 +237,25 @@ Refuses without changing anything if the app has no device target, configures
 `signingKeys` itself, or sets a different `publishTask`. **An app wired by 0.3.6:
 run it again** (from 0.3.7 or later): it replaces exactly the old block and
 nothing else. Then delete the app's `.gradle/*/executionHistory/`, where the
-old block left the key, but keep `.gradle/keliver-store-path`. Restart the portal afterwards:
-the relay reads `keliver.portal.json` at start.
+old block left the key, but keep `.gradle/keliver-store-path`. No portal restart
+is needed for this: the relay rereads `publishTask` and `publishOutput` from
+`keliver.portal.json` on every publish. Any other key it reads at start, so a
+change to one of those does need `keliver-portal stop` and a fresh start (a
+publish names such keys in its response).
 
-### bin/keliver-new-component.sh
+### bin/keliver-new-component.sh, bin/keliver-new-screen.sh
+
+Run both from your app's root (the directory holding `keliver.portal.json`).
 
 Scaffold a project component ("molecule") built from keliver primitives:
-`bin/keliver-new-component.sh MenuRow`. Reads `componentsDir` from
-keliver.portal.json, derives the package from existing sources, and refuses to
-overwrite. It appears under "Project components" in the editor palette and is
-callable from any screen. Add `--slot` (`--slot SectionCard`) to scaffold a
-container with one required editable trailing content slot. (Companion to
-`bin/keliver-new-screen.sh`.)
+`keliver-new-component.sh MenuRow`. It writes `<componentsDir>/MenuRow.kt`
+(`componentsDir` from keliver.portal.json, default: a `components/` directory
+next to `screensDir`), derives the package from existing sources, and refuses
+to overwrite. It appears under "Project components" in the editor palette and
+is callable from any screen. Add `--slot` (`--slot SectionCard`) to scaffold a
+container with one required editable trailing content slot.
+
+`keliver-new-screen.sh Profile` is its companion for screens: it writes
+`<screensDir>/profile.kt` (the screen and its Bindings interface) and a
+hand-owned `ProfilePresenter.kt` in the `logic/` directory next to
+`screensDir`, refusing to overwrite either.

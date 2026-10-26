@@ -1,11 +1,15 @@
 # Known Keliver / Zipline bugs
 
-> This document was originally written in the
-> [ServerDrivenUI](https://github.com/waliasanchit007/ServerDrivenUI)
-> reference integration. It now lives in the Keliver fork so docs
-> travel with the artifact. Cross-references to "the integration" or
-> "DevoStatus" point back to that reference repo and the production
-> app it drives.
+> **How this file is kept (2026-10-27).** Every entry's heading carries its
+> status: OPEN, FIXED (with the release that shipped it), WORKED AROUND,
+> CAUSE UNRESOLVED or MEASURED. Fixed entries stay here with their status, so
+> the history of each workaround is in one place; `CHANGELOG.md` and the
+> tools release notes say which release shipped a fix. Open now: U19, U20,
+> U28, U38 (and U8 part 1, upstream in Zipline).
+>
+> The file was started in an earlier integration repository and moved here so
+> docs travel with the artifact. The early entries (U1–U15) cite that
+> integration and the app it drove; read those references as history.
 
 Surfaced by the DevoStatus integration (real Android Compose app
 consuming Keliver as a Maven library + git submodule during early
@@ -29,8 +33,8 @@ Resolved bugs live in two places:
 - **Integration-side fixes** — ServerDrivenUI's
   [`docs/CHANGELOG.md`](https://github.com/waliasanchit007/ServerDrivenUI/blob/keliver-main/docs/CHANGELOG.md).
 
-> Treat this file as the punch list. When a bug becomes fixed, move it
-> to `CHANGELOG.md` with the fixing commit.
+> Treat this file as the punch list. When a bug is fixed, change its heading
+> to FIXED, name the release, and add the fix to `CHANGELOG.md`.
 
 ---
 
@@ -594,7 +598,9 @@ declaration* and the *consuming host's take site* hit this. The
 interface needs a manual `Adapter`, not just the impl.
 
 **Workaround.** Hand-roll the adapter. The pattern, from
-`sample/shared/.../ManualSampleAppServiceAdapter.kt`:
+a hand-rolled adapter (the sample has since moved to the generated
+`GeneratedSampleAppServiceAdapter` with a companion-object wrapper, in
+`sample/shared/.../SampleAppService.kt`):
 
 ```kotlin
 @file:Suppress(
@@ -658,9 +664,9 @@ mapping must match between the two.
 
 **Real-world examples.**
 
-- [`keliver/sample/shared/.../ManualSampleAppServiceAdapter.kt`](../sample/shared/src/commonMain/kotlin/dev/keliver/sample/shared/ManualSampleAppServiceAdapter.kt)
-  — minimum-viable: three methods (`launch`, `appLifecycle`,
-  `close`), ~95 LoC.
+- [`sample/shared/.../SampleAppService.kt`](../sample/shared/src/commonMain/kotlin/dev/keliver/sample/shared/SampleAppService.kt)
+  — today's shape: the generated adapter plus the companion-object
+  wrapper (the hand-rolled ~95-line adapter it replaced is in git history).
 - ServerDrivenUI's `ManualSduiAppServiceAdapter` — same pattern,
   same surface (because `SduiAppService` doesn't add methods
   beyond what AppService requires).
@@ -1280,7 +1286,7 @@ check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
 
-### U32. The iOS host's `TEAM_ID` setting did nothing, and `Config.local.xcconfig` was never read — FIXED (unreleased; found 2026-10-12)
+### U32. The iOS host's `TEAM_ID` setting did nothing, and `Config.local.xcconfig` was never read — FIXED in tools 0.3.9 (found 2026-10-12)
 
 Found while preparing W7 (`docs/DEVICE_PROOF.md`). No device build was run;
 measured with `xcodebuild -showBuildSettings` on the template's project: with
@@ -1387,7 +1393,7 @@ error would quote the whole string.
 - A CRLF `build.gradle` comes back with LF line endings, as with the append.
 - Any copy of the old block an adopter edited by hand.
 
-### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — FIXED (2026-10-11, W8)
+### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — FIXED in tools 0.3.9 (W8; found 2026-10-11)
 
 > **Fixed** in `portal-device-android/build.gradle`'s `syncPortalKey`, with
 > `generatePortalKey`'s pattern:
@@ -2658,7 +2664,7 @@ from `docs/PORTAL_USAGE.md`, so it cannot drift. An app's own
 fresh scaffold and from a directory with no app at all. Regression: `GuideTest`,
 5 cases.
 
-### U13. Inherited Redwood tests are quarantined — the shared `test-app` fixture was stripped
+### U13. Inherited Redwood tests were quarantined — the shared `test-app` fixture was stripped — RESOLVED (caliclan.5)
 
 **What.** A May-2026 test-completeness audit found that `./gradlew
 test` failed on a clean checkout, and that **no CI job ran tests at
@@ -2825,7 +2831,7 @@ then already amortized. Tracked as task #45.
 
 ---
 
-### U15. ~~iOS Zipline cache dir is created under the (read-only) app sandbox root → crashes on a real device~~ — FIXED (see [`CHANGELOG.md`](../CHANGELOG.md) `[Unreleased]`)
+### U15. ~~iOS Zipline cache dir is created under the (read-only) app sandbox root → crashes on a real device~~ — FIXED in 0.2.0 (see [`CHANGELOG.md`](../CHANGELOG.md) `[0.2.0]`)
 
 **Resolution.** `IosTreehousePlatform.newCache` now resolves the cache directory via
 `NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)` →
@@ -2863,7 +2869,7 @@ writable (so this was never caught); on a **real device** only `Documents/`,
 directly at the root returns `EPERM`.
 
 **Surfaced 2026-06-14** running the keliver-material SDUI host inside the real
-Stashfin iOS app on a physical device (the simulator path was already render-proven,
+adopter iOS app on a physical device (the simulator path was already render-proven,
 which is exactly why it hid this).
 
 **Fix.** Resolve a device-writable cache dir, e.g.

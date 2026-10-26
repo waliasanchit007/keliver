@@ -27,7 +27,7 @@ page, and the installer never downloads anything. Its SHA-256 sits beside it in
 against, and it **refuses production mode**:
 
 ```
-$ adb shell am start -n dev.keliver.portaldevice/...MainActivity --es mode prod
+$ adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity --es mode prod
 ```
 
 shows, on the device, "Production mode refused" and tells you to build your own
@@ -60,8 +60,16 @@ It binds services your presenters can take by name:
 
 | name | type | use |
 |---|---|---|
-| `HostHttp` | `HostHttpProvider` | your `KeliverHttp` calls; routed through the relay's `/http-replay`, so responses come from your `portal-fixtures/http` set |
+| `HostHttp` | `HostHttpProvider` | your `KeliverHttp` calls; routed through the relay's `/http-replay` (never to a real API) |
 | `HostSqlDriver` | `HostSqlDriver` | SQLite for `portal-sql` |
+
+The replay fixture set is **hardcoded** in this host, not chosen by you: every
+`HostHttp` request asks `http://10.0.2.2:8077/http-replay` for project
+`default`, fixture set **`field-researcher`**. So the relay answers from
+`field-researcher.json` in your `httpFixturesDir` (default
+`portal-fixtures/http/`); with no file of that name, every request fails. Name
+your fixture file `field-researcher.json`, or scaffold your own host
+(`bin/keliver-new-production-host.sh`) when you need another set or a real API.
 
 ### Limits
 
@@ -306,7 +314,7 @@ server can't make it run an older one.
 **One key, one sequence space.** The floor is per key, across every server and
 route the host has used. During a key rotation (W8) a host reads the highest
 floor over the keys it trusts and writes it under each, so the sequence space
-carries over to the next key ([`KEY_ROTATION.md`](KEY_ROTATION.md); in the tools bundle, at its root). A newest entry below a host's floor shows **no
+carries over to the next key ([`KEY_ROTATION.md`](https://github.com/waliasanchit007/keliver/blob/main/docs/KEY_ROTATION.md); in the tools bundle, `KEY_ROTATION.md` at its root). A newest entry below a host's floor shows **no
 bundle** to a new install, and leaves the others on their cached last good
 bundle (the fall-back above), never on the newer one. So never let sequences go
 backwards. Ways a publisher can do that by mistake:

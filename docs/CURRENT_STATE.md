@@ -1,7 +1,7 @@
 # Keliver current state
 
 **Base snapshot date:** 2026-07-23
-**Last updated:** 2026-10-21 (status at a glance below; details in the `Post-snapshot:` sections)
+**Last updated:** 2026-10-27 (status at a glance below; details in the `Post-snapshot:` sections and in `DELIVERY_PLAN.md`'s Status table)
 **Repository baseline:** `94519abf5` (`#13` flow preview complete and live-verified)
 
 This document is the factual handoff point before the next implementation
@@ -10,15 +10,16 @@ it does not replace the architectural decisions in `DECISIONS.md` or the two
 forward-looking roadmaps.
 
 > **How to read this document.** Everything above the first `## Post-snapshot`
-> heading is the 2026-07-23 base snapshot. **Ten `Post-snapshot:` sections
-> follow it, running through 2026-07-27, and several of them close items the
-> base snapshot lists as open.** Reading only the base snapshot will overstate
+> heading is the 2026-07-23 base snapshot. **Twenty-two `Post-snapshot:` sections
+> follow it, running through 2026-09-23, and several of them close items the
+> base snapshot lists as open.** Work after 2026-09-23 is in the status at a
+> glance below and, step by step, in `DELIVERY_PLAN.md`'s Status table. Reading only the base snapshot will overstate
 > what is outstanding — in particular all six live-preview issues and three of
 > the six product gaps below are already resolved. Where that happens
 > the base section now carries a status banner; trust the banner and the dated
 > section it points to.
 
-## Status at a glance — 2026-09-23
+## Status at a glance — 2026-10-27
 
 Four different kinds of claim, kept apart. **There is no external adopter**; a
 reference app we wrote ourselves is dogfooding, not adoption.
@@ -35,7 +36,14 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | `keliver-portal-tools` | 0.3.10 | still published, unchanged (2026-10-17, `78bcfa0a`, zip `0ba5c07b…`) |
 | `keliver-portal-tools` | 0.3.9 | still published, unchanged (2026-10-13, `6069da99`, zip `31c4214c…`) |
 | `keliver-portal-tools` | 0.3.8 … 0.3.4 | still published, unchanged (0.3.6's signing block has U31: upgrade) |
-| a production host for keliver-material screens | tools 0.3.6 | **scaffolded**, not shipped as a binary: `bin/keliver-new-production-host.sh` writes the app's own host. The bundled host stays development-only. |
+| a production host for keliver-material screens | tools 0.3.6 on | **scaffolded**, not shipped as a binary: `bin/keliver-new-production-host.sh` writes the app's own Android host (0.3.6), `bin/keliver-new-ios-host.sh` the iOS host (0.3.7). Then: `--embed` into an existing app, the static `bundles/index.json` route with `keliver-publish`, signed sequences, rollback floor, channels, rollout, updates on resume and reports (0.3.8: W2–W6); signing-key rotation (0.3.9: W8); debug hosts that update on resume, take their bundle server at launch and carry timing marks, Production bundles by default (0.3.10). The bundled host stays development-only. |
+
+**Merged, not released** — on `main`, in no published artifact yet:
+
+| what | where | reaches users through |
+|---|---|---|
+| the editor program: selection and hover boxes, components edited in place, typed property controls, cross-document undo, byte-exact undo of write-back, the outline keeping its place, a top bar that says what each action does, a palette preview, a compact publish card | #140, #141 (`portal-editor`, `portal-core`, `keliver-material-composeui`, `portal-relay`, `portal-ingest`, `web-spike`) | the **tools bundle**'s generic editor and relay (a tools release); a **per-app editor** compiles against the published `dev.keliver:portal-editor`, so it also needs a **libraries** release |
+| production-host template: a screen opened while an on-resume update is applied waits for it, and is drawn once | #141 (`scripts/templates/production-host`) | a tools release (the scaffolders write it) |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
@@ -49,19 +57,25 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | production OTA on an **iOS** host scaffolded by `keliver-new-ios-host.sh` (released in tools 0.3.7), from Maven Central only: signed v1 → v2, foreign key refused, recovery, offline start (iOS P1, P2, P4–P7) | `reference/inventory` | CI iOS simulator (macos-15, Xcode 16.4, iOS 26.2) and local (Xcode 26.4.1, iOS 26.4) | 2026-10-07, runs `37597390396`, `37602257459` |
 | bundled host refuses production, cold and warm | tools 0.3.5 candidate | CI emulator, API 33 x86_64 | 2026-09-22 |
 | store identity, recovery, resolver refusal (#78) | disposable fixtures | macOS + Linux CI | 2026-09-22 |
+| the published tools 0.3.10 on a **physical Android phone** (arm64): device-verify 18/18 | `reference/inventory` | Samsung S25 Ultra | 2026-10-17 (`RELEASE_NOTES_TOOLS_0.3.10.md`) |
+| release-build start-up numbers (M2): first launch 1024 ms, cold 243 ms, warm 35 ms (medians of 5) | `reference/inventory`, benchmark build | Samsung S25 Ultra | 2026-10-17 (#119) |
+| a brownfield product proof: one feature (13 screens) rebuilt as a Keliver guest inside two existing production apps, debug builds, with fixtures | a private app (not in this repository) | Samsung S25 Ultra, iPhone 13 | 2026-10-14/15 (`ADOPTION_RETRO_2026-10.md`) |
+| the editor loop on a real app: an edit in the editor, surgical write-back, a signed Production bundle, the change on the phone | the same private app | Samsung S25 Ultra (2026-10-16); Galaxy A12, Android 12, with the #140 editor (2026-10-24) | 2026-10-16, 2026-10-24 |
 
-Not demonstrated for any current artifact: a physical Android device or iPhone, and
-Android arm64 execution. The reference app's iOS route runs on simulators only.
+Not demonstrated: the reference app on a physical iPhone (its iOS route runs on
+simulators; iOS M2 waits on a signing team), a release-signed APK or IPA on a
+device, HTTPS with a real certificate to a device, and an external adopter
+(W7, `DEVICE_PROOF.md`).
 
 **Unresolved defects:** U19 (live-preview re-render, cause unresolved); U20
-(editor frame rate, measured not assessed); U30 (Android `syncPortalKey`
-empties its directory through symlinks — found reviewing #77); U28 (the production
-host logs a false `codeLoadFailed` on every start); and the adopter-route gaps in
-`REFERENCE_APP.md`. Since tools 0.3.6 the production host and signed publishing
+(editor frame rate, measured not assessed); U28 (the production host logs a
+false `codeLoadFailed` on every start); U38 (after switching to an app's own
+editor the browser can keep running the bundled one); and the adopter-route
+gaps in `REFERENCE_APP.md`. (U30 was fixed with W8, released in tools 0.3.9.) Since tools 0.3.6 the production host and signed publishing
 are scaffolded (`keliver-new-production-host.sh`, `keliver-new-publish-target.sh`),
-and the relay refuses unsigned bundles. Since PR #92 the reference app's CI
-builds from the published 0.3.7 zip and runs those scaffolders, and the iOS
-host's, from the zip's own `bin/`: runs `37673830830` and `37673830745`.
+and the relay refuses unsigned bundles. The reference app's CI builds
+from the published tools 0.3.12 zip (#139); on pull requests it scaffolds from
+this repository's scripts instead, so template changes are what it tests.
 Priorities: `ROADMAP.md` "Current priorities".
 
 **Fixed in tools 0.3.6:** U27 (the relay wrote
@@ -70,17 +84,18 @@ regenerated) — 0.3.5 and earlier still do both; #77 —
 iOS `generatePortalKey` owns its directory, on warm builds too (measured on a
 debug simulator framework only; release and `iosArm64` not measured).
 
-**Historical evidence whose app is gone:** every "Stashfin" gate below — the
+**Historical evidence whose app is gone:** every gate below recorded against the
+first adopter app — the
 Android/iOS/web loop from one guest source, Profile's 0 RawCode port, the
 hot-reload timings, the editor-distribution proof — was recorded against
-`stashfin-sdui`, lost on 2026-09-05. It shows the path worked then; it cannot be
+that app, lost on 2026-09-05. It shows the path worked then; it cannot be
 re-run. (K3's tri-platform captures used an in-repo tree and are not in this
 category.)
 
 ## Product state
 
 Keliver is a public, pre-1.0 Compose Multiplatform SDUI framework. The current
-published line is `dev.keliver:*:0.3.1` on Maven Central. Guest UI is compiled
+published line is `dev.keliver:*:0.4.0` on Maven Central. Guest UI is compiled
 Kotlin/JS executed by Zipline and rendered as native Compose widgets on Android
 and iOS. Production bundles are versioned, Ed25519-signed, widget/capability
 gated, and verified by hosts before execution.
@@ -96,7 +111,7 @@ The visual portal is bidirectional:
 - Development devices use a live interpreter overlay while canonical Kotlin
   recompiles; production always executes compiled code.
 
-The reference adoption **was** `stashfin-sdui`, which recorded Android, iOS, and
+The reference adoption **was** an earlier adopter app, which recorded Android, iOS, and
 web verification against a real application integration. It was lost with the
 2026-09-05 machine failure and never pushed; **there is currently no external
 adopter.** Its recorded gates stand as evidence that the integration worked, but
@@ -150,7 +165,7 @@ Project Components C1-C4 and Components v2 single-slot support are delivered:
 - Palette insertion, drag/drop, export, empty-slot emission, and surgical
   child write-back support slotted components.
 - `keliver-new-component --slot` scaffolds container definitions.
-- Stashfin adopted `MenuRow`, `SectionHeader`, and `SectionCard`; Profile's five
+- The first adopter app adopted `MenuRow`, `SectionHeader`, and `SectionCard`; Profile's five
   repeated white-card wrappers are now one slotted design-system component.
 
 Multiple named slots, detach-instance, and open-definition interactions remain
@@ -166,7 +181,7 @@ later work.
 - The relay watches logic, debounces and serializes rebuilds, rejects stale
   results, and promotes only successful editor distributions.
 - Failed builds retain the last-known-good preview.
-- Stashfin owned a standalone editor composite build that compiled its real
+- The first adopter app owned a standalone editor composite build that compiled its real
   Profile presenter without copying it. That project no longer exists (2026-09-05);
   the pattern is recorded, the build is not recoverable.
 
@@ -239,9 +254,9 @@ snapshot:
 5. ~~Some consumer wasm distributions require `--rerun-tasks` before webpack
    produces a fresh output.~~ **Resolved.**
 6. ~~The bundled launcher has not fully absorbed the health-wait, supervision,
-   and editor auto-build behavior proven in the Stashfin development script.~~
+   and editor auto-build behavior proven in the first adopter app's development script.~~
    **Resolved 2026-09-05** (ROADMAP item 23) — re-derived from
-   `scripts/keliver-dev.sh`, since the Stashfin script was lost. See
+   `scripts/keliver-dev.sh`, since the first adopter app's script was lost. See
    *Post-snapshot: launcher supervision* below. **With this, all six are
    closed.**
 
@@ -294,7 +309,7 @@ hardening pass:
 - re-run the web, Android, and iOS end-to-end loops.
 
 At this checkpoint, if that pass remained green, the next major feature was single-content-slot
-Project Components v2, dogfooded as Stashfin `SectionCard`.
+Project Components v2, dogfooded as the adopter app's `SectionCard`.
 
 ## Post-snapshot consolidation result — 2026-07-23
 
@@ -352,13 +367,13 @@ Acceptance evidence:
   tests pass; broad API/codegen/core/document/render gates pass (1,453 actions);
 - the canonical Settings dogfood compiles for JS and Wasm, exposes three
   SectionCard instances, and ingests with zero RawCode;
-- Stashfin Profile compiles and ingests with zero RawCode after replacing five
+- The adopter app's Profile compiles and ingests with zero RawCode after replacing five
   repeated wrappers with SectionCard;
-- the production Stashfin editor labels SectionCard as a container, preserves
+- the first adopter app's production editor labels SectionCard as a container, preserves
   child selection (`SectionCard #18` / `MenuRow #19`), runs the real presenter,
   and supports palette insert + undo into the slot with byte-identical source
   restoration;
-- Android Pixel 9 and iPhone 16 Pro loaded the signed Stashfin guest
+- Android Pixel 9 and iPhone 16 Pro loaded the signed adopter-app guest
   (`codeLoadSuccess modules=41`) and visibly rendered the slotted cards.
 
 This closes the design-system container gap. The next recommended milestone is
@@ -381,7 +396,7 @@ plus the capability-preview types a per-app entry builds against
 (`PreviewCapabilities`, `PreviewSqlHost`, `PreviewSqlDriver`, `CapStatus`). All
 editor chrome is internal.
 
-Verified by removing the composite build from `stashfin-sdui/editor`: it
+Verified by removing the composite build from the first adopter app's `editor/`: it
 compiles, produces a full wasm distribution, and runs in a browser against
 locally published `dev.keliver:*:0.3.1-SNAPSHOT` artifacts, rendering the real
 ProfilePresenter and the slotted SectionCard component.
@@ -625,7 +640,7 @@ The development machine died. The repository survived on GitHub through
 survived. This section records what that costs and what the plan is now. It
 supersedes nothing in `DECISIONS.md` — D1–D15 stand.
 
-**Lost.** `stashfin-sdui`, the reference adoption every "Stashfin" gate in the
+**Lost.** The first adopter app, the reference adoption every adopter gate in the
 sections above was recorded against, together with `MenuRow` / `SectionHeader` /
 `SectionCard` and the standalone editor composite build. **There is currently no
 external adopter.** Those gates remain valid evidence that the path worked; they
@@ -718,10 +733,10 @@ pricing, multi-tenant and enterprise governance come only after this gate.
   signal. Nothing here puts Keliver in front of strangers who owe it nothing.
   The AI-verification framing is genuinely interesting to mobile engineers right
   now and writing it up is cheap — it needs an owner and a slot.
-- **Stashfin IP boundary.** `stashfin-sdui` was built while employed there, so
-  the question is partly retrospective rather than cleanly prospective. Worth
+- **IP boundary.** The first adopter app was built under another organisation,
+  so the question is partly retrospective rather than cleanly prospective. Worth
   real legal advice before Keliver is public-facing enough that someone else
-  asks first. Keliver should stay viable independently of Stashfin governance
+  asks first. Keliver should stay viable independently of that organisation's
   approval either way.
 
 ### Freeze list
@@ -742,7 +757,7 @@ dramatically better way to build mobile apps?**
 The last open live-preview/developer-loop item (#6 above, ROADMAP item 23) is
 closed. **The M0 "deterministic preview" milestone is now complete.**
 
-The reference implementation was `stashfin-sdui/scripts/dev.sh`, which was lost
+The reference implementation was the first adopter app's `scripts/dev.sh`, which was lost
 with the machine, so the behaviour was re-derived from the in-repo
 `scripts/keliver-dev.sh` instead of ported.
 
@@ -800,7 +815,7 @@ retitled accordingly; `dev.keliver:*:0.3.2` does not resolve.
 ### The adopter path was exercised end to end for the first time
 
 Previously the zero-checkout path had only been verified against *locally
-published* snapshots inside `stashfin-sdui`, which no longer exists. Running
+published* snapshots inside the first adopter app, which no longer exists. Running
 it as an adopter actually experiences it — released zip, Central only, no
 Keliver checkout — established two things.
 

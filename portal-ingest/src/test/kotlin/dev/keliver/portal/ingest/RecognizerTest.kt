@@ -283,7 +283,7 @@ class RecognizerTest {
 
   /**
    * P1-4: LITERAL action args — `{ b.open("ROUTE") }` / `{ b.pick(3) }` — the
-   * commonest idiom porting native screens (found on stashfin Profile's App
+   * commonest idiom porting native screens (found on the adopter app's Profile's App
    * Update row, which silently RawCoded). Must recognize (no RawCode), keep the
    * arg's SOURCE text, export byte-identically, and type the contract param.
    */

@@ -138,7 +138,7 @@ questions, not M4 questions.
 
 The loop needs a screen whose defects can be planted and reverted
 cheaply. The in-repo `sample/` and the portal dogfood app both qualify;
-`stashfin-sdui` — the app most of the recorded gates used — does not
+the first adopter app — the app most of the recorded gates used — does not
 exist any more (see *Post-snapshot: machine loss and restart* in
 `CURRENT_STATE.md`).
 

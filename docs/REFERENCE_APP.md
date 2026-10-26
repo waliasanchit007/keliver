@@ -136,10 +136,11 @@ for us.
 2. **Publish was not scaffolded, and failed on a scaffolded app** — **addressed
    by `keliver-new-publish-target.sh` (#86, in tools 0.3.6)**. CI now runs it in the
    app instead of overlaying a hand-written block, and P1–P7 pass on the bundles
-   it signs (run `37513078292`). This app's relay is still the published 0.3.5
-   one, which does not check signatures; #86's relay refusal of unsigned bundles
-   is exercised by the adopter acceptance (portal-tools `37513071473`), not
-   here. Here, `prepare.sh` fails an unsigned v1 and the host verifies on the
+   it signs (run `37513078292`). At that run this app's relay was still the
+   published 0.3.5 one, which does not check signatures, so #86's relay refusal
+   of unsigned bundles was exercised by the adopter acceptance (portal-tools
+   `37513071473`), not here. The relay now comes from the pinned tools 0.3.12
+   zip, which refuses an unsigned bundle. Here, `prepare.sh` fails an unsigned v1 and the host verifies on the
    device. What follows is the route before it. `POST /publish`
    runs `publishTask` from `keliver.portal.json`, default
    `:portal-published-guest:compileDevelopmentZipline` — Keliver's own module.

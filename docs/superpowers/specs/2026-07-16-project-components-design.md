@@ -94,7 +94,7 @@ A component USE in a screen is a single node: `MenuRow(title = "...", icon =
   transparent expansion (+ opaque placeholder, cycle guard).
   Gate: Chrome-verified insert/edit/preview; device render via dev loop.
 - **C4 — DX + dogfood.** `keliver-new-component` scaffold, docs
-  (ARCHITECTURE.md component rules), Stashfin dogfood: extract `SectionCard` +
+  (ARCHITECTURE.md component rules), adopter-app dogfood: extract `SectionCard` +
   `MenuRow` from ProfileScreen and rebuild its sections with them (the real
   test: the Profile gets SHORTER and stays 0-RawCode).
 - Later (unchanged from roadmap #17): opaque design-system integration at
