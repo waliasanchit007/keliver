@@ -1292,14 +1292,17 @@ check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
 
-**Scope.** Only `portal-device-android` built from source without
-`keliver.devOnlyHost` has a production mode: the tools bundle's host is
-development-only (it refuses `mode=prod`), and the scaffolded production host
-creates its Treehouse app only once the URL is known (the reference app's P2
-asserts it). **Fix (2026-10-27):** the manifest flow starts empty-handed
-(`MutableStateFlow<String?>(null)`, `filterNotNull()`), so nothing is emitted
-before the lookup has a URL. Checked by compiling
-(`:portal-device-android:compileDebugKotlin`); no device run of that mode.
+**Scope.** The generic hosts built from source have a production mode:
+`portal-device-android` without `keliver.devOnlyHost`, and `portal-device-ios`
+launched with `prod`. Both had the bug. The tools bundle's host is
+development-only (it refuses `mode=prod`), and the scaffolded production hosts
+create their Treehouse app only once the URL is known (the reference app's P2
+asserts it). **Fix (2026-10-27):** in both generic hosts the manifest flow
+starts empty-handed (`MutableStateFlow<String?>(null)`, `filterNotNull()`), so
+nothing is emitted before the lookup has a URL. Checked by compiling
+(`:portal-device-android:compileDebugKotlin`,
+`:portal-device-ios:compileKotlinIosSimulatorArm64`); no device run of that
+mode on either platform.
 
 ### U32. The iOS host's `TEAM_ID` setting did nothing, and `Config.local.xcconfig` was never read — FIXED in tools 0.3.9 (found 2026-10-12)
 
