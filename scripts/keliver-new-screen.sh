@@ -19,14 +19,18 @@ SCREENS_DIR="$ROOT/$SCREENS_REL"
 LOGIC_DIR="$(dirname "$SCREENS_DIR")/logic"
 # The package of the app's existing screens, else one derived from the path
 # after kotlin/ — never this repository's own package.
-pkg_from() { grep -m1 -E '^package ' "$1" 2>/dev/null | sed 's/^package //'; }
+pkg_from() { grep -m1 -E '^[[:space:]]*package[[:space:]]' "$1" 2>/dev/null | tr -d '\r' | sed -E 's/^[[:space:]]*package[[:space:]]+//; s/[[:space:];].*$//' || true; }
+# The package for a path relative to the app: what follows kotlin/ (or the
+# whole path), each segment kept only if it is a Kotlin identifier.
+pkg_of_path() { echo "$1" | sed -E 's#^(.*/)?kotlin/##; s#/+$##' | tr '/' '\n' | grep -E '^[A-Za-z_][A-Za-z0-9_]*$' | paste -sd. - || true; }
 SCREENS_PKG=""
 for f in "$SCREENS_DIR"/*.kt; do
   [ -e "$f" ] || continue
   SCREENS_PKG="$(pkg_from "$f")"; [ -n "$SCREENS_PKG" ] && break
 done
-[ -n "$SCREENS_PKG" ] || SCREENS_PKG="$(echo "$SCREENS_REL" | sed -E 's#.*/kotlin/##; s#/+$##; s#/#.#g')"
-case "$SCREENS_PKG" in *.screens) LOGIC_PKG="${SCREENS_PKG%.screens}.logic" ;; *) LOGIC_PKG="$SCREENS_PKG.logic" ;; esac
+[ -n "$SCREENS_PKG" ] || SCREENS_PKG="$(pkg_of_path "$SCREENS_REL")"
+[ -n "$SCREENS_PKG" ] || { echo "cannot derive a Kotlin package from screensDir '$SCREENS_REL': add a screen with a package line first" >&2; exit 1; }
+case "$SCREENS_PKG" in screens) LOGIC_PKG="logic" ;; *.screens) LOGIC_PKG="${SCREENS_PKG%.screens}.logic" ;; *) LOGIC_PKG="$SCREENS_PKG.logic" ;; esac
 SCREEN_FILE="$SCREENS_DIR/$lower.kt"
 PRESENTER_FILE="$LOGIC_DIR/${NAME}Presenter.kt"
 [ -e "$SCREEN_FILE" ] && { echo "refusing to overwrite $SCREEN_FILE"; exit 1; }

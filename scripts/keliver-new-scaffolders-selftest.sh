@@ -50,9 +50,33 @@ grep -qx 'package acme.screens' "$S" 2>/dev/null && grep -qx 'package acme.logic
   && grep -q 'import acme.screens.ProfileScreenBindings' "$L" \
   && ok "they take the app's packages (acme.screens, acme.logic), not Keliver's own" \
   || bad "wrong packages: $(grep -h '^package' "$S" "$L" 2>/dev/null | tr '\n' ' ')"
+before_again="$(cat "$S" 2>/dev/null)"
 ( cd "$APP" && bash "$BIN/keliver-new-screen.sh" Profile ) > "$RUN/screen-again.log" 2>&1
-[ $? -ne 0 ] && grep -q "refusing to overwrite" "$RUN/screen-again.log" \
-  && ok "a second run refuses to overwrite the screen" || bad "a second run did not refuse"
+[ $? -ne 0 ] && [ -n "$before_again" ] && grep -q "refusing to overwrite $S" "$RUN/screen-again.log" \
+  && [ "$(cat "$S")" = "$before_again" ] \
+  && ok "a second run refuses to overwrite the app's screen, which stays as it was" || bad "a second run did not refuse"
+
+echo "=== packages from awkward sources: CRLF, a semicolon, a file without one, no screens yet"
+APP2="$RUN/crlf"
+mkdir -p "$APP2/app/src/main/kotlin/screens"
+printf '{ "screensDir": "app/src/main/kotlin/screens" }\n' > "$APP2/keliver.portal.json"
+printf '// header\r\n' > "$APP2/app/src/main/kotlin/screens/a_nopackage.kt"
+printf '@file:Suppress("x")\r\npackage com.acme.ui.screens;\r\n\r\nfun x() = Unit\r\n' > "$APP2/app/src/main/kotlin/screens/home.kt"
+( cd "$APP2" && bash "$BIN/keliver-new-screen.sh" Cart && bash "$BIN/keliver-new-component.sh" Badge ) > "$RUN/crlf.log" 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -qx 'package com.acme.ui.screens' "$APP2/app/src/main/kotlin/screens/cart.kt" 2>/dev/null \
+  && grep -qx 'import com.acme.ui.screens.CartScreenBindings' "$APP2/app/src/main/kotlin/logic/CartPresenter.kt" 2>/dev/null \
+  && grep -qx 'package com.acme.ui.logic' "$APP2/app/src/main/kotlin/logic/CartPresenter.kt" \
+  && grep -qx 'package com.acme.ui.components' "$APP2/app/src/main/kotlin/components/Badge.kt" 2>/dev/null \
+  && ok "a CRLF file, a trailing semicolon and a first file with no package still give com.acme.ui.{screens,logic,components}" \
+  || { bad "awkward package sources (rc=$rc)"; cat "$RUN/crlf.log"; grep -h '^package\|^import' "$APP2"/app/src/main/kotlin/*/*.kt 2>/dev/null | cat -A | head; }
+APP3="$RUN/empty"
+mkdir -p "$APP3"
+printf '{ "screensDir": "src/jsMain/kotlin/shop/screens" }\n' > "$APP3/keliver.portal.json"
+( cd "$APP3" && bash "$BIN/keliver-new-screen.sh" First ) > "$RUN/empty.log" 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -qx 'package shop.screens' "$APP3/src/jsMain/kotlin/shop/screens/first.kt" 2>/dev/null \
+  && grep -qx 'package shop.logic' "$APP3/src/jsMain/kotlin/shop/logic/FirstPresenter.kt" 2>/dev/null \
+  && ok "with no screen yet, the package comes from the path after kotlin/ (shop.screens, shop.logic)" \
+  || { bad "no screens yet (rc=$rc)"; cat "$RUN/empty.log"; }
 
 echo "=== keliver-new-component.sh, leaf and --slot"
 ( cd "$APP" && bash "$BIN/keliver-new-component.sh" MenuRow && bash "$BIN/keliver-new-component.sh" --slot SectionCard ) > "$RUN/component.log" 2>&1; rc=$?
