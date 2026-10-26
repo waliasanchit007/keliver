@@ -94,6 +94,12 @@ jobs:
           -Pcheck
           -DRELEASE_SIGNING_ENABLED=false
 
+      # The bundled screen/component scaffolders write into the app they are
+      # run from, never beside the script (they once wrote into the tools
+      # bundle). Shell only; a few seconds.
+      - name: Scaffolders write into the app
+        run: scripts/keliver-new-scaffolders-selftest.sh "$RUNNER_TEMP/scaffolders"
+
       # Enforce the test suite + API binary-compatibility surface.
       # Previously skipped (-x test), which let a stripped test
       # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.

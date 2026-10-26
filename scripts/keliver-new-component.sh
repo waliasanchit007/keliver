@@ -2,11 +2,13 @@
 # keliver new-component — scaffold a portal-recognizable project component
 # ("molecule") built from keliver primitives. Its Kotlin SIGNATURE is its
 # portal spec; screens can call it and edit/preview it in the portal.
-# Usage: scripts/keliver-new-component.sh [--slot] <ComponentName>
-#   leaf: scripts/keliver-new-component.sh MenuRow
-#   slot: scripts/keliver-new-component.sh --slot SectionCard
+# Usage, from the app's root (where keliver.portal.json is):
+#   leaf: keliver-new-component.sh MenuRow
+#   slot: keliver-new-component.sh --slot SectionCard
+# The APP is the working directory (or KELIVER_APP_DIR), never the script's
+# parent: shipped in the tools bundle's bin/, the parent is the bundle.
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="${KELIVER_APP_DIR:-$PWD}"
 SLOT=false
 NAME=""
 for arg in "$@"; do
@@ -25,14 +27,15 @@ for arg in "$@"; do
 done
 [ -n "$NAME" ] || { echo "usage: keliver-new-component.sh [--slot] <ComponentName>"; exit 1; }
 [[ "$NAME" =~ ^[A-Z][A-Za-z0-9]*$ ]] || { echo "ComponentName must be UpperCamelCase (got: $NAME)"; exit 1; }
+[ -f "$ROOT/keliver.portal.json" ] || {
+  echo "no keliver.portal.json in $ROOT — run this from the app's root, or set KELIVER_APP_DIR" >&2
+  exit 1
+}
 
 # Resolve componentsDir from keliver.portal.json (default: sibling of screensDir).
 read -r SCREENS_REL COMPS_REL < <(python3 - "$ROOT/keliver.portal.json" <<'PY'
 import json, sys, os
-try:
-    c = json.load(open(sys.argv[1]))
-except Exception:
-    c = {}
+c = json.load(open(sys.argv[1]))
 screens = c.get("screensDir", "portal-app-lib/src/jsMain/kotlin/screens")
 comps = c.get("componentsDir")
 if not comps:
