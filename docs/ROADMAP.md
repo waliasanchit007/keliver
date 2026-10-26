@@ -100,6 +100,32 @@ run alongside item 2.
      relay restart, so the stamp the guide says to commit churns in git;
    - the publish dialog is titled "Exported Kotlin" and names only the active
      screen's file.
+9. **▶ Live for an adopter's own presenters — deferred (decided 2026-10-26).**
+   On the product proof, Live had nothing to run: the tools bundle's generic
+   editor has no presenters, and the button now says so ("not in this editor").
+   Making it run the app's presenters was planned and not started:
+   - **What it would take.** A per-app editor (`keliver-new-editor.sh`) with
+     the app's logic compiled for wasmJs. Today each screen also needs a
+     hand-written `PreviewFrame` mapper (values and dispatch), and on that app
+     it would have been 13 mappers over about 150 fields and 60 actions. The
+     plan replaced them with **generated live adapters**: one typed
+     `xLive { … }` helper per Bindings interface, emitted by PSI the way
+     `CompiledAdapterGenerator` emits compiled-component adapters. It also
+     needed:
+     - `keliver-nav` with a wasmJs target (it has none);
+     - the serialization plugin in the scaffolded editor;
+     - in the app, a plain capability interface in front of its
+       Zipline-typed bridge, and named presenter functions where routes built
+       their bindings inline.
+   - **Why it is deferred.** About 9–12 hours, half of it changes to the
+     adopter's app, and the result would show the app's own fixtures in the
+     canvas. A phone in debug mode already shows those fixtures with full
+     fidelity, so the dev loop (item 6, a device that picks up a publish while
+     open) comes first.
+   - **When to pick it up.** When Live inside the editor matters to an
+     adopter. Build the generated adapters first and prove them on
+     `reference/inventory` by replacing its hand-written mapper, then on an
+     adopter's app.
 
 ## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 
