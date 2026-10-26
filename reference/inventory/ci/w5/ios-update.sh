@@ -214,7 +214,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs KELIVER_BUNDLE_SERVER "$APP/host-ios/src/iosM
     [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] && break
     sleep 1
   done
-  grep -q "KeliverHost: live updates: stopped listening (the app is in the background)" "$C" \
+  grep -q "KeliverHost: live updates: stopped listening (no screen on show)" "$C" \
     && [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] \
     && ok "LV3: in the background the host stops listening, and its connection is closed (the server saw it go)" \
     || bad "LV3: still listening in the background: $(grep -E 'KeliverHost: live' "$C" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"

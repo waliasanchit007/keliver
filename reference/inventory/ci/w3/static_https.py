@@ -47,6 +47,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         out.write("GET /bundles/events 200 (stream open)\n")
         def send(text):
@@ -55,6 +56,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         try:
             stamp = os.stat(index).st_mtime_ns if os.path.exists(index) else 0
             v = newest_version()
+            # As the relay: a 2 KiB comment first, for clients that hold back a short first chunk.
+            send(":" + " " * 2048 + "\n\n")
             send(f"event: bundle\ndata: {json.dumps({'version': v}, separators=(',', ':'))}\n\n")
             out.write(f"EVENT bundle {v} (on connect)\n")
             beat = time.monotonic()

@@ -20,11 +20,11 @@ class BundleEventsTest {
     val phone = ByteArrayOutputStream()
     events.subscribe(phone)
     events.drain()
-    assertEquals(BundleEvents.event(3), phone.toString(), "a device that connects after a publish still hears of it")
+    assertEquals(BundleEvents.PREAMBLE + BundleEvents.event(3), phone.toString(), "a device that connects after a publish still hears of it")
     newest = 4
     events.announce()
     events.drain()
-    assertEquals(BundleEvents.event(3) + BundleEvents.event(4), phone.toString())
+    assertEquals(BundleEvents.PREAMBLE + BundleEvents.event(3) + BundleEvents.event(4), phone.toString())
     assertEquals("event: bundle\ndata: {\"version\":4}\n\n", BundleEvents.event(4))
   }
 
@@ -33,7 +33,9 @@ class BundleEventsTest {
     val phone = ByteArrayOutputStream()
     events.subscribe(phone)
     events.drain()
-    assertEquals("event: bundle\ndata: {\"version\":null}\n\n", phone.toString())
+    assertEquals(BundleEvents.PREAMBLE + "event: bundle\ndata: {\"version\":null}\n\n", phone.toString())
+    assertTrue(BundleEvents.PREAMBLE.startsWith(":") && BundleEvents.PREAMBLE.endsWith("\n\n") && '\n' !in BundleEvents.PREAMBLE.dropLast(2),
+      "the preamble is one SSE comment line, which every client ignores")
   }
 
   @Test fun aListenerThatWentAwayIsDroppedAndItsConnectionClosed() {

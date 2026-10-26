@@ -1510,6 +1510,7 @@ fun main(args: Array<String>) {
     if (!bundleEvents.hasRoom()) { respond(ex, 503, "too many devices listening"); return@createContext }
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
+    ex.responseHeaders.add("X-Content-Type-Options", "nosniff")
     ex.sendResponseHeaders(200, 0)
     bundleEvents.subscribe(ex.responseBody) { ex.close() } // stream stays open
   }

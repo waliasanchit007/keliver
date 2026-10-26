@@ -43,8 +43,9 @@
  * failure leaves the old one). With UPDATES = "on-resume" in HostConfig.kt the
  * host does that each time the app returns to the foreground. With "live" (by
  * default in a DEBUG build; a DEBUG build only) it also listens to the bundle
- * server's /bundles/events while a Keliver screen is in the window and the app
- * is in the foreground (BundleEvents.kt), so a publish reaches an open app. A
+ * server's /bundles/events while a Keliver screen is on show (its view
+ * controller's lifecycle STARTED; BundleEvents.kt), so a publish reaches an
+ * open app. A
  * DEBUG build also checks when told to from the computer
  * (debugCheckForUpdateName()).
  *
@@ -73,6 +74,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
@@ -127,9 +130,6 @@ import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSThread
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
-import platform.UIKit.UIApplication
-import platform.UIKit.UIApplicationDidEnterBackgroundNotification
-import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIViewController
 import platform.darwin.NOTIFY_STATUS_OK
@@ -304,15 +304,8 @@ public object Keliver {
     // second observer would make every foreground check twice.
     if (updatesMode() != "next-launch" && !resumeObserved) {
       resumeObserved = true
-      foreground = UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateBackground
       NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue) { _ ->
         resumed()
-        foreground = true
-        syncLiveListener()
-      }
-      NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationDidEnterBackgroundNotification, null, NSOperationQueue.mainQueue) { _ ->
-        foreground = false
-        syncLiveListener()
       }
     }
     registerDebugCheckForUpdate()
@@ -464,10 +457,12 @@ public object Keliver {
   /** Whether any code has loaded in this process (main thread). */
   internal fun hasLoaded(): Boolean = loaded
 
-  /** Keliver screens in the window ([viewController] counts them); the live listener runs while there is one. Main thread. */
+  /**
+   * Keliver screens on show ([viewController] counts them by its lifecycle: started from
+   * viewWillAppear until viewDidDisappear or the app going to the background); the live
+   * listener runs while there is one. Main thread.
+   */
   private var screensShown = 0
-  /** Whether the app is in the foreground; the live listener stops in the background. Main thread. */
-  private var foreground = true
   private var liveListener: Job? = null
   /** Set when the bundle server has no event stream (a static server): not asked again in this process. */
   private var liveUnsupported = false
@@ -487,12 +482,10 @@ public object Keliver {
   private fun liveUpdatesAllowed(): Boolean = updatesMode() == "live" && !liveUnsupported && kotlin.native.Platform.isDebugBinary
 
   private fun syncLiveListener() {
-    if (screensShown > 0 && foreground && liveUpdatesAllowed()) {
+    if (screensShown > 0 && liveUpdatesAllowed()) {
       if (liveListener?.isActive != true) liveListener = appScope.launch { listenForBundles() }
     } else {
-      if (liveListener?.isActive == true) {
-        log("live updates: stopped listening (${if (screensShown == 0) "no screen on show" else "the app is in the background"})")
-      }
+      if (liveListener?.isActive == true) log("live updates: stopped listening (no screen on show)")
       liveListener?.cancel()
       liveListener = null
     }
@@ -500,7 +493,7 @@ public object Keliver {
 
   /**
    * Holds `/bundles/events` open and runs [checkForUpdate] on each event, until
-   * cancelled (no screen on show, or the app in the background). An event is
+   * cancelled (no screen on show; in the background none is). An event is
    * only a nudge: what is applied is what the index names and the manifest's
    * signature allows, as on any update. Checks run one at a time; events that
    * arrive during one ask for one more. Before the first bundle has loaded
@@ -561,9 +554,26 @@ public object Keliver {
   public fun viewController(safeArea: Boolean = true): UIViewController = ComposeUIViewController {
     remember { KeliverTiming.mark("open") } // Debug and Benchmark builds only (M0)
     LaunchedEffect(Unit) { start() }
-    DisposableEffect(Unit) {
-      screenShown()
-      onDispose { screenHidden() }
+    // Live updates (UPDATES = "live", debug builds): the host listens for publishes while a
+    // screen is on show. The composition outlives that (a tab not selected, a screen pushed over
+    // it), so this follows the view controller's lifecycle, as Android's KeliverScreen does.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+      var shown = false
+      val observer = LifecycleEventObserver { _, event ->
+        if (event == Lifecycle.Event.ON_START && !shown) {
+          shown = true
+          screenShown()
+        } else if (event == Lifecycle.Event.ON_STOP && shown) {
+          shown = false
+          screenHidden()
+        }
+      }
+      lifecycle.addObserver(observer)
+      onDispose {
+        lifecycle.removeObserver(observer)
+        if (shown) screenHidden()
+      }
     }
     val current by state.collectAsState()
     val modifier = if (safeArea) Modifier.fillMaxSize().safeDrawingPadding() else Modifier.fillMaxSize()

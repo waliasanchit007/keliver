@@ -51,7 +51,7 @@ internal class BundleEvents(
   fun subscribe(out: OutputStream, close: () -> Unit = { out.close() }) {
     val listener = Listener(out, close)
     listeners += listener
-    writer.execute { if (!send(listener, event(newest()))) drop(listener) }
+    writer.execute { if (!send(listener, PREAMBLE + event(newest()))) drop(listener) }
   }
 
   /** Tells every listener the store changed; call after a bundle is completely stored. Returns at once. */
@@ -89,6 +89,13 @@ internal class BundleEvents(
   }
 
   internal companion object {
+    /**
+     * Sent once, before a connection's first event: an SSE comment of 2 KiB. Some HTTP
+     * clients (Apple's URLSession among them) hold back the first bytes of a response to
+     * sniff its type, so a short first event could sit unread; this fills that buffer.
+     */
+    val PREAMBLE: String = ":" + " ".repeat(2_048) + "\n\n"
+
     fun event(version: Int?): String = "event: bundle\ndata: {\"version\":${version ?: "null"}}\n\n"
   }
 }

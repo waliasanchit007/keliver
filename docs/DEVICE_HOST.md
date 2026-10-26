@@ -173,8 +173,9 @@ that opens.
 - `keliver.updates=live` (Android) or `UPDATES = "live"` (iOS, `HostConfig.kt`)
   (**a DEBUG build's default from tools 0.3.13**): `on-resume`, and also, while
   a Keliver screen is on show (Android: a `KeliverScreen` whose lifecycle is
-  STARTED; iOS: a `Keliver.viewController()` screen in the window, with the app
-  in the foreground), the host holds the bundle server's `GET /bundles/events` open and
+  STARTED; iOS: a `Keliver.viewController()` screen whose lifecycle is STARTED,
+  from `viewWillAppear` until it disappears or the app goes to the background),
+  the host holds the bundle server's `GET /bundles/events` open and
   runs its ordinary update check on each event, so a bundle you publish
   reaches the open app in a second or two, with no trip to the background.
   The event is only a nudge: what is applied is what `bundles/index.json`
@@ -184,7 +185,7 @@ that opens.
   shows); a static server has none, so the host logs that once and stays
   `on-resume` (so does a 4xx, or a 200 that is not `text/event-stream`). A
   dropped stream is retried after 2 s, doubling to 30 s; with no screen on
-  show (on iOS, also in the background) the host closes the connection. Before the first bundle has loaded
+  show the host closes the connection. Before the first bundle has loaded
   ("No bundle"), an event starts the host again, so the first publish reaches
   the open app too. The relay accepts at most 32 listeners. Outside a debuggable DEBUG build
   `live` is `on-resume` (the Android template's other build types get
