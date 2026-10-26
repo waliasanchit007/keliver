@@ -59,12 +59,14 @@ $KP/keliver-portal .            # starts the portal for this app
 `portal-mcp` command for AI agents. Stop it with `Ctrl-C`, or
 `$KP/keliver-portal stop .` from another shell.
 
-**One portal at a time.** The server port comes from `"port"` in
-`keliver.portal.json`, but the **editor port is fixed at 8096**, so two apps
-cannot run their portals simultaneously even with different server ports — the
-second reports `port 8096 is already in use`. Stop one before starting the
-other. Their document stores are still fully separate; this is only a port
-collision.
+**Two apps at once.** The server listens on `"port"` in `keliver.portal.json`
+(default 8077) and the editor on `"editorPort"` (default: `port` + 19, so 8096
+beside 8077). Give a second app another `"port"` and both portals run side by
+side; a port already taken is refused at start, naming which. The editor finds
+its own app's server through the `?relay=<port>` in its URL: `keliver-portal`
+prints the URL with it, and the editor's server adds it to a URL opened
+without it, so a bookmark cannot open one app's editor on another app's
+screens. Each app keeps its own document store.
 
 A fresh scaffold is a normal Gradle project:
 

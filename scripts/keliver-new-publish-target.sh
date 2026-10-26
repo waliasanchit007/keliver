@@ -251,7 +251,7 @@ echo "    keliver.portal.json  publishTask $PUBLISH_TASK, publishOutput $PUBLISH
 echo "    build.gradle         signing block appended"
 echo
 echo "Next:"
-RELAY_PORT="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("port",8077))' "$APP/keliver.portal.json" 2>/dev/null || echo 8077)"
+RELAY_PORT="$(python3 -c 'import json,sys;p=json.load(open(sys.argv[1])).get("port",8077);print(p if isinstance(p,int) and not isinstance(p,bool) else 8077)' "$APP/keliver.portal.json" 2>/dev/null || echo 8077)"
 echo "  keliver-portal                     # start it once; the first start creates the app's key"
 echo "  curl -X POST http://localhost:$RELAY_PORT/publish      # or ⬆ Publish in the editor"
 echo "                                     # refused, and nothing stored, unless the bundle is signed"
