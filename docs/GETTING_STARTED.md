@@ -65,7 +65,7 @@ sample/
 ```
 
 > Adding Keliver to a *new* project instead? Use `keliver-init` (above); the
-> published artifacts are `dev.keliver:*:0.4.0` on Maven Central.
+> published artifacts are `dev.keliver:*:0.4.1` on Maven Central.
 
 ## 2. Run it
 

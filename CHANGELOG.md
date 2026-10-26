@@ -9,25 +9,39 @@
 
 ## [Unreleased]
 
-Merged after 0.4.0, in no library release yet. Every published API change is
-additive (the `apiDump` files grew; nothing was removed or changed).
+## Keliver 0.4.1 - 2026-10-27
+
+The editor libraries. Hand-written sources changed only in `portal-editor`,
+`portal-core` and `keliver-material-composeui` (and the version in
+`build-support`; `keliver-material-schema` gained KDoc only). Every published API
+change is additive: the `apiDump` files grew and nothing was removed or changed.
+No dependency versions moved (Kotlin 2.2.0); the Zipline wire format and compiled
+guests are unchanged, so a device host or guest on 0.4.0 needs nothing. A per-app
+editor (`keliver-new-editor.sh`) gets the editor below by moving its
+`dev.keliver:*` dependencies to 0.4.1.
+
+Candidate check (local, signing off, `-Dmaven.repo.local` to a scratch repository, at
+`418bc6898`, whose library sources are this release's): `publishToMavenLocal
+-PkeliverVersion=0.4.1` publishes 378 artifacts and 11 Gradle plugin markers — the same set as
+0.4.0 — and `apiCheck` passes.
 
 - **portal-editor** (#140, #141): the visual editor you work in — selection and
   hover boxes, components opened and edited in place, typed property controls,
   cross-document undo whose order is the relay's, the outline keeping its place,
   a top bar that says what each action does and which bundle devices get, a
   palette preview drawn by the canvas, a compact publish card, and Live saying
-  when an editor has nothing to run. A per-app editor gets these from the next
-  `portal-editor` release; the tools bundle's generic editor from the next tools
-  release.
+  when an editor has nothing to run.
+- **portal-editor** (#145): the top bar's devices chip also says how many phones
+  are listening for live updates (`/devstate`'s `devicesListening`, from a relay
+  in tools 0.3.13 or later; an older relay's answer simply has no count).
 - **portal-core**: `PropChoice` and the `choices` of a property spec (named
   dropdowns generated from the schemas), `isColorParamName`.
 - **keliver-material-composeui**: `SelectionRegistry` gains `hitTest`,
   `rectsOf`, `remove` and `report` (the editor's selection and hover boxes).
-- Not on Maven, shipped by the next tools release: the relay's `/history`
-  (cross-document undo order) and byte-exact undo of write-back; new screen
-  files written compactly; the production-host template's screen waiting for an
-  on-resume update being applied, so it is drawn once (#141).
+- Not on Maven, shipped by tools 0.3.13: the relay's `/history` (cross-document
+  undo order), byte-exact undo of write-back and `GET /bundles/events`; new
+  screen files written compactly; the production-host templates' live updates
+  and a screen waiting for an on-resume update being drawn once (#141).
 
 ## Keliver 0.4.0 - 2026-10-21
 
