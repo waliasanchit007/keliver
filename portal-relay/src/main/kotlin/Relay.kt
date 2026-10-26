@@ -400,9 +400,14 @@ private fun keyProblem(protection: KeyProtection? = keyProtection(keysDir)): Str
 // ---------------------------------------------------------------------------
 // P4 publish pipeline
 
-private fun nextBundleVersion(): Int =
-  (bundlesDir.listFiles { f -> f.isDirectory && f.name.startsWith("v") }
-    ?.mapNotNull { it.name.removePrefix("v").toIntOrNull() }?.maxOrNull() ?: 0) + 1
+private fun nextBundleVersion(): Int = (newestBundleVersion() ?: 0) + 1
+
+private fun newestBundleVersion(): Int? =
+  bundlesDir.listFiles { f -> f.isDirectory && f.name.startsWith("v") }
+    ?.mapNotNull { it.name.removePrefix("v").toIntOrNull() }?.maxOrNull()
+
+/** Live device updates: `GET /bundles/events` (BundleEvents.kt), announced after each stored bundle. */
+private val bundleEvents by lazy { BundleEvents(::newestBundleVersion) }
 
 /**
  * M6: publish compiles the CANONICAL app project as-is (screens/ are already
@@ -1140,7 +1145,7 @@ fun main(args: Array<String>) {
       val svc = documents["$p/$s"]
       val version = svc?.doc?.version ?: 0L
       val writeBack = svc?.writeBack?.json() ?: "null"
-      respond(ex, 200, "{\"project\":\"$p\",\"screen\":\"$s\",\"version\":$version,\"writeBack\":$writeBack}")
+      respond(ex, 200, "{\"project\":\"$p\",\"screen\":\"$s\",\"version\":$version,\"writeBack\":$writeBack,\"devicesListening\":${bundleEvents.listening}}")
     }
   }
 
@@ -1489,11 +1494,23 @@ fun main(args: Array<String>) {
       when (ex.requestMethod) {
         "POST" -> {
           val (ok, logText) = publish()
+          if (ok) bundleEvents.announce()
           respond(ex, if (ok) 200 else 422, logText, contentType = "text/plain")
         }
         else -> respond(ex, 405)
       }
     }
+  }
+
+  // Live device updates: a debug host holds this open while a screen shows, and
+  // runs its update check on each event (BundleEvents.kt). Read-only; the
+  // longer context wins over "/bundles" below.
+  server.createContext("/bundles/events") { ex ->
+    if (ex.requestMethod != "GET") { respond(ex, 405); return@createContext }
+    ex.responseHeaders.add("Content-Type", "text/event-stream")
+    ex.responseHeaders.add("Cache-Control", "no-cache")
+    ex.sendResponseHeaders(200, 0)
+    bundleEvents.subscribe(ex.responseBody) // stream stays open
   }
 
   // /bundles/index.json -> every bundle (W3); /bundles/latest?widgetVersion=W -> newest compatible

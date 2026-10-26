@@ -21,6 +21,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -31,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
@@ -40,6 +43,25 @@ import dev.keliver.treehouse.composeui.TreehouseContent
 fun KeliverScreen(host: KeliverHost, modifier: Modifier = Modifier) {
   remember(host) { KeliverTiming.mark("open") } // debug and benchmark builds only (M0)
   LaunchedEffect(host) { host.start() }
+  // Live updates (keliver.updates=live, debug builds): the host listens for publishes while a screen is on show.
+  val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+  DisposableEffect(host, lifecycle) {
+    var shown = false
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_START && !shown) {
+        shown = true
+        host.screenShown()
+      } else if (event == Lifecycle.Event.ON_STOP && shown) {
+        shown = false
+        host.screenHidden()
+      }
+    }
+    lifecycle.addObserver(observer)
+    onDispose {
+      lifecycle.removeObserver(observer)
+      if (shown) host.screenHidden()
+    }
+  }
   val state by host.state.collectAsState()
   MaterialTheme {
     Surface(modifier = modifier) {

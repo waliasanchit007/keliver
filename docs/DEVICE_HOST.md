@@ -169,11 +169,26 @@ up on the next process start, not when a screen reopens. Only a start that
 created nothing (the "No bundle" row above) is retried, by the next screen
 that opens.
 
-**Updates while the app runs** (both hosts):
+**Updates while the app runs** (both hosts; `live` is Android only so far):
+- `keliver.updates=live` (Android; **a DEBUG build's default from tools 0.3.13**):
+  `on-resume`, and also, while a `KeliverScreen` is on show (its lifecycle
+  STARTED), the host holds the bundle server's `GET /bundles/events` open and
+  runs its ordinary update check on each event, so a bundle you publish
+  reaches the open app in a second or two, with no trip to the background.
+  The event is only a nudge: what is applied is what `bundles/index.json`
+  names and the manifest's signature allows, as on any update, and the screen's
+  state may restart with the new code. The portal relay serves the stream (and
+  `/devstate` counts the devices listening, which the editor's devices chip
+  shows); a static server has none, so the host logs that once and stays
+  `on-resume`. A dropped stream is retried after 2 s, doubling to 30 s; with
+  no screen on show the host stops listening. Outside a debuggable DEBUG build
+  `live` is `on-resume` (the template's other build types get `on-resume` when
+  you set `live`), so it never reaches a store build.
 - `keliver.updates=on-resume` (Android, in `gradle.properties` or
   `keliver.properties`) or `UPDATES = "on-resume"` (iOS, `HostConfig.kt`),
   which is also what a DEBUG build does when the setting is empty (the
-  templates' default from tools 0.3.10 on; a release build then stays
+  templates' default from tools 0.3.10 to 0.3.12, and iOS's still; from
+  0.3.13 an Android debug build takes `live`; a release build then stays
   `next-launch`; this is a build setting, so a `KeliverConfig` built by hand
   takes its own `updates`, `NEXT_LAUNCH` unless set):
   each time the app comes back to the foreground, at most every 30 s, the host

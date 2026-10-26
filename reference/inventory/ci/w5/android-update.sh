@@ -14,6 +14,12 @@
 #   L1-L3  a debug host takes a bundle server set on the device
 #       (files/keliver/bundle-server), refuses a malformed one, and without it
 #       uses its built-in server again
+#   LV1-LV3  live updates (a debug host from 2026-10-27 on, keliver.updates
+#       unset): against a static server (no /bundles/events) it says so and
+#       falls back to on-resume (U1 above is that fallback); against a server
+#       that announces bundles, a publish made while a screen shows is applied
+#       in the same process with no trip to the background; in the background
+#       it stops listening
 echo "--- 6. W5: an update applied when the app comes back to the foreground"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w5-server.log" &
 SERVE_PID=$!
@@ -26,8 +32,19 @@ adb -s "$SERIAL" install -r "$W5_APK" > "$EV/install-update-host.log" 2>&1 \
 adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
 t0="$(date +%s)"
 launch prod "$EV/logcat-update-v8.txt"
-grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates on-resume" "$EV/logcat-update-v8.txt" \
-  && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$EV/logcat-update-v8.txt")"
+if grep -rqs 'bundles/events' "$APP/host-android/src/main/kotlin"; then W5_LIVE=1; else W5_LIVE=0; fi
+if [ "$W5_LIVE" = 1 ]; then
+  sleep 3  # the listener's first request
+  adb -s "$SERIAL" logcat -d > "$EV/logcat-update-v8.txt"
+  grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates live" "$EV/logcat-update-v8.txt" \
+    && ok "U1: the debug host runs with updates live (the default)" || bad "U1: the host is not set to live: $(grep -m1 'verifying manifests' "$EV/logcat-update-v8.txt")"
+  grep -q "$HOST_TAG: live updates: https://$HOST_ADDR:8443/bundles/events is not served (a static bundle server); updates apply on resume" "$EV/logcat-update-v8.txt" \
+    && ok "LV1: a static server has no /bundles/events; the host says so and falls back to on-resume" \
+    || bad "LV1: no fallback line: $(grep -E "$HOST_TAG: live updates" "$EV/logcat-update-v8.txt" | head -3 | tr '\n' ' ')"
+else
+  grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates on-resume" "$EV/logcat-update-v8.txt" \
+    && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$EV/logcat-update-v8.txt")"
+fi
 grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v8/manifest.zipline.json (index sequence 8," "$EV/logcat-update-v8.txt" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=8" "$EV/logcat-update-v8.txt" \
   && ok "U1: the host started on v8" || bad "U1: v8 did not load: $(grep -E "$HOST_TAG" "$EV/logcat-update-v8.txt" | head -3 | tr '\n' ' ')"
@@ -126,5 +143,59 @@ if grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/src/main/kotlin"; then
   adb -s "$SERIAL" shell am force-stop "$PROD_ID"
 else
   echo "  SKIP  L1-L3: this host predates the bundle server set on the device (not counted)"
+fi
+
+# LV2-LV3: live updates against a server that announces bundles. Its own copy of
+# the site and its own port (set on the device, as L1 does), so v10 here never
+# reaches the main site, whose v10 is W8's. Data is cleared afterwards: this
+# copy's v10 raises the rollback floor to 10.
+if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/src/main/kotlin"; then
+  echo "--- live updates: a publish reaches the open app"
+  rm -rf "$W3/site-live" && cp -R "$W3/site" "$W3/site-live"
+  python3 "$HERE/w3/static_https.py" "$W3/site-live" 8445 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/lv-server.log" events &
+  LVPID=$!
+  for _ in $(seq 1 30); do curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8445/bundles/index.json && break; sleep 1; done
+  adb -s "$SERIAL" shell run-as "$PROD_ID" sh -c "'mkdir -p files/keliver && echo https://$HOST_ADDR:8445 > files/keliver/bundle-server'"
+  launch prod "$EV/logcat-LV2-start.txt"
+  sleep 3
+  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV2-start.txt"
+  grep -q "$HOST_TAG: live updates: listening to https://$HOST_ADDR:8445/bundles/events" "$EV/logcat-LV2-start.txt" \
+    && grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-LV2-start.txt" \
+    && ok "LV2: the debug host runs v9 and listens to /bundles/events while its screen shows" \
+    || bad "LV2: not listening: $(grep -E "$HOST_TAG" "$EV/logcat-LV2-start.txt" | tail -4 | tr '\n' ' ')"
+  drive title Cellar LV2before; fold "LV2: v9 shows Cellar" $?
+  pid_live="$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')"
+  adb -s "$SERIAL" logcat -c || true
+  # The edit and publish a developer makes while the app is open; no key press on the phone.
+  w3_title Cellar Loft \
+    && ( cd "$APP" && KELIVER_SIGNING_KEY_FILE="$STORE/keys/ed25519.priv" KELIVER_TOOLS_BIN="$W3/no-tools-bin" \
+      "$W3_PUBLISH" . --out "$W3/site-live" --public-key-file "$STORE/keys/ed25519.pub" ) > "$EV/w3-publish-v10-live.log" 2>&1 \
+    && grep -q "published v10 (sequence 10, channel stable" "$EV/w3-publish-v10-live.log" \
+    && ok "LV2: keliver-publish wrote v10 (\"Loft\") to the live server's site while the app showed v9" \
+    || { bad "LV2: publish v10 to the live site"; tail -20 "$EV/w3-publish-v10-live.log"; }
+  sleep 20
+  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV2.txt"
+  L="$EV/logcat-LV2.txt"
+  grep -q "$HOST_TAG: live updates: the bundle server says {\"version\":10}" "$L" \
+    && grep -q "$HOST_TAG: update check: sequence 10 is available (running 9); applying https://$HOST_ADDR:8445/bundles/v10/manifest.zipline.json" "$L" \
+    && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$L" && grep -q "$HOST_TAG: update applied: sequence 10" "$L" \
+    && ok "LV2: the server announced v10 and the open app looked it up, verified it and applied it" \
+    || bad "LV2: v10 was not applied live: $(grep -E "$HOST_TAG|codeLoad" "$L" | tail -5 | tr '\n' ' ')"
+  [ "$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')" = "$pid_live" ] && ! grep -q "$HOST_TAG: verifying manifests" "$L" \
+    && ! grep -q "update check skipped" "$L" \
+    && ok "LV2: the same process (pid $pid_live), no restart and no resume" || bad "LV2: the process changed or restarted"
+  drive title Loft LV2after; fold "LV2: the open app now shows Loft (v10)" $?
+  adb -s "$SERIAL" logcat -c || true
+  adb -s "$SERIAL" shell input keyevent KEYCODE_HOME; sleep 4
+  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV3.txt"
+  grep -q "$HOST_TAG: live updates: stopped listening (no screen on show)" "$EV/logcat-LV3.txt" \
+    && ok "LV3: in the background the host stops listening" \
+    || bad "LV3: still listening in the background: $(grep -E "$HOST_TAG: live" "$EV/logcat-LV3.txt" | tail -3 | tr '\n' ' ')"
+  kill "$LVPID" 2>/dev/null; wait "$LVPID" 2>/dev/null
+  w3_title Loft Cellar || bad "LV: could not put the title back to Cellar for W8"
+  adb -s "$SERIAL" shell am force-stop "$PROD_ID"
+  adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
+else
+  echo "  SKIP  LV2-LV3: this host predates live updates or the bundle server set on the device (not counted)"
 fi
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""

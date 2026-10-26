@@ -52,10 +52,13 @@
  *
  * Updates (W5): checkForUpdate() looks up again and, after a network start,
  * applies a newer bundle in place (Zipline loads it while the old code runs;
- * a failure leaves the old one). With keliver.updates=on-resume (by default in
- * a debug build), resumed() does that when the app comes back to the
- * foreground. currentBundle and events say what runs and what happened. A
- * debug build also checks when told to from adb ([DEBUG_CHECK_FOR_UPDATE]).
+ * a failure leaves the old one). With keliver.updates=on-resume, resumed() does
+ * that when the app comes back to the foreground. With keliver.updates=live (by
+ * default in a debug build; a debug build only) it also listens to the bundle
+ * server's /bundles/events while a KeliverScreen is on show, so a publish
+ * reaches an open app. currentBundle and events say what runs and what
+ * happened. A debug build also checks when told to from adb
+ * ([DEBUG_CHECK_FOR_UPDATE]).
  *
  * Reports (W6): every outcome (loaded, fell back, update applied or failed,
  * not loaded, no bundle, refused) is a KeliverReport on [reports], for the
@@ -94,7 +97,12 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -197,7 +205,11 @@ class KeliverConfig(
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
       channel = BuildConfig.KELIVER_CHANNEL,
       apiBaseUrl = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() },
-      updates = if (BuildConfig.KELIVER_UPDATES == "on-resume") KeliverUpdates.ON_RESUME else KeliverUpdates.NEXT_LAUNCH,
+      updates = when (BuildConfig.KELIVER_UPDATES) {
+        "live" -> KeliverUpdates.LIVE
+        "on-resume" -> KeliverUpdates.ON_RESUME
+        else -> KeliverUpdates.NEXT_LAUNCH
+      },
       reportUrl = BuildConfig.KELIVER_REPORT_URL.takeIf { it.isNotBlank() },
       nextPublicKeyHex = BuildConfig.KELIVER_NEXT_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
     )
@@ -236,6 +248,16 @@ enum class KeliverUpdates {
 
   /** Also when the app comes back to the foreground ([KeliverHost.resumed]), applying a newer bundle at once. */
   ON_RESUME,
+
+  /**
+   * DEBUG builds only: ON_RESUME, and also while a [KeliverScreen] is on show the
+   * host listens to the bundle server's `/bundles/events` and checks on each
+   * event, so a publish reaches an open app (the screen's state may restart with
+   * the new code). Each update is verified as any other. A server without the
+   * stream (a static one) leaves it ON_RESUME. Outside a debuggable debug build
+   * it is ON_RESUME.
+   */
+  LIVE,
 }
 
 /** The bundle a host runs (W5): its signed sequence, and whether it came from Zipline's cache rather than the network. */
@@ -826,7 +848,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * most every 30 s; otherwise it does nothing.
    */
   fun resumed() {
-    if (config.updates != KeliverUpdates.ON_RESUME) return
+    if (config.updates == KeliverUpdates.NEXT_LAUNCH) return
     val since = SystemClock.elapsedRealtime() - lastLookupAt
     if (since < 30_000) {
       Log.d(TAG, "update check skipped: the last lookup was ${since / 1000} s ago (at most one every 30 s)")
@@ -837,6 +859,89 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       val check = runCatching { checkForUpdate() }.getOrNull()
       // An update being applied clears it when it is applied or fails.
       if (!(check is KeliverUpdateCheck.Available && check.applying)) mutableResumeCheck.value = false
+    }
+  }
+
+  /** Screens on show ([KeliverScreen] counts them); the live listener runs while there is one. Main thread. */
+  private var screensShown = 0
+  private var liveListener: Job? = null
+  /** Set when the bundle server has no event stream (a static server): not asked again in this process. */
+  private var liveUnsupported = false
+
+  /** A [KeliverScreen] started showing (its lifecycle reached STARTED). Main thread. */
+  fun screenShown() {
+    screensShown++
+    syncLiveListener()
+  }
+
+  /** A [KeliverScreen] stopped showing. Main thread. */
+  fun screenHidden() {
+    screensShown = (screensShown - 1).coerceAtLeast(0)
+    syncLiveListener()
+  }
+
+  private fun liveUpdatesAllowed(): Boolean =
+    config.updates == KeliverUpdates.LIVE && !liveUnsupported && BuildConfig.DEBUG &&
+      (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+  private fun syncLiveListener() {
+    if (screensShown > 0 && liveUpdatesAllowed()) {
+      if (liveListener?.isActive != true) liveListener = scope.launch { listenForBundles() }
+    } else if (liveListener != null) {
+      Log.d(TAG, "live updates: stopped listening (no screen on show)")
+      liveListener?.cancel()
+      liveListener = null
+    }
+  }
+
+  /**
+   * Holds `/bundles/events` open and runs [checkForUpdate] on each event, until
+   * cancelled (no screen on show). A dropped connection is retried after 2 s,
+   * doubling to 30 s. An event is only a nudge: what is applied is what the
+   * index names and the manifest's signature allows, as on any update.
+   */
+  private suspend fun listenForBundles() {
+    var retryMillis = 2_000L
+    while (true) {
+      val s = session
+      if (s == null) {
+        delay(1_000) // the first load is still under way
+        continue
+      }
+      val url = s.lookup.server.newBuilder().addPathSegments("bundles/events").build()
+      // No call timeout; the server sends a comment every 15 s, so a read that waits 45 s is a dead link.
+      val client = s.lookup.client.newBuilder().callTimeout(0, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
+      val call = client.newCall(Request.Builder().url(url).header("Accept", "text/event-stream").build())
+      val listening = currentCoroutineContext().job.invokeOnCompletion { call.cancel() }
+      val outcome = runCatching {
+        withContext(Dispatchers.IO) {
+          call.execute().use { response ->
+            if (response.code == 404 || response.code == 405) return@withContext false
+            check(response.isSuccessful) { "HTTP ${response.code}" }
+            Log.d(TAG, "live updates: listening to $url")
+            retryMillis = 2_000L
+            val source = response.body.source()
+            while (true) {
+              val line = source.readUtf8Line() ?: break
+              if (line.startsWith("data:")) {
+                Log.d(TAG, "live updates: the bundle server says ${line.removePrefix("data:").trim()}")
+                scope.launch { runCatching { checkForUpdate() } }
+              }
+            }
+            true
+          }
+        }
+      }
+      listening.dispose()
+      currentCoroutineContext().ensureActive()
+      if (outcome.getOrNull() == false) {
+        Log.i(TAG, "live updates: $url is not served (a static bundle server); updates apply on resume")
+        liveUnsupported = true
+        return
+      }
+      Log.d(TAG, "live updates: the stream ended (${outcome.exceptionOrNull()?.message ?: "closed"}); again in ${retryMillis / 1000} s")
+      delay(retryMillis)
+      retryMillis = (retryMillis * 2).coerceAtMost(30_000L)
     }
   }
 
