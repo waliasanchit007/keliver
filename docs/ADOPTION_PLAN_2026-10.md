@@ -8,10 +8,22 @@ PR #105 (library 0.3.4). Sections below use the ROADMAP's item numbers.
 The rule for all of it: **what an adopter had to discover by review becomes the default.** Every
 serious defect in the proof was in host glue that each adopter writes for themselves.
 
+**Status (2026-10-27).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
+M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
+signing team), M3–M5 are open. Items 3, 4, 5 and 7 are not started. Item 6:
+rows 1 (#108, #115), 2 (#109), 3 (#114) and 4 (#111) are done; the device
+proxy is open, and a debug host that picks up a publish while it is open is in
+progress (`ROADMAP.md`, "Current priorities"). Each item below carries its own
+status line. **Naming:** this plan's K1–K4 (item 3) and B1–B5 (item 4) are its
+own step numbers; they are not the portal grammar's K1–K7 (#120–#134) nor W8's
+K1–K8 checks.
+
 The proof ran on debug builds that were never shipped, so nothing here was measured on a release
 build or a user's device. The delivery plan's W7 (real devices, an adopter) stays open throughout.
 
 ## Item 2. Startup and memory (measure first)
+
+**Status 2026-10-27:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3–M5 open.
 
 **Evidence.**
 - On Android (debug builds), native content took 1.5 s on a cold open against 1.1 s for the
@@ -61,6 +73,8 @@ Decide on optimisations only after M2–M5.
 
 ## Item 3. Brownfield host kit (builds on W2 `--embed`)
 
+**Status 2026-10-27:** not started.
+
 **Evidence.**
 - `keliver-new-production-host.sh --embed` and `keliver-new-ios-host.sh --embed` gave a working
   start.
@@ -109,6 +123,8 @@ The kit builds on these. It does not add a second status channel.
 areas. Measure it on the next adoption: glue lines per app, and review findings.
 
 ## Item 4. Bridge: HostHttp for data, generated actions (D13)
+
+**Status 2026-10-27:** not started.
 
 **Evidence.**
 - One 11-call `ZiplineService` contract was copied byte for byte into three repositories.
@@ -163,6 +179,8 @@ analytics) need a contract.
 
 ## Item 5. Device state catalogue and snapshot runner
 
+**Status 2026-10-27:** not started.
+
 **Evidence.**
 - iOS was verified with improvised parts: a fixtures-only `?demo=` route parameter, debug
   launch-environment switches, and an in-app hook writing PNGs.
@@ -216,6 +234,8 @@ analytics) need a contract.
 
 ## Item 6. Dev loop
 
+**Status 2026-10-27:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). Open: the device proxy, and a debug host that applies a publish while it is open (in progress: the relay's `GET /bundles/events`, `keliver.updates=live`).
+
 **Evidence.**
 - The first publish after another Gradle build failed with a Kotlin/JS internal compiler error.
   The retry worked.
@@ -235,6 +255,8 @@ analytics) need a contract.
 Production bundles by default (the proof's fifth dev-loop finding) is item 2's M1.
 
 ## Item 7. Bundle delivery
+
+**Status 2026-10-27:** not started.
 
 **Evidence.**
 - A download is one request per module, three in flight, so it is latency-bound.

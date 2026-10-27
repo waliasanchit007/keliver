@@ -231,7 +231,7 @@ done
 
 if [ -n "$UPGRADED" ] && [ "$UPGRADED" != signing-0.3.6.gradle ]; then
   echo "==> the signing block in $APP/build.gradle (${UPGRADED%.gradle}) was replaced by the current one"
-  echo "    Nothing else was changed. Restart the portal so /publish builds with the new block."
+  echo "    Nothing else was changed. The next /publish builds with the new block (no restart needed)."
   exit 0
 fi
 if [ -n "$UPGRADED" ]; then
@@ -243,7 +243,7 @@ if [ -n "$UPGRADED" ]; then
   echo "      rm -rf \"$APP\"/.gradle/*/executionHistory"
   echo "    (keep $APP/.gradle/keliver-store-path: it binds this app to its store)."
   echo "    If other local users, CI logs or a cached .gradle/ could have read the key,"
-  echo "    treat it as exposed. Restart the portal so /publish builds with the new block."
+  echo "    treat it as exposed. The next /publish builds with the new block (no restart needed)."
   exit 0
 fi
 echo "==> publishing wired for $APP"
@@ -251,8 +251,9 @@ echo "    keliver.portal.json  publishTask $PUBLISH_TASK, publishOutput $PUBLISH
 echo "    build.gradle         signing block appended"
 echo
 echo "Next:"
+RELAY_PORT="$(python3 -c 'import json,sys;p=json.load(open(sys.argv[1])).get("port",8077);print(p if isinstance(p,int) and not isinstance(p,bool) else 8077)' "$APP/keliver.portal.json" 2>/dev/null || echo 8077)"
 echo "  keliver-portal                     # start it once; the first start creates the app's key"
-echo "  curl -X POST http://localhost:8077/publish"
+echo "  curl -X POST http://localhost:$RELAY_PORT/publish      # or ⬆ Publish in the editor"
 echo "                                     # refused, and nothing stored, unless the bundle is signed"
 echo "A production host must trust the same key: keliver-new-production-host.sh copies"
 echo "this app's keys/ed25519.pub into it."

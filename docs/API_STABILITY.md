@@ -43,8 +43,12 @@ review. Codegen-internal and Yoga-internal APIs are marked non-public
 
 The surface you actually use day-to-day — the schema annotations, the codegen'd
 widget/composable APIs, `keliver-http`, `keliver-treehouse(-guest)`, and the
-`keliver-host` / `keliver-guest` facades — has held steady across the `0.1.x`
-line and is exercised by the [sample](../sample) and a real consumer app. The
-churn risk lives in the deeper, inherited modules, not the everyday API.
+`keliver-host` / `keliver-guest` facades — has changed little, and is exercised
+by the [sample](../sample), the `reference/inventory` app and a 2026-10 product
+proof (there is no external adopter yet). It has not been frozen: 0.3.4 broke
+binary compatibility of the generated TextField APIs (an `align` parameter), and
+0.4.0 broke source compatibility for code that matches exhaustively on the
+portal's `PropValue`; each break is called out in `CHANGELOG.md`. Pin an exact
+version.
 
 [binary-compatibility-validator]: https://github.com/Kotlin/binary-compatibility-validator

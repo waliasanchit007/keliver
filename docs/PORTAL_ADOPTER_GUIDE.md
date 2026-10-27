@@ -35,7 +35,14 @@ command here comes from that package or from your app's Gradle wrapper.
   bundle records both in its `VERSION.json`.
 
 * For the device route only: the **Android SDK platform-tools** (`adb`) and a
-  running emulator or a connected device.
+  running emulator or a connected device. An emulator reaches your machine at
+  `10.0.2.2`, and a USB device through `adb reverse`; a **physical phone over
+  Wi-Fi** needs the relay started with `KELIVER_RELAY_BIND=all` (it listens on
+  this machine only otherwise), and then anyone on that network can edit and
+  publish.
+* To build a production Android host (`keliver-new-production-host.sh`): the
+  **Android SDK** itself, found through `ANDROID_HOME` or an `sdk.dir` line in
+  `host-android/local.properties`.
 
 Network access to Maven Central is needed the first time you build, to fetch
 `dev.keliver:*`.
@@ -52,12 +59,16 @@ $KP/keliver-portal .            # starts the portal for this app
 `portal-mcp` command for AI agents. Stop it with `Ctrl-C`, or
 `$KP/keliver-portal stop .` from another shell.
 
-**One portal at a time.** The server port comes from `"port"` in
-`keliver.portal.json`, but the **editor port is fixed at 8096**, so two apps
-cannot run their portals simultaneously even with different server ports — the
-second reports `port 8096 is already in use`. Stop one before starting the
-other. Their document stores are still fully separate; this is only a port
-collision.
+**Two apps at once.** The server listens on `"port"` in `keliver.portal.json`
+(default 8077) and the editor on `"editorPort"` (default: `port` + 19, so 8096
+beside 8077). Give a second app another `"port"` and both portals run side by
+side; a port already taken is refused at start, naming which. The editor finds
+its own app's server through the `?relay=<port>` in its URL: `keliver-portal`
+prints the URL with it, and the editor's server adds it to a URL opened
+without it, so a bookmark cannot open one app's editor on another app's
+screens. Each app keeps its own document store. A setting that names the
+editor's origin (`httpRecording.allowedOrigins`) must use that app's editor
+port.
 
 A fresh scaffold is a normal Gradle project:
 
@@ -102,7 +113,7 @@ Both are ordinary source files in your git history. Commit them.
 
 The relay must be running — the tools talk to it.
 
-**Tool discovery.** Ten tools are exposed. Depending on the client they may not
+**Tool discovery.** Eleven tools are exposed. Depending on the client they may not
 appear in the up-front tool list; discover them with whatever tool-search
 mechanism your client provides, or name the server explicitly.
 
@@ -114,8 +125,14 @@ mechanism your client provides, or name the server explicitly.
 | `get_document` | one screen as a semantic tree |
 | `apply_ops` | transactional edit (see below) |
 | `undo`, `redo` | server-side, per session |
-| `find_usages` | where a bound field or action is used |
+| `list_tokens` | the app's design tokens (constants), with the import a screen needs |
+| `find_usages` | where a bound field, action or design token is used |
 | `device_screenshot` | a frame from a connected device |
+
+`device_screenshot` runs `adb` from the macOS default SDK location,
+`~/Library/Android/sdk/platform-tools/adb`, and nowhere else: it does not read
+`ANDROID_HOME` or `PATH`. With the SDK anywhere else (or on Linux) the tool
+fails; take the screenshot with `adb exec-out screencap -p` yourself.
 
 **Screen names are bare**, as `list_screens` returns them: `home`, not
 `default/home`.
@@ -322,7 +339,7 @@ host. Both ship in the tools bundle from **0.3.6** on.
 ```bash
 $KP/keliver-new-device-target.sh       # if you have not already: the bundle's entry point
 $KP/keliver-new-publish-target.sh      # publishTask/publishOutput + the signing block
-$KP/keliver-portal stop . && $KP/keliver-portal   # the relay reads keliver.portal.json at start
+$KP/keliver-portal .                  # if not running; no restart: publish rereads publishTask/publishOutput
 curl -X POST http://localhost:8077/publish        # "publish OK: bundle v1", signed with your key
 
 $KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an emulator reaching your relay
@@ -375,7 +392,8 @@ changes nothing else, `keliver.portal.json` included. Then:
 - delete `.gradle/*/executionHistory/` in your app. **Keep
   `.gradle/keliver-store-path`**: it binds the app to its store, and without
   it a moved app can resolve to a new, empty store with a new key;
-- restart the portal, so `/publish` builds with the new block;
+- no portal restart is needed: every `/publish` runs a fresh Gradle build, so
+  it uses the new block straight away;
 - if other users of the machine, shared CI logs or a cached `.gradle/` could
   have exposed the key, treat it as compromised. A new key means rebuilding
   and shipping your production hosts with its public key: follow
@@ -662,7 +680,7 @@ metadata, and a host refuses a sequence below the highest it has run, both on
 the network and from its cache (`DEVICE_HOST.md` §2). So an older signed
 bundle served again is refused, once a host has run a sequenced one. To roll
 back on purpose, rebuild the older source and publish it: it gets a new, higher
-sequence. A `--republish` shortcut is planned (W4.3). A reinstall resets a
+sequence. A reinstall resets a
 host's floor. One key is one sequence space: never let sequences go backwards.
 
 ## Preview mocks are not runtime values
@@ -701,6 +719,7 @@ action back into the same bindings object:
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.PreviewFrame
 import dev.keliver.portal.render.ScreenPreview
+import dev.keliver.portal.render.putRows
 import myapp.logic.HomePresenter
 
 object MyAppPreview : AppPreviewEntry {
@@ -710,10 +729,13 @@ object MyAppPreview : AppPreviewEntry {
     "home" to ScreenPreview { env ->
       val b = HomePresenter()                   // your real presenter
       PreviewFrame(
-        values = mapOf("tally" to b.tally),     // contract field -> current value
+        values = buildMap {                     // contract field -> current value
+          put("subtitle", b.subtitle)
+          putRows("items", "item", b.items.map { mapOf("title" to it.title) })
+        },
         dispatch = { action, _ ->               // portal action -> your bindings
           when (action) {
-            "add" -> b.add()
+            "refresh" -> b.refresh()
             else -> env.log("unhandled action: $action")
           }
         },
@@ -723,8 +745,10 @@ object MyAppPreview : AppPreviewEntry {
 }
 ```
 
-Values are **strings**, matching the mock transport. For a list field use
-`putRows(field, itemVar, rows)` instead of a plain entry.
+This is the `home` screen `keliver-init` scaffolds (`subtitle`, the `items`
+list iterated as `item`, and `refresh`). Values are **strings**, matching the
+mock transport. For a list field use `putRows(field, itemVar, rows)` instead of
+a plain entry, with the loop variable the screen uses as `itemVar`.
 
 **3. Build the editor:**
 
@@ -765,8 +789,11 @@ Verified from a scaffolded app in Chrome — see
 `docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md` for the exact
 sequence and its limits.
 
-**Which build you need.** The published `dev.keliver:portal-editor:0.3.3`, or
-later. Both behaviours were measured against 0.3.3 directly; 0.3.4 did not
+**Which build you need.** At least the published
+`dev.keliver:portal-editor:0.3.3` — a minimum, not a pin. `keliver-new-editor.sh`
+uses your app's `appRuntime.keliverVersion`, so the editor of an app scaffolded
+by these tools gets 0.4.0. Both behaviours were measured
+against 0.3.3 directly; 0.3.4 did not
 change the editor's preview path. An earlier revision of this guide said the published editor
 had a defect here and that an unreleased fix was required; that was wrong, and
 the fix in question turned out to change nothing observable

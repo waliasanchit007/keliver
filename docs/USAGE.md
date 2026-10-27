@@ -1,11 +1,23 @@
 # Using Keliver in another Compose Multiplatform project
 
-> This guide was originally written in the ServerDrivenUI reference
-> integration. It now lives in the Keliver fork so docs travel with
-> the artifact. Code samples reference DevoStatus / ServerDrivenUI by
-> name, but the patterns apply to any CMP host. A reorganized docs
-> site is planned post-launch (see
-> [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md) Phase 7).
+> **Historical guide — not the current setup path.** This is the
+> integration guide from before Maven Central and before the portal: it
+> was written in an earlier reference integration (a separate Compose
+> Multiplatform app) and is kept for its runtime and Zipline material —
+> the silent-failure cheat sheet, host services, dispatchers, the
+> `remember` and data-service patterns. **Its setup steps are
+> historical**: git-submodule vendoring, the `:dev-server` module and
+> `keliverDev` task, `:presenter`, GitHub Packages and the
+> `1.0.0-caliclan.*` versions do not exist in the current repo or
+> releases. Code samples keep that integration's names
+> (`com.example.serverdrivenui.*`, `Sdui*`); the patterns apply to any
+> CMP host.
+>
+> **The current path:** [GETTING_STARTED.md](GETTING_STARTED.md) (start
+> here), [PORTAL_ADOPTER_GUIDE.md](PORTAL_ADOPTER_GUIDE.md) (a new app
+> with `keliver-init`, the portal, devices, publishing, production
+> hosts) and [SCREEN_ARCHITECTURE.md](SCREEN_ARCHITECTURE.md) (how a
+> screen, its presenter and its data are structured).
 
 This guide is for "I have a separate Compose Multiplatform app and I want one
 or more of its screens to be Server-Driven UI." It walks through vendoring
@@ -37,18 +49,18 @@ consumer.
 #    (Step 4).
 ```
 
-Prerequisites: **JDK 21** (matches CI), **Xcode 16+** for iOS, Android SDK
+Prerequisites: **JDK 17**, **Xcode 16+** for iOS, Android SDK
 with API 36, **Kotlin 2.2.0+** (keliver's metadata floor — see the Toolchain
-section below; note Zipline 1.26.0 floats you to Kotlin 2.3.10), AGP **8.12+**.
+section below), Zipline **1.22.0**, Compose Multiplatform **1.8.2**, AGP **8.12+**.
 
 Production-readiness reality check before you commit to this path:
 
 - **Android**: solid. End-to-end verified, hot reload works.
 - **iOS**: solid as of 2026-05-13 (gotcha #12 fixed, dispatcher pattern
   enforced via constructor). Verified on iPhone 17 Pro sim.
-- **Library distribution**: GitHub Packages today; Maven Central tracked
-  in [MAVEN_CENTRAL_SETUP.md](./MAVEN_CENTRAL_SETUP.md). Git submodule
-  vendoring is still supported during early adoption.
+- **Library distribution**: Maven Central (`dev.keliver:*`, no auth; see
+  [MAVEN_CENTRAL_SETUP.md](./MAVEN_CENTRAL_SETUP.md)). The git-submodule
+  vendoring in Step 1 is historical.
 - **Compose Facade**: landed in `1.0.0-caliclan.4`. Adopters depend on
   a single `dev.keliver:keliver-host` artifact (host modules) and a
   single `dev.keliver:keliver-guest` artifact (guest modules) instead
@@ -113,7 +125,7 @@ modules.
 ## The fast path — `keliver-material` (no schema authoring) — NEW in 0.2.0
 
 Steps 1–4 below describe authoring **your own** schema (the
-ServerDrivenUI/DevoStatus reference path). Most adopters don't need to: **the
+original reference integration's path). Most adopters don't need to: **the
 current line ships `keliver-material`, a batteries-included library of 76
 Compose/Material3-parity widgets** so you can write server-driven screens that read like native
 Compose *without defining a single widget*. This is the recommended starting
@@ -121,7 +133,7 @@ point.
 
 ```kotlin
 // guest screen authored entirely with published keliver-material widgets
-import dev.keliver.material.compose.Column
+import dev.keliver.layout.compose.Column
 import dev.keliver.material.compose.StyledText
 import dev.keliver.material.compose.StyledBox
 import dev.keliver.material.compose.RichText
@@ -186,7 +198,7 @@ widget-specific `fillWidth` exceptions.
 You depend on the published `keliver-material-*` modules and run **one** codegen
 step that generates the treehouse protocol adapters from the **published** schema
 (no schema sources of your own). This is exactly the
-[`stashfin-sdui`](https://github.com/waliasanchit007/keliver) consumer setup,
+first adopter app's consumer setup,
 verified end-to-end (Android APK + guest bundle) against Central `0.2.0`.
 
 `gradle/libs.versions.toml`:
@@ -387,18 +399,16 @@ consumer on an **older** Kotlin than 2.2.0 can't read keliver's classes — the
 symptom is `Cannot access class '…' — missing or conflicting dependencies` — so
 treat **Kotlin 2.2.0 as the floor**.
 
-⚠️ **Zipline sets the real Kotlin version, not your catalog.** Keliver guests
-require the Zipline Gradle plugin, and `app.cash.zipline:zipline-gradle-plugin:1.26.0`
-depends on `kotlin-gradle-plugin:2.3.10` — so once you apply it, your build's
-Kotlin compiler floats to **2.3.10** regardless of what your version catalog pins.
-Consequences:
+⚠️ **Zipline can set the real Kotlin version, not your catalog.** Keliver
+guests require the Zipline Gradle plugin, and the plugin brings its own
+`kotlin-gradle-plugin`. Keliver `0.4.0` is built with Zipline **1.22.0**: pin
+that. A newer Zipline plugin floats your build's Kotlin compiler regardless of
+what your catalog pins (`zipline-gradle-plugin:1.26.0`, for example, depends on
+`kotlin-gradle-plugin:2.3.10`), and then needs a KSP release on that Kotlin's
+line.
 
-- Use a **KSP release on the matching `2.3.10-…` line**. A lower KSP (even the
-  `2.2.0-2.0.2` keliver itself ships) only prints a non-fatal
-  `ksp … is too old for kotlin-2.3.10` warning — builds still succeed — but the
-  matching line keeps your log clean.
-- Compose Multiplatform **1.8.0** and AGP **8.12+** are known-good with this combo
-  (verified building a real multi-module consumer APK against `0.2.0`).
+- Compose Multiplatform **1.8.2** and AGP **8.12+** are what Keliver itself
+  builds with.
 
 ### Copy-paste version catalog
 
@@ -411,9 +421,9 @@ pinned to the current `0.4.0` line. Paste it and trim what you don't use:
 [versions]
 keliver = "0.4.0"
 kotlin = "2.2.0"            # keliver's metadata floor; see the Toolchain note
-ksp = "2.2.0-2.0.2"         # bump to a 2.3.10-line KSP for a warning-free log
-zipline = "1.26.0"          # NOTE: floats the build's Kotlin compiler to 2.3.10
-composeMultiplatform = "1.8.0"
+ksp = "2.2.0-2.0.2"
+zipline = "1.22.0"          # the version keliver 0.4.0 is built with; a newer one can float Kotlin
+composeMultiplatform = "1.8.2"
 agp = "8.12.0"
 
 [libraries]
@@ -507,13 +517,13 @@ class MainActivity : ComponentActivity() {
             override val serializersModule = SduiSerializersModule
 
             // Hold strong refs to bound host services so Zipline's
-            // GC-monitored proxy doesn't lose them. See HANDOVER gotcha #6.
+            // GC-monitored proxy doesn't lose them. (Gotcha 4 below.)
             //
             // `hostSnackbar` is `lateinit var` because its constructor
             // needs `treehouseApp.dispatchers.zipline`, which only exists
             // once the factory has created the TreehouseApp. Populating
             // it inside bindServices guarantees correct wiring before any
-            // guest call can fire. (See HANDOVER gotcha #12.)
+            // guest call can fire. (Gotcha 3 below.)
             //
             // `DefaultKeliverConsole` ships in `keliver-console` (and is
             // re-exported through the `keliver-host` facade). It writes
@@ -523,7 +533,7 @@ class MainActivity : ComponentActivity() {
             // override `output(line)` to route to `android.util.Log` /
             // SLF4J / NSLog / your preferred logger.
             //
-            // (The ServerDrivenUI reference repo's `AndroidRealHostConsole`
+            // (The original reference integration's `AndroidRealHostConsole`
             // is its own custom impl predating the keliver-console
             // module — adopters writing fresh code should reach for
             // `DefaultKeliverConsole` first.)
@@ -570,7 +580,7 @@ in this repo. `CmpWidgetFactory` and `SduiContentSource` come from
 
 The single biggest silent footgun in Keliver integration: holding a
 `TreehouseApp` in a `remember(...)` whose key list contains an
-**unstable reference**. This was DevoStatus's `docs/KNOWN_BUGS.md` #9
+**unstable reference**. This was the reference integration's `KNOWN_BUGS.md` #9
 — a day of debugging — and it's still the easiest mistake to make.
 
 **The pattern that breaks.** Anonymous lambdas at the call site get a
@@ -689,7 +699,7 @@ dependencies {
     // protocol modules, plus Zipline + zipline-loader).
     implementation(libs.keliver.host)
 
-    // ServerDrivenUI reference modules from the submodule — these are
+    // Reference-integration modules from the submodule — these are
     // application-specific (your schema, your HostConsole / HostSnackbar
     // impls). External adopters writing their own schema replace these
     // with their own equivalents.
@@ -892,7 +902,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.zipline)
-    alias(libs.plugins.redwood.generator.compose)
+    alias(libs.plugins.keliver.generator.compose)
     alias(libs.plugins.composeMultiplatform)
 }
 
@@ -914,7 +924,7 @@ kotlin {
             // -guest-compose, protocol-guest, and Zipline.
             implementation(libs.keliver.guest)
 
-            // ServerDrivenUI reference modules — replace with your
+            // Reference-integration modules — replace with your
             // own schema definitions when adopting Keliver standalone.
             implementation(project(":shared"))
         }
@@ -933,7 +943,7 @@ Migration from the pre-facade setup: the five guest-side
 `libs.keliver.guest` line. The pre-facade `libs.redwood.*` catalog
 entries still work — the facade is additive.
 
-The `redwood.generator.compose` plugin + `redwoodSchema { source =
+The `keliver.generator.compose` plugin (`dev.keliver.generator.compose`) + `redwoodSchema { source =
 project(":schema") }` are load-bearing — they generate the
 `com.example.serverdrivenui.schema.compose.Column` / `Text` / `Button`
 etc. composables from the schema. Without those, guest screen code
@@ -1108,7 +1118,7 @@ Adopters override the callback for cleanup (always calling
 
 Cross-tab persistence (state surviving the tab being unmounted) is a
 separate concern — see the heart-save pattern in
-`docs/KNOWN_BUGS.md` and DevoStatus's `HostExploreSaver`.
+`docs/KNOWN_BUGS.md` and the reference integration's `HostExploreSaver`.
 
 ### API calls from the guest
 
@@ -1455,7 +1465,7 @@ to a parent route or pass it through host services.
 
 If your guest screen needs **data from the host** (a quote feed, a list
 of products, the user's saved items, etc.), you want the three-service
-pattern. It's the recipe DevoStatus's Quotes tab uses today — wire it
+pattern. It's the recipe the reference integration's Quotes tab used — wire it
 once and you get filtering, tap navigation, and reactive updates from
 the host's view model into the guest screen.
 
@@ -1595,8 +1605,8 @@ val firstScreen = when {
 ```
 
 This way the same guest bundle can serve multiple screens depending on
-which services the host binds. DevoStatus's `:keliver-host` uses this
-trick — its Quotes tab and its Demo tab both ship the same bundle, just
+which services the host binds. The reference integration's host used this
+trick — its Quotes tab and its Demo tab both shipped the same bundle, just
 with different `bindServices(...)` impls.
 
 ### Why three services, not one fat one?
@@ -1635,7 +1645,7 @@ val quotes by HostQuotesProviderBridge.instance!!
 
 When to pick which:
 
-| Use the **Observer-callback** pattern (current ServerDrivenUI default) when… | Use **`Flow<T>` return type** (recommended for new providers) when… |
+| Use the **Observer-callback** pattern (the reference integration's default) when… | Use **`Flow<T>` return type** (recommended for new providers) when… |
 |---|---|
 | Cross-boundary signalling needs to flow guest → host (the guest registers a callback service, the host invokes it). The callback shape is more flexible for one-shot results, multi-method observers, etc. | Data flows host → guest only and the consumer is happy with collect semantics. |
 | You need a single observer registration that drives multiple host-side data shapes. | The observer's life is tied to a single guest collect block — re-collect resubscribes. |
@@ -1659,9 +1669,9 @@ own scope and Zipline routes emissions onto the QuickJS thread. Both
 patterns are safe when wired correctly; the Flow case has less
 boilerplate.
 
-DevoStatus today uses the Observer-callback pattern across
+The reference integration used the Observer-callback pattern across
 `HostQuotesProvider`, `HostWallpapersProvider`, and `HostExploreSaver`
-because it pre-dates `bindWithTimeout` and was built defensively
+because it pre-dated `bindWithTimeout` and was built defensively
 against U1. New integrations on caliclan.3+ should prefer
 `Flow<T>` return types for the reactive-stream shape unless one of
 the observer-specific use cases above applies.
@@ -1703,8 +1713,9 @@ re-fetches and swaps in the new bundle without restarting.
 
 ## Gotchas you should internalize before writing your first screen
 
-These are pulled from `HANDOVER.md`'s gotcha list — read that doc for full
-detail. The TL;DR:
+These come from the original integration's handover notes, which are not in
+this repo; [KNOWN_BUGS.md](KNOWN_BUGS.md) is the searchable reference for
+silent failures here. The TL;DR:
 
 1. **Add new enums to `SduiSerializersModule`** if you use them as a field
    on a `@Modifier`. Otherwise the whole protocol batch silently fails and
@@ -1729,8 +1740,8 @@ detail. The TL;DR:
    iOS additionally needs `NSExceptionDomains` in `Info.plist` for
    IP-literal URLs.
 
-The full list of 12 gotchas is in `HANDOVER.md` §"Gotchas / requirements
-that aren't obvious". Read it before debugging anything mysterious.
+For anything mysterious, grep [KNOWN_BUGS.md](KNOWN_BUGS.md) for the symptom
+before debugging.
 
 ---
 
@@ -1747,8 +1758,8 @@ that aren't obvious". Read it before debugging anything mysterious.
    uses a raw lambda-typed parameter on a ZiplineService method. Wrap it
    in a `ZiplineService` callback type (see `SnackbarResultCallback`).
 
-For anything else, search `HANDOVER.md`'s gotchas list with the failure
-mode keywords (the section was written to be greppable).
+For anything else, search [KNOWN_BUGS.md](KNOWN_BUGS.md) with the failure
+mode keywords.
 
 ---
 

@@ -1,9 +1,10 @@
 # Getting started with Keliver
 
 Get a server-driven screen running natively on Android + iOS, edit it visually
-in the browser, and then write your own — the short path. (For the exhaustive
-reference, see [USAGE.md](USAGE.md); for the app architecture, see
-[SCREEN_ARCHITECTURE.md](SCREEN_ARCHITECTURE.md).)
+in the browser, and then write your own — the short path. (For a new app of
+your own, the adopter path is
+[PORTAL_ADOPTER_GUIDE.md](PORTAL_ADOPTER_GUIDE.md); for the app architecture,
+see [SCREEN_ARCHITECTURE.md](SCREEN_ARCHITECTURE.md).)
 
 ## See it before you install anything
 
@@ -24,11 +25,35 @@ The screens are also **round-trippable**: the Keliver Portal edits the same
 rather than a generated blob. Step 5 covers that loop; it is the part of Keliver
 that is hardest to get from the code alone.
 
-## 1. The starter is `sample/`
+## 1. Get the code — and pick your starting point
 
-The [`sample/`](../sample) directory **is** the starter: a complete, runnable
-project with every moving part wired up. Copy it and rename, or just run it
-first to see the loop.
+Install **git-lfs before cloning**: `*.png` is LFS-tracked, and a clone
+without it fails checkout partway.
+
+```bash
+git lfs install
+git clone https://github.com/waliasanchit007/keliver.git
+cd keliver
+```
+
+**A new app does not start from this repo.** It starts with `keliver-init`
+from the portal tools bundle, which scaffolds a standalone Gradle project on
+the published `dev.keliver:*:0.4.0` libraries (Maven Central) and the
+`keliver-material` widgets, with no Keliver checkout. Download
+`keliver-portal-tools-0.3.12.zip` from the
+[tools 0.3.12 release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.12),
+unzip it, and follow [PORTAL_ADOPTER_GUIDE.md](PORTAL_ADOPTER_GUIDE.md):
+
+```bash
+keliver-portal-tools-0.3.12/bin/keliver-init MyApp && cd myapp
+```
+
+**[`sample/`](../sample) is a runnable demo of the runtime**, with every moving
+part wired up by hand: its **own widget schema** (not `keliver-material`), the
+codegen, a guest bundle and native hosts. It is its own Gradle build, pinned to
+an old library release (`keliver = "0.1.0"` in
+`sample/gradle/libs.versions.toml`). Run it to see the loop, and copy its shape
+only if you are building your own widget schema.
 
 ```
 sample/
@@ -39,9 +64,8 @@ sample/
 └── host-compose, host-android, iosApp   # the native hosts
 ```
 
-> Adding Keliver to a *new* project instead? Copy the version catalog from
-> [USAGE.md → "Copy-paste version catalog"](USAGE.md) (the published artifacts
-> are `dev.keliver:keliver-*:0.4.0` on Maven Central).
+> Adding Keliver to a *new* project instead? Use `keliver-init` (above); the
+> published artifacts are `dev.keliver:*:0.4.0` on Maven Central.
 
 ## 2. Run it
 
@@ -123,25 +147,29 @@ Three ways to edit, all landing in the same file:
 
 1. **The portal UI** — drag widgets, tweak props, bind fields with `@`, wire
    actions, add `if`/`forEach` from the Logic palette.
-2. **Your code editor** — edit `screens/main.kt` directly; the file-watcher
-   ingests it and the portal and any attached devices update live.
+2. **Your code editor** — edit the screen file directly (`screens/home.kt` in a
+   `keliver-init` app, `screens/main.kt` in `portal-app-lib`); the
+   file-watcher ingests it and the portal and any attached devices update live.
 3. **An AI agent** — the `portal-mcp` stdio server exposes `get_catalog`,
    `get_document`, `apply_ops` (transactional, with `dryRun`), `find_usages`.
    Every widget and prop is catalog-grounded, so the agent edits a validated
    document rather than guessing at text.
 
 **The round-trip boundary:** the portal owns `screens/*.kt` — layout, bindings,
-`if`/`forEach`. You own `logic/` and `PublishedEntry.kt`; the portal never
-touches them. If a portal edit binds a new field, your presenter stops compiling
+`if`/`forEach`. You own `logic/` and the bundle's entry point (`device/Main.kt`,
+which `keliver-new-device-target.sh` adds to a `keliver-init` app;
+`PublishedEntry.kt` in `portal-app-lib`); the portal never touches them. If a portal edit binds a new field, your presenter stops compiling
 until you add it — the boundary enforcing itself.
 
-Full workflow, including preview mock rows and the device loop, is in
-**[PORTAL_USAGE.md](PORTAL_USAGE.md)**.
+Full workflow, including preview mock rows and the device loop: for your own
+app, **[PORTAL_ADOPTER_GUIDE.md](PORTAL_ADOPTER_GUIDE.md)**; inside this repo
+(contributors, `portal-app-lib`), **[PORTAL_USAGE.md](PORTAL_USAGE.md)**.
 
 ## Where to go next
 
 - **[SCREEN_ARCHITECTURE.md](SCREEN_ARCHITECTURE.md)** — the app architecture (read this before your second screen).
-- **[PORTAL_USAGE.md](PORTAL_USAGE.md)** — the visual editing loop in full: publishing, devices, preview fidelity.
-- **[USAGE.md](USAGE.md)** — exhaustive setup, host boilerplate, the dev loop, every silent-failure shape.
+- **[PORTAL_ADOPTER_GUIDE.md](PORTAL_ADOPTER_GUIDE.md)** — your own app on the tools bundle: scaffold, edit, devices, publishing, production hosts.
+- **[PORTAL_USAGE.md](PORTAL_USAGE.md)** — the same loop inside this repo, for contributors.
+- **[USAGE.md](USAGE.md)** — the older, pre-portal integration guide: its setup steps are historical, but its runtime/Zipline silent-failure material still applies.
 - **[MIGRATION_FROM_REDWOOD.md](MIGRATION_FROM_REDWOOD.md)** — if you're coming from Redwood.
 - **[KNOWN_BUGS.md](KNOWN_BUGS.md)** — a searchable reference for when something fails silently. Don't read it front-to-back; grep it when you hit a symptom.
