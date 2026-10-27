@@ -108,7 +108,7 @@ for f in settings.gradle build.gradle gradle.properties .gitignore src/nativeInt
          Configuration/Config.xcconfig; do
   [ -f "$H/$f" ] || { bad "missing $f"; missing=1; }
 done
-for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt; do
+for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt; do
   [ -f "$K/$f" ] || { bad "missing $K/$f"; missing=1; }
 done
 [ "$missing" = 0 ] && ok "every expected file is there"
@@ -174,13 +174,17 @@ grep -q "NO_SIGNATURE_CHECKS\|DevelopmentUnsigned\|10\.0\.2\.2\|http-replay\|Hos
 grep -q 'CHANNEL: String = "stable"' "$K/HostConfig.kt" && grep -q "configValue('CHANNEL')" "$H/build.gradle" \
   && grep -q 'pickFromIndex(body.utf8(), capabilities, channel = CHANNEL' "$K/MainViewController.kt" \
   && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
-# Updates: UPDATES empty by default (on-resume in a DEBUG binary, next-launch in a
-# release one); a DEBUG binary also checks on a Darwin notification.
-grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', 'next-launch', 'on-resume'\]" "$H/build.gradle" \
-  && grep -q 'UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "on-resume" else "next-launch" }' "$K/MainViewController.kt" \
+# Updates: UPDATES empty by default (live in a DEBUG binary, next-launch in a
+# release one; live is on-resume in a release one); a DEBUG binary also checks on
+# a Darwin notification, and while live listens to /bundles/events with a screen shown.
+grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', 'next-launch', 'on-resume', 'live'\]" "$H/build.gradle" \
+  && grep -q 'UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "live" else "next-launch" }' "$K/MainViewController.kt" \
+  && grep -q 'if (mode == "live" && !kotlin.native.Platform.isDebugBinary) "on-resume" else mode' "$K/MainViewController.kt" \
   && grep -q 'if (!kotlin.native.Platform.isDebugBinary || debugCheckRegistered) return' "$K/MainViewController.kt" \
-  && ok "updates: on-resume in a debug binary, next-launch in a release one; a debug-only check-now notification" \
-  || bad "updates: the debug default or the check-now notification is not wired"
+  && grep -q 'val url = "$base/bundles/events"' "$K/MainViewController.kt" && grep -q 'screenShown()' "$K/MainViewController.kt" \
+  && grep -q 'text/event-stream' "$K/BundleEvents.kt" \
+  && ok "updates: live in a debug binary (on-resume in a release one), next-launch in a release one; a debug-only check-now notification" \
+  || bad "updates: the debug default, live updates or the check-now notification is not wired"
 # M0: timing marks only when KELIVER_TIMING=YES (Debug, Benchmark); a no-op elsewhere.
 grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/com/example/demo/host/KeliverTiming.kt" 2>/dev/null \
   && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/com/example/demo/host/KeliverTiming.kt" 2>/dev/null \
@@ -248,7 +252,7 @@ grep -q 'Keliver.shared.viewController(safeArea: safeArea)' "$L/KeliverScreen.sw
 grep -q 'CHANNEL: String = "beta"' "$LK/HostConfig.kt" && grep -q 'BUNDLE_SERVER: String = "https://bundles.example.com"' "$LK/HostConfig.kt" \
   && ok "the settings are in HostConfig.kt, as for the standalone host" || bad "HostConfig.kt"
 [ "$(cat "$EX/MyApp.xcodeproj/project.pbxproj")" = 'PRODUCT_NAME = "MyApp";' ] && ok "--embed edited no file of the existing app" || bad "--embed changed the existing project"
-same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt; do
+same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt; do
   cmp -s "$LK/$f" "$K/$f" || { same=0; bad "$f differs between the embedded framework and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the embedded framework and the standalone host"
