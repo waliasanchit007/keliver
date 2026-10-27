@@ -422,8 +422,11 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    open row; owner's request 2026-10-26). The relay announces each stored
    bundle on `GET /bundles/events`; a debug host listens while a screen is on
    show and runs its ordinary, verified update check. Android first, then iOS.
-   **Status 2026-10-27:** Android released in tools 0.3.13 (#145); iOS merged
-   (#150, simulator LV1–LV3 green), for the next tools release.
+   **Status 2026-10-27:** Android released in tools 0.3.13 (#145) and checked
+   on a physical phone (a Galaxy A12, from the published 0.3.13 zip: a publish
+   applied in the open app ≈ 1 s after the event, in the same process); iOS
+   merged (#150, simulator LV1–LV3 green), for the next tools release, not yet
+   on a physical iPhone.
 3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
    into the tools bundle, not the app** (found by the 2026-10-27 audit): run
    from the zip's `bin/`, they resolve the app as the script's parent. Every

@@ -907,8 +907,19 @@ their required checks pass (Standing constraints, below).
 | live device updates (iOS), PR #150 | **merged 2026-10-27** (`553398ede`) at `f2f4b20f4`, reviewed twice (one should-fix: count screens by the view controller's lifecycle, not the composition): `UPDATES = "live"` (a DEBUG binary's default; `on-resume` in a release one), `BundleEvents.kt` (NSURLSession stream; 3xx/4xx/non-SSE = not served), the relay's 2 KiB preamble + `nosniff`. CI on that head: Build, both E2E, reference-app, ios-host `40460319680` (`ios.sh` 167/0: LV1 fallback, LV2 v10 applied in the same pid with 'Loft' on screen, LV3 closed in the background). Not on a physical iPhone. Ships in the next tools release. | PR #150 |
 | editor E2E K1 flake, PR #153 | **merged 2026-10-27** (`28a67d612`) at `b70170677`, reviewed twice: K1 presses Enter when the double-click only selected, and says so in the CI output; KNOWN_BUGS U39 (open) for the editor behaviour behind it. | PR #153 |
 | host kit K1 part 1 (Android), PR #155 | **merged 2026-10-27** (`95a298733`) at `f65ab1a54`, reviewed three times: typed `KeliverHostState`, `onUnavailable` (re-checks the state; a retried start is `Loading`), `showsDeveloperText` (debug variant AND debuggable app). Self-test static checks 63/0; the scaffold's assembleDebug and compileReleaseKotlin. No device run (K4). | PR #155 |
+| live device updates on a **physical Android phone** | **checked 2026-10-27** on a Galaxy A12 (Android 12, arm64-v8a, wireless adb), from the **published** tools 0.3.13 zip (`5d1dd0ef…`) and libraries 0.4.1 from Maven Central, in an isolated home and store (relay :8478, editor :8497, `adb reverse tcp:8478`): `keliver-init` → `keliver-new-device-target.sh` → `keliver-new-publish-target.sh` → `keliver-portal` → publish v1 → `keliver-new-production-host.sh --bundle-server http://localhost:8478` → `assembleDebug` → install. The host logged `updates live` and listened to `/bundles/events`; the relay counted 1 device listening. With the screen open, a title edit was published as v2: the host applied it ≈ 1.1 s after the event, in the same process (same pid, no restart), raised its floor 1 → 2, and the screen showed the new title. Home: "stopped listening"; the relay counted 0 listeners 22 s later. Reopened: listening again. Seen and not yet explained: "stopped listening" logged twice in the same millisecond (a follow-up below). Screenshots kept off-repository. The iPhone run waits on the owner (Xcode has no Apple ID signed in). | this row |
 
 ## Next action
+
+**2026-10-27 (evening).** Live updates on a physical Android phone are
+checked (row above: a Galaxy A12, from the published tools 0.3.13 and libraries
+0.4.1). The iPhone run waits on the owner (Xcode needs an Apple ID). Next: the
+small follow-ups from the reviews and the device run (the relay preamble's
+order, per-listener locking on `/doc-events`, the doubled "stopped listening"
+log line, an LV4 re-listen check, an attempt counter on `Unavailable`, the iOS
+template's lifecycle dependency, U39), then the rest of the host
+kit's K1 on Android, K2 on iOS and the K4 device proof, then tools 0.3.14. The
+entry below is kept as written.
 
 **2026-10-27 (afternoon).** The reference app is on the published 0.3.13
 (#154; its runs were the public-download check), iOS live updates (#150), the
