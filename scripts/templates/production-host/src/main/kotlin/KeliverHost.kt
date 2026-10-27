@@ -199,9 +199,11 @@ class KeliverConfig(
   val reportUrl: String? = null,
   /** W8: the NEXT signing key's public half, trusted too while a rotation is under way (docs/KEY_ROTATION.md). */
   val nextPublicKeyHex: String? = null,
+  /** What guests' HostHttp requests may reach (K1); null allows every path under [apiBaseUrl]. */
+  val requestPolicy: RequestPolicy? = null,
 ) {
   companion object {
-    fun fromBuild(context: Context): KeliverConfig = KeliverConfig(
+    fun fromBuild(context: Context, requestPolicy: RequestPolicy? = null): KeliverConfig = KeliverConfig(
       bundleServer = debugBundleServer(context) ?: BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
       channel = BuildConfig.KELIVER_CHANNEL,
@@ -213,6 +215,7 @@ class KeliverConfig(
       },
       reportUrl = BuildConfig.KELIVER_REPORT_URL.takeIf { it.isNotBlank() },
       nextPublicKeyHex = BuildConfig.KELIVER_NEXT_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
+      requestPolicy = requestPolicy,
     )
   }
 }
@@ -748,7 +751,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         zipline.bind<HostSqlDriver>("HostSqlDriver", sqlHost)
-        if (apiBase != null) zipline.bind<HostHttpProvider>("HostHttp", OkHttpHostHttp(okhttp, apiBase))
+        if (apiBase != null) zipline.bind<HostHttpProvider>("HostHttp", OkHttpHostHttp(okhttp, apiBase, config.requestPolicy))
         KeliverTiming.bindServices(zipline) // KeliverTrace, in debug and benchmark builds only (M0)
       }
 
