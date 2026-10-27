@@ -127,9 +127,9 @@ run alongside item 2.
    **Status 2026-10-27.**
    - **Released in tools 0.3.12:** the generic editor carries no sample app's
      adapters (2150b4fa6).
-   - **Merged, not released** (on `main` after tools 0.3.12):
+   - **Released in tools 0.3.13** (merged after tools 0.3.12):
      - the generic editor carries no sample app's personas or flows either,
-       and Publish confirms once (47f9b3b9b);
+       and Publish asks before it runs, and runs once at a time (47f9b3b9b);
      - text and number edits are written once, on Enter or blur (#140), so an
        undo steps back a whole edit;
      - the compiled-version stamp never goes back after a relay restart
@@ -422,8 +422,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    open row; owner's request 2026-10-26). The relay announces each stored
    bundle on `GET /bundles/events`; a debug host listens while a screen is on
    show and runs its ordinary, verified update check. Android first, then iOS.
-   **Status 2026-10-27:** Android merged (#145, CI LV1–LV3 green); iOS in draft
-   PR #150.
+   **Status 2026-10-27:** Android released in tools 0.3.13 (#145); iOS merged
+   (#150, simulator LV1–LV3 green), for the next tools release.
 3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
    into the tools bundle, not the app** (found by the 2026-10-27 audit): run
    from the zip's `bin/`, they resolve the app as the script's parent. Every
@@ -442,6 +442,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
 7. **Brownfield host kit** (adoption item 3): the glue each embed needed (a
    fallback hook, a status API, user-safe states, a request allow-list hook).
    The proof's serious defects were all in that glue.
+   **Status 2026-10-27:** K1 part 1 merged (#155: Android status, fallback
+   hook, release text policy); the rest of K1, K2–K4 open (ADOPTION_PLAN item 3).
 8. **Bridge generator / HostHttp through the app's client** (adoption item 4).
 9. **Start-up** (adoption item 2, M3: start the code load at host start), then
    M4 (guest frame profile) and M5 (iOS memory).

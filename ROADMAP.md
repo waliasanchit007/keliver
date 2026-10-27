@@ -33,7 +33,7 @@ In order (details and evidence in `docs/ROADMAP.md`):
 1. ~~**Tools 0.3.13**~~ and ~~**libraries 0.4.1**~~: released 2026-10-27
    (the editor you work in, a debug Android host that picks up a publish while
    the app is open, adopter-route fixes; per-app editors on 0.4.1).
-2. **Live updates on iOS**: in review (#150).
+2. **Live updates on iOS**: merged (#150), in the next tools release.
 3. **A host kit for existing apps**: the glue every embed had to write (a
    fallback to the screen being replaced, a status API, user-safe states, a
    request allow-list).

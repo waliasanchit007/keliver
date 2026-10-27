@@ -44,7 +44,9 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | where | reaches users through |
 |---|---|---|
-| nothing as of 2026-10-27: tools 0.3.13 and libraries 0.4.1 carry everything merged before them. In review: iOS live updates (#150), the host kit's status and fallback (Android). | | |
+| live device updates on the **iOS** host: a debug build listens to `/bundles/events` while a screen is on show (its lifecycle STARTED); a publish is applied in the open app (simulator CI: LV1–LV3, `ios.sh` 167/0); the relay's stream starts with a 2 KiB comment | #150 (`scripts/templates/ios-host`, `portal-relay`) | the next tools release |
+| host kit, part 1 (Android): `KeliverHostState` `Loading` / `Unavailable(outcome, reason, …)` / `Running`, `onUnavailable` on `KeliverScreen` and `KeliverView`, no developer text unless a debug build of a debuggable app | #155 (`scripts/templates/production-host`) | the next tools release |
+| the editor E2E's K1 opens with Enter when a double-click only selects (KNOWN_BUGS U39, open) | #153 (tests only) | — |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
@@ -75,7 +77,7 @@ editor the browser can keep running the bundled one); and the adopter-route
 gaps in `REFERENCE_APP.md`. (U30 was fixed with W8, released in tools 0.3.9.) Since tools 0.3.6 the production host and signed publishing
 are scaffolded (`keliver-new-production-host.sh`, `keliver-new-publish-target.sh`),
 and the relay refuses unsigned bundles. The reference app's CI builds
-from the published tools 0.3.12 zip (#139); on pull requests it scaffolds from
+from the published tools 0.3.13 zip (#154); on pull requests it scaffolds from
 this repository's scripts instead, so template changes are what it tests.
 Priorities: `ROADMAP.md` "Current priorities".
 

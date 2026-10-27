@@ -50,7 +50,8 @@ release build never listens, and `live` in a release build means
 - The editor's top bar says how many phones are listening
   ("On devices: v7 · <time> · 1 phone live").
 - iOS hosts from this release stay on-resume in a debug build; live updates
-  for the iOS host are in review (#150).
+  for the iOS host merged after this release (#150) and ship in the next tools
+  release.
 
 The reference app's CI drives this on an emulator (LV1–LV3): a static server
 falls back to on-resume; a publish while the app is open is applied in the
