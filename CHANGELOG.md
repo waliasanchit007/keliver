@@ -38,6 +38,10 @@ Candidate check (local, signing off, `-Dmaven.repo.local` to a scratch repositor
   dropdowns generated from the schemas), `isColorParamName`.
 - **keliver-material-composeui**: `SelectionRegistry` gains `hitTest`,
   `rectsOf`, `remove` and `report` (the editor's selection and hover boxes).
+  `applyKeliverVisuals` reports a `SelectionTag` through a modifier node that
+  withdraws its rect when it leaves the composition. Only the editor injects
+  `SelectionTag` into its preview tree; a device's tree never carries it, so a
+  device draws as before.
 - Not on Maven, shipped by tools 0.3.13: the relay's `/history` (cross-document
   undo order), byte-exact undo of write-back and `GET /bundles/events`; new
   screen files written compactly; the production-host templates' live updates
