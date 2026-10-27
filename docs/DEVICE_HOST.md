@@ -242,9 +242,11 @@ that opens.
 - **Fields:** `installId`, `channel`, `hostVersion`, `sequence`, `source`
   (`network` or `cache`), `outcome`, `reason` and `platform`.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
-  `not-loaded`, `no-bundle` or `refused`.
+  `not-loaded`, `no-bundle`, `refused`, or (Android) `screen-failed`: the
+  code threw while a screen showed it, one record per screen on show.
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
-  `lookup-failed`, `network`, `config` or `other`.
+  `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
+  `other`.
 
 Where the records go:
 - **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
@@ -549,7 +551,10 @@ for byte):
   screen with what it replaced (your web page or native screen, with the route
   you were showing): it is called on the main thread each time a screen is
   composed in an `Unavailable` state, so finish or pop the Keliver screen
-  there rather than stacking the fallback over it. After "no bundle", a
+  there rather than stacking the fallback over it. It is also called with
+  outcome `screen-failed` when the screen's code throws while it shows (only
+  that screen hears it; `state` stays `Running`, and if you keep the screen,
+  the next code load replaces the failure, as an update does). After "no bundle", a
   screen composed later looks up again (`Loading` meanwhile). **`loading`**
   and **`unavailable`** draw those states; the defaults show the host's own
   text only in a debug build of a debuggable app (`showsDeveloperText`) and
@@ -573,6 +578,17 @@ for byte):
   the floor and the install id) with `dataExtractionRules` and
   `fullBackupContent`, or a restored device starts with another device's floor
   and rollout bucket.
+- **Debug-only surfaces** (audited for K1): the bundle server set on the
+  device (`files/keliver/bundle-server`), the check-now broadcast, the
+  host's own text on screen, and live updates. Each needs both this module's
+  debug variant (`BuildConfig.DEBUG`) and a debuggable app, so a release build
+  of your app, or a debuggable build that uses the module's release variant,
+  has none of them. The check-now receiver is registered at run time, never in
+  the manifest, and only a sender holding `android.permission.DUMP` (adb's
+  shell, not an app) reaches it. A release build never runs live updates
+  (`keliver.updates=live` becomes `on-resume`). The self-test's `--build`
+  checks a release APK: `DEBUG` false, not debuggable, and nothing exported
+  but the launcher activity unless a permission guards it.
 - **R8**: the module's consumer rules keep Zipline's bridged services, which
   are called by name. A minified release of the reference app loads and
   renders (X7 below).

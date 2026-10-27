@@ -330,8 +330,11 @@ sealed interface KeliverHostState {
   /**
    * The host cannot show a screen. [outcome] is the report's (W6): `no-bundle`
    * (the lookup failed and nothing is cached; the next screen to open looks
-   * again), `refused` (the build's key or bundle server is unusable) or
-   * `not-loaded` (the bundle did not load, and no last good one did either).
+   * again), `refused` (the build's key or bundle server is unusable),
+   * `not-loaded` (the bundle did not load, and no last good one did either),
+   * or `screen-failed` (the screen's code threw while it showed; only that
+   * screen's `onUnavailable` hears it, and [KeliverHost.state] stays
+   * [Running]: the next code load replaces the failed code).
    * [reason] is the report's fixed category. [title] and [message] say what
    * happened for a developer: they can name addresses and paths, so a release
    * build's [KeliverScreen] does not show them. [attempt] numbers the host's
@@ -398,6 +401,21 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private fun unavailable(outcome: String, title: String, message: String, detail: String) {
     mutableState.value = KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message, unavailableAttempts.incrementAndGet())
     report(outcome, detail = detail)
+  }
+
+  /**
+   * K1's `screen-failed`: a screen's code threw while it showed. Reported (W6), and returned as
+   * that screen's state for its `onUnavailable`; [state] stays [KeliverHostState.Running], since
+   * the next code load (an update) replaces the failed code. Main thread.
+   */
+  internal fun screenFailed(exception: Throwable): KeliverHostState.Unavailable {
+    val detail = exception.message ?: exception::class.simpleName ?: "unknown error"
+    val running = mutableBundle.value
+    report("screen-failed", running?.sequence, running?.let { if (it.fromCache) "cache" else "network" }, detail)
+    return KeliverHostState.Unavailable(
+      "screen-failed", reportReason("screen-failed", detail), "This screen stopped", detail.take(300),
+      unavailableAttempts.incrementAndGet(),
+    )
   }
 
   /**

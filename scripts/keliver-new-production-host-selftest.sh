@@ -182,6 +182,37 @@ grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Una
   && grep -q 'var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)' "$S" \
   && ok "host kit: state is Loading, Unavailable(outcome, reason, …) or Running; KeliverScreen/KeliverView call onUnavailable; a release build shows no host text" \
   || bad "host kit: the typed state, the onUnavailable hook or the release text policy is not wired"
+# Host kit K1, screen-failed: code that throws while a screen shows it is reported, and that
+# screen draws its unavailable slot and calls its onUnavailable (Treehouse's crashed widget).
+grep -q 'dynamicContentWidgetFactory = failureWidgets' "${M%/*}/KeliverScreen.kt" \
+  && grep -q 'if (failed == null) failed = host.screenFailed(uncaughtException)' "${M%/*}/KeliverScreen.kt" \
+  && grep -q 'report("screen-failed", running?.sequence' "$M" && grep -q 'outcome == "screen-failed" -> "exception"' "${M%/*}/BundleIndex.kt" \
+  && ok "host kit: a screen whose code throws reports screen-failed, calls onUnavailable and draws its unavailable slot" \
+  || bad "host kit: screen-failed is not wired"
+# Host kit K1, debug-only surfaces: the bundle server set on the device, the check-now receiver,
+# the host's developer text and live updates each need this module's DEBUG AND a debuggable app;
+# the receiver also needs DUMP (adb's shell has it; apps do not). The manifest declares no receiver.
+cat > "$DISP/debug-gates.py" <<'PY'
+import re, sys
+src = open(sys.argv[1]).read()
+need = {
+  'debugBundleServer': r'private fun debugBundleServer\(context: Context\): String\? \{(.*?)\n\}',
+  'registerDebugCheckForUpdate': r'private fun registerDebugCheckForUpdate\(\) \{(.*?)\n  \}',
+  'showsDeveloperText': r'val showsDeveloperText: Boolean(.*?)\n\n',
+  'liveUpdatesAllowed': r'private fun liveUpdatesAllowed\(\): Boolean =(.*?)\n\n',
+}
+missing = []
+for name, rx in need.items():
+    m = re.search(rx, src, re.S)
+    body = m.group(1) if m else ''
+    if 'BuildConfig.DEBUG' not in body or 'FLAG_DEBUGGABLE' not in body: missing.append(name)
+print(' '.join(missing))
+PY
+dbg_gates="$(python3 "$DISP/debug-gates.py" "$M")"
+[ -z "$dbg_gates" ] && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$M" \
+  && ! grep -q '<receiver' "$H/src/main/AndroidManifest.xml" && grep -q "def updatesOutsideDebug = updates == 'live' ? 'on-resume' : updates" "$H/build.gradle" \
+  && ok "debug surfaces: each needs DEBUG and a debuggable app; the receiver also needs DUMP; release never runs live" \
+  || bad "debug surfaces: not gated on both: ${dbg_gates:-the receiver permission, the manifest or the release updates mode}"
 # M0: timing marks in the debug and benchmark build types only; a no-op elsewhere.
 P="${M%/*}"; P="${P#$H/src/main/kotlin/}"
 grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
@@ -286,6 +317,48 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease > "$DISP/assemble-release.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \
       && ok "a release build with an http:// server fails" || bad "release with http server: rc=$rc"
+    # Debug-only surfaces (K1's audit): a release build with https servers, keliver.updates=live
+    # asked for, is not debuggable, has DEBUG false and no live updates, and exports nothing but
+    # its launcher activity unless a permission guards it (AndroidX's profile installer: DUMP).
+    ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease \
+        -Pkeliver.bundleServer=https://bundles.example.com -Pkeliver.updates=live > "$DISP/assemble-release-https.log" 2>&1 ); rc=$?
+    rel_apk="$(find "$H/build/outputs/apk/release" -name '*.apk' 2>/dev/null | head -1)"
+    aapt2="$(ls -d "$SDK"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)"
+    if [ "$rc" = 0 ] && [ -n "$rel_apk" ] && [ -n "$aapt2" ]; then
+      find "$H/build/generated/source/buildConfig/release" -name BuildConfig.java -exec cat {} + > "$DISP/release-buildconfig.txt"
+      grep -q 'boolean DEBUG = false' "$DISP/release-buildconfig.txt" && grep -q 'KELIVER_UPDATES = "on-resume"' "$DISP/release-buildconfig.txt" \
+        && ok "debug surfaces: a release build has DEBUG false, and keliver.updates=live becomes on-resume there" \
+        || bad "debug surfaces: the release BuildConfig: $(grep -E 'DEBUG|KELIVER_UPDATES' "$DISP/release-buildconfig.txt" | tr '\n' ' ')"
+      "$aapt2" dump xmltree --file AndroidManifest.xml "$rel_apk" > "$DISP/release-manifest.txt" 2>&1
+      cat > "$DISP/manifest-exposed.py" <<'PY'
+import re, sys
+# The aapt2 tree: an element line "E: name (line=N)", its attributes "A: …" below it, indented deeper.
+lines = open(sys.argv[1]).read().splitlines()
+problems, i = [], 0
+def indent(l): return len(l) - len(l.lstrip())
+for i, l in enumerate(lines):
+    s = l.strip()
+    if 'debuggable' in s and s.endswith('=true'): problems.append('the application is debuggable')
+    m = re.match(r'E: (activity|activity-alias|receiver|service|provider) ', s)
+    if not m: continue
+    body, j = [], i + 1
+    while j < len(lines) and indent(lines[j]) > indent(l):
+        body.append(lines[j].strip()); j += 1
+    own = [b for b in body if b.startswith('A: ') and indent(lines[i + 1 + body.index(b)]) == indent(l) + 2]
+    exported = any(':exported(' in a and a.endswith('=true') for a in own)
+    guarded = any(':permission(' in a for a in own)
+    launcher = any('android.intent.category.LAUNCHER' in b for b in body)
+    if exported and not guarded and not (m.group(1) == 'activity' and launcher):
+        name = next((a for a in own if ':name(' in a), '?')
+        problems.append(f'{m.group(1)} {name} is exported without a permission')
+print('; '.join(problems))
+PY
+      exposed="$(python3 "$DISP/manifest-exposed.py" "$DISP/release-manifest.txt")"
+      [ -z "$exposed" ] && ok "debug surfaces: a release build is not debuggable and exports only its launcher, or what a permission guards" \
+        || bad "debug surfaces: $exposed"
+    else
+      bad "debug surfaces: no release build to check (rc=$rc, apk '${rel_apk}', aapt2 '${aapt2}')"
+    fi
     # A key that is not a key fails the BUILD.
     printf 'garbage\n' > "$H/src/main/assets/keliver/portal_ed25519.pub"
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug > "$DISP/assemble-badkey.log" 2>&1 ); rc=$?
