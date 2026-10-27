@@ -20,7 +20,8 @@ import androidx.browser.customtabs.CustomTabsIntent
  *   resolves to this app (its own deep links included), or carries a `file:`,
  *   `content:`, `http:`, `javascript:`, `data:` or `intent:` URI. Otherwise it
  *   reaches any app with a BROWSABLE activity for it, custom schemes included;
- *   one whose data is an https page opens in the browser tab instead. When
+ *   one whose data is an https page opens in the browser tab instead, even
+ *   when it names another app's package. When
  *   nothing can handle it, its `S.browser_fallback_url` is opened if it
  *   is https;
  * - everything else (`http:`, `javascript:`, `file:`, `content:`, custom
@@ -63,10 +64,10 @@ object ExternalLinkPolicy {
     if (context !is android.app.Activity) tab.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     tab.launchUrl(context, Uri.parse(url))
     true
-  } catch (e: ActivityNotFoundException) {
-    false.also { Log.w(TAG, "link not opened: no browser (${e.message})") }
+  } catch (_: ActivityNotFoundException) {
+    false.also { Log.w(TAG, "link not opened: no browser") }
   } catch (e: SecurityException) {
-    false.also { Log.w(TAG, "link not opened: ${e.message}") }
+    false.also { Log.w(TAG, "link not opened: ${detail(e)}") }
   }
 
   /**
@@ -111,9 +112,12 @@ object ExternalLinkPolicy {
       if (fallbackAllowed(fallback)) inAppBrowser(context, fallback!!)
       else false.also { Log.w(TAG, "link not opened: nothing handles it, and no https fallback") }
     } catch (e: SecurityException) { // the activity that matched needs a permission this app lacks
-      false.also { Log.w(TAG, "link not opened: ${e.message}") }
+      false.also { Log.w(TAG, "link not opened: ${detail(e)}") }
     }
   }
+
+  /** An exception's message names the whole link: logged only in a debug build. */
+  private fun detail(e: Exception): String = if (BuildConfig.DEBUG) e.message.orEmpty() else "an activity needs a permission"
 
   private fun httpsHost(url: String): String? =
     runCatching { java.net.URI(url).host }.getOrNull()?.takeIf { it.isNotEmpty() }
