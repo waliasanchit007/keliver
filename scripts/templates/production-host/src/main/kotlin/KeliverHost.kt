@@ -412,21 +412,28 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * [onClose] (called on the main thread); without a route, or for a guest from before K1
    * (Zipline says it has no such function), `launch()` as before.
    */
-  internal fun launch(app: PortalPresenter, route: KeliverRoute?, onClose: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
-    if (route == null || app === noRouteApp) return app.launch()
+  internal fun launch(
+    app: PortalPresenter,
+    treehouseApp: TreehouseApp<PortalPresenter>,
+    route: KeliverRoute?,
+    onClose: () -> Unit,
+  ): dev.keliver.treehouse.ZiplineTreehouseUi {
+    val code = treehouseApp.zipline.value
+    if (route == null || (code != null && code === noRouteCode)) return app.launch()
     return try {
       app.launchRoute(route.encode(), ScreenHost(onClose))
     } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
-      // This loaded code is not asked again (each try leaves its ScreenHost bound); new code is a
-      // new PortalPresenter, so nothing needs clearing when it loads.
-      noRouteApp = app
+      // This loaded code is not asked again (each try leaves its ScreenHost bound). Keyed on its
+      // Zipline: each screen gets its own scoped proxy of the presenter, and new code is a new
+      // Zipline, so nothing needs clearing when it loads.
+      noRouteCode = code
       Log.w(TAG, "this bundle's guest takes no route (scaffolded before the host kit): showing its default screen")
       app.launch()
     }
   }
 
-  /** The loaded code whose guest has no launchRoute (Zipline said so), if any. */
-  @Volatile private var noRouteApp: PortalPresenter? = null
+  /** The loaded code (its Zipline) whose guest has no launchRoute, if any. */
+  @Volatile private var noRouteCode: app.cash.zipline.Zipline? = null
 
   private inner class ScreenHost(private val onClose: () -> Unit) : dev.keliver.hostkit.KeliverScreenHost {
     // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread.

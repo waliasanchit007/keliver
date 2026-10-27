@@ -197,7 +197,7 @@ S="${M%/*}/KeliverScreen.kt"
 grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "${M%/*}/GuestContract.kt" \
   && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "${M%/*}/GuestContract.kt" \
   && grep -q '^package dev.keliver.hostkit$' "${M%/*}/KeliverScreenHost.kt" \
-  && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" && grep -q 'noRouteApp = app' "$M" \
+  && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" && grep -q 'noRouteCode = code' "$M" \
   && grep -q 'val contentSource = remember(route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
   && grep -q 'onClose ?: { activity?.finish() }' "$S" && grep -q 'if (active.get()) latestOnClose()' "$S" \
   && grep -q 'override fun onNewIntent(intent: Intent)' "$H/src/main/kotlin/com/example/demo/host/MainActivity.kt" \
@@ -268,7 +268,7 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/d
   && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
   && ! grep -q 'KeliverTrace' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
   && grep -q "def timingBuildTypes = \['debug', 'benchmark'\]" "$H/build.gradle" && grep -q 'profileable true' "$H/build.gradle" \
-  && grep -q 'KeliverTiming.firstFrame(host.launch(app, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
+  && grep -q 'KeliverTiming.firstFrame(host.launch(app, s.app, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
   && ok "M0: timing marks in debug and benchmark (src/timing), a no-op elsewhere (src/notiming); a benchmark build type" \
   || bad "M0: the timing marks or the benchmark build type are not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.

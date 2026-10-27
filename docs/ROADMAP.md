@@ -445,8 +445,11 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
 7. **Brownfield host kit** (adoption item 3): the glue each embed needed (a
    fallback hook, a status API, user-safe states, a request allow-list hook).
    The proof's serious defects were all in that glue.
-   **Status 2026-10-27:** K1 part 1 merged (#155: Android status, fallback
-   hook, release text policy); the rest of K1, K2–K4 open (ADOPTION_PLAN item 3).
+   **Status 2026-10-28:** K1 on Android: status, fallback hook, release text
+   (#155, #158), `RequestPolicy` and `ExternalLinkPolicy` (#159) merged;
+   `screen-failed`, the debug-surface audit, routes and close in review. K2 on
+   iOS: status, `onUnavailable`, release text merged (#160); `RequestPolicy`,
+   routes and close next. K3, K4 open (ADOPTION_PLAN item 3).
 8. **Bridge generator / HostHttp through the app's client** (adoption item 4).
 9. **Start-up** (adoption item 2, M3: start the code load at host start), then
    M4 (guest frame profile) and M5 (iOS memory).
