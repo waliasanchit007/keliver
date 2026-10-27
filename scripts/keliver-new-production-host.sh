@@ -53,7 +53,7 @@
 # host-android/build.gradle before the APK will install.
 #
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
-# app's appRuntime.keliverVersion, else 0.4.0), KELIVER_HOST_ZIPLINE_VERSION,
+# app's appRuntime.keliverVersion, else 0.4.1), KELIVER_HOST_ZIPLINE_VERSION,
 # KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION, KELIVER_HOST_AGP_VERSION.
 #
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
@@ -155,8 +155,8 @@ PACKAGE="$ROOT_PKG.host"
 KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
 try:
     v = json.load(open(sys.argv[1]))['appRuntime']['keliverVersion']
-    print(v if isinstance(v, str) and v.strip() else '0.4.0')
-except Exception: print('0.4.0')" "$APP/keliver.portal.json")}"
+    print(v if isinstance(v, str) and v.strip() else '0.4.1')
+except Exception: print('0.4.1')" "$APP/keliver.portal.json")}"
 [[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$'
