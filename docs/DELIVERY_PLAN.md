@@ -902,6 +902,7 @@ their required checks pass (Standing constraints, below).
 | `keliver-portal` ports, PR #148 | **merged 2026-10-27** (`b84b79291`) at `69c5d6358`, reviewed three times: the editor on `editorPort` (default port + 19), `?relay=` in the printed URL and added by the editor's server to a URL without it, ports validated (and `stop` working with a broken config), C5 on the right port, `allowedOrigins` documented. | PR #148 |
 | relay `/doc-events` fd leak, PR #149 | **merged 2026-10-27** (`a4e31b6e4`) at `a02d5d874`: a dropped listener's exchange is closed. Relay 393/0. Not done: per-listener write locking (pre-existing interleave risk). | PR #149 |
 | libraries 0.4.1 | **in preparation 2026-10-27**: the editor libraries (#140, #141, #145's chip), additive API only. Local candidate at `418bc6898`: `publishToMavenLocal -PkeliverVersion=0.4.1` 389 poms (378 artifacts + 11 plugin markers, the 0.4.0 set), `apiCheck` passes. Owner's 2026-10-27 prompt: publish when warranted. | this PR |
+| reference app on the published tools 0.3.13 | **#154**: bootstrap, `ios.sh` and both workflows pin the 0.3.13 zip `5d1dd0ef…` (source `a5ab6e2b2`). The app stays on libraries 0.3.3 (`KELIVER_VERSION` from its `keliver.portal.json`), although 0.3.13 scaffolds 0.4.1. Each run's first step downloads the PUBLIC asset on a GitHub-hosted runner and checks it against the release's `.sha256` and the pinned hash: the public-URL check of 0.3.13, which the releasing machine's network blocked. | PR #154 |
 
 ## Next action
 

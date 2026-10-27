@@ -1,7 +1,7 @@
 # Inventory — the reference app
 
 A small stock-keeping app built from what an adopter gets: the published
-[`keliver-portal-tools` 0.3.12](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.12)
+[`keliver-portal-tools` 0.3.13](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.13)
 release and the `dev.keliver:*:0.3.3` libraries on Maven Central. The app itself
 is never compiled against this checkout. Neither of its routes uses anything
 else: development, and production. Production means signed publishing plus
@@ -40,7 +40,7 @@ Needs JDK 17+, python3, curl, git — the adopter guide's prerequisites.
 reference/inventory/bootstrap.sh /some/empty/dir
 ```
 
-That downloads the public 0.3.12 zip, checks it against the release's `.sha256`
+That downloads the public 0.3.13 zip, checks it against the release's `.sha256`
 **and** the hash pinned in the script, runs `keliver-init`, copies in `app/`'s
 screens and logic, runs `keliver-new-device-target.sh` and `keliver-new-editor.sh`,
 and then overlays the files the scaffolders cannot write. What it overlays is
@@ -50,7 +50,7 @@ skip the download; it must have the same hash.
 Then, from `/some/empty/dir/inventory`:
 
 ```bash
-export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.12/bin
+export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.13/bin
 ./gradlew compileKotlinJs                 # type-check against Maven Central 0.3.3
 $KP/keliver-new-publish-target.sh         # publishing + signing
 $KP/keliver-portal .                      # relay + editor; builds editor/ first (minutes)
@@ -98,7 +98,7 @@ Each of these was hit building this app; see
 * **Production needed the Keliver repository — fixed in tools 0.3.6/0.3.7.**
   The 0.3.5 bundle's `host/README.md` said to copy `sample/host-android`, which
   renders the sample's own widget schema, not keliver-material. CI now pins the
-  published 0.3.12 zip (`bootstrap.sh`, `.github/workflows/reference-app.yml`,
+  published 0.3.13 zip (`bootstrap.sh`, `.github/workflows/reference-app.yml`,
   `ci/ios.sh`), runs its `bin/keliver-new-production-host.sh` (Android) and
   `bin/keliver-new-ios-host.sh` (iOS) in the app, and builds both hosts from
   Maven Central. (A pull-request run of `reference-app.yml` uses this
