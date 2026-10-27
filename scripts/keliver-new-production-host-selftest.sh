@@ -181,6 +181,24 @@ grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Una
   && grep -q 'var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)' "$S" \
   && ok "host kit: state is Loading, Unavailable(outcome, reason, …) or Running; KeliverScreen/KeliverView call onUnavailable; a release build shows no host text" \
   || bad "host kit: the typed state, the onUnavailable hook or the release text policy is not wired"
+# Host kit K1: RequestPolicy (one origin, exact (method, path) pairs, a switch for state-changing
+# calls), checked in OkHttpHostHttp before anything is sent; its JVM tests come with the host.
+grep -q 'class RequestPolicy(' "${M%/*}/RequestPolicy.kt" && grep -q '(baseRefusal ?: policy.refusal(method, request.path))' "${M%/*}/OkHttpHostHttp.kt" \
+  && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "${M%/*}/OkHttpHostHttp.kt" \
+  && grep -q 'OkHttpHostHttp(okhttp, apiBase, config.requestPolicy)' "$M" && grep -q 'val requestPolicy: RequestPolicy? = null' "$M" \
+  && [ -f "$H/src/test/kotlin/com/example/demo/host/RequestPolicyTest.kt" ] \
+  && grep -q "testImplementation 'com.squareup.okhttp3:mockwebserver3:" "$H/build.gradle" \
+  && ok "host kit: HostHttp checks the app's RequestPolicy before sending; its tests are scaffolded" \
+  || bad "host kit: RequestPolicy is not wired into HostHttp, or its tests are missing"
+L="${M%/*}/ExternalLinkPolicy.kt"
+grep -q 'scheme == "https" && httpsHost(trimmed) != null -> Decision.InAppBrowser(trimmed)' "$L" \
+  && grep -q 'intent.component = null' "$L" && grep -q 'intent.selector = null' "$L" \
+  && grep -q 'intent.addCategory(Intent.CATEGORY_BROWSABLE)' "$L" && grep -q 'intent.flags = 0' "$L" \
+  && grep -q 'targetPackage == thisPackage || resolvesToThisApp -> ' "$L" && grep -q '.queryIntentActivities(intent, ' "$L" \
+  && [ -f "$H/src/test/kotlin/com/example/demo/host/ExternalLinkPolicyTest.kt" ] \
+  && grep -q "implementation 'androidx.browser:browser:" "$H/build.gradle" \
+  && ok "host kit: ExternalLinkPolicy opens https in a Custom Tab, intent: only as a browser would, nothing else" \
+  || bad "host kit: ExternalLinkPolicy is missing or not as a browser handles intent: links"
 # M0: timing marks in the debug and benchmark build types only; a no-op elsewhere.
 P="${M%/*}"; P="${P#$H/src/main/kotlin/}"
 grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
@@ -281,6 +299,9 @@ if [ "$BUILD" = 1 ]; then
     else
       bad "assembleDebug failed (rc=$rc): $(grep -E '^e: |What went wrong' -A2 "$DISP/assemble.log" | head -6 | tr '\n' ' ')"
     fi
+    ( cd "$APP" && ./gradlew --console=plain -p host-android testDebugUnitTest > "$DISP/unit-tests.log" 2>&1 ); rc=$?
+    [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (testDebugUnitTest)" \
+      || bad "the host kit's JVM tests failed (rc=$rc): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/unit-tests.log" | head -6 | tr '\n' ' ')"
     # A release build with an http:// server is refused.
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease > "$DISP/assemble-release.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \
