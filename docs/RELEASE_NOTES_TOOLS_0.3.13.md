@@ -50,7 +50,7 @@ release build never listens, and `live` in a release build means
 - The editor's top bar says how many phones are listening
   ("On devices: v7 · <time> · 1 phone live").
 - iOS hosts from this release stay on-resume in a debug build; live updates
-  for the iOS host follow in the next release.
+  for the iOS host are in review (#150).
 
 The reference app's CI drives this on an emulator (LV1–LV3): a static server
 falls back to on-resume; a publish while the app is open is applied in the
@@ -156,7 +156,8 @@ public URL after publishing, were blocked by the releasing machine's network
 — the public download is checked from GitHub-hosted runners instead, by the
 reference app's move to 0.3.13 (#154: the first step of `reference-app.yml`
 and `ios-host.yml` checks the public zip against the release's `.sha256` and
-the pinned hash). Published 2026-10-27T06:12:08Z with `--latest=false`.
+the pinned hash). It passed in reference-app run `40460117078` (ubuntu) and
+ios-host run `40460117086` (macOS): `keliver-portal-tools-0.3.13.zip: OK`. Published 2026-10-27T06:12:08Z with `--latest=false`.
 
 Not verified for this release: a physical phone, and a browser re-run of
 U38's reproduction.
