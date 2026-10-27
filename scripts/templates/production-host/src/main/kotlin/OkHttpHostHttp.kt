@@ -22,7 +22,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * - redirects are not followed, so a response cannot send the call elsewhere;
  * - with a [RequestPolicy], only its origin and its exact `(method, path)`
  *   pairs, checked before anything is sent; a refused request fails in the
- *   guest and is logged here.
+ *   guest and is logged here (the path only in a debug build);
+ * - the method-override headers are dropped, so an allowed POST cannot be
+ *   turned into another method on servers that honour them.
  *
  * Add authentication, retries or certificate pinning here — this is your code.
  * Header values are joined with ", "; a multi-valued `Set-Cookie` does not
@@ -35,6 +37,9 @@ class OkHttpHostHttp(
 ) : HostHttpProvider {
   private val client = client.newBuilder().followRedirects(false).followSslRedirects(false).build()
 
+  /** Set when the policy cannot allow anything on [base] (a wrong origin): every request is refused. */
+  private val baseRefusal: String? = policy?.baseRefusal(base)?.also { Log.e(TAG, "HostHttp: $it; every request is refused") }
+
   override suspend fun execute(request: HttpRequest): HttpResponse = withContext(Dispatchers.IO) {
     val segments = request.path.split('/').filter { it.isNotEmpty() }
     require(segments.none { it == "." || it == ".." || '\\' in it }) {
@@ -45,9 +50,12 @@ class OkHttpHostHttp(
       request.query.forEach { (k, v) -> addQueryParameter(k, v) }
     }.build()
     val method = request.method.uppercase()
-    policy?.refusal(method, url, request.path)?.let { why ->
-      Log.w(TAG, "HostHttp refused: $why")
-      throw HostHttpRefused("HostHttp refused: $why")
+    if (policy != null) {
+      (baseRefusal ?: policy.refusal(method, request.path))?.let { why ->
+        // A path can carry ids: logged only in a debug build.
+        Log.w(TAG, "HostHttp refused: ${if (BuildConfig.DEBUG) why else "a request outside the app's RequestPolicy"}")
+        throw HostHttpRefused("HostHttp refused: $why")
+      }
     }
     val headers = request.headers.filterKeys { it.lowercase() !in DROPPED_HEADERS }
     val contentType = headers.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value
@@ -70,6 +78,7 @@ class OkHttpHostHttp(
     val DROPPED_HEADERS = setOf(
       "host", "connection", "content-length", "transfer-encoding", "keep-alive",
       "proxy-connection", "te", "trailer", "upgrade",
+      "x-http-method-override", "x-http-method", "x-method-override",
     )
   }
 }

@@ -558,8 +558,10 @@ for byte):
 - **`RequestPolicy`**: what a guest's HostHttp requests may reach, checked in
   Keliver code before anything is sent:
   `KeliverHost.create(this, KeliverConfig.fromBuild(this, RequestPolicy(origin, rules, allowStateChanging, allowCleartext)))`.
-  - `origin` (scheme, host, port) is the one place requests may go; it must be
-    `https` unless `allowCleartext`, which you set from `BuildConfig.DEBUG`;
+  - `origin` (scheme, host, port) pins the API base: if `keliver.apiBaseUrl`
+    is anywhere else, every request is refused. It must be `https` unless
+    `allowCleartext`, which you set from `BuildConfig.DEBUG` (a release
+    build's settings refuse an http API base anyway);
   - `rules` are exact `RequestPolicy.Rule(method, path)` pairs, paths relative
     to `keliver.apiBaseUrl` and compared segment by segment (no patterns: a
     path with an id in it is a different path);
@@ -567,19 +569,30 @@ for byte):
     `allowStateChanging`, a per-build switch.
 
   A refused request fails in the guest with "HostHttp refused: …" and is
-  logged; nothing reaches the network. Without a policy every path under the
-  API base is allowed, as before: an app embedding Keliver screens should set
-  one. Redirects are never followed either way.
+  logged (the path only in a debug build); nothing reaches the network.
+  Without a policy every path under the API base is allowed, as before: an
+  app embedding Keliver screens should set one. Redirects are never followed
+  and the method-override headers (`X-HTTP-Method-Override` and kin) are
+  dropped either way. **Not restricted:** the query string, and other
+  headers: a guest can set `Authorization` or `Cookie` unless your client's
+  interceptor sets them.
 - **`ExternalLinkPolicy.open(context, url)`**: call it from whatever your app
-  exposes to screens for opening a link. `https` opens in a Custom Tab;
-  `intent:` is handled as a browser handles it (no component or selector,
-  BROWSABLE activities only, no URI permission grants, never this app, no
-  `file:`/`content:` data; an https `browser_fallback_url` when nothing
-  handles it); everything else, `http` included, is refused and logged.
+  exposes to screens for opening a link. `https` opens in a Custom Tab, on any
+  host. `intent:` is handled as a browser handles it, and stricter: a VIEW
+  only, no component or selector, BROWSABLE activities only, none of the
+  link's flags (no URI grants, no task games), never this app (named, or one
+  of its own deep links), and no `file:`, `content:`, `http:`, `javascript:`,
+  `data:` or `intent:` data; an https `browser_fallback_url` when nothing
+  handles it. Otherwise it reaches any app with a BROWSABLE activity for it,
+  custom schemes included. Everything else, `http` included, is refused and
+  logged.
 - **Tests**: the standalone host carries the kit's JVM tests
   (`./gradlew -p host-android testDebugUnitTest`): the policy against a local
   server (allowed, not listed, wrong method, state-changing without the
-  switch, another origin, cleartext, a redirect) and the link decisions.
+  switch, a policy for another origin, cleartext, a redirect, encoded `/` and
+  `?`, dot segments, method case, method-override headers) and the link rules
+  (schemes, and a parsed `intent:` link's action, target and data). Applying
+  those rules to a real `Intent` needs a device.
 - **Settings**: `keliver.properties` in the module (a subproject's
   `gradle.properties` is not read), each overridable with `-Pkeliver.<name>`.
   The host version that `minHostVersion`/`maxHostVersion` gates compare with is

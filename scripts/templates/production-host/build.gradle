@@ -109,6 +109,7 @@ android {
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
   // The host kit's JVM tests (src/test) call code that logs: android.util.Log is a no-op there.
+  // Every other android.* call returns a default (null, 0) too, so keep such calls out of them.
   testOptions { unitTests.returnDefaultValues = true }
 }
 kotlin { jvmToolchain(17) }

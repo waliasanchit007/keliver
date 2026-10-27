@@ -183,7 +183,8 @@ grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Una
   || bad "host kit: the typed state, the onUnavailable hook or the release text policy is not wired"
 # Host kit K1: RequestPolicy (one origin, exact (method, path) pairs, a switch for state-changing
 # calls), checked in OkHttpHostHttp before anything is sent; its JVM tests come with the host.
-grep -q 'class RequestPolicy(' "${M%/*}/RequestPolicy.kt" && grep -q 'policy?.refusal(method, url, request.path)' "${M%/*}/OkHttpHostHttp.kt" \
+grep -q 'class RequestPolicy(' "${M%/*}/RequestPolicy.kt" && grep -q '(baseRefusal ?: policy.refusal(method, request.path))' "${M%/*}/OkHttpHostHttp.kt" \
+  && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "${M%/*}/OkHttpHostHttp.kt" \
   && grep -q 'OkHttpHostHttp(okhttp, apiBase, config.requestPolicy)' "$M" && grep -q 'val requestPolicy: RequestPolicy? = null' "$M" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/RequestPolicyTest.kt" ] \
   && grep -q "testImplementation 'com.squareup.okhttp3:mockwebserver3:" "$H/build.gradle" \
@@ -192,8 +193,8 @@ grep -q 'class RequestPolicy(' "${M%/*}/RequestPolicy.kt" && grep -q 'policy?.re
 L="${M%/*}/ExternalLinkPolicy.kt"
 grep -q 'scheme == "https" && httpsHost(trimmed) != null -> Decision.InAppBrowser(trimmed)' "$L" \
   && grep -q 'intent.component = null' "$L" && grep -q 'intent.selector = null' "$L" \
-  && grep -q 'intent.addCategory(Intent.CATEGORY_BROWSABLE)' "$L" && grep -q 'intent.flags = intent.flags and URI_GRANT_FLAGS.inv()' "$L" \
-  && grep -q 'intent.`package` == context.packageName' "$L" \
+  && grep -q 'intent.addCategory(Intent.CATEGORY_BROWSABLE)' "$L" && grep -q 'intent.flags = 0' "$L" \
+  && grep -q 'targetPackage == thisPackage || resolvesToThisApp -> ' "$L" && grep -q '.queryIntentActivities(intent, ' "$L" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/ExternalLinkPolicyTest.kt" ] \
   && grep -q "implementation 'androidx.browser:browser:" "$H/build.gradle" \
   && ok "host kit: ExternalLinkPolicy opens https in a Custom Tab, intent: only as a browser would, nothing else" \

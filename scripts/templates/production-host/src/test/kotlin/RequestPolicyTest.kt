@@ -69,11 +69,53 @@ class RequestPolicyTest {
     assertEquals(201, ok.status)
   }
 
-  @Test fun anotherOriginIsRefused() {
+  @Test fun aPolicyForAnotherOriginThanTheApiBaseRefusesEverything() {
     val elsewhere = RequestPolicy("https://api.example.com/".toHttpUrl(), setOf(RequestPolicy.Rule("GET", "orders")))
     val why = refused { http(elsewhere).execute(HttpRequest("GET", "orders")) }
-    assertTrue(why, "is not the allowed origin https://api.example.com:443" in why)
+    assertTrue(why, "is not the policy's origin https://api.example.com:443" in why)
     assertEquals(0, server.requestCount)
+  }
+
+  @Test fun anEncodedSlashOrQuestionMarkStaysInsideOneSegment() {
+    val p = policy(RequestPolicy.Rule("GET", "orders/admin"))
+    for (path in listOf("orders%2Fadmin", "orders?x=1", "orders#admin", "orders/admin?x=1")) {
+      val why = refused { http(p).execute(HttpRequest("GET", path)) }
+      assertTrue("$path: $why", "is not in the allow-list" in why)
+    }
+    assertEquals(0, server.requestCount)
+  }
+
+  @Test fun dotSegmentsAreRefusedWithAPolicyToo() {
+    val p = policy(RequestPolicy.Rule("GET", "orders"))
+    try {
+      runBlocking { http(p).execute(HttpRequest("GET", "x/../orders")) }
+      fail("not refused")
+    } catch (e: IllegalArgumentException) {
+      assertTrue(e.message, "not a plain relative path" in e.message.orEmpty())
+    }
+    assertEquals(0, server.requestCount)
+  }
+
+  @Test fun theMethodIsComparedInAnyCaseAndHeadIsReadOnly() = runBlocking {
+    server.enqueue(MockResponse.Builder().code(200).build())
+    server.enqueue(MockResponse.Builder().code(200).build())
+    val p = policy(RequestPolicy.Rule("GET", "orders"), RequestPolicy.Rule("head", "orders"))
+    assertEquals(200, http(p).execute(HttpRequest("get", "orders")).status)
+    assertEquals(200, http(p).execute(HttpRequest("HEAD", "orders")).status)
+    assertEquals(2, server.requestCount)
+  }
+
+  @Test fun methodOverrideHeadersAreNotSent() = runBlocking {
+    server.enqueue(MockResponse.Builder().code(201).build())
+    val p = policy(RequestPolicy.Rule("POST", "orders"), stateChanging = true)
+    val headers = mapOf("X-HTTP-Method-Override" to "DELETE", "X-HTTP-Method" to "DELETE", "X-Method-Override" to "DELETE", "X-Trace" to "1")
+    http(p).execute(HttpRequest("POST", "orders", headers = headers, body = "{}"))
+    val sent = server.takeRequest(5, TimeUnit.SECONDS)!!
+    assertEquals("POST", sent.method)
+    assertNull(sent.headers["X-HTTP-Method-Override"])
+    assertNull(sent.headers["X-HTTP-Method"])
+    assertNull(sent.headers["X-Method-Override"])
+    assertEquals("1", sent.headers["X-Trace"])
   }
 
   @Test fun cleartextIsRefusedUnlessTheBuildAllowsIt() {
@@ -91,9 +133,10 @@ class RequestPolicyTest {
 
   @Test fun theRuleComparesWholeSegments() {
     val p = policy(RequestPolicy.Rule("GET", "orders"))
-    assertNull(p.refusal("GET", base().newBuilder().addPathSegment("orders").build(), "/orders/"))
-    assertNotNull(p.refusal("GET", base().newBuilder().addPathSegments("orders/1").build(), "orders/1"))
-    assertNotNull(p.refusal("GET", base().newBuilder().addPathSegment("ordersx").build(), "ordersx"))
+    assertNull(p.refusal("GET", "/orders/"))
+    assertNull(p.refusal("GET", "orders//"))
+    assertNotNull(p.refusal("GET", "orders/1"))
+    assertNotNull(p.refusal("GET", "ordersx"))
   }
 
   @Test fun withoutAPolicyEveryPathUnderTheBaseIsAllowedAsBefore() = runBlocking {
