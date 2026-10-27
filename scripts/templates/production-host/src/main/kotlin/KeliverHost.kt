@@ -413,19 +413,20 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * (Zipline says it has no such function), `launch()` as before.
    */
   internal fun launch(app: PortalPresenter, route: KeliverRoute?, onClose: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
-    if (route == null || guestTakesNoRoute) return app.launch()
+    if (route == null || app === noRouteApp) return app.launch()
     return try {
       app.launchRoute(route.encode(), ScreenHost(onClose))
     } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
-      // Not asked again until other code loads: each try leaves its ScreenHost bound.
-      guestTakesNoRoute = true
+      // This loaded code is not asked again (each try leaves its ScreenHost bound); new code is a
+      // new PortalPresenter, so nothing needs clearing when it loads.
+      noRouteApp = app
       Log.w(TAG, "this bundle's guest takes no route (scaffolded before the host kit): showing its default screen")
       app.launch()
     }
   }
 
-  /** Set when the running code has no launchRoute; cleared when code loads. */
-  @Volatile private var guestTakesNoRoute = false
+  /** The loaded code whose guest has no launchRoute (Zipline said so), if any. */
+  @Volatile private var noRouteApp: PortalPresenter? = null
 
   private inner class ScreenHost(private val onClose: () -> Unit) : dev.keliver.hostkit.KeliverScreenHost {
     // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread.
@@ -802,7 +803,6 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       eventListenerFactory = LoggingEventListenerFactory(
         onSuccess = { sequence, url ->
           crashed.value = null // new code: no longer the code that threw
-          guestTakesNoRoute = false
           KeliverTiming.mark("code")
           val first = !loaded.getAndSet(true)
           scope.launch {
