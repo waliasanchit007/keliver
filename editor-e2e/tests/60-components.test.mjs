@@ -99,11 +99,20 @@ export default [
       await editor.open('overview', { readyColor: COLORS.summaryCard });
       const screenTypes = (await editor.outline()).map((r) => r.type);
       // An older relay ignores `component=` and sends its screen: answer the component's documents that way.
+      // U39: what was intercepted, so a failure tells "the double-click only selected" (no request)
+      // from "the request was asked for and held here" (a request, and a continue that failed).
+      const intercepted = [];
       const asOlderRelay = (d) => {
         if (d.method !== 'Fetch.requestPaused') return;
         const url = d.params.request.url.replace(/component=[^&]+/, 'screen=overview');
-        page.send('Fetch.continueRequest', { requestId: d.params.requestId, url }).catch(() => {});
+        const seen = { at: Date.now(), url: d.params.request.url, continued: null };
+        intercepted.push(seen);
+        page.send('Fetch.continueRequest', { requestId: d.params.requestId, url })
+          .then(() => { seen.continued = 'ok'; }, (e) => { seen.continued = `failed: ${e?.message ?? e}`; });
       };
+      const interceptLog = () => intercepted.length
+        ? intercepted.map((r) => `${r.url.replace(/^.*\?/, '?')} continue ${r.continued ?? 'pending'}`).join('; ')
+        : 'no component request';
       page.listeners.push(asOlderRelay);
       await page.send('Fetch.enable', { patterns: [{ urlPattern: '*component=*', requestStage: 'Request' }] });
       try {
@@ -120,14 +129,14 @@ export default [
           if (!pressed && Date.now() > end - 6000) {
             if (/SummaryCard/.test((await editor.propsHeader()) ?? '')) {
               // Visible in the CI output, not only in the artifacts: this is KNOWN_BUGS U39.
-              const note = 'the double-click only selected SummaryCard; pressing Enter (KNOWN_BUGS U39)';
+              const note = `the double-click only selected SummaryCard; pressing Enter (KNOWN_BUGS U39; before Enter: ${interceptLog()})`;
               log(note); console.log(`      note: K1: ${note}`);
               await page.press('Enter'); pressed = true;
             }
           }
           await sleep(100);
         }
-        ok(/older than the editor/.test(hint ?? ''), `the editor says the relay cannot open SummaryCard (hint: ${hint}; ${pressed ? 'after Enter' : 'Enter not tried'}; selected: ${await editor.propsHeader()})`);
+        ok(/older than the editor/.test(hint ?? ''), `the editor says the relay cannot open SummaryCard (hint: ${hint}; ${pressed ? 'after Enter' : 'Enter not tried'}; selected: ${await editor.propsHeader()}; intercepted: ${interceptLog()})`);
         await waitCrumbs(page, null, 'the breadcrumb goes back to the screen');
         equal((await editor.outline()).map((r) => r.type), screenTypes, "the outline is still the screen's");
         ok(await editor.findColor(COLORS.summaryCard), 'the screen is still drawn');

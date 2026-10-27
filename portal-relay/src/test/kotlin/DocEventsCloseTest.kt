@@ -59,6 +59,25 @@ class DocEventsCloseTest {
     assertTrue(open.toString().split("data: ").size >= 4, "the open tab still hears every event: $open")
   }
 
+  @Test fun eventsToOneTabNeverInterleave() {
+    val svc = service()
+    val writing = java.util.concurrent.atomic.AtomicInteger()
+    var overlapped = false
+    val tab = object : OutputStream() {
+      override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
+      override fun write(b: ByteArray, off: Int, len: Int) {
+        if (writing.incrementAndGet() > 1) overlapped = true
+        Thread.sleep(1) // a slow socket widens the window
+        writing.decrementAndGet()
+      }
+    }
+    svc.subscribe(tab)
+    val threads = List(4) { Thread { repeat(25) { svc.announce() } } }
+    threads.forEach { it.start() }
+    threads.forEach { it.join() }
+    assertTrue(!overlapped, "two events were written to one stream at the same time")
+  }
+
   @Test fun aConnectionThatFailsOnTheFirstEventIsClosedAtOnce() {
     var closed = 0
     service().subscribe(object : OutputStream() { override fun write(b: Int) = throw IOException("reset") }) { closed++ }

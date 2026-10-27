@@ -173,7 +173,8 @@ grep -q '^keliver.updates=$' "$H/gradle.properties" \
 # Host kit (adoption item 3, K1): a typed status, a fallback hook, and no developer text in a
 # release build's screen.
 S="${M%/*}/KeliverScreen.kt"
-grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String) : KeliverHostState' "$M" \
+grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String, val attempt: Int = 0) : KeliverHostState' "$M" \
+  && grep -q 'title, message, unavailableAttempts.incrementAndGet())' "$M" \
   && ! grep -q 'KeliverHostState.Message' "$M" "$S" && ! grep -q 'mutableState.value = KeliverHostState.Message' "$M" \
   && grep -q 'onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null' "$S" && grep -q 'if (host.state.value == s) latest?.invoke(s)' "$S" \
   && grep -q 'BuildConfig.DEBUG && (this.context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0' "$M" \

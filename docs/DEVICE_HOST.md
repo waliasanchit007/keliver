@@ -535,9 +535,10 @@ for byte):
   A second `create()` for the same key throws, because two loaders must never
   share a Zipline cache. `start()` is idempotent: the first screen calls it, or
   call it at launch to warm up. `state` is a `StateFlow` the screens observe:
-  `Loading`, `Running`, or `Unavailable(outcome, reason, title, message)` when
+  `Loading`, `Running`, or `Unavailable(outcome, reason, title, message, attempt)` when
   the host cannot show a screen (`outcome` is the report's: `no-bundle`,
-  `refused` or `not-loaded`; `reason` its fixed category). Observe it to hide
+  `refused` or `not-loaded`; `reason` its fixed category; `attempt` numbers
+  these in the process, so the same failure on a retry is a new state). Observe it to hide
   your own chrome while `Running`.
 - **`KeliverScreen(host, modifier, onUnavailable, loading, unavailable)`**, a
   Composable, and **`KeliverView`**, an `AbstractComposeView` for View layouts

@@ -76,6 +76,22 @@ class BundleEventsTest {
     assertFalse(events.hasRoom())
   }
 
+  @Test fun aStreamStartsWithThePreambleEvenWhenAnAnnouncementWasQueuedFirst() {
+    val release = CountDownLatch(1)
+    val stuck = object : OutputStream() {
+      override fun write(b: Int) { release.await(10, TimeUnit.SECONDS) } // holds the writer thread
+    }
+    events.subscribe(stuck)
+    events.announce() // queued while the writer is held, before the next phone's first write
+    val phone = ByteArrayOutputStream()
+    events.subscribe(phone)
+    release.countDown()
+    events.drain()
+    val text = phone.toString()
+    assertTrue(text.startsWith(BundleEvents.PREAMBLE), "the first bytes are the preamble: ${text.take(40)}")
+    assertEquals(2, events.listening)
+  }
+
   @Test fun aConnectionThatFailsAtOnceIsNotCounted() {
     events.subscribe(object : OutputStream() { override fun write(b: Int) = throw IOException("reset") })
     events.drain()

@@ -334,9 +334,11 @@ sealed interface KeliverHostState {
    * `not-loaded` (the bundle did not load, and no last good one did either).
    * [reason] is the report's fixed category. [title] and [message] say what
    * happened for a developer: they can name addresses and paths, so a release
-   * build's [KeliverScreen] does not show them.
+   * build's [KeliverScreen] does not show them. [attempt] numbers the host's
+   * unavailable outcomes in this process, so the same failure on a retry is a
+   * new state, and `onUnavailable` is called for it again.
    */
-  data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String) : KeliverHostState
+  data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String, val attempt: Int = 0) : KeliverHostState
 
   /** The bundle is running; screens show it. */
   class Running internal constructor(internal val app: TreehouseApp<PortalPresenter>) : KeliverHostState
@@ -390,10 +392,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private val reportInstallId by lazy { runCatching { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).installId() }.getOrDefault("unknown") }
   private val reportHostVersion by lazy { config.hostVersion ?: appVersionCode() }
   private var reportedNoBundle = false
+  private val unavailableAttempts = java.util.concurrent.atomic.AtomicInteger()
 
   /** The host cannot show a screen: says so on [state] (W6's [outcome] and its reason) and reports it. */
   private fun unavailable(outcome: String, title: String, message: String, detail: String) {
-    mutableState.value = KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message)
+    mutableState.value = KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message, unavailableAttempts.incrementAndGet())
     report(outcome, detail = detail)
   }
 
