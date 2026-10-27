@@ -584,6 +584,20 @@ plus `KeliverScreen.swift` and `EMBED.md`:
 - `public object Keliver { start(); viewController(safeArea:) }`, one per
   process; `KeliverScreen` is the SwiftUI wrapper around `viewController`.
   `MainViewController()` stays, as an alias, for the standalone app.
+- **State** (K2, Android's shape): `Keliver.shared.state` is `Loading`,
+  `Running`, or `KeliverHostStateUnavailable(outcome, reason, title,
+  message, attempt)` (`outcome` the report's: `no-bundle`, `refused` or
+  `not-loaded`; `attempt` numbers these from 1, so a repeated failure is a new
+  state). Swift observes it with `Keliver.shared.onStateChange`, called on the
+  main thread: hide your own chrome while `Running`.
+- **`viewController(safeArea:onUnavailable:)`** and `KeliverScreen(onUnavailable:)`:
+  called on the main thread each time that screen shows an `Unavailable`
+  state. Replace the Keliver screen there with what it replaced (your web page
+  or native screen, with the route you were showing): dismiss or pop it,
+  rather than stacking the fallback over it.
+- **Release text**: only a DEBUG binary (`Keliver.shared.showsDeveloperText`)
+  shows the host's own text, which can name addresses and paths; a release
+  binary shows "Loading…" and a generic line.
 - The settings and key are in `src/iosMain/kotlin/<package>/HostConfig.kt`,
   checked by the build as in §3. `checkReleaseUrls` reads the Info.plist Xcode
   is building (`$SRCROOT/$INFOPLIST_FILE`), so a release build refuses an
@@ -597,8 +611,8 @@ plus `KeliverScreen.swift` and `EMBED.md`:
 
 **When a load fails**, the Keliver view's state is `Unavailable`: it calls
 `onUnavailable` and shows a message instead of the guest's screen until your
-app navigates (in a debug build of a debuggable app the text below; otherwise
-a generic line), and nothing else in
+app navigates (in a debug build of a debuggable app, or a DEBUG binary on iOS,
+the text below; otherwise a generic line), and nothing else in
 your app is affected:
 - a missing or invalid key: "Refusing to load";
 - the lookup failed and nothing is cached: "No bundle", retried by the next

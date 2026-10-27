@@ -12,8 +12,12 @@ struct KeliverScreen: UIViewControllerRepresentable {
     /// Pad to the safe area; leave it off when your layout already does.
     var safeArea: Bool = false
 
+    /// Called on the main thread when this screen cannot be shown (`outcome`: no-bundle, refused
+    /// or not-loaded): replace it with what it replaced, with the route you were showing.
+    var onUnavailable: ((KeliverHostStateUnavailable) -> Void)? = nil
+
     func makeUIViewController(context: Context) -> UIViewController {
-        Keliver.shared.viewController(safeArea: safeArea)
+        Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnavailable)
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

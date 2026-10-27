@@ -114,6 +114,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -166,11 +168,42 @@ private fun hostVersion(): Long? = (NSBundle.mainBundle.objectForInfoDictionaryK
 
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+/** What a start found: the app to run, or why there is none. */
 private sealed interface HostState {
-  data object Loading : HostState
   /** [retry]: nothing was created, so the next start() may look again. */
   data class Message(val title: String, val text: String, val retry: Boolean = false) : HostState
   data class Running(val app: TreehouseApp<PortalPresenter>) : HostState
+}
+
+/**
+ * What a screen shows (host kit K2, the same shape as Android's). Observe it with
+ * [Keliver.onStateChange] (Swift) or [Keliver.state] to hide the app's own chrome while
+ * [Running], or to open what a screen replaced when it is [Unavailable] ([Keliver.viewController]'s
+ * onUnavailable does that for one screen). Changes happen on the main thread.
+ */
+public sealed interface KeliverHostState {
+  /** Looking up and loading the first bundle. */
+  public data object Loading : KeliverHostState
+
+  /**
+   * The host cannot show a screen. [outcome] is the report's (W6): `no-bundle` (the lookup failed
+   * and nothing is cached; the next screen to open looks again), `refused` (the build's key or
+   * bundle server is unusable) or `not-loaded` (the bundle did not load, and no last good one did
+   * either). [reason] is the report's fixed category. [title] and [message] say what happened for
+   * a developer: they can name addresses and paths, so a release binary's screen does not show
+   * them. [attempt] numbers these in the process from 1, so the same failure on a retry is a new
+   * state; compare [outcome] and [reason], not whole states.
+   */
+  public data class Unavailable(
+    val outcome: String,
+    val reason: String,
+    val title: String,
+    val message: String,
+    val attempt: Int,
+  ) : KeliverHostState
+
+  /** The bundle is running; screens show it. */
+  public class Running internal constructor(internal val app: TreehouseApp<PortalPresenter>) : KeliverHostState
 }
 
 /** The bundle a host runs (W5): its signed sequence (-1: none), and whether it came from Zipline's cache. */
@@ -230,7 +263,34 @@ internal class LookupContext(val server: BundleServer, val capabilities: List<St
  * the bundle once; [viewController] makes a screen that shows it.
  */
 public object Keliver {
-  private val state = MutableStateFlow<HostState>(HostState.Loading)
+  private val mutableState = MutableStateFlow<KeliverHostState>(KeliverHostState.Loading)
+
+  /** What screens show (K2). Main thread. */
+  public val state: StateFlow<KeliverHostState> = mutableState.asStateFlow()
+
+  /** Called on the main thread with each new [state] (K2): Swift's way to observe it. */
+  public var onStateChange: ((KeliverHostState) -> Unit)? = null
+
+  /**
+   * Whether screens show the host's own text (addresses, paths, errors): only in a DEBUG binary.
+   * A release binary shows "Loading…" and a generic line instead (K2's release text policy).
+   */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  public val showsDeveloperText: Boolean get() = kotlin.native.Platform.isDebugBinary
+
+  private var unavailableAttempts = 0
+
+  private fun setState(s: KeliverHostState) {
+    mutableState.value = s
+    // The app's handler must not take the host down with it.
+    runCatching { onStateChange?.invoke(s) }.onFailure { log("onStateChange threw: ${it.message}") }
+  }
+
+  /** The host cannot show a screen: says so on [state] (W6's [outcome] and its reason) and reports it. Main thread. */
+  private fun unavailable(outcome: String, title: String, message: String, detail: String) {
+    setState(KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message, ++unavailableAttempts))
+    report(outcome, detail = detail)
+  }
   private var started = false // read and written on the main thread only
   private var loaded = false
   private var session: Session? = null
@@ -310,11 +370,16 @@ public object Keliver {
     }
     registerDebugCheckForUpdate()
     lastLookup = TimeSource.Monotonic.markNow()
+    // A start after "no bundle" looks again: Loading meanwhile, as on the first.
+    if (mutableState.value is KeliverHostState.Unavailable) setState(KeliverHostState.Loading)
     appScope.launch {
-      val s = startHost()
-      state.value = s
-      if (s is HostState.Message) report(if (s.retry) "no-bundle" else "refused", detail = s.text)
-      if (s is HostState.Message && s.retry) started = false
+      when (val s = startHost()) {
+        is HostState.Running -> setState(KeliverHostState.Running(s.app))
+        is HostState.Message -> {
+          if (s.retry) started = false
+          unavailable(if (s.retry) "no-bundle" else "refused", s.title, s.text, detail = s.text)
+        }
+      }
     }
   }
 
@@ -542,8 +607,7 @@ public object Keliver {
   /** Called on the main thread when a code load failed: before any code ran, say so instead of a blank screen. */
   internal fun codeLoadFailed(reason: String) {
     if (loaded) return
-    state.value = HostState.Message("Bundle did not load", reason.take(300))
-    report("not-loaded", detail = reason)
+    unavailable("not-loaded", "Bundle did not load", reason.take(300), detail = reason)
   }
 
   /**
@@ -551,7 +615,16 @@ public object Keliver {
    * the guest's screen. [safeArea] pads it to the safe area; turn it off when
    * the containing layout already does.
    */
-  public fun viewController(safeArea: Boolean = true): UIViewController = ComposeUIViewController {
+  public fun viewController(safeArea: Boolean = true): UIViewController = viewController(safeArea, onUnavailable = null)
+
+  /**
+   * [viewController], and [onUnavailable] (K2): called on the main thread each time this screen
+   * shows an [KeliverHostState.Unavailable] state. Replace the Keliver screen there with what it
+   * replaced (your web page or native screen, with the route you were showing): dismiss or pop it
+   * rather than stacking the fallback over it. After "no bundle", a screen created later looks up
+   * again (Loading meanwhile).
+   */
+  public fun viewController(safeArea: Boolean, onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?): UIViewController = ComposeUIViewController {
     remember { KeliverTiming.mark("open") } // Debug and Benchmark builds only (M0)
     LaunchedEffect(Unit) { start() }
     // Live updates (UPDATES = "live", debug builds): the host listens for publishes while a
@@ -575,12 +648,21 @@ public object Keliver {
         if (shown) screenHidden()
       }
     }
-    val current by state.collectAsState()
+    val current by mutableState.collectAsState()
     val modifier = if (safeArea) Modifier.fillMaxSize().safeDrawingPadding() else Modifier.fillMaxSize()
     when (val s = current) {
-      HostState.Loading -> MessageScreen("Loading", "Looking up the latest bundle…", safeArea)
-      is HostState.Message -> MessageScreen(s.title, s.text, safeArea)
-      is HostState.Running -> {
+      KeliverHostState.Loading ->
+        if (showsDeveloperText) MessageScreen("Loading", "Looking up the latest bundle…", safeArea) else MessageScreen("Loading…", null, safeArea)
+      is KeliverHostState.Unavailable -> {
+        // Still the state? A screen created on an old "no bundle" restarts the host just before
+        // this runs (the start() effect is earlier), and must not act on that failure.
+        LaunchedEffect(s) {
+          if (mutableState.value == s) runCatching { onUnavailable?.invoke(s) }.onFailure { log("onUnavailable threw: ${it.message}") }
+        }
+        if (showsDeveloperText) MessageScreen(s.title, s.message, safeArea)
+        else MessageScreen("Not available", "This screen can't be shown right now. Please try again later.", safeArea)
+      }
+      is KeliverHostState.Running -> {
         val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(imageLoader) }
         val contentSource = remember {
           object : TreehouseContentSource<PortalPresenter> {
@@ -908,12 +990,12 @@ private class LoggingEventListener(
 private fun log(message: String) = println("$TAG: $message")
 
 @Composable
-private fun MessageScreen(title: String, message: String, safeArea: Boolean = true) {
+private fun MessageScreen(title: String, message: String?, safeArea: Boolean = true) {
   Column(
     modifier = (if (safeArea) Modifier.fillMaxSize().safeDrawingPadding() else Modifier.fillMaxSize()).padding(24.dp),
     verticalArrangement = Arrangement.Center,
   ) {
     BasicText(title)
-    BasicText(message, modifier = Modifier.padding(top = 12.dp))
+    if (message != null) BasicText(message, modifier = Modifier.padding(top = 12.dp))
   }
 }
