@@ -292,6 +292,10 @@ public object Keliver {
    * first screen, or [start]). Null allows every path under API_BASE_URL, as before.
    */
   public var requestPolicy: RequestPolicy? = null
+    set(value) {
+      if (started) log("requestPolicy set after the host started: it applies from the next process start")
+      field = value
+    }
 
   private fun setState(s: KeliverHostState) {
     mutableState.value = s
@@ -398,6 +402,7 @@ public object Keliver {
 
   /** Called on the main thread when a code load succeeded; [url] is null for a load from the cache. */
   internal fun codeLoaded(sequence: Long?, url: String?) {
+    guestTakesNoRoute = false
     val first = !loaded
     loaded = true
     current = KeliverBundle(sequence ?: -1, fromCache = url == null)
@@ -647,44 +652,65 @@ public object Keliver {
    * or dismisses it, whichever way it was shown. A new route is a new view controller (in SwiftUI,
    * give KeliverScreen a new `.id`).
    */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
   public fun viewController(
     safeArea: Boolean,
     onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?,
     route: KeliverRoute?,
     onClose: (() -> Unit)?,
   ): UIViewController {
-    var shownBy: UIViewController? = null
-    val close: () -> Unit = onClose ?: { shownBy?.let(::closeShown) }
-    return screen(safeArea, onUnavailable, route, close).also { shownBy = it }
+    // Weak: the screen holds this closure, and a view controller that went closes nothing.
+    var shownBy: kotlin.native.ref.WeakReference<UIViewController>? = null
+    val close: () -> Unit = onClose ?: { shownBy?.get()?.let(::closeShown) }
+    return screen(safeArea, onUnavailable, route, close).also { shownBy = kotlin.native.ref.WeakReference(it) }
   }
 
-  /** Pops [vc] when its navigation controller shows it on top of another, else dismisses it if presented. */
+  /**
+   * Closes [vc] the way it was shown: pops the navigation stack back to the screen below the one
+   * that holds [vc] (not whatever is on top), or dismisses what presents it. A SwiftUI app that
+   * shows it in a sheet or a NavigationStack passes onClose instead (dismiss(), or drop the path
+   * element), so its own state agrees.
+   */
   private fun closeShown(vc: UIViewController) {
-    val nav = vc.navigationController ?: vc.parentViewController?.navigationController
-    if (nav != null && nav.viewControllers.size > 1) {
-      nav.popViewControllerAnimated(true)
-    } else if (vc.presentingViewController != null || vc.parentViewController?.presentingViewController != null) {
-      (vc.parentViewController?.takeIf { it.presentingViewController != null } ?: vc).dismissViewControllerAnimated(true, completion = null)
-    } else {
-      log("closeScreen: this screen is neither pushed nor presented; pass onClose to close it your way")
+    val nav = vc.navigationController
+    if (nav != null) {
+      // The navigation stack's entry that is, or contains, vc.
+      var entry: UIViewController? = vc
+      while (entry != null && entry.parentViewController != nav) entry = entry.parentViewController
+      val stack = nav.viewControllers
+      val i = stack.indexOf(entry)
+      if (i > 0) {
+        nav.popToViewController(stack[i - 1] as UIViewController, animated = true)
+        return
+      }
     }
+    var shown: UIViewController? = vc
+    while (shown != null && shown.presentingViewController == null) shown = shown.parentViewController
+    if (shown != null) shown.dismissViewControllerAnimated(true, completion = null)
+    else log("closeScreen: this screen is neither pushed nor presented; pass onClose to close it your way")
   }
 
   /** The guest's UI for [route] (launchRoute), or launch() without one or for a guest from before K2. */
   private fun launch(app: PortalPresenter, route: KeliverRoute?, close: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
-    if (route == null) return app.launch()
+    if (route == null || guestTakesNoRoute) return app.launch()
     return try {
       app.launchRoute(route.encode(), ScreenHost(close))
     } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
+      // Not asked again until other code loads: each try leaves its ScreenHost bound.
+      guestTakesNoRoute = true
       log("this bundle's guest takes no route (scaffolded before the host kit): showing its default screen")
       app.launch()
     }
   }
 
-  private class ScreenHost(private val close: () -> Unit) : KeliverScreenHost {
-    // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread.
+  /** Set when the running code has no launchRoute; cleared when code loads. */
+  private var guestTakesNoRoute = false
+
+  private class ScreenHost(private val close: () -> Unit) : dev.keliver.hostkit.KeliverScreenHost {
+    // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread, and a
+    // throw there must not end the process.
     override fun closeScreen() {
-      appScope.launch { close() }
+      appScope.launch { runCatching(close).onFailure { log("onClose threw: ${it.message}") } }
     }
   }
 

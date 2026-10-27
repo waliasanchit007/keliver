@@ -200,14 +200,34 @@ grep -q 'public class RequestPolicy(' "$KC/RequestPolicy.kt" && [ -f "$H/src/jvm
   && ok "host kit K2: HostHttp checks the app's RequestPolicy before sending; its JVM tests are scaffolded" \
   || bad "host kit K2: RequestPolicy is not wired into NSURLSessionHostHttp, or its tests are missing"
 # Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).
-grep -q 'public class KeliverRoute(path: String, query: Map<String, String>)' "$KC/KeliverRoute.kt" \
+grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = emptyMap())' "$KC/KeliverRoute.kt" \
   && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
   && grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "$K/GuestContract.kt" \
   && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$K/MainViewController.kt" \
   && grep -q 'override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, route, close))' "$K/MainViewController.kt" \
-  && grep -q 'nav.popViewControllerAnimated(true)' "$K/MainViewController.kt" \
+  && grep -q 'nav.popToViewController(stack\[i - 1\] as UIViewController, animated = true)' "$K/MainViewController.kt" \
+  && grep -q 'runCatching(close).onFailure' "$K/MainViewController.kt" && grep -q 'guestTakesNoRoute = true' "$K/MainViewController.kt" \
+  && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "$K/GuestContract.kt" \
+  && grep -q '^  apiTracking = false$' "$H/build.gradle" \
   && ok "host kit K2: routes (allowed query keys only, older guests still open) and close (pop or dismiss by default)" \
   || bad "host kit K2: routes and close are not wired"
+# One KeliverRoute and one KeliverScreenHost for both hosts and the guest: the same text for the
+# same link, and a launchRoute signature Zipline matches (parameter types' packages included).
+PH=""
+for d in "$ROOT/scripts/templates/production-host" "$(dirname "$SCAFFOLD")/../templates/production-host"; do
+  [ -f "$d/src/main/kotlin/KeliverRoute.kt" ] && { PH="$d"; break; }
+done
+DT="$(dirname "$SCAFFOLD")/keliver-new-device-target.sh"
+if [ -n "$PH" ] && [ -f "$DT" ]; then
+  sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/KeliverRoute.kt" | cmp -s - "$KC/KeliverRoute.kt" \
+    && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/test/kotlin/KeliverRouteTest.kt" | cmp -s - "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" \
+    && cmp -s "$PH/src/main/kotlin/KeliverScreenHost.kt" "$K/KeliverScreenHost.kt" \
+    && sed -n "/<<'HOSTKIT'$/,/^HOSTKIT$/p" "$DT" | sed '1d;$d' | cmp -s - "$K/KeliverScreenHost.kt" \
+    && ok "host kit: KeliverRoute (and its test) and KeliverScreenHost are the Android host's and the guest's, byte for byte" \
+    || bad "host kit: KeliverRoute, its test or KeliverScreenHost differs from the Android host's or the guest's"
+else
+  bad "host kit: the Android templates or keliver-new-device-target.sh are not beside $SCAFFOLD"
+fi
 grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', 'next-launch', 'on-resume', 'live'\]" "$H/build.gradle" \
   && grep -q 'UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "live" else "next-launch" }' "$K/MainViewController.kt" \
   && grep -q 'if (mode == "live" && !kotlin.native.Platform.isDebugBinary) "on-resume" else mode' "$K/MainViewController.kt" \

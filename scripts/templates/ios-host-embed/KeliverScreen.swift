@@ -21,7 +21,9 @@ struct KeliverScreen: UIViewControllerRepresentable {
     /// only the query keys you allow). A new route needs a new screen: give this view a new `.id`.
     var route: KeliverRoute? = nil
 
-    /// Called on the main thread when the screen asks to close; nil pops or dismisses it.
+    /// Called on the main thread when the screen asks to close. nil pops the navigation stack
+    /// back to the screen below it, or dismisses it: in a sheet or a NavigationStack, pass
+    /// `dismiss()` (or drop the path element) so SwiftUI's state agrees.
     var onClose: (() -> Void)? = nil
 
     func makeUIViewController(context: Context) -> UIViewController {

@@ -1,19 +1,20 @@
 package @@PACKAGE@@
 
 /**
- * What a Keliver screen shows (adoption item 3, K2; D8: navigation across
+ * What a Keliver screen shows (adoption item 3, host kit; D8: navigation across
  * features goes through the app's own deep links). A path, and only the query
  * keys the app allows: a deep link's other parameters never reach the guest.
- * The same text as the Android host's KeliverRoute ([encode]:
- * `orders/42?tab=items`), which the guest receives in `launchRoute`. Pure
- * Kotlin: its tests run on the JVM (`./gradlew -p host-ios jvmTest`).
+ * The guest receives [encode]'s text (`orders/42?tab=items`) in `launchRoute`.
+ *
+ * Pure Kotlin, and the same file in the Android and iOS hosts, so both send the
+ * same text for the same link; KeliverRouteTest (also shared) pins it.
  */
-public class KeliverRoute(path: String, query: Map<String, String>) {
+public class KeliverRoute(path: String, query: Map<String, String> = emptyMap()) {
   /** Its segments joined by `/`, with no empty ones (so no leading or trailing `/`). */
   public val path: String = path.split('/').filter { it.isNotEmpty() }.joinToString("/")
   public val query: Map<String, String> = query.entries.sortedBy { it.key }.associate { it.key to it.value }
 
-  /** `path?key=value&…`, keys sorted; each segment, key and value form-encoded (UTF-8). */
+  /** `path?key=value&…`, keys sorted; each segment, key and value form-encoded (UTF-8, as java.net.URLEncoder). */
   public fun encode(): String {
     val p = path.split('/').filter { it.isNotEmpty() }.joinToString("/") { formEncode(it) }
     if (query.isEmpty()) return p
@@ -26,28 +27,28 @@ public class KeliverRoute(path: String, query: Map<String, String>) {
 
   public companion object {
     /**
-     * The route a deep link [uri] names (its host and path, as `example://orders/42`, or
-     * `https://example.com/orders/42`), keeping only [allowedQueryKeys] of its query. Null when
-     * [uri] is null or not a URI (no scheme, or a space or control character in it). A key that
-     * appears twice keeps its first value.
+     * The route a deep link [uri] names, keeping only [allowedQueryKeys] of its query:
+     * - `example://orders/42`: a custom scheme's authority is the first segment (`orders/42`);
+     * - `https://example.com/orders/42`: a web link's host is not part of it (`orders/42`);
+     * - `example:orders/42`: no authority, the path as it is.
+     * Null when [uri] is null, has no scheme, or holds a space or a control character. Segments
+     * are percent-decoded (an encoded `/` becomes a separator: a route is a path, not a list); a
+     * query key that appears twice keeps its first value.
      */
     public fun from(uri: String?, allowedQueryKeys: Set<String>): KeliverRoute? {
       if (uri == null || uri.any { it <= ' ' || it == '\u007f' }) return null
-      val scheme = uri.substringBefore(':', "")
+      val scheme = uri.substringBefore(':', "").lowercase()
       if (scheme.isEmpty() || !scheme.first().isLetter() || scheme.any { !it.isLetterOrDigit() && it !in "+-." }) return null
       var rest = uri.substringAfter(':').substringBefore('#')
       val rawQuery = if ('?' in rest) rest.substringAfter('?') else null
       rest = rest.substringBefore('?')
-      // A custom scheme's first segment is its "host" (example://orders/42); a web link's host is not a route.
-      val head: String
+      var head = ""
       if (rest.startsWith("//")) {
         val authority = rest.removePrefix("//").substringBefore('/')
         rest = rest.removePrefix("//").removePrefix(authority)
-        head = if (scheme.lowercase() in setOf("http", "https")) "" else authority.substringAfter('@').substringBefore(':')
-      } else {
-        head = ""
+        if (scheme != "http" && scheme != "https") head = authority.substringAfter('@').substringBefore(':')
       }
-      val path = (head + "/" + rest).split('/').filter { it.isNotEmpty() }.joinToString("/") { percentDecode(it, plusIsSpace = false) }
+      val path = (listOf(head) + rest.split('/')).filter { it.isNotEmpty() }.joinToString("/") { percentDecode(it, plusIsSpace = false) }
       val query = linkedMapOf<String, String>()
       rawQuery?.split('&')?.forEach { pair ->
         if (pair.isEmpty()) return@forEach
@@ -58,7 +59,7 @@ public class KeliverRoute(path: String, query: Map<String, String>) {
       return KeliverRoute(path, query)
     }
 
-    /** Reads [encode]'s text back (the guest does the same with its own copy). */
+    /** Reads [encode]'s text back (a guest does the same with its own copy). */
     public fun decode(text: String): KeliverRoute {
       val query = linkedMapOf<String, String>()
       if ('?' in text) {
@@ -73,7 +74,7 @@ public class KeliverRoute(path: String, query: Map<String, String>) {
     /** As java.net.URLEncoder (UTF-8): letters, digits and `.-*_` kept, a space as `+`, the rest `%XX`. */
     internal fun formEncode(s: String): String = buildString {
       for (b in s.encodeToByteArray()) {
-        val c = (b.toInt() and 0xff)
+        val c = b.toInt() and 0xff
         when {
           c in 'a'.code..'z'.code || c in 'A'.code..'Z'.code || c in '0'.code..'9'.code || c.toChar() in ".-*_" -> append(c.toChar())
           c == ' '.code -> append('+')
@@ -90,10 +91,16 @@ public class KeliverRoute(path: String, query: Map<String, String>) {
         val c = s[i]
         val hi = if (c == '%' && i + 2 < s.length) HEX.indexOf(s[i + 1].uppercaseChar()) else -1
         val lo = if (hi >= 0) HEX.indexOf(s[i + 2].uppercaseChar()) else -1
-        when {
-          hi >= 0 && lo >= 0 -> { out.add(((hi shl 4) or lo).toByte()); i += 3 }
-          c == '+' && plusIsSpace -> { out.add(' '.code.toByte()); i++ }
-          else -> { c.toString().encodeToByteArray().forEach { out.add(it) }; i++ }
+        if (hi >= 0 && lo >= 0) {
+          out.add(((hi shl 4) or lo).toByte()); i += 3
+        } else if (c == '+' && plusIsSpace) {
+          out.add(' '.code.toByte()); i++
+        } else {
+          // A run of literal characters, encoded together so a surrogate pair stays one character.
+          var end = i + 1
+          while (end < s.length && s[end] != '%' && !(plusIsSpace && s[end] == '+')) end++
+          s.substring(i, end).encodeToByteArray().forEach { out.add(it) }
+          i = end
         }
       }
       return out.toByteArray().decodeToString()

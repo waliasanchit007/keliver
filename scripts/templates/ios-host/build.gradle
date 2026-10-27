@@ -110,6 +110,11 @@ tasks.configureEach { t ->
   if (t.name ==~ /linkRelease.*Ios.*/) t.dependsOn(checkReleaseUrls)
 }
 
+// The JVM target only runs the host kit's pure-Kotlin checks: no Compose, and no Zipline API
+// tracking (it would add a ziplineApiCheck, fetching the Zipline CLI, to `check`).
+zipline {
+  apiTracking = false
+}
 // The JVM target only runs the host kit's pure-Kotlin checks: no Compose there.
 composeCompiler {
   targetKotlinPlatforms.set([org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native] as Set)
