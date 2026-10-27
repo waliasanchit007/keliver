@@ -1,4 +1,3 @@
-import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
@@ -58,8 +57,12 @@ internal class BundleEvents(
   fun subscribe(out: OutputStream, close: () -> Unit = { out.close() }) {
     val listener = Listener(out, close)
     listeners += listener // counted at once, so hasRoom() holds the limit
-    writer.execute {
-      if (send(listener, PREAMBLE + event(newest()))) listener.ready = true else drop(listener)
+    try {
+      writer.execute {
+        if (send(listener, PREAMBLE + event(newest()))) listener.ready = true else drop(listener)
+      }
+    } catch (_: java.util.concurrent.RejectedExecutionException) {
+      drop(listener) // the relay is shutting down
     }
   }
 
@@ -83,8 +86,8 @@ internal class BundleEvents(
     l.out.write(text.toByteArray())
     l.out.flush()
     true
-  } catch (_: IOException) {
-    false
+  } catch (_: Exception) {
+    false // an IOException mostly; anything else must not end the scheduled heartbeat either
   }
 
   /**

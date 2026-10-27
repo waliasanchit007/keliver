@@ -538,7 +538,8 @@ for byte):
   `Loading`, `Running`, or `Unavailable(outcome, reason, title, message, attempt)` when
   the host cannot show a screen (`outcome` is the report's: `no-bundle`,
   `refused` or `not-loaded`; `reason` its fixed category; `attempt` numbers
-  these in the process, so the same failure on a retry is a new state). Observe it to hide
+  these in the process from 1, so the same failure on a retry is a new state;
+  equality includes it, so compare `outcome` and `reason`, not whole states). Observe it to hide
   your own chrome while `Running`.
 - **`KeliverScreen(host, modifier, onUnavailable, loading, unavailable)`**, a
   Composable, and **`KeliverView`**, an `AbstractComposeView` for View layouts
