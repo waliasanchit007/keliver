@@ -170,6 +170,17 @@ grep -q '^keliver.updates=$' "$H/gradle.properties" \
   && grep -q 'addPathSegments("bundles/events")' "$M" && grep -q 'host.screenShown()' "${M%/*}/KeliverScreen.kt" \
   && ok "updates: live in debug builds (listening to /bundles/events while a screen shows), next-launch otherwise; a debug-only check-now receiver that needs DUMP" \
   || bad "updates: the debug default, the live listener or the check-now receiver is not wired"
+# Host kit (adoption item 3, K1): a typed status, a fallback hook, and no developer text in a
+# release build's screen.
+S="${M%/*}/KeliverScreen.kt"
+grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String) : KeliverHostState' "$M" \
+  && ! grep -q 'KeliverHostState.Message' "$M" "$S" && ! grep -q 'mutableState.value = KeliverHostState.Message' "$M" \
+  && grep -q 'onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null' "$S" && grep -q 'if (host.state.value == s) latest?.invoke(s)' "$S" \
+  && grep -q 'BuildConfig.DEBUG && (this.context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0' "$M" \
+  && ! grep -q 'BuildConfig.DEBUG' "$S" && grep -q 'if (host.showsDeveloperText) MessageScreen(state.title, state.message)' "$S" \
+  && grep -q 'var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)' "$S" \
+  && ok "host kit: state is Loading, Unavailable(outcome, reason, …) or Running; KeliverScreen/KeliverView call onUnavailable; a release build shows no host text" \
+  || bad "host kit: the typed state, the onUnavailable hook or the release text policy is not wired"
 # M0: timing marks in the debug and benchmark build types only; a no-op elsewhere.
 P="${M%/*}"; P="${P#$H/src/main/kotlin/}"
 grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/dev/null \

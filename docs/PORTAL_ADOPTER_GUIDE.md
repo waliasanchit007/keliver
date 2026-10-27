@@ -459,7 +459,14 @@ same host Kotlin as `host-android/`. Then, in your app:
   one host per process: a second `create()` for the same key throws;
 - a screen: `KeliverScreen(keliver, Modifier.fillMaxSize())` in Compose, or
   `KeliverView(context).apply { host = keliver }` in a View layout (in a
-  `ComponentActivity` or a `Fragment`).
+  `ComponentActivity` or a `Fragment`);
+- the fallback: pass `onUnavailable = { replaceWithWhatThisReplaced() }` to
+  `KeliverScreen` (or set `KeliverView.onUnavailable`). It is called when the
+  host cannot show a screen (no bundle, a refused build, a bundle that did not
+  load): replace the Keliver screen there with your web page or native screen
+  (finish or pop it; a screen you return to calls it again). Only a debug
+  build of a debuggable app shows the host's own text, which can name
+  addresses and paths.
 
 The settings are in `keliver-host/keliver.properties` (`-Pkeliver.*` overrides
 them), and the key is `keliver-host/src/main/assets/keliver/portal_ed25519.pub`.
@@ -487,8 +494,9 @@ your `App`'s `init` starts the lookup early.
 On both platforms, every Keliver screen in the process shares one lookup and
 one load: navigating natively or rotating doesn't load again, and a newer
 bundle is picked up on the next process start. If a bundle doesn't verify, the
-host falls back to the last good one it ran; with none, the Keliver screen says
-"Bundle did not load". Your native screens keep working either way.
+host falls back to the last good one it ran; with none, the Keliver screen calls
+`onUnavailable` (Android) and, in a debug build, also says "Bundle did not load".
+Your native screens keep working either way.
 `DEVICE_HOST.md` §4 has the details and the limits. The main limit is on
 Android: the module compiles with your app's Kotlin, and only 2.2.0 works. On
 iOS the framework builds with its own Gradle and Kotlin, but an app that
