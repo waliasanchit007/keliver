@@ -415,22 +415,30 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    program yet (#140, #141), nor the production-host fix for a screen drawn
    twice after a resume update. Gate: `scripts/build-portal-tools.sh`, the
    adopter acceptance, the identity check, device verify, then the release
-   procedure in `PORTAL_TOOLS_RELEASE.md`. It carries items 2–4.
+   procedure in `PORTAL_TOOLS_RELEASE.md`. It carries items 2–4 and 6.
+   **Status 2026-10-27:** everything it carries is merged (#140–#149); the
+   release follows libraries 0.4.1 (item 5).
 2. **A debug host picks up a publish while it is open** (adoption item 6's
    open row; owner's request 2026-10-26). The relay announces each stored
    bundle on `GET /bundles/events`; a debug host listens while a screen is on
    show and runs its ordinary, verified update check. Android first, then iOS.
+   **Status 2026-10-27:** Android merged (#145, CI LV1–LV3 green); iOS in draft
+   PR #150.
 3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
    into the tools bundle, not the app** (found by the 2026-10-27 audit): run
    from the zip's `bin/`, they resolve the app as the script's parent. Every
    adopter who follows `PORTAL_TOOLS_README.md` to add a screen hits it.
+   **Status 2026-10-27:** fixed, merged (#142).
 4. **U38: the browser keeps running a cached editor** after switching to an
    app's own one. Small; serve the editor with `Cache-Control: no-cache`.
+   **Status 2026-10-27:** fixed, merged (#143: `no-store`); no browser re-run yet.
 5. **A libraries release (0.4.1)** so per-app editors get #140/#141: the
    published `portal-editor`, `portal-core`, `keliver-material-composeui`
-   changed. **Needs the owner's go** (Maven Central).
+   changed. **Status 2026-10-27:** in release (the owner's 2026-10-27 prompt
+   authorizes it when warranted); local candidate 389 poms, `apiCheck` passes.
 6. **U28: a false `codeLoadFailed` on every production-host start.** It sends
-   developers chasing a failure that did not happen.
+   developers chasing a failure that did not happen. **Status 2026-10-27:**
+   fixed on both generic hosts, merged (#146); not run on a device.
 7. **Brownfield host kit** (adoption item 3): the glue each embed needed (a
    fallback hook, a status API, user-safe states, a request allow-list hook).
    The proof's serious defects were all in that glue.
