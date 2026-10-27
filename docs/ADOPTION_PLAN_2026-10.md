@@ -75,12 +75,16 @@ Decide on optimisations only after M2–M5.
 
 ## Item 3. Brownfield host kit (builds on W2 `--embed`)
 
-**Status 2026-10-27:** K1 started, Android only. Done: the typed status (`Loading`,
-`Unavailable(outcome, reason, title, message)`, `Running`; `Message` is gone, its two uses
-being loading and unavailability), `onUnavailable` on `KeliverScreen` and `KeliverView`, and
-the release message policy (overridable `loading` / `unavailable` slots; the host's text only in a debug build of a debuggable app), and a retried start reporting `Loading` again. In review: `RequestPolicy` (in `OkHttpHostHttp`; its `https` rule comes from the app's `allowCleartext`, set from `BuildConfig.DEBUG`, and a release build's settings refuse an http API base) and `ExternalLinkPolicy`, with JVM tests in the
-scaffolded host. Not yet: the `screen-failed` outcome, routes and close, the
-debug-surface audit, iOS (K2), the dependency-floor report (K3) and the device proof (K4).
+**Status 2026-10-28:** K1 (Android) complete in code, K2 (iOS) in part; no device proof yet (K4).
+- **Merged:** the typed status, `onUnavailable` and the release text policy (#155; `attempt`,
+  #158); `RequestPolicy` (in `OkHttpHostHttp`; its `https` rule comes from the app's
+  `allowCleartext`, and a release build's settings refuse an http API base) and
+  `ExternalLinkPolicy`, with JVM tests in the scaffolded host (#159); iOS's public
+  `KeliverHostState`, `onUnavailable` per screen and release text policy (#160).
+- **In review:** the `screen-failed` outcome, the debug-surface audit, routes and close on
+  Android (this record's PR); `RequestPolicy`, routes and close on iOS (the next).
+- **Not yet:** the dependency-floor report (K3) and the device proof (K4: the unavailable,
+  refusal, route and close cases on the CI emulator and simulator, and on a phone).
 
 **Evidence.**
 - `keliver-new-production-host.sh --embed` and `keliver-new-ios-host.sh --embed` gave a working
