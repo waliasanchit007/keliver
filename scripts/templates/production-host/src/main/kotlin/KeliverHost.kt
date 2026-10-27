@@ -335,9 +335,10 @@ sealed interface KeliverHostState {
    * (the lookup failed and nothing is cached; the next screen to open looks
    * again), `refused` (the build's key or bundle server is unusable),
    * `not-loaded` (the bundle did not load, and no last good one did either),
-   * or `screen-failed` (the screen's code threw while it showed; only that
-   * screen's `onUnavailable` hears it, and [KeliverHost.state] stays
-   * [Running]: the next code load replaces the failed code).
+   * or `screen-failed` (the code threw while screens showed it: Treehouse
+   * stops it, every screen showing it and every screen opened afterwards calls
+   * its `onUnavailable`, one report per screen on show; [KeliverHost.state]
+   * stays [Running] until code loads again, as an update does).
    * [reason] is the report's fixed category. [title] and [message] say what
    * happened for a developer: they can name addresses and paths, so a release
    * build's [KeliverScreen] does not show them. [attempt] numbers the host's
@@ -412,21 +413,33 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * (Zipline says it has no such function), `launch()` as before.
    */
   internal fun launch(app: PortalPresenter, route: KeliverRoute?, onClose: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
-    if (route == null) return app.launch()
+    if (route == null || guestTakesNoRoute) return app.launch()
     return try {
       app.launchRoute(route.encode(), ScreenHost(onClose))
     } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
-      Log.w(TAG, "this bundle's guest takes no route (scaffolded before K1): showing its default screen")
+      // Not asked again until other code loads: each try leaves its ScreenHost bound.
+      guestTakesNoRoute = true
+      Log.w(TAG, "this bundle's guest takes no route (scaffolded before the host kit): showing its default screen")
       app.launch()
     }
   }
 
-  private inner class ScreenHost(private val onClose: () -> Unit) : KeliverScreenHost {
+  /** Set when the running code has no launchRoute; cleared when code loads. */
+  @Volatile private var guestTakesNoRoute = false
+
+  private inner class ScreenHost(private val onClose: () -> Unit) : dev.keliver.hostkit.KeliverScreenHost {
     // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread.
     override fun closeScreen() {
-      scope.launch { onClose() }
+      scope.launch { runCatching(onClose).onFailure { Log.w(TAG, "onClose threw: ${it.message}") } }
     }
   }
+
+  /**
+   * Set when the running code threw (K1's `screen-failed`): Treehouse stops it, so a screen
+   * opened afterwards would wait for code that never comes. It shows this instead, and calls its
+   * onUnavailable. Cleared when code loads again (an update). Main thread.
+   */
+  internal val crashed = MutableStateFlow<KeliverHostState.Unavailable?>(null)
 
   /**
    * K1's `screen-failed`: a screen's code threw while it showed. Reported (W6), and returned as
@@ -440,7 +453,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     return KeliverHostState.Unavailable(
       "screen-failed", reportReason("screen-failed", detail), "This screen stopped", detail.take(300),
       unavailableAttempts.incrementAndGet(),
-    )
+    ).also { crashed.value = it }
   }
 
   /**
@@ -788,6 +801,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       // this manifest's signature, and so its metadata, before loading it.
       eventListenerFactory = LoggingEventListenerFactory(
         onSuccess = { sequence, url ->
+          crashed.value = null // new code: no longer the code that threw
+          guestTakesNoRoute = false
           KeliverTiming.mark("code")
           val first = !loaded.getAndSet(true)
           scope.launch {

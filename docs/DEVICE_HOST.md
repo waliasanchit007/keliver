@@ -552,9 +552,10 @@ for byte):
   you were showing): it is called on the main thread each time a screen is
   composed in an `Unavailable` state, so finish or pop the Keliver screen
   there rather than stacking the fallback over it. It is also called with
-  outcome `screen-failed` when the screen's code throws while it shows (only
-  that screen hears it; `state` stays `Running`, and if you keep the screen,
-  the next code load replaces the failure, as an update does). After "no bundle", a
+  outcome `screen-failed` when the code throws while it shows: Treehouse stops
+  that code, so every screen showing it hears it (one report each), and so
+  does every screen opened afterwards, until code loads again (an update);
+  `state` stays `Running`. After "no bundle", a
   screen composed later looks up again (`Loading` meanwhile). **`loading`**
   and **`unavailable`** draw those states; the defaults show the host's own
   text only in a debug build of a debuggable app (`showsDeveloperText`) and
@@ -571,9 +572,12 @@ for byte):
   `PortalPresenter.launchRoute(route, screen)`, which
   `keliver-new-device-target.sh` scaffolds; a guest scaffolded before it has
   no `launchRoute`, and the host shows its `launch()` screen instead (logged).
-  A screen closes itself with `screen.closeScreen()`: `KeliverScreen`'s
-  `onClose`, by default a back press (pops a navigation entry or finishes the
-  activity, whichever way the screen was shown).
+  The route is form-encoded text (UTF-8, `+` for a space) and the same for
+  the same link on Android and iOS (one shared `KeliverRoute`). A screen
+  closes itself with `screen.closeScreen()`: `KeliverScreen`'s `onClose`, on
+  the main thread; without one its activity finishes. In a navigation stack,
+  pass `onClose` (pop your entry). A close that arrives after the screen went
+  (a late reply) closes nothing.
 - **`RequestPolicy`**: what a guest's HostHttp requests may reach, checked in
   Keliver code before anything is sent:
   `KeliverHost.create(this, KeliverConfig.fromBuild(this, RequestPolicy(origin, rules, allowStateChanging, allowCleartext)))`.

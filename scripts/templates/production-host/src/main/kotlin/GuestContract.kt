@@ -1,6 +1,7 @@
 package @@PACKAGE@@
 
 import app.cash.zipline.ZiplineService
+import dev.keliver.hostkit.KeliverScreenHost
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.ZiplineTreehouseUi
 
@@ -19,10 +20,4 @@ interface PortalPresenter : AppService, ZiplineService {
    * before K1 has no such function: the host calls [launch] instead.
    */
   fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi
-}
-
-/** What a screen may ask of the host that shows it (K1). */
-interface KeliverScreenHost : ZiplineService {
-  /** Close this screen: the app's `onClose` for it, by default a back press (pop, or finish the activity). */
-  fun closeScreen()
 }

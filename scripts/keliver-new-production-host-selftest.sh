@@ -191,17 +191,35 @@ grep -q 'dynamicContentWidgetFactory = failureWidgets' "${M%/*}/KeliverScreen.kt
   || bad "host kit: screen-failed is not wired"
 # Host kit K1, routes and close: a route keeps only the app's allowed query keys, a new route
 # relaunches the guest, a guest from before K1 still opens (launch()), and closeScreen reaches
-# the app's onClose (by default a back press); the activity takes a re-delivered intent's route.
+# the app's onClose (by default the activity finishes; a late close closes nothing); the
+# activity takes a re-delivered intent's route.
 S="${M%/*}/KeliverScreen.kt"
 grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "${M%/*}/GuestContract.kt" \
-  && grep -q 'fun closeScreen()' "${M%/*}/GuestContract.kt" \
-  && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" \
+  && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "${M%/*}/GuestContract.kt" \
+  && grep -q '^package dev.keliver.hostkit$' "${M%/*}/KeliverScreenHost.kt" \
+  && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" && grep -q 'guestTakesNoRoute = true' "$M" \
   && grep -q 'val contentSource = remember(route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
-  && grep -q 'backDispatcher?.onBackPressed()' "$S" \
+  && grep -q 'onClose ?: { activity?.finish() }' "$S" && grep -q 'if (active.get()) latestOnClose()' "$S" \
   && grep -q 'override fun onNewIntent(intent: Intent)' "$H/src/main/kotlin/com/example/demo/host/MainActivity.kt" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
   && ok "host kit: routes (allowed query keys only, a new route relaunches, older guests still open) and close" \
   || bad "host kit: routes and close are not wired"
+# Zipline matches launchRoute by its signature, parameter types' packages included: the guest
+# that keliver-new-device-target.sh writes must declare KeliverScreenHost exactly as this host does.
+DT="$(dirname "$SCAFFOLD")/keliver-new-device-target.sh"
+if [ -f "$DT" ]; then
+  sed -n "/<<'HOSTKIT'$/,/^HOSTKIT$/p" "$DT" | sed '1d;$d' | cmp -s - "${M%/*}/KeliverScreenHost.kt" \
+    && grep -qF 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "$DT" \
+    && ok "host kit: the guest scaffolder declares KeliverScreenHost and launchRoute exactly as this host does" \
+    || bad "host kit: the guest's KeliverScreenHost or launchRoute differs from this host's: routes would never reach it"
+else
+  bad "host kit: no keliver-new-device-target.sh beside $SCAFFOLD to compare the guest contract with"
+fi
+# A crash leaves no blank screen: a screen opened after the code threw shows that and calls onUnavailable.
+grep -q 'val failed by host.crashed.collectAsState()' "$S" && grep -q '.also { crashed.value = it }' "$M" \
+  && grep -q 'crashed.value = null // new code' "$M" \
+  && ok "host kit: after the code threw, a screen opened later says so (not a blank screen) until code loads again" \
+  || bad "host kit: a screen opened after a crash is not handled"
 # Host kit K1, debug-only surfaces: the bundle server set on the device, the check-now receiver,
 # the host's developer text and live updates each need this module's DEBUG AND a debuggable app;
 # the receiver also needs DUMP (adb's shell has it; apps do not). The manifest declares no receiver.
@@ -375,14 +393,16 @@ for i, l in enumerate(lines):
     if 'debuggable' in s and s.endswith('=true'): problems.append('the application is debuggable')
     m = re.match(r'E: (activity|activity-alias|receiver|service|provider) ', s)
     if not m: continue
-    body, j = [], i + 1
+    body, own, j = [], [], i + 1
     while j < len(lines) and indent(lines[j]) > indent(l):
-        body.append(lines[j].strip()); j += 1
-    own = [b for b in body if b.startswith('A: ') and indent(lines[i + 1 + body.index(b)]) == indent(l) + 2]
+        t = lines[j].strip()
+        body.append(t)
+        if t.startswith('A: ') and indent(lines[j]) == indent(l) + 2: own.append(t)
+        j += 1
     exported = any(':exported(' in a and a.endswith('=true') for a in own)
     guarded = any(':permission(' in a for a in own)
     launcher = any('android.intent.category.LAUNCHER' in b for b in body)
-    if exported and not guarded and not (m.group(1) == 'activity' and launcher):
+    if exported and not guarded and not (m.group(1) in ('activity', 'activity-alias') and launcher):
         name = next((a for a in own if ':name(' in a), '?')
         problems.append(f'{m.group(1)} {name} is exported without a permission')
 print('; '.join(problems))

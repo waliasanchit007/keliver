@@ -230,6 +230,7 @@ import dev.keliver.treehouse.StandardAppLifecycle
 import dev.keliver.treehouse.TreehouseUi
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import dev.keliver.treehouse.asZiplineTreehouseUi
+import dev.keliver.hostkit.KeliverScreenHost
 import ${PKG}.logic.${PRESENTER}
 import ${PKG}.screens.${SCREEN}
 
@@ -244,17 +245,12 @@ interface PortalPresenter : AppService, ZiplineService {
   fun launch(): ZiplineTreehouseUi
 
   /**
-   * A screen for a route (host kit K1): the app opens a Keliver screen with a
+   * A screen for a route (host kit): the app opens a Keliver screen with a
    * route such as "orders/42?tab=items", its query already cut to the keys the
-   * app allows. Hosts from before it call launch() only.
+   * app allows. Each path segment, key and value is form-encoded (UTF-8; "+"
+   * is a space). Hosts from before it call launch() only.
    */
   fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi
-}
-
-/** What a screen may ask of the host that shows it. */
-interface KeliverScreenHost : ZiplineService {
-  /** Close this screen (the host pops it, or finishes its activity). */
-  fun closeScreen()
 }
 
 /**
@@ -291,6 +287,24 @@ fun main() {
 }
 EOF
 echo "    src/jsMain/kotlin/device/Main.kt"
+
+# The type launchRoute takes, in the one package every host declares it in too: Zipline
+# matches a function by its signature, parameter types' packages included.
+cat > "$APP/src/jsMain/kotlin/device/KeliverScreenHost.kt" <<'HOSTKIT'
+// A fixed package, the same in every host and every guest: Zipline identifies a function by
+// its signature, its parameter types' packages included, so launchRoute(String,
+// KeliverScreenHost) reaches a guest only when both declare this type here.
+package dev.keliver.hostkit
+
+import app.cash.zipline.ZiplineService
+
+/** What a screen may ask of the host that shows it (host kit). */
+interface KeliverScreenHost : ZiplineService {
+  /** Close this screen: the app's onClose for it (by default the host closes it as it was shown). */
+  fun closeScreen()
+}
+HOSTKIT
+echo "    src/jsMain/kotlin/device/KeliverScreenHost.kt"
 
 sed "s/@@PACKAGE@@/${PKG}/g" "$GUEST_TIMING" > "$APP/src/jsMain/kotlin/device/KeliverTiming.kt"
 echo "    src/jsMain/kotlin/device/KeliverTiming.kt"

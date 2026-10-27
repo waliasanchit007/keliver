@@ -118,13 +118,18 @@ fun KeliverScreen(
             SideEffect { shown = true } // once drawn, an update swaps in place
             val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
             // K1's routes and close: a new route is a new content source, so the guest launches it
-            // (TreehouseContent rebinds); closing defaults to a back press (pop, or finish).
-            val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-            val latestOnClose by rememberUpdatedState(onClose ?: { backDispatcher?.onBackPressed() })
+            // (TreehouseContent rebinds). Without onClose, closing finishes the activity (not a back
+            // press: the guest's own back handlers, a NavHost's or a sheet's would take that).
+            val activity = androidx.compose.ui.platform.LocalContext.current.findActivity()
+            val latestOnClose by rememberUpdatedState(onClose ?: { activity?.finish() })
+            // A close asked for after this content went (a reply that came late) closes nothing.
+            val active = remember(route) { java.util.concurrent.atomic.AtomicBoolean(true) }
+            DisposableEffect(active) { onDispose { active.set(false) } }
             val contentSource = remember(route) {
               object : TreehouseContentSource<PortalPresenter> {
                 // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
-                override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(host.launch(app, route) { latestOnClose() })
+                override fun get(app: PortalPresenter) =
+                  KeliverTiming.firstFrame(host.launch(app, route) { if (active.get()) latestOnClose() })
               }
             }
             // K1's screen-failed: the code threw while this screen showed it.
@@ -156,9 +161,17 @@ private class ScreenFailedWidgets(
   private val onUnavailable: () -> ((KeliverHostState.Unavailable) -> Unit)?,
   private val unavailable: () -> @Composable (KeliverHostState.Unavailable) -> Unit,
 ) : DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> {
+  // Nothing while code loads, as before; but once the running code has thrown, it never will:
+  // a screen opened then says so and calls its onUnavailable.
   override fun Loading(): Loading<@Composable (Modifier) -> Unit> = object : Loading<@Composable (Modifier) -> Unit> {
     override var modifier: RedwoodModifier = RedwoodModifier
-    override val value: @Composable (Modifier) -> Unit = {}
+    override val value: @Composable (Modifier) -> Unit = {
+      val failed by host.crashed.collectAsState()
+      failed?.let { f ->
+        LaunchedEffect(f) { onUnavailable()?.invoke(f) }
+        unavailable()(f)
+      }
+    }
   }
 
   override fun Crashed(): Crashed<@Composable (Modifier) -> Unit> = object : Crashed<@Composable (Modifier) -> Unit> {
@@ -179,6 +192,12 @@ private class ScreenFailedWidgets(
   }
 }
 
+private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+  is android.app.Activity -> this
+  is android.content.ContextWrapper -> baseContext.findActivity()
+  else -> null
+}
+
 /** KeliverScreen for apps built on Views: add it to a layout, then set [host]. */
 class KeliverView @JvmOverloads constructor(
   context: Context,
@@ -193,7 +212,7 @@ class KeliverView @JvmOverloads constructor(
   /** [KeliverScreen]'s route: set a new one (a re-delivered intent's) and the screen shows it. */
   var route: KeliverRoute? by mutableStateOf(null)
 
-  /** [KeliverScreen]'s onClose: the screen asked to close; by default a back press. */
+  /** [KeliverScreen]'s onClose: the screen asked to close; by default its activity finishes. */
   var onClose: (() -> Unit)? by mutableStateOf(null)
 
   @Composable
