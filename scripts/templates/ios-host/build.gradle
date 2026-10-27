@@ -110,7 +110,14 @@ tasks.configureEach { t ->
   if (t.name ==~ /linkRelease.*Ios.*/) t.dependsOn(checkReleaseUrls)
 }
 
+// The JVM target only runs the host kit's pure-Kotlin checks: no Compose there.
+composeCompiler {
+  targetKotlinPlatforms.set([org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native] as Set)
+}
+
 kotlin {
+  // Only for the host kit's pure-Kotlin checks (src/commonMain, src/jvmTest): ./gradlew -p host-ios jvmTest
+  jvm()
   [iosArm64(), iosSimulatorArm64()].each { t ->
     // The system SQLite, for IosSqlHost (src/nativeInterop/cinterop/sqlite3.def).
     t.compilations.main.cinterops {
@@ -128,6 +135,11 @@ kotlin {
     }
   }
   sourceSets {
+    jvmTest {
+      dependencies {
+        implementation 'org.jetbrains.kotlin:kotlin-test'
+      }
+    }
     iosMain {
       // Timing marks (M0) only when Xcode's build setting KELIVER_TIMING is YES, which the
       // Debug and Benchmark configurations set (Benchmark: Release settings, never shipped).

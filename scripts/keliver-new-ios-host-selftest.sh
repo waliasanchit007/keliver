@@ -189,6 +189,16 @@ grep -q 'public sealed interface KeliverHostState' "$K/MainViewController.kt" \
   && ! grep -q 'HostState.Message(.*) -> MessageScreen' "$K/MainViewController.kt" \
   && ok "host kit K2: KeliverHostState is public (Loading, Unavailable, Running), onUnavailable per screen, host text only in DEBUG" \
   || bad "host kit K2: the public state, onUnavailable or the release text policy is not wired"
+# Host kit K2: RequestPolicy (pure Kotlin in commonMain, checked by NSURLSessionHostHttp before
+# sending; its tests run on the JVM target).
+KC="$H/src/commonMain/kotlin/com/example/demo/host"
+grep -q 'public class RequestPolicy(' "$KC/RequestPolicy.kt" && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/RequestPolicyTest.kt" ] \
+  && grep -q '(baseRefusal ?: policy.refusal(method, request.path))' "$K/IosHttp.kt" \
+  && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "$K/IosHttp.kt" \
+  && grep -q 'NSURLSessionHostHttp(it, Keliver.requestPolicy)' "$K/MainViewController.kt" \
+  && grep -q "implementation 'org.jetbrains.kotlin:kotlin-test'" "$H/build.gradle" \
+  && ok "host kit K2: HostHttp checks the app's RequestPolicy before sending; its JVM tests are scaffolded" \
+  || bad "host kit K2: RequestPolicy is not wired into NSURLSessionHostHttp, or its tests are missing"
 grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', 'next-launch', 'on-resume', 'live'\]" "$H/build.gradle" \
   && grep -q 'UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "live" else "next-launch" }' "$K/MainViewController.kt" \
   && grep -q 'if (mode == "live" && !kotlin.native.Platform.isDebugBinary) "on-resume" else mode' "$K/MainViewController.kt" \
@@ -293,15 +303,22 @@ if [ "$BUILD" = 1 ]; then
       fw="$(find "$H/build" "$appb/Frameworks" -name KeliverHost.framework -type d -exec test -d '{}/Modules' ';' -print 2>/dev/null | head -1)"
       if [ -z "$fw" ]; then
         bad "no KeliverHost.framework with Modules under $H/build to type-check KeliverScreen.swift against"
-      elif xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
-          -F "$(dirname "$fw")" "$L/KeliverScreen.swift" > "$DISP/swift-typecheck.log" 2>&1; then
-        ok "the embed's KeliverScreen.swift type-checks against the built framework (viewController with onUnavailable)"
+      elif printf '%s\n' 'import KeliverHost' 'func configureKeliver() {' \
+            '  Keliver.shared.requestPolicy = RequestPolicy(origin: "https://api.example.com", allowed: [RequestPolicy.Rule(method: "GET", path: "orders")], allowStateChanging: false, allowCleartext: false)' \
+            '}' > "$DISP/policy-check.swift" \
+          && xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
+          -F "$(dirname "$fw")" "$L/KeliverScreen.swift" "$DISP/policy-check.swift" > "$DISP/swift-typecheck.log" 2>&1; then
+        ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable) and setting a RequestPolicy"
       else
         bad "KeliverScreen.swift does not type-check (framework '${fw}'): $(grep -m3 'error:' "$DISP/swift-typecheck.log" | tr '\n' ' ')"
       fi
     else
       bad "xcodebuild failed (rc=$rc): $(grep -E '^e: |error:' "$DISP/xcodebuild.log" | head -3 | tr '\n' ' ')"
     fi
+    # The host kit's pure-Kotlin checks (RequestPolicy), on the JVM target.
+    ( cd "$APP" && ./gradlew --console=plain -p host-ios jvmTest > "$DISP/jvm-tests.log" 2>&1 ); rc=$?
+    [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (jvmTest: RequestPolicy)" \
+      || bad "the host kit's JVM tests failed (rc=$rc): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/jvm-tests.log" | head -6 | tr '\n' ' ')"
     # A release framework refuses http:// — the check exists, fails here, and is wired to every release link.
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-urls.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/release-urls.log" \

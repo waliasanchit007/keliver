@@ -598,6 +598,16 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   or native screen, with the route you were showing): dismiss or pop it,
   rather than stacking the fallback over it. The screen holds the closure:
   capture your controller weakly (`[weak self]`).
+- **`RequestPolicy`** (K2, Android's rules): set `Keliver.shared.requestPolicy
+  = RequestPolicy(origin: "https://api.example.com", allowed: [RequestPolicy.Rule(method: "GET", path: "orders")], allowStateChanging: false, allowCleartext: false)`
+  before the host starts. The origin must be `API_BASE_URL`'s (otherwise every
+  request is refused) and `https` unless `allowCleartext` (DEBUG only); paths
+  are exact pairs relative to the API base; a state-changing method also needs
+  `allowStateChanging`. A refused request fails in the guest ("HostHttp
+  refused: …") and nothing is sent; the method-override headers are always
+  dropped. Not restricted: the query string and other headers. Without a
+  policy every path under the API base is allowed, as before. It is pure
+  Kotlin, so its tests run on the JVM: `./gradlew -p host-ios jvmTest`.
 - **Release text**: only a DEBUG binary (`Keliver.shared.showsDeveloperText`)
   shows the host's own text, which can name addresses and paths; a release
   binary shows "Loading…" and a generic line.

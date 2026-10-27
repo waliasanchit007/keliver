@@ -283,6 +283,12 @@ fi
 for f in "$TEMPLATES"/src/iosMain/kotlin/*.kt; do
   subst "$f" "$STAGE/src/iosMain/kotlin/$PKG_PATH/$(basename "$f")"
 done
+# Pure Kotlin shared with the JVM target that runs its checks (K2: RequestPolicy).
+for set in commonMain jvmTest; do
+  for f in "$TEMPLATES"/src/$set/kotlin/*.kt; do
+    subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
+  done
+done
 # Timing marks (M0): the real ones when Xcode's KELIVER_TIMING is YES (Debug, Benchmark), a no-op otherwise.
 for set in timing notiming; do
   subst "$TEMPLATES/src/$set/kotlin/KeliverTiming.kt" "$STAGE/src/$set/kotlin/$PKG_PATH/KeliverTiming.kt"

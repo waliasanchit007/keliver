@@ -286,6 +286,12 @@ public object Keliver {
 
   private var unavailableAttempts = 0
 
+  /**
+   * What guests' HostHttp requests may reach (K2): set it before the host starts (before the
+   * first screen, or [start]). Null allows every path under API_BASE_URL, as before.
+   */
+  public var requestPolicy: RequestPolicy? = null
+
   private fun setState(s: KeliverHostState) {
     mutableState.value = s
     // The app's handler must not take the host down with it.
@@ -867,7 +873,7 @@ private fun createApp(
   // One of each per host, bound into every code load (not one per load: each
   // holds a connection or a session).
   val sql = IosSqlHost()
-  val http = apiBase?.let { NSURLSessionHostHttp(it) }
+  val http = apiBase?.let { NSURLSessionHostHttp(it, Keliver.requestPolicy) }
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "keliver-production"
     override val manifestUrl = flow
