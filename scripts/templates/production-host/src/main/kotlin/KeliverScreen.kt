@@ -94,7 +94,9 @@ fun KeliverScreen(
         KeliverHostState.Loading -> loading()
         is KeliverHostState.Unavailable -> {
           val latest by rememberUpdatedState(onUnavailable)
-          LaunchedEffect(s) { latest?.invoke(s) }
+          // Still the state? A screen composed on an old "no bundle" restarts the host just
+          // before this runs (the start() effect is earlier), and must not act on that failure.
+          LaunchedEffect(s) { if (host.state.value == s) latest?.invoke(s) }
           unavailable(s)
         }
         is KeliverHostState.Running -> {

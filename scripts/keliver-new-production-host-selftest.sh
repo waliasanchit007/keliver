@@ -175,7 +175,7 @@ grep -q '^keliver.updates=$' "$H/gradle.properties" \
 S="${M%/*}/KeliverScreen.kt"
 grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String) : KeliverHostState' "$M" \
   && ! grep -q 'KeliverHostState.Message' "$M" "$S" && ! grep -q 'mutableState.value = KeliverHostState.Message' "$M" \
-  && grep -q 'onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null' "$S" && grep -q 'latest?.invoke(s)' "$S" \
+  && grep -q 'onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null' "$S" && grep -q 'if (host.state.value == s) latest?.invoke(s)' "$S" \
   && grep -q 'BuildConfig.DEBUG && (this.context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0' "$M" \
   && ! grep -q 'BuildConfig.DEBUG' "$S" && grep -q 'if (host.showsDeveloperText) MessageScreen(state.title, state.message)' "$S" \
   && grep -q 'var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)' "$S" \

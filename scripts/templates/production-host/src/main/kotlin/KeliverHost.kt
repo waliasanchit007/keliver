@@ -479,7 +479,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   internal val imageLoader: ImageLoader by lazy { ImageLoader.Builder(this.context).build() }
   private val sqlHost by lazy { AndroidSqlHost(this.context) }
 
-  /** Looks up and loads the bundle, once per process; later calls do nothing. */
+  /**
+   * Looks up and loads the bundle, once per process; later calls do nothing, except after
+   * "no bundle", when the next call looks again. From any thread.
+   */
   fun start() {
     registerDebugCheckForUpdate()
     if (!started.compareAndSet(false, true)) return
