@@ -129,7 +129,7 @@ fun KeliverScreen(
               object : TreehouseContentSource<PortalPresenter> {
                 // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
                 override fun get(app: PortalPresenter) =
-                  KeliverTiming.firstFrame(host.launch(app, route) { if (active.get()) latestOnClose() })
+                  KeliverTiming.firstFrame(host.launch(app, s.app, route) { if (active.get()) latestOnClose() })
               }
             }
             // K1's screen-failed: the code threw while this screen showed it.
