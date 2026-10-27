@@ -5,7 +5,7 @@
 > CAUSE UNRESOLVED or MEASURED. Fixed entries stay here with their status, so
 > the history of each workaround is in one place; `CHANGELOG.md` and the
 > tools release notes say which release shipped a fix. Open now: U19, U20,
-> U28, U38 (and U8 part 1, upstream in Zipline).
+> U38's browser re-run, U39 (and U8 part 1, upstream in Zipline).
 >
 > The file was started in an earlier integration repository and moved here so
 > docs travel with the artifact. The early entries (U1–U15) cite that
@@ -883,6 +883,27 @@ threading bug rather than a wiring bug.
 ---
 
 ## Actionable here
+
+### U39. A double-click right after a screen settles can select a component instance without opening it — OPEN, CAUSE UNRESOLVED (found 2026-10-27)
+
+**What happened.** The editor E2E test K1 double-clicks the SummaryCard instance
+just after the screen has loaded. On CI it failed on the first attempt three
+times in one day (runs for #150, #151 and #152, none of which touched the
+editor), and passed on each rerun. The failure's DOM dump shows the instance
+**selected**, the outline still the screen's, and no component requested: the
+first click's select took effect, the double-click's open did not. The
+canvas's double-click handler (`Portal.kt`, `openOrEditInline` after a hit
+test) found nothing under the pointer.
+
+**Suspected, not shown.** The select from the first click makes the canvas
+recompose, and the selection boxes are withdrawn and reported again; a
+double-click landing in that gap would hit-test against no box. If so, a
+person who double-clicks the moment a screen appears gets "selected, not
+opened" too, and a second double-click (or Enter) opens it.
+
+**Workaround in the test (#153).** K1 presses Enter, the same open path,
+when the double-click only selected, and says so in the CI output. The editor
+itself is unchanged; this entry stays open until the hit test is looked at.
 
 ### U38. After switching to an app's own editor, the browser can keep running the bundled one — FIXED for tools 0.3.13, browser re-run pending (found 2026-10-21)
 

@@ -27,7 +27,7 @@
 # keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
 set -euo pipefail
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
-KELIVER_VERSION="${KELIVER_VERSION:-0.4.0}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}"
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
 # The app's own Keliver version (appRuntime.keliverVersion) unless

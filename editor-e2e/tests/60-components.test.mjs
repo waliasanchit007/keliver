@@ -95,7 +95,7 @@ export default [
   {
     id: 'K1',
     title: 'a relay that cannot open components is never shown as one: the editor says so and stays on the screen',
-    async run({ page, editor, relay }) {
+    async run({ page, editor, relay, log }) {
       await editor.open('overview', { readyColor: COLORS.summaryCard });
       const screenTypes = (await editor.outline()).map((r) => r.type);
       // An older relay ignores `component=` and sends its screen: answer the component's documents that way.
@@ -110,8 +110,24 @@ export default [
         const card = await editor.findColor(COLORS.summaryCard);
         await page.dblclick(card.cx, card.top + 8);
         let hint = null;
-        for (const end = Date.now() + 5000; !hint && Date.now() < end;) { hint = await editor.canvasHint(); if (!hint) await sleep(100); }
-        ok(/older than the editor/.test(hint ?? ''), `the editor says the relay cannot open SummaryCard (hint: ${hint})`);
+        // A double-click right after the screen settles sometimes lands as a select only (CI,
+        // 2026-10-27: the instance selected, no component asked for). Enter on the selected
+        // instance takes the same open path, so the relay's answer is still what is tested.
+        let pressed = false;
+        for (const end = Date.now() + 8000; !hint && Date.now() < end;) {
+          hint = await editor.canvasHint();
+          if (hint) break;
+          if (!pressed && Date.now() > end - 6000) {
+            if (/SummaryCard/.test((await editor.propsHeader()) ?? '')) {
+              // Visible in the CI output, not only in the artifacts: this is KNOWN_BUGS U39.
+              const note = 'the double-click only selected SummaryCard; pressing Enter (KNOWN_BUGS U39)';
+              log(note); console.log(`      note: K1: ${note}`);
+              await page.press('Enter'); pressed = true;
+            }
+          }
+          await sleep(100);
+        }
+        ok(/older than the editor/.test(hint ?? ''), `the editor says the relay cannot open SummaryCard (hint: ${hint}; ${pressed ? 'after Enter' : 'Enter not tried'}; selected: ${await editor.propsHeader()})`);
         await waitCrumbs(page, null, 'the breadcrumb goes back to the screen');
         equal((await editor.outline()).map((r) => r.type), screenTypes, "the outline is still the screen's");
         ok(await editor.findColor(COLORS.summaryCard), 'the screen is still drawn');

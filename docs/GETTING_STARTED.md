@@ -38,14 +38,14 @@ cd keliver
 
 **A new app does not start from this repo.** It starts with `keliver-init`
 from the portal tools bundle, which scaffolds a standalone Gradle project on
-the published `dev.keliver:*:0.4.0` libraries (Maven Central) and the
+the published `dev.keliver:*:0.4.1` libraries (Maven Central) and the
 `keliver-material` widgets, with no Keliver checkout. Download
-`keliver-portal-tools-0.3.12.zip` from the
-[tools 0.3.12 release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.12),
+`keliver-portal-tools-0.3.13.zip` from the
+[tools 0.3.13 release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.13),
 unzip it, and follow [PORTAL_ADOPTER_GUIDE.md](PORTAL_ADOPTER_GUIDE.md):
 
 ```bash
-keliver-portal-tools-0.3.12/bin/keliver-init MyApp && cd myapp
+keliver-portal-tools-0.3.13/bin/keliver-init MyApp && cd myapp
 ```
 
 **[`sample/`](../sample) is a runnable demo of the runtime**, with every moving
