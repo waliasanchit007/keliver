@@ -3,6 +3,7 @@ package @@PACKAGE@@
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -18,13 +19,20 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * - `.` and `..` segments and backslashes are refused, so a path cannot climb
  *   out of the base path (OkHttp would otherwise pop `..`);
  * - `Host` and hop-by-hop headers from the guest are dropped;
- * - redirects are not followed, so a response cannot send the call elsewhere.
+ * - redirects are not followed, so a response cannot send the call elsewhere;
+ * - with a [RequestPolicy], only its origin and its exact `(method, path)`
+ *   pairs, checked before anything is sent; a refused request fails in the
+ *   guest and is logged here.
  *
  * Add authentication, retries or certificate pinning here — this is your code.
  * Header values are joined with ", "; a multi-valued `Set-Cookie` does not
  * survive that, because HttpResponse carries one string per header.
  */
-class OkHttpHostHttp(client: OkHttpClient, private val base: HttpUrl) : HostHttpProvider {
+class OkHttpHostHttp(
+  client: OkHttpClient,
+  private val base: HttpUrl,
+  private val policy: RequestPolicy? = null,
+) : HostHttpProvider {
   private val client = client.newBuilder().followRedirects(false).followSslRedirects(false).build()
 
   override suspend fun execute(request: HttpRequest): HttpResponse = withContext(Dispatchers.IO) {
@@ -36,9 +44,13 @@ class OkHttpHostHttp(client: OkHttpClient, private val base: HttpUrl) : HostHttp
       segments.forEach { addPathSegment(it) }
       request.query.forEach { (k, v) -> addQueryParameter(k, v) }
     }.build()
+    val method = request.method.uppercase()
+    policy?.refusal(method, url, request.path)?.let { why ->
+      Log.w(TAG, "HostHttp refused: $why")
+      throw HostHttpRefused("HostHttp refused: $why")
+    }
     val headers = request.headers.filterKeys { it.lowercase() !in DROPPED_HEADERS }
     val contentType = headers.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value
-    val method = request.method.uppercase()
     // OkHttp refuses POST/PUT/PATCH without a body; send an empty one.
     val body = request.body?.toRequestBody(contentType?.toMediaTypeOrNull())
       ?: if (method in setOf("POST", "PUT", "PATCH")) ByteArray(0).toRequestBody() else null
@@ -61,3 +73,6 @@ class OkHttpHostHttp(client: OkHttpClient, private val base: HttpUrl) : HostHttp
     )
   }
 }
+
+/** A request the app's [RequestPolicy] does not allow; nothing was sent. */
+class HostHttpRefused(message: String) : IllegalArgumentException(message)
