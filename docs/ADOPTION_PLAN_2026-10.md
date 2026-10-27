@@ -73,7 +73,12 @@ Decide on optimisations only after M2–M5.
 
 ## Item 3. Brownfield host kit (builds on W2 `--embed`)
 
-**Status 2026-10-27:** not started.
+**Status 2026-10-27:** K1 started, Android only. Done: the typed status (`Loading`,
+`Unavailable(outcome, reason, title, message)`, `Running`; `Message` is gone, its two uses
+being loading and unavailability), `onUnavailable` on `KeliverScreen` and `KeliverView`, and
+the release message policy (overridable `loading` / `unavailable` slots). Not yet: the
+`screen-failed` outcome, `RequestPolicy`, `ExternalLinkPolicy`, routes and close, the
+debug-surface audit, iOS (K2), the dependency-floor report (K3) and the device proof (K4).
 
 **Evidence.**
 - `keliver-new-production-host.sh --embed` and `keliver-new-ios-host.sh --embed` gave a working
