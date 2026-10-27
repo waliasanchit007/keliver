@@ -562,6 +562,18 @@ for byte):
   name addresses and paths. `KeliverView` needs a lifecycle owner
   in its window, like any Compose view: use it in a `ComponentActivity`
   (`AppCompatActivity`) or a `Fragment`, not a plain `android.app.Activity`.
+- **Routes and close** (K1): `KeliverScreen(host, route = KeliverRoute.from(intent.dataString, allowedQueryKeys))`
+  shows the guest's screen for that route. `KeliverRoute` keeps a deep
+  link's path and only the query keys you allow, so a link's other
+  parameters never reach the guest. Set a new route (a re-delivered intent's,
+  from `onNewIntent`; `KeliverView.route` for Views) and the screen launches
+  it. The guest receives it as text (`orders/42?tab=items`) in
+  `PortalPresenter.launchRoute(route, screen)`, which
+  `keliver-new-device-target.sh` scaffolds; a guest scaffolded before it has
+  no `launchRoute`, and the host shows its `launch()` screen instead (logged).
+  A screen closes itself with `screen.closeScreen()`: `KeliverScreen`'s
+  `onClose`, by default a back press (pops a navigation entry or finishes the
+  activity, whichever way the screen was shown).
 - **`RequestPolicy`**: what a guest's HostHttp requests may reach, checked in
   Keliver code before anything is sent:
   `KeliverHost.create(this, KeliverConfig.fromBuild(this, RequestPolicy(origin, rules, allowStateChanging, allowCleartext)))`.

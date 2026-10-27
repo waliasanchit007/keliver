@@ -189,6 +189,19 @@ grep -q 'dynamicContentWidgetFactory = failureWidgets' "${M%/*}/KeliverScreen.kt
   && grep -q 'report("screen-failed", running?.sequence' "$M" && grep -q 'outcome == "screen-failed" -> "exception"' "${M%/*}/BundleIndex.kt" \
   && ok "host kit: a screen whose code throws reports screen-failed, calls onUnavailable and draws its unavailable slot" \
   || bad "host kit: screen-failed is not wired"
+# Host kit K1, routes and close: a route keeps only the app's allowed query keys, a new route
+# relaunches the guest, a guest from before K1 still opens (launch()), and closeScreen reaches
+# the app's onClose (by default a back press); the activity takes a re-delivered intent's route.
+S="${M%/*}/KeliverScreen.kt"
+grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "${M%/*}/GuestContract.kt" \
+  && grep -q 'fun closeScreen()' "${M%/*}/GuestContract.kt" \
+  && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" \
+  && grep -q 'val contentSource = remember(route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
+  && grep -q 'backDispatcher?.onBackPressed()' "$S" \
+  && grep -q 'override fun onNewIntent(intent: Intent)' "$H/src/main/kotlin/com/example/demo/host/MainActivity.kt" \
+  && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
+  && ok "host kit: routes (allowed query keys only, a new route relaunches, older guests still open) and close" \
+  || bad "host kit: routes and close are not wired"
 # Host kit K1, debug-only surfaces: the bundle server set on the device, the check-now receiver,
 # the host's developer text and live updates each need this module's DEBUG AND a debuggable app;
 # the receiver also needs DUMP (adb's shell has it; apps do not). The manifest declares no receiver.
@@ -237,7 +250,7 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/d
   && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
   && ! grep -q 'KeliverTrace' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
   && grep -q "def timingBuildTypes = \['debug', 'benchmark'\]" "$H/build.gradle" && grep -q 'profileable true' "$H/build.gradle" \
-  && grep -q 'KeliverTiming.firstFrame(app.launch())' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
+  && grep -q 'KeliverTiming.firstFrame(host.launch(app, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
   && ok "M0: timing marks in debug and benchmark (src/timing), a no-op elsewhere (src/notiming); a benchmark build type" \
   || bad "M0: the timing marks or the benchmark build type are not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.

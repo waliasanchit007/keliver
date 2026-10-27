@@ -242,12 +242,33 @@ import ${PKG}.screens.${SCREEN}
  */
 interface PortalPresenter : AppService, ZiplineService {
   fun launch(): ZiplineTreehouseUi
+
+  /**
+   * A screen for a route (host kit K1): the app opens a Keliver screen with a
+   * route such as "orders/42?tab=items", its query already cut to the keys the
+   * app allows. Hosts from before it call launch() only.
+   */
+  fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi
 }
 
-private class AppUi : TreehouseUi {
+/** What a screen may ask of the host that shows it. */
+interface KeliverScreenHost : ZiplineService {
+  /** Close this screen (the host pops it, or finishes its activity). */
+  fun closeScreen()
+}
+
+/**
+ * One screen for every route as scaffolded: branch on route.substringBefore('?')
+ * to show others, and call screen?.closeScreen() to close this one.
+ */
+private class AppUi(val route: String = "", private val screen: KeliverScreenHost? = null) : TreehouseUi {
   @Composable
   override fun Show() {
     ${SCREEN}(${PRESENTER}())
+  }
+
+  override fun close() {
+    screen?.close() // the host's handle for this screen, released with it
   }
 }
 
@@ -258,6 +279,8 @@ private class AppPresenter(json: kotlinx.serialization.json.Json) : PortalPresen
     widgetVersion = 1U,
   )
   override fun launch(): ZiplineTreehouseUi = AppUi().asZiplineTreehouseUi(appLifecycle)
+  override fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi =
+    AppUi(route, screen).asZiplineTreehouseUi(appLifecycle)
 }
 
 fun main() {

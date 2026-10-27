@@ -66,6 +66,8 @@ import dev.keliver.treehouse.composeui.TreehouseContent
 fun KeliverScreen(
   host: KeliverHost,
   modifier: Modifier = Modifier,
+  route: KeliverRoute? = null,
+  onClose: (() -> Unit)? = null,
   onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null,
   loading: @Composable () -> Unit = { DefaultLoading(host) },
   unavailable: @Composable (KeliverHostState.Unavailable) -> Unit = { DefaultUnavailable(host, it) },
@@ -115,10 +117,14 @@ fun KeliverScreen(
           } else {
             SideEffect { shown = true } // once drawn, an update swaps in place
             val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
-            val contentSource = remember {
+            // K1's routes and close: a new route is a new content source, so the guest launches it
+            // (TreehouseContent rebinds); closing defaults to a back press (pop, or finish).
+            val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+            val latestOnClose by rememberUpdatedState(onClose ?: { backDispatcher?.onBackPressed() })
+            val contentSource = remember(route) {
               object : TreehouseContentSource<PortalPresenter> {
                 // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
-                override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(app.launch())
+                override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(host.launch(app, route) { latestOnClose() })
               }
             }
             // K1's screen-failed: the code threw while this screen showed it.
@@ -184,9 +190,15 @@ class KeliverView @JvmOverloads constructor(
   /** [KeliverScreen]'s onUnavailable: open what this view replaced when the host cannot show a screen. */
   var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)
 
+  /** [KeliverScreen]'s route: set a new one (a re-delivered intent's) and the screen shows it. */
+  var route: KeliverRoute? by mutableStateOf(null)
+
+  /** [KeliverScreen]'s onClose: the screen asked to close; by default a back press. */
+  var onClose: (() -> Unit)? by mutableStateOf(null)
+
   @Composable
   override fun Content() {
-    host?.let { KeliverScreen(it, Modifier.fillMaxSize(), onUnavailable = onUnavailable) }
+    host?.let { KeliverScreen(it, Modifier.fillMaxSize(), route = route, onClose = onClose, onUnavailable = onUnavailable) }
   }
 }
 

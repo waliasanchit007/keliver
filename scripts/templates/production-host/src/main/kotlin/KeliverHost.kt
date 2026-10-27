@@ -407,6 +407,28 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   }
 
   /**
+   * K1's routes: [app]'s UI for [route] through `launchRoute`, which can close itself through
+   * [onClose] (called on the main thread); without a route, or for a guest from before K1
+   * (Zipline says it has no such function), `launch()` as before.
+   */
+  internal fun launch(app: PortalPresenter, route: KeliverRoute?, onClose: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
+    if (route == null) return app.launch()
+    return try {
+      app.launchRoute(route.encode(), ScreenHost(onClose))
+    } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
+      Log.w(TAG, "this bundle's guest takes no route (scaffolded before K1): showing its default screen")
+      app.launch()
+    }
+  }
+
+  private inner class ScreenHost(private val onClose: () -> Unit) : KeliverScreenHost {
+    // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread.
+    override fun closeScreen() {
+      scope.launch { onClose() }
+    }
+  }
+
+  /**
    * K1's `screen-failed`: a screen's code threw while it showed. Reported (W6), and returned as
    * that screen's state for its `onUnavailable`; [state] stays [KeliverHostState.Running], since
    * the next code load (an update) replaces the failed code. Main thread.
