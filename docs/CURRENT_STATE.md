@@ -64,6 +64,7 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | release-build start-up numbers (M2): first launch 1024 ms, cold 243 ms, warm 35 ms (medians of 5) | `reference/inventory`, benchmark build | Samsung S25 Ultra | 2026-10-17 (#119) |
 | a brownfield product proof: one feature (13 screens) rebuilt as a Keliver guest inside two existing production apps, debug builds, with fixtures | a private app (not in this repository) | Samsung S25 Ultra, iPhone 13 | 2026-10-14/15 (`ADOPTION_RETRO_2026-10.md`) |
 | the editor loop on a real app: an edit in the editor, surgical write-back, a signed Production bundle, the change on the phone | the same private app | Samsung S25 Ultra (2026-10-16); Galaxy A12, Android 12, with the #140 editor (2026-10-24) | 2026-10-16, 2026-10-24 |
+| live device updates: a debug Android host applies a publish while the screen is open (≈ 1 s after the event, same process); the stream closes in the background and reopens on return | an app scaffolded from the **published** tools 0.3.13 zip and libraries 0.4.1 (the production-host template's debug build) | Galaxy A12, Android 12, wireless adb + `adb reverse` | 2026-10-27 (`DELIVERY_PLAN.md` row) |
 
 Not demonstrated: the reference app on a physical iPhone (its iOS route runs on
 simulators; iOS M2 waits on a signing team), a release-signed APK or IPA on a
@@ -71,10 +72,11 @@ device, HTTPS with a real certificate to a device, and an external adopter
 (W7, `DEVICE_PROOF.md`).
 
 **Unresolved defects:** U19 (live-preview re-render, cause unresolved); U20
-(editor frame rate, measured not assessed); U28 (the production host logs a
-false `codeLoadFailed` on every start); U38 (after switching to an app's own
-editor the browser can keep running the bundled one); and the adopter-route
-gaps in `REFERENCE_APP.md`. (U30 was fixed with W8, released in tools 0.3.9.) Since tools 0.3.6 the production host and signed publishing
+(editor frame rate, measured not assessed); U39 (a double-click right after a
+screen settles can select without opening); and the adopter-route gaps in
+`REFERENCE_APP.md`. U28 (a false `codeLoadFailed` on every generic-host
+start) and U38 (the browser kept running a cached editor) are fixed in tools
+0.3.13; U28 is not run on a device, and U38's browser re-run is pending. (U30 was fixed with W8, released in tools 0.3.9.) Since tools 0.3.6 the production host and signed publishing
 are scaffolded (`keliver-new-production-host.sh`, `keliver-new-publish-target.sh`),
 and the relay refuses unsigned bundles. The reference app's CI builds
 from the published tools 0.3.13 zip (#154); on pull requests it scaffolds from
