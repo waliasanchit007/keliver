@@ -199,6 +199,15 @@ grep -q 'public class RequestPolicy(' "$KC/RequestPolicy.kt" && [ -f "$H/src/jvm
   && grep -q "implementation 'org.jetbrains.kotlin:kotlin-test'" "$H/build.gradle" \
   && ok "host kit K2: HostHttp checks the app's RequestPolicy before sending; its JVM tests are scaffolded" \
   || bad "host kit K2: RequestPolicy is not wired into NSURLSessionHostHttp, or its tests are missing"
+# Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).
+grep -q 'public class KeliverRoute(path: String, query: Map<String, String>)' "$KC/KeliverRoute.kt" \
+  && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
+  && grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "$K/GuestContract.kt" \
+  && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$K/MainViewController.kt" \
+  && grep -q 'override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, route, close))' "$K/MainViewController.kt" \
+  && grep -q 'nav.popViewControllerAnimated(true)' "$K/MainViewController.kt" \
+  && ok "host kit K2: routes (allowed query keys only, older guests still open) and close (pop or dismiss by default)" \
+  || bad "host kit K2: routes and close are not wired"
 grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', 'next-launch', 'on-resume', 'live'\]" "$H/build.gradle" \
   && grep -q 'UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "live" else "next-launch" }' "$K/MainViewController.kt" \
   && grep -q 'if (mode == "live" && !kotlin.native.Platform.isDebugBinary) "on-resume" else mode' "$K/MainViewController.kt" \
@@ -269,7 +278,7 @@ L="$EX/keliver-host-ios"; LK="$L/src/iosMain/kotlin/com/example/demo/host"
 [ -x "$L/gradlew" ] && [ -f "$L/gradle/wrapper/gradle-wrapper.properties" ] && [ -f "$L/settings.gradle" ] && [ -f "$L/build.gradle" ] \
   && [ -f "$L/KeliverScreen.swift" ] && [ -f "$L/EMBED.md" ] && [ ! -e "$L/iosApp" ] && [ ! -e "$L/iosApp.xcodeproj" ] \
   && ok "a framework build with its own wrapper, KeliverScreen.swift and EMBED.md; no Xcode app" || bad "the embedded framework's files"
-grep -q 'Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnavailable)' "$L/KeliverScreen.swift" && grep -q 'cd "$SRCROOT/keliver-host-ios"' "$L/EMBED.md" \
+grep -q 'Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnavailable, route: route, onClose: onClose)' "$L/KeliverScreen.swift" && grep -q 'cd "$SRCROOT/keliver-host-ios"' "$L/EMBED.md" \
   && ! grep -q '@@' "$L/EMBED.md" && ok "KeliverScreen shows Keliver.shared; EMBED.md names the build phase with this layout's path" || bad "KeliverScreen.swift / EMBED.md"
 grep -q 'CHANNEL: String = "beta"' "$LK/HostConfig.kt" && grep -q 'BUNDLE_SERVER: String = "https://bundles.example.com"' "$LK/HostConfig.kt" \
   && ok "the settings are in HostConfig.kt, as for the standalone host" || bad "HostConfig.kt"
@@ -305,6 +314,7 @@ if [ "$BUILD" = 1 ]; then
         bad "no KeliverHost.framework with Modules under $H/build to type-check KeliverScreen.swift against"
       elif printf '%s\n' 'import KeliverHost' 'func configureKeliver() {' \
             '  Keliver.shared.requestPolicy = RequestPolicy(origin: "https://api.example.com", allowed: [RequestPolicy.Rule(method: "GET", path: "orders")], allowStateChanging: false, allowCleartext: false)' \
+            '  _ = KeliverScreen(route: KeliverRoute.companion.from(uri: "example://orders/42?tab=items", allowedQueryKeys: ["tab"]), onClose: {})' \
             '}' > "$DISP/policy-check.swift" \
           && xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
           -F "$(dirname "$fw")" "$L/KeliverScreen.swift" "$DISP/policy-check.swift" > "$DISP/swift-typecheck.log" 2>&1; then
@@ -317,7 +327,7 @@ if [ "$BUILD" = 1 ]; then
     fi
     # The host kit's pure-Kotlin checks (RequestPolicy), on the JVM target.
     ( cd "$APP" && ./gradlew --console=plain -p host-ios jvmTest > "$DISP/jvm-tests.log" 2>&1 ); rc=$?
-    [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (jvmTest: RequestPolicy)" \
+    [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (jvmTest: RequestPolicy, KeliverRoute)" \
       || bad "the host kit's JVM tests failed (rc=$rc): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/jvm-tests.log" | head -6 | tr '\n' ' ')"
     # A release framework refuses http:// — the check exists, fails here, and is wired to every release link.
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-urls.log" 2>&1 ); rc=$?

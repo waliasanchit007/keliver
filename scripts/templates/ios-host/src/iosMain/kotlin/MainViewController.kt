@@ -134,6 +134,7 @@ import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIViewController
+import platform.UIKit.navigationController
 import platform.darwin.NOTIFY_STATUS_OK
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
@@ -636,7 +637,63 @@ public object Keliver {
    * rather than stacking the fallback over it. After "no bundle", a screen created later looks up
    * again (Loading meanwhile).
    */
-  public fun viewController(safeArea: Boolean, onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?): UIViewController = ComposeUIViewController {
+  public fun viewController(safeArea: Boolean, onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?): UIViewController =
+    viewController(safeArea, onUnavailable, route = null, onClose = null)
+
+  /**
+   * [viewController] for [route] (K2): the guest's screen for it (its `launchRoute`; a guest from
+   * before the host kit shows its default screen, logged). The screen closes itself through
+   * [onClose], on the main thread; null pops this view controller from its navigation controller,
+   * or dismisses it, whichever way it was shown. A new route is a new view controller (in SwiftUI,
+   * give KeliverScreen a new `.id`).
+   */
+  public fun viewController(
+    safeArea: Boolean,
+    onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?,
+    route: KeliverRoute?,
+    onClose: (() -> Unit)?,
+  ): UIViewController {
+    var shownBy: UIViewController? = null
+    val close: () -> Unit = onClose ?: { shownBy?.let(::closeShown) }
+    return screen(safeArea, onUnavailable, route, close).also { shownBy = it }
+  }
+
+  /** Pops [vc] when its navigation controller shows it on top of another, else dismisses it if presented. */
+  private fun closeShown(vc: UIViewController) {
+    val nav = vc.navigationController ?: vc.parentViewController?.navigationController
+    if (nav != null && nav.viewControllers.size > 1) {
+      nav.popViewControllerAnimated(true)
+    } else if (vc.presentingViewController != null || vc.parentViewController?.presentingViewController != null) {
+      (vc.parentViewController?.takeIf { it.presentingViewController != null } ?: vc).dismissViewControllerAnimated(true, completion = null)
+    } else {
+      log("closeScreen: this screen is neither pushed nor presented; pass onClose to close it your way")
+    }
+  }
+
+  /** The guest's UI for [route] (launchRoute), or launch() without one or for a guest from before K2. */
+  private fun launch(app: PortalPresenter, route: KeliverRoute?, close: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
+    if (route == null) return app.launch()
+    return try {
+      app.launchRoute(route.encode(), ScreenHost(close))
+    } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
+      log("this bundle's guest takes no route (scaffolded before the host kit): showing its default screen")
+      app.launch()
+    }
+  }
+
+  private class ScreenHost(private val close: () -> Unit) : KeliverScreenHost {
+    // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread.
+    override fun closeScreen() {
+      appScope.launch { close() }
+    }
+  }
+
+  private fun screen(
+    safeArea: Boolean,
+    onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?,
+    route: KeliverRoute?,
+    close: () -> Unit,
+  ): UIViewController = ComposeUIViewController {
     remember { KeliverTiming.mark("open") } // Debug and Benchmark builds only (M0)
     LaunchedEffect(Unit) { start() }
     // Live updates (UPDATES = "live", debug builds): the host listens for publishes while a
@@ -679,7 +736,7 @@ public object Keliver {
         val contentSource = remember {
           object : TreehouseContentSource<PortalPresenter> {
             // first-frame, in Debug and Benchmark builds only (M0); the UI itself elsewhere.
-            override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(app.launch())
+            override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, route, close))
           }
         }
         Box(modifier) {

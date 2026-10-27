@@ -598,6 +598,15 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   or native screen, with the route you were showing): dismiss or pop it,
   rather than stacking the fallback over it. The screen holds the closure:
   capture your controller weakly (`[weak self]`).
+- **Routes and close** (K2): `KeliverScreen(route: KeliverRoute.companion.from(uri: url, allowedQueryKeys: ["tab"]), onClose: …)`
+  or `Keliver.shared.viewController(safeArea:onUnavailable:route:onClose:)`
+  shows the guest's screen for that route: a deep link's path and only the
+  query keys you allow, as the same text the Android host sends
+  (`orders/42?tab=items`) to the guest's `launchRoute`. A guest scaffolded
+  before it shows its default screen (logged). A new route needs a new screen
+  (in SwiftUI, a new `.id`). The screen closes itself with
+  `screen.closeScreen()`: your `onClose`, or by default a pop from its
+  navigation controller, or a dismiss, whichever way it was shown.
 - **`RequestPolicy`** (K2, Android's rules): set `Keliver.shared.requestPolicy
   = RequestPolicy(origin: "https://api.example.com", allowed: [RequestPolicy.Rule(method: "GET", path: "orders")], allowStateChanging: false, allowCleartext: false)`
   before the host starts. The origin must be `API_BASE_URL`'s (otherwise every

@@ -11,4 +11,17 @@ import dev.keliver.treehouse.ZiplineTreehouseUi
  */
 interface PortalPresenter : AppService, ZiplineService {
   fun launch(): ZiplineTreehouseUi
+
+  /**
+   * K2: the screen for [route] ([KeliverRoute.encode]'s text: `orders/42?tab=items`, its query
+   * already cut to the app's allowed keys); [screen] is how it closes itself. A guest scaffolded
+   * before the host kit has no such function: the host calls [launch] instead.
+   */
+  fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi
+}
+
+/** What a screen may ask of the host that shows it (K2). */
+interface KeliverScreenHost : ZiplineService {
+  /** Close this screen: the app's onClose for it, by default a pop or a dismiss. */
+  fun closeScreen()
 }
