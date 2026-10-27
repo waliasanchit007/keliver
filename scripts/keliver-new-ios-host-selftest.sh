@@ -206,7 +206,7 @@ grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = em
   && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$K/MainViewController.kt" \
   && grep -q 'override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, route, close))' "$K/MainViewController.kt" \
   && grep -q 'nav.popToViewController(stack\[i - 1\] as UIViewController, animated = true)' "$K/MainViewController.kt" \
-  && grep -q 'runCatching(close).onFailure' "$K/MainViewController.kt" && grep -q 'guestTakesNoRoute = true' "$K/MainViewController.kt" \
+  && grep -q 'runCatching(close).onFailure' "$K/MainViewController.kt" && grep -q 'noRouteApp = app' "$K/MainViewController.kt" \
   && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "$K/GuestContract.kt" \
   && grep -q '^  apiTracking = false$' "$H/build.gradle" \
   && ok "host kit K2: routes (allowed query keys only, older guests still open) and close (pop or dismiss by default)" \

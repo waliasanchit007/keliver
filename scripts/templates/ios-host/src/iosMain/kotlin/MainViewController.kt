@@ -402,7 +402,6 @@ public object Keliver {
 
   /** Called on the main thread when a code load succeeded; [url] is null for a load from the cache. */
   internal fun codeLoaded(sequence: Long?, url: String?) {
-    guestTakesNoRoute = false
     val first = !loaded
     loaded = true
     current = KeliverBundle(sequence ?: -1, fromCache = url == null)
@@ -684,6 +683,8 @@ public object Keliver {
         return
       }
     }
+    // What presents the screen (or its container); not a modal the screen presents itself, which
+    // UIKit would dismiss instead: close that one first.
     var shown: UIViewController? = vc
     while (shown != null && shown.presentingViewController == null) shown = shown.parentViewController
     if (shown != null) shown.dismissViewControllerAnimated(true, completion = null)
@@ -692,19 +693,20 @@ public object Keliver {
 
   /** The guest's UI for [route] (launchRoute), or launch() without one or for a guest from before K2. */
   private fun launch(app: PortalPresenter, route: KeliverRoute?, close: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
-    if (route == null || guestTakesNoRoute) return app.launch()
+    if (route == null || app === noRouteApp) return app.launch()
     return try {
       app.launchRoute(route.encode(), ScreenHost(close))
     } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
-      // Not asked again until other code loads: each try leaves its ScreenHost bound.
-      guestTakesNoRoute = true
+      // This loaded code is not asked again (each try leaves its ScreenHost bound); new code is a
+      // new PortalPresenter, so nothing needs clearing when it loads.
+      noRouteApp = app
       log("this bundle's guest takes no route (scaffolded before the host kit): showing its default screen")
       app.launch()
     }
   }
 
-  /** Set when the running code has no launchRoute; cleared when code loads. */
-  private var guestTakesNoRoute = false
+  /** The loaded code whose guest has no launchRoute (Zipline said so), if any. */
+  private var noRouteApp: PortalPresenter? = null
 
   private class ScreenHost(private val close: () -> Unit) : dev.keliver.hostkit.KeliverScreenHost {
     // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread, and a
