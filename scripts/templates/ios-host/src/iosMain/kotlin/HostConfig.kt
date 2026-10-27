@@ -19,10 +19,14 @@ package @@PACKAGE@@
 // new URL without a rebuild); a release build uses only this line.
 //
 // UPDATES is when the running host looks for a newer bundle (W5): "next-launch"
-// (only when the process starts) or "on-resume" (also each time the app returns
-// to the foreground, at most every 30 s, applying a newer bundle at once).
-// Empty: "on-resume" in a DEBUG build and "next-launch" in a release one. A
-// value here applies to every build.
+// (only when the process starts), "on-resume" (also each time the app returns
+// to the foreground, at most every 30 s, applying a newer bundle at once) or
+// "live" (a DEBUG build only: on-resume, and while a Keliver screen is in the
+// window the host also listens to the bundle server's /bundles/events, so a
+// publish reaches the open app; a server without it, a static one, leaves it
+// on-resume; in a release build "live" is "on-resume").
+// Empty: "live" in a DEBUG build and "next-launch" in a release one. A value
+// here applies to every build.
 //
 // REPORT_URL (W6, optional): where the host POSTs a small JSON report of each
 // outcome (loaded, fell back, update applied or failed, not loaded): your

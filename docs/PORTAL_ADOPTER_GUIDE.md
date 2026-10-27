@@ -356,16 +356,17 @@ must then offer that sequence or newer. Only a debug build of a debuggable app
 reads the file, never a release build. An `http://` value also needs a built-in
 server that is `http://` (debug cleartext is allowed only then).
 
-A debug build of the Android host (tools 0.3.13 on) picks up a bundle you
-publish **while the app is open**: with `keliver.updates` empty its updates are
-`live`, so while a screen shows it listens to the relay's `/bundles/events` and
+A debug build of the production host (Android from tools 0.3.13, iOS from the
+next tools release) picks
+up a bundle you publish **while the app is open**: with `keliver.updates`
+(Android) or `UPDATES` (iOS) empty its updates are `live`, so while a screen
+shows it listens to the relay's `/bundles/events` and
 applies the new bundle a second or two after **⬆ Publish** finishes (the
 editor's devices chip says how many phones are listening). It is still the
 signed, verified update path; the screen's state may restart with the new
 code. Against a static bundle server, which has no event stream, it falls back
 to checking when you switch back to the app (on-resume updates, at most one
-lookup every 30 s), as iOS debug builds and Android hosts from tools 0.3.10 to
-0.3.12 do. Any debug build also looks at once
+lookup every 30 s), as debug hosts from tools 0.3.10 to 0.3.12 do. Any debug build also looks at once
 on `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>`
 (the receiver needs the `DUMP` permission, which adb's shell has and ordinary apps do not). Every other build type looks only at the
 next launch, except one made with `initWith(debug)` (or, for the embedded

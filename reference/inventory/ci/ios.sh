@@ -157,7 +157,7 @@ grep -q "PORTAL_PUBLIC_KEY_HEX: String = \"$PUB\"" "$CFG" \
 sed -i '' 's|REPORT_URL: String = "[^"]*"|REPORT_URL: String = "http://localhost:8077/report"|' "$CFG"
 # The rows before W5 (U1) expect a bundle published while the app runs to show
 # only after a relaunch: pin next-launch (a template from tools 0.3.10 on leaves
-# UPDATES empty, which a debug build takes as on-resume).
+# UPDATES empty, which a debug build takes as on-resume, or live from the release after 0.3.13).
 sed -i '' 's|UPDATES: String = ""|UPDATES: String = "next-launch"|' "$CFG"
 ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
     -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
