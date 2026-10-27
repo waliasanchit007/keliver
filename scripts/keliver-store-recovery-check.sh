@@ -322,7 +322,8 @@ boot "$LOSER" 8163 c4-loser || exit 2
 # --- C5: the packaged launcher ----------------------------------------------
 echo
 echo "--- C5  the packaged keliver-portal starts the recovered app"
-if keliver_port_free_or_die 8161 && keliver_port_free_or_die 8096; then
+# keliver-portal puts the editor on port + 19 (8180) unless editorPort says otherwise.
+if keliver_port_free_or_die 8161 && keliver_port_free_or_die 8180; then
   keliver_require_isolated_store "$DISP" "$P2" > "$DISP/c5.guard" 2>&1 \
     && sed 's/^/        /' "$DISP/c5.guard" \
     || { note "guard refused"; sed 's/^/        /' "$DISP/c5.guard"; }
@@ -352,7 +353,7 @@ if keliver_port_free_or_die 8161 && keliver_port_free_or_die 8096; then
     ok "C5 the packaged launcher stopped it again"
   fi
 else
-  bad "C5 could not run — 8161 or 8096 is in use by something this run does not own"
+  bad "C5 could not run — 8161 or 8180 is in use by something this run does not own"
 fi
 
 

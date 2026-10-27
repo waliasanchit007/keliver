@@ -16,6 +16,11 @@
 #   --rerun-tasks       force a clean editor rebuild (webpack can serve a stale
 #                       distribution otherwise)
 #
+# Ports: the server on keliver.portal.json's "port" (default 8077), the editor
+# on its "editorPort" (default: port + 19, so 8096 beside 8077). Two apps can
+# run portals at once with different ports; the editor URL printed at start
+# names the server's port (?relay=) whenever it is not 8077.
+#
 # If <app>/editor exists (scaffolded by keliver-new-editor.sh) it is built and
 # served, so the preview runs the app's REAL presenters. Otherwise the
 # prebuilt editor shipped in this bundle is served.
@@ -47,7 +52,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --no-editor-build) EDITOR_BUILD=false ;;
     --rerun-tasks)     RERUN_TASKS=true ;;
-    -h|--help)         sed -n '2,23p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)         awk 'NR == 1 { next } /^#/ { print; next } { exit }' "${BASH_SOURCE[0]}"; exit 0 ;;
     -*)                echo "keliver-portal: unknown option $1" >&2; exit 2 ;;
     *)                 APP_ARG="$1" ;;
   esac
@@ -57,8 +62,42 @@ done
 APP_DIR="$(cd "${APP_ARG:-$PWD}" 2>/dev/null && pwd)" || {
   echo "keliver-portal: no such directory: ${APP_ARG}" >&2; exit 2; }
 
-PORT="$(python3 -c "import json;print(json.load(open('$APP_DIR/keliver.portal.json')).get('port',8077))" 2>/dev/null || echo 8077)"
-EDITOR_PORT=8096
+# The server's port: "port" (default 8077). The editor's own port: "editorPort",
+# else port + 19 (8096 beside 8077). It used to be 8096 always, so a second
+# app's portal could never start, and changing "port" did not help. Both must be
+# port numbers, and different; anything else is refused here, by name.
+PORTS="$(python3 -I - "$APP_DIR/keliver.portal.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+try:
+    config = json.load(open(path)) if os.path.exists(path) else {}
+except (OSError, ValueError) as e:
+    sys.exit(f"keliver-portal: cannot read {path} as JSON: {e}")
+if not isinstance(config, dict):
+    sys.exit(f"keliver-portal: {path} must hold a JSON object")
+def port(key, default):
+    value = config.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 65535:
+        sys.exit(f"keliver-portal: \"{key}\" in keliver.portal.json must be a port number (1-65535), not {json.dumps(value)}")
+    return value
+server = port("port", 8077)
+if "editorPort" not in config and server + 19 > 65535:
+    sys.exit(f"keliver-portal: the editor's default port ({server} + 19) is not a port number; set \"editorPort\" in keliver.portal.json")
+editor = port("editorPort", server + 19)
+if editor == server:
+    sys.exit(f"keliver-portal: \"editorPort\" and \"port\" in keliver.portal.json are both {server}; the server and the editor need a port each")
+print(server, editor)
+PY
+)" || {
+  # stop needs only this app's pid file: a config being edited must not keep a
+  # running portal from being stopped.
+  [ "$CMD" = stop ] || exit 2
+  PORTS=""
+}
+read -r PORT EDITOR_PORT <<< "$PORTS"
+# The editor asks the server on 8077 unless its URL names another (?relay=).
+EDITOR_URL="http://localhost:$EDITOR_PORT"
+[ "$PORT" = 8077 ] || EDITOR_URL="$EDITOR_URL/?relay=$PORT"
 
 # Per-app run state, so `stop` can find exactly what this app started and we
 # never kill a port that belongs to somebody else's project.
@@ -113,6 +152,7 @@ case "$CMD" in
     echo "keliver-portal: nothing to stop for $APP_DIR"
     # A foreign process may still hold the ports; say so rather than killing it.
     for p in "$PORT" "$EDITOR_PORT"; do
+      [ -n "$p" ] || continue
       if port_in_use "$p"; then
         warn "port $p is in use by another process (not started by this app dir) — left alone"
       fi
@@ -140,11 +180,8 @@ if healthy; then
   die "a portal server is already answering on :$PORT — 'keliver-portal stop' first, or use a different port in keliver.portal.json"
 fi
 if stop_instance; then warn "cleaned up a previous instance that had exited uncleanly"; fi
-for p in "$PORT" "$EDITOR_PORT"; do
-  if port_in_use "$p"; then
-    die "port $p is already in use by another process. Free it, or change 'port' in keliver.portal.json."
-  fi
-done
+port_in_use "$PORT" && die "port $PORT (the server) is already in use by another process. Free it, or set another 'port' in keliver.portal.json."
+port_in_use "$EDITOR_PORT" && die "port $EDITOR_PORT (the editor) is already in use by another process. Free it, or set another 'editorPort' (or 'port') in keliver.portal.json."
 
 : > "$PIDFILE"
 cleaned=false
@@ -211,10 +248,24 @@ say "editor (:$EDITOR_PORT) from $EDITOR_DIR"
 # can be the older file, so a revalidation by date (Last-Modified, which
 # http.server answers 304) can keep the editor the browser saw first. Every
 # response says Cache-Control: no-store, and a conditional request is answered
-# in full. -I: nothing in the served directory is imported.
+# in full. -I: nothing in the served directory is imported. A page asked for
+# without ?relay= (a bookmark, a typed URL, a restored tab) is sent to the one
+# naming this app's server: without it the editor asks :8077, which may be
+# another app's server, and would edit that app's screens.
 ( cd "$EDITOR_DIR" && exec python3 -I -c '
-import http.server, sys
+import http.server, sys, urllib.parse
+RELAY = sys.argv[2]
 class NoStore(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        u = urllib.parse.urlsplit(self.path)
+        if u.path in ("/", "/index.html") and "relay" not in urllib.parse.parse_qs(u.query):
+            query = (u.query + "&" if u.query else "") + "relay=" + RELAY
+            self.send_response(302)
+            self.send_header("Location", urllib.parse.urlunsplit(("", "", u.path, query, "")))
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        super().do_GET()
     def send_head(self):
         del self.headers["If-Modified-Since"]
         return super().send_head()
@@ -222,7 +273,7 @@ class NoStore(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
 http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), NoStore).serve_forever()
-' "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
+' "$EDITOR_PORT" "$PORT" ) >"$EDITOR_LOG" 2>&1 &
 echo $! >> "$PIDFILE"
 
 # --- health-wait: don't claim success until the server actually answers ------
@@ -247,7 +298,7 @@ $READY || {
 }
 
 printf "\n\033[1;32m✓ keliver portal is live\033[0m\n\n"
-printf "  Editor   →  http://localhost:%s\n" "$EDITOR_PORT"
+printf "  Editor   →  %s\n" "$EDITOR_URL"
 printf "  Server   →  http://localhost:%s\n" "$PORT"
 [ "$RELAY_BIND" = all ] && printf "  \033[1;33mServer listens on every network interface (KELIVER_RELAY_BIND=all)\033[0m\n"
 printf "  MCP      →  PORTAL_REPO=%s %s/mcp/bin/portal-mcp   (stdio, for AI agents)\n" "$APP_DIR" "$BUNDLE"
