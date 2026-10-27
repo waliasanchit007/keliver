@@ -1,9 +1,9 @@
 # Keliver — Public OSS Launch Roadmap
 
 > **Historical document.** The public-launch transition is complete: Keliver is
-> public and the current `dev.keliver:*:0.4.0` line is on Maven Central. This
+> public and the current `dev.keliver:*:0.4.1` line is on Maven Central. This
 > checklist is retained as launch history and is not the source of current
-> priorities. Use [`README.md`](./README.md), [`ROADMAP.md`](./ROADMAP.md), and
+> priorities. Use [`README.md`](./README.md), [`docs/ROADMAP.md`](./docs/ROADMAP.md), and
 > [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md).
 
 Tracks the work to take Keliver from "private fork shipping to Caliclan's own
@@ -14,7 +14,11 @@ Recorded starting state: `1.0.0-caliclan.3` on private GitHub Packages,
 end-to-end validated on Android via DevoStatus. Later work completed public
 visibility, cross-platform samples/adoption, and Maven Central publication.
 
-This is a living document. Check items off as they land.
+This was a living document; its boxes were not all ticked as the work landed.
+As of 2026-10-27 the README rewrite, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
+the issue and pull-request templates, `sample/`, Maven Central publication,
+the public flip and `docs/API_STABILITY.md` are all done; a docs site is not
+(GitHub issue #17).
 
 ---
 

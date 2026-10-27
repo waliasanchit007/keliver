@@ -8,9 +8,9 @@ ship UI updates without an app-store release.
 the visual editor with a live canvas, 60+ widgets, data bindings with mock
 previews, and one-click **Export Kotlin** (the output is real code).
 
-> **Status: public on Maven Central — `0.4.0`.** Add `mavenCentral()` and
-> depend on `dev.keliver:keliver-host:0.4.0` (host) /
-> `dev.keliver:keliver-guest:0.4.0` (guest) — no GitHub PAT, no extra repo.
+> **Status: public on Maven Central — `0.4.1`.** Add `mavenCentral()` and
+> depend on `dev.keliver:keliver-host:0.4.1` (host) /
+> `dev.keliver:keliver-guest:0.4.1` (guest) — no GitHub PAT, no extra repo.
 > `keliver-material` is a Compose/Material3-parity widget library (76 widgets —
 > see [`docs/WIDGET_PARITY.md`](./docs/WIDGET_PARITY.md)) so you build
 > server-driven screens without authoring a schema. `0.3.0` adds Icon +
@@ -37,15 +37,15 @@ namespace with:
 
 - **Production-hardening fixes** for the silent-failure shapes that hit
   every new integrator. See [`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md)
-  for the full list — 11 of 12 documented gotchas now have a Keliver-side
-  mitigation as of `1.0.0-caliclan.3`.
+  for the full list and each entry's status (fixed, worked around, or open).
 - **A focused module set.** Phase 1.5 dropped 13 upstream modules that
   aren't relevant to Compose Multiplatform (View/UIView/DOM widgets, the
   test-app harness, etc.). Module count went from 60 → 47.
-- **Continued maintenance.** Active integration with at least one
-  production Compose Multiplatform app ([DevoStatus](https://github.com/waliasanchit007/DevoStatus),
-  private) drives the gotcha backlog. Bugs surface in real adoption and
-  get fixed; the changelog is honest about what's still broken.
+- **Continued maintenance.** Bugs surface by building real screens (the
+  in-repo `sample/`, the `reference/inventory` app CI builds from the
+  published tools, and a brownfield product proof inside two existing apps in
+  2026-10) and get fixed; the changelog and `docs/KNOWN_BUGS.md` are honest
+  about what's still broken. There is no external adopter yet.
 
 ## What it gives you
 
@@ -100,7 +100,7 @@ class QuotesAppSpec : TreehouseApp.Spec<SduiAppService>() {
         // bindWithTimeout turns the silent bind-hang failure shape into
         // an actionable timeout — see KNOWN_BUGS.md U1.
         bindWithTimeout {
-            zipline.bind<HostConsole>("console", retain(StatusCraftHostConsole()))
+            zipline.bind<HostConsole>("console", retain(AppHostConsole()))
         }
 
         requireSerializerOf<Quote>()  // bind-time pre-flight — KNOWN_BUGS U3.
@@ -172,8 +172,8 @@ serverlessly in wasm.
   RPC service designed per capability
 
 A typical app uses Keliver for a slice of its surface area, not the
-whole app. The [DevoStatus integration](https://github.com/waliasanchit007/DevoStatus)
-uses it for two screens out of ~10.
+whole app: the 2026-10 product proof replaced one web feature (13 screens)
+inside two existing apps (`docs/ADOPTION_RETRO_2026-10.md`).
 
 ## Getting started
 
@@ -212,22 +212,20 @@ Workouts screen (an API call + a host database + live search) built in both
 architecture styles, with a green unit test. Copy it and rename, or run it
 first to see the loop.
 
-When the public OSS launch lands (see [PUBLIC_LAUNCH_ROADMAP.md](./PUBLIC_LAUNCH_ROADMAP.md))
-a proper docs site will replace these.
+The repository is public and the libraries are on Maven Central; a docs
+site is not built yet, so these guides are the documentation.
 
 ## Known limitations + open bugs
 
-[`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md) is the punch list. As of
-`1.0.0-caliclan.3`:
-
-- ✅ U1, U2, U3, U5, U6, U7, U10 fixed or mitigated in Keliver (U5
-  mitigated in `1.0.0-caliclan.4` via `keliver-image`).
-- ✅ U4, U8 part 2, U9, U11 fixed or documented at the integration
-  layer (see ServerDrivenUI's KNOWN_BUGS for fix details)
-- 🎯 **U8 part 1** (`@MainThread` codegen) — only entry without a
-  Keliver-side fix; root cause is in Zipline's compiler plugin, tracked
-  at [cashapp/zipline#1825](https://github.com/cashapp/zipline/issues/1825).
-  Workaround pattern is well-established.
+[`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md) is the punch list (U1–U38),
+each entry headed with its status. Open as of 2026-10-27: U19 (a live-preview
+re-render), U20 (the editor's frame rate, measured but not assessed), U28 (a
+false `codeLoadFailed` log line on every production-host start) and U38 (the
+browser can keep a cached editor after switching to an app's own one).
+**U8 part 1** (`@MainThread` codegen) still has no Keliver-side fix: its root
+cause is in Zipline's compiler plugin, tracked at
+[cashapp/zipline#1825](https://github.com/cashapp/zipline/issues/1825), and the
+workaround is documented.
 
 ## Versioning & API stability
 
@@ -238,9 +236,12 @@ ships by accident. See [`docs/API_STABILITY.md`](./docs/API_STABILITY.md).
 
 ## What's planned
 
-[`ROADMAP.md`](./ROADMAP.md) — adopter-facing forward-looking plan.
-Distinct from [`PUBLIC_LAUNCH_ROADMAP.md`](./PUBLIC_LAUNCH_ROADMAP.md)
-which tracks the one-time work to take this repo public.
+[`docs/ROADMAP.md`](./docs/ROADMAP.md) — the backlog, in priority order, with
+a status line on each item. Where things stand: [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md)
+(status at a glance) and [`docs/DELIVERY_PLAN.md`](./docs/DELIVERY_PLAN.md)
+(the step-by-step Status table and next action).
+[`PUBLIC_LAUNCH_ROADMAP.md`](./PUBLIC_LAUNCH_ROADMAP.md) records the one-time
+work that took this repo public (complete).
 
 ## License
 

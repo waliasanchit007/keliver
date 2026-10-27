@@ -66,7 +66,7 @@ class ItemMockTest {
     assertEquals(Bind("tag.name"), out.children[0].children[0].props["text"])
   }
 
-  // Stashfin Profile surfaced this: account/security/support all iterate with
+  // The adopter app's Profile surfaced this: account/security/support all iterate with
   // `forEach { item -> }`, so their rows share the itemVar "item". Rows are
   // namespaced by the LIST field so they stay distinct; the plain "item.title"
   // key is the shared fallback (editor per-item mocks / single-list back-compat).

@@ -1465,7 +1465,7 @@ fun main(args: Array<String>) {
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
     ex.sendResponseHeaders(200, 0)
-    docFor(query(ex)).subscribe(ex.responseBody) // stream stays open
+    docFor(query(ex)).subscribe(ex.responseBody) { ex.close() } // stream stays open
   }
 
   // LEGACY device endpoint — unchanged wire shape. Mirrors the ACTIVE screen's draft.

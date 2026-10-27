@@ -1,12 +1,51 @@
 # Change Log
 
 > Keliver's history begins with a fork from CashApp Redwood `0.18.0`.
-> Entries below `0.18.0` are from upstream Redwood. Keliver-only entries
-> use the `1.0.0-caliclan.N` versioning scheme — see
-> `docs/KELIVER_PLAN.md` (in the Caliclan repo) for the full versioning
-> and wire-format compatibility policy.
+> Entries below `0.18.0` are from upstream Redwood. Keliver's libraries are
+> versioned `0.x` on Maven Central (`dev.keliver:*`; the earlier
+> `1.0.0-caliclan.N` entries below are pre-Maven history); the tools bundle has
+> its own line (`docs/RELEASE_NOTES_TOOLS_*.md`). Compatibility policy:
+> `docs/API_STABILITY.md`.
 
 ## [Unreleased]
+
+## Keliver 0.4.1 - 2026-10-27
+
+The editor libraries. Hand-written sources changed only in `portal-editor`,
+`portal-core` and `keliver-material-composeui` (and the version in
+`build-support`; `keliver-material-schema` gained KDoc only). Every published API
+change is additive: the `apiDump` files grew and nothing was removed or changed.
+No dependency versions moved (Kotlin 2.2.0); the Zipline wire format and compiled
+guests are unchanged, so a device host or guest on 0.4.0 needs nothing. A per-app
+editor (`keliver-new-editor.sh`) gets the editor below by moving its
+`dev.keliver:*` dependencies to 0.4.1.
+
+Candidate check (local, signing off, `-Dmaven.repo.local` to a scratch repository, at
+`418bc6898`, whose library sources are this release's): `publishToMavenLocal
+-PkeliverVersion=0.4.1` publishes 378 artifacts and 11 Gradle plugin markers — the same set as
+0.4.0 — and `apiCheck` passes.
+
+- **portal-editor** (#140, #141): the visual editor you work in — selection and
+  hover boxes, components opened and edited in place, typed property controls,
+  cross-document undo whose order is the relay's, the outline keeping its place,
+  a top bar that says what each action does and which bundle devices get, a
+  palette preview drawn by the canvas, a compact publish card, and Live saying
+  when an editor has nothing to run.
+- **portal-editor** (#145): the top bar's devices chip also says how many phones
+  are listening for live updates (`/devstate`'s `devicesListening`, from a relay
+  in tools 0.3.13 or later; an older relay's answer simply has no count).
+- **portal-core**: `PropChoice` and the `choices` of a property spec (named
+  dropdowns generated from the schemas), `isColorParamName`.
+- **keliver-material-composeui**: `SelectionRegistry` gains `hitTest`,
+  `rectsOf`, `remove` and `report` (the editor's selection and hover boxes).
+  `applyKeliverVisuals` reports a `SelectionTag` through a modifier node that
+  withdraws its rect when it leaves the composition. Only the editor injects
+  `SelectionTag` into its preview tree; a device's tree never carries it, so a
+  device draws as before.
+- Not on Maven, shipped by tools 0.3.13: the relay's `/history` (cross-document
+  undo order), byte-exact undo of write-back and `GET /bundles/events`; new
+  screen files written compactly; the production-host templates' live updates
+  and a screen waiting for an on-resume update being drawn once (#141).
 
 ## Keliver 0.4.0 - 2026-10-21
 
@@ -16,7 +55,7 @@ The portal grammar and editor-canvas libraries. Hand-written sources changed onl
 moved (Kotlin 2.2.0). The relay, ingest and tools-bundle entries below are not on Maven:
 everything in this section except K6, K7, the compiled component preview's tools side (the
 adapter generator, the bundled editor's hook, the relay step) and U37 already shipped in tools
-0.3.10/0.3.11; those four wait for the next tools release (they shipped in tools 0.3.12, 2026-10-21).
+0.3.10/0.3.11; those four shipped in tools 0.3.12 (2026-10-21).
 
 **Source-incompatible with 0.3.4** for code that matches on the portal document model:
 `PropValue` (portal-document) gains `Token`, `Conditional`, `Template`, `ListOf`, `Arith` and
@@ -633,7 +672,7 @@ Distribution and correctness:
 First Maven Central release to bundle the **`keliver-material`** widget library
 (`dev.keliver:keliver-*:0.2.0`, no auth). Released via the
 `publish-maven-central.yml` workflow; dogfooded end-to-end (Android APK + guest
-bundle) by the stashfin-sdui consumer against the published artifacts.
+bundle) by the first adopter app's consumer against the published artifacts.
 
 Added:
 - **`keliver-material` — ~60 Compose/Material3-parity widgets** so adopters can

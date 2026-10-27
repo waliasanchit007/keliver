@@ -18,7 +18,7 @@ The short version:
   the View / UIView / DOM toolkits — see "What's removed" below).
 
 > **Status:** Keliver is public. The current pre-1.0 artifacts are
-> `dev.keliver:*:0.4.0` on Maven Central; no GitHub Packages credentials are
+> `dev.keliver:*:0.4.1` on Maven Central; no GitHub Packages credentials are
 > required. This guide retains some `1.0.0-caliclan.N` references only as
 > historical version context.
 
@@ -30,8 +30,10 @@ Upstream Redwood is no longer being actively developed by Cash App. The
 last upstream release is `0.18.0` (August 2025). Keliver picks up where
 that left off:
 
-1. **Continued maintenance.** The fork's `1.0.0-caliclan.N` line ships
-   regular fixes against real-world integration breakage. See
+1. **Continued maintenance.** The fork ships regular fixes against
+   real-world integration breakage: first as the `1.0.0-caliclan.N` line
+   (historical), now as `dev.keliver:*` releases on Maven Central (0.4.1
+   is the newest). See
    [`CHANGELOG.md`](../CHANGELOG.md) for the full history.
 2. **Production-hardening for silent-failure shapes** — `Spec.retain`,
    `Spec.bindWithTimeout`, `Spec.requireSerializerOf`, and others that
@@ -92,9 +94,9 @@ For most adopters the entire upper block collapses into:
 
 ```kotlin
 // host module
-implementation("dev.keliver:keliver-host:0.4.0")
+implementation("dev.keliver:keliver-host:0.4.1")
 // guest module
-implementation("dev.keliver:keliver-guest:0.4.0")
+implementation("dev.keliver:keliver-guest:0.4.1")
 ```
 
 See [`docs/USAGE.md`](./USAGE.md) "API calls from the guest" and
@@ -357,7 +359,7 @@ class QuotesScreen : Screen {
 
    ```toml
    [versions]
-   keliver = "0.4.0"
+   keliver = "0.4.1"
 
    [libraries]
    keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }

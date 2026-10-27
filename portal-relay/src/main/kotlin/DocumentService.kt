@@ -147,7 +147,9 @@ class DocumentService(
 
   private val undoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
   private val redoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
-  private val listeners = CopyOnWriteArrayList<OutputStream>()
+  /** A browser listening on /doc-events: its stream, and how to close its connection. */
+  private class Listener(val out: OutputStream, val close: () -> Unit)
+  private val listeners = CopyOnWriteArrayList<Listener>()
   private val writer = Executors.newSingleThreadScheduledExecutor { r ->
     Thread(r, "doc-writeback").apply { isDaemon = true }
   }
@@ -498,9 +500,25 @@ class DocumentService(
     return OpAck(true, doc.version)
   }
 
-  fun subscribe(out: OutputStream) {
-    listeners += out
-    runCatching { sendEvent(out, doc.version) }
+  /**
+   * Adds [out]; [close] closes its connection when a send fails (the exchange:
+   * closing only the stream of a broken connection throws before the
+   * connection is released, and leaked its file descriptor for every closed
+   * or reloaded editor tab).
+   */
+  fun subscribe(out: OutputStream, close: () -> Unit = { out.close() }) {
+    val listener = Listener(out, close)
+    listeners += listener
+    if (runCatching { sendEvent(out, doc.version) }.isFailure) drop(listener)
+  }
+
+  private fun sendToAll() {
+    for (l in listeners) if (runCatching { sendEvent(l.out, doc.version) }.isFailure) drop(l)
+  }
+
+  private fun drop(l: Listener) {
+    listeners -= l
+    runCatching { l.close() }
   }
 
   /**
@@ -630,7 +648,7 @@ class DocumentService(
 
   private fun changed(writeBack: Boolean = true) {
     onProjected(doc.toWidgetTree())
-    listeners.removeAll { out -> runCatching { sendEvent(out, doc.version) }.isFailure }
+    sendToAll()
     if (writeBack) {
       pendingWrite?.cancel(false)
       pendingWrite = writer.schedule({ writeKotlin() }, 400, TimeUnit.MILLISECONDS)
@@ -642,7 +660,7 @@ class DocumentService(
    * did not (the project's design tokens) — same event, current version.
    */
   fun announce() {
-    listeners.removeAll { out -> runCatching { sendEvent(out, doc.version) }.isFailure }
+    sendToAll()
   }
 
   private fun sendEvent(out: OutputStream, version: Long) {

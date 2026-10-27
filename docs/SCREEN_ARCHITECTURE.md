@@ -57,10 +57,13 @@ only — no native release.**
 class KtorHostHttpProvider(val client: HttpClient, val baseUrl: String) : HostHttpProvider {
   override suspend fun execute(req: HttpRequest): HttpResponse { /* client.request(baseUrl + req.path){…} */ }
 }
-zipline.bind<HostHttpProvider>("http", KtorHostHttpProvider(client, "https://api.example.com"))
+// "HostHttp" is the name Keliver's hosts bind it under (the generic device host and
+// the scaffolded Android/iOS production hosts); the guest must take the same name.
+zipline.bind<HostHttpProvider>("HostHttp", KtorHostHttpProvider(client, "https://api.example.com"))
 
 // GUEST: define your own types + endpoints, call them typed.
 @Serializable data class Workout(val id: String, val name: String, val durationMin: Int)
+val provider = zipline.take<HostHttpProvider>("HostHttp")
 val http = KeliverHttp(provider)
 val workouts: List<Workout> = http.get("/workouts")
 ```
@@ -1042,7 +1045,7 @@ fun SectionCard(content: @Composable () -> Unit) {
 
 Worked dogfood: `portal-app-lib/.../components/{MenuRow,SectionCard}.kt` +
 `screens/settings.kt` (3 SectionCard containers + 4 editable MenuRow children,
-**0 RawCode**). Stashfin Profile uses the same slot capability for its five
+**0 RawCode**). The adopter app's Profile uses the same slot capability for its five
 canonical white card wrappers and is verified in its editor, Android, and iOS.
 
 ## 7a. The write-back guarantee — what the editor does to your .kt file

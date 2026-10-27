@@ -60,7 +60,7 @@ Each step lists its **done when**: the evidence that closes it. A step isn't
 done without its evidence recorded (run ids, results files) in
 `docs/REFERENCE_APP.md` or the PR.
 
-### W1 — iOS production host (G1). **Current.**
+### W1 — iOS production host (G1). **Done: released in tools 0.3.7.**
 
 Parity with the Android production host, for iOS.
 
@@ -826,8 +826,9 @@ at 0, until its first load.
 
 W1 (iOS parity) → W3 (headless publish + static index, which W4 builds on) →
 W4 → W2 → W5 → W6. W7 and W8 run alongside whenever hardware or decisions
-allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
-**only with the owner's approval**.
+allow. Releases went 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
+with the owner's approval. From 2026-10-27, tools releases are authorized when
+their required checks pass (Standing constraints, below).
 
 ## Status
 
@@ -838,7 +839,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W1 I1 scaffolder | **built, measured locally 2026-10-07.** `keliver-new-ios-host.sh` + `templates/ios-host/`; self-test 38/0, and 43/0 with `--build` (xcodebuild). The scaffolded host loads signed v1, then v2 after an edit (Inventory → Stockroom); the real SQLite `IosSqlHost` passes 5/5. | `docs/superpowers/evidence/ios-host-i1/` |
 | W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396`, then `37602257459` after the independent review's fixes (macos-15, Xcode 16.4, iOS 26.2): self-test 48/0, P1/P2/P4–P7 30/0. Review: nothing blocking, all points fixed. | `docs/superpowers/evidence/ios-host-ci-37597390396/`; run `37602257459` |
 | W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
-| W1 I4 docs + 0.3.7 | **RELEASED 2026-10-07: tools 0.3.7** (candidate 4, with the U31 fix). Tag `portal-tools-v0.3.7` → `aaa03478`; zip `75ce0928…`, checked at the draft digest, by download-back and at the public URL. Candidates 1–3 superseded. | `docs/RELEASE_NOTES_TOOLS_0.3.7.md`; PRs #89, #91 (not merged) |
+| W1 I4 docs + 0.3.7 | **RELEASED 2026-10-07: tools 0.3.7** (candidate 4, with the U31 fix). Tag `portal-tools-v0.3.7` → `aaa03478`; zip `75ce0928…`, checked at the draft digest, by download-back and at the public URL. Candidates 1–3 superseded. | `docs/RELEASE_NOTES_TOOLS_0.3.7.md`; PRs #89, #91 (merged through #93, 2026-10-10) |
 | W3 design | **done 2026-10-07**: a static `bundles/index.json` (format 1). Each entry is bound by its manifest's own signature plus `manifestSha256`; the index is unsigned. Anti-rollback is deferred to W4. | "W3 design" above |
 | W3 `keliver-publish` + index-reading hosts | **built, CI green 2026-10-07** on PR #90 (`feat/w3-static-publish`, stacked on #88). The CLI verifies the signature and every module's sha256, then writes `v<N>/` and an atomic `index.json`. It refuses anything unsigned, foreign or incomplete and writes nothing (exit codes in the W3 design). The relay also serves `/bundles/index.json`. Both host templates read the index, pin the manifest's sha256, and fall back to `/bundles/latest` only on a 404. `KELIVER_SIGNING_KEY_FILE` covers CI signing. Tests before the review: `StaticPublishTest` 12, `BundleIndexTest` 7, `keliver-publish-selftest.sh` 16/0, the iOS host self-test with `xcodebuild` 49/0 (CI). The Android host self-test with a build, 40/0, was local and is in no CI evidence. | PR #90 |
 | W3 static HTTPS on CI | **green 2026-10-07**. No relay; a static HTTPS server is fed only by the CLI, with a throwaway CA in the emulator's system store and the simulator's keychain. S2 (v1 through the index), S4 (v2), S5 (CLI refuses a foreign key), S6 (wrong sha256, nothing loads), S7 (offline from the cache). Android `reference-app.yml` run 37629943998: prepare 18/0, device 54/0. iOS `ios-host.yml` run 37629943934: self-test 49/0, `ios.sh` 48/0. | `docs/superpowers/evidence/w3-android-ci-37629943998/`, `w3-ios-ci-37629943934/` |
@@ -870,6 +871,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W7 | **prep done 2026-10-12; not executed on hardware** (PR #100). `docs/DEVICE_PROOF.md`: the session's checklist (Android over USB, iPhone signing and `devicectl`, real-certificate HTTPS, release-signed APK and IPA, the embed proof, what to record, what it does not prove). The Android harness has a physical-device route (`KELIVER_DEVICE=physical`: hosts built for `127.0.0.1` behind `adb reverse`, the throwaway CA inside the test APKs, the development host's rows SKIP), **rehearsed on the CI emulator only** (`reference-app.yml` 38202773284, `device_route=physical`: prepare 28/0, device 130/0, E1–E10 and D3 SKIP; not a device result). `ci/w7/ios-device.sh` (build, sign, install, first load on an iPhone) has never run. Found and fixed: **U32**, the iOS host ignored `TEAM_ID`. D14 screenshots: black only on the `aosp_atd` image; `google_apis` gives VALID captures, device 135/0 (38213948442; `REFERENCE_APP.md`). Moving CI to it is a decision left open. CI at `ebdd0b31d`: reference-app 38213936318 (135/0), physical rehearsal 38213940854 (28/0, 130/0), ios-host 38213936321 (self-test 69/0, `ios.sh` 120/0), `ci.yml` 38213936497. Still needs the owner: the devices, an Apple team, a real-certificate server, an adopter app | PR #100 |
 | **tools 0.3.9 RELEASED** (W8 + the W3 hardening + U32) | **released 2026-10-13** under the owner's full control of releases (2026-10-12).<br>• **Tag** `portal-tools-v0.3.9` → `6069da99`.<br>• **Zip** `31c4214c…` (90,611,347 bytes), from the verified artifact `11843942421` (build 38454753493).<br>• **Device:** 38463890634 (19/0, 28/0).<br>• **Local check:** 58 files byte-identical; `ios.sh` on the zip **146/0**.<br>• **Stored asset:** the draft download-back worked (`31c4214c`); the public zip checked here (`shasum -c` OK).<br>• **Merged first, all green:** #101 (`993c43d6`), #100 (`f2dafdab`), #98 (`f4de3a34`).<br>• **Published-only proof (PR #102):** reference-app dispatch 38494338455 at `5ca15f16` (scaffolders from the published zip): prepare 30/0, device **160/0**; ios-host dispatch 38468862546 at `4c19479d` (`ios.sh` is unchanged since): **147/0**. These are the first runs where K1–K8 come entirely from a published zip, with the pre-W8 host from the published 0.3.8. The PR runs are also green (38483538737: 160/0; 38483538839: 147/0; CI 38483538738). | `docs/RELEASE_NOTES_TOOLS_0.3.9.md` |
 | **libraries 0.3.4 RELEASED** (adoption item 1: the host widget gaps) | **released 2026-10-16** on the owner's go.<br>• **PRs** #103 (keyed container children, `2b89e1c8`), #105 (the widget fixes, `8b547f2b`) and #107 (version, CHANGELOG, docs; merged as `502416e9` after main was merged in and CI went green on the identical tree `b0a2c25e`).<br>• **Tag** `v0.3.4` (annotated) → `502416e9`.<br>• **Maven Central:** `publish-maven-central.yml` run `38814070981`: preflight and upload green, automatic release; all 378 artifacts of the local pre-gate publish and the Gradle plugin markers resolve from `repo1.maven.org` (`maven-metadata.xml` latest = 0.3.4). GitHub Packages: `publish.yml` `38814046945` green.<br>• **Device:** rendered on a Samsung S25 Ultra before the release (BottomSheet open/close/reopen, Theme, scroll column, lazy list after list changes, pager, text align); text-field `align` was not exercised on a device (the proof guest is built on 0.3.3).<br>• **Not in 0.3.4:** U33 (#112, merged after the tag). Tools still scaffold 0.3.3 until the next tools release. | `CHANGELOG.md` [0.3.4], PR #107 |
+| adoption item 6, rows 1–2 and 4; item 2, M1 | **merged 2026-10-15, released in tools 0.3.10:** #108 (the full Gradle output of every publish is kept, linked from the reply), #109 (publish reads `keliver.portal.json` each time), #110 (M1: Production bundles by default; Development behind a flag), #111 (a debug host takes its bundle server at launch, on Android and iOS). | #108–#111 |
 | adoption item 6, row 3: debug hosts update on resume | **merged 2026-10-17** (#114, `f659f280`). `keliver.updates` / `UPDATES` empty by default: `on-resume` in debug builds, `next-launch` otherwise. A debug "check now": `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <appId>` (a run-time receiver, `DUMP`-guarded) and the Darwin notification `<bundle id>.keliver.check-for-update`. Reference CI pins `next-launch` where it relied on it. CI: reference-app prepare 31/0, device 164/0 (U0, U1 on the default, U2); ios-host `ios.sh` 152/0 (U1 on the default, U2). Samsung S25 Ultra, a debug template host: going home and back applied v2 in the same process, and the adb broadcast applied v3 without leaving the app (logs; the screenshots caught the owner's own screen) | PR #114 |
 | adoption item 6, row 1b: the first-publish compiler error | **worked around 2026-10-17** (#115, `7a7eef3f`): a relay publish that fails with "Internal compiler error" is built once more, both logs kept. Six reproduction attempts on the proof app did not reproduce it; KNOWN_BUGS U34 records them and what is still open | PR #115 |
 | adoption item 2, M0: timing marks | **#116**: `process`/`open`/`code`/`first-frame`/`content` in debug builds and a new benchmark build type (Android) / `Benchmark` configuration (iOS); none of it in a store build. `first-frame` wraps the guest UI's change sink in the template (no library change). Rows T0–T2 on both platforms. S25 (debug template host, Development bundle over plain HTTP, the FIRST launch after install, not a cold start): process→open 389 ms, →code 1315 ms, →first-frame and content 1437 ms | PR #116 |
@@ -886,8 +888,40 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | **libraries 0.4.0 RELEASED** | **released 2026-10-21 (IST; Central publish finished 2026-10-20T21:13Z)** on the owner's go (2026-10-20).<br>• **PR** #136 (version, CHANGELOG, docs), merged `b359b3952` after CI 39471554982.<br>• **Tag** `v0.4.0` (annotated, `1f78a1137`) → `b359b3952`.<br>• **Maven Central:** `publish-maven-central.yml` 39484069794 (preflight + publish green, automatic release); all 389 poms of the local pre-gate at the merge commit (378 artifacts + 11 plugin markers, the same set as 0.3.4) resolve from `repo1.maven.org`; `maven-metadata.xml` latest/release = 0.4.0. GitHub Packages: `publish.yml` 39484052616 green.<br>• **Consumer check:** the product-proof app (Kotlin/JS guest) built against the Central artifacts (re-run after the release, 2026-10-21, with the scratch repository removed): Zipline bundles compile, 101/104 tests unchanged; the other 3 are goldens that differ only by `OutlinedTextField.align` (added in 0.3.4) now being sent — the app's goldens were recorded on 0.3.3.<br>• Of the published modules, only `portal-core`, `portal-document`, `portal-render`, `portal-editor` changed source; source break for an exhaustive `when` over `PropValue` (CHANGELOG). Tools still scaffold 0.3.4 until a tools release | #136 |
 | **tools 0.3.12 RELEASED** | **released 2026-10-21** on the owner's go: K6 (#131), K7 (#134), the compiled component preview's tools side (#132), U37 (#135); new apps get the 0.4.0 libraries.<br>• **Tag** `portal-tools-v0.3.12` → `8139a55b`; zip `4c9aac74…` (91,616,631 bytes) from artifact `12329584134` (build 39564359560); the tag push ran only the read-only rebuild 39584468151.<br>• **Verified:** device job 39567056811 (28/0, 19/0); the build job's packaged checks (acceptance 25/0, identity 6/0, store recovery 144/0, …); locally on the attached bytes: acceptance 25/0, identity 6/0, and the compiled component preview end to end on a scaffolded app (generic editor: placeholder; per-app editor: the app's compiled component); the draft's assets downloaded back in full and hashed identical, then the public URL.<br>• **Review caught two release blockers in the first candidate** (`964982ef1`, not released): the generic editor drew Keliver's sample components in place of an app's same-named opaque ones, and `keliver-portal` never wrote an app's adapters. Fixed in `2150b4fa6`/`8139a55b`. Follow-up: U38. Not run: device-verify on a physical phone. Record: `RELEASE_NOTES_TOOLS_0.3.12.md` | #138 |
 | reference app on the published tools 0.3.12 | **#139**: bootstrap, `ios.sh` and both workflows pin the 0.3.12 zip `4c9aac74…` (source `8139a55be`). The app stays on libraries 0.3.3 (`KELIVER_VERSION` from its `keliver.portal.json`), although 0.3.12 scaffolds 0.4.0 for new apps: moving an existing app is a separate change (0.3.12's release notes). Each run's first step downloads the public asset on a GitHub runner and checks it against the release's `.sha256`, the pinned hash and `VERSION.json`'s source commit: the public-download half of the 0.3.12 record. Runs at `d02ae8f58`, pull request (scaffolders from this checkout): reference-app 39585012146 (prepare 34/0, `keliver-publish` self-test 41/0, device 171/0), ios-host 39585012260 (71/0, `ios.sh` 159/0); by hand, host scaffolders and `keliver-publish` from the published zip: reference-app 39585020070 (34/0, 41/0, 171/0), ios-host 39585026780 (`ios.sh` 159/0 from the zip; its scaffolder self-test 71/0 always runs this checkout's script, byte-identical to the zip's `bin/keliver-new-ios-host.sh`) | #139 |
+| editor E2E suite (real input) | **merged into the editor branch 2026-10-22** (`5d37db41e`), **reached `main` through #140 on 2026-10-25**: `editor-e2e/run.sh`, a Node CDP driver with real mouse and keyboard input against a headless Chrome and a public fixture app; CI job "Editor E2E (real input, headless Chrome)" plus a changed-paths job. Unreleased. |
+| typed property controls (E8–E13, E27, E28, E48) | **merged into the editor branch 2026-10-23** (`3944c52f7`), **reached `main` through #140**: enum and code props as named dropdowns from the schemas, colours with swatch and alpha, numbers validated and written once on Enter or blur, tokens filtered by meaning, `@` picks a contract field, conditions and events picked from the contract. Unreleased. |
+| editor program, PR #140 | **merged 2026-10-25** (`12cacbe08`) after five feedback rounds by a user-role agent and seven independent reviews: selection and hover boxes, components opened and edited in place (zoomed when small), properties and State panel, cross-document undo whose order is the relay's (`/history`), byte-exact undo of write-back, new screen files written compactly. Editor 191/0, ingest 369/0, relay 391/0, E2E 34/34; CI green. The loop (editor edit, write-back, signed bundle, render) was checked on a physical Android phone (Android 12) against a scratch store. **Unreleased:** the generic editor ships in the tools bundle; a per-app editor compiles against the published `portal-editor`, so it also needs a libraries release. |
+| editor polish + host resume fix, PR #141 | **merged 2026-10-26** (`a13b2d4ea`): the outline keeps its scroll place; the top bar says what ▶ Live, </> Code and ⬆ Publish do and which bundle devices get; a palette preview drawn by the canvas; a compact publish card; Live says when the editor has nothing to run. Production-host template: a screen opened while an on-resume update is being applied waits for it (up to 5 s), so it is drawn once, not old-then-new (checked on the same phone: one guest start instead of two). All checks green, reference-app included. **Unreleased.** |
+| ▶ Live for an adopter's own presenters | **deferred 2026-10-26** by the owner: planned (generated live adapters from Bindings interfaces instead of hand-written mappers), not started; the debug device loop comes first. `docs/ROADMAP.md` adoption item 9. |
+| bundled scaffolders write into the app, PR #142 | **merged 2026-10-27** (`13b69b9d6`): `keliver-new-screen.sh` / `keliver-new-component.sh` take the app from the working directory (or `KELIVER_APP_DIR`), refuse without `keliver.portal.json`, and derive the app's package. `keliver-new-scaffolders-selftest.sh` 9/0 (1/7 on the old scripts). | PR #142 |
+| U38, PR #143 | **merged 2026-10-27** (`1dda934fe`): `keliver-portal` serves the editor `Cache-Control: no-store` and ignores `If-Modified-Since`. Not re-run in a browser yet. | PR #143 |
+| docs audit, PR #144 | **merged 2026-10-27** (`34daa91b6`): status records, guides, ranked priorities, the Live deferral. | PR #144 |
+| live device updates (Android), PR #145 | **merged 2026-10-27** (`d3b3ad2cf`) at head `418bc6898`, reviewed twice: the relay's `GET /bundles/events` (SSE, ≤ 32 listeners, a stalled phone never delays a publish), the Android host's `keliver.updates=live` (debug default) listening while a `KeliverScreen` is on show, the editor's devices chip. CI on that head: Build, both editor E2E, reference-app (Android LV1–LV3: static-server fallback, a publish applied in the open app in the same process, the stream closed in the background), ios-host 40409443193 — all green. | PR #145 |
+| U28 on both generic hosts, PR #146 | **merged 2026-10-27** (`33fa9fdeb`) at `b3c5b895d`: `portal-device-android` and `portal-device-ios` emit no manifest URL until the lookup has one. Compiled both; no device run of prod mode. | PR #146 |
+| MCP `device_screenshot` finds adb, PR #147 | **merged 2026-10-27** (`46cd57649`) at `dd674f727`: `ANDROID_HOME`, `ANDROID_SDK_ROOT`, the macOS and Linux SDK defaults, then `PATH`. mcp tests 27/0. | PR #147 |
+| `keliver-portal` ports, PR #148 | **merged 2026-10-27** (`b84b79291`) at `69c5d6358`, reviewed three times: the editor on `editorPort` (default port + 19), `?relay=` in the printed URL and added by the editor's server to a URL without it, ports validated (and `stop` working with a broken config), C5 on the right port, `allowedOrigins` documented. | PR #148 |
+| relay `/doc-events` fd leak, PR #149 | **merged 2026-10-27** (`a4e31b6e4`) at `a02d5d874`: a dropped listener's exchange is closed. Relay 393/0. Not done: per-listener write locking (pre-existing interleave risk). | PR #149 |
+| libraries 0.4.1 | **in preparation 2026-10-27**: the editor libraries (#140, #141, #145's chip), additive API only. Local candidate at `418bc6898`: `publishToMavenLocal -PkeliverVersion=0.4.1` 389 poms (378 artifacts + 11 plugin markers, the 0.4.0 set), `apiCheck` passes. Owner's 2026-10-27 prompt: publish when warranted. | this PR |
 
 ## Next action
+
+**2026-10-27 (night).** #145–#149 are merged (rows above), each after an
+independent review and with every check green on its exact head. Next: libraries
+**0.4.1** (this PR, then tag `v0.4.1` and `publish-maven-central.yml`), so that
+tools **0.3.13** can scaffold per-app editors on it; then tools 0.3.13 by
+`PORTAL_TOOLS_RELEASE.md`; then iOS live updates (draft PR #150) and the
+brownfield host kit (ROADMAP item 7). The entry below is kept as written.
+
+**2026-10-27.** The editor program is merged (#140, #141; rows above) and
+**unreleased**: no tools release since 0.3.12. The roadmap's adoption items
+now carry status lines, and Live for an adopter's presenters is deferred
+(ROADMAP item 9). The owner handed over end-to-end ownership on 2026-10-27,
+with merges and tools releases authorized when checks pass (no Maven
+publish, no key changes, no destructive cleanup without asking). Next, in
+order: the documentation pass, then the prioritized work in
+`docs/ROADMAP.md` ("Current priorities"), starting with the debug host that
+picks up a publish while open. The 2026-10-21 entries below are kept as
+written.
 
 **2026-10-21 (later).** Tools **0.3.12** is released (row above): new apps get
 the 0.4.0 libraries, and the editor carries K6/K7 and the compiled component
@@ -964,6 +998,10 @@ hardening, U32), and `main` holds #98, #100 and #101. #102 (merging) pins the re
   - D14 screenshots: `google_apis` captures are VALID and `aosp_atd` captures
     are black, so moving CI's emulator image is the owner's call.
 
+*The blocks from here to "Standing constraints" are the 2026-10-07 to
+2026-10-12 next-action history, kept as written; the PRs they call open have
+all merged since (Status table).*
+
 **On 2026-10-07 the owner said: start both in parallel — the tools 0.3.7
 release and W3.**
 
@@ -1032,10 +1070,14 @@ What was done for the candidate:
 
 ## Standing constraints (from the owner; they apply to every step)
 
-- **No merges** without explicit authorization. **No tag, release or Maven
-  publication** without explicit approval for that release (0.3.6 was approved
-  on 2026-10-07; that approval does not extend to anything else). Never move or
-  recreate a released tools tag.
+- **2026-10-27, the owner's handover:** merging reviewed changes and
+  publishing **tools-bundle** releases are authorized when the required checks
+  pass, preserving the verified artifact's identity (never rebuild or
+  substitute release bytes). Still only after discussing the specific action
+  with the owner: a **Maven** (libraries) publication, exposing or rotating
+  private keys, deleting user data, destructive cleanup. Never move or
+  recreate a released tag. (Before 2026-10-27: no merge, tag, release or Maven
+  publication without explicit approval for each.)
 - Pushing review branches, opening PRs, and running build-only/device CI are
   allowed.
 - Never touch `~/.keliver-portal`, its keys, `~/.gradle/caches`, or the real
@@ -1045,6 +1087,5 @@ What was done for the candidate:
   and remove only the temp dirs, that this run created.
 - Report completed work and evidence, not hours. Don't call the reference app
   an external adoption, and don't claim a platform that wasn't executed.
-- The PR stack #81–#93 is merged into `main` (2026-10-10). Open: #94 → `main`
-  (the 0.3.8 candidate branch), #95 → #94 (W2), #96 → #95 (W5). This plan's
-  newest copy is on the top branch, `feat/w5-update-api`.
+- The PR stacks #81–#93 (2026-10-10) and #94–#97 (2026-10-11) are merged;
+  this plan's newest copy is on `main`.

@@ -43,7 +43,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.modules.EmptySerializersModule
@@ -132,7 +132,9 @@ private fun initializeTreehouseApp(): TreehouseApp<PortalPresenter> {
     hostProtocolFactory = KeliverMaterialHostProtocol.Factory,
   )
 
-  val manifestFlow = MutableStateFlow(if (prodMode) "" else DEV_MANIFEST_URL)
+  // In prod mode nothing is emitted until the lookup has a URL: an empty one made
+  // Treehouse log a false codeLoadFailed on every start (KNOWN_BUGS U28).
+  val manifestFlow = MutableStateFlow<String?>(if (prodMode) null else DEV_MANIFEST_URL)
   if (prodMode) {
     appScope.launch(Dispatchers.Default) {
       runCatching {
@@ -156,7 +158,7 @@ private fun initializeTreehouseApp(): TreehouseApp<PortalPresenter> {
 
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "portal-device"
-    override val manifestUrl = manifestFlow.asStateFlow()
+    override val manifestUrl = manifestFlow.filterNotNull()
     override val serializersModule = EmptySerializersModule()
 
     override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {

@@ -128,7 +128,7 @@ Keliver checkout, artifacts resolved from Maven Central only, and a fresh
 This mattered because the path had never been verified this way. The one
 recorded verification (*Post-snapshot: editor distribution productization*,
 2026-07-24) used **locally published `0.3.1-SNAPSHOT` artifacts** inside
-`stashfin-sdui` — a project that no longer exists. Central was never the
+the first adopter app — a project that no longer exists. Central was never the
 resolution source, and `mavenLocal` on this machine already held
 `dev.keliver:*:0.3.1` from a CI run, so a careless test would have passed
 against local artifacts and proven nothing. Verified first that

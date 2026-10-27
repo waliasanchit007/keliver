@@ -24,7 +24,7 @@ would.
 ## Working in this repo
 
 Open the repo root in IntelliJ/Android Studio (it's a normal Gradle build).
-Your app's screens live in `portal-app-lib/src/jsMain/kotlin/screens/` — a
+Your app's screens live in `portal-app-lib/src/commonMain/kotlin/screens/` — a
 module with ordinary dependencies on the generated compose modules. Everything
 resolves after the first Gradle sync.
 
@@ -40,7 +40,7 @@ Every `dev.keliver:*` artifact on Maven Central ships a `-sources.jar`
 consumers get the same completion + docs without cloning this repo. Depend on:
 
 ```kotlin
-implementation("dev.keliver:keliver-material-compose:0.2.0") // guest screens
+implementation("dev.keliver:keliver-material-compose:0.4.1") // guest screens
 ```
 
 ## The portal grammar (the one thing worth memorizing)
@@ -65,5 +65,9 @@ Claude Code / any MCP client at it and the agent gets `get_catalog`,
 `get_document`, `apply_ops` (transactional, dry-run), `find_usages`:
 
 ```bash
+./gradlew :portal-mcp:installDist      # once (JDK 17), builds the launcher below
 PORTAL_REPO=$PWD portal-mcp/build/install/portal-mcp/bin/portal-mcp
 ```
+
+(With the tools bundle instead of a checkout, the same server is
+`mcp/bin/portal-mcp`.)
