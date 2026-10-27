@@ -318,9 +318,27 @@ sealed interface KeliverUpdateEvent {
   data class FellBack(val reason: String) : KeliverUpdateEvent
 }
 
-/** What a screen shows: a message (loading, refused, no bundle), or the running app. */
+/**
+ * What a screen shows. Observe [KeliverHost.state] to hide the app's own chrome
+ * while [Running], or to open what a screen replaced when it is [Unavailable]
+ * ([KeliverScreen]'s `onUnavailable` does that for one screen).
+ */
 sealed interface KeliverHostState {
-  data class Message(val title: String, val message: String) : KeliverHostState
+  /** Looking up and loading the first bundle. */
+  data object Loading : KeliverHostState
+
+  /**
+   * The host cannot show a screen. [outcome] is the report's (W6): `no-bundle`
+   * (the lookup failed and nothing is cached; the next screen to open looks
+   * again), `refused` (the build's key or bundle server is unusable) or
+   * `not-loaded` (the bundle did not load, and no last good one did either).
+   * [reason] is the report's fixed category. [title] and [message] say what
+   * happened for a developer: they can name addresses and paths, so a release
+   * build's [KeliverScreen] does not show them.
+   */
+  data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String) : KeliverHostState
+
+  /** The bundle is running; screens show it. */
   class Running internal constructor(internal val app: TreehouseApp<PortalPresenter>) : KeliverHostState
 }
 
@@ -333,7 +351,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private val started = AtomicBoolean(false)
   private val loaded = AtomicBoolean(false)
-  private val mutableState = MutableStateFlow<KeliverHostState>(KeliverHostState.Message("Loading", "Looking up the latest bundle…"))
+  private val mutableState = MutableStateFlow<KeliverHostState>(KeliverHostState.Loading)
 
   /** What screens show; they only observe it. */
   val state: StateFlow<KeliverHostState> = mutableState.asStateFlow()
@@ -372,6 +390,12 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private val reportInstallId by lazy { runCatching { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).installId() }.getOrDefault("unknown") }
   private val reportHostVersion by lazy { config.hostVersion ?: appVersionCode() }
   private var reportedNoBundle = false
+
+  /** The host cannot show a screen: says so on [state] (W6's [outcome] and its reason) and reports it. */
+  private fun unavailable(outcome: String, title: String, message: String, detail: String) {
+    mutableState.value = KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message)
+    report(outcome, detail = detail)
+  }
 
   /**
    * Hands [outcome] to [reports] and, with a report URL, POSTs it there. Best
@@ -467,8 +491,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val trust = decideProductionTrust(config.publicKeyHex, config.nextPublicKeyHex)
     if (trust is ProductionTrust.Refused) {
       Log.e(TAG, "refusing to load: ${trust.message}")
-      mutableState.value = KeliverHostState.Message("Refusing to load", trust.message)
-      report("refused", detail = trust.message)
+      unavailable("refused", "Refusing to load", trust.message, detail = trust.message)
       return
     }
     trust as ProductionTrust.Verified
@@ -495,8 +518,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       ?.takeIf { it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null }
     if (server == null) {
       Log.w(TAG, "refusing to load: the bundle server '${config.bundleServer}' is not an http(s) URL without a user, query or fragment")
-      mutableState.value = KeliverHostState.Message("Refusing to load", "The bundle server '${config.bundleServer}' is not a URL.")
-      report("refused", detail = "the bundle server is not a URL")
+      unavailable("refused", "Refusing to load", "The bundle server '${config.bundleServer}' is not a URL.", detail = "the bundle server is not a URL")
       return
     }
     val apiBase = config.apiBaseUrl?.takeIf { it.isNotBlank() }?.toHttpUrlOrNull()
@@ -544,8 +566,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor), lookup, fallback = null)
       }
       else -> {
-        mutableState.value = KeliverHostState.Message("No bundle", "No compatible bundle at $server, and none loaded before.")
-        report("no-bundle", detail = "the lookup failed and nothing is cached")
+        unavailable("no-bundle", "No bundle", "No compatible bundle at $server, and none loaded before.", detail = "the lookup failed and nothing is cached")
         // Nothing was created, so the next screen to start() may look again.
         started.set(false)
       }
@@ -776,8 +797,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               flow.value = fallback
               app.start()
             } else {
-              mutableState.value = KeliverHostState.Message("Bundle did not load", reason.take(300))
-              report("not-loaded", detail = reason)
+              unavailable("not-loaded", "Bundle did not load", reason.take(300), detail = reason)
             }
           }
         },

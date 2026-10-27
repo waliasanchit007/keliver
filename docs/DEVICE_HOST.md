@@ -522,11 +522,22 @@ for byte):
   built in code, which skips the build's checks of the key and of `https://`.)
   A second `create()` for the same key throws, because two loaders must never
   share a Zipline cache. `start()` is idempotent: the first screen calls it, or
-  call it at launch to warm up. `state` is a `StateFlow` the screens observe.
-- **`KeliverScreen(host, modifier)`**, a Composable, and **`KeliverView`**, an
-  `AbstractComposeView` for View layouts (set its `host`). They only observe
-  the host, so any number of them, recreated on every configuration change,
-  share the one lookup and the one load. `KeliverView` needs a lifecycle owner
+  call it at launch to warm up. `state` is a `StateFlow` the screens observe:
+  `Loading`, `Running`, or `Unavailable(outcome, reason, title, message)` when
+  the host cannot show a screen (`outcome` is the report's: `no-bundle`,
+  `refused` or `not-loaded`; `reason` its fixed category). Observe it to hide
+  your own chrome while `Running`.
+- **`KeliverScreen(host, modifier, onUnavailable, loading, unavailable)`**, a
+  Composable, and **`KeliverView`**, an `AbstractComposeView` for View layouts
+  (set its `host`, and its `onUnavailable`). They only observe the host, so any
+  number of them, recreated on every configuration change, share the one lookup
+  and the one load. **`onUnavailable`** is where you open what the Keliver
+  screen replaced (your web page or native screen, with the route you were
+  showing): it is called on the main thread when the screen meets an
+  `Unavailable` state. **`loading`** and **`unavailable`** draw those states;
+  the defaults show the host's own text in a debug build and, in a release
+  build, only "Loading…" and a generic line, because the host's text can name
+  addresses and paths. `KeliverView` needs a lifecycle owner
   in its window, like any Compose view: use it in a `ComponentActivity`
   (`AppCompatActivity`) or a `Fragment`, not a plain `android.app.Activity`.
 - **Settings**: `keliver.properties` in the module (a subproject's
@@ -569,8 +580,10 @@ plus `KeliverScreen.swift` and `EMBED.md`:
 - The scaffolder refuses an Xcode project that already names a product or
   module `KeliverHost`: Swift would then ignore `import KeliverHost`.
 
-**When a load fails**, the Keliver view shows a message instead of the guest's
-screen, and nothing else in your app is affected:
+**When a load fails**, the Keliver view's state is `Unavailable` and it calls
+`onUnavailable`, or shows a message instead of the guest's screen (in a debug
+build the text below; in a release build a generic line), and nothing else in
+your app is affected:
 - a missing or invalid key: "Refusing to load";
 - the lookup failed and nothing is cached: "No bundle", retried by the next
   Keliver screen that opens;
