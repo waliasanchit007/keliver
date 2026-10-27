@@ -77,7 +77,7 @@ editor the browser can keep running the bundled one); and the adopter-route
 gaps in `REFERENCE_APP.md`. (U30 was fixed with W8, released in tools 0.3.9.) Since tools 0.3.6 the production host and signed publishing
 are scaffolded (`keliver-new-production-host.sh`, `keliver-new-publish-target.sh`),
 and the relay refuses unsigned bundles. The reference app's CI builds
-from the published tools 0.3.12 zip (#139); on pull requests it scaffolds from
+from the published tools 0.3.13 zip (#154); on pull requests it scaffolds from
 this repository's scripts instead, so template changes are what it tests.
 Priorities: `ROADMAP.md` "Current priorities".
 

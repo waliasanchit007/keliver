@@ -127,9 +127,9 @@ run alongside item 2.
    **Status 2026-10-27.**
    - **Released in tools 0.3.12:** the generic editor carries no sample app's
      adapters (2150b4fa6).
-   - **Merged, not released** (on `main` after tools 0.3.12):
+   - **Released in tools 0.3.13** (merged after tools 0.3.12):
      - the generic editor carries no sample app's personas or flows either,
-       and Publish confirms once (47f9b3b9b);
+       and Publish asks before it runs, and runs once at a time (47f9b3b9b);
      - text and number edits are written once, on Enter or blur (#140), so an
        undo steps back a whole edit;
      - the compiled-version stamp never goes back after a relay restart
