@@ -1,7 +1,7 @@
 # Keliver — Public OSS Launch Roadmap
 
 > **Historical document.** The public-launch transition is complete: Keliver is
-> public and the current `dev.keliver:*:0.4.0` line is on Maven Central. This
+> public and the current `dev.keliver:*:0.4.1` line is on Maven Central. This
 > checklist is retained as launch history and is not the source of current
 > priorities. Use [`README.md`](./README.md), [`docs/ROADMAP.md`](./docs/ROADMAP.md), and
 > [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md).

@@ -96,7 +96,7 @@ same `SampleHostApp` composable.
    so `mavenCentral()` in `settings.gradle.kts` resolves every artifact —
    no GitHub token, no `gpr.user`/`gpr.token`. Just clone and build. The
    sample pins **`keliver = "0.1.0"`** in `gradle/libs.versions.toml`, not
-   the newest release (0.4.0); it has not been moved forward.
+   the newest release (0.4.1); it has not been moved forward.
 
 4. (iOS only) **Xcode** (the iOS run below was tested with Xcode 26.3; other
    versions are unverified) and CocoaPods / KMP-direct framework
