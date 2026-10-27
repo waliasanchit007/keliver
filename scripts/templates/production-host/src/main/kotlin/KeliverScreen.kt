@@ -36,6 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
+import dev.keliver.Modifier as RedwoodModifier
+import dev.keliver.treehouse.Crashed
+import dev.keliver.treehouse.DynamicContentWidgetFactory
+import dev.keliver.treehouse.Loading
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
 
@@ -62,6 +66,8 @@ import dev.keliver.treehouse.composeui.TreehouseContent
 fun KeliverScreen(
   host: KeliverHost,
   modifier: Modifier = Modifier,
+  route: KeliverRoute? = null,
+  onClose: (() -> Unit)? = null,
   onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null,
   loading: @Composable () -> Unit = { DefaultLoading(host) },
   unavailable: @Composable (KeliverHostState.Unavailable) -> Unit = { DefaultUnavailable(host, it) },
@@ -111,23 +117,85 @@ fun KeliverScreen(
           } else {
             SideEffect { shown = true } // once drawn, an update swaps in place
             val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
-            val contentSource = remember {
+            // K1's routes and close: a new route is a new content source, so the guest launches it
+            // (TreehouseContent rebinds). Without onClose, closing finishes the activity (not a back
+            // press: the guest's own back handlers, a NavHost's or a sheet's would take that).
+            val activity = androidx.compose.ui.platform.LocalContext.current.findActivity()
+            val latestOnClose by rememberUpdatedState(onClose ?: { activity?.finish() })
+            // A close asked for after this content went (a reply that came late) closes nothing.
+            val active = remember(route) { java.util.concurrent.atomic.AtomicBoolean(true) }
+            DisposableEffect(active) { onDispose { active.set(false) } }
+            val contentSource = remember(route) {
               object : TreehouseContentSource<PortalPresenter> {
                 // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
-                override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(app.launch())
+                override fun get(app: PortalPresenter) =
+                  KeliverTiming.firstFrame(host.launch(app, route) { if (active.get()) latestOnClose() })
               }
             }
+            // K1's screen-failed: the code threw while this screen showed it.
+            val latestOnUnavailable by rememberUpdatedState(onUnavailable)
+            val latestUnavailable by rememberUpdatedState(unavailable)
+            val failureWidgets = remember(host) { ScreenFailedWidgets(host, { latestOnUnavailable }, { latestUnavailable }) }
             TreehouseContent(
               treehouseApp = s.app,
               widgetSystem = widgetSystem,
               contentSource = contentSource,
               modifier = Modifier.fillMaxSize(),
+              dynamicContentWidgetFactory = failureWidgets,
             )
           }
         }
       }
     }
   }
+}
+
+/**
+ * What [TreehouseContent] draws while a screen's code loads (nothing, as before) and when it throws
+ * while the screen shows it (K1's `screen-failed`): the host reports it (W6), the screen calls its
+ * `onUnavailable` once per failure, and draws its `unavailable` slot (the host's text only when
+ * [KeliverHost.showsDeveloperText]). Treehouse replaces the failed content when code loads again.
+ */
+private class ScreenFailedWidgets(
+  private val host: KeliverHost,
+  private val onUnavailable: () -> ((KeliverHostState.Unavailable) -> Unit)?,
+  private val unavailable: () -> @Composable (KeliverHostState.Unavailable) -> Unit,
+) : DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> {
+  // Nothing while code loads, as before; but once the running code has thrown, it never will:
+  // a screen opened then says so and calls its onUnavailable.
+  override fun Loading(): Loading<@Composable (Modifier) -> Unit> = object : Loading<@Composable (Modifier) -> Unit> {
+    override var modifier: RedwoodModifier = RedwoodModifier
+    override val value: @Composable (Modifier) -> Unit = {
+      val failed by host.crashed.collectAsState()
+      failed?.let { f ->
+        LaunchedEffect(f) { onUnavailable()?.invoke(f) }
+        unavailable()(f)
+      }
+    }
+  }
+
+  override fun Crashed(): Crashed<@Composable (Modifier) -> Unit> = object : Crashed<@Composable (Modifier) -> Unit> {
+    private var failed by mutableStateOf<KeliverHostState.Unavailable?>(null)
+    override var modifier: RedwoodModifier = RedwoodModifier
+    override val value: @Composable (Modifier) -> Unit = {
+      failed?.let { f ->
+        LaunchedEffect(f) { onUnavailable()?.invoke(f) }
+        unavailable()(f)
+      }
+    }
+
+    override fun uncaughtException(uncaughtException: Throwable) {
+      if (failed == null) failed = host.screenFailed(uncaughtException)
+    }
+
+    override fun restart(restart: () -> Unit) {}
+  }
+}
+
+private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+  is android.app.Activity -> this
+  is android.content.ContextWrapper -> baseContext.findActivity()
+  else -> null
 }
 
 /** KeliverScreen for apps built on Views: add it to a layout, then set [host]. */
@@ -141,9 +209,15 @@ class KeliverView @JvmOverloads constructor(
   /** [KeliverScreen]'s onUnavailable: open what this view replaced when the host cannot show a screen. */
   var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)
 
+  /** [KeliverScreen]'s route: set a new one (a re-delivered intent's) and the screen shows it. */
+  var route: KeliverRoute? by mutableStateOf(null)
+
+  /** [KeliverScreen]'s onClose: the screen asked to close; by default its activity finishes. */
+  var onClose: (() -> Unit)? by mutableStateOf(null)
+
   @Composable
   override fun Content() {
-    host?.let { KeliverScreen(it, Modifier.fillMaxSize(), onUnavailable = onUnavailable) }
+    host?.let { KeliverScreen(it, Modifier.fillMaxSize(), route = route, onClose = onClose, onUnavailable = onUnavailable) }
   }
 }
 

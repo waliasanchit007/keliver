@@ -249,6 +249,12 @@ for f in "$TEMPLATES"/src/main/kotlin/*.kt; do
   if $EMBED; then case "$(basename "$f")" in HostApp.kt|MainActivity.kt) continue ;; esac; fi
   subst "$f" "$STAGE/src/main/kotlin/$PKG_PATH/$(basename "$f")"
 done
+# The host kit's JVM tests, in the standalone host (its build declares their dependencies).
+if ! $EMBED; then
+  for f in "$TEMPLATES"/src/test/kotlin/*.kt; do
+    subst "$f" "$STAGE/src/test/kotlin/$PKG_PATH/$(basename "$f")"
+  done
+fi
 mkdir -p "$STAGE/src/main/assets/keliver"
 printf '%s\n' "$KEY_HEX" > "$STAGE/src/main/assets/keliver/portal_ed25519.pub"
 cat > "$STAGE/.gitignore" <<'EOF'

@@ -20,6 +20,7 @@
 #       that announces bundles, a publish made while a screen shows is applied
 #       in the same process with no trip to the background; in the background
 #       it stops listening
+#   LV4  back in the foreground (the same process), the host listens again
 echo "--- 6. W5: an update applied when the app comes back to the foreground"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w5-server.log" &
 SERVE_PID=$!
@@ -200,11 +201,27 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     && [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] \
     && ok "LV3: in the background the host stops listening, and its connection is closed (the server saw it go)" \
     || bad "LV3: still listening in the background: $(grep -E "$HOST_TAG: live" "$EV/logcat-LV3.txt" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"
+  # LV4: back to the foreground. The launcher activity brings the existing task forward.
+  adb -s "$SERIAL" logcat -c || true
+  opened_before="$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")"
+  cmp="$(adb -s "$SERIAL" shell cmd package resolve-activity --brief -a android.intent.action.MAIN \
+    -c android.intent.category.LAUNCHER "$PROD_ID" | tr -d '\r' | tail -1)"
+  adb -s "$SERIAL" shell am start -n "$cmp" > /dev/null
+  for _ in $(seq 1 20); do
+    [ "$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")" -gt "$opened_before" ] && break
+    sleep 1
+  done
+  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV4.txt"
+  grep -q "$HOST_TAG: live updates: listening to https://$HOST_ADDR:8445/bundles/events" "$EV/logcat-LV4.txt" \
+    && [ "$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")" -gt "$opened_before" ] \
+    && [ "$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')" = "$pid_live" ] \
+    && ok "LV4: back in the foreground, the same process listens again (the server saw a new stream)" \
+    || bad "LV4: not listening again: $(grep -E "$HOST_TAG: live" "$EV/logcat-LV4.txt" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"
   kill "$LVPID" 2>/dev/null; wait "$LVPID" 2>/dev/null
   w3_title Loft Cellar || bad "LV: could not put the title back to Cellar for W8"
   adb -s "$SERIAL" shell am force-stop "$PROD_ID"
   adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
 else
-  echo "  SKIP  LV2-LV3: this host predates live updates or the bundle server set on the device (not counted)"
+  echo "  SKIP  LV2-LV4: this host predates live updates or the bundle server set on the device (not counted)"
 fi
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""

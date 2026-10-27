@@ -99,6 +99,12 @@ if [ -f "$B/src/jsMain/kotlin/device/Main.kt" ]; then
   grep -q 'import twin\.screens\.DetailScreen$' "$M" && ok "two-screen: imports the SELECTED screen" || bad "two-screen: wrong screen import"
   grep -q 'import twin\.logic\.DetailPresenter$' "$M" && ok "two-screen: imports the SELECTED presenter" || bad "two-screen: wrong presenter import"
   grep -q 'HomeScreen' "$M" && bad "two-screen: leaked the unselected screen" || ok "two-screen: unselected screen absent"
+  grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "$M" && grep -q 'fun closeScreen()' "$B/src/jsMain/kotlin/device/KeliverScreenHost.kt" \
+    && grep -q 'AppUi(route, screen).asZiplineTreehouseUi(appLifecycle)' "$M" \
+    && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "$M" \
+    && grep -q '^package dev.keliver.hostkit$' "$B/src/jsMain/kotlin/device/KeliverScreenHost.kt" \
+    && ok "two-screen: takes a route and a screen host from the host kit (launchRoute), and launch() as before" \
+    || bad "two-screen: no launchRoute for the host kit's routes"
 else
   bad "two-screen: no Main.kt generated"
 fi

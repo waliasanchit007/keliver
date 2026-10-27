@@ -230,6 +230,7 @@ import dev.keliver.treehouse.StandardAppLifecycle
 import dev.keliver.treehouse.TreehouseUi
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import dev.keliver.treehouse.asZiplineTreehouseUi
+import dev.keliver.hostkit.KeliverScreenHost
 import ${PKG}.logic.${PRESENTER}
 import ${PKG}.screens.${SCREEN}
 
@@ -242,12 +243,28 @@ import ${PKG}.screens.${SCREEN}
  */
 interface PortalPresenter : AppService, ZiplineService {
   fun launch(): ZiplineTreehouseUi
+
+  /**
+   * A screen for a route (host kit): the app opens a Keliver screen with a
+   * route such as "orders/42?tab=items", its query already cut to the keys the
+   * app allows. Each path segment, key and value is form-encoded (UTF-8; "+"
+   * is a space). Hosts from before it call launch() only.
+   */
+  fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi
 }
 
-private class AppUi : TreehouseUi {
+/**
+ * One screen for every route as scaffolded: branch on route.substringBefore('?')
+ * to show others, and call screen?.closeScreen() to close this one.
+ */
+private class AppUi(val route: String = "", private val screen: KeliverScreenHost? = null) : TreehouseUi {
   @Composable
   override fun Show() {
     ${SCREEN}(${PRESENTER}())
+  }
+
+  override fun close() {
+    screen?.close() // the host's handle for this screen, released with it
   }
 }
 
@@ -258,6 +275,8 @@ private class AppPresenter(json: kotlinx.serialization.json.Json) : PortalPresen
     widgetVersion = 1U,
   )
   override fun launch(): ZiplineTreehouseUi = AppUi().asZiplineTreehouseUi(appLifecycle)
+  override fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi =
+    AppUi(route, screen).asZiplineTreehouseUi(appLifecycle)
 }
 
 fun main() {
@@ -268,6 +287,24 @@ fun main() {
 }
 EOF
 echo "    src/jsMain/kotlin/device/Main.kt"
+
+# The type launchRoute takes, in the one package every host declares it in too: Zipline
+# matches a function by its signature, parameter types' packages included.
+cat > "$APP/src/jsMain/kotlin/device/KeliverScreenHost.kt" <<'HOSTKIT'
+// A fixed package, the same in every host and every guest: Zipline identifies a function by
+// its signature, its parameter types' packages included, so launchRoute(String,
+// KeliverScreenHost) reaches a guest only when both declare this type here.
+package dev.keliver.hostkit
+
+import app.cash.zipline.ZiplineService
+
+/** What a screen may ask of the host that shows it (host kit). */
+interface KeliverScreenHost : ZiplineService {
+  /** Close this screen: the app's onClose for it (by default the host closes it as it was shown). */
+  fun closeScreen()
+}
+HOSTKIT
+echo "    src/jsMain/kotlin/device/KeliverScreenHost.kt"
 
 sed "s/@@PACKAGE@@/${PKG}/g" "$GUEST_TIMING" > "$APP/src/jsMain/kotlin/device/KeliverTiming.kt"
 echo "    src/jsMain/kotlin/device/KeliverTiming.kt"

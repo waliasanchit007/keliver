@@ -19,6 +19,7 @@
 #       updates on resume; against a server that announces bundles, a publish
 #       is applied in the open app with no resume; in the background the host
 #       stops listening
+#   LV4  back in the foreground (the same process), the host listens again
 echo "--- W5: an update applied when the app comes back to the foreground"
 app_pid(){ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="UIKitApplication:$BID" 'index($3, b) == 1 { print $1 }' | head -1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
@@ -218,12 +219,26 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs KELIVER_BUNDLE_SERVER "$APP/host-ios/src/iosM
     && [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] \
     && ok "LV3: in the background the host stops listening, and its connection is closed (the server saw it go)" \
     || bad "LV3: still listening in the background: $(grep -E 'KeliverHost: live' "$C" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"
+  # LV4: back to the foreground. simctl launch brings a running app forward (it is not
+  # restarted without --terminate-running-process); its console stays on $C.
+  listening_before="$(grep -c 'KeliverHost: live updates: listening to https://localhost:8445/bundles/events' "$C")"
+  opened_before="$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")"
+  xcrun simctl launch "$UDID" "$BID" > /dev/null 2>&1
+  for _ in $(seq 1 20); do
+    [ "$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")" -gt "$opened_before" ] && break
+    sleep 1
+  done
+  [ "$(grep -c 'KeliverHost: live updates: listening to https://localhost:8445/bundles/events' "$C")" -gt "$listening_before" ] \
+    && [ "$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")" -gt "$opened_before" ] \
+    && [ -n "$pid_live" ] && [ "$(app_pid)" = "$pid_live" ] \
+    && ok "LV4: back in the foreground, the same process listens again (the server saw a new stream)" \
+    || bad "LV4: not listening again: $(grep -E 'KeliverHost: live' "$C" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"
   kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
   kill "$LVPID" 2>/dev/null; wait "$LVPID" 2>/dev/null
   w3_title Loft Cellar || bad "LV: could not put the title back to Cellar for W8"
   xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
   xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
 else
-  echo "  SKIP  LV2-LV3: this host predates live updates or the launch-environment bundle server (not counted)"
+  echo "  SKIP  LV2-LV4: this host predates live updates or the launch-environment bundle server (not counted)"
 fi
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""

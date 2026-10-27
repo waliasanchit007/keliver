@@ -509,11 +509,11 @@ class DocumentService(
   fun subscribe(out: OutputStream, close: () -> Unit = { out.close() }) {
     val listener = Listener(out, close)
     listeners += listener
-    if (runCatching { sendEvent(out, doc.version) }.isFailure) drop(listener)
+    if (runCatching { sendEvent(listener) }.isFailure) drop(listener)
   }
 
   private fun sendToAll() {
-    for (l in listeners) if (runCatching { sendEvent(l.out, doc.version) }.isFailure) drop(l)
+    for (l in listeners) if (runCatching { sendEvent(l) }.isFailure) drop(l)
   }
 
   private fun drop(l: Listener) {
@@ -663,10 +663,16 @@ class DocumentService(
     sendToAll()
   }
 
-  private fun sendEvent(out: OutputStream, version: Long) {
+  /**
+   * One event to [l], under its lock: a subscribe (a request thread), an edit
+   * (another request thread) and a write-back's status (the writer thread) can
+   * send at the same time, and two writes to one stream would interleave. The
+   * version is read inside the lock, so one listener never sees it go back.
+   */
+  private fun sendEvent(l: Listener) = synchronized(l) {
     val wb = writeBack?.let { ",\"writeBack\":${it.json()}" } ?: ""
-    out.write("data: {\"version\":$version,\"tokens\":${tokensVersion()},\"components\":${componentsVersion()}$wb}\n\n".toByteArray())
-    out.flush()
+    l.out.write("data: {\"version\":${doc.version},\"tokens\":${tokensVersion()},\"components\":${componentsVersion()}$wb}\n\n".toByteArray())
+    l.out.flush()
   }
 
   /** M6: create the canonical .kt on first sight of a screen (no change needed). */

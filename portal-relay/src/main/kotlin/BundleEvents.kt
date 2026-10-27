@@ -1,4 +1,3 @@
-import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
@@ -28,8 +27,15 @@ internal class BundleEvents(
   /** At most this many devices listen at once; more are refused (503). */
   private val maxListeners: Int = 32,
 ) {
-  /** A listening device: its stream, and how to close its connection (the exchange, not just the stream). */
-  private class Listener(val out: OutputStream, val close: () -> Unit)
+  /**
+   * A listening device: its stream, and how to close its connection (the exchange, not just the stream).
+   * [ready] once its preamble and first event are written; until then a heartbeat or an
+   * announcement queued before them passes it by, so its stream always starts with the preamble.
+   * Only the writer thread reads or sets it.
+   */
+  private class Listener(val out: OutputStream, val close: () -> Unit) {
+    var ready = false
+  }
 
   private val listeners = CopyOnWriteArrayList<Listener>()
 
@@ -50,8 +56,14 @@ internal class BundleEvents(
   /** Adds [out] and sends it the store's newest version; [close] closes its connection when it goes away. */
   fun subscribe(out: OutputStream, close: () -> Unit = { out.close() }) {
     val listener = Listener(out, close)
-    listeners += listener
-    writer.execute { if (!send(listener, PREAMBLE + event(newest()))) drop(listener) }
+    listeners += listener // counted at once, so hasRoom() holds the limit
+    try {
+      writer.execute {
+        if (send(listener, PREAMBLE + event(newest()))) listener.ready = true else drop(listener)
+      }
+    } catch (_: java.util.concurrent.RejectedExecutionException) {
+      drop(listener) // the relay is shutting down
+    }
   }
 
   /** Tells every listener the store changed; call after a bundle is completely stored. Returns at once. */
@@ -67,15 +79,15 @@ internal class BundleEvents(
   }
 
   private fun sendAll(text: String) {
-    for (l in listeners) if (!send(l, text)) drop(l)
+    for (l in listeners) if (l.ready && !send(l, text)) drop(l)
   }
 
   private fun send(l: Listener, text: String): Boolean = try {
     l.out.write(text.toByteArray())
     l.out.flush()
     true
-  } catch (_: IOException) {
-    false
+  } catch (_: Exception) {
+    false // an IOException mostly; anything else must not end the scheduled heartbeat either
   }
 
   /**

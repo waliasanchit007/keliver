@@ -242,9 +242,11 @@ that opens.
 - **Fields:** `installId`, `channel`, `hostVersion`, `sequence`, `source`
   (`network` or `cache`), `outcome`, `reason` and `platform`.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
-  `not-loaded`, `no-bundle` or `refused`.
+  `not-loaded`, `no-bundle`, `refused`, or (Android) `screen-failed`: the
+  code threw while a screen showed it, one record per screen on show.
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
-  `lookup-failed`, `network`, `config` or `other`.
+  `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
+  `other`.
 
 Where the records go:
 - **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
@@ -535,9 +537,11 @@ for byte):
   A second `create()` for the same key throws, because two loaders must never
   share a Zipline cache. `start()` is idempotent: the first screen calls it, or
   call it at launch to warm up. `state` is a `StateFlow` the screens observe:
-  `Loading`, `Running`, or `Unavailable(outcome, reason, title, message)` when
+  `Loading`, `Running`, or `Unavailable(outcome, reason, title, message, attempt)` when
   the host cannot show a screen (`outcome` is the report's: `no-bundle`,
-  `refused` or `not-loaded`; `reason` its fixed category). Observe it to hide
+  `refused` or `not-loaded`; `reason` its fixed category; `attempt` numbers
+  these in the process from 1, so the same failure on a retry is a new state;
+  equality includes it, so compare `outcome` and `reason`, not whole states). Observe it to hide
   your own chrome while `Running`.
 - **`KeliverScreen(host, modifier, onUnavailable, loading, unavailable)`**, a
   Composable, and **`KeliverView`**, an `AbstractComposeView` for View layouts
@@ -547,7 +551,11 @@ for byte):
   screen with what it replaced (your web page or native screen, with the route
   you were showing): it is called on the main thread each time a screen is
   composed in an `Unavailable` state, so finish or pop the Keliver screen
-  there rather than stacking the fallback over it. After "no bundle", a
+  there rather than stacking the fallback over it. It is also called with
+  outcome `screen-failed` when the code throws while it shows: Treehouse stops
+  that code, so every screen showing it hears it (one report each), and so
+  does every screen opened afterwards, until code loads again (an update);
+  `state` stays `Running`. After "no bundle", a
   screen composed later looks up again (`Loading` meanwhile). **`loading`**
   and **`unavailable`** draw those states; the defaults show the host's own
   text only in a debug build of a debuggable app (`showsDeveloperText`) and
@@ -555,6 +563,59 @@ for byte):
   name addresses and paths. `KeliverView` needs a lifecycle owner
   in its window, like any Compose view: use it in a `ComponentActivity`
   (`AppCompatActivity`) or a `Fragment`, not a plain `android.app.Activity`.
+- **Routes and close** (K1): `KeliverScreen(host, route = KeliverRoute.from(intent.dataString, allowedQueryKeys))`
+  shows the guest's screen for that route. `KeliverRoute` keeps a deep
+  link's path and only the query keys you allow, so a link's other
+  parameters never reach the guest. Set a new route (a re-delivered intent's,
+  from `onNewIntent`; `KeliverView.route` for Views) and the screen launches
+  it. The guest receives it as text (`orders/42?tab=items`) in
+  `PortalPresenter.launchRoute(route, screen)`, which
+  `keliver-new-device-target.sh` scaffolds; a guest scaffolded before it has
+  no `launchRoute`, and the host shows its `launch()` screen instead (logged).
+  The route is form-encoded text (UTF-8, `+` for a space) and the same for
+  the same link on Android and iOS (one shared `KeliverRoute`). A screen
+  closes itself with `screen.closeScreen()`: `KeliverScreen`'s `onClose`, on
+  the main thread; without one its activity finishes. In a navigation stack,
+  pass `onClose` (pop your entry). A close that arrives after the screen went
+  (a late reply) closes nothing.
+- **`RequestPolicy`**: what a guest's HostHttp requests may reach, checked in
+  Keliver code before anything is sent:
+  `KeliverHost.create(this, KeliverConfig.fromBuild(this, RequestPolicy(origin, rules, allowStateChanging, allowCleartext)))`.
+  - `origin` (scheme, host, port) pins the API base: if `keliver.apiBaseUrl`
+    is anywhere else, every request is refused. It must be `https` unless
+    `allowCleartext`, which you set from `BuildConfig.DEBUG` (a release
+    build's settings refuse an http API base anyway);
+  - `rules` are exact `RequestPolicy.Rule(method, path)` pairs, paths relative
+    to `keliver.apiBaseUrl` and compared segment by segment (no patterns: a
+    path with an id in it is a different path);
+  - a state-changing method (anything but GET, HEAD, OPTIONS) also needs
+    `allowStateChanging`, a per-build switch.
+
+  A refused request fails in the guest with "HostHttp refused: …" and is
+  logged (the path only in a debug build); nothing reaches the network.
+  Without a policy every path under the API base is allowed, as before: an
+  app embedding Keliver screens should set one. Redirects are never followed
+  and the method-override headers (`X-HTTP-Method-Override` and kin) are
+  dropped either way. **Not restricted:** the query string, and other
+  headers: a guest can set `Authorization` or `Cookie` unless your client's
+  interceptor sets them.
+- **`ExternalLinkPolicy.open(context, url)`**: call it from whatever your app
+  exposes to screens for opening a link. `https` opens in a Custom Tab, on any
+  host. `intent:` is handled as a browser handles it, and stricter: a VIEW
+  only, no component or selector, BROWSABLE activities only, none of the
+  link's flags (no URI grants, no task games), never this app (named, or one
+  of its own deep links), and no `file:`, `content:`, `http:`, `javascript:`,
+  `data:` or `intent:` data; an https `browser_fallback_url` when nothing
+  handles it. Otherwise it reaches any app with a BROWSABLE activity for it,
+  custom schemes included. Everything else, `http` included, is refused and
+  logged.
+- **Tests**: the standalone host carries the kit's JVM tests
+  (`./gradlew -p host-android testDebugUnitTest`): the policy against a local
+  server (allowed, not listed, wrong method, state-changing without the
+  switch, a policy for another origin, cleartext, a redirect, encoded `/` and
+  `?`, dot segments, method case, method-override headers) and the link rules
+  (schemes, and a parsed `intent:` link's action, target and data). Applying
+  those rules to a real `Intent` needs a device.
 - **Settings**: `keliver.properties` in the module (a subproject's
   `gradle.properties` is not read), each overridable with `-Pkeliver.<name>`.
   The host version that `minHostVersion`/`maxHostVersion` gates compare with is
@@ -571,6 +632,17 @@ for byte):
   the floor and the install id) with `dataExtractionRules` and
   `fullBackupContent`, or a restored device starts with another device's floor
   and rollout bucket.
+- **Debug-only surfaces** (audited for K1): the bundle server set on the
+  device (`files/keliver/bundle-server`), the check-now broadcast, the
+  host's own text on screen, and live updates. Each needs both this module's
+  debug variant (`BuildConfig.DEBUG`) and a debuggable app, so a release build
+  of your app, or a debuggable build that uses the module's release variant,
+  has none of them. The check-now receiver is registered at run time, never in
+  the manifest, and only a sender holding `android.permission.DUMP` (adb's
+  shell, not an app) reaches it. A release build never runs live updates
+  (`keliver.updates=live` becomes `on-resume`). The self-test's `--build`
+  checks a release APK: `DEBUG` false, not debuggable, and nothing exported
+  but the launcher activity unless a permission guards it.
 - **R8**: the module's consumer rules keep Zipline's bridged services, which
   are called by name. A minified release of the reference app loads and
   renders (X7 below).

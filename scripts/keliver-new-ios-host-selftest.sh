@@ -214,6 +214,7 @@ grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', '
   && grep -q 'if (!kotlin.native.Platform.isDebugBinary || debugCheckRegistered) return' "$K/MainViewController.kt" \
   && grep -q 'val url = "$base/bundles/events"' "$K/MainViewController.kt" && grep -q 'screenShown()' "$K/MainViewController.kt" \
   && grep -q 'text/event-stream' "$K/BundleEvents.kt" \
+  && grep -q "implementation 'org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:" "$H/build.gradle" \
   && ok "updates: live in a debug binary (on-resume in a release one), next-launch in a release one; a debug-only check-now notification" \
   || bad "updates: the debug default, live updates or the check-now notification is not wired"
 # M0: timing marks only when KELIVER_TIMING=YES (Debug, Benchmark); a no-op elsewhere.

@@ -157,6 +157,10 @@ kotlin {
         implementation 'org.jetbrains.compose.runtime:runtime:@@COMPOSE_VERSION@@'
         implementation 'org.jetbrains.compose.foundation:foundation:@@COMPOSE_VERSION@@'
         implementation 'org.jetbrains.compose.ui:ui:@@COMPOSE_VERSION@@'
+        // LocalLifecycleOwner (live updates follow the view controller's lifecycle). Compose UI
+        // 1.8.2 brings this version; declared so the host does not rely on that. With a newer
+        // Compose (KELIVER_HOST_COMPOSE_VERSION), Gradle takes the newer lifecycle it brings.
+        implementation 'org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.8.4'
         implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'
         implementation 'io.coil-kt.coil3:coil-network-ktor3:3.3.0' // images over the network
         implementation 'io.ktor:ktor-client-darwin:3.1.0'           // coil's network engine on iOS
