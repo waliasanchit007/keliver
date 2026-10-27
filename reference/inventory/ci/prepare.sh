@@ -237,9 +237,11 @@ if [ -z "$W5_UPDATES" ]; then
       -Pkeliver.bundleServer="https://$HOST_ADDR:8443" -Pkeliver.reportUrl="https://$HOST_ADDR:8443/report" ) > "$EV/u0-buildconfig.log" 2>&1 \
     || bad "U0: generating the debug and release BuildConfig failed: $(grep -E 'What went wrong' -A2 "$EV/u0-buildconfig.log" | head -3 | tr '\n' ' ')"
   u0(){ find "$APP/host-android/build/generated/source/buildConfig/$1" -name BuildConfig.java -exec grep -h KELIVER_UPDATES {} + 2>/dev/null | sed 's/.*= *"\([^"]*\)".*/\1/'; }
-  [ "$(u0 debug)" = on-resume ] && [ "$(u0 release)" = next-launch ] \
-    && ok "U0: keliver.updates unset: the debug build is on-resume, the release build next-launch" \
-    || { bad "U0: debug '$(u0 debug)', release '$(u0 release)'"; tail -20 "$EV/u0-buildconfig.log"; }
+  # A host with live updates (2026-10-27 on) defaults its debug build to live; an older one to on-resume.
+  if grep -rqs 'bundles/events' "$APP/host-android/src/main/kotlin"; then U0_DEBUG=live; else U0_DEBUG=on-resume; fi
+  [ "$(u0 debug)" = "$U0_DEBUG" ] && [ "$(u0 release)" = next-launch ] \
+    && ok "U0: keliver.updates unset: the debug build is $U0_DEBUG, the release build next-launch" \
+    || { bad "U0: debug '$(u0 debug)' (expected $U0_DEBUG), release '$(u0 release)'"; tail -20 "$EV/u0-buildconfig.log"; }
 fi
 echo "W5_APK=$EV/production-host-onresume.apk" >> "$WORK/env"
 # M0 (T0): the benchmark build (release settings, timing marks) for the static

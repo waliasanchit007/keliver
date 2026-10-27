@@ -40,12 +40,16 @@ if (reportUrl && !(reportUrl ==~ reportUrlPattern)) {
 if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
   throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")
 }
-// Empty (the default): on-resume in DEBUG builds, so a bundle published while
-// you work shows when you switch back to the app; next-launch in every other
-// build type. A value set here applies to every build type.
-if (updates && !(updates in ['next-launch', 'on-resume'])) {
-  throw new GradleException("keliver.updates must be next-launch, on-resume or empty (got '$updates').")
+// Empty (the default): live in DEBUG builds, so a bundle published while you
+// work shows in the open app (and on-resume against a server without
+// /bundles/events); next-launch in every other build type. A value set here
+// applies to every build type, except that live is on-resume outside debug.
+if (updates && !(updates in ['next-launch', 'on-resume', 'live'])) {
+  throw new GradleException("keliver.updates must be next-launch, on-resume, live or empty (got '$updates').")
 }
+// live is for development: a debug build listens for publishes while a screen
+// shows. Every other build type takes it as on-resume (the host checks again).
+def updatesOutsideDebug = updates == 'live' ? 'on-resume' : updates
 def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:') || reportUrl.startsWith('http:')
 
 // The embedded key(s), checked by checkPortalKey (below) and compiled into
@@ -76,7 +80,7 @@ android {
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_REPORT_URL', "\"${reportUrl}\""
     buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
-    buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'next-launch'}\""
+    buildConfigField 'String', 'KELIVER_UPDATES', "\"${updatesOutsideDebug ?: 'next-launch'}\""
     buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeysOk ? portalKeyLines[0] : ''}\""
     buildConfigField 'String', 'KELIVER_NEXT_PUBLIC_KEY_HEX', "\"${portalKeysOk && portalKeyLines.size() == 2 ? portalKeyLines[1] : ''}\""
   }
@@ -86,7 +90,7 @@ android {
     // build with an http server is refused outright (checkReleaseUrls, below).
     debug {
       manifestPlaceholders = [usesCleartextTraffic: cleartext.toString()]
-      buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'on-resume'}\""
+      buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'live'}\""
     }
     // For measuring (M0), never shipped: release settings (not debuggable, https
     // only), minified with R8 as a store build should be (this template's release
