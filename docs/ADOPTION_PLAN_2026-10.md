@@ -10,10 +10,12 @@ serious defect in the proof was in host glue that each adopter writes for themse
 
 **Status (2026-10-27).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
-signing team), M3–M5 are open. Items 3, 4, 5 and 7 are not started. Item 6:
-rows 1 (#108, #115), 2 (#109), 3 (#114) and 4 (#111) are done; the device
-proxy is open, and a debug host that picks up a publish while it is open is in
-progress (`ROADMAP.md`, "Current priorities"). Each item below carries its own
+signing team), M3–M5 are open. Item 3 is started (K1 part 1, #155); items 4, 5
+and 7 are not started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
+(#111) are done, and so is a debug host that picks up a publish while it is
+open (Android #145, released in tools 0.3.13 and checked on a physical phone;
+iOS #150, merged); the device proxy is open (`ROADMAP.md`, "Current
+priorities"). Each item below carries its own
 status line. **Naming:** this plan's K1–K4 (item 3) and B1–B5 (item 4) are its
 own step numbers; they are not the portal grammar's K1–K7 (#120–#134) nor W8's
 K1–K8 checks.
@@ -239,7 +241,7 @@ analytics) need a contract.
 
 ## Item 6. Dev loop
 
-**Status 2026-10-27:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). Open: the device proxy, and a debug host that applies a publish while it is open (in progress: the relay's `GET /bundles/events`, `keliver.updates=live`).
+**Status 2026-10-27:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, merged, simulator only). Open: the device proxy.
 
 **Evidence.**
 - The first publish after another Gradle build failed with a Kotlin/JS internal compiler error.

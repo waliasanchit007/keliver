@@ -143,7 +143,7 @@ grep -q '/bundles/index.json"' "$K/MainViewController.kt" && grep -q 'status == 
 # W2: one host per process (Keliver), started once; every view controller only observes it.
 grep -q '^public object Keliver {' "$K/MainViewController.kt" && grep -q 'if (started) return' "$K/MainViewController.kt" \
   && grep -q 'public fun MainViewController(): UIViewController = Keliver.viewController()' "$K/MainViewController.kt" \
-  && grep -q 'state.collectAsState()' "$K/MainViewController.kt" \
+  && grep -q 'mutableState.collectAsState()' "$K/MainViewController.kt" \
   && ok "W2: Keliver is the one host (started once); MainViewController() only shows it" || bad "W2: the iOS host is not one per process"
 # W4.2: the rollback floor is read per key, guards the network load and the cache
 # start, and rises only from a verified successful load. W8: across the trusted
@@ -177,6 +177,18 @@ grep -q 'CHANNEL: String = "stable"' "$K/HostConfig.kt" && grep -q "configValue(
 # Updates: UPDATES empty by default (live in a DEBUG binary, next-launch in a
 # release one; live is on-resume in a release one); a DEBUG binary also checks on
 # a Darwin notification, and while live listens to /bundles/events with a screen shown.
+# Host kit K2: a public state with Android's shape, onUnavailable per screen, the release text policy.
+grep -q 'public sealed interface KeliverHostState' "$K/MainViewController.kt" \
+  && grep -q 'public data class Unavailable(' "$K/MainViewController.kt" && grep -q 'val attempt: Int,' "$K/MainViewController.kt" \
+  && grep -q 'public var onStateChange: ((KeliverHostState) -> Unit)? = null' "$K/MainViewController.kt" \
+  && grep -q 'public val currentState: KeliverHostState get() = mutableState.value' "$K/MainViewController.kt" \
+  && grep -q 'public fun viewController(safeArea: Boolean, onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?): UIViewController' "$K/MainViewController.kt" \
+  && grep -q 'if (mutableState.value == s) runCatching { onUnavailable?.invoke(s) }' "$K/MainViewController.kt" \
+  && grep -q 'public val showsDeveloperText: Boolean get() = kotlin.native.Platform.isDebugBinary' "$K/MainViewController.kt" \
+  && grep -q 'else MessageScreen("Not available", "This screen can' "$K/MainViewController.kt" \
+  && ! grep -q 'HostState.Message(.*) -> MessageScreen' "$K/MainViewController.kt" \
+  && ok "host kit K2: KeliverHostState is public (Loading, Unavailable, Running), onUnavailable per screen, host text only in DEBUG" \
+  || bad "host kit K2: the public state, onUnavailable or the release text policy is not wired"
 grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', 'next-launch', 'on-resume', 'live'\]" "$H/build.gradle" \
   && grep -q 'UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "live" else "next-launch" }' "$K/MainViewController.kt" \
   && grep -q 'if (mode == "live" && !kotlin.native.Platform.isDebugBinary) "on-resume" else mode' "$K/MainViewController.kt" \
@@ -248,7 +260,7 @@ L="$EX/keliver-host-ios"; LK="$L/src/iosMain/kotlin/com/example/demo/host"
 [ -x "$L/gradlew" ] && [ -f "$L/gradle/wrapper/gradle-wrapper.properties" ] && [ -f "$L/settings.gradle" ] && [ -f "$L/build.gradle" ] \
   && [ -f "$L/KeliverScreen.swift" ] && [ -f "$L/EMBED.md" ] && [ ! -e "$L/iosApp" ] && [ ! -e "$L/iosApp.xcodeproj" ] \
   && ok "a framework build with its own wrapper, KeliverScreen.swift and EMBED.md; no Xcode app" || bad "the embedded framework's files"
-grep -q 'Keliver.shared.viewController(safeArea: safeArea)' "$L/KeliverScreen.swift" && grep -q 'cd "$SRCROOT/keliver-host-ios"' "$L/EMBED.md" \
+grep -q 'Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnavailable)' "$L/KeliverScreen.swift" && grep -q 'cd "$SRCROOT/keliver-host-ios"' "$L/EMBED.md" \
   && ! grep -q '@@' "$L/EMBED.md" && ok "KeliverScreen shows Keliver.shared; EMBED.md names the build phase with this layout's path" || bad "KeliverScreen.swift / EMBED.md"
 grep -q 'CHANNEL: String = "beta"' "$LK/HostConfig.kt" && grep -q 'BUNDLE_SERVER: String = "https://bundles.example.com"' "$LK/HostConfig.kt" \
   && ok "the settings are in HostConfig.kt, as for the standalone host" || bad "HostConfig.kt"
@@ -278,6 +290,16 @@ if [ "$BUILD" = 1 ]; then
       ok "xcodebuild built $(basename "$appb") for the simulator"
       [ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$appb/Info.plist" 2>/dev/null)" = com.example.demo.host ] \
         && ok "the app's bundle id is com.example.demo.host" || bad "the built app's bundle id"
+      # The embed's SwiftUI screen against the framework just built (K2: onUnavailable reaches Swift).
+      fw="$(find "$H/build" "$appb/Frameworks" -name KeliverHost.framework -type d -exec test -d '{}/Modules' ';' -print 2>/dev/null | head -1)"
+      if [ -z "$fw" ]; then
+        bad "no KeliverHost.framework with Modules under $H/build to type-check KeliverScreen.swift against"
+      elif xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
+          -F "$(dirname "$fw")" "$L/KeliverScreen.swift" > "$DISP/swift-typecheck.log" 2>&1; then
+        ok "the embed's KeliverScreen.swift type-checks against the built framework (viewController with onUnavailable)"
+      else
+        bad "KeliverScreen.swift does not type-check (framework '${fw}'): $(grep -m3 'error:' "$DISP/swift-typecheck.log" | tr '\n' ' ')"
+      fi
     else
       bad "xcodebuild failed (rc=$rc): $(grep -E '^e: |error:' "$DISP/xcodebuild.log" | head -3 | tr '\n' ' ')"
     fi
