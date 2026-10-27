@@ -893,8 +893,24 @@ their required checks pass (Standing constraints, below).
 | editor program, PR #140 | **merged 2026-10-25** (`12cacbe08`) after five feedback rounds by a user-role agent and seven independent reviews: selection and hover boxes, components opened and edited in place (zoomed when small), properties and State panel, cross-document undo whose order is the relay's (`/history`), byte-exact undo of write-back, new screen files written compactly. Editor 191/0, ingest 369/0, relay 391/0, E2E 34/34; CI green. The loop (editor edit, write-back, signed bundle, render) was checked on a physical Android phone (Android 12) against a scratch store. **Unreleased:** the generic editor ships in the tools bundle; a per-app editor compiles against the published `portal-editor`, so it also needs a libraries release. |
 | editor polish + host resume fix, PR #141 | **merged 2026-10-26** (`a13b2d4ea`): the outline keeps its scroll place; the top bar says what ▶ Live, </> Code and ⬆ Publish do and which bundle devices get; a palette preview drawn by the canvas; a compact publish card; Live says when the editor has nothing to run. Production-host template: a screen opened while an on-resume update is being applied waits for it (up to 5 s), so it is drawn once, not old-then-new (checked on the same phone: one guest start instead of two). All checks green, reference-app included. **Unreleased.** |
 | ▶ Live for an adopter's own presenters | **deferred 2026-10-26** by the owner: planned (generated live adapters from Bindings interfaces instead of hand-written mappers), not started; the debug device loop comes first. `docs/ROADMAP.md` adoption item 9. |
+| bundled scaffolders write into the app, PR #142 | **merged 2026-10-27** (`13b69b9d6`): `keliver-new-screen.sh` / `keliver-new-component.sh` take the app from the working directory (or `KELIVER_APP_DIR`), refuse without `keliver.portal.json`, and derive the app's package. `keliver-new-scaffolders-selftest.sh` 9/0 (1/7 on the old scripts). | PR #142 |
+| U38, PR #143 | **merged 2026-10-27** (`1dda934fe`): `keliver-portal` serves the editor `Cache-Control: no-store` and ignores `If-Modified-Since`. Not re-run in a browser yet. | PR #143 |
+| docs audit, PR #144 | **merged 2026-10-27** (`34daa91b6`): status records, guides, ranked priorities, the Live deferral. | PR #144 |
+| live device updates (Android), PR #145 | **merged 2026-10-27** (`d3b3ad2cf`) at head `418bc6898`, reviewed twice: the relay's `GET /bundles/events` (SSE, ≤ 32 listeners, a stalled phone never delays a publish), the Android host's `keliver.updates=live` (debug default) listening while a `KeliverScreen` is on show, the editor's devices chip. CI on that head: Build, both editor E2E, reference-app (Android LV1–LV3: static-server fallback, a publish applied in the open app in the same process, the stream closed in the background), ios-host 40409443193 — all green. | PR #145 |
+| U28 on both generic hosts, PR #146 | **merged 2026-10-27** (`33fa9fdeb`) at `b3c5b895d`: `portal-device-android` and `portal-device-ios` emit no manifest URL until the lookup has one. Compiled both; no device run of prod mode. | PR #146 |
+| MCP `device_screenshot` finds adb, PR #147 | **merged 2026-10-27** (`46cd57649`) at `dd674f727`: `ANDROID_HOME`, `ANDROID_SDK_ROOT`, the macOS and Linux SDK defaults, then `PATH`. mcp tests 27/0. | PR #147 |
+| `keliver-portal` ports, PR #148 | **merged 2026-10-27** (`b84b79291`) at `69c5d6358`, reviewed three times: the editor on `editorPort` (default port + 19), `?relay=` in the printed URL and added by the editor's server to a URL without it, ports validated (and `stop` working with a broken config), C5 on the right port, `allowedOrigins` documented. | PR #148 |
+| relay `/doc-events` fd leak, PR #149 | **merged 2026-10-27** (`a4e31b6e4`) at `a02d5d874`: a dropped listener's exchange is closed. Relay 393/0. Not done: per-listener write locking (pre-existing interleave risk). | PR #149 |
+| libraries 0.4.1 | **in preparation 2026-10-27**: the editor libraries (#140, #141, #145's chip), additive API only. Local candidate at `418bc6898`: `publishToMavenLocal -PkeliverVersion=0.4.1` 389 poms (378 artifacts + 11 plugin markers, the 0.4.0 set), `apiCheck` passes. Owner's 2026-10-27 prompt: publish when warranted. | this PR |
 
 ## Next action
+
+**2026-10-27 (night).** #145–#149 are merged (rows above), each after an
+independent review and with every check green on its exact head. Next: libraries
+**0.4.1** (this PR, then tag `v0.4.1` and `publish-maven-central.yml`), so that
+tools **0.3.13** can scaffold per-app editors on it; then tools 0.3.13 by
+`PORTAL_TOOLS_RELEASE.md`; then iOS live updates (draft PR #150) and the
+brownfield host kit (ROADMAP item 7). The entry below is kept as written.
 
 **2026-10-27.** The editor program is merged (#140, #141; rows above) and
 **unreleased**: no tools release since 0.3.12. The roadmap's adoption items
