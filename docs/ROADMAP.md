@@ -416,8 +416,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    twice after a resume update. Gate: `scripts/build-portal-tools.sh`, the
    adopter acceptance, the identity check, device verify, then the release
    procedure in `PORTAL_TOOLS_RELEASE.md`. It carries items 2–4 and 6.
-   **Status 2026-10-27:** everything it carries is merged (#140–#149); the
-   release follows libraries 0.4.1 (item 5).
+   **Status 2026-10-27: released** (tools 0.3.13, tag → `a5ab6e2b2`, zip
+   `5d1dd0ef…`; `RELEASE_NOTES_TOOLS_0.3.13.md`).
 2. **A debug host picks up a publish while it is open** (adoption item 6's
    open row; owner's request 2026-10-26). The relay announces each stored
    bundle on `GET /bundles/events`; a debug host listens while a screen is on
@@ -434,8 +434,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    **Status 2026-10-27:** fixed, merged (#143: `no-store`); no browser re-run yet.
 5. **A libraries release (0.4.1)** so per-app editors get #140/#141: the
    published `portal-editor`, `portal-core`, `keliver-material-composeui`
-   changed. **Status 2026-10-27:** in release (the owner's 2026-10-27 prompt
-   authorizes it when warranted); local candidate 389 poms, `apiCheck` passes.
+   changed. **Status 2026-10-27: released** (`v0.4.1` → `c5a7e8716`, on Maven
+   Central; tools 0.3.13 scaffolds it).
 6. **U28: a false `codeLoadFailed` on every production-host start.** It sends
    developers chasing a failure that did not happen. **Status 2026-10-27:**
    fixed on both generic hosts, merged (#146); not run on a device.

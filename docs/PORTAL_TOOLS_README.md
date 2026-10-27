@@ -58,7 +58,7 @@ keliver-portal .                   # open http://localhost:8096
 
 `keliver-init` creates a standalone Gradle project whose screens
 (`src/jsMain/kotlin/screens/`) are real Kotlin Compose against the published
-`dev.keliver:*:0.4.0` artifacts — edit them in your IDE (native completion) or
+`dev.keliver:*:0.4.1` artifacts — edit them in your IDE (native completion) or
 visually in the browser; both stay in sync via `keliver.portal.json`.
 
 No install at all? The hosted playground: **http://keliver.me/keliver/**
@@ -110,6 +110,15 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `keliver-portal` writes the adapters before it builds that editor);
   contract write-back no longer redeclares a field or action the screen's
   interface inherits.
+- **From 0.3.13:** new apps get the 0.4.1 libraries; the editor you work in
+  (selection and hover boxes, components opened and edited in place, typed
+  property controls, undo across documents, a palette preview, a compact
+  publish card); a debug production host (Android) picks up a publish while
+  the app is open (`keliver.updates=live`, the debug default; the relay's
+  `GET /bundles/events`); `keliver-new-screen.sh` and
+  `keliver-new-component.sh` write into the app they are run from;
+  `keliver-portal` puts the editor on `editorPort` (default port + 19) so two
+  apps' portals can run at once, and serves it uncached.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

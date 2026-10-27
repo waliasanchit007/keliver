@@ -39,7 +39,7 @@ pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); }
 bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); }
 
-( cd "$DISP" && env -u KELIVER_USE_MAVEN_LOCAL KELIVER_VERSION="${KELIVER_VERSION:-0.4.0}" \
+( cd "$DISP" && env -u KELIVER_USE_MAVEN_LOCAL KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}" \
     "$INIT" Tree > "$DISP/init.log" 2>&1 ) || { echo "scaffold failed"; cat "$DISP/init.log"; exit 1; }
 APP="$DISP/tree"
 [ -f "$APP/.gitignore" ] && ok "the scaffold ships a .gitignore" || bad "no .gitignore scaffolded"
