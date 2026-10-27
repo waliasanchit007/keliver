@@ -118,11 +118,16 @@ export default [
           hint = await editor.canvasHint();
           if (hint) break;
           if (!pressed && Date.now() > end - 6000) {
-            if (/SummaryCard/.test((await editor.propsHeader()) ?? '')) { log('the double-click only selected SummaryCard; pressing Enter'); await page.press('Enter'); pressed = true; }
+            if (/SummaryCard/.test((await editor.propsHeader()) ?? '')) {
+              // Visible in the CI output, not only in the artifacts: this is KNOWN_BUGS U39.
+              const note = 'the double-click only selected SummaryCard; pressing Enter (KNOWN_BUGS U39)';
+              log(note); console.log(`      note: K1: ${note}`);
+              await page.press('Enter'); pressed = true;
+            }
           }
           await sleep(100);
         }
-        ok(/older than the editor/.test(hint ?? ''), `the editor says the relay cannot open SummaryCard (hint: ${hint}${pressed ? ', after Enter' : ''})`);
+        ok(/older than the editor/.test(hint ?? ''), `the editor says the relay cannot open SummaryCard (hint: ${hint}; ${pressed ? 'after Enter' : 'Enter not tried'}; selected: ${await editor.propsHeader()})`);
         await waitCrumbs(page, null, 'the breadcrumb goes back to the screen');
         equal((await editor.outline()).map((r) => r.type), screenTypes, "the outline is still the screen's");
         ok(await editor.findColor(COLORS.summaryCard), 'the screen is still drawn');
