@@ -356,7 +356,8 @@ must then offer that sequence or newer. Only a debug build of a debuggable app
 reads the file, never a release build. An `http://` value also needs a built-in
 server that is `http://` (debug cleartext is allowed only then).
 
-A debug build of the production host (tools 0.3.13 on, Android and iOS) picks
+A debug build of the production host (Android from tools 0.3.13, iOS from the
+next tools release) picks
 up a bundle you publish **while the app is open**: with `keliver.updates`
 (Android) or `UPDATES` (iOS) empty its updates are `live`, so while a screen
 shows it listens to the relay's `/bundles/events` and

@@ -179,7 +179,7 @@ that opens.
 
 **Updates while the app runs** (both hosts):
 - `keliver.updates=live` (Android) or `UPDATES = "live"` (iOS, `HostConfig.kt`)
-  (**a DEBUG build's default from tools 0.3.13**): `on-resume`, and also, while
+  (**a DEBUG build's default: Android from tools 0.3.13, iOS from the next tools release**): `on-resume`, and also, while
   a Keliver screen is on show (Android: a `KeliverScreen` whose lifecycle is
   STARTED; iOS: a `Keliver.viewController()` screen whose lifecycle is STARTED,
   from `viewWillAppear` until it disappears or the app goes to the background),
@@ -203,8 +203,8 @@ that opens.
 - `keliver.updates=on-resume` (Android, in `gradle.properties` or
   `keliver.properties`) or `UPDATES = "on-resume"` (iOS, `HostConfig.kt`),
   which is also what a DEBUG build did when the setting is empty (the
-  templates' default from tools 0.3.10 to 0.3.12; from 0.3.13 a debug build
-  takes `live` on both platforms; a release build stays `next-launch`; this is a build setting, so a `KeliverConfig` built by hand
+  templates' default from tools 0.3.10 to 0.3.12, and iOS's in 0.3.13; then a
+  debug build takes `live` on both platforms; a release build stays `next-launch`; this is a build setting, so a `KeliverConfig` built by hand
   takes its own `updates`, `NEXT_LAUNCH` unless set):
   each time the app comes back to the foreground, at most every 30 s, the host
   looks up again and applies a newer bundle in place. Zipline loads it while
