@@ -35,4 +35,22 @@ class EditorPublishTest {
     assertNull(newestBundle("""{"format":1,"entries":[]}"""), "nothing published yet")
     assertNull(newestBundle("not json"))
   }
+
+  @Test fun theDevicesChipSaysHowManyPhonesAreListeningLive() {
+    val at = { iso: String -> iso.take(10) }
+    val (none, noneTip) = devicesChip(3 to "2026-10-27T10:00:00Z", at, 0)
+    assertEquals("On devices: v3 · 2026-10-27", none)
+    assertTrue("No phone is listening live" in noneTip, noneTip)
+    assertEquals("On devices: v3 · 2026-10-27 · 1 phone live", devicesChip(3 to "2026-10-27T10:00:00Z", at, 1).first)
+    assertEquals("Not published yet · 2 phones live", devicesChip(null, at, 2).first)
+    val (old, oldTip) = devicesChip(3 to "2026-10-27T10:00:00Z", at, null)
+    assertEquals("On devices: v3 · 2026-10-27", old, "a relay that does not say leaves the chip as it was")
+    assertTrue("live" !in oldTip, oldTip)
+  }
+
+  @Test fun theRelaySaysHowManyDevicesListen() {
+    assertEquals(2, devicesListening("""{"project":"p","screen":"s","version":4,"writeBack":null,"devicesListening":2}"""))
+    assertNull(devicesListening("""{"project":"p","screen":"s","version":4,"writeBack":null}"""), "an older relay")
+    assertNull(devicesListening("not json"))
+  }
 }

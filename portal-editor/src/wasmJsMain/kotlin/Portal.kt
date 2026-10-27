@@ -304,7 +304,7 @@ private fun mountPlaygroundStrip() {
     "position:fixed; left:0; right:0; top:46px; z-index:29; display:flex; align-items:center; gap:10px; " +
       "padding:6px 14px; background:#2a2436; border-bottom:1px solid var(--border); font-size:12px;",
   )
-  strip.appendChild(Ui.el("span", "", "Playground — try: ① drag widgets from the palette  ② bind props with @ (mocks drive the preview)  ③ Export Kotlin: it's real code."))
+  strip.appendChild(Ui.el("span", "", "Playground — try: ① drag widgets from the palette  ② bind props with @ (mocks drive the preview)  ③ </> Code: it's real Kotlin."))
   strip.appendChild(Ui.el("span", "grow"))
   strip.appendChild(Ui.el("span", "muted", "Templates:"))
   strip.appendChild(Ui.button("Feed", "btn") { loadTemplate(demoTemplate(), demoMocks) })
@@ -1081,11 +1081,12 @@ private lateinit var devicesChip: HTMLElement
 /** Which bundle devices get now — the newest one published — next to Publish. */
 private fun refreshDevicesChip() {
   if (playground) return
-  serverGet("/bundles/index.json") { txt ->
-    val newest = newestBundle(txt)
-    devicesChip.textContent = newest?.let { (v, at) -> "On devices: v$v · ${localTime(at)}" } ?: "Not published yet"
-    devicesChip.setAttribute("title", if (newest == null) "No bundle published from this app yet: devices have nothing to load"
-      else "The newest published bundle (v${newest.first}): devices running this app load it on their next update check")
+  serverGet("/bundles/index.json") { index ->
+    serverGet("/devstate") { state ->
+      val (text, tip) = devicesChip(newestBundle(index), ::localTime, devicesListening(state))
+      devicesChip.textContent = text
+      devicesChip.setAttribute("title", tip)
+    }
   }
 }
 
@@ -1244,6 +1245,8 @@ private fun buildTopbar() {
     "Devices running the app load it on their next update check.", "btn primary") { confirmPublish() }
   bar.appendChild(publishBtn)
   refreshDevicesChip()
+  // A phone that starts listening live (or stops) shows within 10 s.
+  if (!playground) window.setInterval({ refreshDevicesChip(); null }, 10_000)
   // E41: the topbar is first in the tab order (it is first on screen), and says what it is.
   bar.setAttribute("role", "toolbar")
   bar.setAttribute("aria-label", "Editor")

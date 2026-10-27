@@ -159,14 +159,17 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
   && grep -q 'channel = BuildConfig.KELIVER_CHANNEL' "$M" && grep -q 'pickFromIndex(body, capabilities, channel = config.channel' "$M" \
   && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
-# Updates: keliver.updates empty by default, so a debug build checks on resume and
-# every other build type at the next launch; a debug build also checks on adb's word.
+# Updates: keliver.updates empty by default, so a debug build listens for
+# publishes while a screen shows (live) and every other build type checks at the
+# next launch; live outside debug is on-resume; a debug build also checks on adb's word.
 grep -q '^keliver.updates=$' "$H/gradle.properties" \
-  && grep -q "buildConfigField 'String', 'KELIVER_UPDATES', \"\\\\\"\${updates ?: 'next-launch'}" "$H/build.gradle" \
-  && grep -q "buildConfigField 'String', 'KELIVER_UPDATES', \"\\\\\"\${updates ?: 'on-resume'}" "$H/build.gradle" \
+  && grep -q "buildConfigField 'String', 'KELIVER_UPDATES', \"\\\\\"\${updatesOutsideDebug ?: 'next-launch'}" "$H/build.gradle" \
+  && grep -q "buildConfigField 'String', 'KELIVER_UPDATES', \"\\\\\"\${updates ?: 'live'}" "$H/build.gradle" \
+  && grep -q "def updatesOutsideDebug = updates == 'live' ? 'on-resume' : updates" "$H/build.gradle" \
   && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$M" && grep -q 'if (!BuildConfig.DEBUG) return$' "$M" \
-  && ok "updates: on-resume in debug builds, next-launch otherwise; a debug-only check-now receiver that needs DUMP" \
-  || bad "updates: the debug default or the check-now receiver is not wired"
+  && grep -q 'addPathSegments("bundles/events")' "$M" && grep -q 'host.screenShown()' "${M%/*}/KeliverScreen.kt" \
+  && ok "updates: live in debug builds (listening to /bundles/events while a screen shows), next-launch otherwise; a debug-only check-now receiver that needs DUMP" \
+  || bad "updates: the debug default, the live listener or the check-now receiver is not wired"
 # M0: timing marks in the debug and benchmark build types only; a no-op elsewhere.
 P="${M%/*}"; P="${P#$H/src/main/kotlin/}"
 grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
@@ -262,8 +265,8 @@ if [ "$BUILD" = 1 ]; then
       unzip -p "$apk" assets/keliver/portal_ed25519.pub | tr -d '[:space:]' | cmp -s - <(tr -d '[:space:]' < "$KEY") \
         && ok "the APK embeds exactly the scaffolded public key" || bad "the APK's embedded key differs"
       unzip -l "$apk" | grep -q ' AndroidManifest.xml$' && ok "the APK has a manifest" || bad "the APK has no manifest"
-      find "$H/build/generated/source/buildConfig/debug" -name BuildConfig.java -exec cat {} + | grep -q 'KELIVER_UPDATES = "on-resume"' \
-        && ok "the debug build, keliver.updates empty, checks for updates on resume" || bad "the debug build's KELIVER_UPDATES is not on-resume"
+      find "$H/build/generated/source/buildConfig/debug" -name BuildConfig.java -exec cat {} + | grep -q 'KELIVER_UPDATES = "live"' \
+        && ok "the debug build, keliver.updates empty, takes live updates" || bad "the debug build's KELIVER_UPDATES is not live"
     else
       bad "assembleDebug failed (rc=$rc): $(grep -E '^e: |What went wrong' -A2 "$DISP/assemble.log" | head -6 | tr '\n' ' ')"
     fi
