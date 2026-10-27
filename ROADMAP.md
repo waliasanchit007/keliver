@@ -10,7 +10,7 @@ The step-by-step record of every release and its evidence:
 
 ## What you can use today
 
-- **Libraries** `dev.keliver:*:0.4.0` on Maven Central: the runtime (a fork of
+- **Libraries** `dev.keliver:*:0.4.1` on Maven Central: the runtime (a fork of
   Cash App Redwood on Zipline), the `keliver-material` widget set, layout and
   lazy layouts, navigation, HTTP and SQL capabilities, and the portal's editor
   libraries. Pre-1.0: pin an exact version ([`docs/API_STABILITY.md`](./docs/API_STABILITY.md)).

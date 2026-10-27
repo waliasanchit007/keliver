@@ -40,7 +40,7 @@ Every `dev.keliver:*` artifact on Maven Central ships a `-sources.jar`
 consumers get the same completion + docs without cloning this repo. Depend on:
 
 ```kotlin
-implementation("dev.keliver:keliver-material-compose:0.4.0") // guest screens
+implementation("dev.keliver:keliver-material-compose:0.4.1") // guest screens
 ```
 
 ## The portal grammar (the one thing worth memorizing)
