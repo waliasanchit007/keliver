@@ -45,22 +45,26 @@ import dev.keliver.treehouse.composeui.TreehouseContent
  *
  * When the host cannot show a screen ([KeliverHostState.Unavailable]: no
  * bundle, a refused build, a bundle that did not load), [onUnavailable] is
- * called on the main thread each time this screen meets one: open what this screen replaced there
- * (your web page or native screen), with the route you were showing.
- * [unavailable] is drawn meanwhile, or instead when there is no
- * [onUnavailable].
+ * called on the main thread each time this screen is composed in that state:
+ * REPLACE this screen there with what it replaced (your web page or native
+ * screen, with the route you were showing): finish or pop it, don't stack the
+ * fallback over it, or going back to it calls [onUnavailable] again. After
+ * "no bundle" a screen composed later looks up again (the state is Loading
+ * meanwhile). [unavailable] is drawn until the app navigates, or instead
+ * when there is no [onUnavailable].
  *
- * The default [loading] and [unavailable] show the host's own text in a debug
- * build, which names addresses and paths, and in a release build only
- * "Loading…" and a generic line: a user never sees a developer's message.
+ * The default [loading] and [unavailable] show the host's own text only when
+ * [KeliverHost.showsDeveloperText] (a debug build of a debuggable app); it
+ * can name addresses and paths. Otherwise they show "Loading…" and a generic
+ * line: a user never sees a developer's message.
  */
 @Composable
 fun KeliverScreen(
   host: KeliverHost,
   modifier: Modifier = Modifier,
   onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null,
-  loading: @Composable () -> Unit = { DefaultLoading() },
-  unavailable: @Composable (KeliverHostState.Unavailable) -> Unit = { DefaultUnavailable(it) },
+  loading: @Composable () -> Unit = { DefaultLoading(host) },
+  unavailable: @Composable (KeliverHostState.Unavailable) -> Unit = { DefaultUnavailable(host, it) },
 ) {
   remember(host) { KeliverTiming.mark("open") } // debug and benchmark builds only (M0)
   LaunchedEffect(host) { host.start() }
@@ -101,7 +105,7 @@ fun KeliverScreen(
           var shown by remember { mutableStateOf(false) }
           LaunchedEffect(Unit) { kotlinx.coroutines.delay(5_000); waited = true }
           if (checking && !shown && !waited) {
-            if (BuildConfig.DEBUG) MessageScreen("Updating", "Loading the newest version…") else loading()
+            if (host.showsDeveloperText) MessageScreen("Updating", "Loading the newest version…") else loading()
           } else {
             SideEffect { shown = true } // once drawn, an update swaps in place
             val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
@@ -143,18 +147,18 @@ class KeliverView @JvmOverloads constructor(
 
 /** [KeliverScreen]'s default while the host looks up and loads. */
 @Composable
-fun DefaultLoading() {
-  if (BuildConfig.DEBUG) MessageScreen("Loading", "Looking up the latest bundle…") else MessageScreen("Loading…", null)
+fun DefaultLoading(host: KeliverHost) {
+  if (host.showsDeveloperText) MessageScreen("Loading", "Looking up the latest bundle…") else MessageScreen("Loading…", null)
 }
 
 /**
  * [KeliverScreen]'s default when the host cannot show a screen: the host's own
- * text in a debug build; in a release build a generic line, never the host's
- * (it can name addresses and paths).
+ * text when [KeliverHost.showsDeveloperText]; otherwise a generic line, never
+ * the host's (it can name addresses and paths).
  */
 @Composable
-fun DefaultUnavailable(state: KeliverHostState.Unavailable) {
-  if (BuildConfig.DEBUG) MessageScreen(state.title, state.message)
+fun DefaultUnavailable(host: KeliverHost, state: KeliverHostState.Unavailable) {
+  if (host.showsDeveloperText) MessageScreen(state.title, state.message)
   else MessageScreen("Not available", "This screen can't be shown right now. Please try again later.")
 }
 

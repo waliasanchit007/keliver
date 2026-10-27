@@ -483,8 +483,18 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   fun start() {
     registerDebugCheckForUpdate()
     if (!started.compareAndSet(false, true)) return
+    // A retried start (after "no bundle") is loading again: a screen must not act on the old failure.
+    mutableState.value = KeliverHostState.Loading
     scope.launch { run() }
   }
+
+  /**
+   * Whether screens may show the host's own text (it can name addresses and paths): this
+   * module's debug variant AND a debuggable app. An app build type that falls back to the
+   * module's debug variant (a staging build, say) is not enough.
+   */
+  val showsDeveloperText: Boolean =
+    BuildConfig.DEBUG && (this.context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
   private suspend fun run() {
     // Decided BEFORE any fetch: no valid key, no network, no bundle.

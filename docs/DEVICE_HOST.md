@@ -539,13 +539,16 @@ for byte):
   Composable, and **`KeliverView`**, an `AbstractComposeView` for View layouts
   (set its `host`, and its `onUnavailable`). They only observe the host, so any
   number of them, recreated on every configuration change, share the one lookup
-  and the one load. **`onUnavailable`** is where you open what the Keliver
-  screen replaced (your web page or native screen, with the route you were
-  showing): it is called on the main thread when the screen meets an
-  `Unavailable` state. **`loading`** and **`unavailable`** draw those states;
-  the defaults show the host's own text in a debug build and, in a release
-  build, only "Loading…" and a generic line, because the host's text can name
-  addresses and paths. `KeliverView` needs a lifecycle owner
+  and the one load. **`onUnavailable`** is where you replace the Keliver
+  screen with what it replaced (your web page or native screen, with the route
+  you were showing): it is called on the main thread each time a screen is
+  composed in an `Unavailable` state, so finish or pop the Keliver screen
+  there rather than stacking the fallback over it. After "no bundle", a
+  screen composed later looks up again (`Loading` meanwhile). **`loading`**
+  and **`unavailable`** draw those states; the defaults show the host's own
+  text only in a debug build of a debuggable app (`showsDeveloperText`) and
+  otherwise only "Loading…" and a generic line, because the host's text can
+  name addresses and paths. `KeliverView` needs a lifecycle owner
   in its window, like any Compose view: use it in a `ComponentActivity`
   (`AppCompatActivity`) or a `Fragment`, not a plain `android.app.Activity`.
 - **Settings**: `keliver.properties` in the module (a subproject's
@@ -588,9 +591,10 @@ plus `KeliverScreen.swift` and `EMBED.md`:
 - The scaffolder refuses an Xcode project that already names a product or
   module `KeliverHost`: Swift would then ignore `import KeliverHost`.
 
-**When a load fails**, the Keliver view's state is `Unavailable` and it calls
-`onUnavailable`, or shows a message instead of the guest's screen (in a debug
-build the text below; in a release build a generic line), and nothing else in
+**When a load fails**, the Keliver view's state is `Unavailable`: it calls
+`onUnavailable` and shows a message instead of the guest's screen until your
+app navigates (in a debug build of a debuggable app the text below; otherwise
+a generic line), and nothing else in
 your app is affected:
 - a missing or invalid key: "Refusing to load";
 - the lookup failed and nothing is cached: "No bundle", retried by the next

@@ -174,9 +174,10 @@ grep -q '^keliver.updates=$' "$H/gradle.properties" \
 # release build's screen.
 S="${M%/*}/KeliverScreen.kt"
 grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Unavailable(val outcome: String, val reason: String, val title: String, val message: String) : KeliverHostState' "$M" \
-  && ! grep -q 'KeliverHostState.Message' "$M" "$S" && [ "$(grep -c 'unavailable("' "$M")" = 4 ] \
-  && grep -q 'onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null' "$S" && grep -q 'LaunchedEffect(s) { latest?.invoke(s) }' "$S" \
-  && grep -q 'if (BuildConfig.DEBUG) MessageScreen(state.title, state.message)' "$S" \
+  && ! grep -q 'KeliverHostState.Message' "$M" "$S" && ! grep -q 'mutableState.value = KeliverHostState.Message' "$M" \
+  && grep -q 'onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? = null' "$S" && grep -q 'latest?.invoke(s)' "$S" \
+  && grep -q 'BuildConfig.DEBUG && (this.context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0' "$M" \
+  && ! grep -q 'BuildConfig.DEBUG' "$S" && grep -q 'if (host.showsDeveloperText) MessageScreen(state.title, state.message)' "$S" \
   && grep -q 'var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)' "$S" \
   && ok "host kit: state is Loading, Unavailable(outcome, reason, …) or Running; KeliverScreen/KeliverView call onUnavailable; a release build shows no host text" \
   || bad "host kit: the typed state, the onUnavailable hook or the release text policy is not wired"
