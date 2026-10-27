@@ -267,7 +267,7 @@ reliably from Gradle catalogs, BOMs, or composite substitution:
 
 ```json
 "appRuntime": {
-  "keliverVersion": "0.4.0",
+  "keliverVersion": "0.4.1",
   "widgetVersion": 1
 }
 ```

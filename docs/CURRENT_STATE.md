@@ -28,10 +28,12 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | version | where |
 |---|---|---|
-| libraries `dev.keliver:*` | **0.4.0** | Maven Central, published 2026-10-20T21:13Z (2026-10-21 IST): tag `v0.4.0` → `b359b3952` (#136), publish run `39484069794` (preflight + publish green), all 389 poms (378 artifacts + 11 plugin markers) resolve from `repo1.maven.org`. Portal grammar and canvas libraries (K2–K7, the compiled component preview); only `portal-core`, `portal-document`, `portal-render`, `portal-editor` changed source; an exhaustive `when` over `PropValue` breaks, see [`CHANGELOG.md`](../CHANGELOG.md) |
+| libraries `dev.keliver:*` | **0.4.1** | Maven Central, 2026-10-27: tag `v0.4.1` → `c5a7e8716` (#151), publish run `40430838622` (preflight + publish green), all 389 poms (378 artifacts + 11 plugin markers) resolve from `repo1.maven.org` (checked 03:24Z). The editor libraries (#140, #141, #145's devices chip): only `portal-editor`, `portal-core`, `keliver-material-composeui` changed source, additively; see [`CHANGELOG.md`](../CHANGELOG.md) |
+| libraries `dev.keliver:*` | 0.4.0 | still published, unchanged. Maven Central, published 2026-10-20T21:13Z (2026-10-21 IST): tag `v0.4.0` → `b359b3952` (#136), publish run `39484069794` (preflight + publish green), all 389 poms (378 artifacts + 11 plugin markers) resolve from `repo1.maven.org`. Portal grammar and canvas libraries (K2–K7, the compiled component preview); only `portal-core`, `portal-document`, `portal-render`, `portal-editor` changed source; an exhaustive `when` over `PropValue` breaks, see [`CHANGELOG.md`](../CHANGELOG.md) |
 | libraries `dev.keliver:*` | 0.3.4 | still published, unchanged. Maven Central, 2026-10-16: tag `v0.3.4` → `502416e9` (#107), publish run `38814070981` (preflight + upload green), all 378 artifacts and the Gradle plugin markers resolve from `repo1.maven.org`. Host widget fixes (keyed container children #103, BottomSheet, Theme, text-field `align`, keyed lazy/pager items, ScrollableColumn); generated TextField APIs are binary-incompatible, see [`CHANGELOG.md`](../CHANGELOG.md). Device-rendered before release on a Samsung S25 Ultra (text-field `align` covered by `HostGapsTest` only) |
 | libraries `dev.keliver:*` | 0.3.3 | still published, unchanged (2026-09-05) |
-| `keliver-portal-tools` | **0.3.12** (Maven dependency 0.4.0 for new apps; scaffolders follow an app's `appRuntime.keliverVersion`) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.12), 2026-10-21, tag → `8139a55b`; zip `4c9aac74…` ([notes](RELEASE_NOTES_TOOLS_0.3.12.md)). K6, K7, the compiled component preview for per-app editors, U37 |
+| `keliver-portal-tools` | **0.3.13** (Maven dependency 0.4.1 for new apps; scaffolders follow an app's `appRuntime.keliverVersion`) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.13), 2026-10-27, tag → `a5ab6e2b`; zip `5d1dd0ef…` ([notes](RELEASE_NOTES_TOOLS_0.3.13.md)). The editor program (#140, #141), live device updates on the Android host (#145), the bundled scaffolders fix (#142), U38, `editorPort` (#148), U28, the MCP adb lookup, a relay fd leak |
+| `keliver-portal-tools` | 0.3.12 | still published, unchanged (2026-10-21, `8139a55b`, zip `4c9aac74…`; K6, K7, the compiled component preview, U37) |
 | `keliver-portal-tools` | 0.3.11 | still published, unchanged (2026-10-19, `ebbb24c9`, zip `ae84cb2c…`; U35/U36) |
 | `keliver-portal-tools` | 0.3.10 | still published, unchanged (2026-10-17, `78bcfa0a`, zip `0ba5c07b…`) |
 | `keliver-portal-tools` | 0.3.9 | still published, unchanged (2026-10-13, `6069da99`, zip `31c4214c…`) |
@@ -42,8 +44,7 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | where | reaches users through |
 |---|---|---|
-| the editor program: selection and hover boxes, components edited in place, typed property controls, cross-document undo, byte-exact undo of write-back, the outline keeping its place, a top bar that says what each action does, a palette preview, a compact publish card | #140, #141 (`portal-editor`, `portal-core`, `keliver-material-composeui`, `portal-relay`, `portal-ingest`, `web-spike`) | the **tools bundle**'s generic editor and relay (a tools release); a **per-app editor** compiles against the published `dev.keliver:portal-editor`, so it also needs a **libraries** release |
-| production-host template: a screen opened while an on-resume update is applied waits for it, and is drawn once | #141 (`scripts/templates/production-host`) | a tools release (the scaffolders write it) |
+| nothing as of 2026-10-27: tools 0.3.13 and libraries 0.4.1 carry everything merged before them. In review: iOS live updates (#150), the host kit's status and fallback (Android). | | |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
@@ -95,7 +96,7 @@ category.)
 ## Product state
 
 Keliver is a public, pre-1.0 Compose Multiplatform SDUI framework. The current
-published line is `dev.keliver:*:0.4.0` on Maven Central. Guest UI is compiled
+published line is `dev.keliver:*:0.4.1` on Maven Central. Guest UI is compiled
 Kotlin/JS executed by Zipline and rendered as native Compose widgets on Android
 and iOS. Production bundles are versioned, Ed25519-signed, widget/capability
 gated, and verified by hosts before execution.
