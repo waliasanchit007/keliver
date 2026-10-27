@@ -268,7 +268,13 @@ public object Keliver {
   /** What screens show (K2). Main thread. */
   public val state: StateFlow<KeliverHostState> = mutableState.asStateFlow()
 
-  /** Called on the main thread with each new [state] (K2): Swift's way to observe it. */
+  /** [state]'s value now, typed for Swift (K2). Main thread. */
+  public val currentState: KeliverHostState get() = mutableState.value
+
+  /**
+   * Called on the main thread with each LATER change of [state] (K2): Swift's way to observe it.
+   * Read [currentState] when you set it, for the state it starts from.
+   */
   public var onStateChange: ((KeliverHostState) -> Unit)? = null
 
   /**

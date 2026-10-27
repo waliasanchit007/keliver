@@ -181,6 +181,7 @@ grep -q 'CHANNEL: String = "stable"' "$K/HostConfig.kt" && grep -q "configValue(
 grep -q 'public sealed interface KeliverHostState' "$K/MainViewController.kt" \
   && grep -q 'public data class Unavailable(' "$K/MainViewController.kt" && grep -q 'val attempt: Int,' "$K/MainViewController.kt" \
   && grep -q 'public var onStateChange: ((KeliverHostState) -> Unit)? = null' "$K/MainViewController.kt" \
+  && grep -q 'public val currentState: KeliverHostState get() = mutableState.value' "$K/MainViewController.kt" \
   && grep -q 'public fun viewController(safeArea: Boolean, onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?): UIViewController' "$K/MainViewController.kt" \
   && grep -q 'if (mutableState.value == s) runCatching { onUnavailable?.invoke(s) }' "$K/MainViewController.kt" \
   && grep -q 'public val showsDeveloperText: Boolean get() = kotlin.native.Platform.isDebugBinary' "$K/MainViewController.kt" \
@@ -289,11 +290,10 @@ if [ "$BUILD" = 1 ]; then
       [ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$appb/Info.plist" 2>/dev/null)" = com.example.demo.host ] \
         && ok "the app's bundle id is com.example.demo.host" || bad "the built app's bundle id"
       # The embed's SwiftUI screen against the framework just built (K2: onUnavailable reaches Swift).
-      fw=""
-      for d in $(find "$H/build" "$appb/Frameworks" -name KeliverHost.framework -type d 2>/dev/null); do
-        [ -d "$d/Modules" ] && { fw="$d"; break; }
-      done
-      if [ -n "$fw" ] && xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
+      fw="$(find "$H/build" "$appb/Frameworks" -name KeliverHost.framework -type d -exec test -d '{}/Modules' ';' -print 2>/dev/null | head -1)"
+      if [ -z "$fw" ]; then
+        bad "no KeliverHost.framework with Modules under $H/build to type-check KeliverScreen.swift against"
+      elif xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
           -F "$(dirname "$fw")" "$L/KeliverScreen.swift" > "$DISP/swift-typecheck.log" 2>&1; then
         ok "the embed's KeliverScreen.swift type-checks against the built framework (viewController with onUnavailable)"
       else

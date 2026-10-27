@@ -13,7 +13,8 @@ struct KeliverScreen: UIViewControllerRepresentable {
     var safeArea: Bool = false
 
     /// Called on the main thread when this screen cannot be shown (`outcome`: no-bundle, refused
-    /// or not-loaded): replace it with what it replaced, with the route you were showing.
+    /// or not-loaded): replace it with what it replaced, with the route you were showing. The
+    /// screen holds this closure: capture your controller weakly (`[weak self]`).
     var onUnavailable: ((KeliverHostStateUnavailable) -> Void)? = nil
 
     func makeUIViewController(context: Context) -> UIViewController {
