@@ -692,21 +692,28 @@ public object Keliver {
   }
 
   /** The guest's UI for [route] (launchRoute), or launch() without one or for a guest from before K2. */
-  private fun launch(app: PortalPresenter, route: KeliverRoute?, close: () -> Unit): dev.keliver.treehouse.ZiplineTreehouseUi {
-    if (route == null || app === noRouteApp) return app.launch()
+  private fun launch(
+    app: PortalPresenter,
+    treehouseApp: TreehouseApp<PortalPresenter>,
+    route: KeliverRoute?,
+    close: () -> Unit,
+  ): dev.keliver.treehouse.ZiplineTreehouseUi {
+    val code = treehouseApp.zipline.value
+    if (route == null || (code != null && code === noRouteCode)) return app.launch()
     return try {
       app.launchRoute(route.encode(), ScreenHost(close))
     } catch (e: app.cash.zipline.ZiplineApiMismatchException) {
-      // This loaded code is not asked again (each try leaves its ScreenHost bound); new code is a
-      // new PortalPresenter, so nothing needs clearing when it loads.
-      noRouteApp = app
+      // This loaded code is not asked again (each try leaves its ScreenHost bound). Keyed on its
+      // Zipline: each screen gets its own scoped proxy of the presenter, and new code is a new
+      // Zipline, so nothing needs clearing when it loads.
+      noRouteCode = code
       log("this bundle's guest takes no route (scaffolded before the host kit): showing its default screen")
       app.launch()
     }
   }
 
-  /** The loaded code whose guest has no launchRoute (Zipline said so), if any. */
-  private var noRouteApp: PortalPresenter? = null
+  /** The loaded code (its Zipline) whose guest has no launchRoute, if any. */
+  private var noRouteCode: app.cash.zipline.Zipline? = null
 
   private class ScreenHost(private val close: () -> Unit) : dev.keliver.hostkit.KeliverScreenHost {
     // Zipline calls in on its own dispatcher; the app's onClose runs on the main thread, and a
@@ -764,7 +771,7 @@ public object Keliver {
         val contentSource = remember {
           object : TreehouseContentSource<PortalPresenter> {
             // first-frame, in Debug and Benchmark builds only (M0); the UI itself elsewhere.
-            override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, route, close))
+            override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, s.app, route, close))
           }
         }
         Box(modifier) {
