@@ -47,6 +47,9 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | live device updates on the **iOS** host: a debug build listens to `/bundles/events` while a screen is on show (its lifecycle STARTED); a publish is applied in the open app (simulator CI: LV1–LV3, `ios.sh` 167/0); the relay's stream starts with a 2 KiB comment | #150 (`scripts/templates/ios-host`, `portal-relay`) | the next tools release |
 | host kit, part 1 (Android): `KeliverHostState` `Loading` / `Unavailable(outcome, reason, …)` / `Running`, `onUnavailable` on `KeliverScreen` and `KeliverView`, no developer text unless a debug build of a debuggable app | #155 (`scripts/templates/production-host`) | the next tools release |
 | the editor E2E's K1 opens with Enter when a double-click only selects (KNOWN_BUGS U39, open) | #153 (tests only) | — |
+| live-update follow-ups: the relay sends a listener nothing before its preamble, `/doc-events` writes one event at a time per listener, `Unavailable.attempt`, LV4 in CI | #158 (`portal-relay`, `scripts/templates`) | the next tools release |
+| host kit (Android): `RequestPolicy` (exact `(method, path)` pairs, one origin, https, a switch for state-changing calls) in HostHttp; `ExternalLinkPolicy`; JVM tests in the scaffolded host | #159 (`scripts/templates/production-host`) | the next tools release |
+| host kit (iOS): public `KeliverHostState`, `onUnavailable` per screen, the release text policy | #160 (`scripts/templates/ios-host`) | the next tools release |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 

@@ -258,6 +258,7 @@ internal fun reportReason(outcome: String, detail: String): String {
   val d = detail.lowercase()
   return when {
     outcome == "refused" -> "config"
+    outcome == "screen-failed" -> "exception"
     d.isEmpty() -> ""
     "sha256 mismatch" in d -> "sha256-mismatch"
     "rollback refused" in d -> "below-floor"

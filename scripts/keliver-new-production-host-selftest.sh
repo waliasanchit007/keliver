@@ -182,6 +182,68 @@ grep -q 'data object Loading : KeliverHostState' "$M" && grep -q 'data class Una
   && grep -q 'var onUnavailable: ((KeliverHostState.Unavailable) -> Unit)? by mutableStateOf(null)' "$S" \
   && ok "host kit: state is Loading, Unavailable(outcome, reason, …) or Running; KeliverScreen/KeliverView call onUnavailable; a release build shows no host text" \
   || bad "host kit: the typed state, the onUnavailable hook or the release text policy is not wired"
+# Host kit K1, screen-failed: code that throws while a screen shows it is reported, and that
+# screen draws its unavailable slot and calls its onUnavailable (Treehouse's crashed widget).
+grep -q 'dynamicContentWidgetFactory = failureWidgets' "${M%/*}/KeliverScreen.kt" \
+  && grep -q 'if (failed == null) failed = host.screenFailed(uncaughtException)' "${M%/*}/KeliverScreen.kt" \
+  && grep -q 'report("screen-failed", running?.sequence' "$M" && grep -q 'outcome == "screen-failed" -> "exception"' "${M%/*}/BundleIndex.kt" \
+  && ok "host kit: a screen whose code throws reports screen-failed, calls onUnavailable and draws its unavailable slot" \
+  || bad "host kit: screen-failed is not wired"
+# Host kit K1, routes and close: a route keeps only the app's allowed query keys, a new route
+# relaunches the guest, a guest from before K1 still opens (launch()), and closeScreen reaches
+# the app's onClose (by default the activity finishes; a late close closes nothing); the
+# activity takes a re-delivered intent's route.
+S="${M%/*}/KeliverScreen.kt"
+grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "${M%/*}/GuestContract.kt" \
+  && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "${M%/*}/GuestContract.kt" \
+  && grep -q '^package dev.keliver.hostkit$' "${M%/*}/KeliverScreenHost.kt" \
+  && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" && grep -q 'noRouteCode = code' "$M" \
+  && grep -q 'val contentSource = remember(route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
+  && grep -q 'onClose ?: { activity?.finish() }' "$S" && grep -q 'if (active.get()) latestOnClose()' "$S" \
+  && grep -q 'override fun onNewIntent(intent: Intent)' "$H/src/main/kotlin/com/example/demo/host/MainActivity.kt" \
+  && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
+  && ok "host kit: routes (allowed query keys only, a new route relaunches, older guests still open) and close" \
+  || bad "host kit: routes and close are not wired"
+# Zipline matches launchRoute by its signature, parameter types' packages included: the guest
+# that keliver-new-device-target.sh writes must declare KeliverScreenHost exactly as this host does.
+DT="$(dirname "$SCAFFOLD")/keliver-new-device-target.sh"
+if [ -f "$DT" ]; then
+  sed -n "/<<'HOSTKIT'$/,/^HOSTKIT$/p" "$DT" | sed '1d;$d' | cmp -s - "${M%/*}/KeliverScreenHost.kt" \
+    && grep -qF 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "$DT" \
+    && ok "host kit: the guest scaffolder declares KeliverScreenHost and launchRoute exactly as this host does" \
+    || bad "host kit: the guest's KeliverScreenHost or launchRoute differs from this host's: routes would never reach it"
+else
+  bad "host kit: no keliver-new-device-target.sh beside $SCAFFOLD to compare the guest contract with"
+fi
+# A crash leaves no blank screen: a screen opened after the code threw shows that and calls onUnavailable.
+grep -q 'val failed by host.crashed.collectAsState()' "$S" && grep -q '.also { crashed.value = it }' "$M" \
+  && grep -q 'crashed.value = null // new code' "$M" \
+  && ok "host kit: after the code threw, a screen opened later says so (not a blank screen) until code loads again" \
+  || bad "host kit: a screen opened after a crash is not handled"
+# Host kit K1, debug-only surfaces: the bundle server set on the device, the check-now receiver,
+# the host's developer text and live updates each need this module's DEBUG AND a debuggable app;
+# the receiver also needs DUMP (adb's shell has it; apps do not). The manifest declares no receiver.
+cat > "$DISP/debug-gates.py" <<'PY'
+import re, sys
+src = open(sys.argv[1]).read()
+need = {
+  'debugBundleServer': r'private fun debugBundleServer\(context: Context\): String\? \{(.*?)\n\}',
+  'registerDebugCheckForUpdate': r'private fun registerDebugCheckForUpdate\(\) \{(.*?)\n  \}',
+  'showsDeveloperText': r'val showsDeveloperText: Boolean(.*?)\n\n',
+  'liveUpdatesAllowed': r'private fun liveUpdatesAllowed\(\): Boolean =(.*?)\n\n',
+}
+missing = []
+for name, rx in need.items():
+    m = re.search(rx, src, re.S)
+    body = m.group(1) if m else ''
+    if 'BuildConfig.DEBUG' not in body or 'FLAG_DEBUGGABLE' not in body: missing.append(name)
+print(' '.join(missing))
+PY
+dbg_gates="$(python3 "$DISP/debug-gates.py" "$M")"
+[ -z "$dbg_gates" ] && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$M" \
+  && ! grep -q '<receiver' "$H/src/main/AndroidManifest.xml" && grep -q "def updatesOutsideDebug = updates == 'live' ? 'on-resume' : updates" "$H/build.gradle" \
+  && ok "debug surfaces: each needs DEBUG and a debuggable app; the receiver also needs DUMP; release never runs live" \
+  || bad "debug surfaces: not gated on both: ${dbg_gates:-the receiver permission, the manifest or the release updates mode}"
 # Host kit K1: RequestPolicy (one origin, exact (method, path) pairs, a switch for state-changing
 # calls), checked in OkHttpHostHttp before anything is sent; its JVM tests come with the host.
 grep -q 'class RequestPolicy(' "${M%/*}/RequestPolicy.kt" && grep -q '(baseRefusal ?: policy.refusal(method, request.path))' "${M%/*}/OkHttpHostHttp.kt" \
@@ -206,7 +268,7 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/d
   && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
   && ! grep -q 'KeliverTrace' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
   && grep -q "def timingBuildTypes = \['debug', 'benchmark'\]" "$H/build.gradle" && grep -q 'profileable true' "$H/build.gradle" \
-  && grep -q 'KeliverTiming.firstFrame(app.launch())' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
+  && grep -q 'KeliverTiming.firstFrame(host.launch(app, s.app, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
   && ok "M0: timing marks in debug and benchmark (src/timing), a no-op elsewhere (src/notiming); a benchmark build type" \
   || bad "M0: the timing marks or the benchmark build type are not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
@@ -307,6 +369,50 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease > "$DISP/assemble-release.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \
       && ok "a release build with an http:// server fails" || bad "release with http server: rc=$rc"
+    # Debug-only surfaces (K1's audit): a release build with https servers, keliver.updates=live
+    # asked for, is not debuggable, has DEBUG false and no live updates, and exports nothing but
+    # its launcher activity unless a permission guards it (AndroidX's profile installer: DUMP).
+    ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease \
+        -Pkeliver.bundleServer=https://bundles.example.com -Pkeliver.updates=live > "$DISP/assemble-release-https.log" 2>&1 ); rc=$?
+    rel_apk="$(find "$H/build/outputs/apk/release" -name '*.apk' 2>/dev/null | head -1)"
+    aapt2="$(ls -d "$SDK"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)"
+    if [ "$rc" = 0 ] && [ -n "$rel_apk" ] && [ -n "$aapt2" ]; then
+      find "$H/build/generated/source/buildConfig/release" -name BuildConfig.java -exec cat {} + > "$DISP/release-buildconfig.txt"
+      grep -q 'boolean DEBUG = false' "$DISP/release-buildconfig.txt" && grep -q 'KELIVER_UPDATES = "on-resume"' "$DISP/release-buildconfig.txt" \
+        && ok "debug surfaces: a release build has DEBUG false, and keliver.updates=live becomes on-resume there" \
+        || bad "debug surfaces: the release BuildConfig: $(grep -E 'DEBUG|KELIVER_UPDATES' "$DISP/release-buildconfig.txt" | tr '\n' ' ')"
+      "$aapt2" dump xmltree --file AndroidManifest.xml "$rel_apk" > "$DISP/release-manifest.txt" 2>&1
+      cat > "$DISP/manifest-exposed.py" <<'PY'
+import re, sys
+# The aapt2 tree: an element line "E: name (line=N)", its attributes "A: …" below it, indented deeper.
+lines = open(sys.argv[1]).read().splitlines()
+problems, i = [], 0
+def indent(l): return len(l) - len(l.lstrip())
+for i, l in enumerate(lines):
+    s = l.strip()
+    if 'debuggable' in s and s.endswith('=true'): problems.append('the application is debuggable')
+    m = re.match(r'E: (activity|activity-alias|receiver|service|provider) ', s)
+    if not m: continue
+    body, own, j = [], [], i + 1
+    while j < len(lines) and indent(lines[j]) > indent(l):
+        t = lines[j].strip()
+        body.append(t)
+        if t.startswith('A: ') and indent(lines[j]) == indent(l) + 2: own.append(t)
+        j += 1
+    exported = any(':exported(' in a and a.endswith('=true') for a in own)
+    guarded = any(':permission(' in a for a in own)
+    launcher = any('android.intent.category.LAUNCHER' in b for b in body)
+    if exported and not guarded and not (m.group(1) in ('activity', 'activity-alias') and launcher):
+        name = next((a for a in own if ':name(' in a), '?')
+        problems.append(f'{m.group(1)} {name} is exported without a permission')
+print('; '.join(problems))
+PY
+      exposed="$(python3 "$DISP/manifest-exposed.py" "$DISP/release-manifest.txt")"
+      [ -z "$exposed" ] && ok "debug surfaces: a release build is not debuggable and exports only its launcher, or what a permission guards" \
+        || bad "debug surfaces: $exposed"
+    else
+      bad "debug surfaces: no release build to check (rc=$rc, apk '${rel_apk}', aapt2 '${aapt2}')"
+    fi
     # A key that is not a key fails the BUILD.
     printf 'garbage\n' > "$H/src/main/assets/keliver/portal_ed25519.pub"
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug > "$DISP/assemble-badkey.log" 2>&1 ); rc=$?

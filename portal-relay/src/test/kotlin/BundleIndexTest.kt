@@ -291,7 +291,8 @@ class BundleIndexTest {
     assertEquals("config", reportReason("refused", "No valid portal public key"))
     assertEquals("other", reportReason("not-loaded", "TypeError at /data/user/0/com.example/files/x.js"))
     assertEquals("", reportReason("loaded", ""))
-    val categories = setOf("", "sha256-mismatch", "below-floor", "signature", "lookup-failed", "network", "config", "other")
+    assertEquals("exception", reportReason("screen-failed", "TypeError: x is undefined"))
+    val categories = setOf("", "sha256-mismatch", "below-floor", "signature", "lookup-failed", "network", "config", "exception", "other")
     for (m in listOf("/data/user/0/p", "https://u:p@h/q?k=1", "10.1.2.3")) assertTrue(reportReason("not-loaded", m) in categories)
   }
 
