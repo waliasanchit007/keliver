@@ -37,6 +37,7 @@ on:
       - "scripts/keliver-new-publish-target.sh"
       - "scripts/keliver-publish"
       - "scripts/keliver-publish-selftest.sh"
+      - "scripts/keliver-run-android.sh"
       - "portal-relay/src/main/kotlin/StaticIndex.kt"
       - "portal-relay/src/main/kotlin/KeliverPublish.kt"
       - "portal-relay/src/main/kotlin/PublishSignature.kt"

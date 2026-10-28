@@ -78,7 +78,7 @@ cp scripts/keliver-publish "$STAGE/bin/"
 cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/keliver-new-editor.sh \
    scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh \
    scripts/keliver-new-production-host.sh scripts/keliver-new-publish-target.sh \
-   scripts/keliver-new-ios-host.sh "$STAGE/bin/"
+   scripts/keliver-new-ios-host.sh scripts/keliver-run-android.sh "$STAGE/bin/"
 # The production-host scaffolder's templates: an Android module's SOURCE, with
 # no key in it — the key is copied from the adopter's own store when they run
 # the scaffolder. It finds them at bin/../templates.
@@ -106,7 +106,7 @@ chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" "$STAGE/bin/keliv
   "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh" "$STAGE/bin/keliver-new-editor.sh" \
   "$STAGE/bin/keliver-new-device-target.sh" "$STAGE/bin/keliver-install-device-host.sh" \
   "$STAGE/bin/keliver-new-production-host.sh" "$STAGE/bin/keliver-new-publish-target.sh" \
-  "$STAGE/bin/keliver-new-ios-host.sh" \
+  "$STAGE/bin/keliver-new-ios-host.sh" "$STAGE/bin/keliver-run-android.sh" \
   "$STAGE/bin/keliver-store-path.sh" "$STAGE/bin/keliver-record-http.sh" \
   "$STAGE/bin/keliver-adopt-legacy-store.sh" "$STAGE/bin/keliver-store-recover.sh"
 
