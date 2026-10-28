@@ -81,14 +81,20 @@ reads W2-embed-close "Native header" && reads W2-embed-close "Keliver closed" &&
   && ok "I7: the app's native text took the Keliver screen's place" || bad "I7: $(tr '\n' '|' < "$EV/W2-embed-close.ocr.txt" | cut -c1-200)"
 # I8: the guest throws while its screen shows: the host reports screen-failed and the
 # app's onUnavailable puts its own text there.
-launch W2-embed-crash -k4link "existing://k4/crash"
-C="$EV/W2-embed-crash.console.txt"
-grep -q "KeliverTiming: route-k4-crash " "$C" && grep -q "ExistingApp: keliver unavailable: screen-failed" "$C" \
-  && ok "I8: the guest threw, and the app's onUnavailable ran with screen-failed" \
-  || bad "I8: $(grep -E 'KeliverTiming: route|ExistingApp|KeliverHost|Uncaught' "$C" | head -5 | tr '\n' ' ')"
-reads W2-embed-crash "Native header" && reads W2-embed-crash "Native fallback" && ! reads W2-embed-crash Attic \
-  && ! grep -q "Uncaught Kotlin exception" "$C" \
-  && ok "I8: the app's fallback took the Keliver screen's place, and the process did not die" || bad "I8: $(tr '\n' '|' < "$EV/W2-embed-crash.ocr.txt" | cut -c1-200)"
+# Only for a host that has it: tools 0.3.14's iOS template (a run started by hand
+# scaffolds from the published zip) does not.
+if grep -rq 'fun screenFailed(' "$EMB/keliver-host-ios/src/iosMain/kotlin"; then
+  launch W2-embed-crash -k4link "existing://k4/crash"
+  C="$EV/W2-embed-crash.console.txt"
+  grep -q "KeliverTiming: route-k4-crash " "$C" && grep -q "ExistingApp: keliver unavailable: screen-failed" "$C" \
+    && ok "I8: the guest threw, and the app's onUnavailable ran with screen-failed" \
+    || bad "I8: $(grep -E 'KeliverTiming: route|ExistingApp|KeliverHost|Uncaught' "$C" | head -5 | tr '\n' ' ')"
+  reads W2-embed-crash "Native header" && reads W2-embed-crash "Native fallback" && ! reads W2-embed-crash Attic \
+    && ! grep -q "Uncaught Kotlin exception" "$C" \
+    && ok "I8: the app's fallback took the Keliver screen's place, and the process did not die" || bad "I8: $(tr '\n' '|' < "$EV/W2-embed-crash.ocr.txt" | cut -c1-200)"
+else
+  echo "    I8: skipped, the scaffolded host ($WHICH) has no screen-failed on iOS"
+fi
 
 # I5: the same app trusting another app's key: nothing loads; the native views stay.
 HC="$(find "$EMB/keliver-host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
