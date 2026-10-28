@@ -225,7 +225,7 @@ launch(){  # $1 = label; any further arguments go to the app (`-key value`: its 
   # logged so a slow render stays visible.
   if [ "$(grep -c . "$EV/$label.ocr.txt" 2>/dev/null)" -le 1 ]; then
     echo "    $label: only the status bar on screen; looking again in 15 s" | tee -a "$EV/ios.retries"
-    xcrun simctl launch "$UDID" "$BID" >/dev/null 2>&1 || true   # forward if still running; started again if not
+    xcrun simctl launch "$UDID" "$BID" "$@" >/dev/null 2>&1 || true   # forward if still running; started again if not
     sleep 15
     mv "$EV/$label.png" "$EV/$label.first.png"; mv "$EV/$label.ocr.txt" "$EV/$label.first.ocr.txt"
     xcrun simctl io "$UDID" screenshot "$EV/$label.png" > /dev/null 2>&1

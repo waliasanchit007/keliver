@@ -24,9 +24,10 @@ EMB="$WORK/embed-ios"; rm -rf "$EMB"; cp -R "$REPO/reference/embed/ios" "$EMB"
 find "$EMB/keliver-host-ios/src/iosMain/kotlin" -name HostConfig.kt -exec sed -i '' 's|UPDATES: String = ""|UPDATES: String = "next-launch"|' {} +
 cp "$EMB/keliver-host-ios/KeliverScreen.swift" "$EMB/iosApp/" # EMBED.md step 4
 w2_build(){  # $1 = log: the existing app, through its own Xcode build phase
+  # KELIVER_TIMING=YES: EMBED.md's optional step 5, the timing marks, which I6/I7 read.
   ( cd "$EMB" && xcodebuild -project ExistingApp.xcodeproj -scheme iosApp -configuration Debug \
       -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd-embed" \
-      CODE_SIGNING_ALLOWED=NO build ) > "$1" 2>&1
+      CODE_SIGNING_ALLOWED=NO KELIVER_TIMING=YES build ) > "$1" 2>&1
 }
 w2_build "$EV/w2-embed-xcodebuild.log" && ok "W2: the existing SwiftUI app built, its build phase compiling the Kotlin framework from Maven Central" \
   || { bad "W2: the existing app did not build"; grep -E 'error:|^e: ' "$EV/w2-embed-xcodebuild.log" | head -10; }
@@ -62,11 +63,11 @@ EFLOOR="keliver.highestSequence-keliver-production-$(printf '%s' "$PUB" | tr 'A-
 # I6: a deep link's route reaches the guest, which marks it (KeliverTiming).
 launch W2-embed-route -k4link "existing://k4/items?tab=stock&token=k4secret"
 C="$EV/W2-embed-route.console.txt"
+# The mark is the whole route: had the token got through, it would read
+# route-k4-items-tab-stock-token-k (32 at most), and this would fail.
 grep -q "KeliverTiming: route-k4-items-tab-stock " "$C" \
-  && ok "I6: the guest received the route k4/items?tab=stock (launchRoute)" \
+  && ok "I6: the guest received the route k4/items?tab=stock and nothing else: the link's token is not an allowed key" \
   || bad "I6: no route mark: $(grep -E 'KeliverTiming: route|KeliverHost' "$C" | head -3 | tr '\n' ' ')"
-grep -q "KeliverTiming: route-.*k4secret" "$C" \
-  && bad "I6: the link's token reached the guest" || ok "I6: the link's token (not an allowed key) did not reach the guest"
 reads W2-embed-route "Native header" && reads W2-embed-route Attic \
   && ok "I6: the routed screen shows the guest and the native views" || bad "I6: $(tr '\n' '|' < "$EV/W2-embed-route.ocr.txt" | cut -c1-200)"
 # I7: the guest closes its screen; the app's onClose puts a native text there.

@@ -127,11 +127,11 @@ grep -q 'highestSequence-[^"]*" value="7"' "$EV/w2-prefs.xml" \
 # (KeliverTiming, debug builds); the link's token is not an allowed key.
 w2_route "existing://k4/items?tab=stock&token=k4secret" "$EV/logcat-embed-route.txt"
 w2_dump X8
+# The mark is the whole route: had the token got through, it would read
+# route-k4-items-tab-stock-token-k (32 at most), and this would fail.
 grep -q "KeliverTiming: route-k4-items-tab-stock " "$EV/logcat-embed-route.txt" \
-  && ok "X8: the guest received the route k4/items?tab=stock (launchRoute)" \
+  && ok "X8: the guest received the route k4/items?tab=stock and nothing else: the link's token is not an allowed key" \
   || bad "X8: no route mark: $(grep -E "KeliverTiming: route|$HOST_TAG" "$EV/logcat-embed-route.txt" | head -3 | tr '\n' ' ')"
-grep -q "KeliverTiming: route-.*k4secret" "$EV/logcat-embed-route.txt" \
-  && bad "X8: the link's token reached the guest" || ok "X8: the link's token (not an allowed key) did not reach the guest"
 grep -q 'text="Attic"' "$EV/w2-X8.xml" && grep -q 'text="Native header"' "$EV/w2-X8.xml" \
   && ok "X8: the routed screen shows the guest and the native views" || bad "X8: the routed screen is missing a part"
 
