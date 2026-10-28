@@ -242,8 +242,9 @@ that opens.
 - **Fields:** `installId`, `channel`, `hostVersion`, `sequence`, `source`
   (`network` or `cache`), `outcome`, `reason` and `platform`.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
-  `not-loaded`, `no-bundle`, `refused`, or (Android) `screen-failed`: the
-  code threw while a screen showed it, one record per screen on show.
+  `not-loaded`, `no-bundle`, `refused`, or `screen-failed`: the code threw
+  while a screen showed it, one record per screen on show (Android from tools
+  0.3.14, iOS from the next tools release).
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
   `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
   `other`.
@@ -540,7 +541,8 @@ for byte):
   `Loading`, `Running`, or `Unavailable(outcome, reason, title, message, attempt)` when
   the host cannot show a screen (`outcome` is the report's: `no-bundle`,
   `refused` or `not-loaded`; `reason` its fixed category; `attempt` numbers
-  these in the process from 1, so the same failure on a retry is a new state;
+  failures in the process from 1, `screen-failed` ones (given to a screen's
+  `onUnavailable` only) included, so the same failure on a retry is a new state;
   equality includes it, so compare `outcome` and `reason`, not whole states). Observe it to hide
   your own chrome while `Running`.
 - **`KeliverScreen(host, modifier, onUnavailable, loading, unavailable)`**, a
@@ -660,7 +662,8 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   is `KeliverHostStateLoading`, `KeliverHostStateRunning`, or
   `KeliverHostStateUnavailable(outcome, reason, title, message, attempt)`
   (`outcome` the report's: `no-bundle`, `refused` or `not-loaded`; `attempt`
-  numbers these from 1, so a repeated failure is a new state). Read it, then
+  numbers failures from 1, `screen-failed` ones included, so a repeated
+  failure is a new state and the numbers seen here can skip). Read it, then
   set `Keliver.shared.onStateChange`, called on the main thread with each later
   change: hide your own chrome while `Running`. (Kotlin code can collect
   `Keliver.state`, a `StateFlow`.)
@@ -669,7 +672,11 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   state. Replace the Keliver screen there with what it replaced (your web page
   or native screen, with the route you were showing): dismiss or pop it,
   rather than stacking the fallback over it. The screen holds the closure:
-  capture your controller weakly (`[weak self]`).
+  capture your controller weakly (`[weak self]`). It is also called with
+  outcome `screen-failed` when the code throws while it shows, as on Android:
+  Treehouse stops that code, so every screen showing it hears it (one report
+  each), and so does every screen opened afterwards, until code loads again
+  (an update); `currentState` stays `Running`.
 - **Routes and close** (K2): `KeliverScreen(route: KeliverRoute.companion.from(uri: url.absoluteString, allowedQueryKeys: ["tab"]), onClose: …)`
   or `Keliver.shared.viewController(safeArea:onUnavailable:route:onClose:)`
   shows the guest's screen for that route: a deep link's path and only the
@@ -730,13 +737,19 @@ server fed by `keliver-publish`:
   guest inside the `KeliverView` (X1); a signed load (X2); taps inside the
   embedded screen (X3); native navigation and a rotation with one lookup and
   one load (X4); the floor stored in the app's own data (X5); another key's
-  bundle refused, the Keliver view saying so, while the native views and the
-  process stay (X6); an
-  R8-minified release loading and rendering (X7);
+  bundle refused, the app's `onUnavailable` putting its own view there, while
+  the native views and the process stay (X6); an
+  R8-minified release loading and rendering (X7); and the host kit (K4), from
+  the app's deep links: a route reaching the guest with only the allowed query
+  keys (X8), the guest closing its screen through the app's `onClose` (X9),
+  and the guest throwing: `screen-failed`, the app's `onUnavailable`, the
+  process alive (X10);
 - iOS simulator: the native views and the guest's screen in one screenshot
   (I1); a signed load (I2); the floor stored in the app's defaults (I4);
-  another key's bundle looked up, refused and reported in the Keliver view,
-  while the native views stay (I5).
+  another key's bundle looked up and refused, the app's `onUnavailable`
+  putting its fallback there, while the native views stay (I5); the host kit
+  from a link passed at launch: the route (I6), the close (I7) and
+  `screen-failed` (I8).
 
 **Not measured:**
 - native navigation on iOS (no tap driver on the simulator CI);

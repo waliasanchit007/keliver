@@ -89,29 +89,29 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Download the PUBLIC tools 0.3.13 release, as the adopter guide does
+      - name: Download the PUBLIC tools 0.3.14 release, as the adopter guide does
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/dl" "$GITHUB_WORKSPACE/evidence"
           cd "$RUNNER_TEMP/dl"
-          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.13
-          curl -fsSLO "$base/keliver-portal-tools-0.3.13.zip"
-          curl -fsSLO "$base/keliver-portal-tools-0.3.13.zip.sha256"
+          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.14
+          curl -fsSLO "$base/keliver-portal-tools-0.3.14.zip"
+          curl -fsSLO "$base/keliver-portal-tools-0.3.14.zip.sha256"
           {
-            echo "downloaded: $base/keliver-portal-tools-0.3.13.zip"
-            sha256sum -c keliver-portal-tools-0.3.13.zip.sha256
-            sha256sum keliver-portal-tools-0.3.13.zip
-            unzip -p keliver-portal-tools-0.3.13.zip 'keliver-portal-tools-0.3.13/VERSION.json'
+            echo "downloaded: $base/keliver-portal-tools-0.3.14.zip"
+            sha256sum -c keliver-portal-tools-0.3.14.zip.sha256
+            sha256sum keliver-portal-tools-0.3.14.zip
+            unzip -p keliver-portal-tools-0.3.14.zip 'keliver-portal-tools-0.3.14/VERSION.json'
           } | tee "$GITHUB_WORKSPACE/evidence/public-download.txt"
-          test "$(sha256sum keliver-portal-tools-0.3.13.zip | cut -d' ' -f1)" = \
-            5d1dd0efc19aaae1377676c7a043892a7a7155a2a4167f30171499c59cbcb323
-          unzip -p keliver-portal-tools-0.3.13.zip 'keliver-portal-tools-0.3.13/VERSION.json' \
-            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == 'a5ab6e2b2bcaf51cb1e09a4504eac6a6869aff0e'"
+          test "$(sha256sum keliver-portal-tools-0.3.14.zip | cut -d' ' -f1)" = \
+            7284aec9d45ea11a0b8c36863955a4f47c6df79c996be488922d3f092a24dc08
+          unzip -p keliver-portal-tools-0.3.14.zip 'keliver-portal-tools-0.3.14/VERSION.json' \
+            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == '58851db260446445ae47ec09e7ac428695bf5a4f'"
 
       - name: Prepare — bootstrap, ingest, signed v1, scaffolded production host
         run: |
           bash reference/inventory/ci/prepare.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence" \
-            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.13.zip"
+            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.14.zip"
           # Free the app's Gradle daemon before the emulator starts.
           (cd "$RUNNER_TEMP/ref/boot/inventory" && ./gradlew --stop) || true
 
