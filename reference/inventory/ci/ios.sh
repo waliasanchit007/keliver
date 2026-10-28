@@ -191,10 +191,10 @@ xcrun simctl install "$UDID" "$APPB" && ok "P1: the host installed as its own ap
 
 # launch <label>: a fresh process; its console (the KeliverHost: lines), a
 # screenshot taken while it runs, and what that screenshot reads.
-launch(){
-  local label="$1" pid
+launch(){  # $1 = label; any further arguments go to the app (`-key value`: its UserDefaults)
+  local label="$1" pid; shift
   xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
-  xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$label.console.txt" 2>&1 &
+  xcrun simctl launch --console-pty "$UDID" "$BID" "$@" > "$EV/$label.console.txt" 2>&1 &
   pid=$!
   sleep 30
   # Nothing at all on the console: the process never started (seen on the first launch after
@@ -206,7 +206,7 @@ launch(){
     kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
     mv "$EV/$label.console.txt" "$EV/$label.first.console.txt"
     xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
-    xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$label.console.txt" 2>&1 &
+    xcrun simctl launch --console-pty "$UDID" "$BID" "$@" > "$EV/$label.console.txt" 2>&1 &
     pid=$!
     sleep 30
   fi

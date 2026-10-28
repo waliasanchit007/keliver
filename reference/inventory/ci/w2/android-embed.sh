@@ -15,6 +15,13 @@
 #       stay and the process lives
 #   X7  the app shrunk by R8 (a minified release): the guest still verifies,
 #       loads and renders in the KeliverView
+# The host kit on a device (K4), through the existing app's deep links:
+#   X8  a route reaches the guest (launchRoute), with only the app's allowed
+#       query keys
+#   X9  the guest closes its screen: the app's onClose replaces the view
+#   X10 the guest throws while its screen shows: screen-failed, and the app's
+#       onUnavailable replaces the view; the process lives
+# X6 also checks that the app's onUnavailable ran (its native fallback shows).
 echo "--- 5. W2: the host embedded in an existing app"
 W2_ID="${W2_ID:-com.example.existing}"
 w2_launch(){  # $1 = logcat file: a cold start of the existing app
@@ -23,6 +30,13 @@ w2_launch(){  # $1 = logcat file: a cold start of the existing app
   adb -s "$SERIAL" shell am start -n "$W2_ID/.MainActivity" > /dev/null
   sleep 15
   adb -s "$SERIAL" logcat -d > "$1"
+}
+w2_route(){  # $1 = deep link, $2 = logcat file: a cold start of the existing app on that route
+  adb -s "$SERIAL" logcat -c || true
+  adb -s "$SERIAL" shell am force-stop "$W2_ID"
+  adb -s "$SERIAL" shell "am start -a android.intent.action.VIEW -d '$1' -n $W2_ID/.MainActivity" > /dev/null
+  sleep 15
+  adb -s "$SERIAL" logcat -d > "$2"
 }
 w2_dump(){  # $1 = label: the view hierarchy, kept as evidence
   adb -s "$SERIAL" shell rm -f /sdcard/w2.xml
@@ -109,6 +123,40 @@ adb -s "$SERIAL" shell "run-as $W2_ID cat shared_prefs/keliver-host.xml" > "$EV/
 grep -q 'highestSequence-[^"]*" value="7"' "$EV/w2-prefs.xml" \
   && ok "X5: the embedded host stored its rollback floor (7) in the existing app's data" || bad "X5: $(head -c 300 "$EV/w2-prefs.xml")"
 
+# X8: a deep link's route reaches the guest. The guest marks the route it got
+# (KeliverTiming, debug builds); the link's token is not an allowed key.
+w2_route "existing://k4/items?tab=stock&token=k4secret" "$EV/logcat-embed-route.txt"
+w2_dump X8
+grep -q "KeliverTiming: route-k4-items-tab-stock " "$EV/logcat-embed-route.txt" \
+  && ok "X8: the guest received the route k4/items?tab=stock (launchRoute)" \
+  || bad "X8: no route mark: $(grep -E "KeliverTiming: route|$HOST_TAG" "$EV/logcat-embed-route.txt" | head -3 | tr '\n' ' ')"
+grep -q "KeliverTiming: route-.*k4secret" "$EV/logcat-embed-route.txt" \
+  && bad "X8: the link's token reached the guest" || ok "X8: the link's token (not an allowed key) did not reach the guest"
+grep -q 'text="Attic"' "$EV/w2-X8.xml" && grep -q 'text="Native header"' "$EV/w2-X8.xml" \
+  && ok "X8: the routed screen shows the guest and the native views" || bad "X8: the routed screen is missing a part"
+
+# X9: the guest closes its screen; the app's onClose puts a native view there.
+w2_route "existing://k4/close" "$EV/logcat-embed-close.txt"
+w2_dump X9
+grep -q "KeliverTiming: route-k4-close " "$EV/logcat-embed-close.txt" && grep -q "ExistingApp: keliver closed" "$EV/logcat-embed-close.txt" \
+  && ok "X9: the guest asked to close and the app's onClose ran" \
+  || bad "X9: $(grep -E "KeliverTiming: route|ExistingApp|$HOST_TAG" "$EV/logcat-embed-close.txt" | head -4 | tr '\n' ' ')"
+grep -q 'text="Keliver closed"' "$EV/w2-X9.xml" && grep -q 'text="Native header"' "$EV/w2-X9.xml" \
+  && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
+  && ok "X9: the app's native view took the Keliver view's place; the app is still running" || bad "X9: the screen after the close is not the app's"
+
+# X10: the guest throws while its screen shows: the host reports screen-failed and
+# the app's onUnavailable puts its own view there.
+w2_route "existing://k4/crash" "$EV/logcat-embed-crash.txt"
+w2_dump X10
+grep -q "KeliverTiming: route-k4-crash " "$EV/logcat-embed-crash.txt" && grep -q "ExistingApp: keliver unavailable: screen-failed" "$EV/logcat-embed-crash.txt" \
+  && ok "X10: the guest threw, and the app's onUnavailable ran with screen-failed" \
+  || bad "X10: $(grep -E "KeliverTiming: route|ExistingApp|$HOST_TAG|uncaught" "$EV/logcat-embed-crash.txt" | head -5 | tr '\n' ' ')"
+grep -q 'text="Native fallback"' "$EV/w2-X10.xml" && grep -q 'text="Native header"' "$EV/w2-X10.xml" \
+  && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
+  && ok "X10: the app's fallback took the Keliver view's place; the app is still running" || bad "X10: the screen after the exception is not the app's"
+grep -q "FATAL EXCEPTION" "$EV/logcat-embed-crash.txt" && bad "X10: the guest's exception crashed the process" || ok "X10: no process crash"
+
 # X6: the same app trusting another key: nothing loads in the Keliver view, the
 # native views stay, the process lives.
 adb -s "$SERIAL" install -r "$W2_FOREIGN_APK" > "$EV/install-embed-foreign.log" 2>&1 \
@@ -123,8 +171,9 @@ grep -q "codeLoadFailed" "$EV/logcat-embed-foreign.txt" && ok "X6: the host repo
 grep -q 'text="Native header"' "$EV/w2-X6.xml" && ! grep -q 'text="Attic"' "$EV/w2-X6.xml" \
   && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
   && ok "X6: the native views are still shown and the app is still running" || bad "X6: the existing app did not survive the refusal"
-grep -q 'text="Bundle did not load"' "$EV/w2-X6.xml" \
-  && ok "X6: the Keliver view says the bundle did not load (not a blank view)" || bad "X6: no 'Bundle did not load' in the Keliver view"
+grep -q "ExistingApp: keliver unavailable: " "$EV/logcat-embed-foreign.txt" && grep -q 'text="Native fallback"' "$EV/w2-X6.xml" \
+  && ok "X6: the app's onUnavailable ran ($(sed -n 's/.*ExistingApp: keliver unavailable: \([a-z-]*\).*/\1/p' "$EV/logcat-embed-foreign.txt" | head -1)) and its fallback shows (not a blank view)" \
+  || bad "X6: no onUnavailable fallback: $(grep -E "ExistingApp|$HOST_TAG" "$EV/logcat-embed-foreign.txt" | head -3 | tr '\n' ' ')"
 
 # X7: the minified release. Zipline crosses the bridge by name and reflection, so
 # R8 can break it at run time only: this is the check that the library's
