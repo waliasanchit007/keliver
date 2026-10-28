@@ -201,7 +201,7 @@ launch(){
   # install on a slow CI runner, run for #161: an empty console and the home screen). Launch
   # once more; the first console is kept and the retry logged. A host that started and then
   # failed is not retried.
-  if ! grep -q "KeliverHost:\|KeliverTiming:" "$EV/$label.console.txt"; then
+  if ! grep -qE "KeliverHost:|KeliverTiming:" "$EV/$label.console.txt"; then
     echo "    $label: the app printed nothing in 30 s; launching it once more" | tee -a "$EV/ios.retries"
     kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
     mv "$EV/$label.console.txt" "$EV/$label.first.console.txt"
