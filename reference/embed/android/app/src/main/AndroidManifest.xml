@@ -10,6 +10,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- The host kit's routes (K4): existing://<path>?tab=… opens this screen on that route. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="existing" />
+            </intent-filter>
         </activity>
         <activity android:name=".DetailsActivity" android:exported="false" />
     </application>

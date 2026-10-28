@@ -191,10 +191,10 @@ xcrun simctl install "$UDID" "$APPB" && ok "P1: the host installed as its own ap
 
 # launch <label>: a fresh process; its console (the KeliverHost: lines), a
 # screenshot taken while it runs, and what that screenshot reads.
-launch(){
-  local label="$1" pid
+launch(){  # $1 = label; any further arguments go to the app (`-key value`: its UserDefaults)
+  local label="$1" pid; shift
   xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
-  xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$label.console.txt" 2>&1 &
+  xcrun simctl launch --console-pty "$UDID" "$BID" "$@" > "$EV/$label.console.txt" 2>&1 &
   pid=$!
   sleep 30
   # Nothing at all on the console: the process never started (seen on the first launch after
@@ -206,7 +206,7 @@ launch(){
     kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
     mv "$EV/$label.console.txt" "$EV/$label.first.console.txt"
     xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
-    xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$label.console.txt" 2>&1 &
+    xcrun simctl launch --console-pty "$UDID" "$BID" "$@" > "$EV/$label.console.txt" 2>&1 &
     pid=$!
     sleep 30
   fi
@@ -225,7 +225,7 @@ launch(){
   # logged so a slow render stays visible.
   if [ "$(grep -c . "$EV/$label.ocr.txt" 2>/dev/null)" -le 1 ]; then
     echo "    $label: only the status bar on screen; looking again in 15 s" | tee -a "$EV/ios.retries"
-    xcrun simctl launch "$UDID" "$BID" >/dev/null 2>&1 || true   # forward if still running; started again if not
+    xcrun simctl launch "$UDID" "$BID" "$@" >/dev/null 2>&1 || true   # forward if still running; started again if not
     sleep 15
     mv "$EV/$label.png" "$EV/$label.first.png"; mv "$EV/$label.ocr.txt" "$EV/$label.first.ocr.txt"
     xcrun simctl io "$UDID" screenshot "$EV/$label.png" > /dev/null 2>&1
@@ -236,6 +236,13 @@ launch(){
 reads(){ grep -qx "$2" "$EV/$1.ocr.txt"; }   # the screen has a line exactly equal to $2
 
 # --- P2 -------------------------------------------------------------------------
+# On a cold CI runner the relay's first bundles/index.json has taken longer than the host's
+# 10 s lookup timeout (the first P2 runs for #158 and #164: "no bundle", and every later step
+# green). Ask for it once first, and keep how long it took: P2 then checks the host, and a
+# slow relay stays visible.
+t0=$(date +%s)
+code=$(curl -s -m 60 -o /dev/null -w '%{http_code}' http://localhost:8077/bundles/index.json)
+echo "    the relay's first bundles/index.json: HTTP $code in $(( $(date +%s) - t0 )) s" | tee "$EV/relay-first-index.txt"
 launch P2-v1
 C="$EV/P2-v1.console.txt"
 grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}" "$C" && ok "P2: the host verifies with this app's key" || bad "P2: no verification line"
@@ -349,5 +356,7 @@ reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || b
 . "$HERE/w8/ios-rotation.sh"
 
 for f in "$EV"/*.png; do echo "$(basename "$f"): $(python3 "$HERE/shot.py" "$f")"; done > "$EV/shots.results"
+# A relaunch can hide a first launch that printed nothing: say how many there were.
+[ -s "$EV/ios.retries" ] && echo "ios: $(grep -c . "$EV/ios.retries") launch(es) printed nothing and were relaunched (ios.retries):" && cat "$EV/ios.retries"
 echo "ios: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]
