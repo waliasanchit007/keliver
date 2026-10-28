@@ -179,7 +179,7 @@ that opens.
 
 **Updates while the app runs** (both hosts):
 - `keliver.updates=live` (Android) or `UPDATES = "live"` (iOS, `HostConfig.kt`)
-  (**a DEBUG build's default: Android from tools 0.3.13, iOS from the next tools release**): `on-resume`, and also, while
+  (**a DEBUG build's default: Android from tools 0.3.13, iOS from tools 0.3.14**): `on-resume`, and also, while
   a Keliver screen is on show (Android: a `KeliverScreen` whose lifecycle is
   STARTED; iOS: a `Keliver.viewController()` screen whose lifecycle is STARTED,
   from `viewWillAppear` until it disappears or the app goes to the background),

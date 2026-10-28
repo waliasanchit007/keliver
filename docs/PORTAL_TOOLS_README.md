@@ -124,7 +124,10 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   app that embeds Keliver screens, in both host templates: a typed status and
   `onUnavailable`, no host text in a release build, `RequestPolicy` for
   HostHttp, routes (`KeliverRoute`, the guest's `launchRoute`) and close, and
-  on Android `ExternalLinkPolicy` and `screen-failed`.
+  on Android `ExternalLinkPolicy` and `screen-failed` (a new dependency,
+  `androidx.browser:browser:1.8.0`); an existing guest needs `launchRoute`
+  and `device/KeliverScreenHost.kt` (as `keliver-new-device-target.sh` now
+  writes them) for routes.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
