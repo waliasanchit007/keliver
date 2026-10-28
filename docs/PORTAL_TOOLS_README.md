@@ -119,6 +119,12 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `keliver-new-component.sh` write into the app they are run from;
   `keliver-portal` puts the editor on `editorPort` (default port + 19) so two
   apps' portals can run at once, and serves it uncached.
+- **From 0.3.14:** still the 0.4.1 libraries; a debug iOS host picks up a
+  publish while the app is open too (`UPDATES = "live"`); the host kit for an
+  app that embeds Keliver screens, in both host templates: a typed status and
+  `onUnavailable`, no host text in a release build, `RequestPolicy` for
+  HostHttp, routes (`KeliverRoute`, the guest's `launchRoute`) and close, and
+  on Android `ExternalLinkPolicy` and `screen-failed`.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
