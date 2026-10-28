@@ -9,7 +9,7 @@ embedAndSignAppleFrameworkForXcode`), `ENABLE_USER_SCRIPT_SANDBOXING = NO` and
 and a `KeliverScreen` in the layout. Its route, `onClose` and `onUnavailable`
 are the host kit's optional part (K4): the reference CI passes a deep link as
 a launch argument (`-k4link <uri>`), and a native text takes the screen's place
-when the guest closes it or it cannot show. The project file is the iOS host
+when the guest closes it, throws (`screen-failed`) or it cannot show. The project file is the iOS host
 template's, with that build phase; its sources are the `iosApp/` folder.
 
 `reference/inventory/ci/w2/ios-embed.sh` scaffolds `keliver-host-ios/` into a
