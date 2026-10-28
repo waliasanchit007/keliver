@@ -211,6 +211,15 @@ grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = em
   && grep -q '^  apiTracking = false$' "$H/build.gradle" \
   && ok "host kit K2: routes (allowed query keys only, older guests still open) and close (pop or dismiss by default)" \
   || bad "host kit K2: routes and close are not wired"
+# Host kit K2, screen-failed (as Android's K1): code that throws while a screen shows it is
+# reported, and that screen shows the unavailable screen and calls its onUnavailable.
+grep -q 'dynamicContentWidgetFactory = failureWidgets,' "$K/MainViewController.kt" \
+  && grep -q 'if (failed == null) failed = Keliver.screenFailed(uncaughtException)' "$K/MainViewController.kt" \
+  && grep -q 'report("screen-failed", running?.sequence' "$K/MainViewController.kt" \
+  && grep -q 'crashed.value = null // new code: no longer the code that threw' "$K/MainViewController.kt" \
+  && grep -q 'outcome == "screen-failed" -> "exception"' "$K/BundleIndex.kt" \
+  && ok "host kit K2: a screen whose code throws reports screen-failed, calls onUnavailable and shows the unavailable screen" \
+  || bad "host kit K2: screen-failed is not wired"
 # One KeliverRoute and one KeliverScreenHost for both hosts and the guest: the same text for the
 # same link, and a launchRoute signature Zipline matches (parameter types' packages included).
 PH=""

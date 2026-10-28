@@ -70,6 +70,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -89,7 +92,11 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portal.sql.HostSqlDriver
+import dev.keliver.Modifier as RedwoodModifier
+import dev.keliver.treehouse.Crashed
+import dev.keliver.treehouse.DynamicContentWidgetFactory
 import dev.keliver.treehouse.EventListener
+import dev.keliver.treehouse.Loading
 import dev.keliver.treehouse.MemoryStateStore
 import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
@@ -308,6 +315,27 @@ public object Keliver {
     setState(KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message, ++unavailableAttempts))
     report(outcome, detail = detail)
   }
+  /**
+   * Set when the running code threw (K2's `screen-failed`, as on Android): Treehouse stops it, so a
+   * screen opened afterwards would wait for code that never comes. It shows this instead, and calls
+   * its onUnavailable. Cleared when code loads again (an update). Main thread.
+   */
+  internal val crashed = MutableStateFlow<KeliverHostState.Unavailable?>(null)
+
+  /**
+   * K2's `screen-failed`: a screen's code threw while it showed. Reported (W6), and returned as that
+   * screen's state for its `onUnavailable`; [state] stays [KeliverHostState.Running], since the next
+   * code load (an update) replaces the failed code. Main thread.
+   */
+  internal fun screenFailed(exception: Throwable): KeliverHostState.Unavailable {
+    val detail = exception.message ?: exception::class.simpleName ?: "unknown error"
+    val running = current
+    report("screen-failed", running?.sequence, running?.let { if (it.fromCache) "cache" else "network" } ?: "", detail)
+    return KeliverHostState.Unavailable(
+      "screen-failed", reportReason("screen-failed", detail), "This screen stopped", detail.take(300), ++unavailableAttempts,
+    ).also { crashed.value = it }
+  }
+
   private var started = false // read and written on the main thread only
   private var loaded = false
   private var session: Session? = null
@@ -404,6 +432,7 @@ public object Keliver {
   internal fun codeLoaded(sequence: Long?, url: String?) {
     val first = !loaded
     loaded = true
+    crashed.value = null // new code: no longer the code that threw
     current = KeliverBundle(sequence ?: -1, fromCache = url == null)
     // After a load from the cache Zipline takes no further manifest; after a network load it does.
     session?.fromCache = url == null
@@ -763,8 +792,7 @@ public object Keliver {
         LaunchedEffect(s) {
           if (mutableState.value == s) runCatching { onUnavailable?.invoke(s) }.onFailure { log("onUnavailable threw: ${it.message}") }
         }
-        if (showsDeveloperText) MessageScreen(s.title, s.message, safeArea)
-        else MessageScreen("Not available", "This screen can't be shown right now. Please try again later.", safeArea)
+        UnavailableScreen(s, safeArea)
       }
       is KeliverHostState.Running -> {
         val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(imageLoader) }
@@ -774,11 +802,67 @@ public object Keliver {
             override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, s.app, route, close))
           }
         }
+        // K2's screen-failed: the code threw while this screen showed it.
+        val latestOnUnavailable by rememberUpdatedState(onUnavailable)
+        val failureWidgets = remember { ScreenFailedWidgets({ latestOnUnavailable }, safeArea) }
         Box(modifier) {
-          TreehouseContent(treehouseApp = s.app, widgetSystem = widgetSystem, contentSource = contentSource)
+          TreehouseContent(
+            treehouseApp = s.app,
+            widgetSystem = widgetSystem,
+            contentSource = contentSource,
+            dynamicContentWidgetFactory = failureWidgets,
+          )
         }
       }
     }
+  }
+}
+
+/** A screen the host cannot show: the host's own text only when [Keliver.showsDeveloperText]. */
+@Composable
+private fun UnavailableScreen(s: KeliverHostState.Unavailable, safeArea: Boolean) {
+  if (Keliver.showsDeveloperText) MessageScreen(s.title, s.message, safeArea)
+  else MessageScreen("Not available", "This screen can't be shown right now. Please try again later.", safeArea)
+}
+
+/**
+ * What a screen shows in place of the guest's content while code loads, and once the code it showed
+ * has thrown (K2's `screen-failed`, as Android's KeliverScreen): the host reports it (W6), the screen
+ * calls its `onUnavailable` once per failure and shows [UnavailableScreen]. Treehouse replaces the
+ * failed content when code loads again.
+ */
+private class ScreenFailedWidgets(
+  private val onUnavailable: () -> ((KeliverHostState.Unavailable) -> Unit)?,
+  private val safeArea: Boolean,
+) : DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> {
+  // Nothing while code loads, as before; but once the running code has thrown, it never will:
+  // a screen opened then says so and calls its onUnavailable.
+  override fun Loading(): Loading<@Composable (Modifier) -> Unit> = object : Loading<@Composable (Modifier) -> Unit> {
+    override var modifier: RedwoodModifier = RedwoodModifier
+    override val value: @Composable (Modifier) -> Unit = {
+      val failed by Keliver.crashed.collectAsState()
+      failed?.let { f -> Failed(f) }
+    }
+  }
+
+  override fun Crashed(): Crashed<@Composable (Modifier) -> Unit> = object : Crashed<@Composable (Modifier) -> Unit> {
+    private var failed by mutableStateOf<KeliverHostState.Unavailable?>(null)
+    override var modifier: RedwoodModifier = RedwoodModifier
+    override val value: @Composable (Modifier) -> Unit = {
+      failed?.let { f -> Failed(f) }
+    }
+
+    override fun uncaughtException(uncaughtException: Throwable) {
+      if (failed == null) failed = Keliver.screenFailed(uncaughtException)
+    }
+
+    override fun restart(restart: () -> Unit) {}
+  }
+
+  @Composable
+  private fun Failed(f: KeliverHostState.Unavailable) {
+    LaunchedEffect(f) { runCatching { onUnavailable()?.invoke(f) }.onFailure { log("onUnavailable threw: ${it.message}") } }
+    UnavailableScreen(f, safeArea)
   }
 }
 

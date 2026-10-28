@@ -242,8 +242,9 @@ that opens.
 - **Fields:** `installId`, `channel`, `hostVersion`, `sequence`, `source`
   (`network` or `cache`), `outcome`, `reason` and `platform`.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
-  `not-loaded`, `no-bundle`, `refused`, or (Android) `screen-failed`: the
-  code threw while a screen showed it, one record per screen on show.
+  `not-loaded`, `no-bundle`, `refused`, or `screen-failed`: the code threw
+  while a screen showed it, one record per screen on show (Android from tools
+  0.3.14, iOS from the next tools release).
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
   `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
   `other`.
@@ -669,7 +670,11 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   state. Replace the Keliver screen there with what it replaced (your web page
   or native screen, with the route you were showing): dismiss or pop it,
   rather than stacking the fallback over it. The screen holds the closure:
-  capture your controller weakly (`[weak self]`).
+  capture your controller weakly (`[weak self]`). It is also called with
+  outcome `screen-failed` when the code throws while it shows, as on Android:
+  Treehouse stops that code, so every screen showing it hears it (one report
+  each), and so does every screen opened afterwards, until code loads again
+  (an update); `currentState` stays `Running`.
 - **Routes and close** (K2): `KeliverScreen(route: KeliverRoute.companion.from(uri: url.absoluteString, allowedQueryKeys: ["tab"]), onClose: …)`
   or `Keliver.shared.viewController(safeArea:onUnavailable:route:onClose:)`
   shows the guest's screen for that route: a deep link's path and only the
