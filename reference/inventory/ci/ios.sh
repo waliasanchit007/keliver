@@ -197,6 +197,19 @@ launch(){
   xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$label.console.txt" 2>&1 &
   pid=$!
   sleep 30
+  # Nothing at all on the console: the process never started (seen on the first launch after
+  # install on a slow CI runner, run for #161: an empty console and the home screen). Launch
+  # once more; the first console is kept and the retry logged. A host that started and then
+  # failed is not retried.
+  if ! grep -qE "KeliverHost:|KeliverTiming:" "$EV/$label.console.txt"; then
+    echo "    $label: the app printed nothing in 30 s; launching it once more" | tee -a "$EV/ios.retries"
+    kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+    mv "$EV/$label.console.txt" "$EV/$label.first.console.txt"
+    xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
+    xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$label.console.txt" 2>&1 &
+    pid=$!
+    sleep 30
+  fi
   xcrun simctl io "$UDID" screenshot "$EV/$label.png" > /dev/null 2>&1
   kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
   # A failed reading must not let a "never appeared" check pass.

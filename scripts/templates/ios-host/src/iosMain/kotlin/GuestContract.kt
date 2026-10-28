@@ -1,6 +1,7 @@
 package @@PACKAGE@@
 
 import app.cash.zipline.ZiplineService
+import dev.keliver.hostkit.KeliverScreenHost
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.ZiplineTreehouseUi
 
@@ -11,4 +12,11 @@ import dev.keliver.treehouse.ZiplineTreehouseUi
  */
 interface PortalPresenter : AppService, ZiplineService {
   fun launch(): ZiplineTreehouseUi
+
+  /**
+   * K2: the screen for [route] ([KeliverRoute.encode]'s text: `orders/42?tab=items`, its query
+   * already cut to the app's allowed keys); [screen] is how it closes itself. A guest scaffolded
+   * before the host kit has no such function: the host calls [launch] instead.
+   */
+  fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi
 }

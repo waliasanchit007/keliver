@@ -911,8 +911,14 @@ their required checks pass (Standing constraints, below).
 | live updates and host kit follow-ups, PR #158 | **merged 2026-10-28** (`8810bf387`) at `300aecda1`, reviewed twice: the relay's `/bundles/events` sends a listener nothing before its 2 KiB preamble; `/doc-events` writes one event at a time per listener; `KeliverHostState.Unavailable.attempt`; the iOS template declares `lifecycle-runtime-compose`; LV4 (back in the foreground the host listens again) on Android and iOS; U39 narrowed (every failure was K1, the one test intercepting the component request) and instrumented. Relay 401/0. CI: Build, both E2E, reference-app, ios-host (after one rerun: the first run's P2 lookup of the published 0.3.13 relay timed out on a slow macOS runner; job `122354750369`, rerun `122440015566`). | PR #158 |
 | host kit K1: `RequestPolicy` and `ExternalLinkPolicy`, PR #159 | **merged 2026-10-27** (`489f5e8e9`) at `a635372ae`, reviewed four times (security-minded): exact `(method, path)` pairs, one origin that must be the API base's, https unless the build allows cleartext, a switch for state-changing calls, method-override headers dropped; `intent:` links only as a browser opens them, never this app, no launch flags; JVM tests scaffolded into the host (13 + 9). | PR #159 |
 | host kit K2 part 1 (iOS), PR #160 | **merged 2026-10-28** (`0f8caaed9`) at `8c5add3f6`, reviewed twice: public `KeliverHostState` (Android's shape), `currentState` / `onStateChange` for Swift, `viewController(safeArea:onUnavailable:)`, the release text policy; the self-test type-checks the embed's Swift against the built framework. | PR #160 |
+| host kit K1 rest (Android), PR #161 | **merged 2026-10-28** (`3ed8535c1`) at `4ddc9edb8`, reviewed before and after it opened (one blocker found and fixed: `KeliverScreenHost` must be in one package on both sides, or Zipline never matches `launchRoute`): `screen-failed` (a crash shows the unavailable slot and calls `onUnavailable`, also on screens opened afterwards); the debug-surface audit as self-test checks (a release APK's BuildConfig and manifest); routes and close (one shared pure-Kotlin `KeliverRoute`; an old guest falls back to `launch()`; a default close that finishes the activity). CI: Build, both E2E, reference-app, ios-host (after one rerun: P2's first launch printed nothing on a slow runner; job `122529889585`, rerun `122584972689`). Not run on a device (K4). | PR #161 |
 
 ## Next action
+
+**2026-10-28 (later).** #161 is merged: K1 on Android is complete in code.
+In review: `RequestPolicy`, routes and close on iOS, with a relaunch in the
+iOS reference CI for a first launch that printed nothing. Then tools 0.3.14.
+The entry below is kept as written.
 
 **2026-10-28.** #158, #159 and #160 are merged (rows above). In review: the
 rest of K1 on Android (`screen-failed`, the debug-surface audit, routes and

@@ -17,8 +17,17 @@ struct KeliverScreen: UIViewControllerRepresentable {
     /// screen holds this closure: capture your controller weakly (`[weak self]`).
     var onUnavailable: ((KeliverHostStateUnavailable) -> Void)? = nil
 
+    /// The guest's screen for this route (`KeliverRoute.companion.from(uri:allowedQueryKeys:)` keeps
+    /// only the query keys you allow). A new route needs a new screen: give this view a new `.id`.
+    var route: KeliverRoute? = nil
+
+    /// Called on the main thread when the screen asks to close. nil pops the navigation stack
+    /// back to the screen below it, or dismisses it: in a sheet or a NavigationStack, pass
+    /// `dismiss()` (or drop the path element) so SwiftUI's state agrees.
+    var onClose: (() -> Void)? = nil
+
     func makeUIViewController(context: Context) -> UIViewController {
-        Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnavailable)
+        Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnavailable, route: route, onClose: onClose)
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

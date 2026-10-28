@@ -205,11 +205,18 @@ internal val reportSession: NSURLSession by lazy {
  * host's OkHttpHostHttp:
  * - `.` and `..` segments and backslashes are refused;
  * - `Host` and hop-by-hop headers from the guest are dropped;
- * - redirects are not followed.
+ * - redirects are not followed;
+ * - with a [RequestPolicy], only its origin and its exact `(method, path)`
+ *   pairs, checked before anything is sent; a refused request fails in the
+ *   guest and is logged (the path only in a DEBUG binary);
+ * - the method-override headers are dropped.
  *
  * Add authentication, retries or certificate pinning here — this is your code.
  */
-internal class NSURLSessionHostHttp(private val base: String) : HostHttpProvider {
+internal class NSURLSessionHostHttp(private val base: String, private val policy: RequestPolicy? = null) : HostHttpProvider {
+  /** Set when the policy cannot allow anything on [base] (a wrong origin): every request is refused. */
+  private val baseRefusal: String? = policy?.baseRefusal(base)?.also { println("KeliverHost: HostHttp: $it; every request is refused") }
+
   private val session = NSURLSession.sessionWithConfiguration(
     configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration,
     delegate = NoRedirects(),
@@ -223,6 +230,14 @@ internal class NSURLSessionHostHttp(private val base: String) : HostHttpProvider
     }
     val method = request.method.uppercase()
     require(METHOD.matches(method)) { "HostHttp: '${request.method}' is not an HTTP method" }
+    if (policy != null) {
+      (baseRefusal ?: policy.refusal(method, request.path))?.let { why ->
+        // A path can carry ids: logged only in a DEBUG binary.
+        @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+        println("KeliverHost: HostHttp refused: ${if (kotlin.native.Platform.isDebugBinary) why else "a request outside the app's RequestPolicy"}")
+        throw HostHttpRefused("HostHttp refused: $why")
+      }
+    }
     request.headers.forEach { (k, v) ->
       require(TOKEN.matches(k) && v.none { it == '\r' || it == '\n' || it == '\u0000' }) {
         "HostHttp: header '$k' is not a valid header name and value"
@@ -252,6 +267,10 @@ internal class NSURLSessionHostHttp(private val base: String) : HostHttpProvider
     val DROPPED_HEADERS = setOf(
       "host", "connection", "content-length", "transfer-encoding", "keep-alive",
       "proxy-connection", "te", "trailer", "upgrade",
+      "x-http-method-override", "x-http-method", "x-method-override",
     )
   }
 }
+
+/** A request the app's [RequestPolicy] does not allow; nothing was sent. */
+public class HostHttpRefused(message: String) : IllegalArgumentException(message)
