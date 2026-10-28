@@ -236,6 +236,13 @@ launch(){  # $1 = label; any further arguments go to the app (`-key value`: its 
 reads(){ grep -qx "$2" "$EV/$1.ocr.txt"; }   # the screen has a line exactly equal to $2
 
 # --- P2 -------------------------------------------------------------------------
+# On a cold CI runner the relay's first bundles/index.json has taken longer than the host's
+# 10 s lookup timeout (the first P2 runs for #158 and #164: "no bundle", and every later step
+# green). Ask for it once first, and keep how long it took: P2 then checks the host, and a
+# slow relay stays visible.
+t0=$(date +%s)
+code=$(curl -s -m 60 -o /dev/null -w '%{http_code}' http://localhost:8077/bundles/index.json)
+echo "    the relay's first bundles/index.json: HTTP $code in $(( $(date +%s) - t0 )) s" | tee "$EV/relay-first-index.txt"
 launch P2-v1
 C="$EV/P2-v1.console.txt"
 grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}" "$C" && ok "P2: the host verifies with this app's key" || bad "P2: no verification line"
