@@ -213,7 +213,7 @@ The harness installs debug builds, plus one R8 release signed with the debug key
     If the load fails with an ATS error (`-1022`), use the https route.
 
 **Team setting:** a host scaffolded by tools 0.3.7 or 0.3.8 ignores `TEAM_ID`
-(**U32** in `KNOWN_BUGS.md`; fixed in tools 0.3.9; this checklist uses 0.3.13).
+(**U32** in `KNOWN_BUGS.md`; fixed in tools 0.3.9; this checklist uses 0.3.14).
 For those older hosts, do one of:
 - add `DEVELOPMENT_TEAM=<team id>` to `host-ios/Configuration/Config.xcconfig`;
 - set `DEVELOPMENT_TEAM` in the environment for `ci/w7/ios-device.sh`, which
