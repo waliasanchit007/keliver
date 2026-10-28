@@ -174,8 +174,8 @@ published. It scaffolds `host-android/` if the app has none, builds a debug
 host that looks for bundles at `http://localhost:<port>` (a `-P` property:
 your `gradle.properties` is not changed), runs `adb reverse` for that port
 (nothing listens on your network), installs and starts it, and waits for the
-host to say which bundle it loaded. The debug host then updates live on each
-publish. It never publishes and touches only the device you choose.
+host to load your bundle from the relay. A debug host scaffolded from tools
+0.3.13 on then updates live on each publish. It never publishes and touches only the device you choose.
 
 ### bin/keliver-new-ios-host.sh
 

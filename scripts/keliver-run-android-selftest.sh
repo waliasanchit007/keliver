@@ -29,7 +29,8 @@ echo "    disposable root: $RUN"
 
 # --- stand-ins -------------------------------------------------------------------
 FAKE="$RUN/fake"; mkdir -p "$FAKE"
-# adb: FAKE_DEVICES (newline-separated serials) and FAKE_OUTCOME (the host's report line).
+# adb: FAKE_DEVICES (newline-separated serials) and FAKE_OUTCOME (the host's line, as a
+# default host logs it: no report URL, so no "report:" lines).
 cat > "$FAKE/adb" <<'SH'
 #!/usr/bin/env bash
 echo "adb $*" >> "$FAKE_LOG"
@@ -42,6 +43,7 @@ fi
 case "$1 ${2:-}" in
   "get-state "*) echo device ;;
   "shell getprop") echo "Selftest Phone" ;;
+  "shell date") echo "10-28 12:00:00.000" ;;
   "logcat -d") echo "10-28 12:00:00.000 D KeliverHost: verifying manifests with portal-ed25519 abcd1234…"
                [ -n "${FAKE_OUTCOME:-}" ] && echo "10-28 12:00:01.000 D KeliverHost: $FAKE_OUTCOME" ;;
   "install "*) echo Success ;;
@@ -123,7 +125,7 @@ run twodevices "$APP"
   && ok "two devices and no --serial: refused, touching neither" || bad "two devices: rc=$RC $(head -3 "$RUN/twodevices.out")"
 
 # --- the route ---------------------------------------------------------------------
-export FAKE_OUTCOME="report: loaded sequence=3 reason=-"
+export FAKE_OUTCOME="codeLoadSuccess modules=4 sequence=3 source=network"
 run happy --serial phone-serial-b "$APP"
 L="$FAKE_LOG"
 [ "$RC" = 0 ] && says happy "loaded bundle sequence 3 from http://localhost:$PORT" \
@@ -135,6 +137,8 @@ grep -q "^gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundle
 grep -q "^adb -s phone-serial-b reverse tcp:$PORT tcp:$PORT$" "$L" && ok "adb reverse tcp:$PORT on the chosen device" || bad "no adb reverse: $(grep reverse "$L")"
 grep -q "^adb -s phone-serial-b install -r $APP/host-android/build/outputs/apk/debug/host-android-debug.apk$" "$L" \
   && ok "it installs the APK the build wrote" || bad "no install of the built APK: $(grep install "$L")"
+grep -q "^adb -s phone-serial-b logcat -d -T 10-28 12:00:00.000 -s KeliverHost:D$" "$L" \
+  && ok "it reads only this start's host log (logcat -T, from the device's clock)" || bad "the log was not read from the device's time: $(grep logcat "$L" | tail -1)"
 grep -q "^adb -s phone-serial-b shell monkey -p com.example.selftest.host -c android.intent.category.LAUNCHER 1$" "$L" \
   && grep -q "^adb -s phone-serial-b shell am force-stop com.example.selftest.host$" "$L" \
   && ok "it restarts the host by its applicationId (com.example.selftest.host)" || bad "the host was not started by its applicationId"
@@ -148,17 +152,22 @@ run onedevice "$APP"
 [ "$RC" = 0 ] && grep -q "^adb -s emulator-5554 reverse tcp:$PORT tcp:$PORT$" "$FAKE_LOG" \
   && ok "one device and no --serial: that device" || bad "one device: rc=$RC $(tail -3 "$RUN/onedevice.out" | tr '\n' ' ')"
 
-export FAKE_OUTCOME="report: no-bundle sequence=none reason=lookup-failed"
+export FAKE_OUTCOME="E KeliverHost: bundle lookup failed"
 run nobundlehost "$APP"
-[ "$RC" != 0 ] && says nobundlehost "the host did not load a bundle (no-bundle" \
-  && ok "the host reports no-bundle: it fails, with the host's own lines" || bad "a host with no bundle: rc=$RC $(tail -3 "$RUN/nobundlehost.out" | tr '\n' ' ')"
+[ "$RC" != 0 ] && says nobundlehost "the host did not load a bundle: bundle lookup failed" \
+  && ok "the host's lookup fails: it fails, with the host's own lines" || bad "a failed lookup: rc=$RC $(tail -3 "$RUN/nobundlehost.out" | tr '\n' ' ')"
+
+export FAKE_OUTCOME="codeLoadSuccess modules=4 sequence=2 source=cache"
+run fromcache "$APP"
+[ "$RC" != 0 ] && says fromcache "started from its cached bundle, not from http://localhost:$PORT" \
+  && ok "a host that starts from its cache: not counted as reaching the relay" || bad "a cache start: rc=$RC $(tail -3 "$RUN/fromcache.out" | tr '\n' ' ')"
 
 export FAKE_OUTCOME=""
 run silent "$APP"
 [ "$RC" != 0 ] && says silent "the host said nothing about a bundle within 6 s" \
   && ok "a host that never reports: it gives up after the wait, and says so" || bad "a silent host: rc=$RC $(tail -3 "$RUN/silent.out" | tr '\n' ' ')"
 
-export FAKE_OUTCOME="report: loaded sequence=3 reason=-" FAKE_BUILD_FAILS=1
+export FAKE_OUTCOME="codeLoadSuccess modules=4 sequence=3 source=network" FAKE_BUILD_FAILS=1
 run buildfails "$APP"
 [ "$RC" != 0 ] && says buildfails "the build failed" && says buildfails "e: something did not compile" && ! grep -q ' install ' "$FAKE_LOG" \
   && ok "a failed build: it stops before installing, showing the compiler's error" || bad "a failed build: rc=$RC $(tail -3 "$RUN/buildfails.out" | tr '\n' ' ')"

@@ -14,9 +14,11 @@
 #      (-Pkeliver.bundleServer: host-android/gradle.properties is not changed);
 #   5. `adb reverse tcp:<port> tcp:<port>`: the device reaches this machine's relay
 #      over USB or wireless debugging, and nothing listens on your network;
-#   6. installs and starts the host, and waits for it to say whether your bundle loaded.
-# A debug host then updates live: edit, ⬆ Publish, and the open app takes the new
-# bundle. Run this again only after changing the host itself.
+#   6. installs and starts the host, and waits for it to load your bundle from the
+#      relay (its log's codeLoadSuccess, source=network), or to say why not.
+# A debug host scaffolded from tools 0.3.13 on then updates live: edit, ⬆ Publish,
+# and the open app takes the new bundle. Run this again only after changing the
+# host itself.
 #
 # Needs: adb (on PATH, or in $ANDROID_HOME/platform-tools), the Android SDK for the
 # build, python3, curl. It never publishes, and it touches no device but the one chosen.
@@ -99,7 +101,7 @@ APP_ID="$(sed -n "s/^[[:space:]]*applicationId[[:space:]]*['\"]\([^'\"]*\)['\"].
 echo "$NAME: building $APP_ID (debug, bundle server $SERVER)"
 LOG="$APP_DIR/build/$NAME.log"; mkdir -p "$APP_DIR/build"
 ( cd "$APP_DIR" && ./gradlew --console=plain -p host-android assembleDebug "-Pkeliver.bundleServer=$SERVER" ) > "$LOG" 2>&1 \
-  || { grep -E '^e: |What went wrong' -A3 "$LOG" | head -20 >&2; fail "the build failed; the whole log is $LOG"; }
+  || { grep -E '^e: |What went wrong' -A3 "$LOG" | head -20 >&2 || true; fail "the build failed; the whole log is $LOG"; }
 APK="$(find "$HOST/build/outputs/apk/debug" -name '*.apk' 2>/dev/null | head -1)"
 [ -n "$APK" ] || fail "the build wrote no APK under $HOST/build/outputs/apk/debug."
 
@@ -109,26 +111,38 @@ adbs reverse "tcp:$PORT" "tcp:$PORT" > /dev/null || fail "adb reverse tcp:$PORT 
 # 6. Install, start, and wait for the host's outcome.
 adbs install -r "$APK" > "$APP_DIR/build/$NAME.install.log" 2>&1 \
   || fail "the install failed: $(tail -2 "$APP_DIR/build/$NAME.install.log" | tr '\n' ' ')"
+# Only this start's lines: from the device's clock now (and the buffer cleared, where allowed).
+SINCE="$(adbs shell date "'+%m-%d %H:%M:%S.000'" 2>/dev/null | tr -d '\r' || true)"
 adbs logcat -c > /dev/null 2>&1 || true
+hostlog() {
+  if [ -n "$SINCE" ]; then adbs logcat -d -T "$SINCE" -s KeliverHost:D 2>/dev/null || true
+  else adbs logcat -d -s KeliverHost:D 2>/dev/null || true; fi
+}
 adbs shell am force-stop "$APP_ID"
 adbs shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1 || fail "could not start $APP_ID."
 echo "$NAME: started $APP_ID; waiting for it to load a bundle (at most ${WAIT} s)"
+# Every host logs these, whatever its report settings: codeLoadSuccess (with the sequence and
+# whether it came from the network or its cache), and the lookup's and the load's failures.
 outcome=""; line=""; t=0
 while [ "$t" -lt "$WAIT" ]; do
   sleep 3; t=$((t + 3))
-  line="$(adbs logcat -d -s KeliverHost:D 2>/dev/null | grep -E 'report: (loaded|update-applied|no-bundle|refused|not-loaded) ' | tail -1 || true)"
+  line="$(hostlog | grep -E 'codeLoadSuccess |codeLoadFailed|refusing to load|refusing a manifest URL|bundle lookup failed|bundle lookup: HTTP|no compatible bundle' | head -1 || true)"
   case "$line" in
-    *"report: loaded "*|*"report: update-applied "*) outcome=ok; break ;;
-    *"report: "*) outcome=failed; break ;;
+    *"codeLoadSuccess "*"source=network"*) outcome=ok; break ;;
+    *"codeLoadSuccess "*) outcome=cache; break ;;
+    ?*) outcome=failed; break ;;
   esac
 done
 if [ "$outcome" = ok ]; then
   seq="$(printf '%s' "$line" | sed -n 's/.*sequence=\([0-9][0-9]*\).*/\1/p')"
   echo "$NAME: running — $APP_ID on $SERIAL loaded bundle sequence ${seq:-?} from $SERVER."
-  echo "  Edit in the editor and ⬆ Publish: the open app takes the new bundle (live updates, debug build)."
+  echo "  Edit in the editor and ⬆ Publish: a debug host from tools 0.3.13 on takes the new bundle while it is open."
   echo "  This machine's relay stays reachable from the device until: $ADB -s $SERIAL reverse --remove tcp:$PORT"
   exit 0
 fi
-adbs logcat -d -s KeliverHost:D 2>/dev/null | tail -12 >&2 || true
-if [ "$outcome" = failed ]; then fail "the host did not load a bundle ($(printf '%s' "$line" | sed 's/.*report: //'))."; fi
+hostlog | tail -12 >&2 || true
+case "$outcome" in
+  cache)  fail "the host started from its cached bundle, not from $SERVER: it did not reach the relay (its log is above)." ;;
+  failed) fail "the host did not load a bundle: $(printf '%s' "$line" | sed 's/.*KeliverHost: //')" ;;
+esac
 fail "the host said nothing about a bundle within ${WAIT} s (its log is above)."
