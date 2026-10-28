@@ -71,7 +71,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -802,9 +801,9 @@ public object Keliver {
             override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, s.app, route, close))
           }
         }
-        // K2's screen-failed: the code threw while this screen showed it.
-        val latestOnUnavailable by rememberUpdatedState(onUnavailable)
-        val failureWidgets = remember { ScreenFailedWidgets({ latestOnUnavailable }, safeArea) }
+        // K2's screen-failed: the code threw while this screen showed it. (onUnavailable and
+        // safeArea are this view controller's, fixed for its life.)
+        val failureWidgets = remember { ScreenFailedWidgets({ onUnavailable }, safeArea) }
         Box(modifier) {
           TreehouseContent(
             treehouseApp = s.app,

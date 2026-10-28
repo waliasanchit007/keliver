@@ -14,8 +14,8 @@ struct KeliverScreen: UIViewControllerRepresentable {
 
     /// Called on the main thread when this screen cannot be shown (`outcome`: no-bundle, refused,
     /// not-loaded, or screen-failed when its code threw): replace it with what it replaced, with
-    /// the route you were showing. The
-    /// screen holds this closure: capture your controller weakly (`[weak self]`).
+    /// the route you were showing. The screen holds this closure: capture your controller weakly
+    /// (`[weak self]`).
     var onUnavailable: ((KeliverHostStateUnavailable) -> Void)? = nil
 
     /// The guest's screen for this route (`KeliverRoute.companion.from(uri:allowedQueryKeys:)` keeps

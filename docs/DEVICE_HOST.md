@@ -541,7 +541,8 @@ for byte):
   `Loading`, `Running`, or `Unavailable(outcome, reason, title, message, attempt)` when
   the host cannot show a screen (`outcome` is the report's: `no-bundle`,
   `refused` or `not-loaded`; `reason` its fixed category; `attempt` numbers
-  these in the process from 1, so the same failure on a retry is a new state;
+  failures in the process from 1, `screen-failed` ones (given to a screen's
+  `onUnavailable` only) included, so the same failure on a retry is a new state;
   equality includes it, so compare `outcome` and `reason`, not whole states). Observe it to hide
   your own chrome while `Running`.
 - **`KeliverScreen(host, modifier, onUnavailable, loading, unavailable)`**, a
@@ -661,7 +662,8 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   is `KeliverHostStateLoading`, `KeliverHostStateRunning`, or
   `KeliverHostStateUnavailable(outcome, reason, title, message, attempt)`
   (`outcome` the report's: `no-bundle`, `refused` or `not-loaded`; `attempt`
-  numbers these from 1, so a repeated failure is a new state). Read it, then
+  numbers failures from 1, `screen-failed` ones included, so a repeated
+  failure is a new state and the numbers seen here can skip). Read it, then
   set `Keliver.shared.onStateChange`, called on the main thread with each later
   change: hide your own chrome while `Running`. (Kotlin code can collect
   `Keliver.state`, a `StateFlow`.)

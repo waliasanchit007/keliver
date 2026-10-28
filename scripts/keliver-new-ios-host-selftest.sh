@@ -217,6 +217,7 @@ grep -q 'dynamicContentWidgetFactory = failureWidgets,' "$K/MainViewController.k
   && grep -q 'if (failed == null) failed = Keliver.screenFailed(uncaughtException)' "$K/MainViewController.kt" \
   && grep -q 'report("screen-failed", running?.sequence' "$K/MainViewController.kt" \
   && grep -q 'crashed.value = null // new code: no longer the code that threw' "$K/MainViewController.kt" \
+  && grep -q 'val failed by Keliver.crashed.collectAsState()' "$K/MainViewController.kt" \
   && grep -q 'outcome == "screen-failed" -> "exception"' "$K/BundleIndex.kt" \
   && ok "host kit K2: a screen whose code throws reports screen-failed, calls onUnavailable and shows the unavailable screen" \
   || bad "host kit K2: screen-failed is not wired"
