@@ -737,13 +737,19 @@ server fed by `keliver-publish`:
   guest inside the `KeliverView` (X1); a signed load (X2); taps inside the
   embedded screen (X3); native navigation and a rotation with one lookup and
   one load (X4); the floor stored in the app's own data (X5); another key's
-  bundle refused, the Keliver view saying so, while the native views and the
-  process stay (X6); an
-  R8-minified release loading and rendering (X7);
+  bundle refused, the app's `onUnavailable` putting its own view there, while
+  the native views and the process stay (X6); an
+  R8-minified release loading and rendering (X7); and the host kit (K4), from
+  the app's deep links: a route reaching the guest with only the allowed query
+  keys (X8), the guest closing its screen through the app's `onClose` (X9),
+  and the guest throwing: `screen-failed`, the app's `onUnavailable`, the
+  process alive (X10);
 - iOS simulator: the native views and the guest's screen in one screenshot
   (I1); a signed load (I2); the floor stored in the app's defaults (I4);
-  another key's bundle looked up, refused and reported in the Keliver view,
-  while the native views stay (I5).
+  another key's bundle looked up and refused, the app's `onUnavailable`
+  putting its fallback there, while the native views stay (I5); the host kit
+  from a link passed at launch: the route (I6), the close (I7) and
+  `screen-failed` (I8).
 
 **Not measured:**
 - native navigation on iOS (no tap driver on the simulator CI);
