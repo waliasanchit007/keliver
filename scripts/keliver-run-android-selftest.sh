@@ -157,6 +157,11 @@ run nobundlehost "$APP"
 [ "$RC" != 0 ] && says nobundlehost "the host did not load a bundle: bundle lookup failed" \
   && ok "the host's lookup fails: it fails, with the host's own lines" || bad "a failed lookup: rc=$RC $(tail -3 "$RUN/nobundlehost.out" | tr '\n' ' ')"
 
+export FAKE_OUTCOME="E KeliverHost: bundle index: no compatible entry among 2 (channel stable, capabilities [])"
+run noentry "$APP"
+[ "$RC" != 0 ] && says noentry "the host did not load a bundle: bundle index: no compatible entry" \
+  && ok "no compatible entry in the index: it fails at once, with the host's line" || bad "no compatible entry: rc=$RC $(tail -3 "$RUN/noentry.out" | tr '\n' ' ')"
+
 export FAKE_OUTCOME="codeLoadSuccess modules=4 sequence=2 source=cache"
 run fromcache "$APP"
 [ "$RC" != 0 ] && says fromcache "started from its cached bundle, not from http://localhost:$PORT" \

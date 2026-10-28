@@ -113,6 +113,7 @@ adbs install -r "$APK" > "$APP_DIR/build/$NAME.install.log" 2>&1 \
   || fail "the install failed: $(tail -2 "$APP_DIR/build/$NAME.install.log" | tr '\n' ' ')"
 # Only this start's lines: from the device's clock now (and the buffer cleared, where allowed).
 SINCE="$(adbs shell date "'+%m-%d %H:%M:%S.000'" 2>/dev/null | tr -d '\r' || true)"
+printf '%s' "$SINCE" | grep -Eq '^[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.000$' || SINCE=""
 adbs logcat -c > /dev/null 2>&1 || true
 hostlog() {
   if [ -n "$SINCE" ]; then adbs logcat -d -T "$SINCE" -s KeliverHost:D 2>/dev/null || true
@@ -126,7 +127,7 @@ echo "$NAME: started $APP_ID; waiting for it to load a bundle (at most ${WAIT} s
 outcome=""; line=""; t=0
 while [ "$t" -lt "$WAIT" ]; do
   sleep 3; t=$((t + 3))
-  line="$(hostlog | grep -E 'codeLoadSuccess |codeLoadFailed|refusing to load|refusing a manifest URL|bundle lookup failed|bundle lookup: HTTP|no compatible bundle' | head -1 || true)"
+  line="$(hostlog | grep -E 'codeLoadSuccess |codeLoadFailed|refusing to load|refusing a manifest URL|bundle index: |bundle lookup failed|bundle lookup: HTTP|no compatible bundle' | head -1 || true)"
   case "$line" in
     *"codeLoadSuccess "*"source=network"*) outcome=ok; break ;;
     *"codeLoadSuccess "*) outcome=cache; break ;;
