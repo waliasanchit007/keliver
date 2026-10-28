@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.13](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.13)**:
+  **[tools 0.3.14](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.14)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.13/keliver-portal-tools-0.3.13.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.13/keliver-portal-tools-0.3.13.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.13.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.14/keliver-portal-tools-0.3.14.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.14/keliver-portal-tools-0.3.14.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.14.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.13.zip
-  export KP="$PWD/keliver-portal-tools-0.3.13/bin"
+  unzip keliver-portal-tools-0.3.14.zip
+  export KP="$PWD/keliver-portal-tools-0.3.14/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,7 +30,7 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.13
+  The tools version and the library version are **separate lines**: tools 0.3.14
   scaffolds projects against Maven libraries **`dev.keliver:*:0.4.1`**. The
   bundle records both in its `VERSION.json`.
 
@@ -356,8 +356,8 @@ must then offer that sequence or newer. Only a debug build of a debuggable app
 reads the file, never a release build. An `http://` value also needs a built-in
 server that is `http://` (debug cleartext is allowed only then).
 
-A debug build of the production host (Android from tools 0.3.13, iOS from the
-next tools release) picks
+A debug build of the production host (Android from tools 0.3.13, iOS from
+0.3.14) picks
 up a bundle you publish **while the app is open**: with `keliver.updates`
 (Android) or `UPDATES` (iOS) empty its updates are `live`, so while a screen
 shows it listens to the relay's `/bundles/events` and

@@ -100,15 +100,16 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.13** (Maven dependency **0.4.1** for new apps;
-scaffolders follow an app's `appRuntime.keliverVersion`), released 2026-10-27
-from `a5ab6e2b`: the editor you work in (#140, #141), a debug Android host that
-picks up a publish while the app is open (`GET /bundles/events`, #145), the
-bundled screen/component scaffolders writing into the app (#142), the editor
-served uncached (U38) and on `editorPort` (#148), U28, the MCP adb lookup and
-a relay fd leak. Its identities and how the stored asset was checked are in
-[`docs/RELEASE_NOTES_TOOLS_0.3.13.md`](docs/RELEASE_NOTES_TOOLS_0.3.13.md).
-0.3.12 (`8139a55b`), 0.3.11 (`ebbb24c9`), 0.3.10 (`78bcfa0a`), 0.3.9 (`6069da99`), 0.3.8 (`731ebfce`), 0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
+PUBLISHED release: tools **0.3.14** (Maven dependency **0.4.1** for new apps;
+scaffolders follow an app's `appRuntime.keliverVersion`), released 2026-10-28
+from `58851db2`: iOS debug hosts that pick up a publish while the app is open
+(#150), and the host kit for apps that embed Keliver screens, in both host
+templates (#155, #158–#162: `KeliverHostState` and `onUnavailable`, release
+text, `RequestPolicy`, routes and close, `ExternalLinkPolicy` and
+`screen-failed` on Android). Its identities and how the stored asset was
+checked are in
+[`docs/RELEASE_NOTES_TOOLS_0.3.14.md`](docs/RELEASE_NOTES_TOOLS_0.3.14.md).
+0.3.13 (`a5ab6e2b`), 0.3.12 (`8139a55b`), 0.3.11 (`ebbb24c9`), 0.3.10 (`78bcfa0a`), 0.3.9 (`6069da99`), 0.3.8 (`731ebfce`), 0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
 read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then

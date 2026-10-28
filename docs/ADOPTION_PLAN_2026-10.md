@@ -8,13 +8,14 @@ PR #105 (library 0.3.4). Sections below use the ROADMAP's item numbers.
 The rule for all of it: **what an adopter had to discover by review becomes the default.** Every
 serious defect in the proof was in host glue that each adopter writes for themselves.
 
-**Status (2026-10-27).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
+**Status (2026-10-29).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
-signing team), M3–M5 are open. Item 3 is started (K1 part 1, #155); items 4, 5
-and 7 are not started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
+signing team), M3–M5 are open. Item 3: K1 and K2 are released (tools 0.3.14),
+K4 ran on the CI emulator and simulator (#165), K3 is open; items 4, 5 and 7
+are not started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
 (#111) are done, and so is a debug host that picks up a publish while it is
 open (Android #145, released in tools 0.3.13 and checked on a physical phone;
-iOS #150, merged); the device proxy is open (`ROADMAP.md`, "Current
+iOS #150, released in tools 0.3.14); the device proxy is open (`ROADMAP.md`, "Current
 priorities"). Each item below carries its own
 status line. **Naming:** this plan's K1–K4 (item 3) and B1–B5 (item 4) are its
 own step numbers; they are not the portal grammar's K1–K7 (#120–#134) nor W8's
@@ -75,7 +76,7 @@ Decide on optimisations only after M2–M5.
 
 ## Item 3. Brownfield host kit (builds on W2 `--embed`)
 
-**Status 2026-10-28:** K1 (Android) complete in code; K2 (iOS) complete in code with this record's PR; no device proof yet (K4).
+**Status 2026-10-29:** K1 (Android) and K2 (iOS) complete in code (#155, #158–#162) and released in tools 0.3.14; `screen-failed` on iOS merged (#165). K4 ran on the CI emulator and simulator (#165), not yet on a phone. K3 open.
 - **Merged:** the typed status, `onUnavailable` and the release text policy (#155; `attempt`,
   #158); `RequestPolicy` (in `OkHttpHostHttp`; its `https` rule comes from the app's
   `allowCleartext`, and a release build's settings refuse an http API base) and
@@ -83,10 +84,13 @@ Decide on optimisations only after M2–M5.
   `KeliverHostState`, `onUnavailable` per screen and release text policy (#160); the
   `screen-failed` outcome, the debug-surface audit, routes and close on Android, with one
   shared `KeliverRoute` and `KeliverScreenHost` in a fixed package (#161).
-- **In review:** `RequestPolicy`, routes and close on iOS (this record's PR). iOS has no
-  `screen-failed` outcome yet.
-- **Not yet:** the dependency-floor report (K3) and the device proof (K4: the unavailable,
-  refusal, route and close cases on the CI emulator and simulator, and on a phone).
+- **Merged:** `RequestPolicy`, routes and close on iOS (#162). All of it is in tools 0.3.14.
+  `screen-failed` on iOS (#165), for the next tools release.
+- **K4 on CI** (#165): the reference embed apps, through their deep links: a route reaching the
+  guest with only the allowed keys, close, `screen-failed` and another key's bundle, each
+  putting the app's own view in place (emulator X6, X8–X10; simulator I5–I8).
+- **Not yet:** the dependency-floor report (K3); K4 on a phone; a `RequestPolicy` refusal on a
+  device (its rules are covered by JVM tests on both hosts).
 
 **Evidence.**
 - `keliver-new-production-host.sh --embed` and `keliver-new-ios-host.sh --embed` gave a working
@@ -247,7 +251,7 @@ analytics) need a contract.
 
 ## Item 6. Dev loop
 
-**Status 2026-10-27:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, merged, simulator only). Open: the device proxy.
+**Status 2026-10-29:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, tools 0.3.14, simulator only). Open: the device proxy.
 
 **Evidence.**
 - The first publish after another Gradle build failed with a Kotlin/JS internal compiler error.

@@ -22,7 +22,7 @@
 #
 #   library:  v0.4.1               -> publish.yml (GitHub Packages) and, manually,
 #                                     publish-maven-central.yml
-#   tools:    portal-tools-v0.3.12 -> this workflow, and ONLY this workflow
+#   tools:    portal-tools-v0.3.14 -> this workflow, and ONLY this workflow
 #
 # `portal-tools-v*` does not match the `v*` pattern publish.yml listens on, so a
 # tools release cannot publish libraries. That is the point of the convention:
