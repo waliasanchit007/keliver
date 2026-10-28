@@ -45,6 +45,7 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | where | reaches users through |
 |---|---|---|
+| `bin/keliver-run-android.sh`: the app's screens on a phone or emulator in one command (build a debug host for `http://localhost:<port>`, `adb reverse`, install, start, wait for the bundle to load) | #166 (`scripts/`) | the next tools release |
 | `screen-failed` on the iOS host: a screen whose code throws reports it and calls its `onUnavailable` (as Android's) | #165 (`scripts/templates/ios-host`) | the next tools release |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
