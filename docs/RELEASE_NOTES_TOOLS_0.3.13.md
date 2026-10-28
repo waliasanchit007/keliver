@@ -133,7 +133,7 @@ All of it against one set of bytes: the retained artifact of build run
 | Build | `portal-tools.yml` run `40444075230`; retained artifact `12708283293` (digest `sha256:09cc598750af3cedbdad3a499b930fb3a5beb526469bb034ea9f151274daec5b`) |
 | Device job | run `40446935093` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin; device verify 28/0; production refusal and the development route 19/0 |
 
-The build run's packaged checks: unit tests 134/0; the store resolver 32/0
+The build run's packaged checks: the unit tests (a Gradle run: `BUILD SUCCESSFUL`); the disposable-parent refusal 134/0 (earlier notes called this the unit tests); the store resolver 32/0
 and 73/0; packaging hygiene (U22) 10/0; the **packaged adopter acceptance**,
 with the U21 identity gate, 25/0; the foreign-relay refusal 6/0; the store
 identity contract 11/0; the production-host scaffolder 68/0 (and 62/0 from

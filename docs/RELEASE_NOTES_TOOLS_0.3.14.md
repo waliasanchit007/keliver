@@ -118,7 +118,7 @@ All of it against one set of bytes: the retained artifact of build run
 | Build | `portal-tools.yml` run `40672818679`; retained artifact `12811030869` (92,061,968 bytes, digest `sha256:c04d62b3c6aac394317950cdc0f20f584afc9f9f5179d9bbde8baa7fbc901575`) |
 | Device job | run `40676584557` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin (`apk-under-test.sha256`); device verify 28/0; evidence artifact `12810318887` |
 
-The build run's packaged checks: unit tests 134/0; the store resolver 32/0
+The build run's packaged checks: the unit tests (a Gradle run: `BUILD SUCCESSFUL`); the disposable-parent refusal 134/0 (earlier notes called this the unit tests); the store resolver 32/0
 and 73/0; packaging hygiene (U22) 10/0; the **packaged adopter acceptance**,
 with the U21 identity gate, 25/0; the foreign-relay refusal 6/0; the store
 identity contract 11/0; the production-host scaffolder 79/0 (and 70/0 from
@@ -151,8 +151,8 @@ app's move to 0.3.14 (#164: the first step of `reference-app.yml` and
 `ios-host.yml` checks the public zip against the release's `.sha256` and the
 pinned hash). It passed in reference-app run `40679106090` (ubuntu) and
 ios-host run `40679105755` (macOS; its job passed on the one rerun allowed,
-`122872828527`, after the first attempt's P2 lookup of the relay timed out,
-a harness flake fixed in #165): `keliver-portal-tools-0.3.14.zip: OK`, then the
+`122872828527`, after the first attempt's P2 lookup of the relay timed out:
+a harness flake, mitigated in #165 by asking the relay once before P2): `keliver-portal-tools-0.3.14.zip: OK`, then the
 pinned hash and `sourceCommit`. Published 2026-10-28T11:13:40Z with
 `--latest=false`.
 

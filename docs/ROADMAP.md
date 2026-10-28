@@ -448,8 +448,9 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    **Status 2026-10-28:** K1 on Android (#155, #158, #159, #161) and K2 on
    iOS (#160, #162) complete in code and **released in tools 0.3.14**;
    `screen-failed` on iOS merged (#165, next tools release). K4, the device
-   proof, ran on the CI emulator and simulator (#165: routes, close,
-   `screen-failed`, the app's fallback); not on a phone yet. K3 (the
+   proof, ran on the CI emulator and simulator against the templates after
+   0.3.14 (#165: routes, close, `screen-failed`, the app's fallback), not
+   against the 0.3.14 bytes; not on a phone yet. K3 (the
    dependency-floor report) open (ADOPTION_PLAN item 3).
 8. **Bridge generator / HostHttp through the app's client** (adoption item 4).
 9. **Start-up** (adoption item 2, M3: start the code load at host start), then

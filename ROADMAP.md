@@ -37,9 +37,9 @@ In order (details and evidence in `docs/ROADMAP.md`):
    checked on the simulator, not yet on a physical iPhone.
 3. **A host kit for existing apps**: the glue every embed had to write (a
    fallback to the screen being replaced, a status API, user-safe states, a
-   request allow-list). Released in tools 0.3.14 on both host templates, and
-   checked on the CI emulator and simulator through the reference embed apps;
-   next, a phone.
+   request allow-list). Released in tools 0.3.14 on both host templates. The
+   templates after it (#165, with `screen-failed` on iOS) are checked on the
+   CI emulator and simulator through the reference embed apps; next, a phone.
 4. **A bridge generator**, so an app's own host calls are generated, not
    hand-copied.
 5. **Start-up and memory**, measured before optimised.
