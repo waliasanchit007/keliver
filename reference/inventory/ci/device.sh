@@ -352,6 +352,8 @@ drive title Stockroom P7; fold "P7: Stockroom offline" $?
 . "$HERE/m0/android-timing.sh"
 # shellcheck source=w8/android-rotation.sh
 . "$HERE/w8/android-rotation.sh"
+# shellcheck source=a1/android-run.sh
+. "$HERE/a1/android-run.sh"
 
 echo "device: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

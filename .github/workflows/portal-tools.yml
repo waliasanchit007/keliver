@@ -220,6 +220,12 @@ jobs:
           scripts/keliver-new-scaffolders-selftest.sh "$RUNNER_TEMP/scaffolders-pkg" \
             --package "$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*)"
           echo "::endgroup::"
+          echo "::group::keliver-run-android, from the package"
+          # The candidate zip's own bin/ copy, against a small relay and
+          # adb/gradlew stand-ins (no device here; the reference app's CI has one).
+          scripts/keliver-run-android-selftest.sh "$RUNNER_TEMP/run-android-pkg" \
+            --package "$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*)"
+          echo "::endgroup::"
           echo "::group::keliver-publish (static publishing, W3/W4), from the package"
           # The candidate zip's own bin/keliver-publish and relay/: publish,
           # refusals, --republish, --promote and constraints, through the wrapper.

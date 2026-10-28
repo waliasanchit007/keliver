@@ -20,6 +20,7 @@ bin/keliver-new-publish-target.sh  # (app root) wire POST /publish + bundle sign
 bin/keliver-publish                # publish a signed bundle to a static host/CDN, no relay
 bin/keliver-new-production-host.sh # (app root) your own production Android host
 bin/keliver-new-ios-host.sh        # (app root) your own production iOS host
+bin/keliver-run-android.sh         # (app root) your screens on a phone or emulator: build, install, start
 bin/keliver-store-path.sh          # print the document store an app resolves to
 bin/keliver-store-recover.sh       # rebind a store to an app that moved or was renamed
 bin/keliver-adopt-legacy-store.sh  # copy the old shared ~/.keliver-portal store into one app's
@@ -169,6 +170,21 @@ per process, made in your `Application`), the `KeliverScreen` Composable and
 `KeliverView`. It edits none of your files and prints the lines to add. Your
 build must supply Kotlin 2.2.0, its Compose plugin and `app.cash.zipline`
 1.22.0. `host/README.md` §4 has the details.
+
+### bin/keliver-run-android.sh (from 0.3.15)
+
+```bash
+bin/keliver-run-android.sh [--serial SERIAL] [app-dir]
+```
+
+Your published screens on a connected Android phone (USB or wireless
+debugging) or emulator, in one command, with the portal running and a bundle
+published. It scaffolds `host-android/` if the app has none, builds a debug
+host that looks for bundles at `http://localhost:<port>` (a `-P` property:
+your `gradle.properties` is not changed), runs `adb reverse` for that port
+(nothing listens on your network), installs and starts it, and waits for the
+host to load your bundle from the relay. A debug host scaffolded from tools
+0.3.13 on then updates live on each publish. It never publishes and touches only the device you choose.
 
 ### bin/keliver-new-ios-host.sh
 

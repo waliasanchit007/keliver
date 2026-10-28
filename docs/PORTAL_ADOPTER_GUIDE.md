@@ -346,6 +346,22 @@ $KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an e
 ./gradlew -p host-android assembleDebug
 ```
 
+**On a phone or emulator, in one command** (tools 0.3.15 and later): with the
+portal running and a bundle published, connect the phone (USB, or wireless
+debugging) and run
+
+```bash
+$KP/keliver-run-android.sh            # --serial <serial> when adb lists more than one device
+```
+
+It scaffolds `host-android/` if the app has none, builds a debug host that
+looks for bundles at `http://localhost:<port>` (your `gradle.properties` is not
+changed), runs `adb reverse tcp:<port>` so the phone reaches this machine's
+relay without anything listening on your network, installs and starts it, and
+waits until the host has loaded your bundle from the relay. Then edit and
+**⬆ Publish**: the open app takes the new bundle (a host scaffolded from tools
+0.3.13 on; below). Run it again only after changing the host itself.
+
 A debug build also takes its bundle server from the device, so a new tunnel
 URL needs no rebuild:
 `adb shell run-as <applicationId> sh -c 'mkdir -p files/keliver && echo https://… > files/keliver/bundle-server'`,

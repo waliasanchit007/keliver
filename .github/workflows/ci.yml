@@ -100,6 +100,11 @@ jobs:
       - name: Scaffolders write into the app
         run: scripts/keliver-new-scaffolders-selftest.sh "$RUNNER_TEMP/scaffolders"
 
+      # keliver-run-android.sh against a small relay and adb/gradlew stand-ins:
+      # what it asks of the device and the build, and what it refuses. Seconds.
+      - name: keliver-run-android (no device)
+        run: scripts/keliver-run-android-selftest.sh "$RUNNER_TEMP/run-android"
+
       # Enforce the test suite + API binary-compatibility surface.
       # Previously skipped (-x test), which let a stripped test
       # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.
