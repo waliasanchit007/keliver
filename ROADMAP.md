@@ -14,7 +14,7 @@ The step-by-step record of every release and its evidence:
   Cash App Redwood on Zipline), the `keliver-material` widget set, layout and
   lazy layouts, navigation, HTTP and SQL capabilities, and the portal's editor
   libraries. Pre-1.0: pin an exact version ([`docs/API_STABILITY.md`](./docs/API_STABILITY.md)).
-- **Tools bundle** `keliver-portal-tools` 0.3.13 (a GitHub release asset):
+- **Tools bundle** `keliver-portal-tools` 0.3.14 (a GitHub release asset):
   `keliver-init` scaffolds an app, `keliver-portal` runs the relay and the
   visual editor, `keliver-publish` writes signed bundles for any static HTTPS
   server, and scaffolders write a production host for Android and iOS (also
@@ -33,10 +33,13 @@ In order (details and evidence in `docs/ROADMAP.md`):
 1. ~~**Tools 0.3.13**~~ and ~~**libraries 0.4.1**~~: released 2026-10-27
    (the editor you work in, a debug Android host that picks up a publish while
    the app is open, adopter-route fixes; per-app editors on 0.4.1).
-2. **Live updates on iOS**: merged (#150), in the next tools release.
+2. ~~**Live updates on iOS**~~: released in tools 0.3.14 (2026-10-28);
+   checked on the simulator, not yet on a physical iPhone.
 3. **A host kit for existing apps**: the glue every embed had to write (a
    fallback to the screen being replaced, a status API, user-safe states, a
-   request allow-list).
+   request allow-list). Released in tools 0.3.14 on both host templates, and
+   checked on the CI emulator and simulator through the reference embed apps;
+   next, a phone.
 4. **A bridge generator**, so an app's own host calls are generated, not
    hand-copied.
 5. **Start-up and memory**, measured before optimised.

@@ -1,7 +1,12 @@
 # keliver-portal-tools 0.3.14 — release notes
 
-**Status: CANDIDATE**, by `PORTAL_TOOLS_RELEASE.md`. Identities are filled in
-as each step of the procedure passes.
+**Status: RELEASED 2026-10-28**, by `PORTAL_TOOLS_RELEASE.md`.
+
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.14` → `58851db260446445ae47ec09e7ac428695bf5a4f` |
+| zip asset | `keliver-portal-tools-0.3.14.zip`, sha256 `7284aec9d45ea11a0b8c36863955a4f47c6df79c996be488922d3f092a24dc08` (92,077,423 bytes): the retained, verified CI artifact |
+| `.sha256` asset | the zip's sha256 and file name |
 
 What is in it since 0.3.13 (`a5ab6e2b2`): PRs #150 (live updates on the iOS
 host), #153 (an editor test fix), #155, #158, #159, #161 (the host kit on
@@ -101,9 +106,55 @@ package must be exactly that one, or the host cannot match `launchRoute`.
 
 ## Verification
 
-(to be filled in: source commit, zip sha256 and size, `VERSION.json`, APK,
-build run and artifact, device job, the packaged checks, the stored asset's
-digest, the public download check)
+All of it against one set of bytes: the retained artifact of build run
+`40672818679`, which was then attached to the release.
+
+| | |
+|---|---|
+| Source commit | `58851db260446445ae47ec09e7ac428695bf5a4f` (PR #163's head; `sourceDirtyFiles` 0) |
+| Zip | `keliver-portal-tools-0.3.14.zip`, sha256 `7284aec9d45ea11a0b8c36863955a4f47c6df79c996be488922d3f092a24dc08`, 92,077,423 bytes |
+| `VERSION.json` | tools 0.3.14, Maven dependency 0.4.1 |
+| Bundled host APK | sha256 `0e435144096d75b133321e14310e9f7eb3d1a16d1f0eff2847115279b3b73e83`, no `assets/portal_ed25519.pub` |
+| Build | `portal-tools.yml` run `40672818679`; retained artifact `12811030869` (92,061,968 bytes, digest `sha256:c04d62b3c6aac394317950cdc0f20f584afc9f9f5179d9bbde8baa7fbc901575`) |
+| Device job | run `40676584557` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin (`apk-under-test.sha256`); device verify 28/0; evidence artifact `12810318887` |
+
+The build run's packaged checks: unit tests 134/0; the store resolver 32/0
+and 73/0; packaging hygiene (U22) 10/0; the **packaged adopter acceptance**,
+with the U21 identity gate, 25/0; the foreign-relay refusal 6/0; the store
+identity contract 11/0; the production-host scaffolder 79/0 (and 70/0 from
+the package); the iOS host scaffolder 69/0 (and 69/0); the publish
+scaffolder 51/0 (and 33/0); the screen and component scaffolders 9/0;
+`keliver-publish` 41/0; key permissions 63/0; guest bundle signing 4/0;
+store recovery 144/0 (0.3.13's run had 145: its C9 race check took the
+"no winner" branch, three checks, where this run's took the "claimed"
+branch, two).
+
+The artifact was downloaded and checked on the releasing machine before the
+tag (through `gh api …/actions/artifacts/12811030869/zip`): the artifact's
+sha256 equals GitHub's digest, and the zip, `VERSION.json` and APK are as
+above. Step 3 at `58851db26`: no workflow in the tagged tree can create a
+release or attach an asset. PR #163's CI on the same commit (run `40672758352`):
+Build and both editor E2E suites green; reference-app and ios-host do not run
+on its paths, and ran on the template changes in #158–#162.
+
+**How the stored asset was checked.** The draft's assets were compared with
+the verified files by GitHub's server-side record (`digest`, `size`): the zip
+`sha256:7284aec9…`, 92,077,423 bytes, and the `.sha256` file
+`sha256:a2fcae54…`, 98 bytes, both `uploaded`; the tag (annotated, object
+`2252a65cb`) was re-checked at `58851db26` and its push ran only
+`portal-tools.yml`'s read-only rebuild (`40677547950`, never attached).
+Downloading the draft asset back, and the public URL after publishing, were
+blocked by the releasing machine's network (the 879-byte "Bad Gateway" page;
+the public URL timed out), so — as for 0.3.5 and 0.3.13 — the public
+download is checked from GitHub-hosted runners instead, by the reference
+app's move to 0.3.14 (#164: the first step of `reference-app.yml` and
+`ios-host.yml` checks the public zip against the release's `.sha256` and the
+pinned hash). It passed in reference-app run `40679106090` (ubuntu) and
+ios-host run `40679105755` (macOS; its job passed on the one rerun allowed,
+`122872828527`, after the first attempt's P2 lookup of the relay timed out,
+a harness flake fixed in #165): `keliver-portal-tools-0.3.14.zip: OK`, then the
+pinned hash and `sourceCommit`. Published 2026-10-28T11:13:40Z with
+`--latest=false`.
 
 Not verified for this release: the host kit on a device (K4), live updates
 on a physical iPhone (waiting on an Xcode account).

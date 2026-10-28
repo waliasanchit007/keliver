@@ -26,11 +26,11 @@ step against a named, retained artifact.
 ## Procedure
 
 The notes for the latest published release are
-[`RELEASE_NOTES_TOOLS_0.3.13.md`](RELEASE_NOTES_TOOLS_0.3.13.md) (previous:
-[`RELEASE_NOTES_TOOLS_0.3.12.md`](RELEASE_NOTES_TOOLS_0.3.12.md)).
+[`RELEASE_NOTES_TOOLS_0.3.14.md`](RELEASE_NOTES_TOOLS_0.3.14.md) (previous:
+[`RELEASE_NOTES_TOOLS_0.3.13.md`](RELEASE_NOTES_TOOLS_0.3.13.md)).
 
 Everything below was executed for 0.3.4 on 2026-09-12, for 0.3.5 on 2026-09-22,
-for 0.3.6 and 0.3.7 on 2026-10-07, for 0.3.8 on 2026-10-11 (the draft download-back was blocked by the network again; the 0.3.5 route below was used), for 0.3.9 on 2026-10-13 (the draft download-back worked), for 0.3.10 on 2026-10-17 (the draft download-back was blocked; the 0.3.5 route below was used), for 0.3.11 on 2026-10-19 (the draft download-back worked), for 0.3.12 on 2026-10-21 (the draft download-back worked; `gh release create` was run in the background and the draft's assets checked for `state: uploaded`, as for 0.3.7), and for 0.3.13 on 2026-10-27 (the local artifact download failed once and worked through `gh api …/actions/artifacts/<id>/zip`; the draft download-back and the public URL were blocked, so the 0.3.5 route below was used, with the public check in the reference app's PR #154). For 0.3.7, `gh release create`
+for 0.3.6 and 0.3.7 on 2026-10-07, for 0.3.8 on 2026-10-11 (the draft download-back was blocked by the network again; the 0.3.5 route below was used), for 0.3.9 on 2026-10-13 (the draft download-back worked), for 0.3.10 on 2026-10-17 (the draft download-back was blocked; the 0.3.5 route below was used), for 0.3.11 on 2026-10-19 (the draft download-back worked), for 0.3.12 on 2026-10-21 (the draft download-back worked; `gh release create` was run in the background and the draft's assets checked for `state: uploaded`, as for 0.3.7), and for 0.3.13 on 2026-10-27 (the local artifact download failed once and worked through `gh api …/actions/artifacts/<id>/zip`; the draft download-back and the public URL were blocked, so the 0.3.5 route below was used, with the public check in the reference app's PR #154), and for 0.3.14 on 2026-10-28 (the same: the artifact through `gh api`, the draft download-back and the public URL blocked, the public check in the reference app's PR #164). For 0.3.7, `gh release create`
 stayed alive after its uploads had finished: check the draft's assets
 (`state: uploaded`, `digest`) rather than waiting on the client. Where 0.3.5 found the written procedure wrong, the
 text below is corrected and says so. For 0.3.6 the draft download-back

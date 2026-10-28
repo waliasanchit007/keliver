@@ -425,8 +425,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    **Status 2026-10-27:** Android released in tools 0.3.13 (#145) and checked
    on a physical phone (a Galaxy A12, from the published 0.3.13 zip: a publish
    applied in the open app ≈ 1 s after the event, in the same process); iOS
-   merged (#150, simulator LV1–LV3 green), for the next tools release, not yet
-   on a physical iPhone.
+   merged (#150, simulator LV1–LV3 green) and released in tools 0.3.14
+   (2026-10-28); not yet on a physical iPhone.
 3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
    into the tools bundle, not the app** (found by the 2026-10-27 audit): run
    from the zip's `bin/`, they resolve the app as the script's parent. Every
@@ -445,10 +445,12 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
 7. **Brownfield host kit** (adoption item 3): the glue each embed needed (a
    fallback hook, a status API, user-safe states, a request allow-list hook).
    The proof's serious defects were all in that glue.
-   **Status 2026-10-28:** K1 on Android complete in code (#155, #158, #159,
-   #161). K2 on iOS: status, `onUnavailable`, release text merged (#160);
-   `RequestPolicy`, routes and close in review. K3, K4 open (ADOPTION_PLAN
-   item 3).
+   **Status 2026-10-28:** K1 on Android (#155, #158, #159, #161) and K2 on
+   iOS (#160, #162) complete in code and **released in tools 0.3.14**;
+   `screen-failed` on iOS merged (#165, next tools release). K4, the device
+   proof, ran on the CI emulator and simulator (#165: routes, close,
+   `screen-failed`, the app's fallback); not on a phone yet. K3 (the
+   dependency-floor report) open (ADOPTION_PLAN item 3).
 8. **Bridge generator / HostHttp through the app's client** (adoption item 4).
 9. **Start-up** (adoption item 2, M3: start the code load at host start), then
    M4 (guest frame profile) and M5 (iOS memory).
