@@ -50,6 +50,7 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | live-update follow-ups: the relay sends a listener nothing before its preamble, `/doc-events` writes one event at a time per listener, `Unavailable.attempt`, LV4 in CI | #158 (`portal-relay`, `scripts/templates`) | the next tools release |
 | host kit (Android): `RequestPolicy` (exact `(method, path)` pairs, one origin, https, a switch for state-changing calls) in HostHttp; `ExternalLinkPolicy`; JVM tests in the scaffolded host | #159 (`scripts/templates/production-host`) | the next tools release |
 | host kit (iOS): public `KeliverHostState`, `onUnavailable` per screen, the release text policy | #160 (`scripts/templates/ios-host`) | the next tools release |
+| host kit (Android): `screen-failed`, the debug-surface audit, routes and close (`KeliverRoute`, `launchRoute`, `closeScreen`) | #161 (`scripts/templates/production-host`, `keliver-new-device-target.sh`) | the next tools release |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
