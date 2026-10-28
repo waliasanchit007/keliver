@@ -1,8 +1,8 @@
 # The reference app — what the published route costs an adopter
 
-**2026-09-22/24; on the newest published tools since PR #92 (0.3.7, 2026-10-08); tools 0.3.10 since PR #118 (2026-10-17); tools 0.3.11 since PR #128 (2026-10-19); tools 0.3.12 since PR #139 (2026-10-21); tools 0.3.13 since PR #154 (2026-10-27).** An inventory
+**2026-09-22/24; on the newest published tools since PR #92 (0.3.7, 2026-10-08); tools 0.3.10 since PR #118 (2026-10-17); tools 0.3.11 since PR #128 (2026-10-19); tools 0.3.12 since PR #139 (2026-10-21); tools 0.3.13 since PR #154 (2026-10-27); tools 0.3.14 since PR #164 (2026-10-28).** An inventory
 app built outside this checkout from the **published** `keliver-portal-tools`
-release (0.3.5 until PR #92, then each published release; 0.3.13 now) and `dev.keliver:*:0.3.3` on
+release (0.3.5 until PR #92, then each published release; 0.3.14 now) and `dev.keliver:*:0.3.3` on
 Maven Central, following [`PORTAL_ADOPTER_GUIDE.md`](PORTAL_ADOPTER_GUIDE.md),
 then checked against
 [`reference/inventory/EXPECTATIONS.md`](../reference/inventory/EXPECTATIONS.md) —
@@ -26,7 +26,7 @@ apart from the CI harness.**
   into the app by `keliver-new-production-host.sh` and built by the app's Gradle
   against Maven Central 0.3.3 (54 `dev.keliver` artifacts). The host's own
   Kotlin is that scaffolder's template. **Since PR #92 both come from the
-  published zip's `bin/` and `templates/`** (0.3.7 then; 0.3.13 now): `reference-app.yml` run
+  published zip's `bin/` and `templates/`** (0.3.7 then; 0.3.14 now): `reference-app.yml` run
   `37673830830` (prepare 15/0, device 37/0) and the iOS host, via
   `ios-host.yml` run `37673830745` (48/0, 30/0). Before that, runs 8 to 13 took
   the scaffolders from this repository, because the app was built from the
@@ -139,7 +139,7 @@ for us.
    it signs (run `37513078292`). At that run this app's relay was still the
    published 0.3.5 one, which does not check signatures, so #86's relay refusal
    of unsigned bundles was exercised by the adopter acceptance (portal-tools
-   `37513071473`), not here. The relay now comes from the pinned tools 0.3.13
+   `37513071473`), not here. The relay now comes from the pinned tools 0.3.14
    zip, which refuses an unsigned bundle. Here, `prepare.sh` fails an unsigned v1 and the host verifies on the
    device. What follows is the route before it. `POST /publish`
    runs `publishTask` from `keliver.portal.json`, default
