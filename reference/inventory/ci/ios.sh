@@ -349,5 +349,7 @@ reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || b
 . "$HERE/w8/ios-rotation.sh"
 
 for f in "$EV"/*.png; do echo "$(basename "$f"): $(python3 "$HERE/shot.py" "$f")"; done > "$EV/shots.results"
+# A relaunch can hide a first launch that printed nothing: say how many there were.
+[ -s "$EV/ios.retries" ] && echo "ios: $(grep -c . "$EV/ios.retries") launch(es) printed nothing and were relaunched (ios.retries):" && cat "$EV/ios.retries"
 echo "ios: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]
