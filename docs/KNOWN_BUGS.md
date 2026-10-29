@@ -1364,7 +1364,7 @@ which writes no Xcode project).
 into the project file).
 
 **Fix:** the template sets `DEVELOPMENT_TEAM=$(TEAM_ID)` and ends with
-`#include? "Config.local.xcconfig"`. Ships in the next tools release.
+`#include? "Config.local.xcconfig"`. Shipped in tools 0.3.9.
 
 ### U31. The publish signing block exposed the private key: argv, `--info` logs, `.gradle/` — FIXED in tools 0.3.7 (2026-10-07)
 

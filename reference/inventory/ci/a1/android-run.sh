@@ -13,8 +13,10 @@ echo "--- 9. A1: the app's screens on this device in one command (keliver-run-an
 if [ "$DEVICE_KIND" = physical ]; then
   skip "A1: not on the physical route (W7's no-cleartext overlay on host-android/src/debug)"
 else
-if [ -x "$KP/keliver-run-android.sh" ]; then RUNA="$KP/keliver-run-android.sh"; RUNA_WHICH="the zip's bin/"
-else RUNA="$REPO/scripts/keliver-run-android.sh"; RUNA_WHICH="this repository's scripts/ (unreleased)"; fi
+# The zip's copy (0.3.15 on) when the hosts come from the zip (a run by hand);
+# a pull request tests this checkout's, the change under review.
+if [ "${KELIVER_SCAFFOLD_FROM:-zip}" = zip ] && [ -x "$KP/keliver-run-android.sh" ]; then RUNA="$KP/keliver-run-android.sh"; RUNA_WHICH="the zip's bin/"
+else RUNA="$REPO/scripts/keliver-run-android.sh"; RUNA_WHICH="this repository's scripts/"; fi
 portal_up "$APP" "$EV/relay-A-run.log" && ok "A1: the relay for this app is up again" || bad "A1: the relay did not start"
 adb -s "$SERIAL" uninstall "$PROD_ID" > /dev/null 2>&1 || true
 before="$(cd "$APP" && git status --porcelain --untracked-files=all -- . ':!build' ':!host-android/build' ':!.gradle' ':!host-android/.gradle' ':!.kotlin' ':!host-android/.kotlin' 2>/dev/null | sort)"
