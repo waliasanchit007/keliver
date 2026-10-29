@@ -183,7 +183,9 @@ adb -s "$SERIAL" install -r "$W2_RELEASE_APK" > "$EV/install-embed-release.log" 
 adb -s "$SERIAL" shell pm clear "$W2_ID" > /dev/null
 w2_launch "$EV/logcat-embed-release.txt"
 w2_dump X7
-grep -q "codeLoadSuccess" "$EV/logcat-embed-release.txt" && ! grep -qE "codeLoadFailed|uncaughtException|FATAL EXCEPTION" "$EV/logcat-embed-release.txt" \
+# The host's own lines only: on a phone other processes log the word too (a
+# Samsung service prints "value for uncaughtException will be default").
+grep -q "codeLoadSuccess" "$EV/logcat-embed-release.txt" && ! grep -qE "$HOST_TAG: (codeLoadFailed|uncaughtException)|FATAL EXCEPTION" "$EV/logcat-embed-release.txt" \
   && ok "X7: the minified app verified and loaded v7 (codeLoadSuccess, no failure)" \
   || bad "X7: $(grep -E "$HOST_TAG|FATAL|AndroidRuntime" "$EV/logcat-embed-release.txt" | head -4 | tr '\n' ' ')"
 grep -q 'text="Attic"' "$EV/w2-X7.xml" && grep -q 'text="Native header"' "$EV/w2-X7.xml" \
