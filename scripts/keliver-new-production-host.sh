@@ -240,6 +240,31 @@ except Exception as e:
 
 KOTLIN_IDS = ('org.jetbrains.kotlin.android', 'org.jetbrains.kotlin.jvm', 'org.jetbrains.kotlin.multiplatform')
 VER = r"""['"]([0-9][\w.+-]*)['"]"""
+SKIPPED = []
+
+def strip_comments(t):
+    # One left-to-right pass: a // or /* inside a string ('META-INF/*', "a//b",
+    # "https://") is not a comment, and whichever opens first wins.
+    out, i, n, quote = [], 0, len(t), None
+    while i < n:
+        c = t[i]
+        if quote:
+            out.append(c)
+            if c == '\\' and i + 1 < n:
+                out.append(t[i + 1]); i += 2; continue
+            if c == quote or c == '\n':  # build-file strings are one line; a stray quote ends there
+                quote = None
+            i += 1
+        elif c in '"\'':
+            quote = c; out.append(c); i += 1
+        elif t.startswith('//', i):
+            j = t.find('\n', i); i = n if j < 0 else j
+        elif t.startswith('/*', i):
+            j = t.find('*/', i + 2); i = n if j < 0 else j + 2
+            out.append(' ')
+        else:
+            out.append(c); i += 1
+    return ''.join(out)
 
 def read_build_files():
     # The existing app's build files, at most four directories deep (nested
@@ -254,12 +279,12 @@ def read_build_files():
                or (f == 'gradle.properties' and depth == 0) \
                or (f.endswith('.versions.toml') and os.path.basename(d) == 'gradle'):
                 rel = os.path.normpath(os.path.join(rel_d, f))
-                t = open(os.path.join(d, f), encoding='utf-8', errors='replace').read()
-                if not f.endswith(('.toml', '.properties')):
-                    # Comments are not declarations ("https://" is not a comment).
-                    t = re.sub(r'/\*.*?\*/', '', t, flags=re.S)
-                    t = re.sub(r'(?<!:)//[^\n]*', '', t)
-                texts[rel] = t
+                try:
+                    t = open(os.path.join(d, f), encoding='utf-8', errors='replace').read()
+                except OSError:
+                    SKIPPED.append(rel)
+                    continue
+                texts[rel] = t if f.endswith(('.toml', '.properties')) else strip_comments(t)
     return texts
 
 def report():
@@ -273,9 +298,16 @@ def report():
                 props[m.group(1)] = m.group(2)
         elif not rel.endswith('.toml'):
             for pat in (r"""(?:\b(?:val|var|def)\s+|ext\.|\bset\(\s*|extra\[\s*)['"]?([A-Za-z_]\w*)['"]?\s*\]?\s*(?::\s*String\s*)?[=,]\s*""" + VER,
-                        r"""\bval\s+([A-Za-z_]\w*)\s*(?::\s*String\s*)?by\s+extra\(\s*""" + VER,
-                        r"""^\s*([A-Za-z_]\w*)\s*=\s*""" + VER):
+                        r"""\bval\s+([A-Za-z_]\w*)\s*(?::\s*String\s*)?by\s+extra\(\s*""" + VER):
                 for m in re.finditer(pat, t, re.M):
+                    props.setdefault(m.group(1), m.group(2))
+            # `name = 'ver'` alone only inside an ext { } block (elsewhere it is
+            # a named argument or another block's property).
+            for e in re.finditer(r'\bext\s*\{', t):
+                depth, k = 1, e.end()
+                while k < len(t) and depth:
+                    depth += {'{': 1, '}': -1}.get(t[k], 0); k += 1
+                for m in re.finditer(r"""^\s*([A-Za-z_]\w*)\s*=\s*""" + VER, t[e.end():k], re.M):
                     props.setdefault(m.group(1), m.group(2))
 
     def resolve(v):
@@ -338,12 +370,15 @@ def report():
                 elif g('id') in KOTLIN_IDS and ver:
                     kotlin_plugin.append((ver, rel, False))
             continue
+        forced = [(f.start(), f.end()) for f in re.finditer(r'\bforce\s*\(([^()]*)\)', t)]
         for m in re.finditer(r"""['"]([\w.-]+):([\w.-]+)(?::(\$\{[^}]*\}|[^'"\s@]+))?(?:@\w+)?['"]""", t):
             grp, name, v = m.group(1), m.group(2), m.group(3)
             if not re.fullmatch(r'[a-z][\w-]*(\.[\w-]+)+', grp):
                 continue
-            before = t[max(0, m.start() - 24):m.start()]
-            strict = bool(re.search(r'\bforce\s*\(?\s*$', before))
+            before = t[max(0, m.start() - 40):m.start()]
+            strict = any(a <= m.start() < b for a, b in forced) \
+                or bool(re.search(r'\b(?:force|enforcedPlatform)\s*\(?\s*$', before)) \
+                or bool(re.match(r'\s*\)?\s*\{[^}]*\bforce\s*=\s*true', t[m.end():m.end() + 120]))
             if v is None:
                 st = re.match(r"""\s*\)?\s*\{[^}]*?strictly\s*\(?\s*['"]([^'"]+)['"]""", t[m.end():m.end() + 200])
                 if not st:
@@ -367,18 +402,24 @@ def report():
 
     # A BOM versions the modules of its own group with its own version, except
     # the Compose BOM, whose versions are dates.
-    boms = [(c, v, w) for c, lst in declared.items() if c.split(':')[1].endswith('-bom') for v, w, _ in lst]
+    boms = [(c, v, w, st) for c, lst in declared.items() if re.search(r'-bom(?:-\w+)?$', c.split(':')[1]) for v, w, st in lst]
 
     def key(v):
         m = re.match(r'(\d+(?:\.\d+)*)(.*)', v)
         if not m:
-            return ([0, 0, 0, 0], 0, v)
+            return ([0, 0, 0, 0], 0, 0, 0)
         nums = [int(x) for x in m.group(1).split('.')]
-        pre = m.group(2).lstrip('-.')
-        return (nums + [0] * (4 - len(nums)), 0 if pre else 1, pre)
+        pre = m.group(2).lstrip('-.').lower()
+        if not pre:
+            return (nums + [0] * (4 - len(nums)), 1, 0, 0)
+        q = re.match(r'(dev|snapshot|alpha|a|beta|b|m|milestone|rc|cr)?\D*(\d*)', pre)
+        rank = {'dev': 0, 'snapshot': 0, 'alpha': 1, 'a': 1, 'beta': 2, 'b': 2, 'm': 2, 'milestone': 2, 'rc': 3, 'cr': 3}.get(q.group(1), 0)
+        return (nums + [0] * (4 - len(nums)), 0, rank, int(q.group(2) or 0))
     def dynamic(v):
         return bool(re.search(r'[\[\](),+]|latest\.', v))
 
+    # An older Kotlin plugin decides it, whatever a BOM or a stdlib line says.
+    old_kotlin = [x for x in kotlin_plugin if key(x[0]) < key(floor['plugins']['kotlin'])]
     rows, raised, pinned, blocking = [], 0, 0, 0
     for r in floor['floor']:
         fv = r['version']
@@ -386,15 +427,16 @@ def report():
         groups = {c.split(':')[0] for c in r['declaredAs']}
         via_compose_bom = None
         if not found:
-            for c, v, w in boms:
+            for c, v, w, strict_bom in boms:
                 bg, bn = c.split(':')
-                if bn == 'compose-bom' and any(gr.startswith('androidx.compose.') for gr in groups):
+                if 'compose-bom' in bn and any(gr.startswith('androidx.compose.') for gr in groups):
                     via_compose_bom = (v, w)
-                elif bg in groups and v:
-                    found.append((v, '%s, %s' % (bn, w), False))
+                elif v and any(m.split(':')[0] == bg and m.split(':')[1].startswith(bn[:-len('-bom')])
+                               for m in r['declaredAs']):
+                    found.append((v, '%s, %s' % (bn, w), strict_bom))
         plugin_row = False
-        if r['module'] == 'org.jetbrains.kotlin:kotlin-stdlib' and not found and kotlin_plugin:
-            found, plugin_row = [(v, w + ', the Kotlin plugin', s) for v, w, s in kotlin_plugin], True
+        if r['module'] == 'org.jetbrains.kotlin:kotlin-stdlib' and kotlin_plugin and (not found or old_kotlin):
+            found, plugin_row = [(v, w + ', the Kotlin plugin', s) for v, w, s in (old_kotlin or kotlin_plugin)], True
         if not found:
             if via_compose_bom:
                 rows.append((r['name'], fv, 'Compose BOM %s (%s)' % (via_compose_bom[0] or '?', via_compose_bom[1]),
@@ -406,7 +448,8 @@ def report():
             continue
         fixed = [x for x in found if not dynamic(x[0])]
         if not fixed:
-            rows.append((r['name'], fv, '%s (%s)' % (found[0][0], found[0][1]), 'a range or dynamic version: check it'))
+            rows.append((r['name'], fv, '%s%s (%s)' % (found[0][0], ', strict' if found[0][2] else '', found[0][1]),
+                         'a range or dynamic version: check it'))
             continue
         v, w, strict = min(fixed, key=lambda x: key(x[0]))
         shown = '%s%s (%s)' % (v, ', strict' if strict else '', w)
@@ -440,6 +483,8 @@ def report():
         print('  %d strict or forced version(s) below the floor: lift them first, or Gradle fails or keeps a version the module was not built with.' % pinned)
     if raised:
         print("  %d of this app's declared versions will be RAISED when it adds the module: build and test the app with them." % raised)
+    for rel in SKIPPED:
+        print('  (could not read %s: skipped)' % rel)
     print("  '-': not declared in the build files this reads (it may come from a BOM, a plugin or a convention plugin).")
     built_for = (floor['keliverVersion'], p['kotlin'], p['zipline'], floor.get('composeVersion', '?'))
     writing = (want_keliver, want_kotlin, want_zipline, want_compose)

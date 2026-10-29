@@ -205,13 +205,77 @@ PY
 [ $? = 0 ] && [ "$rc" = 0 ] && ok "the report on other shapes: $(tail -1 "$DISP/shapes-check.txt")" \
   || bad "the report on other shapes (rc=$rc): $(tail -1 "$DISP/shapes-check.txt")"
 
-# A report that breaks is a warning, never a refusal: an unreadable build file.
+# More shapes: '/*' and '**/' inside strings and a '//' in a string are not
+# comments; one library's BOM does not version another; enforcedPlatform, a
+# force() of two and { force = true } are pins; a Kotlin BOM does not hide an
+# older Kotlin plugin.
+SH2="$DISP/shapes2"; mkdir -p "$SH2/app"
+printf "rootProject.name = 'shapes2'\ninclude ':app'\n" > "$SH2/settings.gradle"
+cat > "$SH2/build.gradle" <<'EOF'
+plugins { id 'org.jetbrains.kotlin.android' version '1.9.22' apply false }
+// TODO: drop the libs/* jars
+EOF
+cat > "$SH2/app/build.gradle" <<'EOF'
+android {
+  packagingOptions { exclude 'META-INF/*.kotlin_module' }
+}
+def p = "a//b" ; dependencies { implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2' }
+dependencies {
+  implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.22')
+  implementation platform('org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.7.3')
+  implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json'
+  implementation enforcedPlatform('com.squareup.okhttp3:okhttp-bom:4.12.0')
+  implementation('androidx.browser:browser:1.4.0') { force = true }
+  /* an old block */
+}
+configurations.all {
+  resolutionStrategy.force('androidx.core:core-ktx:1.9.0', 'androidx.activity:activity-compose:1.7.0')
+}
+def coverage = ['**/R.class', '**/R$*.class']
+EOF
+( cd "$APP" && env ${FLOOR_ENV[@]+"${FLOOR_ENV[@]}"} "$SCAFFOLD" --embed --into "$SH2" --module kh --bundle-server https://bundles.invalid ) > "$DISP/shapes2.log" 2>&1; rc=$?
+python3 - "$DISP/shapes2.log" "$FLOOR" > "$DISP/shapes2-check.txt" 2>&1 <<'PY'
+import json, re, sys
+log = open(sys.argv[1]).read(); f = json.load(open(sys.argv[2]))
+v = {r['name']: r['version'] for r in f['floor']}
+def row(name):
+    m = re.search(r'^  ' + re.escape(name) + r'\s{2,}(\S+)\s+(.*?)\s*$', log, re.M)
+    assert m, 'no row for ' + name
+    return m.group(2)
+cases = {
+    'Kotlin stdlib': ('1.9.22 (build.gradle, the Kotlin plugin)', 'will not compile'),
+    'kotlinx-coroutines': ('1.7.3 (kotlinx-coroutines-bom, app/build.gradle)', 'RAISED to ' + v['kotlinx-coroutines']),
+    'OkHttp': ('4.12.0, strict (okhttp-bom, app/build.gradle)', 'PINNED below the floor'),
+    'androidx.browser': ('1.4.0, strict (app/build.gradle)', 'PINNED below the floor'),
+    'androidx.core': ('1.9.0, strict (app/build.gradle)', 'PINNED below the floor'),
+    'activity-compose': ('1.7.0, strict (app/build.gradle)', 'PINNED below the floor'),
+    'androidx.lifecycle': ('2.6.2 (app/build.gradle)', 'RAISED to ' + v['androidx.lifecycle']),
+}
+for name, (declared, verdict) in cases.items():
+    rest = row(name)
+    assert rest.startswith(declared) and verdict in rest, '%s: %r' % (name, rest)
+assert not row('kotlinx-serialization').startswith('1.7.3'), 'the coroutines BOM versioned serialization: %r' % row('kotlinx-serialization')
+assert 'report stopped' not in log and 'report failed' not in log, 'the report broke'
+print('ok: strings with /* and // kept, BOMs by name, enforcedPlatform / force() of two / force = true pinned, a Kotlin BOM does not hide Kotlin 1.9')
+PY
+[ $? = 0 ] && [ "$rc" = 0 ] && ok "the report on more shapes: $(tail -1 "$DISP/shapes2-check.txt")" \
+  || { bad "the report on more shapes (rc=$rc): $(tail -1 "$DISP/shapes2-check.txt")"; sed -n '1,22p' "$DISP/shapes2.log"; }
+
+# A build file it cannot read is skipped and named; a report that breaks (a
+# floor without its keliverVersion) is a warning. Neither refuses the module.
 mkdir -p "$DISP/unreadable/mod"; printf "rootProject.name = 'u'\n" > "$DISP/unreadable/settings.gradle"
 ln -s "$DISP/does-not-exist" "$DISP/unreadable/mod/build.gradle"
 ( cd "$APP" && env ${FLOOR_ENV[@]+"${FLOOR_ENV[@]}"} "$SCAFFOLD" --embed --into "$DISP/unreadable" --bundle-server https://bundles.invalid ) > "$DISP/unreadable.log" 2>&1; rc=$?
-[ "$rc" = 0 ] && grep -q "^warning: the dependency-floor report stopped" "$DISP/unreadable.log" && [ -d "$DISP/unreadable/keliver-host" ] \
+[ "$rc" = 0 ] && grep -q "(could not read mod/build.gradle: skipped)" "$DISP/unreadable.log" && grep -q "^dependency floor of the embedded host" "$DISP/unreadable.log" \
+  && [ -d "$DISP/unreadable/keliver-host" ] \
+  && ok "a build file it cannot read is skipped and named; the report and the module still come" \
+  || bad "an unreadable build file: rc=$rc $(tail -2 "$DISP/unreadable.log" | tr '\n' ' ')"
+python3 -c "import json,sys; f=json.load(open(sys.argv[1])); del f['keliverVersion']; json.dump(f, open(sys.argv[2],'w'))" "$FLOOR" "$DISP/no-version.json"
+mkdir -p "$DISP/warned"; printf "rootProject.name = 'w'\n" > "$DISP/warned/settings.gradle"
+( cd "$APP" && KELIVER_EMBED_FLOOR="$DISP/no-version.json" "$SCAFFOLD" --embed --into "$DISP/warned" --bundle-server https://bundles.invalid ) > "$DISP/warned.log" 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -q "^warning: the dependency-floor report stopped" "$DISP/warned.log" && [ -d "$DISP/warned/keliver-host" ] \
   && ok "a report that breaks warns, and the module is still written" \
-  || bad "a broken report: rc=$rc $(tail -2 "$DISP/unreadable.log" | tr '\n' ' ')"
+  || bad "a broken report: rc=$rc $(tail -2 "$DISP/warned.log" | tr '\n' ' ')"
 
 echo "=== 3. the app builds, and Gradle resolves what the report said"
 # Gradle keeps the real user.home (its default Gradle home); the isolation
