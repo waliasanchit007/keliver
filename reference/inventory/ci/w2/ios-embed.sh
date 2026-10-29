@@ -81,8 +81,8 @@ reads W2-embed-close "Native header" && reads W2-embed-close "Keliver closed" &&
   && ok "I7: the app's native text took the Keliver screen's place" || bad "I7: $(tr '\n' '|' < "$EV/W2-embed-close.ocr.txt" | cut -c1-200)"
 # I8: the guest throws while its screen shows: the host reports screen-failed and the
 # app's onUnavailable puts its own text there.
-# Only for a host that has it: tools 0.3.14's iOS template (a run started by hand
-# scaffolds from the published zip) does not.
+# Only for a host that has it: an iOS template before tools 0.3.15 (a run started
+# by hand scaffolds from the published zip) does not.
 if grep -rq 'fun screenFailed(' "$EMB/keliver-host-ios/src/iosMain/kotlin"; then
   launch W2-embed-crash -k4link "existing://k4/crash"
   C="$EV/W2-embed-crash.console.txt"
