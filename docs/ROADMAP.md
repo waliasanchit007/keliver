@@ -426,7 +426,9 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    on a physical phone (a Galaxy A12, from the published 0.3.13 zip: a publish
    applied in the open app ≈ 1 s after the event, in the same process); iOS
    merged (#150, simulator LV1–LV3 green) and released in tools 0.3.14
-   (2026-10-28); not yet on a physical iPhone.
+   (2026-10-28). **2026-10-29:** checked on a physical iPhone (an iPhone 13 on
+   the releasing machine's Wi-Fi, a debug host scaffolded from the published
+   0.3.15 zip: a publish applied in the open app as soon as it returned).
 3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
    into the tools bundle, not the app** (found by the 2026-10-27 audit): run
    from the zip's `bin/`, they resolve the app as the script's parent. Every
