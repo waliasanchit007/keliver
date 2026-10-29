@@ -169,6 +169,8 @@ dependencies {
   implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion") // https://example.com/notes
   implementation("androidx.core:core-ktx:${rootProject.extra["core_version"]}")
   implementation("com.squareup.okio:okio:99.0.0!!")
+  implementation(platform("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.6.4"))
+  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
 }
 configurations.all { resolutionStrategy { force("androidx.browser:browser:1.4.0") } }
 EOF
@@ -196,6 +198,7 @@ for name, (declared, verdict) in cases.items():
     rest = row(name)
     assert rest.startswith(declared) and verdict in rest, '%s: %r' % (name, rest)
 assert row('Coil') == '-', 'a commented-out Coil was read: %r' % row('Coil')
+assert '1.6.4' not in row('kotlinx-serialization'), 'the coroutines BOM versioned serialization: %r' % row('kotlinx-serialization')
 assert re.search(r"\b4 of this app's declared versions will be RAISED", log), 'the RAISED count'
 assert re.search(r'\b2 strict or forced version', log), 'the PINNED count'
 assert 'module will not compile in it' in log, 'the Kotlin gap is not named'
@@ -235,7 +238,7 @@ def coverage = ['**/R.class', '**/R$*.class']
 def script = """
   cp build/outputs/*.apk dist/
 """
-dependencies { implementation 'com.squareup.okio:okio:3.0.0' }
+configurations.all { resolutionStrategy { force 'androidx.browser:browser:1.4.0' } }; dependencies { implementation 'com.squareup.okio:okio:3.0.0' }
 configurations.all { resolutionStrategy { force 'io.coil-kt.coil3:coil-compose:3.0.0', 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0' } }
 EOF
 ( cd "$APP" && env ${FLOOR_ENV[@]+"${FLOOR_ENV[@]}"} "$SCAFFOLD" --embed --into "$SH2" --module kh --bundle-server https://bundles.invalid ) > "$DISP/shapes2.log" 2>&1; rc=$?
@@ -263,7 +266,7 @@ for name, (declared, verdict) in cases.items():
     rest = row(name)
     assert rest.startswith(declared) and verdict in rest, '%s: %r' % (name, rest)
 assert 'report stopped' not in log and 'report failed' not in log, 'the report broke'
-print('ok: /* and // in strings (and a triple-quoted one) kept, BOMs by name, enforcedPlatform / force() of two / force a, b / force = true pinned, a Kotlin BOM does not hide Kotlin 1.9')
+print('ok: /* and // in strings (and a triple-quoted one) kept, a force ends at its statement, BOMs by name, enforcedPlatform / force() of two / force a, b / force = true pinned, a Kotlin BOM does not hide Kotlin 1.9')
 PY
 [ $? = 0 ] && [ "$rc" = 0 ] && ok "the report on more shapes: $(tail -1 "$DISP/shapes2-check.txt")" \
   || { bad "the report on more shapes (rc=$rc): $(tail -1 "$DISP/shapes2-check.txt")"; sed -n '1,22p' "$DISP/shapes2.log"; }

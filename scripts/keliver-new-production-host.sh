@@ -376,8 +376,8 @@ def report():
                 elif g('id') in KOTLIN_IDS and ver:
                     kotlin_plugin.append((ver, rel, False))
             continue
-        # force(a, b) and Groovy's force a, b (to the end of the line).
-        forced = [(f.start(), f.end()) for f in re.finditer(r'\bforce\s*(?:\(([^()]*)\)|[ \t]+[^\n(]*)', t)]
+        # force(a, b) and Groovy's force a, b (to the end of the statement).
+        forced = [(f.start(), f.end()) for f in re.finditer(r'\bforce\s*(?:\(([^()]*)\)|[ \t]+[^\n(;}]*)', t)]
         for m in re.finditer(r"""['"]([\w.-]+):([\w.-]+)(?::(\$\{[^}]*\}|[^'"\s@]+))?(?:@\w+)?['"]""", t):
             grp, name, v = m.group(1), m.group(2), m.group(3)
             if not re.fullmatch(r'[a-z][\w-]*(\.[\w-]+)+', grp):
