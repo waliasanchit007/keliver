@@ -463,18 +463,32 @@ the lines to add. It ships in the tools bundle from **0.3.8** on.
 $KP/keliver-new-production-host.sh --embed --into ../my-app --bundle-server https://bundles.example.com
 ```
 
-Before it writes anything, it prints the module's **dependency floor**: the
-versions of Kotlin, coroutines, Compose, activity-compose, AndroidX core and
-lifecycle, OkHttp, Okio, Coil and Zipline that the module resolves to. Each
-one sits beside the version your build files declare (direct coordinates,
-`gradle/libs.versions.toml`, simple version variables). Gradle keeps one
-version of each library, so a version you declare below the floor is
-**RAISED** to it when you add the module. The report counts those, says when
-one is a new major version (OkHttp 4 to 5, for example) and names a Compose BOM
-it finds. Build and test your app with the raised versions before you ship it.
-A `-` means your build files do not declare that library directly. The floor
-comes from the tools release (`templates/production-host-embed/dependency-floor.json`,
-which also holds the full resolved list), from tools 0.3.15 on.
+Before it writes anything, it prints the module's **dependency floor**. These
+are the versions the module resolves to of Kotlin, coroutines,
+kotlinx-serialization, Compose (runtime, UI, foundation, material),
+activity-compose, AndroidX core, lifecycle and browser, OkHttp, Okio, Coil and
+Zipline. Each sits beside the version your build files declare. The report
+reads direct coordinates, version catalogs (`gradle/*.versions.toml`), simple
+version variables, the Kotlin plugin and BOMs. It looks at most four
+directories deep and skips comments. Each row gets a verdict:
+- **RAISED:** you declare an older version. Gradle keeps one version of each
+  library, so your app gets the floor instead. The report counts these, and
+  says when one is a new major version (OkHttp 4 to 5, for example). Build and
+  test your app with the raised versions before you ship it.
+- **PINNED below the floor:** a `strictly`, `!!` or `force()` version older than
+  the floor. Gradle fails, or keeps your version, which the module was not built
+  with. Lift the pin first.
+- **The Kotlin plugin is older than the module's Kotlin:** the module will not
+  compile in your app.
+- **A Compose BOM:** its versions are dates, so check that BOM's Compose
+  version yourself.
+- **`-`:** the build files it reads do not declare that library. It may come
+  from a BOM it cannot map, a plugin or a convention plugin.
+
+The floor comes with the tools release, from tools 0.3.15 on. It is in
+`templates/production-host-embed/dependency-floor.json`, with the full resolved
+list. It describes the module the scaffolder writes by default; if your app
+asks for another Keliver version, the report says that the floor may differ.
 
 It writes `../my-app/keliver-host/`, a `com.android.library` module with the
 same host Kotlin as `host-android/`. Then, in your app:

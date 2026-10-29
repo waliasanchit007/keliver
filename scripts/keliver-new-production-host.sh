@@ -91,7 +91,7 @@ while [ $# -gt 0 ]; do
     --embed)           EMBED=true; shift ;;
     --into)            need "$1" $#; INTO="$2"; shift 2 ;;
     --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,64p' "$SELF"; exit 0 ;;
+    -h|--help)         sed -n '2,65p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -223,113 +223,239 @@ if $EMBED; then
   if [ "$FLOOR" = none ]; then
     :
   elif [ -f "$FLOOR" ]; then
-    python3 - "$FLOOR" "$INTO" <<'PY' || fail "could not read the dependency floor ($FLOOR)."
-import glob, json, os, re, sys
-floor = json.load(open(sys.argv[1], encoding='utf-8')); into = sys.argv[2]
-texts = {}
-for pat in ('settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts', '*/build.gradle',
-            '*/build.gradle.kts', 'gradle/*.versions.toml', 'gradle.properties'):
-    for f in sorted(glob.glob(os.path.join(into, pat))):
-        texts[os.path.relpath(f, into)] = open(f, encoding='utf-8', errors='replace').read()
+    # Exit 3: the floor file itself is unreadable (refused: nothing written).
+    # Anything else going wrong in the report is a warning; the scaffold goes on.
+    FLOOR_RC=0
+    python3 - "$FLOOR" "$INTO" "$KELIVER_VERSION" "$KOTLIN_VERSION" "$ZIPLINE_VERSION" "$COMPOSE_VERSION" <<'PY' || FLOOR_RC=$?
+import json, os, re, sys
+floor_path, into, want_keliver, want_kotlin, want_zipline, want_compose = sys.argv[1:7]
+try:
+    floor = json.load(open(floor_path, encoding='utf-8'))
+    for r in floor['floor']:
+        r['name'], r['module'], r['version'], list(r['declaredAs'])
+    floor['plugins']['kotlin'], floor['plugins']['zipline'], floor['minSdk'], floor['compileSdk']
+except Exception as e:
+    print('%s: %s' % (type(e).__name__, e), file=sys.stderr)
+    sys.exit(3)
 
-# Plain version variables: gradle.properties, and ext/val/def/set(...) of a
-# quoted version in a build script.
-props = {}
-for rel, t in texts.items():
-    if rel == 'gradle.properties':
-        for m in re.finditer(r'^\s*([A-Za-z_][\w.]*)\s*[=:]\s*([0-9][\w.+-]*)\s*$', t, re.M):
-            props[m.group(1)] = m.group(2)
-    elif not rel.endswith('.toml'):
-        for m in re.finditer(r'''(?:\b(?:val|var|def)\s+|ext\.|\bset\(\s*)['"]?([A-Za-z_]\w*)['"]?\s*[=,]\s*['"]([0-9][\w.+-]*)['"]''', t):
-            props.setdefault(m.group(1), m.group(2))
-def resolve(v):
-    m = re.fullmatch(r'\$\{?([A-Za-z_][\w.]*)\}?', v)
-    return props.get(m.group(1)) if m else (v if '$' not in v else None)
+KOTLIN_IDS = ('org.jetbrains.kotlin.android', 'org.jetbrains.kotlin.jvm', 'org.jetbrains.kotlin.multiplatform')
+VER = r"""['"]([0-9][\w.+-]*)['"]"""
 
-declared = {}  # 'group:name' -> [(version or None, where)]
-def note(coord, version, where):
-    declared.setdefault(coord, []).append((version, where))
-kotlin_plugin = []
-for rel, t in texts.items():
-    if rel.endswith('.toml'):
-        section, versions, entries = None, {}, []
-        for line in t.splitlines():
-            line = line.split('#', 1)[0].strip()
-            s = re.fullmatch(r'\[([\w.-]+)\]', line)
-            if s: section = s.group(1); continue
-            m = re.fullmatch(r'([\w.-]+)\s*=\s*(.+)', line)
-            if not m: continue
-            key, val = m.group(1), m.group(2)
-            if section == 'versions':
-                q = re.fullmatch(r'"([^"]+)"', val) or re.search(r'(?:strictly|require|prefer)\s*=\s*"([^"]+)"', val)
-                if q: versions[key] = q.group(1)
-            elif section in ('libraries', 'plugins'):
-                entries.append((section, val))
-        for section, val in entries:
-            q = re.fullmatch(r'"([\w.-]+):([\w.-]+):([^"]+)"', val)
-            if q and section == 'libraries':
-                note(q.group(1) + ':' + q.group(2), q.group(3), rel); continue
-            g = lambda k: (re.search(r'\b' + k + r'\s*=\s*"([^"]+)"', val) or [None, None])[1]
-            ver = g(r'version\.ref')
-            ver = versions.get(ver) if ver else g('version')
-            if section == 'libraries':
-                mod = g('module') or (g('group') and g('name') and g('group') + ':' + g('name'))
-                if mod: note(mod, ver, rel)
-            elif g('id') in ('org.jetbrains.kotlin.android', 'org.jetbrains.kotlin.jvm', 'org.jetbrains.kotlin.multiplatform'):
-                if ver: kotlin_plugin.append((ver, rel))
-        continue
-    for m in re.finditer(r'''['"]([\w.-]+):([\w.-]+):([^'"\s@]+)(?:@\w+)?['"]''', t):
-        if m.group(1) == 'org.jetbrains.kotlin' and m.group(2) == 'kotlin-gradle-plugin':
-            v = resolve(m.group(3))
-            if v: kotlin_plugin.append((v, rel))
-        else:
+def read_build_files():
+    # The existing app's build files, at most four directories deep (nested
+    # modules, build-logic/), never build output.
+    texts = {}
+    for d, dirs, files in os.walk(into):
+        rel_d = os.path.relpath(d, into)
+        depth = 0 if rel_d == '.' else rel_d.count(os.sep) + 1
+        dirs[:] = sorted(x for x in dirs if not x.startswith('.') and x not in ('build', 'node_modules') and depth < 4)
+        for f in sorted(files):
+            if f in ('settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts') \
+               or (f == 'gradle.properties' and depth == 0) \
+               or (f.endswith('.versions.toml') and os.path.basename(d) == 'gradle'):
+                rel = os.path.normpath(os.path.join(rel_d, f))
+                t = open(os.path.join(d, f), encoding='utf-8', errors='replace').read()
+                if not f.endswith(('.toml', '.properties')):
+                    # Comments are not declarations ("https://" is not a comment).
+                    t = re.sub(r'/\*.*?\*/', '', t, flags=re.S)
+                    t = re.sub(r'(?<!:)//[^\n]*', '', t)
+                texts[rel] = t
+    return texts
+
+def report():
+    texts = read_build_files()
+    # Plain version variables: gradle.properties; val/var/def, ext.x, ext { x = },
+    # set(...), extra[...] and `by extra(...)` of a quoted version.
+    props = {}
+    for rel, t in texts.items():
+        if rel == 'gradle.properties':
+            for m in re.finditer(r'^\s*([A-Za-z_][\w.]*)\s*[=:]\s*([0-9][\w.+-]*)\s*$', t, re.M):
+                props[m.group(1)] = m.group(2)
+        elif not rel.endswith('.toml'):
+            for pat in (r"""(?:\b(?:val|var|def)\s+|ext\.|\bset\(\s*|extra\[\s*)['"]?([A-Za-z_]\w*)['"]?\s*\]?\s*(?::\s*String\s*)?[=,]\s*""" + VER,
+                        r"""\bval\s+([A-Za-z_]\w*)\s*(?::\s*String\s*)?by\s+extra\(\s*""" + VER,
+                        r"""^\s*([A-Za-z_]\w*)\s*=\s*""" + VER):
+                for m in re.finditer(pat, t, re.M):
+                    props.setdefault(m.group(1), m.group(2))
+
+    def resolve(v):
+        if '$' not in v:
+            return v
+        m = re.fullmatch(r'\$\{?([^}]*)\}?', v)
+        words = re.findall(r'[A-Za-z_]\w*', m.group(1)) if m else []
+        return props.get(words[-1]) if words else None
+
+    declared = {}  # 'group:name' -> [(version or None, where, strict)]
+    def note(coord, version, where, strict=False):
+        declared.setdefault(coord, []).append((version, where, strict))
+    kotlin_plugin = []
+    for rel, t in texts.items():
+        if rel.endswith('.toml'):
+            section, versions, entries = None, {}, []
+            for line in t.splitlines():
+                line = line.split('#', 1)[0].strip()
+                s = re.fullmatch(r'\[([\w.-]+)\]', line)
+                if s:
+                    section = s.group(1); continue
+                m = re.fullmatch(r'([\w.-]+)\s*=\s*(.+)', line)
+                if not m:
+                    continue
+                key, val = m.group(1), m.group(2)
+                if section == 'versions':
+                    q = re.fullmatch(r"""["']([^"']+)["']""", val)
+                    st = re.search(r"""strictly\s*=\s*["']([^"']+)["']""", val)
+                    rq = re.search(r"""(?:require|prefer)\s*=\s*["']([^"']+)["']""", val)
+                    if q: versions[key] = (q.group(1), False)
+                    elif st: versions[key] = (st.group(1), True)
+                    elif rq: versions[key] = (rq.group(1), False)
+                elif section in ('libraries', 'plugins'):
+                    entries.append((section, val))
+            for section, val in entries:
+                q = re.fullmatch(r"""["']([\w.-]+):([\w.-]+)(?::([^"']+))?["']""", val)
+                if q and section == 'libraries':
+                    v = q.group(3)
+                    note(q.group(1) + ':' + q.group(2), v[:-2] if v and v.endswith('!!') else v, rel, bool(v and v.endswith('!!')))
+                    continue
+                if section == 'plugins':
+                    sq = re.fullmatch(r"""["']([\w.-]+):([^"']+)["']""", val)
+                    if sq:
+                        if sq.group(1) in KOTLIN_IDS:
+                            kotlin_plugin.append((sq.group(2), rel, False))
+                        continue
+                g = lambda k: (re.search(r'\b' + k + r"""\s*=\s*["']([^"']+)["']""", val) or [None, None])[1]
+                ref = g(r'version\.ref')
+                if ref:
+                    ver, strict = versions.get(ref, (None, False))
+                else:
+                    ver, strict = g('version'), False
+                    st = re.search(r"""strictly\s*=\s*["']([^"']+)["']""", val)
+                    if st:
+                        ver, strict = st.group(1), True
+                if section == 'libraries':
+                    mod = g('module') or (g('group') and g('name') and g('group') + ':' + g('name'))
+                    if mod:
+                        note(mod, ver, rel, strict)
+                elif g('id') in KOTLIN_IDS and ver:
+                    kotlin_plugin.append((ver, rel, False))
+            continue
+        for m in re.finditer(r"""['"]([\w.-]+):([\w.-]+)(?::(\$\{[^}]*\}|[^'"\s@]+))?(?:@\w+)?['"]""", t):
+            grp, name, v = m.group(1), m.group(2), m.group(3)
+            if not re.fullmatch(r'[a-z][\w-]*(\.[\w-]+)+', grp):
+                continue
+            before = t[max(0, m.start() - 24):m.start()]
+            strict = bool(re.search(r'\bforce\s*\(?\s*$', before))
+            if v is None:
+                st = re.match(r"""\s*\)?\s*\{[^}]*?strictly\s*\(?\s*['"]([^'"]+)['"]""", t[m.end():m.end() + 200])
+                if not st:
+                    note(grp + ':' + name, None, rel)
+                    continue
+                v, strict = st.group(1), True
+            if v.endswith('!!'):
+                v, strict = v[:-2], True
+            if grp == 'org.jetbrains.kotlin' and name == 'kotlin-gradle-plugin':
+                rv = resolve(v)
+                if rv:
+                    kotlin_plugin.append((rv, rel, False))
+            else:
+                note(grp + ':' + name, resolve(v), rel, strict)
+        for m in re.finditer(r"""\bgroup\s*[:=]\s*['"]([\w.-]+)['"]\s*,\s*name\s*[:=]\s*['"]([\w.-]+)['"]\s*,\s*version\s*[:=]\s*['"]([^'"]+)['"]""", t):
             note(m.group(1) + ':' + m.group(2), resolve(m.group(3)), rel)
-    for m in re.finditer(r'''(?:id\s*\(?\s*['"]org\.jetbrains\.kotlin\.(?:android|jvm|multiplatform)['"]\s*\)?|kotlin\(\s*"(?:android|jvm|multiplatform)"\s*\))\s*version\s*\(?\s*['"]([^'"]+)['"]''', t):
-        v = resolve(m.group(1))
-        if v: kotlin_plugin.append((v, rel))
+        for m in re.finditer(r"""(?:id\s*\(?\s*['"]org\.jetbrains\.kotlin\.(?:android|jvm|multiplatform)['"]\s*\)?|kotlin\(\s*"(?:android|jvm|multiplatform)"\s*\))\s*version\s*\(?\s*['"]([^'"]+)['"]""", t):
+            rv = resolve(m.group(1))
+            if rv:
+                kotlin_plugin.append((rv, rel, False))
 
-def key(v):
-    base, _, pre = v.partition('-')
-    nums = [int(x) if x.isdigit() else 0 for x in re.split(r'[.]', base)]
-    return (nums + [0] * (4 - len(nums)), 0 if pre else 1)
-rows, raised = [], 0
-for r in floor['floor']:
-    found = [(v, w) for c in r['declaredAs'] for (v, w) in declared.get(c, [])]
-    if r['module'] == 'org.jetbrains.kotlin:kotlin-stdlib' and not found:
-        found = [(v, w + ', the Kotlin plugin') for v, w in kotlin_plugin]
-    if not found:
-        rows.append((r['name'], r['version'], '-', '')); continue
-    known = [(v, w) for v, w in found if v]
-    if not known:
-        rows.append((r['name'], r['version'], 'a version this cannot read (%s)' % found[0][1], 'check it')); continue
-    v, w = min(known, key=lambda x: key(x[0]))
-    if key(v) < key(r['version']):
-        raised += 1
-        major = key(v)[0][0] != key(r['version'])[0][0]
-        rows.append((r['name'], r['version'], '%s (%s)' % (v, w), 'RAISED to %s%s' % (r['version'], ', a new major version' if major else '')))
-    else:
-        rows.append((r['name'], r['version'], '%s (%s)' % (v, w), 'ok'))
-print('dependency floor of the embedded host (keliver %s, its %s; generated by %s):'
-      % (floor['keliverVersion'], floor['configuration'], floor['generatedBy']))
-print('  %-22s %-10s %-44s %s' % ('library', 'floor', 'this app declares', ''))
-for name, fv, dv, verdict in rows:
-    print('  %-22s %-10s %-44s %s' % (name, fv, dv, verdict))
-bom = [(v, w) for v, w in declared.get('androidx.compose:compose-bom', [])]
-if bom:
-    print('  this app declares the Compose BOM %s (%s): Compose modules it pins older than the floor are raised too'
-          % (bom[0][0] or '(a version this cannot read)', bom[0][1]))
-p = floor['plugins']
-print('  the module needs: Kotlin %s with its Compose plugin, app.cash.zipline %s, compileSdk %s or newer, minSdk %s or newer (built with AGP %s)'
-      % (p['kotlin'], p['zipline'], floor['compileSdk'], floor['minSdk'], p['androidGradlePlugin']))
-for rel, t in texts.items():
-    for m in re.finditer(r'\bminSdk(?:Version)?\s*(?:=|\(|\s)\s*(\d+)', t):
-        if int(m.group(1)) < floor['minSdk']:
-            print('  %s: minSdk %s is below the module\'s %s: the manifest merge will fail' % (rel, m.group(1), floor['minSdk']))
-if raised:
-    print('  %d of this app\'s declared versions will be RAISED when it adds the module: build and test the app with them.' % raised)
-print("  '-': not declared in %s's build files (it may come from a BOM, a plugin or a convention plugin)." % os.path.basename(into))
-print('  The full resolved list is in %s.' % sys.argv[1])
+    # A BOM versions the modules of its own group with its own version, except
+    # the Compose BOM, whose versions are dates.
+    boms = [(c, v, w) for c, lst in declared.items() if c.split(':')[1].endswith('-bom') for v, w, _ in lst]
+
+    def key(v):
+        m = re.match(r'(\d+(?:\.\d+)*)(.*)', v)
+        if not m:
+            return ([0, 0, 0, 0], 0, v)
+        nums = [int(x) for x in m.group(1).split('.')]
+        pre = m.group(2).lstrip('-.')
+        return (nums + [0] * (4 - len(nums)), 0 if pre else 1, pre)
+    def dynamic(v):
+        return bool(re.search(r'[\[\](),+]|latest\.', v))
+
+    rows, raised, pinned, blocking = [], 0, 0, 0
+    for r in floor['floor']:
+        fv = r['version']
+        found = [x for c in r['declaredAs'] for x in declared.get(c, []) if x[0]]
+        groups = {c.split(':')[0] for c in r['declaredAs']}
+        via_compose_bom = None
+        if not found:
+            for c, v, w in boms:
+                bg, bn = c.split(':')
+                if bn == 'compose-bom' and any(gr.startswith('androidx.compose.') for gr in groups):
+                    via_compose_bom = (v, w)
+                elif bg in groups and v:
+                    found.append((v, '%s, %s' % (bn, w), False))
+        plugin_row = False
+        if r['module'] == 'org.jetbrains.kotlin:kotlin-stdlib' and not found and kotlin_plugin:
+            found, plugin_row = [(v, w + ', the Kotlin plugin', s) for v, w, s in kotlin_plugin], True
+        if not found:
+            if via_compose_bom:
+                rows.append((r['name'], fv, 'Compose BOM %s (%s)' % (via_compose_bom[0] or '?', via_compose_bom[1]),
+                             "check this BOM's Compose version"))
+            else:
+                unread = [declared[c][0][1] for c in r['declaredAs'] if declared.get(c)]
+                rows.append((r['name'], fv, 'a version this cannot read (%s)' % unread[0] if unread else '-',
+                             'check it' if unread else ''))
+            continue
+        fixed = [x for x in found if not dynamic(x[0])]
+        if not fixed:
+            rows.append((r['name'], fv, '%s (%s)' % (found[0][0], found[0][1]), 'a range or dynamic version: check it'))
+            continue
+        v, w, strict = min(fixed, key=lambda x: key(x[0]))
+        shown = '%s%s (%s)' % (v, ', strict' if strict else '', w)
+        if key(v) >= key(fv):
+            rows.append((r['name'], fv, shown, 'ok'))
+        elif plugin_row:
+            blocking += 1
+            rows.append((r['name'], fv, shown, 'the module needs Kotlin %s: it will not compile' % floor['plugins']['kotlin']))
+        elif strict:
+            pinned += 1
+            rows.append((r['name'], fv, shown, 'PINNED below the floor: Gradle fails, or keeps %s' % v))
+        else:
+            raised += 1
+            major = ', a new major version' if key(v)[0][0] != key(fv)[0][0] else ''
+            rows.append((r['name'], fv, shown, 'RAISED to %s%s' % (fv, major)))
+
+    p = floor['plugins']
+    print('dependency floor of the embedded host (keliver %s, its %s):' % (floor['keliverVersion'], floor['configuration']))
+    print('  %-22s %-10s %-50s %s' % ('library', 'floor', 'this app declares', ''))
+    for name, fv, dv, verdict in rows:
+        print('  %-22s %-10s %-50s %s' % (name, fv, dv, verdict))
+    print('  the module needs: Kotlin %s with its Compose plugin, app.cash.zipline %s, compileSdk %s or newer, minSdk %s or newer (built with AGP %s)'
+          % (p['kotlin'], p['zipline'], floor['compileSdk'], floor['minSdk'], p['androidGradlePlugin']))
+    for rel, t in texts.items():
+        for m in re.finditer(r'\bminSdk(?:Version)?\s*(?:=|\(|\s)\s*(\d+)', t):
+            if int(m.group(1)) < floor['minSdk']:
+                print("  %s: minSdk %s is below the module's %s: the manifest merge will fail" % (rel, m.group(1), floor['minSdk']))
+    if blocking:
+        print('  This app builds with an older Kotlin: the module will not compile in it until the app moves to Kotlin %s.' % p['kotlin'])
+    if pinned:
+        print('  %d strict or forced version(s) below the floor: lift them first, or Gradle fails or keeps a version the module was not built with.' % pinned)
+    if raised:
+        print("  %d of this app's declared versions will be RAISED when it adds the module: build and test the app with them." % raised)
+    print("  '-': not declared in the build files this reads (it may come from a BOM, a plugin or a convention plugin).")
+    built_for = (floor['keliverVersion'], p['kotlin'], p['zipline'], floor.get('composeVersion', '?'))
+    writing = (want_keliver, want_kotlin, want_zipline, want_compose)
+    if built_for != writing:
+        print('  note: this floor was resolved for keliver %s, Kotlin %s, Zipline %s, Compose %s; this module is written for %s, %s, %s, %s.'
+              % (built_for + writing))
+        print('        Its real floor may differ: scripts/keliver-embed-floor.sh in a Keliver checkout resolves it.')
+    print('  The full resolved list: %s' % floor_path)
+
+try:
+    report()
+except Exception as e:
+    print('warning: the dependency-floor report stopped (%s: %s); the floor is in %s.' % (type(e).__name__, e, floor_path))
 PY
+    [ "$FLOOR_RC" = 3 ] && fail "could not read the dependency floor ($FLOOR)."
+    [ "$FLOOR_RC" = 0 ] || echo "warning: the dependency-floor report failed (exit $FLOOR_RC); the floor is in $FLOOR." >&2
   else
     echo "note: no dependency-floor report in this copy of the templates ($FLOOR); the tools bundle carries one, and scripts/keliver-embed-floor.sh writes it." >&2
   fi

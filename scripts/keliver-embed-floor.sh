@@ -43,12 +43,13 @@ printf '%s\n' "$(printf '00%.0s' $(seq 1 32))" > "$WORK/placeholder.pub"
 
 # The probe: an existing app with nothing of its own, declaring the plugins
 # the embed asks the app for (the versions the scaffolder's defaults name).
-eval "$(sed -nE 's/^(ZIPLINE_VERSION|KOTLIN_VERSION|AGP_VERSION)="\$\{KELIVER_HOST_[A-Z_]+:-([0-9A-Za-z.+-]+)\}"$/\1=\2/p' "$SCAFFOLD")"
-[ -n "${ZIPLINE_VERSION:-}" ] && [ -n "${KOTLIN_VERSION:-}" ] && [ -n "${AGP_VERSION:-}" ] \
+eval "$(sed -nE 's/^(ZIPLINE_VERSION|KOTLIN_VERSION|AGP_VERSION|COMPOSE_VERSION)="\$\{KELIVER_HOST_[A-Z_]+:-([0-9A-Za-z.+-]+)\}"$/\1=\2/p' "$SCAFFOLD")"
+[ -n "${ZIPLINE_VERSION:-}" ] && [ -n "${KOTLIN_VERSION:-}" ] && [ -n "${AGP_VERSION:-}" ] && [ -n "${COMPOSE_VERSION:-}" ] \
   || fail "could not read the plugin versions from $SCAFFOLD."
 ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$ZIPLINE_VERSION}"
 KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$KOTLIN_VERSION}"
 AGP_VERSION="${KELIVER_HOST_AGP_VERSION:-$AGP_VERSION}"
+COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$COMPOSE_VERSION}"
 cat > "$EX/settings.gradle" <<EOF
 pluginManagement {
   repositories { gradlePluginPortal(); google(); mavenCentral() }
@@ -88,6 +89,13 @@ allprojects {
         def cfg = configurations.getByName('releaseRuntimeClasspath')
         def out = file(providers.gradleProperty('keliver.floorOut').get())
         doLast {
+          // A dependency that did not resolve would drop out of the list with
+          // everything under it, and the floor would be too low: fail instead.
+          def unresolved = cfg.incoming.resolutionResult.allDependencies
+            .findAll { it instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult }
+          if (unresolved) {
+            throw new GradleException('unresolved: ' + unresolved.collect { "${it.requested.displayName} (${it.failure.message})" }.join('; '))
+          }
           def mods = cfg.incoming.resolutionResult.allComponents
             .findAll { it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
             .collect { "${it.moduleVersion.group}:${it.moduleVersion.name}:${it.moduleVersion.version}" }
@@ -101,16 +109,18 @@ EOF
 ( cd "$EX" && ./gradlew --console=plain --no-daemon --no-configuration-cache -q --init-script "$WORK/floor.init.gradle" \
     :keliver-host:keliverFloor -Pkeliver.floorOut="$WORK/resolved.txt" ) > "$WORK/gradle.log" 2>&1 \
   || { tail -30 "$WORK/gradle.log" >&2; fail "Gradle could not resolve the embed's classpath (log: $WORK/gradle.log)."; }
-[ -s "$WORK/resolved.txt" ] || fail "Gradle resolved nothing."
+grep -q ":" "$WORK/resolved.txt" || fail "Gradle resolved nothing."
 
 KELIVER_VERSION="$(sed -nE "s/.*'dev\.keliver:keliver-treehouse-host:([^']+)'.*/\1/p" "$EX/keliver-host/build.gradle")"
-python3 - "$WORK/resolved.txt" "$OUT" "$KELIVER_VERSION" "$KOTLIN_VERSION" "$ZIPLINE_VERSION" "$AGP_VERSION" \
+python3 - "$WORK/resolved.txt" "$OUT" "$KELIVER_VERSION" "$KOTLIN_VERSION" "$ZIPLINE_VERSION" "$AGP_VERSION" "$COMPOSE_VERSION" \
   "$(sed -nE 's/^[[:space:]]*compileSdk[[:space:]]+([0-9]+).*/\1/p' "$EX/keliver-host/build.gradle")" \
   "$(sed -nE 's/^[[:space:]]*minSdk[[:space:]]+([0-9]+).*/\1/p' "$EX/keliver-host/build.gradle")" <<'PY'
 import json, sys
-resolved_file, out, keliver, kotlin, zipline, agp, compile_sdk, min_sdk = sys.argv[1:9]
+resolved_file, out, keliver, kotlin, zipline, agp, compose, compile_sdk, min_sdk = sys.argv[1:10]
 resolved = {}
 for line in open(resolved_file):
+    if not line.strip():
+        continue
     g, n, v = line.strip().split(':')
     resolved[g + ':' + n] = v
 # The libraries an app most often pins itself: the module whose resolved
@@ -149,6 +159,7 @@ json.dump({
     'generatedBy': 'scripts/keliver-embed-floor.sh',
     'configuration': 'releaseRuntimeClasspath',
     'keliverVersion': keliver,
+    'composeVersion': compose,
     'plugins': {'kotlin': kotlin, 'zipline': zipline, 'androidGradlePlugin': agp},
     'compileSdk': int(compile_sdk), 'minSdk': int(min_sdk),
     'floor': rows,

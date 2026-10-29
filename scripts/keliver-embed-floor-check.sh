@@ -13,6 +13,9 @@
 #    scripts/fixtures/embed-older-compose (Compose BOM 2024.06.00, OkHttp 4,
 #    ...), prints each library's floor beside the version the app declares,
 #    before anything is written; a floor file it cannot read writes nothing.
+#    Then, without a build, the declaration shapes it must not misread (strict
+#    and forced versions, BOMs, catalogs, variables, comments, an older Kotlin),
+#    and a report that breaks: a warning, and the module is still written.
 # 3. The build: that app builds with the module, and its resolved
 #    releaseRuntimeClasspath has every listed library at its floor or newer, and
 #    the ones the report says it raises at exactly the floor.
@@ -119,15 +122,101 @@ for name, declared in expect_raised.items():
 assert 'a new major version' in row('OkHttp')[1], 'OkHttp 4 -> 5 is not called a new major version'
 floor, rest = row('Kotlin stdlib')
 assert rest.startswith('2.2.0 (build.gradle, the Kotlin plugin)') and rest.endswith('ok'), 'Kotlin: %r' % rest
-for name in ('Compose UI', 'Compose material', 'Coil', 'Zipline'):
+for name in ('Compose UI', 'Compose material'):
+    rest = row(name)[1]
+    assert rest.startswith('Compose BOM 2024.06.00 (app/build.gradle)') and "check this BOM's Compose version" in rest, '%s: %r' % (name, rest)
+for name in ('Coil', 'Zipline'):
     assert row(name)[1] == '-', '%s: %r' % (name, row(name)[1])
-assert re.search(r'Compose BOM 2024\.06\.00 \(app/build\.gradle\)', log), 'the Compose BOM is not named'
+assert 'this floor was resolved for' not in log, 'the floor and the module written disagree on versions'
+assert 'warning:' not in log, 'the report warned'
 assert re.search(r"\b5 of this app's declared versions will be RAISED", log), 'the RAISED count'
-print('ok: the report precedes the write; 5 raised (OkHttp a new major), Kotlin ok, the BOM named')
+print('ok: the report precedes the write; 5 raised (OkHttp a new major), Kotlin ok, Compose through the BOM')
 PY
 [ $? = 0 ] && ok "the report: $(tail -1 "$DISP/report-check.txt")" || bad "the report: $(tail -1 "$DISP/report-check.txt")"
 
+# The report on the declaration shapes it must not misread (not built): a
+# catalog with a strict rich version, a single-quoted version, a plugin in
+# string notation and an OkHttp BOM; a Groovy ext { } block; a nested Kotlin
+# module with comments, a typed val, rootProject.extra, a force() and a !!.
+# The directory name holds glob characters.
+SH="$DISP/shapes [old]"; mkdir -p "$SH/gradle" "$SH/feature/ui"
+printf 'rootProject.name = "shapes"\ninclude(":feature:ui")\n' > "$SH/settings.gradle.kts"
+cat > "$SH/gradle/libs.versions.toml" <<'EOF'
+[versions]
+kotlin = "1.9.22"
+coroutines = { strictly = "1.7.3" }
+activity = '1.8.2'
+
+[libraries]
+coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+activity = { group = "androidx.activity", name = "activity-compose", version.ref = "activity" }
+okhttp-bom = { module = "com.squareup.okhttp3:okhttp-bom", version = "4.12.0" }
+okhttp = { module = "com.squareup.okhttp3:okhttp" }
+
+[plugins]
+kotlin-android = "org.jetbrains.kotlin.android:1.9.22"
+EOF
+cat > "$SH/build.gradle" <<'EOF'
+ext {
+  core_version = '1.12.0'
+}
+EOF
+cat > "$SH/feature/ui/build.gradle.kts" <<'EOF'
+// implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.0.0")
+/* implementation("io.coil-kt.coil3:coil-compose:3.0.0") */
+val lifecycleVersion: String = "2.6.2"
+dependencies {
+  implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion") // https://example.com/notes
+  implementation("androidx.core:core-ktx:${rootProject.extra["core_version"]}")
+  implementation("com.squareup.okio:okio:99.0.0!!")
+}
+configurations.all { resolutionStrategy { force("androidx.browser:browser:1.4.0") } }
+EOF
+( cd "$APP" && env ${FLOOR_ENV[@]+"${FLOOR_ENV[@]}"} "$SCAFFOLD" --embed --into "$SH" --module kh --bundle-server https://bundles.invalid ) > "$DISP/shapes.log" 2>&1; rc=$?
+sed 's/^/    | /' "$DISP/shapes.log" | sed -n '1,26p'
+python3 - "$DISP/shapes.log" "$FLOOR" > "$DISP/shapes-check.txt" 2>&1 <<'PY'
+import json, re, sys
+log = open(sys.argv[1]).read(); f = json.load(open(sys.argv[2]))
+v = {r['name']: r['version'] for r in f['floor']}
+def row(name):
+    m = re.search(r'^  ' + re.escape(name) + r'\s{2,}(\S+)\s+(.*?)\s*$', log, re.M)
+    assert m, 'no row for ' + name
+    return m.group(2)
+cases = {
+    'Kotlin stdlib': ('1.9.22 (gradle/libs.versions.toml, the Kotlin plugin)', 'will not compile'),
+    'kotlinx-coroutines': ('1.7.3, strict (gradle/libs.versions.toml)', 'PINNED below the floor'),
+    'activity-compose': ('1.8.2 (gradle/libs.versions.toml)', 'RAISED to ' + v['activity-compose']),
+    'OkHttp': ('4.12.0 (okhttp-bom, gradle/libs.versions.toml)', 'RAISED to %s, a new major version' % v['OkHttp']),
+    'androidx.core': ('1.12.0 (feature/ui/build.gradle.kts)', 'RAISED to ' + v['androidx.core']),
+    'androidx.lifecycle': ('2.6.2 (feature/ui/build.gradle.kts)', 'RAISED to ' + v['androidx.lifecycle']),
+    'androidx.browser': ('1.4.0, strict (feature/ui/build.gradle.kts)', 'PINNED below the floor'),
+    'Okio': ('99.0.0, strict (feature/ui/build.gradle.kts)', 'ok'),
+}
+for name, (declared, verdict) in cases.items():
+    rest = row(name)
+    assert rest.startswith(declared) and verdict in rest, '%s: %r' % (name, rest)
+assert row('Coil') == '-', 'a commented-out Coil was read: %r' % row('Coil')
+assert re.search(r"\b4 of this app's declared versions will be RAISED", log), 'the RAISED count'
+assert re.search(r'\b2 strict or forced version', log), 'the PINNED count'
+assert 'module will not compile in it' in log, 'the Kotlin gap is not named'
+assert 'report stopped' not in log and 'report failed' not in log, 'the report broke'
+print('ok: strict, forced, BOM, ext, typed val, rootProject.extra, comments and the Kotlin plugin read as written')
+PY
+[ $? = 0 ] && [ "$rc" = 0 ] && ok "the report on other shapes: $(tail -1 "$DISP/shapes-check.txt")" \
+  || bad "the report on other shapes (rc=$rc): $(tail -1 "$DISP/shapes-check.txt")"
+
+# A report that breaks is a warning, never a refusal: an unreadable build file.
+mkdir -p "$DISP/unreadable/mod"; printf "rootProject.name = 'u'\n" > "$DISP/unreadable/settings.gradle"
+ln -s "$DISP/does-not-exist" "$DISP/unreadable/mod/build.gradle"
+( cd "$APP" && env ${FLOOR_ENV[@]+"${FLOOR_ENV[@]}"} "$SCAFFOLD" --embed --into "$DISP/unreadable" --bundle-server https://bundles.invalid ) > "$DISP/unreadable.log" 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -q "^warning: the dependency-floor report stopped" "$DISP/unreadable.log" && [ -d "$DISP/unreadable/keliver-host" ] \
+  && ok "a report that breaks warns, and the module is still written" \
+  || bad "a broken report: rc=$rc $(tail -2 "$DISP/unreadable.log" | tr '\n' ' ')"
+
 echo "=== 3. the app builds, and Gradle resolves what the report said"
+# Gradle keeps the real user.home (its default Gradle home); the isolation
+# above is for the scaffolder's store lookup.
+unset JAVA_TOOL_OPTIONS
 ( cd "$EX" && ./gradlew --console=plain --no-daemon :app:assembleDebug ) > "$DISP/build.log" 2>&1 \
   && ok "the older app builds with the embedded host (assembleDebug)" \
   || { bad "the older app did not build"; grep -E '^e: |What went wrong' -A4 "$DISP/build.log" | head -25; }
@@ -139,6 +228,9 @@ allprojects {
         def cfg = configurations.getByName('releaseRuntimeClasspath')
         def out = file(providers.gradleProperty('keliver.resolvedOut').get())
         doLast {
+          def unresolved = cfg.incoming.resolutionResult.allDependencies
+            .findAll { it instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult }
+          if (unresolved) throw new GradleException('unresolved: ' + unresolved.collect { it.requested.displayName }.join(', '))
           out.text = cfg.incoming.resolutionResult.allComponents
             .findAll { it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
             .collect { "${it.moduleVersion.group}:${it.moduleVersion.name}:${it.moduleVersion.version}" }
