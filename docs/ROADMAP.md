@@ -447,17 +447,18 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    The proof's serious defects were all in that glue.
    **Status 2026-10-28:** K1 on Android (#155, #158, #159, #161) and K2 on
    iOS (#160, #162) complete in code and **released in tools 0.3.14**;
-   `screen-failed` on iOS merged (#165, next tools release). K4, the device
+   `screen-failed` on iOS merged (#165, released in tools 0.3.15). K4, the device
    proof, ran on the CI emulator and simulator against the templates after
    0.3.14 (#165: routes, close, `screen-failed`, the app's fallback), not
    against the 0.3.14 bytes; not on a phone yet. **2026-10-29:** K3, the
-   dependency-floor report, merged (#168, next tools release): `--embed`
+   dependency-floor report, merged (#168): `--embed`
    prints the module's floor beside the app's declared versions before it
-   writes, checked in CI on an app on older libraries.
+   writes, checked in CI on an app on older libraries. Released in tools
+   0.3.15.
 8. **Bridge generator / HostHttp through the app's client** (adoption item 4).
-   **Status 2026-10-29:** B1 merged (#169, next tools release): on Android,
+   **Status 2026-10-29:** B1 merged (#169): on Android,
    guests' HostHttp goes through the app's own authenticated client behind the
-   `RequestPolicy`. B2 (iOS) to B5 not started.
+   `RequestPolicy`; released in tools 0.3.15. B2 (iOS) to B5 not started.
 9. **Start-up** (adoption item 2, M3: start the code load at host start), then
    M4 (guest frame profile) and M5 (iOS memory).
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle

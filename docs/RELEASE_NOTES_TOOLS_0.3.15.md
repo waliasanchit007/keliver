@@ -1,7 +1,12 @@
 # keliver-portal-tools 0.3.15 — release notes
 
-**Status: CANDIDATE**, by `PORTAL_TOOLS_RELEASE.md`. Identities are filled in
-as each step of the procedure passes.
+**Status: RELEASED 2026-10-29**, by `PORTAL_TOOLS_RELEASE.md`.
+
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.15` → `3dc039f5efebfdac912df34e5cbdc8a49311b80b` |
+| zip asset | `keliver-portal-tools-0.3.15.zip`, sha256 `68958efa4977dce413c44b87bf8dcbdefc053677cd1afc20ff8ee6638585a287` (92,097,006 bytes): the retained, verified CI artifact |
+| `.sha256` asset | the zip's sha256 and file name |
 
 What is in it since 0.3.14 (`58851db26`): PRs #165 (`screen-failed` on the
 iOS host), #166 (`keliver-run-android`), #168 (the embed's dependency floor)
@@ -17,8 +22,10 @@ and an Android SDK), CI and the docs; the relay is unchanged. New apps get
 `dev.keliver:*:0.4.1`, as with 0.3.14.
 
 **An existing host gets none of this until it is scaffolded again.** The host
-is your code once written; the scaffolder refuses to write over it. Scaffold
-into a new directory and carry your edits over, as for 0.3.14.
+is your code once written; the scaffolder refuses to write over it. For an
+`--embed` module, scaffold into another `--module` (or `--into`); for the
+standalone `host-android/`, move it aside first. Then carry your edits over,
+as for 0.3.14.
 
 ## New: your screens on a phone or emulator in one command (#166)
 
@@ -101,11 +108,60 @@ has done since 0.3.14.
 
 ## Verification
 
-(to be filled in: source commit, zip sha256 and size, `VERSION.json`, APK,
-build run and artifact, device job, the packaged checks, the stored asset's
-digest, the public download check)
+All of it against one set of bytes: the retained artifact of build run
+`40871650582`, which was then attached to the release.
+
+| | |
+|---|---|
+| Source commit | `3dc039f5efebfdac912df34e5cbdc8a49311b80b` (PR #170's head at the build; `sourceDirtyFiles` 0) |
+| Zip | `keliver-portal-tools-0.3.15.zip`, sha256 `68958efa4977dce413c44b87bf8dcbdefc053677cd1afc20ff8ee6638585a287`, 92,097,006 bytes |
+| `VERSION.json` | tools 0.3.15, Maven dependency 0.4.1 |
+| Bundled host APK | sha256 `603ed1a1ba9656f695a25ec265f438086f4c09b06ae616849afee761af3e2173`, no `assets/portal_ed25519.pub` |
+| Dependency floor | `templates/production-host-embed/dependency-floor.json`: keliver 0.4.1, Kotlin 2.2.0, Zipline 1.22.0, Compose 1.8.2, 201 modules resolved at build time |
+| Build | `portal-tools.yml` run `40871650582`; retained artifact `12897894342` (92,080,667 bytes, digest `sha256:64d25e9de4a1de122a4988e1b8ee0f7f5861e64ba394d741ab6626c610146226`) |
+| Device job | run `40904089864` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin; device verify 28/0, its acceptance 19/0; evidence artifact `12910832280` |
+
+The build run's packaged checks:
+- the unit tests (a Gradle run: `BUILD SUCCESSFUL`);
+- the disposable-parent refusal 134/0;
+- the store resolver 32/0 and 73/0;
+- packaging hygiene (U22) 10/0;
+- the **packaged adopter acceptance**, with the U21 identity gate, 25/0;
+- the foreign-relay refusal 6/0;
+- the store identity contract 11/0;
+- the production-host scaffolder 79/0 (and 70/0 from the package);
+- the iOS host scaffolder 70/0 (and 70/0);
+- the publish scaffolder 51/0 (and 33/0);
+- the screen and component scaffolders 9/0;
+- `keliver-run-android` from the package 22/0;
+- the **embed dependency floor from the package 11/0**: the zip's own floor and scaffolder, and an app on older libraries built and resolved against it;
+- `keliver-publish` 41/0;
+- key permissions 63/0;
+- guest bundle signing 4/0;
+- store recovery 145/0.
+
+The artifact was downloaded and checked on the releasing machine before the
+tag (through `gh api …/actions/artifacts/12897894342/zip`): the artifact's
+sha256 equals GitHub's digest, and the zip, `VERSION.json`, APK and floor are
+as above. Step 3 at `3dc039f5e`: no workflow in the tagged tree can create a
+release or attach an asset (`publish.yml` takes `v*` only; `portal-tools.yml`
+is read-only). PR #170's CI on the same commit (run `40871660786`): Build,
+both editor E2E suites, embed-floor and production-host-build green.
+
+**How the stored asset was checked.** The draft's assets matched the
+verified files by GitHub's server-side record (`digest`, `size`): the zip
+`sha256:68958efa…`, 92,097,006 bytes, and the `.sha256` file
+`sha256:96755f2a…`, 98 bytes, both `uploaded`. The tag (annotated, object
+`5660281945`) was re-checked at `3dc039f5e`, and its push ran only
+`portal-tools.yml`'s read-only rebuild (`40905050619`, never attached). This
+time the network let both downloads through. The draft asset downloaded back
+(`gh api …/releases/assets/689049110`) hashed `68958efa…`, and after
+publishing, the public URL (`curl -L …/releases/download/portal-tools-v0.3.15/…`)
+gave the same 92,097,006 bytes and `68958efa…`. Published
+2026-10-29T15:49:45Z with `--latest=false` (the "Latest" badge stays on
+`v0.3.3`).
 
 Not verified for this release: `keliver-run-android` and live updates on a
 physical Android phone or iPhone. On 2026-10-29 neither test phone could
-reach the releasing machine's network. The
-host kit's device proof (K4) has run on the CI emulator and simulator only.
+reach the releasing machine's network. The host kit's device proof (K4) has
+run on the CI emulator and simulator only.
