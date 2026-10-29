@@ -450,7 +450,9 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    `screen-failed` on iOS merged (#165, released in tools 0.3.15). K4, the device
    proof, ran on the CI emulator and simulator against the templates after
    0.3.14 (#165: routes, close, `screen-failed`, the app's fallback), not
-   against the 0.3.14 bytes; not on a phone yet. **2026-10-29:** K3, the
+   against the 0.3.14 bytes. **2026-10-30:** the same checks passed against
+   the published 0.3.15 hosts (#171's hand runs: X8–X10 on the emulator,
+   I6–I8 on the simulator); not on a phone yet. **2026-10-29:** K3, the
    dependency-floor report, merged (#168): `--embed`
    prints the module's floor beside the app's declared versions before it
    writes, checked in CI on an app on older libraries. Released in tools
