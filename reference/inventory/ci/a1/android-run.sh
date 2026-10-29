@@ -29,9 +29,9 @@ loaded="$(sed -n 's/.*loaded bundle sequence \([0-9][0-9]*\) from http:\/\/local
 [ "$rc" = 0 ] && [ -n "$newest" ] && [ "$loaded" = "$newest" ] \
   && ok "A1: one command, from no host installed to the host showing the newest bundle (sequence $loaded)" \
   || bad "A1: rc=$rc, newest published ${newest:-?}, loaded ${loaded:-?}"
-adb -s "$SERIAL" reverse --list 2>/dev/null | grep -q "tcp:8077" && ok "A1: the device reaches the relay through adb reverse" || bad "A1: no adb reverse for the relay"
+adb -s "$SERIAL" reverse --list 2>/dev/null | grep -q "tcp:$RELAY_PORT" && ok "A1: the device reaches the relay through adb reverse" || bad "A1: no adb reverse for the relay"
 after="$(cd "$APP" && git status --porcelain --untracked-files=all -- . ':!build' ':!host-android/build' ':!.gradle' ':!host-android/.gradle' ':!.kotlin' ':!host-android/.kotlin' 2>/dev/null | sort)"
 [ "$before" = "$after" ] && ok "A2: the app's tracked and untracked files are as they were" || bad "A2: the command changed the app: $(diff <(echo "$before") <(echo "$after") | head -5 | tr '\n' ' ')"
-adb -s "$SERIAL" reverse --remove tcp:8077 > /dev/null 2>&1 || true
+adb -s "$SERIAL" reverse --remove tcp:$RELAY_PORT > /dev/null 2>&1 || true
 portal_down "$APP"
 fi

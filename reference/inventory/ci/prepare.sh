@@ -52,6 +52,16 @@ case "$DEVICE_KIND" in
   physical) HOST_ADDR=127.0.0.1 ;;
   *) bad "KELIVER_DEVICE must be emulator or physical, not $DEVICE_KIND"; exit 1 ;;
 esac
+# The relay's port: KELIVER_RELAY_PORT, 8077 by default (CI). Another one on a
+# machine whose :8077 is someone else's portal; the editor follows at port + 19.
+# It goes into the app's keliver.portal.json (committed with the publish wiring
+# below) and into <work-dir>/env, so device.sh and ios.sh use the same port.
+RELAY_PORT="${KELIVER_RELAY_PORT:-8077}"
+case "$RELAY_PORT" in
+  ''|*[!0-9]*) bad "KELIVER_RELAY_PORT must be a port number, not $RELAY_PORT"; exit 1 ;;
+esac
+[ "$RELAY_PORT" -ge 1024 ] && [ "$RELAY_PORT" -le 65516 ] \
+  || { bad "KELIVER_RELAY_PORT must be 1024-65516 (the editor takes port + 19), not $RELAY_PORT"; exit 1; }
 
 # --- 1. the app, from the public release ------------------------------------
 echo "==> bootstrap"
@@ -65,7 +75,13 @@ APP="$WORK/boot/inventory"
 export KP="$(ls -d "$WORK"/boot/tools/keliver-portal-tools-*/bin)"
 cp "$APP/hand-edits.diff" "$EV/hand-edits.diff"
 echo "APP=$APP" > "$WORK/env"; echo "KP=$KP" >> "$WORK/env"
-{ echo "DEVICE_KIND=$DEVICE_KIND"; echo "HOST_ADDR=$HOST_ADDR"; } >> "$WORK/env"
+{ echo "DEVICE_KIND=$DEVICE_KIND"; echo "HOST_ADDR=$HOST_ADDR"; echo "RELAY_PORT=$RELAY_PORT"; } >> "$WORK/env"
+if [ "$RELAY_PORT" != 8077 ]; then
+  python3 -c 'import json,sys; p=sys.argv[1]; c=json.load(open(p)); c["port"]=int(sys.argv[2]); open(p,"w").write(json.dumps(c,indent=2)+"\n")' \
+    "$APP/keliver.portal.json" "$RELAY_PORT" \
+    && ok "the relay's port is $RELAY_PORT (KELIVER_RELAY_PORT), in the app's keliver.portal.json" \
+    || { bad "could not set the relay's port in keliver.portal.json"; exit 1; }
+fi
 
 ( cd "$APP" && ./gradlew compileKotlinJs --console=plain ) > "$EV/compile.log" 2>&1 \
   && ok "compile: ./gradlew compileKotlinJs against Maven Central 0.3.3" \
@@ -92,13 +108,18 @@ keliver_require_isolated_store "$WORK" "$APP" > "$EV/guard-1.log" 2>&1 \
 cat "$EV/guard-1.log"
 
 portal_up(){  # $1 = app dir, $2 = log
+  # A relay this run did not start would answer every check below, and take
+  # its edits and publishes: refuse a port that still answers after 20 s.
+  local free=0
+  for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" || { free=1; break; }; sleep 2; done
+  [ "$free" = 1 ] || { echo ":$RELAY_PORT already answers: a relay this run did not start (set KELIVER_RELAY_PORT)" | tee -a "$2" >&2; return 1; }
   ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
-  for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null http://localhost:8077/devstate && return 0; sleep 3; done
+  for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" && return 0; sleep 3; done
   return 1
 }
 portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 2; }
 
-portal_up "$APP" "$EV/relay-prepare.log" && ok "the relay for this app answered on :8077" \
+portal_up "$APP" "$EV/relay-prepare.log" && ok "the relay for this app answered on :$RELAY_PORT" \
   || { bad "the relay never answered"; tail -30 "$EV/relay-prepare.log"; exit 1; }
 STORE="$(cat "$APP/.gradle/keliver-store-path")"
 echo "STORE=$STORE" >> "$WORK/env"
@@ -114,7 +135,7 @@ ls -l "$STORE/keys" | awk 'NR>1 {print "    key file mode: " $1 "  " $NF}' | tee
 
 # --- 3. D1: ingest with zero RawCode -----------------------------------------
 for s in inventory item; do
-  curl -sf "http://localhost:8077/doc?project=default&screen=$s" > "$EV/doc-$s.json"
+  curl -sf "http://localhost:$RELAY_PORT/doc?project=default&screen=$s" > "$EV/doc-$s.json"
   n="$(grep -o 'DocNode.RawCode' "$EV/doc-$s.json" | wc -l | tr -d ' ')"
   w="$(grep -o 'DocNode.Widget' "$EV/doc-$s.json" | wc -l | tr -d ' ')"
   [ -s "$EV/doc-$s.json" ] && [ "$n" = 0 ] && [ "$w" -gt 5 ] \
@@ -122,7 +143,7 @@ for s in inventory item; do
 done
 
 # --- 4. P2 precondition: publish v1, signed with this app's key --------------
-curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-v1.log" 2>&1
+curl -s -m 600 -X POST http://localhost:$RELAY_PORT/publish > "$EV/publish-v1.log" 2>&1
 grep -q 'publish OK: bundle v1' "$EV/publish-v1.log" && ok "publish v1: $(grep 'publish OK' "$EV/publish-v1.log")" \
   || { bad "publish v1 failed"; tail -20 "$EV/publish-v1.log"; }
 M1="$STORE/bundles/v1/manifest.zipline.json"
@@ -160,7 +181,7 @@ case "${KELIVER_SCAFFOLD_FROM:-zip}" in
   repo) PROD_SCAFFOLD="$REPO/scripts/keliver-new-production-host.sh"; PROD_WHICH="this repository's scripts/ (W3, unreleased)" ;;
   *)    bad "KELIVER_SCAFFOLD_FROM must be zip or repo, not ${KELIVER_SCAFFOLD_FROM}"; exit 1 ;;
 esac
-( cd "$APP" && "$PROD_SCAFFOLD" --bundle-server "http://$HOST_ADDR:8077" \
+( cd "$APP" && "$PROD_SCAFFOLD" --bundle-server "http://$HOST_ADDR:$RELAY_PORT" \
     --application-id "$PROD_ID" ) > "$EV/host-scaffold.log" 2>&1 \
   && ok "P1: keliver-new-production-host.sh ($PROD_WHICH) scaffolded host-android/" \
   || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
@@ -171,7 +192,7 @@ printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android
 # Every host but W5's is pinned to next-launch: the rows expect a bundle published
 # while the app runs to show only after a relaunch (a template from tools 0.3.10
 # on leaves keliver.updates empty, which a debug build takes as on-resume).
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.reportUrl="http://$HOST_ADDR:8077/report" ) > "$EV/host-build.log" 2>&1 \
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.reportUrl="http://$HOST_ADDR:$RELAY_PORT/report" ) > "$EV/host-build.log" 2>&1 \
   && ok "P1: the scaffolded host built from Maven Central" \
   || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
 # Where every Keliver artifact in that build came from.
