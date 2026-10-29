@@ -188,6 +188,24 @@ jobs:
             :keliver-treehouse-guest:jsTest \
             -DRELEASE_SIGNING_ENABLED=false
 
+  # K3: the dependency floor the embedded Android host imposes. Resolves the
+  # --embed template's classpath, scaffolds it into an app on older libraries
+  # (scripts/fixtures/embed-older-compose), checks the floor report the
+  # scaffolder prints before writing, builds the app and compares what Gradle
+  # resolved. Linux: ubuntu-latest has a JDK and an Android SDK.
+  embed-floor:
+    name: Embed dependency floor (older-libraries app)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Floor, report and consumer build
+        run: scripts/keliver-embed-floor-check.sh "$RUNNER_TEMP/embed-floor"
+
   # Which parts of the tree a pull request touches: the editor end-to-end suite
   # below runs only when the editor, what it renders with, or the relay it
   # talks to changed (every push to main and every manual run runs it).

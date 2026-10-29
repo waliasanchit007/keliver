@@ -170,6 +170,11 @@ per process, made in your `Application`), the `KeliverScreen` Composable and
 `KeliverView`. It edits none of your files and prints the lines to add. Your
 build must supply Kotlin 2.2.0, its Compose plugin and `app.cash.zipline`
 1.22.0. `host/README.md` §4 has the details.
+From 0.3.15 it first prints the module's dependency floor: Kotlin,
+coroutines, Compose, activity-compose, OkHttp, Coil, Zipline and the rest, as
+the module resolves them (`templates/production-host-embed/dependency-floor.json`),
+beside the versions your build declares. A declared version below the floor
+is marked RAISED: that is the version your app will get.
 
 ### bin/keliver-run-android.sh (from 0.3.15)
 
