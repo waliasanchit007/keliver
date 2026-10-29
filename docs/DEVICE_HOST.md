@@ -244,7 +244,7 @@ that opens.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
   `not-loaded`, `no-bundle`, `refused`, or `screen-failed`: the code threw
   while a screen showed it, one record per screen on show (Android from tools
-  0.3.14, iOS from the next tools release).
+  0.3.14, iOS from 0.3.15).
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
   `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
   `other`.

@@ -46,6 +46,8 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | what | where | reaches users through |
 |---|---|---|
 | `bin/keliver-run-android.sh`: the app's screens on a phone or emulator in one command (build a debug host for `http://localhost:<port>`, `adb reverse`, install, start, wait for the bundle to load) | #166 (`scripts/`) | the next tools release |
+| guests' HostHttp through the app's own authenticated `OkHttpClient` (`KeliverConfig.httpClient`), behind the `RequestPolicy`, checked again after the app's interceptors | #169 (`scripts/templates/production-host`) | the next tools release |
+| the embed's dependency floor: `--embed` prints what the module makes the existing app depend on (Kotlin, coroutines, Compose, activity-compose, OkHttp, Coil, Zipline, …) beside the app's declared versions, before writing; the tools zip carries `templates/production-host-embed/dependency-floor.json` | #168 (`scripts/`) | the next tools release |
 | `screen-failed` on the iOS host: a screen whose code throws reports it and calls its `onUnavailable` (as Android's) | #165 (`scripts/templates/ios-host`) | the next tools release |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:

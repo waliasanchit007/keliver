@@ -40,8 +40,10 @@ In order (details and evidence in `docs/ROADMAP.md`):
    request allow-list). Released in tools 0.3.14 on both host templates. The
    templates after it (#165, with `screen-failed` on iOS) are checked on the
    CI emulator and simulator through the reference embed apps; next, a phone.
+   The dependency-floor report (K3) is merged for the next tools release.
 4. **A bridge generator**, so an app's own host calls are generated, not
-   hand-copied.
+   hand-copied. First step merged (B1, Android): guests' data calls go
+   through the app's own signed-in HTTP client, behind the allow-list.
 5. **Start-up and memory**, measured before optimised.
 6. **A physical-device proof** with release-signed builds and a real HTTPS
    server, and an external adopter.
