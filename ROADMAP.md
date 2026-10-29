@@ -17,9 +17,10 @@ The step-by-step record of every release and its evidence:
 - **Tools bundle** `keliver-portal-tools` 0.3.15 (a GitHub release asset):
   `keliver-init` scaffolds an app, `keliver-portal` runs the relay and the
   visual editor, `keliver-run-android` puts the app's screens on a phone or
-  emulator (checked on the CI emulator and a physical Android phone), `keliver-publish` writes signed bundles for any static HTTPS
-  server, and scaffolders write a production host for Android and iOS (also
-  embeddable in an existing app) and a per-app editor.
+  emulator (checked on the CI emulator and a physical Android phone),
+  `keliver-publish` writes signed bundles for any static HTTPS server, and
+  scaffolders write a production host for Android and iOS (also embeddable in
+  an existing app) and a per-app editor.
 - **Production delivery**: Ed25519-signed, versioned bundles, a rollback floor,
   channels and staged rollout, signing-key rotation, updates on resume, and
   reports, all verified by the host before any code runs.
