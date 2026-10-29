@@ -55,13 +55,21 @@ esac
 # The relay's port: KELIVER_RELAY_PORT, 8077 by default (CI). Another one on a
 # machine whose :8077 is someone else's portal; the editor follows at port + 19.
 # It goes into the app's keliver.portal.json (committed with the publish wiring
-# below) and into <work-dir>/env, so device.sh and ios.sh use the same port.
+# below) and into <work-dir>/env, which device.sh reads. ci/ios.sh builds its own
+# app and keeps :8077.
 RELAY_PORT="${KELIVER_RELAY_PORT:-8077}"
 case "$RELAY_PORT" in
   ''|*[!0-9]*) bad "KELIVER_RELAY_PORT must be a port number, not $RELAY_PORT"; exit 1 ;;
 esac
+RELAY_PORT=$((10#$RELAY_PORT))
 [ "$RELAY_PORT" -ge 1024 ] && [ "$RELAY_PORT" -le 65516 ] \
   || { bad "KELIVER_RELAY_PORT must be 1024-65516 (the editor takes port + 19), not $RELAY_PORT"; exit 1; }
+# The harness's other servers: the development bundle server and the static
+# HTTPS servers. Neither the relay nor its editor may take one of them.
+for taken in 8080 8443 8444 8445; do
+  [ "$RELAY_PORT" = "$taken" ] || [ $((RELAY_PORT + 19)) = "$taken" ] \
+    && { bad "KELIVER_RELAY_PORT $RELAY_PORT: it or its editor (port + 19) would take :$taken, which the harness uses"; exit 1; }
+done
 
 # --- 1. the app, from the public release ------------------------------------
 echo "==> bootstrap"
@@ -112,7 +120,7 @@ portal_up(){  # $1 = app dir, $2 = log
   # its edits and publishes: refuse a port that still answers after 20 s.
   local free=0
   for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" || { free=1; break; }; sleep 2; done
-  [ "$free" = 1 ] || { echo ":$RELAY_PORT already answers: a relay this run did not start (set KELIVER_RELAY_PORT)" | tee -a "$2" >&2; return 1; }
+  [ "$free" = 1 ] || { bad ":$RELAY_PORT already answers: a relay this run did not start (stop it, or set another KELIVER_RELAY_PORT)"; echo "prepare: passed $pass, failed $fail"; exit 1; }
   ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
   for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" && return 0; sleep 3; done
   return 1

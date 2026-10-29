@@ -33,7 +33,8 @@ EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
 SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
-. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, DEVICE_KIND, HOST_ADDR
+unset RELAY_PORT   # only the work dir says which port its app was built for
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, DEVICE_KIND, HOST_ADDR, RELAY_PORT
 # W7: what prepare.sh built the hosts for (KELIVER_DEVICE there). A work dir
 # from before W7 has neither line: it was built for the emulator.
 DEVICE_KIND="${DEVICE_KIND:-emulator}"; HOST_ADDR="${HOST_ADDR:-10.0.2.2}"
@@ -96,7 +97,8 @@ portal_up(){  # $1 app, $2 log
   # its edits and publishes: refuse a port that still answers after 20 s.
   local free=0
   for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" || { free=1; break; }; sleep 2; done
-  [ "$free" = 1 ] || { echo ":$RELAY_PORT already answers: a relay this run did not start (set KELIVER_RELAY_PORT)" | tee -a "$2" >&2; return 1; }
+  # Stop the run: every check after this would edit and publish through it.
+  [ "$free" = 1 ] || { bad ":$RELAY_PORT already answers: a relay this run did not start (stop it, or run prepare.sh again with another KELIVER_RELAY_PORT)"; echo "device: passed $pass, failed $fail"; exit 1; }
   ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
   for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate && return 0; sleep 3; done
   return 1
@@ -152,8 +154,9 @@ fi
 if [ "$DEVICE_KIND" = physical ]; then
   [ "$IS_EMU" = 1 ] && echo "    NOTE: the physical-device route on an EMULATOR: a rehearsal, not a physical-device run"
   # The hosts reach this machine as 127.0.0.1: the relay (:$RELAY_PORT) and the static
-  # HTTPS servers (:8443, and :8444 for W5's L rows), each through the USB connection.
-  for port in $RELAY_PORT 8443 8444; do
+  # HTTPS servers (:8443, :8444 for W5's L rows, :8445 for its LV rows), each
+  # through the adb connection.
+  for port in $RELAY_PORT 8443 8444 8445; do
     adb -s "$SERIAL" reverse "tcp:$port" "tcp:$port" >/dev/null && REVERSED="$REVERSED $port" \
       && ok "W7: adb reverse tcp:$port (the device reaches this machine's :$port as 127.0.0.1:$port)" \
       || bad "W7: adb reverse tcp:$port failed"
