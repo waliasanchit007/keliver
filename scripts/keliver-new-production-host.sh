@@ -248,13 +248,19 @@ def strip_comments(t):
     out, i, n, quote = [], 0, len(t), None
     while i < n:
         c = t[i]
-        if quote:
+        if quote in ('"""', "'''"):  # a triple-quoted string may span lines
+            j = t.find(quote, i)
+            j = n if j < 0 else j + 3
+            out.append(t[i:j]); i = j; quote = None
+        elif quote:
             out.append(c)
             if c == '\\' and i + 1 < n:
                 out.append(t[i + 1]); i += 2; continue
             if c == quote or c == '\n':  # build-file strings are one line; a stray quote ends there
                 quote = None
             i += 1
+        elif t.startswith('"""', i) or t.startswith("'''", i):
+            quote = t[i:i + 3]; out.append(quote); i += 3
         elif c in '"\'':
             quote = c; out.append(c); i += 1
         elif t.startswith('//', i):
@@ -370,7 +376,8 @@ def report():
                 elif g('id') in KOTLIN_IDS and ver:
                     kotlin_plugin.append((ver, rel, False))
             continue
-        forced = [(f.start(), f.end()) for f in re.finditer(r'\bforce\s*\(([^()]*)\)', t)]
+        # force(a, b) and Groovy's force a, b (to the end of the line).
+        forced = [(f.start(), f.end()) for f in re.finditer(r'\bforce\s*(?:\(([^()]*)\)|[ \t]+[^\n(]*)', t)]
         for m in re.finditer(r"""['"]([\w.-]+):([\w.-]+)(?::(\$\{[^}]*\}|[^'"\s@]+))?(?:@\w+)?['"]""", t):
             grp, name, v = m.group(1), m.group(2), m.group(3)
             if not re.fullmatch(r'[a-z][\w-]*(\.[\w-]+)+', grp):
@@ -378,7 +385,7 @@ def report():
             before = t[max(0, m.start() - 40):m.start()]
             strict = any(a <= m.start() < b for a, b in forced) \
                 or bool(re.search(r'\b(?:force|enforcedPlatform)\s*\(?\s*$', before)) \
-                or bool(re.match(r'\s*\)?\s*\{[^}]*\bforce\s*=\s*true', t[m.end():m.end() + 120]))
+                or bool(re.match(r'\s*\)?\s*\{[^}]*\b(?:force|isForce)\s*=\s*true', t[m.end():m.end() + 120]))
             if v is None:
                 st = re.match(r"""\s*\)?\s*\{[^}]*?strictly\s*\(?\s*['"]([^'"]+)['"]""", t[m.end():m.end() + 200])
                 if not st:

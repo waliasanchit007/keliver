@@ -470,15 +470,16 @@ activity-compose, AndroidX core, lifecycle and browser, OkHttp, Okio, Coil and
 Zipline. Each sits beside the version your build files declare. The report
 reads direct coordinates, version catalogs (`gradle/*.versions.toml`), simple
 version variables, the Kotlin plugin and BOMs (a BOM named `<x>-bom` versions
-that group's `<x>…` modules). It looks at most four
-directories deep and skips comments. Each row gets a verdict:
+that group's `<x>…` modules). It looks at most four directories deep and skips
+comments. Each row gets a verdict:
 - **RAISED:** you declare an older version. Gradle keeps one version of each
   library, so your app gets the floor instead. The report counts these, and
   says when one is a new major version (OkHttp 4 to 5, for example). Build and
   test your app with the raised versions before you ship it.
-- **PINNED below the floor:** a `strictly`, `!!`, `force()`, `force = true` or
-  `enforcedPlatform` version older than the floor. Gradle fails, or keeps your version, which the module was not built
-  with. Lift the pin first.
+- **PINNED below the floor:** a `strictly`, `!!`, `force`, `force = true`,
+  `isForce = true` or `enforcedPlatform` version older than the floor. Gradle
+  fails, or keeps your version, which the module was not built with. Lift the
+  pin first.
 - **The Kotlin plugin is older than the module's Kotlin:** the module will not
   compile in your app.
 - **A Compose BOM:** its versions are dates, so check that BOM's Compose

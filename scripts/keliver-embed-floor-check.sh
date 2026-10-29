@@ -213,9 +213,9 @@ SH2="$DISP/shapes2"; mkdir -p "$SH2/app"
 printf "rootProject.name = 'shapes2'\ninclude ':app'\n" > "$SH2/settings.gradle"
 cat > "$SH2/build.gradle" <<'EOF'
 plugins { id 'org.jetbrains.kotlin.android' version '1.9.22' apply false }
-// TODO: drop the libs/* jars
 EOF
 cat > "$SH2/app/build.gradle" <<'EOF'
+// TODO: drop the libs/* jars
 android {
   packagingOptions { exclude 'META-INF/*.kotlin_module' }
 }
@@ -232,6 +232,11 @@ configurations.all {
   resolutionStrategy.force('androidx.core:core-ktx:1.9.0', 'androidx.activity:activity-compose:1.7.0')
 }
 def coverage = ['**/R.class', '**/R$*.class']
+def script = """
+  cp build/outputs/*.apk dist/
+"""
+dependencies { implementation 'com.squareup.okio:okio:3.0.0' }
+configurations.all { resolutionStrategy { force 'io.coil-kt.coil3:coil-compose:3.0.0', 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0' } }
 EOF
 ( cd "$APP" && env ${FLOOR_ENV[@]+"${FLOOR_ENV[@]}"} "$SCAFFOLD" --embed --into "$SH2" --module kh --bundle-server https://bundles.invalid ) > "$DISP/shapes2.log" 2>&1; rc=$?
 python3 - "$DISP/shapes2.log" "$FLOOR" > "$DISP/shapes2-check.txt" 2>&1 <<'PY'
@@ -250,19 +255,22 @@ cases = {
     'androidx.core': ('1.9.0, strict (app/build.gradle)', 'PINNED below the floor'),
     'activity-compose': ('1.7.0, strict (app/build.gradle)', 'PINNED below the floor'),
     'androidx.lifecycle': ('2.6.2 (app/build.gradle)', 'RAISED to ' + v['androidx.lifecycle']),
+    'Okio': ('3.0.0 (app/build.gradle)', 'RAISED to ' + v['Okio']),
+    'Coil': ('3.0.0, strict (app/build.gradle)', 'PINNED below the floor'),
+    'kotlinx-serialization': ('1.5.0, strict (app/build.gradle)', 'PINNED below the floor'),
 }
 for name, (declared, verdict) in cases.items():
     rest = row(name)
     assert rest.startswith(declared) and verdict in rest, '%s: %r' % (name, rest)
-assert not row('kotlinx-serialization').startswith('1.7.3'), 'the coroutines BOM versioned serialization: %r' % row('kotlinx-serialization')
 assert 'report stopped' not in log and 'report failed' not in log, 'the report broke'
-print('ok: strings with /* and // kept, BOMs by name, enforcedPlatform / force() of two / force = true pinned, a Kotlin BOM does not hide Kotlin 1.9')
+print('ok: /* and // in strings (and a triple-quoted one) kept, BOMs by name, enforcedPlatform / force() of two / force a, b / force = true pinned, a Kotlin BOM does not hide Kotlin 1.9')
 PY
 [ $? = 0 ] && [ "$rc" = 0 ] && ok "the report on more shapes: $(tail -1 "$DISP/shapes2-check.txt")" \
   || { bad "the report on more shapes (rc=$rc): $(tail -1 "$DISP/shapes2-check.txt")"; sed -n '1,22p' "$DISP/shapes2.log"; }
 
 # A build file it cannot read is skipped and named; a report that breaks (a
-# floor without its keliverVersion) is a warning. Neither refuses the module.
+# floor without its keliverVersion, which the scaffolder's own validation does
+# not ask for) is a warning. Neither refuses the module.
 mkdir -p "$DISP/unreadable/mod"; printf "rootProject.name = 'u'\n" > "$DISP/unreadable/settings.gradle"
 ln -s "$DISP/does-not-exist" "$DISP/unreadable/mod/build.gradle"
 ( cd "$APP" && env ${FLOOR_ENV[@]+"${FLOOR_ENV[@]}"} "$SCAFFOLD" --embed --into "$DISP/unreadable" --bundle-server https://bundles.invalid ) > "$DISP/unreadable.log" 2>&1; rc=$?
