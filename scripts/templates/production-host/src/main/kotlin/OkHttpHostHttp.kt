@@ -7,10 +7,12 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 
 /**
  * The HostHttp capability: guests send a RELATIVE request, and it goes to YOUR
@@ -29,7 +31,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * - what goes on the wire is checked again, after your client's own
  *   interceptors and on every retry (an `Authenticator`'s too): a request
  *   whose scheme, host, port or path is not the one checked is refused, so an
- *   interceptor that acts on a header the guest set cannot send it elsewhere;
+ *   interceptor that acts on a header the guest set cannot send it elsewhere
+ *   (nor answer it from your client's cache). Your interceptors must change a
+ *   request with `newBuilder()`: one built from scratch, or one that rewrites
+ *   the path on purpose (a `/v2` prefix), is refused;
  * - with [appOwnsCredentials] (your own client, `KeliverConfig.httpClient`),
  *   the guest's `Authorization`, `Proxy-Authorization` and `Cookie` headers are
  *   dropped, and the response's `Set-Cookie` is not handed back: your client's
@@ -49,20 +54,24 @@ class OkHttpHostHttp(
   private val appOwnsCredentials: Boolean = false,
 ) : HostHttpProvider {
   private val client = client.newBuilder().followRedirects(false).followSslRedirects(false)
-    // Last, so it sees each attempt as it goes out, after the app's own network interceptors.
-    .addNetworkInterceptor { chain ->
-      val sent = chain.request().url
-      val checked = chain.request().tag(CheckedUrl::class.java)?.url
-      if (checked == null || sent.scheme != checked.scheme || sent.host != checked.host ||
-        sent.port != checked.port || sent.encodedPath != checked.encodedPath
-      ) {
-        val why = "the request going out is not the one checked"
-        Log.w(TAG, "HostHttp refused: ${if (BuildConfig.DEBUG) "$why ($sent)" else why}")
-        throw HostHttpRefused("HostHttp refused: $why")
-      }
-      chain.proceed(chain.request())
-    }
+    // Last of the app's interceptors (before its cache can answer), and last on the
+    // network (each attempt as it goes out, retries included).
+    .addInterceptor(::sameAsChecked)
+    .addNetworkInterceptor(::sameAsChecked)
     .build()
+
+  private fun sameAsChecked(chain: Interceptor.Chain): Response {
+    val sent = chain.request().url
+    val checked = chain.request().tag(CheckedUrl::class.java)?.url
+    if (checked == null || sent.scheme != checked.scheme || sent.host != checked.host ||
+      sent.port != checked.port || sent.encodedPath != checked.encodedPath
+    ) {
+      val why = "the request going out is not the one checked"
+      Log.w(TAG, "HostHttp refused: ${if (BuildConfig.DEBUG) "$why ($sent)" else why}")
+      throw HostHttpRefused("HostHttp refused: $why")
+    }
+    return chain.proceed(chain.request())
+  }
 
   /** Set when the policy cannot allow anything on [base] (a wrong origin): every request is refused. */
   private val baseRefusal: String? = policy?.baseRefusal(base)?.also { Log.e(TAG, "HostHttp: $it; every request is refused") }

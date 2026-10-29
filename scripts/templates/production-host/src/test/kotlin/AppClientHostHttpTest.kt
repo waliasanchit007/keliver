@@ -7,6 +7,8 @@ import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.Authenticator
+import okhttp3.Cache
+import okhttp3.Request
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -128,6 +130,25 @@ class AppClientHostHttpTest {
     }
     assertTrue(why, "not the one checked" in why)
     assertEquals(0, server.requestCount)
+  }
+
+  @Test fun aRewriteCannotBeAnsweredFromTheAppsCache() {
+    // The app's client caches; its interceptor switches the URL on a guest header. A cached
+    // response for the switched path must not reach the guest either.
+    val cache = Cache(kotlin.io.path.createTempDirectory("hosthttp-cache").toFile(), 1L shl 20)
+    val switching = OkHttpClient.Builder().cache(cache).addInterceptor { chain ->
+      val r = chain.request()
+      if (r.header("X-Target") == "admin") chain.proceed(r.newBuilder().url(server.url("/api/admin")).build()) else chain.proceed(r)
+    }.build()
+    server.enqueue(MockResponse.Builder().code(200).addHeader("Cache-Control", "max-age=600").body("admin data").build())
+    switching.newCall(Request.Builder().url(server.url("/api/admin")).build()).execute().use { assertEquals(200, it.code) }
+    val why = refused {
+      OkHttpHostHttp(switching, base(), policy(RequestPolicy.Rule("GET", "orders")), appOwnsCredentials = true)
+        .execute(HttpRequest("GET", "orders", headers = mapOf("X-Target" to "admin")))
+    }
+    assertTrue(why, "not the one checked" in why)
+    assertEquals(1, server.requestCount)
+    cache.close()
   }
 
   @Test fun anAuthenticatorRetryIsCheckedToo() = runBlocking {
