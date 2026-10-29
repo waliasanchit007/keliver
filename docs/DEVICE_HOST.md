@@ -582,12 +582,12 @@ for byte):
   (a late reply) closes nothing.
 - **`RequestPolicy`**: what a guest's HostHttp requests may reach, checked in
   Keliver code before anything is sent:
-  `KeliverHost.create(this, KeliverConfig.fromBuild(this, RequestPolicy(origin, rules, allowStateChanging, allowCleartext)))`.
+  `KeliverHost.create(this, KeliverConfig.fromBuild(this, RequestPolicy(origin, allowed, allowStateChanging, allowCleartext)))`.
   - `origin` (scheme, host, port) pins the API base: if `keliver.apiBaseUrl`
     is anywhere else, every request is refused. It must be `https` unless
     `allowCleartext`, which you set from `BuildConfig.DEBUG` (a release
     build's settings refuse an http API base anyway);
-  - `rules` are exact `RequestPolicy.Rule(method, path)` pairs, paths relative
+  - `allowed` holds exact `RequestPolicy.Rule(method, path)` pairs, paths relative
     to `keliver.apiBaseUrl` and compared segment by segment (no patterns: a
     path with an id in it is a different path);
   - a state-changing method (anything but GET, HEAD, OPTIONS) also needs
@@ -598,8 +598,12 @@ for byte):
   Without a policy every path under the API base is allowed, as before: an
   app embedding Keliver screens should set one. Redirects are never followed
   and the method-override and path-override headers (`X-HTTP-Method-Override`,
-  `X-Original-URL` and kin) are dropped either way. The URL that goes on the
-  wire is checked again after your interceptors and on every retry. **Not
+  `X-Original-URL` and kin) are dropped either way (the path-override ones from
+  0.3.15). From 0.3.15 the URL is also checked again after your client's
+  interceptors and on each network attempt: an interceptor must change a
+  request with `newBuilder()`, and one that sends it to another path is
+  refused. (An `Authenticator` retry to another path that your client's cache
+  answers is not caught.) **Not
   restricted:** the query string, and other headers. With the host's plain
   client a guest can set `Authorization` or `Cookie`. With your own client
   (`KeliverConfig.fromBuild(this, requestPolicy, httpClient = yourClient)`,
@@ -616,8 +620,11 @@ for byte):
   custom schemes included. Everything else, `http` included, is refused and
   logged.
 - **Tests**: the standalone host carries the kit's JVM tests
-  (`./gradlew -p host-android testDebugUnitTest`): the policy against a local
-  server (allowed, not listed, wrong method, state-changing without the
+  (`./gradlew -p host-android testDebugUnitTest`): your own client behind the
+  policy (allowed with your token, refused before your client, wrong origin,
+  a redirect, an interceptor or authenticator sending the request elsewhere,
+  the guest's credential headers, `Set-Cookie`, no policy), the routes
+  (`KeliverRoute`), the policy against a local server (allowed, not listed, wrong method, state-changing without the
   switch, a policy for another origin, cleartext, a redirect, encoded `/` and
   `?`, dot segments, method case, method-override headers) and the link rules
   (schemes, and a parsed `intent:` link's action, target and data). Applying
@@ -757,8 +764,9 @@ server fed by `keliver-publish`:
 
 **Not measured:**
 - native navigation on iOS (no tap driver on the simulator CI);
-- an app on another Kotlin, AGP, Compose or OkHttp/Coil version than the one
-  combination CI builds;
+- an app on another Kotlin or AGP than the one combination CI builds (CI also
+  BUILDS an app on older Compose, activity, core, lifecycle, coroutines and
+  OkHttp 4, raised to the floor, but does not run it);
 - an iOS app that already embeds a Kotlin framework (it would carry two Kotlin
   runtimes; put the host sources in that framework instead);
 - an XCFramework instead of the build phase (documented in `EMBED.md`, not run);
@@ -771,5 +779,9 @@ server fed by `keliver-publish`:
   that; it isn't published.
 - **The theme** is Material 1: your Material 3 theme doesn't reach the Keliver
   screen.
-- **Dependency versions.** Compose, OkHttp and Coil versions resolve together
-  with your app's, and a forced upgrade either way is not tested.
+- **Dependency versions.** Compose, OkHttp, Coil and the rest resolve together
+  with your app's. From 0.3.15, `--embed` prints the module's dependency floor
+  beside your app's declared versions before it writes, and says which of
+  yours Gradle will RAISE, which strict or forced pins are below the floor,
+  and whether your Kotlin is too old (`templates/production-host-embed/dependency-floor.json`
+  holds the full resolved list). A raised app is built in CI, not run.

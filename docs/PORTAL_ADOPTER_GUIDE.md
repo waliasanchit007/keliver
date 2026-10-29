@@ -543,7 +543,9 @@ same host Kotlin as `host-android/`. Then, in your app:
   must be the API base's, so a debug build against a local `http://` API needs
   that origin there (and `allowCleartext`). Your client is used only for
   HostHttp, never for bundles. The URL that goes out is checked again after
-  your interceptors and on every retry, and redirects are not followed: an
+  your interceptors and on each network attempt, and redirects are not
+  followed (an `Authenticator` retry to another path that your client's cache
+  answers is not caught): an
   interceptor of yours must change a request with `newBuilder()`, and one
   that rewrites the path (a `/v2` prefix) makes the request refused. A
   guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are

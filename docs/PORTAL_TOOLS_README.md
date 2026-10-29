@@ -135,7 +135,10 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `screen-failed` on the iOS host too; and on Android, guests' `HostHttp`
   through your app's own authenticated `OkHttpClient`
   (`KeliverConfig.httpClient`), which needs a `RequestPolicy` and is used for
-  nothing else (a guest's credential headers are dropped).
+  nothing else (a guest's credential headers are dropped). On every host,
+  the path-override headers are dropped and the URL going out is checked
+  again after the client's interceptors. A host scaffolded earlier gets none
+  of it until it is scaffolded again.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

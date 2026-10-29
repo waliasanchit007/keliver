@@ -5,13 +5,20 @@ as each step of the procedure passes.
 
 What is in it since 0.3.14 (`58851db26`): PRs #165 (`screen-failed` on the
 iOS host), #166 (`keliver-run-android`), #168 (the embed's dependency floor)
-and #169 (HostHttp through the app's own client). #164, #165's reference-app
-half and #167 move the reference app and record evidence.
+and #169 (HostHttp through the app's own client). #163, #164, #165's
+reference-app half, #167 and #170 move the reference app and record releases
+and evidence.
 
 **The libraries stay 0.4.1.** Nothing published to Maven Central changed
-since 0.4.1. Every change here is in the scaffolders, their templates, the
-reference app's CI and the docs; the relay is unchanged. New apps get
+since 0.4.1. Every change here is in the packaged scripts (the scaffolders,
+their templates, the new `keliver-run-android.sh`), the packaging (the tools
+build now resolves the embed's dependency floor, so it needs network access
+and an Android SDK), CI and the docs; the relay is unchanged. New apps get
 `dev.keliver:*:0.4.1`, as with 0.3.14.
+
+**An existing host gets none of this until it is scaffolded again.** The host
+is your code once written; the scaffolder refuses to write over it. Scaffold
+into a new directory and carry your edits over, as for 0.3.14.
 
 ## New: your screens on a phone or emulator in one command (#166)
 
@@ -27,7 +34,8 @@ reference app's CI and the docs; the relay is unchanged. New apps get
 
 A failure says which step failed: no device, a build error, a load failure,
 or a load from the cache. On the CI emulator it went from no host installed
-to the newest bundle in 32 s.
+to the newest bundle in 32 s, with Gradle already warm from earlier builds in
+the same job.
 
 ## New: the dependency floor, before `--embed` writes (#168)
 
@@ -60,14 +68,11 @@ to guests' HostHttp requests.
 - It needs a `RequestPolicy`; a config without one is refused.
 - It is used only for HostHttp: bundles, the update stream and reports keep
   the host's own client.
-- The policy is checked before your interceptors see a request. The URL is
-  checked again after your interceptors (before your client's cache) and on
-  every attempt, including an `Authenticator`'s retry. A request your
-  interceptor sends elsewhere is refused.
-- A guest's `Authorization`, `Proxy-Authorization` and `Cookie` headers and
-  the path-override headers (`X-Original-URL` and kin) are dropped. A
-  response's `Set-Cookie` is not handed back.
-- Your interceptors must change a request with `newBuilder()`.
+- The policy is checked before your interceptors see a request.
+- A guest's `Authorization`, `Proxy-Authorization` and `Cookie` headers are
+  dropped, and a response's `Set-Cookie` is not handed back.
+- Known gap: an `Authenticator` retry to another path that your client's
+  cache answers is not caught (the check below runs on the network attempt).
 
 iOS (the header callback, B2) is not in this release.
 
@@ -77,10 +82,22 @@ When the code throws while a screen shows it, the iOS host reports
 `screen-failed` and calls that screen's `onUnavailable`, as the Android host
 has done since 0.3.14.
 
-## Changed
+## Changed, for every Android host (with or without your client)
 
-- The scaffolded production host's build and its JVM tests now run in CI on
-  every pull request that changes the host (`production-host-build`).
+- The URL that goes out is checked again: as the last of the client's own
+  interceptors (before its cache) and on each network attempt. A request an
+  interceptor sends to another scheme, host, port or path is refused. Your
+  interceptors must change a request with `newBuilder()`; one built from
+  scratch, or a deliberate path rewrite (a `/v2` prefix), is refused.
+- The path-override headers (`X-Original-URL`, `X-Rewrite-URL`,
+  `X-Forwarded-Host`, `X-Forwarded-Prefix`, `X-Forwarded-Proto`) are dropped
+  from a guest's request, as the method-override headers already were.
+
+## Changed, in CI
+
+- The scaffolded production host's build and its JVM tests now run on every
+  pull request that changes the host (`production-host-build`), and the
+  dependency-floor check on every pull request (`embed-floor`).
 
 ## Verification
 
@@ -89,6 +106,6 @@ build run and artifact, device job, the packaged checks, the stored asset's
 digest, the public download check)
 
 Not verified for this release: `keliver-run-android` and live updates on a
-physical phone. On 2026-10-29 the A12 was not reachable from this Mac, and
-the iPhone, now built and signed, could not reach the Mac's network. The
+physical Android phone or iPhone. On 2026-10-29 neither test phone could
+reach the releasing machine's network. The
 host kit's device proof (K4) has run on the CI emulator and simulator only.
