@@ -56,6 +56,11 @@
 # app's appRuntime.keliverVersion, else 0.4.1), KELIVER_HOST_ZIPLINE_VERSION,
 # KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION, KELIVER_HOST_AGP_VERSION.
 #
+# --embed prints the module's dependency floor (K3) beside the versions the
+# existing app declares, before writing anything: from
+# templates/production-host-embed/dependency-floor.json, which the tools bundle
+# carries; KELIVER_EMBED_FLOOR names another file, or "none" to skip it.
+#
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
 # A rejected input leaves the app byte-identical.
 set -euo pipefail
@@ -86,7 +91,7 @@ while [ $# -gt 0 ]; do
     --embed)           EMBED=true; shift ;;
     --into)            need "$1" $#; INTO="$2"; shift 2 ;;
     --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,60p' "$SELF"; exit 0 ;;
+    -h|--help)         sed -n '2,64p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -205,6 +210,129 @@ else
   echo "note: $KEY_FILE could not be checked against this app's portal store ($RESOLVE_WHY)." >&2
   echo "      A private key looks exactly like a public one; make sure this is ed25519.pub." >&2
   KEY_ORIGIN="$KEY_FILE (NOT checked against a store)"
+fi
+
+# K3: what the embedded host makes the existing app depend on, beside what that
+# app declares, printed BEFORE anything is written. Gradle resolves one version
+# per module, so an app that declares an older one gets the floor instead.
+# The tools bundle carries templates/production-host-embed/dependency-floor.json
+# (build-portal-tools.sh writes it with keliver-embed-floor.sh);
+# KELIVER_EMBED_FLOOR names another file, or "none".
+if $EMBED; then
+  FLOOR="${KELIVER_EMBED_FLOOR:-$EMBED_TEMPLATES/dependency-floor.json}"
+  if [ "$FLOOR" = none ]; then
+    :
+  elif [ -f "$FLOOR" ]; then
+    python3 - "$FLOOR" "$INTO" <<'PY' || fail "could not read the dependency floor ($FLOOR)."
+import glob, json, os, re, sys
+floor = json.load(open(sys.argv[1], encoding='utf-8')); into = sys.argv[2]
+texts = {}
+for pat in ('settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts', '*/build.gradle',
+            '*/build.gradle.kts', 'gradle/*.versions.toml', 'gradle.properties'):
+    for f in sorted(glob.glob(os.path.join(into, pat))):
+        texts[os.path.relpath(f, into)] = open(f, encoding='utf-8', errors='replace').read()
+
+# Plain version variables: gradle.properties, and ext/val/def/set(...) of a
+# quoted version in a build script.
+props = {}
+for rel, t in texts.items():
+    if rel == 'gradle.properties':
+        for m in re.finditer(r'^\s*([A-Za-z_][\w.]*)\s*[=:]\s*([0-9][\w.+-]*)\s*$', t, re.M):
+            props[m.group(1)] = m.group(2)
+    elif not rel.endswith('.toml'):
+        for m in re.finditer(r'''(?:\b(?:val|var|def)\s+|ext\.|\bset\(\s*)['"]?([A-Za-z_]\w*)['"]?\s*[=,]\s*['"]([0-9][\w.+-]*)['"]''', t):
+            props.setdefault(m.group(1), m.group(2))
+def resolve(v):
+    m = re.fullmatch(r'\$\{?([A-Za-z_][\w.]*)\}?', v)
+    return props.get(m.group(1)) if m else (v if '$' not in v else None)
+
+declared = {}  # 'group:name' -> [(version or None, where)]
+def note(coord, version, where):
+    declared.setdefault(coord, []).append((version, where))
+kotlin_plugin = []
+for rel, t in texts.items():
+    if rel.endswith('.toml'):
+        section, versions, entries = None, {}, []
+        for line in t.splitlines():
+            line = line.split('#', 1)[0].strip()
+            s = re.fullmatch(r'\[([\w.-]+)\]', line)
+            if s: section = s.group(1); continue
+            m = re.fullmatch(r'([\w.-]+)\s*=\s*(.+)', line)
+            if not m: continue
+            key, val = m.group(1), m.group(2)
+            if section == 'versions':
+                q = re.fullmatch(r'"([^"]+)"', val) or re.search(r'(?:strictly|require|prefer)\s*=\s*"([^"]+)"', val)
+                if q: versions[key] = q.group(1)
+            elif section in ('libraries', 'plugins'):
+                entries.append((section, val))
+        for section, val in entries:
+            q = re.fullmatch(r'"([\w.-]+):([\w.-]+):([^"]+)"', val)
+            if q and section == 'libraries':
+                note(q.group(1) + ':' + q.group(2), q.group(3), rel); continue
+            g = lambda k: (re.search(r'\b' + k + r'\s*=\s*"([^"]+)"', val) or [None, None])[1]
+            ver = g(r'version\.ref')
+            ver = versions.get(ver) if ver else g('version')
+            if section == 'libraries':
+                mod = g('module') or (g('group') and g('name') and g('group') + ':' + g('name'))
+                if mod: note(mod, ver, rel)
+            elif g('id') in ('org.jetbrains.kotlin.android', 'org.jetbrains.kotlin.jvm', 'org.jetbrains.kotlin.multiplatform'):
+                if ver: kotlin_plugin.append((ver, rel))
+        continue
+    for m in re.finditer(r'''['"]([\w.-]+):([\w.-]+):([^'"\s@]+)(?:@\w+)?['"]''', t):
+        if m.group(1) == 'org.jetbrains.kotlin' and m.group(2) == 'kotlin-gradle-plugin':
+            v = resolve(m.group(3))
+            if v: kotlin_plugin.append((v, rel))
+        else:
+            note(m.group(1) + ':' + m.group(2), resolve(m.group(3)), rel)
+    for m in re.finditer(r'''(?:id\s*\(?\s*['"]org\.jetbrains\.kotlin\.(?:android|jvm|multiplatform)['"]\s*\)?|kotlin\(\s*"(?:android|jvm|multiplatform)"\s*\))\s*version\s*\(?\s*['"]([^'"]+)['"]''', t):
+        v = resolve(m.group(1))
+        if v: kotlin_plugin.append((v, rel))
+
+def key(v):
+    base, _, pre = v.partition('-')
+    nums = [int(x) if x.isdigit() else 0 for x in re.split(r'[.]', base)]
+    return (nums + [0] * (4 - len(nums)), 0 if pre else 1)
+rows, raised = [], 0
+for r in floor['floor']:
+    found = [(v, w) for c in r['declaredAs'] for (v, w) in declared.get(c, [])]
+    if r['module'] == 'org.jetbrains.kotlin:kotlin-stdlib' and not found:
+        found = [(v, w + ', the Kotlin plugin') for v, w in kotlin_plugin]
+    if not found:
+        rows.append((r['name'], r['version'], '-', '')); continue
+    known = [(v, w) for v, w in found if v]
+    if not known:
+        rows.append((r['name'], r['version'], 'a version this cannot read (%s)' % found[0][1], 'check it')); continue
+    v, w = min(known, key=lambda x: key(x[0]))
+    if key(v) < key(r['version']):
+        raised += 1
+        major = key(v)[0][0] != key(r['version'])[0][0]
+        rows.append((r['name'], r['version'], '%s (%s)' % (v, w), 'RAISED to %s%s' % (r['version'], ', a new major version' if major else '')))
+    else:
+        rows.append((r['name'], r['version'], '%s (%s)' % (v, w), 'ok'))
+print('dependency floor of the embedded host (keliver %s, its %s; generated by %s):'
+      % (floor['keliverVersion'], floor['configuration'], floor['generatedBy']))
+print('  %-22s %-10s %-44s %s' % ('library', 'floor', 'this app declares', ''))
+for name, fv, dv, verdict in rows:
+    print('  %-22s %-10s %-44s %s' % (name, fv, dv, verdict))
+bom = [(v, w) for v, w in declared.get('androidx.compose:compose-bom', [])]
+if bom:
+    print('  this app declares the Compose BOM %s (%s): Compose modules it pins older than the floor are raised too'
+          % (bom[0][0] or '(a version this cannot read)', bom[0][1]))
+p = floor['plugins']
+print('  the module needs: Kotlin %s with its Compose plugin, app.cash.zipline %s, compileSdk %s or newer, minSdk %s or newer (built with AGP %s)'
+      % (p['kotlin'], p['zipline'], floor['compileSdk'], floor['minSdk'], p['androidGradlePlugin']))
+for rel, t in texts.items():
+    for m in re.finditer(r'\bminSdk(?:Version)?\s*(?:=|\(|\s)\s*(\d+)', t):
+        if int(m.group(1)) < floor['minSdk']:
+            print('  %s: minSdk %s is below the module\'s %s: the manifest merge will fail' % (rel, m.group(1), floor['minSdk']))
+if raised:
+    print('  %d of this app\'s declared versions will be RAISED when it adds the module: build and test the app with them.' % raised)
+print("  '-': not declared in %s's build files (it may come from a BOM, a plugin or a convention plugin)." % os.path.basename(into))
+print('  The full resolved list is in %s.' % sys.argv[1])
+PY
+  else
+    echo "note: no dependency-floor report in this copy of the templates ($FLOOR); the tools bundle carries one, and scripts/keliver-embed-floor.sh writes it." >&2
+  fi
 fi
 
 # --- stage everything, then move it into place in one step -----------------

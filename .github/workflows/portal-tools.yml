@@ -226,6 +226,14 @@ jobs:
           scripts/keliver-run-android-selftest.sh "$RUNNER_TEMP/run-android-pkg" \
             --package "$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*)"
           echo "::endgroup::"
+          echo "::group::the embed dependency floor (K3), from the package"
+          # The floor this candidate carries (templates/production-host-embed/
+          # dependency-floor.json, written by build-portal-tools.sh), printed by
+          # the zip's own scaffolder for an app on older libraries, which then
+          # builds and resolves at or above it.
+          KELIVER_PRODUCTION_HOST_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-production-host.sh" \
+            scripts/keliver-embed-floor-check.sh "$RUNNER_TEMP/embed-floor-pkg"
+          echo "::endgroup::"
           echo "::group::keliver-publish (static publishing, W3/W4), from the package"
           # The candidate zip's own bin/keliver-publish and relay/: publish,
           # refusals, --republish, --promote and constraints, through the wrapper.

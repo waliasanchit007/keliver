@@ -76,7 +76,7 @@ Decide on optimisations only after M2–M5.
 
 ## Item 3. Brownfield host kit (builds on W2 `--embed`)
 
-**Status 2026-10-29:** K1 (Android) and K2 (iOS) complete in code (#155, #158–#162) and released in tools 0.3.14; `screen-failed` on iOS merged (#165). K4 ran on the CI emulator and simulator (#165), not yet on a phone. K3 open.
+**Status 2026-10-29:** K1 (Android) and K2 (iOS) complete in code (#155, #158–#162) and released in tools 0.3.14; `screen-failed` on iOS merged (#165). K4 ran on the CI emulator and simulator (#165), not yet on a phone. K3 (the dependency-floor report) in review, for tools 0.3.15.
 - **Merged:** the typed status, `onUnavailable` and the release text policy (#155; `attempt`,
   #158); `RequestPolicy` (in `OkHttpHostHttp`; its `https` rule comes from the app's
   `allowCleartext`, and a release build's settings refuse an http API base) and
@@ -89,7 +89,15 @@ Decide on optimisations only after M2–M5.
 - **K4 on CI** (#165): the reference embed apps, through their deep links: a route reaching the
   guest with only the allowed keys, close, `screen-failed` and another key's bundle, each
   putting the app's own view in place (emulator X6, X8–X10; simulator I5–I8).
-- **Not yet:** the dependency-floor report (K3); K4 on a phone; a `RequestPolicy` refusal on a
+- **K3** (in review): `keliver-embed-floor.sh` resolves the `--embed` template's
+  `releaseRuntimeClasspath` in a throwaway app, and `build-portal-tools.sh` ships the result as
+  `templates/production-host-embed/dependency-floor.json`. `--embed` prints that floor beside the
+  existing app's declared versions (direct coordinates, a version catalog, simple variables) before
+  writing anything, and marks each declared version that Gradle will raise. CI's
+  `keliver-embed-floor-check.sh` runs it on an app on older libraries
+  (`scripts/fixtures/embed-older-compose`: Compose BOM 2024.06.00, OkHttp 4.12.0, …). It checks the
+  report, builds the app, and compares what Gradle resolved.
+- **Not yet:** K4 on a phone; a `RequestPolicy` refusal on a
   device (its rules are covered by JVM tests on both hosts).
 
 **Evidence.**
