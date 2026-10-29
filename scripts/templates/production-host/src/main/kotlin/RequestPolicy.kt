@@ -19,8 +19,11 @@ import okhttp3.HttpUrl
  *   [allowStateChanging] is set for this build, even if a pair allows them.
  *
  * Not restricted: the query string, and headers other than the ones
- * [OkHttpHostHttp] drops (the method-override headers among them). A guest can
- * set `Authorization` or `Cookie` unless your client's interceptor sets them.
+ * [OkHttpHostHttp] drops (the method-override and path-override headers among
+ * them). With your own client ([KeliverConfig.httpClient], B1) a guest's
+ * `Authorization`, `Proxy-Authorization` and `Cookie` are dropped too; with the
+ * host's plain client a guest can set them. What goes on the wire is checked
+ * again against the URL that passed, after any interceptor.
  *
  * Without a policy ([KeliverConfig.requestPolicy] null) every path under the
  * API base is allowed, as before; an app embedding Keliver screens should set

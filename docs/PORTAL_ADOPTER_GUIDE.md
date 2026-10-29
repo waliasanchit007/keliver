@@ -512,7 +512,44 @@ same host Kotlin as `host-android/`. Then, in your app:
   load): replace the Keliver screen there with your web page or native screen
   (finish or pop it; a screen you return to calls it again). Only a debug
   build of a debuggable app shows the host's own text, which can name
-  addresses and paths.
+  addresses and paths;
+- data, through your own signed-in client (from tools 0.3.15): with an API
+  base (`--api-base-url`), guests call your API through `HostHttp`. Give the
+  host your app's `OkHttpClient`, with its authentication interceptor and
+  certificate pinning, and the allow-list it may be used for:
+
+  ```kotlin
+  // In your Application; <host package> is the one the scaffolder printed.
+  import <host package>.KeliverConfig
+  import <host package>.KeliverHost
+  import <host package>.RequestPolicy
+  import okhttp3.HttpUrl.Companion.toHttpUrl
+
+  val keliver by lazy {
+    KeliverHost.create(this, KeliverConfig.fromBuild(this,
+      requestPolicy = RequestPolicy(
+        origin = "https://api.example.com/".toHttpUrl(),
+        allowed = setOf(RequestPolicy.Rule("GET", "orders/recent")),
+        allowCleartext = BuildConfig.DEBUG,
+      ),
+      httpClient = myAuthenticatedClient,
+    ))
+  }
+  ```
+
+  The policy is checked before your client sees a request: one origin (the API
+  base's), exact `(method, path)` pairs, and state-changing calls only with
+  `allowStateChanging`. Without a policy, `httpClient` is refused. The origin
+  must be the API base's, so a debug build against a local `http://` API needs
+  that origin there (and `allowCleartext`). Your client is used only for
+  HostHttp, never for bundles. The URL that goes out is checked again after
+  your interceptors and on every retry, and redirects are not followed: an
+  interceptor of yours must change a request with `newBuilder()`, and one
+  that rewrites the path (a `/v2` prefix) makes the request refused. A
+  guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
+  dropped, and a response's `Set-Cookie` is not handed back. Other credentials,
+  such as an API-key header or a token in the query, are for your interceptor
+  to set with `header()` or to remove.
 
 The settings are in `keliver-host/keliver.properties` (`-Pkeliver.*` overrides
 them), and the key is `keliver-host/src/main/assets/keliver/portal_ed25519.pub`.

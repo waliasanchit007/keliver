@@ -597,10 +597,14 @@ for byte):
   logged (the path only in a debug build); nothing reaches the network.
   Without a policy every path under the API base is allowed, as before: an
   app embedding Keliver screens should set one. Redirects are never followed
-  and the method-override headers (`X-HTTP-Method-Override` and kin) are
-  dropped either way. **Not restricted:** the query string, and other
-  headers: a guest can set `Authorization` or `Cookie` unless your client's
-  interceptor sets them.
+  and the method-override and path-override headers (`X-HTTP-Method-Override`,
+  `X-Original-URL` and kin) are dropped either way. The URL that goes on the
+  wire is checked again after your interceptors and on every retry. **Not
+  restricted:** the query string, and other headers. With the host's plain
+  client a guest can set `Authorization` or `Cookie`. With your own client
+  (`KeliverConfig.fromBuild(this, requestPolicy, httpClient = yourClient)`,
+  from 0.3.15) they are dropped, and so is a response's `Set-Cookie`. Your
+  client is used only for HostHttp.
 - **`ExternalLinkPolicy.open(context, url)`**: call it from whatever your app
   exposes to screens for opening a link. `https` opens in a Custom Tab, on any
   host. `intent:` is handled as a browser handles it, and stricter: a VIEW

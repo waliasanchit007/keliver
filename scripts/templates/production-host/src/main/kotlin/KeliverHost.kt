@@ -201,9 +201,31 @@ class KeliverConfig(
   val nextPublicKeyHex: String? = null,
   /** What guests' HostHttp requests may reach (K1); null allows every path under [apiBaseUrl]. */
   val requestPolicy: RequestPolicy? = null,
+  /**
+   * B1: YOUR app's own OkHttpClient (its authentication interceptor, its certificate pinning)
+   * for guests' HostHttp requests, in place of a plain client. It is used for nothing else:
+   * bundles, the update stream and reports never go through it. It needs a [requestPolicy]
+   * (an authenticated client with no allow-list would let a guest call any path under the API
+   * base as the user), checked before your interceptors and again on the wire; redirects are
+   * never followed; a guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
+   * dropped and a response's `Set-Cookie` is not handed back. Other credentials (a query
+   * parameter, an API-key header) are your interceptor's to set with `header()` or to remove.
+   * Without [apiBaseUrl] there is no HostHttp, and this client is unused.
+   */
+  val httpClient: OkHttpClient? = null,
 ) {
+  init {
+    require(httpClient == null || requestPolicy != null) {
+      "KeliverConfig: an app's own httpClient needs a requestPolicy (the paths guests may call with it)"
+    }
+  }
+
   companion object {
-    fun fromBuild(context: Context, requestPolicy: RequestPolicy? = null): KeliverConfig = KeliverConfig(
+    fun fromBuild(
+      context: Context,
+      requestPolicy: RequestPolicy? = null,
+      httpClient: OkHttpClient? = null,
+    ): KeliverConfig = KeliverConfig(
       bundleServer = debugBundleServer(context) ?: BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
       channel = BuildConfig.KELIVER_CHANNEL,
@@ -216,6 +238,7 @@ class KeliverConfig(
       reportUrl = BuildConfig.KELIVER_REPORT_URL.takeIf { it.isNotBlank() },
       nextPublicKeyHex = BuildConfig.KELIVER_NEXT_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
       requestPolicy = requestPolicy,
+      httpClient = httpClient,
     )
   }
 }
@@ -794,7 +817,14 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         zipline.bind<HostSqlDriver>("HostSqlDriver", sqlHost)
-        if (apiBase != null) zipline.bind<HostHttpProvider>("HostHttp", OkHttpHostHttp(okhttp, apiBase, config.requestPolicy))
+        if (apiBase == null && config.httpClient != null) Log.w(TAG, "KeliverConfig.httpClient is set but there is no API base: no HostHttp")
+        if (apiBase != null) {
+          // The app's own client (B1) only here; the bundles keep the host's plain one.
+          val hostHttp = config.httpClient
+            ?.let { OkHttpHostHttp(it, apiBase, config.requestPolicy, appOwnsCredentials = true) }
+            ?: OkHttpHostHttp(okhttp, apiBase, config.requestPolicy)
+          zipline.bind<HostHttpProvider>("HostHttp", hostHttp)
+        }
         KeliverTiming.bindServices(zipline) // KeliverTrace, in debug and benchmark builds only (M0)
       }
 

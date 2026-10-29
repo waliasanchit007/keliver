@@ -149,7 +149,7 @@ areas. Measure it on the next adoption: glue lines per app, and review findings.
 
 ## Item 4. Bridge: HostHttp for data, generated actions (D13)
 
-**Status 2026-10-27:** not started.
+**Status 2026-10-29:** B1 in review. `KeliverConfig.httpClient` sends guests' HostHttp through the app's own authenticated `OkHttpClient`, behind the `RequestPolicy`. A config with the app's client and no policy is refused. The client is used for nothing else. The URL going out is checked again after the app's interceptors and on retries. A guest's credential and path-override headers are dropped, and the response's `Set-Cookie` is not returned to the guest. JVM tests run against a local server: allowed, refused, wrong origin, redirect, an interceptor or authenticator sending the request elsewhere, guest credentials, the session cookie, and no policy. A new PR CI job builds the scaffolded host and runs its JVM tests. B2–B5 not started.
 
 **Evidence.**
 - One 11-call `ZiplineService` contract was copied byte for byte into three repositories.
