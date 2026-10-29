@@ -8,7 +8,7 @@ PR #105 (library 0.3.4). Sections below use the ROADMAP's item numbers.
 The rule for all of it: **what an adopter had to discover by review becomes the default.** Every
 serious defect in the proof was in host glue that each adopter writes for themselves.
 
-**Status (2026-10-30).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
+**Status (2026-10-29).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3–M5 are open. Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator

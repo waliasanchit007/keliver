@@ -1,6 +1,6 @@
 # Keliver roadmap
 
-Adopter-facing summary, updated 2026-10-27. The working backlog, ranked and
+Adopter-facing summary, updated 2026-10-29. The working backlog, ranked and
 with a status line on every item, is [`docs/ROADMAP.md`](./docs/ROADMAP.md)
 ("Current priorities"). Where things stand, kept apart as shipped, merged but
 unreleased, demonstrated, and open: [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md).
@@ -14,9 +14,10 @@ The step-by-step record of every release and its evidence:
   Cash App Redwood on Zipline), the `keliver-material` widget set, layout and
   lazy layouts, navigation, HTTP and SQL capabilities, and the portal's editor
   libraries. Pre-1.0: pin an exact version ([`docs/API_STABILITY.md`](./docs/API_STABILITY.md)).
-- **Tools bundle** `keliver-portal-tools` 0.3.14 (a GitHub release asset):
+- **Tools bundle** `keliver-portal-tools` 0.3.15 (a GitHub release asset):
   `keliver-init` scaffolds an app, `keliver-portal` runs the relay and the
-  visual editor, `keliver-publish` writes signed bundles for any static HTTPS
+  visual editor, `keliver-run-android` puts the app's screens on a phone or
+  emulator, `keliver-publish` writes signed bundles for any static HTTPS
   server, and scaffolders write a production host for Android and iOS (also
   embeddable in an existing app) and a per-app editor.
 - **Production delivery**: Ed25519-signed, versioned bundles, a rollback floor,
