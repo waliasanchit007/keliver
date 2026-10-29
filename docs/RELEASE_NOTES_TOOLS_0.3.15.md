@@ -165,3 +165,19 @@ Not verified for this release: `keliver-run-android` and live updates on a
 physical Android phone or iPhone. On 2026-10-29 neither test phone could
 reach the releasing machine's network. The host kit's device proof (K4) has
 run on the CI emulator and simulator only.
+
+**After the release (2026-10-29, ≈ 20:55Z), on physical phones, from this
+release's zip** (`68958efa…`, hashed again first):
+- **Galaxy A12** (Android, wireless adb). Starting from nothing: `keliver-init`,
+  the device and publish targets, `keliver-portal`, a publish (19 s), then
+  `keliver-run-android.sh --serial <A12>`. That scaffolded, built, installed and
+  started the debug host, which loaded sequence 1 from the network, in 38 s with
+  Gradle already warm. A publish then reached the open app about 1 s later.
+- **iPhone 13** (on the same Wi-Fi). A debug host from `keliver-new-ios-host.sh`,
+  built for the device with the owner's team given only on the build command
+  line. The first lookups failed while iOS asked for local-network access. The
+  live-update stream retried and the host loaded the bundle without a restart.
+  The next publish was applied as soon as it returned, and on the A12 as well.
+
+K4 on a phone is still not run (the reference harness expects its relay on
+port 8077).

@@ -261,7 +261,7 @@ analytics) need a contract.
 
 ## Item 6. Dev loop
 
-**Status 2026-10-29:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, tools 0.3.14, simulator only). The device end in one command: `keliver-run-android.sh` (#166, released in tools 0.3.15; from the 2026-10-27 phone run's ≈ 12 commands; checked on the CI emulator, not yet on a phone). Open: the device proxy.
+**Status 2026-10-29:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, tools 0.3.14; checked on a physical iPhone on 2026-10-29). The device end in one command: `keliver-run-android.sh` (#166, released in tools 0.3.15; from the 2026-10-27 phone run's ≈ 12 commands; checked on the CI emulator, and on a Galaxy A12 on 2026-10-29 from the published 0.3.15 zip: 38 s from no host installed to the screen, with Gradle warm). Open: the device proxy.
 
 **Evidence.**
 - The first publish after another Gradle build failed with a Kotlin/JS internal compiler error.
