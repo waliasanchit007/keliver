@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
 # The reference app's production route on iOS: a tools release (the PUBLIC
-# 0.3.14 asset by default, or a pinned release candidate), a signed publish, and
+# 0.3.15 asset by default, or a pinned release candidate), a signed publish, and
 # a production host scaffolded by that zip's own bin/keliver-new-ios-host.sh,
 # run on an iOS simulator.
 #
 #   ci/ios.sh <work-dir> <evidence-dir> <keliver-portal-tools-X.Y.Z.zip>
 #
-# The zip must be the published 0.3.14 asset; its hash is pinned below. To check
+# The zip must be the published 0.3.15 asset; its hash is pinned below. To check
 # a release CANDIDATE instead, set KELIVER_CANDIDATE_SHA256 to the candidate
 # zip's sha256 (from its build run); the version is then read from the zip's
 # VERSION.json, and the results say "candidate", never "published".
@@ -41,8 +41,8 @@
 # never on a command line, in a log or in .gradle/).
 set -uo pipefail
 
-TOOLS_VERSION=0.3.14
-TOOLS_SHA256=7284aec9d45ea11a0b8c36863955a4f47c6df79c996be488922d3f092a24dc08
+TOOLS_VERSION=0.3.15
+TOOLS_SHA256=68958efa4977dce413c44b87bf8dcbdefc053677cd1afc20ff8ee6638585a287
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REF="$(cd "$HERE/.." && pwd -P)"
 REPO="$(cd "$HERE/../../.." && pwd -P)"
