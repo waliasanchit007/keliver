@@ -129,6 +129,10 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `androidx.browser:browser:1.8.0`); an existing guest needs `launchRoute`
   and `device/KeliverScreenHost.kt` (as `keliver-new-device-target.sh` now
   writes them) for routes.
+- **From 0.3.15 (Android):** guests' `HostHttp` through your app's own
+  authenticated `OkHttpClient` (`KeliverConfig.httpClient`), which needs a
+  `RequestPolicy` and is used for nothing else. A guest's credential headers
+  are dropped.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

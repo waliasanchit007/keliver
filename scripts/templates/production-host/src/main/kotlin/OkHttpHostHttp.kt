@@ -24,9 +24,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
  *   pairs, checked before anything is sent; a refused request fails in the
  *   guest and is logged here (the path only in a debug build);
  * - the method-override headers are dropped, so an allowed POST cannot be
- *   turned into another method on servers that honour them.
+ *   turned into another method on servers that honour them;
+ * - with [appOwnsCredentials] (your own client, `KeliverConfig.httpClient`),
+ *   the guest's `Authorization`, `Proxy-Authorization` and `Cookie` headers are
+ *   dropped too: your client's interceptor adds the user's credentials, and a
+ *   guest cannot replace or add its own.
  *
- * Add authentication, retries or certificate pinning here — this is your code.
+ * Authentication, retries or certificate pinning: pass your app's OkHttpClient
+ * as `KeliverConfig.httpClient` (it then needs a [RequestPolicy]), or edit this
+ * code — it is yours.
  * Header values are joined with ", "; a multi-valued `Set-Cookie` does not
  * survive that, because HttpResponse carries one string per header.
  */
@@ -34,6 +40,7 @@ class OkHttpHostHttp(
   client: OkHttpClient,
   private val base: HttpUrl,
   private val policy: RequestPolicy? = null,
+  private val appOwnsCredentials: Boolean = false,
 ) : HostHttpProvider {
   private val client = client.newBuilder().followRedirects(false).followSslRedirects(false).build()
 
@@ -57,7 +64,10 @@ class OkHttpHostHttp(
         throw HostHttpRefused("HostHttp refused: $why")
       }
     }
-    val headers = request.headers.filterKeys { it.lowercase() !in DROPPED_HEADERS }
+    val headers = request.headers.filterKeys {
+      val name = it.lowercase()
+      name !in DROPPED_HEADERS && !(appOwnsCredentials && name in CREDENTIAL_HEADERS)
+    }
     val contentType = headers.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value
     // OkHttp refuses POST/PUT/PATCH without a body; send an empty one.
     val body = request.body?.toRequestBody(contentType?.toMediaTypeOrNull())
@@ -80,6 +90,7 @@ class OkHttpHostHttp(
       "proxy-connection", "te", "trailer", "upgrade",
       "x-http-method-override", "x-http-method", "x-method-override",
     )
+    val CREDENTIAL_HEADERS = setOf("authorization", "proxy-authorization", "cookie")
   }
 }
 
