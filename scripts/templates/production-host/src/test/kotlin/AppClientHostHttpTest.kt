@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
+import okhttp3.Authenticator
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -92,14 +93,60 @@ class AppClientHostHttpTest {
     // The app's interceptor sets Authorization; a guest's Cookie and Proxy-Authorization go nowhere either.
     val noAuth = OkHttpClient.Builder().addInterceptor { chain -> seen.incrementAndGet(); chain.proceed(chain.request()) }.build()
     server.enqueue(MockResponse.Builder().code(200).build())
-    val headers = mapOf("Authorization" to "Bearer guest", "Cookie" to "session=guest", "Proxy-Authorization" to "Basic x", "X-Trace" to "1")
+    val headers = mapOf(
+      "authorization" to "Bearer guest", "COOKIE" to "session=guest", "Proxy-Authorization" to "Basic x",
+      "X-Original-URL" to "/api/account", "X-Forwarded-Host" to "elsewhere.example.com", "X-Trace" to "1",
+    )
     OkHttpHostHttp(noAuth, base(), policy(RequestPolicy.Rule("GET", "orders")), appOwnsCredentials = true)
       .execute(HttpRequest("GET", "orders", headers = headers))
     val recorded = server.takeRequest(5, TimeUnit.SECONDS)!!
     assertNull(recorded.headers["Authorization"])
     assertNull(recorded.headers["Cookie"])
     assertNull(recorded.headers["Proxy-Authorization"])
+    assertNull(recorded.headers["X-Original-URL"])
+    assertNull(recorded.headers["X-Forwarded-Host"])
     assertEquals("1", recorded.headers["X-Trace"])
+    assertEquals(1, seen.get())
+  }
+
+  @Test fun theSessionCookieIsNotHandedToTheGuest() = runBlocking {
+    server.enqueue(MockResponse.Builder().code(200).addHeader("Set-Cookie", "session=secret").addHeader("ETag", "\"1\"").build())
+    val response = http(policy(RequestPolicy.Rule("GET", "orders"))).execute(HttpRequest("GET", "orders"))
+    assertTrue(response.headers.keys.none { it.equals("Set-Cookie", ignoreCase = true) })
+    assertEquals("\"1\"", response.headers.entries.first { it.key.equals("ETag", ignoreCase = true) }.value)
+  }
+
+  @Test fun anInterceptorActingOnAGuestHeaderCannotSendTheRequestElsewhere() {
+    // A common app pattern: a marker header switches where a request goes.
+    val switching = OkHttpClient.Builder().addInterceptor { chain ->
+      val r = chain.request()
+      if (r.header("X-Target") == "admin") chain.proceed(r.newBuilder().url(server.url("/api/admin")).build()) else chain.proceed(r)
+    }.build()
+    val why = refused {
+      OkHttpHostHttp(switching, base(), policy(RequestPolicy.Rule("GET", "orders")), appOwnsCredentials = true)
+        .execute(HttpRequest("GET", "orders", headers = mapOf("X-Target" to "admin")))
+    }
+    assertTrue(why, "not the one checked" in why)
+    assertEquals(0, server.requestCount)
+  }
+
+  @Test fun anAuthenticatorRetryIsCheckedToo() = runBlocking {
+    // Retrying the same URL with a fresh token is fine; a retry to another path is refused.
+    var retryPath = "/api/orders"
+    val client = appClient.newBuilder().authenticator(Authenticator { _, response ->
+      response.request.newBuilder().url(server.url(retryPath)).header("Authorization", "Bearer refreshed").build()
+    }).build()
+    val http = OkHttpHostHttp(client, base(), policy(RequestPolicy.Rule("GET", "orders")), appOwnsCredentials = true)
+    server.enqueue(MockResponse.Builder().code(401).build())
+    server.enqueue(MockResponse.Builder().code(200).body("ok").build())
+    assertEquals(200, http.execute(HttpRequest("GET", "orders")).status)
+    assertEquals(2, server.requestCount)
+
+    retryPath = "/api/login"
+    server.enqueue(MockResponse.Builder().code(401).build())
+    val why = refused { http.execute(HttpRequest("GET", "orders")) }
+    assertTrue(why, "not the one checked" in why)
+    assertEquals(3, server.requestCount)
   }
 
   @Test fun anAppsClientNeedsAPolicy() {

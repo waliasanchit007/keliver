@@ -290,7 +290,7 @@ if $EMBED; then
   echo "  your Application:     val keliver by lazy { $PACKAGE.KeliverHost.create(this) }   (one per process)"
   echo "  a Compose screen:     $PACKAGE.KeliverScreen(keliver, Modifier.fillMaxSize())"
   echo "  or a View layout:     $PACKAGE.KeliverView(context).apply { host = keliver }"
-  [ -z "$API_BASE_URL" ] || echo "  HostHttp, your client: KeliverHost.create(this, KeliverConfig.fromBuild(this, requestPolicy = RequestPolicy(...), httpClient = yourOkHttpClient))"
+  [ -z "$API_BASE_URL" ] || echo "  HostHttp, your client: $PACKAGE.KeliverHost.create(this, $PACKAGE.KeliverConfig.fromBuild(this, requestPolicy = $PACKAGE.RequestPolicy(...), httpClient = yourOkHttpClient))"
   echo "  settings: $MODULE/keliver.properties (or -Pkeliver.bundleServer=...); an http:// server needs YOUR app's cleartext permission in debug"
   exit 0
 fi

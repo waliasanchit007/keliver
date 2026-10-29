@@ -206,8 +206,11 @@ class KeliverConfig(
    * for guests' HostHttp requests, in place of a plain client. It is used for nothing else:
    * bundles, the update stream and reports never go through it. It needs a [requestPolicy]
    * (an authenticated client with no allow-list would let a guest call any path under the API
-   * base as the user); redirects are never followed; and a guest's own `Authorization`,
-   * `Proxy-Authorization` and `Cookie` headers are dropped, so the credentials are only yours.
+   * base as the user), checked before your interceptors and again on the wire; redirects are
+   * never followed; a guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
+   * dropped and a response's `Set-Cookie` is not handed back. Other credentials (a query
+   * parameter, an API-key header) are your interceptor's to set with `header()` or to remove.
+   * Without [apiBaseUrl] there is no HostHttp, and this client is unused.
    */
   val httpClient: OkHttpClient? = null,
 ) {
@@ -814,6 +817,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         zipline.bind<HostSqlDriver>("HostSqlDriver", sqlHost)
+        if (apiBase == null && config.httpClient != null) Log.w(TAG, "KeliverConfig.httpClient is set but there is no API base: no HostHttp")
         if (apiBase != null) {
           // The app's own client (B1) only here; the bundles keep the host's plain one.
           val hostHttp = config.httpClient
