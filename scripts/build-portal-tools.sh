@@ -85,6 +85,11 @@ cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/kelive
 mkdir -p "$STAGE/templates"
 cp -R scripts/templates/production-host "$STAGE/templates/"
 cp -R scripts/templates/production-host-embed "$STAGE/templates/"
+# K3: the dependency floor the embedded host imposes on an app, resolved from
+# that template now, so the scaffolder can print it before it writes anything.
+echo "==> the embed template's dependency floor"
+rm -rf "$OUT/embed-floor"
+scripts/keliver-embed-floor.sh "$OUT/embed-floor" "$STAGE/templates/production-host-embed/dependency-floor.json"
 # keliver-new-publish-target.sh's signing block, appended to an app's build.gradle.
 cp -R scripts/templates/publish "$STAGE/templates/"
 # keliver-new-ios-host.sh's iOS host: a KMP framework build plus an Xcode app shell.
