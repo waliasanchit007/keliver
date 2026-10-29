@@ -129,10 +129,16 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `androidx.browser:browser:1.8.0`); an existing guest needs `launchRoute`
   and `device/KeliverScreenHost.kt` (as `keliver-new-device-target.sh` now
   writes them) for routes.
-- **From 0.3.15 (Android):** guests' `HostHttp` through your app's own
-  authenticated `OkHttpClient` (`KeliverConfig.httpClient`), which needs a
-  `RequestPolicy` and is used for nothing else. A guest's credential headers
-  are dropped.
+- **From 0.3.15:** still the 0.4.1 libraries; `bin/keliver-run-android.sh`
+  puts your screens on a phone or emulator in one command; `--embed` prints
+  the module's dependency floor beside your app's versions before it writes;
+  `screen-failed` on the iOS host too; and on Android, guests' `HostHttp`
+  through your app's own authenticated `OkHttpClient`
+  (`KeliverConfig.httpClient`), which needs a `RequestPolicy` and is used for
+  nothing else (a guest's credential headers are dropped). On every host,
+  the path-override headers are dropped and the URL going out is checked
+  again after the client's interceptors. A host scaffolded earlier gets none
+  of it until it is scaffolded again.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

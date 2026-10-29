@@ -76,7 +76,7 @@ Decide on optimisations only after M2–M5.
 
 ## Item 3. Brownfield host kit (builds on W2 `--embed`)
 
-**Status 2026-10-29:** K1 (Android) and K2 (iOS) complete in code (#155, #158–#162) and released in tools 0.3.14; `screen-failed` on iOS merged (#165). K4 ran on the CI emulator and simulator (#165), not yet on a phone. K3 (the dependency-floor report) in review, for tools 0.3.15.
+**Status 2026-10-29:** K1 (Android) and K2 (iOS) complete in code (#155, #158–#162) and released in tools 0.3.14; `screen-failed` on iOS merged (#165). K4 ran on the CI emulator and simulator (#165), not yet on a phone. K3 (the dependency-floor report) merged (#168) and released in tools 0.3.15.
 - **Merged:** the typed status, `onUnavailable` and the release text policy (#155; `attempt`,
   #158); `RequestPolicy` (in `OkHttpHostHttp`; its `https` rule comes from the app's
   `allowCleartext`, and a release build's settings refuse an http API base) and
@@ -85,11 +85,11 @@ Decide on optimisations only after M2–M5.
   `screen-failed` outcome, the debug-surface audit, routes and close on Android, with one
   shared `KeliverRoute` and `KeliverScreenHost` in a fixed package (#161).
 - **Merged:** `RequestPolicy`, routes and close on iOS (#162). All of it is in tools 0.3.14.
-  `screen-failed` on iOS (#165), for the next tools release.
+  `screen-failed` on iOS (#165), released in tools 0.3.15.
 - **K4 on CI** (#165): the reference embed apps, through their deep links: a route reaching the
   guest with only the allowed keys, close, `screen-failed` and another key's bundle, each
   putting the app's own view in place (emulator X6, X8–X10; simulator I5–I8).
-- **K3** (in review): `keliver-embed-floor.sh` resolves the `--embed` template's
+- **K3** (#168, merged 2026-10-29): `keliver-embed-floor.sh` resolves the `--embed` template's
   `releaseRuntimeClasspath` in a throwaway app, and `build-portal-tools.sh` ships the result as
   `templates/production-host-embed/dependency-floor.json`. `--embed` prints that floor beside the
   existing app's declared versions (direct coordinates, a version catalog, simple variables) before
@@ -149,7 +149,7 @@ areas. Measure it on the next adoption: glue lines per app, and review findings.
 
 ## Item 4. Bridge: HostHttp for data, generated actions (D13)
 
-**Status 2026-10-29:** B1 in review. `KeliverConfig.httpClient` sends guests' HostHttp through the app's own authenticated `OkHttpClient`, behind the `RequestPolicy`. A config with the app's client and no policy is refused. The client is used for nothing else. The URL going out is checked again after the app's interceptors and on retries. A guest's credential and path-override headers are dropped, and the response's `Set-Cookie` is not returned to the guest. JVM tests run against a local server: allowed, refused, wrong origin, redirect, an interceptor or authenticator sending the request elsewhere, guest credentials, the session cookie, and no policy. A new PR CI job builds the scaffolded host and runs its JVM tests. B2–B5 not started.
+**Status 2026-10-29:** B1 merged (#169) and released in tools 0.3.15. `KeliverConfig.httpClient` sends guests' HostHttp through the app's own authenticated `OkHttpClient`, behind the `RequestPolicy`. A config with the app's client and no policy is refused. The client is used for nothing else. The URL going out is checked again after the app's interceptors and on retries. A guest's credential and path-override headers are dropped, and the response's `Set-Cookie` is not returned to the guest. JVM tests run against a local server: allowed, refused, wrong origin, redirect, an interceptor or authenticator sending the request elsewhere, guest credentials, the session cookie, and no policy. A new PR CI job builds the scaffolded host and runs its JVM tests. B2–B5 not started.
 
 **Evidence.**
 - One 11-call `ZiplineService` contract was copied byte for byte into three repositories.
@@ -259,7 +259,7 @@ analytics) need a contract.
 
 ## Item 6. Dev loop
 
-**Status 2026-10-29:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, tools 0.3.14, simulator only). The device end in one command: `keliver-run-android.sh` (#166, merged, for the next tools release; from the 2026-10-27 phone run's ≈ 12 commands; checked on the CI emulator, not yet on a phone). Open: the device proxy.
+**Status 2026-10-29:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, tools 0.3.14, simulator only). The device end in one command: `keliver-run-android.sh` (#166, released in tools 0.3.15; from the 2026-10-27 phone run's ≈ 12 commands; checked on the CI emulator, not yet on a phone). Open: the device proxy.
 
 **Evidence.**
 - The first publish after another Gradle build failed with a Kotlin/JS internal compiler error.

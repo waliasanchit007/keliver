@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.14](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.14)**:
+  **[tools 0.3.15](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.15)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.14/keliver-portal-tools-0.3.14.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.14/keliver-portal-tools-0.3.14.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.14.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.15/keliver-portal-tools-0.3.15.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.15/keliver-portal-tools-0.3.15.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.15.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.14.zip
-  export KP="$PWD/keliver-portal-tools-0.3.14/bin"
+  unzip keliver-portal-tools-0.3.15.zip
+  export KP="$PWD/keliver-portal-tools-0.3.15/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,7 +30,7 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.14
+  The tools version and the library version are **separate lines**: tools 0.3.15
   scaffolds projects against Maven libraries **`dev.keliver:*:0.4.1`**. The
   bundle records both in its `VERSION.json`.
 
@@ -543,7 +543,9 @@ same host Kotlin as `host-android/`. Then, in your app:
   must be the API base's, so a debug build against a local `http://` API needs
   that origin there (and `allowCleartext`). Your client is used only for
   HostHttp, never for bundles. The URL that goes out is checked again after
-  your interceptors and on every retry, and redirects are not followed: an
+  your interceptors and on each network attempt, and redirects are not
+  followed (an `Authenticator` retry to another path that your client's cache
+  answers is not caught): an
   interceptor of yours must change a request with `newBuilder()`, and one
   that rewrites the path (a `/v2` prefix) makes the request refused. A
   guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
