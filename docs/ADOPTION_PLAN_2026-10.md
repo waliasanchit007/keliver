@@ -12,7 +12,7 @@ serious defect in the proof was in host glue that each adopter writes for themse
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3–M5 are open. Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
-(#165; against the published 0.3.15 hosts in #171), not yet on a phone. Item 4:
+(#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2–B5 are open. Items 5 and 7 are not
 started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
 (#111) are done, and so is a debug host that picks up a publish while it is
@@ -78,7 +78,7 @@ Decide on optimisations only after M2–M5.
 
 ## Item 3. Brownfield host kit (builds on W2 `--embed`)
 
-**Status 2026-10-29:** K1 (Android) and K2 (iOS) complete in code (#155, #158–#162) and released in tools 0.3.14; `screen-failed` on iOS merged (#165). K4 ran on the CI emulator and simulator (#165), and again against the published 0.3.15 hosts (#171), not yet on a phone. K3 (the dependency-floor report) merged (#168) and released in tools 0.3.15.
+**Status 2026-10-30:** K1 (Android) and K2 (iOS) complete in code (#155, #158–#162) and released in tools 0.3.14; `screen-failed` on iOS merged (#165). K4 ran on the CI emulator and simulator (#165), and again against the published 0.3.15 hosts (#171); the published 0.3.15 Android host passed X6 and X8–X10 on a Galaxy A12 (2026-10-29, #174). K3 (the dependency-floor report) merged (#168) and released in tools 0.3.15.
 - **Merged:** the typed status, `onUnavailable` and the release text policy (#155; `attempt`,
   #158); `RequestPolicy` (in `OkHttpHostHttp`; its `https` rule comes from the app's
   `allowCleartext`, and a release build's settings refuse an http API base) and
@@ -99,7 +99,9 @@ Decide on optimisations only after M2–M5.
   `keliver-embed-floor-check.sh` runs it on an app on older libraries
   (`scripts/fixtures/embed-older-compose`: Compose BOM 2024.06.00, OkHttp 4.12.0, …). It checks the
   report, builds the app, and compares what Gradle resolved.
-- **Not yet:** K4 on a phone; a `RequestPolicy` refusal on a
+- **K4 on a phone** (#174): X6 and X8–X10 on a Galaxy A12 (2026-10-29), the Android host from
+  the published 0.3.15 zip.
+- **Not yet:** K4 on an iPhone; a `RequestPolicy` refusal on a
   device (its rules are covered by JVM tests on both hosts).
 
 **Evidence.**

@@ -454,7 +454,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    0.3.14 (#165: routes, close, `screen-failed`, the app's fallback), not
    against the 0.3.14 bytes. **2026-10-29:** the same checks passed against
    the published 0.3.15 hosts (#171's hand runs: X8–X10 on the emulator,
-   I6–I8 on the simulator); not on a phone yet. K3, the
+   I6–I8 on the simulator). **2026-10-29 (#174):** the Android host also on a phone: X6 and X8–X10
+   passed on a Galaxy A12 with the published 0.3.15 host; not yet on an iPhone. K3, the
    dependency-floor report, merged (#168): `--embed`
    prints the module's floor beside the app's declared versions before it
    writes, checked in CI on an app on older libraries. Released in tools
