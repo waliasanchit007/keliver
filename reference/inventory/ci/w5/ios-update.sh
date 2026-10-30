@@ -20,6 +20,9 @@
 #       is applied in the open app with no resume; in the background the host
 #       stops listening
 #   LV4  back in the foreground (the same process), the host listens again
+#   LV5  a first load that failed loads at the next event, in the same process
+#       (a host after tools 0.3.15): with no cache and a module of v10 missing,
+#       "Bundle did not load"; the module back, the server announces v10 again
 echo "--- W5: an update applied when the app comes back to the foreground"
 app_pid(){ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="UIKitApplication:$BID" 'index($3, b) == 1 { print $1 }' | head -1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
@@ -233,6 +236,50 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs KELIVER_BUNDLE_SERVER "$APP/host-ios/src/iosM
     && [ -n "$pid_live" ] && [ "$(app_pid)" = "$pid_live" ] \
     && ok "LV4: back in the foreground, the same process listens again (the server saw a new stream)" \
     || bad "LV4: not listening again: $(grep -E 'KeliverHost: live' "$C" | tail -3 | tr '\n' ' '); server: $(tail -3 "$EV/lv-server.log" | tr '\n' ' ')"
+  # LV5: a fresh install (no cache, no last good bundle, floor 0), so a failed first load has
+  # nothing to fall back to. A module of v10 is moved off the server, as a link that drops
+  # mid-download does; once it is back, touching the index makes the server announce v10.
+  if grep -rqs "the first bundle did not load; loading" "$APP/host-ios/src/iosMain/kotlin"; then
+    kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
+    xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+    xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
+    mod="$(cd "$W3/site-live/bundles/v10" && ls -- *.zipline | head -1)"
+    mv "$W3/site-live/bundles/v10/$mod" "$W3/lv5-$mod"
+    SIMCTL_CHILD_KELIVER_BUNDLE_SERVER=https://localhost:8445 xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/LV5.console.txt" 2>&1 &
+    CPID=$!
+    sleep 25
+    C="$EV/LV5.console.txt"
+    # The first launch after an install can print nothing on a slow runner (ios.sh's launch()):
+    # once more, the module still off the server (a warm-up launch would load and cache v10).
+    if ! grep -qE "KeliverHost:|KeliverTiming:" "$C"; then
+      echo "    LV5: the app printed nothing in 25 s; launching it once more" | tee -a "$EV/ios.retries"
+      kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
+      mv "$C" "$EV/LV5.first.console.txt"
+      xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+      SIMCTL_CHILD_KELIVER_BUNDLE_SERVER=https://localhost:8445 xcrun simctl launch --console-pty "$UDID" "$BID" > "$C" 2>&1 &
+      CPID=$!
+      sleep 30
+    fi
+    pid_lv5="$(app_pid)"
+    grep -q "KeliverHost: codeLoadFailed" "$C" && ! grep -q "codeLoadSuccess" "$C" \
+      && grep -q "GET /bundles/v10/$mod.* 404" "$EV/lv-server.log" \
+      && ok "LV5: with $mod missing from v10 and nothing cached, the first load failed" \
+      || bad "LV5: the first load did not fail as set up: $(grep -E 'KeliverHost|codeLoad' "$C" | tail -4 | tr '\n' ' ')"
+    lines_before="$(wc -l < "$C")"
+    mv "$W3/lv5-$mod" "$W3/site-live/bundles/v10/$mod" && touch "$W3/site-live/bundles/index.json"
+    sleep 20
+    L="$EV/LV5.after.console.txt"; tail -n +"$((lines_before + 1))" "$C" > "$L"
+    grep -q "KeliverHost: update check: the first bundle did not load; loading https://localhost:8445/bundles/v10/manifest.zipline.json" "$L" \
+      && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$L" \
+      && [ -n "$pid_lv5" ] && [ "$(app_pid)" = "$pid_lv5" ] && ! grep -q "KeliverHost: verifying manifests" "$L" \
+      && ok "LV5: the server announced v10 again and the same process (pid $pid_lv5) looked it up and loaded it" \
+      || bad "LV5: the failed first load was not loaded again: $(grep -E 'KeliverHost|codeLoad' "$L" | tail -5 | tr '\n' ' ')"
+    xcrun simctl io "$UDID" screenshot "$EV/LV5-after.png" > /dev/null 2>&1
+    swift "$HERE/ocr.swift" "$EV/LV5-after.png" > "$EV/LV5-after.ocr.txt" 2>"$EV/LV5-after.ocr.err"
+    reads LV5-after Loft && ok "LV5: the open app now reads 'Loft' (v10)" || bad "LV5: 'Loft' is not on the screen: $(tr '\n' '|' < "$EV/LV5-after.ocr.txt" | cut -c1-200)"
+  else
+    echo "  SKIP  LV5: this host predates loading again after a failed first load (not counted)"
+  fi
   kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
   kill "$LVPID" 2>/dev/null; wait "$LVPID" 2>/dev/null
   w3_title Loft Cellar || bad "LV: could not put the title back to Cellar for W8"

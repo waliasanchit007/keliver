@@ -47,8 +47,10 @@
  * load. Once a bundle is loading, it is the one this process runs: a newer
  * bundle is picked up on the next process start. A start that created nothing
  * ("No bundle": the lookup failed and nothing was cached) is retried by the
- * next screen to call start(). A load that fails shows "Bundle did not load"
- * until the next process start, unless it falls back to the last good bundle.
+ * next screen to call start(). A first load that fails falls back to the last
+ * good bundle, or shows "Bundle did not load"; the next update check (a live
+ * event, a resume with on-resume or live updates, or the app's own
+ * [checkForUpdate]) then looks up and loads again in the same process.
  *
  * Updates (W5): checkForUpdate() looks up again and, after a network start,
  * applies a newer bundle in place (Zipline loads it while the old code runs;
@@ -357,7 +359,8 @@ sealed interface KeliverHostState {
    * The host cannot show a screen. [outcome] is the report's (W6): `no-bundle`
    * (the lookup failed and nothing is cached; the next screen to open looks
    * again), `refused` (the build's key or bundle server is unusable),
-   * `not-loaded` (the bundle did not load, and no last good one did either),
+   * `not-loaded` (the bundle did not load, and no last good one did either;
+   * the next update check loads again),
    * or `screen-failed` (the code threw while screens showed it: Treehouse
    * stops it, every screen showing it and every screen opened afterwards calls
    * its `onUnavailable`, one report per screen on show; [KeliverHost.state]
@@ -529,7 +532,41 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val manifestUrls: MutableStateFlow<String>,
     val lookup: LookupContext,
     var fromCache: Boolean,
-  )
+    /** Loads a manifest URL (and its index sha256) into [app] again, from the network: [loadAgain]. */
+    val reload: (String, String?) -> Unit,
+  ) {
+    /** The first load failed, and nothing runs: the next update check loads again. */
+    var notLoaded = false
+    private var failedUrl: String? = null
+    private var failedSha256: String? = null
+    private var unloadable = false
+    /** The report's reason for the load that failed. */
+    var failedReason = ""
+      private set
+
+    /**
+     * The first load failed for [reason]: remembers what did not load, and whether the bundle
+     * itself cannot load whatever the link does. Only the floor's own refusal and Zipline's
+     * signature failure count, by their exact messages: a TLS error can say "verified", and a
+     * sha256 mismatch can be a stale CDN copy that refreshes.
+     */
+    fun markNotLoaded(reason: String) {
+      notLoaded = true
+      failedUrl = manifestUrls.value
+      failedSha256 = failedUrl?.let(pinning::pinnedSha256)
+      failedReason = reportReason("not-loaded", reason)
+      unloadable = "rollback refused:" in reason || ("manifest signature for key" in reason && "did not verify" in reason)
+    }
+
+    /**
+     * The index still names exactly what failed (the same manifest and sha256), and the bundle
+     * itself cannot load (below the floor, or its signature did not verify): fetching it again
+     * cannot help, and would report the failure again. Without a sha256 (the relay's legacy
+     * lookup) the bytes at that URL may have changed, so it is fetched again.
+     */
+    fun sameUnloadable(url: String, sha256: String?): Boolean =
+      unloadable && failedSha256 != null && url == failedUrl && sha256 == failedSha256
+  }
   private class LookupContext(
     val server: HttpUrl,
     val capabilities: List<String>,
@@ -908,13 +945,23 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               flow.value = fallback
               app.start()
             } else {
+              session?.markNotLoaded(reason)
               unavailable("not-loaded", "Bundle did not load", reason.take(300), detail = reason)
             }
           }
         },
       ),
     )
-    session = Session(app, ziplineHttp, flow, lookup, fromCache = freshness is AcceptCachedBundle)
+    // After a first load that failed (loadAgain): from the network this time, into the same app,
+    // stop() then start() as the fall-back does.
+    val reload = { url: String, sha256: String? ->
+      freshnessSwitch.current = DefaultFreshnessCheckerNotFresh
+      ziplineHttp.pin(url, sha256)
+      app.stop()
+      flow.value = url
+      app.start()
+    }
+    session = Session(app, ziplineHttp, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload)
     mutableState.value = KeliverHostState.Running(app)
   }
 
@@ -925,11 +972,14 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * while the running code goes on, swaps it in on success ([events]: Applied)
    * and keeps the old one on failure (Failed). After a start from the cache,
    * Zipline takes no further manifest, so a newer bundle applies at the next
-   * process start.
+   * process start. When the first load failed ("Bundle did not load"), it
+   * looks up and loads again instead, whatever [apply] says ([loadAgain]):
+   * then [events] gets nothing, and [state] and [reports] say how it went.
    */
   suspend fun checkForUpdate(apply: Boolean = true): KeliverUpdateCheck = withContext(Dispatchers.Main.immediate) {
     val s = session
     val running = mutableBundle.value
+    if (s != null && running == null && s.notLoaded) return@withContext loadAgain(s)
     if (s == null || running == null) {
       Log.d(TAG, "update check: no bundle is running yet")
       return@withContext KeliverUpdateCheck.Failed("no bundle is running yet")
@@ -971,6 +1021,39 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     s.pinning.pin(latest.manifestUrl, latest.manifestSha256)
     s.manifestUrls.value = latest.manifestUrl
     KeliverUpdateCheck.Available(sequence, applying = true)
+  }
+
+  /**
+   * The first load failed and nothing runs (W5's open question from a phone on a weak link: the
+   * host stayed on "Bundle did not load" until the process was restarted). Looks up again and
+   * loads what the index names now, from the network, into the same app. Every rule of a start
+   * holds (the index, the channel, the constraints, the floor, the signature). The state is
+   * [KeliverHostState.Running] again while it loads; a failure says "Bundle did not load" again.
+   * It is not an update: [events] gets no Applied or Failed for it; [state] and [reports]
+   * (`loaded`, or `not-loaded` again) say how it went. When the index still names the bundle
+   * that failed, and it cannot load (below the floor, or its signature did not verify), it is
+   * not fetched again. Main thread.
+   */
+  private suspend fun loadAgain(s: Session): KeliverUpdateCheck {
+    lastLookupAt = SystemClock.elapsedRealtime()
+    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor())
+    val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
+    // Another check may have started it while this one looked up.
+    if (session !== s || !s.notLoaded) return KeliverUpdateCheck.Failed("the bundle is already loading again")
+    if (latest == null) {
+      Log.d(TAG, "update check: the first bundle did not load, and the lookup failed")
+      return KeliverUpdateCheck.Failed("the lookup failed")
+    }
+    if (s.sameUnloadable(latest.manifestUrl, latest.manifestSha256)) {
+      Log.d(TAG, "update check: the first bundle did not load (${s.failedReason}), and the index still names it: not fetched again")
+      return KeliverUpdateCheck.Failed("the bundle that did not load (${s.failedReason}) is still the newest")
+    }
+    s.notLoaded = false
+    Log.d(TAG, "update check: the first bundle did not load; loading ${latest.manifestUrl} (${latest.source})")
+    mutableResumeCheck.value = false // nothing ran, so no screen waits for this check
+    mutableState.value = KeliverHostState.Running(s.app)
+    s.reload(latest.manifestUrl, latest.manifestSha256)
+    return KeliverUpdateCheck.Available(latest.sequence ?: -1, applying = true)
   }
 
   /**
@@ -1032,7 +1115,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * what the index names and the manifest's signature allows, as on any update.
    * Checks run one at a time; events that arrive during one ask for one more.
    * Before the first bundle has loaded ("No bundle"), an event starts the host
-   * again instead, so the first publish reaches the open app too. A dropped
+   * again instead, so the first publish reaches the open app too; after a
+   * first load that failed, the check loads again ([loadAgain]). A dropped
    * stream is retried after 2 s, doubling to 30 s; the delay goes back to 2 s
    * only once an event has arrived.
    */

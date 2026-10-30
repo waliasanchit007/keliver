@@ -158,8 +158,25 @@ the host **falls back to the last good bundle**: the one pinned in Zipline's
 cache, which it restarts from exactly as in the second row above (the floor
 holds, and the manifest is verified against the key again). Only when no
 bundle has loaded before for this key and server, or the cached one fails too,
-does it show "Bundle did not load" (until the process restarts). With a static
-server, the failures include:
+does it show "Bundle did not load". The next update check then looks up and
+loads again in the same process (both hosts, from the tools release after
+0.3.15; before it, only a process restart did):
+- a live-update event (a debug build);
+- a return to the foreground with `on-resume` or `live` updates, at least
+  30 s after the last lookup, the failed start's included (on Android, an
+  app that embeds the host calls `resumed()` for this; see "Updates while
+  the app runs");
+- the app's own `checkForUpdate()`, whatever its `apply` says.
+
+That load is not an update: no `Applied` or `Failed` event comes for it.
+The state (`Running` while it loads) and the reports (`loaded`, or
+`not-loaded` again) say how it went. When the index still names the very
+bundle that failed (the same manifest and sha256), and that bundle cannot
+load whatever the link does (it is below the floor, or its signature did not
+verify), it is not fetched again. A sha256 mismatch is fetched again: it can
+be a stale CDN copy that refreshes.
+With `next-launch` updates and no call of its own, the app still needs a
+restart. With a static server, the failures include:
 - an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
   overwritten, or a stale CDN copy);
 - a `v<N>/` that isn't there yet because the index was uploaded first;
@@ -244,7 +261,9 @@ that opens.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
   `not-loaded`, `no-bundle`, `refused`, or `screen-failed`: the code threw
   while a screen showed it, one record per screen on show (Android from tools
-  0.3.14, iOS from 0.3.15).
+  0.3.14, iOS from 0.3.15). After the tools release after 0.3.15, a host
+  whose first load failed loads again at the next update check (§2), so one
+  process can send `not-loaded` more than once, then `loaded`.
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
   `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
   `other`.
@@ -734,8 +753,8 @@ your app is affected:
   Keliver screen that opens;
 - a bundle that the lookup named but that then fails (another key's signature,
   a sha256 mismatch, a sequence below the floor): the cached last good bundle,
-  if one ran before (§2); otherwise "Bundle did not load", until the process
-  restarts.
+  if one ran before (§2); otherwise "Bundle did not load", until the next
+  update check loads it (§2) or the process restarts.
 
 A running process keeps the bundle it loaded; a newer one is picked up on the
 next process start (§2, "Lifecycle").
