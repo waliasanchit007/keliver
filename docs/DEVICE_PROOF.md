@@ -88,6 +88,16 @@ KELIVER_DEVICE=physical bash reference/inventory/ci/prepare.sh "$W" "$E" ~/w7/dl
 bash reference/inventory/ci/device.sh "$W" "$E" <serial>
 ```
 
+**If this Mac's `:8077` is taken** (your own portal, for instance), give the
+run another relay port: `KELIVER_RELAY_PORT=8478 KELIVER_DEVICE=physical bash
+…/prepare.sh …`. `prepare.sh` writes it into the app's `keliver.portal.json`
+(the editor moves to the port + 19) and into the work dir, and `device.sh`
+reads it from there. Both stop when the port already answers: a relay this
+run did not start would otherwise take its edits and publishes. The port must
+not be, or put the editor on, one the harness uses itself (`:8080`, `:8443`,
+`:8444`, `:8445`). Android only: `ci/ios.sh` keeps `:8077` (and refuses when it
+answers).
+
 **`prepare.sh` with `KELIVER_DEVICE=physical`:**
 - It builds every host for `127.0.0.1`, not the emulator's `10.0.2.2`.
 - It builds the HTTPS test APKs with the run's throwaway CA inside them
@@ -100,10 +110,11 @@ bash reference/inventory/ci/device.sh "$W" "$E" <serial>
 **`device.sh`** reads the route from the work dir. Then it:
 - writes `device-facts.txt`;
 - refuses hosts built for an emulator if the device is a phone;
-- runs `adb reverse tcp:8077` (the relay) and `tcp:8443` (the static HTTPS
-  server), so the phone reaches this Mac as `127.0.0.1` over the cable, with no
+- runs `adb reverse` for the relay's port (`tcp:8077` unless
+  `KELIVER_RELAY_PORT` says otherwise) and the static HTTPS servers
+  (`tcp:8443`, `tcp:8444` and `tcp:8445`, the last for the live-update LV rows), so the phone reaches this Mac as `127.0.0.1` over the cable, with no
   Wi-Fi, LAN IP or firewall involved;
-- removes both when it exits.
+- removes them when it exits.
 
 **Expected result.** `device: passed N, failed 0`, with these SKIP lines:
 
@@ -111,8 +122,8 @@ bash reference/inventory/ci/device.sh "$W" "$E" <serial>
 |---|---|---|
 | E1–E10, D3 | **SKIP** | The generic *development* host from the tools bundle has `http://10.0.2.2:8080` compiled in, and a phone cannot reach that. P4 still shows the D2 edit, signed, in production. |
 | D2 | runs | It needs only the relay, not the device. |
-| P1–P7, V2 | run | Production host against the relay, through `adb reverse :8077`. |
-| S2–S15, X1–X10, U1, U2, V1 | run | The static HTTPS route, through `adb reverse :8443`. The test APKs trust the throwaway CA. |
+| P1–P7, V2 | run | Production host against the relay, through `adb reverse` of the relay's port. |
+| S2–S15, X1–X10, U1, U2, V1, LV1–LV4 | run | The static HTTPS route, through `adb reverse` of `:8443` (`:8444`, `:8445` for W5's L and LV rows). The test APKs trust the throwaway CA. |
 | device screenshots | `screencap` only | Outside the pass/fail count. The emulator's host-side capture does not exist on a phone. |
 
 **If something fails:**

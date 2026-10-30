@@ -33,10 +33,13 @@ EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
 SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
-. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, DEVICE_KIND, HOST_ADDR
+unset RELAY_PORT   # only the work dir says which port its app was built for
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, DEVICE_KIND, HOST_ADDR, RELAY_PORT
 # W7: what prepare.sh built the hosts for (KELIVER_DEVICE there). A work dir
 # from before W7 has neither line: it was built for the emulator.
 DEVICE_KIND="${DEVICE_KIND:-emulator}"; HOST_ADDR="${HOST_ADDR:-10.0.2.2}"
+# prepare.sh's KELIVER_RELAY_PORT (a work dir from before it has no line: 8077).
+RELAY_PORT="${RELAY_PORT:-8077}"
 export KP JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 
@@ -90,8 +93,14 @@ trap cleanup EXIT
 
 portal_up(){  # $1 app, $2 log
   keliver_require_isolated_store "$WORK" "$1" >> "$EV/guard.log" 2>&1 || { bad "isolation guard refused $1"; return 1; }
+  # A relay this run did not start would answer every check below, and take
+  # its edits and publishes: refuse a port that still answers after 20 s.
+  local free=0
+  for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" || { free=1; break; }; sleep 2; done
+  # Stop the run: every check after this would edit and publish through it.
+  [ "$free" = 1 ] || { bad ":$RELAY_PORT already answers: a relay this run did not start (stop it, or run prepare.sh again with another KELIVER_RELAY_PORT)"; echo "device: passed $pass, failed $fail"; exit 1; }
   ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
-  for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null http://localhost:8077/devstate && return 0; sleep 3; done
+  for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate && return 0; sleep 3; done
   return 1
 }
 portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 3; }
@@ -144,9 +153,10 @@ if [ "$DEVICE_KIND" = emulator ] && [ "$IS_EMU" = 0 ]; then
 fi
 if [ "$DEVICE_KIND" = physical ]; then
   [ "$IS_EMU" = 1 ] && echo "    NOTE: the physical-device route on an EMULATOR: a rehearsal, not a physical-device run"
-  # The hosts reach this machine as 127.0.0.1: the relay (:8077) and the static
-  # HTTPS servers (:8443, and :8444 for W5's L rows), each through the USB connection.
-  for port in 8077 8443 8444; do
+  # The hosts reach this machine as 127.0.0.1: the relay (:$RELAY_PORT) and the static
+  # HTTPS servers (:8443, :8444 for W5's L rows, :8445 for its LV rows), each
+  # through the adb connection.
+  for port in $RELAY_PORT 8443 8444 8445; do
     adb -s "$SERIAL" reverse "tcp:$port" "tcp:$port" >/dev/null && REVERSED="$REVERSED $port" \
       && ok "W7: adb reverse tcp:$port (the device reaches this machine's :$port as 127.0.0.1:$port)" \
       || bad "W7: adb reverse tcp:$port failed"
@@ -193,7 +203,7 @@ echo "--- 2. D14 layout edit"
 portal_up "$APP" "$EV/relay-A-1.log" && ok "the relay for this app is up" || bad "the relay did not start"
 ( cd "$APP/src/jsMain/kotlin/logic" && sha256 *.kt ) > "$EV/logic-before.sha256"
 ( cd "$APP" && git status --porcelain ) > "$EV/git-status-before-edit.txt"
-V="$(curl -sf "http://localhost:8077/doc?project=default&screen=inventory" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+V="$(curl -sf "http://localhost:$RELAY_PORT/doc?project=default&screen=inventory" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
 cat > "$WORK/op-title.json" <<EOF
 {"baseVersion": $V, "envelope": {"session": "reference-app", "atMillis": 0}, "ops": [
  {"kind": "dev.keliver.portal.document.DocOp.SetProp", "target": 2, "name": "text",
@@ -201,7 +211,7 @@ cat > "$WORK/op-title.json" <<EOF
  {"kind": "dev.keliver.portal.document.DocOp.SetProp", "target": 2, "name": "fontSize",
   "value": {"kind": "dev.keliver.portal.document.PropValue.Lit", "tag": "i", "i": 30}}]}
 EOF
-curl -s -X POST --data-binary @"$WORK/op-title.json" "http://localhost:8077/ops?project=default&screen=inventory" > "$EV/ops-title.json"
+curl -s -X POST --data-binary @"$WORK/op-title.json" "http://localhost:$RELAY_PORT/ops?project=default&screen=inventory" > "$EV/ops-title.json"
 grep -q '"ok":true' "$EV/ops-title.json" && ok "D2: the relay applied the title edit: $(cat "$EV/ops-title.json")" || bad "D2: the edit was rejected: $(cat "$EV/ops-title.json")"
 sleep 3
 ( cd "$APP" && git diff -- src/jsMain/kotlin/screens/inventory.kt ) > "$EV/d14-screen.diff"
@@ -238,7 +248,7 @@ adb -s "$SERIAL" install -r "$APK" > "$EV/install-prod-host.log" 2>&1 \
 PUB="$(cat "$EV/app-public-key.hex")"
 # P2: only v1 (title Inventory) is published, although the SOURCE now says
 # Stockroom, so a screen reading Inventory is the signed bundle, not the source.
-curl -sf "http://localhost:8077/bundles/latest?widgetVersion=1&caps=" > "$EV/latest-p2.json"; cat "$EV/latest-p2.json"; echo
+curl -sf "http://localhost:$RELAY_PORT/bundles/latest?widgetVersion=1&caps=" > "$EV/latest-p2.json"; cat "$EV/latest-p2.json"; echo
 launch prod "$EV/logcat-prod-v1.txt"
 adb -s "$SERIAL" shell pm list packages | tr -d '\r' | grep -qx "package:$PROD_ID" \
   && ok "P1: the production host is its own app ($PROD_ID), not the generic development host" \
@@ -248,12 +258,12 @@ adb -s "$SERIAL" shell pm list packages | tr -d '\r' | grep -qx "package:$PROD_I
 # Which lookup depends on the relay under test: one from tools 0.3.7 or earlier
 # serves no bundles/index.json (the host falls back to /bundles/latest on the
 # 404); from 0.3.8 it serves the index.
-if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8077/bundles/index.json)" = 404 ]; then
-  grep -q "$HOST_TAG: no bundles/index.json at http://$HOST_ADDR:8077/; asking bundles/latest" "$EV/logcat-prod-v1.txt" \
+if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:$RELAY_PORT/bundles/index.json)" = 404 ]; then
+  grep -q "$HOST_TAG: no bundles/index.json at http://$HOST_ADDR:$RELAY_PORT/; asking bundles/latest" "$EV/logcat-prod-v1.txt" \
     && ok "P2: the relay serves no index; the host fell back to /bundles/latest on the 404" \
     || bad "P2: no fallback to /bundles/latest in the log"
 else
-  grep -q "$HOST_TAG: loading http://$HOST_ADDR:8077/bundles/v1/manifest.zipline.json (index sequence 1," "$EV/logcat-prod-v1.txt" \
+  grep -q "$HOST_TAG: loading http://$HOST_ADDR:$RELAY_PORT/bundles/v1/manifest.zipline.json (index sequence 1," "$EV/logcat-prod-v1.txt" \
     && ! grep -q "asking bundles/latest" "$EV/logcat-prod-v1.txt" \
     && ok "P2: the relay serves bundles/index.json; the host looked v1 up through it" \
     || bad "P2: the relay serves an index, but the host did not look up through it"
@@ -267,7 +277,7 @@ grep -q "codeLoadSuccess" "$EV/logcat-prod-v1.txt" && ok "P2: the signed v1 load
 drive title Inventory P2; fold "P2: v1 shows Inventory in production" $?
 drive prod Inventory P3; fold "P3: repeated actions run from the signed bundle" $?
 
-curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-v2.log" 2>&1
+curl -s -m 600 -X POST http://localhost:$RELAY_PORT/publish > "$EV/publish-v2.log" 2>&1
 grep -q 'publish OK: bundle v2' "$EV/publish-v2.log" && ok "P4: $(grep 'publish OK' "$EV/publish-v2.log")" || bad "P4: publish v2 failed"
 sha256 "$STORE/bundles/v2/manifest.zipline.json" | tee "$EV/manifest-v2.sha256"
 cp "$STORE/bundles/v2/manifest.zipline.json" "$EV/manifest-v2.zipline.json"
@@ -278,8 +288,8 @@ shot P4-stockroom-production
 # V2 (W6): this host reports to the relay. A relay that collects reports
 # (GET /reports; not in tools 0.3.8 candidate 2 or earlier) must have counted
 # v1's and v2's loads. An older relay is a SKIP, not a pass.
-if [ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://localhost:8077/reports)" = 200 ]; then
-  curl -s -m 5 http://localhost:8077/reports > "$EV/relay-reports.json"
+if [ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://localhost:$RELAY_PORT/reports)" = 200 ]; then
+  curl -s -m 5 http://localhost:$RELAY_PORT/reports > "$EV/relay-reports.json"
   python3 "$HERE/w5/relay_reports.py" "$EV/relay-reports.json" android > "$EV/relay-reports.txt" 2>&1 \
     && ok "V2: the relay counted this host's loads of v1 and v2 (GET /reports)" || bad "V2: $(tail -1 "$EV/relay-reports.txt")"
 else
@@ -299,10 +309,10 @@ FSTORE="$(cat "$FAPP/.gradle/keliver-store-path")"
 FPUB="$(tr -d ' \n' < "$FSTORE/keys/ed25519.pub")"
 [ "$FSTORE" != "$STORE" ] && [ "$FPUB" != "$PUB" ] \
   && ok "P5: the copy has its own store and a different key (${FPUB:0:8}… vs ${PUB:0:8}…)" || bad "P5: the copy shares the identity"
-FV="$(curl -sf "http://localhost:8077/doc?project=default&screen=inventory" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+FV="$(curl -sf "http://localhost:$RELAY_PORT/doc?project=default&screen=inventory" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
 sed -e "s/\"baseVersion\": [0-9]*/\"baseVersion\": $FV/" -e 's/"Stockroom"/"Foreign build"/' "$WORK/op-title.json" > "$WORK/op-foreign.json"
-curl -s -X POST --data-binary @"$WORK/op-foreign.json" "http://localhost:8077/ops?project=default&screen=inventory" > "$EV/ops-foreign.json"
-curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-foreign.log" 2>&1
+curl -s -X POST --data-binary @"$WORK/op-foreign.json" "http://localhost:$RELAY_PORT/ops?project=default&screen=inventory" > "$EV/ops-foreign.json"
+curl -s -m 600 -X POST http://localhost:$RELAY_PORT/publish > "$EV/publish-foreign.log" 2>&1
 grep -q 'publish OK' "$EV/publish-foreign.log" && ok "P5: the copy published a bundle signed with ITS key" || bad "P5: the copy did not publish"
 FM="$(ls -d "$FSTORE"/bundles/v*/ 2>/dev/null | sort -V | tail -1)manifest.zipline.json"
 [ -f "$FM" ] && cp "$FM" "$EV/manifest-foreign.zipline.json"
@@ -332,7 +342,7 @@ portal_down "$APP"
 # app's key. (Run 36624478213: an earlier host that loaded the saved URL with
 # Zipline's default freshness checker failed here — Zipline 1.22 uses its cache
 # only before the network, and only when the checker accepts it.)
-curl -sf -m 2 -o /dev/null http://localhost:8077/devstate && bad "P7: a relay is still answering" || ok "P7: no bundle server is answering"
+curl -sf -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate && bad "P7: a relay is still answering" || ok "P7: no bundle server is answering"
 launch prod "$EV/logcat-prod-offline.txt"
 grep -q "$HOST_TAG: lookup failed; starting from the cached bundle" "$EV/logcat-prod-offline.txt" \
   && ok "P7: the lookup failed and the host started from its cache" || bad "P7: it did not start from the cache"
