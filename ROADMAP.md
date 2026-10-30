@@ -42,8 +42,8 @@ In order (details and evidence in `docs/ROADMAP.md`):
    request allow-list). Released in tools 0.3.14 on both host templates. The
    templates after it (#165, with `screen-failed` on iOS) are checked on the
    CI emulator and simulator through the reference embed apps, and so are the
-   published 0.3.15 hosts, which have also passed on a physical Android phone
-   (2026-10-30).
+   published 0.3.15 hosts; the Android host has also passed on a physical
+   phone (2026-10-29, #174), the iOS one not yet.
    The dependency-floor report (K3) is released in tools 0.3.15.
 4. **A bridge generator**, so an app's own host calls are generated, not
    hand-copied. First step released in tools 0.3.15 (B1, Android): guests'
