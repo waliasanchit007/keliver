@@ -249,6 +249,17 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs KELIVER_BUNDLE_SERVER "$APP/host-ios/src/iosM
     CPID=$!
     sleep 25
     C="$EV/LV5.console.txt"
+    # The first launch after an install can print nothing on a slow runner (ios.sh's launch()):
+    # once more, the module still off the server (a warm-up launch would load and cache v10).
+    if ! grep -qE "KeliverHost:|KeliverTiming:" "$C"; then
+      echo "    LV5: the app printed nothing in 25 s; launching it once more" | tee -a "$EV/ios.retries"
+      kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
+      mv "$C" "$EV/LV5.first.console.txt"
+      xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+      SIMCTL_CHILD_KELIVER_BUNDLE_SERVER=https://localhost:8445 xcrun simctl launch --console-pty "$UDID" "$BID" > "$C" 2>&1 &
+      CPID=$!
+      sleep 30
+    fi
     pid_lv5="$(app_pid)"
     grep -q "KeliverHost: codeLoadFailed" "$C" && ! grep -q "codeLoadSuccess" "$C" \
       && grep -q "GET /bundles/v10/$mod.* 404" "$EV/lv-server.log" \

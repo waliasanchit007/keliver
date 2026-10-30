@@ -229,6 +229,9 @@ internal class ManifestPinningHttpClient(
     pinned = pinned + (manifestUrl to (sha256 ?: pinned[manifestUrl]))
   }
 
+  /** The sha256 [manifestUrl] is held to, or null (none, or not pinned). */
+  fun pinnedSha256(manifestUrl: String): String? = pinned[manifestUrl]
+
   override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString {
     val body = delegate.download(url, requestHeaders)
     val pinned = pinned

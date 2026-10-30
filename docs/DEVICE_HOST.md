@@ -159,12 +159,22 @@ cache, which it restarts from exactly as in the second row above (the floor
 holds, and the manifest is verified against the key again). Only when no
 bundle has loaded before for this key and server, or the cached one fails too,
 does it show "Bundle did not load". The next update check then looks up and
-loads again in the same process: a live-update event, a return to the
-foreground with `on-resume` or `live` updates, or the app's own
-`checkForUpdate()` (both hosts, from the tools release after 0.3.15; before
-it, only a process restart did). With `next-launch` updates and no call of
-its own, the app still needs a restart. With a static server, the failures
-include:
+loads again in the same process (both hosts, from the tools release after
+0.3.15; before it, only a process restart did):
+- a live-update event (a debug build);
+- a return to the foreground with `on-resume` or `live` updates, at least
+  30 s after the last lookup, the failed start's included (on Android, an
+  app that embeds the host calls `resumed()` for this; see "Updates while
+  the app runs");
+- the app's own `checkForUpdate()`, whatever its `apply` says.
+
+That load is not an update: no `Applied` or `Failed` event comes for it.
+The state (`Running` while it loads) and the reports (`loaded`, or
+`not-loaded` again) say how it went. When the index still names the very
+bundle that failed (the same manifest and sha256) for a reason of its own
+(`signature`, `sha256-mismatch`, `below-floor`), it is not fetched again.
+With `next-launch` updates and no call of its own, the app still needs a
+restart. With a static server, the failures include:
 - an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
   overwritten, or a stale CDN copy);
 - a `v<N>/` that isn't there yet because the index was uploaded first;
@@ -249,7 +259,9 @@ that opens.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
   `not-loaded`, `no-bundle`, `refused`, or `screen-failed`: the code threw
   while a screen showed it, one record per screen on show (Android from tools
-  0.3.14, iOS from 0.3.15).
+  0.3.14, iOS from 0.3.15). After the tools release after 0.3.15, a host
+  whose first load failed loads again at the next update check (§2), so one
+  process can send `not-loaded` more than once, then `loaded`.
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
   `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
   `other`.

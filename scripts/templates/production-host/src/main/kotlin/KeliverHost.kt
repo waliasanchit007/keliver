@@ -537,6 +537,30 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   ) {
     /** The first load failed, and nothing runs: the next update check loads again. */
     var notLoaded = false
+    private var failedUrl: String? = null
+    private var failedSha256: String? = null
+    /** The report's reason for the load that failed. */
+    var failedReason = ""
+      private set
+
+    /** The first load failed for [reason]: remembers what did not load. */
+    fun markNotLoaded(reason: String) {
+      notLoaded = true
+      failedUrl = manifestUrls.value
+      failedSha256 = failedUrl?.let(pinning::pinnedSha256)
+      failedReason = reportReason("not-loaded", reason)
+    }
+
+    /**
+     * The index still names exactly what failed, for a reason of the bundle's own (its signature,
+     * its sha256, the floor): fetching it again cannot help, and would report the failure again.
+     */
+    fun sameUnloadable(url: String, sha256: String?): Boolean =
+      url == failedUrl && sha256 == failedSha256 && failedReason in UNLOADABLE
+
+    private companion object {
+      val UNLOADABLE = setOf("signature", "sha256-mismatch", "below-floor")
+    }
   }
   private class LookupContext(
     val server: HttpUrl,
@@ -916,7 +940,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               flow.value = fallback
               app.start()
             } else {
-              session?.notLoaded = true
+              session?.markNotLoaded(reason)
               unavailable("not-loaded", "Bundle did not load", reason.take(300), detail = reason)
             }
           }
@@ -944,7 +968,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * and keeps the old one on failure (Failed). After a start from the cache,
    * Zipline takes no further manifest, so a newer bundle applies at the next
    * process start. When the first load failed ("Bundle did not load"), it
-   * looks up and loads again instead, whatever [apply] says ([loadAgain]).
+   * looks up and loads again instead, whatever [apply] says ([loadAgain]):
+   * then [events] gets nothing, and [state] and [reports] say how it went.
    */
   suspend fun checkForUpdate(apply: Boolean = true): KeliverUpdateCheck = withContext(Dispatchers.Main.immediate) {
     val s = session
@@ -999,6 +1024,9 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * loads what the index names now, from the network, into the same app. Every rule of a start
    * holds (the index, the channel, the constraints, the floor, the signature). The state is
    * [KeliverHostState.Running] again while it loads; a failure says "Bundle did not load" again.
+   * It is not an update: [events] gets no Applied or Failed for it; [state] and [reports]
+   * (`loaded`, or `not-loaded` again) say how it went. When the index still names the bundle
+   * that failed, for a reason of its own (signature, sha256, floor), it is not fetched again.
    * Main thread.
    */
   private suspend fun loadAgain(s: Session): KeliverUpdateCheck {
@@ -1010,6 +1038,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     if (latest == null) {
       Log.d(TAG, "update check: the first bundle did not load, and the lookup failed")
       return KeliverUpdateCheck.Failed("the lookup failed")
+    }
+    if (s.sameUnloadable(latest.manifestUrl, latest.manifestSha256)) {
+      Log.d(TAG, "update check: the first bundle did not load (${s.failedReason}), and the index still names it: not fetched again")
+      return KeliverUpdateCheck.Failed("the bundle that did not load (${s.failedReason}) is still the newest")
     }
     s.notLoaded = false
     Log.d(TAG, "update check: the first bundle did not load; loading ${latest.manifestUrl} (${latest.source})")
