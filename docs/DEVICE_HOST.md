@@ -158,8 +158,13 @@ the host **falls back to the last good bundle**: the one pinned in Zipline's
 cache, which it restarts from exactly as in the second row above (the floor
 holds, and the manifest is verified against the key again). Only when no
 bundle has loaded before for this key and server, or the cached one fails too,
-does it show "Bundle did not load" (until the process restarts). With a static
-server, the failures include:
+does it show "Bundle did not load". The next update check then looks up and
+loads again in the same process: a live-update event, a return to the
+foreground with `on-resume` or `live` updates, or the app's own
+`checkForUpdate()` (both hosts, from the tools release after 0.3.15; before
+it, only a process restart did). With `next-launch` updates and no call of
+its own, the app still needs a restart. With a static server, the failures
+include:
 - an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
   overwritten, or a stale CDN copy);
 - a `v<N>/` that isn't there yet because the index was uploaded first;
@@ -734,8 +739,8 @@ your app is affected:
   Keliver screen that opens;
 - a bundle that the lookup named but that then fails (another key's signature,
   a sha256 mismatch, a sequence below the floor): the cached last good bundle,
-  if one ran before (§2); otherwise "Bundle did not load", until the process
-  restarts.
+  if one ran before (§2); otherwise "Bundle did not load", until the next
+  update check loads it (§2) or the process restarts.
 
 A running process keeps the bundle it loaded; a newer one is picked up on the
 next process start (§2, "Lifecycle").
