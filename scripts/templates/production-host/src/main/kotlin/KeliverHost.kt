@@ -561,10 +561,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     /**
      * The index still names exactly what failed (the same manifest and sha256), and the bundle
      * itself cannot load (below the floor, or its signature did not verify): fetching it again
-     * cannot help, and would report the failure again.
+     * cannot help, and would report the failure again. Without a sha256 (the relay's legacy
+     * lookup) the bytes at that URL may have changed, so it is fetched again.
      */
     fun sameUnloadable(url: String, sha256: String?): Boolean =
-      unloadable && url == failedUrl && sha256 == failedSha256
+      unloadable && failedSha256 != null && url == failedUrl && sha256 == failedSha256
   }
   private class LookupContext(
     val server: HttpUrl,
