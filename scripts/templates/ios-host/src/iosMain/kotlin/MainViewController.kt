@@ -271,28 +271,32 @@ internal class Session(
   var notLoaded = false
   private var failedUrl: String? = null
   private var failedSha256: String? = null
+  private var unloadable = false
   /** The report's reason for the load that failed. */
   var failedReason = ""
     private set
 
-  /** The first load failed for [reason]: remembers what did not load. */
+  /**
+   * The first load failed for [reason]: remembers what did not load, and whether the bundle
+   * itself cannot load whatever the link does. Only the floor's own refusal and Zipline's
+   * signature failure count, by their exact messages: a TLS error can say "verified", and a
+   * sha256 mismatch can be a stale CDN copy that refreshes.
+   */
   fun markNotLoaded(reason: String) {
     notLoaded = true
     failedUrl = manifestUrls.value
     failedSha256 = failedUrl?.let(pinning::pinnedSha256)
     failedReason = reportReason("not-loaded", reason)
+    unloadable = "rollback refused:" in reason || ("manifest signature for key" in reason && "did not verify" in reason)
   }
 
   /**
-   * The index still names exactly what failed, for a reason of the bundle's own (its signature,
-   * its sha256, the floor): fetching it again cannot help, and would report the failure again.
+   * The index still names exactly what failed (the same manifest and sha256), and the bundle
+   * itself cannot load (below the floor, or its signature did not verify): fetching it again
+   * cannot help, and would report the failure again.
    */
   fun sameUnloadable(url: String, sha256: String?): Boolean =
-    url == failedUrl && sha256 == failedSha256 && failedReason in UNLOADABLE
-
-  private companion object {
-    val UNLOADABLE = setOf("signature", "sha256-mismatch", "below-floor")
-  }
+    unloadable && url == failedUrl && sha256 == failedSha256
 }
 internal class LookupContext(val server: BundleServer, val capabilities: List<String>, val floor: () -> Long)
 
@@ -693,8 +697,8 @@ public object Keliver {
    * [KeliverHostState.Running] again while it loads; a failure says "Bundle did not load" again.
    * It is not an update: [onUpdateEvent] gets no "applied" or "failed" for it; the state and the
    * reports (`loaded`, or `not-loaded` again) say how it went. When the index still names the
-   * bundle that failed, for a reason of its own (signature, sha256, floor), it is not fetched
-   * again. Main thread.
+   * bundle that failed, and it cannot load (below the floor, or its signature did not verify),
+   * it is not fetched again. Main thread.
    */
   private suspend fun loadAgain(s: Session): KeliverUpdateCheck {
     lastLookup = TimeSource.Monotonic.markNow()

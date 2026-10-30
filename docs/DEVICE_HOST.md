@@ -171,8 +171,10 @@ loads again in the same process (both hosts, from the tools release after
 That load is not an update: no `Applied` or `Failed` event comes for it.
 The state (`Running` while it loads) and the reports (`loaded`, or
 `not-loaded` again) say how it went. When the index still names the very
-bundle that failed (the same manifest and sha256) for a reason of its own
-(`signature`, `sha256-mismatch`, `below-floor`), it is not fetched again.
+bundle that failed (the same manifest and sha256), and that bundle cannot
+load whatever the link does (it is below the floor, or its signature did not
+verify), it is not fetched again. A sha256 mismatch is fetched again: it can
+be a stale CDN copy that refreshes.
 With `next-launch` updates and no call of its own, the app still needs a
 restart. With a static server, the failures include:
 - an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
