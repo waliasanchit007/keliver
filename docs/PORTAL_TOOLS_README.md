@@ -139,6 +139,10 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   the path-override headers are dropped and the URL going out is checked
   again after the client's interceptors. A host scaffolded earlier gets none
   of it until it is scaffolded again.
+- **From the release after 0.3.15 (Android):** `TRACE`, `TRACK` and `CONNECT`
+  are never sent through your app's own client, even when the
+  `RequestPolicy` allows them (a `TRACE` would echo its credentials back to
+  the guest). A host scaffolded earlier keeps sending them.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

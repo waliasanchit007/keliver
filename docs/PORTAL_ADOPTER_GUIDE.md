@@ -551,7 +551,10 @@ same host Kotlin as `host-android/`. Then, in your app:
   guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
   dropped, and a response's `Set-Cookie` is not handed back. Other credentials,
   such as an API-key header or a token in the query, are for your interceptor
-  to set with `header()` or to remove.
+  to set with `header()` or to remove. From the tools release after 0.3.15,
+  `TRACE`, `TRACK` and `CONNECT` are refused through your client (a `TRACE`
+  would echo your headers back to the guest); a host scaffolded earlier keeps
+  sending them until it is scaffolded again or patched.
 
 The settings are in `keliver-host/keliver.properties` (`-Pkeliver.*` overrides
 them), and the key is `keliver-host/src/main/assets/keliver/portal_ed25519.pub`.
