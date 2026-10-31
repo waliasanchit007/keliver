@@ -60,8 +60,9 @@ run alongside item 2.
      the later-screen case not measured yet; released in tools 0.3.16);
    - **merged 2026-10-31:** M4's host-side guest frame profile (#186, templates
      only; reaches apps with the next tools release);
-   - **open:** M4's composition/encoding split (a library change) and M5 (the iOS
-     memory breakdown).
+   - **in review:** M5's iOS memory profile (#188, the iOS template; memory cycles
+     for a second-open leak; simulator numbers in CI, a phone's not yet);
+   - **open:** M4's composition/encoding split (a library change).
      See ADOPTION_PLAN item 2.
 3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
    start; each host then needed ≈ 900 lines of glue, and every serious defect
@@ -480,7 +481,7 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    not started.
 9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
    host-side frame profile merged (#186, not released; composition apart from encoding needs a
-   library release); then M5 (iOS memory).
+   library release); M5's iOS memory profile in review (#188); then its numbers on a phone.
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
     delivery (item 7); the device proxy (item 6's last row).
 11. **W7, the physical-device proof** (a real-certificate HTTPS server, a
