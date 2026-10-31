@@ -1,6 +1,6 @@
 # The reference app — what the published route costs an adopter
 
-**2026-09-22/24; on the newest published tools since PR #92 (0.3.7, 2026-10-08); tools 0.3.10 since PR #118 (2026-10-17); tools 0.3.11 since PR #128 (2026-10-19); tools 0.3.12 since PR #139 (2026-10-21); tools 0.3.13 since PR #154 (2026-10-27); tools 0.3.14 since PR #164 (2026-10-28); tools 0.3.15 since 2026-10-29; tools 0.3.16 since 2026-10-31.** An inventory
+**2026-09-22/24; on the newest published tools since PR #92 (0.3.7, 2026-10-08); tools 0.3.10 since PR #118 (2026-10-17); tools 0.3.11 since PR #128 (2026-10-19); tools 0.3.12 since PR #139 (2026-10-21); tools 0.3.13 since PR #154 (2026-10-27); tools 0.3.14 since PR #164 (2026-10-28); tools 0.3.15 since PR #171 (2026-10-29); tools 0.3.16 since PR #183 (2026-10-31).** An inventory
 app built outside this checkout from the **published** `keliver-portal-tools`
 release (0.3.5 until PR #92, then each published release; 0.3.16 now) and `dev.keliver:*:0.3.3` on
 Maven Central, following [`PORTAL_ADOPTER_GUIDE.md`](PORTAL_ADOPTER_GUIDE.md),
