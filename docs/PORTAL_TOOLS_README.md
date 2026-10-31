@@ -156,6 +156,11 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
     has what that costs at launch).
 
   A host scaffolded earlier gets none of it until it is scaffolded again.
+- **From the release after 0.3.16 (both hosts):** a guest frame profile next to
+  the timing marks, in debug and benchmark builds only: one `frames` line per
+  window of frames, timing the guest's frame, its change lists and their apply
+  (`DEVICE_HOST.md`, "The guest frame profile"). A host scaffolded earlier
+  gets it when it is scaffolded again.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
