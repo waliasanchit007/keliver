@@ -626,8 +626,11 @@ for byte):
   restricted:** the query string, and other headers. With the host's plain
   client a guest can set `Authorization` or `Cookie`. With your own client
   (`KeliverConfig.fromBuild(this, requestPolicy, httpClient = yourClient)`,
-  from 0.3.15) they are dropped, and so is a response's `Set-Cookie`. Your
-  client is used only for HostHttp.
+  from 0.3.15) they are dropped, and so is a response's `Set-Cookie`. From
+  the tools release after 0.3.15, `TRACE`, `TRACK` and `CONNECT` are refused
+  through your client even when the policy allows them: a `TRACE` would echo
+  your interceptor's headers back to the guest. Your client is used only for
+  HostHttp.
 - **`ExternalLinkPolicy.open(context, url)`**: call it from whatever your app
   exposes to screens for opening a link. `https` opens in a Custom Tab, on any
   host. `intent:` is handled as a browser handles it, and stricter: a VIEW

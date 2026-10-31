@@ -170,6 +170,16 @@ class AppClientHostHttpTest {
     assertEquals(3, server.requestCount)
   }
 
+  @Test fun traceIsNeverSentThroughTheAppsClient() {
+    val loose = RequestPolicy(base(), setOf(RequestPolicy.Rule("TRACE", "orders"), RequestPolicy.Rule("CONNECT", "orders")), allowStateChanging = true, allowCleartext = true)
+    for (method in listOf("TRACE", "trace", "CONNECT")) {
+      val why = refused { http(loose).execute(HttpRequest(method, "orders")) }
+      assertTrue(why, "never sent through the app's own client" in why)
+    }
+    assertEquals(0, seen.get())
+    assertEquals(0, server.requestCount)
+  }
+
   @Test fun anAppsClientNeedsAPolicy() {
     try {
       KeliverConfig(bundleServer = "https://bundles.example.com", publicKeyHex = null, apiBaseUrl = base().toString(), httpClient = appClient)
