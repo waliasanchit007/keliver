@@ -90,9 +90,9 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's i
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
    **2026-11-01, in review (#188):** the iOS host's debug and Benchmark builds log a `memory`
-   line (footprint, QuickJS's heap, and the Kotlin heap after a collection) at `open`, `ui`,
-   `runtime`, `code`, `content` and `closed`. A debug-only Darwin notification runs a memory
-   cycle: it opens a second screen, closes it, and samples `closed`. The growth from one
+   line (footprint and QuickJS's heap; at `closed` also the Kotlin heap after a collection) at
+   `open`, `ui`, `runtime`, `code`, `content` and `closed`. In those builds a Darwin
+   notification runs a memory cycle: it opens a second screen, closes it, and samples `closed`. The growth from one
    cycle's close to the next is the leak measure (`DEVICE_HOST.md`, "The memory profile").
    The reference app's iOS CI (T4) checks the lines on the simulator and prints the numbers,
    with no bound yet. Not done: the numbers on a phone, where the 76 MB was seen (the

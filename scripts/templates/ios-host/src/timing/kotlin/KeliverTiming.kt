@@ -223,8 +223,8 @@ internal object KeliverTiming {
       done()
       return
     }
-    // done() whatever happens to this (a closed app's dispatcher too): a cycle left running
-    // would refuse every later one.
+    // done() when the job ends however it ends (a throw, a cancel): a cycle left running would
+    // refuse every later one. A stopped app has no Zipline, so it takes the branch above.
     memoryScope.launch(app.dispatchers.zipline) {
       val quickJs = runCatching { KeliverMemory.quickJs(code, gc = true) }.getOrNull()
       emitMemory("closed", n, now(), KeliverMemory.footprint(), quickJs, kotlinHeap)
@@ -242,6 +242,7 @@ internal object KeliverTiming {
   }
 
   /** Opens a second screen over the shown one, closes it after its content, then samples "closed"; main thread. */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class) // WeakReference
   private fun memoryCycle() {
     if (cycleRunning) {
       println("KeliverTiming: memory-cycle: one is already running; this one is ignored")
@@ -261,27 +262,39 @@ internal object KeliverTiming {
     }
     cycleRunning = true
     val n = cycle.incrementAndGet()
-    // Nothing below holds the screen: what is measured at "closed" is what it left behind.
+    val screen = Keliver.viewController().apply { modalPresentationStyle = UIModalPresentationFullScreen }
+    // Nothing below holds the screen (only this weak reference): what is measured at "closed"
+    // is what it left behind.
+    val shown = kotlin.native.ref.WeakReference(screen)
     var ended = false
+    var sampled = false
+    val closed = {
+      if (!sampled) {
+        sampled = true
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
+          memoryClosed(n) { cycleRunning = false }
+        }
+      }
+    }
     val end = {
       if (!ended) {
         ended = true
         cycleContent = null
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
-          val closed = {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
-              memoryClosed(n) { cycleRunning = false }
-            }
+          // Only this cycle's screen, and only while it is up: it may have closed itself
+          // (closeScreen), and something else on top of over is the app's own.
+          val up = shown.get()
+          if (up != null && over.presentedViewController === up && !up.isBeingDismissed()) {
+            over.dismissViewControllerAnimated(false) { closed() }
           }
-          // The screen may have closed itself (closeScreen): then dismiss nothing, which would
-          // close the app's own modal under it.
-          if (over.presentedViewController != null) over.dismissViewControllerAnimated(false) { closed() } else closed()
+          // And in any case: UIKit runs no completion for a dismiss it refuses.
+          dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) { closed() }
         }
       }
     }
     cycleContent = end
     println("KeliverTiming: memory-cycle $n: opening a screen")
-    over.presentViewController(Keliver.viewController().apply { modalPresentationStyle = UIModalPresentationFullScreen }, animated = false, completion = null)
+    over.presentViewController(screen, animated = false, completion = null)
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 15 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
       if (!ended) println("KeliverTiming: memory-cycle $n: no content within 15 s; closing it")
       end()
