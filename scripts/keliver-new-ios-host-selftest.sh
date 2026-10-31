@@ -272,6 +272,16 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/com/example/demo/host/Kel
   && grep -q 'name = Benchmark;' "$H/iosApp.xcodeproj/project.pbxproj" && grep -q 'KOTLIN_FRAMEWORK_BUILD_TYPE = release;' "$H/iosApp.xcodeproj/project.pbxproj" \
   && ok "M0: timing marks when KELIVER_TIMING=YES (Debug, Benchmark), a no-op elsewhere; a Benchmark configuration" \
   || bad "M0: the timing marks or the Benchmark configuration are not wired"
+# M4: the guest frame profile, as on Android, and its window byte for byte the Android host's.
+T="$H/src/timing/kotlin/com/example/demo/host"
+grep -q 'override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callStart(call)' "$K/MainViewController.kt" \
+  && grep -q 'override fun callEnd(call: ZiplineCall, result: CallResult, startValue: Any?) = KeliverTiming.callEnd(call, startValue)' "$K/MainViewController.kt" \
+  && grep -q 'call.service !is AppLifecycle || !call.function.signature.startsWith("fun sendFrame(")' "$T/KeliverTiming.kt" \
+  && grep -q 'inline fun callStart(call: Call): Any? = null' "$H/src/notiming/kotlin/com/example/demo/host/KeliverTiming.kt" \
+  && [ ! -e "$H/src/notiming/kotlin/com/example/demo/host/KeliverFrames.kt" ] \
+  && [ -n "$PH" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/timing/kotlin/KeliverFrames.kt" | cmp -s - "$T/KeliverFrames.kt" \
+  && ok "M4: the guest frame profile when KELIVER_TIMING=YES, a no-op elsewhere; its window is the Android host's, byte for byte" \
+  || bad "M4: the guest frame profile is not wired, or its window differs from the Android host's"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \

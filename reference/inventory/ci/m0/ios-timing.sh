@@ -7,6 +7,9 @@
 #       Library/Caches/keliver/timing.log; first-frame and content not before code
 #   T2  the Benchmark configuration (Release settings) loads v9 and logs the
 #       same marks; the Release configuration's binary has none of them
+#   T3  M4's guest frame profile, in both: well-formed "frames" lines on the
+#       console and in the file, with a timed guest frame and an applied change
+#       list (frames.py); a host from templates without it SKIPs
 if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   echo "--- M0: timing marks"
   python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/m0-server.log" &
@@ -34,6 +37,13 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
       bad "$1: the marks are out of order: open $o code $c first-frame $ff content $ct"; return 1
     fi
   }
+  m0_frames(){  # $1 label, $2 console file
+    local out
+    if ! grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
+      echo "  SKIP  $1: this host predates the guest frame profile (not counted)"; return 0
+    fi
+    out="$(python3 "$HERE/m0/frames.py" "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
+  }
 
   # T1: the Debug build W5 left installed (its server is https://localhost:8443).
   m0_launch T1
@@ -44,6 +54,10 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   ct="$(m0_at "$C" content)"
   [ -n "$ct" ] && grep -qx "content $ct" "$TL" 2>/dev/null \
     && ok "T1: Library/Caches/keliver/timing.log has the same content mark ($ct)" || bad "T1: the file sink: $(tail -3 "$TL" 2>&1 | tr '\n' ' ')"
+  m0_frames T3 "$C"
+  if grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
+    grep -q "^frames [0-9]* n=" "$TL" 2>/dev/null && ok "T3: Library/Caches/keliver/timing.log has the frames lines too" || bad "T3: no frames line in the file sink"
+  fi
 
   # T2: the Benchmark configuration. A Release-type build refuses an Info.plist
   # ATS exception (the scaffolder wrote one for the relay's http://), so it is
@@ -65,14 +79,15 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && ok "T2: the Benchmark build verified and ran v9" \
       || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$C" | head -3 | tr '\n' ' ')"
     m0_marks T2 "$C"
+    m0_frames "T3 (Benchmark)" "$C"
   else
     bad "T2: the Benchmark build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Benchmark.log" | head
   fi
   # The store configuration has none of it: its binary names no KeliverTrace.
   if m0_build Release; then
     RAPP="$(find "$WORK/dd-m0/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
-    ! find "$RAPP" -type f -perm -u+x -exec grep -aq KeliverTrace {} \; -print | grep -q . \
-      && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace)" || bad "T2: the Release build carries timing code"
+    ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow' {} \; -print | grep -q . \
+      && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, no FrameWindow)" || bad "T2: the Release build carries timing code"
   else
     bad "T2: the Release build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Release.log" | head
   fi

@@ -545,9 +545,12 @@ else
     subst "$TEMPLATES/$f" "$STAGE/$f"
   done
 fi
-# Timing marks (M0): the real ones for debug and benchmark, a no-op for every other build type.
+# Timing marks (M0) and the guest frame profile (M4): the real ones for debug and benchmark, a
+# no-op for every other build type.
 for set in timing notiming; do
-  subst "$TEMPLATES/src/$set/kotlin/KeliverTiming.kt" "$STAGE/src/$set/kotlin/$PKG_PATH/KeliverTiming.kt"
+  for f in "$TEMPLATES"/src/$set/kotlin/*.kt; do
+    subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
+  done
 done
 # The same Kotlin in both modes; only the app shell (its Application and its
 # activity) stays out of the library.
@@ -559,6 +562,10 @@ done
 if ! $EMBED; then
   for f in "$TEMPLATES"/src/test/kotlin/*.kt; do
     subst "$f" "$STAGE/src/test/kotlin/$PKG_PATH/$(basename "$f")"
+  done
+  # The frame profile's window exists only in the debug and benchmark builds (src/timing).
+  for f in "$TEMPLATES"/src/testDebug/kotlin/*.kt; do
+    subst "$f" "$STAGE/src/testDebug/kotlin/$PKG_PATH/$(basename "$f")"
   done
 fi
 mkdir -p "$STAGE/src/main/assets/keliver"

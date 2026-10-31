@@ -277,6 +277,17 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/d
   && grep -q 'KeliverTiming.firstFrame(host.launch(app, s.app, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
   && ok "M0: timing marks in debug and benchmark (src/timing), a no-op elsewhere (src/notiming); a benchmark build type" \
   || bad "M0: the timing marks or the benchmark build type are not wired"
+# M4: the guest frame profile, beside the marks: the listener's call hooks, the window, a no-op elsewhere.
+grep -q 'override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callStart(call)' "$M" \
+  && grep -q 'override fun callEnd(call: ZiplineCall, result: CallResult, startValue: Any?) = KeliverTiming.callEnd(call, startValue)' "$M" \
+  && grep -q '^internal class FrameWindow' "$H/src/timing/kotlin/$P/KeliverFrames.kt" 2>/dev/null \
+  && grep -q 'call.service !is AppLifecycle || !call.function.signature.startsWith("fun sendFrame(")' "$H/src/timing/kotlin/$P/KeliverTiming.kt" \
+  && grep -q 'isAsynchronous = true' "$H/src/timing/kotlin/$P/KeliverTiming.kt" \
+  && grep -q 'inline fun callStart(call: Call): Any? = null' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
+  && ! grep -q 'FrameWindow' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" && [ ! -e "$H/src/notiming/kotlin/$P/KeliverFrames.kt" ] \
+  && [ -f "$H/src/testDebug/kotlin/$P/FrameWindowTest.kt" ] \
+  && ok "M4: the guest frame profile in debug and benchmark (sendFrame and change-list spans, the main thread's apply), a no-op elsewhere; its window's tests" \
+  || bad "M4: the guest frame profile is not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
@@ -371,6 +382,9 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-android testDebugUnitTest > "$DISP/unit-tests.log" 2>&1 ); rc=$?
     [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (testDebugUnitTest)" \
       || bad "the host kit's JVM tests failed (rc=$rc): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/unit-tests.log" | head -6 | tr '\n' ' ')"
+    fw="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.FrameWindowTest.xml"
+    [ -f "$fw" ] && grep -q 'failures="0" errors="0"' "$fw" && ! grep -q 'tests="0"' "$fw" \
+      && ok "M4: the frame window's tests ran: $(grep -o 'tests="[0-9]*"' "$fw" | head -1)" || bad "M4: the frame window's tests did not run, or failed"
     # A release build with an http:// server is refused.
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease > "$DISP/assemble-release.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \

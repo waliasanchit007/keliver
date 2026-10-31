@@ -81,6 +81,8 @@ import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
+import app.cash.zipline.Call as ZiplineCall
+import app.cash.zipline.CallResult
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
@@ -1287,4 +1289,7 @@ private class LoggingEventListener(
   override fun uncaughtException(exception: Throwable) {
     Log.e(TAG, "uncaughtException: ${exception.message}", exception)
   }
+  // The guest frame profile (M4), in debug and benchmark builds only; nothing elsewhere.
+  override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callStart(call)
+  override fun callEnd(call: ZiplineCall, result: CallResult, startValue: Any?) = KeliverTiming.callEnd(call, startValue)
 }

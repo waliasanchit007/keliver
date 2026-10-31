@@ -11,8 +11,8 @@ serious defect in the proof was in host glue that each adopter writes for themse
 **Status (2026-10-31).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
-screen opened at launch, and the later-screen case is not measured yet), M4–M5
-are open. Item 3: K1 and K2 are released (tools 0.3.14),
+screen opened at launch, and the later-screen case is not measured yet), M4's
+first step (the host-side frame profile) is in review (#186), M5 is open. Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
@@ -32,7 +32,7 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
 ## Item 2. Startup and memory (measure first)
 
 **Status 2026-10-31:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
-below); M4–M5 open.
+below); M4's host-side frame profile in review (#186, step 5); M5 open.
 
 **Evidence.**
 - On Android (debug builds), native content took 1.5 s on a cold open against 1.1 s for the
@@ -80,6 +80,13 @@ below); M4–M5 open.
    apply. The host side comes from M0's change-list hook. `callStart` and `callEnd` time a whole
    guest call, so splitting composition from encoding needs spans inside the guest's runtime,
    reported through M0's `KeliverTrace` service.
+   **2026-10-31, in review (#186):** the host-side profile, templates only: per frame the
+   guest's `sendFrame` call (`guest`), the time until its change list reaches the host
+   (`lead`), the host's `sendChanges` (`sink`), the wait for the main thread (`queue`) and
+   the apply (`apply`), as one `frames` line per window (`DEVICE_HOST.md`, "The guest frame
+   profile"); checked by the scaffolders' self-tests, JVM tests of the window and T3 in the
+   reference app's CI. Not done: composition apart from encoding. It needs a timestamp in
+   `StandardAppLifecycle.sendFrame` (keliver-treehouse-guest), so a library release (0.4.2).
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
 
