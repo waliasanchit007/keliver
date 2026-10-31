@@ -119,7 +119,7 @@ All of it against one set of bytes: the retained artifact of build run
 | Bundled host APK | sha256 `603ed1a1ba9656f695a25ec265f438086f4c09b06ae616849afee761af3e2173`, no `assets/portal_ed25519.pub` |
 | Dependency floor | `templates/production-host-embed/dependency-floor.json`: keliver 0.4.1, Kotlin 2.2.0, Zipline 1.22.0, Compose 1.8.2, 201 modules resolved at build time |
 | Build | `portal-tools.yml` run `40871650582`; retained artifact `12897894342` (92,080,667 bytes, digest `sha256:64d25e9de4a1de122a4988e1b8ee0f7f5861e64ba394d741ab6626c610146226`) |
-| Device job | run `40904089864` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin; device verify 28/0, its acceptance 19/0; evidence artifact `12910832280` |
+| Device job | run `40904089864` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin; device verify 19/0, its acceptance 28/0; evidence artifact `12910832280` |
 
 The build run's packaged checks:
 - the unit tests (a Gradle run: `BUILD SUCCESSFUL`);
