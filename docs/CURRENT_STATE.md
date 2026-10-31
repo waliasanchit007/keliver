@@ -87,7 +87,7 @@ U28). U38 (the browser kept running a cached editor) is fixed in tools 0.3.13;
 its browser re-run is pending. (U30 was fixed with W8, released in tools 0.3.9.) Since tools 0.3.6 the production host and signed publishing
 are scaffolded (`keliver-new-production-host.sh`, `keliver-new-publish-target.sh`),
 and the relay refuses unsigned bundles. The reference app's CI builds
-from the published tools 0.3.15 zip (since 2026-10-29; 0.3.14 from #164); on pull requests it scaffolds from
+from the published tools 0.3.16 zip (since 2026-10-31; 0.3.15 from #171, 0.3.14 from #164); on pull requests it scaffolds from
 this repository's scripts instead, so template changes are what it tests.
 Priorities: `ROADMAP.md` "Current priorities".
 
