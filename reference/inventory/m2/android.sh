@@ -193,6 +193,9 @@ measure(){
     [ "$(at "$L" "${pr#*:}")" -ge "$(at "$L" "${pr%%:*}")" ] || { err "$s $r: '${pr#*:}' is before '${pr%%:*}'"; return 1; }
   done
   want=COLD; [ "$s" = warm ] && want=WARM
+  # Android 12 reports a warm open as UNKNOWN (0) (results-2026-10-31-a12-m3): accepted for a
+  # warm open only, whose marks above already show it was one (no process, no code).
+  [ "$s" = warm ] && [ "$(amv "$A" LaunchState)" = UNKNOWN ] && want=UNKNOWN
   [ "$(amv "$A" LaunchState)" = "$want" ] || { err "$s $r: am start says LaunchState $(amv "$A" LaunchState), not $want"; return 1; }
   if [ "$s" != warm ]; then
     grep -qE "codeLoadSuccess modules=[0-9]+ sequence=$SEQ " "$L" \

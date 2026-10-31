@@ -33,7 +33,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
   adb -s "$SERIAL" install -r "$W5_APK" > "$EV/install-T1.log" 2>&1
   launch prod "$EV/logcat-T1.txt"
   m0_marks T1 "$EV/logcat-T1.txt"
-  grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-T1.txt" && ok "T1: the debug host ran v9" || bad "T1: v9 did not load"
+  grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-T1.txt" && ok "T1: the debug host ran v9" || bad "T1: v9 did not load"
   adb -s "$SERIAL" shell run-as "$PROD_ID" cat files/keliver/timing.log > "$EV/T1-timing.log" 2>&1
   ct="$(m0_at "$EV/logcat-T1.txt" content)"
   [ -n "$ct" ] && grep -qx "content $ct" "$EV/T1-timing.log" \
@@ -45,7 +45,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
     adb -s "$SERIAL" shell dumpsys package "$PROD_ID" > "$EV/T2-dumpsys.txt" 2>&1
     ! grep -q "flags=\[.*DEBUGGABLE" "$EV/T2-dumpsys.txt" && ok "T2: it is not debuggable" || bad "T2: the benchmark build is debuggable"
     launch prod "$EV/logcat-T2.txt"
-    grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-T2.txt" \
+    grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-T2.txt" \
       && ok "T2: the benchmark build (R8) verified and ran v9" || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$EV/logcat-T2.txt" | head -3 | tr '\n' ' ')"
     m0_marks T2 "$EV/logcat-T2.txt"
     adb -s "$SERIAL" shell am force-stop "$PROD_ID"

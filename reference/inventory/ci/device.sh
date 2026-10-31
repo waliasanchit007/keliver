@@ -120,7 +120,7 @@ launch(){  # $1 = dev|prod ; $2 = logcat file
     adb -s "$SERIAL" shell am start -n "$cmp" >/dev/null
   else adb -s "$SERIAL" shell am start -n "$ACT" >/dev/null; fi
   sleep 15
-  adb -s "$SERIAL" logcat -d > "$2"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$2"
 }
 serve_up(){
   ( cd "$APP" && ./gradlew serveDevelopmentZipline --console=plain > "$EV/serve-$1.log" 2>&1 ) &
@@ -268,12 +268,12 @@ else
     && ok "P2: the relay serves bundles/index.json; the host looked v1 up through it" \
     || bad "P2: the relay serves an index, but the host did not look up through it"
 fi
-grep -q "codeLoadFailed: Expected URL scheme" "$EV/logcat-prod-v1.txt" \
+grep -q "$HOST_TAG: codeLoadFailed: Expected URL scheme" "$EV/logcat-prod-v1.txt" \
   && bad "P2: an empty-URL load was attempted (U28)" || ok "P2: no empty-URL load attempt (U28 absent)"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-v1.txt" \
   && ok "P2: production verifies with this app's key (${PUB:0:8}…)" || bad "P2: no verification with this app's key in the log"
 grep -q "$HOST_TAG: refusing to load" "$EV/logcat-prod-v1.txt" && bad "P2: the production host refused to load" || ok "P2: the production host did not refuse"
-grep -q "codeLoadSuccess" "$EV/logcat-prod-v1.txt" && ok "P2: the signed v1 loaded (codeLoadSuccess)" || bad "P2: v1 did not load"
+grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-prod-v1.txt" && ok "P2: the signed v1 loaded (codeLoadSuccess)" || bad "P2: v1 did not load"
 drive title Inventory P2; fold "P2: v1 shows Inventory in production" $?
 drive prod Inventory P3; fold "P3: repeated actions run from the signed bundle" $?
 
@@ -282,7 +282,7 @@ grep -q 'publish OK: bundle v2' "$EV/publish-v2.log" && ok "P4: $(grep 'publish 
 sha256 "$STORE/bundles/v2/manifest.zipline.json" | tee "$EV/manifest-v2.sha256"
 cp "$STORE/bundles/v2/manifest.zipline.json" "$EV/manifest-v2.zipline.json"
 launch prod "$EV/logcat-prod-v2.txt"
-grep -q "codeLoadSuccess" "$EV/logcat-prod-v2.txt" && ok "P4: the signed v2 loaded" || bad "P4: v2 did not load"
+grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-prod-v2.txt" && ok "P4: the signed v2 loaded" || bad "P4: v2 did not load"
 drive title Stockroom P4; fold "P4: the second signed version shows Stockroom" $?
 shot P4-stockroom-production
 # V2 (W6): this host reports to the relay. A relay that collects reports
@@ -321,9 +321,9 @@ launch prod "$EV/logcat-prod-foreign.txt"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-foreign.txt" \
   && ok "P5: verification still uses this app's key" || bad "P5: verification key not seen"
 grep -E "codeLoadFailed" "$EV/logcat-prod-foreign.txt" | head -3 | sed 's/^/    /'
-grep -qE "codeLoadFailed.*(signature|verif)" "$EV/logcat-prod-foreign.txt" \
+grep -qE "$HOST_TAG: codeLoadFailed.*(signature|verif)" "$EV/logcat-prod-foreign.txt" \
   && ok "P5: the foreign-signed bundle was rejected on its signature" || bad "P5: no signature rejection in the log"
-grep -q "codeLoadSuccess" "$EV/logcat-prod-foreign.txt" && bad "P5: something loaded" || ok "P5: no code loaded"
+grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-prod-foreign.txt" && bad "P5: something loaded" || ok "P5: no code loaded"
 python3 "$HERE/drive.py" "$SERIAL" "$EV" title "Foreign build" P5 > "$EV/foreign-screen.txt" 2>&1
 grep -q "PASS  TITLE " "$EV/foreign-screen.txt" && bad "P5: Foreign build is on screen" || ok "P5: Foreign build never appeared"
 portal_down "$FAPP"
@@ -332,7 +332,7 @@ portal_down "$FAPP"
 portal_up "$APP" "$EV/relay-A-2.log" || bad "P6: the relay did not come back"
 launch prod "$EV/logcat-prod-recover.txt"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-recover.txt" \
-  && grep -q "codeLoadSuccess" "$EV/logcat-prod-recover.txt" \
+  && grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-prod-recover.txt" \
   && ok "P6: this app's signed bundle loads again, verified" || bad "P6: no verified load after recovery"
 drive title Stockroom P6; fold "P6: Stockroom is back" $?
 portal_down "$APP"
@@ -347,7 +347,7 @@ launch prod "$EV/logcat-prod-offline.txt"
 grep -q "$HOST_TAG: lookup failed; starting from the cached bundle" "$EV/logcat-prod-offline.txt" \
   && ok "P7: the lookup failed and the host started from its cache" || bad "P7: it did not start from the cache"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-offline.txt" \
-  && grep -q "codeLoadSuccess" "$EV/logcat-prod-offline.txt" \
+  && grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-prod-offline.txt" \
   && ok "P7: with the relay down, code loaded (codeLoadSuccess) in the host that verifies with this app's key" \
   || bad "P7: no load offline"
 drive title Stockroom P7; fold "P7: Stockroom offline" $?

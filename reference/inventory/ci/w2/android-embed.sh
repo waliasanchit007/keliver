@@ -24,19 +24,22 @@
 # X6 also checks that the app's onUnavailable ran (its native fallback shows).
 echo "--- 5. W2: the host embedded in an existing app"
 W2_ID="${W2_ID:-com.example.existing}"
+# Whether the existing app's own process crashed: on a phone, other processes' crashes are in
+# the same log ("FATAL EXCEPTION: main" is followed by "Process: <id>, PID: <n>").
+w2_crashed(){ grep -A2 "FATAL EXCEPTION" "$1" | grep -q "Process: $W2_ID, PID:"; }
 w2_launch(){  # $1 = logcat file: a cold start of the existing app
   adb -s "$SERIAL" logcat -c || true
   adb -s "$SERIAL" shell am force-stop "$W2_ID"
   adb -s "$SERIAL" shell am start -n "$W2_ID/.MainActivity" > /dev/null
   sleep 15
-  adb -s "$SERIAL" logcat -d > "$1"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$1"
 }
 w2_route(){  # $1 = deep link, $2 = logcat file: a cold start of the existing app on that route
   adb -s "$SERIAL" logcat -c || true
   adb -s "$SERIAL" shell am force-stop "$W2_ID"
   adb -s "$SERIAL" shell "am start -a android.intent.action.VIEW -d '$1' -n $W2_ID/.MainActivity" > /dev/null
   sleep 15
-  adb -s "$SERIAL" logcat -d > "$2"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$2"
 }
 w2_dump(){  # $1 = label: the view hierarchy, kept as evidence
   adb -s "$SERIAL" shell rm -f /sdcard/w2.xml
@@ -82,7 +85,7 @@ PY
 # X2: a signed load, from the static server, verified with this app's key.
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-embed.txt" \
   && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$EV/logcat-embed.txt" \
-  && grep -q "codeLoadSuccess" "$EV/logcat-embed.txt" \
+  && grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-embed.txt" \
   && ok "X2: the embedded host verified with this app's key and loaded v7 from the static server" \
   || bad "X2: $(grep -E "$HOST_TAG" "$EV/logcat-embed.txt" | head -3 | tr '\n' ' ')"
 
@@ -107,10 +110,10 @@ adb -s "$SERIAL" shell input keyevent KEYCODE_BACK; sleep 4
 adb -s "$SERIAL" shell settings put system accelerometer_rotation 0
 adb -s "$SERIAL" shell settings put system user_rotation 1; sleep 8
 adb -s "$SERIAL" shell settings put system user_rotation 0; sleep 8
-adb -s "$SERIAL" logcat -d > "$EV/logcat-embed-nav.txt"
+adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-embed-nav.txt"
 created="$(grep -c "ExistingApp: native screen created" "$EV/logcat-embed-nav.txt")"
 loads="$(grep -c "$HOST_TAG: loading https://" "$EV/logcat-embed-nav.txt")"
-codeloads="$(grep -c "codeLoadSuccess" "$EV/logcat-embed-nav.txt")"
+codeloads="$(grep -c "$HOST_TAG: codeLoadSuccess" "$EV/logcat-embed-nav.txt")"
 [ "$created" -ge 2 ] && ok "X4: the rotation recreated the native screen ($created creations)" || bad "X4: the native screen was not recreated ($created)"
 [ "$loads" = 1 ] && [ "$codeloads" = 1 ] && ok "X4: one lookup and one code load across native navigation and a rotation" \
   || bad "X4: $loads lookups and $codeloads code loads"
@@ -155,7 +158,7 @@ grep -q "KeliverTiming: route-k4-crash " "$EV/logcat-embed-crash.txt" && grep -q
 grep -q 'text="Native fallback"' "$EV/w2-X10.xml" && grep -q 'text="Native header"' "$EV/w2-X10.xml" \
   && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
   && ok "X10: the app's fallback took the Keliver view's place; the app is still running" || bad "X10: the screen after the exception is not the app's"
-grep -q "FATAL EXCEPTION" "$EV/logcat-embed-crash.txt" && bad "X10: the guest's exception crashed the process" || ok "X10: no process crash"
+w2_crashed "$EV/logcat-embed-crash.txt" && bad "X10: the guest's exception crashed the process" || ok "X10: no process crash"
 
 # X6: the same app trusting another key: nothing loads in the Keliver view, the
 # native views stay, the process lives.
@@ -164,9 +167,9 @@ adb -s "$SERIAL" install -r "$W2_FOREIGN_APK" > "$EV/install-embed-foreign.log" 
 adb -s "$SERIAL" shell pm clear "$W2_ID" > /dev/null
 w2_launch "$EV/logcat-embed-foreign.txt"
 w2_dump X6
-grep -q "codeLoadSuccess" "$EV/logcat-embed-foreign.txt" && bad "X6: code loaded under a key that did not sign it" \
+grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-embed-foreign.txt" && bad "X6: code loaded under a key that did not sign it" \
   || ok "X6: nothing loaded under another key"
-grep -q "codeLoadFailed" "$EV/logcat-embed-foreign.txt" && ok "X6: the host reported the load failed (the manifest did not verify)" \
+grep -q "$HOST_TAG: codeLoadFailed" "$EV/logcat-embed-foreign.txt" && ok "X6: the host reported the load failed (the manifest did not verify)" \
   || bad "X6: no codeLoadFailed: $(grep -E "$HOST_TAG" "$EV/logcat-embed-foreign.txt" | head -3 | tr '\n' ' ')"
 grep -q 'text="Native header"' "$EV/w2-X6.xml" && ! grep -q 'text="Attic"' "$EV/w2-X6.xml" \
   && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
@@ -185,7 +188,8 @@ w2_launch "$EV/logcat-embed-release.txt"
 w2_dump X7
 # The host's own lines only: on a phone other processes log the word too (a
 # Samsung service prints "value for uncaughtException will be default").
-grep -q "codeLoadSuccess" "$EV/logcat-embed-release.txt" && ! grep -qE "$HOST_TAG: (codeLoadFailed|uncaughtException)|FATAL EXCEPTION" "$EV/logcat-embed-release.txt" \
+grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-embed-release.txt" && ! grep -qE "$HOST_TAG: (codeLoadFailed|uncaughtException)" "$EV/logcat-embed-release.txt" \
+  && ! w2_crashed "$EV/logcat-embed-release.txt" \
   && ok "X7: the minified app verified and loaded v7 (codeLoadSuccess, no failure)" \
   || bad "X7: $(grep -E "$HOST_TAG|FATAL|AndroidRuntime" "$EV/logcat-embed-release.txt" | head -4 | tr '\n' ' ')"
 grep -q 'text="Attic"' "$EV/w2-X7.xml" && grep -q 'text="Native header"' "$EV/w2-X7.xml" \
