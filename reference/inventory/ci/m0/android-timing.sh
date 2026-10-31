@@ -12,8 +12,9 @@
 #   T3  M4's guest frame profile, in both builds: after the launch, Add 1 twice
 #       on an open item (drive.py frames), so the guest recomposes in a frame —
 #       a launch alone may send none (run 41214369597: n=0); then well-formed
-#       "frames" lines on logcat and in the file, with a timed guest frame and
-#       an applied change list (frames.py); a host from templates without it SKIPs
+#       "frames" lines on logcat and in the file, with a timed guest frame that
+#       sent a change list and an applied change list (frames.py --changed); a
+#       host from templates without it SKIPs
 if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
   echo "--- M0: timing marks"
   python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/m0-server.log" &
@@ -39,10 +40,11 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
     if ! grep -rqs "class FrameWindow" "$APP/host-android/src/timing"; then
       echo "  SKIP  $1: this host predates the guest frame profile (not counted)"; return 0
     fi
-    drive frames Cellar "$2"; fold "$1: Add 1 twice on an open item" $?
+    drive frames Cellar "$2" || { bad "$1: Add 1 twice on an open item ($? failed checks; no profile read)"; return 0; }
+    ok "$1: Add 1 twice on an open item"
     sleep 3  # a window ends 1 s after its first sample
     adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-$2.txt"
-    out="$(python3 "$HERE/m0/frames.py" "$EV/logcat-$2.txt")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
+    out="$(python3 "$HERE/m0/frames.py" --changed "$EV/logcat-$2.txt")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
   }
 
   adb -s "$SERIAL" install -r "$W5_APK" > "$EV/install-T1.log" 2>&1
