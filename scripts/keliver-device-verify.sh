@@ -115,13 +115,21 @@ ui_dump(){
 # assume a leading text=".
 on_screen(){ grep -qiF "$2" "$1"; }
 
+# On a phone `logcat -d` holds every process's lines, so another app's could
+# satisfy or fail a check below. Keep the whole capture as evidence and check
+# only the host's own lines (its tag is PortalDevice).
+host_log(){
+  adb -s "$SERIAL" logcat -d -v threadtime > "$1.all" || true
+  grep -a ' PortalDevice: ' "$1.all" > "$1" || true
+}
+
 attempt_prod(){
   local tag="$1"
   adb -s "$SERIAL" logcat -c || true
   adb -s "$SERIAL" shell am force-stop "$PKGID"
   adb -s "$SERIAL" shell am start -n "$ACT" --es mode prod >/dev/null
   sleep 12
-  adb -s "$SERIAL" logcat -d > "$EV/prod-$tag.log"
+  host_log "$EV/prod-$tag.log"
   ui_dump "prod-$tag" "$EV/prod-$tag.xml"
 
   grep -q "refusing production mode" "$EV/prod-$tag.log" \
@@ -182,7 +190,7 @@ adb -s "$SERIAL" logcat -c || true
 adb -s "$SERIAL" shell am force-stop "$PKGID"
 adb -s "$SERIAL" shell am start -n "$ACT" >/dev/null
 sleep 10
-adb -s "$SERIAL" logcat -d > "$EV/dev-after.log"
+host_log "$EV/dev-after.log"
 ui_dump "dev-after" "$EV/dev-after.xml"
 grep -q "mode=dev" "$EV/dev-after.log" \
   && ok "the development route still enters the development path after a refusal" \
