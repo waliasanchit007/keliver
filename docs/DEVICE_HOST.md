@@ -566,9 +566,9 @@ for byte):
   - with on-resume or live updates, update checks on each return to the
     foreground (at most one every 30 s), which a host with nothing loaded
     skipped;
-  - a first load that fails, fails at launch, maybe before the network is up.
-    The screen opened later does not load again: the next update check does
-    (§2), and with next-launch updates there is none in the process;
+  - a first load that fails, fails at launch. The screen opened later does
+    not load again: the next update check does (§2 for Android, §3 for iOS),
+    and with next-launch updates there is none in the process;
   - guest code that crashes with no screen showing is only logged, and the
     first screen loads it again.
 
