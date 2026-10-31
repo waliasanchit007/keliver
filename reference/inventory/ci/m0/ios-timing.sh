@@ -116,8 +116,9 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   # The store configuration has none of it: its binary names no KeliverTrace.
   if m0_build Release; then
     RAPP="$(find "$WORK/dd-m0/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
-    ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow|KeliverMemory|keliver\.memory-cycle' {} \; -print | grep -q . \
-      && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, FrameWindow, KeliverMemory or memory cycle)" || bad "T2: the Release build carries timing code"
+    # Class names, which the binary keeps in ASCII (Kotlin string constants are UTF-16).
+    ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow|KeliverMemory' {} \; -print | grep -q . \
+      && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, FrameWindow or KeliverMemory)" || bad "T2: the Release build carries timing code"
   else
     bad "T2: the Release build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Release.log" | head
   fi

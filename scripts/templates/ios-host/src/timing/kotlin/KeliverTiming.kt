@@ -29,7 +29,8 @@
  *   closed   2 s after a memory cycle closed its screen, after collecting both heaps
  *
  * A memory cycle opens a second screen over the shown one, waits for its content (at most
- * 15 s), closes it and samples "closed"; cycle=<n> counts them (0 before the first). Post
+ * 15 s), closes it and samples "closed"; cycle=<n> counts them (0 before the first). One runs
+ * at a time, and only after the shown screen's content. Post
  * the Darwin notification "<bundle id>.keliver.memory-cycle" for one
  * (`xcrun simctl spawn <udid> notifyutil -p <name>`, or `xcrun devicectl device notification
  * post --device <id> --name <name>` on a phone). Growth from one cycle's "closed" to the next
@@ -110,7 +111,9 @@ internal object KeliverTiming {
   private val watched = AtomicReference<TreehouseApp<*>?>(null)
   private val memoryScope = CoroutineScope(SupervisorJob())
   private val cycle = AtomicInt(0)
-  private var cycleDone: (() -> Unit)? = null // main thread: ends the running memory cycle
+  private var cycleRunning = false // main thread: from a memory cycle's open until its "closed"
+  private var cycleContent: (() -> Unit)? = null // main thread: the running cycle's screen showed its content
+  private var contentSeen = false // main thread: a content mark came; a cycle waits for the first
 
   /** Once, by the host (main thread): the file sink, started again when it is long. */
   fun start() {
@@ -179,45 +182,51 @@ internal object KeliverTiming {
   }
 
   /**
-   * A memory line for [point] (M5). On [zipline]'s thread when it is given (a runtime being
-   * loaded); otherwise from any thread, reading QuickJS on the watched app's Zipline dispatcher.
+   * A memory line for [point] (M5): its time and the footprint now. On [zipline]'s thread when
+   * it is given (a runtime being loaded), QuickJS read here; otherwise from any thread, QuickJS
+   * read next on the watched app's Zipline dispatcher (after the guest work queued there).
    */
   fun memory(point: String, zipline: Zipline? = null) {
     val at = cycle.value
+    val nanos = now()
+    val footprint = KeliverMemory.footprint()
     if (zipline != null) {
-      emitMemory(point, at, runCatching { KeliverMemory.quickJs(zipline, gc = false) }.getOrNull(), null)
+      emitMemory(point, at, nanos, footprint, runCatching { KeliverMemory.quickJs(zipline, gc = false) }.getOrNull(), null)
       return
     }
     val app = watched.value
     val code = app?.zipline?.value
     if (app == null || code == null) {
-      emitMemory(point, at, null, null)
+      emitMemory(point, at, nanos, footprint, null, null)
       return
     }
     memoryScope.launch(app.dispatchers.zipline) {
-      emitMemory(point, at, runCatching { KeliverMemory.quickJs(code, gc = false) }.getOrNull(), null)
+      emitMemory(point, at, nanos, footprint, runCatching { KeliverMemory.quickJs(code, gc = false) }.getOrNull(), null)
     }
   }
 
-  /** The footprint now, with [quickJs] and [kotlinHeap] read just before. */
-  private fun emitMemory(point: String, at: Int, quickJs: Triple<Long, Long, Long>?, kotlinHeap: Long?) {
-    val nanos = now()
-    val line = KeliverMemory.line(point, at, KeliverMemory.footprint(), quickJs, kotlinHeap)
+  private fun emitMemory(point: String, at: Int, nanos: Long, footprint: Pair<Long, Long?>?, quickJs: Triple<Long, Long, Long>?, kotlinHeap: Long?) {
+    val line = KeliverMemory.line(point, at, footprint, quickJs, kotlinHeap)
     dispatch_async(dispatch_get_main_queue()) { record("memory", nanos, line) }
   }
 
-  /** "closed": both heaps collected first (the Kotlin one here, on main; QuickJS on its thread). */
-  private fun memoryClosed() {
-    val at = cycle.value
+  /**
+   * Cycle [n]'s "closed": both heaps collected first (the Kotlin one here, on main; QuickJS on
+   * its thread), and the footprint read after both. Then [done], on main.
+   */
+  private fun memoryClosed(n: Int, done: () -> Unit) {
     val kotlinHeap = runCatching { KeliverMemory.kotlinHeapAfterCollect() }.getOrNull()
     val app = watched.value
     val code = app?.zipline?.value
     if (app == null || code == null) {
-      emitMemory("closed", at, null, kotlinHeap)
+      emitMemory("closed", n, now(), KeliverMemory.footprint(), null, kotlinHeap)
+      done()
       return
     }
     memoryScope.launch(app.dispatchers.zipline) {
-      emitMemory("closed", at, runCatching { KeliverMemory.quickJs(code, gc = true) }.getOrNull(), kotlinHeap)
+      val quickJs = runCatching { KeliverMemory.quickJs(code, gc = true) }.getOrNull()
+      emitMemory("closed", n, now(), KeliverMemory.footprint(), quickJs, kotlinHeap)
+      dispatch_async(dispatch_get_main_queue()) { done() }
     }
   }
 
@@ -233,36 +242,44 @@ internal object KeliverTiming {
 
   /** Opens a second screen over the shown one, closes it after its content, then samples "closed"; main thread. */
   private fun memoryCycle() {
-    if (cycleDone != null) {
-      println("KeliverTiming: a memory cycle is already running; this one is ignored")
+    if (cycleRunning) {
+      println("KeliverTiming: memory-cycle: one is already running; this one is ignored")
+      return
+    }
+    if (!contentSeen) {
+      // Its own screen's content mark would be taken for the shown screen's.
+      println("KeliverTiming: memory-cycle: the shown screen has no content yet; ignored")
       return
     }
     @Suppress("DEPRECATION")
     var top: UIViewController? = UIApplication.sharedApplication.keyWindow?.rootViewController
     while (top?.presentedViewController != null) top = top.presentedViewController
     val over = top ?: run {
-      println("KeliverTiming: no view controller to open a memory cycle's screen over")
+      println("KeliverTiming: memory-cycle: no view controller to open a screen over")
       return
     }
+    cycleRunning = true
     val n = cycle.incrementAndGet()
     // Nothing below holds the screen: what is measured at "closed" is what it left behind.
     var ended = false
     val end = {
       if (!ended) {
         ended = true
-        cycleDone = null
+        cycleContent = null
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
           over.dismissViewControllerAnimated(false) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) { memoryClosed() }
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
+              memoryClosed(n) { cycleRunning = false }
+            }
           }
         }
       }
     }
-    cycleDone = end
-    println("KeliverTiming: memory cycle $n: opening a screen")
+    cycleContent = end
+    println("KeliverTiming: memory-cycle $n: opening a screen")
     over.presentViewController(Keliver.viewController().apply { modalPresentationStyle = UIModalPresentationFullScreen }, animated = false, completion = null)
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 15 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
-      if (!ended) println("KeliverTiming: memory cycle $n: no content within 15 s; closing it")
+      if (!ended) println("KeliverTiming: memory-cycle $n: no content within 15 s; closing it")
       end()
     }
   }
@@ -312,8 +329,9 @@ internal object KeliverTiming {
     runCatching { Keliver.onTrace?.invoke(name, nanos) }.onFailure { println("KeliverTiming: onTrace threw: ${it.message}") }
     writeLine("$name $nanos")
     if (name == "content") {
+      contentSeen = true
       memory("content")
-      cycleDone?.invoke()
+      cycleContent?.invoke()
     }
   }
 

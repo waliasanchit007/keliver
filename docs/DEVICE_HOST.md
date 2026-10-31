@@ -511,14 +511,15 @@ Sizes are in KB; `-` is "not read here".
 
 | Field | What it is |
 |---|---|
-| `at` | `open` (a Keliver screen is being made, before its Compose view controller), `ui` (two display-link ticks after its first composition, the Loading screen), `runtime` (a QuickJS runtime was made, before any code), `code` (the bundle's code loaded), `content` (with the guest's `content` mark), `closed` (2 s after a memory cycle closed its screen, after collecting both heaps) |
+| `at` | `open` (a Keliver screen is being made, before its Compose view controller), `ui` (two display-link ticks after its first composition: the first screen's Loading screen; a later screen's is the guest's at once), `runtime` (a QuickJS runtime was made, before any code), `code` (the bundle's code loaded), `content` (with the guest's `content` mark), `closed` (2 s after a memory cycle closed its screen, after collecting both heaps) |
 | `cycle` | 0 for the screen the app shows; then each memory cycle's number |
 | `footprint`, `peak` | the process's physical footprint (`task_info` `TASK_VM_INFO` `phys_footprint`: what Xcode's memory gauge shows and iOS's memory limit counts), and its highest so far |
 | `qjs`, `objects` | QuickJS's heap in use / allocated, and its objects (`Zipline.quickJs.memoryUsage`, read on the Zipline thread); `-` before a runtime exists |
 | `knheap` | the Kotlin/Native heap's live objects after a full collection; at `closed` only |
 
 - **A memory cycle** opens a second screen over the shown one, waits for its content (at
-  most 15 s), closes it and samples `closed`. A debug or Benchmark build runs one when the
+  most 15 s), closes it and samples `closed`. One runs at a time, and only once the shown
+  screen has its content. A debug or Benchmark build runs one when the
   Darwin notification `<bundle id>.keliver.memory-cycle` is posted (`xcrun simctl spawn
   <udid> notifyutil -p <name>`; `xcrun devicectl device notification post --device <id>
   --name <name>` on a phone). Growth from one cycle's `closed` to the next is what a screen
@@ -531,7 +532,10 @@ Sizes are in KB; `-` is "not read here".
   Compose draws), so footprint differences between points are approximate; only `qjs` is
   exact. Skia and Metal memory is not apart from Compose's, nor the host's widgets from
   Compose. The simulator is a macOS process with no memory limit and other graphics memory:
-  numbers that matter are a phone's.
+  numbers that matter are a phone's. `closed` reads QuickJS after the screen's view
+  controller is dismissed; if its composition is let go only later, at a Kotlin collection,
+  its guest objects still count there (compare `objects` at `closed` with `content`). A host
+  that starts before its first screen logs `runtime` and `code` before `open`.
 - **Output:** the same as the frame profile's (the console and `timing.log`, not `onTrace`).
 - **Overhead:** one `task_info` call per point, and one QuickJS read on the Zipline thread;
   collections only at `closed`. A store build compiles none of it (`src/notiming/`); only

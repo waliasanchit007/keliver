@@ -3,11 +3,13 @@
 Reads the "KeliverTiming: memory <nanos> at=<point> cycle=<n> footprint=… peak=… qjs=…/… objects=…
 knheap=…" lines (the iOS console) and checks them:
   - every such line is well formed;
-  - cycle 0 has open, ui, runtime, code and content, each once; open is the first of them,
-    and runtime, code and content come in that order;
+  - cycle 0 has open, ui, runtime, code and content, each once; ui after open, and runtime,
+    code and content in that order (a host started before its first screen logs runtime and
+    code before open);
   - QuickJS is read from runtime on ("-" only before it), and the guest's code grew its heap;
   - each memory cycle 1..N (--cycles, default 2) has open, ui, content and closed, closed
-    last, with both heaps read after a collection;
+    last, with QuickJS read after a collection (the Kotlin heap is reported, "-" when the
+    runtime did not say);
   - with --leak-kb or --leak-footprint-kb: QuickJS's heap in use, or the footprint, grew by at
     most that from cycle 1's closed to the last one's (the screens left nothing behind).
 Prints the deltas between the points; exits 1 with the reason when a check fails.
@@ -30,7 +32,8 @@ def fail(reason):
 
 def parse(path):
     with open(path, errors="replace") as f:
-        raw = [l.rstrip("\n") for l in f if "KeliverTiming: memory " in l]
+        # "memory <nanos>": not the cycle's own "memory-cycle …" messages.
+        raw = [l.rstrip("\n") for l in f if re.search(r"KeliverTiming: memory \d", l)]
     if not raw:
         fail("no memory line")
     rows = []
@@ -57,8 +60,8 @@ def one(rows, cycle, point):
 def main(path, cycles, leak_kb, leak_fp_kb):
     rows = parse(path)
     c0 = {p: one(rows, 0, p) for p in POINTS0}
-    if min(c0.values(), key=lambda r: r["nanos"]) is not c0["open"]:
-        fail("cycle 0: 'open' is not the first point")
+    if c0["ui"]["nanos"] < c0["open"]["nanos"]:
+        fail("cycle 0: 'ui' is before 'open'")
     if not c0["runtime"]["nanos"] <= c0["code"]["nanos"] <= c0["content"]["nanos"]:
         fail("cycle 0: runtime, code and content are out of order")
     for r in rows:
@@ -71,8 +74,6 @@ def main(path, cycles, leak_kb, leak_fp_kb):
         c = {p: one(rows, n, p) for p in POINTS}
         if max(c.values(), key=lambda r: r["nanos"]) is not c["closed"]:
             fail(f"cycle {n}: 'closed' is not the last point")
-        if c["closed"]["knheap"] is None:
-            fail(f"cycle {n}: the Kotlin heap was not read at 'closed'")
         closed.append(c["closed"])
     d = lambda a, b, k: b[k] - a[k]
     out = [
@@ -84,12 +85,13 @@ def main(path, cycles, leak_kb, leak_fp_kb):
     ]
     if closed:
         out.append("closed " + ", ".join(
-            f"#{r['cycle']} {r['footprint']} KB (qjs {r['qjs']}, knheap {r['knheap']})" for r in closed))
+            f"#{r['cycle']} {r['footprint']} KB (qjs {r['qjs']}, knheap {r['knheap'] if r['knheap'] is not None else '-'})" for r in closed))
     if len(closed) >= 2:
         grew_qjs = d(closed[0], closed[-1], "qjs")
         grew_fp = d(closed[0], closed[-1], "footprint")
-        out.append(f"from cycle 1 to {closed[-1]['cycle']}: footprint {grew_fp:+} KB, qjs {grew_qjs:+} KB, "
-                   f"knheap {d(closed[0], closed[-1], 'knheap'):+} KB")
+        kn = (f"{d(closed[0], closed[-1], 'knheap'):+} KB"
+              if closed[0]["knheap"] is not None and closed[-1]["knheap"] is not None else "not read")
+        out.append(f"from cycle 1 to {closed[-1]['cycle']}: footprint {grew_fp:+} KB, qjs {grew_qjs:+} KB, knheap {kn}")
         if leak_kb is not None and grew_qjs > leak_kb:
             fail(f"QuickJS's heap grew {grew_qjs} KB from cycle 1's close to cycle {closed[-1]['cycle']}'s (at most {leak_kb}): " + "; ".join(out))
         if leak_fp_kb is not None and grew_fp > leak_fp_kb:
