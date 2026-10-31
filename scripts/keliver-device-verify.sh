@@ -117,10 +117,12 @@ on_screen(){ grep -qiF "$2" "$1"; }
 
 # On a phone `logcat -d` holds every process's lines, so another app's could
 # satisfy or fail a check below. Keep the whole capture as evidence and check
-# only the host's own lines (its tag is PortalDevice).
+# only the lines logged under the host's tag, PortalDevice: the tag in the
+# threadtime header, not the text anywhere in a line.
 host_log(){
   adb -s "$SERIAL" logcat -d -v threadtime > "$1.all" || true
-  grep -a ' PortalDevice: ' "$1.all" > "$1" || true
+  [ -s "$1.all" ] || bad "the device log could not be captured ($(basename "$1").all is empty)"
+  grep -aE '^[0-9]{2}-[0-9]{2} [0-9:.]+ +[0-9]+ +[0-9]+ [VDIWEFA] PortalDevice: ' "$1.all" > "$1" || true
 }
 
 attempt_prod(){
