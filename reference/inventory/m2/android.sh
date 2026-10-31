@@ -177,8 +177,9 @@ measure(){
   tail -n +"$((n0 + 1))" "$EV/server.log" > "$EV/$s-$r.server.txt"
   # Each mark exactly once (none of process/code on a warm open), in the
   # orders that are guaranteed (as M0's rows). open and code are not ordered
-  # against each other: the load waits for the screen AND the lookup, and
-  # which of the screen or the lookup comes first varies.
+  # against each other: the load waits for the lookup (and, in hosts before
+  # M3, for the screen too), and which of the screen or the lookup comes first
+  # varies.
   if [ "$s" = warm ]; then expect="open first-frame content"; else expect="$MARKS"; fi
   for m in $MARKS; do
     case " $expect " in

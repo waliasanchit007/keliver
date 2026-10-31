@@ -1,6 +1,7 @@
 /*
  * This app's Application: it owns the one KeliverHost for the process, and
- * starts it at launch so the lookup runs while the first screen comes up.
+ * starts it at launch so the lookup, and then the code load (M3), run while
+ * the first screen comes up.
  * Scaffolded by keliver-new-production-host.sh (W2).
  */
 package @@PACKAGE@@
