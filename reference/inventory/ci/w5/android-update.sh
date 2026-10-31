@@ -39,7 +39,7 @@ launch prod "$EV/logcat-update-v8.txt"
 if grep -rqs 'bundles/events' "$APP/host-android/src/main/kotlin"; then W5_LIVE=1; else W5_LIVE=0; fi
 if [ "$W5_LIVE" = 1 ]; then
   sleep 3  # the listener's first request
-  adb -s "$SERIAL" logcat -d > "$EV/logcat-update-v8.txt"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-update-v8.txt"
   grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates live" "$EV/logcat-update-v8.txt" \
     && ok "U1: the debug host runs with updates live (the default)" || bad "U1: the host is not set to live: $(grep -m1 'verifying manifests' "$EV/logcat-update-v8.txt")"
   grep -q "$HOST_TAG: live updates: https://$HOST_ADDR:8443/bundles/events is not served (a static bundle server); updates apply on resume" "$EV/logcat-update-v8.txt" \
@@ -67,7 +67,7 @@ adb -s "$SERIAL" shell input keyevent KEYCODE_HOME; sleep 5
 adb -s "$SERIAL" shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER \
   -n "$(adb -s "$SERIAL" shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PROD_ID" | tr -d '\r' | tail -1)" > /dev/null
 sleep 20
-adb -s "$SERIAL" logcat -d > "$EV/logcat-update-resume.txt"
+adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-update-resume.txt"
 L="$EV/logcat-update-resume.txt"
 grep -q "$HOST_TAG: update check: sequence 9 is available (running 8); applying https://$HOST_ADDR:8443/bundles/v9/manifest.zipline.json" "$L" \
   && ok "U1: back in the foreground the host looked up and found v9" \
@@ -88,7 +88,7 @@ if grep -rqs DEBUG_CHECK_FOR_UPDATE "$APP/host-android/src/main/kotlin"; then
   for _ in 1 2; do
     adb -s "$SERIAL" shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p "$PROD_ID" >> "$EV/U2-broadcast.txt" 2>&1; sleep 6
   done
-  adb -s "$SERIAL" logcat -d > "$EV/logcat-U2.txt"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-U2.txt"
   L="$EV/logcat-U2.txt"
   [ "$(grep -c "$HOST_TAG: update check requested from adb (a debug build)" "$L")" = 2 ] \
     && [ "$(grep -c "$HOST_TAG: update check: up to date (sequence 9)" "$L")" = 2 ] && ! grep -q "update check skipped" "$L" \
@@ -162,7 +162,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
   adb -s "$SERIAL" shell run-as "$PROD_ID" sh -c "'mkdir -p files/keliver && echo https://$HOST_ADDR:8445 > files/keliver/bundle-server'"
   launch prod "$EV/logcat-LV2-start.txt"
   sleep 3
-  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV2-start.txt"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-LV2-start.txt"
   grep -q "$HOST_TAG: live updates: listening to https://$HOST_ADDR:8445/bundles/events" "$EV/logcat-LV2-start.txt" \
     && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-LV2-start.txt" \
     && ok "LV2: the debug host runs v9 and listens to /bundles/events while its screen shows" \
@@ -178,7 +178,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     && ok "LV2: keliver-publish wrote v10 (\"Loft\") to the live server's site while the app showed v9" \
     || { bad "LV2: publish v10 to the live site"; tail -20 "$EV/w3-publish-v10-live.log"; }
   sleep 20
-  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV2.txt"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-LV2.txt"
   L="$EV/logcat-LV2.txt"
   grep -q "$HOST_TAG: live updates: the bundle server says {\"version\":10}" "$L" \
     && grep -q "$HOST_TAG: update check: sequence 10 is available (running 9); applying https://$HOST_ADDR:8445/bundles/v10/manifest.zipline.json" "$L" \
@@ -199,7 +199,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] && break
     sleep 1
   done
-  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV3.txt"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-LV3.txt"
   grep -q "$HOST_TAG: live updates: stopped listening (no screen on show)" "$EV/logcat-LV3.txt" \
     && [ "$(grep -c 'GET /bundles/events closed' "$EV/lv-server.log")" -gt "$closed_before" ] \
     && ok "LV3: in the background the host stops listening, and its connection is closed (the server saw it go)" \
@@ -214,7 +214,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     [ "$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")" -gt "$opened_before" ] && break
     sleep 1
   done
-  adb -s "$SERIAL" logcat -d > "$EV/logcat-LV4.txt"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-LV4.txt"
   grep -q "$HOST_TAG: live updates: listening to https://$HOST_ADDR:8445/bundles/events" "$EV/logcat-LV4.txt" \
     && [ "$(grep -c 'GET /bundles/events 200' "$EV/lv-server.log")" -gt "$opened_before" ] \
     && [ "$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')" = "$pid_live" ] \
@@ -238,7 +238,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     adb -s "$SERIAL" logcat -c || true
     mv "$W3/lv5-$mod" "$W3/site-live/bundles/v10/$mod" && touch "$W3/site-live/bundles/index.json"
     sleep 20
-    L="$EV/logcat-LV5.txt"; adb -s "$SERIAL" logcat -d > "$L"
+    L="$EV/logcat-LV5.txt"; adb -s "$SERIAL" logcat -d -v threadtime > "$L"
     grep -q "$HOST_TAG: update check: the first bundle did not load; loading https://$HOST_ADDR:8445/bundles/v10/manifest.zipline.json" "$L" \
       && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=10" "$L" \
       && [ -n "$pid_lv5" ] && [ "$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')" = "$pid_lv5" ] && ! grep -q "$HOST_TAG: verifying manifests" "$L" \

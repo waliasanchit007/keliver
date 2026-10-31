@@ -120,7 +120,7 @@ launch(){  # $1 = dev|prod ; $2 = logcat file
     adb -s "$SERIAL" shell am start -n "$cmp" >/dev/null
   else adb -s "$SERIAL" shell am start -n "$ACT" >/dev/null; fi
   sleep 15
-  adb -s "$SERIAL" logcat -d > "$2"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$2"
 }
 serve_up(){
   ( cd "$APP" && ./gradlew serveDevelopmentZipline --console=plain > "$EV/serve-$1.log" 2>&1 ) &

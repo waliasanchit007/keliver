@@ -113,10 +113,10 @@ drive title Depot S2static; fold "S2: v1 shows Depot" $?
 adb -s "$SERIAL" shell settings put system accelerometer_rotation 0
 adb -s "$SERIAL" shell settings put system user_rotation 1; sleep 8
 adb -s "$SERIAL" shell settings put system user_rotation 0; sleep 8
-adb -s "$SERIAL" logcat -d > "$EV/logcat-static-rotate.txt"
+adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-static-rotate.txt"
 created="$(grep -c "$HOST_TAG: screen created" "$EV/logcat-static-rotate.txt")"
 loads="$(grep -c "$HOST_TAG: loading https://" "$EV/logcat-static-rotate.txt")"
-codeloads="$(grep -c "codeLoadSuccess" "$EV/logcat-static-rotate.txt")"
+codeloads="$(grep -c "$HOST_TAG: codeLoadSuccess" "$EV/logcat-static-rotate.txt")"
 [ "$created" -ge 2 ] && ok "R1: the rotation recreated the activity ($created creations)" || bad "R1: the activity was not recreated ($created creations): no rotation happened"
 [ "$loads" = 1 ] && [ "$codeloads" = 1 ] && ok "R1: one lookup and one code load across the rotation (the host is the Application's)" \
   || bad "R1: $loads lookups and $codeloads code loads across the rotation"
@@ -154,7 +154,7 @@ grep -q "manifest sha256 mismatch" "$EV/logcat-static-pin.txt" && ok "S6: the ma
 # cached v2, verified again; nothing else loads.
 grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle (last loaded from https://$HOST_ADDR:8443/bundles/v2/" "$EV/logcat-static-pin.txt" \
   && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=2 source=cache" "$EV/logcat-static-pin.txt" \
-  && ! grep "codeLoadSuccess" "$EV/logcat-static-pin.txt" | grep -qv "sequence=2 source=cache" \
+  && ! grep "$HOST_TAG: codeLoadSuccess" "$EV/logcat-static-pin.txt" | grep -qv "sequence=2 source=cache" \
   && ok "S6/U2: the host fell back to the cached last good bundle (v2, sequence 2, from the cache), and loaded nothing else" \
   || bad "S6/U2: no fall-back: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-static-pin.txt" | tail -4 | tr '\n' ' ')"
 drive title Warehouse S6static; fold "S6/U2: the screen still shows Warehouse (v2, from the cache)" $?
@@ -174,7 +174,7 @@ grep -q "rollback refused: sequence 1 is below 2" "$EV/logcat-static-rollback.tx
   || bad "S8: no rollback refusal: $(grep -E "$HOST_TAG" "$EV/logcat-static-rollback.txt" | head -3 | tr '\n' ' ')"
 # W5: the refused v1 is not run; the host falls back to the cached v2.
 grep -q "falling back to the cached last good bundle" "$EV/logcat-static-rollback.txt" \
-  && ! grep "codeLoadSuccess" "$EV/logcat-static-rollback.txt" | grep -qv "sequence=2 source=cache" \
+  && ! grep "$HOST_TAG: codeLoadSuccess" "$EV/logcat-static-rollback.txt" | grep -qv "sequence=2 source=cache" \
   && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=2 source=cache" "$EV/logcat-static-rollback.txt" \
   && ok "S8: v1 did not run; the host fell back to the cached v2 (sequence 2, from the cache)" \
   || bad "S8: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-static-rollback.txt" | tail -4 | tr '\n' ' ')"

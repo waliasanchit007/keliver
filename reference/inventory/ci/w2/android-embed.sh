@@ -32,14 +32,14 @@ w2_launch(){  # $1 = logcat file: a cold start of the existing app
   adb -s "$SERIAL" shell am force-stop "$W2_ID"
   adb -s "$SERIAL" shell am start -n "$W2_ID/.MainActivity" > /dev/null
   sleep 15
-  adb -s "$SERIAL" logcat -d > "$1"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$1"
 }
 w2_route(){  # $1 = deep link, $2 = logcat file: a cold start of the existing app on that route
   adb -s "$SERIAL" logcat -c || true
   adb -s "$SERIAL" shell am force-stop "$W2_ID"
   adb -s "$SERIAL" shell "am start -a android.intent.action.VIEW -d '$1' -n $W2_ID/.MainActivity" > /dev/null
   sleep 15
-  adb -s "$SERIAL" logcat -d > "$2"
+  adb -s "$SERIAL" logcat -d -v threadtime > "$2"
 }
 w2_dump(){  # $1 = label: the view hierarchy, kept as evidence
   adb -s "$SERIAL" shell rm -f /sdcard/w2.xml
@@ -110,10 +110,10 @@ adb -s "$SERIAL" shell input keyevent KEYCODE_BACK; sleep 4
 adb -s "$SERIAL" shell settings put system accelerometer_rotation 0
 adb -s "$SERIAL" shell settings put system user_rotation 1; sleep 8
 adb -s "$SERIAL" shell settings put system user_rotation 0; sleep 8
-adb -s "$SERIAL" logcat -d > "$EV/logcat-embed-nav.txt"
+adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-embed-nav.txt"
 created="$(grep -c "ExistingApp: native screen created" "$EV/logcat-embed-nav.txt")"
 loads="$(grep -c "$HOST_TAG: loading https://" "$EV/logcat-embed-nav.txt")"
-codeloads="$(grep -c "codeLoadSuccess" "$EV/logcat-embed-nav.txt")"
+codeloads="$(grep -c "$HOST_TAG: codeLoadSuccess" "$EV/logcat-embed-nav.txt")"
 [ "$created" -ge 2 ] && ok "X4: the rotation recreated the native screen ($created creations)" || bad "X4: the native screen was not recreated ($created)"
 [ "$loads" = 1 ] && [ "$codeloads" = 1 ] && ok "X4: one lookup and one code load across native navigation and a rotation" \
   || bad "X4: $loads lookups and $codeloads code loads"
