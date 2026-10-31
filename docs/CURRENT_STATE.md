@@ -47,7 +47,7 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | where | reaches users through |
 |---|---|---|
-| M4's guest frame profile, host side (#186): one `frames` line per window in debug and benchmark builds | both host templates (`scripts/templates/production-host`, `scripts/templates/ios-host`) | the next tools release; a host scaffolded earlier gets it when scaffolded again |
+| M4's guest frame profile, host side: one `frames` line per window in debug and benchmark builds | #186 (both host templates, `scripts/templates/production-host` and `scripts/templates/ios-host`, and both scaffolders, which copy the new files) | the next tools release; a host scaffolded earlier gets it when scaffolded again |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
