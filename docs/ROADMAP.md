@@ -475,7 +475,7 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    same policy, with B1's rules (20 simulator tests); released in tools
    0.3.16. B3 to B5
    not started.
-9. **Start-up** (adoption item 2): M3 merged (#179, 2026-10-31); then M4
+9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); then M4
    (guest frame profile) and M5 (iOS memory).
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
     delivery (item 7); the device proxy (item 6's last row).

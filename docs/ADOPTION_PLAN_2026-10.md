@@ -31,7 +31,7 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
 
 ## Item 2. Startup and memory (measure first)
 
-**Status 2026-10-31:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 merged (#179, step 4
+**Status 2026-10-31:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
 below); M4–M5 open.
 
 **Evidence.**

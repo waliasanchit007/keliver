@@ -115,7 +115,8 @@ tag (through `gh api …/actions/artifacts/13040705437/zip`): the artifact's
 sha256 equals GitHub's digest, and the zip, `VERSION.json`, APK and floor are
 as above. Step 3 at `65346c63d`: no workflow in the tagged tree can create a
 release or attach an asset (`publish.yml` takes `v*` only and is the only one
-with a write permission; `pages.yml` runs on `main` only; `portal-tools.yml`
+that can write packages or contents; `pages.yml`, with `pages: write`, runs
+on `main` only; `portal-tools.yml`
 is read-only). PR #182's CI on the same commit (run `41193419978`): Build,
 both editor E2E suites, embed-floor and production-host-build green.
 
@@ -126,13 +127,17 @@ verified files by GitHub's server-side record (`digest`, `size`): the zip
 of the stored bytes, not a download: this time the network blocked asset
 downloads (`gh api …/releases/assets/695180562` and the public URL both
 answered 502, "Bad Gateway", 879 bytes), so the 0.3.5 route was used. The tag
-(annotated, object `0c3b9e945`) was re-checked at `65346c63d` before
-publishing, and its push ran only `portal-tools.yml`'s read-only rebuild
+(annotated, object `0c3b9e945`; its message lost the line naming #176 and
+#180, because git drops message lines that start with `#`, and a released
+tag is never moved) was re-checked at `65346c63d` before publishing, and its push ran only `portal-tools.yml`'s read-only rebuild
 (`41196283640`, never attached). Published 2026-10-31T11:24:06Z with
-`--latest=false` (the "Latest" badge stays on `v0.3.3`). The public download
-is checked from a GitHub-hosted runner by the reference app's move to 0.3.16
-(PR #183): its first step checks the public zip against the release's
-`.sha256`, the pinned hash and `VERSION.json`'s source commit.
+`--latest=false` (the "Latest" badge stays on `v0.3.3`). After publishing,
+the public download was checked on GitHub-hosted runners by the reference
+app's move to 0.3.16 (PR #183 at `1d860f2de`): the first step of
+reference-app run `41196932565` (job `124524886641`, ubuntu-latest) and of
+ios-host run `41196932589` (job `124524886541`, macos-15) downloaded the
+public zip and checked it against the release's `.sha256`, the pinned hash
+`e120ea7a…` and `VERSION.json`'s source commit `65346c63d`; both passed.
 
 Not verified for this release:
 - B2 in a running app or on a phone (no guest uses HostHttp yet);
