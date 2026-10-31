@@ -576,6 +576,27 @@ Xcode project is not changed. `EMBED.md` lists the edits:
 Then `KeliverScreen()` goes in any SwiftUI view. `Keliver.shared.start()` in
 your `App`'s `init` starts the lookup early.
 
+Guests' data goes through your API with your user's credentials (from the
+tools release after 0.3.15): set the allow-list and a header callback before
+the host starts.
+
+```swift
+Keliver.shared.requestPolicy = RequestPolicy(
+  origin: "https://api.example.com",
+  allowed: [RequestPolicy.Rule(method: "GET", path: "orders/recent")],
+  allowStateChanging: false, allowCleartext: false)
+Keliver.shared.requestHeaders = { method, path, done in
+  session.accessToken { token in done(token.map { ["Authorization": "Bearer \($0)"] }) }
+}
+```
+
+The policy is checked first; the callback is then asked, on the main thread,
+for each allowed request. `done(nil)` refuses the request (nothing is sent),
+and so does no answer within 30 s, so don't block the main thread in it.
+`TRACE`, `TRACK` and `CONNECT` are refused. Without a policy, every request is
+refused. A guest's own `Authorization`, `Proxy-Authorization` and `Cookie`
+headers are dropped, and a response's `Set-Cookie` is not handed back.
+
 On both platforms, every Keliver screen in the process shares one lookup and
 one load: navigating natively or rotating doesn't load again, and a newer
 bundle is picked up on the next process start. If a bundle doesn't verify, the

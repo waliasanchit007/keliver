@@ -135,10 +135,16 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `screen-failed` on the iOS host too; and on Android, guests' `HostHttp`
   through your app's own authenticated `OkHttpClient`
   (`KeliverConfig.httpClient`), which needs a `RequestPolicy` and is used for
-  nothing else (a guest's credential headers are dropped). On every host,
-  the path-override headers are dropped and the URL going out is checked
-  again after the client's interceptors. A host scaffolded earlier gets none
-  of it until it is scaffolded again.
+  nothing else (a guest's credential headers are dropped). On every Android
+  host, the path-override headers are dropped and the URL going out is
+  checked again after the client's interceptors. A host scaffolded earlier
+  gets none of it until it is scaffolded again.
+- **From the release after 0.3.15 (iOS):** guests' `HostHttp` with your app's
+  credentials (`Keliver.shared.requestHeaders`, a header callback), which
+  needs a `RequestPolicy`; a guest's credential headers and a response's
+  `Set-Cookie` are dropped. The path-override headers are dropped on iOS
+  too. Its rules run as simulator tests against a local server
+  (`./gradlew -p host-ios iosSimulatorArm64Test`).
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

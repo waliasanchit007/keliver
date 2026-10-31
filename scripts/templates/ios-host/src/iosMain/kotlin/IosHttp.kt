@@ -9,6 +9,13 @@ import dev.keliver.http.HttpResponse
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlin.time.Duration
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration.Companion.seconds
+import platform.Foundation.NSHTTPCookieAcceptPolicy
 import kotlinx.coroutines.withTimeoutOrNull
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
@@ -200,6 +207,14 @@ internal val reportSession: NSURLSession by lazy {
 }
 
 /**
+ * B2: your app's credentials for one guest HostHttp request ([Keliver.requestHeaders]). It is
+ * called on the main thread with the request's method and its path relative to API_BASE_URL,
+ * both already allowed by the [RequestPolicy]. Call `done` once, with the headers to add, or
+ * with null to refuse the request (nothing is sent).
+ */
+public typealias KeliverRequestHeaders = (method: String, path: String, done: (Map<String, String>?) -> Unit) -> Unit
+
+/**
  * The HostHttp capability: guests send a RELATIVE request, and it goes to YOUR
  * API base over real HTTP, and nowhere else. The rules match the Android
  * host's OkHttpHostHttp:
@@ -209,16 +224,50 @@ internal val reportSession: NSURLSession by lazy {
  * - with a [RequestPolicy], only its origin and its exact `(method, path)`
  *   pairs, checked before anything is sent; a refused request fails in the
  *   guest and is logged (the path only in a DEBUG binary);
- * - the method-override headers are dropped.
+ * - the method-override and path-override headers (`X-Original-URL` and kin)
+ *   are dropped;
+ * - with [appHeaders] (B2, [Keliver.requestHeaders]: your app's credentials),
+ *   it needs a [RequestPolicy] (without one every request is refused), and
+ *   is asked for each request the policy allowed; the guest's own
+ *   `Authorization`, `Proxy-Authorization` and `Cookie` are dropped, a
+ *   response's `Set-Cookie` is not handed back, and this session keeps no
+ *   cookies, cache or credentials of its own. Other credentials (a query
+ *   parameter, an API-key header) are your callback's to set. No code of
+ *   yours runs between the check and the wire, so the URL sent is the one
+ *   checked.
  *
- * Add authentication, retries or certificate pinning here — this is your code.
+ * Retries or certificate pinning: add them here — this is your code.
  */
-internal class NSURLSessionHostHttp(private val base: String, private val policy: RequestPolicy? = null) : HostHttpProvider {
-  /** Set when the policy cannot allow anything on [base] (a wrong origin): every request is refused. */
-  private val baseRefusal: String? = policy?.baseRefusal(base)?.also { println("KeliverHost: HostHttp: $it; every request is refused") }
+internal class NSURLSessionHostHttp(
+  private val base: String,
+  private val policy: RequestPolicy? = null,
+  private val appHeaders: KeliverRequestHeaders? = null,
+  /** Where [appHeaders] is called: the main thread (a test passes another context). */
+  private val appHeadersContext: CoroutineContext = Dispatchers.Main,
+  private val appHeadersTimeout: Duration = 30.seconds,
+) : HostHttpProvider {
+  private val appOwnsCredentials = appHeaders != null
+
+  /** Set when nothing can be allowed: a wrong origin, or your credentials with no policy. */
+  private val baseRefusal: String? = (
+    if (appHeaders != null && policy == null) {
+      "Keliver.requestHeaders needs a requestPolicy (the paths guests may call with your credentials)"
+    } else {
+      policy?.baseRefusal(base)
+    }
+  )?.also { println("KeliverHost: HostHttp: $it; every request is refused") }
 
   private val session = NSURLSession.sessionWithConfiguration(
-    configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration,
+    configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration.apply {
+      if (appOwnsCredentials) {
+        // Your credentials come from requestHeaders alone: nothing a response set is sent again.
+        HTTPShouldSetCookies = false
+        HTTPCookieAcceptPolicy = NSHTTPCookieAcceptPolicy.NSHTTPCookieAcceptPolicyNever
+        HTTPCookieStorage = null
+        URLCache = null
+        URLCredentialStorage = null
+      }
+    },
     delegate = NoRedirects(),
     delegateQueue = null,
   )
@@ -230,19 +279,18 @@ internal class NSURLSessionHostHttp(private val base: String, private val policy
     }
     val method = request.method.uppercase()
     require(METHOD.matches(method)) { "HostHttp: '${request.method}' is not an HTTP method" }
-    if (policy != null) {
-      (baseRefusal ?: policy.refusal(method, request.path))?.let { why ->
-        // A path can carry ids: logged only in a DEBUG binary.
-        @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
-        println("KeliverHost: HostHttp refused: ${if (kotlin.native.Platform.isDebugBinary) why else "a request outside the app's RequestPolicy"}")
-        throw HostHttpRefused("HostHttp refused: $why")
-      }
+    // A path can carry ids: logged only in a DEBUG binary (baseRefusal names no path).
+    baseRefusal?.let { refused(it) }
+    policy?.refusal(method, request.path)?.let { why ->
+      refused(why, if (isDebugBinary) why else "a request outside the app's RequestPolicy")
     }
+    // TRACE echoes the request, your credentials included, back to the guest; CONNECT is for proxies.
+    if (appOwnsCredentials && method in ECHOING_METHODS) refused("$method is never sent with the app's credentials")
     request.headers.forEach { (k, v) ->
-      require(TOKEN.matches(k) && v.none { it == '\r' || it == '\n' || it == '\u0000' }) {
-        "HostHttp: header '$k' is not a valid header name and value"
-      }
+      require(validHeader(k, v)) { "HostHttp: header '$k' is not a valid header name and value" }
     }
+    val added = appHeaders?.let { credentials(it, method, segments.joinToString("/")) }.orEmpty()
+    val replaced = added.keys.mapTo(HashSet()) { it.lowercase() }
     val query = request.query.entries.joinToString("&") { (k, v) -> "${percentEncode(k)}=${percentEncode(v)}" }
     val url = base.trimEnd('/') + segments.joinToString("") { "/" + percentEncode(it) } +
       (if (query.isEmpty()) "" else "?$query")
@@ -252,24 +300,85 @@ internal class NSURLSessionHostHttp(private val base: String, private val policy
       timeoutInterval = 30.0,
     ).apply {
       setHTTPMethod(method)
-      request.headers.filterKeys { it.lowercase() !in DROPPED_HEADERS }.forEach { (k, v) ->
-        setValue(v, forHTTPHeaderField = k)
-      }
+      request.headers.filterKeys {
+        val name = it.lowercase()
+        name !in DROPPED_HEADERS && name !in replaced && !(appOwnsCredentials && name in CREDENTIAL_HEADERS)
+      }.forEach { (k, v) -> setValue(v, forHTTPHeaderField = k) }
+      added.filterKeys { it.lowercase() !in DROPPED_HEADERS }.forEach { (k, v) -> setValue(v, forHTTPHeaderField = k) }
       request.body?.let { setHTTPBody((it as NSString).dataUsingEncoding(NSUTF8StringEncoding)) }
     }
     val (status, body, headers) = send(session, call)
-    return HttpResponse(status = status, body = body.utf8(), headers = headers)
+    return HttpResponse(
+      status = status,
+      body = body.utf8(),
+      headers = headers.filterKeys { !(appOwnsCredentials && it.lowercase() in RESPONSE_CREDENTIAL_HEADERS) },
+    )
   }
 
+  /**
+   * Asks your [KeliverRequestHeaders] for this request's credentials: null, none in time, or a bad
+   * header refuses it. The call is posted to [appHeadersContext] and only the answer is awaited,
+   * so a busy main thread, or a callback that blocks it, refuses the request in time rather than
+   * holding the guest's call (a `withContext` there would wait for the main thread even when
+   * cancelled). A call that reaches the main thread after the time is up is not made.
+   */
+  private suspend fun credentials(appHeaders: KeliverRequestHeaders, method: String, path: String): Map<String, String> {
+    val answer = CompletableDeferred<Map<String, String>?>()
+    val asked = CoroutineScope(appHeadersContext).launch {
+      if (answer.isCompleted) return@launch
+      // Your callback must not take the guest's call down with it; a second `done` is ignored.
+      runCatching { appHeaders(method, path) { answer.complete(it) } }.onFailure {
+        // Its message could hold a token: logged only in a DEBUG binary.
+        println("KeliverHost: HostHttp: requestHeaders threw${if (isDebugBinary) ": ${it.message}" else ""}")
+        answer.complete(null)
+      }
+    }
+    var timedOut = false
+    val added = try {
+      // Wrapped, so that `done(null)` (refused) and no answer in time (timed out) differ.
+      val got = withTimeoutOrNull(appHeadersTimeout) { Answer(answer.await()) }
+      if (got == null) timedOut = true
+      got?.headers
+    } finally {
+      // Timed out, or the guest's call was cancelled: no answer is taken from now on, and a call
+      // still waiting for the main thread is not made.
+      answer.complete(null)
+      asked.cancel()
+    }
+    if (added == null) {
+      refused(if (timedOut) "the app's requestHeaders did not answer within $appHeadersTimeout" else "the app's requestHeaders gave no headers")
+    }
+    added.forEach { (k, v) ->
+      if (!validHeader(k, v)) refused("the app's requestHeaders gave header '$k', which is not a valid header name and value")
+    }
+    return added
+  }
+
+  private fun refused(why: String, logged: String = why): Nothing {
+    println("KeliverHost: HostHttp refused: $logged")
+    throw HostHttpRefused("HostHttp refused: $why")
+  }
+
+  private fun validHeader(name: String, value: String) =
+    TOKEN.matches(name) && value.none { it == '\r' || it == '\n' || it == '\u0000' }
+
   private companion object {
+    @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+    val isDebugBinary = kotlin.native.Platform.isDebugBinary
     val METHOD = Regex("^[A-Z]{1,16}$")
     val TOKEN = Regex("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
     val DROPPED_HEADERS = setOf(
       "host", "connection", "content-length", "transfer-encoding", "keep-alive",
       "proxy-connection", "te", "trailer", "upgrade",
       "x-http-method-override", "x-http-method", "x-method-override",
+      "x-original-url", "x-rewrite-url", "x-forwarded-host", "x-forwarded-prefix", "x-forwarded-proto",
     )
+    val CREDENTIAL_HEADERS = setOf("authorization", "proxy-authorization", "cookie")
+    val RESPONSE_CREDENTIAL_HEADERS = setOf("set-cookie", "set-cookie2")
+    val ECHOING_METHODS = setOf("TRACE", "TRACK", "CONNECT")
   }
+
+  private class Answer(val headers: Map<String, String>?)
 }
 
 /** A request the app's [RequestPolicy] does not allow; nothing was sent. */

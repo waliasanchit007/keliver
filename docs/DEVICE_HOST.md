@@ -483,8 +483,10 @@ It behaves like the Android host in §2:
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
   set. Paths can't climb out of it; a method that isn't a plain token, or a
   header holding CR or LF, is refused; hop-by-hop headers are dropped; and
-  redirects aren't followed. (That last one is the delegate's job. It is not
-  yet measured: no running guest has used HostHttp.)
+  redirects aren't followed. (That last one is the delegate's job. From the
+  tools release after 0.3.15 it is measured by the host's simulator tests,
+  `./gradlew -p host-ios iosSimulatorArm64Test`, against a local server; no
+  running guest has used HostHttp yet.)
 - **Guest SQL** (`HostSqlDriver`) is real SQLite in Application Support, bound
   through `src/nativeInterop/cinterop/sqlite3.def`.
 - **Images** load over the network (Coil with Ktor's Darwin engine).
@@ -726,9 +728,32 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   are exact pairs relative to the API base; a state-changing method also needs
   `allowStateChanging`. A refused request fails in the guest ("HostHttp
   refused: …") and nothing is sent; the method-override headers are always
-  dropped. Not restricted: the query string and other headers. Without a
-  policy every path under the API base is allowed, as before. It is pure
-  Kotlin, so its tests run on the JVM: `./gradlew -p host-ios jvmTest`.
+  dropped, and from the tools release after 0.3.15 the path-override ones
+  (`X-Original-URL` and kin) too. Not restricted: the query string and other
+  headers. Without a policy every path under the API base is allowed, as
+  before. It is pure Kotlin, so its tests run on the JVM:
+  `./gradlew -p host-ios jvmTest`.
+- **`requestHeaders`** (B2, from the tools release after 0.3.15): your app's
+  credentials for guests' HostHttp requests, in place of Android's own
+  client: `Keliver.shared.requestHeaders = { method, path, done in
+  done(["Authorization": "Bearer \(token)"]) }`, set before the host starts.
+  It is called on the main thread for each request the policy allowed, with
+  its method and its path relative to the API base. Call `done` once, with
+  the headers to add (they replace the guest's of the same name), or with
+  `nil` to refuse the request, as when nobody is signed in; no answer within
+  30 s refuses it too (a busy main thread included: don't block it in the
+  callback, answer `done` later), and a refused request sends nothing. It
+  needs a `requestPolicy`: without one every request is refused. With it, a
+  guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
+  dropped, a response's `Set-Cookie` is not handed back, HostHttp keeps no
+  cookies, cache or credentials of its own, and `TRACE`, `TRACK` and
+  `CONNECT` are refused (`TRACE` would echo your headers back to the guest;
+  Android's own client does not refuse it yet). Only HostHttp gets these
+  headers: never
+  bundles, the update stream or reports. The rules are measured on a
+  simulator against a local server: `./gradlew -p host-ios
+  iosSimulatorArm64Test` (`-PkeliverTestSimulator=<name or UDID>` when
+  Kotlin's default simulator is not installed).
 - **Release text**: only a DEBUG binary (`Keliver.shared.showsDeveloperText`)
   shows the host's own text, which can name addresses and paths; a release
   binary shows "Loading…" and a generic line.

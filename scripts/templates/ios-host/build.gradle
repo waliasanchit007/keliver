@@ -138,9 +138,18 @@ kotlin {
       isStatic = true
       linkerOpts.add('-lsqlite3') // Zipline's bundle cache and IosSqlHost
     }
+    // The test binaries too (src/iosTest: HostHttp over NSURLSession, on a simulator).
+    t.binaries.withType(org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable).configureEach { b -> b.linkerOpts.add('-lsqlite3') }
   }
   sourceSets {
     jvmTest {
+      dependencies {
+        implementation 'org.jetbrains.kotlin:kotlin-test'
+      }
+    }
+    // B2: HostHttp with your app's credentials, against a local server on a simulator:
+    // ./gradlew -p host-ios iosSimulatorArm64Test [-PkeliverTestSimulator=<simulator name or UDID>]
+    iosTest {
       dependencies {
         implementation 'org.jetbrains.kotlin:kotlin-test'
       }
@@ -174,4 +183,10 @@ kotlin {
       }
     }
   }
+}
+
+// -PkeliverTestSimulator: the simulator iosSimulatorArm64Test boots, when Kotlin's default
+// device is not installed on this Mac.
+tasks.named('iosSimulatorArm64Test') {
+  if (project.hasProperty('keliverTestSimulator')) device = project.property('keliverTestSimulator')
 }
