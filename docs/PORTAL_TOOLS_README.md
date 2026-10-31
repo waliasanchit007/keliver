@@ -139,12 +139,23 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   host, the path-override headers are dropped and the URL going out is
   checked again after the client's interceptors. A host scaffolded earlier
   gets none of it until it is scaffolded again.
-- **From the release after 0.3.15 (iOS):** guests' `HostHttp` with your app's
-  credentials (`Keliver.shared.requestHeaders`, a header callback), which
-  needs a `RequestPolicy`; a guest's credential headers and a response's
-  `Set-Cookie` are dropped. The path-override headers are dropped on iOS
-  too. Its rules run as simulator tests against a local server
-  (`./gradlew -p host-ios iosSimulatorArm64Test`).
+- **From 0.3.16:** still the 0.4.1 libraries.
+  - iOS: guests' `HostHttp` with your app's credentials
+    (`Keliver.shared.requestHeaders`, a header callback), which needs a
+    `RequestPolicy`. A guest's credential headers and a response's
+    `Set-Cookie` are dropped, and `TRACE`, `TRACK` and `CONNECT` are refused.
+    The path-override headers are dropped on iOS too. Its rules run as
+    simulator tests against a local server
+    (`./gradlew -p host-ios iosSimulatorArm64Test`).
+  - Android: `TRACE`, `TRACK` and `CONNECT` are never sent through your app's
+    own client, even when the `RequestPolicy` allows them (a `TRACE` would
+    echo your credentials back to the guest).
+  - Both hosts: a host whose first code load failed loads again on its next
+    update check, in the same process; and the code load starts as soon as
+    the lookup answers, not when the first screen asks (`DEVICE_HOST.md` §4
+    has what that costs at launch).
+
+  A host scaffolded earlier gets none of it until it is scaffolded again.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

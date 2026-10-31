@@ -55,8 +55,11 @@ run alongside item 2.
      Production bundles by default) and M2 on Android (#119: release-build
      start-up numbers on the reference app); iOS M2 is deferred (it needs a
      signing team);
-   - **open:** M3 (start the code load at host start), M4 (a guest frame
-     profile) and M5 (the iOS memory breakdown). See ADOPTION_PLAN item 2.
+   - **merged 2026-10-31:** M3 (#179: the code load starts as soon as the
+     lookup answers; on a Galaxy A12 no gain for a screen opened at launch,
+     the later-screen case not measured yet; released in tools 0.3.16);
+   - **open:** M4 (a guest frame profile) and M5 (the iOS memory breakdown).
+     See ADOPTION_PLAN item 2.
 3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
    start; each host then needed ≈ 900 lines of glue, and every serious defect
    (no web fallback, a bypassable request block, an authenticated client that
@@ -432,8 +435,7 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    **2026-10-30 (#176):** a debug host whose first code load failed stayed
    unloaded until restarted, on the A12 and the iPhone 13; now its next update
    check loads it again in the same process (both templates; earlier revisions
-   checked on both phones, the merged one by LV5 in CI). Merged, not released: it ships in the next tools
-   release.
+   checked on both phones, the merged one by LV5 in CI). Released in tools 0.3.16 (2026-10-31).
 3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
    into the tools bundle, not the app** (found by the 2026-10-27 audit): run
    from the zip's `bin/`, they resolve the app as the script's parent. Every
@@ -468,9 +470,13 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
 8. **Bridge generator / HostHttp through the app's client** (adoption item 4).
    **Status 2026-10-29:** B1 merged (#169): on Android,
    guests' HostHttp goes through the app's own authenticated client behind the
-   `RequestPolicy`; released in tools 0.3.15. B2 (iOS) to B5 not started.
-9. **Start-up** (adoption item 2, M3: start the code load at host start), then
-   M4 (guest frame profile) and M5 (iOS memory).
+   `RequestPolicy`; released in tools 0.3.15. **2026-10-31:** B2 merged
+   (#178): on iOS, a header callback adds the app's credentials, behind the
+   same policy, with B1's rules (20 simulator tests); released in tools
+   0.3.16. B3 to B5
+   not started.
+9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); then M4
+   (guest frame profile) and M5 (iOS memory).
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
     delivery (item 7); the device proxy (item 6's last row).
 11. **W7, the physical-device proof** (a real-certificate HTTPS server, a
