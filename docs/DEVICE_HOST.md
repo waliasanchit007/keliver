@@ -159,8 +159,8 @@ cache, which it restarts from exactly as in the second row above (the floor
 holds, and the manifest is verified against the key again). Only when no
 bundle has loaded before for this key and server, or the cached one fails too,
 does it show "Bundle did not load". The next update check then looks up and
-loads again in the same process (both hosts, from the tools release after
-0.3.15; before it, only a process restart did):
+loads again in the same process (both hosts, from tools 0.3.16; before
+it, only a process restart did):
 - a live-update event (a debug build);
 - a return to the foreground with `on-resume` or `live` updates, at least
   30 s after the last lookup, the failed start's included (on Android, an

@@ -435,8 +435,7 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    **2026-10-30 (#176):** a debug host whose first code load failed stayed
    unloaded until restarted, on the A12 and the iPhone 13; now its next update
    check loads it again in the same process (both templates; earlier revisions
-   checked on both phones, the merged one by LV5 in CI). Merged, not released: it ships in the next tools
-   release.
+   checked on both phones, the merged one by LV5 in CI). Merged, not released: it ships in tools 0.3.16.
 3. **The bundled `keliver-new-screen.sh` and `keliver-new-component.sh` write
    into the tools bundle, not the app** (found by the 2026-10-27 audit): run
    from the zip's `bin/`, they resolve the app as the script's parent. Every

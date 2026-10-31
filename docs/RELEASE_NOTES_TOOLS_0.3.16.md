@@ -7,7 +7,8 @@ What is in it since 0.3.15 (`3dc039f5e`): PRs #176 (a failed first load loads
 again), #178 (B2: guests' HostHttp on iOS with your app's credentials), #179
 (M3: the code load starts at host start) and #180 (TRACE, TRACK and CONNECT
 never through your app's own client on Android). #171–#175, #177 and #181
-move the reference app, its harness and the records.
+move the reference app, its harness and the records, and #170 records
+the 0.3.15 release.
 
 **The libraries stay 0.4.1.** Nothing published to Maven Central changed
 since 0.4.1. Every change here is in the scaffolders, their templates and
@@ -60,9 +61,10 @@ update checks on return to the foreground. `DEVICE_HOST.md` §4 has the
 list. An app whose Keliver screens are rarely used can leave `start()` to
 the first screen.
 
-Measured on a Galaxy A12 (`reference/inventory/m2/results-2026-10-31-a12-m3`):
-no change for a screen opened at launch, because the lookup answered after
-the screen opened in every run. The case M3 is for, a first screen opened
+Measured on a Galaxy A12 with the bundles over wireless `adb reverse`
+(`reference/inventory/m2/results-2026-10-31-a12-m3`): in this setup, no
+change for a screen opened at launch, because the lookup answered after the
+screen opened in every run. The case M3 is for, a first screen opened
 after the lookup answered, is not measured.
 
 ## Changed: TRACE, TRACK and CONNECT never through your app's own client (Android, #180)
@@ -77,6 +79,11 @@ headers back to the guest. The host's plain client is unchanged.
 build run and artifact, device job, the packaged checks, the stored asset's
 digest, the public download check)
 
-Not verified for this release: B2 in a running app or on a phone (no guest
-uses HostHttp yet); M3 with a screen opened after the lookup; #176's final
-revision on a phone (earlier revisions ran on a Galaxy A12 and an iPhone 13).
+Not verified for this release:
+- B2 in a running app or on a phone (no guest uses HostHttp yet);
+- M3 with a screen opened after the lookup, M3 on iOS at all, and M3
+  together with #176's load-again (the measured host was 0.3.15 plus M3's
+  one line);
+- #176's final revision on a phone (earlier revisions ran on a Galaxy A12
+  and an iPhone 13);
+- #180 on a phone (JVM tests and the CI emulator only).

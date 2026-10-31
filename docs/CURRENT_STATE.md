@@ -46,7 +46,10 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | where | reaches users through |
 |---|---|---|
-| (nothing since tools 0.3.15) | | |
+| a host whose first code load failed loads again on its next update check, in the same process | #176 (both host templates) | tools 0.3.16 (candidate) |
+| guests' HostHttp on iOS with the app's credentials: `Keliver.shared.requestHeaders`, behind the `RequestPolicy`, with B1's rules (the guest's credentials dropped, no `Set-Cookie` back, no cookie kept, TRACE/TRACK/CONNECT refused); the path-override headers dropped on every iOS host | #178 (`scripts/templates/ios-host`) | tools 0.3.16 (candidate) |
+| the code load starts as soon as the lookup answers, not at the first screen (M3) | #179 (both host templates) | tools 0.3.16 (candidate) |
+| TRACE, TRACK and CONNECT never through the app's own client (Android) | #180 (`scripts/templates/production-host`) | tools 0.3.16 (candidate) |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
