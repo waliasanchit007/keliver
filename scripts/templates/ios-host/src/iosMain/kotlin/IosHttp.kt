@@ -11,7 +11,8 @@ import kotlin.time.Duration
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
 import platform.Foundation.NSHTTPCookieAcceptPolicy
@@ -278,10 +279,13 @@ internal class NSURLSessionHostHttp(
     }
     val method = request.method.uppercase()
     require(METHOD.matches(method)) { "HostHttp: '${request.method}' is not an HTTP method" }
-    (baseRefusal ?: policy?.refusal(method, request.path))?.let { why ->
-      // A path can carry ids: logged only in a DEBUG binary.
+    // A path can carry ids: logged only in a DEBUG binary (baseRefusal names no path).
+    baseRefusal?.let { refused(it) }
+    policy?.refusal(method, request.path)?.let { why ->
       refused(why, if (isDebugBinary) why else "a request outside the app's RequestPolicy")
     }
+    // TRACE echoes the request, your credentials included, back to the guest; CONNECT is for proxies.
+    if (appOwnsCredentials && method in ECHOING_METHODS) refused("$method is never sent with the app's credentials")
     request.headers.forEach { (k, v) ->
       require(validHeader(k, v)) { "HostHttp: header '$k' is not a valid header name and value" }
     }
@@ -311,18 +315,30 @@ internal class NSURLSessionHostHttp(
     )
   }
 
-  /** Asks your [KeliverRequestHeaders] for this request's credentials: null, none in time, or a bad header refuses it. */
+  /**
+   * Asks your [KeliverRequestHeaders] for this request's credentials: null, none in time, or a bad
+   * header refuses it. The call is posted to [appHeadersContext] and only the answer is awaited,
+   * so a busy main thread, or a callback that blocks it, refuses the request in time rather than
+   * holding the guest's call (a `withContext` there would wait for the main thread even when
+   * cancelled). A call that reaches the main thread after the time is up is not made.
+   */
   private suspend fun credentials(appHeaders: KeliverRequestHeaders, method: String, path: String): Map<String, String> {
     val answer = CompletableDeferred<Map<String, String>?>()
-    withContext(appHeadersContext) {
+    val asked = CoroutineScope(appHeadersContext).launch {
+      if (answer.isCompleted) return@launch
       // Your callback must not take the guest's call down with it; a second `done` is ignored.
       runCatching { appHeaders(method, path) { answer.complete(it) } }.onFailure {
-        println("KeliverHost: HostHttp: requestHeaders threw: ${it.message}")
+        // Its message could hold a token: logged only in a DEBUG binary.
+        println("KeliverHost: HostHttp: requestHeaders threw${if (isDebugBinary) ": ${it.message}" else ""}")
         answer.complete(null)
       }
     }
     val added = withTimeoutOrNull(appHeadersTimeout) { answer.await() }
-      ?: refused(if (answer.isCompleted) "the app's requestHeaders gave no headers" else "the app's requestHeaders did not answer within $appHeadersTimeout")
+    if (added == null) {
+      val timedOut = answer.complete(null) // true: no answer yet, and none is taken from now on
+      asked.cancel()
+      refused(if (timedOut) "the app's requestHeaders did not answer within $appHeadersTimeout" else "the app's requestHeaders gave no headers")
+    }
     added.forEach { (k, v) ->
       if (!validHeader(k, v)) refused("the app's requestHeaders gave header '$k', which is not a valid header name and value")
     }
@@ -350,6 +366,7 @@ internal class NSURLSessionHostHttp(
     )
     val CREDENTIAL_HEADERS = setOf("authorization", "proxy-authorization", "cookie")
     val RESPONSE_CREDENTIAL_HEADERS = setOf("set-cookie", "set-cookie2")
+    val ECHOING_METHODS = setOf("TRACE", "CONNECT")
   }
 }
 

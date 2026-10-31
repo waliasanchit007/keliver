@@ -592,7 +592,8 @@ Keliver.shared.requestHeaders = { method, path, done in
 
 The policy is checked first; the callback is then asked, on the main thread,
 for each allowed request. `done(nil)` refuses the request (nothing is sent),
-and so does no answer within 30 s. Without a policy, every request is
+and so does no answer within 30 s, so don't block the main thread in it.
+`TRACE` and `CONNECT` are refused. Without a policy, every request is
 refused. A guest's own `Authorization`, `Proxy-Authorization` and `Cookie`
 headers are dropped, and a response's `Set-Cookie` is not handed back.
 

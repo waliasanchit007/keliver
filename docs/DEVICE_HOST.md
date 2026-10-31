@@ -741,11 +741,14 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   its method and its path relative to the API base. Call `done` once, with
   the headers to add (they replace the guest's of the same name), or with
   `nil` to refuse the request, as when nobody is signed in; no answer within
-  30 s refuses it too, and a refused request sends nothing. It needs a
-  `requestPolicy`: without one every request is refused. With it, a guest's
-  own `Authorization`, `Proxy-Authorization` and `Cookie` headers are dropped,
-  a response's `Set-Cookie` is not handed back, and HostHttp keeps no cookies,
-  cache or credentials of its own. Only HostHttp gets these headers: never
+  30 s refuses it too (a busy main thread included: don't block it in the
+  callback, answer `done` later), and a refused request sends nothing. It
+  needs a `requestPolicy`: without one every request is refused. With it, a
+  guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
+  dropped, a response's `Set-Cookie` is not handed back, HostHttp keeps no
+  cookies, cache or credentials of its own, and `TRACE` and `CONNECT` are
+  refused (`TRACE` would echo your headers back to the guest; Android's own
+  client does not refuse it yet). Only HostHttp gets these headers: never
   bundles, the update stream or reports. The rules are measured on a
   simulator against a local server: `./gradlew -p host-ios
   iosSimulatorArm64Test` (`-PkeliverTestSimulator=<name or UDID>` when

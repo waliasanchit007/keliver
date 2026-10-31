@@ -139,7 +139,7 @@ kotlin {
       linkerOpts.add('-lsqlite3') // Zipline's bundle cache and IosSqlHost
     }
     // The test binaries too (src/iosTest: HostHttp over NSURLSession, on a simulator).
-    t.binaries.configureEach { linkerOpts.add('-lsqlite3') }
+    t.binaries.withType(org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable).configureEach { b -> b.linkerOpts.add('-lsqlite3') }
   }
   sourceSets {
     jvmTest {

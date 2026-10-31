@@ -193,7 +193,8 @@ grep -q 'public sealed interface KeliverHostState' "$K/MainViewController.kt" \
 # sending; its tests run on the JVM target).
 KC="$H/src/commonMain/kotlin/com/example/demo/host"
 grep -q 'public class RequestPolicy(' "$KC/RequestPolicy.kt" && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/RequestPolicyTest.kt" ] \
-  && grep -q '(baseRefusal ?: policy?.refusal(method, request.path))' "$K/IosHttp.kt" \
+  && grep -q '    baseRefusal?.let { refused(it) }' "$K/IosHttp.kt" \
+  && grep -q '    policy?.refusal(method, request.path)?.let { why ->' "$K/IosHttp.kt" \
   && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "$K/IosHttp.kt" \
   && grep -q '"x-original-url", "x-rewrite-url", "x-forwarded-host", "x-forwarded-prefix", "x-forwarded-proto",' "$K/IosHttp.kt" \
   && grep -q 'NSURLSessionHostHttp(it, Keliver.requestPolicy, Keliver.requestHeaders)' "$K/MainViewController.kt" \
@@ -210,7 +211,8 @@ grep -q 'public var requestHeaders: KeliverRequestHeaders? = null' "$K/MainViewC
   && grep -q 'HTTPShouldSetCookies = false' "$K/IosHttp.kt" \
   && [ -f "$H/src/iosTest/kotlin/com/example/demo/host/AppHeadersHostHttpTest.kt" ] \
   && grep -q '^package com.example.demo.host$' "$H/src/iosTest/kotlin/com/example/demo/host/AppHeadersHostHttpTest.kt" \
-  && grep -q "t.binaries.configureEach { linkerOpts.add('-lsqlite3') }" "$H/build.gradle" \
+  && grep -q "t.binaries.withType(org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable).configureEach { b -> b.linkerOpts.add('-lsqlite3') }" "$H/build.gradle" \
+  && grep -q 'val ECHOING_METHODS = setOf("TRACE", "CONNECT")' "$K/IosHttp.kt" \
   && ok "B2: Keliver.requestHeaders adds the app's credentials (needs a requestPolicy; the guest's own dropped, no Set-Cookie back); its simulator tests are scaffolded" \
   || bad "B2: requestHeaders is not wired into NSURLSessionHostHttp, or its simulator tests are missing"
 # Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).
@@ -380,7 +382,7 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-ios iosSimulatorArm64Test \
         ${KELIVER_SELFTEST_SIMULATOR:+"-PkeliverTestSimulator=$KELIVER_SELFTEST_SIMULATOR"} > "$DISP/ios-tests.log" 2>&1 ); rc=$?
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*AppHeadersHostHttpTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
-    [ "$rc" = 0 ] && [ "${n:-0}" -ge 13 ] && ok "B2: the HostHttp simulator tests pass ($n: the app's credentials, refusals, no redirect, no Set-Cookie)" \
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 20 ] && ok "B2: the HostHttp simulator tests pass ($n: the app's credentials on the main thread, refusals, no redirect, no Set-Cookie)" \
       || bad "B2: the HostHttp simulator tests failed (rc=$rc, ${n:-no} passed): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/ios-tests.log" | head -6 | tr '\n' ' ')"
     # A release framework refuses http:// — the check exists, fails here, and is wired to every release link.
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-urls.log" 2>&1 ); rc=$?

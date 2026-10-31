@@ -345,13 +345,14 @@ public object Keliver {
    * Called on the main thread for each request the [requestPolicy] allowed, with its method and its
    * path relative to API_BASE_URL. Call `done` once: with the headers to add (they replace the
    * guest's of the same name), or with nil to refuse the request, as when nobody is signed in;
-   * nothing is sent then, nor when `done` is not called within 30 s.
+   * nothing is sent then, nor when `done` is not called within 30 s (counted from before the hop
+   * to the main thread). Do not block the main thread in it: answer `done` later instead.
    *
    * It needs a [requestPolicy] (your credentials with no allow-list would let a guest call any
    * path under the API base as the user): without one every request is refused. With it, a
    * guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are dropped, a
-   * response's `Set-Cookie` is not handed back, and HostHttp keeps no cookies, cache or
-   * credentials of its own. Bundles, the update stream and reports never get these headers.
+   * response's `Set-Cookie` is not handed back, HostHttp keeps no cookies, cache or credentials
+   * of its own, and TRACE and CONNECT are refused (TRACE would echo your headers to the guest). Bundles, the update stream and reports never get these headers.
    * Set it before the host starts (before the first screen, or [start]).
    */
   public var requestHeaders: KeliverRequestHeaders? = null

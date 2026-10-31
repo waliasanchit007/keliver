@@ -25,6 +25,20 @@ import kotlinx.cinterop.sizeOf
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import kotlinx.coroutines.runBlocking
+import kotlin.time.TimeSource
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.completeWith
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
+import platform.Foundation.runUntilDate
+import platform.Foundation.dateWithTimeIntervalSinceNow
+import platform.Foundation.NSRunLoop
+import platform.Foundation.NSDate
+import platform.posix.timeval
+import platform.posix.SO_RCVTIMEO
+import platform.posix.SO_NOSIGPIPE
 import platform.Foundation.NSLock
 import platform.Foundation.NSThread
 import platform.posix.AF_INET
@@ -54,8 +68,8 @@ class AppHeadersHostHttpTest {
   private val base = "http://127.0.0.1:${server.port}/api"
   private val calls = mutableListOf<String>()
 
-  private fun policy(vararg rules: RequestPolicy.Rule, origin: String = "http://127.0.0.1:${server.port}") =
-    RequestPolicy(origin, rules.toSet(), allowStateChanging = false, allowCleartext = true)
+  private fun policy(vararg rules: RequestPolicy.Rule, origin: String = "http://127.0.0.1:${server.port}", stateChanging: Boolean = false) =
+    RequestPolicy(origin, rules.toSet(), allowStateChanging = stateChanging, allowCleartext = true)
 
   /** Your credentials, recording each call (method and path). */
   private val signedIn: KeliverRequestHeaders = { method, path, done ->
@@ -109,14 +123,70 @@ class AppHeadersHostHttpTest {
   }
 
   @Test fun aGuestCannotSetItsOwnCredentials() = runBlocking {
-    http().execute(
+    // Your credentials here are an API key: the guest's Authorization is not replaced, it is dropped.
+    val apiKey: KeliverRequestHeaders = { _, _, done -> done(mapOf("X-Api-Key" to "app-key")) }
+    http(headers = apiKey).execute(
       get(headers = mapOf("authorization" to "Bearer guest", "Proxy-Authorization" to "Basic eA==", "Cookie" to "sid=guest", "X-Trace" to "1")),
     )
     val sent = server.requests.single()
-    assertEquals("Bearer app-token", header(sent, "Authorization"))
+    assertEquals("app-key", header(sent, "X-Api-Key"))
+    assertNull(header(sent, "Authorization"))
     assertNull(header(sent, "Proxy-Authorization"))
     assertNull(header(sent, "Cookie"))
     assertEquals("1", header(sent, "X-Trace"))
+  }
+
+  @Test fun theAppsCookieIsSent() = runBlocking {
+    val cookie: KeliverRequestHeaders = { _, _, done -> done(mapOf("Cookie" to "sid=app")) }
+    http(headers = cookie).execute(get(headers = mapOf("Cookie" to "sid=guest")))
+    assertEquals("sid=app", header(server.requests.single(), "Cookie"))
+  }
+
+  @Test fun theAppsHeaderReplacesTheGuestsOfTheSameName() = runBlocking {
+    val tenant: KeliverRequestHeaders = { _, _, done -> done(mapOf("X-Tenant" to "app")) }
+    http(headers = tenant).execute(get(headers = mapOf("x-tenant" to "guest")))
+    val sent = server.requests.single()
+    assertEquals(listOf("app"), values(sent, "X-Tenant"))
+  }
+
+  @Test fun everySpellingOfSetCookieIsDropped() = runBlocking {
+    server.respond = { "HTTP/1.1 200 OK\r\nset-cookie: a=1\r\nSet-Cookie2: b=2\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok" }
+    val headers = http().execute(get()).headers
+    assertFalse(headers.keys.any { it.lowercase().startsWith("set-cookie") }, "$headers")
+  }
+
+  @Test fun traceIsNeverSentWithTheAppsCredentials() {
+    val loose = policy(RequestPolicy.Rule("TRACE", "orders"), stateChanging = true)
+    assertFailsWith<HostHttpRefused> { runBlocking { http(policy = loose).execute(HttpRequest(method = "TRACE", path = "orders")) } }
+    assertTrue(calls.isEmpty())
+    assertTrue(server.requests.isEmpty())
+  }
+
+  @Test fun theCallbackRunsOnTheMainThreadByDefault() {
+    assertTrue(NSThread.isMainThread, "kotlin.test runs this on the main thread")
+    var onMain: Boolean? = null
+    val headers: KeliverRequestHeaders = { _, _, done ->
+      onMain = NSThread.isMainThread
+      done(mapOf("Authorization" to "Bearer app-token"))
+    }
+    val h = NSURLSessionHostHttp(base, policy(RequestPolicy.Rule("GET", "orders")), headers)
+    val status = offMain { h.execute(get()).status }
+    // Dispatchers.Main runs on the main queue, which this run loop drains.
+    pumpMainUntil { status.isCompleted }
+    assertEquals(200, runBlocking { status.await() })
+    assertEquals(true, onMain)
+  }
+
+  @Test fun aBusyMainThreadRefusesTheRequestInTime() {
+    // The main thread (this one) never runs its queue here, so the callback is never even reached.
+    val h = NSURLSessionHostHttp(base, policy(RequestPolicy.Rule("GET", "orders")), signedIn, appHeadersTimeout = 300.milliseconds)
+    val status = offMain { h.execute(get()).status }
+    val start = TimeSource.Monotonic.markNow()
+    while (!status.isCompleted && start.elapsedNow() < 10.seconds) usleep(10_000u)
+    val e = assertFailsWith<HostHttpRefused> { runBlocking { status.await() } }
+    assertTrue("did not answer" in e.message!!, e.message)
+    assertTrue(calls.isEmpty())
+    assertTrue(server.requests.isEmpty())
   }
 
   @Test fun theSessionCookieIsNotHandedToTheGuestNorSentAgain() = runBlocking {
@@ -163,19 +233,47 @@ class AppHeadersHostHttpTest {
     server.respond = { "HTTP/1.1 200 OK\r\nSet-Cookie: sid=s\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok" }
     val plain = NSURLSessionHostHttp(base)
     val response = plain.execute(
-      get(headers = mapOf("Authorization" to "Bearer guest", "X-Original-URL" to "/admin", "X-HTTP-Method-Override" to "DELETE")),
+      get(
+        headers = mapOf(
+          "Authorization" to "Bearer guest", "Cookie" to "sid=guest",
+          "X-Original-URL" to "/admin", "X-HTTP-Method-Override" to "DELETE",
+        ),
+      ),
     )
     assertTrue(response.headers.keys.any { it.equals("Set-Cookie", ignoreCase = true) })
     val sent = server.requests.single()
     assertEquals("Bearer guest", header(sent, "Authorization"))
+    assertEquals("sid=guest", header(sent, "Cookie"))
     assertNull(header(sent, "X-Original-URL"))
     assertNull(header(sent, "X-HTTP-Method-Override"))
   }
 
-  private fun header(request: String, name: String): String? =
+  @Test fun withoutTheAppsCredentialsARedirectIsNotFollowedEither() = runBlocking {
+    server.respond = { "HTTP/1.1 302 Found\r\nLocation: /api/elsewhere\r\nContent-Length: 0\r\nConnection: close\r\n\r\n" }
+    assertEquals(302, NSURLSessionHostHttp(base).execute(get()).status)
+    assertEquals(1, server.requests.size)
+  }
+
+  /** Runs [block] on another thread; this one stays free to drain (or not drain) the main queue. */
+  private fun <T> offMain(block: suspend () -> T): CompletableDeferred<T> {
+    val result = CompletableDeferred<T>()
+    CoroutineScope(Dispatchers.Default).launch { result.completeWith(runCatching { block() }) }
+    return result
+  }
+
+  private fun pumpMainUntil(done: () -> Boolean) {
+    val start = TimeSource.Monotonic.markNow()
+    while (!done() && start.elapsedNow() < 10.seconds) {
+      NSRunLoop.mainRunLoop.runUntilDate(NSDate.dateWithTimeIntervalSinceNow(0.05))
+    }
+  }
+
+  private fun values(request: String, name: String): List<String> =
     request.substringBefore("\r\n\r\n").split("\r\n").drop(1)
-      .firstOrNull { it.substringBefore(':').trim().equals(name, ignoreCase = true) }
-      ?.substringAfter(':')?.trim()
+      .filter { it.substringBefore(':').trim().equals(name, ignoreCase = true) }
+      .map { it.substringAfter(':').trim() }
+
+  private fun header(request: String, name: String): String? = values(request, name).firstOrNull()
 }
 
 /** One HTTP/1.1 request per connection on 127.0.0.1, answered by [respond]; [requests] holds each, raw. */
@@ -184,7 +282,7 @@ private class LocalServer {
   private val seen = mutableListOf<String>()
   @Volatile private var stopping = false
   @Volatile private var stopped = false
-  var respond: (String) -> String = { "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok" }
+  @Volatile var respond: (String) -> String = { "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok" }
   val requests: List<String> get() = locked { seen.toList() }
 
   private val fd = socket(AF_INET, SOCK_STREAM, 0)
@@ -214,6 +312,13 @@ private class LocalServer {
       if (stopping) {
         close(client)
         break
+      }
+      memScoped {
+        // A client that hangs up early must not SIGPIPE the test process, nor an idle one hold it.
+        val one = alloc<IntVar>().apply { value = 1 }
+        setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, one.ptr, sizeOf<IntVar>().convert())
+        val wait = alloc<timeval>().apply { tv_sec = 5; tv_usec = 0 }
+        setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, wait.ptr, sizeOf<timeval>().convert())
       }
       val raw = StringBuilder()
       val buffer = ByteArray(8192)
