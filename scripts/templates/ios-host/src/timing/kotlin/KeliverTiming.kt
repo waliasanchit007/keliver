@@ -263,16 +263,21 @@ internal object KeliverTiming {
     cycleRunning = true
     val n = cycle.incrementAndGet()
     val screen = Keliver.viewController().apply { modalPresentationStyle = UIModalPresentationFullScreen }
-    // Nothing below holds the screen (only this weak reference): what is measured at "closed"
-    // is what it left behind.
+    // No closure below holds the screen, only this weak reference. Kotlin/Native's own
+    // references to it (this local) keep it until a collection, whose release of it then runs
+    // on main: "closed" collects first and lets main run that release before it measures.
     val shown = kotlin.native.ref.WeakReference(screen)
     var ended = false
     var sampled = false
     val closed = {
       if (!sampled) {
         sampled = true
+        if (shown.get()?.presentingViewController != null) {
+          println("KeliverTiming: memory-cycle $n: its screen is still up; this cycle's closed includes it")
+        }
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
-          memoryClosed(n) { cycleRunning = false }
+          runCatching { KeliverMemory.kotlinHeapAfterCollect() }
+          dispatch_async(dispatch_get_main_queue()) { memoryClosed(n) { cycleRunning = false } }
         }
       }
     }

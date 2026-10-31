@@ -533,9 +533,10 @@ Sizes are in KB; `-` is "not read here".
   Compose draws), so footprint differences between points are approximate; only `qjs` is
   exact. Skia and Metal memory is not apart from Compose's, nor the host's widgets from
   Compose. The simulator is a macOS process with no memory limit and other graphics memory:
-  numbers that matter are a phone's. `closed` reads QuickJS after the screen's view
-  controller is dismissed; if its composition is let go only later, at a Kotlin collection,
-  its guest objects still count there (compare `objects` at `closed` with `content`). A host
+  numbers that matter are a phone's. `closed` collects the Kotlin heap and lets the main
+  thread release what that freed before it measures; if the screen's composition is let go
+  later still, its guest objects count there (compare `objects` at `closed` with
+  `content`). A cycle whose screen did not close says so on the console. A host
   that starts before its first screen logs `runtime` and `code` before `open`.
 - **Output:** the same as the frame profile's (the console and `timing.log`, not `onTrace`).
 - **Overhead:** one `task_info` call per point, and one QuickJS read on the Zipline thread;
