@@ -40,6 +40,9 @@ import okhttp3.Response
  *   dropped, and the response's `Set-Cookie` is not handed back: your client's
  *   interceptor adds the user's credentials. Other credentials (a query
  *   parameter, an API-key header) are your interceptor's to set or remove.
+ *   `TRACE`, `TRACK` and `CONNECT` are refused then, even when the policy
+ *   allows them: a `TRACE` would echo your interceptor's headers back to the
+ *   guest.
  *
  * Authentication, retries or certificate pinning: pass your app's OkHttpClient
  * as `KeliverConfig.httpClient` (it then needs a [RequestPolicy]), or edit this
@@ -93,6 +96,11 @@ class OkHttpHostHttp(
         throw HostHttpRefused("HostHttp refused: $why")
       }
     }
+    if (appOwnsCredentials && method in ECHOING_METHODS) {
+      val why = "$method is never sent through the app's own client"
+      Log.w(TAG, "HostHttp refused: $why")
+      throw HostHttpRefused("HostHttp refused: $why")
+    }
     val headers = request.headers.filterKeys {
       val name = it.lowercase()
       name !in DROPPED_HEADERS && !(appOwnsCredentials && name in CREDENTIAL_HEADERS)
@@ -124,6 +132,8 @@ class OkHttpHostHttp(
     )
     val CREDENTIAL_HEADERS = setOf("authorization", "proxy-authorization", "cookie")
     val RESPONSE_CREDENTIAL_HEADERS = setOf("set-cookie", "set-cookie2")
+    /** TRACE (and IIS's TRACK) echo the request, credentials included, to the guest; CONNECT is for proxies. */
+    val ECHOING_METHODS = setOf("TRACE", "TRACK", "CONNECT")
   }
 }
 

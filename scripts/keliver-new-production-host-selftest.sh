@@ -251,7 +251,9 @@ grep -q 'class RequestPolicy(' "${M%/*}/RequestPolicy.kt" && grep -q '(baseRefus
   && grep -q 'OkHttpHostHttp(okhttp, apiBase, config.requestPolicy)' "$M" && grep -q 'val requestPolicy: RequestPolicy? = null' "$M" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/RequestPolicyTest.kt" ] \
   && grep -q "testImplementation 'com.squareup.okhttp3:mockwebserver3:" "$H/build.gradle" \
-  && ok "host kit: HostHttp checks the app's RequestPolicy before sending; its tests are scaffolded" \
+  && grep -q 'if (appOwnsCredentials && method in ECHOING_METHODS) {' "${M%/*}/OkHttpHostHttp.kt" \
+  && grep -q 'val ECHOING_METHODS = setOf("TRACE", "TRACK", "CONNECT")' "${M%/*}/OkHttpHostHttp.kt" \
+  && ok "host kit: HostHttp checks the app's RequestPolicy before sending (TRACE, TRACK and CONNECT never through the app's client); its tests are scaffolded" \
   || bad "host kit: RequestPolicy is not wired into HostHttp, or its tests are missing"
 L="${M%/*}/ExternalLinkPolicy.kt"
 grep -q 'scheme == "https" && httpsHost(trimmed) != null -> Decision.InAppBrowser(trimmed)' "$L" \
