@@ -109,6 +109,10 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
       || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$C" | head -3 | tr '\n' ' ')"
     m0_marks T2 "$C"
     m0_frames "T3 (Benchmark)" "$C"
+    # The positive control for the Release check below: these names are in a build that has them.
+    find "$BAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace' {} \; -print | grep -q . \
+      && ok "T2: the Benchmark build's binaries carry the timing code's class names (the Release check can see them)" \
+      || bad "T2: no KeliverTrace in the Benchmark build's binaries: the Release check would prove nothing"
     m0_memory "T4-Benchmark"
   else
     bad "T2: the Benchmark build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Benchmark.log" | head

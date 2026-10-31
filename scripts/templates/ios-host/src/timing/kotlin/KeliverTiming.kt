@@ -223,11 +223,12 @@ internal object KeliverTiming {
       done()
       return
     }
+    // done() whatever happens to this (a closed app's dispatcher too): a cycle left running
+    // would refuse every later one.
     memoryScope.launch(app.dispatchers.zipline) {
       val quickJs = runCatching { KeliverMemory.quickJs(code, gc = true) }.getOrNull()
       emitMemory("closed", n, now(), KeliverMemory.footprint(), quickJs, kotlinHeap)
-      dispatch_async(dispatch_get_main_queue()) { done() }
-    }
+    }.invokeOnCompletion { dispatch_async(dispatch_get_main_queue()) { done() } }
   }
 
   /** "<bundle id>.keliver.memory-cycle" runs one memory cycle; main thread. */
@@ -267,11 +268,14 @@ internal object KeliverTiming {
         ended = true
         cycleContent = null
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
-          over.dismissViewControllerAnimated(false) {
+          val closed = {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
               memoryClosed(n) { cycleRunning = false }
             }
           }
+          // The screen may have closed itself (closeScreen): then dismiss nothing, which would
+          // close the app's own modal under it.
+          if (over.presentedViewController != null) over.dismissViewControllerAnimated(false) { closed() } else closed()
         }
       }
     }
@@ -350,7 +354,12 @@ internal object KeliverTiming {
 
   private object GuestTrace : KeliverTrace {
     override fun mark(name: String) {
-      if (guestName.matches(name)) markAfterFrame(name) else println("KeliverTiming: ignored a guest mark: names are a-z, 0-9 and '-', at most 32")
+      when {
+        // The host's own lines: a guest mark of that name would read as one of them.
+        name == "memory" || name == "frames" -> println("KeliverTiming: ignored a guest mark: '$name' is the host's")
+        guestName.matches(name) -> markAfterFrame(name)
+        else -> println("KeliverTiming: ignored a guest mark: names are a-z, 0-9 and '-', at most 32")
+      }
     }
   }
 

@@ -515,7 +515,7 @@ Sizes are in KB; `-` is "not read here".
 | `cycle` | 0 for the screen the app shows; then each memory cycle's number |
 | `footprint`, `peak` | the process's physical footprint (`task_info` `TASK_VM_INFO` `phys_footprint`: what Xcode's memory gauge shows and iOS's memory limit counts), and its highest so far |
 | `qjs`, `objects` | QuickJS's heap in use / allocated, and its objects (`Zipline.quickJs.memoryUsage`, read on the Zipline thread); `-` before a runtime exists |
-| `knheap` | the Kotlin/Native heap's live objects after a full collection; at `closed` only |
+| `knheap` | the Kotlin/Native heap's live objects after a full collection; at `closed` only, and `-` there when the runtime does not report it |
 
 - **A memory cycle** opens a second screen over the shown one, waits for its content (at
   most 15 s), closes it and samples `closed`. One runs at a time, and only once the shown
@@ -527,7 +527,8 @@ Sizes are in KB; `-` is "not read here".
 - **Reading it:** `open` to `ui` is mostly the Compose Multiplatform runtime and its first
   draw; `ui` to `runtime` and `runtime` to `code` add QuickJS, the loader and the guest's
   code (`qjs` at `runtime` is the engine before any code; `code` minus it is the guest's code
-  and start-up); `code` to `content` is the screen (`qjs` for its guest side).
+  and start-up); `code` to `content` is the screen (`qjs` for its guest side). A guest mark
+  named `memory` or `frames` is ignored: it would read as one of these lines.
 - **What it cannot split:** the steps overlap (the lookup and the code load run while
   Compose draws), so footprint differences between points are approximate; only `qjs` is
   exact. Skia and Metal memory is not apart from Compose's, nor the host's widgets from
