@@ -15,7 +15,7 @@ result. The iOS device script (`ci/w7/ios-device.sh`) has never run on a
 device; only its settings and device lookup were tried, with no iPhone attached.
 
 Everything runs from a checkout of this repository on the owner's Mac. The app
-and its tools come from the **published tools 0.3.15** and Maven Central, as in
+and its tools come from the **published tools 0.3.16** and Maven Central, as in
 CI.
 
 ---
@@ -34,11 +34,11 @@ CI.
       assets, download it on another network and pass the path:
       ```bash
       mkdir -p ~/w7/dl && cd ~/w7/dl
-      base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.15
-      curl -fLO "$base/keliver-portal-tools-0.3.15.zip" && curl -fLO "$base/keliver-portal-tools-0.3.15.zip.sha256"
-      shasum -a 256 -c keliver-portal-tools-0.3.15.zip.sha256
-      # must print 68958efa4977dce413c44b87bf8dcbdefc053677cd1afc20ff8ee6638585a287
-      shasum -a 256 keliver-portal-tools-0.3.15.zip
+      base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.16
+      curl -fLO "$base/keliver-portal-tools-0.3.16.zip" && curl -fLO "$base/keliver-portal-tools-0.3.16.zip.sha256"
+      shasum -a 256 -c keliver-portal-tools-0.3.16.zip.sha256
+      # must print e120ea7aed62960e1d65da2a0dc31a8361b6f805b14101cc850c9795bf8c8699
+      shasum -a 256 keliver-portal-tools-0.3.16.zip
       ```
 - [ ] **A fresh work directory per run**, e.g. `~/w7/run1`. The harness keeps
       `user.home`, the portal store and its disposable keys inside it. It never
@@ -84,7 +84,7 @@ CI.
 cd <this checkout>
 export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 W=~/w7/run1; E=~/w7/run1-evidence
-KELIVER_DEVICE=physical bash reference/inventory/ci/prepare.sh "$W" "$E" ~/w7/dl/keliver-portal-tools-0.3.15.zip
+KELIVER_DEVICE=physical bash reference/inventory/ci/prepare.sh "$W" "$E" ~/w7/dl/keliver-portal-tools-0.3.16.zip
 bash reference/inventory/ci/device.sh "$W" "$E" <serial>
 ```
 
@@ -224,7 +224,7 @@ The harness installs debug builds, plus one R8 release signed with the debug key
     If the load fails with an ATS error (`-1022`), use the https route.
 
 **Team setting:** a host scaffolded by tools 0.3.7 or 0.3.8 ignores `TEAM_ID`
-(**U32** in `KNOWN_BUGS.md`; fixed in tools 0.3.9; this checklist uses 0.3.15).
+(**U32** in `KNOWN_BUGS.md`; fixed in tools 0.3.9; this checklist uses 0.3.16).
 For those older hosts, do one of:
 - add `DEVELOPMENT_TEAM=<team id>` to `host-ios/Configuration/Config.xcconfig`;
 - set `DEVELOPMENT_TEAM` in the environment for `ci/w7/ios-device.sh`, which
@@ -244,7 +244,7 @@ A host with the U32 fix takes `TEAM_ID` from the gitignored
 $KP/keliver-new-ios-host.sh --bundle-server https://<your server>
 ```
 
-`$KP` is `~/w7/run1/boot/tools/keliver-portal-tools-0.3.15/bin`. Run the
+`$KP` is `~/w7/run1/boot/tools/keliver-portal-tools-0.3.16/bin`. Run the
 scaffolder with `JAVA_TOOL_OPTIONS="-Duser.home=$HOME/w7/run1/home"`, so it
 finds the run's store and key.
 
