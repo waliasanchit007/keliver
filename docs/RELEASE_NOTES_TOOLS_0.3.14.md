@@ -116,7 +116,7 @@ All of it against one set of bytes: the retained artifact of build run
 | `VERSION.json` | tools 0.3.14, Maven dependency 0.4.1 |
 | Bundled host APK | sha256 `0e435144096d75b133321e14310e9f7eb3d1a16d1f0eff2847115279b3b73e83`, no `assets/portal_ed25519.pub` |
 | Build | `portal-tools.yml` run `40672818679`; retained artifact `12811030869` (92,061,968 bytes, digest `sha256:c04d62b3c6aac394317950cdc0f20f584afc9f9f5179d9bbde8baa7fbc901575`) |
-| Device job | run `40676584557` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin (`apk-under-test.sha256`); device verify 28/0; evidence artifact `12810318887` |
+| Device job | run `40676584557` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin (`apk-under-test.sha256`); device verify 19/0, its packaged acceptance 28/0; evidence artifact `12810318887` |
 
 The build run's packaged checks: the unit tests (a Gradle run: `BUILD SUCCESSFUL`); the disposable-parent refusal 134/0 (earlier notes called this the unit tests); the store resolver 32/0
 and 73/0; packaging hygiene (U22) 10/0; the **packaged adopter acceptance**,
