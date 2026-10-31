@@ -488,8 +488,9 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
   the main queue was idle between them) is counted, which shows in p95 and max.
 - **Output:** the same as the marks' (logcat tag `KeliverTiming`, the iOS console, and
   `timing.log`), but not `Keliver.shared.onTrace`, whose marks are moments. A screen's first
-  change list, sent from its start rather than in a frame, has no `lead`. A frame and its
-  change lists are always in the same line.
+  change list, sent from its start rather than in a frame, has no `lead`. A frame's `lead`
+  and `sink` are always in the same line as its `guest`; their `apply` and `queue` come later
+  and can fall in the next line.
 - **Overhead:** per frame, a few small objects and one task on the timing thread; per change
   list, two more main-thread messages and one more timing-thread task; the samples in fixed
   arrays. A store build compiles none of it (`src/notiming/`); only the listener's two

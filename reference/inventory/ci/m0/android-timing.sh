@@ -51,7 +51,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
   m0_frames T3 "$EV/logcat-T1.txt"
   if grep -rqs "class FrameWindow" "$APP/host-android/src/timing"; then
     # This launch's own line: the file outlives the app's earlier runs.
-    fl="$(tr -d '\r' < "$EV/logcat-T1.txt" | sed -n 's/.*KeliverTiming: \(frames [0-9][0-9]* n=.*\)$/\1/p' | head -1)"
+    fl="$(LC_ALL=C tr -d '\r' < "$EV/logcat-T1.txt" | LC_ALL=C sed -n 's/.*KeliverTiming: \(frames [0-9][0-9]* n=.*\)$/\1/p' | head -1)"
     [ -n "$fl" ] && grep -qxF "$fl" "$EV/T1-timing.log" \
       && ok "T3: files/keliver/timing.log has this launch's frames line" || bad "T3: the file sink lacks this launch's frames line: ${fl:-none on logcat}"
   fi
