@@ -49,9 +49,9 @@ In order (details and evidence in `docs/ROADMAP.md`):
    hand-copied. First step released in tools 0.3.15 (B1, Android): guests'
    data calls go through the app's own signed-in HTTP client, behind the
    allow-list. The iOS step (B2: the app adds its credentials through a
-   header callback) is merged for tools 0.3.16.
+   header callback) is released in tools 0.3.16.
 5. **Start-up and memory**, measured before optimised. M3 (the code load
-   starts at host start) is merged for tools 0.3.16; on a Galaxy A12 it did
+   starts at host start) is released in tools 0.3.16; on a Galaxy A12 it did
    not speed up a screen opened at launch.
 6. **A physical-device proof** with release-signed builds and a real HTTPS
    server, and an external adopter.

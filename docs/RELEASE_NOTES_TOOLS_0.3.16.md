@@ -1,7 +1,10 @@
 # keliver-portal-tools 0.3.16 — release notes
 
-**Status: CANDIDATE**, by `PORTAL_TOOLS_RELEASE.md`. Identities are filled in
-as each step of the procedure passes.
+**Status: RELEASED** 2026-10-31T11:24:06Z, by `PORTAL_TOOLS_RELEASE.md`. Tag
+`portal-tools-v0.3.16` → `65346c63dc4f28bf5f20daf4f6da1ea6ce9c0877`; asset
+`keliver-portal-tools-0.3.16.zip`, sha256
+`e120ea7aed62960e1d65da2a0dc31a8361b6f805b14101cc850c9795bf8c8699`
+(92,110,030 bytes), the retained, verified CI artifact.
 
 What is in it since 0.3.15 (`3dc039f5e`): PRs #176 (a failed first load loads
 again), #178 (B2: guests' HostHttp on iOS with your app's credentials), #179
@@ -75,9 +78,61 @@ headers back to the guest. The host's plain client is unchanged.
 
 ## Verification
 
-(to be filled in: source commit, zip sha256 and size, `VERSION.json`, APK,
-build run and artifact, device job, the packaged checks, the stored asset's
-digest, the public download check)
+All of it against one set of bytes: the retained artifact of build run
+`41193510584`, which was then attached to the release.
+
+| | |
+|---|---|
+| Source commit | `65346c63dc4f28bf5f20daf4f6da1ea6ce9c0877` (PR #182's head at the build; `sourceDirtyFiles` 0) |
+| Zip | `keliver-portal-tools-0.3.16.zip`, sha256 `e120ea7aed62960e1d65da2a0dc31a8361b6f805b14101cc850c9795bf8c8699`, 92,110,030 bytes |
+| `VERSION.json` | tools 0.3.16, Maven dependency 0.4.1 |
+| Bundled host APK | sha256 `57a2cb8fd96322e0c47d73b5ce2bc9b7dda4b5579bfffa82eb4739d835a93e76`, no `assets/portal_ed25519.pub` |
+| Dependency floor | `templates/production-host-embed/dependency-floor.json`: keliver 0.4.1, Kotlin 2.2.0, Zipline 1.22.0, Compose 1.8.2, 201 modules resolved at build time |
+| Build | `portal-tools.yml` run `41193510584`; retained artifact `13040705437` (92,093,096 bytes, digest `sha256:24f695fa01d1ec6e60e983c5d958061bf32f5a2346978129d1f454383557cba6`) |
+| Device job | run `41195531997` (an emulator on GitHub-hosted Ubuntu; the verifier from the candidate's own branch): the APK's sha256 checked against the pin; device verify 28/0, its acceptance 19/0; evidence artifact `13040366518` |
+
+The build run's packaged checks:
+- the unit tests (a Gradle run: `BUILD SUCCESSFUL`);
+- the disposable-parent refusal 134/0;
+- the store resolver 32/0 and 73/0;
+- packaging hygiene (U22) 10/0;
+- the **packaged adopter acceptance**, with the U21 identity gate, 25/0;
+- the foreign-relay refusal 6/0;
+- the store identity contract 11/0;
+- the production-host scaffolder 80/0 (and 71/0 from the package);
+- the iOS host scaffolder 72/0 (and 72/0);
+- the publish scaffolder 51/0 (and 33/0);
+- the screen and component scaffolders 9/0;
+- `keliver-run-android` from the package 22/0;
+- the embed dependency floor from the package 11/0;
+- `keliver-publish` 41/0;
+- key permissions 63/0;
+- guest bundle signing 4/0;
+- store recovery 144/0.
+
+The artifact was downloaded and checked on the releasing machine before the
+tag (through `gh api …/actions/artifacts/13040705437/zip`): the artifact's
+sha256 equals GitHub's digest, and the zip, `VERSION.json`, APK and floor are
+as above. Step 3 at `65346c63d`: no workflow in the tagged tree can create a
+release or attach an asset (`publish.yml` takes `v*` only and is the only one
+with a write permission; `pages.yml` runs on `main` only; `portal-tools.yml`
+is read-only). PR #182's CI on the same commit (run `41193419978`): Build,
+both editor E2E suites, embed-floor and production-host-build green.
+
+**How the stored asset was checked.** The draft's assets matched the
+verified files by GitHub's server-side record (`digest`, `size`): the zip
+`sha256:e120ea7a…`, 92,110,030 bytes, and the `.sha256` file
+`sha256:c8a047f9…`, 98 bytes, both `uploaded`. That is GitHub's own record
+of the stored bytes, not a download: this time the network blocked asset
+downloads (`gh api …/releases/assets/695180562` and the public URL both
+answered 502, "Bad Gateway", 879 bytes), so the 0.3.5 route was used. The tag
+(annotated, object `0c3b9e945`) was re-checked at `65346c63d` before
+publishing, and its push ran only `portal-tools.yml`'s read-only rebuild
+(`41196283640`, never attached). Published 2026-10-31T11:24:06Z with
+`--latest=false` (the "Latest" badge stays on `v0.3.3`). The public download
+is checked from a GitHub-hosted runner by the reference app's move to 0.3.16
+(PR #183): its first step checks the public zip against the release's
+`.sha256`, the pinned hash and `VERSION.json`'s source commit.
 
 Not verified for this release:
 - B2 in a running app or on a phone (no guest uses HostHttp yet);
@@ -86,4 +141,5 @@ Not verified for this release:
   one line);
 - #176's final revision on a phone (earlier revisions ran on a Galaxy A12
   and an iPhone 13);
-- #180 on a phone (JVM tests and the CI emulator only).
+- #180 on a phone: JVM tests only (the CI emulator built it but does not
+  exercise it).

@@ -100,14 +100,14 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.15** (Maven dependency **0.4.1** for new apps;
-scaffolders follow an app's `appRuntime.keliverVersion`), released 2026-10-29
-from `3dc039f5`: `bin/keliver-run-android.sh` (#166), the embed's
-dependency-floor report (#168), guests' HostHttp through the app's own
-client (#169) and `screen-failed` on iOS (#165). Its identities and how the
-stored asset was checked are in
-[`docs/RELEASE_NOTES_TOOLS_0.3.15.md`](docs/RELEASE_NOTES_TOOLS_0.3.15.md).
-0.3.14 (`58851db2`), 0.3.13 (`a5ab6e2b`), 0.3.12 (`8139a55b`), 0.3.11 (`ebbb24c9`), 0.3.10 (`78bcfa0a`), 0.3.9 (`6069da99`), 0.3.8 (`731ebfce`), 0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
+PUBLISHED release: tools **0.3.16** (Maven dependency **0.4.1** for new apps;
+scaffolders follow an app's `appRuntime.keliverVersion`), released 2026-10-31
+from `65346c63`: guests' HostHttp on iOS with the app's credentials (B2,
+#178), the code load at host start (M3, #179), a failed first load loading
+again (#176) and no TRACE through the app's client on Android (#180). Its
+identities and how the stored asset was checked are in
+[`docs/RELEASE_NOTES_TOOLS_0.3.16.md`](docs/RELEASE_NOTES_TOOLS_0.3.16.md).
+0.3.15 (`3dc039f5`), 0.3.14 (`58851db2`), 0.3.13 (`a5ab6e2b`), 0.3.12 (`8139a55b`), 0.3.11 (`ebbb24c9`), 0.3.10 (`78bcfa0a`), 0.3.9 (`6069da99`), 0.3.8 (`731ebfce`), 0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
 read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then

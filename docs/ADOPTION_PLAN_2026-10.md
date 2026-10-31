@@ -10,13 +10,13 @@ serious defect in the proof was in host glue that each adopter writes for themse
 
 **Status (2026-10-31).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
-signing team), M3 is merged (#179; on a Galaxy A12 it gained nothing for a
+signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
 screen opened at launch, and the later-screen case is not measured yet), M4–M5
 are open. Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
-B1 (Android) is released (tools 0.3.15), B2 (iOS) is merged (#178) but not
-released, B3–B5 are open. Items 5 and 7 are not
+B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
+B3–B5 are open. Items 5 and 7 are not
 started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
 (#111) are done, and so is a debug host that picks up a publish while it is
 open (Android #145, released in tools 0.3.13 and checked on a physical phone;
@@ -162,7 +162,7 @@ areas. Measure it on the next adoption: glue lines per app, and review findings.
 
 ## Item 4. Bridge: HostHttp for data, generated actions (D13)
 
-**Status 2026-10-31:** B1 merged (#169) and released in tools 0.3.15. `KeliverConfig.httpClient` sends guests' HostHttp through the app's own authenticated `OkHttpClient`, behind the `RequestPolicy`. A config with the app's client and no policy is refused. The client is used for nothing else. The URL going out is checked again after the app's interceptors and on retries. A guest's credential and path-override headers are dropped, and the response's `Set-Cookie` is not returned to the guest. JVM tests run against a local server: allowed, refused, wrong origin, redirect, an interceptor or authenticator sending the request elsewhere, guest credentials, the session cookie, and no policy. A new PR CI job builds the scaffolded host and runs its JVM tests. **B2** merged (#178, 2026-10-31; not released): on iOS, `Keliver.shared.requestHeaders` adds the app's credentials to each request the `RequestPolicy` allowed, called on the main thread (`done(nil)`, no answer in 30 s, a throw or an invalid header refuse it). It needs a policy; the guest's own credentials and a response's `Set-Cookie` are dropped, the session keeps no cookies, cache or credentials, and TRACE, TRACK and CONNECT are refused. 20 simulator tests against a local server run in the iOS self-test. Android refuses TRACE, TRACK and CONNECT through the app's client too (#180). B3–B5 not started.
+**Status 2026-10-31:** B1 merged (#169) and released in tools 0.3.15. `KeliverConfig.httpClient` sends guests' HostHttp through the app's own authenticated `OkHttpClient`, behind the `RequestPolicy`. A config with the app's client and no policy is refused. The client is used for nothing else. The URL going out is checked again after the app's interceptors and on retries. A guest's credential and path-override headers are dropped, and the response's `Set-Cookie` is not returned to the guest. JVM tests run against a local server: allowed, refused, wrong origin, redirect, an interceptor or authenticator sending the request elsewhere, guest credentials, the session cookie, and no policy. A new PR CI job builds the scaffolded host and runs its JVM tests. **B2** merged (#178) and released in tools 0.3.16 (2026-10-31): on iOS, `Keliver.shared.requestHeaders` adds the app's credentials to each request the `RequestPolicy` allowed, called on the main thread (`done(nil)`, no answer in 30 s, a throw or an invalid header refuse it). It needs a policy; the guest's own credentials and a response's `Set-Cookie` are dropped, the session keeps no cookies, cache or credentials, and TRACE, TRACK and CONNECT are refused. 20 simulator tests against a local server run in the iOS self-test. Android refuses TRACE, TRACK and CONNECT through the app's client too (#180). B3–B5 not started.
 
 **Evidence.**
 - One 11-call `ZiplineService` contract was copied byte for byte into three repositories.
@@ -272,7 +272,7 @@ analytics) need a contract.
 
 ## Item 6. Dev loop
 
-**Status 2026-10-30:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, tools 0.3.14; checked on a physical iPhone on 2026-10-29). The device end in one command: `keliver-run-android.sh` (#166, released in tools 0.3.15; from the 2026-10-27 phone run's ≈ 12 commands; checked on the CI emulator, and on a Galaxy A12 on 2026-10-29 from the published 0.3.15 zip: 38 s from no host installed to the newest bundle loaded from the network, with a warm Gradle home). A debug host whose first code load failed loads again on its next update check, in the same process (#176, 2026-10-30; earlier revisions checked on a Galaxy A12 and an iPhone 13, the merged one in CI; merged, it ships in tools 0.3.16). Open: the device proxy.
+**Status 2026-10-30:** rows 1–4 done (#108, #115, #109, #114, #111; tools 0.3.10). A debug host that applies a publish while it is open is done: the relay's `GET /bundles/events` and `keliver.updates=live` on Android (#145, tools 0.3.13; checked on a Galaxy A12 on 2026-10-27), `UPDATES = "live"` on iOS (#150, tools 0.3.14; checked on a physical iPhone on 2026-10-29). The device end in one command: `keliver-run-android.sh` (#166, released in tools 0.3.15; from the 2026-10-27 phone run's ≈ 12 commands; checked on the CI emulator, and on a Galaxy A12 on 2026-10-29 from the published 0.3.15 zip: 38 s from no host installed to the newest bundle loaded from the network, with a warm Gradle home). A debug host whose first code load failed loads again on its next update check, in the same process (#176, 2026-10-30; earlier revisions checked on a Galaxy A12 and an iPhone 13, the merged one in CI; released in tools 0.3.16). Open: the device proxy.
 
 **Evidence.**
 - The first publish after another Gradle build failed with a Kotlin/JS internal compiler error.
