@@ -212,7 +212,7 @@ grep -q 'public var requestHeaders: KeliverRequestHeaders? = null' "$K/MainViewC
   && [ -f "$H/src/iosTest/kotlin/com/example/demo/host/AppHeadersHostHttpTest.kt" ] \
   && grep -q '^package com.example.demo.host$' "$H/src/iosTest/kotlin/com/example/demo/host/AppHeadersHostHttpTest.kt" \
   && grep -q "t.binaries.withType(org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable).configureEach { b -> b.linkerOpts.add('-lsqlite3') }" "$H/build.gradle" \
-  && grep -q 'val ECHOING_METHODS = setOf("TRACE", "CONNECT")' "$K/IosHttp.kt" \
+  && grep -q 'val ECHOING_METHODS = setOf("TRACE", "TRACK", "CONNECT")' "$K/IosHttp.kt" \
   && ok "B2: Keliver.requestHeaders adds the app's credentials (needs a requestPolicy; the guest's own dropped, no Set-Cookie back); its simulator tests are scaffolded" \
   || bad "B2: requestHeaders is not wired into NSURLSessionHostHttp, or its simulator tests are missing"
 # Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).

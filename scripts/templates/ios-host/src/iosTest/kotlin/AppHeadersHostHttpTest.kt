@@ -173,6 +173,7 @@ class AppHeadersHostHttpTest {
     val status = offMain { h.execute(get()).status }
     // Dispatchers.Main runs on the main queue, which this run loop drains.
     pumpMainUntil { status.isCompleted }
+    assertTrue(status.isCompleted, "the request did not finish within 10 s")
     assertEquals(200, runBlocking { status.await() })
     assertEquals(true, onMain)
   }
@@ -183,6 +184,8 @@ class AppHeadersHostHttpTest {
     val status = offMain { h.execute(get()).status }
     val start = TimeSource.Monotonic.markNow()
     while (!status.isCompleted && start.elapsedNow() < 10.seconds) usleep(10_000u)
+    // Fails rather than hangs: awaiting here would block the main thread the request may wait for.
+    assertTrue(status.isCompleted, "a busy main thread held the request past its time")
     val e = assertFailsWith<HostHttpRefused> { runBlocking { status.await() } }
     assertTrue("did not answer" in e.message!!, e.message)
     assertTrue(calls.isEmpty())

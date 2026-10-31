@@ -746,9 +746,10 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   needs a `requestPolicy`: without one every request is refused. With it, a
   guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
   dropped, a response's `Set-Cookie` is not handed back, HostHttp keeps no
-  cookies, cache or credentials of its own, and `TRACE` and `CONNECT` are
-  refused (`TRACE` would echo your headers back to the guest; Android's own
-  client does not refuse it yet). Only HostHttp gets these headers: never
+  cookies, cache or credentials of its own, and `TRACE`, `TRACK` and
+  `CONNECT` are refused (`TRACE` would echo your headers back to the guest;
+  Android's own client does not refuse it yet). Only HostHttp gets these
+  headers: never
   bundles, the update stream or reports. The rules are measured on a
   simulator against a local server: `./gradlew -p host-ios
   iosSimulatorArm64Test` (`-PkeliverTestSimulator=<name or UDID>` when

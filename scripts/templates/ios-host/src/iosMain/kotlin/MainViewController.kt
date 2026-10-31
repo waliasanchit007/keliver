@@ -352,7 +352,8 @@ public object Keliver {
    * path under the API base as the user): without one every request is refused. With it, a
    * guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are dropped, a
    * response's `Set-Cookie` is not handed back, HostHttp keeps no cookies, cache or credentials
-   * of its own, and TRACE and CONNECT are refused (TRACE would echo your headers to the guest). Bundles, the update stream and reports never get these headers.
+   * of its own, and TRACE, TRACK and CONNECT are refused (TRACE would echo your headers to the
+   * guest). Bundles, the update stream and reports never get these headers.
    * Set it before the host starts (before the first screen, or [start]).
    */
   public var requestHeaders: KeliverRequestHeaders? = null

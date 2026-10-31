@@ -333,10 +333,19 @@ internal class NSURLSessionHostHttp(
         answer.complete(null)
       }
     }
-    val added = withTimeoutOrNull(appHeadersTimeout) { answer.await() }
-    if (added == null) {
-      val timedOut = answer.complete(null) // true: no answer yet, and none is taken from now on
+    var timedOut = false
+    val added = try {
+      // Wrapped, so that `done(null)` (refused) and no answer in time (timed out) differ.
+      val got = withTimeoutOrNull(appHeadersTimeout) { Answer(answer.await()) }
+      if (got == null) timedOut = true
+      got?.headers
+    } finally {
+      // Timed out, or the guest's call was cancelled: no answer is taken from now on, and a call
+      // still waiting for the main thread is not made.
+      answer.complete(null)
       asked.cancel()
+    }
+    if (added == null) {
       refused(if (timedOut) "the app's requestHeaders did not answer within $appHeadersTimeout" else "the app's requestHeaders gave no headers")
     }
     added.forEach { (k, v) ->
@@ -366,8 +375,10 @@ internal class NSURLSessionHostHttp(
     )
     val CREDENTIAL_HEADERS = setOf("authorization", "proxy-authorization", "cookie")
     val RESPONSE_CREDENTIAL_HEADERS = setOf("set-cookie", "set-cookie2")
-    val ECHOING_METHODS = setOf("TRACE", "CONNECT")
+    val ECHOING_METHODS = setOf("TRACE", "TRACK", "CONNECT")
   }
+
+  private class Answer(val headers: Map<String, String>?)
 }
 
 /** A request the app's [RequestPolicy] does not allow; nothing was sent. */
