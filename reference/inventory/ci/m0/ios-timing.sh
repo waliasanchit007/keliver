@@ -13,6 +13,14 @@
 #       tap step: after a launch the simulator times only an empty frame, so a
 #       PASS shows well-formed lines, not a timed frame that sent changes
 #       (Android's T3 checks that: frames.py --changed)
+#   T4  M5's memory profile, in both, in a launch of its own (its extra screens
+#       would break T1's "once"): after the first screen's content, two memory
+#       cycles (the Darwin notification <bundle id>.keliver.memory-cycle opens a
+#       second screen, closes it after its content and samples "closed"); then
+#       the points in order with QuickJS read from the runtime on (memory.py).
+#       It prints the growth from cycle 1's close to cycle 2's and sets no bound
+#       on it yet: the simulator's numbers come first. A host from templates
+#       without it SKIPs
 if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   echo "--- M0: timing marks"
   python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/m0-server.log" &
@@ -48,6 +56,20 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     out="$(python3 "$HERE/m0/frames.py" "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
   }
 
+  m0_memory(){  # $1 label: a launch, two memory cycles, then the profile
+    local pid out
+    if ! grep -rqs "keliver.memory-cycle" "$APP/host-ios/src/timing"; then
+      echo "  SKIP  $1: this host predates the memory profile (not counted)"; return 0
+    fi
+    xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+    xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$1.console.txt" 2>&1 &
+    pid=$!; sleep 30
+    xcrun simctl spawn "$UDID" notifyutil -p "$BID.keliver.memory-cycle"; sleep 25
+    xcrun simctl spawn "$UDID" notifyutil -p "$BID.keliver.memory-cycle"; sleep 25
+    kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+    out="$(python3 "$HERE/m0/memory.py" "$EV/$1.console.txt")" && ok "$1: the memory profile: $out" || bad "$1: the memory profile: $out"
+  }
+
   # T1: the Debug build W5 left installed (its server is https://localhost:8443).
   m0_launch T1
   C="$EV/T1.console.txt"
@@ -64,6 +86,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     [ -n "$fl" ] && grep -qxF "$fl" "$TL" 2>/dev/null \
       && ok "T3: Library/Caches/keliver/timing.log has this launch's frames line" || bad "T3: the file sink lacks this launch's frames line: ${fl:-none on the console}"
   fi
+  m0_memory T4
 
   # T2: the Benchmark configuration. A Release-type build refuses an Info.plist
   # ATS exception (the scaffolder wrote one for the relay's http://), so it is
@@ -86,14 +109,15 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
       || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$C" | head -3 | tr '\n' ' ')"
     m0_marks T2 "$C"
     m0_frames "T3 (Benchmark)" "$C"
+    m0_memory "T4-Benchmark"
   else
     bad "T2: the Benchmark build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Benchmark.log" | head
   fi
   # The store configuration has none of it: its binary names no KeliverTrace.
   if m0_build Release; then
     RAPP="$(find "$WORK/dd-m0/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
-    ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow' {} \; -print | grep -q . \
-      && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, no FrameWindow)" || bad "T2: the Release build carries timing code"
+    ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow|KeliverMemory|keliver\.memory-cycle' {} \; -print | grep -q . \
+      && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, FrameWindow, KeliverMemory or memory cycle)" || bad "T2: the Release build carries timing code"
   else
     bad "T2: the Release build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Release.log" | head
   fi
