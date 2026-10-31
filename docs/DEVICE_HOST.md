@@ -483,13 +483,17 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
 - **What it cannot split:** composition from encoding inside `guest` and `lead`. That needs
   a timestamp inside the guest's runtime, a library change. `apply` is the host's own apply
   of the list. The host UI's own recomposition, layout and draw come at its next frame and
-  are not in it.
+  are not in it, except now and then: main-thread work that gets in between the two posts
+  (Android: another asynchronous message due in that moment; iOS: a display-link render while
+  the main queue was idle between them) is counted, which shows in p95 and max.
 - **Output:** the same as the marks' (logcat tag `KeliverTiming`, the iOS console, and
   `timing.log`), but not `Keliver.shared.onTrace`, whose marks are moments. A screen's first
-  change list, sent from its start rather than in a frame, has no `lead`.
-- **Overhead:** a few small objects and one task on the timing thread per frame and per
-  change list, the samples in fixed arrays; a store build compiles none of it
-  (`src/notiming/`).
+  change list, sent from its start rather than in a frame, has no `lead`. A frame and its
+  change lists are always in the same line.
+- **Overhead:** per frame, a few small objects and one task on the timing thread; per change
+  list, two more main-thread messages and one more timing-thread task; the samples in fixed
+  arrays. A store build compiles none of it (`src/notiming/`); only the listener's two
+  overrides, returning nothing, remain.
 
 ## 3. Your own production iOS host
 

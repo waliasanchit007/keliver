@@ -56,7 +56,10 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     && ok "T1: Library/Caches/keliver/timing.log has the same content mark ($ct)" || bad "T1: the file sink: $(tail -3 "$TL" 2>&1 | tr '\n' ' ')"
   m0_frames T3 "$C"
   if grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
-    grep -q "^frames [0-9]* n=" "$TL" 2>/dev/null && ok "T3: Library/Caches/keliver/timing.log has the frames lines too" || bad "T3: no frames line in the file sink"
+    # This launch's own line: the file outlives the app's earlier runs.
+    fl="$(tr -d '\r' < "$C" | sed -n 's/.*KeliverTiming: \(frames [0-9][0-9]* n=.*\)$/\1/p' | head -1)"
+    [ -n "$fl" ] && grep -qxF "$fl" "$TL" 2>/dev/null \
+      && ok "T3: Library/Caches/keliver/timing.log has this launch's frames line" || bad "T3: the file sink lacks this launch's frames line: ${fl:-none on the console}"
   fi
 
   # T2: the Benchmark configuration. A Release-type build refuses an Info.plist

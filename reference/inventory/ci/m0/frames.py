@@ -4,7 +4,8 @@ Reads the "KeliverTiming: frames <nanos> n=… guest=… lead=… sink=… apply
 (logcat or the iOS console) and checks them:
   - every such line is well formed, each span "-" or p50/p95/max with p50 <= p95 <= max;
   - at least one guest frame was timed (n) and one change list applied (apply);
-  - no change list reached the host later than the longest frame ended (lead <= guest).
+  - in each line, no change list reached the host later than the longest frame ended
+    (lead <= guest: a frame and its change lists are in one window).
 Prints one summary line; exits 1 with the reason when a check fails.
 """
 import re
@@ -34,6 +35,7 @@ def main(path):
         m = LINE.search(l)
         if not m:
             fail(f"a malformed frames line: {l.strip()[-160:]}")
+        line_max = {}
         for i, k in enumerate(["n", "empty", "lists", "changes"]):
             totals[k] += int(m.group(i + 2))
         for i, s in enumerate(SPANS):
@@ -44,12 +46,13 @@ def main(path):
             if not p50 <= p95 <= mx:
                 fail(f"{s} is not p50 <= p95 <= max: {v}")
             worst[s] = mx if worst[s] is None else max(worst[s], mx)
+            line_max[s] = mx
+        if "lead" in line_max and line_max["lead"] > line_max.get("guest", -1):
+            fail(f"a change list reached the host {line_max['lead']} us into a frame, after its window's longest frame: {l.strip()[-160:]}")
     if totals["n"] < 1:
         fail(f"no guest frame was timed ({len(raw)} lines, lists={totals['lists']})")
     if totals["lists"] < 1 or worst["apply"] is None:
         fail("no change list was applied")
-    if worst["lead"] is not None and worst["guest"] is not None and worst["lead"] > worst["guest"]:
-        fail(f"a change list reached the host {worst['lead']} us into a frame, after the longest frame ({worst['guest']} us)")
     shown = " ".join(f"{s}<={worst[s]}us" if worst[s] is not None else f"{s}=-" for s in SPANS)
     print(f"{len(raw)} lines: frames={totals['n']} (empty {totals['empty']}) lists={totals['lists']} changes={totals['changes']}; {shown}")
 

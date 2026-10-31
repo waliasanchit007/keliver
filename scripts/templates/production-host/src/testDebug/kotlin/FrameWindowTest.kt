@@ -54,14 +54,23 @@ class FrameWindowTest {
     assertEquals("n=1 empty=1 lists=0 changes=0 guest=3000/3000/3000 lead=- sink=- apply=- queue=-", window.take())
   }
 
-  @Test fun aWindowIsFullAtItsSizeAndKeepsNoMoreSamples() {
+  @Test fun aWindowIsFullAtItsSize() {
     val window = FrameWindow(size = 3)
     repeat(2) { window.frame(guestNanos = ms, changeLists = 1) }
     assertFalse(window.isFull)
     window.frame(guestNanos = 9 * ms, changeLists = 1)
     assertTrue(window.isFull)
-    window.frame(guestNanos = 99 * ms, changeLists = 1)
-    assertEquals("n=4 empty=0 lists=0 changes=0 guest=1000/9000/9000 lead=- sink=- apply=- queue=-", window.take())
+  }
+
+  @Test fun aFrameAddedPastItsSizeIsKeptUpToTwiceTheSize() {
+    val window = FrameWindow(size = 2)
+    window.frame(guestNanos = ms, changeLists = 5)
+    repeat(5) { window.changeList(leadNanos = it * ms, sinkNanos = ms, count = 1) }
+    assertTrue(window.isFull)
+    assertEquals(
+      "n=1 empty=0 lists=5 changes=5 guest=1000/1000/1000 lead=1000/3000/3000 sink=1000/1000/1000 apply=- queue=-",
+      window.take(),
+    )
   }
 
   @Test fun theOrderOfSamplesDoesNotMatter() {

@@ -65,8 +65,7 @@ internal object KeliverTiming {
   private val window = FrameWindow()
   private var windowGeneration = 0
   private var windowOpen = false
-  @Volatile private var frameStart = 0L
-  @Volatile private var frameLists = 0
+  @Volatile private var sending: Frame? = null // the frame whose sendFrame call is running
 
   @Volatile private var file: File? = null
 
@@ -101,17 +100,19 @@ internal object KeliverTiming {
   /** EventListener.callStart: times the host's sendFrame calls, the guest's frames (M4). */
   fun callStart(call: Call): Any? {
     if (call.service !is AppLifecycle || !call.function.signature.startsWith("fun sendFrame(")) return null
-    frameLists = 0
-    return FrameStart(System.nanoTime()).also { frameStart = it.nanos }
+    return Frame(System.nanoTime()).also { sending = it }
   }
 
   /** EventListener.callEnd. */
   fun callEnd(call: Call, startValue: Any?) {
-    val start = startValue as? FrameStart ?: return
-    val guest = System.nanoTime() - start.nanos
-    val lists = frameLists
-    frameStart = 0L
-    sample { frame(guest, lists) }
+    val ended = startValue as? Frame ?: return
+    val guest = System.nanoTime() - ended.start
+    if (sending === ended) sending = null
+    // The frame and its change lists in one sample, so a window never splits them.
+    sample {
+      frame(guest, ended.lists.size)
+      for (list in ended.lists) changeList(list.lead, list.sink, list.count)
+    }
   }
 
   /** Binds KeliverTrace for the guest's marks. */
@@ -127,9 +128,12 @@ internal object KeliverTiming {
   }
 
   private fun changeList(received: Long, sinkNanos: Long, count: Int) {
-    val start = frameStart
-    if (start != 0L) frameLists++
-    sample { changeList(if (start != 0L) received - start else null, sinkNanos, count) }
+    val frame = sending
+    if (frame != null) {
+      frame.lists += ChangeListSpans(received - frame.start, sinkNanos, count)
+    } else {
+      sample { changeList(null, sinkNanos, count) }
+    }
   }
 
   /** Adds to the window on io; a window ends when full, or 1 s after its first sample. */
@@ -160,7 +164,12 @@ internal object KeliverTiming {
     main.sendMessage(Message.obtain(main, Runnable { block() }).apply { isAsynchronous = true })
   }
 
-  private class FrameStart(val nanos: Long)
+  /** A guest frame being sent, and the change lists it sent so far; the Zipline thread. */
+  private class Frame(val start: Long) {
+    val lists = ArrayList<ChangeListSpans>(2)
+  }
+
+  private class ChangeListSpans(val lead: Long, val sink: Long, val count: Int)
 
   /** One change list's wait for the main thread and its apply there; both callbacks run on main. */
   private class ApplySpan(private val posted: Long) {
@@ -183,7 +192,11 @@ internal object KeliverTiming {
   }
 
   private class FirstFrameUi(private val ui: ZiplineTreehouseUi) : ZiplineTreehouseUi by ui {
-    override fun start(host: ZiplineTreehouseUi.Host) = ui.start(FirstFrameHost(host))
+    override fun start(host: ZiplineTreehouseUi.Host) {
+      // A screen starts between frames: a frame whose callEnd never came (its call threw) is over.
+      sending = null
+      ui.start(FirstFrameHost(host))
+    }
   }
 
   private class FirstFrameHost(private val host: ZiplineTreehouseUi.Host) : ZiplineTreehouseUi.Host by host {

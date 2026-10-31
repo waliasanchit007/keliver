@@ -1,8 +1,8 @@
 /*
- * The guest frame profile (M4; docs/DEVICE_HOST.md, "Timing marks"): spans per frame, gathered
- * into one "frames" line per window by KeliverTiming. Pure Kotlin, the same file in the Android
- * and iOS hosts, and compiled only where KeliverTiming's real marks are (debug and benchmark
- * builds). Not thread-safe: KeliverTiming uses one window from one thread. Scaffolded by
+ * The guest frame profile (M4; docs/DEVICE_HOST.md, "The guest frame profile"): spans per
+ * frame, gathered into one "frames" line per window by KeliverTiming. Pure Kotlin, the same file
+ * in the Android and iOS hosts, and compiled only where KeliverTiming's real marks are (debug and
+ * benchmark builds). Not thread-safe: KeliverTiming uses one window from one thread. Scaffolded by
  * keliver-new-production-host.sh and keliver-new-ios-host.sh.
  *
  * A window's line, durations in microseconds as p50/p95/max ("-" when a span has no samples):
@@ -20,19 +20,20 @@
  */
 package @@PACKAGE@@
 
-internal class FrameWindow(size: Int = 60) {
-  private val guest = Span(size)
-  private val lead = Span(size)
-  private val sink = Span(size)
-  private val apply = Span(size)
-  private val queue = Span(size)
+internal class FrameWindow(private val size: Int = 60) {
+  // Room for twice [size]: a frame and all its change lists are added at once, past [size].
+  private val guest = Span(2 * size)
+  private val lead = Span(2 * size)
+  private val sink = Span(2 * size)
+  private val apply = Span(2 * size)
+  private val queue = Span(2 * size)
   private var frames = 0
   private var empty = 0
   private var lists = 0
   private var changes = 0L
 
-  /** A window ends when any span has [size] samples. */
-  val isFull: Boolean get() = guest.isFull || sink.isFull || apply.isFull
+  /** A window ends when any span has [size] samples; samples past twice [size] are dropped. */
+  val isFull: Boolean get() = guest.count >= size || sink.count >= size || apply.count >= size
 
   /** A guest frame: its sendFrame call took [guestNanos] and sent [changeLists] change lists. */
   fun frame(guestNanos: Long, changeLists: Int) {
@@ -71,7 +72,6 @@ internal class FrameWindow(size: Int = 60) {
     private val samples = LongArray(size)
     var count = 0
       private set
-    val isFull: Boolean get() = count == samples.size
 
     fun add(nanos: Long) {
       if (count < samples.size) samples[count++] = nanos
