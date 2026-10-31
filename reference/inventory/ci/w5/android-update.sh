@@ -50,7 +50,7 @@ else
     && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$EV/logcat-update-v8.txt")"
 fi
 grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v8/manifest.zipline.json (index sequence 8," "$EV/logcat-update-v8.txt" \
-  && grep -q "codeLoadSuccess modules=[0-9]* sequence=8" "$EV/logcat-update-v8.txt" \
+  && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=8" "$EV/logcat-update-v8.txt" \
   && ok "U1: the host started on v8" || bad "U1: v8 did not load: $(grep -E "$HOST_TAG" "$EV/logcat-update-v8.txt" | head -3 | tr '\n' ' ')"
 drive title Garage U1before; fold "U1: v8 shows Garage" $?
 pid_before="$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')"
@@ -72,7 +72,7 @@ L="$EV/logcat-update-resume.txt"
 grep -q "$HOST_TAG: update check: sequence 9 is available (running 8); applying https://$HOST_ADDR:8443/bundles/v9/manifest.zipline.json" "$L" \
   && ok "U1: back in the foreground the host looked up and found v9" \
   || bad "U1: no update check on resume: $(grep -E "$HOST_TAG" "$L" | head -4 | tr '\n' ' ')"
-grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$L" && grep -q "$HOST_TAG: update applied: sequence 9" "$L" \
+grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=9" "$L" && grep -q "$HOST_TAG: update applied: sequence 9" "$L" \
   && grep -q "$HOST_TAG: rollback floor raised: 8 -> 9" "$L" \
   && ok "U1: v9 loaded in place, applied, and the floor rose 8 -> 9" \
   || bad "U1: v9 was not applied: $(grep -E "$HOST_TAG|codeLoad" "$L" | tail -4 | tr '\n' ' ')"
@@ -128,13 +128,13 @@ if grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/src/main/kotlin"; then
   L="$EV/logcat-L1.txt"
   grep -q "$HOST_TAG: bundle server from files/keliver/bundle-server (a debug build): https://$HOST_ADDR:8444" "$L" \
     && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8444/bundles/v9/manifest.zipline.json (index sequence 9," "$L" \
-    && grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$L" && grep -q "GET /bundles/index.json" "$EV/l1-server.log" \
+    && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=9" "$L" && grep -q "GET /bundles/index.json" "$EV/l1-server.log" \
     && ok "L1: with files/keliver/bundle-server set to :8444, the debug host verified and loaded v9 from there" \
     || bad "L1: the server set on the device was not used: $(grep -E "$HOST_TAG" "$L" | head -3 | tr '\n' ' ')"
   set_server "https://$HOST_ADDR:8444/?x=1"
   launch prod "$EV/logcat-L2.txt"
   grep -q "$HOST_TAG: refusing to load: the bundle server 'https://$HOST_ADDR:8444/?x=1' is not an http(s) URL without a user, query or fragment" "$EV/logcat-L2.txt" \
-    && ! grep -q "codeLoadSuccess" "$EV/logcat-L2.txt" \
+    && ! grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-L2.txt" \
     && ok "L2: a server with a query is refused, and nothing loads" \
     || bad "L2: a malformed server was not refused: $(grep -E "$HOST_TAG" "$EV/logcat-L2.txt" | head -3 | tr '\n' ' ')"
   kill "$LPID" 2>/dev/null; wait "$LPID" 2>/dev/null
@@ -164,7 +164,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
   sleep 3
   adb -s "$SERIAL" logcat -d > "$EV/logcat-LV2-start.txt"
   grep -q "$HOST_TAG: live updates: listening to https://$HOST_ADDR:8445/bundles/events" "$EV/logcat-LV2-start.txt" \
-    && grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-LV2-start.txt" \
+    && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=9" "$EV/logcat-LV2-start.txt" \
     && ok "LV2: the debug host runs v9 and listens to /bundles/events while its screen shows" \
     || bad "LV2: not listening: $(grep -E "$HOST_TAG" "$EV/logcat-LV2-start.txt" | tail -4 | tr '\n' ' ')"
   drive title Cellar LV2before; fold "LV2: v9 shows Cellar" $?
@@ -182,7 +182,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
   L="$EV/logcat-LV2.txt"
   grep -q "$HOST_TAG: live updates: the bundle server says {\"version\":10}" "$L" \
     && grep -q "$HOST_TAG: update check: sequence 10 is available (running 9); applying https://$HOST_ADDR:8445/bundles/v10/manifest.zipline.json" "$L" \
-    && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$L" && grep -q "$HOST_TAG: update applied: sequence 10" "$L" \
+    && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=10" "$L" && grep -q "$HOST_TAG: update applied: sequence 10" "$L" \
     && ok "LV2: the server announced v10 and the open app looked it up, verified it and applied it" \
     || bad "LV2: v10 was not applied live: $(grep -E "$HOST_TAG|codeLoad" "$L" | tail -5 | tr '\n' ' ')"
   [ "$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')" = "$pid_live" ] && ! grep -q "$HOST_TAG: verifying manifests" "$L" \
@@ -231,7 +231,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     mv "$W3/site-live/bundles/v10/$mod" "$W3/lv5-$mod"
     launch prod "$EV/logcat-LV5-start.txt"
     pid_lv5="$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')"
-    grep -q "$HOST_TAG: codeLoadFailed" "$EV/logcat-LV5-start.txt" && ! grep -q "codeLoadSuccess" "$EV/logcat-LV5-start.txt" \
+    grep -q "$HOST_TAG: codeLoadFailed" "$EV/logcat-LV5-start.txt" && ! grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-LV5-start.txt" \
       && grep -q "GET /bundles/v10/$mod.* 404" "$EV/lv-server.log" \
       && ok "LV5: with $mod missing from v10 and nothing cached, the first load failed" \
       || bad "LV5: the first load did not fail as set up: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-LV5-start.txt" | tail -4 | tr '\n' ' ')"
@@ -240,7 +240,7 @@ if [ "$W5_LIVE" = 1 ] && grep -rqs DEBUG_BUNDLE_SERVER_FILE "$APP/host-android/s
     sleep 20
     L="$EV/logcat-LV5.txt"; adb -s "$SERIAL" logcat -d > "$L"
     grep -q "$HOST_TAG: update check: the first bundle did not load; loading https://$HOST_ADDR:8445/bundles/v10/manifest.zipline.json" "$L" \
-      && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$L" \
+      && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=10" "$L" \
       && [ -n "$pid_lv5" ] && [ "$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')" = "$pid_lv5" ] && ! grep -q "$HOST_TAG: verifying manifests" "$L" \
       && ok "LV5: the server announced v10 again and the same process (pid $pid_lv5) looked it up and loaded it" \
       || bad "LV5: the failed first load was not loaded again: $(grep -E "$HOST_TAG|codeLoad" "$L" | tail -5 | tr '\n' ' ')"
