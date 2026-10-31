@@ -17,6 +17,10 @@
  *
  * first-frame and the guest's marks are taken two Choreographer callbacks after the host was
  * told, so they count a frame the user can see; the others when they happen.
+ *
+ * The guest frame profile (M4) adds one line per window of up to 60 frames, or 1 s after the
+ * window's first sample: "frames <nanos> n=… guest=… lead=… sink=… apply=… queue=…", what
+ * KeliverFrames.kt describes.
  */
 package @@PACKAGE@@
 
@@ -24,16 +28,20 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.Message
 import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import android.view.Choreographer
+import app.cash.zipline.Call
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineService
 import dev.keliver.protocol.Change
+import dev.keliver.treehouse.AppLifecycle
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import java.io.File
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -50,7 +58,14 @@ internal object KeliverTiming {
   private const val MAX_FILE_BYTES = 256L * 1024L
   private val guestName = Regex("[a-z0-9][a-z0-9-]{0,31}")
   private val main = Handler(Looper.getMainLooper())
-  private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "keliver-timing").apply { isDaemon = true } }
+  private val io = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "keliver-timing").apply { isDaemon = true } }
+
+  // M4. The window is used on io only. sendFrame, and the change lists the guest sends during
+  // it, arrive on the Zipline thread.
+  private val window = FrameWindow()
+  private var windowGeneration = 0
+  private var windowOpen = false
+  @Volatile private var sending: Frame? = null // the frame whose sendFrame call is running
 
   @Volatile private var file: File? = null
 
@@ -82,15 +97,88 @@ internal object KeliverTiming {
   /** [ui], reporting first-frame after its first change list. */
   fun firstFrame(ui: ZiplineTreehouseUi): ZiplineTreehouseUi = FirstFrameUi(ui)
 
+  /** EventListener.callStart: times the host's sendFrame calls, the guest's frames (M4). */
+  fun callStart(call: Call): Any? {
+    if (call.service !is AppLifecycle || !call.function.signature.startsWith("fun sendFrame(")) return null
+    return Frame(System.nanoTime()).also { sending = it }
+  }
+
+  /** EventListener.callEnd. */
+  fun callEnd(call: Call, startValue: Any?) {
+    val ended = startValue as? Frame ?: return
+    val guest = System.nanoTime() - ended.start
+    if (sending === ended) sending = null
+    // The frame and its change lists in one sample, so a window never splits them.
+    sample {
+      frame(guest, ended.lists.size)
+      for (list in ended.lists) changeList(list.lead, list.sink, list.count)
+    }
+  }
+
   /** Binds KeliverTrace for the guest's marks. */
   fun bindServices(zipline: Zipline) {
     zipline.bind<KeliverTrace>("KeliverTrace", GuestTrace)
   }
 
-  private fun markAt(name: String, nanos: Long) {
-    Log.i(LOG_TAG, "$name $nanos")
+  private fun markAt(name: String, nanos: Long, detail: String? = null) {
+    val line = if (detail == null) "$name $nanos" else "$name $nanos $detail"
+    Log.i(LOG_TAG, line)
     val f = file ?: return
-    io.execute { runCatching { f.appendText("$name $nanos\n") } }
+    io.execute { runCatching { f.appendText("$line\n") } }
+  }
+
+  private fun changeList(received: Long, sinkNanos: Long, count: Int) {
+    val frame = sending
+    if (frame != null) {
+      frame.lists += ChangeListSpans(received - frame.start, sinkNanos, count)
+    } else {
+      sample { changeList(null, sinkNanos, count) }
+    }
+  }
+
+  /** Adds to the window on io; a window ends when full, or 1 s after its first sample. */
+  private fun sample(add: FrameWindow.() -> Unit) {
+    io.execute {
+      window.add()
+      if (window.isFull) {
+        flush()
+      } else if (!windowOpen) {
+        windowOpen = true
+        val generation = windowGeneration
+        io.schedule({ if (generation == windowGeneration) flush() }, 1, TimeUnit.SECONDS)
+      }
+    }
+  }
+
+  private fun flush() {
+    windowGeneration++
+    windowOpen = false
+    window.take()?.let { markAt("frames", SystemClock.elapsedRealtimeNanos(), it) }
+  }
+
+  /**
+   * On the main thread as an ASYNCHRONOUS message, as Dispatchers.Main posts the host's apply: an
+   * ordinary message can be held behind a sync barrier while the apply runs ahead of it.
+   */
+  private fun onMain(block: () -> Unit) {
+    main.sendMessage(Message.obtain(main, Runnable { block() }).apply { isAsynchronous = true })
+  }
+
+  /** A guest frame being sent, and the change lists it sent so far; the Zipline thread. */
+  private class Frame(val start: Long) {
+    val lists = ArrayList<ChangeListSpans>(2)
+  }
+
+  private class ChangeListSpans(val lead: Long, val sink: Long, val count: Int)
+
+  /** One change list's wait for the main thread and its apply there; both callbacks run on main. */
+  private class ApplySpan(private val posted: Long) {
+    private var began = 0L
+    fun begin() { began = System.nanoTime() }
+    fun end() {
+      val ended = System.nanoTime()
+      sample { applied(began - posted, ended - began) }
+    }
   }
 
   private object GuestTrace : KeliverTrace {
@@ -104,15 +192,24 @@ internal object KeliverTiming {
   }
 
   private class FirstFrameUi(private val ui: ZiplineTreehouseUi) : ZiplineTreehouseUi by ui {
-    override fun start(host: ZiplineTreehouseUi.Host) = ui.start(FirstFrameHost(host))
+    override fun start(host: ZiplineTreehouseUi.Host) {
+      // A screen starts between frames: a frame whose callEnd never came (its call threw) is over.
+      sending = null
+      ui.start(FirstFrameHost(host))
+    }
   }
 
   private class FirstFrameHost(private val host: ZiplineTreehouseUi.Host) : ZiplineTreehouseUi.Host by host {
     private val marked = AtomicBoolean(false)
 
     override fun sendChanges(changes: List<Change>) {
+      val received = System.nanoTime()
+      val apply = ApplySpan(received)
+      onMain(apply::begin)
       // The host applies them on the main thread, after this returns; markAfterFrame queues behind that.
       host.sendChanges(changes)
+      onMain(apply::end)
+      changeList(received, System.nanoTime() - received, changes.size)
       if (changes.isNotEmpty() && marked.compareAndSet(false, true)) markAfterFrame("first-frame")
     }
   }

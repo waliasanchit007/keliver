@@ -13,14 +13,20 @@
  *   first-frame  two display-link ticks after the host applied a screen's first change list
  *   content      two display-link ticks after the guest said its data is shown:
  *                KeliverTiming.mark("content") in the guest, through KeliverTrace
+ *
+ * The guest frame profile (M4) adds one line per window of up to 60 frames, or 1 s after the
+ * window's first sample: "frames <nanos> n=… guest=… lead=… sink=… apply=… queue=…", what
+ * KeliverFrames.kt describes. It goes to the console and the file, not to onTrace.
  */
 @file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 
 package @@PACKAGE@@
 
+import app.cash.zipline.Call
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineService
 import dev.keliver.protocol.Change
+import dev.keliver.treehouse.AppLifecycle
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import kotlinx.cinterop.ObjCAction
 import platform.Foundation.NSFileManager
@@ -33,9 +39,13 @@ import platform.Foundation.NSUserDomainMask
 import platform.QuartzCore.CACurrentMediaTime
 import platform.QuartzCore.CADisplayLink
 import platform.darwin.NSObject
+import platform.darwin.DISPATCH_TIME_NOW
+import platform.darwin.NSEC_PER_SEC
+import platform.darwin.dispatch_after
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 import platform.darwin.dispatch_queue_create
+import platform.darwin.dispatch_time
 import platform.posix.fclose
 import platform.posix.fopen
 import platform.posix.fputs
@@ -60,6 +70,13 @@ internal object KeliverTiming {
   private val io = dispatch_queue_create("keliver-timing", null)
   private var path: String? = null // main thread
 
+  // M4. The window is used on io only. sendFrame, and the change lists the guest sends during
+  // it, arrive on the Zipline thread.
+  private val window = FrameWindow()
+  private var windowGeneration = 0
+  private var windowOpen = false
+  private var sending: Frame? = null // the frame whose sendFrame call is running; the Zipline thread
+
   /** Once, by the host (main thread): the file sink, started again when it is long. */
   fun start() {
     if (path != null) return
@@ -76,9 +93,11 @@ internal object KeliverTiming {
 
   /** A mark now. From any thread. */
   fun mark(name: String) {
-    val nanos = (CACurrentMediaTime() * 1_000_000_000.0).toLong()
+    val nanos = now()
     dispatch_async(dispatch_get_main_queue()) { record(name, nanos) }
   }
+
+  private fun now(): Long = (CACurrentMediaTime() * 1_000_000_000.0).toLong()
 
   /**
    * A mark two display-link ticks after the main-thread work queued so far: the first tick can
@@ -95,16 +114,74 @@ internal object KeliverTiming {
   /** [ui], reporting first-frame after its first change list. */
   fun firstFrame(ui: ZiplineTreehouseUi): ZiplineTreehouseUi = FirstFrameUi(ui)
 
+  /** EventListener.callStart: times the host's sendFrame calls, the guest's frames (M4). */
+  fun callStart(call: Call): Any? {
+    if (call.service !is AppLifecycle || !call.function.signature.startsWith("fun sendFrame(")) return null
+    return Frame(now()).also { sending = it }
+  }
+
+  /** EventListener.callEnd. */
+  fun callEnd(call: Call, startValue: Any?) {
+    val ended = startValue as? Frame ?: return
+    val guest = now() - ended.start
+    if (sending === ended) sending = null
+    // The frame and its change lists in one sample, so a window never splits them.
+    sample {
+      frame(guest, ended.lists.size)
+      for (list in ended.lists) changeList(list.lead, list.sink, list.count)
+    }
+  }
+
   /** Binds KeliverTrace for the guest's marks. */
   fun bindServices(zipline: Zipline) {
     zipline.bind<KeliverTrace>("KeliverTrace", GuestTrace)
   }
 
-  private fun record(name: String, nanos: Long) {
-    start() // a screen's open can come before the host's start()
-    val line = "$name $nanos"
-    println("KeliverTiming: $line")
+  private fun changeList(received: Long, sinkNanos: Long, count: Int) {
+    val frame = sending
+    if (frame != null) {
+      frame.lists += ChangeListSpans(received - frame.start, sinkNanos, count)
+    } else {
+      sample { changeList(null, sinkNanos, count) }
+    }
+  }
+
+  /** Adds to the window on io; a window ends when full, or 1 s after its first sample. */
+  private fun sample(add: FrameWindow.() -> Unit) {
+    dispatch_async(io) {
+      window.add()
+      if (window.isFull) {
+        flush()
+      } else if (!windowOpen) {
+        windowOpen = true
+        val generation = windowGeneration
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC.toLong()), io) { if (generation == windowGeneration) flush() }
+      }
+    }
+  }
+
+  private fun flush() {
+    windowGeneration++
+    windowOpen = false
+    val line = window.take() ?: return
+    val nanos = now()
+    dispatch_async(dispatch_get_main_queue()) { record("frames", nanos, line) }
+  }
+
+  private fun record(name: String, nanos: Long, detail: String? = null) {
+    if (detail != null) {
+      // A frame profile line: the console and the file, not onTrace, whose marks are moments.
+      writeLine("$name $nanos $detail")
+      return
+    }
     runCatching { Keliver.onTrace?.invoke(name, nanos) }.onFailure { println("KeliverTiming: onTrace threw: ${it.message}") }
+    writeLine("$name $nanos")
+  }
+
+  /** The console and the file sink; on the main thread. */
+  private fun writeLine(line: String) {
+    start() // a screen's open can come before the host's start()
+    println("KeliverTiming: $line")
     val file = path ?: return
     dispatch_async(io) {
       fopen(file, "a")?.let { f ->
@@ -120,6 +197,23 @@ internal object KeliverTiming {
     }
   }
 
+  /** A guest frame being sent, and the change lists it sent so far; the Zipline thread. */
+  private class Frame(val start: Long) {
+    val lists = ArrayList<ChangeListSpans>(2)
+  }
+
+  private class ChangeListSpans(val lead: Long, val sink: Long, val count: Int)
+
+  /** One change list's wait for the main thread and its apply there; both callbacks run on main. */
+  private class ApplySpan(private val posted: Long) {
+    private var began = 0L
+    fun begin() { began = now() }
+    fun end() {
+      val ended = now()
+      sample { applied(began - posted, ended - began) }
+    }
+  }
+
   private class FrameTick(private val onTick: () -> Unit) : NSObject() {
     @ObjCAction
     fun tick(link: CADisplayLink) {
@@ -129,15 +223,25 @@ internal object KeliverTiming {
   }
 
   private class FirstFrameUi(private val ui: ZiplineTreehouseUi) : ZiplineTreehouseUi by ui {
-    override fun start(host: ZiplineTreehouseUi.Host) = ui.start(FirstFrameHost(host))
+    override fun start(host: ZiplineTreehouseUi.Host) {
+      // A screen starts between frames: a frame whose callEnd never came (its call threw) is over.
+      sending = null
+      ui.start(FirstFrameHost(host))
+    }
   }
 
   private class FirstFrameHost(private val host: ZiplineTreehouseUi.Host) : ZiplineTreehouseUi.Host by host {
     private val marked = AtomicInt(0)
 
     override fun sendChanges(changes: List<Change>) {
+      val received = now()
+      val apply = ApplySpan(received)
+      // dispatch_async to the main queue is first in, first out, as Dispatchers.Main's own posts are.
+      dispatch_async(dispatch_get_main_queue()) { apply.begin() }
       // The host applies them on the main thread, after this returns; markAfterFrame queues behind that.
       host.sendChanges(changes)
+      dispatch_async(dispatch_get_main_queue()) { apply.end() }
+      changeList(received, now() - received, changes.size)
       if (changes.isNotEmpty() && marked.compareAndSet(0, 1)) markAfterFrame("first-frame")
     }
   }

@@ -1,0 +1,68 @@
+"""M4's guest frame profile in a host's log: python3 frames.py [--changed] <log file>.
+
+Reads the "KeliverTiming: frames <nanos> n=… guest=… lead=… sink=… apply=… queue=…" lines
+(logcat or the iOS console) and checks them:
+  - every such line is well formed, each span "-" or p50/p95/max with p50 <= p95 <= max;
+  - at least one guest frame was timed (n) and one change list applied (apply);
+  - with --changed, at least one timed frame sent a change list (n > empty, and a lead):
+    a screen left alone may time only frames that send nothing;
+  - in each line, no change list reached the host later than the longest frame ended
+    (lead <= guest: a frame and its change lists are in one window).
+Prints one summary line; exits 1 with the reason when a check fails.
+"""
+import re
+import sys
+
+SPANS = ["guest", "lead", "sink", "apply", "queue"]
+LINE = re.compile(
+    r"KeliverTiming: frames (\d+) n=(\d+) empty=(\d+) lists=(\d+) changes=(\d+) "
+    + " ".join(rf"{s}=(-|\d+/\d+/\d+)" for s in SPANS)
+    + r"\r?$"
+)
+
+
+def fail(reason):
+    print(reason)
+    sys.exit(1)
+
+
+def main(path, changed=False):
+    with open(path, errors="replace") as f:
+        raw = [l.rstrip("\n") for l in f if "KeliverTiming: frames " in l]
+    if not raw:
+        fail("no frames line")
+    totals = dict(n=0, empty=0, lists=0, changes=0)
+    worst = {s: None for s in SPANS}
+    for l in raw:
+        m = LINE.search(l)
+        if not m:
+            fail(f"a malformed frames line: {l.strip()[-160:]}")
+        line_max = {}
+        for i, k in enumerate(["n", "empty", "lists", "changes"]):
+            totals[k] += int(m.group(i + 2))
+        for i, s in enumerate(SPANS):
+            v = m.group(i + 6)
+            if v == "-":
+                continue
+            p50, p95, mx = (int(x) for x in v.split("/"))
+            if not p50 <= p95 <= mx:
+                fail(f"{s} is not p50 <= p95 <= max: {v}")
+            worst[s] = mx if worst[s] is None else max(worst[s], mx)
+            line_max[s] = mx
+        if "lead" in line_max and line_max["lead"] > line_max.get("guest", -1):
+            fail(f"a change list reached the host {line_max['lead']} us into a frame, after its window's longest frame: {l.strip()[-160:]}")
+    if totals["n"] < 1:
+        fail(f"no guest frame was timed ({len(raw)} lines, lists={totals['lists']})")
+    if changed and (totals["n"] <= totals["empty"] or worst["lead"] is None):
+        fail(f"no timed frame sent a change list (frames={totals['n']}, empty {totals['empty']})")
+    if totals["lists"] < 1 or worst["apply"] is None:
+        fail("no change list was applied")
+    shown = " ".join(f"{s}<={worst[s]}us" if worst[s] is not None else f"{s}=-" for s in SPANS)
+    print(f"{len(raw)} lines: frames={totals['n']} (empty {totals['empty']}) lists={totals['lists']} changes={totals['changes']}; {shown}")
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if len(args) not in (1, 2) or args[-1].startswith("-") or any(a != "--changed" for a in args[:-1]):
+        fail("usage: frames.py [--changed] <log file>")
+    main(args[-1], changed=len(args) == 2)

@@ -7,6 +7,8 @@ Scenarios:
   dev     E1-E10 on whatever host is in the foreground (the development route)
   title   only that the list screen shows <title> as its title (D3/P2/P4/P6)
   prod    P3: Add 1 three times on Espresso beans, observed after each tap
+  frames  M4 (T3): Add 1 twice on Espresso beans, from whatever it has on hand,
+          so the guest recomposes the open screen in a frame
 
 Every observation is the device's own view hierarchy (uiautomator dump), saved
 as <evidence-dir>/<label>-NN-<tag>.xml. Results go to <label>.results.json and
@@ -199,6 +201,22 @@ def scenario_prod():
         check(f"P3.{n}", f"Add 1 -> On hand: {n}", ok, [x for x in t if x.startswith("On hand")])
 
 
+def scenario_frames():
+    ok, t, root = wait_for("frames-list", lambda t: has(t, ESP), timeout=60)
+    check("F0", "the list is on screen", ok, t)
+    tap_text(root, ESP)
+    # "On hand: N" as a node's whole text or one component of a merged node, as has() reads it.
+    on_hand = lambda t: next((int(m.group(1)) for x in t for m in [re.search(r"(?:^|, )On hand: (\d+)(?:, |$)", x)] if m), None)
+    ok, t, root = wait_for("frames-item", lambda t: on_hand(t) is not None)
+    check("F1", "Espresso beans opens with its quantity on hand", ok, [x for x in t if "On hand" in x])
+    if not ok:
+        return
+    n = on_hand(t)
+    for i in (1, 2):
+        ok, t, root = tap_and_read(root, "Add 1", "F", f"frames-add-{i}", f"On hand: {n + i}")
+        check(f"F{i + 1}", f"Add 1 -> On hand: {n + i}", ok, [x for x in t if "On hand" in x])
+
+
 def scenario_dev():
     ok, t, root = wait_for("E1", lambda t: has(t, TITLE) and has(t, "8 items · 2 low on stock"), timeout=90)
     check("E1", f"launch: title {TITLE!r} and '8 items · 2 low on stock'", ok, t)
@@ -263,7 +281,7 @@ def scenario_dev():
           [x for x in t if x.startswith("On hand") or "adjust" in x])
 
 
-{"dev": scenario_dev, "title": scenario_title, "prod": scenario_prod}[SCENARIO]()
+{"dev": scenario_dev, "title": scenario_title, "prod": scenario_prod, "frames": scenario_frames}[SCENARIO]()
 
 with open(os.path.join(EV, f"{LABEL}.results.json"), "w") as f:
     json.dump(results, f, indent=1, ensure_ascii=False)

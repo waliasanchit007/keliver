@@ -80,6 +80,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import app.cash.zipline.Call as ZiplineCall
+import app.cash.zipline.CallResult
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
@@ -1281,6 +1283,9 @@ private class LoggingEventListener(
   }
   override fun uncaughtException(exception: Throwable) =
     log("uncaughtException: ${exception.message}")
+  // The guest frame profile (M4), in Debug and Benchmark builds only; nothing elsewhere.
+  override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callStart(call)
+  override fun callEnd(call: ZiplineCall, result: CallResult, startValue: Any?) = KeliverTiming.callEnd(call, startValue)
 }
 
 /** stdout, which `xcrun simctl launch --console-pty` captures. */

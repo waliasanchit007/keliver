@@ -58,7 +58,9 @@ run alongside item 2.
    - **merged 2026-10-31:** M3 (#179: the code load starts as soon as the
      lookup answers; on a Galaxy A12 no gain for a screen opened at launch,
      the later-screen case not measured yet; released in tools 0.3.16);
-   - **open:** M4 (a guest frame profile) and M5 (the iOS memory breakdown).
+   - **in review:** M4's host-side guest frame profile (#186, templates only);
+   - **open:** M4's composition/encoding split (a library change) and M5 (the iOS
+     memory breakdown).
      See ADOPTION_PLAN item 2.
 3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
    start; each host then needed ≈ 900 lines of glue, and every serious defect
@@ -475,8 +477,9 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    same policy, with B1's rules (20 simulator tests); released in tools
    0.3.16. B3 to B5
    not started.
-9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); then M4
-   (guest frame profile) and M5 (iOS memory).
+9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
+   host-side frame profile in review (#186; composition apart from encoding needs a
+   library release); then M5 (iOS memory).
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
     delivery (item 7); the device proxy (item 6's last row).
 11. **W7, the physical-device proof** (a real-certificate HTTPS server, a

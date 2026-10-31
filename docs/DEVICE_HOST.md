@@ -455,6 +455,50 @@ For measuring startup, a host records these moments:
   Xcode, compile `src/notiming/`. An embedded iOS host needs that setting in your own
   project (its `EMBED.md`).
 
+**The guest frame profile** (both hosts, in the same builds as the marks; M4 of
+`ADOPTION_PLAN_2026-10.md`; not in a released tools bundle yet). Where the time of each
+guest frame goes, as one line per window of up to 60 frames, or 1 s after the window's first
+sample:
+
+```
+frames <nanos> n=12 empty=3 lists=10 changes=84 guest=850/2100/2400 lead=700/1900/2200 sink=40/90/120 apply=300/900/1100 queue=60/400/700
+```
+
+Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
+
+| Field | What it counts |
+|---|---|
+| `n`, `empty` | the guest's frames (the host's `sendFrame` calls), and those that sent no change list |
+| `lists`, `changes` | change lists the guest sent, and the changes in them |
+| `guest` | a frame's `sendFrame` call, start to end: the guest's composition, applying it to the guest's tree, encoding, and the host taking the change list |
+| `lead` | from a frame's start to its change list reaching the host: the guest's work and encoding, and the host decoding the list |
+| `sink` | the host's `sendChanges`: converting the list and queueing it for the main thread |
+| `apply` | the host applying the list on the main thread |
+| `queue` | the list waiting for the main thread |
+
+- **Where it comes from:** the host's `EventListener` times `sendFrame`
+  (`callStart`/`callEnd`), and the timing wrapper around each screen's
+  `ZiplineTreehouseUi.Host` times `sendChanges` and posts a message before and after the
+  apply (Android: asynchronous messages, as `Dispatchers.Main` posts the apply).
+- **What it cannot split:** composition from encoding inside `guest` and `lead`. That needs
+  a timestamp inside the guest's runtime, a library change. `apply` is the host's own apply
+  of the list. The host UI's own recomposition, layout and draw come at its next frame and
+  are not in it, except now and then: main-thread work that gets in between the two posts
+  (Android: another asynchronous message due in that moment; iOS: a display-link render while
+  the main queue was idle between them) is counted, which shows in p95 and max.
+- **Output:** the same as the marks' (logcat tag `KeliverTiming`, the iOS console, and
+  `timing.log`), but not `Keliver.shared.onTrace`, whose marks are moments. A screen's first
+  change list, sent from its start rather than in a frame, has no `lead`. Frames are sent
+  when the guest asks for one, and a screen left alone after it opens may ask for none
+  (`n=0`, as on the Android emulator) or only for frames that send nothing (`empty`, as on
+  the iOS simulator); the reference app's Android T3 taps a button first. A frame's `lead`
+  and `sink` are always in the same line as its `guest`; their `apply` and `queue` come later
+  and can fall in the next line.
+- **Overhead:** per frame, a few small objects and one task on the timing thread; per change
+  list, two more main-thread messages and one more timing-thread task; the samples in fixed
+  arrays. A store build compiles none of it (`src/notiming/`); only the listener's two
+  overrides, returning nothing, remain.
+
 ## 3. Your own production iOS host
 
 `keliver-new-ios-host.sh` (run from the app root; scaffolding needs bash and

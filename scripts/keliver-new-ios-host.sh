@@ -290,9 +290,12 @@ for set in commonMain jvmTest iosTest; do
     subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
   done
 done
-# Timing marks (M0): the real ones when Xcode's KELIVER_TIMING is YES (Debug, Benchmark), a no-op otherwise.
+# Timing marks (M0) and the guest frame profile (M4): the real ones when Xcode's KELIVER_TIMING
+# is YES (Debug, Benchmark), a no-op otherwise.
 for set in timing notiming; do
-  subst "$TEMPLATES/src/$set/kotlin/KeliverTiming.kt" "$STAGE/src/$set/kotlin/$PKG_PATH/KeliverTiming.kt"
+  for f in "$TEMPLATES"/src/$set/kotlin/*.kt; do
+    subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
+  done
 done
 cat > "$STAGE/.gitignore" <<'GI'
 /build/

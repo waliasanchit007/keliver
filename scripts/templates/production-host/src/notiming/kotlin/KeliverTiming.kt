@@ -7,6 +7,7 @@
 package @@PACKAGE@@
 
 import android.content.Context
+import app.cash.zipline.Call
 import app.cash.zipline.Zipline
 import dev.keliver.treehouse.ZiplineTreehouseUi
 
@@ -21,4 +22,8 @@ internal object KeliverTiming {
   inline fun firstFrame(ui: ZiplineTreehouseUi): ZiplineTreehouseUi = ui
 
   inline fun bindServices(zipline: Zipline) = Unit
+
+  inline fun callStart(call: Call): Any? = null
+
+  inline fun callEnd(call: Call, startValue: Any?) = Unit
 }
