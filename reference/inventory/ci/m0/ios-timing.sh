@@ -9,7 +9,10 @@
 #       same marks; the Release configuration's binary has none of them
 #   T3  M4's guest frame profile, in both: well-formed "frames" lines on the
 #       console and in the file, with a timed guest frame and an applied change
-#       list (frames.py); a host from templates without it SKIPs
+#       list (frames.py); a host from templates without it SKIPs. There is no
+#       tap step: after a launch the simulator times only an empty frame, so a
+#       PASS shows well-formed lines, not a timed frame that sent changes
+#       (Android's T3 checks that: frames.py --changed)
 if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   echo "--- M0: timing marks"
   python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/m0-server.log" &

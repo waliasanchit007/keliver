@@ -63,4 +63,6 @@ def main(path, changed=False):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    main(args[-1], changed="--changed" in args[:-1])
+    if len(args) not in (1, 2) or args[-1].startswith("-") or any(a != "--changed" for a in args[:-1]):
+        fail("usage: frames.py [--changed] <log file>")
+    main(args[-1], changed=len(args) == 2)
