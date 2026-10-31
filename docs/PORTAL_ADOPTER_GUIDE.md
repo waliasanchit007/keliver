@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.15](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.15)**:
+  **[tools 0.3.16](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.16)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.15/keliver-portal-tools-0.3.15.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.15/keliver-portal-tools-0.3.15.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.15.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.16/keliver-portal-tools-0.3.16.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.16/keliver-portal-tools-0.3.16.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.16.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.15.zip
-  export KP="$PWD/keliver-portal-tools-0.3.15/bin"
+  unzip keliver-portal-tools-0.3.16.zip
+  export KP="$PWD/keliver-portal-tools-0.3.16/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,7 +30,7 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.15
+  The tools version and the library version are **separate lines**: tools 0.3.16
   scaffolds projects against Maven libraries **`dev.keliver:*:0.4.1`**. The
   bundle records both in its `VERSION.json`.
 
@@ -551,7 +551,7 @@ same host Kotlin as `host-android/`. Then, in your app:
   guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are
   dropped, and a response's `Set-Cookie` is not handed back. Other credentials,
   such as an API-key header or a token in the query, are for your interceptor
-  to set with `header()` or to remove. From the tools release after 0.3.15,
+  to set with `header()` or to remove. From tools 0.3.16,
   `TRACE`, `TRACK` and `CONNECT` are refused through your client (a `TRACE`
   would echo your headers back to the guest); a host scaffolded earlier keeps
   sending them until it is scaffolded again or patched.
@@ -577,11 +577,11 @@ Xcode project is not changed. `EMBED.md` lists the edits:
 - adding `KeliverScreen.swift` to your target.
 
 Then `KeliverScreen()` goes in any SwiftUI view. `Keliver.shared.start()` in
-your `App`'s `init` starts the lookup early, and (from the tools release
-after 0.3.15) the code load right after it.
+your `App`'s `init` starts the lookup early, and (from tools
+0.3.16) the code load right after it.
 
-Guests' data goes through your API with your user's credentials (from the
-tools release after 0.3.15): set the allow-list and a header callback before
+Guests' data goes through your API with your user's credentials (from tools
+0.3.16): set the allow-list and a header callback before
 the host starts.
 
 ```swift

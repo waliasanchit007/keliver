@@ -261,7 +261,7 @@ that opens.
 - **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
   `not-loaded`, `no-bundle`, `refused`, or `screen-failed`: the code threw
   while a screen showed it, one record per screen on show (Android from tools
-  0.3.14, iOS from 0.3.15). After the tools release after 0.3.15, a host
+  0.3.14, iOS from 0.3.15). From tools 0.3.16, a host
   whose first load failed loads again at the next update check (§2), so one
   process can send `not-loaded` more than once, then `loaded`.
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
@@ -483,8 +483,8 @@ It behaves like the Android host in §2:
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
   set. Paths can't climb out of it; a method that isn't a plain token, or a
   header holding CR or LF, is refused; hop-by-hop headers are dropped; and
-  redirects aren't followed. (That last one is the delegate's job. From the
-  tools release after 0.3.15 it is measured by the host's simulator tests,
+  redirects aren't followed. (That last one is the delegate's job. From tools
+  0.3.16 it is measured by the host's simulator tests,
   `./gradlew -p host-ios iosSimulatorArm64Test`, against a local server; no
   running guest has used HostHttp yet.)
 - **Guest SQL** (`HostSqlDriver`) is real SQLite in Application Support, bound
@@ -558,8 +558,8 @@ for byte):
   built in code, which skips the build's checks of the key and of `https://`.)
   A second `create()` for the same key throws, because two loaders must never
   share a Zipline cache. `start()` is idempotent: the first screen calls it, or
-  call it at launch to warm up. It looks the bundle up and, from the tools
-  release after 0.3.15 (M3), starts loading its code as soon as the lookup
+  call it at launch to warm up. It looks the bundle up and, from tools
+  0.3.16 (M3), starts loading its code as soon as the lookup
   answers, before any screen asks (earlier hosts loaded the code only when the
   first screen was shown). So a start at launch does the whole load then,
   whether or not a Keliver screen is ever opened:
@@ -647,7 +647,7 @@ for byte):
   client a guest can set `Authorization` or `Cookie`. With your own client
   (`KeliverConfig.fromBuild(this, requestPolicy, httpClient = yourClient)`,
   from 0.3.15) they are dropped, and so is a response's `Set-Cookie`. From
-  the tools release after 0.3.15, `TRACE`, `TRACK` and `CONNECT` are refused
+  tools 0.3.16, `TRACE`, `TRACK` and `CONNECT` are refused
   through your client even when the policy allows them: a `TRACE` would echo
   your interceptor's headers back to the guest. Your client is used only for
   HostHttp.
@@ -749,12 +749,12 @@ plus `KeliverScreen.swift` and `EMBED.md`:
   are exact pairs relative to the API base; a state-changing method also needs
   `allowStateChanging`. A refused request fails in the guest ("HostHttp
   refused: …") and nothing is sent; the method-override headers are always
-  dropped, and from the tools release after 0.3.15 the path-override ones
+  dropped, and from tools 0.3.16 the path-override ones
   (`X-Original-URL` and kin) too. Not restricted: the query string and other
   headers. Without a policy every path under the API base is allowed, as
   before. It is pure Kotlin, so its tests run on the JVM:
   `./gradlew -p host-ios jvmTest`.
-- **`requestHeaders`** (B2, from the tools release after 0.3.15): your app's
+- **`requestHeaders`** (B2, from tools 0.3.16): your app's
   credentials for guests' HostHttp requests, in place of Android's own
   client: `Keliver.shared.requestHeaders = { method, path, done in
   done(["Authorization": "Bearer \(token)"]) }`, set before the host starts.
