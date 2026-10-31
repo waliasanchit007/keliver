@@ -488,7 +488,9 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
   the main queue was idle between them) is counted, which shows in p95 and max.
 - **Output:** the same as the marks' (logcat tag `KeliverTiming`, the iOS console, and
   `timing.log`), but not `Keliver.shared.onTrace`, whose marks are moments. A screen's first
-  change list, sent from its start rather than in a frame, has no `lead`. A frame's `lead`
+  change list, sent from its start rather than in a frame, has no `lead`. The guest asks for a
+  frame only when its state changes, so a screen left alone after it opens can log no frame at
+  all (`n=0`); the reference app's T3 taps a button first. A frame's `lead`
   and `sink` are always in the same line as its `guest`; their `apply` and `queue` come later
   and can fall in the next line.
 - **Overhead:** per frame, a few small objects and one task on the timing thread; per change
