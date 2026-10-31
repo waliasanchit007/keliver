@@ -16,8 +16,10 @@ package @@PACKAGE@@
  *   [allowStateChanging] is set for this build, even if a pair allows them.
  *
  * Not restricted: the query string, and headers other than the ones the host
- * drops (the method-override headers among them). A guest can set
- * `Authorization` or `Cookie` unless your session sets them.
+ * drops (the method-override and path-override headers among them). With your
+ * credentials ([Keliver.requestHeaders], B2) a guest's `Authorization`,
+ * `Proxy-Authorization` and `Cookie` are dropped too; without them a guest
+ * can set those.
  *
  * Set it with `Keliver.shared.requestPolicy` before the host starts. Without
  * one, every path under the API base is allowed, as before; an app embedding

@@ -283,8 +283,9 @@ fi
 for f in "$TEMPLATES"/src/iosMain/kotlin/*.kt; do
   subst "$f" "$STAGE/src/iosMain/kotlin/$PKG_PATH/$(basename "$f")"
 done
-# Pure Kotlin shared with the JVM target that runs its checks (K2: RequestPolicy).
-for set in commonMain jvmTest; do
+# Pure Kotlin shared with the JVM target that runs its checks (K2: RequestPolicy), and the
+# simulator tests of HostHttp (B2: iosTest).
+for set in commonMain jvmTest iosTest; do
   for f in "$TEMPLATES"/src/$set/kotlin/*.kt; do
     subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
   done

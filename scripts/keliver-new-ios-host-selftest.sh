@@ -193,12 +193,26 @@ grep -q 'public sealed interface KeliverHostState' "$K/MainViewController.kt" \
 # sending; its tests run on the JVM target).
 KC="$H/src/commonMain/kotlin/com/example/demo/host"
 grep -q 'public class RequestPolicy(' "$KC/RequestPolicy.kt" && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/RequestPolicyTest.kt" ] \
-  && grep -q '(baseRefusal ?: policy.refusal(method, request.path))' "$K/IosHttp.kt" \
+  && grep -q '(baseRefusal ?: policy?.refusal(method, request.path))' "$K/IosHttp.kt" \
   && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "$K/IosHttp.kt" \
-  && grep -q 'NSURLSessionHostHttp(it, Keliver.requestPolicy)' "$K/MainViewController.kt" \
+  && grep -q '"x-original-url", "x-rewrite-url", "x-forwarded-host", "x-forwarded-prefix", "x-forwarded-proto",' "$K/IosHttp.kt" \
+  && grep -q 'NSURLSessionHostHttp(it, Keliver.requestPolicy, Keliver.requestHeaders)' "$K/MainViewController.kt" \
   && grep -q "implementation 'org.jetbrains.kotlin:kotlin-test'" "$H/build.gradle" \
   && ok "host kit K2: HostHttp checks the app's RequestPolicy before sending; its JVM tests are scaffolded" \
   || bad "host kit K2: RequestPolicy is not wired into NSURLSessionHostHttp, or its tests are missing"
+# B2: the app's credentials through Keliver.requestHeaders, only with a policy; the guest's own
+# credentials and a response's Set-Cookie dropped; its simulator tests scaffolded (src/iosTest).
+grep -q 'public var requestHeaders: KeliverRequestHeaders? = null' "$K/MainViewController.kt" \
+  && grep -q 'public typealias KeliverRequestHeaders = (method: String, path: String, done: (Map<String, String>?) -> Unit) -> Unit' "$K/IosHttp.kt" \
+  && grep -q '"Keliver.requestHeaders needs a requestPolicy' "$K/IosHttp.kt" \
+  && grep -q 'val CREDENTIAL_HEADERS = setOf("authorization", "proxy-authorization", "cookie")' "$K/IosHttp.kt" \
+  && grep -q 'val RESPONSE_CREDENTIAL_HEADERS = setOf("set-cookie", "set-cookie2")' "$K/IosHttp.kt" \
+  && grep -q 'HTTPShouldSetCookies = false' "$K/IosHttp.kt" \
+  && [ -f "$H/src/iosTest/kotlin/com/example/demo/host/AppHeadersHostHttpTest.kt" ] \
+  && grep -q '^package com.example.demo.host$' "$H/src/iosTest/kotlin/com/example/demo/host/AppHeadersHostHttpTest.kt" \
+  && grep -q "t.binaries.configureEach { linkerOpts.add('-lsqlite3') }" "$H/build.gradle" \
+  && ok "B2: Keliver.requestHeaders adds the app's credentials (needs a requestPolicy; the guest's own dropped, no Set-Cookie back); its simulator tests are scaffolded" \
+  || bad "B2: requestHeaders is not wired into NSURLSessionHostHttp, or its simulator tests are missing"
 # Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).
 grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = emptyMap())' "$KC/KeliverRoute.kt" \
   && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
@@ -345,11 +359,12 @@ if [ "$BUILD" = 1 ]; then
         bad "no KeliverHost.framework with Modules under $H/build to type-check KeliverScreen.swift against"
       elif printf '%s\n' 'import KeliverHost' 'func configureKeliver() {' \
             '  Keliver.shared.requestPolicy = RequestPolicy(origin: "https://api.example.com", allowed: [RequestPolicy.Rule(method: "GET", path: "orders")], allowStateChanging: false, allowCleartext: false)' \
+            '  Keliver.shared.requestHeaders = { method, path, done in done(method == "GET" && path == "orders" ? ["Authorization": "Bearer t"] : nil) }' \
             '  _ = KeliverScreen(route: KeliverRoute.companion.from(uri: "example://orders/42?tab=items", allowedQueryKeys: ["tab"]), onClose: {})' \
             '}' > "$DISP/policy-check.swift" \
           && xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
           -F "$(dirname "$fw")" "$L/KeliverScreen.swift" "$DISP/policy-check.swift" > "$DISP/swift-typecheck.log" 2>&1; then
-        ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable) and setting a RequestPolicy"
+        ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable), setting a RequestPolicy and requestHeaders"
       else
         bad "KeliverScreen.swift does not type-check (framework '${fw}'): $(grep -m3 'error:' "$DISP/swift-typecheck.log" | tr '\n' ' ')"
       fi
@@ -360,6 +375,13 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-ios jvmTest > "$DISP/jvm-tests.log" 2>&1 ); rc=$?
     [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (jvmTest: RequestPolicy, KeliverRoute)" \
       || bad "the host kit's JVM tests failed (rc=$rc): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/jvm-tests.log" | head -6 | tr '\n' ' ')"
+    # B2: HostHttp with the app's credentials, over NSURLSession to a local server, on a simulator
+    # (KELIVER_SELFTEST_SIMULATOR: a simulator name or UDID, when Kotlin's default is not installed).
+    ( cd "$APP" && ./gradlew --console=plain -p host-ios iosSimulatorArm64Test \
+        ${KELIVER_SELFTEST_SIMULATOR:+"-PkeliverTestSimulator=$KELIVER_SELFTEST_SIMULATOR"} > "$DISP/ios-tests.log" 2>&1 ); rc=$?
+    n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*AppHeadersHostHttpTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 13 ] && ok "B2: the HostHttp simulator tests pass ($n: the app's credentials, refusals, no redirect, no Set-Cookie)" \
+      || bad "B2: the HostHttp simulator tests failed (rc=$rc, ${n:-no} passed): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/ios-tests.log" | head -6 | tr '\n' ' ')"
     # A release framework refuses http:// — the check exists, fails here, and is wired to every release link.
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-urls.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/release-urls.log" \

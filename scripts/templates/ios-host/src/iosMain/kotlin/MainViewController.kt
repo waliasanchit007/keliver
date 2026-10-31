@@ -339,6 +339,27 @@ public object Keliver {
       field = value
     }
 
+  /**
+   * B2: YOUR app's credentials for guests' HostHttp requests, in Swift:
+   * `Keliver.shared.requestHeaders = { method, path, done in done(["Authorization": "Bearer \(token)"]) }`.
+   * Called on the main thread for each request the [requestPolicy] allowed, with its method and its
+   * path relative to API_BASE_URL. Call `done` once: with the headers to add (they replace the
+   * guest's of the same name), or with nil to refuse the request, as when nobody is signed in;
+   * nothing is sent then, nor when `done` is not called within 30 s.
+   *
+   * It needs a [requestPolicy] (your credentials with no allow-list would let a guest call any
+   * path under the API base as the user): without one every request is refused. With it, a
+   * guest's own `Authorization`, `Proxy-Authorization` and `Cookie` headers are dropped, a
+   * response's `Set-Cookie` is not handed back, and HostHttp keeps no cookies, cache or
+   * credentials of its own. Bundles, the update stream and reports never get these headers.
+   * Set it before the host starts (before the first screen, or [start]).
+   */
+  public var requestHeaders: KeliverRequestHeaders? = null
+    set(value) {
+      if (started) log("requestHeaders set after the host started: it applies from the next process start")
+      field = value
+    }
+
   private fun setState(s: KeliverHostState) {
     mutableState.value = s
     // The app's handler must not take the host down with it.
@@ -1124,7 +1145,7 @@ private fun createApp(
   // One of each per host, bound into every code load (not one per load: each
   // holds a connection or a session).
   val sql = IosSqlHost()
-  val http = apiBase?.let { NSURLSessionHostHttp(it, Keliver.requestPolicy) }
+  val http = apiBase?.let { NSURLSessionHostHttp(it, Keliver.requestPolicy, Keliver.requestHeaders) }
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "keliver-production"
     override val manifestUrl = flow
