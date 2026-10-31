@@ -1,0 +1,20 @@
+--- m2/android.sh	2026-10-27 11:45:43
++++ android-a12.sh (scratch copy)	2026-10-31 11:50:39
+@@ -47,7 +47,7 @@
+ [ $# -ge 5 ] || { echo "$usage" >&2; exit 2; }
+ for d in "$1" "$2" "$3"; do [ -d "$d" ] || { echo "not a directory: $d" >&2; echo "$usage" >&2; exit 2; }; done
+ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+-CI="$HERE/../ci"
++CI="reference/inventory/ci"
+ APP="$(cd "$1" && pwd -P)"; SITE="$(cd "$2" && pwd -P)"; TLS="$(cd "$3" && pwd -P)"; SERIAL="$4"
+ mkdir -p "$5" || exit 2; EV="$(cd "$5" && pwd -P)"; RUNS="${6:-5}"
+ H="$APP/host-android"
+@@ -192,6 +192,8 @@
+     [ "$(at "$L" "${pr#*:}")" -ge "$(at "$L" "${pr%%:*}")" ] || { err "$s $r: '${pr#*:}' is before '${pr%%:*}'"; return 1; }
+   done
+   want=COLD; [ "$s" = warm ] && want=WARM
++  # Scratch copy for an Android 12 phone: its `am start -W` says UNKNOWN for a warm open (the marks above already prove it was one).
++  [ "$s" = warm ] && [ "$(amv "$A" LaunchState)" = UNKNOWN ] && want=UNKNOWN
+   [ "$(amv "$A" LaunchState)" = "$want" ] || { err "$s $r: am start says LaunchState $(amv "$A" LaunchState), not $want"; return 1; }
+   if [ "$s" != warm ]; then
+     grep -qE "codeLoadSuccess modules=[0-9]+ sequence=$SEQ " "$L" \

@@ -1,0 +1,116 @@
+== reference/inventory/m2/results-2026-10-31-a12-m3/before.tsv
+-- first: 5 runs
+   process_open         median      191  min      186  max      192  n 5
+   process_code         median     2574  min     2261  max     2617  n 5
+   process_first_frame  median     2800  min     2452  max     2877  n 5
+   process_content      median     2800  min     2595  max     2878  n 5
+   open_first_frame     median     2608  min     2263  max     2686  n 5
+   open_content         median     2608  min     2406  max     2686  n 5
+   am_state             COLD x5
+   am_total_ms          median      427  min      416  max      435  n 5
+   pss_kb               median    59923  min    59775  max    61229  n 5
+   battery_dC           median      298  min      297  max      299  n 5
+-- cold: 5 runs
+   process_open         median      156  min      154  max      158  n 5
+   process_code         median      683  min      674  max      985  n 5
+   process_first_frame  median      867  min      849  max     1164  n 5
+   process_content      median      899  min      881  max     1195  n 5
+   open_first_frame     median      712  min      693  max     1008  n 5
+   open_content         median      745  min      724  max     1039  n 5
+   am_state             COLD x5
+   am_total_ms          median      363  min      353  max      366  n 5
+   pss_kb               median    54275  min    54114  max    54745  n 5
+   battery_dC           median      298  min      297  max      299  n 5
+-- warm: 5 runs
+   open_first_frame     median      154  min      144  max      160  n 5
+   open_content         median      155  min      148  max      160  n 5
+   am_state             UNKNOWN x5
+   pss_kb               median    49380  min    49143  max    49531  n 5
+   battery_dC           median      298  min      297  max      299  n 5
+== reference/inventory/m2/results-2026-10-31-a12-m3/after.tsv
+-- first: 5 runs
+   process_open         median      189  min      184  max      215  n 5
+   process_code         median     2572  min     2365  max     2906  n 5
+   process_first_frame  median     2820  min     2572  max     3143  n 5
+   process_content      median     2820  min     2726  max     3143  n 5
+   open_first_frame     median     2630  min     2382  max     2959  n 5
+   open_content         median     2630  min     2528  max     2959  n 5
+   am_state             COLD x5
+   am_total_ms          median      416  min      406  max      443  n 5
+   pss_kb               median    60200  min    59620  max    60442  n 5
+   battery_dC           median      300  min      299  max      300  n 5
+-- cold: 5 runs
+   process_open         median      156  min      154  max      163  n 5
+   process_code         median      695  min      659  max      721  n 5
+   process_first_frame  median      874  min      843  max      920  n 5
+   process_content      median      907  min      843  max      954  n 5
+   open_first_frame     median      718  min      686  max      757  n 5
+   open_content         median      743  min      686  max      792  n 5
+   am_state             COLD x5
+   am_total_ms          median      373  min      365  max      407  n 5
+   pss_kb               median    54421  min    54040  max    54576  n 5
+   battery_dC           median      300  min      299  max      300  n 5
+-- warm: 5 runs
+   open_first_frame     median      153  min      145  max      154  n 5
+   open_content         median      153  min      146  max      155  n 5
+   am_state             UNKNOWN x5
+   pss_kb               median    49236  min    49111  max    49335  n 5
+   battery_dC           median      300  min      299  max      300  n 5
+== reference/inventory/m2/results-2026-10-31-a12-m3/before-2.tsv
+-- first: 5 runs
+   process_open         median      255  min      250  max      273  n 5
+   process_code         median     2973  min     2709  max     3775  n 5
+   process_first_frame  median     3360  min     3100  max     4256  n 5
+   process_content      median     3460  min     3231  max     4400  n 5
+   open_first_frame     median     3087  min     2850  max     4003  n 5
+   open_content         median     3201  min     2981  max     4146  n 5
+   am_state             COLD x5
+   am_total_ms          median      506  min      490  max      522  n 5
+   pss_kb               median    56034  min    55468  max    59285  n 5
+   battery_dC           median      301  min      300  max      301  n 5
+-- cold: 5 runs
+   process_open         median      176  min      170  max      176  n 5
+   process_code         median      820  min      804  max      893  n 5
+   process_first_frame  median     1175  min     1148  max     1280  n 5
+   process_content      median     1202  min     1175  max     1280  n 5
+   open_first_frame     median     1004  min      972  max     1104  n 5
+   open_content         median     1032  min      999  max     1104  n 5
+   am_state             COLD x5
+   am_total_ms          median      388  min      382  max      402  n 5
+   pss_kb               median    49551  min    49352  max    49853  n 5
+   battery_dC           median      301  min      301  max      301  n 5
+-- warm: 5 runs
+   open_first_frame     median      332  min      327  max      343  n 5
+   open_content         median      339  min      332  max      343  n 5
+   am_state             UNKNOWN x5
+   pss_kb               median    44333  min    44040  max    44480  n 5
+   battery_dC           median      301  min      301  max      301  n 5
+== reference/inventory/m2/results-2026-10-31-a12-m3/after-2.tsv
+-- first: 5 runs
+   process_open         median      250  min      245  max      252  n 5
+   process_code         median     3174  min     3019  max     3824  n 5
+   process_first_frame  median     3553  min     3414  max     4288  n 5
+   process_content      median     3699  min     3517  max     4288  n 5
+   open_first_frame     median     3308  min     3164  max     4042  n 5
+   open_content         median     3453  min     3267  max     4042  n 5
+   am_state             COLD x5
+   am_total_ms          median      495  min      488  max      507  n 5
+   pss_kb               median    58918  min    56723  max    59464  n 5
+   battery_dC           median      303  min      302  max      303  n 5
+-- cold: 5 runs
+   process_open         median      170  min      167  max      177  n 5
+   process_code         median      853  min      827  max      951  n 5
+   process_first_frame  median     1198  min     1185  max     1292  n 5
+   process_content      median     1226  min     1186  max     1321  n 5
+   open_first_frame     median     1027  min     1016  max     1122  n 5
+   open_content         median     1056  min     1019  max     1151  n 5
+   am_state             COLD x5
+   am_total_ms          median      384  min      373  max      393  n 5
+   pss_kb               median    49584  min    49379  max    49765  n 5
+   battery_dC           median      303  min      302  max      303  n 5
+-- warm: 5 runs
+   open_first_frame     median      331  min      329  max      334  n 5
+   open_content         median      334  min      331  max      342  n 5
+   am_state             UNKNOWN x5
+   pss_kb               median    44346  min    44321  max    44403  n 5
+   battery_dC           median      303  min      302  max      303  n 5

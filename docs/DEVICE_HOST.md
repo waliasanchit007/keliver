@@ -556,7 +556,13 @@ for byte):
   built in code, which skips the build's checks of the key and of `https://`.)
   A second `create()` for the same key throws, because two loaders must never
   share a Zipline cache. `start()` is idempotent: the first screen calls it, or
-  call it at launch to warm up. `state` is a `StateFlow` the screens observe:
+  call it at launch to warm up. It looks the bundle up and, from the tools
+  release after 0.3.15 (M3), starts loading its code as soon as the lookup
+  answers, before any screen asks (earlier hosts loaded the code only when the
+  first screen was shown). So a start at launch also costs the loaded code's
+  memory then, whether or not a Keliver screen is opened: an app whose Keliver
+  screens are rarely used can leave `start()` to the first screen. `state` is a
+  `StateFlow` the screens observe:
   `Loading`, `Running`, or `Unavailable(outcome, reason, title, message, attempt)` when
   the host cannot show a screen (`outcome` is the report's: `no-bundle`,
   `refused` or `not-loaded`; `reason` its fixed category; `attempt` numbers

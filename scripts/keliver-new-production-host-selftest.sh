@@ -140,6 +140,10 @@ grep -q 'android:name=".HostApp"' "$H/src/main/AndroidManifest.xml" \
   && grep -q 'appScope = scope' "$M" && grep -q 'compareAndSet(false, true)' "$M" \
   && ok "W2: the Application owns one KeliverHost (its own scope, started once); MainActivity only shows KeliverScreen" \
   || bad "W2: the host is not owned by the Application"
+# M3: the code load starts at host start (right after the lookup), not at the first screen.
+grep -A2 '^    mutableState.value = KeliverHostState.Running(app)$' "$M" | grep -q '^    app.start()$' \
+  && ok "M3: the code load starts when the host starts, not when the first screen asks" \
+  || bad "M3: the host does not start the code load at host start"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
   && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)' "$M" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \

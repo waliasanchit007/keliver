@@ -43,7 +43,8 @@ VStack {
 ```
 
 `Keliver.shared.start()` (for instance in your `App`'s `init`) starts the
-lookup early; otherwise the first `KeliverScreen` does. One host per process:
+lookup early, and the code load as soon as it answers; otherwise the first
+`KeliverScreen` does. One host per process:
 every `KeliverScreen` shares its one lookup and one load.
 
 ## Not covered here

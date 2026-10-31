@@ -574,7 +574,8 @@ Xcode project is not changed. `EMBED.md` lists the edits:
 - adding `KeliverScreen.swift` to your target.
 
 Then `KeliverScreen()` goes in any SwiftUI view. `Keliver.shared.start()` in
-your `App`'s `init` starts the lookup early.
+your `App`'s `init` starts the lookup early, and (from the tools release
+after 0.3.15) the code load right after it.
 
 On both platforms, every Keliver screen in the process shares one lookup and
 one load: navigating natively or rotating doesn't load again, and a newer
