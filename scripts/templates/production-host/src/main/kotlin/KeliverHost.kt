@@ -42,7 +42,8 @@
  * Lifecycle (W2): the host owns its coroutine scope, its one Treehouse app and
  * Zipline, its SQL and HTTP hosts and its image loader, for the life of the
  * process. start() is idempotent: the first screen calls it, and the
- * Application may call it earlier to warm up. Screens only observe [state], so
+ * Application may call it earlier to warm up: the lookup, then the code load,
+ * start then (M3), before any screen asks. Screens only observe [state], so
  * a configuration change, or a second screen, never repeats the lookup or the
  * load. Once a bundle is loading, it is the one this process runs: a newer
  * bundle is picked up on the next process start. A start that created nothing
@@ -963,6 +964,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     }
     session = Session(app, ziplineHttp, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload)
     mutableState.value = KeliverHostState.Running(app)
+    // M3: the code load starts now, not when the first screen's createContent would start it.
+    app.start()
   }
 
   /**

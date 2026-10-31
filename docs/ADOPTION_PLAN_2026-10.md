@@ -67,6 +67,11 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
    the reference app's benchmark build (M0), which has release settings.
 4. M3: **start the code load at host start**, not at the first screen. Today the host's
    `start()` at app launch only looks up the bundle. Measure the cold-open gain with M2's harness.
+   **2026-10-31:** both templates start the load as soon as the lookup answers. On a Galaxy A12
+   with the bundles over wireless `adb reverse`, an app that opens its Keliver screen at launch
+   gained nothing: in all 40 first and cold launches, the lookup answered after the screen opened
+   (`reference/inventory/m2/results-2026-10-31-a12-m3`). The case it is for, a first screen
+   opened after the lookup, is not measured yet.
 5. M4: **a guest frame profile**: time per frame in composition, protocol encoding and host
    apply. The host side comes from M0's change-list hook. `callStart` and `callEnd` time a whole
    guest call, so splitting composition from encoding needs spans inside the guest's runtime,

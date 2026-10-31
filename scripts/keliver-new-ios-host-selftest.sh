@@ -276,6 +276,11 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/com/example/demo/host/Kel
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
+# M3: the code load starts at host start (right after the lookup), not at the first screen.
+grep -A2 '^  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))$' "$K/MainViewController.kt" \
+  | grep -q '^  app.start()$' \
+  && ok "M3: the code load starts when the host starts, not when the first screen asks" \
+  || bad "M3: the host does not start the code load at host start"
 refuses "a second run over an existing host-ios" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-ios\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 # W4.4: --channel beta, over a removed host-ios (the build below then builds a beta host).

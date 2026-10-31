@@ -1,0 +1,10 @@
+--- before/host-android/src/main/kotlin/inventory/host/KeliverHost.kt	2026-10-30 17:06:27
++++ after/host-android/src/main/kotlin/inventory/host/KeliverHost.kt	2026-10-31 11:46:58
+@@ -916,6 +916,7 @@
+     )
+     session = Session(app, ziplineHttp, flow, lookup, fromCache = freshness is AcceptCachedBundle)
+     mutableState.value = KeliverHostState.Running(app)
++    app.start() // M3 trial: the code load starts now, not when the first screen asks
+   }
+ 
+   /**

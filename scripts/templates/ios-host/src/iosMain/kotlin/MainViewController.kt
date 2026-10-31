@@ -1218,6 +1218,8 @@ private fun createApp(
     app.start()
   }
   Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))
+  // M3: the code load starts now, not when the first screen's createContent would start it.
+  app.start()
   return app
 }
 

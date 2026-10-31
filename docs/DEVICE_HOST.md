@@ -558,7 +558,25 @@ for byte):
   built in code, which skips the build's checks of the key and of `https://`.)
   A second `create()` for the same key throws, because two loaders must never
   share a Zipline cache. `start()` is idempotent: the first screen calls it, or
-  call it at launch to warm up. `state` is a `StateFlow` the screens observe:
+  call it at launch to warm up. It looks the bundle up and, from the tools
+  release after 0.3.15 (M3), starts loading its code as soon as the lookup
+  answers, before any screen asks (earlier hosts loaded the code only when the
+  first screen was shown). So a start at launch does the whole load then,
+  whether or not a Keliver screen is ever opened:
+  - the download (on a first launch, every module) and the code's memory;
+  - the `loaded` report, which no longer means a screen was shown;
+  - with on-resume or live updates, update checks on each return to the
+    foreground (at most one every 30 s), which a host with nothing loaded
+    skipped;
+  - a first load that fails, fails at launch. The screen opened later does
+    not load again: the next update check does (§2, both hosts),
+    and with next-launch updates there is none in the process;
+  - guest code that crashes with no screen showing is only logged, and the
+    first screen loads it again.
+
+  An app whose Keliver screens are rarely used, or opened long after launch,
+  can leave `start()` to the first screen. `state` is a `StateFlow` the screens
+  observe:
   `Loading`, `Running`, or `Unavailable(outcome, reason, title, message, attempt)` when
   the host cannot show a screen (`outcome` is the report's: `no-bundle`,
   `refused` or `not-loaded`; `reason` its fixed category; `attempt` numbers
