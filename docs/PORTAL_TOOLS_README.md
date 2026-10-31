@@ -145,6 +145,15 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `Set-Cookie` are dropped. The path-override headers are dropped on iOS
   too. Its rules run as simulator tests against a local server
   (`./gradlew -p host-ios iosSimulatorArm64Test`).
+- **From the release after 0.3.15 (Android):** `TRACE`, `TRACK` and `CONNECT`
+  are never sent through your app's own client, even when the
+  `RequestPolicy` allows them (a `TRACE` would echo its credentials back to
+  the guest). A host scaffolded earlier keeps sending them.
+- **From the release after 0.3.15 (both hosts):** a host whose first
+  code load failed loads again on its next update check, in the same process
+  (#176), and the code load starts as soon as the lookup answers, not when
+  the first screen asks (M3, `DEVICE_HOST.md` §4 has what that costs at
+  launch).
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
