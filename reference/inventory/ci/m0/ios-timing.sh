@@ -99,7 +99,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
       bad "$1: Add 1 twice on an open item (no profile read): $(grep -E 'error: |AddOneTwice: |ios-timing: ' "$EV/$3-tap.log" | head -3 | cut -c1-200 | tr '\n' ' ')"
       return 0
     fi
-    ok "$1: Add 1 twice on an open item ($(grep -c 'AddOneTwice: F[12] ' "$EV/$3-tap.log") steps, $3-tap.log)"
+    ok "$1: Add 1 twice on an open item ($(grep -c 'AddOneTwice: F[1-3] ' "$EV/$3-tap.log") steps, $3-tap.log)"
     out="$(python3 "$HERE/m0/frames.py" --changed "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
   }
 
