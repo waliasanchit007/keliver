@@ -183,10 +183,11 @@ internal object KeliverTiming {
 
   private object GuestTrace : KeliverTrace {
     override fun mark(name: String) {
-      if (guestName.matches(name)) {
-        markAfterFrame(name)
-      } else {
-        Log.w(LOG_TAG, "ignored a guest mark: names are a-z, 0-9 and '-', at most 32")
+      when {
+        // The host's own lines: a guest mark of that name would read as one of them.
+        name == "memory" || name == "frames" -> Log.w(LOG_TAG, "ignored a guest mark: '$name' is the host's")
+        guestName.matches(name) -> markAfterFrame(name)
+        else -> Log.w(LOG_TAG, "ignored a guest mark: names are a-z, 0-9 and '-', at most 32")
       }
     }
   }

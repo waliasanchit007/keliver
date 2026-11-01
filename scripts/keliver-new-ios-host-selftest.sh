@@ -296,7 +296,8 @@ grep -q 'task_info(mach_task_self_, TASK_VM_INFO.convert()' "$T/KeliverMemory.kt
   && grep -q 'inline fun watch(app: TreehouseApp<\*>) = Unit' "$N" \
   && [ ! -e "$H/src/notiming/kotlin/com/example/demo/host/KeliverMemory.kt" ] \
   && ! grep -rq 'memory-cycle' "$H/src/notiming" "$K" \
-  && ok "M5: the memory profile and its cycle when KELIVER_TIMING=YES, a no-op elsewhere" \
+  && grep -q 'name == "memory" || name == "frames" -> println' "$T/KeliverTiming.kt" \
+  && ok "M5: the memory profile and its cycle when KELIVER_TIMING=YES, a no-op elsewhere; guest marks cannot use its name" \
   || bad "M5: the memory profile is not wired, or reaches a build without KELIVER_TIMING"
 # One locked write a line: println writes the text and its newline apart, so another thread's line
 # could land between them (an ios-host run read "…knheap=-KeliverHost: codeLoadSuccess …").
