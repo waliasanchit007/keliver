@@ -77,7 +77,7 @@ public object ShopActionsBridge {
   /**
    * A hash of the functions and of the types they reach, for the compatibility gate (B4).
    */
-  public const val SHAPE: String = "cd5829702ffe49be"
+  public const val SHAPE: String = "41f790d0806bed0b"
 
   /**
    * Host side: serves the guest's calls with [impl], each on [context] and through the guard.
@@ -92,12 +92,12 @@ public object ShopActionsBridge {
   }
 
   /**
-   * Host side, for an iOS app: serves the guest's calls with Swift's [callbacks], each on [context] (the main dispatcher) and through the guard.
+   * Host side, for an iOS app: serves the guest's calls with Swift's [callbacks], each on [context] and through the guard. Pass `Dispatchers.Main`: Swift's code expects the main thread, so there is no default.
    */
   public fun bind(
     zipline: Zipline,
     callbacks: ShopActionsCallbacks,
-    context: CoroutineContext = Dispatchers.Default,
+    context: CoroutineContext,
     log: (String) -> Unit = {},
   ) {
     zipline.bind<ShopActionsService>(NAME, ShopActionsCallbackAdapter(callbacks, BridgeGuard(NAME, context, log)))

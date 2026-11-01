@@ -110,10 +110,13 @@ internal class BridgeEmitter(private val bridge: Bridge) {
       )
       .addFunction(
         FunSpec.builder("bind")
-          .addKdoc("Host side, for an iOS app: serves the guest's calls with Swift's [callbacks], each on [context] (the main dispatcher) and through the guard.")
+          .addKdoc(
+            "Host side, for an iOS app: serves the guest's calls with Swift's [callbacks], each on [context] and through the guard. " +
+              "Pass `Dispatchers.Main`: Swift's code expects the main thread, so there is no default.",
+          )
           .addParameter("zipline", ZIPLINE)
           .addParameter("callbacks", callbacks)
-          .addParameter(context)
+          .addParameter("context", COROUTINE_CONTEXT)
           .addParameter(log)
           .addStatement("zipline.bind<%T>(NAME, %T(callbacks, %T(NAME, context, log)))", service, callbackAdapter, BRIDGE_GUARD)
           .build(),

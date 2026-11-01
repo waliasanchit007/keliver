@@ -40,9 +40,13 @@ dependencies {
   add('kspCommonMainMetadata', projects.keliverBridgeCodegen)
 }
 
-// ksp#1318: every compilation needs the metadata KSP output first.
+// ksp#1318: every compilation needs the metadata KSP output first, and so do Zipline's API
+// tasks, which read the generated service. api/zipline-api.toml pins its call ids.
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask).configureEach {
   if (name != 'kspCommonMainKotlinMetadata') {
     dependsOn('kspCommonMainKotlinMetadata')
   }
+}
+tasks.matching { it.name.contains('ZiplineApi') || it.name.startsWith('ziplineApi') }.configureEach {
+  dependsOn('kspCommonMainKotlinMetadata')
 }

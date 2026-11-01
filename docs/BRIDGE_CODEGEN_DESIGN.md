@@ -100,6 +100,16 @@ The processor **fails the build**, naming the function, for:
 - a parameter or return type that is not a primitive, `String`, an enum, a `@Serializable`
   class, or a `List`/`Map` of those (checked by the declaration, not by trying to serialize).
 
+Found while building the processor (B3b), it also refuses:
+- an interface that is not public, nested, generic, extends another, or declares properties;
+- a function with a body, one named `close` (`ZiplineService.close()`), and one starting with an
+  Objective-C method family (`init`, `new`, `copy`, `mutableCopy`, `alloc` followed by a capital
+  or nothing), which Kotlin/Native renames for Swift;
+- a parameter named like the generated code's own names (`call`, `done`, `fail`, `impl`,
+  `guard`, `callbacks`, `service`, `zipline`, `context`, `log`, `it`, `e`).
+
+A typealias is checked as the type it stands for.
+
 ### 4. What is generated
 
 For `ShopActions`, in its package, in one file per interface, all in `commonMain` (so the guest

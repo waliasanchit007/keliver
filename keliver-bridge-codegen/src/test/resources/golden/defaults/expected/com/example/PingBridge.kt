@@ -58,12 +58,12 @@ public object PingBridge {
   }
 
   /**
-   * Host side, for an iOS app: serves the guest's calls with Swift's [callbacks], each on [context] (the main dispatcher) and through the guard.
+   * Host side, for an iOS app: serves the guest's calls with Swift's [callbacks], each on [context] and through the guard. Pass `Dispatchers.Main`: Swift's code expects the main thread, so there is no default.
    */
   public fun bind(
     zipline: Zipline,
     callbacks: PingCallbacks,
-    context: CoroutineContext = Dispatchers.Default,
+    context: CoroutineContext,
     log: (String) -> Unit = {},
   ) {
     zipline.bind<PingService>(NAME, PingCallbackAdapter(callbacks, BridgeGuard(NAME, context, log)))

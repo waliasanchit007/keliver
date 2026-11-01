@@ -168,6 +168,7 @@ jobs:
           :keliver-bridge-fixture:jvmTest
           :keliver-bridge-fixture:compileKotlinJs
           :keliver-bridge-fixture:compileKotlinIosSimulatorArm64
+          :keliver-bridge-fixture:ziplineApiCheck
           -DRELEASE_SIGNING_ENABLED=false
 
       # The full inherited Redwood test suite that asserts against the

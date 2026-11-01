@@ -65,7 +65,7 @@ tasks.withType(Test).configureEach {
 afterEvaluate {
   spotless {
     kotlin {
-      targetExclude('src/test/fixture/**/build/**', 'src/test/resources/golden/**')
+      targetExclude('src/test/resources/golden/**')
     }
   }
 }

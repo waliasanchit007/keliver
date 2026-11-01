@@ -47,8 +47,9 @@ class KeliverBridgeCodegenTest {
       configureKsp { symbolProcessorProviders.add(KeliverBridgeCodegenProvider()) }
     }
     val result = compilation.compile()
-    val generated = compilation.kspSourcesDir.walkTopDown().filter { it.isFile && it.extension == "kt" }
-      .associate { it.name to it.readText() }
+    val root = compilation.kspSourcesDir
+    val generated = root.walkTopDown().filter { it.isFile && it.extension == "kt" }
+      .associate { it.relativeTo(root).invariantSeparatorsPath.substringAfter("kotlin/") to it.readText() }
     return Compiled(result.exitCode, result.messages, generated)
   }
 
@@ -69,9 +70,10 @@ class KeliverBridgeCodegenTest {
     if (System.getProperty("keliver.bridge.updateGolden") == "true") {
       expectedDir.deleteRecursively()
       expectedDir.mkdirs()
-      compiled.generated.forEach { (name, text) -> File(expectedDir, name).writeText(text) }
+      compiled.generated.forEach { (path, text) -> File(expectedDir, path).apply { parentFile.mkdirs() }.writeText(text) }
     }
-    val expected = expectedDir.listFiles()!!.associate { it.name to it.readText() }
+    val expected = expectedDir.walkTopDown().filter { it.isFile }
+      .associate { it.relativeTo(expectedDir).invariantSeparatorsPath to it.readText() }
     assertThat(compiled.generated.keys.sorted()).isEqualTo(expected.keys.sorted())
     for ((name, text) in expected) assertThat(compiled.generated[name], name).isEqualTo(text)
   }
@@ -183,12 +185,61 @@ class KeliverBridgeCodegenTest {
     "name 'shop actions' must be letters, digits",
   )
 
+  @Test fun aNullableListResult() = refused("$header\n@KeliverBridge interface A { suspend fun a(): List<String>? }", "A.a must not return a collection")
+
+  @Test fun aSetResult() = refused("$header\n@KeliverBridge interface A { suspend fun a(): Set<String> }", "A.a must not return a collection")
+
+  @Test fun aStarProjection() = refused("$header\n@KeliverBridge interface A { fun a(x: List<*>) }", "A.a's parameter x must not use a star projection")
+
+  @Test fun aSuspendFunctionParameter() = refused(
+    "$header\n@KeliverBridge interface A { suspend fun a(x: suspend () -> Unit) }",
+    "A.a's parameter x must not be a function",
+  )
+
+  @Test fun aFunctionWithABody() = refused(
+    "$header\n@KeliverBridge interface A { suspend fun a(): String = \"\" }",
+    "A.a must not have a body",
+  )
+
+  @Test fun aPrivateFunctionWithABody() = refused(
+    "$header\n@KeliverBridge interface A { suspend fun a(): String\n private fun b() {} }",
+    "A.b must not have a body",
+  )
+
+  @Test fun anInternalInterface() = refused("$header\n@KeliverBridge internal interface A { suspend fun a(): String }", "A must be public")
+
+  @Test fun aFunctionNamedClose() = refused("$header\n@KeliverBridge interface A { suspend fun close() }", "A.close clashes with ZiplineService.close()")
+
+  @Test fun anObjectiveCMethodFamily() = refused(
+    "$header\n@KeliverBridge interface A { suspend fun newOrder(id: String) }",
+    "A.newOrder starts with an Objective-C method family",
+  )
+
+  @Test fun aNameLikeAFamilyButNotOneIsAccepted() {
+    val compiled = compile(source("$header\n@KeliverBridge interface A { suspend fun newsletter(id: String)\n suspend fun initials(): String }"))
+    assertThat(compiled.exitCode, "messages: ${compiled.messages}").isEqualTo(KotlinCompilation.ExitCode.OK)
+  }
+
+  @Test fun aParameterNamedLikeTheGeneratedCode() = refused(
+    "$header\n@KeliverBridge interface A { suspend fun a(service: String) }",
+    "A.a's parameter service clashes with a name the generated code uses",
+  )
+
+  @Test fun aTypealiasIsCheckedAsWhatItStandsFor() {
+    val ok = compile(source("$header\ntypealias Props = Map<String, String>\n@KeliverBridge interface A { fun a(x: Props) }"))
+    assertThat(ok.exitCode, "messages: ${ok.messages}").isEqualTo(KotlinCompilation.ExitCode.OK)
+    refused(
+      "$header\nclass Plain\ntypealias P = Plain\n@KeliverBridge interface A { fun a(x: P) }",
+      "A.a's parameter x is com.example.Plain",
+    )
+  }
+
   // --- SHAPE ---
 
   private fun shape(contract: String): String {
     val compiled = compile(source("$header\n$contract"))
     assertThat(compiled.exitCode, "messages: ${compiled.messages}").isEqualTo(KotlinCompilation.ExitCode.OK)
-    return Regex("""SHAPE: String = "([0-9a-f]{16})"""").find(compiled.generated.getValue("ABridge.kt"))!!.groupValues[1]
+    return Regex("""SHAPE: String = "([0-9a-f]{16})"""").find(compiled.generated.getValue("com/example/ABridge.kt"))!!.groupValues[1]
   }
 
   private val base = """
@@ -205,6 +256,29 @@ class KeliverBridgeCodegenTest {
     val two = "@KeliverBridge interface A { suspend fun a(): String\n suspend fun b(): String }"
     val swapped = "@KeliverBridge interface A { suspend fun b(): String\n suspend fun a(): String }"
     assertThat(shape(swapped)).isEqualTo(shape(two))
+  }
+
+  @Test fun theOrderOfFieldsAndConstantsDoesNotChangeTheShape() {
+    val swapped = base.replace("val id: String, val kind: Kind", "val kind: Kind, val id: String").replace("HOME, WORK", "WORK, HOME")
+    assertThat(shape(swapped)).isEqualTo(shape(base))
+  }
+
+  @Test fun inheritedFieldsAndSealedSubclassesChangeTheShape() {
+    val sealed = """
+      @Serializable sealed class Pick { abstract val at: Long }
+      @Serializable class Home(override val at: Long, val door: String) : Pick()
+      @Serializable class Work(override val at: Long) : Pick()
+      @KeliverBridge interface A { suspend fun a(): Pick }
+    """.trimIndent()
+    val shape = shape(sealed)
+    assertThat(shape(sealed.replace("val door: String", "val door: Int"))).isNotEqualTo(shape)
+    assertThat(shape(sealed.replace("@Serializable class Work(override val at: Long) : Pick()", "@Serializable class Work(override val at: Long) : Pick()\n@Serializable class Away(override val at: Long) : Pick()"))).isNotEqualTo(shape)
+    val open = """
+      @Serializable open class Base(val id: String)
+      @Serializable class Req(val extra: String) : Base("x")
+      @KeliverBridge interface A { suspend fun a(r: Req): Boolean }
+    """.trimIndent()
+    assertThat(shape(open.replace("open class Base(val id: String)", "open class Base(val id: Int)").replace("Base(\"x\")", "Base(1)"))).isNotEqualTo(shape(open))
   }
 
   @Test fun whatCrossesTheWireChangesTheShape() {

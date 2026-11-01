@@ -18,6 +18,8 @@ package dev.keliver.bridge.codegen
 import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.getDeclaredFunctions
 import com.google.devtools.ksp.getDeclaredProperties
+import com.google.devtools.ksp.isInternal
+import com.google.devtools.ksp.isPrivate
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
@@ -30,6 +32,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSNode
 import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeAlias
 import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ksp.toClassName
@@ -54,8 +57,11 @@ internal class KeliverBridgeCodegen(
       }
       try {
         val bridge = read(symbol)
+        // SHAPE reads every type the functions reach, often in other files: each is an input,
+        // so a change to one of them regenerates the bridge.
+        val files = (listOf(bridge.declaration) + bridge.shape.declarations).mapNotNull { it.containingFile }.distinct()
         BridgeEmitter(bridge).file()
-          .writeTo(codeGenerator, Dependencies(aggregating = false, bridge.declaration.containingFile!!))
+          .writeTo(codeGenerator, Dependencies(aggregating = false, *files.toTypedArray()))
       } catch (e: Refused) {
         logger.error("@KeliverBridge: ${e.message}", e.node)
       }
@@ -71,6 +77,9 @@ internal class KeliverBridgeCodegen(
     val simpleName = declaration.simpleName.asString()
     if (declaration.parentDeclaration != null) refuse(declaration, "$simpleName must be a top-level interface")
     if (declaration.typeParameters.isNotEmpty()) refuse(declaration, "$simpleName must not be generic")
+    if (declaration.isInternal() || declaration.isPrivate()) {
+      refuse(declaration, "$simpleName must be public: the generated Bridge object exposes it")
+    }
     if (declaration.superTypes.any { it.resolve().declaration.qualifiedName?.asString() != "kotlin.Any" }) {
       refuse(declaration, "$simpleName must not extend another interface: declare every function on it")
     }
@@ -109,10 +118,17 @@ internal class KeliverBridgeCodegen(
   private fun readFunction(owner: String, defaultTimeout: Int, function: KSFunctionDeclaration): BridgeFunction {
     val name = function.simpleName.asString()
     val where = "$owner.$name"
+    if (!function.isAbstract) {
+      refuse(function, "$where must not have a body: every function is served by the host")
+    }
+    if (name == "close") refuse(function, "$where clashes with ZiplineService.close(): give it another name")
+    if (OBJC_FAMILIES.any { name == it || (name.startsWith(it) && name[it.length].isUpperCase()) }) {
+      refuse(function, "$where starts with an Objective-C method family (init, new, copy, mutableCopy, alloc), which Kotlin/Native renames for Swift: give it another name")
+    }
     if (function.extensionReceiver != null) refuse(function, "$where must not be an extension function")
     if (function.typeParameters.isNotEmpty()) refuse(function, "$where must not be generic")
     val suspending = Modifier.SUSPEND in function.modifiers
-    val returnType = function.returnType!!.resolve()
+    val returnType = function.returnType!!.resolve().expanded()
     val returnsUnit = returnType.qualifiedName() == "kotlin.Unit" && !returnType.isMarkedNullable
     if (!suspending && !returnsUnit) {
       refuse(function, "$where must be suspend, or return Unit (fire and forget): a non-suspend call would hold the guest's thread until the host answered")
@@ -126,7 +142,10 @@ internal class KeliverBridgeCodegen(
       val parameterName = parameter.name!!.asString()
       if (parameter.isVararg) refuse(parameter, "$where's parameter $parameterName must not be vararg")
       if (parameter.hasDefault) refuse(parameter, "$where's parameter $parameterName must not have a default value")
-      val type = parameter.type.resolve()
+      if (parameterName in GENERATED_NAMES) {
+        refuse(parameter, "$where's parameter $parameterName clashes with a name the generated code uses (${GENERATED_NAMES.sorted().joinToString()}): rename it")
+      }
+      val type = parameter.type.resolve().expanded()
       when {
         type.isFunctionType || type.isSuspendFunctionType ->
           refuse(parameter, "$where's parameter $parameterName must not be a function (KNOWN_BUGS U11): an action takes values")
@@ -151,7 +170,8 @@ internal class KeliverBridgeCodegen(
   }
 
   /** A primitive, String, an enum, a @Serializable class, or a List or Map of those. */
-  private fun checkValueType(node: KSNode, what: String, type: KSType) {
+  private fun checkValueType(node: KSNode, what: String, unexpanded: KSType) {
+    val type = unexpanded.expanded()
     val qualifiedName = type.qualifiedName()
     when {
       qualifiedName in VALUES -> Unit
@@ -184,6 +204,13 @@ internal class KeliverBridgeCodegen(
 
 internal fun KSType.qualifiedName(): String? = declaration.qualifiedName?.asString()
 
+/** The type a typealias stands for (with its nullability), or this type. */
+internal fun KSType.expanded(): KSType {
+  val alias = declaration as? KSTypeAlias ?: return this
+  val target = alias.type.resolve().expanded()
+  return if (isMarkedNullable) target.makeNullable() else target
+}
+
 internal fun KSAnnotated.annotation(qualifiedName: String): KSAnnotation? =
   annotations.firstOrNull { it.annotationType.resolve().qualifiedName() == qualifiedName }
 
@@ -198,6 +225,12 @@ internal const val SERIAL_NAME = "kotlinx.serialization.SerialName"
 internal const val TRANSIENT = "kotlinx.serialization.Transient"
 private const val ZIPLINE_SERVICE = "app.cash.zipline.ZiplineService"
 private const val FLOW = "kotlinx.coroutines.flow.Flow"
+
+// Kotlin/Native renames a function in these Objective-C method families for Swift.
+private val OBJC_FAMILIES = listOf("alloc", "copy", "mutableCopy", "new", "init")
+
+// Names the generated code declares around the app's parameters (BridgeEmitter).
+private val GENERATED_NAMES = setOf("call", "done", "fail", "impl", "guard", "callbacks", "service", "zipline", "context", "log", "it", "e")
 
 private val VALUES = setOf(
   "kotlin.Boolean", "kotlin.Byte", "kotlin.Short", "kotlin.Int", "kotlin.Long",
