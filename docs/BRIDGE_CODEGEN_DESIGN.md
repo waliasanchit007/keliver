@@ -165,9 +165,9 @@ where they apply, because they were reviewed there:
 - no answer in time, a `fail(message)`, or a throw ends the guest's call with
   `BridgeCallFailed`, whose message is `KeliverBridge: ShopActions.pickAddress: <reason>` and
   which has no cause. `fail`'s message is the reason as the app wrote it, its line breaks
-  replaced by spaces, so it survives as one line. A throw's message is
-  not passed on (it could hold app data): the reason names the exception's class, and the
-  message goes only to `log`, which a host wires to its debug console;
+  replaced by spaces, so it survives as one line. A throw's message is not passed on (it could
+  hold app data): the reason names the exception's class, and the message goes only to `log`,
+  which a host wires to its debug console;
 - when the guest's call is cancelled, or times out, a call still waiting for `context` is not
   made, and `call.onCancel`'s block runs once, on `context`, from a separate launch, so it does
   not hold up the guest's cancellation; a block registered after that runs at once, also on
@@ -185,8 +185,8 @@ rebuilt on the other side as a `ZiplineException` (or as a cancellation): Ziplin
 types it knows, so it begins `dev.keliver.bridge.BridgeCallFailed: KeliverBridge: …` and goes on
 with the host's stack frames. So the guest cannot catch `BridgeCallFailed` directly; the
 generated `take` wrapper looks for `BridgeCallFailed: KeliverBridge: ` in the message's first
-line, rebuilds a
-`BridgeCallFailed` from that line alone (no host frames), and rethrows anything else.
+line, rebuilds a `BridgeCallFailed` from that line alone (no host frames), and rethrows
+anything else.
 
 ### 6. Tests
 
