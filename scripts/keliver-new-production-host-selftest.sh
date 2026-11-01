@@ -370,6 +370,8 @@ grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyLines\[0\]" "$L/build.gradle" && grep
   || bad "the host still reads its key from the merged assets"
 grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q '^    claim(cacheName)' "$LK/KeliverHost.kt" \
   && ok "a second host for the same key fails in create(), not later in start()" || bad "the per-key claim is not in create()"
+grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$L/consumer-rules.pro" \
+  && ok "M5: the library's consumer rules keep MemoryUsage (QuickJS builds it through JNI)" || bad "M5: the library's consumer rules do not keep MemoryUsage"
 [ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
 same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }
