@@ -118,7 +118,7 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      on iOS, B5's hook in the Kotlin `Keliver` object calls it, and Swift supplies only the
      callbacks;
    - `bind(zipline, callbacks: ShopActionsCallbacks, context, log)` is the same for the iOS
-     callbacks: the guard calls `ShopActionsCallbackAdapter` (item 5) with its `BridgeCall`;
+     callbacks, through `ShopActionsCallbackAdapter` (item 5);
    - `take(zipline): ShopActions` (guest side) returns a `ShopActions` that forwards to the
      taken service, so guest code, too, sees only the app's interface (§5 on failures).
 3. **Android delegate:** none is generated, because the app's interface is already one. An
@@ -145,10 +145,10 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      and depend on both with `api`; the template's framework exports nothing today. That is
      host work, in B5.
 5. **`ShopActionsCallbackAdapter(callbacks)`**, internal, generated next to `ShopActionsBridge`.
-   It only connects the callbacks to the guard: for each `suspend` function it calls the app's
-   function with the guard's `BridgeCall` and hands the guard its `done` and `fail` (so it does
-   not implement `ShopActions`); a fire-and-forget function is passed straight to the guard's
-   post. Posting to `context`, the limit and the first answer winning are the guard's (§5),
+   It only connects the callbacks to the guard: for each `suspend` function the guard gives it
+   a `BridgeCall` and its own `done` and `fail`, and it calls the app's function with them (so
+   it does not implement `ShopActions`); for a fire-and-forget function it hands the app's call
+   to the guard's post. Posting to `context`, the limit and the first answer winning are the guard's (§5),
    in `keliver-bridge`, not generated code.
 
 ### 5. The guard (`keliver-bridge`), the same on both platforms
