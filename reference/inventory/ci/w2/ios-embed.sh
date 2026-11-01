@@ -15,7 +15,7 @@
 #   I8  the guest throws while its screen shows: screen-failed, and the app's
 #       onUnavailable replaces it; the app keeps running
 # (Nothing taps in this embedded app (ci/m0/ios-tap drives only the standalone
-# host's T3), so native navigation, I3 in the plan, is not exercised on iOS;
+# host's P3 and T3), so native navigation, I3 in the plan, is not exercised on iOS;
 # Android's X4 covers it.)
 echo "--- W2: the host framework embedded in an existing SwiftUI app"
 EMB="$WORK/embed-ios"; rm -rf "$EMB"; cp -R "$REPO/reference/embed/ios" "$EMB"

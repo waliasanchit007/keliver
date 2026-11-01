@@ -12,8 +12,9 @@
 #      (hash pinned);
 #    - it publishes signed v1;
 #    - the host scaffolded by that zip's own bin/keliver-new-ios-host.sh runs on
-#      an iOS simulator through P1, P2 and P4–P7: signed v1, v2 after an edit, a
-#      foreign key refused, recovery, and an offline start from the cache;
+#      an iOS simulator through P1–P7: signed v1, three taps on Add 1 (an XCTest
+#      UI test), v2 after an edit, a foreign key refused, recovery, and an
+#      offline start from the cache;
 #    - then the static route: keliver-publish into a static HTTPS server whose
 #      throwaway CA only this run's simulator trusts, with no relay (S2-S16),
 #      the embedded host (W2), updates and reports (W5, W6).
@@ -103,7 +104,7 @@ jobs:
           bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
             | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
 
-      - name: iOS production OTA on the simulator — P1, P2, P4–P7
+      - name: iOS production OTA on the simulator — P1–P7
         run: |
           bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
             "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.17.zip"

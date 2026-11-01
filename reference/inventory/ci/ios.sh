@@ -15,11 +15,13 @@
 # iOS P-checks, the counterparts of device.sh's P1–P7:
 #   P1  the host embeds this app's public key; it builds and installs as its own app
 #   P2  signed v1 loads, the screen reads "Inventory", no empty-URL load (U28)
+#   P3  Add 1 three times on Espresso beans: 13, 14, 15, each observed (an XCTest
+#       UI test, ci/m0/ios-tap, attached to the running host), the screen then
+#       reading "On hand: 15"
 #   P4  an edit, published as v2, reaches the host: "Stockroom"
 #   P5  a copy of the app publishes with ITS key; the host refuses that bundle
 #   P6  back on this app's relay, its bundle loads again
 #   P7  relay down: the host starts from its cached bundle, verified
-# P3 (repeated taps) is not run here; the only iOS taps are M0's T3 (ci/m0/ios-tap).
 # The 0.3.6 relay serves no bundles/index.json, so these also show the host's
 # fallback to /bundles/latest on a 404.
 #
@@ -188,6 +190,10 @@ UDID="$(xcrun simctl create keliver-ios-ci ${SIM#* } ${SIM% *})" || { bad "could
 echo "simulator: $UDID ($SIM)" | tee "$EV/simulator.txt"
 xcrun simctl boot "$UDID" && xcrun simctl bootstatus "$UDID" -b > /dev/null 2>&1
 xcrun simctl install "$UDID" "$APPB" && ok "P1: the host installed as its own app ($BID)" || bad "P1: install failed"
+# The tap driver for P3 and M0's T3, built once.
+# shellcheck source=m0/ios-tap/tap.sh
+. "$HERE/m0/ios-tap/tap.sh"
+tap_build || bad "P3: the tap driver (ci/m0/ios-tap) did not build: $(grep -E ' error: ' "$EV/ios-tap-build.log" | head -2 | tr '\n' ' ')"
 
 # launch <label>: a fresh process; its console (the KeliverHost: lines), a
 # screenshot taken while it runs, and what that screenshot reads.
@@ -264,6 +270,28 @@ fi
 grep -q "codeLoadFailed" "$C" && bad "P2: a load failed (U28 would be an empty-URL failure): $(grep codeLoadFailed "$C" | head -1)" \
   || ok "P2: no failed load, so no empty-URL attempt (U28 absent)"
 reads P2-v1 Inventory && ok "P2: the screen reads 'Inventory'" || bad "P2: 'Inventory' is not on the screen"
+
+# --- P3 -------------------------------------------------------------------------
+# A launch of its own, its console kept while the UI test taps (launch() would close it
+# first), then a screenshot of the item, read like every other.
+if [ -n "$TAP_BUILT" ]; then
+  xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
+  xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/P3.console.txt" 2>&1 &
+  P3_PID=$!
+  sleep 30
+  tap_run P3 3 12; P3_RC=$?
+  xcrun simctl io "$UDID" screenshot "$EV/P3.png" > /dev/null 2>&1
+  kill "$P3_PID" 2>/dev/null; wait "$P3_PID" 2>/dev/null
+  swift "$HERE/ocr.swift" "$EV/P3.png" > "$EV/P3.ocr.txt" 2>"$EV/P3.ocr.err"
+  printf '    P3: %s\n' "$(grep 'On hand' "$EV/P3.ocr.txt" | head -1)"
+  grep -q "KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json" "$EV/P3.console.txt" \
+    && grep -q "codeLoadSuccess" "$EV/P3.console.txt" \
+    && ok "P3: the presenter runs from the signed v1 (codeLoadSuccess)" || bad "P3: v1 did not load in P3's launch"
+  [ "$P3_RC" = 0 ] && ok "P3: Add 1 three times on Espresso beans: 13, 14, 15, each observed ($(tap_steps P3) steps, P3-tap.log)" \
+    || bad "P3: Add 1 three times on Espresso beans: $(tap_why P3)"
+  reads P3 "On hand: 15" && ok "P3: the screen reads 'On hand: 15'" \
+    || bad "P3: 'On hand: 15' is not on the screen: $(grep -i 'hand' "$EV/P3.ocr.txt" | head -2 | tr '\n' ' ')$(head -1 "$EV/P3.ocr.err")"
+fi
 
 # --- P4 -------------------------------------------------------------------------
 V="$(curl -sf "http://localhost:8077/doc?project=default&screen=inventory" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"

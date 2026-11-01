@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		43AF46B243B1931602A821D3 /* AddOneTwice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0626ABC7132912167E9E13B0 /* AddOneTwice.swift */; };
+		1414C4F89EDC431CBD8FFD7B /* AddOne.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E8613F5755EDC2472CBDD6 /* AddOne.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0626ABC7132912167E9E13B0 /* AddOneTwice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddOneTwice.swift; sourceTree = "<group>"; };
+		88E8613F5755EDC2472CBDD6 /* AddOne.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddOne.swift; sourceTree = "<group>"; };
 		F2BF0A75EF38328050F3892C /* IosTapUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = IosTapUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -27,7 +27,7 @@
 		A8EEC8823B039F4CFCE90290 = {
 			isa = PBXGroup;
 			children = (
-				0626ABC7132912167E9E13B0 /* AddOneTwice.swift */,
+				88E8613F5755EDC2472CBDD6 /* AddOne.swift */,
 				3F792DB2615804A3BB0A8117 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,7 +90,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				43AF46B243B1931602A821D3 /* AddOneTwice.swift in Sources */,
+				1414C4F89EDC431CBD8FFD7B /* AddOne.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

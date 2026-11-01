@@ -1,14 +1,14 @@
 # Sourced by ci/ios.sh after W5: M0's timing marks on iOS, against W3's static
 # HTTPS server (its site is at v9). Uses ios.sh's APP, UDID, BID, APPB, WORK,
-# EV, HERE, launch, ok/bad, and W3. Only a host from templates with the marks
-# (src/timing/); an older one SKIPs.
+# EV, HERE, launch, ok/bad, W3, and the tap driver (m0/ios-tap/tap.sh). Only a
+# host from templates with the marks (src/timing/); an older one SKIPs.
 #   T1  the Debug build logs open, code, first-frame and content (the guest's
 #       KeliverTiming.mark), each once, on the console and in
 #       Library/Caches/keliver/timing.log; first-frame and content not before code
 #   T2  the Benchmark configuration (Release settings) loads v9 and logs the
 #       same marks; the Release configuration's binary has none of them
 #   T3  M4's guest frame profile, in both: in T1's and T2's launch, Add 1
-#       twice on Espresso beans (m0/ios-tap, an XCTest UI test that attaches
+#       twice on Espresso beans (tap_run, an XCTest UI test that attaches
 #       to the running host), so the guest recomposes in a frame — a launch
 #       alone times only an empty frame; then well-formed "frames" lines on the
 #       console and in the file, with a timed guest frame that sent a change
@@ -16,8 +16,8 @@
 #       host from templates without it SKIPs. The test runner's start sends the
 #       host to the background and back: the Debug build then checks for an
 #       update, harmless while the server stays at v9 (a newer bundle would
-#       load and repeat T1's marks). If the driver does not build, that is one
-#       FAIL and T3 reads frames.py without --changed, as before the taps
+#       load and repeat T1's marks). If the driver did not build (one FAIL, in
+#       ios.sh), T3 reads frames.py without --changed, as before the taps
 #   T4  M5's memory profile, in both, in a launch of its own (its extra screens
 #       would break T1's "once"): after the first screen's content, two memory
 #       cycles (the Darwin notification <bundle id>.keliver.memory-cycle opens a
@@ -33,13 +33,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   for _ in $(seq 1 30); do curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json && break; sleep 1; done
   m0_at(){ sed -n "s/.*KeliverTiming: $2 \([0-9][0-9]*\)\r*$/\1/p" "$1" | head -1; }
   m0_count(){ grep -c "KeliverTiming: $2 [0-9]" "$1"; }
-  # T3's tap driver, built once (it has no app of its own; it drives the host by bundle id).
-  M0_TAP=""; M0_TAP_RC=1
-  if grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
-    xcodebuild build-for-testing -project "$HERE/m0/ios-tap/IosTap.xcodeproj" -scheme IosTap \
-        -destination "id=$UDID" -derivedDataPath "$WORK/dd-tap" > "$EV/m0-ios-tap-build.log" 2>&1 \
-      && M0_TAP=1 || bad "T3: the tap driver (m0/ios-tap) did not build: $(grep -E 'error:' "$EV/m0-ios-tap-build.log" | head -2 | tr '\n' ' ')"
-  fi
+  M0_TAP_RC=1
   # One launch, one console, no relaunch: ios.sh's launch() relaunches without a
   # console when the first screenshot is blank, which would lose the marks.
   # With "tap", T3's Add 1 twice runs in the launch (log: $1-tap.log); M0_TAP_RC is its status.
@@ -48,28 +42,9 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
     xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$1.console.txt" 2>&1 &
     pid=$!; sleep 30
-    if [ "${2:-}" = tap ]; then
-      M0_TAP_RC=1
-      if [ -n "$M0_TAP" ]; then
-        local tpid t=0
-        rm -rf "$EV/$1-tap.xcresult"
-        TEST_RUNNER_TAP_BUNDLE_ID="$BID" xcodebuild test-without-building -project "$HERE/m0/ios-tap/IosTap.xcodeproj" \
-          -scheme IosTap -destination "id=$UDID" -derivedDataPath "$WORK/dd-tap" \
-          -resultBundlePath "$EV/$1-tap.xcresult" > "$EV/$1-tap.log" 2>&1 &
-        tpid=$!
-        # No timeout(1) on macOS: a hung runner fails this row, not the job.
-        while kill -0 "$tpid" 2>/dev/null && [ "$t" -lt 300 ]; do sleep 5; t=$((t + 5)); done
-        local stopped=""
-        if kill -0 "$tpid" 2>/dev/null; then
-          kill "$tpid" 2>/dev/null; stopped=1
-          while kill -0 "$tpid" 2>/dev/null && [ "$t" -lt 330 ]; do sleep 5; t=$((t + 5)); done
-          kill -9 "$tpid" 2>/dev/null
-        fi
-        wait "$tpid"; M0_TAP_RC=$?
-        [ -z "$stopped" ] || echo "ios-timing: the tap driver was stopped after 300 s" >> "$EV/$1-tap.log"
-        # The test, not just xcodebuild, must have passed.
-        grep -q "Test Case '-\[IosTapUITests.AddOneTwice testAddOneTwice\]' passed" "$EV/$1-tap.log" || M0_TAP_RC=1
-      fi
+    # Only a host with the frame profile: m0_frames SKIPs the others.
+    if [ "${2:-}" = tap ] && grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
+      tap_run "$1" 2; M0_TAP_RC=$?
     fi
     kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
   }
@@ -90,16 +65,16 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     if ! grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
       echo "  SKIP  $1: this host predates the guest frame profile (not counted)"; return 0
     fi
-    if [ -z "$M0_TAP" ]; then  # its failed build is counted once, above
+    if [ -z "$TAP_BUILT" ]; then  # its failed build is counted once, in ios.sh
       echo "  NOTE  $1: no tap driver, so only well-formed lines are checked"
       out="$(python3 "$HERE/m0/frames.py" "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
       return 0
     fi
     if [ "$M0_TAP_RC" != 0 ]; then
-      bad "$1: Add 1 twice on an open item (no profile read): $(grep -E 'error: |AddOneTwice: |ios-timing: ' "$EV/$3-tap.log" | head -3 | cut -c1-200 | tr '\n' ' ')"
+      bad "$1: Add 1 twice on an open item (no profile read): $(tap_why "$3")"
       return 0
     fi
-    ok "$1: Add 1 twice on an open item ($(grep -c 'AddOneTwice: F[1-3] ' "$EV/$3-tap.log") steps, $3-tap.log)"
+    ok "$1: Add 1 twice on an open item ($(tap_steps "$3") steps, $3-tap.log)"
     out="$(python3 "$HERE/m0/frames.py" --changed "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
   }
 

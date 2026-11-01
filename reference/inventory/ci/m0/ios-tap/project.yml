@@ -1,6 +1,7 @@
-# The iOS tap driver for ios-timing.sh's T3: one UI-testing bundle with no app of its own,
-# which drives the host by bundle id. IosTap.xcodeproj is generated from this file and
-# checked in, so CI needs no xcodegen; after a change here: xcodegen generate --spec project.yml
+# The iOS tap driver (tap.sh), for ios.sh's P3 and ios-timing.sh's T3: one UI-testing
+# bundle with no app of its own, which drives the host by bundle id. IosTap.xcodeproj is
+# generated from this file and checked in, so CI needs no xcodegen; after a change here:
+# xcodegen generate --spec project.yml
 name: IosTap
 options:
   deploymentTarget:
@@ -9,7 +10,7 @@ targets:
   IosTapUITests:
     type: bundle.ui-testing
     platform: iOS
-    sources: [AddOneTwice.swift]
+    sources: [AddOne.swift]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.keliver.reference.iostap
