@@ -492,9 +492,9 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
   change list, sent from its start rather than in a frame, has no `lead`. Frames are sent
   when the guest asks for one, and a screen left alone after it opens may ask for none
   (`n=0`, as on the Android emulator) or only for frames that send nothing (`empty`, as on
-  the iOS simulator); the reference app's T3 taps a button first (an XCTest UI test on iOS). A frame's `lead`
-  and `sink` are always in the same line as its `guest`; their `apply` and `queue` come later
-  and can fall in the next line.
+  the iOS simulator); the reference app's T3 taps a button first (on iOS, an XCTest UI
+  test). A frame's `lead` and `sink` are always in the same line as its `guest`; their
+  `apply` and `queue` come later and can fall in the next line.
 - **Overhead:** per frame, a few small objects and one task on the timing thread; per change
   list, two more main-thread messages and one more timing-thread task; the samples in fixed
   arrays. A store build compiles none of it (`src/notiming/`); only the listener's two

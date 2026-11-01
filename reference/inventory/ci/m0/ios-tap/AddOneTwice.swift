@@ -7,6 +7,10 @@ import XCTest
 /// It finds the widgets through Compose's accessibility tree, which XCTest asks for.
 /// TAP_BUNDLE_ID names the host; xcodebuild passes TEST_RUNNER_TAP_BUNDLE_ID through as it.
 final class AddOneTwice: XCTestCase {
+  override func setUp() {
+    continueAfterFailure = false
+  }
+
   func testAddOneTwice() throws {
     let bundleId = try XCTUnwrap(ProcessInfo.processInfo.environment["TAP_BUNDLE_ID"], "no TAP_BUNDLE_ID")
     let app = XCUIApplication(bundleIdentifier: bundleId)
@@ -21,12 +25,24 @@ final class AddOneTwice: XCTestCase {
         .lazy.compactMap { Int($0.label.dropFirst("On hand: ".count)) }.first
     }
 
-    // A ListItem's row may carry its texts as one label, joined with ", ".
-    let row = labelled("label BEGINSWITH %@", "Espresso beans, dark roast 1kg")
-    XCTAssertTrue(row.waitForExistence(timeout: 60), "F0: no Espresso beans row on screen:\n\(app.debugDescription)")
-    row.tap()
+    // On iOS a ListItem's row is labelled with its trailing icon's description
+    // ("KeyboardArrowRight", which wins over its texts), so the row is found by its headline,
+    // a text Compose keeps in the tree inside the row. Should XCTest not report that text,
+    // the first row is Espresso beans (the seed order, no search): tap its arrow. Either way
+    // the item screen must then show the name.
+    let name = "Espresso beans, dark roast 1kg"
+    let headline = labelled("label == %@", name)
+    if headline.waitForExistence(timeout: 60) {
+      headline.tap()
+    } else {
+      let arrow = labelled("label == %@", "KeyboardArrowRight")
+      XCTAssertTrue(arrow.exists, "F0: no Espresso beans row on screen:\n\(app.debugDescription)")
+      print("AddOneTwice: F0 no headline text in the tree; tapping the first row's arrow")
+      arrow.tap()
+    }
     let add = labelled("label == %@", "Add 1")
-    XCTAssertTrue(add.waitForExistence(timeout: 30), "F1: Espresso beans did not open:\n\(app.debugDescription)")
+    XCTAssertTrue(add.waitForExistence(timeout: 30), "F1: no item opened:\n\(app.debugDescription)")
+    XCTAssertTrue(labelled("label == %@", name).exists, "F1: the open item is not Espresso beans:\n\(app.debugDescription)")
     let n = try XCTUnwrap(onHand(), "F1: no 'On hand: N' on the item:\n\(app.debugDescription)")
     print("AddOneTwice: F1 Espresso beans opens with On hand: \(n)")
     for i in 1...2 {

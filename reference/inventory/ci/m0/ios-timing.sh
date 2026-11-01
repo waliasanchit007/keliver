@@ -13,7 +13,11 @@
 #       alone times only an empty frame; then well-formed "frames" lines on the
 #       console and in the file, with a timed guest frame that sent a change
 #       list and an applied change list (frames.py --changed, as on Android); a
-#       host from templates without it SKIPs
+#       host from templates without it SKIPs. The test runner's start sends the
+#       host to the background and back: the Debug build then checks for an
+#       update, harmless while the server stays at v9 (a newer bundle would
+#       load and repeat T1's marks). If the driver does not build, that is one
+#       FAIL and T3 reads frames.py without --changed, as before the taps
 #   T4  M5's memory profile, in both, in a launch of its own (its extra screens
 #       would break T1's "once"): after the first screen's content, two memory
 #       cycles (the Darwin notification <bundle id>.keliver.memory-cycle opens a
@@ -47,10 +51,20 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     if [ "${2:-}" = tap ]; then
       M0_TAP_RC=1
       if [ -n "$M0_TAP" ]; then
+        local tpid t=0
+        rm -rf "$EV/$1-tap.xcresult"
         TEST_RUNNER_TAP_BUNDLE_ID="$BID" xcodebuild test-without-building -project "$HERE/m0/ios-tap/IosTap.xcodeproj" \
-          -scheme IosTap -destination "id=$UDID" -derivedDataPath "$WORK/dd-tap" > "$EV/$1-tap.log" 2>&1
-        M0_TAP_RC=$?
-        sleep 3  # a window ends 1 s after its first sample
+          -scheme IosTap -destination "id=$UDID" -derivedDataPath "$WORK/dd-tap" \
+          -resultBundlePath "$EV/$1-tap.xcresult" > "$EV/$1-tap.log" 2>&1 &
+        tpid=$!
+        # No timeout(1) on macOS: a hung runner fails this row, not the job.
+        while kill -0 "$tpid" 2>/dev/null && [ "$t" -lt 300 ]; do sleep 5; t=$((t + 5)); done
+        if kill -0 "$tpid" 2>/dev/null; then
+          kill "$tpid" 2>/dev/null; echo "ios-timing: the tap driver was stopped after ${t} s" >> "$EV/$1-tap.log"
+        fi
+        wait "$tpid"; M0_TAP_RC=$?
+        # The test, not just xcodebuild, must have passed.
+        grep -q "Test Case '-\[IosTapUITests.AddOneTwice testAddOneTwice\]' passed" "$EV/$1-tap.log" || M0_TAP_RC=1
       fi
     fi
     kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
@@ -72,9 +86,13 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     if ! grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
       echo "  SKIP  $1: this host predates the guest frame profile (not counted)"; return 0
     fi
-    [ -n "$M0_TAP" ] || return 0  # its failed build is counted once, above
+    if [ -z "$M0_TAP" ]; then  # its failed build is counted once, above
+      echo "  NOTE  $1: no tap driver, so only well-formed lines are checked"
+      out="$(python3 "$HERE/m0/frames.py" "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
+      return 0
+    fi
     if [ "$M0_TAP_RC" != 0 ]; then
-      bad "$1: Add 1 twice on an open item (no profile read): $(grep -E 'error: |AddOneTwice: ' "$EV/$3-tap.log" | head -3 | cut -c1-200 | tr '\n' ' ')"
+      bad "$1: Add 1 twice on an open item (no profile read): $(grep -E 'error: |AddOneTwice: |ios-timing: ' "$EV/$3-tap.log" | head -3 | cut -c1-200 | tr '\n' ' ')"
       return 0
     fi
     ok "$1: Add 1 twice on an open item ($(grep -c 'AddOneTwice: F' "$EV/$3-tap.log") steps, $3-tap.log)"
