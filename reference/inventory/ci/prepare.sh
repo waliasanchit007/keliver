@@ -288,12 +288,32 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing" && [ "$DEVI
     grep -q "profileable" "$EV/m0-benchmark-manifest.txt" && ! grep -q "debuggable" "$EV/m0-benchmark-manifest.txt" \
       && ok "T0: the benchmark build is profileable and not debuggable" || bad "T0: the benchmark manifest: $(grep -iE 'profileable|debuggable' "$EV/m0-benchmark-manifest.txt" | tr '\n' ' ')"
   fi
+  # The memory profile's strings (M5), in a host that has it: its cycle's action and pss's graphics stat.
+  M0_STRINGS=(-e 'keliver/timing.log' -e 'KeliverTrace' -e 'first-frame')
+  grep -rqs "MEMORY_CYCLE" "$APP/host-android/src/timing" && M0_STRINGS+=(-e 'dev.keliver.debug.MEMORY_CYCLE' -e 'summary.graphics')
+  # A positive control: the benchmark build's dex carries every one, so the release check can see
+  # them. Each grep reads the files itself: `cat … | grep -q` exits 141 under pipefail when grep
+  # stops early, which read as "absent" here and as "no timing code" in the release check.
+  if [ -f "$EV/production-host-benchmark.apk" ]; then
+    rm -rf "$WORK/m0-bdex" && mkdir -p "$WORK/m0-bdex" && unzip -q -o "$EV/production-host-benchmark.apk" 'classes*.dex' -d "$WORK/m0-bdex"
+    missing=""
+    for ((i = 1; i < ${#M0_STRINGS[@]}; i += 2)); do
+      grep -aq -e "${M0_STRINGS[$i]}" "$WORK"/m0-bdex/*.dex || missing="$missing ${M0_STRINGS[$i]}"
+    done
+    [ -z "$missing" ] && ok "T0: the benchmark build's dex carries $(( ${#M0_STRINGS[@]} / 2 )) timing strings (the release check can see them)" \
+      || bad "T0: the benchmark build's dex lacks:$missing"
+  fi
   # The store build has none of it: not the file sink, not the guest's service.
   rel="$(find "$APP/host-android/build/outputs/apk/release" -name '*.apk' | head -1)"
   if [ -n "$rel" ]; then
     rm -rf "$WORK/m0-dex" && mkdir -p "$WORK/m0-dex" && unzip -q -o "$rel" 'classes*.dex' -d "$WORK/m0-dex"
-    ! cat "$WORK"/m0-dex/*.dex | grep -aq -e 'keliver/timing.log' -e 'KeliverTrace' -e 'first-frame' \
-      && ok "T0: the release build has no timing marks (no file sink, no KeliverTrace, no first-frame)" || bad "T0: the release build carries timing code"
+    # Only grep's 1 is "none": 2 (no dex unpacked, an unreadable file) looked at nothing.
+    grep -aqs "${M0_STRINGS[@]}" "$WORK"/m0-dex/*.dex; rc=$?
+    case $rc in
+      1) ok "T0: the release build has no timing marks (no file sink, no KeliverTrace, no first-frame$([ ${#M0_STRINGS[@]} -gt 6 ] && echo ', no memory profile'))" ;;
+      0) bad "T0: the release build carries timing code" ;;
+      *) bad "T0: the release build's dex could not be read (grep exit $rc)" ;;
+    esac
   else
     bad "T0: no release APK to check"
   fi

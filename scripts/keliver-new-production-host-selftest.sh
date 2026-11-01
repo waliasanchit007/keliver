@@ -289,6 +289,27 @@ grep -q 'override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callSta
   && grep -q 'name == "memory" || name == "frames" -> Log.w' "$H/src/timing/kotlin/$P/KeliverTiming.kt" \
   && ok "M4: the guest frame profile in debug and benchmark (sendFrame and change-list spans, the main thread's apply), a no-op elsewhere; its window's tests; guest marks cannot use its name" \
   || bad "M4: the guest frame profile is not wired"
+# M5: the memory profile at its points, and the memory cycle; neither outside debug and benchmark.
+T="$H/src/timing/kotlin/$P"; N="$H/src/notiming/kotlin/$P/KeliverTiming.kt"
+grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
+  && grep -q '@OptIn(EngineApi::class)' "$T/KeliverMemory.kt" \
+  && grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$H/proguard-rules.pro" \
+  && grep -q 'private const val MEMORY_CYCLE = "dev.keliver.debug.MEMORY_CYCLE"' "$T/KeliverTiming.kt" \
+  && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$T/KeliverTiming.kt" \
+  && grep -q 'override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)' "$M" \
+  && grep -q 'KeliverTiming.memory("code", zipline)' "$M" \
+  && grep -q 'KeliverTiming.watch(this, app)' "$M" \
+  && grep -q '^ *KeliverTiming.mark(name)$' "$T/KeliverTiming.kt" && ! grep -q '^ *mark(name)$' "$T/KeliverTiming.kt" \
+  && grep -q 'KeliverTiming.memory("open")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
+  && grep -q 'KeliverTiming.memoryAfterFrame("ui")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
+  && grep -q 'KeliverTiming.screenOpened(screenActivity)' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
+  && grep -q 'inline fun screenOpened(activity: android.app.Activity?) = Unit' "$N" \
+  && grep -q 'inline fun memory(point: String, zipline: Zipline? = null) = Unit' "$N" \
+  && grep -q 'inline fun watch(host: KeliverHost, app: TreehouseApp<\*>) = Unit' "$N" \
+  && [ ! -e "$H/src/notiming/kotlin/$P/KeliverMemory.kt" ] \
+  && ! grep -rq 'MEMORY_CYCLE' "$H/src/notiming" "$H/src/main" \
+  && ok "M5: the memory profile and its cycle in debug and benchmark, a no-op elsewhere" \
+  || bad "M5: the memory profile is not wired, or reaches a build without the marks"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
@@ -349,6 +370,8 @@ grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyLines\[0\]" "$L/build.gradle" && grep
   || bad "the host still reads its key from the merged assets"
 grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q '^    claim(cacheName)' "$LK/KeliverHost.kt" \
   && ok "a second host for the same key fails in create(), not later in start()" || bad "the per-key claim is not in create()"
+grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$L/consumer-rules.pro" \
+  && ok "M5: the library's consumer rules keep MemoryUsage (QuickJS builds it through JNI)" || bad "M5: the library's consumer rules do not keep MemoryUsage"
 [ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
 same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }

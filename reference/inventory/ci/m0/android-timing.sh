@@ -15,6 +15,14 @@
 #       "frames" lines on logcat and in the file, with a timed guest frame that
 #       sent a change list and an applied change list (frames.py --changed); a
 #       host from templates without it SKIPs
+#   T4  M5's memory profile, in both builds, in a launch of its own (its extra
+#       screens would break T1's "once"): after the first screen's content, two
+#       memory cycles (adb's broadcast dev.keliver.debug.MEMORY_CYCLE opens a
+#       second screen, closes it after its content and samples "closed"); then
+#       the points with QuickJS read from the runtime on, and pss at each
+#       closed (memory.py). It prints the growth from cycle 1's close to cycle
+#       2's and sets no bound on it yet: the emulator's numbers come first. A
+#       host from templates without it SKIPs
 if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
   echo "--- M0: timing marks"
   python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/m0-server.log" &
@@ -47,6 +55,21 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
     out="$(python3 "$HERE/m0/frames.py" --changed "$EV/logcat-$2.txt")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
   }
 
+  m0_memory(){  # $1 label, $2 evidence label: a launch, two memory cycles, then the profile in logcat-$2.txt
+    local out
+    if ! grep -rqs "MEMORY_CYCLE" "$APP/host-android/src/timing"; then
+      echo "  SKIP  $1: this host predates the memory profile (not counted)"; return 0
+    fi
+    launch prod "$EV/logcat-$2-launch.txt"
+    adb -s "$SERIAL" shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p "$PROD_ID" > /dev/null; sleep 25
+    adb -s "$SERIAL" shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p "$PROD_ID" > /dev/null; sleep 25
+    adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-$2-cycles.txt"
+    # Both dumps, each line once (a threadtime line carries its time, pid and tid; a memory line
+    # its nanos): the launch's has the early lines even if the log turned over since.
+    cat "$EV/logcat-$2-launch.txt" "$EV/logcat-$2-cycles.txt" | awk '!seen[$0]++' > "$EV/logcat-$2.txt"
+    out="$(python3 "$HERE/m0/memory.py" "$EV/logcat-$2.txt")" && ok "$1: the memory profile: $out" || bad "$1: the memory profile: $out"
+  }
+
   adb -s "$SERIAL" install -r "$W5_APK" > "$EV/install-T1.log" 2>&1
   launch prod "$EV/logcat-T1.txt"
   m0_marks T1 "$EV/logcat-T1.txt"
@@ -62,6 +85,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
     [ -n "$fl" ] && grep -qxF "$fl" "$EV/T1-timing.log" \
       && ok "T3: files/keliver/timing.log has this launch's frames line" || bad "T3: the file sink lacks this launch's frames line: ${fl:-none on logcat}"
   fi
+  m0_memory T4 T4
 
   if [ -n "${M0_BENCH_APK:-}" ] && [ -f "$M0_BENCH_APK" ]; then
     adb -s "$SERIAL" install -r "$M0_BENCH_APK" > "$EV/install-T2.log" 2>&1 \
@@ -73,6 +97,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
       && ok "T2: the benchmark build (R8) verified and ran v9" || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$EV/logcat-T2.txt" | head -3 | tr '\n' ' ')"
     m0_marks T2 "$EV/logcat-T2.txt"
     m0_frames "T3 (benchmark)" T3-benchmark
+    m0_memory "T4 (benchmark)" T4-benchmark
     adb -s "$SERIAL" shell am force-stop "$PROD_ID"
   else
     echo "  SKIP  T2: no benchmark build (a physical device, whose test CA is in the debug build only)"

@@ -965,6 +965,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       app.start()
     }
     session = Session(app, ziplineHttp, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload)
+    KeliverTiming.watch(this, app) // the memory profile (M5), in debug and benchmark builds only
     mutableState.value = KeliverHostState.Running(app)
     // M3: the code load starts now, not when the first screen's createContent would start it.
     app.start()
@@ -1275,6 +1276,7 @@ private class LoggingEventListener(
     // A load from the cache reports no manifest URL.
     Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"} source=${if (manifestUrl == null) "cache" else "network"}")
     onSuccess(sequence, manifestUrl)
+    KeliverTiming.memory("code", zipline) // the memory profile (M5), in debug and benchmark builds only
     manifestUrl?.let(onLoaded)
     sequence?.let(onSequence)
   }
@@ -1289,6 +1291,8 @@ private class LoggingEventListener(
   override fun uncaughtException(exception: Throwable) {
     Log.e(TAG, "uncaughtException: ${exception.message}", exception)
   }
+  // The memory profile (M5): a runtime, before any code loaded.
+  override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)
   // The guest frame profile (M4), in debug and benchmark builds only; nothing elsewhere.
   override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callStart(call)
   override fun callEnd(call: ZiplineCall, result: CallResult, startValue: Any?) = KeliverTiming.callEnd(call, startValue)
