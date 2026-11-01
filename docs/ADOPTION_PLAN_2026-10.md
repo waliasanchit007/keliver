@@ -12,7 +12,7 @@ serious defect in the proof was in host glue that each adopter writes for themse
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
 screen opened at launch, and the later-screen case is not measured yet), M4's
-first step (the host-side frame profile) is merged (#186, not released), M5's iOS memory profile is in review (#188). Item 3: K1 and K2 are released (tools 0.3.14),
+first step (the host-side frame profile) is merged (#186, not released), M5's iOS memory profile is merged (#188, not released). Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
@@ -31,8 +31,8 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
 
 ## Item 2. Startup and memory (measure first)
 
-**Status 2026-10-31:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
-below); M4's host-side frame profile merged (#186, step 5; not released); M5's iOS memory profile in review (#188, step 6).
+**Status 2026-11-01:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
+below); M4's host-side frame profile merged (#186, step 5; not released); M5's iOS memory profile merged (#188, step 6; not released).
 
 **Evidence.**
 - On Android (debug builds), native content took 1.5 s on a cold open against 1.1 s for the
@@ -89,13 +89,16 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's i
    `StandardAppLifecycle.sendFrame` (keliver-treehouse-guest), so a library release (0.4.2).
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
-   **2026-11-01, in review (#188):** the iOS host's debug and Benchmark builds log a `memory`
+   **2026-11-01, merged (#188, not released):** the iOS host's debug and Benchmark builds log a `memory`
    line (footprint and QuickJS's heap; at `closed` also the Kotlin heap after a collection) at
    `open`, `ui`, `runtime`, `code`, `content` and `closed`. In those builds a Darwin
    notification runs a memory cycle: it opens a second screen, closes it, and samples `closed`. The growth from one
    cycle's close to the next is the leak measure (`DEVICE_HOST.md`, "The memory profile").
    The reference app's iOS CI (T4) checks the lines on the simulator and prints the numbers,
-   with no bound yet. Not done: the numbers on a phone, where the 76 MB was seen (the
+   with no bound yet. On the CI simulator (debug; Benchmark in brackets): 22.1 MB at `open`
+   (18.2), QuickJS 4.7 MB once the code is loaded, about 47 MB (42) at the first cycle's close,
+   and from one cycle's close to the next +1.4 MB (+1.0) footprint, +6 KB (+8) QuickJS and
+   +128 KB Kotlin heap. Not done: the numbers on a phone, where the 76 MB was seen (the
    simulator has no memory limit and other graphics memory); an Android counterpart.
 
 Decide on optimisations only after M2–M5.
