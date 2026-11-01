@@ -90,11 +90,11 @@ public class BridgeGuard(
       }
       outcome.complete(answer)
     }
-    // A context that refused the launch (a closed executor: kotlinx cancels the job) still
-    // answers, unless the guard had already ended the wait.
+    // A context that refused the call, or a resumption of it (a closed executor: kotlinx
+    // cancels the job), still answers, unless the guard had already ended the wait.
     job.invokeOnCompletion {
-      if (it != null && outcome.complete(Answer.Failed("the app's context did not run it"))) {
-        safeLog("${BridgeCallFailed.PREFIX}$bridge.$function was not run: ${it.describe()}")
+      if (it != null && outcome.complete(Answer.Failed("the app's context refused it"))) {
+        safeLog("${BridgeCallFailed.PREFIX}$bridge.$function was refused by its context: ${it.describe()}")
       }
     }
 

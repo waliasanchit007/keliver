@@ -226,7 +226,8 @@ class BridgeGuardTest {
   }
 
   @Test fun aLogThatThrowsEndsNeitherTheCallNorTheProcess() = runTest {
-    // runTest fails on an exception that reaches no handler, so this also shows none escapes.
+    // Were the guard's scope handler to throw (it logs), kotlinx would pass that on and runTest
+    // would fail: this also shows nothing escapes.
     val g = BridgeGuard("ShopActions", StandardTestDispatcher(testScheduler)) { throw IllegalStateException("console down") }
     val e = assertFailsWith<BridgeCallFailed> { g.call<Unit>("share", 30) { error("boom") } }
     assertEquals("KeliverBridge: ShopActions.share: threw IllegalStateException", e.message)

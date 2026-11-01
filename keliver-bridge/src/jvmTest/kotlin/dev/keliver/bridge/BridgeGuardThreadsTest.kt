@@ -78,7 +78,7 @@ class BridgeGuardThreadsTest {
     val logged = ConcurrentLinkedQueue<String>()
     val guard = BridgeGuard("ShopActions", closed.asCoroutineDispatcher()) { logged += it }
     val e = runCatching { runBlocking { guard.call("openRoute", 30) { true } } }.exceptionOrNull()
-    assertEquals("KeliverBridge: ShopActions.openRoute: the app's context did not run it", e?.message)
+    assertEquals("KeliverBridge: ShopActions.openRoute: the app's context refused it", e?.message)
     guard.post("track") { }
     val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
     while (logged.none { it.startsWith("KeliverBridge: ShopActions.track was not run: ") } && System.nanoTime() < until) {
