@@ -298,6 +298,7 @@ grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
   && grep -q 'override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)' "$M" \
   && grep -q 'KeliverTiming.memory("code", zipline)' "$M" \
   && grep -q 'KeliverTiming.watch(this, app)' "$M" \
+  && grep -q '^          KeliverTiming.mark(name)$' "$T/KeliverTiming.kt" \
   && grep -q 'KeliverTiming.memory("open")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
   && grep -q 'KeliverTiming.memoryAfterFrame("ui")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
   && grep -q 'KeliverTiming.screenOpened(screenActivity)' "$H/src/main/kotlin/$P/KeliverScreen.kt" \

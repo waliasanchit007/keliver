@@ -423,8 +423,9 @@ internal object KeliverTiming {
       when {
         // The host's own lines: a guest mark of that name would read as one of them.
         name == "memory" || name == "frames" -> Log.w(LOG_TAG, "ignored a guest mark: '$name' is the host's")
+        // KeliverTiming.mark: a bare mark here is this one, which would schedule itself every frame.
         guestName.matches(name) -> afterFrame {
-          mark(name)
+          KeliverTiming.mark(name)
           if (name == "content") contentShown()
         }
         else -> Log.w(LOG_TAG, "ignored a guest mark: names are a-z, 0-9 and '-', at most 32")
