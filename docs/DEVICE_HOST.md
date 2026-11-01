@@ -520,7 +520,7 @@ Sizes are in KiB (the lines say KB); `-` is "not read here".
 |---|---|
 | `at` | `open` (a Keliver screen is being made: on iOS before its Compose view controller, on Android as the `KeliverScreen` enters the composition), `ui` (one frame after its first composition, two display-link ticks or Choreographer callbacks: the first screen's Loading screen; a later screen's is the guest's at once), `runtime` (a QuickJS runtime was made, before any code), `code` (the bundle's code loaded), `content` (with the guest's `content` mark), `closed` (2 s after a memory cycle closed its screen, after collecting both heaps) |
 | `cycle` | 0 for the screen the app shows; then each memory cycle's number |
-| `qjs`, `objects` | QuickJS's heap in use / allocated, and its objects (`Zipline.quickJs.memoryUsage`, read on the Zipline thread); `-` before a runtime exists |
+| `qjs`, `objects` | QuickJS's heap in use / allocated, and its objects (`Zipline.quickJs.memoryUsage`, read on the Zipline thread); `-` before a runtime exists. On Android the `benchmark` build reads it only because `host-android/proguard-rules.pro` keeps `app.cash.zipline.MemoryUsage`, which QuickJS builds through JNI; an app minifying with its own rules needs that line too, or `qjs` reads `-` |
 | `footprint`, `peak` (iOS) | the process's physical footprint (`task_info` `TASK_VM_INFO` `phys_footprint`: what Xcode's memory gauge shows and iOS's memory limit counts), and its highest so far |
 | `knheap` (iOS) | the Kotlin/Native heap's live objects after a full collection; at `closed` only, and `-` there when the runtime does not report it |
 | `rss` (Android) | the process's resident memory (`/proc/self/statm`), cheap enough for every point |
