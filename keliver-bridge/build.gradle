@@ -1,0 +1,27 @@
+// The runtime of generated action bridges: the guard every call a host serves goes through
+// (a time limit, the first answer winning, failures as one line), BridgeCall and
+// BridgeCallFailed. Called by the code keliver-bridge-codegen generates (B3b), so it is tested
+// once here rather than in every app. Design: docs/BRIDGE_CODEGEN_DESIGN.md, section 5.
+
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.kotlinx.coroutines.core
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}

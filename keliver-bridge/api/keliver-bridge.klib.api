@@ -1,0 +1,30 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-bridge>
+final class dev.keliver.bridge/BridgeCall { // dev.keliver.bridge/BridgeCall|null[0]
+    final val isCancelled // dev.keliver.bridge/BridgeCall.isCancelled|{}isCancelled[0]
+        final fun <get-isCancelled>(): kotlin/Boolean // dev.keliver.bridge/BridgeCall.isCancelled.<get-isCancelled>|<get-isCancelled>(){}[0]
+
+    final fun onCancel(kotlin/Function0<kotlin/Unit>) // dev.keliver.bridge/BridgeCall.onCancel|onCancel(kotlin.Function0<kotlin.Unit>){}[0]
+}
+
+final class dev.keliver.bridge/BridgeCallFailed : kotlin/RuntimeException { // dev.keliver.bridge/BridgeCallFailed|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String) // dev.keliver.bridge/BridgeCallFailed.<init>|<init>(kotlin.String;kotlin.String;kotlin.String){}[0]
+
+    final object Companion { // dev.keliver.bridge/BridgeCallFailed.Companion|null[0]
+        final fun fromZiplineMessage(kotlin/String?): dev.keliver.bridge/BridgeCallFailed? // dev.keliver.bridge/BridgeCallFailed.Companion.fromZiplineMessage|fromZiplineMessage(kotlin.String?){}[0]
+    }
+}
+
+final class dev.keliver.bridge/BridgeGuard { // dev.keliver.bridge/BridgeGuard|null[0]
+    constructor <init>(kotlin/String, kotlin.coroutines/CoroutineContext = ..., kotlin/Function1<kotlin/String, kotlin/Unit> = ...) // dev.keliver.bridge/BridgeGuard.<init>|<init>(kotlin.String;kotlin.coroutines.CoroutineContext;kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+
+    final fun post(kotlin/String, kotlin/Function0<kotlin/Unit>) // dev.keliver.bridge/BridgeGuard.post|post(kotlin.String;kotlin.Function0<kotlin.Unit>){}[0]
+    final suspend fun <#A1: kotlin/Any?> call(kotlin/String, kotlin/Int, kotlin.coroutines/SuspendFunction1<dev.keliver.bridge/BridgeCall, #A1>): #A1 // dev.keliver.bridge/BridgeGuard.call|call(kotlin.String;kotlin.Int;kotlin.coroutines.SuspendFunction1<dev.keliver.bridge.BridgeCall,0:0>){0§<kotlin.Any?>}[0]
+    final suspend fun <#A1: kotlin/Any?> callback(kotlin/String, kotlin/Int, kotlin/Function3<dev.keliver.bridge/BridgeCall, kotlin/Function1<#A1, kotlin/Unit>, kotlin/Function1<kotlin/String, kotlin/Unit>, kotlin/Unit>): #A1 // dev.keliver.bridge/BridgeGuard.callback|callback(kotlin.String;kotlin.Int;kotlin.Function3<dev.keliver.bridge.BridgeCall,kotlin.Function1<0:0,kotlin.Unit>,kotlin.Function1<kotlin.String,kotlin.Unit>,kotlin.Unit>){0§<kotlin.Any?>}[0]
+}

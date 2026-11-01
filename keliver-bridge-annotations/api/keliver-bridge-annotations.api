@@ -1,0 +1,10 @@
+public abstract interface annotation class dev/keliver/bridge/api/BridgeTimeout : java/lang/annotation/Annotation {
+	public abstract fun seconds ()I
+}
+
+public abstract interface annotation class dev/keliver/bridge/api/KeliverBridge : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun timeoutSeconds ()I
+	public abstract fun version ()I
+}
+

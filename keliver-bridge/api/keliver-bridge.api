@@ -1,0 +1,22 @@
+public final class dev/keliver/bridge/BridgeCall {
+	public final fun isCancelled ()Z
+	public final fun onCancel (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class dev/keliver/bridge/BridgeCallFailed : java/lang/RuntimeException {
+	public static final field Companion Ldev/keliver/bridge/BridgeCallFailed$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class dev/keliver/bridge/BridgeCallFailed$Companion {
+	public final fun fromZiplineMessage (Ljava/lang/String;)Ldev/keliver/bridge/BridgeCallFailed;
+}
+
+public final class dev/keliver/bridge/BridgeGuard {
+	public fun <init> (Ljava/lang/String;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun call (Ljava/lang/String;ILkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun callback (Ljava/lang/String;ILkotlin/jvm/functions/Function3;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun post (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+}
+

@@ -144,7 +144,10 @@ jobs:
       # superset conflicts with the strict yarn.lock check in the build above.
       # The composeui jvmTests are the widgets' real Compose UI tests (desktop,
       # headless: HostGapsTest, LazyListItemStateTest). Like the portal modules,
-      # `test` skips them.
+      # `test` skips them. keliver-bridge's guard runs on JVM, JS and the iOS
+      # simulator (docs/BRIDGE_CODEGEN_DESIGN.md, section 6): the first iOS
+      # simulator test in this job, so a runner without Xcode's simulators (the
+      # macos-latest fallback when vars.CI_RUNNER is unset) fails it here.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
@@ -157,6 +160,9 @@ jobs:
           :portal-sql:jvmTest
           :keliver-material-composeui:jvmTest
           :keliver-lazylayout-composeui:jvmTest
+          :keliver-bridge:jvmTest
+          :keliver-bridge:jsTest
+          :keliver-bridge:iosSimulatorArm64Test
           -DRELEASE_SIGNING_ENABLED=false
 
       # The full inherited Redwood test suite that asserts against the
