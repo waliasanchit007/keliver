@@ -293,6 +293,7 @@ grep -q 'override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callSta
 T="$H/src/timing/kotlin/$P"; N="$H/src/notiming/kotlin/$P/KeliverTiming.kt"
 grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
   && grep -q '@OptIn(EngineApi::class)' "$T/KeliverMemory.kt" \
+  && grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$H/proguard-rules.pro" \
   && grep -q 'private const val MEMORY_CYCLE = "dev.keliver.debug.MEMORY_CYCLE"' "$T/KeliverTiming.kt" \
   && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$T/KeliverTiming.kt" \
   && grep -q 'override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)' "$M" \
