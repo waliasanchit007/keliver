@@ -45,6 +45,9 @@ hand-written ones, so the Zipline plugin adapts a generated `ZiplineService` the
 treehouse codegen's output in `sample/shared` already relies on that. A `dev.keliver.bridge` Gradle
 plugin id that applies all of this is a later convenience, not part of B3.
 
+KSP does not always see the annotations' default values in that metadata compilation (an
+annotation from a library klib), so the processor repeats them (found in B3b).
+
 ### 2. Modules
 
 | Module | Targets | Contents |
@@ -210,6 +213,11 @@ frames), and rethrows anything else.
   Zipline plugin for JVM, JS and the iOS simulator in CI's full build, as `sample/shared` is.
   If Zipline's API lets a JVM test bind and take through a pair of endpoints in one process,
   that test runs there too (B3b finds out); otherwise the first round trip is B5's.
+  **B3b found:** Zipline 1.22 has no public in-process endpoint pair, so the first round trip
+  is B5's. The fixture (`keliver-bridge-fixture`) is built with the plugin for JVM, JS and the
+  iOS simulator (Zipline writes `ShopActionsService.Companion.Adapter`), and its JVM tests drive
+  the generated classes: both host services through a real guard, and the guest's wrapper over
+  a service failing with a host's real stack-trace text.
 - **The guard** (`keliver-bridge`, `commonTest`, so JVM, JS, where the guest-side mapping runs,
   and the iOS simulator): first answer
   wins, a second is ignored, each limit including none, `fail`, a throw (its message only in
