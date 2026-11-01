@@ -9,11 +9,11 @@ What is in it since 0.3.16 (`65346c63d`):
 - #190 (guest marks cannot take the hosts' own line names on Android);
 - #192 (whole console lines on iOS).
 
-#182–#185, #187, #189 and #193 move the reference app, its harness, the tools device verifier
-and the records.
+#182 records the 0.3.16 release. #183–#185, #187, #189 and #193 move the reference app, its
+harness, the tools device verifier (not in the bundle) and the records.
 
 **The libraries stay 0.4.1.** Nothing published to Maven Central changed
-since 0.4.1. Every change here is in the scaffolders' host templates and
+since 0.4.1. Every change here is in the scaffolders, their templates and
 the docs; the relay is unchanged. New apps get `dev.keliver:*:0.4.1`, as
 with 0.3.16. **A host scaffolded earlier gets none of it until it is
 scaffolded again.** Everything below but the iOS console change (#192, every
@@ -68,10 +68,11 @@ On Android, a minified `benchmark` build reads QuickJS only because R8 keeps
 rules of its own needs that line too. `DEVICE_HOST.md`, "The memory profile".
 
 First numbers, from CI (KiB / 1024; debug, benchmark in brackets):
-- **iOS simulator** (#188): 21.6 MiB footprint at `open` (17.8); QuickJS 4.6 MiB once the
-  code is loaded; 45.8 MiB (40.7) at the first cycle's close.
-- **Android emulator** (#191): rss 181.9 MiB at `open` (112.8); QuickJS 4.6 MiB; `pss`
-  110.3 MiB (39.2) at the first cycle's close.
+- **iOS simulator** (#188): 21.6 MiB footprint at `open` (17.8); QuickJS's heap 4.6 MiB at
+  `code` (4678 KiB: 93 before any code, +4585 with it); 45.8 MiB (40.7) at the first cycle's
+  close.
+- **Android emulator** (#191): rss 181.9 MiB at `open` (112.8); QuickJS's heap 4.6 MiB at
+  `code`, as on iOS; `pss` 110.3 MiB (39.2) at the first cycle's close.
 
 From one cycle to the next, QuickJS grew a few KiB on both. The two hosts count different
 things (footprint and `pss`), so their numbers do not compare. No phone numbers yet.
