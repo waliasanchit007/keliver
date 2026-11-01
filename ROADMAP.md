@@ -14,7 +14,7 @@ The step-by-step record of every release and its evidence:
   Cash App Redwood on Zipline), the `keliver-material` widget set, layout and
   lazy layouts, navigation, HTTP and SQL capabilities, and the portal's editor
   libraries. Pre-1.0: pin an exact version ([`docs/API_STABILITY.md`](./docs/API_STABILITY.md)).
-- **Tools bundle** `keliver-portal-tools` 0.3.15 (a GitHub release asset):
+- **Tools bundle** `keliver-portal-tools` 0.3.17 (a GitHub release asset):
   `keliver-init` scaffolds an app, `keliver-portal` runs the relay and the
   visual editor, `keliver-run-android` puts the app's screens on a phone or
   emulator (checked on the CI emulator and a physical Android phone),
@@ -52,7 +52,9 @@ In order (details and evidence in `docs/ROADMAP.md`):
    header callback) is released in tools 0.3.16.
 5. **Start-up and memory**, measured before optimised. M3 (the code load
    starts at host start) is released in tools 0.3.16; on a Galaxy A12 it did
-   not speed up a screen opened at launch.
+   not speed up a screen opened at launch. The guest frame profile (M4) and
+   the memory profile on both hosts (M5) are released in tools 0.3.17, with
+   CI emulator and simulator numbers; a phone's are not taken yet.
 6. **A physical-device proof** with release-signed builds and a real HTTPS
    server, and an external adopter.
 

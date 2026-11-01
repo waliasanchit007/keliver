@@ -1,7 +1,8 @@
 # keliver-portal-tools 0.3.17 — release notes
 
-**Status: CANDIDATE**, by `PORTAL_TOOLS_RELEASE.md`. Identities are filled in
-as each step of the procedure passes.
+**Status: RELEASED** 2026-11-01 (09:52:28Z), by `PORTAL_TOOLS_RELEASE.md`, under the
+owner's 2026-10-27 handover. Tag `portal-tools-v0.3.17` (annotated, `df6e93c40`) →
+`7ea8940c383ce3b759575f6bb83e26d2c4e8b207`. Not marked "Latest" (`--latest=false`).
 
 What is in it since 0.3.16 (`65346c63d`):
 - #186 (M4: the guest frame profile);
@@ -92,11 +93,24 @@ interleave.
 
 ## Verification
 
-(to be filled in: source commit, zip sha256 and size, `VERSION.json`, APK,
-build run and artifact, device job, the packaged checks, the stored asset's
-digest, the public download check)
+| what | identity |
+|---|---|
+| source commit | `7ea8940c383ce3b759575f6bb83e26d2c4e8b207` (the candidate commit on PR #194; `VERSION.json`'s `sourceCommit`, `sourceDirtyFiles` 0) |
+| zip | `keliver-portal-tools-0.3.17.zip`, sha256 `2c6e69d64d142e4282f341d1e5879dd21c689c915265f56c2582782b4ad8b785`, 92,132,756 bytes |
+| `.sha256` file | 98 bytes, sha256 `10d36890e5460c41048116679fd982861d52bfb7724bd8d45497b54905e81d16` |
+| `VERSION.json` | toolsVersion 0.3.17, mavenDependencyVersion 0.4.1 |
+| device host APK | `host/keliver-device-host-0.3.17.apk`, sha256 `9f12b1fc4d621a336de7b4f2e400fe866410bea4b511f1e43067a8822778b6e8`; no `assets/portal_ed25519.pub` |
+| candidate build | `portal-tools.yml` run `41291720452` (bundle job `124804166537`) at `7ea8940c3`; retained artifact `13078906556` (artifact zip `e1bad49d…`) |
+| packaged checks in that build | adopter acceptance 25/0 (with the U21 identity gate), foreign-relay refusal 6/0, store identity 11/0, device-host hygiene 10/0, store recovery 144/0, production-host scaffolder 84/0 (from `scripts/`) and 74/0 (from the package), iOS host 75/0 and 75/0, publish target 51/0 and 33/0, screen and component scaffolders 9/0, `keliver-run-android` 22/0, the embed floor 11/0, `keliver-publish` 41/0, key permissions 63/0 |
+| device job | `portal-tools.yml` run `41294342437` (job `124811933096`), dispatched from `release/tools-0.3.17` at `c52668d86` (differs from the candidate only in these notes) against the artifact above, APK sha256 pinned: the device verifier 19/0 and its packaged acceptance 28/0, on the CI emulator |
+| checked locally | the artifact downloaded through `gh api …/actions/artifacts/13078906556/zip`: both sha256s, `VERSION.json`, no key in the APK, and the shipped templates carry #191's `KeliverTiming.mark(name)`, both `MemoryUsage` keep rules and #192's `consoleLock` with no `println` |
+| tag push | ran only `portal-tools.yml`'s read-only rebuild (`41294843724`), never attached; step 3 found no workflow at `7ea8940c3` that can write a release |
+| stored assets | release `430489073`: the zip (asset `697925066`) and the `.sha256` (asset `697925065`), server digests and sizes equal to the files above |
+| draft download-back | worked: sha256 `2c6e69d6…`, 92,132,756 bytes |
+| public download | worked from the releasing machine after publishing: the zip `2c6e69d6…`, 92,132,756 bytes, and the public `.sha256` names the same hash |
 
-Not verified for this release:
+Not verified for this release (the reference app's move to 0.3.17 will run the published
+hosts in CI):
 - either profile on a phone: M4 and M5 ran only on the CI emulator and simulator;
 - a leak bound: none is set;
 - iOS's frame profile after a tap: the iOS harness has no tap step, so its T3 sees one empty
