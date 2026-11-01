@@ -23,7 +23,7 @@ them visually in a web portal that round-trips to the .kt files in git.
   the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
   checked on an emulator by `.github/workflows/reference-app.yml` and on an iOS
   simulator by `ios-host.yml`. Its production route is published-only
-  when the workflow is run by hand: tools **0.3.16**'s own `bin/` scaffolders
+  when the workflow is run by hand: tools **0.3.17**'s own `bin/` scaffolders
   write the signing, the Android host and the iOS host, which build against
   Maven Central, and `keliver-publish` comes from the zip too. On a pull request
   the same harness scaffolds from this checkout's `scripts/` instead
