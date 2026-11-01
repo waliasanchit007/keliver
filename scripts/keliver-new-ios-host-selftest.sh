@@ -282,6 +282,22 @@ grep -q 'override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callSta
   && [ -n "$PH" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/timing/kotlin/KeliverFrames.kt" | cmp -s - "$T/KeliverFrames.kt" \
   && ok "M4: the guest frame profile when KELIVER_TIMING=YES, a no-op elsewhere; its window is the Android host's, byte for byte" \
   || bad "M4: the guest frame profile is not wired, or its window differs from the Android host's"
+# M5: the memory profile, at its points, and the memory cycle; neither outside KELIVER_TIMING=YES.
+N="$H/src/notiming/kotlin/com/example/demo/host/KeliverTiming.kt"
+grep -q 'task_info(mach_task_self_, TASK_VM_INFO.convert()' "$T/KeliverMemory.kt" 2>/dev/null \
+  && grep -q '@OptIn(EngineApi::class)' "$T/KeliverMemory.kt" \
+  && grep -q 'keliver.memory-cycle' "$T/KeliverTiming.kt" \
+  && grep -q 'override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)' "$K/MainViewController.kt" \
+  && grep -q 'KeliverTiming.memory("code", zipline)' "$K/MainViewController.kt" \
+  && grep -q 'KeliverTiming.memory("open")' "$K/MainViewController.kt" \
+  && grep -q 'KeliverTiming.memoryAfterFrame("ui")' "$K/MainViewController.kt" \
+  && grep -q 'KeliverTiming.watch(app)' "$K/MainViewController.kt" \
+  && grep -q 'inline fun memory(point: String, zipline: Zipline? = null) = Unit' "$N" \
+  && grep -q 'inline fun watch(app: TreehouseApp<\*>) = Unit' "$N" \
+  && [ ! -e "$H/src/notiming/kotlin/com/example/demo/host/KeliverMemory.kt" ] \
+  && ! grep -rq 'memory-cycle' "$H/src/notiming" "$K" \
+  && ok "M5: the memory profile and its cycle when KELIVER_TIMING=YES, a no-op elsewhere" \
+  || bad "M5: the memory profile is not wired, or reaches a build without KELIVER_TIMING"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \

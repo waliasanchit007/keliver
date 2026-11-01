@@ -8,6 +8,7 @@ package @@PACKAGE@@
 
 import app.cash.zipline.Call
 import app.cash.zipline.Zipline
+import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.ZiplineTreehouseUi
 
 @Suppress("UNUSED_PARAMETER", "NOTHING_TO_INLINE")
@@ -25,4 +26,10 @@ internal object KeliverTiming {
   inline fun callStart(call: Call): Any? = null
 
   inline fun callEnd(call: Call, startValue: Any?) = Unit
+
+  inline fun watch(app: TreehouseApp<*>) = Unit
+
+  inline fun memoryAfterFrame(point: String) = Unit
+
+  inline fun memory(point: String, zipline: Zipline? = null) = Unit
 }

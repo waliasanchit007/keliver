@@ -290,7 +290,7 @@ for set in commonMain jvmTest iosTest; do
     subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
   done
 done
-# Timing marks (M0) and the guest frame profile (M4): the real ones when Xcode's KELIVER_TIMING
+# Timing marks (M0), the guest frame profile (M4) and the memory profile (M5): the real ones when Xcode's KELIVER_TIMING
 # is YES (Debug, Benchmark), a no-op otherwise.
 for set in timing notiming; do
   for f in "$TEMPLATES"/src/$set/kotlin/*.kt; do

@@ -499,6 +499,51 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
   arrays. A store build compiles none of it (`src/notiming/`); only the listener's two
   overrides, returning nothing, remain.
 
+**The memory profile** (the iOS host, in the same builds as the marks; M5 of
+`ADOPTION_PLAN_2026-10.md`; not in a released tools bundle yet). What the process, QuickJS
+and the Kotlin heap hold at points of a screen's life, as one line per point:
+
+```
+memory <nanos> at=content cycle=0 footprint=183204 peak=190112 qjs=6120/7012 objects=41230 knheap=-
+```
+
+Sizes are in KB; `-` is "not read here".
+
+| Field | What it is |
+|---|---|
+| `at` | `open` (a Keliver screen is being made, before its Compose view controller), `ui` (two display-link ticks after its first composition: the first screen's Loading screen; a later screen's is the guest's at once), `runtime` (a QuickJS runtime was made, before any code), `code` (the bundle's code loaded), `content` (with the guest's `content` mark), `closed` (2 s after a memory cycle closed its screen, after collecting both heaps) |
+| `cycle` | 0 for the screen the app shows; then each memory cycle's number |
+| `footprint`, `peak` | the process's physical footprint (`task_info` `TASK_VM_INFO` `phys_footprint`: what Xcode's memory gauge shows and iOS's memory limit counts), and its highest so far |
+| `qjs`, `objects` | QuickJS's heap in use / allocated, and its objects (`Zipline.quickJs.memoryUsage`, read on the Zipline thread); `-` before a runtime exists |
+| `knheap` | the Kotlin/Native heap's live objects after a full collection; at `closed` only, and `-` there when the runtime does not report it |
+
+- **A memory cycle** opens a second screen over the shown one, waits for its content (at
+  most 15 s), closes it and samples `closed`. One runs at a time, and only once the shown
+  screen has its content. A debug or Benchmark build runs one when the
+  Darwin notification `<bundle id>.keliver.memory-cycle` is posted (`xcrun simctl spawn
+  <udid> notifyutil -p <name>`; `xcrun devicectl device notification post --device <id>
+  --name <name>` on a phone). Growth from one cycle's `closed` to the next is what a screen
+  did not give back; the first cycle's own growth includes one-time costs (images, caches).
+- **Reading it:** `open` to `ui` is mostly the Compose Multiplatform runtime and its first
+  draw; `ui` to `runtime` and `runtime` to `code` add QuickJS, the loader and the guest's
+  code (`qjs` at `runtime` is the engine before any code; `code` minus it is the guest's code
+  and start-up); `code` to `content` is the screen (`qjs` for its guest side). A guest mark
+  named `memory` or `frames` is ignored: it would read as one of these lines.
+- **What it cannot split:** the steps overlap (the lookup and the code load run while
+  Compose draws), so footprint differences between points are approximate; only `qjs` is
+  exact. Skia and Metal memory is not apart from Compose's, nor the host's widgets from
+  Compose. The simulator is a macOS process with no memory limit and other graphics memory:
+  numbers that matter are a phone's. `closed` collects the Kotlin heap and lets the main
+  thread release what that freed before it measures; if the screen's composition is let go
+  later still, its guest objects count there (compare `objects` at `closed` with
+  `content`). A cycle whose screen did not close says so on the console. A host
+  that starts before its first screen logs `runtime` and `code` before `open`.
+- **Output:** the same as the frame profile's (the console and `timing.log`, not `onTrace`).
+- **Overhead:** one `task_info` call per point, and one QuickJS read on the Zipline thread;
+  collections only at `closed`. A store build compiles none of it (`src/notiming/`); only
+  the listener's `ziplineCreated` override, doing nothing, remains. The Android host has no
+  memory profile yet.
+
 ## 3. Your own production iOS host
 
 `keliver-new-ios-host.sh` (run from the app root; scaffolding needs bash and

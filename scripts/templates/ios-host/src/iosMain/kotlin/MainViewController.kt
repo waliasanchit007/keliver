@@ -787,6 +787,7 @@ public object Keliver {
     route: KeliverRoute?,
     onClose: (() -> Unit)?,
   ): UIViewController {
+    KeliverTiming.memory("open") // Debug and Benchmark builds only (M5)
     // Weak: the screen holds this closure, and a view controller that went closes nothing.
     var shownBy: kotlin.native.ref.WeakReference<UIViewController>? = null
     val close: () -> Unit = onClose ?: { shownBy?.get()?.let(::closeShown) }
@@ -858,7 +859,11 @@ public object Keliver {
     route: KeliverRoute?,
     close: () -> Unit,
   ): UIViewController = ComposeUIViewController {
-    remember { KeliverTiming.mark("open") } // Debug and Benchmark builds only (M0)
+    remember {
+      // Debug and Benchmark builds only (M0, M5)
+      KeliverTiming.mark("open")
+      KeliverTiming.memoryAfterFrame("ui")
+    }
     LaunchedEffect(Unit) { start() }
     // Live updates (UPDATES = "live", debug builds): the host listens for publishes while a
     // screen is on show. The composition outlives that (a tab not selected, a screen pushed over
@@ -1210,6 +1215,7 @@ private fun createApp(
       },
     ),
   )
+  KeliverTiming.watch(app) // the memory profile reads its QuickJS heap (M5); Debug and Benchmark builds only
   // After a first load that failed (Keliver.loadAgain): from the network this time, into the same
   // app, stop() then start() as the fall-back does.
   val reload = { url: String, sha256: String? ->
@@ -1266,6 +1272,7 @@ private class LoggingEventListener(
   private val onSequence: (Long) -> Unit,
 ) : EventListener() {
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
+    KeliverTiming.memory("code", zipline) // the memory profile (M5), Debug and Benchmark builds only
     val sequence = manifestSequence(manifest.metadata)
     // A load from the cache reports no manifest URL.
     log("codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"} source=${if (manifestUrl == null) "cache" else "network"}")
@@ -1283,6 +1290,8 @@ private class LoggingEventListener(
   }
   override fun uncaughtException(exception: Throwable) =
     log("uncaughtException: ${exception.message}")
+  // The memory profile (M5): QuickJS before any code loads. Debug and Benchmark builds only.
+  override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)
   // The guest frame profile (M4), in Debug and Benchmark builds only; nothing elsewhere.
   override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callStart(call)
   override fun callEnd(call: ZiplineCall, result: CallResult, startValue: Any?) = KeliverTiming.callEnd(call, startValue)
