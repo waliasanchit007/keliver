@@ -117,8 +117,8 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      §5. It is called from Kotlin (its `Zipline` and `CoroutineContext` are no use to Swift):
      on iOS, B5's hook in the Kotlin `Keliver` object calls it, and Swift supplies only the
      callbacks;
-   - `bind(zipline, callbacks: ShopActionsCallbacks, context, log)` is the same through
-     `ShopActionsCallbackAdapter`;
+   - `bind(zipline, callbacks: ShopActionsCallbacks, context, log)` is the same for the iOS
+     callbacks: the guard calls `ShopActionsCallbackAdapter` (item 5) with its `BridgeCall`;
    - `take(zipline): ShopActions` (guest side) returns a `ShopActions` that forwards to the
      taken service, so guest code, too, sees only the app's interface (§5 on failures).
 3. **Android delegate:** none is generated, because the app's interface is already one. An
@@ -144,10 +144,12 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      and `keliver-bridge` (for `BridgeCall`; an export does not carry over to dependencies),
      and depend on both with `api`; the template's framework exports nothing today. That is
      host work, in B5.
-5. **`ShopActionsCallbackAdapter(callbacks)`**, internal, which turns each callback into a
-   `suspend` call that also takes the guard's `BridgeCall` (so it does not implement
-   `ShopActions`): it calls the app's function on `context` and waits for the first `done` or
-   `fail` (§5).
+5. **`ShopActionsCallbackAdapter(callbacks)`**, internal, generated next to `ShopActionsBridge`.
+   It only connects the callbacks to the guard: for each `suspend` function it calls the app's
+   function with the guard's `BridgeCall` and hands the guard its `done` and `fail` (so it does
+   not implement `ShopActions`); a fire-and-forget function is passed straight to the guard's
+   post. Posting to `context`, the limit and the first answer winning are the guard's (§5),
+   in `keliver-bridge`, not generated code.
 
 ### 5. The guard (`keliver-bridge`), the same on both platforms
 
