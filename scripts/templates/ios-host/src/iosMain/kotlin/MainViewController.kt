@@ -1297,8 +1297,8 @@ private class LoggingEventListener(
   override fun callEnd(call: ZiplineCall, result: CallResult, startValue: Any?) = KeliverTiming.callEnd(call, startValue)
 }
 
-/** stdout, which `xcrun simctl launch --console-pty` captures. */
-private fun log(message: String) = println("$TAG: $message")
+/** stdout, which `xcrun simctl launch --console-pty` captures: one write a line (consoleLine). */
+private fun log(message: String) = consoleLine("$TAG: $message")
 
 @Composable
 private fun MessageScreen(title: String, message: String?, safeArea: Boolean = true) {

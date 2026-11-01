@@ -298,6 +298,14 @@ grep -q 'task_info(mach_task_self_, TASK_VM_INFO.convert()' "$T/KeliverMemory.kt
   && ! grep -rq 'memory-cycle' "$H/src/notiming" "$K" \
   && ok "M5: the memory profile and its cycle when KELIVER_TIMING=YES, a no-op elsewhere" \
   || bad "M5: the memory profile is not wired, or reaches a build without KELIVER_TIMING"
+# One write a line: println writes the text and its newline apart, so another thread's line could
+# land between them (an ios-host run read "…knheap=-KeliverHost: codeLoadSuccess …").
+grep -q 'val n = write(1, pinned.addressOf(at), (bytes.size - at).convert()).toInt()' "$K/ConsoleLine.kt" 2>/dev/null \
+  && grep -q 'private fun log(message: String) = consoleLine("$TAG: $message")' "$K/MainViewController.kt" \
+  && grep -q 'consoleLine("KeliverTiming: $line")' "$T/KeliverTiming.kt" \
+  && ! grep -rqE '(^|[^a-zA-Z])print(ln)?\(' "$K" "$T" "$H/src/notiming" \
+  && ok "the host's console lines are one write each (no println)" \
+  || bad "a host console line can be split by another thread's (println, or no ConsoleLine.kt)"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \
