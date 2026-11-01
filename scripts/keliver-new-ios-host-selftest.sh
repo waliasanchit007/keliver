@@ -296,7 +296,8 @@ grep -q 'task_info(mach_task_self_, TASK_VM_INFO.convert()' "$T/KeliverMemory.kt
   && grep -q 'inline fun watch(app: TreehouseApp<\*>) = Unit' "$N" \
   && [ ! -e "$H/src/notiming/kotlin/com/example/demo/host/KeliverMemory.kt" ] \
   && ! grep -rq 'memory-cycle' "$H/src/notiming" "$K" \
-  && ok "M5: the memory profile and its cycle when KELIVER_TIMING=YES, a no-op elsewhere" \
+  && grep -q 'name == "memory" || name == "frames" -> println' "$T/KeliverTiming.kt" \
+  && ok "M5: the memory profile and its cycle when KELIVER_TIMING=YES, a no-op elsewhere; guest marks cannot use its name" \
   || bad "M5: the memory profile is not wired, or reaches a build without KELIVER_TIMING"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
