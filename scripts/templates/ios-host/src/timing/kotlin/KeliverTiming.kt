@@ -238,26 +238,26 @@ internal object KeliverTiming {
       val token = alloc<IntVar>()
       notify_register_dispatch(name, token.ptr, dispatch_get_main_queue()) { _ -> memoryCycle() }
     }
-    if (status != NOTIFY_STATUS_OK.toUInt()) println("KeliverTiming: could not register $name (notify status $status)")
+    if (status != NOTIFY_STATUS_OK.toUInt()) consoleLine("KeliverTiming: could not register $name (notify status $status)")
   }
 
   /** Opens a second screen over the shown one, closes it after its content, then samples "closed"; main thread. */
   @OptIn(kotlin.experimental.ExperimentalNativeApi::class) // WeakReference
   private fun memoryCycle() {
     if (cycleRunning) {
-      println("KeliverTiming: memory-cycle: one is already running; this one is ignored")
+      consoleLine("KeliverTiming: memory-cycle: one is already running; this one is ignored")
       return
     }
     if (!contentSeen) {
       // Its own screen's content mark would be taken for the shown screen's.
-      println("KeliverTiming: memory-cycle: the shown screen has no content yet; ignored")
+      consoleLine("KeliverTiming: memory-cycle: the shown screen has no content yet; ignored")
       return
     }
     @Suppress("DEPRECATION")
     var top: UIViewController? = UIApplication.sharedApplication.keyWindow?.rootViewController
     while (top?.presentedViewController != null) top = top.presentedViewController
     val over = top ?: run {
-      println("KeliverTiming: memory-cycle: no view controller to open a screen over")
+      consoleLine("KeliverTiming: memory-cycle: no view controller to open a screen over")
       return
     }
     cycleRunning = true
@@ -273,7 +273,7 @@ internal object KeliverTiming {
       if (!sampled) {
         sampled = true
         if (shown.get()?.presentingViewController != null) {
-          println("KeliverTiming: memory-cycle $n: its screen is still up; this cycle's closed includes it")
+          consoleLine("KeliverTiming: memory-cycle $n: its screen is still up; this cycle's closed includes it")
         }
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
           runCatching { KeliverMemory.kotlinHeapAfterCollect() }
@@ -298,10 +298,10 @@ internal object KeliverTiming {
       }
     }
     cycleContent = end
-    println("KeliverTiming: memory-cycle $n: opening a screen")
+    consoleLine("KeliverTiming: memory-cycle $n: opening a screen")
     over.presentViewController(screen, animated = false, completion = null)
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 15 * NSEC_PER_SEC.toLong()), dispatch_get_main_queue()) {
-      if (!ended) println("KeliverTiming: memory-cycle $n: no content within 15 s; closing it")
+      if (!ended) consoleLine("KeliverTiming: memory-cycle $n: no content within 15 s; closing it")
       end()
     }
   }
@@ -348,7 +348,7 @@ internal object KeliverTiming {
       writeLine("$name $nanos $detail")
       return
     }
-    runCatching { Keliver.onTrace?.invoke(name, nanos) }.onFailure { println("KeliverTiming: onTrace threw: ${it.message}") }
+    runCatching { Keliver.onTrace?.invoke(name, nanos) }.onFailure { consoleLine("KeliverTiming: onTrace threw: ${it.message}") }
     writeLine("$name $nanos")
     if (name == "content") {
       contentSeen = true
@@ -360,7 +360,7 @@ internal object KeliverTiming {
   /** The console and the file sink; on the main thread. */
   private fun writeLine(line: String) {
     start() // a screen's open can come before the host's start()
-    println("KeliverTiming: $line")
+    consoleLine("KeliverTiming: $line")
     val file = path ?: return
     dispatch_async(io) {
       fopen(file, "a")?.let { f ->
@@ -374,9 +374,9 @@ internal object KeliverTiming {
     override fun mark(name: String) {
       when {
         // The host's own lines: a guest mark of that name would read as one of them.
-        name == "memory" || name == "frames" -> println("KeliverTiming: ignored a guest mark: '$name' is the host's")
+        name == "memory" || name == "frames" -> consoleLine("KeliverTiming: ignored a guest mark: '$name' is the host's")
         guestName.matches(name) -> markAfterFrame(name)
-        else -> println("KeliverTiming: ignored a guest mark: names are a-z, 0-9 and '-', at most 32")
+        else -> consoleLine("KeliverTiming: ignored a guest mark: names are a-z, 0-9 and '-', at most 32")
       }
     }
   }

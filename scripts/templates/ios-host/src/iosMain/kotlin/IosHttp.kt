@@ -255,7 +255,7 @@ internal class NSURLSessionHostHttp(
     } else {
       policy?.baseRefusal(base)
     }
-  )?.also { println("KeliverHost: HostHttp: $it; every request is refused") }
+  )?.also { consoleLine("KeliverHost: HostHttp: $it; every request is refused") }
 
   private val session = NSURLSession.sessionWithConfiguration(
     configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration.apply {
@@ -329,7 +329,7 @@ internal class NSURLSessionHostHttp(
       // Your callback must not take the guest's call down with it; a second `done` is ignored.
       runCatching { appHeaders(method, path) { answer.complete(it) } }.onFailure {
         // Its message could hold a token: logged only in a DEBUG binary.
-        println("KeliverHost: HostHttp: requestHeaders threw${if (isDebugBinary) ": ${it.message}" else ""}")
+        consoleLine("KeliverHost: HostHttp: requestHeaders threw${if (isDebugBinary) ": ${it.message}" else ""}")
         answer.complete(null)
       }
     }
@@ -355,7 +355,7 @@ internal class NSURLSessionHostHttp(
   }
 
   private fun refused(why: String, logged: String = why): Nothing {
-    println("KeliverHost: HostHttp refused: $logged")
+    consoleLine("KeliverHost: HostHttp refused: $logged")
     throw HostHttpRefused("HostHttp refused: $why")
   }
 
