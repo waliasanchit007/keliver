@@ -95,10 +95,10 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's i
    notification runs a memory cycle: it opens a second screen, closes it, and samples `closed`. The growth from one
    cycle's close to the next is the leak measure (`DEVICE_HOST.md`, "The memory profile").
    The reference app's iOS CI (T4) checks the lines on the simulator and prints the numbers,
-   with no bound yet. On the CI simulator (debug; Benchmark in brackets): 22.1 MB at `open`
-   (18.2), QuickJS 4.7 MB once the code is loaded, about 47 MB (42) at the first cycle's close,
-   and from one cycle's close to the next +1.4 MB (+1.0) footprint, +6 KB (+8) QuickJS and
-   +128 KB Kotlin heap. Not done: the numbers on a phone, where the 76 MB was seen (the
+   with no bound yet. On the CI simulator (debug; Benchmark in brackets; the lines' KB are
+   KiB): 21.6 MiB at `open` (17.8), QuickJS 4.6 MiB once the code is loaded, 45.8 MiB (40.7)
+   at the first cycle's close, and from one cycle's close to the next +1.4 MiB (+0.9)
+   footprint, +6 KiB (+8) QuickJS and +128 KiB Kotlin heap. Not done: the numbers on a phone, where the 76 MB was seen (the
    simulator has no memory limit and other graphics memory); an Android counterpart.
 
 Decide on optimisations only after M2–M5.
