@@ -19,7 +19,7 @@
 #   P5  a copy of the app publishes with ITS key; the host refuses that bundle
 #   P6  back on this app's relay, its bundle loads again
 #   P7  relay down: the host starts from its cached bundle, verified
-# P3 (repeated taps) has no iOS driver here and is not run.
+# P3 (repeated taps) is not run here; the only iOS taps are M0's T3 (ci/m0/ios-tap).
 # The 0.3.6 relay serves no bundles/index.json, so these also show the host's
 # fallback to /bundles/latest on a 404.
 #
@@ -28,7 +28,7 @@
 # host framework embedded in an existing SwiftUI app (ci/w2/ios-embed.sh).
 # Then W5's U1: an update applied when the app returns to the foreground
 # (ci/w5/ios-update.sh). Then M0's timing marks, in the Debug and Benchmark
-# builds (ci/m0/ios-timing.sh): T1-T2. Then W8, a signing-key rotation
+# builds (ci/m0/ios-timing.sh): T1-T4. Then W8, a signing-key rotation
 # (ci/w8/ios-rotation.sh): K1-K8.
 #
 # The simulator has no view-hierarchy dump. What a screen shows is read from
