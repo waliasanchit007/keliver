@@ -156,15 +156,17 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
     has what that costs at launch).
 
   A host scaffolded earlier gets none of it until it is scaffolded again.
-- **From the release after 0.3.16 (both hosts):** a guest frame profile next to
-  the timing marks, in debug and benchmark builds only: one `frames` line per
-  window of frames, timing the guest's frame, its change lists and their apply
-  (`DEVICE_HOST.md`, "The guest frame profile"). Both also log a memory
-  profile: the process (iOS's footprint; Android's rss, and pss at a cycle's
-  close), QuickJS and the host's own heap at a screen's points, and memory
-  cycles that show whether a second open leaks (`DEVICE_HOST.md`, "The memory
-  profile"). A host scaffolded earlier gets them when it is
-  scaffolded again.
+- **From 0.3.17 (both hosts):** still the 0.4.1 libraries. A guest frame
+  profile next to the timing marks, in debug and benchmark builds only: one
+  `frames` line per window of frames, timing the guest's frame, its change
+  lists and their apply (`DEVICE_HOST.md`, "The guest frame profile"). Both
+  also log a memory profile: the process (iOS's footprint; Android's rss, and
+  pss at a cycle's close), QuickJS and the host's own heap at a screen's
+  points, and memory cycles that show whether a second open leaks
+  (`DEVICE_HOST.md`, "The memory profile"). A guest mark named `memory` or
+  `frames` is ignored on both hosts, and the iOS host's console lines can no
+  longer be split by another thread's. A host scaffolded earlier gets none of
+  it until it is scaffolded again.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

@@ -457,7 +457,7 @@ For measuring startup, a host records these moments:
   project (its `EMBED.md`).
 
 **The guest frame profile** (both hosts, in the same builds as the marks; M4 of
-`ADOPTION_PLAN_2026-10.md`; not in a released tools bundle yet). Where the time of each
+`ADOPTION_PLAN_2026-10.md`; from tools 0.3.17). Where the time of each
 guest frame goes, as one line per window of up to 60 frames, or 1 s after the window's first
 sample:
 
@@ -501,7 +501,7 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
   overrides, returning nothing, remain.
 
 **The memory profile** (both hosts, in the same builds as the marks; M5 of
-`ADOPTION_PLAN_2026-10.md`; not in a released tools bundle yet). What the process, QuickJS
+`ADOPTION_PLAN_2026-10.md`; from tools 0.3.17). What the process, QuickJS
 and the host's own heap hold at points of a screen's life, as one line per point. iOS:
 
 ```
