@@ -438,7 +438,8 @@ For measuring startup, a host records these moments:
   `templates/guest/KeliverTiming.kt` there and replace `@@PACKAGE@@` with the package of
   your `device/Main.kt` minus `.device`. Call `KeliverTiming.mark("content")` once the screen's data is shown;
   pass it to a presenter as a lambda, since presenters are common code. Names are `a-z`,
-  `0-9` and `-`, at most 32 characters. It calls the `KeliverTrace` service, which only a
+  `0-9` and `-`, at most 32 characters; `frames` and `memory` are the host's own lines, and
+  both hosts ignore a guest mark with either name. It calls the `KeliverTrace` service, which only a
   build with the marks binds; anywhere else it does nothing.
 - **Which builds have them:** debug builds, and a **benchmark** build that is never
   shipped: release settings (not debuggable, `https://` only), minified with R8 as a
@@ -534,8 +535,9 @@ Sizes are in KB; `-` is "not read here".
   exact. Skia and Metal memory is not apart from Compose's, nor the host's widgets from
   Compose. The simulator is a macOS process with no memory limit and other graphics memory:
   numbers that matter are a phone's. `closed` collects the Kotlin heap and lets the main
-  thread release what that freed before it measures; if the screen's composition is let go
-  later still, its guest objects count there (compare `objects` at `closed` with
+  thread release what that freed before it measures, but pages that collection frees can
+  still be returned after the read, so `closed`'s footprint is approximate too (`knheap` is
+  not); if the screen's composition is let go later still, its guest objects count there (compare `objects` at `closed` with
   `content`). A cycle whose screen did not close says so on the console. A host
   that starts before its first screen logs `runtime` and `code` before `open`.
 - **Output:** the same as the frame profile's (the console and `timing.log`, not `onTrace`).
