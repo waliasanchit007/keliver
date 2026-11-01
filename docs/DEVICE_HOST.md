@@ -439,7 +439,7 @@ For measuring startup, a host records these moments:
   your `device/Main.kt` minus `.device`. Call `KeliverTiming.mark("content")` once the screen's data is shown;
   pass it to a presenter as a lambda, since presenters are common code. Names are `a-z`,
   `0-9` and `-`, at most 32 characters. Both hosts ignore a guest mark named `frames` or
-  `memory`, the names of the hosts' own lines (`memory` is iOS's only, for now). It calls the
+  `memory`, the names of the hosts' own lines. It calls the
   `KeliverTrace` service, which only a build with the marks binds; anywhere else it does nothing.
 - **Which builds have them:** debug builds, and a **benchmark** build that is never
   shipped: release settings (not debuggable, `https://` only), minified with R8 as a
@@ -500,51 +500,68 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
   arrays. A store build compiles none of it (`src/notiming/`); only the listener's two
   overrides, returning nothing, remain.
 
-**The memory profile** (the iOS host, in the same builds as the marks; M5 of
+**The memory profile** (both hosts, in the same builds as the marks; M5 of
 `ADOPTION_PLAN_2026-10.md`; not in a released tools bundle yet). What the process, QuickJS
-and the Kotlin heap hold at points of a screen's life, as one line per point:
+and the host's own heap hold at points of a screen's life, as one line per point. iOS:
 
 ```
 memory <nanos> at=content cycle=0 footprint=183204 peak=190112 qjs=6120/7012 objects=41230 knheap=-
 ```
 
-Sizes are in KB; `-` is "not read here".
+Android:
+
+```
+memory <nanos> at=closed cycle=1 rss=162344 java=9120 native=31876 qjs=5144/6020 objects=40112 pss=131020 graphics=30110
+```
+
+Sizes are in KiB (the lines say KB); `-` is "not read here".
 
 | Field | What it is |
 |---|---|
-| `at` | `open` (a Keliver screen is being made, before its Compose view controller), `ui` (two display-link ticks after its first composition: the first screen's Loading screen; a later screen's is the guest's at once), `runtime` (a QuickJS runtime was made, before any code), `code` (the bundle's code loaded), `content` (with the guest's `content` mark), `closed` (2 s after a memory cycle closed its screen, after collecting both heaps) |
+| `at` | `open` (a Keliver screen is being made: on iOS before its Compose view controller, on Android as the `KeliverScreen` enters the composition), `ui` (one frame after its first composition, two display-link ticks or Choreographer callbacks: the first screen's Loading screen; a later screen's is the guest's at once), `runtime` (a QuickJS runtime was made, before any code), `code` (the bundle's code loaded), `content` (with the guest's `content` mark), `closed` (2 s after a memory cycle closed its screen, after collecting both heaps) |
 | `cycle` | 0 for the screen the app shows; then each memory cycle's number |
-| `footprint`, `peak` | the process's physical footprint (`task_info` `TASK_VM_INFO` `phys_footprint`: what Xcode's memory gauge shows and iOS's memory limit counts), and its highest so far |
 | `qjs`, `objects` | QuickJS's heap in use / allocated, and its objects (`Zipline.quickJs.memoryUsage`, read on the Zipline thread); `-` before a runtime exists |
-| `knheap` | the Kotlin/Native heap's live objects after a full collection; at `closed` only, and `-` there when the runtime does not report it |
+| `footprint`, `peak` (iOS) | the process's physical footprint (`task_info` `TASK_VM_INFO` `phys_footprint`: what Xcode's memory gauge shows and iOS's memory limit counts), and its highest so far |
+| `knheap` (iOS) | the Kotlin/Native heap's live objects after a full collection; at `closed` only, and `-` there when the runtime does not report it |
+| `rss` (Android) | the process's resident memory (`/proc/self/statm`), cheap enough for every point |
+| `java`, `native` (Android) | the Java heap in use (at `closed`, after a collection), and the native heap in use (`Debug.getNativeHeapAllocatedSize`), which holds QuickJS's heap |
+| `pss`, `graphics` (Android) | the proportional set size, what Android's memory accounting counts, and its GL and graphics share (`Debug.getMemoryInfo`); at `closed` only, since reading them walks every mapping |
 
 - **A memory cycle** opens a second screen over the shown one, waits for its content (at
   most 15 s), closes it and samples `closed`. One runs at a time, and only once the shown
-  screen has its content. A debug or Benchmark build runs one when the
+  screen has its content. A debug or Benchmark build runs one on iOS when the
   Darwin notification `<bundle id>.keliver.memory-cycle` is posted (`xcrun simctl spawn
   <udid> notifyutil -p <name>`; `xcrun devicectl device notification post --device <id>
-  --name <name>` on a phone). Growth from one cycle's `closed` to the next is what a screen
-  did not give back; the first cycle's own growth includes one-time costs (images, caches).
-- **Reading it:** `open` to `ui` is mostly the Compose Multiplatform runtime and its first
-  draw; `ui` to `runtime` and `runtime` to `code` add QuickJS, the loader and the guest's
-  code (`qjs` at `runtime` is the engine before any code; `code` minus it is the guest's code
-  and start-up); `code` to `content` is the screen (`qjs` for its guest side). A guest mark
-  named `memory` or `frames` is ignored: it would read as one of these lines.
+  --name <name>` on a phone). On Android, a debug or benchmark build runs one on
+  `adb shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p <applicationId>` (only a
+  sender holding `DUMP`, as adb's shell does, is heard); its screen is a full-screen dialog
+  over the activity in front. Growth from one cycle's `closed` to the next is what a screen
+  did not give back (on Android read `pss`); the first cycle's own growth includes one-time
+  costs (images, caches).
+- **Reading it:** `open` to `ui` is mostly the Compose runtime and its first draw;
+  `runtime` to `code` adds the loader and the guest's code (`qjs` at `runtime` is the engine
+  before any code; `code` minus it is the guest's code and start-up); `code` to `content` is
+  the screen (`qjs` for its guest side). A host that starts before its first screen (the
+  Android host always does, M3) logs `runtime` and `code` before `open`. A guest mark named
+  `memory` or `frames` is ignored: it would read as one of these lines.
 - **What it cannot split:** the steps overlap (the lookup and the code load run while
-  Compose draws), so footprint differences between points are approximate; only `qjs` is
-  exact. Skia and Metal memory is not apart from Compose's, nor the host's widgets from
-  Compose. The simulator is a macOS process with no memory limit and other graphics memory:
-  numbers that matter are a phone's. `closed` collects the Kotlin heap and lets the main
-  thread release what that freed before it measures, but pages that collection frees can
-  still be returned after the read, so even `closed`'s own footprint is approximate (its
-  `knheap`, from the collection itself, is exact). If the screen's composition is let go
-  later still, its guest objects count there (compare `objects` at `closed` with `content`). A cycle whose screen did not close says so on the console. A host
-  that starts before its first screen logs `runtime` and `code` before `open`.
-- **Output:** the same as the frame profile's (the console and `timing.log`, not `onTrace`).
-- **Overhead:** one `task_info` call per point, and one QuickJS read on the Zipline thread;
-  collections only at `closed`. A store build compiles none of it (`src/notiming/`); only
-  the listener's `ziplineCreated` override, doing nothing, remains. The Android host has no
-  memory profile yet.
+  Compose draws), so differences between points are approximate; only `qjs` is exact.
+  Skia, Metal and GL memory is not apart from Compose's, nor the host's widgets from
+  Compose. The simulator is a macOS process with no memory limit and other graphics memory,
+  and the emulator's graphics are the host machine's: numbers that matter are a phone's. On
+  iOS, `closed` collects the Kotlin heap and lets the main thread release what that freed
+  before it measures, but pages that collection frees can still be returned after the read,
+  so even `closed`'s own footprint is approximate (its `knheap`, from the collection itself,
+  is exact); on Android, `closed` collects QuickJS's heap, then the Java heap with its
+  finalizers, and then reads `pss`. If the screen's composition is let go later still, its
+  guest objects count there (compare `objects` at `closed` with `content`). A cycle whose
+  screen did not close says so in the log.
+- **Output:** the same as the frame profile's: the console (iOS) or logcat (Android), and
+  `timing.log`; not `onTrace`.
+- **Overhead:** at each point one `task_info` call (iOS) or a read of `statm` and the two
+  heaps' counters (Android), and one QuickJS read on the Zipline thread; collections and
+  Android's `Debug.getMemoryInfo` only at `closed`. A store build compiles none of it
+  (`src/notiming/`); only the listener's `ziplineCreated` override, doing nothing, remains.
 
 ## 3. Your own production iOS host
 

@@ -72,7 +72,12 @@ fun KeliverScreen(
   loading: @Composable () -> Unit = { DefaultLoading(host) },
   unavailable: @Composable (KeliverHostState.Unavailable) -> Unit = { DefaultUnavailable(host, it) },
 ) {
-  remember(host) { KeliverTiming.mark("open") } // debug and benchmark builds only (M0)
+  remember(host) {
+    // Debug and benchmark builds only (M0, M5); nothing elsewhere.
+    KeliverTiming.mark("open")
+    KeliverTiming.memory("open")
+    KeliverTiming.memoryAfterFrame("ui")
+  }
   LaunchedEffect(host) { host.start() }
   // Live updates (keliver.updates=live, debug builds): the host listens for publishes while a screen is on show.
   val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle

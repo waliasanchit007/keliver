@@ -289,6 +289,23 @@ grep -q 'override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callSta
   && grep -q 'name == "memory" || name == "frames" -> Log.w' "$H/src/timing/kotlin/$P/KeliverTiming.kt" \
   && ok "M4: the guest frame profile in debug and benchmark (sendFrame and change-list spans, the main thread's apply), a no-op elsewhere; its window's tests; guest marks cannot use its name" \
   || bad "M4: the guest frame profile is not wired"
+# M5: the memory profile at its points, and the memory cycle; neither outside debug and benchmark.
+T="$H/src/timing/kotlin/$P"; N="$H/src/notiming/kotlin/$P/KeliverTiming.kt"
+grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
+  && grep -q '@OptIn(EngineApi::class)' "$T/KeliverMemory.kt" \
+  && grep -q 'private const val MEMORY_CYCLE = "dev.keliver.debug.MEMORY_CYCLE"' "$T/KeliverTiming.kt" \
+  && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$T/KeliverTiming.kt" \
+  && grep -q 'override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)' "$M" \
+  && grep -q 'KeliverTiming.memory("code", zipline)' "$M" \
+  && grep -q 'KeliverTiming.watch(this, app)' "$M" \
+  && grep -q 'KeliverTiming.memory("open")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
+  && grep -q 'KeliverTiming.memoryAfterFrame("ui")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
+  && grep -q 'inline fun memory(point: String, zipline: Zipline? = null) = Unit' "$N" \
+  && grep -q 'inline fun watch(host: KeliverHost, app: TreehouseApp<\*>) = Unit' "$N" \
+  && [ ! -e "$H/src/notiming/kotlin/$P/KeliverMemory.kt" ] \
+  && ! grep -rq 'MEMORY_CYCLE' "$H/src/notiming" "$H/src/main" \
+  && ok "M5: the memory profile and its cycle in debug and benchmark, a no-op elsewhere" \
+  || bad "M5: the memory profile is not wired, or reaches a build without the marks"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \

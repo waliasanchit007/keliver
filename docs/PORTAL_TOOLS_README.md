@@ -159,10 +159,11 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **From the release after 0.3.16 (both hosts):** a guest frame profile next to
   the timing marks, in debug and benchmark builds only: one `frames` line per
   window of frames, timing the guest's frame, its change lists and their apply
-  (`DEVICE_HOST.md`, "The guest frame profile"). The iOS host also logs a
-  memory profile: footprint, QuickJS and the Kotlin heap at a screen's points,
-  and memory cycles that show whether a second open leaks (`DEVICE_HOST.md`,
-  "The memory profile"). A host scaffolded earlier gets them when it is
+  (`DEVICE_HOST.md`, "The guest frame profile"). Both also log a memory
+  profile: the process (iOS's footprint; Android's rss, and pss at a cycle's
+  close), QuickJS and the host's own heap at a screen's points, and memory
+  cycles that show whether a second open leaks (`DEVICE_HOST.md`, "The memory
+  profile"). A host scaffolded earlier gets them when it is
   scaffolded again.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
