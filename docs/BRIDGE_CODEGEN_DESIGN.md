@@ -53,7 +53,7 @@ plugin id that applies all of this is a later convenience, not part of B3.
 | `keliver-bridge` | common | the runtime the generated code calls: the guard (§5), `BridgeCall`, `BridgeCallFailed` |
 | `keliver-bridge-codegen` | tooling (JVM) | the KSP processor |
 
-The runtime is small and real code, so it is tested once, in `keliver-bridge`, on JVM and on
+The runtime is small and real code, so it is tested once, in `keliver-bridge`, on JVM, JS and
 the iOS simulator, and not re-emitted (and re-reviewed) into every app. None of the three is
 published until a libraries release, which needs the owner; until then the reference app (B5)
 uses them from this checkout, the way the production host is already built from source.
@@ -107,10 +107,10 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
    `close()`.
 2. **`ShopActionsBridge`**, an object:
    - `NAME = "ShopActions"`, `VERSION = 2`, and `SHAPE`, a hash of the functions' names,
-     parameter and result types in a fixed form, and of the fields (names and types) of every
-     `@Serializable` class they reach (their serial names, so a `@SerialName` rename counts) and
-     of every enum's constants, since such a change keeps Zipline's call id and fails only when
-     decoded. B4 can carry `SHAPE` with the version, so a change without a version
+     parameter and result types in a fixed form, and of every `@Serializable` class and enum
+     they reach: the class's serial name, its fields' serial names and types, and the enum's
+     constants by serial name (so a `@SerialName` rename counts), since such a change keeps
+     Zipline's call id and fails only when decoded. B4 can carry `SHAPE` with the version, so a change without a version
      bump is caught; nothing checks either in B3;
    - `bind(zipline, impl: ShopActions, context = Dispatchers.Default, log = {})` (host
      side) binds, under `NAME`, a `ShopActionsService` that runs each call through the guard in
@@ -160,7 +160,10 @@ where they apply, because they were reviewed there:
   which Zipline sends as one, and the guest would see its call quietly cancelled instead of
   failed. The answer is boxed inside the guard, so a `null` result is not taken for a timeout.
   The call always runs on `context` (by default `Dispatchers.Default`), never on Zipline's own
-  thread, so a delegate that blocks cannot stop the limit firing;
+  thread: it is launched in the guard's scope (below) and only a deferred answer is awaited, as
+  `credentials()` does, not run as a child `withContext`, which the limit would have to wait
+  for; on a timeout or cancel the launch is cancelled explicitly. So a delegate that blocks
+  cannot stop the limit firing;
 - for a callback, the first `done` or `fail` wins, and later ones are ignored;
 - no answer in time, a `fail(message)`, or a throw ends the guest's call with
   `BridgeCallFailed`, whose message is `KeliverBridge: ShopActions.pickAddress: <reason>` and
@@ -174,7 +177,8 @@ where they apply, because they were reviewed there:
   `context`. A `suspend` delegate is cancelled as a coroutine;
 - those launches, and fire-and-forget posts, run in a scope the guard owns for each binding (a
   `SupervisorJob` of its own, not Zipline's), so closing the Zipline on a code reload still
-  runs a picker's `onCancel` instead of cancelling it with the calls;
+  runs a picker's `onCancel` instead of cancelling it with the calls. The scope is never
+  cancelled: it holds only launches in flight and is dropped with the binding;
 - a fire-and-forget function is posted and returns at once; a throw goes to `log` and is
   dropped.
 
@@ -184,9 +188,10 @@ rebuilt on the other side as a `ZiplineException` (or as a cancellation): Ziplin
 `ZiplineException`'s message is that text: Zipline strips a leading `<name>: ` only for the
 types it knows, so it begins `dev.keliver.bridge.BridgeCallFailed: KeliverBridge: …` and goes on
 with the host's stack frames. So the guest cannot catch `BridgeCallFailed` directly; the
-generated `take` wrapper looks for `BridgeCallFailed: KeliverBridge: ` in the message's first
-line, rebuilds a `BridgeCallFailed` from that line alone (no host frames), and rethrows
-anything else.
+generated `take` wrapper matches a first line that starts with
+`dev.keliver.bridge.BridgeCallFailed: KeliverBridge: `, rebuilds a `BridgeCallFailed` whose
+message is that line without the class name (so it begins `KeliverBridge: `, with no host
+frames), and rethrows anything else.
 
 ### 6. Tests
 
@@ -210,7 +215,7 @@ anything else.
   guest-side mapping, fed with real stack-trace text from JVM and Kotlin/Native (Zipline's
   `stacktraceString` is `stackTraceToString().trim()`), not a made-up message.
 - **"Both platforms"** is met in two steps: B3 proves the generated Kotlin compiles and that
-  the guard behaves on JVM and iOS; the Swift side (a Swift class implementing
+  the guard behaves on JVM, JS and iOS; the Swift side (a Swift class implementing
   `ShopActionsCallbacks`, compiled and called) is checked where a Swift app exists, in B5's
   reference-app run on the simulator.
 
