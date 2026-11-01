@@ -12,7 +12,7 @@ serious defect in the proof was in host glue that each adopter writes for themse
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
 screen opened at launch, and the later-screen case is not measured yet), M4's
-first step (the host-side frame profile) is merged (#186, not released), M5's iOS memory profile is merged (#188, not released) and its Android counterpart is in review (#191). Item 3: K1 and K2 are released (tools 0.3.14),
+first step (the host-side frame profile) is merged (#186, not released), M5's memory profile is merged on both hosts (iOS #188, Android #191; not released). Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
@@ -32,7 +32,7 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
 ## Item 2. Startup and memory (measure first)
 
 **Status 2026-11-01:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
-below); M4's host-side frame profile merged (#186, step 5; not released); M5's iOS memory profile merged (#188, step 6; not released), its Android counterpart in review (#191).
+below); M4's host-side frame profile merged (#186, step 5; not released); M5's memory profile merged on both hosts (#188 iOS, #191 Android; step 6; not released).
 
 **Evidence.**
 - On Android (debug builds), native content took 1.5 s on a cold open against 1.1 s for the
@@ -99,12 +99,16 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's i
    KiB): 21.6 MiB at `open` (17.8), QuickJS 4.6 MiB once the code is loaded, 45.8 MiB (40.7)
    at the first cycle's close, and from one cycle's close to the next +1.4 MiB (+0.9)
    footprint, +6 KiB (+8) QuickJS and +128 KiB Kotlin heap.
-   **2026-11-01, in review (#191):** the Android host's debug and benchmark builds log the
-   same points (rss, the Java and native heaps and QuickJS's; `pss` and `graphics` at
+   **2026-11-01, merged (#191, not released):** the Android host's debug and benchmark builds
+   log the same points (rss, the Java and native heaps and QuickJS's; `pss` and `graphics` at
    `closed`), and `adb shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p <app>` runs a
-   cycle; the reference app's Android CI (T4) is to check them on the emulator. Not done: the
-   numbers on a phone, where the 76 MB was seen (the simulator has no memory limit and other
-   graphics memory, and the emulator's graphics are the host machine's).
+   cycle. On the CI emulator (debug; benchmark in brackets; KiB): rss 181.9 MiB at `open`
+   (112.8), QuickJS 4.6 MiB once the code is loaded, pss 110.3 MiB (39.2) at the first
+   cycle's close, and from one cycle's close to the next −204 KiB (+141) pss, +5 KiB (+5)
+   QuickJS and +0 KiB (+22) Java heap. Android's `pss` and iOS's footprint count different
+   things, so the two hosts' numbers do not compare. Not done: the numbers on a phone, where
+   the 76 MB was seen (the simulator has no memory limit and other graphics memory, and the
+   emulator's graphics are the host machine's).
 
 Decide on optimisations only after M2–M5.
 
