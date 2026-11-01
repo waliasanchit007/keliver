@@ -515,7 +515,7 @@ a Galaxy A12 in 2026-10), an iPhone run of the reference app is not; items 5,
    Maven Central only; the reference app's P1–P7 pass on it, P7 being an
    offline start from Zipline's verified cache (CI run `37505534432`). **iOS (shipped in tools 0.3.7):**
    `keliver-new-ios-host.sh` writes `host-ios/` with the same guarantees, and iOS P1, P2 and P4–P7 pass on a
-   simulator in CI (`ios-host.yml` run `37597390396`). What remains: physical devices over HTTPS, and
+   simulator in CI (`ios-host.yml` run `37597390396`; P3, three taps, since #199, run `41338112060`). What remains: physical devices over HTTPS, and
    release-signed builds. The plan of record is `docs/DELIVERY_PLAN.md`.
 2. **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, which
    defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app had
