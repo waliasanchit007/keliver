@@ -941,7 +941,8 @@ server fed by `keliver-publish`:
   `screen-failed` (I8).
 
 **Not measured:**
-- native navigation on iOS (no tap driver on the simulator CI);
+- native navigation on iOS (the simulator CI's only taps are the reference app's T3, in
+  its own host, not the embedded one);
 - an app on another Kotlin or AGP than the one combination CI builds (CI also
   BUILDS an app on older Compose, activity, core, lifecycle, coroutines and
   OkHttp 4, raised to the floor, but does not run it);
