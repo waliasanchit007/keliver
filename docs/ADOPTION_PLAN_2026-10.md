@@ -12,7 +12,7 @@ serious defect in the proof was in host glue that each adopter writes for themse
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
 screen opened at launch, and the later-screen case is not measured yet), M4's
-first step (the host-side frame profile) is merged (#186, not released), M5's memory profile is merged on both hosts (iOS #188, Android #191; not released). Item 3: K1 and K2 are released (tools 0.3.14),
+first step (the host-side frame profile) is released (#186, tools 0.3.17), M5's memory profile is released on both hosts (iOS #188, Android #191; tools 0.3.17). Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
@@ -32,7 +32,7 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
 ## Item 2. Startup and memory (measure first)
 
 **Status 2026-11-01:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
-below); M4's host-side frame profile merged (#186, step 5; not released); M5's memory profile merged on both hosts (#188 iOS, #191 Android; step 6; not released).
+below); M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's memory profile released on both hosts (#188 iOS, #191 Android; step 6; tools 0.3.17).
 
 **Evidence.**
 - On Android (debug builds), native content took 1.5 s on a cold open against 1.1 s for the
@@ -80,7 +80,7 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's m
    apply. The host side comes from M0's change-list hook. `callStart` and `callEnd` time a whole
    guest call, so splitting composition from encoding needs spans inside the guest's runtime,
    reported through M0's `KeliverTrace` service.
-   **2026-10-31, merged (#186; not released):** the host-side profile, templates only: per frame the
+   **2026-10-31, merged (#186; released in tools 0.3.17):** the host-side profile, templates only: per frame the
    guest's `sendFrame` call (`guest`), the time until its change list reaches the host
    (`lead`), the host's `sendChanges` (`sink`), the wait for the main thread (`queue`) and
    the apply (`apply`), as one `frames` line per window (`DEVICE_HOST.md`, "The guest frame
@@ -89,7 +89,7 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's m
    `StandardAppLifecycle.sendFrame` (keliver-treehouse-guest), so a library release (0.4.2).
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
-   **2026-11-01, merged (#188, not released):** the iOS host's debug and Benchmark builds log a `memory`
+   **2026-11-01, merged (#188; released in tools 0.3.17):** the iOS host's debug and Benchmark builds log a `memory`
    line (footprint and QuickJS's heap; at `closed` also the Kotlin heap after a collection) at
    `open`, `ui`, `runtime`, `code`, `content` and `closed`. In those builds a Darwin
    notification runs a memory cycle: it opens a second screen, closes it, and samples `closed`. The growth from one
@@ -99,7 +99,7 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's m
    KiB): 21.6 MiB at `open` (17.8), QuickJS 4.6 MiB once the code is loaded, 45.8 MiB (40.7)
    at the first cycle's close, and from one cycle's close to the next +1.4 MiB (+0.9)
    footprint, +6 KiB (+8) QuickJS and +128 KiB Kotlin heap.
-   **2026-11-01, merged (#191, not released):** the Android host's debug and benchmark builds
+   **2026-11-01, merged (#191; released in tools 0.3.17):** the Android host's debug and benchmark builds
    log the same points (rss, the Java and native heaps and QuickJS's; `pss` and `graphics` at
    `closed`), and `adb shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p <app>` runs a
    cycle. On the CI emulator (debug; benchmark in brackets; KiB): rss 181.9 MiB at `open`

@@ -59,13 +59,13 @@ run alongside item 2.
      lookup answers; on a Galaxy A12 no gain for a screen opened at launch,
      the later-screen case not measured yet; released in tools 0.3.16);
    - **merged 2026-10-31:** M4's host-side guest frame profile (#186, templates
-     only; reaches apps with the next tools release);
+     only; released in tools 0.3.17);
    - **merged 2026-11-01:** M5's iOS memory profile (#188, the iOS template; memory
-     cycles for a second-open leak; simulator numbers in CI, a phone's not yet; reaches
-     apps with the next tools release);
+     cycles for a second-open leak; simulator numbers in CI, a phone's not yet; released
+     in tools 0.3.17);
    - **merged 2026-11-01:** M5 on Android (#191, the Android template; the same points
      and memory cycles, `pss` and `graphics` at each cycle's close; emulator numbers in CI, a phone's
-     not yet; reaches apps with the next tools release);
+     not yet; released in tools 0.3.17);
    - **open:** M4's composition/encoding split (a library change).
      See ADOPTION_PLAN item 2.
 3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
@@ -484,8 +484,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    0.3.16. B3 to B5
    not started.
 9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
-   host-side frame profile merged (#186, not released; composition apart from encoding needs a
-   library release); M5's memory profile merged on both hosts (#188 iOS, #191 Android; not released); then their numbers on a phone.
+   host-side frame profile released (#186, tools 0.3.17; composition apart from encoding needs a
+   library release); M5's memory profile released on both hosts (#188 iOS, #191 Android; tools 0.3.17); then their numbers on a phone.
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
     delivery (item 7); the device proxy (item 6's last row).
 11. **W7, the physical-device proof** (a real-certificate HTTPS server, a
