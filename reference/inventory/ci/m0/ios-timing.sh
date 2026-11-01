@@ -1,7 +1,7 @@
 # Sourced by ci/ios.sh after W5: M0's timing marks on iOS, against W3's static
 # HTTPS server (its site is at v9). Uses ios.sh's APP, UDID, BID, APPB, WORK,
-# EV, HERE, launch, ok/bad, W3, and the tap driver (m0/ios-tap/tap.sh). Only a host from templates with the marks
-# (src/timing/); an older one SKIPs.
+# EV, HERE, launch, ok/bad, W3, and the tap driver (m0/ios-tap/tap.sh). Only a
+# host from templates with the marks (src/timing/); an older one SKIPs.
 #   T1  the Debug build logs open, code, first-frame and content (the guest's
 #       KeliverTiming.mark), each once, on the console and in
 #       Library/Caches/keliver/timing.log; first-frame and content not before code
@@ -42,7 +42,8 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
     xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$1.console.txt" 2>&1 &
     pid=$!; sleep 30
-    if [ "${2:-}" = tap ]; then
+    # Only a host with the frame profile: m0_frames SKIPs the others.
+    if [ "${2:-}" = tap ] && grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
       tap_run "$1" 2; M0_TAP_RC=$?
     fi
     kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null

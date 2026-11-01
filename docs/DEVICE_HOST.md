@@ -622,6 +622,7 @@ none in a release build.
 **Measured** on iOS simulators (the evidence is in the Keliver repository,
 `docs/superpowers/evidence/ios-host-*`, and its `ios-host.yml` CI runs):
 - signed v1 loads;
+- three taps on Add 1 show 13, 14, 15 (the reference app's P3, through an XCTest UI test);
 - an edit published as v2 is followed (Inventory → Stockroom);
 - a bundle signed with another app's key is refused;
 - the host recovers when the right relay is back;
@@ -632,7 +633,7 @@ none in a release build.
 - a physical iPhone;
 - a release or App Store build;
 - HTTPS end to end;
-- taps (the CI has no iOS tap driver);
+- taps beyond the reference app's: its P3 and T3 tap Add 1 through an XCTest UI test;
 - HostHttp, network images and guest SQL in a running app (the reference
   guest uses none of them; the SQLite driver was tested on a macOS harness).
 
@@ -941,8 +942,8 @@ server fed by `keliver-publish`:
   `screen-failed` (I8).
 
 **Not measured:**
-- native navigation on iOS (the simulator CI's only taps are the reference app's T3, in
-  its own host, not the embedded one);
+- native navigation on iOS (the simulator CI's only taps are the reference app's P3 and
+  T3, in its own host, not the embedded one);
 - an app on another Kotlin or AGP than the one combination CI builds (CI also
   BUILDS an app on older Compose, activity, core, lifecycle, coroutines and
   OkHttp 4, raised to the floor, but does not run it);

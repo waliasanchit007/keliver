@@ -290,7 +290,7 @@ if [ -n "$TAP_BUILT" ]; then
   [ "$P3_RC" = 0 ] && ok "P3: Add 1 three times on Espresso beans: 13, 14, 15, each observed ($(tap_steps P3) steps, P3-tap.log)" \
     || bad "P3: Add 1 three times on Espresso beans: $(tap_why P3)"
   reads P3 "On hand: 15" && ok "P3: the screen reads 'On hand: 15'" \
-    || bad "P3: 'On hand: 15' is not on the screen: $(grep -i 'hand' "$EV/P3.ocr.txt" | head -2 | tr '\n' ' ')"
+    || bad "P3: 'On hand: 15' is not on the screen: $(grep -i 'hand' "$EV/P3.ocr.txt" | head -2 | tr '\n' ' ')$(head -1 "$EV/P3.ocr.err")"
 fi
 
 # --- P4 -------------------------------------------------------------------------
