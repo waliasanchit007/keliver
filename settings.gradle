@@ -144,6 +144,12 @@ include ':keliver-http-annotations'
 // classpath.
 include ':keliver-http-codegen'
 
+// Generated action bridges (adoption plan item 4, B3; docs/BRIDGE_CODEGEN_DESIGN.md): the
+// annotations an app's contract interface carries, and the runtime the generated code calls
+// (the guard every host call goes through). The KSP processor follows in B3b.
+include ':keliver-bridge-annotations'
+include ':keliver-bridge'
+
 // AppService adapter KSP processor — reads @KeliverAppService
 // interfaces and emits Generated<Name>Adapter open classes that
 // implement the Zipline #765 manual-adapter workaround. Closes the

@@ -1,0 +1,25 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-bridge-annotations>
+open annotation class dev.keliver.bridge.api/BridgeTimeout : kotlin/Annotation { // dev.keliver.bridge.api/BridgeTimeout|null[0]
+    constructor <init>(kotlin/Int) // dev.keliver.bridge.api/BridgeTimeout.<init>|<init>(kotlin.Int){}[0]
+
+    final val seconds // dev.keliver.bridge.api/BridgeTimeout.seconds|{}seconds[0]
+        final fun <get-seconds>(): kotlin/Int // dev.keliver.bridge.api/BridgeTimeout.seconds.<get-seconds>|<get-seconds>(){}[0]
+}
+
+open annotation class dev.keliver.bridge.api/KeliverBridge : kotlin/Annotation { // dev.keliver.bridge.api/KeliverBridge|null[0]
+    constructor <init>(kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.bridge.api/KeliverBridge.<init>|<init>(kotlin.String;kotlin.Int;kotlin.Int){}[0]
+
+    final val name // dev.keliver.bridge.api/KeliverBridge.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.keliver.bridge.api/KeliverBridge.name.<get-name>|<get-name>(){}[0]
+    final val timeoutSeconds // dev.keliver.bridge.api/KeliverBridge.timeoutSeconds|{}timeoutSeconds[0]
+        final fun <get-timeoutSeconds>(): kotlin/Int // dev.keliver.bridge.api/KeliverBridge.timeoutSeconds.<get-timeoutSeconds>|<get-timeoutSeconds>(){}[0]
+    final val version // dev.keliver.bridge.api/KeliverBridge.version|{}version[0]
+        final fun <get-version>(): kotlin/Int // dev.keliver.bridge.api/KeliverBridge.version.<get-version>|<get-version>(){}[0]
+}
