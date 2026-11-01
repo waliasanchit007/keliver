@@ -108,10 +108,11 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
 2. **`ShopActionsBridge`**, an object:
    - `NAME = "ShopActions"`, `VERSION = 2`, and `SHAPE`, a hash of the functions' names,
      parameter and result types in a fixed form, and of the fields (names and types) of every
-     `@Serializable` class they reach, since a changed field keeps Zipline's call id and fails
-     only when decoded. B4 can carry `SHAPE` with the version, so a change without a version
+     `@Serializable` class they reach (their serial names, so a `@SerialName` rename counts) and
+     of every enum's constants, since such a change keeps Zipline's call id and fails only when
+     decoded. B4 can carry `SHAPE` with the version, so a change without a version
      bump is caught; nothing checks either in B3;
-   - `bind(zipline, impl: ShopActions, context = EmptyCoroutineContext, log = {})` (host
+   - `bind(zipline, impl: ShopActions, context = Dispatchers.Default, log = {})` (host
      side) binds, under `NAME`, a `ShopActionsService` that runs each call through the guard in
      §5. It is called from Kotlin (its `Zipline` and `CoroutineContext` are no use to Swift):
      on iOS, B5's hook in the Kotlin `Keliver` object calls it, and Swift supplies only the
@@ -157,17 +158,23 @@ where they apply, because they were reviewed there:
   calls, so a call waiting forever still ends when the code reloads). The limit is taken with
   `withTimeoutOrNull`, not `withTimeout`: a `TimeoutCancellationException` is a cancellation,
   which Zipline sends as one, and the guest would see its call quietly cancelled instead of
-  failed;
+  failed. The answer is boxed inside the guard, so a `null` result is not taken for a timeout.
+  The call always runs on `context` (by default `Dispatchers.Default`), never on Zipline's own
+  thread, so a delegate that blocks cannot stop the limit firing;
 - for a callback, the first `done` or `fail` wins, and later ones are ignored;
 - no answer in time, a `fail(message)`, or a throw ends the guest's call with
   `BridgeCallFailed`, whose message is `KeliverBridge: ShopActions.pickAddress: <reason>` and
-  which has no cause. `fail`'s message is the reason as the app wrote it. A throw's message is
+  which has no cause. `fail`'s message is the reason as the app wrote it, its line breaks
+  replaced by spaces, so it survives as one line. A throw's message is
   not passed on (it could hold app data): the reason names the exception's class, and the
   message goes only to `log`, which a host wires to its debug console;
 - when the guest's call is cancelled, or times out, a call still waiting for `context` is not
-  made, and `call.onCancel`'s block runs once, on `context`, from a separate launch (the
-  cancelled call's own coroutine can no longer switch to it); a block registered after that
-  runs at once, also on `context`. A `suspend` delegate is cancelled as a coroutine;
+  made, and `call.onCancel`'s block runs once, on `context`, from a separate launch, so it does
+  not hold up the guest's cancellation; a block registered after that runs at once, also on
+  `context`. A `suspend` delegate is cancelled as a coroutine;
+- those launches, and fire-and-forget posts, run in a scope the guard owns for each binding (a
+  `SupervisorJob` of its own, not Zipline's), so closing the Zipline on a code reload still
+  runs a picker's `onCancel` instead of cancelling it with the calls;
 - a fire-and-forget function is posted and returns at once; a throw goes to `log` and is
   dropped.
 
@@ -177,7 +184,8 @@ rebuilt on the other side as a `ZiplineException` (or as a cancellation): Ziplin
 `ZiplineException`'s message is that text: Zipline strips a leading `<name>: ` only for the
 types it knows, so it begins `dev.keliver.bridge.BridgeCallFailed: KeliverBridge: …` and goes on
 with the host's stack frames. So the guest cannot catch `BridgeCallFailed` directly; the
-generated `take` wrapper looks for `KeliverBridge: ` in the message's first line, rebuilds a
+generated `take` wrapper looks for `BridgeCallFailed: KeliverBridge: ` in the message's first
+line, rebuilds a
 `BridgeCallFailed` from that line alone (no host frames), and rethrows anything else.
 
 ### 6. Tests
@@ -193,10 +201,12 @@ generated `take` wrapper looks for `KeliverBridge: ` in the message's first line
   Zipline plugin for JVM, JS and the iOS simulator in CI's full build, as `sample/shared` is.
   If Zipline's API lets a JVM test bind and take through a pair of endpoints in one process,
   that test runs there too (B3b finds out); otherwise the first round trip is B5's.
-- **The guard** (`keliver-bridge`, `commonTest`, so JVM and the iOS simulator): first answer
+- **The guard** (`keliver-bridge`, `commonTest`, so JVM, JS, where the guest-side mapping runs,
+  and the iOS simulator): first answer
   wins, a second is ignored, each limit including none, `fail`, a throw (its message only in
   `log`), cancellation before the post runs and while waiting (`onCancel` on `context`, and
-  registered late), fire-and-forget, a timeout that fails rather than cancels, and the
+  registered late, and after the binding's Zipline closed), fire-and-forget, a `null` result, a
+  delegate that blocks, a timeout that fails rather than cancels, a multi-line `fail`, and the
   guest-side mapping, fed with real stack-trace text from JVM and Kotlin/Native (Zipline's
   `stacktraceString` is `stackTraceToString().trim()`), not a made-up message.
 - **"Both platforms"** is met in two steps: B3 proves the generated Kotlin compiles and that
@@ -212,7 +222,7 @@ generated `take` wrapper looks for `KeliverBridge: ` in the message's first line
   `"HostHttp"` disagree; that is a separate fix).
 - Nothing reaches the host templates. B5's host work, shipped in a tools release: a hook in
   Android's `bindServices` and in the iOS `Keliver` object for the app's own bridges, and the
-  iOS framework exporting the contract module.
+  iOS framework exporting the contract module and `keliver-bridge`.
 
 ## Steps
 
