@@ -223,7 +223,7 @@ class KeliverBridgeCodegenTest {
 
   @Test fun aGenericTypealias() = refused(
     "$header\ntypealias Tags<V> = Map<String, V>\n@KeliverBridge interface A { fun a(x: Tags<String>) }",
-    "A uses the generic typealias Tags: write the type it stands for",
+    "A uses the generic typealias com.example.Tags: write the type it stands for",
   )
 
   @Test fun aKeywordAsAParameterNameIsWrittenInBackticks() {

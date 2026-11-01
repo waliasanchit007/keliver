@@ -129,8 +129,9 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      by name. A field is a property with a backing field and no `@Transient`; for a property
      of another module's class, whose backing field KSP may not know, any non-`@Transient`
      property. Every file the hash reads is an input of the generated file, and reaching a
-     sealed class makes it depend on every source (a new subclass can be in a new file). B4 can carry `SHAPE` with the version, so
-     a change without a version bump is caught; nothing checks either in B3;
+     sealed class makes it depend on every source (a new subclass can be in a new file). B4
+     can carry `SHAPE` with the version, so a change without a version bump is caught;
+     nothing checks either in B3;
    - `bind(zipline, impl: ShopActions, context = Dispatchers.Default, log = {})` (host
      side) binds, under `NAME`, a `ShopActionsService` that runs each call through the guard in
      §5. It is called from Kotlin (its `Zipline` and `CoroutineContext` are no use to Swift):

@@ -65,9 +65,10 @@ internal class KeliverBridgeCodegen(
       } catch (e: Refused) {
         logger.error("@KeliverBridge: ${e.message}", e.node)
       } catch (e: GenericTypealias) {
+        // Reported on the interface: the alias may be a library's, with no location.
         logger.error(
-          "@KeliverBridge: ${(symbol as? KSClassDeclaration)?.simpleName?.asString()} uses the generic typealias ${e.alias.simpleName.asString()}: write the type it stands for",
-          e.alias,
+          "@KeliverBridge: ${(symbol as? KSClassDeclaration)?.simpleName?.asString()} uses the generic typealias ${e.alias.qualifiedName?.asString()}: write the type it stands for",
+          symbol,
         )
       }
     }
@@ -212,12 +213,13 @@ internal class KeliverBridgeCodegen(
 
 internal fun KSType.qualifiedName(): String? = declaration.qualifiedName?.asString()
 
-/** The type a typealias stands for (with its nullability), or this type. */
-internal fun KSType.expanded(): KSType {
+/** The type a typealias stands for (with its nullability), or this type; [onAlias] sees each alias. */
+internal fun KSType.expanded(onAlias: (KSTypeAlias) -> Unit = {}): KSType {
   val alias = declaration as? KSTypeAlias ?: return this
+  onAlias(alias)
   // Its arguments would have to be substituted into the target: not supported, and said so.
   if (alias.typeParameters.isNotEmpty()) throw GenericTypealias(alias)
-  val target = alias.type.resolve().expanded()
+  val target = alias.type.resolve().expanded(onAlias)
   return if (isMarkedNullable) target.makeNullable() else target
 }
 

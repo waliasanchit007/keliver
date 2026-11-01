@@ -22,7 +22,6 @@ import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.symbol.KSTypeAlias
 import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.Origin
 import java.security.MessageDigest
@@ -90,8 +89,7 @@ internal class BridgeShape private constructor(
         }
       }
       type = { unexpanded ->
-        (unexpanded.declaration as? KSTypeAlias)?.containingFile?.let(files::add)
-        val t = unexpanded.expanded()
+        val t = unexpanded.expanded { alias -> alias.containingFile?.let(files::add) }
         (t.declaration as? KSClassDeclaration)?.let(::describe)
         val arguments = t.arguments.map { argument -> argument.type?.resolve()?.let(type) ?: "*" }
         (t.qualifiedName() ?: "?") +
