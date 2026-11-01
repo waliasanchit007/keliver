@@ -33,4 +33,6 @@ internal object KeliverTiming {
   inline fun memory(point: String, zipline: Zipline? = null) = Unit
 
   inline fun memoryAfterFrame(point: String) = Unit
+
+  inline fun screenOpened(activity: android.app.Activity?) = Unit
 }

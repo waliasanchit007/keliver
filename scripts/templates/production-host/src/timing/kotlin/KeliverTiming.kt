@@ -109,6 +109,7 @@ internal object KeliverTiming {
   // its Zipline dispatcher.
   @Volatile private var watchedHost: KeliverHost? = null
   @Volatile private var watchedApp: TreehouseApp<*>? = null
+  @Volatile private var appContext: Context? = null
   private val memoryScope = CoroutineScope(SupervisorJob())
   private val cycle = AtomicInteger(0)
   private var resumed: WeakReference<Activity>? = null // main thread: the activity in front
@@ -120,7 +121,8 @@ internal object KeliverTiming {
     if (file != null) return
     val f = File(context.filesDir, FILE)
     file = f
-    registerMemoryCycle(context.applicationContext)
+    appContext = context.applicationContext
+    trackActivities(context.applicationContext)
     io.execute {
       runCatching {
         f.parentFile?.mkdirs()
@@ -202,9 +204,21 @@ internal object KeliverTiming {
     markAt("memory", nanos, KeliverMemory.line(point, at, usage, quickJs))
   }
 
+  /**
+   * A KeliverScreen in [activity] entered the composition: the activity a memory cycle opens over
+   * when none resumed since the host started (an app whose host is made by its first screen).
+   */
+  fun screenOpened(activity: Activity?) {
+    if (resumed?.get() == null && activity != null) resumed = WeakReference(activity)
+  }
+
   /** The guest's content mark, one frame after it came; main thread. */
   private fun contentShown() {
-    contentSeen = true
+    if (!contentSeen) {
+      contentSeen = true
+      // Only now, off start-up: a cycle waits for the first content anyway.
+      appContext?.let(::registerMemoryCycle)
+    }
     memory("content")
     running?.contentShown()
   }
@@ -217,9 +231,11 @@ internal object KeliverTiming {
     val app = watchedApp
     val code = app?.zipline?.value
     if (app == null || code == null) {
-      KeliverMemory.collectJava()
-      emitMemory("closed", n, SystemClock.elapsedRealtimeNanos(), KeliverMemory.usage(full = true), null)
-      done()
+      io.execute {
+        KeliverMemory.collectJava()
+        emitMemory("closed", n, SystemClock.elapsedRealtimeNanos(), KeliverMemory.usage(full = true), null)
+        main.post(done)
+      }
       return
     }
     // done() when the job ends however it ends (a throw, a cancel): a cycle left running would
@@ -231,8 +247,8 @@ internal object KeliverTiming {
     }.invokeOnCompletion { main.post(done) }
   }
 
-  /** [MEMORY_CYCLE] runs one memory cycle; the activity in front is the one it opens a screen over. */
-  private fun registerMemoryCycle(context: Context) {
+  /** The activity in front, the one a memory cycle opens a screen over. */
+  private fun trackActivities(context: Context) {
     (context as? Application)?.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
       override fun onActivityResumed(activity: Activity) { resumed = WeakReference(activity) }
       override fun onActivityPaused(activity: Activity) { if (resumed?.get() === activity) resumed = null }
@@ -242,6 +258,13 @@ internal object KeliverTiming {
       override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
       override fun onActivityDestroyed(activity: Activity) {}
     })
+  }
+
+  private val cycleRegistered = AtomicBoolean(false)
+
+  /** [MEMORY_CYCLE] runs one memory cycle; once, after the first content. */
+  private fun registerMemoryCycle(context: Context) {
+    if (!cycleRegistered.compareAndSet(false, true)) return
     val receiver = object : BroadcastReceiver() {
       override fun onReceive(c: Context, intent: Intent) = memoryCycle()
     }
@@ -269,7 +292,11 @@ internal object KeliverTiming {
       Log.i(LOG_TAG, "memory-cycle: no ${if (host == null) "host" else "activity in front"} to open a screen over")
       return
     }
-    running = MemoryCycle(cycle.incrementAndGet(), host, over)
+    val n = cycle.incrementAndGet()
+    // A window that cannot show (its activity went between the check and here) ends nothing.
+    running = runCatching { MemoryCycle(n, host, over) }
+      .onFailure { Log.w(LOG_TAG, "memory-cycle $n: could not open a screen: $it") }
+      .getOrNull()
   }
 
   /**

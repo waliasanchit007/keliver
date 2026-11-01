@@ -300,6 +300,8 @@ grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
   && grep -q 'KeliverTiming.watch(this, app)' "$M" \
   && grep -q 'KeliverTiming.memory("open")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
   && grep -q 'KeliverTiming.memoryAfterFrame("ui")' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
+  && grep -q 'KeliverTiming.screenOpened(screenActivity)' "$H/src/main/kotlin/$P/KeliverScreen.kt" \
+  && grep -q 'inline fun screenOpened(activity: android.app.Activity?) = Unit' "$N" \
   && grep -q 'inline fun memory(point: String, zipline: Zipline? = null) = Unit' "$N" \
   && grep -q 'inline fun watch(host: KeliverHost, app: TreehouseApp<\*>) = Unit' "$N" \
   && [ ! -e "$H/src/notiming/kotlin/$P/KeliverMemory.kt" ] \

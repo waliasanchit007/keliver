@@ -61,13 +61,12 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
       echo "  SKIP  $1: this host predates the memory profile (not counted)"; return 0
     fi
     launch prod "$EV/logcat-$2-launch.txt"
-    # Cleared after the launch's dump, so the cycles' dump holds none of its lines and the
-    # two together hold every line, however much the log turned over in between.
-    adb -s "$SERIAL" logcat -c || true
     adb -s "$SERIAL" shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p "$PROD_ID" > /dev/null; sleep 25
     adb -s "$SERIAL" shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p "$PROD_ID" > /dev/null; sleep 25
     adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-$2-cycles.txt"
-    cat "$EV/logcat-$2-launch.txt" "$EV/logcat-$2-cycles.txt" > "$EV/logcat-$2.txt"
+    # Both dumps, each line once (a threadtime line carries its time, pid and tid; a memory line
+    # its nanos): the launch's has the early lines even if the log turned over since.
+    cat "$EV/logcat-$2-launch.txt" "$EV/logcat-$2-cycles.txt" | awk '!seen[$0]++' > "$EV/logcat-$2.txt"
     out="$(python3 "$HERE/m0/memory.py" "$EV/logcat-$2.txt")" && ok "$1: the memory profile: $out" || bad "$1: the memory profile: $out"
   }
 

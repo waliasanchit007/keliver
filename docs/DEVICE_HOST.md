@@ -555,12 +555,17 @@ Sizes are in KiB (the lines say KB); `-` is "not read here".
   is exact); on Android, `closed` collects QuickJS's heap, then the Java heap with its
   finalizers, and then reads `pss`. If the screen's composition is let go later still, its
   guest objects count there (compare `objects` at `closed` with `content`). A cycle whose
-  screen did not close says so in the log.
+  screen did not close says so in the log. A launch whose code loads twice (a fall-back to
+  the cached bundle, an update applied) logs `runtime` and `code` twice in cycle 0, so read
+  the profile of a plain launch.
 - **Output:** the same as the frame profile's: the console (iOS) or logcat (Android), and
   `timing.log`; not `onTrace`.
 - **Overhead:** at each point one `task_info` call (iOS) or a read of `statm` and the two
   heaps' counters (Android), and one QuickJS read on the Zipline thread; collections and
-  Android's `Debug.getMemoryInfo` only at `closed`. A store build compiles none of it
+  Android's `Debug.getMemoryInfo` only at `closed`. The read at `code` walks QuickJS's heap
+  on the Zipline thread before the screen's code runs, so the timing marks of the same
+  launch (`first-frame`, `content`) include it; Android registers the cycle's receiver only
+  after the first content, off start-up. A store build compiles none of it
   (`src/notiming/`); only the listener's `ziplineCreated` override, doing nothing, remains.
 
 ## 3. Your own production iOS host
