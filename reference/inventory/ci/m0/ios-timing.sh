@@ -59,10 +59,14 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
         tpid=$!
         # No timeout(1) on macOS: a hung runner fails this row, not the job.
         while kill -0 "$tpid" 2>/dev/null && [ "$t" -lt 300 ]; do sleep 5; t=$((t + 5)); done
+        local stopped=""
         if kill -0 "$tpid" 2>/dev/null; then
-          kill "$tpid" 2>/dev/null; echo "ios-timing: the tap driver was stopped after ${t} s" >> "$EV/$1-tap.log"
+          kill "$tpid" 2>/dev/null; stopped=1
+          while kill -0 "$tpid" 2>/dev/null && [ "$t" -lt 330 ]; do sleep 5; t=$((t + 5)); done
+          kill -9 "$tpid" 2>/dev/null
         fi
         wait "$tpid"; M0_TAP_RC=$?
+        [ -z "$stopped" ] || echo "ios-timing: the tap driver was stopped after 300 s" >> "$EV/$1-tap.log"
         # The test, not just xcodebuild, must have passed.
         grep -q "Test Case '-\[IosTapUITests.AddOneTwice testAddOneTwice\]' passed" "$EV/$1-tap.log" || M0_TAP_RC=1
       fi
@@ -95,7 +99,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
       bad "$1: Add 1 twice on an open item (no profile read): $(grep -E 'error: |AddOneTwice: |ios-timing: ' "$EV/$3-tap.log" | head -3 | cut -c1-200 | tr '\n' ' ')"
       return 0
     fi
-    ok "$1: Add 1 twice on an open item ($(grep -c 'AddOneTwice: F' "$EV/$3-tap.log") steps, $3-tap.log)"
+    ok "$1: Add 1 twice on an open item ($(grep -c 'AddOneTwice: F[12] ' "$EV/$3-tap.log") steps, $3-tap.log)"
     out="$(python3 "$HERE/m0/frames.py" --changed "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
   }
 
