@@ -482,7 +482,7 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    (#178): on iOS, a header callback adds the app's credentials, behind the
    same policy, with B1's rules (20 simulator tests); released in tools
    0.3.16. B3 to B5
-   not started.
+   not started; B3's design: `BRIDGE_CODEGEN_DESIGN.md` (2026-11-02).
 9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
    host-side frame profile released (#186, tools 0.3.17; composition apart from encoding needs a
    library release); M5's memory profile released on both hosts (#188 iOS, #191 Android; tools 0.3.17); then their numbers on a phone.
@@ -515,7 +515,7 @@ a Galaxy A12 in 2026-10), an iPhone run of the reference app is not; items 5,
    Maven Central only; the reference app's P1–P7 pass on it, P7 being an
    offline start from Zipline's verified cache (CI run `37505534432`). **iOS (shipped in tools 0.3.7):**
    `keliver-new-ios-host.sh` writes `host-ios/` with the same guarantees, and iOS P1, P2 and P4–P7 pass on a
-   simulator in CI (`ios-host.yml` run `37597390396`). What remains: physical devices over HTTPS, and
+   simulator in CI (`ios-host.yml` run `37597390396`; P3, three taps, since #199, run `41338112060`). What remains: physical devices over HTTPS, and
    release-signed builds. The plan of record is `docs/DELIVERY_PLAN.md`.
 2. **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, which
    defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app had
