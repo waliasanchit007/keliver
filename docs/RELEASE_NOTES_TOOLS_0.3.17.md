@@ -108,9 +108,9 @@ interleave.
 | stored assets | release `430489073`: the zip (asset `697925066`) and the `.sha256` (asset `697925065`), server digests and sizes equal to the files above |
 | draft download-back | worked: sha256 `2c6e69d6…`, 92,132,756 bytes |
 | public download | worked from the releasing machine after publishing: the zip `2c6e69d6…`, 92,132,756 bytes, and the public `.sha256` names the same hash |
+| public download, GitHub-hosted runners | the reference app's move to 0.3.17 (PR #195): the public-download step of reference-app `41295173387` (ubuntu) and ios-host `41295173576` (macos) fetched `2c6e69d6…`; the hand runs `41295181893` (device 201/0) and `41295184572` (`ios.sh` 183/0) ran the hosts from it |
 
-Not verified for this release (the reference app's move to 0.3.17 will run the published
-hosts in CI):
+Not verified for this release (the published hosts ran M4 and M5 in CI through #195, row above):
 - either profile on a phone: M4 and M5 ran only on the CI emulator and simulator;
 - a leak bound: none is set;
 - iOS's frame profile after a tap: the iOS harness has no tap step, so its T3 sees one empty
