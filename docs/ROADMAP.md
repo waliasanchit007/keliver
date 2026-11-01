@@ -64,7 +64,7 @@ run alongside item 2.
      cycles for a second-open leak; simulator numbers in CI, a phone's not yet; reaches
      apps with the next tools release);
    - **merged 2026-11-01:** M5 on Android (#191, the Android template; the same points
-     and memory cycles, `pss` at each cycle's close; emulator numbers in CI, a phone's
+     and memory cycles, `pss` and `graphics` at each cycle's close; emulator numbers in CI, a phone's
      not yet; reaches apps with the next tools release);
    - **open:** M4's composition/encoding split (a library change).
      See ADOPTION_PLAN item 2.
