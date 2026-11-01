@@ -207,6 +207,8 @@ internal object KeliverTiming {
   /**
    * A KeliverScreen in [activity] entered the composition: the activity a memory cycle opens over
    * when none resumed since the host started (an app whose host is made by its first screen).
+   * While nothing is in front (paused), a screen composed in an activity behind takes it until
+   * the next resume; a cycle sent then opens over that activity.
    */
   fun screenOpened(activity: Activity?) {
     if (resumed?.get() == null && activity != null) resumed = WeakReference(activity)
@@ -232,9 +234,13 @@ internal object KeliverTiming {
     val code = app?.zipline?.value
     if (app == null || code == null) {
       io.execute {
-        KeliverMemory.collectJava()
-        emitMemory("closed", n, SystemClock.elapsedRealtimeNanos(), KeliverMemory.usage(full = true), null)
-        main.post(done)
+        // done() however this ends: a cycle left running would refuse every later one.
+        try {
+          KeliverMemory.collectJava()
+          emitMemory("closed", n, SystemClock.elapsedRealtimeNanos(), KeliverMemory.usage(full = true), null)
+        } finally {
+          main.post(done)
+        }
       }
       return
     }

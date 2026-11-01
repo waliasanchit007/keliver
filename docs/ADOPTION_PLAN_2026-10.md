@@ -102,7 +102,7 @@ below); M4's host-side frame profile merged (#186, step 5; not released); M5's i
    **2026-11-01, in review (#191):** the Android host's debug and benchmark builds log the
    same points (rss, the Java and native heaps and QuickJS's; `pss` and `graphics` at
    `closed`), and `adb shell am broadcast -a dev.keliver.debug.MEMORY_CYCLE -p <app>` runs a
-   cycle; the reference app's Android CI (T4) checks them on the emulator. Not done: the
+   cycle; the reference app's Android CI (T4) is to check them on the emulator. Not done: the
    numbers on a phone, where the 76 MB was seen (the simulator has no memory limit and other
    graphics memory, and the emulator's graphics are the host machine's).
 

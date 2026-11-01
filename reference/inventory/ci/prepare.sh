@@ -307,8 +307,13 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing" && [ "$DEVI
   rel="$(find "$APP/host-android/build/outputs/apk/release" -name '*.apk' | head -1)"
   if [ -n "$rel" ]; then
     rm -rf "$WORK/m0-dex" && mkdir -p "$WORK/m0-dex" && unzip -q -o "$rel" 'classes*.dex' -d "$WORK/m0-dex"
-    ! grep -aq "${M0_STRINGS[@]}" "$WORK"/m0-dex/*.dex \
-      && ok "T0: the release build has no timing marks (no file sink, no KeliverTrace, no first-frame$([ ${#M0_STRINGS[@]} -gt 6 ] && echo ', no memory profile'))" || bad "T0: the release build carries timing code"
+    # Only grep's 1 is "none": 2 (no dex unpacked, an unreadable file) looked at nothing.
+    grep -aqs "${M0_STRINGS[@]}" "$WORK"/m0-dex/*.dex; rc=$?
+    case $rc in
+      1) ok "T0: the release build has no timing marks (no file sink, no KeliverTrace, no first-frame$([ ${#M0_STRINGS[@]} -gt 6 ] && echo ', no memory profile'))" ;;
+      0) bad "T0: the release build carries timing code" ;;
+      *) bad "T0: the release build's dex could not be read (grep exit $rc)" ;;
+    esac
   else
     bad "T0: no release APK to check"
   fi
