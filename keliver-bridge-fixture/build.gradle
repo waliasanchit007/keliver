@@ -1,0 +1,48 @@
+// Not published. A contract module as an app writes one (docs/BRIDGE_CODEGEN_DESIGN.md,
+// sections 1 and 6): one @KeliverBridge interface, keliver-bridge-codegen run on
+// kspCommonMainMetadata, and the Zipline compiler plugin, built for JVM, JS and iOS in CI's full
+// build. That shows Zipline adapts the generated service on every target (the codegen's own
+// tests compile without the plugin), and its JVM tests drive the generated classes through the
+// guard.
+
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+apply plugin: 'com.google.devtools.ksp'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      // What the processor writes, for every target's compilation.
+      kotlin.srcDir(layout.buildDirectory.dir('generated/ksp/metadata/commonMain/kotlin'))
+      dependencies {
+        api projects.keliverBridgeAnnotations
+        api projects.keliverBridge
+        api libs.zipline
+        api libs.kotlinx.serialization.json
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
+
+dependencies {
+  add('kspCommonMainMetadata', projects.keliverBridgeCodegen)
+}
+
+// ksp#1318: every compilation needs the metadata KSP output first.
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask).configureEach {
+  if (name != 'kspCommonMainKotlinMetadata') {
+    dependsOn('kspCommonMainKotlinMetadata')
+  }
+}

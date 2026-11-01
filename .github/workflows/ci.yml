@@ -148,6 +148,8 @@ jobs:
       # simulator (docs/BRIDGE_CODEGEN_DESIGN.md, section 6). It is this job's
       # first iOS simulator test: it needs Xcode's simulators on the runner and
       # adds a Native test link (about a minute) to the job's time.
+      # keliver-bridge-fixture is a contract module built with keliver-bridge-codegen and
+      # the Zipline plugin; it is not published, so the build above does not compile it.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
@@ -163,6 +165,9 @@ jobs:
           :keliver-bridge:jvmTest
           :keliver-bridge:jsTest
           :keliver-bridge:iosSimulatorArm64Test
+          :keliver-bridge-fixture:jvmTest
+          :keliver-bridge-fixture:compileKotlinJs
+          :keliver-bridge-fixture:compileKotlinIosSimulatorArm64
           -DRELEASE_SIGNING_ENABLED=false
 
       # The full inherited Redwood test suite that asserts against the

@@ -35,6 +35,8 @@ package dev.keliver.bridge.api
  * @property version the contract's version, for the compatibility gate (B4).
  * @property timeoutSeconds how long the host waits for the app's answer to a call, unless a
  *   function's [BridgeTimeout] says otherwise; 0 means no limit.
+ *
+ * The defaults are repeated in keliver-bridge-codegen, which cannot always read them: change both.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)

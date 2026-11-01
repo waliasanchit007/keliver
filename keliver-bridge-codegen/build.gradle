@@ -1,0 +1,71 @@
+// KSP processor for generated action bridges (B3b; docs/BRIDGE_CODEGEN_DESIGN.md): reads the
+// @KeliverBridge interface in an app's contract module and writes, next to it, the
+// ZiplineService, the bind/take object, the iOS callbacks and their adapter. The generated code
+// calls keliver-bridge's guard.
+//
+// Tooling target group — JVM-only, runs at build time. Adopters add it with
+// `add("kspCommonMainMetadata", …)` on the contract module; nothing from this artifact reaches
+// the app's runtime classpath.
+
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
+import static dev.keliver.buildsupport.TargetGroup.Tooling
+
+redwoodBuild {
+  targets(Tooling)
+  publishing()
+}
+
+apply plugin: 'com.google.devtools.ksp'
+
+dependencies {
+  compileOnly libs.ksp.api
+  implementation libs.kotlinPoet
+  implementation libs.kotlinPoet.ksp
+
+  // Registers the processor in META-INF/services, as keliver-http-codegen does.
+  compileOnly libs.autoService.annotations
+  ksp libs.autoService.kspCompiler
+
+  testImplementation libs.junit
+  testImplementation libs.assertk
+  testImplementation libs.kotlinCompileTesting.ksp
+  // What the fixtures and the generated code reference: the annotations, the guard, Zipline
+  // (its bind/take compile without the Zipline compiler plugin, which these tests do not run),
+  // coroutines and kotlinx.serialization's annotations.
+  testImplementation projects.keliverBridgeAnnotations
+  testImplementation projects.keliverBridge
+  testImplementation libs.zipline
+  testImplementation libs.kotlinx.coroutines.core
+  testImplementation libs.kotlinx.serialization.json
+}
+
+tasks.withType(JavaCompile).configureEach {
+  sourceCompatibility = JavaVersion.VERSION_11.toString()
+  targetCompatibility = JavaVersion.VERSION_11.toString()
+}
+
+tasks.withType(KotlinJvmCompile).configureEach {
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_11)
+  }
+}
+
+// `./gradlew :keliver-bridge-codegen:test -PupdateGolden` rewrites the expected files under
+// src/test/resources/golden; review the diff like any other change.
+tasks.withType(Test).configureEach {
+  systemProperty('keliver.bridge.goldenDir', file('src/test/resources/golden').absolutePath)
+  if (project.hasProperty('updateGolden')) {
+    systemProperty('keliver.bridge.updateGolden', 'true')
+  }
+}
+
+// The expected files are exactly what the processor writes: no license header, no reformatting.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude('src/test/fixture/**/build/**', 'src/test/resources/golden/**')
+    }
+  }
+}
