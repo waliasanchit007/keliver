@@ -7,12 +7,13 @@
 #       Library/Caches/keliver/timing.log; first-frame and content not before code
 #   T2  the Benchmark configuration (Release settings) loads v9 and logs the
 #       same marks; the Release configuration's binary has none of them
-#   T3  M4's guest frame profile, in both: well-formed "frames" lines on the
-#       console and in the file, with a timed guest frame and an applied change
-#       list (frames.py); a host from templates without it SKIPs. There is no
-#       tap step: after a launch the simulator times only an empty frame, so a
-#       PASS shows well-formed lines, not a timed frame that sent changes
-#       (Android's T3 checks that: frames.py --changed)
+#   T3  M4's guest frame profile, in both: in T1's and T2's launch, Add 1
+#       twice on Espresso beans (m0/ios-tap, an XCTest UI test that attaches
+#       to the running host), so the guest recomposes in a frame — a launch
+#       alone times only an empty frame; then well-formed "frames" lines on the
+#       console and in the file, with a timed guest frame that sent a change
+#       list and an applied change list (frames.py --changed, as on Android); a
+#       host from templates without it SKIPs
 #   T4  M5's memory profile, in both, in a launch of its own (its extra screens
 #       would break T1's "once"): after the first screen's content, two memory
 #       cycles (the Darwin notification <bundle id>.keliver.memory-cycle opens a
@@ -28,13 +29,31 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   for _ in $(seq 1 30); do curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json && break; sleep 1; done
   m0_at(){ sed -n "s/.*KeliverTiming: $2 \([0-9][0-9]*\)\r*$/\1/p" "$1" | head -1; }
   m0_count(){ grep -c "KeliverTiming: $2 [0-9]" "$1"; }
+  # T3's tap driver, built once (it has no app of its own; it drives the host by bundle id).
+  M0_TAP=""; M0_TAP_RC=1
+  if grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
+    xcodebuild build-for-testing -project "$HERE/m0/ios-tap/IosTap.xcodeproj" -scheme IosTap \
+        -destination "id=$UDID" -derivedDataPath "$WORK/dd-tap" > "$EV/m0-ios-tap-build.log" 2>&1 \
+      && M0_TAP=1 || bad "T3: the tap driver (m0/ios-tap) did not build: $(grep -E 'error:' "$EV/m0-ios-tap-build.log" | head -2 | tr '\n' ' ')"
+  fi
   # One launch, one console, no relaunch: ios.sh's launch() relaunches without a
   # console when the first screenshot is blank, which would lose the marks.
-  m0_launch(){  # $1 label
+  # With "tap", T3's Add 1 twice runs in the launch (log: $1-tap.log); M0_TAP_RC is its status.
+  m0_launch(){  # $1 label, [$2 tap]
     local pid
     xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
     xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$1.console.txt" 2>&1 &
-    pid=$!; sleep 30; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+    pid=$!; sleep 30
+    if [ "${2:-}" = tap ]; then
+      M0_TAP_RC=1
+      if [ -n "$M0_TAP" ]; then
+        TEST_RUNNER_TAP_BUNDLE_ID="$BID" xcodebuild test-without-building -project "$HERE/m0/ios-tap/IosTap.xcodeproj" \
+          -scheme IosTap -destination "id=$UDID" -derivedDataPath "$WORK/dd-tap" > "$EV/$1-tap.log" 2>&1
+        M0_TAP_RC=$?
+        sleep 3  # a window ends 1 s after its first sample
+      fi
+    fi
+    kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
   }
   m0_marks(){  # $1 label, $2 console file
     local f="$2" o c ff ct n
@@ -48,12 +67,18 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
       bad "$1: the marks are out of order: open $o code $c first-frame $ff content $ct"; return 1
     fi
   }
-  m0_frames(){  # $1 label, $2 console file
+  m0_frames(){  # $1 label, $2 console file, $3 the launch's label (its tap log)
     local out
     if ! grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
       echo "  SKIP  $1: this host predates the guest frame profile (not counted)"; return 0
     fi
-    out="$(python3 "$HERE/m0/frames.py" "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
+    [ -n "$M0_TAP" ] || return 0  # its failed build is counted once, above
+    if [ "$M0_TAP_RC" != 0 ]; then
+      bad "$1: Add 1 twice on an open item (no profile read): $(grep -E 'error: |AddOneTwice: ' "$EV/$3-tap.log" | head -3 | cut -c1-200 | tr '\n' ' ')"
+      return 0
+    fi
+    ok "$1: Add 1 twice on an open item ($(grep -c 'AddOneTwice: F' "$EV/$3-tap.log") steps, $3-tap.log)"
+    out="$(python3 "$HERE/m0/frames.py" --changed "$2")" && ok "$1: the guest frame profile: $out" || bad "$1: the guest frame profile: $out"
   }
 
   m0_memory(){  # $1 label: a launch, two memory cycles, then the profile
@@ -71,7 +96,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   }
 
   # T1: the Debug build W5 left installed (its server is https://localhost:8443).
-  m0_launch T1
+  m0_launch T1 tap
   C="$EV/T1.console.txt"
   m0_marks T1 "$C"
   grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && ok "T1: the Debug build ran v9" || bad "T1: v9 did not load"
@@ -79,7 +104,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   ct="$(m0_at "$C" content)"
   [ -n "$ct" ] && grep -qx "content $ct" "$TL" 2>/dev/null \
     && ok "T1: Library/Caches/keliver/timing.log has the same content mark ($ct)" || bad "T1: the file sink: $(tail -3 "$TL" 2>&1 | tr '\n' ' ')"
-  m0_frames T3 "$C"
+  m0_frames T3 "$C" T1
   if grep -rqs "class FrameWindow" "$APP/host-ios/src/timing"; then
     # This launch's own line: the file outlives the app's earlier runs.
     fl="$(LC_ALL=C tr -d '\r' < "$C" | LC_ALL=C sed -n 's/.*KeliverTiming: \(frames [0-9][0-9]* n=.*\)$/\1/p' | head -1)"
@@ -103,12 +128,12 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     BAPP="$(find "$WORK/dd-m0/Build/Products/Benchmark-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
     # Installed over the Debug build: the app's data (cache, rollback floor) stays for W8.
     xcrun simctl install "$UDID" "$BAPP"
-    m0_launch T2
+    m0_launch T2 tap
     C="$EV/T2.console.txt"
     grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && ok "T2: the Benchmark build verified and ran v9" \
       || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$C" | head -3 | tr '\n' ' ')"
     m0_marks T2 "$C"
-    m0_frames "T3 (Benchmark)" "$C"
+    m0_frames "T3 (Benchmark)" "$C" T2
     # The positive control for the Release check below: these names are in a build that has them.
     m0_has_all=1
     for m0_n in KeliverTrace FrameWindow KeliverMemory; do
