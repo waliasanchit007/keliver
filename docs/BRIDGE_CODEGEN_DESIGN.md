@@ -25,7 +25,8 @@ What this repository has today (2026-11-02):
 - Swift reaches Kotlin through Kotlin function types: `Keliver.requestHeaders`
   (`KeliverRequestHeaders`, B2) is a callback with a `done`, and its suspend side
   (`credentials()` in the iOS template's `IosHttp.kt`) posts the call to the main thread, waits
-  30 s at most, and ignores a second `done`. That is the pattern B3 generates.
+  30 s at most, and ignores a second `done`. B3 generates that pattern, with a limit per
+  function.
 
 ## Decisions
 
@@ -39,7 +40,9 @@ The plan said "a Gradle task generates". KSP is used instead because:
 
 The contract module is multiplatform, so the processor runs on `kspCommonMainMetadata` and its
 output is added to `commonMain`, with the ksp#1318 task dependency, as
-`sample/shared/build.gradle.kts` does for the treehouse codegen. A `dev.keliver.bridge` Gradle
+`sample/shared/build.gradle.kts` does for the treehouse codegen. Generated sources are compiled like
+hand-written ones, so the Zipline plugin adapts a generated `ZiplineService` there too; the
+treehouse codegen's output in `sample/shared` already relies on that. A `dev.keliver.bridge` Gradle
 plugin id that applies all of this is a later convenience, not part of B3.
 
 ### 2. Modules
@@ -47,7 +50,7 @@ plugin id that applies all of this is a later convenience, not part of B3.
 | Module | Targets | Contents |
 |---|---|---|
 | `keliver-bridge-annotations` | common (JVM, JS, iOS, Android) | `@KeliverBridge(name, version)`, `SOURCE` retention |
-| `keliver-bridge` | common | the runtime the generated code calls: `BridgeCallFailed`, and `awaitCallback`, the suspend-to-callback step (§5) |
+| `keliver-bridge` | common | the runtime the generated code calls: the guard (§5), `BridgeCall`, `BridgeCallFailed` |
 | `keliver-bridge-codegen` | tooling (JVM) | the KSP processor |
 
 The runtime is small and real code, so it is tested once, in `keliver-bridge`, on JVM and on
@@ -62,6 +65,7 @@ uses them from this checkout, the way the production host is already built from 
 interface ShopActions {
   suspend fun openRoute(route: String): Boolean
   suspend fun share(text: String, url: String?)
+  @BridgeTimeout(seconds = 0)                                        // the user picks: no limit
   suspend fun pickAddress(request: AddressRequest): AddressResult   // @Serializable types
   fun track(event: String, properties: Map<String, String>)          // fire and forget
 }
@@ -69,79 +73,118 @@ interface ShopActions {
 
 The contract module is the app's own (multiplatform, the Zipline plugin applied, U2). The
 guest and both hosts depend on it, so the contract is written once, and the shape-matching
-redeclaration goes away for app actions. `name` defaults to the interface's simple name and is
-the binding name; `version` defaults to 1 and is what B4 will carry.
+redeclaration goes away for app actions. How it reaches them is the app's choice, as for any
+library it owns: a project in the same build, an included build, or, when the guest and the
+hosts live in separate repositories (as in the retro), a version the app publishes to its own
+repository. Keliver does not host it.
+
+`name` defaults to the interface's simple name and is the binding name. `version` defaults to 1
+and is what B4 will carry. `@KeliverBridge(timeoutSeconds = 30)` is the default limit for a
+call; `@BridgeTimeout(seconds)` overrides it for one function, and 0 means none, for calls that
+wait on the user (a picker, a web page's result).
 
 The processor **fails the build**, naming the function, for:
-- a `suspend` function returning `List`, `Set` or `Map` of anything but strings and
-  primitives (U1; the message says to wrap it in one `@Serializable` type);
+- a `suspend` function returning any collection (U1 was measured for `List<@Serializable T>`;
+  `Set`, `Map` and lists of primitives are refused as a precaution, so one rule covers them,
+  and the message says to wrap the value in one `@Serializable` type);
 - a parameter of function type, `Flow`, or a `ZiplineService` (U11 and lifetime: an action
   takes values);
 - a non-`suspend` function that returns anything but `Unit` (it would block the guest's thread
   on the host's main thread);
-- generics, default arguments, overloads (Objective-C export renames them, which makes the
-  Swift side unpredictable), `vararg`, and extension functions;
+- generics, default arguments, `vararg`, extension functions, and overloads (Objective-C
+  export renames a function whose selector clashes, which makes the Swift side depend on the
+  other functions; refusing all overloads keeps the rule simple);
 - a parameter or return type that is not a primitive, `String`, an enum, a `@Serializable`
   class, or a `List`/`Map` of those (checked by the declaration, not by trying to serialize).
 
 ### 4. What is generated
 
-For `ShopActions`, in its package, in one file per interface:
+For `ShopActions`, in its package, in one file per interface, all in `commonMain` (so the guest
+bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drops them):
 
 1. **`ShopActionsService : ZiplineService`**, the same functions. It exists only so that the
    app's interface never carries `ZiplineService`, and neither delegate has to implement
    `close()`.
 2. **`ShopActionsBridge`**, an object:
-   - `NAME = "ShopActions"`, `VERSION = 2` (B4 reads these; nothing checks them in B3);
-   - `bind(zipline, impl: ShopActions)` (host side) binds a forwarding `ShopActionsService`
-     under `NAME`;
+   - `NAME = "ShopActions"`, `VERSION = 2`, and `SHAPE`, a hash of the functions' names,
+     parameter and result types in a fixed form. B4 can carry `SHAPE` with the version, so a
+     signature change without a version bump is caught; nothing checks either in B3;
+   - `bind(zipline, impl: ShopActions, context, log)` (host side) binds, under `NAME`, a
+     `ShopActionsService` that runs each call through the guard in §5;
+   - `bind(zipline, callbacks: ShopActionsCallbacks, context, log)` is the same through
+     `ShopActionsCallbackAdapter`;
    - `take(zipline): ShopActions` (guest side) returns a `ShopActions` that forwards to the
-     taken service, so guest code, too, sees only the app's interface.
+     taken service, so guest code, too, sees only the app's interface (§5 on failures).
 3. **Android delegate:** none is generated, because the app's interface is already one. An
-   Android app implements `ShopActions` with `suspend` functions and passes it to `bind`.
+   Android app implements `ShopActions` with `suspend` functions and passes it to `bind`, with
+   `Dispatchers.Main` as the context if it touches UI. It gets the same guard as iOS.
 4. **`ShopActionsCallbacks`**, the iOS delegate, non-suspend:
    ```kotlin
    interface ShopActionsCallbacks {
-     fun openRoute(route: String, done: (Boolean) -> Unit, fail: (String) -> Unit)
-     fun share(text: String, url: String?, done: () -> Unit, fail: (String) -> Unit)
-     fun pickAddress(request: AddressRequest, done: (AddressResult) -> Unit, fail: (String) -> Unit)
+     fun openRoute(route: String, call: BridgeCall, done: (Boolean) -> Unit, fail: (String) -> Unit)
+     fun share(text: String, url: String?, call: BridgeCall, done: () -> Unit, fail: (String) -> Unit)
+     fun pickAddress(request: AddressRequest, call: BridgeCall, done: (AddressResult) -> Unit, fail: (String) -> Unit)
      fun track(event: String, properties: Map<String, String>)
    }
    ```
-   Kotlin/Native exports it as an Objective-C protocol, and Swift implements it directly.
-   `done` and `fail` are separate, so a nullable result needs no wrapper. They are Kotlin
-   function types in the host framework, not in a `ZiplineService`, so U11 does not apply.
-5. **`ShopActionsCallbackAdapter(callbacks, context, timeout = 30.seconds) : ShopActions`**,
-   which the iOS host passes to `bind`. Each call goes through `awaitCallback` (§5).
+   - Kotlin/Native exports it as an Objective-C protocol, and Swift implements it directly.
+     Primitives are boxed there: `done(KotlinBoolean(bool: true))`, and a `Map<String, Int>` is
+     `[String: KotlinInt]`.
+   - `done` and `fail` are separate, so a nullable result needs no wrapper. They are Kotlin
+     function types in the host framework, not in a `ZiplineService`, so U11 does not apply.
+   - `call` (`BridgeCall`, in `keliver-bridge`) tells the app the guest stopped waiting:
+     `isCancelled`, and `onCancel { }` to close a picker the guest no longer wants.
+   - For Swift to see these types, the iOS host's framework must `export` the contract module
+     (and depend on it with `api`); the template's framework exports nothing today. That is
+     host work, in B5.
+5. **`ShopActionsCallbackAdapter(callbacks) : ShopActions`**, which turns each callback into a
+   `suspend` call (§5).
 
-### 5. The suspend-to-callback step (`awaitCallback`, in `keliver-bridge`)
+### 5. The guard (`keliver-bridge`), the same on both platforms
 
-The same rules as B2's `credentials()`, because they were reviewed there:
-- the call is posted to `context` (the host passes the main dispatcher), and only the answer is
-  awaited, so a busy main thread fails the call in time instead of holding the guest's call;
-- the first `done` or `fail` wins, and later ones are ignored;
-- no answer within `timeout`, a `fail(message)`, or a throw from the callback ends the guest's
-  call with `BridgeCallFailed(bridge, function, reason)`, which Zipline passes to the guest as
-  an exception. A throw's message is not passed on (it could hold app data): the reason names
-  the exception's class only;
-- when the guest's call is cancelled, or times out, a call still waiting for the main thread
-  is not made;
-- a fire-and-forget function is posted and returns at once; a throw is caught and dropped.
+Every call a host serves through `bind` runs through one guard, with B2's `credentials()` rules
+where they apply, because they were reviewed there:
+- the call is posted to `context`, and only the answer is awaited, so a busy main thread fails
+  the call in time instead of holding the guest's call;
+- the function's limit (§3) applies; 0 waits until the guest cancels;
+- for a callback, the first `done` or `fail` wins, and later ones are ignored;
+- no answer in time, a `fail(message)`, or a throw ends the guest's call with
+  `BridgeCallFailed`, whose message is `KeliverBridge: ShopActions.pickAddress: <reason>` and
+  which has no cause. `fail`'s message is the reason as the app wrote it. A throw's message is
+  not passed on (it could hold app data): the reason names the exception's class, and the
+  message goes only to `log`, which a host wires to its debug console;
+- when the guest's call is cancelled, or times out, a call still waiting for `context` is not
+  made, and `call.onCancel` runs (a `suspend` delegate is cancelled as a coroutine);
+- a fire-and-forget function is posted and returns at once; a throw goes to `log` and is
+  dropped.
+
+Across Zipline, a throwable travels as its known type names and its stack-trace text, and is
+rebuilt on the other side as a `ZiplineException` (or as a cancellation): Zipline 1.22's
+`ThrowableSerializer` writes a `ThrowableSurrogate(types, stacktraceString)`. So the guest cannot
+catch `BridgeCallFailed` directly; the generated `take` wrapper turns a `ZiplineException` whose
+text starts with `KeliverBridge: ` back into a `BridgeCallFailed`, and rethrows anything else.
 
 ### 6. Tests
 
 - **Golden files** (`keliver-bridge-codegen`): each case is a source fixture and its expected
   output, checked in under `src/test/resources/golden/<case>/`. The test runs the processor
-  with kotlin-compile-testing, compares the output byte for byte, and then compiles it together
-  with the Zipline runtime. A system property rewrites the expected files, and the diff is
-  reviewed like any other change. Every rejection in §3 has its own case and message check.
-- **The runtime** (`keliver-bridge`, `commonTest`, so JVM and the iOS simulator in CI's full
-  build): first answer wins, a second is ignored, the timeout, `fail`, a throw, cancellation
-  before the post runs, and fire-and-forget.
-- **"Both platforms"** is met in two steps: B3 proves the generated Kotlin compiles and behaves
-  on JVM (the Android delegate path) and that the adapter's runtime behaves on iOS; the Swift
-  side (a Swift class implementing `ShopActionsCallbacks`, compiled and called) is checked
-  where a Swift app exists, in B5's reference-app run on the simulator.
+  with kotlin-compile-testing, compares the output byte for byte, and then compiles it, without
+  the Zipline compiler plugin (as the treehouse codegen's tests do): that proves the output is
+  valid Kotlin, not that Zipline adapts it. A system property rewrites the expected files, and
+  the diff is reviewed like any other change. Every rejection in §3 has its own case and
+  message check.
+- **Zipline's adapter:** a fixture contract module in this repository, built by Gradle with the
+  Zipline plugin for JVM, JS and the iOS simulator in CI's full build, as `sample/shared` is.
+  If Zipline's API lets a JVM test bind and take through a pair of endpoints in one process,
+  that test runs there too (B3b finds out); otherwise the first round trip is B5's.
+- **The guard** (`keliver-bridge`, `commonTest`, so JVM and the iOS simulator): first answer
+  wins, a second is ignored, each limit including none, `fail`, a throw (its message only in
+  `log`), cancellation before the post runs and while waiting (`onCancel`), fire-and-forget,
+  and the guest-side mapping of the message prefix.
+- **"Both platforms"** is met in two steps: B3 proves the generated Kotlin compiles and that
+  the guard behaves on JVM and iOS; the Swift side (a Swift class implementing
+  `ShopActionsCallbacks`, compiled and called) is checked where a Swift app exists, in B5's
+  reference-app run on the simulator.
 
 ### 7. What B3 does not change
 
@@ -149,12 +192,12 @@ The same rules as B2's `credentials()`, because they were reviewed there:
   the app's, and moving it would break every guest built today.
 - `HostHttp` and its binding name are untouched (the guest-side kdoc's `"http"` and the hosts'
   `"HostHttp"` disagree; that is a separate fix).
-- Nothing reaches the host templates. Letting an app bind its own services in the scaffolded
-  hosts (a hook in Android's `bindServices` and in the iOS `Keliver` object) is part of B5, and
-  ships in a tools release.
+- Nothing reaches the host templates. B5's host work, shipped in a tools release: a hook in
+  Android's `bindServices` and in the iOS `Keliver` object for the app's own bridges, and the
+  iOS framework exporting the contract module.
 
 ## Steps
 
-1. B3a: `keliver-bridge-annotations` and `keliver-bridge` (the runtime and its tests).
+1. B3a: `keliver-bridge-annotations` and `keliver-bridge` (the guard and its tests).
 2. B3b: `keliver-bridge-codegen` with the golden-file and rejection tests.
 3. B4 and B5 as the adoption plan says, B5 adding the host hook.
