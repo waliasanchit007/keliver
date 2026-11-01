@@ -28,7 +28,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Runnable
@@ -226,13 +225,13 @@ class BridgeGuardTest {
     assertFalse(call!!.isCancelled)
   }
 
-  @Test fun theAppsExceptionHandlerIsNotTheGuards() = runTest {
-    var theirs = false
-    val g = BridgeGuard("ShopActions", StandardTestDispatcher(testScheduler) + CoroutineExceptionHandler { _, _ -> theirs = true }) { logged += it }
+  @Test fun aLogThatThrowsEndsNeitherTheCallNorTheProcess() = runTest {
+    // runTest fails on an exception that reaches no handler, so this also shows none escapes.
+    val g = BridgeGuard("ShopActions", StandardTestDispatcher(testScheduler)) { throw IllegalStateException("console down") }
+    val e = assertFailsWith<BridgeCallFailed> { g.call<Unit>("share", 30) { error("boom") } }
+    assertEquals("KeliverBridge: ShopActions.share: threw IllegalStateException", e.message)
     g.post("track") { error("boom") }
     advanceUntilIdle()
-    assertFalse(theirs)
-    assertEquals(listOf("KeliverBridge: ShopActions.track threw IllegalStateException: boom"), logged)
   }
 
   @Test fun aJobInTheAppsContextDoesNotEndItsCalls() = runTest {

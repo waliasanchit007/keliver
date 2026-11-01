@@ -37,8 +37,12 @@ import kotlinx.coroutines.withTimeoutOrNull
  * the guest as [BridgeCallFailed], on one line; a throw's message goes only to [log].
  *
  * @param bridge the bridge's name, for messages.
- * @param context where the app's code runs: `Dispatchers.Main` for code that touches UI.
- * @param log the host's debug console: a throw's message, which is never sent to the guest.
+ * @param context where the app's code runs: `Dispatchers.Main` for code that touches UI. It
+ *   must dispatch: with `Dispatchers.Unconfined`, or `Dispatchers.Main.immediate` called on the
+ *   main thread, the app's code runs inline, before the limit starts, and a call that blocks
+ *   holds the guest's call.
+ * @param log the host's debug console: a throw's message, which is never sent to the guest. A
+ *   `log` that throws is ignored.
  */
 public class BridgeGuard(
   private val bridge: String,
@@ -52,9 +56,10 @@ public class BridgeGuard(
 
   // Never cancelled: it holds only launches in flight, so closing the guest's Zipline (which
   // cancels its calls) still runs onCancel, and it is dropped with the binding. The launches
-  // catch everything themselves; the handler is the last resort (a `log` that throws).
+  // catch everything themselves, and logging cannot throw; the handler only keeps anything
+  // still escaping from the thread's uncaught handler, which would end the app's process.
   private val scope = CoroutineScope(
-    SupervisorJob() + CoroutineExceptionHandler { _, e -> log("${BridgeCallFailed.PREFIX}$bridge: ${e.describe()}") },
+    SupervisorJob() + CoroutineExceptionHandler { _, e -> safeLog("${BridgeCallFailed.PREFIX}$bridge: ${e.describe()}") },
   )
 
   /**
@@ -85,10 +90,11 @@ public class BridgeGuard(
       }
       outcome.complete(answer)
     }
-    // A context that refused the launch (a closed executor) still answers.
+    // A context that refused the launch (a closed executor: kotlinx cancels the job) still
+    // answers, unless the guard had already ended the wait.
     job.invokeOnCompletion {
-      if (it != null && outcome.complete(Answer.Failed("ended with ${it::class.simpleName}"))) {
-        log("${BridgeCallFailed.PREFIX}$bridge.$function ended with ${it.describe()}")
+      if (it != null && outcome.complete(Answer.Failed("the app's context did not run it"))) {
+        safeLog("${BridgeCallFailed.PREFIX}$bridge.$function was not run: ${it.describe()}")
       }
     }
 
@@ -134,7 +140,7 @@ public class BridgeGuard(
       start(call, { first.complete(Answer.Value(it)) }, { first.complete(Answer.Failed(it)) })
     } catch (e: Throwable) {
       if (!first.isCompleted) throw e
-      log("${BridgeCallFailed.PREFIX}$bridge.$function threw after answering: ${e.describe()}")
+      safeLog("${BridgeCallFailed.PREFIX}$bridge.$function threw after answering: ${e.describe()}")
     }
     when (val answer = first.await()) {
       is Answer.Value -> answer.value
@@ -149,20 +155,30 @@ public class BridgeGuard(
   }
 
   private fun runOnContext(function: String, what: String, block: () -> Unit) {
+    val name = "${BridgeCallFailed.PREFIX}$bridge.$function${if (what.isEmpty()) "" else " $what"}"
+    // Nothing cancels these launches but a context that refused them.
     scope.launch(context) {
       try {
         block()
       } catch (e: Throwable) {
         if (e is CancellationException) ensureActive()
-        log("${BridgeCallFailed.PREFIX}$bridge.$function${if (what.isEmpty()) "" else " $what"} threw ${e.describe()}")
+        safeLog("$name threw ${e.describe()}")
       }
+    }.invokeOnCompletion { if (it != null) safeLog("$name was not run: ${it.describe()}") }
+  }
+
+  private fun safeLog(message: String) {
+    try {
+      log(message)
+    } catch (_: Throwable) {
+      // The host's console failing must not end its process, or the guest's call.
     }
   }
 
   private fun <T> answerFor(function: String, e: Throwable): Answer<T> {
     if (e is AppFailed) return Answer.Failed(e.reason)
     // Its message could hold the app's data: the guest gets the class only.
-    log("${BridgeCallFailed.PREFIX}$bridge.$function threw ${e.describe()}")
+    safeLog("${BridgeCallFailed.PREFIX}$bridge.$function threw ${e.describe()}")
     return Answer.Failed("threw ${e::class.simpleName ?: "an exception"}")
   }
 
