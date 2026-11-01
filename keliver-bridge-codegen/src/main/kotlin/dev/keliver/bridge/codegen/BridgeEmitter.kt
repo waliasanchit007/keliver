@@ -146,7 +146,7 @@ internal class BridgeEmitter(private val bridge: Bridge) {
     .addSuperinterface(service)
     .addFunctions(
       bridge.functions.map { function ->
-        val call = CodeBlock.of("impl.%L(%L)", function.name, arguments(function))
+        val call = CodeBlock.of("impl.%N(%L)", function.name, arguments(function))
         function(function, KModifier.OVERRIDE)
           .apply {
             if (function.suspending) {
@@ -178,16 +178,16 @@ internal class BridgeEmitter(private val bridge: Bridge) {
         function(function, KModifier.OVERRIDE)
           .apply {
             when {
-              !function.suspending -> addStatement("guard.post(%S) { callbacks.%L(%L) }", function.name, function.name, arguments)
+              !function.suspending -> addStatement("guard.post(%S) { callbacks.%N(%L) }", function.name, function.name, arguments)
               function.returnType == null -> addStatement(
-                "return guard.callback<Unit>(%S, %L) { call, done, fail -> callbacks.%L(%L) }",
+                "return guard.callback<Unit>(%S, %L) { call, done, fail -> callbacks.%N(%L) }",
                 function.name,
                 function.timeoutSeconds,
                 function.name,
                 join(arguments, "call", "{ done(Unit) }", "fail"),
               )
               else -> addStatement(
-                "return guard.callback(%S, %L) { call, done, fail -> callbacks.%L(%L) }",
+                "return guard.callback(%S, %L) { call, done, fail -> callbacks.%N(%L) }",
                 function.name,
                 function.timeoutSeconds,
                 function.name,
@@ -211,7 +211,7 @@ internal class BridgeEmitter(private val bridge: Bridge) {
     .addSuperinterface(bridge.className)
     .addFunctions(
       bridge.functions.map { function ->
-        val call = CodeBlock.of("service.%L(%L)", function.name, arguments(function))
+        val call = CodeBlock.of("service.%N(%L)", function.name, arguments(function))
         function(function, KModifier.OVERRIDE)
           .apply {
             if (function.suspending) {
@@ -235,7 +235,9 @@ internal class BridgeEmitter(private val bridge: Bridge) {
     .addParameters(function.parameters.map { ParameterSpec(it.name, it.type) })
     .apply { function.returnType?.let(::returns) }
 
-  private fun arguments(function: BridgeFunction): String = function.parameters.joinToString(", ") { it.name }
+  // Each name as Kotlin needs it written (a keyword in backticks).
+  private fun arguments(function: BridgeFunction): String =
+    function.parameters.joinToString(", ") { CodeBlock.of("%N", it.name).toString() }
 
   private fun join(vararg parts: String): String = parts.filter { it.isNotEmpty() }.joinToString(", ")
 

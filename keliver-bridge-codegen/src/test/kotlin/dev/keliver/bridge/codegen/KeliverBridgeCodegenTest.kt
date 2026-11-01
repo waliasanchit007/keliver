@@ -215,6 +215,22 @@ class KeliverBridgeCodegenTest {
     "A.newOrder starts with an Objective-C method family",
   )
 
+  @Test fun objectiveCMethodFamiliesAsKotlinNativeSeesThem() {
+    for (name in listOf("copy", "init", "new2", "_copyX", "init_x", "alloc2")) {
+      refused("$header\n@KeliverBridge interface A { suspend fun $name(id: String) }", "A.$name starts with an Objective-C method family")
+    }
+  }
+
+  @Test fun aGenericTypealias() = refused(
+    "$header\ntypealias Tags<V> = Map<String, V>\n@KeliverBridge interface A { fun a(x: Tags<String>) }",
+    "A uses the generic typealias Tags: write the type it stands for",
+  )
+
+  @Test fun aKeywordAsAParameterNameIsWrittenInBackticks() {
+    val compiled = compile(source("$header\n@KeliverBridge interface A { suspend fun a(`in`: String): String\n fun b(`object`: String) }"))
+    assertThat(compiled.exitCode, "messages: ${compiled.messages}").isEqualTo(KotlinCompilation.ExitCode.OK)
+  }
+
   @Test fun aNameLikeAFamilyButNotOneIsAccepted() {
     val compiled = compile(source("$header\n@KeliverBridge interface A { suspend fun newsletter(id: String)\n suspend fun initials(): String }"))
     assertThat(compiled.exitCode, "messages: ${compiled.messages}").isEqualTo(KotlinCompilation.ExitCode.OK)

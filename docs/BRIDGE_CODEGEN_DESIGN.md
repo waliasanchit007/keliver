@@ -103,12 +103,13 @@ The processor **fails the build**, naming the function, for:
 Found while building the processor (B3b), it also refuses:
 - an interface that is not public, nested, generic, extends another, or declares properties;
 - a function with a body, one named `close` (`ZiplineService.close()`), and one starting with an
-  Objective-C method family (`init`, `new`, `copy`, `mutableCopy`, `alloc` followed by a capital
-  or nothing), which Kotlin/Native renames for Swift;
+  Objective-C method family (after any leading `_`: `init`, `new`, `copy`, `mutableCopy` or
+  `alloc`, then the end of the name or anything but a lowercase letter), which Kotlin/Native
+  renames for Swift;
 - a parameter named like the generated code's own names (`call`, `done`, `fail`, `impl`,
   `guard`, `callbacks`, `service`, `zipline`, `context`, `log`, `it`, `e`).
 
-A typealias is checked as the type it stands for.
+A typealias is checked as the type it stands for; a generic one is refused (write the type).
 
 ### 4. What is generated
 
@@ -122,8 +123,13 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
    - `NAME = "ShopActions"`, `VERSION = 2`, and `SHAPE`, a hash of the functions' names,
      parameter and result types in a fixed form, and of every `@Serializable` class and enum
      they reach: the class's serial name, its fields' serial names and types, and the enum's
-     constants by serial name (so a `@SerialName` rename counts), since such a change keeps
-     Zipline's call id and fails only when decoded. B4 can carry `SHAPE` with the version, so
+     constants by serial name (so a `@SerialName` rename counts), and a sealed class's
+     subclasses, since such a change keeps Zipline's call id and fails only when decoded.
+     Fields include inherited ones; fields and constants are sorted, since JSON matches them
+     by name. A field is a property with a backing field and no `@Transient`; for a property
+     of another module's class, whose backing field KSP may not know, any non-`@Transient`
+     property. Every file the hash reads is an input of the generated file, and reaching a
+     sealed class makes it depend on every source (a new subclass can be in a new file). B4 can carry `SHAPE` with the version, so
      a change without a version bump is caught; nothing checks either in B3;
    - `bind(zipline, impl: ShopActions, context = Dispatchers.Default, log = {})` (host
      side) binds, under `NAME`, a `ShopActionsService` that runs each call through the guard in
@@ -176,7 +182,8 @@ where they apply, because they were reviewed there:
   `withTimeoutOrNull`, not `withTimeout`: a `TimeoutCancellationException` is a cancellation,
   which Zipline sends as one, and the guest would see its call quietly cancelled instead of
   failed. The answer is boxed inside the guard, so a `null` result is not taken for a timeout.
-  The call always runs on `context` (by default `Dispatchers.Default`), never on Zipline's own
+  The call always runs on `context` (by default `Dispatchers.Default` for an implementation;
+  required for Swift's callbacks, which expect the main thread), never on Zipline's own
   thread: it is launched in the guard's scope (below) and only a deferred answer is awaited, as
   `credentials()` does, not run as a child `withContext`, which the limit would have to wait
   for; on a timeout or cancel the launch is cancelled explicitly. So a delegate that blocks

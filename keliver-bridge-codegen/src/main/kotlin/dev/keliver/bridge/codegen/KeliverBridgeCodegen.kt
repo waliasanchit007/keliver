@@ -59,11 +59,16 @@ internal class KeliverBridgeCodegen(
         val bridge = read(symbol)
         // SHAPE reads every type the functions reach, often in other files: each is an input,
         // so a change to one of them regenerates the bridge.
-        val files = (listOf(bridge.declaration) + bridge.shape.declarations).mapNotNull { it.containingFile }.distinct()
+        val files = (listOfNotNull(bridge.declaration.containingFile) + bridge.shape.files).distinct()
         BridgeEmitter(bridge).file()
-          .writeTo(codeGenerator, Dependencies(aggregating = false, *files.toTypedArray()))
+          .writeTo(codeGenerator, Dependencies(aggregating = bridge.shape.reachesSealed, *files.toTypedArray()))
       } catch (e: Refused) {
         logger.error("@KeliverBridge: ${e.message}", e.node)
+      } catch (e: GenericTypealias) {
+        logger.error(
+          "@KeliverBridge: ${(symbol as? KSClassDeclaration)?.simpleName?.asString()} uses the generic typealias ${e.alias.simpleName.asString()}: write the type it stands for",
+          e.alias,
+        )
       }
     }
     return deferred
@@ -122,7 +127,10 @@ internal class KeliverBridgeCodegen(
       refuse(function, "$where must not have a body: every function is served by the host")
     }
     if (name == "close") refuse(function, "$where clashes with ZiplineService.close(): give it another name")
-    if (OBJC_FAMILIES.any { name == it || (name.startsWith(it) && name[it.length].isUpperCase()) }) {
+    // Kotlin/Native's rule: leading underscores dropped, the family, then the end or anything
+    // but a lowercase letter.
+    val bare = name.trimStart('_')
+    if (OBJC_FAMILIES.any { bare.startsWith(it) && (bare.length == it.length || !bare[it.length].isLowerCase()) }) {
       refuse(function, "$where starts with an Objective-C method family (init, new, copy, mutableCopy, alloc), which Kotlin/Native renames for Swift: give it another name")
     }
     if (function.extensionReceiver != null) refuse(function, "$where must not be an extension function")
@@ -207,6 +215,8 @@ internal fun KSType.qualifiedName(): String? = declaration.qualifiedName?.asStri
 /** The type a typealias stands for (with its nullability), or this type. */
 internal fun KSType.expanded(): KSType {
   val alias = declaration as? KSTypeAlias ?: return this
+  // Its arguments would have to be substituted into the target: not supported, and said so.
+  if (alias.typeParameters.isNotEmpty()) throw GenericTypealias(alias)
   val target = alias.type.resolve().expanded()
   return if (isMarkedNullable) target.makeNullable() else target
 }
@@ -217,6 +227,8 @@ internal fun KSAnnotated.annotation(qualifiedName: String): KSAnnotation? =
 internal fun KSAnnotation.argument(name: String): Any? =
   arguments.firstOrNull { it.name?.asString() == name }?.value
     ?: defaultArguments.firstOrNull { it.name?.asString() == name }?.value
+
+internal class GenericTypealias(val alias: KSTypeAlias) : Exception()
 
 internal const val KELIVER_BRIDGE = "dev.keliver.bridge.api.KeliverBridge"
 internal const val BRIDGE_TIMEOUT = "dev.keliver.bridge.api.BridgeTimeout"
