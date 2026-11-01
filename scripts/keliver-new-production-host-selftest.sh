@@ -286,7 +286,8 @@ grep -q 'override fun callStart(call: ZiplineCall): Any? = KeliverTiming.callSta
   && grep -q 'inline fun callStart(call: Call): Any? = null' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
   && ! grep -q 'FrameWindow' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" && [ ! -e "$H/src/notiming/kotlin/$P/KeliverFrames.kt" ] \
   && [ -f "$H/src/testDebug/kotlin/$P/FrameWindowTest.kt" ] \
-  && ok "M4: the guest frame profile in debug and benchmark (sendFrame and change-list spans, the main thread's apply), a no-op elsewhere; its window's tests" \
+  && grep -q 'name == "memory" || name == "frames" -> Log.w' "$H/src/timing/kotlin/$P/KeliverTiming.kt" \
+  && ok "M4: the guest frame profile in debug and benchmark (sendFrame and change-list spans, the main thread's apply), a no-op elsewhere; its window's tests; guest marks cannot use its name" \
   || bad "M4: the guest frame profile is not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
