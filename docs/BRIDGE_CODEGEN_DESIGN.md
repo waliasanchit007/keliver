@@ -110,8 +110,8 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      parameter and result types in a fixed form, and of every `@Serializable` class and enum
      they reach: the class's serial name, its fields' serial names and types, and the enum's
      constants by serial name (so a `@SerialName` rename counts), since such a change keeps
-     Zipline's call id and fails only when decoded. B4 can carry `SHAPE` with the version, so a change without a version
-     bump is caught; nothing checks either in B3;
+     Zipline's call id and fails only when decoded. B4 can carry `SHAPE` with the version, so
+     a change without a version bump is caught; nothing checks either in B3;
    - `bind(zipline, impl: ShopActions, context = Dispatchers.Default, log = {})` (host
      side) binds, under `NAME`, a `ShopActionsService` that runs each call through the guard in
      §5. It is called from Kotlin (its `Zipline` and `CoroutineContext` are no use to Swift):
@@ -144,8 +144,10 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      and `keliver-bridge` (for `BridgeCall`; an export does not carry over to dependencies),
      and depend on both with `api`; the template's framework exports nothing today. That is
      host work, in B5.
-5. **`ShopActionsCallbackAdapter(callbacks) : ShopActions`**, which turns each callback into a
-   `suspend` call (§5).
+5. **`ShopActionsCallbackAdapter(callbacks)`**, internal, which turns each callback into a
+   `suspend` call that also takes the guard's `BridgeCall` (so it does not implement
+   `ShopActions`): it calls the app's function on `context` and waits for the first `done` or
+   `fail` (§5).
 
 ### 5. The guard (`keliver-bridge`), the same on both platforms
 
