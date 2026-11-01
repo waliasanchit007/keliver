@@ -1,7 +1,7 @@
 # Keliver current state
 
 **Base snapshot date:** 2026-07-23
-**Last updated:** 2026-10-31 (status at a glance below; details in the `Post-snapshot:` sections and in `DELIVERY_PLAN.md`'s Status table)
+**Last updated:** 2026-11-02 (status at a glance below; details in the `Post-snapshot:` sections and in `DELIVERY_PLAN.md`'s Status table)
 **Repository baseline:** `94519abf5` (`#13` flow preview complete and live-verified)
 
 This document is the factual handoff point before the next implementation
@@ -59,7 +59,7 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | development route on the bundled generic host, E1–E10 (view hierarchy, not screenshots) | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23/24, runs `35802020305`, `35803336957`, `35967437120`, `35969509784`, `35969576311` |
 | production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; **host compiled from Keliver source** at `b5615637` | 2026-09-23/24, runs `35800642819`, `35802020305`, `35803336957`, `35967437120`, `35969509784`, `35969576311` |
 | production OTA on a host **scaffolded** by `keliver-new-production-host.sh` and built from Maven Central only: signed v1 → v2, foreign key rejected, offline start from the verified cache (P1–P7) | `reference/inventory` | CI emulator, API 33 x86_64; scaffolder from this repository (PR #85; released in tools 0.3.6) | 2026-10-06, run `37505534432` |
-| production OTA on an **iOS** host scaffolded by `keliver-new-ios-host.sh` (released in tools 0.3.7), from Maven Central only: signed v1 → v2, foreign key refused, recovery, offline start (iOS P1, P2, P4–P7) | `reference/inventory` | CI iOS simulator (macos-15, Xcode 16.4, iOS 26.2) and local (Xcode 26.4.1, iOS 26.4) | 2026-10-07, runs `37597390396`, `37602257459` |
+| production OTA on an **iOS** host scaffolded by `keliver-new-ios-host.sh` (released in tools 0.3.7), from Maven Central only: signed v1 → v2, foreign key refused, recovery, offline start (iOS P1, P2, P4–P7); since #199 also P3, three taps on Add 1 (13, 14, 15) through an XCTest UI test | `reference/inventory` | CI iOS simulator (macos-15, Xcode 16.4, iOS 26.2) and local (Xcode 26.4.1, iOS 26.4) | 2026-10-07, runs `37597390396`, `37602257459`; P3 2026-11-01, run `41338112060` (CI simulator only) |
 | bundled host refuses production, cold and warm | tools 0.3.5 candidate | CI emulator, API 33 x86_64 | 2026-09-22 |
 | store identity, recovery, resolver refusal (#78) | disposable fixtures | macOS + Linux CI | 2026-09-22 |
 | the published tools 0.3.10 on a **physical Android phone** (arm64): device-verify 18/18 | `reference/inventory` | Samsung S25 Ultra | 2026-10-17 (`RELEASE_NOTES_TOOLS_0.3.10.md`) |

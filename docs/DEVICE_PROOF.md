@@ -278,7 +278,7 @@ It does four things:
 (side button + volume up) and AirDrop them into the evidence dir, or use
 QuickTime's movie recording with the iPhone as the camera.
 
-`ios.sh` (the simulator harness, 120 checks) is not ported to a device. Its
+`ios.sh` (the simulator harness, 188 checks since #199) is not ported to a device. Its
 `simctl` steps (installing by container path, writing prefs, OCR on a
 screenshot) have no devicectl equivalent here.
 
