@@ -108,7 +108,7 @@ for f in settings.gradle build.gradle gradle.properties .gitignore src/nativeInt
          Configuration/Config.xcconfig; do
   [ -f "$H/$f" ] || { bad "missing $f"; missing=1; }
 done
-for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt; do
+for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt; do
   [ -f "$K/$f" ] || { bad "missing $K/$f"; missing=1; }
 done
 [ "$missing" = 0 ] && ok "every expected file is there"
@@ -150,16 +150,35 @@ grep -q '^public object Keliver {' "$K/MainViewController.kt" && grep -q 'if (st
 # keys (the highest), and written under each.
 grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'floorAcross(trust.publicKeysHex.map' "$K/MainViewController.kt" \
   && grep -q 'raiseFloor(trust, sequence)' "$K/MainViewController.kt" && grep -q 'raiseFloor(trust, floor())' "$K/MainViewController.kt" \
-  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor)' "$K/MainViewController.kt" \
+  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor, Keliver.served)' "$K/MainViewController.kt" \
   && grep -q 'manifestSequence(manifest.metadata)' "$K/MainViewController.kt" && grep -q 'sequence?.let(onSequence)' "$K/MainViewController.kt" \
   && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
   || bad "W4.2: the rollback floor is not wired"
 # B4: the bridge check runs where the floor's does, and a refused manifest is unloadable.
-grep -A12 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' \
+grep -A12 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
   && grep -q '"bridge refused:" in reason' "$K/MainViewController.kt" \
   && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$K/BundleIndex.kt" \
   && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
   || bad "B4: the bridge check is not wired"
+# B5: the app's bridges are set on Keliver (checked when set), copied when the host starts and
+# gated on from that copy everywhere, bound before the host's own services and checked as bound.
+V="$K/MainViewController.kt"
+grep -q '  public var bridges: List<KeliverBridgeBinding> = emptyList()' "$V" \
+  && grep -A4 '  public var bridges: List<KeliverBridgeBinding>' "$V" | grep -q 'servedBridgesOf(value.map { it.declared })' \
+  && grep -A8 '    if (started) return' "$V" | grep -q 'served = servedBridgesOf(bridges.map { it.declared })' \
+  && [ "$(grep -c 'HostFacts(' "$V")" = "$(grep -cE 'HostFacts\(.*, (Keliver\.)?served\)' "$V")" ] \
+  && [ "$(grep -c 'ManifestPinningHttpClient(' "$V")" = "$(grep -c 'ManifestPinningHttpClient(.*) { served }' "$V")" ] \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, (Keliver\.)?served\)' "$V")" ] \
+  && ! grep -q 'ServedBridges' "$V" "$K/BundleIndex.kt" \
+  && grep -q 'val bridges = Keliver.startedBridges' "$V" \
+  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, Keliver.bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
+  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, Keliver::bridgeDebugLog)' \
+  && [ "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
+  && grep -q 'override fun bindService(name: String, service: ZiplineService) = Keliver.bridgeBinds.bound(name)' "$V" \
+  && grep -q 'if (kotlin.native.Platform.isDebugBinary) log("bridge: $message")' "$V" \
+  && [ -f "$K/Bridges.kt" ] && grep -q 'internal fun bindAppBridges(' "$K/Bridges.kt" \
+  && ok "B5: the app's bridges are checked when set on Keliver, gated on from the start's copy, bound before the host's services and checked as bound" \
+  || bad "B5: the app's bridges are not wired"
 grep -q 'DEVELOPMENT_TEAM' "$H/iosApp.xcodeproj/project.pbxproj" && bad "the Xcode project names a development team" \
   || ok "the Xcode project names no development team"
 # U32: TEAM_ID (in Config.xcconfig, or the gitignored Config.local.xcconfig)
@@ -315,7 +334,7 @@ grep -q 'val n = write(1, pinned.addressOf(at), (bytes.size - at).convert()).toI
   && ok "the host's console lines are one write each, under a lock (no println)" \
   || bad "a host console line can be split by another thread's (println, or no ConsoleLine.kt)"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
-grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
+grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served)' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$K/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
@@ -377,7 +396,7 @@ grep -q 'Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnav
 grep -q 'CHANNEL: String = "beta"' "$LK/HostConfig.kt" && grep -q 'BUNDLE_SERVER: String = "https://bundles.example.com"' "$LK/HostConfig.kt" \
   && ok "the settings are in HostConfig.kt, as for the standalone host" || bad "HostConfig.kt"
 [ "$(cat "$EX/MyApp.xcodeproj/project.pbxproj")" = 'PRODUCT_NAME = "MyApp";' ] && ok "--embed edited no file of the existing app" || bad "--embed changed the existing project"
-same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt; do
+same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt; do
   cmp -s "$LK/$f" "$K/$f" || { same=0; bad "$f differs between the embedded framework and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the embedded framework and the standalone host"
@@ -410,10 +429,18 @@ if [ "$BUILD" = 1 ]; then
             '  Keliver.shared.requestPolicy = RequestPolicy(origin: "https://api.example.com", allowed: [RequestPolicy.Rule(method: "GET", path: "orders")], allowStateChanging: false, allowCleartext: false)' \
             '  Keliver.shared.requestHeaders = { method, path, done in done(method == "GET" && path == "orders" ? ["Authorization": "Bearer t"] : nil) }' \
             '  _ = KeliverScreen(route: KeliverRoute.companion.from(uri: "example://orders/42?tab=items", allowedQueryKeys: ["tab"]), onClose: {})' \
-            '}' > "$DISP/policy-check.swift" \
+            '  let callbacks = NSObject()' \
+            '  let binding = KeliverBridgeBinding(name: "ShopActions", version: 2, shape: "cd5829702ffe49be") { scope in' \
+            '    standInBind(zipline: scope.zipline, callbacks: callbacks, context: scope.main, log: scope.log)' \
+            '  }' \
+            '  Keliver.shared.bridges = [binding]' \
+            '  let version: Int32 = binding.version; _ = (binding.name, binding.shape, version)' \
+            '}' \
+            '// The generated <Name>Bridge.bind(zipline:callbacks:context:log:), standing in (B5c compiles the real one).' \
+            'func standInBind<Z>(zipline: Z, callbacks: AnyObject, context: KotlinCoroutineContext, log: @escaping (String) -> Void) { log("bound") }' > "$DISP/policy-check.swift" \
           && xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
           -F "$(dirname "$fw")" "$L/KeliverScreen.swift" "$DISP/policy-check.swift" > "$DISP/swift-typecheck.log" 2>&1; then
-        ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable), setting a RequestPolicy and requestHeaders"
+        ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable), setting a RequestPolicy and requestHeaders, and B5's bridges (a KeliverBridgeBinding with its closure, set on Keliver.shared)"
       else
         bad "KeliverScreen.swift does not type-check (framework '${fw}'): $(grep -m3 'error:' "$DISP/swift-typecheck.log" | tr '\n' ' ')"
       fi

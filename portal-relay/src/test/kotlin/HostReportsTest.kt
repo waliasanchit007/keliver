@@ -108,6 +108,7 @@ class HostReportsTest {
       "", "manifest sha256 mismatch: x", "rollback refused: sequence 1 is below 2",
       "bridge refused: the bundle needs A@1, which this host does not serve",
       "bridge refused: the bundle was built against another A@1 contract (shape a; this host's is b)",
+      "bridge bind failed: A bound [] (it must bind A, once)",
       "manifest signature for key k did not verify", "lookup failed", "timeout", "something else",
     )
     val outcomes = listOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed")
@@ -123,7 +124,7 @@ class HostReportsTest {
     }
     // Every category the hosts send was produced above, so each was checked.
     assertEquals(
-      setOf("", "sha256-mismatch", "below-floor", "bridge-missing", "bridge-shape", "signature", "lookup-failed", "network", "config", "exception", "other"),
+      setOf("", "sha256-mismatch", "below-floor", "bridge-missing", "bridge-shape", "bridge-bind", "signature", "lookup-failed", "network", "config", "exception", "other"),
       produced,
     )
   }

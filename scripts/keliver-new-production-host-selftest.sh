@@ -150,7 +150,7 @@ grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code =
   || bad "the host does not look up through bundles/index.json"
 # W4.2: the rollback floor is read per key, guards the network load and the cache
 # start, and rises only from a verified successful load.
-grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor)' "$M" \
+grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor, servedBridges)' "$M" \
   && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)' "$M" \
   && grep -q 'putLong(floorKey(it), sequence)' "$M" && grep -q 'prefs.raiseFloor(floorNames, sequence)' "$M" \
   && grep -q 'edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()' "$M" \
@@ -161,11 +161,30 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   || bad "W4.2: the rollback floor is not wired"
 # B4: the bridge check runs where the floor's does: on the cache start (the network load's is
 # inside ManifestPinningHttpClient, in BundleIndex.kt), and a refused manifest is unloadable.
-grep -A12 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' \
+grep -A12 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
   && grep -q '"bridge refused:" in reason' "$M" \
   && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$(dirname "$M")/BundleIndex.kt" \
   && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
   || bad "B4: the bridge check is not wired"
+# B5: the app's bridges are declared in KeliverConfig (checked there); the host gates on its own
+# list in every lookup, manifest and cache check (no process-wide one), binds them before its own
+# services, and checks what each bound through the code load's listener.
+grep -q '  bridges: List<KeliverBridgeBinding> = emptyList(),' "$M" && grep -q '  val bridges: List<KeliverBridgeBinding> = bridges.toList()' "$M" \
+  && grep -q 'servedBridgesOf(bridges.map { it.declared })' "$M" \
+  && grep -q 'private val servedBridges: Map<String, HostBridge> = servedBridgesOf(config.bridges.map { it.declared })' "$M" \
+  && [ "$(grep -c 'HostFacts(' "$M")" = "$(grep -c 'HostFacts(.*, servedBridges)' "$M")" ] \
+  && [ "$(grep -c 'ManifestPinningHttpClient(' "$M")" = "$(grep -c 'ManifestPinningHttpClient(.*) { servedBridges }' "$M")" ] \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, servedBridges)' "$M")" ] \
+  && ! grep -q 'ServedBridges' "$M" "$(dirname "$M")/BundleIndex.kt" \
+  && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
+  && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, ::bridgeDebugLog)' \
+  && [ "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
+  && grep -q 'override fun bindService(name: String, service: ZiplineService) = bridgeBinds.bound(name)' "$M" \
+  && grep -q 'if (BuildConfig.DEBUG) Log.w(TAG, "bridge: $message")' "$M" \
+  && [ -f "$(dirname "$M")/Bridges.kt" ] && grep -q 'internal fun bindAppBridges(' "$(dirname "$M")/Bridges.kt" \
+  && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverBridgesTest.kt" ] \
+  && ok "B5: the app's bridges are checked in KeliverConfig, gated on per host, bound before the host's services and checked as bound" \
+  || bad "B5: the app's bridges are not wired"
 # W4.4: the host takes one channel besides stable, stable by default.
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
   && grep -q 'channel = BuildConfig.KELIVER_CHANNEL' "$M" && grep -q 'pickFromIndex(body, capabilities, channel = config.channel' "$M" \
@@ -318,7 +337,7 @@ grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
   && ok "M5: the memory profile and its cycle in debug and benchmark, a no-op elsewhere" \
   || bad "M5: the memory profile is not wired, or reaches a build without the marks"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
-grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
+grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges)' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, versionCode, floor)" || bad "W4.5: constraints are not wired"
@@ -380,7 +399,7 @@ grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q
 grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$L/consumer-rules.pro" \
   && ok "M5: the library's consumer rules keep MemoryUsage (QuickJS builds it through JNI)" || bad "M5: the library's consumer rules do not keep MemoryUsage"
 [ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
-same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
+same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the library and the standalone host (one set of sources)"

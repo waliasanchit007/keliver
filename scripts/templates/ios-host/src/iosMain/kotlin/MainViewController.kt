@@ -84,6 +84,7 @@ import app.cash.zipline.Call as ZiplineCall
 import app.cash.zipline.CallResult
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
+import app.cash.zipline.ZiplineService
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
 import app.cash.zipline.loader.FreshnessChecker
 import app.cash.zipline.loader.ManifestVerifier
@@ -121,6 +122,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -229,7 +231,7 @@ public data class KeliverUpdateCheck(val outcome: String, val sequence: Long, va
  * [source] is "network", "cache" or ""; [sequence] -1 when there is none;
  * [hostVersion] -1 when CFBundleVersion is not an integer. [reason] is a fixed
  * category (sha256-mismatch, below-floor, bridge-missing, bridge-shape,
- * signature, lookup-failed, network, config, exception, other); [detail] is
+ * bridge-bind, signature, lookup-failed, network, config, exception, other); [detail] is
  * the full message, for the app only: it can hold addresses, paths or URLs, so
  * [toJson], what REPORT_URL receives, leaves it out. [installId] is the random
  * id made on the device for rollouts.
@@ -366,6 +368,54 @@ public object Keliver {
       field = value
     }
 
+  /**
+   * B5: YOUR app's generated action bridges (docs/BRIDGE_CODEGEN_DESIGN.md), served to guests.
+   * In Swift, one [KeliverBridgeBinding] per generated `<Name>Bridge`, whose callbacks you implement:
+   * ```
+   * let shopActions = AppShopActions()   // made here, on the main thread
+   * Keliver.shared.bridges = [
+   *   KeliverBridgeBinding(name: ShopActionsBridge.shared.NAME, version: ShopActionsBridge.shared.VERSION,
+   *                        shape: ShopActionsBridge.shared.SHAPE) { scope in
+   *     ShopActionsBridge.shared.bind(zipline: scope.zipline, callbacks: shopActions,
+   *                                   context: scope.main, log: scope.log)
+   *   }
+   * ]
+   * ```
+   * The closure runs on Zipline's thread, not the main thread (Bridges.kt): it should only call
+   * the generated `bind` with objects made before; your callbacks are then called on `scope.main`.
+   * (Under Swift 6's language mode, mark the closure `@Sendable`.)
+   * Set it before the host starts (before the first screen, or [start]): the host declares them
+   * before its first lookup, so the bundle gate (B4) knows which bundles it can run, and binds
+   * them before its own services each time code loads. A list the host must not serve (a bad
+   * name, version or shape, a name twice, or one of the host's own services) is refused when it
+   * is set, with an IllegalArgumentException that ends the process: the app's programming error.
+   */
+  public var bridges: List<KeliverBridgeBinding> = emptyList()
+    set(value) {
+      try {
+        servedBridgesOf(value.map { it.declared })
+      } catch (e: IllegalArgumentException) {
+        throw IllegalArgumentException("Keliver.bridges: ${e.message}", e)
+      }
+      if (started) log("bridges set after the host started: they apply when it next starts (the next process, or a start retried after no bundle)")
+      field = value
+    }
+
+  /** B5: the bridges this process serves and binds, as they were when the host started. Main thread. */
+  internal var served: Map<String, HostBridge> = emptyMap()
+    private set
+  internal var startedBridges: List<KeliverBridgeBinding> = emptyList()
+    private set
+
+  /** B5: what each app binding bound, from the code load's EventListener. */
+  internal val bridgeBinds = BridgeBindRecorder()
+
+  /** B5: a bridge's log (the guard's failures, a binding that threw), in a DEBUG binary only. */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  internal fun bridgeDebugLog(message: String) {
+    if (kotlin.native.Platform.isDebugBinary) log("bridge: $message")
+  }
+
   private fun setState(s: KeliverHostState) {
     mutableState.value = s
     // The app's handler must not take the host down with it.
@@ -466,6 +516,10 @@ public object Keliver {
     }
     if (started) return
     started = true
+    // B5: the bridges this process serves, before its first lookup (B4's gate reads them there,
+    // on a cache start and on each manifest), and binds: one copy, as they are now.
+    startedBridges = bridges
+    served = servedBridgesOf(bridges.map { it.declared })
     KeliverTiming.start() // Debug and Benchmark builds only (M0); nothing elsewhere
     // Once: a start that created nothing runs again (started is reset), and a
     // second observer would make every foreground check twice.
@@ -566,7 +620,7 @@ public object Keliver {
       pending = null
     }
     lastLookup = TimeSource.Monotonic.markNow()
-    val latest = lookupBundle(s.lookup.server, s.lookup.capabilities, HostFacts(installId(), hostVersion(), s.lookup.floor()))
+    val latest = lookupBundle(s.lookup.server, s.lookup.capabilities, HostFacts(installId(), hostVersion(), s.lookup.floor(), served))
     pending?.let { return KeliverUpdateCheck("available", it.sequence, true, "") }
     if (latest == null) {
       log("update check: the lookup failed")
@@ -730,7 +784,7 @@ public object Keliver {
    */
   private suspend fun loadAgain(s: Session): KeliverUpdateCheck {
     lastLookup = TimeSource.Monotonic.markNow()
-    val latest = lookupBundle(s.lookup.server, s.lookup.capabilities, HostFacts(installId(), hostVersion(), s.lookup.floor()))
+    val latest = lookupBundle(s.lookup.server, s.lookup.capabilities, HostFacts(installId(), hostVersion(), s.lookup.floor(), served))
     // Another check may have started it while this one looked up.
     if (session !== s || !s.notLoaded) return KeliverUpdateCheck("failed", -1, false, "the bundle is already loading again")
     if (latest == null) {
@@ -1037,7 +1091,7 @@ private suspend fun startHost(): HostState {
   val floor = { floorOf(trust) }
   raiseFloor(trust, floor())
   // What the index's constraints are checked against (W4.5).
-  val latest = lookupBundle(server, capabilities, HostFacts(installId(), hostVersion(), floor()))
+  val latest = lookupBundle(server, capabilities, HostFacts(installId(), hostVersion(), floor(), Keliver.served))
   val lookup = LookupContext(server, capabilities, floor)
   return when {
     latest != null -> {
@@ -1047,7 +1101,7 @@ private suspend fun startHost(): HostState {
     }
     lastGood != null -> {
       log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
-      HostState.Running(createApp(trust, lastGood, null, lookup, AcceptCachedBundle(floor), apiBase, fallback = null))
+      HostState.Running(createApp(trust, lastGood, null, lookup, AcceptCachedBundle(floor, Keliver.served), apiBase, fallback = null))
     }
     else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.", retry = true)
   }
@@ -1131,7 +1185,8 @@ private fun createApp(
     trustedSignatures(trust.publicKeysHex).forEach { (name, key) -> addEd25519(name, key.decodeHex()) }
   }.build()
   // The manifest held to the index's sha256 (when there is one) and to the rollback floor.
-  val pinning = ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor)
+  val served = Keliver.served // B5: as the host started
+  val pinning = ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor) { served }
   val flow = MutableStateFlow(manifestUrl)
   // One checker for the app's life, switched for the fall-back (W5): Treehouse
   // reads the spec's checker each time it (re)starts its loader.
@@ -1157,6 +1212,7 @@ private fun createApp(
   // holds a connection or a session).
   val sql = IosSqlHost()
   val http = apiBase?.let { NSURLSessionHostHttp(it, Keliver.requestPolicy, Keliver.requestHeaders) }
+  val bridges = Keliver.startedBridges // B5: as the host started with them
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "keliver-production"
     override val manifestUrl = flow
@@ -1164,6 +1220,13 @@ private fun createApp(
     override val freshnessChecker: FreshnessChecker = freshnessSwitch
 
     override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
+      // B5: the app's own bridges first, each checked to bind exactly its declared name; then
+      // the host's services, so that no binding can stand in for one of them.
+      if (bridges.isNotEmpty()) {
+        val bridgeScope = KeliverBridgeScope(zipline, Dispatchers.Main, Keliver::bridgeDebugLog)
+        val load = currentCoroutineContext()[Job]
+        bindAppBridges(bridges, Keliver.bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true }) { it.bind(bridgeScope) }
+      }
       zipline.bind<HostSqlDriver>("HostSqlDriver", sql)
       KeliverTiming.bindServices(zipline) // KeliverTrace, in Debug and Benchmark builds only (M0)
       if (http != null) zipline.bind<HostHttpProvider>("HostHttp", http)
@@ -1195,7 +1258,7 @@ private fun createApp(
             fellBack = true
             Keliver.fellBack(reason)
             log("the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
-            freshnessSwitch.current = AcceptCachedBundle(floor)
+            freshnessSwitch.current = AcceptCachedBundle(floor, served)
             pinning.pin(fallback, null)
             // stop() then start(): after a failed first load the app is still
             // "starting", which restart() would leave alone.
@@ -1245,11 +1308,11 @@ private class SwitchableFreshness(@Volatile var current: FreshnessChecker) : Fre
  * verifying it. A refused cache is not used; Zipline then fetches the manifest
  * from the network, through the same floor guard (createApp wraps every client).
  */
-private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessChecker {
+private class AcceptCachedBundle(private val floor: () -> Long, private val bridges: Map<String, HostBridge>) : FreshnessChecker {
   override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
     // So does B4's bridge check, on the verified metadata.
     val problem = rollbackProblem(manifestSequence(manifest.metadata), floor())
-      ?: manifestBridgeProblem(manifest.metadata[BRIDGES_METADATA_KEY], ServedBridges.all)
+      ?: manifestBridgeProblem(manifest.metadata[BRIDGES_METADATA_KEY], bridges)
       ?: return true
     log("cached bundle refused: $problem")
     return false
@@ -1276,6 +1339,9 @@ private class LoggingEventListener(
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
 ) : EventListener() {
+  // B5: Zipline reports every bind here, inside bind(): what an app's bridge binding bound.
+  override fun bindService(name: String, service: ZiplineService) = Keliver.bridgeBinds.bound(name)
+
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     KeliverTiming.memory("code", zipline) // the memory profile (M5), Debug and Benchmark builds only
     val sequence = manifestSequence(manifest.metadata)

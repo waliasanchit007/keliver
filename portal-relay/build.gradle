@@ -61,12 +61,13 @@ def keliverPublishStartScripts = tasks.register('keliverPublishStartScripts', Cr
 }
 distributions { main { contents { from(keliverPublishStartScripts) { into 'bin' } } } }
 
-// The production hosts' index reader (scripts/templates/*/BundleIndex.kt) is
-// template source with a @@PACKAGE@@ placeholder. Compile the Android copy into
-// the tests, so BundleIndexTest runs the code the scaffolders ship; the test
-// also holds the iOS copy byte-identical to it.
+// The production hosts' index reader and bridge binding (scripts/templates/*/BundleIndex.kt
+// and Bridges.kt) are template source with a @@PACKAGE@@ placeholder. Compile the Android
+// copies into the tests, so BundleIndexTest and BridgeGateTest run the code the scaffolders
+// ship; BundleIndexTest also holds the iOS copies byte-identical to them.
 def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/BundleIndex.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/main/kotlin/Bridges.kt'))
   filter { line -> line.replace('@@PACKAGE@@', 'hosttemplate') }
   into layout.buildDirectory.dir('generated/hostTemplate/kotlin')
 }

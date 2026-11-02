@@ -301,5 +301,10 @@ class BundleIndexTest {
     val android = File("../scripts/templates/production-host/src/main/kotlin/BundleIndex.kt").readText()
     val ios = File("../scripts/templates/ios-host/src/iosMain/kotlin/BundleIndex.kt").readText()
     assertEquals(android, ios)
+    // B5: the app's bridges, the same way on both.
+    assertEquals(
+      File("../scripts/templates/production-host/src/main/kotlin/Bridges.kt").readText(),
+      File("../scripts/templates/ios-host/src/iosMain/kotlin/Bridges.kt").readText(),
+    )
   }
 }

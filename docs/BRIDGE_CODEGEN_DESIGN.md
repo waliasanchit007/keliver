@@ -462,7 +462,9 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
   - **The check**, in `BundleIndex.kt` (the same file in both hosts, so the relay's
     `BridgeGateTest` tests it): a name `parseBridges` would not accept, a version outside
     1..999999999, a shape that is not 16 lowercase hex digits, a name twice, or a name the host
-    binds itself (`HostSqlDriver`, `HostHttp`, `KeliverTrace`) is the app's programming error.
+    binds itself (`HostSqlDriver`, `HostHttp`) or keeps for itself (any starting with `Keliver`,
+    such as a debug build's `KeliverTrace`: a prefix, because the release checks look for that
+    name in a store build's code) is the app's programming error.
     Android refuses it in `KeliverConfig`'s constructor, as it refuses `httpClient` without
     `requestPolicy`. iOS refuses it in the `bridges` setter, so the crash names the Swift line
     that set it (an uncaught Kotlin exception ends the process; nothing here is `@Throws`).
@@ -485,7 +487,8 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
     name, once, or the load fails with `bridge bind failed: ShopActions bound [] (it must bind
     ShopActions, once)`. A binding that binds later, from a coroutine it launched, records
     nothing and fails that way: binding is synchronous.
-  - **A binding that throws** (anything but cancellation, an `Error` included) fails the load
+  - **A binding that throws** (an `Error` included, and a cancellation unless the load itself
+    was cancelled: Zipline's loader reports nothing for a cancellation) fails the load
     as `bridge bind failed: ShopActions: <the throwable's class>`, its message in the debug log
     only. Both are reported under a new reason, `bridge-bind`, matched in `reportReason` with
     the other bridge reasons, before `signature` and `network` (a class named `ConnectException`

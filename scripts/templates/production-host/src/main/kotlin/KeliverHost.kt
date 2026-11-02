@@ -85,6 +85,7 @@ import app.cash.zipline.Call as ZiplineCall
 import app.cash.zipline.CallResult
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
+import app.cash.zipline.ZiplineService
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
 import app.cash.zipline.loader.FreshnessChecker
 import app.cash.zipline.loader.ManifestVerifier
@@ -107,6 +108,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -218,10 +220,26 @@ class KeliverConfig(
    * Without [apiBaseUrl] there is no HostHttp, and this client is unused.
    */
   val httpClient: OkHttpClient? = null,
+  /**
+   * B5: YOUR app's generated action bridges (Bridges.kt; docs/BRIDGE_CODEGEN_DESIGN.md), served
+   * to guests. They are declared here, before the host's first lookup, so the bundle gate (B4)
+   * knows which bundles this host can run, and bound before the host's own services each time
+   * code loads. A list the host must not serve (a bad name, version or shape, a name twice, or
+   * one of the host's own services) is refused here, as an IllegalArgumentException. The list
+   * is copied: the host gates on, and binds, the bridges as they were here.
+   */
+  bridges: List<KeliverBridgeBinding> = emptyList(),
 ) {
+  val bridges: List<KeliverBridgeBinding> = bridges.toList()
+
   init {
     require(httpClient == null || requestPolicy != null) {
       "KeliverConfig: an app's own httpClient needs a requestPolicy (the paths guests may call with it)"
+    }
+    try {
+      servedBridgesOf(bridges.map { it.declared })
+    } catch (e: IllegalArgumentException) {
+      throw IllegalArgumentException("KeliverConfig.bridges: ${e.message}", e)
     }
   }
 
@@ -230,6 +248,7 @@ class KeliverConfig(
       context: Context,
       requestPolicy: RequestPolicy? = null,
       httpClient: OkHttpClient? = null,
+      bridges: List<KeliverBridgeBinding> = emptyList(),
     ): KeliverConfig = KeliverConfig(
       bundleServer = debugBundleServer(context) ?: BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
@@ -244,6 +263,7 @@ class KeliverConfig(
       nextPublicKeyHex = BuildConfig.KELIVER_NEXT_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
       requestPolicy = requestPolicy,
       httpClient = httpClient,
+      bridges = bridges,
     )
   }
 }
@@ -309,8 +329,8 @@ sealed interface KeliverUpdateCheck {
  * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
  * update-applied, update-failed, not-loaded, no-bundle, refused or screen-failed;
  * [source] is network or cache (or null). [reason] is a fixed category
- * (sha256-mismatch, below-floor, bridge-missing, bridge-shape, signature,
- * lookup-failed, network, config, exception, other); [detail] is
+ * (sha256-mismatch, below-floor, bridge-missing, bridge-shape, bridge-bind,
+ * signature, lookup-failed, network, config, exception, other); [detail] is
  * the full message, for the app only: it can hold addresses, paths or URLs, so
  * [toJson], what a report URL receives, leaves it out. [installId] is the
  * random id made on the device for rollouts.
@@ -383,6 +403,17 @@ sealed interface KeliverHostState {
 
 class KeliverHost private constructor(context: Context, private val config: KeliverConfig) {
   private val context = context.applicationContext
+
+  /** B5: the bridges this host serves (its app's, checked in KeliverConfig), for its own lookups and loads. */
+  private val servedBridges: Map<String, HostBridge> = servedBridgesOf(config.bridges.map { it.declared })
+
+  /** B5: what each app binding bound, from the code load's EventListener. */
+  private val bridgeBinds = BridgeBindRecorder()
+
+  /** B5: a bridge's log (the guard's failures, a binding that threw), in debug builds only. */
+  private fun bridgeDebugLog(message: String) {
+    if (BuildConfig.DEBUG) Log.w(TAG, "bridge: $message")
+  }
 
   init {
     KeliverTiming.start(this.context) // debug and benchmark builds only (M0); nothing elsewhere
@@ -691,14 +722,14 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       .callTimeout(LOOKUP_BUDGET_MILLIS, TimeUnit.MILLISECONDS)
       .build()
     // What the index's constraints are checked against (W4.5).
-    val facts = HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())
+    val facts = HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges)
     val lookup = LookupContext(server, capabilities, lookupClient, prefs, floor)
     lastLookupAt = SystemClock.elapsedRealtime()
     val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities, facts) }
     when {
       latest != null -> {
         Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
-        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)
+        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor) { servedBridges }
         // A failed load falls back to the cached last good bundle, if there is one (W5).
         startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh, lookup, fallback = lastGood)
       }
@@ -707,8 +738,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         // Guarded too: when the cache is refused or empty, Zipline goes on to fetch
         // lastGood from the network, and a lookup that failed proves nothing about
         // that server (it may have failed the lookup on purpose).
-        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)
-        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor), lookup, fallback = null)
+        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor) { servedBridges }
+        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor, servedBridges), lookup, fallback = null)
       }
       else -> {
         unavailable("no-bundle", "No bundle", "No compatible bundle at $server, and none loaded before.", detail = "the lookup failed and nothing is cached")
@@ -858,6 +889,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       override val freshnessChecker: FreshnessChecker = freshnessSwitch
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
+        // B5: the app's own bridges first, each checked to bind exactly its declared name; then
+        // the host's services, so that no binding can stand in for one of them.
+        if (config.bridges.isNotEmpty()) {
+          val bridgeScope = KeliverBridgeScope(zipline, Dispatchers.Main, ::bridgeDebugLog)
+          val load = currentCoroutineContext()[Job]
+          bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true }) { it.bind(bridgeScope) }
+        }
         zipline.bind<HostSqlDriver>("HostSqlDriver", sqlHost)
         if (apiBase == null && config.httpClient != null) Log.w(TAG, "KeliverConfig.httpClient is set but there is no API base: no HostHttp")
         if (apiBase != null) {
@@ -942,7 +980,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               mutableEvents.tryEmit(KeliverUpdateEvent.FellBack(reason))
               report("fell-back", detail = reason)
               Log.d(TAG, "the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
-              freshnessSwitch.current = AcceptCachedBundle(floor)
+              freshnessSwitch.current = AcceptCachedBundle(floor, servedBridges)
               ziplineHttp.pin(fallback, null)
               // stop() then start(): after a failed first load the app is still
               // "starting", which restart() would leave alone.
@@ -955,6 +993,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             }
           }
         },
+        bridgeBinds = bridgeBinds,
       ),
     )
     // After a first load that failed (loadAgain): from the network this time, into the same app,
@@ -1000,7 +1039,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       pending = null
     }
     lastLookupAt = SystemClock.elapsedRealtime()
-    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor())
+    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges)
     val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
     pending?.let { return@withContext KeliverUpdateCheck.Available(it.sequence, applying = true) }
     if (latest == null) {
@@ -1044,7 +1083,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    */
   private suspend fun loadAgain(s: Session): KeliverUpdateCheck {
     lastLookupAt = SystemClock.elapsedRealtime()
-    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor())
+    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges)
     val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
     // Another check may have started it while this one looked up.
     if (session !== s || !s.notLoaded) return KeliverUpdateCheck.Failed("the bundle is already loading again")
@@ -1242,14 +1281,14 @@ private class SwitchableFreshness(@Volatile var current: FreshnessChecker) : Fre
  * key before loading it. If the cache holds nothing (cleared, or a new key's
  * cache), Zipline goes on to the network, which fails and reports codeLoadFailed.
  */
-private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessChecker {
+private class AcceptCachedBundle(private val floor: () -> Long, private val bridges: Map<String, HostBridge>) : FreshnessChecker {
   // The rollback floor holds here too: Zipline hands over the pinned manifest
   // after verifying it. A refused cache is not used; Zipline then fetches the
   // manifest from the network, through the same floor guard.
   override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
     // So does B4's bridge check, on the verified metadata.
     val problem = rollbackProblem(manifestSequence(manifest.metadata), floor())
-      ?: manifestBridgeProblem(manifest.metadata[BRIDGES_METADATA_KEY], ServedBridges.all)
+      ?: manifestBridgeProblem(manifest.metadata[BRIDGES_METADATA_KEY], bridges)
       ?: return true
     Log.e(TAG, "cached bundle refused: $problem")
     return false
@@ -1262,9 +1301,10 @@ private class LoggingEventListenerFactory(
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
   private val onFailed: (String) -> Unit,
+  private val bridgeBinds: BridgeBindRecorder,
 ) : EventListener.Factory {
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
-    LoggingEventListener(manifestUrl, onSuccess, onSkipped, onLoaded, onSequence, onFailed)
+    LoggingEventListener(manifestUrl, onSuccess, onSkipped, onLoaded, onSequence, onFailed, bridgeBinds)
   override fun close() {}
 }
 
@@ -1275,7 +1315,11 @@ private class LoggingEventListener(
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
   private val onFailed: (String) -> Unit,
+  private val bridgeBinds: BridgeBindRecorder,
 ) : EventListener() {
+  // B5: Zipline reports every bind here, inside bind(): what an app's bridge binding bound.
+  override fun bindService(name: String, service: ZiplineService) = bridgeBinds.bound(name)
+
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     val sequence = manifestSequence(manifest.metadata)
     // A load from the cache reports no manifest URL.
