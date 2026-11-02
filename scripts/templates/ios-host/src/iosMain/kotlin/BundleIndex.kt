@@ -20,7 +20,8 @@
  * Bridges (B4, docs/BRIDGE_CODEGEN_DESIGN.md): a bundle that calls an app's generated bridges
  * names them, with the oldest version it can talk to, in its SIGNED metadata
  * ("keliver.bridges"), and its index entry carries the same as the `bridges` constraint (which
- * hosts from before B4 skip). The host serves the bridges in [ServedBridges]; it skips an entry,
+ * hosts from before B4 skip). The host serves the bridges in [ServedBridges] (declared before its
+ * first lookup); it skips an entry,
  * and refuses a manifest, that needs one it does not serve, at a newer version, or (at the same
  * version) built against another contract shape.
  */
@@ -87,8 +88,11 @@ internal data class HostFacts(
 internal data class HostBridge(val version: Int, val shape: String?)
 
 /**
- * The bridges this host serves, by name, recorded when the app binds them (B5's hook). Empty
- * until then: such a host skips every entry, and refuses every manifest, that needs a bridge.
+ * The bridges this host serves, by name. They must be set before the host's first lookup, from
+ * the app's configuration (B5: each generated `<Name>Bridge`'s NAME, VERSION and SHAPE, declared
+ * when the host is configured), not when the bridge is bound: binding happens after the lookup,
+ * the cache check and the manifest check, so a cold start would refuse a bundle it can serve.
+ * Empty until B5: such a host skips every entry, and refuses every manifest, that needs a bridge.
  */
 internal object ServedBridges {
   @Volatile var all: Map<String, HostBridge> = emptyMap()
@@ -364,7 +368,7 @@ internal fun reportReason(outcome: String, detail: String): String {
     "sha256 mismatch" in d -> "sha256-mismatch"
     "rollback refused" in d -> "below-floor"
     // Before "signature": a bridge refusal's text can name a contract, never a signature.
-    "bridge refused" in d && "another" in d && "contract" in d -> "bridge-shape"
+    "bridge refused: the bundle was built against another" in d -> "bridge-shape"
     "bridge refused" in d -> "bridge-missing"
     "signature" in d || "verif" in d -> "signature"
     "lookup failed" in d || "nothing is cached" in d -> "lookup-failed"

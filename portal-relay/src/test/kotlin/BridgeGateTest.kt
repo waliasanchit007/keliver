@@ -141,4 +141,22 @@ class BridgeGateTest {
       }
     }
   }
+
+  @Test
+  fun aLaterVersionIsNotComparedByShapeAndEveryBridgeMustBeServed() {
+    val served = mapOf("A" to HostBridge(3, other), "B" to HostBridge(1, null))
+    assertNull(manifestBridgeProblem("A@2#$shape", served), "a later version: shapes not compared")
+    assertNull(manifestBridgeProblem("A@3#$other,B@1", served))
+    assertTrue("C@1" in manifestBridgeProblem("A@3,C@1", served)!!, "one of several not served")
+    assertEquals(1L, pick(served, entry(1, null), entry(2, """{"A":{"min":3},"C":{"min":1}}""")))
+    assertEquals(2L, pick(served, entry(1, null), entry(2, """{"A":{"min":3},"B":{"min":1}}""")))
+    assertEquals(2L, pick(emptyMap(), entry(1, null), entry(2, "{}")), "an empty bridges constraint needs nothing")
+  }
+
+  @Test
+  fun aBridgesNameNeverChangesTheReason() {
+    assertEquals("bridge-missing", reportReason("not-loaded", "bridge refused: the bundle needs AnotherContract@1, which this host does not serve"))
+    assertEquals("bridge-missing", reportReason("not-loaded", "bridge refused: the bundle needs SignatureVerifier@1, which this host does not serve"))
+    assertEquals("bridge-missing", reportReason("not-loaded", "bridge refused: the bundle needs Sha256Mismatch@1; this host serves version 0"))
+  }
 }

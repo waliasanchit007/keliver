@@ -73,7 +73,7 @@ internal fun signedSequenceText(manifestJson: String): String? {
  * carries, read from the manifest's SIGNED `keliver.bridges` (`ShopActions@2#<shape>,…`), so
  * the index never says other than what was signed. [constraint] is null when the bundle needs
  * no bridge; [problem] is set when the value is malformed. The same rules as the hosts'
- * `parseBridges` (BundleIndex.kt); BundleIndexTest holds the two together.
+ * `parseBridges` (BundleIndex.kt); BridgeGateTest holds the two together.
  */
 internal data class SignedBridges(val constraint: JsonObject?, val problem: String?)
 
@@ -103,6 +103,8 @@ internal fun signedBridges(manifestJson: String): SignedBridges {
 
 /** [constraints] with `bridges` set from [signed] (and any copied `bridges` dropped); null when empty. */
 internal fun withSignedBridges(constraints: JsonObject?, signed: SignedBridges): JsonObject? {
+  // Every caller has refused a malformed value; never write an entry without its gate.
+  check(signed.problem == null) { signed.problem!! }
   val merged = (constraints.orEmpty() - "bridges") + signed.constraint.orEmpty()
   return merged.takeIf { it.isNotEmpty() }?.let(::JsonObject)
 }
@@ -407,6 +409,8 @@ internal fun publishStatic(
       }
       // Under the lock: another publish may have taken this sequence since the build.
       sequenceProblem(File(staging, "manifest.zipline.json").readText(), sequence)?.let { throw PublishRefused(it) }
+      // And what was copied must still name well-formed bridges.
+      signedBridges(File(staging, "manifest.zipline.json").readText()).problem?.let { throw PublishRefused(it) }
       if (!acceptKeyChange) keyChangeProblem(bundlesDir, index, File(staging, "manifest.zipline.json").readText(), publicKeyHex)?.let { throw PublishRefused(it) }
       Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
     } finally {

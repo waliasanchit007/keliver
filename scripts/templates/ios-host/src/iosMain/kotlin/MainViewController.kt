@@ -225,11 +225,11 @@ public data class KeliverUpdateCheck(val outcome: String, val sequence: Long, va
 
 /**
  * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
- * update-applied, update-failed, not-loaded, no-bundle or refused; [source] is
- * "network", "cache" or ""; [sequence] -1 when there is none; [hostVersion] -1
- * when CFBundleVersion is not an integer. [reason] is a fixed category
- * (sha256-mismatch, below-floor, signature, lookup-failed, network, config,
- * other); [detail] is the full message, for the app only: it can hold
+ * update-applied, update-failed, not-loaded, no-bundle, refused or screen-failed;
+ * [source] is "network", "cache" or ""; [sequence] -1 when there is none;
+ * [hostVersion] -1 when CFBundleVersion is not an integer. [reason] is a fixed
+ * category (sha256-mismatch, below-floor, bridge-missing, bridge-shape,
+ * signature, lookup-failed, network, config, exception, other); [detail] is the full message, for the app only: it can hold
  * addresses, paths or URLs, so [toJson], what REPORT_URL receives, leaves it
  * out. [installId] is the random id made on the device for rollouts.
  */

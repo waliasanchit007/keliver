@@ -520,6 +520,11 @@ private fun publish(): Pair<Boolean, String> {
         "Nothing was stored.",
     ).toString()
   }
+  // B4: the index is derived from the signed keliver.bridges; a malformed value would leave this
+  // version out of it, so it is refused here, with the reason.
+  signedBridges(manifest.readText()).problem?.let {
+    return false to log.appendLine("publish REFUSED: $it. Nothing was stored.").toString()
+  }
   val dest = File(bundlesDir, "v$version")
   ziplineOut.copyRecursively(dest, overwrite = true)
   // M6: the audit hash is of the CANONICAL screen source (what actually compiled).

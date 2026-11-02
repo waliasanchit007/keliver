@@ -856,4 +856,31 @@ class StaticPublishTest {
     assertEquals("v4", legacyLatest(store, 1, emptySet())?.name)
     assertNull(legacyLatest(store, 0, emptySet()), "no bundle at widget version 0")
   }
+
+  @Test
+  fun aCopiedBridgesConstraintIsReplacedByTheManifestsAndOtherConstraintsAreKept() {
+    publishStatic(output("one", bridges = "ShopActions@2"), site, app.publicHex, init = true)
+    // An entry whose bridges were edited to something the manifest does not say.
+    val edited = entries().map { e ->
+      JsonObject(e + ("constraints" to Json.parseToJsonElement("""{"minHostVersion":3,"bridges":{"Wrong":{"min":9}}}""")))
+    }
+    File(bundles, INDEX_FILE).writeText(JsonObject(index() + ("entries" to JsonArray(edited))).toString())
+    val promoted = promoteStatic(site, 1, "beta", app.publicHex, constraints = Constraints(rollout = 10)).entry
+    assertEquals(
+      Json.parseToJsonElement("""{"minHostVersion":3,"rollout":10,"bridges":{"ShopActions":{"min":2}}}"""),
+      promoted["constraints"],
+    )
+    val rolled = setRolloutStatic(site, 1, 50, channel = "beta").entry
+    assertEquals(Json.parseToJsonElement("""{"ShopActions":{"min":2}}"""), bridgesOf(rolled))
+  }
+
+  @Test
+  fun theLegacyLatestSkipsAVersionWithoutAManifest() {
+    val store = File(tmp, "legacy-nomanifest").apply { mkdirs() }
+    output("lm1", seq = 1).copyRecursively(File(store, "v1"))
+    File(store, "v1/meta.json").writeText("""{"version":1,"widgetVersion":1,"capabilities":[],"createdAt":1759838400000}""")
+    File(store, "v2").mkdirs()
+    File(store, "v2/meta.json").writeText("""{"version":2,"widgetVersion":1,"capabilities":[],"createdAt":1759838400000}""")
+    assertEquals("v1", legacyLatest(store, 1, emptySet())?.name)
+  }
 }

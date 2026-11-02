@@ -100,4 +100,24 @@ class HostReportsTest {
       server.stop(0)
     }
   }
+
+  @Test
+  fun everyOutcomeAndReasonAHostSendsIsAccepted() {
+    // The hosts' reportReason (BundleIndex.kt, compiled into these tests) against HostReports' sets.
+    val details = listOf(
+      "", "manifest sha256 mismatch: x", "rollback refused: sequence 1 is below 2",
+      "bridge refused: the bundle needs A@1, which this host does not serve",
+      "bridge refused: the bundle was built against another A@1 contract (shape a; this host's is b)",
+      "manifest signature for key k did not verify", "lookup failed", "timeout", "something else",
+    )
+    val outcomes = listOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed")
+    val r = HostReports(dir())
+    for (outcome in outcomes) {
+      for (d in details) {
+        val reason = hosttemplate.reportReason(outcome, d)
+        val body = report(outcome = outcome).replace("\"reason\":\"\"", "\"reason\":\"$reason\"")
+        assertNull(r.accept(body), "$outcome / $reason")
+      }
+    }
+  }
 }

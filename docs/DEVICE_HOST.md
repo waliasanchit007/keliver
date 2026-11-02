@@ -406,8 +406,9 @@ carry `constraints`:
   it cannot serve (`bridge refused: …`, reported as `bridge-missing` or
   `bridge-shape`), even when the index entry says otherwise.
   [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md), section "B4". A host
-  serves the bridges the app binds; until the hosts' hook for that (B5), it
-  serves none, and skips every entry that names one.
+  serves the bridges the app declares in its configuration, before the first
+  lookup; until the hosts' hook for that (B5), it serves none, and skips every
+  entry that names one.
 
 A host skipping an entry takes the newest one it may run. An entry with a
 constraint key the host doesn't know is skipped, so hosts from before W4.5 skip

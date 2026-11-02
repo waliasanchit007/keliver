@@ -155,7 +155,7 @@ grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'flo
   && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
   || bad "W4.2: the rollback floor is not wired"
 # B4: the bridge check runs where the floor's does, and a refused manifest is unloadable.
-grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' "$K/MainViewController.kt" \
+grep -A8 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' \
   && grep -q '"bridge refused:" in reason' "$K/MainViewController.kt" \
   && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$K/BundleIndex.kt" \
   && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
