@@ -312,8 +312,11 @@ which would then load a bundle whose first bridge call fails.
 
 ### What a host checks
 
-A host knows the bridges it serves: each generated `<Name>Bridge.bind` the app calls (B5's
-hook) records `NAME`, `VERSION` and `SHAPE` with the host.
+A host knows the bridges it serves from its configuration: the app declares each one (its
+generated `<Name>Bridge`'s `NAME`, `VERSION` and `SHAPE`) when it configures the host (B5's
+hook, Android `KeliverConfig`, iOS `Keliver`), before the first lookup. Not at `bind`: binding
+runs after the lookup, the cache check and the manifest check, so a cold start would refuse a
+bundle the host can serve (found in B4a's review). The host then binds what it declared.
 
 1. **Lookup** (`BundleIndex.kt`, the same file in both hosts): an entry whose
    `constraints.bridges` names a bridge the host does not serve, at a `min` above the host's
@@ -391,5 +394,6 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
    `relayIndexJson` and the legacy endpoint's filter), `BundleIndex.kt` (lookup, manifest
    checks, `reportReason`) and the hosts' `markNotLoaded`, with their tests. Host templates
    pass no bridges yet, so nothing changes for an app without one.
-2. B5: the hosts' hooks for an app's bridges (which also record them for B4), the reference app
-   migrated to a generated bridge, and the device scenarios above.
+2. B5: the hosts' hooks for an app's bridges (declared in the configuration, before the first
+   lookup, and bound with the services), the reference app migrated to a generated bridge, and
+   the device scenarios above.
