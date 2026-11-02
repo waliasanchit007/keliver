@@ -229,9 +229,10 @@ public data class KeliverUpdateCheck(val outcome: String, val sequence: Long, va
  * [source] is "network", "cache" or ""; [sequence] -1 when there is none;
  * [hostVersion] -1 when CFBundleVersion is not an integer. [reason] is a fixed
  * category (sha256-mismatch, below-floor, bridge-missing, bridge-shape,
- * signature, lookup-failed, network, config, exception, other); [detail] is the full message, for the app only: it can hold
- * addresses, paths or URLs, so [toJson], what REPORT_URL receives, leaves it
- * out. [installId] is the random id made on the device for rollouts.
+ * signature, lookup-failed, network, config, exception, other); [detail] is
+ * the full message, for the app only: it can hold addresses, paths or URLs, so
+ * [toJson], what REPORT_URL receives, leaves it out. [installId] is the random
+ * id made on the device for rollouts.
  */
 public data class KeliverReport(
   val installId: String,

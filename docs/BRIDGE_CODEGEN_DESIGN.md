@@ -371,11 +371,11 @@ bundle the host can serve (found in B4a's review). The host then binds what it d
 
 ### Tests
 
-- `BundleIndexTest`: lookup skips (missing, older, another shape, malformed), the manifest
+- `BridgeGateTest` (B4a; with the template's `BundleIndex.kt`): lookup skips (missing, older, another shape, malformed), the manifest
   checks (network bytes and verified metadata, with and without a shape), `reportReason`'s
   `bridge-missing` and `bridge-shape` (matched before the signature reasons), and the existing
   rule that an unknown constraint is skipped by a host that predates it.
-- `StaticPublishTest` and `keliver-publish-selftest.sh`: the entry's constraints come from the
+- `StaticPublishTest`: the entry's constraints come from the
   manifest on publish, republish and promotion (an entry written before B4 included); a
   malformed value refuses. A relay test: `relayIndexJson` derives `bridges` from each
   version's manifest and leaves out a malformed one; the legacy `/bundles/latest` skips a

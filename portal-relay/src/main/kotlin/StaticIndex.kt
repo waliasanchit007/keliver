@@ -677,6 +677,8 @@ internal fun republishStatic(
   }
   // Only whether a listed key signed it: the copy is signed again, and checked as a new publish.
   staticOutputProblem(source, publicKeyHex, authenticOnly = true)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
+  // B4: before the re-sign build, not after it (a version stored before B4 may be malformed).
+  signedBridges(sourceManifest.readText()).problem?.let { throw PublishRefused("v$version: $it") }
   val entryChannel = channel ?: (original["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
   val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
   val extra = buildMap<String, JsonElement> {
