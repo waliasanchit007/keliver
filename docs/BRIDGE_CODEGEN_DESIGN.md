@@ -45,6 +45,9 @@ hand-written ones, so the Zipline plugin adapts a generated `ZiplineService` the
 treehouse codegen's output in `sample/shared` already relies on that. A `dev.keliver.bridge` Gradle
 plugin id that applies all of this is a later convenience, not part of B3.
 
+KSP does not always see the annotations' default values in that metadata compilation (an
+annotation from a library klib), so the processor repeats them (found in B3b).
+
 ### 2. Modules
 
 | Module | Targets | Contents |
@@ -52,9 +55,10 @@ plugin id that applies all of this is a later convenience, not part of B3.
 | `keliver-bridge-annotations` | common (JVM, JS, iOS, Android) | `@KeliverBridge(name, version, timeoutSeconds)` and `@BridgeTimeout(seconds)`, `SOURCE` retention |
 | `keliver-bridge` | common | the runtime the generated code calls: the guard (§5), `BridgeCall`, `BridgeCallFailed` |
 | `keliver-bridge-codegen` | tooling (JVM) | the KSP processor |
+| `keliver-bridge-fixture` | common, not published | a contract module built with the processor and the Zipline plugin, for its tests (§6) |
 
 The runtime is small and real code, so it is tested once, in `keliver-bridge`, on JVM, JS and
-the iOS simulator, and not re-emitted (and re-reviewed) into every app. None of the three is
+the iOS simulator, and not re-emitted (and re-reviewed) into every app. None of the first three is
 published until a libraries release, which needs the owner; until then the reference app (B5)
 uses them from this checkout, the way the production host is already built from source.
 
@@ -97,6 +101,19 @@ The processor **fails the build**, naming the function, for:
 - a parameter or return type that is not a primitive, `String`, an enum, a `@Serializable`
   class, or a `List`/`Map` of those (checked by the declaration, not by trying to serialize).
 
+Found while building the processor (B3b), it also refuses:
+- an interface that is not public, nested, generic, extends another, or declares properties;
+- a function with a body, one named `close` (`ZiplineService.close()`), and one starting with an
+  Objective-C method family (after any leading `_`: `init`, `new`, `copy`, `mutableCopy` or
+  `alloc`, then the end of the name or anything but a lowercase letter), which Kotlin/Native
+  renames for Swift;
+- a parameter named like the generated code's own names (`call`, `done`, `fail`, `impl`,
+  `guard`, `callbacks`, `service`, `zipline`, `context`, `log`, `it`, `e`, `Unit`,
+  `BridgeCallFailed`).
+
+A typealias is checked as the type it stands for; a generic one is refused (write the type).
+A generic `@Serializable` class's type arguments are checked as values too.
+
 ### 4. What is generated
 
 For `ShopActions`, in its package, in one file per interface, all in `commonMain` (so the guest
@@ -109,9 +126,15 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
    - `NAME = "ShopActions"`, `VERSION = 2`, and `SHAPE`, a hash of the functions' names,
      parameter and result types in a fixed form, and of every `@Serializable` class and enum
      they reach: the class's serial name, its fields' serial names and types, and the enum's
-     constants by serial name (so a `@SerialName` rename counts), since such a change keeps
-     Zipline's call id and fails only when decoded. B4 can carry `SHAPE` with the version, so
-     a change without a version bump is caught; nothing checks either in B3;
+     constants by serial name (so a `@SerialName` rename counts), and a sealed class's
+     subclasses, since such a change keeps Zipline's call id and fails only when decoded.
+     Fields include inherited ones; fields and constants are sorted, since JSON matches them
+     by name. A field is a property with a backing field and no `@Transient`; for a property
+     of another module's class, whose backing field KSP may not know, any non-`@Transient`
+     property. Every file the hash reads is an input of the generated file, and reaching a
+     sealed class makes it depend on every source (a new subclass can be in a new file). B4
+     can carry `SHAPE` with the version, so a change without a version bump is caught;
+     nothing checks either in B3;
    - `bind(zipline, impl: ShopActions, context = Dispatchers.Default, log = {})` (host
      side) binds, under `NAME`, a `ShopActionsService` that runs each call through the guard in
      §5. It is called from Kotlin (its `Zipline` and `CoroutineContext` are no use to Swift):
@@ -163,7 +186,8 @@ where they apply, because they were reviewed there:
   `withTimeoutOrNull`, not `withTimeout`: a `TimeoutCancellationException` is a cancellation,
   which Zipline sends as one, and the guest would see its call quietly cancelled instead of
   failed. The answer is boxed inside the guard, so a `null` result is not taken for a timeout.
-  The call always runs on `context` (by default `Dispatchers.Default`), never on Zipline's own
+  The call always runs on `context` (by default `Dispatchers.Default` for an implementation;
+  required for Swift's callbacks, which expect the main thread), never on Zipline's own
   thread: it is launched in the guard's scope (below) and only a deferred answer is awaited, as
   `credentials()` does, not run as a child `withContext`, which the limit would have to wait
   for; on a timeout or cancel the launch is cancelled explicitly. So a delegate that blocks
@@ -210,6 +234,12 @@ frames), and rethrows anything else.
   Zipline plugin for JVM, JS and the iOS simulator in CI's full build, as `sample/shared` is.
   If Zipline's API lets a JVM test bind and take through a pair of endpoints in one process,
   that test runs there too (B3b finds out); otherwise the first round trip is B5's.
+  **B3b found:** Zipline 1.22 has no public in-process endpoint pair, so the first round trip
+  is B5's. The fixture (`keliver-bridge-fixture`) is built with the plugin for JVM, JS and the
+  iOS simulator (Zipline writes `ShopActionsService.Companion.Adapter`), and its JVM tests drive
+  the generated classes: both host services through a real guard, the guest's wrapper over a
+  service failing with a host's real stack-trace text, and both `bind`s against a real JVM
+  Zipline (QuickJS), which shows the plugin rewrote `bind<T>`.
 - **The guard** (`keliver-bridge`, `commonTest`, so JVM, JS, where the guest-side mapping runs,
   and the iOS simulator): first answer
   wins, a second is ignored, each limit including none, `fail`, a throw (its message only in

@@ -1,0 +1,21 @@
+[dev.keliver.bridge.fixture.ShopActionsService]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # fun track(kotlin.String, kotlin.collections.Map<kotlin.String,kotlin.String>): kotlin.Unit
+  "0XUfnMcz",
+
+  # suspend fun findCoupon(kotlin.String): kotlin.String
+  "itSbBDcB",
+
+  # suspend fun openRoute(kotlin.String): kotlin.Boolean
+  "IddpghEx",
+
+  # suspend fun pickAddress(dev.keliver.bridge.fixture.AddressRequest): dev.keliver.bridge.fixture.AddressResult
+  "RUCEM8yP",
+
+  # suspend fun share(kotlin.String, kotlin.String): kotlin.Unit
+  "NaZi/FKT",
+]

@@ -146,9 +146,13 @@ include ':keliver-http-codegen'
 
 // Generated action bridges (adoption plan item 4, B3; docs/BRIDGE_CODEGEN_DESIGN.md): the
 // annotations an app's contract interface carries, and the runtime the generated code calls
-// (the guard every host call goes through). The KSP processor follows in B3b.
+// (the guard every host call goes through), and the KSP processor that writes an app's
+// bridge from its interface (B3b).
 include ':keliver-bridge-annotations'
 include ':keliver-bridge'
+include ':keliver-bridge-codegen'
+// Not published: a contract module built with the processor and the Zipline plugin.
+include ':keliver-bridge-fixture'
 
 // AppService adapter KSP processor — reads @KeliverAppService
 // interfaces and emits Generated<Name>Adapter open classes that
