@@ -299,8 +299,9 @@ way the sequence floor is (W4). B4 follows the existing mechanisms rather than a
     `bridges` from the manifest too, so an entry written before B4 gets it as well;
   - the relay, which keeps no entries but rebuilds them from each version's `meta.json` on
     every request (`relayIndexJson`): it derives `bridges` from that version's manifest.
-  A malformed value refuses the publish. `noStricterThan` already treats an entry with
-  constraints as stricter.
+  A malformed value refuses a publish, republish or promotion. The relay, which has no publish
+  step at that point, leaves out of its index an entry whose manifest's value is malformed
+  (fail closed). `noStricterThan` already treats an entry with constraints as stricter.
 
 ### Why `constraints`, not a new top-level field
 
@@ -323,12 +324,17 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
    verified metadata in `AcceptCachedBundle` (a cache start). A manifest whose
    `keliver.bridges` the host cannot serve is refused with `bridge refused: …`. What follows
    is what a refused floor gets today, extended to this reason:
-   - on the network path, the host falls back to the last good bundle when it has one;
-   - on a cache start there is nothing to fall back to: the screen is not loaded;
-   - the manifest is marked unloadable (`markNotLoaded` adds `bridge refused:` to the reasons
-     it knows), so an update check does not fetch it again;
-   - it is reported under a new reason, `bridge-missing` (`reportReason`).
-   A manifest without `keliver.bridges` needs no bridge.
+   - a first load refused on the network path falls back to the last good bundle when there is
+     one; with none, or on a cache start, the screen is not loaded, and `markNotLoaded`
+     (`KeliverHost.kt`, iOS `MainViewController.kt`) adds `bridge refused:` to the reasons that
+     make a manifest unloadable, so it is not fetched again (when its sha256 is known: a cache
+     start's pin has none);
+   - a refused update to a running bundle takes the existing update-failed path: the running
+     bundle stays, and the manifest is remembered as a failed update;
+   - it is reported under new reasons in `reportReason` (`BundleIndex.kt`), matched before the
+     signature reasons: `bridge-missing`, and `bridge-shape` for a shape mismatch (3).
+   A manifest without `keliver.bridges` needs no bridge; one whose value is malformed is
+   refused (fail closed), as `bridge refused: malformed keliver.bridges`.
 3. **Shape**, when the manifest carries one: at the same version, the guest's shape must equal
    the host's; a different shape at the same version is refused (`bridge refused: ShopActions@2
    was built against another contract`), since it is the change a version bump was missed for.
@@ -337,8 +343,10 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
    - **functions:** keep every older function's signature (Zipline call id), adding new ones
      only;
    - **types those older functions use:** change them only in ways an older guest still
-     decodes: a new field with a default, never a new required field, a renamed or retyped
-     field, a new enum constant or a new sealed subclass sent to an older guest.
+     decodes (Zipline's JSON ignores unknown keys and encodes defaults):
+     - allowed: a new field with a default;
+     - not allowed: a new required field, a renamed or retyped field, and a new enum constant
+       or sealed subclass sent to an older guest.
    Anything else needs a new bridge name. The shape is in the index entry too, so a host at
    the same version skips a mismatched entry at lookup instead of refusing it at every start.
 
@@ -364,7 +372,10 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
   bytes and verified metadata, with and without a shape), and the existing rule that an unknown
   constraint is skipped by a host that predates it.
 - `StaticPublishTest` and `keliver-publish-selftest.sh`: the entry's constraints come from the
-  manifest; a malformed value refuses; republish and promotion keep it.
+  manifest on publish, republish and promotion (an entry written before B4 included); a
+  malformed value refuses. A relay test: `relayIndexJson` derives `bridges` from each
+  version's manifest and leaves out a malformed one; the legacy `/bundles/latest` skips a
+  bundle that declares bridges.
 - Scaffolder self-tests: both hosts wire the bridge check where they wire the floor.
 - On a device (the reference app, after B5): an index entry needing a bridge the host does not
   serve is skipped (as S16 does for a capability), and a manifest whose signed requirement the
@@ -372,9 +383,9 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
 
 ### Steps
 
-1. B4a: the publisher (index constraints from the manifest, refusal, copies; the legacy
-   endpoint's filter) and `BundleIndex.kt`
-   (lookup skip, manifest checks, reasons), with their tests. Host templates pass no bridges
-   yet, so nothing changes for an app without one.
+1. B4a: the publisher (index constraints from the manifest on every path, refusal;
+   `relayIndexJson` and the legacy endpoint's filter), `BundleIndex.kt` (lookup, manifest
+   checks, `reportReason`) and the hosts' `markNotLoaded`, with their tests. Host templates
+   pass no bridges yet, so nothing changes for an app without one.
 2. B5: the hosts' hooks for an app's bridges (which also record them for B4), the reference app
    migrated to a generated bridge, and the device scenarios above.
