@@ -1,3 +1,13 @@
+[dev.keliver.bridge.fixture.RoundTripDriver]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # suspend fun run(kotlin.String): kotlin.String
+  "D37ksH0E",
+]
+
 [dev.keliver.bridge.fixture.ShopActionsService]
 
 functions = [
@@ -18,4 +28,14 @@ functions = [
 
   # suspend fun share(kotlin.String, kotlin.String): kotlin.Unit
   "NaZi/FKT",
+]
+
+[dev.keliver.bridge.fixture.WaitsService]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # suspend fun waitBriefly(): kotlin.String
+  "x9jmJW7d",
 ]

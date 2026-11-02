@@ -149,7 +149,9 @@ jobs:
       # first iOS simulator test: it needs Xcode's simulators on the runner and
       # adds a Native test link (about a minute) to the job's time.
       # keliver-bridge-fixture is a contract module built with keliver-bridge-codegen and
-      # the Zipline plugin; it is not published, so the build above does not compile it.
+      # the Zipline plugin; it is not published, so the build above does not compile it. Its
+      # jvmTest also builds keliver-bridge-fixture-guest (a Kotlin/JS Zipline guest) and runs
+      # the first guest-to-host round trip through it (B5b).
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew

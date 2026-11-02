@@ -153,6 +153,7 @@ include ':keliver-bridge'
 include ':keliver-bridge-codegen'
 // Not published: a contract module built with the processor and the Zipline plugin.
 include ':keliver-bridge-fixture'
+include ':keliver-bridge-fixture-guest'
 
 // AppService adapter KSP processor — reads @KeliverAppService
 // interfaces and emits Generated<Name>Adapter open classes that
