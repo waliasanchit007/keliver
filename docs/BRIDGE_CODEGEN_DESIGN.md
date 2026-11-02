@@ -601,8 +601,13 @@ its editor still builds and previews the screen with a fake.
    scaffolder flags): §3. It reaches adopters only with the libraries release, so the tools
    release that ships it follows that one. Until then its self-tests resolve the three modules
    from this checkout, published to a disposable local Maven repository for the run
-   (`publishToMavenLocal` with `-Dmaven.repo.local`); both host self-tests, which refuse any
-   `includeBuild` today, then allow exactly the contract's. Its iOS self-test compiles a Swift
+   (`publishToMavenLocal` with `-Dmaven.repo.local`). The hosts need it too: a build resolves
+   an included build's outside dependencies through its own repositories, and both hosts reach
+   `keliver-bridge` (Android through the contract's `api`, iOS directly, to export it). So for
+   the run the self-test adds that repository to both hosts' `settings.gradle`, passes the same
+   `-Dmaven.repo.local` to every Gradle run, and both host self-tests, which refuse any
+   `includeBuild` and anything beyond Maven Central and Google today, allow exactly the
+   contract's build and that repository. Its iOS self-test compiles a Swift
    conformance to a real generated `<Name>Callbacks` (boxed primitives, `BridgeCall`) with
    `xcodebuild`.
 4. **B5d** (the reference app): §4's first two scenarios now and the third once B5a is merged
