@@ -556,14 +556,18 @@ Sizes are in KiB (the lines say KB); `-` is "not read here".
   did not give back (on Android read `pss`); the first cycle's own growth includes one-time
   costs (images, caches).
 - **The leak bound:** the reference app's CI (T4) fails when QuickJS's heap in use grew by
-  more than 32 KiB from cycle 1's `closed` to cycle 2's (`memory.py --leak-kb 32`; the bound is
-  from cycle 1 to the last, so a run of more cycles needs a larger one). Closing a
-  screen frees about 250 KiB of QuickJS's heap in the reference app, so a screen left behind
-  shows; every device measured grew 4 to 8 KiB a cycle, and steadily so over eight cycles on a
-  Galaxy A12 (`reference/inventory/m2/results-2026-11-02-a12-memory-cycles`). There is no bound
-  on `pss` or the iOS footprint: over those eight cycles `pss` fell for four and then held, and
-  the simulator's footprint grew about 1 MiB a cycle, so either would follow the platform's
-  caches rather than a leak.
+  more than 32 KiB from cycle 1's `closed` to cycle 2's (`memory.py --leak-kb 32`; it compares
+  cycle 1 with the last of `--cycles N`, so a run of more cycles needs a larger bound). A
+  screen's whole share of QuickJS's heap in the reference app is about 150 KiB (a cycle's
+  `open` to `content`, and what its close frees from the second cycle on, on a Galaxy A12 and
+  an iPhone 13; the first cycle's close frees more, about 250 KiB, since it is the first
+  collection since launch), so a screen the guest keeps whole shows; every device measured
+  grew 4 to 9 KiB a cycle, and steadily so over eight cycles on a Galaxy A12
+  (`reference/inventory/m2/results-2026-11-02-a12-memory-cycles`). It bounds the guest's heap
+  only: a screen the host keeps (its views, the Java or Kotlin heap) is not caught, nor a
+  guest leak of under 32 KiB a cycle. There is no bound on `pss` or the iOS footprint: over
+  those eight cycles `pss` fell for four and then held, and the simulator's footprint grew
+  about 1 MiB a cycle, so either would follow the platform's caches rather than a leak.
 - **Reading it:** `open` to `ui` is mostly the Compose runtime and its first draw;
   `runtime` to `code` adds the loader and the guest's code (`qjs` at `runtime` is the engine
   before any code; `code` minus it is the guest's code and start-up); `code` to `content` is

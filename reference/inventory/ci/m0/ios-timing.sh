@@ -24,8 +24,8 @@
 #       second screen, closes it after its content and samples "closed"); then
 #       the points in order with QuickJS read from the runtime on (memory.py).
 #       It prints the growth from cycle 1's close to cycle 2's and fails when
-#       QuickJS's heap grew by more than 32 KiB (a leaked screen leaves about
-#       250 KiB; every device so far grew 4-8 KiB a cycle); no bound on the
+#       QuickJS's heap grew by more than 32 KiB (a screen's whole share of it
+#       is about 150 KiB; every device so far grew 4-9 KiB a cycle); no bound on the
 #       footprint, which follows the platform's caches. A host from templates
 #       without it SKIPs
 if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then

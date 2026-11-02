@@ -15,8 +15,9 @@ caches settling. This launch ran eight, for the leak bound `ci/m0/memory.py` tak
   eight memory cycles (`am broadcast -a dev.keliver.debug.MEMORY_CYCLE`), 25 s apart, each
   opening a second screen and closing it; then `memory.py --cycles 8`. The phone was checked to
   be awake, unlocked and not on a call before each cycle.
-- A second launch stopped at its second cycle when the phone went to sleep: not counted
-  (`run.log`). So this is **one run**.
+- A second launch stopped at its second cycle when the phone went to sleep (the script checks
+  before each cycle and exits, so `run.log` has no `== done` line): not counted. So this is
+  **one run**.
 
 ## At each cycle's close (KiB)
 
@@ -36,15 +37,20 @@ caches settling. This launch ran eight, for the leak bound `ci/m0/memory.py` tak
   showed on the iPhone (`../results-2026-11-02-iphone-m4-m5`) may be the same settling; this
   run cannot say for iOS.
 - **QuickJS grows steadily: 4–5 KiB a cycle** (+33 KiB from cycle 1 to 8: +5, +4, +5, +5, +5,
-  +5, +4), as on the CI emulator (+5), the simulator (+6, +8) and the iPhone (+6, +7). It is
-  small, but it does not settle in eight cycles: something of each screen stays in the guest's
-  heap. A whole screen left behind would be far more: closing the second screen frees about
-  250 KiB of QuickJS's heap on the iPhone (`content` → `closed` of a cycle).
+  +5, +4), as on the CI emulator (+5, once +9), the simulator (+6 to +8) and the iPhone (+6,
+  +7). It is small, but it does not settle in eight cycles: something of each screen stays in
+  the guest's heap. A whole screen left in the guest would be far more: a screen's share of
+  QuickJS's heap is about 150 KiB (a cycle's `open` → `content` adds 148–165 KiB here and
+  145–166 on the iPhone, computed from #212's logs; from the second cycle on, a close frees
+  144–158 here and 150 on the iPhone). The first cycle's close frees more (228 KiB here, 234–254
+  on the iPhone) because it is the first collection since launch.
 - **graphics** grows 1–2 KiB a cycle.
 
 ## For the leak bound
 
-A bound on QuickJS's growth from cycle 1's close to cycle 2's of **32 KiB** is four times the
-largest growth seen on any device (+8) and well under one leaked screen (about 250 KiB). A
-bound on `pss` or the iOS footprint would follow the platform's own caches (this run: −306 KiB
-from cycle 1 to 2; the iPhone: +384 to +464; the CI simulator: +1 056 to +1 440), so none is set.
+A bound on QuickJS's growth from cycle 1's close to cycle 2's of **32 KiB** is more than three
+times the largest growth seen on any device (+9, the CI emulator once) and about a fifth of a
+screen's share of the guest's heap (about 150 KiB). It catches a screen the guest keeps whole,
+not one the host keeps, nor a guest leak of under 32 KiB a cycle. A bound on `pss` or the iOS
+footprint would follow the platform's own caches (this run: −306 KiB from cycle 1 to 2; the
+iPhone: +384 to +464; the CI simulator: about +0.5 to +1.5 MiB), so none is set.

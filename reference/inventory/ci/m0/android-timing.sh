@@ -21,9 +21,9 @@
 #       second screen, closes it after its content and samples "closed"); then
 #       the points with QuickJS read from the runtime on, and pss at each
 #       closed (memory.py). It prints the growth from cycle 1's close to cycle
-#       2's and fails when QuickJS's heap grew by more than 32 KiB (a leaked
-#       screen leaves about 250 KiB; every device so far grew 4-8 KiB a cycle,
-#       m2/results-2026-11-02-a12-memory-cycles); no bound on pss, which
+#       2's and fails when QuickJS's heap grew by more than 32 KiB (a screen's
+#       whole share of it is about 150 KiB; every device so far grew 4-9 KiB a
+#       cycle, m2/results-2026-11-02-a12-memory-cycles); no bound on pss, which
 #       follows the platform's caches. A host from templates without it SKIPs
 if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
   echo "--- M0: timing marks"
