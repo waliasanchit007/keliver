@@ -14,11 +14,13 @@ signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained not
 screen opened at launch, and, as one line on the 0.3.15 host, cut a screen opened 3 s later from 816 to 267 ms cold), M4's
 first step (the host-side frame profile) is released (#186, tools 0.3.17), M5's memory profile is released on both hosts (iOS #188, Android #191; tools 0.3.17); both profiles have
 numbers from a Galaxy A12, and the memory profile from an iPhone 13 (a Debug build; its frame profile
-there: the launch's frames only). Item 3: K1 and K2 are released (tools 0.3.14),
+there: the launch's frames only); CI's memory cycles have a leak bound (#214). Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
-B3 is merged (#201–#203, not published), B4a is merged (#205), B5 is open. Items 5 and 7 are not
+B3 is merged (#201–#203, not published), B4a is merged (#205) and its gate runs on the CI
+emulator and simulator (#213), B5 is open: its design (#208) and the first guest-to-host round
+trip (#211) are merged. Items 5 and 7 are not
 started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
 (#111) are done, and so is a debug host that picks up a publish while it is
 open (Android #145, released in tools 0.3.13 and checked on a physical phone;
@@ -134,8 +136,15 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    starts: mostly the host's Compose UI and first view, though the steps overlap the bundle
    lookup. `code` (the loader and the guest's code) adds about 12 MiB, 4 585 KiB of it QuickJS's
    heap. From one cycle's close to the next the footprint grew in every run, +384 to +464 KiB
-   (QuickJS +6 to +7, Kotlin heap +0 to +256), which two cycles cannot attribute. Not done: a
-   leak bound in `memory.py` (it needs more cycles), a Benchmark build on the phone.
+   (QuickJS +6 to +7, Kotlin heap +0 to +256), which two cycles cannot attribute. Not done:
+   more cycles on the iPhone (the eight-cycle run below is the A12's; the iPhone's stopped when
+   its developer trust lapsed), a Benchmark build on the phone.
+   **2026-11-02, the leak bound (#214):** eight cycles in one launch on a Galaxy A12
+   (`reference/inventory/m2/results-2026-11-02-a12-memory-cycles`): `pss` settles after four,
+   QuickJS grows a steady 4–5 KiB a cycle. CI's T4 now fails when QuickJS's heap grew by more
+   than 32 KiB from cycle 1's close to cycle 2's (`memory.py --leak-kb 32`): about a fifth of a
+   screen's share of it (about 150 KiB), and every device grew 4–9 KiB a cycle. No bound on
+   `pss` or the footprint, which follow the platform's caches.
 
 Decide on optimisations only after M2–M5.
 
@@ -216,7 +225,7 @@ areas. Measure it on the next adoption: glue lines per app, and review findings.
 
 ## Item 4. Bridge: HostHttp for data, generated actions (D13)
 
-**Status 2026-10-31:** B1 merged (#169) and released in tools 0.3.15. `KeliverConfig.httpClient` sends guests' HostHttp through the app's own authenticated `OkHttpClient`, behind the `RequestPolicy`. A config with the app's client and no policy is refused. The client is used for nothing else. The URL going out is checked again after the app's interceptors and on retries. A guest's credential and path-override headers are dropped, and the response's `Set-Cookie` is not returned to the guest. JVM tests run against a local server: allowed, refused, wrong origin, redirect, an interceptor or authenticator sending the request elsewhere, guest credentials, the session cookie, and no policy. A new PR CI job builds the scaffolded host and runs its JVM tests. **B2** merged (#178) and released in tools 0.3.16 (2026-10-31): on iOS, `Keliver.shared.requestHeaders` adds the app's credentials to each request the `RequestPolicy` allowed, called on the main thread (`done(nil)`, no answer in 30 s, a throw or an invalid header refuse it). It needs a policy; the guest's own credentials and a response's `Set-Cookie` are dropped, the session keeps no cookies, cache or credentials, and TRACE, TRACK and CONNECT are refused. 20 simulator tests against a local server run in the iOS self-test. Android refuses TRACE, TRACK and CONNECT through the app's client too (#180). **2026-11-02:** B3 merged, not published: its design in [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md) (#201), the runtime `keliver-bridge` (#202) and the KSP processor `keliver-bridge-codegen` with a fixture contract module built for JVM, JS and iOS (#203); the modules reach adopters with the next libraries release. B4 designed (same document, section "B4"); B4a merged (#205, 2026-11-02): the publisher derives the gate from the signed manifest, and both hosts skip and refuse a bundle needing a bridge they do not serve; in the next tools release. B5 designed (same document, section "B5"): the hosts' hook, the first round trip and B4's device scenarios need nothing published; the contract build and the reference app on a bridge reach adopters with the libraries release.
+**Status 2026-10-31:** B1 merged (#169) and released in tools 0.3.15. `KeliverConfig.httpClient` sends guests' HostHttp through the app's own authenticated `OkHttpClient`, behind the `RequestPolicy`. A config with the app's client and no policy is refused. The client is used for nothing else. The URL going out is checked again after the app's interceptors and on retries. A guest's credential and path-override headers are dropped, and the response's `Set-Cookie` is not returned to the guest. JVM tests run against a local server: allowed, refused, wrong origin, redirect, an interceptor or authenticator sending the request elsewhere, guest credentials, the session cookie, and no policy. A new PR CI job builds the scaffolded host and runs its JVM tests. **B2** merged (#178) and released in tools 0.3.16 (2026-10-31): on iOS, `Keliver.shared.requestHeaders` adds the app's credentials to each request the `RequestPolicy` allowed, called on the main thread (`done(nil)`, no answer in 30 s, a throw or an invalid header refuse it). It needs a policy; the guest's own credentials and a response's `Set-Cookie` are dropped, the session keeps no cookies, cache or credentials, and TRACE, TRACK and CONNECT are refused. 20 simulator tests against a local server run in the iOS self-test. Android refuses TRACE, TRACK and CONNECT through the app's client too (#180). **2026-11-02:** B3 merged, not published: its design in [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md) (#201), the runtime `keliver-bridge` (#202) and the KSP processor `keliver-bridge-codegen` with a fixture contract module built for JVM, JS and iOS (#203); the modules reach adopters with the next libraries release. B4 designed (same document, section "B4"); B4a merged (#205, 2026-11-02): the publisher derives the gate from the signed manifest, and both hosts skip and refuse a bundle needing a bridge they do not serve; in the next tools release. B5 designed (#208; same document, section "B5"): the hosts' hook, the first round trip and B4's device scenarios need nothing published; the contract build and the reference app on a bridge reach adopters with the libraries release. **2026-11-02:** the first guest-to-host round trip through the generated bridges, on the JVM (B5b, #211; the iOS simulator not yet); B4's first two device scenarios, S17 and S17b, on the CI emulator and simulator (#213); the hosts' hook (B5a) in review.
 
 **Evidence.**
 - One 11-call `ZiplineService` contract was copied byte for byte into three repositories.

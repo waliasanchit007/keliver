@@ -487,13 +487,15 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    (#178): on iOS, a header callback adds the app's credentials, behind the
    same policy, with B1's rules (20 simulator tests); released in tools
    0.3.16. **2026-11-02:** B3 merged, not published (#201 design, #202 runtime,
-   #203 codegen; `BRIDGE_CODEGEN_DESIGN.md`); B4 designed there; B4a merged (#205); B5
-   not started.
+   #203 codegen; `BRIDGE_CODEGEN_DESIGN.md`); B4 designed there; B4a merged (#205), its gate
+   on the CI emulator and simulator (#213); B5 designed (#208), its first guest-to-host round
+   trip merged (#211, JVM), the hosts' hook in review.
 9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
    host-side frame profile released (#186, tools 0.3.17; composition apart from encoding needs a
    library release); M5's memory profile released on both hosts (#188 iOS, #191 Android; tools 0.3.17); M3's later-screen case and both
-   profiles measured on a Galaxy A12, and M5 on an iPhone 13 (Debug, 2026-11-02); next, a leak bound in
-   `memory.py` and the iPhone's frame profile with taps (an Xcode account for the tap driver).
+   profiles measured on a Galaxy A12, and M5 on an iPhone 13 (Debug, 2026-11-02); CI's memory
+   cycles have a leak bound (#214); next, the iPhone's frame profile with taps (an Xcode account
+   for the tap driver).
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
     delivery (item 7); the device proxy (item 6's last row).
 11. **W7, the physical-device proof** (a real-certificate HTTPS server, a
