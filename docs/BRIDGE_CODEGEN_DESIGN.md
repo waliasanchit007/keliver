@@ -579,7 +579,7 @@ merged:
 
 The first two are S17 and S17b in the reference app's static route
 (`reference/inventory/ci/w3/android-static.sh` and `ios-static.sh`), on the CI emulator and
-simulator in its pull-request and push runs, whose hosts this checkout scaffolds; a hand-run of a
+simulator in its pull-request runs, whose hosts this checkout scaffolds; a hand-run of a
 published zip from before B4 skips them.
 
 ### 5. The reference app on a bridge
