@@ -11,7 +11,7 @@ serious defect in the proof was in host glue that each adopter writes for themse
 **Status (2026-11-02).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
-screen opened at launch, and cut a screen opened 3 s later from 816 to 267 ms cold), M4's
+screen opened at launch, and, as one line on the 0.3.15 host, cut a screen opened 3 s later from 816 to 267 ms cold), M4's
 first step (the host-side frame profile) is released (#186, tools 0.3.17), M5's memory profile is released on both hosts (iOS #188, Android #191; tools 0.3.17); both profiles have
 numbers from a Galaxy A12, not yet from an iPhone. Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
@@ -76,7 +76,8 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    with the bundles over wireless `adb reverse`, an app that opens its Keliver screen at launch
    gained nothing: in all 40 first and cold launches, the lookup answered after the screen opened
    (`reference/inventory/m2/results-2026-10-31-a12-m3`).
-   **2026-11-02:** the case it is for, on the same phone: the first Keliver screen asked for 3 s
+   **2026-11-02:** the case it is for, on the same phone and the same 0.3.15 host with and
+   without M3's line: the first Keliver screen asked for 3 s
    after launch. `open` → `content` went from 2352 to 265 ms on a first launch and from 816 to
    267 ms cold; warm was unchanged (142 and 132 ms). Medians of 10, with the app compiled to
    `speed` after each install: background dexopt had moved the warm numbers in a first pass
@@ -94,9 +95,11 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    `StandardAppLifecycle.sendFrame` (keliver-treehouse-guest), so a library release (0.4.2).
    **2026-11-02, on a Galaxy A12** (the published 0.3.17 host, compiled to `speed`;
    `reference/inventory/m2/results-2026-11-02-a12-m4-m5`): in the benchmark build a frame that
-   changes two values costs about 24 ms of `guest`, 22 ms of it before the change list reaches
-   the host (`lead`), and the host's `sink` and `apply` together under 1 ms; the frame that
-   opens an item (130 changes) 59 ms. So the guest's side dominates. Not measured on an iPhone.
+   changes two values costs about 24 ms of `guest`, 22.5 ms of it `lead` (the guest's work and
+   the host decoding the list), and the host's `sink` and `apply` together 0.56 ms; the frame
+   that opens an item (130 changes) 59 ms. Comparing the debug build suggests (an inference)
+   that most of `lead` is the guest's: under 1 ms of it is the host's on a 2-change frame,
+   roughly 6 to 16 ms of 56 on the 130-change one. Not measured on an iPhone.
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
    **2026-11-01, merged (#188; released in tools 0.3.17):** the iOS host's debug and Benchmark builds log a `memory`

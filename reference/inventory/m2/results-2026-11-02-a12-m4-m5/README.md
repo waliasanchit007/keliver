@@ -14,12 +14,14 @@ on the Android host scaffolded by the **published 0.3.17 zip**, debug and benchm
   `keliver.updates=next-launch`, channel stable, and the harness's throwaway CA trusted from
   their own source sets (`ci/w7/android-test-ca.sh`), as the physical route does.
 - **Compile state:** each build was compiled with `cmd package compile -m speed -f` after
-  install, so background dexopt could not change the numbers between runs (it did in M3's runs,
-  `../results-2026-11-02-a12-m3-late`). The benchmark build reached `speed`; ART leaves a
-  debuggable app at `verify`, so the debug build ran interpreted and JIT-compiled (`run.env`).
+  install, so that a background compile during the runs would not move the numbers (one did in
+  M3's runs, `../results-2026-11-02-a12-m3-late`). The state is recorded after that compile
+  (`run.env`), not again after the runs. The benchmark build reached `speed`; ART leaves a
+  debuggable app at `verify`, so the debug build ran interpreted and JIT-compiled.
 - **Bundles:** the reference app's static site, sequence 9 (40 modules), over HTTPS through
   `adb reverse`; every launch loaded sequence 9 (checked).
-- **Script:** `android-m45.sh` (scratch, as run). Per build, 3 rounds of:
+- **Script:** `android-m45.sh` (as run from a scratch directory; its paths and the device's
+  serial replaced). Per build, 3 rounds of:
   - **frames:** a launch; after its `content` mark, `ci/drive.py frames` opens Espresso beans
     and taps Add 1 twice, each step observed in the view hierarchy (`logs/*.results.json`);
     then `ci/m0/frames.py --changed` on the launch's log;
@@ -27,35 +29,46 @@ on the Android host scaffolded by the **published 0.3.17 zip**, debug and benchm
     (`am broadcast -a dev.keliver.debug.MEMORY_CYCLE`, 25 s apart); then `ci/m0/memory.py`.
   Each launch streamed its own filtered logcat (`KeliverTiming`, `KeliverHost`), in `logs/`.
   Every launch checked first that the phone was awake, unlocked and not on a call.
-- All 12 rounds passed (`run.log`).
+- All 6 rounds (12 launches) passed (`run.log`).
 
 ## The frame profile (µs; median, range over the runs)
 
-Each run's log has the same four windows: the screen's first change list (sent from its start,
-not in a frame), the frame that opens Espresso beans (130 changes), and one frame per Add 1 tap
-(2 changes each).
+Each run's log has the same four windows, one frame each: the screen's first change list (sent
+from its start, not in a frame, so it has no `guest` or `lead`), the frame that opens Espresso
+beans (130 changes), and one frame per Add 1 tap (2 changes each). Medians of an even count are
+rounded half up.
 
 | | debug | benchmark |
 |---|---|---|
-| first change list, 127 changes: `sink` / `apply` | 14 301 / 44 944 | 855 / 7 408 |
+| first change list, 127 changes: `sink` / `apply` | 14 785 / 44 944 | 855 / 7 408 |
 | opening an item, 130 changes: `guest` | 164 702 (164 666–170 397) | 59 154 (56 879–61 638) |
 | — `lead` | 146 267 | 56 102 |
 | — `sink` / `apply` / `queue` | 14 301 / 37 084 / 272 | 650 / 2 675 / 148 |
-| one Add 1, 2 changes (6 frames): `guest` | 28 682 (27 319–32 523) | 24 275 (22 900–26 454) |
-| — `lead` | 24 515 | 22 483 |
-| — `sink` / `apply` / `queue` | 1 207 / 2 537 / 408 | 217 / 337 / 134 |
+| one Add 1, 2 changes (6 frames): `guest` | 28 682 (27 319–32 523) | 24 276 (22 900–26 454) |
+| — `lead` | 24 516 | 22 483 |
+| — `sink` / `apply` / `queue` | 1 207 / 2 537 / 408 | 218 / 338 / 134 |
 
-- **The guest's side dominates.** In the benchmark build, a frame that changes two values costs
-  about 24 ms of `guest`, 22 ms of it before the change list reaches the host (`lead`): the
-  guest's composition, applying it to the guest's tree and encoding, in QuickJS. The host's own
-  part (`sink` + `apply`) is under 1 ms. At 60 Hz a frame has 16.7 ms.
-- Which part of `lead` is composition and which is encoding cannot be told from the host: that
-  needs a span inside the guest's runtime, a library change (M4's second step).
-- The debug build's host side is 5–17 times slower (not minified, interpreted); its guest side
-  about 1.2 times on a 2-change frame and 2.8 times on the 130-change one (the host's work inside
-  `sendFrame` grows with the list); QuickJS itself is the same in both builds.
+- **Most of a frame is `lead`.** In the benchmark build, a frame that changes two values costs
+  about 24 ms of `guest`, 22.5 ms of it `lead`, and the host's `sink` and `apply` together
+  0.56 ms. `lead` holds the guest's composition, applying it to the guest's tree and encoding,
+  in QuickJS, and the host decoding the list (`DEVICE_HOST.md`); the profile cannot split them.
+  `guest` runs on Zipline's thread, not the main thread: it delays a change, it does not block
+  the UI.
+- **Inferred, not measured: on these frames most of `lead` is the guest's.** QuickJS and the
+  bundle are the same in both builds, so what differs between them inside `lead` is the host's
+  own Kotlin work (decoding, Zipline's host side). The debug build's host code is 6.7 to 15.5
+  times slower (`sink` + `apply`, below), yet its `lead` on a 2-change frame is only 2 ms
+  longer (1.09 times). If the host's work inside `lead` slows down as much as `sink` + `apply`
+  do, its part of the benchmark build's 22.5 ms is 0.14 to 0.36 ms. On the 130-change frame
+  debug's `lead` is 90 ms longer (2.6 times), which by the same ratios puts the host's part at
+  roughly 6 to 16 ms of the benchmark build's 56 ms.
+- **Debug against benchmark:** the host's `sink` + `apply` are 6.7 to 15.5 times slower in the
+  debug build (not minified, at `verify`); `guest` is 1.18 times on a 2-change frame and 2.78
+  times on the 130-change one, the difference being the host's work inside the call.
+- Telling composition from encoding needs a span inside the guest's runtime, a library change
+  (M4's second step).
 
-## The memory profile (KiB)
+## The memory profile (KiB; the lines say KB, which are KiB)
 
 | | debug | benchmark |
 |---|---|---|
@@ -71,12 +84,14 @@ not in a frame), the frame that opens Espresso beans (130 changes), and one fram
 - **No growth from one cycle to the next:** in all 6 runs `pss` was lower after the second
   cycle than after the first; QuickJS's heap grew by 5 KiB. That is one data point toward the
   leak bound `memory.py` does not set yet; the iPhone's numbers are not in yet.
-- QuickJS holds 5 203 KiB at `content` (4 585 KiB of it added at `code`, the guest's code;
-  `memory.py`'s deltas in `run.log`), as on the emulator, in both builds.
+- QuickJS holds 5 203 KiB at `content` in both builds, 4 585 KiB of it added at `code` (the
+  guest's code; `memory.py`'s deltas in `run.log`), the same +4 585 KiB the CI emulator shows.
 - The benchmark build's process is about 27 MiB smaller in `pss` than the debug build's.
 
 ## Not measured here
 
-- The iPhone (the same profiles on iOS; the Debug build only, over the LAN: see the PR).
+- The iPhone: its Debug build (a Release framework refuses `http://`, and trusting a test CA
+  would need a profile installed on the phone) is built and installed, but the phone does not
+  yet trust its developer certificate, which only the phone's owner can do.
 - A release build: it compiles none of this (`src/notiming/`).
 - A heavier screen than the reference app's list, and scrolling.

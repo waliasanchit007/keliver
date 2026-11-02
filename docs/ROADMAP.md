@@ -57,7 +57,8 @@ run alongside item 2.
      signing team);
    - **merged 2026-10-31:** M3 (#179: the code load starts as soon as the
      lookup answers; on a Galaxy A12 no gain for a screen opened at launch, and
-     816 → 267 ms cold for a screen opened 3 s later (2026-11-02); released in tools 0.3.16);
+     816 → 267 ms cold for a screen opened 3 s later, as one line on the 0.3.15 host
+     (2026-11-02); released in tools 0.3.16);
    - **merged 2026-10-31:** M4's host-side guest frame profile (#186, templates
      only; released in tools 0.3.17);
    - **merged 2026-11-01:** M5's iOS memory profile (#188, the iOS template; memory

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# Scratch, not in the repository. M4's guest frame profile and M5's memory profile on the
-# owner's Galaxy A12, from host-android scaffolded by the PUBLISHED tools 0.3.17 zip
+# As run from a scratch directory on 2026-11-02 (its paths and the device's serial replaced
+# below). M4's guest frame profile and M5's memory profile on a
+# Galaxy A12, from host-android scaffolded by the PUBLISHED tools 0.3.17 zip
 # (keliver-new-production-host.sh), in its debug and benchmark builds, against the reference
 # app's static site (sequence 9) over https://127.0.0.1:8443 through `adb reverse`; both
 # builds trust the throwaway CA from their own source sets (ci/w7/android-test-ca.sh).
@@ -24,10 +25,10 @@ P=<scratch>/phone-m45
 APP="$P/app"; H="$APP/host-android"; SITE="$P/site"
 CI=<checkout>/reference/inventory/ci   # origin/main at 1c6db68ef or later
 TLS=<scratch>/k4-a12/work3/w3/tls
-S=adb-RZ8R81E56LV-8FnBYv._adb-tls-connect._tcp
+S="<the phone's adb serial>"
 RUNS="${1:-3}"; EV="$P/ev-android"; mkdir -p "$EV"
 export JAVA_HOME="$(/usr/libexec/java_home -v 17)" GRADLE_USER_HOME=<scratch>/a12-live/gradle-home
-export ANDROID_HOME="$HOME/Library/Android/sdk" NODE_EXTRA_CA_CERTS="$HOME/.android-certs/full-ca-bundle.pem"
+export ANDROID_HOME="$HOME/Library/Android/sdk"   # (and this machine's CA bundle for Node)
 export PATH="$ANDROID_HOME/platform-tools:$PATH" JAVA_TOOL_OPTIONS="-Duser.home=$P/home"
 adb_(){ adb -s "$S" "$@"; }
 log(){ echo "$*" | tee -a "$EV/run.log"; }
