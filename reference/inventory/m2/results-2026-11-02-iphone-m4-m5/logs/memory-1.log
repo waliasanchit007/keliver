@@ -1,0 +1,31 @@
+KeliverTiming: memory 11244267383375 at=open cycle=0 footprint=6608 peak=6608 qjs=- objects=- knheap=-
+KeliverTiming: open 11244290131500
+KeliverHost: verifying manifests with portal-ed25519 351a52ba…; updates next-launch
+KeliverTiming: memory 11244340542000 at=ui cycle=0 footprint=57664 peak=57664 qjs=- objects=- knheap=-
+KeliverHost: loading http://<mac-wifi-ip>:8497/bundles/v9/manifest.zipline.json (index sequence 9, channel stable (host: stable), host version 1, manifest sha256 d624c9b041c7…); rollback floor 9
+KeliverTiming: memory 11244456654458 at=runtime cycle=0 footprint=62560 peak=62560 qjs=93/105 objects=288 knheap=-
+KeliverTiming: memory 11244564511375 at=code cycle=0 footprint=74768 peak=74800 qjs=4678/5649 objects=12920 knheap=-
+KeliverHost: codeLoadSuccess modules=40 sequence=9 source=network
+KeliverTiming: code 11244565890916
+KeliverTiming: first-frame 11244650468958
+KeliverTiming: content 11244650470708
+KeliverTiming: memory 11244650535875 at=content cycle=0 footprint=82672 peak=82672 qjs=5213/6280 objects=16367 knheap=-
+KeliverTiming: frames 11245641204250 n=1 empty=1 lists=1 changes=127 guest=7115/7115/7115 lead=- sink=669/669/669 apply=1923/1923/1923 queue=13/13/13
+KeliverTiming: memory-cycle 1: opening a screen
+KeliverTiming: memory 11250449460083 at=open cycle=1 footprint=76304 peak=84352 qjs=5232/6304 objects=16499 knheap=-
+KeliverTiming: open 11250478344833
+KeliverTiming: memory 11250508587833 at=ui cycle=1 footprint=117984 peak=117984 qjs=5341/6442 objects=17232 knheap=-
+KeliverTiming: first-frame 11250561842833
+KeliverTiming: content 11250561844375
+KeliverTiming: memory 11250561910208 at=content cycle=1 footprint=124704 peak=124736 qjs=5397/6507 objects=17629 knheap=-
+KeliverTiming: frames 11251595931875 n=2 empty=2 lists=1 changes=127 guest=7006/7336/7336 lead=- sink=217/217/217 apply=478/478/478 queue=18/18/18
+KeliverTiming: memory 11253754998916 at=closed cycle=1 footprint=105312 peak=124784 qjs=5144/6202 objects=15950 knheap=17920
+KeliverTiming: memory-cycle 2: opening a screen
+KeliverTiming: memory 11276013570333 at=open cycle=2 footprint=69168 peak=124784 qjs=5144/6202 objects=15950 knheap=-
+KeliverTiming: open 11276033574291
+KeliverTiming: memory 11276089974416 at=ui cycle=2 footprint=110816 peak=124784 qjs=5254/6342 objects=16683 knheap=-
+KeliverTiming: first-frame 11276123318666
+KeliverTiming: content 11276123320208
+KeliverTiming: memory 11276123369000 at=content cycle=2 footprint=116592 peak=124784 qjs=5300/6395 objects=17006 knheap=-
+KeliverTiming: frames 11277141146416 n=1 empty=1 lists=1 changes=127 guest=7157/7157/7157 lead=- sink=241/241/241 apply=541/541/541 queue=16/16/16
+KeliverTiming: memory 11279218429541 at=closed cycle=2 footprint=105744 peak=124784 qjs=5150/6220 objects=15995 knheap=18176

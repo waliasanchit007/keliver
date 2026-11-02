@@ -62,14 +62,15 @@ run alongside item 2.
    - **merged 2026-10-31:** M4's host-side guest frame profile (#186, templates
      only; released in tools 0.3.17);
    - **merged 2026-11-01:** M5's iOS memory profile (#188, the iOS template; memory
-     cycles for a second-open leak; simulator numbers in CI, an iPhone's not yet; released
-     in tools 0.3.17);
+     cycles for a second-open leak; simulator numbers in CI, an iPhone 13's (Debug) on 2026-11-02;
+     released in tools 0.3.17);
    - **merged 2026-11-01:** M5 on Android (#191, the Android template; the same points
      and memory cycles, `pss` and `graphics` at each cycle's close; emulator numbers in CI;
      released in tools 0.3.17);
    - **measured 2026-11-02 on a Galaxy A12:** M3's later-screen case, and M4's and
-     M5's profiles (`reference/inventory/m2/results-2026-11-02-a12-*`); the iPhone's
-     numbers are not in yet;
+     M5's profiles (`reference/inventory/m2/results-2026-11-02-a12-*`); on an iPhone 13
+     the same day (Debug), M5 (the first open adds 74–76 MiB, about two thirds of it at `ui`,
+     before QuickJS) and M4's launch frames only (`results-2026-11-02-iphone-m4-m5`);
    - **open:** M4's composition/encoding split (a library change).
      See ADOPTION_PLAN item 2.
 3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
@@ -491,7 +492,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
 9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
    host-side frame profile released (#186, tools 0.3.17; composition apart from encoding needs a
    library release); M5's memory profile released on both hosts (#188 iOS, #191 Android; tools 0.3.17); M3's later-screen case and both
-   profiles measured on a Galaxy A12 (2026-11-02); next, the iPhone's numbers and a leak bound.
+   profiles measured on a Galaxy A12, and M5 on an iPhone 13 (Debug, 2026-11-02); next, a leak bound in
+   `memory.py` and the iPhone's frame profile with taps (an Xcode account for the tap driver).
 10. **Device state catalogue and snapshot runner** (adoption item 5); bundle
     delivery (item 7); the device proxy (item 6's last row).
 11. **W7, the physical-device proof** (a real-certificate HTTPS server, a

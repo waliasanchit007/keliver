@@ -13,7 +13,8 @@ M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
 screen opened at launch, and, as one line on the 0.3.15 host, cut a screen opened 3 s later from 816 to 267 ms cold), M4's
 first step (the host-side frame profile) is released (#186, tools 0.3.17), M5's memory profile is released on both hosts (iOS #188, Android #191; tools 0.3.17); both profiles have
-numbers from a Galaxy A12, not yet from an iPhone. Item 3: K1 and K2 are released (tools 0.3.14),
+numbers from a Galaxy A12, and the memory profile from an iPhone 13 (a Debug build; its frame profile
+there: the launch's frames only). Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
@@ -33,7 +34,7 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
 ## Item 2. Startup and memory (measure first)
 
 **Status 2026-11-02:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
-below), its later-screen case measured on a Galaxy A12; M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's memory profile released on both hosts (#188 iOS, #191 Android; step 6; tools 0.3.17); both profiles measured on a Galaxy A12, not yet on an iPhone.
+below), its later-screen case measured on a Galaxy A12; M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's memory profile released on both hosts (#188 iOS, #191 Android; step 6; tools 0.3.17); both profiles measured on a Galaxy A12, and M5 on an iPhone 13 (Debug, 2026-11-02).
 
 **Evidence.**
 - On Android (debug builds), native content took 1.5 s on a cold open against 1.1 s for the
@@ -99,7 +100,9 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    the host decoding the list), and the host's `sink` and `apply` together 0.56 ms; the frame
    that opens an item (130 changes) 59 ms. Comparing the debug build suggests (an inference)
    that most of `lead` is the guest's: under 1 ms of it is the host's on a 2-change frame,
-   roughly 6 to 16 ms of 56 on the 130-change one. Not measured on an iPhone.
+   roughly 6 to 16 ms of 56 on the 130-change one. On an iPhone 13 (2026-11-02,
+   `results-2026-11-02-iphone-m4-m5`), only the launch's frames: the XCTest tap driver needs an
+   App ID that only an Apple account signed in to Xcode can register.
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
    **2026-11-01, merged (#188; released in tools 0.3.17):** the iOS host's debug and Benchmark builds log a `memory`
@@ -123,8 +126,16 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    **2026-11-02, on a Galaxy A12** (`reference/inventory/m2/results-2026-11-02-a12-m4-m5`):
    `pss` at the first cycle's close 51 029 KiB in the benchmark build (debug 78 681), and lower
    after the second cycle in all 6 runs (−197 to −540 KiB); QuickJS +5 KiB from one cycle to
-   the next. Not done: an iPhone, where the 76 MB was seen (the simulator has no memory limit
-   and other graphics memory), and a leak bound in `memory.py`.
+   the next.
+   **2026-11-02, on an iPhone 13** (Debug, over the Mac's Wi-Fi;
+   `reference/inventory/m2/results-2026-11-02-iphone-m4-m5`): the first open adds 75 456–77 360
+   KiB of footprint over 6 launches (`open` → `content`; about the size of the retro's 76 MB, which was
+   another app), and about two thirds of it (67–70 % per run) comes at `ui`, before QuickJS
+   starts: mostly the host's Compose UI and first view, though the steps overlap the bundle
+   lookup. `code` (the loader and the guest's code) adds about 12 MiB, 4 585 KiB of it QuickJS's
+   heap. From one cycle's close to the next the footprint grew in every run, +384 to +464 KiB
+   (QuickJS +6 to +7, Kotlin heap +0 to +256), which two cycles cannot attribute. Not done: a
+   leak bound in `memory.py` (it needs more cycles), a Benchmark build on the phone.
 
 Decide on optimisations only after M2–M5.
 
