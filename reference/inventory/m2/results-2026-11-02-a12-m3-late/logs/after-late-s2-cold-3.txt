@@ -1,0 +1,10 @@
+--------- beginning of main
+I/KeliverTiming( 9941): process 59036080000000
+D/KeliverHost( 9941): verifying manifests with portal-ed25519 351a52ba…; updates next-launch
+D/KeliverHost( 9941): screen created (the host is the Application's, not this activity's)
+D/KeliverHost( 9941): loading https://127.0.0.1:8443/bundles/v9/manifest.zipline.json (index sequence 9, channel stable (host: stable), host version 1, manifest sha256 d624c9b041c7…); rollback floor 9
+D/KeliverHost( 9941): codeLoadSuccess modules=40 sequence=9 source=network
+I/KeliverTiming( 9941): code 59036812269200
+I/KeliverTiming( 9941): open 59039375677585
+I/KeliverTiming( 9941): first-frame 59039608597354
+I/KeliverTiming( 9941): content 59039675162354

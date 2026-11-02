@@ -8,15 +8,16 @@ PR #105 (library 0.3.4). Sections below use the ROADMAP's item numbers.
 The rule for all of it: **what an adopter had to discover by review becomes the default.** Every
 serious defect in the proof was in host glue that each adopter writes for themselves.
 
-**Status (2026-10-31).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
+**Status (2026-11-02).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
-screen opened at launch, and the later-screen case is not measured yet), M4's
-first step (the host-side frame profile) is released (#186, tools 0.3.17), M5's memory profile is released on both hosts (iOS #188, Android #191; tools 0.3.17). Item 3: K1 and K2 are released (tools 0.3.14),
+screen opened at launch, and cut a screen opened 3 s later from 816 to 267 ms cold), M4's
+first step (the host-side frame profile) is released (#186, tools 0.3.17), M5's memory profile is released on both hosts (iOS #188, Android #191; tools 0.3.17); both profiles have
+numbers from a Galaxy A12, not yet from an iPhone. Item 3: K1 and K2 are released (tools 0.3.14),
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
-B3–B5 are open. Items 5 and 7 are not
+B3 is merged (#201–#203, not published), B4a is merged (#205), B5 is open. Items 5 and 7 are not
 started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
 (#111) are done, and so is a debug host that picks up a publish while it is
 open (Android #145, released in tools 0.3.13 and checked on a physical phone;
@@ -31,8 +32,8 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
 
 ## Item 2. Startup and memory (measure first)
 
-**Status 2026-11-01:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
-below); M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's memory profile released on both hosts (#188 iOS, #191 Android; step 6; tools 0.3.17).
+**Status 2026-11-02:** M0, M1, M2 (Android) done; M2 (iOS) deferred; M3 released (#179, tools 0.3.16, step 4
+below), its later-screen case measured on a Galaxy A12; M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's memory profile released on both hosts (#188 iOS, #191 Android; step 6; tools 0.3.17); both profiles measured on a Galaxy A12, not yet on an iPhone.
 
 **Evidence.**
 - On Android (debug builds), native content took 1.5 s on a cold open against 1.1 s for the
@@ -74,8 +75,12 @@ below); M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's
    **2026-10-31:** both templates start the load as soon as the lookup answers. On a Galaxy A12
    with the bundles over wireless `adb reverse`, an app that opens its Keliver screen at launch
    gained nothing: in all 40 first and cold launches, the lookup answered after the screen opened
-   (`reference/inventory/m2/results-2026-10-31-a12-m3`). The case it is for, a first screen
-   opened after the lookup, is not measured yet.
+   (`reference/inventory/m2/results-2026-10-31-a12-m3`).
+   **2026-11-02:** the case it is for, on the same phone: the first Keliver screen asked for 3 s
+   after launch. `open` → `content` went from 2352 to 265 ms on a first launch and from 816 to
+   267 ms cold; warm was unchanged (142 and 132 ms). Medians of 10, with the app compiled to
+   `speed` after each install: background dexopt had moved the warm numbers in a first pass
+   (`reference/inventory/m2/results-2026-11-02-a12-m3-late`). Not measured on iOS.
 5. M4: **a guest frame profile**: time per frame in composition, protocol encoding and host
    apply. The host side comes from M0's change-list hook. `callStart` and `callEnd` time a whole
    guest call, so splitting composition from encoding needs spans inside the guest's runtime,
@@ -87,6 +92,11 @@ below); M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's
    profile"); checked by the scaffolders' self-tests, JVM tests of the window and T3 in the
    reference app's CI. Not done: composition apart from encoding. It needs a timestamp in
    `StandardAppLifecycle.sendFrame` (keliver-treehouse-guest), so a library release (0.4.2).
+   **2026-11-02, on a Galaxy A12** (the published 0.3.17 host, compiled to `speed`;
+   `reference/inventory/m2/results-2026-11-02-a12-m4-m5`): in the benchmark build a frame that
+   changes two values costs about 24 ms of `guest`, 22 ms of it before the change list reaches
+   the host (`lead`), and the host's `sink` and `apply` together under 1 ms; the frame that
+   opens an item (130 changes) 59 ms. So the guest's side dominates. Not measured on an iPhone.
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
    **2026-11-01, merged (#188; released in tools 0.3.17):** the iOS host's debug and Benchmark builds log a `memory`
@@ -106,9 +116,12 @@ below); M4's host-side frame profile released (#186, step 5; tools 0.3.17); M5's
    (112.8), QuickJS 4.6 MiB once the code is loaded, pss 110.3 MiB (39.2) at the first
    cycle's close, and from one cycle's close to the next −204 KiB (+141) pss, +5 KiB (+5)
    QuickJS and +0 KiB (+22) Java heap. Android's `pss` and iOS's footprint count different
-   things, so the two hosts' numbers do not compare. Not done: the numbers on a phone, where
-   the 76 MB was seen (the simulator has no memory limit and other graphics memory, and the
-   emulator's graphics are the host machine's).
+   things, so the two hosts' numbers do not compare.
+   **2026-11-02, on a Galaxy A12** (`reference/inventory/m2/results-2026-11-02-a12-m4-m5`):
+   `pss` at the first cycle's close 51 029 KiB in the benchmark build (debug 78 681), and lower
+   after the second cycle in all 6 runs (−197 to −540 KiB); QuickJS +5 KiB from one cycle to
+   the next. Not done: an iPhone, where the 76 MB was seen (the simulator has no memory limit
+   and other graphics memory), and a leak bound in `memory.py`.
 
 Decide on optimisations only after M2–M5.
 

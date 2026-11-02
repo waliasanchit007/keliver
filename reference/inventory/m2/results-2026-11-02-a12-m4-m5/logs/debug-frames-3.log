@@ -1,0 +1,19 @@
+--------- beginning of main
+11-02 15:41:32.602 12822 12822 I KeliverTiming: process 59361402000000
+11-02 15:41:32.619 12822 12822 D KeliverHost: verifying manifests with portal-ed25519 351a52ba…; updates next-launch
+11-02 15:41:32.735 12822 12822 D KeliverHost: screen created (the host is the Application's, not this activity's)
+11-02 15:41:32.992 12822 12822 I KeliverTiming: open 59362148440681
+11-02 15:41:32.996 12822 12822 I KeliverTiming: memory 59362149012066 at=open cycle=0 rss=99760 java=4323 native=9603 qjs=- objects=- pss=- graphics=-
+11-02 15:41:33.244 12822 12822 D KeliverHost: loading https://127.0.0.1:8443/bundles/v9/manifest.zipline.json (index sequence 9, channel stable (host: stable), host version 1, manifest sha256 d624c9b041c7…); rollback floor 9
+11-02 15:41:33.398 12822 12822 I KeliverTiming: memory 59362551669989 at=ui cycle=0 rss=115828 java=5159 native=12821 qjs=- objects=- pss=- graphics=-
+11-02 15:41:34.203 12822 12856 I KeliverTiming: memory 59363356951605 at=runtime cycle=0 rss=122364 java=7543 native=13661 qjs=93/114 objects=288 pss=- graphics=-
+11-02 15:41:34.941 12822 12856 D KeliverHost: codeLoadSuccess modules=40 sequence=9 source=network
+11-02 15:41:34.942 12822 12856 I KeliverTiming: code 59364098025681
+11-02 15:41:34.962 12822 12856 I KeliverTiming: memory 59364099203297 at=code cycle=0 rss=134020 java=11277 native=18797 qjs=4678/6144 objects=12920 pss=- graphics=-
+11-02 15:41:36.306 12822 12838 I KeliverTiming: frames 59365462258605 n=0 empty=0 lists=1 changes=127 guest=- lead=- sink=14898/14898/14898 apply=44944/44944/44944 queue=1034/1034/1034
+11-02 15:41:36.637 12822 12822 I KeliverTiming: first-frame 59365793582374
+11-02 15:41:36.653 12822 12822 I KeliverTiming: content 59365808994682
+11-02 15:41:36.678 12822 12856 I KeliverTiming: memory 59365812082374 at=content cycle=0 rss=150044 java=13149 native=20005 qjs=5203/6819 objects=16305 pss=- graphics=-
+11-02 15:41:41.532 12822 12838 I KeliverTiming: frames 59370688747143 n=1 empty=0 lists=1 changes=130 guest=164666/164666/164666 lead=145623/145623/145623 sink=14763/14763/14763 apply=38465/38465/38465 queue=455/455/455
+11-02 15:41:44.647 12822 12838 I KeliverTiming: frames 59373802871144 n=1 empty=0 lists=1 changes=2 guest=31783/31783/31783 lead=26322/26322/26322 sink=1678/1678/1678 apply=3680/3680/3680 queue=483/483/483
+11-02 15:41:47.741 12822 12838 I KeliverTiming: frames 59376897804682 n=1 empty=0 lists=1 changes=2 guest=27594/27594/27594 lead=23063/23063/23063 sink=1171/1171/1171 apply=2461/2461/2461 queue=481/481/481

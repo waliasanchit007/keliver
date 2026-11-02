@@ -1,0 +1,52 @@
+--- reference/inventory/m2/android.sh	2026-11-01 05:48:33
++++ android-a12.sh	2026-11-02 15:23:19
+@@ -47,7 +47,7 @@
+ [ $# -ge 5 ] || { echo "$usage" >&2; exit 2; }
+ for d in "$1" "$2" "$3"; do [ -d "$d" ] || { echo "not a directory: $d" >&2; echo "$usage" >&2; exit 2; }; done
+ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+-CI="$HERE/../ci"
++CI="<checkout>/reference/inventory/ci"
+ APP="$(cd "$1" && pwd -P)"; SITE="$(cd "$2" && pwd -P)"; TLS="$(cd "$3" && pwd -P)"; SERIAL="$4"
+ mkdir -p "$5" || exit 2; EV="$(cd "$5" && pwd -P)"; RUNS="${6:-5}"
+ H="$APP/host-android"
+@@ -126,12 +126,17 @@
+ REVERSED=1
+ adb_ install -r "$APK" > "$EV/install.log" 2>&1 || { echo "install failed: $(cat "$EV/install.log")" >&2; exit 1; }
+ adb_ shell pm path "$ID" | grep -q "^package:" || { echo "$ID is not installed after the install" >&2; exit 1; }
++# Scratch (2026-11-02): fix the compile state when M3_COMPILE is set (e.g. speed), so background
++# dexopt during the runs cannot make one variant faster than the other.
++if [ -n "${M3_COMPILE:-}" ]; then
++  adb_ shell cmd package compile -m "$M3_COMPILE" -f "$ID" > "$EV/compile.log" 2>&1 || { echo "compile -m $M3_COMPILE failed: $(cat "$EV/compile.log")" >&2; exit 1; }
++fi
+ 
+ dexopt(){ adb_ shell dumpsys package "$ID" | tr -d '\r' | sed -n '/Dexopt state:/,/^$/p' | grep -E "\[status=|arm64" | head -3 | tr -s ' ' | paste -sd' ' -; }
+ {
+   echo "apk $(shasum -a 256 "$APK" | cut -d' ' -f1) $(wc -c < "$APK" | tr -d ' ') bytes, $ID/$CMP, site sequence $SEQ"
+   echo "device $(adb_ shell getprop ro.product.model | tr -d '\r') Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') build $(adb_ shell getprop ro.build.fingerprint | tr -d '\r')"
+-  echo "dexopt after install: $(dexopt)"
++  echo "dexopt after install${M3_COMPILE:+ and compile -m $M3_COMPILE}: $(dexopt)"
+   echo "thermal: $(adb_ shell dumpsys thermalservice | tr -d '\r' | grep -m1 'Thermal Status')"
+ } | tee "$EV/m2-android.env"
+ 
+@@ -177,9 +182,8 @@
+   tail -n +"$((n0 + 1))" "$EV/server.log" > "$EV/$s-$r.server.txt"
+   # Each mark exactly once (none of process/code on a warm open), in the
+   # orders that are guaranteed (as M0's rows). open and code are not ordered
+-  # against each other: the load waits for the lookup (and, in hosts before
+-  # M3, for the screen too), and which of the screen or the lookup comes first
+-  # varies.
++  # against each other: the load waits for the screen AND the lookup, and
++  # which of the screen or the lookup comes first varies.
+   if [ "$s" = warm ]; then expect="open first-frame content"; else expect="$MARKS"; fi
+   for m in $MARKS; do
+     case " $expect " in
+@@ -193,8 +197,7 @@
+     [ "$(at "$L" "${pr#*:}")" -ge "$(at "$L" "${pr%%:*}")" ] || { err "$s $r: '${pr#*:}' is before '${pr%%:*}'"; return 1; }
+   done
+   want=COLD; [ "$s" = warm ] && want=WARM
+-  # Android 12 reports a warm open as UNKNOWN (0) (results-2026-10-31-a12-m3): accepted for a
+-  # warm open only, whose marks above already show it was one (no process, no code).
++  # Scratch copy for an Android 12 phone: its `am start -W` says UNKNOWN for a warm open (the marks above already prove it was one).
+   [ "$s" = warm ] && [ "$(amv "$A" LaunchState)" = UNKNOWN ] && want=UNKNOWN
+   [ "$(amv "$A" LaunchState)" = "$want" ] || { err "$s $r: am start says LaunchState $(amv "$A" LaunchState), not $want"; return 1; }
+   if [ "$s" != warm ]; then

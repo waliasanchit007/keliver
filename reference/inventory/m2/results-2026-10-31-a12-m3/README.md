@@ -27,7 +27,7 @@ That case is not measured here (see the end).
   thermal status 0. Build fingerprint in `*.env`.
 - **App:** the reference app from the K4 run 3 work directory. Its
   `host-android` was scaffolded by the **published tools 0.3.15** (libraries
-  0.4.1). It was built as the benchmark build type (release settings, minified,
+  0.3.3, the reference app's pin; corrected 2026-11-02, this said 0.4.1). It was built as the benchmark build type (release settings, minified,
   profileable, not debuggable), with `keliver.updates=next-launch` and channel
   stable.
 - **Before / after:** two copies of that `host-android`. "after" adds only the
