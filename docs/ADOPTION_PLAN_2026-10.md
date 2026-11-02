@@ -136,8 +136,9 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    starts: mostly the host's Compose UI and first view, though the steps overlap the bundle
    lookup. `code` (the loader and the guest's code) adds about 12 MiB, 4 585 KiB of it QuickJS's
    heap. From one cycle's close to the next the footprint grew in every run, +384 to +464 KiB
-   (QuickJS +6 to +7, Kotlin heap +0 to +256), which two cycles cannot attribute. Not done: a
-   Benchmark build on the phone.
+   (QuickJS +6 to +7, Kotlin heap +0 to +256), which two cycles cannot attribute. Not done:
+   more cycles on the iPhone (the eight-cycle run below is the A12's; the iPhone's stopped when
+   its developer trust lapsed), a Benchmark build on the phone.
    **2026-11-02, the leak bound (#214):** eight cycles in one launch on a Galaxy A12
    (`reference/inventory/m2/results-2026-11-02-a12-memory-cycles`): `pss` settles after four,
    QuickJS grows a steady 4–5 KiB a cycle. CI's T4 now fails when QuickJS's heap grew by more
