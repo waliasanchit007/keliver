@@ -1,0 +1,8 @@
+== 2026-11-02T11:00:10Z dev.keliver.local.phonerun on <the phone>, app InventoryHost.app, 3 runs
+frames-1: no tap driver (launch frames only): 1 lines: frames=1 (empty 1) lists=1 changes=127; guest<=6936us lead=- sink<=658us apply<=2568us queue<=14us
+memory-1: 13 lines; KB: open 6608 KB; ui +51056; runtime +4896 (qjs 93); code +12208 (qjs +4585); content +7904 (qjs +535); closed #1 105312 KB (qjs 5144, knheap 17920), #2 105744 KB (qjs 5150, knheap 18176); from cycle 1 to 2: footprint +432 KB, qjs +6 KB, knheap +256 KB
+frames-2: no tap driver (launch frames only): 1 lines: frames=1 (empty 1) lists=1 changes=127; guest<=7327us lead=- sink<=426us apply<=1314us queue<=13us
+memory-2: 13 lines; KB: open 6624 KB; ui +52656; runtime +3360 (qjs 93); code +11728 (qjs +4585); content +7712 (qjs +534); closed #1 104688 KB (qjs 5143, knheap 17280), #2 105152 KB (qjs 5150, knheap 17280); from cycle 1 to 2: footprint +464 KB, qjs +7 KB, knheap +0 KB
+frames-3: no tap driver (launch frames only): 1 lines: frames=1 (empty 1) lists=1 changes=127; guest<=7121us lead=- sink<=638us apply<=1519us queue<=12us
+memory-3: 13 lines; KB: open 6672 KB; ui +52448; runtime +3792 (qjs 93); code +11792 (qjs +4585); content +8656 (qjs +535); closed #1 105312 KB (qjs 5144, knheap 17024), #2 105696 KB (qjs 5150, knheap 17280); from cycle 1 to 2: footprint +384 KB, qjs +6 KB, knheap +256 KB
+== done 2026-11-02T11:04:05Z

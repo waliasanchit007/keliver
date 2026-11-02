@@ -1,0 +1,13 @@
+KeliverTiming: memory 11385382084833 at=open cycle=0 footprint=6544 peak=6544 qjs=- objects=- knheap=-
+KeliverTiming: open 11385405981166
+KeliverHost: verifying manifests with portal-ed25519 351a52ba…; updates next-launch
+KeliverHost: loading http://<mac-wifi-ip>:8497/bundles/v9/manifest.zipline.json (index sequence 9, channel stable (host: stable), host version 1, manifest sha256 d624c9b041c7…); rollback floor 9
+KeliverTiming: memory 11385462010875 at=ui cycle=0 footprint=58320 peak=58320 qjs=- objects=- knheap=-
+KeliverTiming: memory 11385486345333 at=runtime cycle=0 footprint=62560 peak=62560 qjs=93/105 objects=288 knheap=-
+KeliverHost: codeLoadSuccess modules=40 sequence=9 source=network
+KeliverTiming: memory 11385594690500 at=code cycle=0 footprint=74336 peak=74368 qjs=4678/5649 objects=12920 knheap=-
+KeliverTiming: code 11385596059375
+KeliverTiming: first-frame 11385670075541
+KeliverTiming: content 11385685684708
+KeliverTiming: memory 11385685735166 at=content cycle=0 footprint=83776 peak=83776 qjs=5220/6289 objects=16418 knheap=-
+KeliverTiming: frames 11386705893250 n=1 empty=1 lists=1 changes=127 guest=7121/7121/7121 lead=- sink=638/638/638 apply=1519/1519/1519 queue=12/12/12
