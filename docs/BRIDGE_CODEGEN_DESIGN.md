@@ -137,9 +137,9 @@ bundle carries the iOS types too, unused; Kotlin/JS's dead-code elimination drop
      nothing checks either in B3;
    - `bind(zipline, impl: ShopActions, context = Dispatchers.Default, log = {})` (host
      side) binds, under `NAME`, a `ShopActionsService` that runs each call through the guard in
-     §5. It is called from Kotlin (its `Zipline` and `CoroutineContext` are no use to Swift):
-     on iOS, B5's hook in the Kotlin `Keliver` object calls it, and Swift supplies only the
-     callbacks;
+     §5. (B3 planned that on iOS a hook in the Kotlin `Keliver` object would call it, with Swift
+     supplying only the callbacks; the host cannot name an app's generated types, so in B5 Swift
+     calls the callbacks form below itself, inside a closure the host runs, B5 §1);
    - `bind(zipline, callbacks: ShopActionsCallbacks, context, log)` is the same for the iOS
      callbacks, through `ShopActionsCallbackAdapter` (item 5);
    - `take(zipline): ShopActions` (guest side) returns a `ShopActions` that forwards to the
@@ -452,10 +452,12 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
   The closure runs on Zipline's loader thread, not the main thread: the first Swift closure the
   host calls off it (B3 §4 said Kotlin would call `bind`; the host cannot name the app's
   generated types, so Swift does, and only that). So it must only call `bind` with objects made
-  before, and the callbacks themselves are called on `scope.main`. Under Swift 6's language mode
-  a closure formed in a main-actor context is main-actor isolated and traps off the main thread,
-  so it must be marked `@Sendable` there; the template builds in Swift 5 mode. B5a's iOS
-  self-test compiles this snippet with `xcodebuild`, in the template's mode.
+  before, and the callbacks themselves are called on `scope.main`. The template builds in Swift 5
+  mode, where this compiles as written; B5a's iOS self-test compiles it with `xcodebuild` against
+  a stand-in bridge. Under Swift 6's language mode a closure formed in a main-actor context is
+  main-actor isolated and traps off the main thread, so it must be `@Sendable`, and then what it
+  captures must be Sendable too (for example a `@MainActor` class, whose protocol methods need
+  `nonisolated` or a `@preconcurrency` conformance). Swift 6 mode is not covered here.
 - **What the host does with the list:**
   - **The check**, in `BundleIndex.kt` (the same file in both hosts, so the relay's
     `BridgeGateTest` tests it): a name `parseBridges` would not accept, a version outside
@@ -472,15 +474,24 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
     `requestPolicy` is.
   - **Binding, and what was bound.** In `bindServices`, the app's bindings run first, each on
     its own, and then the host's services. Zipline's `bind` replaces a service of the same name
-    without a word, so the host's services come last and an app's binding can never stand in
-    for them. Every `bind` fires the code load's `EventListener.bindService(zipline, name,
-    service)`, which both hosts already implement (`LoggingEventListener`). The host records the
-    names each binding bound: exactly its declared name, or the load fails with
-    `bridge bind failed: ShopActions bound [] (it must bind ShopActions)`.
+    without a word (`Endpoint.bind` is a map put), so the host's services come last and an app's
+    binding can never stand in for them. Inside every `bind`, before it stores the service,
+    Zipline calls the code load's listener, which Treehouse passes on to the host's
+    `EventListener.bindService(name, service)` (the hosts' `LoggingEventListener` gains that
+    override). `bindServices` cannot reach that listener instance, so the host owns a recorder
+    (one per host: two Android hosts load on their own threads): it is switched on only around
+    each binding's own `bind` call, on the thread running `bindServices`, and cleared in a
+    `finally`, and the listener adds each name to it. A binding must bind exactly its declared
+    name, once, or the load fails with `bridge bind failed: ShopActions bound [] (it must bind
+    ShopActions, once)`. A binding that binds later, from a coroutine it launched, records
+    nothing and fails that way: binding is synchronous.
   - **A binding that throws** (anything but cancellation, an `Error` included) fails the load
     as `bridge bind failed: ShopActions: <the throwable's class>`, its message in the debug log
-    only. Both are reported under a new reason, `bridge-bind`, which the relay's `/report`
-    accepts. `bindServices` runs for every load, so the fall-back to the last good bundle fails
+    only. Both are reported under a new reason, `bridge-bind`, matched in `reportReason` with
+    the other bridge reasons, before `signature` and `network` (a class named `ConnectException`
+    or a bridge named `Verify…` must not read as those), and listed in `DEVICE_HOST.md`. The
+    relay's `/report` accepts it; a relay older than the hosts rejects that report, which is
+    then dropped, as reports are best effort. `bindServices` runs for every load, so the fall-back to the last good bundle fails
     the same way: the screen shows "Bundle did not load" until a fixed app is installed. That is
     the right end for a programming error, and the report says which.
 
@@ -500,8 +511,11 @@ not yet carried a call from a guest to a host. Zipline's JVM runtime loads JS mo
   one line, not the host's stack trace), a timeout (the fixture gains a function with a short
   limit; today's are 30 s or none), the guest cancelling a call (`onCancel` runs), and
   fire-and-forget.
-- The iOS simulator runs the same test if Kotlin/Native's Zipline loads JS the same way (not
-  yet checked); otherwise the iOS side is first carried end to end on the simulator in step 4.
+- The test loads the guest through `ZiplineLoader` with a local manifest, binding before the
+  modules load, as the hosts do; the iOS production host already loads plugin-built modules
+  that way on Kotlin/Native, so the same test runs on the iOS simulator
+  (`iosSimulatorArm64Test`), where only the test's plumbing (where the modules are read from)
+  is new.
 
 ### 3. The builds see the app's contract
 
@@ -528,10 +542,13 @@ guest was built with. And the editor compiles the app's `logic/` for wasm
 - **Presenters see the app's interface, and the editor compiles it from source.** A presenter
   takes `ShopActions` (the annotated interface), not anything generated. The device target gets
   one from `ShopActionsBridge.take(zipline)` at the edge, as other services are adapted there;
-  the editor compiles the contract's own sources (the interface and its `@Serializable` types,
-  without the generated code) into its wasm build, and its preview passes a fake. That needs
-  `keliver-bridge-annotations` to gain a `wasmJs` target (it holds two `SOURCE`-retention
-  annotations), and an interface file that uses nothing else from `keliver-bridge`.
+  the editor compiles the contract's hand-written source directory (the interface and its
+  `@Serializable` types, without the generated code) into its wasm build, and its preview passes
+  a fake. That needs `keliver-bridge-annotations` to gain a `wasmJs` target (it holds two
+  `SOURCE`-retention annotations), the editor scaffolder to add that dependency, and a contract
+  source directory that uses only the annotations and kotlinx-serialization (which the editor
+  already has, through `portal-editor`): a custom serializer or a field type from another
+  library needs that library on wasm too.
 - **The templates stay generic:** both hosts read one Gradle property,
   `keliver.bridgeContract=<group>:<name>` with `keliver.bridgeContractBuild=<dir>`; with them
   set, `settings.gradle` includes that build and `build.gradle` adds the dependency (and, on
@@ -546,8 +563,9 @@ guest was built with. And the editor compiles the app's `logic/` for wasm
 
 The device scenarios B4 lists need only a bundle that declares a bridge, not one that calls it:
 `keliver.bridges` is metadata in the guest's build. The reference app's pull-request runs use
-this checkout's scaffolders (its README), so these run on the CI emulator and simulator as soon
-as the hook is merged, with the published libraries:
+this checkout's scaffolders (its README), so these run on the CI emulator and simulator with the
+published libraries: the first two now (they need only B4a, merged), the third once the hook is
+merged:
 
 - a host serving no bridge, and an entry needing one: skipped at lookup (the host starts the
   newest entry without it), as S16 does for a capability;
@@ -580,9 +598,13 @@ its editor still builds and previews the screen with a fake.
    template's framework with a stand-in bridge.
 2. **B5b** (`keliver-bridge-fixture`; this repository's CI; nothing published needed): §2.
 3. **B5c** (`keliver-bridge-annotations` gains `wasmJs`; the templates' contract properties, the
-   scaffolder flags): §3. It can be built and tested in this repository against the checkout's
-   modules, but it reaches adopters only with the libraries release, so the tools release that
-   ships it follows that one.
-4. **B5d** (the reference app): §4 once B5a is merged (pull-request runs, this checkout's
-   scaffolders, published libraries); §5 after the libraries release and the tools release with
-   B5c.
+   scaffolder flags): §3. It reaches adopters only with the libraries release, so the tools
+   release that ships it follows that one. Until then its self-tests resolve the three modules
+   from this checkout, published to a disposable local Maven repository for the run
+   (`publishToMavenLocal` with `-Dmaven.repo.local`); both host self-tests, which refuse any
+   `includeBuild` today, then allow exactly the contract's. Its iOS self-test compiles a Swift
+   conformance to a real generated `<Name>Callbacks` (boxed primitives, `BridgeCall`) with
+   `xcodebuild`.
+4. **B5d** (the reference app): §4's first two scenarios now and the third once B5a is merged
+   (pull-request runs, this checkout's scaffolders, published libraries); §5 after the
+   libraries release and the tools release with B5c.
