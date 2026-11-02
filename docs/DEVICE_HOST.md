@@ -561,13 +561,14 @@ Sizes are in KiB (the lines say KB); `-` is "not read here".
   screen's whole share of QuickJS's heap in the reference app is about 150 KiB (a cycle's
   `open` to `content`, and what its close frees from the second cycle on, on a Galaxy A12 and
   an iPhone 13; the first cycle's close frees more, about 250 KiB, since it is the first
-  collection since launch), so a screen the guest keeps whole shows; every device measured
-  grew 4 to 9 KiB a cycle, and steadily so over eight cycles on a Galaxy A12
-  (`reference/inventory/m2/results-2026-11-02-a12-memory-cycles`). It bounds the guest's heap
-  only: a screen the host keeps (its views, the Java or Kotlin heap) is not caught, nor a
-  guest leak of under 32 KiB a cycle. There is no bound on `pss` or the iOS footprint: over
-  those eight cycles `pss` fell for four and then held, and the simulator's footprint grew
-  about 1 MiB a cycle, so either would follow the platform's caches rather than a leak.
+  forced collection since launch), so a screen the guest keeps whole shows; every device
+  measured grew 4 to 9 KiB a cycle (+9 once, in reference-app run 41430386432), and steadily
+  so over eight cycles on a Galaxy A12 (`reference/inventory/m2/results-2026-11-02-a12-memory-
+  cycles`). It bounds the guest's heap only: a screen the host keeps (its views, the Java or
+  Kotlin heap) is not caught, nor, over T4's two cycles, a guest leak of under about 27 KiB a
+  cycle above that steady growth. There is no bound on `pss` or the iOS footprint: over those
+  eight cycles `pss` fell for four and then held, and the simulator's footprint grew about 1
+  MiB a cycle, so either would follow the platform's caches rather than a leak.
 - **Reading it:** `open` to `ui` is mostly the Compose runtime and its first draw;
   `runtime` to `code` adds the loader and the guest's code (`qjs` at `runtime` is the engine
   before any code; `code` minus it is the guest's code and start-up); `code` to `content` is

@@ -37,13 +37,14 @@ caches settling. This launch ran eight, for the leak bound `ci/m0/memory.py` tak
   showed on the iPhone (`../results-2026-11-02-iphone-m4-m5`) may be the same settling; this
   run cannot say for iOS.
 - **QuickJS grows steadily: 4–5 KiB a cycle** (+33 KiB from cycle 1 to 8: +5, +4, +5, +5, +5,
-  +5, +4), as on the CI emulator (+5, once +9), the simulator (+6 to +8) and the iPhone (+6,
-  +7). It is small, but it does not settle in eight cycles: something of each screen stays in
-  the guest's heap. A whole screen left in the guest would be far more: a screen's share of
-  QuickJS's heap is about 150 KiB (a cycle's `open` → `content` adds 148–165 KiB here and
-  145–166 on the iPhone, computed from #212's logs; from the second cycle on, a close frees
-  144–158 here and 150 on the iPhone). The first cycle's close frees more (228 KiB here, 234–254
-  on the iPhone) because it is the first collection since launch.
+  +5, +4), as on the CI emulator (+5; once +9, reference-app run 41430386432, T4 benchmark), the
+  simulator (+6 to +8) and the iPhone (+6, +7). It is small, but it does not settle in eight
+  cycles: something of each screen stays in the guest's heap. A whole screen left in the guest
+  would be far more: a screen's share of QuickJS's heap is about 150 KiB (a cycle's `open` →
+  `content` adds 148–165 KiB here and 145–166 on the iPhone, computed from #212's logs; from the
+  second cycle on, a close frees 144–158 here and 150 on the iPhone). The first cycle's close
+  frees more (228 KiB here, 234–254 on the iPhone) because it is the first forced collection
+  since launch.
 - **graphics** grows 1–2 KiB a cycle.
 
 ## For the leak bound
@@ -51,6 +52,7 @@ caches settling. This launch ran eight, for the leak bound `ci/m0/memory.py` tak
 A bound on QuickJS's growth from cycle 1's close to cycle 2's of **32 KiB** is more than three
 times the largest growth seen on any device (+9, the CI emulator once) and about a fifth of a
 screen's share of the guest's heap (about 150 KiB). It catches a screen the guest keeps whole,
-not one the host keeps, nor a guest leak of under 32 KiB a cycle. A bound on `pss` or the iOS
+not one the host keeps, nor (over T4's two cycles) a guest leak of under about 27 KiB a cycle
+above the steady 4–5. A bound on `pss` or the iOS
 footprint would follow the platform's own caches (this run: −306 KiB from cycle 1 to 2; the
 iPhone: +384 to +464; the CI simulator: about +0.5 to +1.5 MiB), so none is set.
