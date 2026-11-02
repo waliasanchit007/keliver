@@ -577,6 +577,11 @@ merged:
   name (§1 requires the name to be bound): a one-function `ZiplineService` in the scenario's
   host, which the guest never calls.
 
+The first two are S17 and S17b in the reference app's static route
+(`reference/inventory/ci/w3/android-static.sh` and `ios-static.sh`), on the CI emulator and
+simulator in its pull-request and push runs, whose hosts this checkout scaffolds; a hand-run of a
+published zip from before B4 skips them.
+
 ### 5. The reference app on a bridge
 
 The reference app is built only from the published tools zip and Maven Central (its README), so

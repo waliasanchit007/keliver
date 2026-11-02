@@ -23,6 +23,9 @@
 #       skipped, the host stays on v5
 #   S16 (W3) capability filtering: v6's entry, edited to require HostCamera@1
 #       (not provided), is skipped; edited to require HostSqlDriver@1, it loads
+#   S17 (B4) v7 ("Cellar") declares a bridge this host does not serve: skipped
+#       at lookup; S17b with the index lying about it, refused from the signed
+#       manifest, and the host falls back (hosts from before B4: skipped)
 #   S7  server down: the host starts from its cached newest bundle ($LAST_V)
 #   S9  (W4.2) the stored floor above that cached bundle, offline: refused
 #   S9c (W5) the lookup answers, but everything it offers is below the floor:
@@ -303,6 +306,45 @@ grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v6/manifest.zipline.
   && ok "S16b: v6 needs a capability this host provides: loaded" || bad "S16b: v6 needs a capability this host provides: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 drive title Attic S16bstatic; fold "S16b: the screen reads Attic" $?
 cp "$W3/index.s15" "$W3/site/bundles/index.json"
+
+# S17 (B4; docs/BRIDGE_CODEGEN_DESIGN.md, "B5" §4): a bundle that declares a bridge this host does
+# not serve. v7 ("Cellar") is published with keliver.bridges=AbsentBridge@1 in its signed metadata
+# (one zipline { metadata } line in the app's build, taken out again), and the CLI copies it into
+# v7's entry as constraints.bridges. v6's entry is edited as in S16b, so v6 is the one this host
+# can take: v7 is skipped at lookup. S17b: v7's entry loses that constraint, as a lying index
+# would: the host fetches v7's manifest, refuses it from its signed value (bridge refused, reported
+# as bridge-missing) and falls back to v6. v7 and its entry are removed afterwards, so S7-S9b see
+# the index S15 left. A host from before B4 (a published 0.3.17 zip's) has no bridge gate: skipped.
+if grep -rq 'BRIDGES_METADATA_KEY' "$APP/host-android/src/main/kotlin"; then
+  cp "$APP/build.gradle" "$W3/build.gradle.s17"
+  printf '\n// S17 (CI only): this bundle calls a bridge no host serves.\nzipline { metadata.put("keliver.bridges", "AbsentBridge@1") }\n' >> "$APP/build.gradle"
+  w3_title Attic Cellar && w3_publish v7-bridged && grep -q "published v7 (sequence 7, channel stable" "$EV/w3-publish-v7-bridged.log" \
+    && python3 -c 'import json,sys; i=json.load(open(sys.argv[1])); e=[x for x in i["entries"] if x["sequence"]==7][0]; m=json.load(open(sys.argv[2])); sys.exit(0 if m.get("metadata",{}).get("keliver.bridges")=="AbsentBridge@1" and "AbsentBridge" in e.get("constraints",{}).get("bridges",{}) else 1)' \
+      "$W3/site/bundles/index.json" "$W3/site/bundles/v7/manifest.zipline.json" \
+    && ok "S17: v7's signed manifest declares AbsentBridge@1, and the CLI put it in v7's entry" || { bad "S17: publish v7 declaring a bridge"; tail -20 "$EV/w3-publish-v7-bridged.log"; }
+  cp "$W3/build.gradle.s17" "$APP/build.gradle"; w3_title Cellar Attic
+  w3_caps HostSqlDriver@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-s17.json"
+  launch prod "$EV/logcat-static-bridge-skipped.txt"
+  C="$EV/logcat-static-bridge-skipped.txt"
+  grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v6/manifest.zipline.json (index sequence 6," "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+    && ok "S17: v7 needs a bridge this host does not serve: skipped, v6 loaded" || bad "S17: v7 needs a bridge this host does not serve: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+  grep -q "bundles/v7/" "$C" && bad "S17: the host asked for v7" || ok "S17: the host never asked for v7"
+  drive title Attic S17static; fold "S17: the screen still reads Attic" $?
+  python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); e=[x for x in i["entries"] if x["sequence"]==7][0]; e["constraints"].pop("bridges"); e["constraints"] or e.pop("constraints"); json.dump(i,open(p,"w"))' \
+    "$W3/site/bundles/index.json" && cp "$W3/site/bundles/index.json" "$EV/w3-index-s17b.json" \
+    && ok "S17b: v7's entry no longer says it needs a bridge" || bad "S17b: could not edit the index"
+  launch prod "$EV/logcat-static-bridge-refused.txt"
+  C="$EV/logcat-static-bridge-refused.txt"
+  grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$C" \
+    && grep -q "bridge refused: the bundle needs AbsentBridge@1, which this host does not serve" "$C" \
+    && ok "S17b: v7's signed manifest needs a bridge this host does not serve: refused" || bad "S17b: v7 refused from its signed metadata: $(grep -E 'loading|codeLoad|refused|falling' "$C" | head -4 | tr '\n' ' ')"
+  grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle" "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+    && ok "S17b: the host fell back to its last good bundle" || bad "S17b: no fall-back after the refusal: $(grep -E 'codeLoad|falling|not load' "$C" | head -3 | tr '\n' ' ')"
+  drive title Attic S17bstatic; fold "S17b: the screen reads Attic, not Cellar" $?
+  cp "$W3/index.s15" "$W3/site/bundles/index.json" && rm -rf "${W3:?}/site/bundles/v7"
+else
+  skip "S17, S17b: this host predates B4 (no bridge gate in its BundleIndex.kt)"
+fi
 
 # The newest bundle this host has run, for S7, S9 and S9b.
 LAST_V=6; LAST_TITLE=Attic
