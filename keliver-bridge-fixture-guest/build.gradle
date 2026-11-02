@@ -1,0 +1,29 @@
+// B5b (docs/BRIDGE_CODEGEN_DESIGN.md, section "B5", §2): a Zipline guest that calls the fixture's
+// generated bridges, so keliver-bridge-fixture's round-trip test can load it into a real Zipline
+// on the JVM and carry calls from a guest to a host. Not published.
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+kotlin {
+  js {
+    // The name of the JS module, unique within the repository.
+    outputModuleName = 'keliver-bridge-fixture-guest'
+    browser()
+    binaries.executable()
+  }
+
+  sourceSets {
+    jsMain {
+      dependencies {
+        implementation projects.keliverBridgeFixture
+      }
+    }
+  }
+}
+
+zipline {
+  // Private, test-only module: no stable API to track.
+  apiTracking = false
+}

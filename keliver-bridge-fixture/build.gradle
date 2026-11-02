@@ -34,7 +34,23 @@ kotlin {
         implementation libs.kotlinx.coroutines.test
       }
     }
+    jvmTest {
+      dependencies {
+        // B5b: the round trip loads keliver-bridge-fixture-guest through ZiplineLoader.
+        implementation libs.zipline.loader
+      }
+    }
   }
+}
+
+// B5b (docs/BRIDGE_CODEGEN_DESIGN.md, section "B5", §2): RoundTripTest loads the fixture guest's
+// development build (its Zipline modules and manifest) into a real Zipline on the JVM.
+def fixtureGuestZipline = ':keliver-bridge-fixture-guest:compileDevelopmentExecutableKotlinJsZipline'
+tasks.named('jvmTest') {
+  dependsOn(fixtureGuestZipline)
+  def guestDir = project(':keliver-bridge-fixture-guest').layout.buildDirectory.dir('zipline/Development')
+  inputs.dir(guestDir).withPropertyName('fixtureGuest')
+  doFirst { systemProperty('keliver.fixtureGuestDir', guestDir.get().asFile.absolutePath) }
 }
 
 dependencies {
