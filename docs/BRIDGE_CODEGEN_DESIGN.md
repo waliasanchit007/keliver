@@ -108,9 +108,11 @@ Found while building the processor (B3b), it also refuses:
   `alloc`, then the end of the name or anything but a lowercase letter), which Kotlin/Native
   renames for Swift;
 - a parameter named like the generated code's own names (`call`, `done`, `fail`, `impl`,
-  `guard`, `callbacks`, `service`, `zipline`, `context`, `log`, `it`, `e`).
+  `guard`, `callbacks`, `service`, `zipline`, `context`, `log`, `it`, `e`, `Unit`,
+  `BridgeCallFailed`).
 
 A typealias is checked as the type it stands for; a generic one is refused (write the type).
+A generic `@Serializable` class's type arguments are checked as values too.
 
 ### 4. What is generated
 

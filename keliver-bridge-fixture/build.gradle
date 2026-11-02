@@ -1,7 +1,8 @@
 // Not published. A contract module as an app writes one (docs/BRIDGE_CODEGEN_DESIGN.md,
 // sections 1 and 6): one @KeliverBridge interface, keliver-bridge-codegen run on
-// kspCommonMainMetadata, and the Zipline compiler plugin, built for JVM, JS and iOS by CI (the
-// tasks are listed in ci.yml: the publishing build step does not reach an unpublished module). That shows Zipline adapts the generated service on every target (the codegen's own
+// kspCommonMainMetadata, and the Zipline compiler plugin, built for JVM, JS and iOS by CI
+// (the tasks are listed in ci.yml: the publishing build step does not reach an unpublished
+// module). That shows Zipline adapts the generated service on every target (the codegen's own
 // tests compile without the plugin), and its JVM tests drive the generated classes through the
 // guard.
 
