@@ -1,0 +1,5 @@
+--------- beginning of main
+D/KeliverHost( 3944): screen created (the host is the Application's, not this activity's)
+I/KeliverTiming( 3944): open 58629714038253
+I/KeliverTiming( 3944): first-frame 58629838470868
+I/KeliverTiming( 3944): content 58629855023792

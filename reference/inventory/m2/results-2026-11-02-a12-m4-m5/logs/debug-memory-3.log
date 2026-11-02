@@ -1,0 +1,34 @@
+--------- beginning of main
+11-02 15:41:56.133 13041 13041 I KeliverTiming: process 59384930000000
+11-02 15:41:56.149 13041 13041 D KeliverHost: verifying manifests with portal-ed25519 351a52ba…; updates next-launch
+11-02 15:41:56.263 13041 13041 D KeliverHost: screen created (the host is the Application's, not this activity's)
+11-02 15:41:56.521 13041 13041 I KeliverTiming: open 59385676909990
+11-02 15:41:56.525 13041 13041 I KeliverTiming: memory 59385677456067 at=open cycle=0 rss=99776 java=4339 native=9587 qjs=- objects=- pss=- graphics=-
+11-02 15:41:56.772 13041 13041 D KeliverHost: loading https://127.0.0.1:8443/bundles/v9/manifest.zipline.json (index sequence 9, channel stable (host: stable), host version 1, manifest sha256 d624c9b041c7…); rollback floor 9
+11-02 15:41:56.922 13041 13041 I KeliverTiming: memory 59386075571144 at=ui cycle=0 rss=116064 java=5175 native=12858 qjs=- objects=- pss=- graphics=-
+11-02 15:41:57.690 13041 13074 I KeliverTiming: memory 59386844027606 at=runtime cycle=0 rss=122544 java=7527 native=13688 qjs=93/114 objects=288 pss=- graphics=-
+11-02 15:41:58.443 13041 13074 D KeliverHost: codeLoadSuccess modules=40 sequence=9 source=network
+11-02 15:41:58.444 13041 13074 I KeliverTiming: code 59387600046991
+11-02 15:41:58.464 13041 13074 I KeliverTiming: memory 59387601160144 at=code cycle=0 rss=134040 java=11293 native=18831 qjs=4678/6144 objects=12920 pss=- graphics=-
+11-02 15:41:59.807 13041 13057 I KeliverTiming: frames 59388963168760 n=0 empty=0 lists=1 changes=127 guest=- lead=- sink=15307/15307/15307 apply=48531/48531/48531 queue=1169/1169/1169
+11-02 15:42:00.126 13041 13041 I KeliverTiming: first-frame 59389282005683
+11-02 15:42:00.138 13041 13041 I KeliverTiming: content 59389294522914
+11-02 15:42:00.163 13041 13074 I KeliverTiming: memory 59389297112145 at=content cycle=0 rss=149932 java=13165 native=20020 qjs=5203/6819 objects=16303 pss=- graphics=-
+11-02 15:42:05.622 13041 13041 I KeliverTiming: memory-cycle 1: opening a screen
+11-02 15:42:05.686 13041 13041 I KeliverTiming: open 59394841889068
+11-02 15:42:05.706 13041 13074 I KeliverTiming: memory 59394842270760 at=open cycle=1 rss=151068 java=13377 native=19795 qjs=5203/6819 objects=16303 pss=- graphics=-
+11-02 15:42:05.945 13041 13074 I KeliverTiming: memory 59395040390222 at=ui cycle=1 rss=145068 java=5809 native=20282 qjs=5338/6995 objects=17225 pss=- graphics=-
+11-02 15:42:06.659 13041 13041 I KeliverTiming: first-frame 59395815131760
+11-02 15:42:06.669 13041 13041 I KeliverTiming: content 59395825476222
+11-02 15:42:06.692 13041 13074 I KeliverTiming: memory 59395825853299 at=content cycle=1 rss=146296 java=6801 native=20561 qjs=5368/7034 objects=17428 pss=- graphics=-
+11-02 15:42:06.911 13041 13057 I KeliverTiming: frames 59396067213068 n=1 empty=1 lists=1 changes=127 guest=21306/21306/21306 lead=- sink=9144/9144/9144 apply=24412/24412/24412 queue=429/429/429
+11-02 15:42:10.088 13041 13074 I KeliverTiming: memory 59399171769684 at=closed cycle=1 rss=144956 java=5265 native=19866 qjs=5140/6730 objects=15931 pss=78681 graphics=12936
+11-02 15:42:30.882 13041 13041 I KeliverTiming: memory-cycle 2: opening a screen
+11-02 15:42:30.952 13041 13041 I KeliverTiming: open 59420108218454
+11-02 15:42:30.976 13041 13074 I KeliverTiming: memory 59420108529993 at=open cycle=2 rss=144280 java=5477 native=19495 qjs=5140/6730 objects=15931 pss=- graphics=-
+11-02 15:42:31.170 13041 13074 I KeliverTiming: memory 59420273144762 at=ui cycle=2 rss=144768 java=5769 native=19738 qjs=5277/6907 objects=16853 pss=- graphics=-
+11-02 15:42:31.879 13041 13041 I KeliverTiming: first-frame 59421035205685
+11-02 15:42:31.879 13041 13041 I KeliverTiming: content 59421035627762
+11-02 15:42:31.915 13041 13074 I KeliverTiming: memory 59421035753839 at=content cycle=2 rss=145792 java=6713 native=19950 qjs=5301/6939 objects=17013 pss=- graphics=-
+11-02 15:42:32.135 13041 13057 I KeliverTiming: frames 59421291093608 n=1 empty=1 lists=1 changes=127 guest=21654/21654/21654 lead=- sink=8177/8177/8177 apply=20820/20820/20820 queue=192/192/192
+11-02 15:42:35.307 13041 13074 I KeliverTiming: memory 59424386974454 at=closed cycle=2 rss=144560 java=5267 native=19494 qjs=5145/6736 objects=15964 pss=78141 graphics=12937
