@@ -188,9 +188,13 @@ class BridgeGateTest {
     assertTrue("not a bridge name" in refused(DeclaredBridge("Shop@2", 1, null)), "a name that would break keliver.bridges")
     assertTrue("not a bridge name" in refused(DeclaredBridge("Shop,Other", 1, null)))
     assertTrue("not a bridge name" in refused(DeclaredBridge("zipline/host", 1, null)))
-    for (name in listOf("HostSqlDriver", "HostHttp", "KeliverTrace")) {
+    for (name in listOf("HostSqlDriver", "HostHttp")) {
       assertTrue("binds a service of that name itself" in refused(DeclaredBridge(name, 1, null)), name)
     }
+    for (name in listOf("KeliverTrace", "Keliver", "KeliverAnything")) {
+      assertTrue("names starting with Keliver are the host's own" in refused(DeclaredBridge(name, 1, null)), name)
+    }
+    assertEquals(HostBridge(1, null), servedBridgesOf(listOf(DeclaredBridge("MyKeliverActions", 1, null)))["MyKeliverActions"], "only a prefix")
     assertTrue("version 0" in refused(DeclaredBridge("Shop", 0, null)))
     assertTrue("version -1" in refused(DeclaredBridge("Shop", -1, null)))
     assertTrue("version 1000000000" in refused(DeclaredBridge("Shop", 1_000_000_000, null)))

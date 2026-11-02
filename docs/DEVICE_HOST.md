@@ -418,8 +418,9 @@ carry `constraints`:
   its `NAME`, `VERSION` and `SHAPE`, and a `bind` that calls the generated
   `bind` (on iOS with your callbacks and `scope.main`). A bad list (a name a
   bundle could not name, a version outside 1..999999999, a shape that is not
-  16 lowercase hex digits, a name twice, or `HostSqlDriver`, `HostHttp` or
-  `KeliverTrace`) is refused when it is set. In an embedded Android host
+  16 lowercase hex digits, a name twice, `HostSqlDriver`, `HostHttp`, or a name
+  starting with `Keliver`, which the host keeps for its own services such as
+  a debug build's `KeliverTrace`) is refused when it is set. In an embedded Android host
   (`--embed`), Zipline is the library's own dependency: your module will reach
   `scope.zipline`'s type through the contract module, which depends on Zipline
   with `api` (B5c). Each code load binds your bridges

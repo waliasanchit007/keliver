@@ -97,7 +97,15 @@ internal data class HostBridge(val version: Int, val shape: String?)
 internal data class DeclaredBridge(val name: String, val version: Int, val shape: String?)
 
 /** Services the host binds itself: a bridge cannot take their names. */
-internal val HOST_SERVICE_NAMES = setOf("HostSqlDriver", "HostHttp", "KeliverTrace")
+internal val HOST_SERVICE_NAMES = setOf("HostSqlDriver", "HostHttp")
+
+/**
+ * Names that start with this are the host's own (the timing service a debug build binds, and any
+ * later one), so a bridge cannot take them either. A prefix, not the timing service's own name:
+ * the release checks look for that name in a store build's code.
+ */
+internal const val HOST_SERVICE_PREFIX = "Keliver"
+
 private val BRIDGE_SHAPE = Regex("[0-9a-f]{16}")
 
 /**
@@ -105,13 +113,14 @@ private val BRIDGE_SHAPE = Regex("[0-9a-f]{16}")
  * IllegalArgumentException for a list the host must not serve, an app's programming error: a
  * name a bundle's `keliver.bridges` could not carry, a version below 1 or above what that value
  * can carry, a shape that is not a generated SHAPE (16 lowercase hex digits), a name twice, or a
- * name the host binds itself.
+ * name the host binds itself or keeps for itself ([HOST_SERVICE_PREFIX]).
  */
 internal fun servedBridgesOf(declared: List<DeclaredBridge>): Map<String, HostBridge> {
   val served = linkedMapOf<String, HostBridge>()
   for (b in declared) {
     require(BRIDGE_NAME.matches(b.name)) { "bridge \"${b.name}\": not a bridge name (a generated <Name>Bridge.NAME)" }
     require(b.name !in HOST_SERVICE_NAMES) { "bridge \"${b.name}\": the host binds a service of that name itself" }
+    require(!b.name.startsWith(HOST_SERVICE_PREFIX)) { "bridge \"${b.name}\": names starting with $HOST_SERVICE_PREFIX are the host's own" }
     require(b.version in 1..999_999_999) { "bridge ${b.name}: version ${b.version} is outside 1..999999999" }
     require(b.shape == null || BRIDGE_SHAPE.matches(b.shape)) { "bridge ${b.name}: shape \"${b.shape}\" is not a generated SHAPE (16 lowercase hex digits)" }
     require(served.put(b.name, HostBridge(b.version, b.shape)) == null) { "bridge ${b.name}: declared twice" }

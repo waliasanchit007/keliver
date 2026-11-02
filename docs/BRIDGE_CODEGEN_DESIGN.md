@@ -462,7 +462,9 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
   - **The check**, in `BundleIndex.kt` (the same file in both hosts, so the relay's
     `BridgeGateTest` tests it): a name `parseBridges` would not accept, a version outside
     1..999999999, a shape that is not 16 lowercase hex digits, a name twice, or a name the host
-    binds itself (`HostSqlDriver`, `HostHttp`, `KeliverTrace`) is the app's programming error.
+    binds itself (`HostSqlDriver`, `HostHttp`) or keeps for itself (any starting with `Keliver`,
+    such as a debug build's `KeliverTrace`: a prefix, because the release checks look for that
+    name in a store build's code) is the app's programming error.
     Android refuses it in `KeliverConfig`'s constructor, as it refuses `httpClient` without
     `requestPolicy`. iOS refuses it in the `bridges` setter, so the crash names the Swift line
     that set it (an uncaught Kotlin exception ends the process; nothing here is `@Throws`).
