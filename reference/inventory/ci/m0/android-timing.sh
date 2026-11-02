@@ -21,8 +21,10 @@
 #       second screen, closes it after its content and samples "closed"); then
 #       the points with QuickJS read from the runtime on, and pss at each
 #       closed (memory.py). It prints the growth from cycle 1's close to cycle
-#       2's and sets no bound on it yet: the emulator's numbers come first. A
-#       host from templates without it SKIPs
+#       2's and fails when QuickJS's heap grew by more than 32 KiB (a leaked
+#       screen leaves about 250 KiB; every device so far grew 4-8 KiB a cycle,
+#       m2/results-2026-11-02-a12-memory-cycles); no bound on pss, which
+#       follows the platform's caches. A host from templates without it SKIPs
 if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
   echo "--- M0: timing marks"
   python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/m0-server.log" &
@@ -67,7 +69,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing"; then
     # Both dumps, each line once (a threadtime line carries its time, pid and tid; a memory line
     # its nanos): the launch's has the early lines even if the log turned over since.
     cat "$EV/logcat-$2-launch.txt" "$EV/logcat-$2-cycles.txt" | awk '!seen[$0]++' > "$EV/logcat-$2.txt"
-    out="$(python3 "$HERE/m0/memory.py" "$EV/logcat-$2.txt")" && ok "$1: the memory profile: $out" || bad "$1: the memory profile: $out"
+    out="$(python3 "$HERE/m0/memory.py" --leak-kb 32 "$EV/logcat-$2.txt")" && ok "$1: the memory profile: $out" || bad "$1: the memory profile: $out"
   }
 
   adb -s "$SERIAL" install -r "$W5_APK" > "$EV/install-T1.log" 2>&1
