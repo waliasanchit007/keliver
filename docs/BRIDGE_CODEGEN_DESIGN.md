@@ -299,9 +299,9 @@ way the sequence floor is (W4). B4 follows the existing mechanisms rather than a
     `bridges` from the manifest too, so an entry written before B4 gets it as well;
   - the relay, which keeps no entries but rebuilds them from each version's `meta.json` on
     every request (`relayIndexJson`): it derives `bridges` from that version's manifest.
-  A malformed value refuses a publish, republish or promotion. The relay, which has no publish
-  step at that point, leaves out of its index an entry whose manifest's value is malformed
-  (fail closed). `noStricterThan` already treats an entry with constraints as stricter.
+  A malformed value refuses a publish, republish or promotion, and the relay's own publish. The
+  relay's index, rebuilt on each request, leaves out a version whose manifest's value is
+  malformed anyway (one stored before B4, fail closed). `noStricterThan` already treats an entry with constraints as stricter.
 
 ### Why `constraints`, not a new top-level field
 
@@ -340,8 +340,7 @@ bundle the host can serve (found in B4a's review). The host then binds what it d
    refused (fail closed), as `bridge refused: malformed keliver.bridges`, reported as
    `bridge-missing`.
 3. **Shape**, when the manifest carries one: at the same version, the guest's shape must equal
-   the host's; a different shape at the same version is refused (`bridge refused: ShopActions@2
-   was built against another contract`), since it is the change a version bump was missed for.
+   the host's; a different shape at the same version is refused (`bridge refused: the bundle was built against another ShopActions@2 contract …`), since it is the change a version bump was missed for.
    A host at a later version than `min` is not compared, so a version bump must stay
    compatible with older guests, on two levels:
    - **functions:** keep every older function's signature (Zipline call id), adding new ones
@@ -380,7 +379,8 @@ bundle the host can serve (found in B4a's review). The host then binds what it d
   manifest on publish, republish and promotion (an entry written before B4 included); a
   malformed value refuses. A relay test: `relayIndexJson` derives `bridges` from each
   version's manifest and leaves out a malformed one; the legacy `/bundles/latest` skips a
-  bundle that declares bridges.
+  bundle that declares bridges. The relay's own publish refusal is not covered by a test: it is
+  inside the relay's private publish function, which runs Gradle.
 - Scaffolder self-tests: both hosts wire the bridge check where they wire the floor, and
   `markNotLoaded` treats `bridge refused:` as unloadable (checked in the source, as the floor's
   wiring is; it runs on a device in B5's scenarios).

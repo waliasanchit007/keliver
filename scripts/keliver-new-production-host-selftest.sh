@@ -161,7 +161,7 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   || bad "W4.2: the rollback floor is not wired"
 # B4: the bridge check runs where the floor's does: on the cache start (the network load's is
 # inside ManifestPinningHttpClient, in BundleIndex.kt), and a refused manifest is unloadable.
-grep -A8 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' \
+grep -A12 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' \
   && grep -q '"bridge refused:" in reason' "$M" \
   && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$(dirname "$M")/BundleIndex.kt" \
   && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \

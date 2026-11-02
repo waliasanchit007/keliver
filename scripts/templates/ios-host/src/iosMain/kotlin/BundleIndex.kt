@@ -20,10 +20,9 @@
  * Bridges (B4, docs/BRIDGE_CODEGEN_DESIGN.md): a bundle that calls an app's generated bridges
  * names them, with the oldest version it can talk to, in its SIGNED metadata
  * ("keliver.bridges"), and its index entry carries the same as the `bridges` constraint (which
- * hosts from before B4 skip). The host serves the bridges in [ServedBridges] (declared before its
- * first lookup); it skips an entry,
- * and refuses a manifest, that needs one it does not serve, at a newer version, or (at the same
- * version) built against another contract shape.
+ * hosts from before B4 skip). The host serves the bridges in [ServedBridges] (declared before
+ * its first lookup); it skips an entry, and refuses a manifest, that needs one it does not
+ * serve, at a newer version, or (at the same version) built against another contract shape.
  */
 package @@PACKAGE@@
 

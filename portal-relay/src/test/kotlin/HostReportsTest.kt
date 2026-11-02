@@ -112,12 +112,19 @@ class HostReportsTest {
     )
     val outcomes = listOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed")
     val r = HostReports(dir())
+    val produced = mutableSetOf<String>()
     for (outcome in outcomes) {
       for (d in details) {
         val reason = hosttemplate.reportReason(outcome, d)
+        produced += reason
         val body = report(outcome = outcome).replace("\"reason\":\"\"", "\"reason\":\"$reason\"")
         assertNull(r.accept(body), "$outcome / $reason")
       }
     }
+    // Every category the hosts send was produced above, so each was checked.
+    assertEquals(
+      setOf("", "sha256-mismatch", "below-floor", "bridge-missing", "bridge-shape", "signature", "lookup-failed", "network", "config", "exception", "other"),
+      produced,
+    )
   }
 }
