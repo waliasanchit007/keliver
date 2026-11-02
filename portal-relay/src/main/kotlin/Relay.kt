@@ -520,6 +520,11 @@ private fun publish(): Pair<Boolean, String> {
         "Nothing was stored.",
     ).toString()
   }
+  // B4: the index is derived from the signed keliver.bridges; a malformed value would leave this
+  // version out of it, so it is refused here, with the reason.
+  signedBridges(manifest.readText()).problem?.let {
+    return false to log.appendLine("publish REFUSED: $it. Nothing was stored.").toString()
+  }
   val dest = File(bundlesDir, "v$version")
   ziplineOut.copyRecursively(dest, overwrite = true)
   // M6: the audit hash is of the CANONICAL screen source (what actually compiled).
@@ -1533,17 +1538,7 @@ fun main(args: Array<String>) {
           // M7: capability gating — a bundle only qualifies when every capability
           // it REQUIRES is in the host's declared list (caps=a@1,b@2).
           val hostCaps = (q["caps"] ?: "").split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-          val best = bundlesDir.listFiles { f -> f.isDirectory && f.name.startsWith("v") }
-            ?.filter { dir ->
-              val metaText = File(dir, "meta.json").takeIf { it.exists() }?.readText() ?: ""
-              val recorded = Regex("\"widgetVersion\":(\\d+)").find(metaText)
-                ?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
-              val required = Regex("\"capabilities\":\\[([^\\]]*)]").find(metaText)
-                ?.groupValues?.get(1)?.split(',')?.map { it.trim().trim('"') }?.filter { it.isNotEmpty() }
-                ?: emptyList()
-              recorded <= want && hostCaps.containsAll(required)
-            }
-            ?.maxByOrNull { it.name.removePrefix("v").toIntOrNull() ?: 0 }
+          val best = legacyLatest(bundlesDir, want, hostCaps)
           if (best == null) {
             respond(ex, 404, "{\"error\":\"no compatible bundle\"}")
           } else {

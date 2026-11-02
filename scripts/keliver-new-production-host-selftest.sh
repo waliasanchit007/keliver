@@ -159,6 +159,13 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   && grep -q 'manifestSequence(manifest.metadata)' "$M" && grep -q 'sequence?.let(onSequence)' "$M" \
   && ok "W4.2: the rollback floor guards the network load, the cache start and its network fallback, and rises (committed) after a load" \
   || bad "W4.2: the rollback floor is not wired"
+# B4: the bridge check runs where the floor's does: on the cache start (the network load's is
+# inside ManifestPinningHttpClient, in BundleIndex.kt), and a refused manifest is unloadable.
+grep -A12 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' \
+  && grep -q '"bridge refused:" in reason' "$M" \
+  && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$(dirname "$M")/BundleIndex.kt" \
+  && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
+  || bad "B4: the bridge check is not wired"
 # W4.4: the host takes one channel besides stable, stable by default.
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
   && grep -q 'channel = BuildConfig.KELIVER_CHANNEL' "$M" && grep -q 'pickFromIndex(body, capabilities, channel = config.channel' "$M" \
@@ -313,7 +320,7 @@ grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
-  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
+  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, versionCode, floor)" || bad "W4.5: constraints are not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"

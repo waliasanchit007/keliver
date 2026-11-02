@@ -307,9 +307,10 @@ sealed interface KeliverUpdateCheck {
 
 /**
  * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
- * update-applied, update-failed, not-loaded, no-bundle or refused; [source] is
- * network or cache (or null). [reason] is a fixed category (sha256-mismatch,
- * below-floor, signature, lookup-failed, network, config, other); [detail] is
+ * update-applied, update-failed, not-loaded, no-bundle, refused or screen-failed;
+ * [source] is network or cache (or null). [reason] is a fixed category
+ * (sha256-mismatch, below-floor, bridge-missing, bridge-shape, signature,
+ * lookup-failed, network, config, exception, other); [detail] is
  * the full message, for the app only: it can hold addresses, paths or URLs, so
  * [toJson], what a report URL receives, leaves it out. [installId] is the
  * random id made on the device for rollouts.
@@ -558,7 +559,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       failedUrl = manifestUrls.value
       failedSha256 = failedUrl?.let(pinning::pinnedSha256)
       failedReason = reportReason("not-loaded", reason)
-      unloadable = "rollback refused:" in reason || ("manifest signature for key" in reason && "did not verify" in reason)
+      unloadable = "rollback refused:" in reason || "bridge refused:" in reason ||
+        ("manifest signature for key" in reason && "did not verify" in reason)
     }
 
     /**
@@ -1245,7 +1247,10 @@ private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessCheck
   // after verifying it. A refused cache is not used; Zipline then fetches the
   // manifest from the network, through the same floor guard.
   override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
-    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor()) ?: return true
+    // So does B4's bridge check, on the verified metadata.
+    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor())
+      ?: manifestBridgeProblem(manifest.metadata[BRIDGES_METADATA_KEY], ServedBridges.all)
+      ?: return true
     Log.e(TAG, "cached bundle refused: $problem")
     return false
   }
