@@ -1,5 +1,9 @@
+import hosttemplate.BridgeBindRecorder
+import hosttemplate.DeclaredBridge
 import hosttemplate.HostBridge
 import hosttemplate.HostFacts
+import hosttemplate.KeliverBridgeBinding
+import hosttemplate.bindAppBridges
 import hosttemplate.ManifestPinningHttpClient
 import hosttemplate.NeededBridge
 import hosttemplate.bridgeProblem
@@ -8,11 +12,13 @@ import hosttemplate.manifestBridges
 import hosttemplate.parseBridges
 import hosttemplate.pickFromIndex
 import hosttemplate.reportReason
+import hosttemplate.servedBridgesOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
 import okio.ByteString
@@ -158,5 +164,132 @@ class BridgeGateTest {
     assertEquals("bridge-missing", reportReason("not-loaded", "bridge refused: the bundle needs AnotherContract@1, which this host does not serve"))
     assertEquals("bridge-missing", reportReason("not-loaded", "bridge refused: the bundle needs SignatureVerifier@1, which this host does not serve"))
     assertEquals("bridge-missing", reportReason("not-loaded", "bridge refused: the bundle needs Sha256Mismatch@1; this host serves version 0"))
+  }
+
+  @Test
+  fun anAppsDeclaredBridgesBecomeWhatTheGateReads() {
+    assertEquals(emptyMap(), servedBridgesOf(emptyList()), "no bridge declared: none served")
+    val served = servedBridgesOf(listOf(DeclaredBridge("ShopActions", 2, shape), DeclaredBridge("com.example.Other_1", 1, null)))
+    assertEquals(mapOf("ShopActions" to HostBridge(2, shape), "com.example.Other_1" to HostBridge(1, null)), served)
+    // What the gate admits with them: the declared version and shape, as a bundle's signed value names them.
+    assertNull(manifestBridgeProblem("ShopActions@2#$shape,com.example.Other_1@1", served))
+    assertTrue("another" in manifestBridgeProblem("ShopActions@2#$other", served)!!)
+    assertEquals(2L, pick(served, entry(1, null), entry(2, """{"ShopActions":{"min":2,"shape":"$shape"}}""")))
+    // The largest version a bundle's value can carry is accepted.
+    assertEquals(HostBridge(999_999_999, null), servedBridgesOf(listOf(DeclaredBridge("A", 999_999_999, null)))["A"])
+  }
+
+  @Test
+  fun aBridgeListTheHostMustNotServeIsRefused() {
+    fun refused(vararg declared: DeclaredBridge): String =
+      assertFailsWith<IllegalArgumentException> { servedBridgesOf(declared.toList()) }.message!!
+    assertTrue("not a bridge name" in refused(DeclaredBridge("", 1, null)))
+    assertTrue("not a bridge name" in refused(DeclaredBridge("1Shop", 1, null)))
+    assertTrue("not a bridge name" in refused(DeclaredBridge("Shop@2", 1, null)), "a name that would break keliver.bridges")
+    assertTrue("not a bridge name" in refused(DeclaredBridge("Shop,Other", 1, null)))
+    assertTrue("not a bridge name" in refused(DeclaredBridge("zipline/host", 1, null)))
+    for (name in listOf("HostSqlDriver", "HostHttp", "KeliverTrace")) {
+      assertTrue("binds a service of that name itself" in refused(DeclaredBridge(name, 1, null)), name)
+    }
+    assertTrue("version 0" in refused(DeclaredBridge("Shop", 0, null)))
+    assertTrue("version -1" in refused(DeclaredBridge("Shop", -1, null)))
+    assertTrue("version 1000000000" in refused(DeclaredBridge("Shop", 1_000_000_000, null)))
+    assertTrue("not a generated SHAPE" in refused(DeclaredBridge("Shop", 1, "")))
+    assertTrue("not a generated SHAPE" in refused(DeclaredBridge("Shop", 1, shape.uppercase())))
+    assertTrue("not a generated SHAPE" in refused(DeclaredBridge("Shop", 1, shape + "0")))
+    assertTrue("declared twice" in refused(DeclaredBridge("Shop", 1, null), DeclaredBridge("Shop", 2, null)))
+  }
+
+  /** A binding whose bind does [action] with the recorder (standing in for Zipline's listener). */
+  private fun binding(name: String, action: (BridgeBindRecorder) -> Unit) = name to action
+
+  private fun bindAll(vararg bindings: Pair<String, (BridgeBindRecorder) -> Unit>): Pair<Throwable?, List<String>> {
+    val recorder = BridgeBindRecorder()
+    val log = mutableListOf<String>()
+    val actions = bindings.toMap()
+    val list = bindings.map { (name, _) -> KeliverBridgeBinding(name, 1, null) { error("not called: bindOne is") } }
+    val thrown = runCatching {
+      bindAppBridges(list, recorder, { log += it }, { false }) { b -> actions.getValue(b.name)(recorder) }
+    }.exceptionOrNull()
+    return thrown to log
+  }
+
+  @Test
+  fun eachBindingMustBindExactlyItsDeclaredNameOnce() {
+    assertNull(bindAll(binding("A") { it.bound("A") }, binding("B") { it.bound("B") }).first)
+    for ((what, action) in listOf<Pair<String, (BridgeBindRecorder) -> Unit>>(
+      "nothing" to {},
+      "another name" to { it.bound("B") },
+      "a host service" to { it.bound("HostHttp") },
+      "its name twice" to { it.bound("A"); it.bound("A") },
+      "its name and another" to { it.bound("A"); it.bound("HostSqlDriver") },
+    )) {
+      val e = bindAll(binding("A", action)).first
+      assertTrue(e is IllegalStateException && e.message!!.startsWith("bridge bind failed: A bound ["), "$what: $e")
+      assertEquals("bridge-bind", reportReason("not-loaded", e.message!!), what)
+    }
+    // Names bound outside a binding's own call are not its: the recorder is off between them.
+    val recorder = BridgeBindRecorder()
+    recorder.bound("HostHttp")
+    assertEquals(listOf("A"), recorder.record { recorder.bound("A") })
+    recorder.bound("KeliverTrace")
+    assertEquals(emptyList(), recorder.record { })
+  }
+
+  @Test
+  fun aBindingThatThrowsFailsTheLoadWithItsClassOnly() {
+    for (t in listOf<Throwable>(IllegalStateException("token=secret"), NotImplementedError("secret"), StackOverflowError())) {
+      val (e, log) = bindAll(binding("A") { throw t }, binding("B") { error("B must not run after A failed") })
+      assertEquals("bridge bind failed: A: ${t::class.simpleName}", e!!.message)
+      assertTrue("secret" !in e.message!!, "the throwable's text stays out of the failure (it is reported)")
+      assertEquals(1, log.size)
+      assertTrue(log.single().startsWith("A: bind threw: "), log.single())
+      assertEquals("bridge-bind", reportReason("not-loaded", e.message!!))
+    }
+    // A cancellation passes through as itself only when the load was cancelled, and the recorder
+    // is off afterwards; one the binding made up fails the load, which Zipline then reports.
+    val recorder = BridgeBindRecorder()
+    val cancelled = kotlinx.coroutines.CancellationException("stop")
+    val e = runCatching {
+      bindAppBridges(listOf(KeliverBridgeBinding("A", 1, null) {}), recorder, {}, { true }) { recorder.bound("A"); throw cancelled }
+    }.exceptionOrNull()
+    assertTrue(e === cancelled, "$e")
+    recorder.bound("late")
+    assertEquals(emptyList(), recorder.record { })
+    val (madeUp, _) = bindAll(binding("A") { throw kotlinx.coroutines.CancellationException("a timeout inside the binding") })
+    assertTrue(madeUp is IllegalStateException && madeUp.message!!.startsWith("bridge bind failed: A: "), "$madeUp")
+  }
+
+  @Test
+  fun ziplineReportsABindToItsListenerInsideTheBindCall() {
+    // What the hosts' check rests on (Zipline 1.22): EventListener.bindService runs inside bind,
+    // on the binding thread, so the recorder sees it. Zipline.create binds its own zipline/host.
+    val recorder = BridgeBindRecorder()
+    val listener = object : app.cash.zipline.EventListener() {
+      override fun bindService(zipline: app.cash.zipline.Zipline, name: String, service: app.cash.zipline.ZiplineService) = recorder.bound(name)
+    }
+    val dispatcher = java.util.concurrent.Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    try {
+      runBlocking(dispatcher) {
+        lateinit var zipline: app.cash.zipline.Zipline
+        val bound = recorder.record { zipline = app.cash.zipline.Zipline.create(dispatcher, eventListener = listener) }
+        try {
+          assertTrue("zipline/host" in bound, "bound while recording: $bound")
+        } finally {
+          zipline.close()
+        }
+      }
+    } finally {
+      dispatcher.close()
+    }
+  }
+
+  @Test
+  fun aBridgeBindFailureIsNeverReadAsAnotherReason() {
+    for (d in listOf(
+      "bridge bind failed: Verifier: java.net.ConnectException",
+      "bridge bind failed: SignatureCheck bound [] (it must bind SignatureCheck, once)",
+      "bridge bind failed: A: SocketTimeoutException",
+    )) assertEquals("bridge-bind", reportReason("not-loaded", d), d)
   }
 }

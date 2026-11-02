@@ -20,9 +20,10 @@
  * Bridges (B4, docs/BRIDGE_CODEGEN_DESIGN.md): a bundle that calls an app's generated bridges
  * names them, with the oldest version it can talk to, in its SIGNED metadata
  * ("keliver.bridges"), and its index entry carries the same as the `bridges` constraint (which
- * hosts from before B4 skip). The host serves the bridges in [ServedBridges] (declared before
- * its first lookup); it skips an entry, and refuses a manifest, that needs one it does not
- * serve, at a newer version, or (at the same version) built against another contract shape.
+ * hosts from before B4 skip). A host serves the bridges its app declares (B5, Bridges.kt; each
+ * host passes its own as [HostFacts.bridges], known before its first lookup); it skips an
+ * entry, and refuses a manifest, that needs one it does not serve, at a newer version, or (at
+ * the same version) built against another contract shape.
  */
 package @@PACKAGE@@
 
@@ -80,21 +81,42 @@ internal data class HostFacts(
   val installId: String,
   val hostVersion: Long?,
   val floor: Long,
-  val bridges: Map<String, HostBridge> = ServedBridges.all,
+  /**
+   * The bridges this host serves ([servedBridgesOf] the app's configuration, B5), known before
+   * its first lookup: binding happens after the lookup, the cache check and the manifest check,
+   * so bridges recorded at bind would make a cold start refuse a bundle it can serve. Each host
+   * passes its own; none (the default) skips every entry, and refuses every manifest, that needs one.
+   */
+  val bridges: Map<String, HostBridge> = emptyMap(),
 )
 
 /** A bridge this host serves: its contract version and shape (a generated `<Name>Bridge`'s VERSION and SHAPE). */
 internal data class HostBridge(val version: Int, val shape: String?)
 
+/** One bridge an app declares (B5): a generated `<Name>Bridge`'s NAME, VERSION and SHAPE. */
+internal data class DeclaredBridge(val name: String, val version: Int, val shape: String?)
+
+/** Services the host binds itself: a bridge cannot take their names. */
+internal val HOST_SERVICE_NAMES = setOf("HostSqlDriver", "HostHttp", "KeliverTrace")
+private val BRIDGE_SHAPE = Regex("[0-9a-f]{16}")
+
 /**
- * The bridges this host serves, by name. They must be set before the host's first lookup, from
- * the app's configuration (B5: each generated `<Name>Bridge`'s NAME, VERSION and SHAPE, declared
- * when the host is configured), not when the bridge is bound: binding happens after the lookup,
- * the cache check and the manifest check, so a cold start would refuse a bundle it can serve.
- * Empty until B5: such a host skips every entry, and refuses every manifest, that needs a bridge.
+ * The bridges an app declares, as the map the gate reads ([HostFacts.bridges]). Throws
+ * IllegalArgumentException for a list the host must not serve, an app's programming error: a
+ * name a bundle's `keliver.bridges` could not carry, a version below 1 or above what that value
+ * can carry, a shape that is not a generated SHAPE (16 lowercase hex digits), a name twice, or a
+ * name the host binds itself.
  */
-internal object ServedBridges {
-  @Volatile var all: Map<String, HostBridge> = emptyMap()
+internal fun servedBridgesOf(declared: List<DeclaredBridge>): Map<String, HostBridge> {
+  val served = linkedMapOf<String, HostBridge>()
+  for (b in declared) {
+    require(BRIDGE_NAME.matches(b.name)) { "bridge \"${b.name}\": not a bridge name (a generated <Name>Bridge.NAME)" }
+    require(b.name !in HOST_SERVICE_NAMES) { "bridge \"${b.name}\": the host binds a service of that name itself" }
+    require(b.version in 1..999_999_999) { "bridge ${b.name}: version ${b.version} is outside 1..999999999" }
+    require(b.shape == null || BRIDGE_SHAPE.matches(b.shape)) { "bridge ${b.name}: shape \"${b.shape}\" is not a generated SHAPE (16 lowercase hex digits)" }
+    require(served.put(b.name, HostBridge(b.version, b.shape)) == null) { "bridge ${b.name}: declared twice" }
+  }
+  return served
 }
 
 /** A bridge a bundle needs: the oldest version it can talk to, and the shape it was built against. */
@@ -315,7 +337,7 @@ internal class ManifestPinningHttpClient(
   manifestUrl: String,
   sha256: String?,
   private val floor: () -> Long = { 0 },
-  private val bridges: () -> Map<String, HostBridge> = { ServedBridges.all },
+  private val bridges: () -> Map<String, HostBridge> = { emptyMap() },
 ) : ZiplineHttpClient() {
   /** Manifest URL -> the sha256 the index holds it to (null: the floor only). Copied on write. */
   @Volatile private var pinned: Map<String, String?> = mapOf(manifestUrl to sha256)
@@ -366,7 +388,8 @@ internal fun reportReason(outcome: String, detail: String): String {
     d.isEmpty() -> ""
     "sha256 mismatch" in d -> "sha256-mismatch"
     "rollback refused" in d -> "below-floor"
-    // Before "signature": a bridge refusal's text can name a contract, never a signature.
+    // Before "signature": a bridge's text can name a contract, never a signature.
+    "bridge bind failed" in d -> "bridge-bind"
     "bridge refused: the bundle was built against another" in d -> "bridge-shape"
     "bridge refused" in d -> "bridge-missing"
     "signature" in d || "verif" in d -> "signature"

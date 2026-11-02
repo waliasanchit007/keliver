@@ -265,8 +265,10 @@ that opens.
   whose first load failed loads again at the next update check (§2), so one
   process can send `not-loaded` more than once, then `loaded`.
 - **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `bridge-missing`
-  and `bridge-shape` (B4, below), `signature`, `lookup-failed`, `network`,
-  `config`, `exception` (for `screen-failed`) or `other`.
+  and `bridge-shape` (B4, below), `bridge-bind` (B5, below), `signature`,
+  `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
+  `other`. A relay older than the host refuses a reason it does not know, and
+  that report is dropped.
 
 Where the records go:
 - **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
@@ -406,9 +408,28 @@ carry `constraints`:
   it cannot serve (`bridge refused: …`, reported as `bridge-missing` or
   `bridge-shape`), even when the index entry says otherwise.
   [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md), section "B4". A host
-  serves the bridges the app declares in its configuration, before the first
-  lookup; until the hosts' hook for that (B5), it serves none, and skips every
-  entry that names one.
+  serves the bridges the app declares in its configuration (B5, next), known
+  before the first lookup; an app that declares none serves none, and its host
+  skips every entry that names one.
+- **Serving your app's bridges** (B5, `Bridges.kt`): list them in
+  `KeliverConfig(bridges = …)` or `KeliverConfig.fromBuild(context, …,
+  bridges = …)` (Android) or `Keliver.shared.bridges` (iOS, from Swift, before
+  the host starts), one `KeliverBridgeBinding` per generated `<Name>Bridge`:
+  its `NAME`, `VERSION` and `SHAPE`, and a `bind` that calls the generated
+  `bind` (on iOS with your callbacks and `scope.main`). A bad list (a name a
+  bundle could not name, a version outside 1..999999999, a shape that is not
+  16 lowercase hex digits, a name twice, or `HostSqlDriver`, `HostHttp` or
+  `KeliverTrace`) is refused when it is set. In an embedded Android host
+  (`--embed`), Zipline is the library's own dependency: your module reaches
+  `scope.zipline`'s type through the contract module, which depends on
+  Zipline with `api`. Each code load binds your bridges
+  first, on Zipline's thread, then the host's own services. A binding must
+  bind exactly its declared name, once; one that binds anything else, or
+  throws, fails the load as `bridge bind failed: …` (reason `bridge-bind`), the
+  last good bundle too, until a fixed build is installed. The bridges' log
+  (a failed call's message) is written in debug builds only.
+  [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md), section "B5". The
+  generated code itself (`keliver-bridge*`) is not published yet.
 
 A host skipping an entry takes the newest one it may run. An entry with a
 constraint key the host doesn't know is skipped, so hosts from before W4.5 skip
