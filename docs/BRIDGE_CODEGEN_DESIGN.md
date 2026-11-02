@@ -596,7 +596,10 @@ its editor still builds and previews the screen with a fake.
    relay's `BridgeGateTest` for the check; JVM tests in the Android host for the config; both
    self-tests for the wiring, the iOS one also compiling §1's Swift snippet against the
    template's framework with a stand-in bridge.
-2. **B5b** (`keliver-bridge-fixture`; this repository's CI; nothing published needed): §2.
+2. **B5b** (`keliver-bridge-fixture`; this repository's CI; nothing published needed): §2 on the
+   JVM (#211). The same test on the iOS simulator is still to do: it needs the test in a source
+   set shared with `iosTest`, with platform threads and the guest's files reachable from the
+   simulator.
 3. **B5c** (`keliver-bridge-annotations` gains `wasmJs`; the templates' contract properties, the
    scaffolder flags): §3. It reaches adopters only with the libraries release, so the tools
    release that ships it follows that one. Until then its self-tests resolve the three modules

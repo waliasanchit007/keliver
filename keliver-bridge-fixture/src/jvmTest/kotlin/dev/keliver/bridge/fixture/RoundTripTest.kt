@@ -55,9 +55,15 @@ class RoundTripTest {
 
   /**
    * Loads the guest with [bind] binding the host's side ([main] standing in for the app's main
-   * thread), runs each of [steps] in the guest, and returns what the guest answered.
+   * thread), runs each of [steps] in the guest, then [beforeClose] while the guest is still open
+   * (closing it cancels the host's calls, so what the guest's own cancel did is checked there),
+   * and returns what the guest answered.
    */
-  private fun roundTrip(bind: (Zipline, CoroutineContext) -> Unit, vararg steps: String): List<String> {
+  private fun roundTrip(
+    bind: (Zipline, CoroutineContext) -> Unit,
+    vararg steps: String,
+    beforeClose: suspend () -> Unit = {},
+  ): List<String> {
     val ziplineThread = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     val main = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     try {
@@ -69,7 +75,7 @@ class RoundTripTest {
         val zipline = (result as? LoadResult.Success)?.zipline ?: error("the guest did not load: $result")
         try {
           val driver = zipline.take<RoundTripDriver>(RoundTripDriver.NAME)
-          steps.map { withTimeout(20_000) { driver.run(it) } }
+          steps.map { withTimeout(20_000) { driver.run(it) } }.also { beforeClose() }
         } finally {
           zipline.close()
         }
@@ -114,6 +120,11 @@ class RoundTripTest {
         WaitsBridge.bind(zipline, waitForever, main)
       },
       "openRoute", "share", "pickAddress", "findCoupon", "findCouponFound", "track", "waitBriefly", "cancelPick",
+      beforeClose = {
+        // Before the guest closes: closing would cancel the host's call by itself.
+        withTimeout(5_000) { pickCancelled.await() }
+        assertEquals("viewed {item=beans}", withTimeout(5_000) { tracked.await() }, "fire and forget, run on the host")
+      },
     )
     assertEquals(
       listOf(
@@ -129,10 +140,6 @@ class RoundTripTest {
       answers,
     )
     assertEquals(listOf("hello null"), shared)
-    runBlocking {
-      assertEquals("viewed {item=beans}", withTimeout(5_000) { tracked.await() }, "fire and forget, run on the host")
-      withTimeout(5_000) { pickCancelled.await() } // the guest stopped waiting: the host's call was cancelled
-    }
   }
 
   @Test fun aFailureOnTheHostReachesTheGuestAsOneLine() {
@@ -151,36 +158,59 @@ class RoundTripTest {
       },
       "openRoute",
       "share",
+      "rawOpenRoute",
     )
     assertEquals(
       listOf(
         "failed KeliverBridge: ShopActions.openRoute: threw IllegalStateException",
         "failed KeliverBridge: ShopActions.share: threw NotImplementedError",
       ),
-      answers,
+      answers.take(2),
     )
-    assertTrue(answers.none { "secret" in it }, "the host's message stays on the host")
+    // The whole text Zipline gave the guest for a failure, stack trace included, holds the one
+    // line and nothing of the app's message: the guard throws BridgeCallFailed with no cause.
+    val raw = answers[2]
+    assertTrue(raw.startsWith("raw ") && "KeliverBridge: ShopActions.openRoute: threw IllegalStateException" in raw, raw)
+    assertTrue(answers.none { "secret" in it }, "the host's message stays on the host: $raw")
     assertTrue(synchronized(logged) { logged.any { "token=secret" in it } }, "and in the host's log: $logged")
   }
 
   @Test fun swiftStyleCallbacksAnswerOnTheMainContext() {
-    val callbackThreads = mutableSetOf<Thread>()
+    val threads = java.util.Collections.synchronizedMap(mutableMapOf<String, Thread>())
+    fun on(what: String) {
+      threads[what] = Thread.currentThread()
+    }
     val pickerClosed = CompletableDeferred<Boolean>()
+    val tracked = CompletableDeferred<Unit>()
     val callbacks = object : ShopActionsCallbacks {
       override fun openRoute(route: String, call: BridgeCall, done: (Boolean) -> Unit, fail: (String) -> Unit) {
-        callbackThreads += Thread.currentThread()
+        on("openRoute")
         done(route == "/cart")
       }
-      override fun share(text: String, url: String?, call: BridgeCall, done: () -> Unit, fail: (String) -> Unit) = done()
+      override fun share(text: String, url: String?, call: BridgeCall, done: () -> Unit, fail: (String) -> Unit) {
+        on("share")
+        done()
+      }
       override fun pickAddress(request: AddressRequest, call: BridgeCall, done: (AddressResult) -> Unit, fail: (String) -> Unit) {
         if (request.purpose == Purpose.DELIVERY) {
-          call.onCancel { pickerClosed.complete(call.isCancelled) }
+          on("pickAddress (left open)")
+          call.onCancel {
+            on("onCancel")
+            pickerClosed.complete(call.isCancelled)
+          }
         } else {
+          on("pickAddress")
           done(AddressResult("2 High St", emptyList()))
         }
       }
-      override fun findCoupon(code: String, call: BridgeCall, done: (String?) -> Unit, fail: (String) -> Unit) = fail("no coupon $code")
-      override fun track(event: String, properties: Map<String, String>) = Unit
+      override fun findCoupon(code: String, call: BridgeCall, done: (String?) -> Unit, fail: (String) -> Unit) {
+        on("findCoupon")
+        fail("no coupon $code")
+      }
+      override fun track(event: String, properties: Map<String, String>) {
+        on("track")
+        tracked.complete(Unit)
+      }
     }
     var mainThread: Thread? = null
     val answers = roundTrip(
@@ -193,10 +223,19 @@ class RoundTripTest {
       "share",
       "pickAddress",
       "findCoupon",
+      "track",
       "cancelPick",
+      beforeClose = {
+        // Before the guest closes: closing would cancel the picker's call by itself.
+        assertTrue(withTimeout(5_000) { pickerClosed.await() }, "onCancel ran when the guest stopped waiting")
+        withTimeout(5_000) { tracked.await() }
+      },
     )
-    assertEquals(listOf("ok true", "ok", "ok 2 High St []", "failed KeliverBridge: ShopActions.findCoupon: no coupon NONE", "ok null"), answers)
-    assertEquals(setOf(checkNotNull(mainThread)), callbackThreads, "the callbacks run on the context bind was given")
-    runBlocking { assertTrue(withTimeout(5_000) { pickerClosed.await() }, "onCancel ran when the guest stopped waiting") }
+    assertEquals(listOf("ok true", "ok", "ok 2 High St []", "failed KeliverBridge: ShopActions.findCoupon: no coupon NONE", "ok", "ok null"), answers)
+    assertEquals(
+      setOf("openRoute", "share", "pickAddress", "findCoupon", "track", "pickAddress (left open)", "onCancel"),
+      threads.keys,
+    )
+    assertEquals(setOf(checkNotNull(mainThread)), threads.values.toSet(), "every callback, and onCancel, on the context bind was given: $threads")
   }
 }

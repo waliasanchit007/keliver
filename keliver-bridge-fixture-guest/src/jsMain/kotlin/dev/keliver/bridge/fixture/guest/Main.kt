@@ -16,12 +16,14 @@
 package dev.keliver.bridge.fixture.guest
 
 import app.cash.zipline.Zipline
+import app.cash.zipline.ZiplineException
 import dev.keliver.bridge.BridgeCallFailed
 import dev.keliver.bridge.fixture.AddressRequest
 import dev.keliver.bridge.fixture.Purpose
 import dev.keliver.bridge.fixture.RoundTripDriver
 import dev.keliver.bridge.fixture.ShopActions
 import dev.keliver.bridge.fixture.ShopActionsBridge
+import dev.keliver.bridge.fixture.ShopActionsService
 import dev.keliver.bridge.fixture.Waits
 import dev.keliver.bridge.fixture.WaitsBridge
 import kotlinx.coroutines.withTimeoutOrNull
@@ -29,10 +31,16 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** Runs when the host loads this guest: takes the host's bridges, binds the test's driver. */
 fun main() {
   val zipline = Zipline.get()
-  zipline.bind<RoundTripDriver>(RoundTripDriver.NAME, GuestDriver(ShopActionsBridge.take(zipline), WaitsBridge.take(zipline)))
+  val raw = zipline.take<ShopActionsService>(ShopActionsBridge.NAME)
+  zipline.bind<RoundTripDriver>(RoundTripDriver.NAME, GuestDriver(ShopActionsBridge.take(zipline), WaitsBridge.take(zipline), raw))
 }
 
-private class GuestDriver(private val shop: ShopActions, private val waits: Waits) : RoundTripDriver {
+private class GuestDriver(
+  private val shop: ShopActions,
+  private val waits: Waits,
+  /** The service itself, without take's wrapper: what Zipline hands a guest, whole. */
+  private val raw: ShopActionsService,
+) : RoundTripDriver {
   override suspend fun run(step: String): String = try {
     when (step) {
       "openRoute" -> "ok ${shop.openRoute("/cart")}"
@@ -44,6 +52,12 @@ private class GuestDriver(private val shop: ShopActions, private val waits: Wait
       "waitBriefly" -> "ok ${waits.waitBriefly()}"
       // The guest stops waiting before the host answers: the host's side is cancelled.
       "cancelPick" -> "ok ${withTimeoutOrNull(300) { shop.pickAddress(AddressRequest(Purpose.DELIVERY, null)) }}"
+      // Everything a host's failure sends the guest: Zipline's whole exception text.
+      "rawOpenRoute" -> try {
+        "ok ${raw.openRoute("/cart")}"
+      } catch (e: ZiplineException) {
+        "raw ${e.message}"
+      }
       else -> "unknown step $step"
     }
   } catch (e: BridgeCallFailed) {

@@ -3,7 +3,6 @@
 // on the JVM and carry calls from a guest to a host. Not published.
 
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
-apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'app.cash.zipline'
 
 kotlin {

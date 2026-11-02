@@ -49,7 +49,7 @@ def fixtureGuestZipline = ':keliver-bridge-fixture-guest:compileDevelopmentExecu
 tasks.named('jvmTest') {
   dependsOn(fixtureGuestZipline)
   def guestDir = project(':keliver-bridge-fixture-guest').layout.buildDirectory.dir('zipline/Development')
-  inputs.dir(guestDir).withPropertyName('fixtureGuest')
+  inputs.dir(guestDir).withPropertyName('fixtureGuest').withPathSensitivity(PathSensitivity.RELATIVE)
   doFirst { systemProperty('keliver.fixtureGuestDir', guestDir.get().asFile.absolutePath) }
 }
 
