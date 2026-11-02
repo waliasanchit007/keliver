@@ -15,6 +15,7 @@
  */
 package dev.keliver.bridge.codegen
 
+import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
@@ -62,6 +63,8 @@ internal class BridgeShape private constructor(
         val qualifiedName = declaration.qualifiedName?.asString() ?: return
         if (seen.put(qualifiedName, declaration) != null) return
         declaration.containingFile?.let(files::add)
+        // Inherited fields are read too: their classes' files are inputs as well.
+        declaration.getAllSuperTypes().mapNotNull { it.declaration.containingFile }.forEach(files::add)
         when {
           declaration.classKind == ClassKind.ENUM_CLASS -> {
             val constants = declaration.declarations

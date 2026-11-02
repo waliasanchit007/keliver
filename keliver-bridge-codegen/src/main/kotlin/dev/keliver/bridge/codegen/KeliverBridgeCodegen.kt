@@ -67,7 +67,7 @@ internal class KeliverBridgeCodegen(
       } catch (e: GenericTypealias) {
         // Reported on the interface: the alias may be a library's, with no location.
         logger.error(
-          "@KeliverBridge: ${(symbol as? KSClassDeclaration)?.simpleName?.asString()} uses the generic typealias ${e.alias.qualifiedName?.asString()}: write the type it stands for",
+          "@KeliverBridge: ${(symbol as? KSClassDeclaration)?.simpleName?.asString()} uses the generic typealias ${e.alias.qualifiedName?.asString()} (in a parameter, a result, or a field of a class they reach): write the type it stands for",
           symbol,
         )
       }
@@ -196,6 +196,11 @@ internal class KeliverBridgeCodegen(
         if (!ok) {
           refuse(node, "$what is $qualifiedName: use a primitive, String, an enum, a @Serializable class, or a List or Map of those")
         }
+        // A generic @Serializable class's arguments must be values too.
+        type.arguments.forEach { argument ->
+          val argumentType = argument.type?.resolve() ?: refuse(node, "$what must not use a star projection")
+          checkValueType(node, what, argumentType)
+        }
       }
     }
   }
@@ -244,7 +249,10 @@ private const val FLOW = "kotlinx.coroutines.flow.Flow"
 private val OBJC_FAMILIES = listOf("alloc", "copy", "mutableCopy", "new", "init")
 
 // Names the generated code declares around the app's parameters (BridgeEmitter).
-private val GENERATED_NAMES = setOf("call", "done", "fail", "impl", "guard", "callbacks", "service", "zipline", "context", "log", "it", "e")
+private val GENERATED_NAMES = setOf(
+  "call", "done", "fail", "impl", "guard", "callbacks", "service", "zipline", "context", "log", "it", "e",
+  "Unit", "BridgeCallFailed",
+)
 
 private val VALUES = setOf(
   "kotlin.Boolean", "kotlin.Byte", "kotlin.Short", "kotlin.Int", "kotlin.Long",

@@ -77,7 +77,7 @@ class GeneratedBridgeTest {
     assertEquals(listOf("viewed"), tracked)
   }
 
-  @Test fun theAppsThrowReachesTheGuestAsOneLine() = runTest {
+  @Test fun theAppsThrowFailsTheCallWithOneLineAndLogsItsMessage() = runTest {
     val impl = object : ShopActions by unused() {
       override suspend fun openRoute(route: String): Boolean = error("token=secret")
     }
@@ -85,6 +85,17 @@ class GeneratedBridgeTest {
     val e = assertFailsWith<BridgeCallFailed> { ShopActionsGuardedService(impl, guard).openRoute("/cart") }
     assertEquals("KeliverBridge: ShopActions.openRoute: threw IllegalStateException", e.message)
     assertEquals(listOf("KeliverBridge: ShopActions.openRoute threw IllegalStateException: token=secret"), logged)
+  }
+
+  @Test fun theDefaultLimitIsThirtySeconds() = runTest {
+    // timeoutSeconds is left at its default on the fixture: the processor's fallback (KSP may
+    // not see the annotation's defaults in this metadata compilation) must be @KeliverBridge's.
+    val impl = object : ShopActions by unused() {
+      override suspend fun openRoute(route: String): Boolean = kotlinx.coroutines.awaitCancellation()
+    }
+    val service = ShopActionsGuardedService(impl, BridgeGuard("ShopActions", StandardTestDispatcher(testScheduler)))
+    val e = assertFailsWith<BridgeCallFailed> { service.openRoute("/cart") }
+    assertEquals("KeliverBridge: ShopActions.openRoute: no answer within 30 s", e.message)
   }
 
   @Test fun swiftsCallbacksServeEachKindOfCall() = runTest {

@@ -223,13 +223,23 @@ class KeliverBridgeCodegenTest {
 
   @Test fun aGenericTypealias() = refused(
     "$header\ntypealias Tags<V> = Map<String, V>\n@KeliverBridge interface A { fun a(x: Tags<String>) }",
-    "A uses the generic typealias com.example.Tags: write the type it stands for",
+    "A uses the generic typealias com.example.Tags (in a parameter, a result, or a field of a class they reach): write the type it stands for",
   )
 
   @Test fun aKeywordAsAParameterNameIsWrittenInBackticks() {
     val compiled = compile(source("$header\n@KeliverBridge interface A { suspend fun a(`in`: String): String\n fun b(`object`: String) }"))
     assertThat(compiled.exitCode, "messages: ${compiled.messages}").isEqualTo(KotlinCompilation.ExitCode.OK)
   }
+
+  @Test fun aGenericSerializableClassOfSomethingThatIsNotAValue() = refused(
+    "$header\nclass Plain\n@Serializable class Box<T>(val value: T)\n@KeliverBridge interface A { fun a(x: Box<Plain>) }",
+    "A.a's parameter x is com.example.Plain",
+  )
+
+  @Test fun aParameterNamedUnit() = refused(
+    "$header\n@KeliverBridge interface A { suspend fun a(Unit: String) }",
+    "A.a's parameter Unit clashes with a name the generated code uses",
+  )
 
   @Test fun aNameLikeAFamilyButNotOneIsAccepted() {
     val compiled = compile(source("$header\n@KeliverBridge interface A { suspend fun newsletter(id: String)\n suspend fun initials(): String }"))

@@ -55,9 +55,10 @@ annotation from a library klib), so the processor repeats them (found in B3b).
 | `keliver-bridge-annotations` | common (JVM, JS, iOS, Android) | `@KeliverBridge(name, version, timeoutSeconds)` and `@BridgeTimeout(seconds)`, `SOURCE` retention |
 | `keliver-bridge` | common | the runtime the generated code calls: the guard (§5), `BridgeCall`, `BridgeCallFailed` |
 | `keliver-bridge-codegen` | tooling (JVM) | the KSP processor |
+| `keliver-bridge-fixture` | common, not published | a contract module built with the processor and the Zipline plugin, for its tests (§6) |
 
 The runtime is small and real code, so it is tested once, in `keliver-bridge`, on JVM, JS and
-the iOS simulator, and not re-emitted (and re-reviewed) into every app. None of the three is
+the iOS simulator, and not re-emitted (and re-reviewed) into every app. None of the first three is
 published until a libraries release, which needs the owner; until then the reference app (B5)
 uses them from this checkout, the way the production host is already built from source.
 
@@ -234,8 +235,9 @@ frames), and rethrows anything else.
   **B3b found:** Zipline 1.22 has no public in-process endpoint pair, so the first round trip
   is B5's. The fixture (`keliver-bridge-fixture`) is built with the plugin for JVM, JS and the
   iOS simulator (Zipline writes `ShopActionsService.Companion.Adapter`), and its JVM tests drive
-  the generated classes: both host services through a real guard, and the guest's wrapper over
-  a service failing with a host's real stack-trace text.
+  the generated classes: both host services through a real guard, the guest's wrapper over a
+  service failing with a host's real stack-trace text, and both `bind`s against a real JVM
+  Zipline (QuickJS), which shows the plugin rewrote `bind<T>`.
 - **The guard** (`keliver-bridge`, `commonTest`, so JVM, JS, where the guest-side mapping runs,
   and the iOS simulator): first answer
   wins, a second is ignored, each limit including none, `fail`, a throw (its message only in
