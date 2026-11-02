@@ -4,12 +4,13 @@ M4 (the guest frame profile) and M5 (the memory profile) are in the hosts from t
 (`docs/DEVICE_HOST.md`, "The guest frame profile", "The memory profile"). CI has run them on the
 simulator only; this is the first iPhone, after the Galaxy A12
 (`../results-2026-11-02-a12-m4-m5`). The adoption retro measured that the iOS first open adds
-about 76 MB (`docs/ADOPTION_RETRO_2026-10.md`); M5 was built to say where it goes.
+about 76 MB, in another app (the private brownfield one, also a debug build;
+`docs/ADOPTION_RETRO_2026-10.md`); M5 was built to say where such a cost goes.
 
-**Result: the first open adds 74–75 MiB of footprint, and 69 % of it is the host's UI, before
-QuickJS starts.** Compose and the first view add 51.3 MiB (`ui`), QuickJS's runtime 3.4 MiB, the
-guest's code 11.8 MiB (4.5 MiB of it QuickJS's heap) and the first content 7.8 MiB. From one
-memory cycle's close to the next the footprint grew 384–464 KiB, QuickJS 6–7 KiB.
+**Result: in the reference app the first open adds 74–76 MiB of footprint (77–79 MB, the size
+the retro saw), and about two thirds of it comes before QuickJS starts, at `ui`, mostly the
+host's Compose UI and first view.** From one memory cycle's close to the next the footprint grew
+384–464 KiB in every run, QuickJS 6–7 KiB.
 
 ## What ran
 
@@ -29,10 +30,12 @@ memory cycle's close to the next the footprint grew 384–464 KiB, QuickJS 6–7
   - **memory:** a launch of its own; 5 s after content, two memory cycles (the Darwin
     notification `<bundle id>.keliver.memory-cycle`, 25 s apart); then `ci/m0/memory.py`.
 - All 3 rounds (6 launches) passed (`run.log`). The app was uninstalled at the end.
+  `pidof.py` is the script's helper that finds the app's process.
 
 ## The memory profile (footprint, KiB; the lines say KB, which are KiB)
 
-Medians of the 3 memory launches; every point's three values are in `logs/memory-*.log`.
+Medians of the 3 memory launches; every point's three values are in `logs/memory-*.log`. The
+step column is the difference between two medians, not the median of each run's step.
 
 | point | footprint | step | QuickJS in use |
 |---|---|---|---|
@@ -51,15 +54,20 @@ Medians of the 3 memory launches; every point's three values are in `logs/memory
 | QuickJS, cycle 1 → 2 | +6 | +7 | +6 |
 | Kotlin heap, cycle 1 → 2 | +256 | +0 | +256 |
 
-- **Where the first open goes:** `ui` (the host's Compose runtime and the first screen's view,
-  before any guest runs) is 52 496 of the 76 048 KiB, 69 %. QuickJS's runtime and the guest's
-  code together add 15 584 KiB, the first content 7 968. The retro's 76 MB is this
-  `open` → `content` (75 456–76 688 KiB here).
-- **No leak shown, but the footprint is not flat:** each cycle opens a second screen and
-  closes it. After the first cycle the process sits 22 640 KiB above its `content` level, and the
-  second cycle adds 384–464 KiB more. QuickJS's heap grew 6–7 KiB a cycle, as on the simulator
-  and the Galaxy A12. Two cycles cannot tell a slow leak from caches settling; a leak bound
-  needs more cycles.
+- **Where the first open goes:** `ui` is 67.1, 69.8 and 68.4 % of each memory run's
+  `open` → `content`. It comes before QuickJS starts (`qjs` is `-` there), and it is mostly the
+  host's Compose runtime and the first screen's view; but the steps overlap the bundle lookup
+  (`docs/DEVICE_HOST.md`): in 4 of the 6 launches the manifest was already loading before `ui`.
+  `runtime` (QuickJS holds 93 KiB there) is Zipline, the loader and the lookup more than QuickJS;
+  `code` is the loader and the guest's code (QuickJS +4 585 KiB); `content` the first content.
+  Over all 6 launches `open` → `content` was 75 456–77 360 KiB.
+- **Growth in every run, which two cycles cannot attribute:** each cycle opens a second screen
+  and closes it. After the first cycle the process sits 22 640 KiB above its `content` level,
+  and the second cycle added 384–464 KiB more, QuickJS 6–7 KiB, Kotlin heap +0 or +256 KiB, and
+  15 950 → 15 995 QuickJS objects in all three runs. Two cycles cannot tell a slow leak from
+  caches settling (and `closed`'s footprint is approximate, `DEVICE_HOST.md`); a leak bound
+  needs more cycles. QuickJS grew about as much on the CI simulator (+6 KiB) and the Galaxy A12
+  (+5).
 - **Against the CI simulator** (debug, `docs/ADOPTION_PLAN_2026-10.md` item 2): the simulator
   starts at about 21.6 MiB at `open` and grew +1 056 to +1 440 KiB a cycle (#188, #195). The
   phone starts at 6.5 MiB and grew less per cycle; the simulator has other graphics memory and
@@ -68,15 +76,21 @@ Medians of the 3 memory launches; every point's three values are in `logs/memory
 ## The frame profile: the launch only
 
 The tap driver (`ci/m0/ios-tap`) needs an App ID that only an Apple account signed in to Xcode
-can register; none was, so no frame here sent changes after the first. Each launch's one
+can register; none was, so no frame here sent changes after the first. Each launch's first
 `frames` line has the screen's first change list (127 changes, sent from its start, so no
-`guest` or `lead`) and one frame that sent nothing:
+`guest` or `lead`) and a frame that sent nothing:
 
-| run | first change list: `sink` / `apply` / `queue` (µs) | the empty frame: `guest` (µs) |
+| launch | first change list: `sink` / `apply` / `queue` (µs) | the empty frame: `guest` (µs) |
 |---|---|---|
-| 1 | 658 / 2 568 / 14 | 6 936 |
-| 2 | 426 / 1 314 / 13 | 7 327 |
-| 3 | 638 / 1 519 / 12 | 7 121 |
+| frames-1 | 658 / 2 568 / 14 | 6 936 |
+| frames-2 | 426 / 1 314 / 13 | 7 327 |
+| frames-3 | 638 / 1 519 / 12 | 7 121 |
+| memory-1 | 669 / 1 923 / 13 | 7 115 |
+| memory-2 | 417 / 1 715 / 12 | 7 394 |
+| memory-3 | 394 / 870 / 12 | 7 015 |
+
+The memory launches' later lines are the cycles' second screens: `sink` 217–253 µs, `apply`
+280–541 µs, and once a `queue` of 15 903 µs (memory-2, a wait for the main thread).
 
 `open` → `content` was 258–360 ms over the 6 launches (each loading the code from the network;
 Debug, not a start-up measurement).
