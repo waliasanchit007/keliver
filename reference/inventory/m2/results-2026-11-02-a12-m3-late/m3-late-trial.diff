@@ -1,0 +1,27 @@
+--- before/host-android/src/main/kotlin/inventory/host/MainActivity.kt	2026-10-30 17:06:27
++++ before-late/host-android/src/main/kotlin/inventory/host/MainActivity.kt	2026-10-31 12:03:31
+@@ -29,7 +29,13 @@
+     super.onCreate(savedInstanceState)
+     Log.d(TAG, "screen created (the host is the Application's, not this activity's)")
+     route = KeliverRoute.from(intent?.dataString, ROUTE_QUERY_KEYS)
+-    setContent { KeliverScreen((application as HostApp).keliver, Modifier.fillMaxSize(), route = route) }
++    // M3 trial (scratch only): the Keliver screen is asked for 3 s after the activity starts,
++    // as when a user opens the first Keliver screen of an app a few seconds after launch.
++    setContent {
++      var late by androidx.compose.runtime.remember { mutableStateOf(false) }
++      androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(3000); late = true }
++      if (late) KeliverScreen((application as HostApp).keliver, Modifier.fillMaxSize(), route = route)
++    }
+   }
+ 
+   override fun onNewIntent(intent: Intent) {
+--- before-late/host-android/src/main/kotlin/inventory/host/KeliverHost.kt	2026-10-30 17:06:27
++++ after-late/host-android/src/main/kotlin/inventory/host/KeliverHost.kt	2026-10-31 11:46:58
+@@ -916,6 +916,7 @@
+     )
+     session = Session(app, ziplineHttp, flow, lookup, fromCache = freshness is AcceptCachedBundle)
+     mutableState.value = KeliverHostState.Running(app)
++    app.start() // M3 trial: the code load starts now, not when the first screen asks
+   }
+ 
+   /**

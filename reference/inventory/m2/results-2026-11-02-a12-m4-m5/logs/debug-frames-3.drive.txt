@@ -1,0 +1,5 @@
+  PASS  F0  the list is on screen
+  PASS  F1  Espresso beans opens with its quantity on hand
+  PASS  F2  Add 1 -> On hand: 13
+  PASS  F3  Add 1 -> On hand: 14
+debug-frames-3: passed 4, failed 0

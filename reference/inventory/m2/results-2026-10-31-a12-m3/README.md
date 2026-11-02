@@ -27,7 +27,8 @@ That case is not measured here (see the end).
   thermal status 0. Build fingerprint in `*.env`.
 - **App:** the reference app from the K4 run 3 work directory. Its
   `host-android` was scaffolded by the **published tools 0.3.15** (libraries
-  0.4.1). It was built as the benchmark build type (release settings, minified,
+  0.3.3, the reference app's pin; corrected 2026-11-02, this said 0.4.1). It
+  was built as the benchmark build type (release settings, minified,
   profileable, not debuggable), with `keliver.updates=next-launch` and channel
   stable.
 - **Before / after:** two copies of that `host-android`. "after" adds only the
@@ -60,7 +61,9 @@ That case is not measured here (see the end).
 | warm: open → content | 155 | 153 | 339 | 334 |
 
 - Each pair (before/after, before-2/after-2) agrees within its own spread.
-  The difference between the two pairs is the phone, not M3.
+  The difference between the two pairs is the phone, not M3. (2026-11-02: most
+  likely the compile state in the next point; with it fixed, warm opens took
+  122–148 ms in every set, `../results-2026-11-02-a12-m3-late`.)
 - `before.env` and `after.env` show the app compiled (`speed-profile`) after
   their runs. The second pair stayed at `verify`. When during the first pair's
   runs the compilation happened is not recorded. Pooling the four sets would
