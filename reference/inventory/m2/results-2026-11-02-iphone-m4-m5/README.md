@@ -7,8 +7,8 @@ simulator only; this is the first iPhone, after the Galaxy A12
 about 76 MB, in another app (the private brownfield one, also a debug build;
 `docs/ADOPTION_RETRO_2026-10.md`); M5 was built to say where such a cost goes.
 
-**Result: in the reference app the first open adds 74–76 MiB of footprint (77–79 MB, the size
-the retro saw), and about two thirds of it comes before QuickJS starts, at `ui`, mostly the
+**Result: in the reference app the first open adds 74–76 MiB of footprint (77–79 MB, about the
+size the retro saw), and about two thirds of it comes before QuickJS starts, at `ui`, mostly the
 host's Compose UI and first view.** From one memory cycle's close to the next the footprint grew
 384–464 KiB in every run, QuickJS 6–7 KiB.
 
