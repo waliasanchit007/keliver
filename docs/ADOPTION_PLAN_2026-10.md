@@ -129,7 +129,7 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    the next.
    **2026-11-02, on an iPhone 13** (Debug, over the Mac's Wi-Fi;
    `reference/inventory/m2/results-2026-11-02-iphone-m4-m5`): the first open adds 75 456–77 360
-   KiB of footprint over 6 launches (`open` → `content`; the size of the retro's 76 MB, which was
+   KiB of footprint over 6 launches (`open` → `content`; about the size of the retro's 76 MB, which was
    another app), and about two thirds of it (67–70 % per run) comes at `ui`, before QuickJS
    starts: mostly the host's Compose UI and first view, though the steps overlap the bundle
    lookup. `code` (the loader and the guest's code) adds about 12 MiB, 4 585 KiB of it QuickJS's
