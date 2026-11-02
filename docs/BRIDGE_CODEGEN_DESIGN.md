@@ -334,7 +334,8 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
    - it is reported under new reasons in `reportReason` (`BundleIndex.kt`), matched before the
      signature reasons: `bridge-missing`, and `bridge-shape` for a shape mismatch (3).
    A manifest without `keliver.bridges` needs no bridge; one whose value is malformed is
-   refused (fail closed), as `bridge refused: malformed keliver.bridges`.
+   refused (fail closed), as `bridge refused: malformed keliver.bridges`, reported as
+   `bridge-missing`.
 3. **Shape**, when the manifest carries one: at the same version, the guest's shape must equal
    the host's; a different shape at the same version is refused (`bridge refused: ShopActions@2
    was built against another contract`), since it is the change a version bump was missed for.
@@ -368,15 +369,18 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
 
 ### Tests
 
-- `BundleIndexTest`: lookup skips (missing, older, malformed), the manifest checks (network
-  bytes and verified metadata, with and without a shape), and the existing rule that an unknown
-  constraint is skipped by a host that predates it.
+- `BundleIndexTest`: lookup skips (missing, older, another shape, malformed), the manifest
+  checks (network bytes and verified metadata, with and without a shape), `reportReason`'s
+  `bridge-missing` and `bridge-shape` (matched before the signature reasons), and the existing
+  rule that an unknown constraint is skipped by a host that predates it.
 - `StaticPublishTest` and `keliver-publish-selftest.sh`: the entry's constraints come from the
   manifest on publish, republish and promotion (an entry written before B4 included); a
   malformed value refuses. A relay test: `relayIndexJson` derives `bridges` from each
   version's manifest and leaves out a malformed one; the legacy `/bundles/latest` skips a
   bundle that declares bridges.
-- Scaffolder self-tests: both hosts wire the bridge check where they wire the floor.
+- Scaffolder self-tests: both hosts wire the bridge check where they wire the floor, and
+  `markNotLoaded` treats `bridge refused:` as unloadable (checked in the source, as the floor's
+  wiring is; it runs on a device in B5's scenarios).
 - On a device (the reference app, after B5): an index entry needing a bridge the host does not
   serve is skipped (as S16 does for a capability), and a manifest whose signed requirement the
   host cannot serve is refused at load even when the index entry lies about it.
