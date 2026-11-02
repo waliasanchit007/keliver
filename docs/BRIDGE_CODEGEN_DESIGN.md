@@ -314,9 +314,10 @@ which would then load a bundle whose first bridge call fails.
 A host knows the bridges it serves: each generated `<Name>Bridge.bind` the app calls (B5's
 hook) records `NAME`, `VERSION` and `SHAPE` with the host.
 
-1. **Lookup** (`BundleIndex.kt`, the same file in both hosts): an entry whose `constraints.bridges`
-   names a bridge the host does not serve, or at a `min` above the host's `VERSION`, is skipped,
-   like an entry needing a capability or widget version the host lacks.
+1. **Lookup** (`BundleIndex.kt`, the same file in both hosts): an entry whose
+   `constraints.bridges` names a bridge the host does not serve, at a `min` above the host's
+   `VERSION`, or at the host's `VERSION` with another `shape` (3, below), is skipped, like an
+   entry needing a capability or widget version the host lacks.
 2. **Load**, on the manifest itself, in the two places the floor is checked: the manifest bytes
    in `ManifestPinningHttpClient` (before Zipline verifies them; it only refuses) and the
    verified metadata in `AcceptCachedBundle` (a cache start). A manifest whose
