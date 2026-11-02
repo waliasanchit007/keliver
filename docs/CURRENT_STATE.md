@@ -48,7 +48,9 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | where | reaches users through |
 |---|---|---|
-| (nothing since tools 0.3.17) | | |
+| generated action bridges: the runtime `keliver-bridge`, its annotations and the KSP processor `keliver-bridge-codegen` (B3, #201–#203) | new library modules | the next libraries release, which needs the owner |
+| the bridge gate: a bundle's signed `keliver.bridges` copied into its index entry by the publisher and the relay; both hosts skip and refuse a bundle needing a bridge they do not serve (B4a, #205) | the host templates, `keliver-publish`, the relay | the next tools release |
+| the iOS tap driver's sentences in the tools bundle's `host/README.md` (from `DEVICE_HOST.md`, #197, #199), and the leak bound and the bridge-gate scenarios documented there (#213, #214) | `docs/DEVICE_HOST.md` | the next tools release |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
