@@ -420,9 +420,9 @@ carry `constraints`:
   bundle could not name, a version outside 1..999999999, a shape that is not
   16 lowercase hex digits, a name twice, or `HostSqlDriver`, `HostHttp` or
   `KeliverTrace`) is refused when it is set. In an embedded Android host
-  (`--embed`), Zipline is the library's own dependency: your module reaches
-  `scope.zipline`'s type through the contract module, which depends on
-  Zipline with `api`. Each code load binds your bridges
+  (`--embed`), Zipline is the library's own dependency: your module will reach
+  `scope.zipline`'s type through the contract module, which depends on Zipline
+  with `api` (B5c). Each code load binds your bridges
   first, on Zipline's thread, then the host's own services. A binding must
   bind exactly its declared name, once; one that binds anything else, or
   throws, fails the load as `bridge bind failed: …` (reason `bridge-bind`), the

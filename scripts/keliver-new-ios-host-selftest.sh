@@ -437,7 +437,7 @@ if [ "$BUILD" = 1 ]; then
             '  let version: Int32 = binding.version; _ = (binding.name, binding.shape, version)' \
             '}' \
             '// The generated <Name>Bridge.bind(zipline:callbacks:context:log:), standing in (B5c compiles the real one).' \
-            'func standInBind<Z, C>(zipline: Z, callbacks: AnyObject, context: C, log: @escaping (String) -> Void) { log("bound") }' > "$DISP/policy-check.swift" \
+            'func standInBind<Z>(zipline: Z, callbacks: AnyObject, context: KotlinCoroutineContext, log: @escaping (String) -> Void) { log("bound") }' > "$DISP/policy-check.swift" \
           && xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
           -F "$(dirname "$fw")" "$L/KeliverScreen.swift" "$DISP/policy-check.swift" > "$DISP/swift-typecheck.log" 2>&1; then
         ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable), setting a RequestPolicy and requestHeaders, and B5's bridges (a KeliverBridgeBinding with its closure, set on Keliver.shared)"

@@ -485,7 +485,8 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
     name, once, or the load fails with `bridge bind failed: ShopActions bound [] (it must bind
     ShopActions, once)`. A binding that binds later, from a coroutine it launched, records
     nothing and fails that way: binding is synchronous.
-  - **A binding that throws** (anything but cancellation, an `Error` included) fails the load
+  - **A binding that throws** (an `Error` included, and a cancellation unless the load itself
+    was cancelled: Zipline's loader reports nothing for a cancellation) fails the load
     as `bridge bind failed: ShopActions: <the throwable's class>`, its message in the debug log
     only. Both are reported under a new reason, `bridge-bind`, matched in `reportReason` with
     the other bridge reasons, before `signature` and `network` (a class named `ConnectException`
