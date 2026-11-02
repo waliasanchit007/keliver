@@ -264,9 +264,9 @@ that opens.
   0.3.14, iOS from 0.3.15). From tools 0.3.16, a host
   whose first load failed loads again at the next update check (§2), so one
   process can send `not-loaded` more than once, then `loaded`.
-- **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
-  `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
-  `other`.
+- **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `bridge-missing`
+  and `bridge-shape` (B4, below), `signature`, `lookup-failed`, `network`,
+  `config`, `exception` (for `screen-failed`) or `other`.
 
 Where the records go:
 - **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
@@ -394,9 +394,26 @@ carry `constraints`:
   is not an integer skips gated entries. Gates hold below the floor too, because
   they are about what the code needs.
 
+- **`bridges`** (B4, not yet in a tools release): the app's generated bridges
+  the bundle calls, each with the oldest version it can talk to and the contract
+  shape it was built against (`{"ShopActions": {"min": 2, "shape": "…"}}`). The
+  publisher copies it from the manifest's **signed** `keliver.bridges` metadata
+  (`ShopActions@2#<shape>`), which the app's build writes with
+  `zipline { metadata.put('keliver.bridges', …) }`; it is never typed into the
+  index. A host takes the entry only when it serves each bridge at that version
+  or later (and, at that very version, with the same shape). It checks the
+  manifest again at load, on the network and on a cache start, and refuses one
+  it cannot serve (`bridge refused: …`, reported as `bridge-missing` or
+  `bridge-shape`), even when the index entry says otherwise.
+  [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md), section "B4". A host
+  serves the bridges the app declares in its configuration, before the first
+  lookup; until the hosts' hook for that (B5), it serves none, and skips every
+  entry that names one.
+
 A host skipping an entry takes the newest one it may run. An entry with a
 constraint key the host doesn't know is skipped, so hosts from before W4.5 skip
-every constrained entry.
+every constrained entry, and hosts from before B4 skip every entry that needs a
+bridge.
 
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,

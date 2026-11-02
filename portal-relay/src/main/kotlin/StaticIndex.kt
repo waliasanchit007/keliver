@@ -68,6 +68,47 @@ internal fun signedSequenceText(manifestJson: String): String? {
   return if (v.isString) v.content else null
 }
 
+/**
+ * B4 (docs/BRIDGE_CODEGEN_DESIGN.md): the `bridges` constraint an entry for [manifestJson]
+ * carries, read from the manifest's SIGNED `keliver.bridges` (`ShopActions@2#<shape>,…`), so
+ * the index never says other than what was signed. [constraint] is null when the bundle needs
+ * no bridge; [problem] is set when the value is malformed. The same rules as the hosts'
+ * `parseBridges` (BundleIndex.kt); BridgeGateTest holds the two together.
+ */
+internal data class SignedBridges(val constraint: JsonObject?, val problem: String?)
+
+internal const val BRIDGES_METADATA_KEY = "keliver.bridges"
+private val BRIDGE_ITEM_RE = Regex("([A-Za-z_][A-Za-z0-9_.]*)@([1-9][0-9]{0,8})(?:#([0-9a-f]{16}))?")
+
+internal fun signedBridges(manifestJson: String): SignedBridges {
+  val root = runCatching { Json.parseToJsonElement(manifestJson) as? JsonObject }.getOrNull()
+    ?: return SignedBridges(null, "the manifest is not a JSON object")
+  val v = (root["metadata"] as? JsonObject)?.get(BRIDGES_METADATA_KEY) ?: return SignedBridges(null, null)
+  val text = (v as? JsonPrimitive)?.takeIf { it.isString }?.content
+    ?: return SignedBridges(null, "the manifest's $BRIDGES_METADATA_KEY is not a string")
+  if (text.isEmpty()) return SignedBridges(null, null)
+  val bridges = linkedMapOf<String, JsonElement>()
+  for (item in text.split(',')) {
+    val m = BRIDGE_ITEM_RE.matchEntire(item)
+      ?: return SignedBridges(null, "the manifest's $BRIDGES_METADATA_KEY '$text' is not name@min[#shape],… (at '$item')")
+    val (name, min, shape) = m.destructured
+    val bridge = buildJsonObject {
+      put("min", min.toInt())
+      if (shape.isNotEmpty()) put("shape", shape)
+    }
+    if (bridges.put(name, bridge) != null) return SignedBridges(null, "the manifest's $BRIDGES_METADATA_KEY names $name twice")
+  }
+  return SignedBridges(JsonObject(mapOf("bridges" to JsonObject(bridges))), null)
+}
+
+/** [constraints] with `bridges` set from [signed] (and any copied `bridges` dropped); null when empty. */
+internal fun withSignedBridges(constraints: JsonObject?, signed: SignedBridges): JsonObject? {
+  // Every caller has refused a malformed value; never write an entry without its gate.
+  check(signed.problem == null) { signed.problem!! }
+  val merged = (constraints.orEmpty() - "bridges") + signed.constraint.orEmpty()
+  return merged.takeIf { it.isNotEmpty() }?.let(::JsonObject)
+}
+
 /** Why [manifestJson] may not be published at [sequence], or null. */
 internal fun sequenceProblem(manifestJson: String, sequence: Long): String? {
   val signed = signedSequenceText(manifestJson)
@@ -344,6 +385,7 @@ internal fun publishStatic(
   // signed sequence against it: a refusal here writes nothing.
   val manifestText = File(output, "manifest.zipline.json").readText()
   sequenceProblem(manifestText, nextSequence(readIndex(bundlesDir), bundlesDir))?.let { throw PublishRefused(it) }
+  signedBridges(manifestText).problem?.let { throw PublishRefused(it) }
   if (!acceptKeyChange) keyChangeProblem(bundlesDir, readIndex(bundlesDir), manifestText, publicKeyHex)?.let { throw PublishRefused(it) }
   beforeLock()
 
@@ -367,6 +409,8 @@ internal fun publishStatic(
       }
       // Under the lock: another publish may have taken this sequence since the build.
       sequenceProblem(File(staging, "manifest.zipline.json").readText(), sequence)?.let { throw PublishRefused(it) }
+      // And what was copied must still name well-formed bridges.
+      signedBridges(File(staging, "manifest.zipline.json").readText()).problem?.let { throw PublishRefused(it) }
       if (!acceptKeyChange) keyChangeProblem(bundlesDir, index, File(staging, "manifest.zipline.json").readText(), publicKeyHex)?.let { throw PublishRefused(it) }
       Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
     } finally {
@@ -374,7 +418,11 @@ internal fun publishStatic(
     }
 
     val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
-    val entryConstraints = constraints.over(extraFields["constraints"])
+    // B4: what the signed manifest says it needs, over any copied (republish) bridges.
+    val entryConstraints = withSignedBridges(
+      constraints.over(extraFields["constraints"]),
+      signedBridges(File(dest, "manifest.zipline.json").readText()),
+    )
     val entry = JsonObject(
       entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields - "constraints" +
         listOfNotNull(entryConstraints?.let { "constraints" to it }),
@@ -471,6 +519,7 @@ internal fun promoteStatic(
       throw PublishRefused("$manifest is not the manifest the entry at sequence $sequence names (manifestSha256)")
     }
     staticOutputProblem(dir, publicKeyHex)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
+    signedBridges(manifest.readText()).problem?.let { throw PublishRefused("v$version: $it") }
     return source
   }
   check(readIndex(bundlesDir)) // before the lock: a refusal writes nothing, not even the lock file
@@ -482,7 +531,13 @@ internal fun promoteStatic(
         "channel" to JsonPrimitive(channel),
         "promotedFrom" to JsonPrimitive(entryChannel(source)),
         "createdAt" to JsonPrimitive(now.toString()),
-      ) + listOfNotNull(constraints.over(source["constraints"])?.let { "constraints" to it }),
+      ) + listOfNotNull(
+        // B4: derived from the signed manifest, so an entry from before B4 gains its bridges.
+        withSignedBridges(
+          constraints.over(source["constraints"]),
+          signedBridges(File(bundlesDir, "v${(source["version"] as JsonPrimitive).content}/manifest.zipline.json").readText()),
+        )?.let { "constraints" to it },
+      ),
     )
     val next = JsonObject(index + ("entries" to JsonArray((index["entries"] as JsonArray) + entry)))
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
@@ -622,6 +677,8 @@ internal fun republishStatic(
   }
   // Only whether a listed key signed it: the copy is signed again, and checked as a new publish.
   staticOutputProblem(source, publicKeyHex, authenticOnly = true)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
+  // B4: before the re-sign build, not after it (a version stored before B4 may be malformed).
+  signedBridges(sourceManifest.readText()).problem?.let { throw PublishRefused("v$version: $it") }
   val entryChannel = channel ?: (original["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
   val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
   val extra = buildMap<String, JsonElement> {
@@ -722,9 +779,13 @@ internal fun relayIndexJson(bundlesDir: File): String {
         ?.takeUnless { it.isString }?.intOrNull ?: return@mapNotNull null
       val caps = (meta["capabilities"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }.orEmpty()
       val created = (meta["createdAt"] as? JsonPrimitive)?.longOrNull?.let(Instant::ofEpochMilli) ?: Instant.EPOCH
+      val bytes = manifest.readBytes()
+      // B4: a malformed keliver.bridges leaves the version out (fail closed).
+      val bridges = signedBridges(bytes.decodeToString()).takeIf { it.problem == null } ?: return@mapNotNull null
       JsonObject(
-        entryJson(version.toLong(), version, DEFAULT_CHANNEL, caps, sha256Hex(manifest.readBytes()), created) +
-          ("widgetVersion" to JsonPrimitive(widgetVersion)),
+        entryJson(version.toLong(), version, DEFAULT_CHANNEL, caps, sha256Hex(bytes), created) +
+          ("widgetVersion" to JsonPrimitive(widgetVersion)) +
+          listOfNotNull(bridges.constraint?.let { "constraints" to it }),
       )
     }
   return Json.encodeToString(
@@ -732,3 +793,24 @@ internal fun relayIndexJson(bundlesDir: File): String {
     JsonObject(mapOf("format" to JsonPrimitive(INDEX_FORMAT), "entries" to JsonArray(entries))),
   )
 }
+
+/**
+ * The relay's legacy `/bundles/latest` (hosts from tools 0.3.7 or earlier): the newest `v<N>/`
+ * whose meta.json's widget version is at most [widgetVersion] and whose capabilities [hostCaps]
+ * holds. B4: such a host serves no bridges, and this answer has no constraints to skip by, so a
+ * bundle whose manifest names any bridge (or a malformed value) is never the answer.
+ */
+internal fun legacyLatest(bundlesDir: File, widgetVersion: Int, hostCaps: Set<String>): File? =
+  bundlesDir.listFiles { f -> f.isDirectory && f.name.startsWith("v") }
+    ?.filter { dir ->
+      val metaText = File(dir, "meta.json").takeIf { it.exists() }?.readText() ?: ""
+      val recorded = Regex("\"widgetVersion\":(\\d+)").find(metaText)
+        ?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
+      val required = Regex("\"capabilities\":\\[([^\\]]*)]").find(metaText)
+        ?.groupValues?.get(1)?.split(',')?.map { it.trim().trim('"') }?.filter { it.isNotEmpty() }
+        ?: emptyList()
+      val signed = File(dir, "manifest.zipline.json").takeIf { it.isFile }?.let { signedBridges(it.readText()) }
+      recorded <= widgetVersion && hostCaps.containsAll(required) && signed != null &&
+        signed.problem == null && signed.constraint == null
+    }
+    ?.maxByOrNull { it.name.removePrefix("v").toIntOrNull() ?: 0 }

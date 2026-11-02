@@ -1,5 +1,7 @@
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestSigner
+import hosttemplate.HostBridge
+import hosttemplate.HostFacts
 import hosttemplate.pickFromIndex
 import java.io.File
 import java.nio.file.Files
@@ -50,7 +52,7 @@ class StaticPublishTest {
    * A compile task's output: two modules and a manifest naming them, signed by [by] (or unsigned),
    * with [seq] in the signed metadata as the W4 signing block writes it (none when null).
    */
-  private fun output(name: String, title: String = name, by: Key? = app, seq: Long? = 1): File {
+  private fun output(name: String, title: String = name, by: Key? = app, seq: Long? = 1, bridges: String? = null): File {
     val dir = File(tmp, "out-$name").apply { mkdirs() }
     val modules = listOf("lib", "main").associateWith { m ->
       val bytes = "// $m of $title\n".encodeToByteArray()
@@ -59,10 +61,15 @@ class StaticPublishTest {
     }
     val json = """{"unsigned":{"signatures":{},"freshAtEpochMs":null,"baseUrl":null},
       |"modules":{${modules.entries.joinToString(",") { (m, sha) -> "\"./$m.js\":{\"url\":\"$m.zipline\",\"sha256\":\"$sha\",\"dependsOnIds\":[]}" }}},
-      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain"${if (seq != null) ",\"metadata\":{\"$SEQUENCE_METADATA_KEY\":\"$seq\"}" else ""}}""".trimMargin().replace("\n", "")
+      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain"${metadata(seq, bridges)}}""".trimMargin().replace("\n", "")
     val manifest = ZiplineManifest.decodeJson(json)
     File(dir, "manifest.zipline.json").writeText((by?.signer?.sign(manifest) ?: manifest).encodeJson())
     return dir
+  }
+
+  private fun metadata(seq: Long?, bridges: String?): String {
+    val pairs = listOfNotNull(seq?.let { "\"$SEQUENCE_METADATA_KEY\":\"$it\"" }, bridges?.let { "\"$BRIDGES_METADATA_KEY\":\"$it\"" })
+    return if (pairs.isEmpty()) "" else pairs.joinToString(",", ",\"metadata\":{", "}")
   }
 
   private val site = File(tmp, "site")
@@ -773,5 +780,107 @@ class StaticPublishTest {
     assertEquals(4, run("--set-rollout", "9", "--rollout", "20", key = null))
     assertEquals(0, run("--promote", "2", "--channel", "beta", "--rollout", "100", "--max-host-version", "7"))
     assertEquals(JsonObject(mapOf("rollout" to JsonPrimitive(100), "maxHostVersion" to JsonPrimitive(7))), entries().last()["constraints"])
+  }
+
+  // --- B4: bridges, from the signed manifest into the entry's constraints ---
+
+  private fun bridgesOf(e: JsonObject) = e["constraints"]?.jsonObject?.get("bridges")
+
+  @Test
+  fun aPublishCopiesTheSignedBridgesIntoTheEntrysConstraints() {
+    val p = publishStatic(output("one", bridges = "ShopActions@2#cd5829702ffe49be,Other@1"), site, app.publicHex, init = true)
+    assertEquals(
+      Json.parseToJsonElement("""{"ShopActions":{"min":2,"shape":"cd5829702ffe49be"},"Other":{"min":1}}"""),
+      bridgesOf(p.entry),
+    )
+    assertEquals(bridgesOf(p.entry), bridgesOf(entries().single()))
+    // A host serving no bridges skips it; one serving them takes it.
+    assertTrue(pickFromIndex(File(bundles, INDEX_FILE).readText(), emptyList()).isFailure)
+    val served = mapOf("ShopActions" to HostBridge(2, "cd5829702ffe49be"), "Other" to HostBridge(3, null))
+    val facts = HostFacts(installId = "", hostVersion = null, floor = 0, bridges = served)
+    assertEquals(1L, pickFromIndex(File(bundles, INDEX_FILE).readText(), emptyList(), facts = facts).getOrThrow().sequence)
+    // A bundle that needs none has no constraints at all.
+    assertNull(publishStatic(output("two", seq = 2), site, app.publicHex).entry["constraints"])
+  }
+
+  @Test
+  fun aMalformedBridgesValueRefusesThePublish() {
+    for (bad in listOf("ShopActions", "ShopActions@0", "Shop Actions@1", "A@1,A@2", "A@1#short")) {
+      val e = assertFailsWith<PublishRefused>(bad) { publishStatic(output("bad", bridges = bad), File(tmp, "site-$bad"), app.publicHex, init = true) }
+      assertTrue(BRIDGES_METADATA_KEY in e.message!!, e.message)
+    }
+  }
+
+  @Test
+  fun theManifestNotTheCopiedEntryDecidesTheBridgesOnRepublishAndPromotion() {
+    // v1 needs ShopActions@2, but its entry (written before B4, say) has no constraint.
+    publishStatic(output("one", bridges = "ShopActions@2"), site, app.publicHex, init = true)
+    val stripped = JsonObject(index() + ("entries" to JsonArray(entries().map { JsonObject(it - "constraints") })))
+    File(bundles, INDEX_FILE).writeText(stripped.toString())
+    assertNull(entries().single()["constraints"])
+    val republished = republishStatic(site, 1, app.publicHex, resign = resign()).entry
+    assertEquals(Json.parseToJsonElement("""{"ShopActions":{"min":2}}"""), bridgesOf(republished))
+    val promoted = promoteStatic(site, 1, "beta", app.publicHex).entry
+    assertEquals(Json.parseToJsonElement("""{"ShopActions":{"min":2}}"""), bridgesOf(promoted))
+  }
+
+  @Test
+  fun theRelaysIndexDerivesBridgesAndLeavesOutAMalformedValue() {
+    val store = File(tmp, "store").apply { mkdirs() }
+    for ((v, b) in listOf(1 to null, 2 to "ShopActions@2", 3 to "not a bridge list")) {
+      output("relay$v", seq = v.toLong(), bridges = b).copyRecursively(File(store, "v$v"))
+      File(store, "v$v/meta.json").writeText("""{"version":$v,"widgetVersion":1,"capabilities":[],"createdAt":1759838400000}""")
+    }
+    val e = Json.parseToJsonElement(relayIndexJson(store)).jsonObject["entries"]!!.jsonArray.map { it.jsonObject }
+    assertEquals(listOf(1L, 2L), e.map { it["sequence"]!!.jsonPrimitive.content.toLong() })
+    assertNull(e[0]["constraints"])
+    assertEquals(Json.parseToJsonElement("""{"ShopActions":{"min":2}}"""), bridgesOf(e[1]))
+    // A host without the bridge gets v1; one with it, v2.
+    assertEquals(1L, pickFromIndex(relayIndexJson(store), emptyList()).getOrThrow().sequence)
+    val facts = HostFacts(installId = "", hostVersion = null, floor = 0, bridges = mapOf("ShopActions" to HostBridge(2, null)))
+    assertEquals(2L, pickFromIndex(relayIndexJson(store), emptyList(), facts = facts).getOrThrow().sequence)
+  }
+
+  @Test
+  fun theLegacyLatestNeverAnswersWithABundleThatNeedsABridge() {
+    val store = File(tmp, "legacy").apply { mkdirs() }
+    for ((v, b) in listOf(1 to null, 2 to "ShopActions@1", 3 to "not a bridge list")) {
+      output("legacy$v", seq = v.toLong(), bridges = b).copyRecursively(File(store, "v$v"))
+      File(store, "v$v/meta.json").writeText("""{"version":$v,"widgetVersion":1,"capabilities":[],"createdAt":1759838400000}""")
+    }
+    assertEquals("v1", legacyLatest(store, 1, emptySet())?.name)
+    // Without the bridged and malformed versions, the newest is still the answer.
+    File(store, "v4").mkdirs()
+    output("legacy4", seq = 4).copyRecursively(File(store, "v4"), overwrite = true)
+    File(store, "v4/meta.json").writeText("""{"version":4,"widgetVersion":1,"capabilities":[],"createdAt":1759838400000}""")
+    assertEquals("v4", legacyLatest(store, 1, emptySet())?.name)
+    assertNull(legacyLatest(store, 0, emptySet()), "no bundle at widget version 0")
+  }
+
+  @Test
+  fun aCopiedBridgesConstraintIsReplacedByTheManifestsAndOtherConstraintsAreKept() {
+    publishStatic(output("one", bridges = "ShopActions@2"), site, app.publicHex, init = true)
+    // An entry whose bridges were edited to something the manifest does not say.
+    val edited = entries().map { e ->
+      JsonObject(e + ("constraints" to Json.parseToJsonElement("""{"minHostVersion":3,"bridges":{"Wrong":{"min":9}}}""")))
+    }
+    File(bundles, INDEX_FILE).writeText(JsonObject(index() + ("entries" to JsonArray(edited))).toString())
+    val promoted = promoteStatic(site, 1, "beta", app.publicHex, constraints = Constraints(rollout = 10)).entry
+    assertEquals(
+      Json.parseToJsonElement("""{"minHostVersion":3,"rollout":10,"bridges":{"ShopActions":{"min":2}}}"""),
+      promoted["constraints"],
+    )
+    val rolled = setRolloutStatic(site, 1, 50, channel = "beta").entry
+    assertEquals(Json.parseToJsonElement("""{"ShopActions":{"min":2}}"""), bridgesOf(rolled))
+  }
+
+  @Test
+  fun theLegacyLatestSkipsAVersionWithoutAManifest() {
+    val store = File(tmp, "legacy-nomanifest").apply { mkdirs() }
+    output("lm1", seq = 1).copyRecursively(File(store, "v1"))
+    File(store, "v1/meta.json").writeText("""{"version":1,"widgetVersion":1,"capabilities":[],"createdAt":1759838400000}""")
+    File(store, "v2").mkdirs()
+    File(store, "v2/meta.json").writeText("""{"version":2,"widgetVersion":1,"capabilities":[],"createdAt":1759838400000}""")
+    assertEquals("v1", legacyLatest(store, 1, emptySet())?.name)
   }
 }

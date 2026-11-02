@@ -87,8 +87,13 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
   companion object {
     const val MAX_LINES = 20_000
     private val KEYS = setOf("installId", "channel", "hostVersion", "sequence", "source", "outcome", "reason", "platform")
-    private val OUTCOMES = setOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused")
-    private val REASONS = setOf("", "sha256-mismatch", "below-floor", "signature", "lookup-failed", "network", "config", "other")
+    // Every outcome and reason the hosts' reportReason (BundleIndex.kt) can send; HostReportsTest
+    // holds the two together. screen-failed/exception (K1/K2) were missing until B4.
+    private val OUTCOMES = setOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed")
+    private val REASONS = setOf(
+      "", "sha256-mismatch", "below-floor", "bridge-missing", "bridge-shape", "signature", "lookup-failed", "network",
+      "config", "exception", "other",
+    )
     private val INSTALL_ID = Regex("[A-Za-z0-9-]{1,64}")
     private val CHANNEL = Regex("[a-z0-9][a-z0-9-]{0,31}")
 

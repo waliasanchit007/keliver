@@ -154,6 +154,12 @@ grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'flo
   && grep -q 'manifestSequence(manifest.metadata)' "$K/MainViewController.kt" && grep -q 'sequence?.let(onSequence)' "$K/MainViewController.kt" \
   && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
   || bad "W4.2: the rollback floor is not wired"
+# B4: the bridge check runs where the floor's does, and a refused manifest is unloadable.
+grep -A12 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], ServedBridges.all)' \
+  && grep -q '"bridge refused:" in reason' "$K/MainViewController.kt" \
+  && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$K/BundleIndex.kt" \
+  && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
+  || bad "B4: the bridge check is not wired"
 grep -q 'DEVELOPMENT_TEAM' "$H/iosApp.xcodeproj/project.pbxproj" && bad "the Xcode project names a development team" \
   || ok "the Xcode project names no development team"
 # U32: TEAM_ID (in Config.xcconfig, or the gitignored Config.local.xcconfig)
@@ -310,7 +316,7 @@ grep -q 'val n = write(1, pinned.addressOf(at), (bytes.size - at).convert()).toI
   || bad "a host console line can be split by another thread's (println, or no ConsoleLine.kt)"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
-  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \
+  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$K/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
 grep -A2 '^  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))$' "$K/MainViewController.kt" \

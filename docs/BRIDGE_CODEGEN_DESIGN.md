@@ -299,9 +299,9 @@ way the sequence floor is (W4). B4 follows the existing mechanisms rather than a
     `bridges` from the manifest too, so an entry written before B4 gets it as well;
   - the relay, which keeps no entries but rebuilds them from each version's `meta.json` on
     every request (`relayIndexJson`): it derives `bridges` from that version's manifest.
-  A malformed value refuses a publish, republish or promotion. The relay, which has no publish
-  step at that point, leaves out of its index an entry whose manifest's value is malformed
-  (fail closed). `noStricterThan` already treats an entry with constraints as stricter.
+  A malformed value refuses a publish, republish or promotion, and the relay's own publish. The
+  relay's index, rebuilt on each request, leaves out a version whose manifest's value is
+  malformed anyway (one stored before B4, fail closed). `noStricterThan` already treats an entry with constraints as stricter.
 
 ### Why `constraints`, not a new top-level field
 
@@ -312,8 +312,11 @@ which would then load a bundle whose first bridge call fails.
 
 ### What a host checks
 
-A host knows the bridges it serves: each generated `<Name>Bridge.bind` the app calls (B5's
-hook) records `NAME`, `VERSION` and `SHAPE` with the host.
+A host knows the bridges it serves from its configuration: the app declares each one (its
+generated `<Name>Bridge`'s `NAME`, `VERSION` and `SHAPE`) when it configures the host (B5's
+hook, Android `KeliverConfig`, iOS `Keliver`), before the first lookup. Not at `bind`: binding
+runs after the lookup, the cache check and the manifest check, so a cold start would refuse a
+bundle the host can serve (found in B4a's review). The host then binds what it declared.
 
 1. **Lookup** (`BundleIndex.kt`, the same file in both hosts): an entry whose
    `constraints.bridges` names a bridge the host does not serve, at a `min` above the host's
@@ -337,8 +340,7 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
    refused (fail closed), as `bridge refused: malformed keliver.bridges`, reported as
    `bridge-missing`.
 3. **Shape**, when the manifest carries one: at the same version, the guest's shape must equal
-   the host's; a different shape at the same version is refused (`bridge refused: ShopActions@2
-   was built against another contract`), since it is the change a version bump was missed for.
+   the host's; a different shape at the same version is refused (`bridge refused: the bundle was built against another ShopActions@2 contract …`), since it is the change a version bump was missed for.
    A host at a later version than `min` is not compared, so a version bump must stay
    compatible with older guests, on two levels:
    - **functions:** keep every older function's signature (Zipline call id), adding new ones
@@ -369,15 +371,16 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
 
 ### Tests
 
-- `BundleIndexTest`: lookup skips (missing, older, another shape, malformed), the manifest
+- `BridgeGateTest` (B4a; with the template's `BundleIndex.kt`): lookup skips (missing, older, another shape, malformed), the manifest
   checks (network bytes and verified metadata, with and without a shape), `reportReason`'s
   `bridge-missing` and `bridge-shape` (matched before the signature reasons), and the existing
   rule that an unknown constraint is skipped by a host that predates it.
-- `StaticPublishTest` and `keliver-publish-selftest.sh`: the entry's constraints come from the
+- `StaticPublishTest`: the entry's constraints come from the
   manifest on publish, republish and promotion (an entry written before B4 included); a
   malformed value refuses. A relay test: `relayIndexJson` derives `bridges` from each
   version's manifest and leaves out a malformed one; the legacy `/bundles/latest` skips a
-  bundle that declares bridges.
+  bundle that declares bridges. The relay's own publish refusal is not covered by a test: it is
+  inside the relay's private publish function, which runs Gradle.
 - Scaffolder self-tests: both hosts wire the bridge check where they wire the floor, and
   `markNotLoaded` treats `bridge refused:` as unloadable (checked in the source, as the floor's
   wiring is; it runs on a device in B5's scenarios).
@@ -391,5 +394,6 @@ hook) records `NAME`, `VERSION` and `SHAPE` with the host.
    `relayIndexJson` and the legacy endpoint's filter), `BundleIndex.kt` (lookup, manifest
    checks, `reportReason`) and the hosts' `markNotLoaded`, with their tests. Host templates
    pass no bridges yet, so nothing changes for an app without one.
-2. B5: the hosts' hooks for an app's bridges (which also record them for B4), the reference app
-   migrated to a generated bridge, and the device scenarios above.
+2. B5: the hosts' hooks for an app's bridges (declared in the configuration, before the first
+   lookup, and bound with the services), the reference app migrated to a generated bridge, and
+   the device scenarios above.
