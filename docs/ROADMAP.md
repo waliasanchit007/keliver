@@ -481,8 +481,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    `RequestPolicy`; released in tools 0.3.15. **2026-10-31:** B2 merged
    (#178): on iOS, a header callback adds the app's credentials, behind the
    same policy, with B1's rules (20 simulator tests); released in tools
-   0.3.16. B3 to B5
-   not started; B3's design: `BRIDGE_CODEGEN_DESIGN.md` (2026-11-02).
+   0.3.16. **2026-11-02:** B3 merged, not published (#201 design, #202 runtime,
+   #203 codegen; `BRIDGE_CODEGEN_DESIGN.md`); B4 designed there; B4 and B5 not started.
 9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
    host-side frame profile released (#186, tools 0.3.17; composition apart from encoding needs a
    library release); M5's memory profile released on both hosts (#188 iOS, #191 Android; tools 0.3.17); then their numbers on a phone.
