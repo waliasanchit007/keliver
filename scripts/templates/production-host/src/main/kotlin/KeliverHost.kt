@@ -558,7 +558,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       failedUrl = manifestUrls.value
       failedSha256 = failedUrl?.let(pinning::pinnedSha256)
       failedReason = reportReason("not-loaded", reason)
-      unloadable = "rollback refused:" in reason || ("manifest signature for key" in reason && "did not verify" in reason)
+      unloadable = "rollback refused:" in reason || "bridge refused:" in reason ||
+      ("manifest signature for key" in reason && "did not verify" in reason)
     }
 
     /**
@@ -1245,7 +1246,10 @@ private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessCheck
   // after verifying it. A refused cache is not used; Zipline then fetches the
   // manifest from the network, through the same floor guard.
   override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
-    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor()) ?: return true
+    // So does B4's bridge check, on the verified metadata.
+    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor())
+      ?: manifestBridgeProblem(manifest.metadata[BRIDGES_METADATA_KEY], ServedBridges.all)
+      ?: return true
     Log.e(TAG, "cached bundle refused: $problem")
     return false
   }

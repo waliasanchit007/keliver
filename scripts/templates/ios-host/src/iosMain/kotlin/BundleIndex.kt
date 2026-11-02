@@ -16,6 +16,13 @@
  * the network (ManifestPinningHttpClient) and on a cache start. The floor rises
  * only after a load succeeded, so after Zipline verified that sequence's
  * signature. Not protected: a reinstall or cleared app data resets the floor.
+ *
+ * Bridges (B4, docs/BRIDGE_CODEGEN_DESIGN.md): a bundle that calls an app's generated bridges
+ * names them, with the oldest version it can talk to, in its SIGNED metadata
+ * ("keliver.bridges"), and its index entry carries the same as the `bridges` constraint (which
+ * hosts from before B4 skip). The host serves the bridges in [ServedBridges]; it skips an entry,
+ * and refuses a manifest, that needs one it does not serve, at a newer version, or (at the same
+ * version) built against another contract shape.
  */
 package @@PACKAGE@@
 
@@ -61,7 +68,7 @@ internal const val DEFAULT_CHANNEL = "stable"
  * Constraint keys this host understands (W4.5). An entry carrying any other is
  * skipped, so a constraint added later never reaches a host that can't honour it.
  */
-private val KNOWN_CONSTRAINTS = setOf("rollout", "minHostVersion", "maxHostVersion")
+private val KNOWN_CONSTRAINTS = setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")
 
 /**
  * What an entry's constraints are checked against (W4.5): this install's random
@@ -69,7 +76,74 @@ private val KNOWN_CONSTRAINTS = setOf("rollout", "minHostVersion", "maxHostVersi
  * version (Android versionCode, iOS CFBundleVersion; null when it is not an
  * integer), and the rollback floor.
  */
-internal data class HostFacts(val installId: String, val hostVersion: Long?, val floor: Long)
+internal data class HostFacts(
+  val installId: String,
+  val hostVersion: Long?,
+  val floor: Long,
+  val bridges: Map<String, HostBridge> = ServedBridges.all,
+)
+
+/** A bridge this host serves: its contract version and shape (a generated `<Name>Bridge`'s VERSION and SHAPE). */
+internal data class HostBridge(val version: Int, val shape: String?)
+
+/**
+ * The bridges this host serves, by name, recorded when the app binds them (B5's hook). Empty
+ * until then: such a host skips every entry, and refuses every manifest, that needs a bridge.
+ */
+internal object ServedBridges {
+  @Volatile var all: Map<String, HostBridge> = emptyMap()
+}
+
+/** A bridge a bundle needs: the oldest version it can talk to, and the shape it was built against. */
+internal data class NeededBridge(val min: Int, val shape: String?)
+
+/** The manifest metadata key that carries the bridges a bundle calls, inside the signed part of the manifest. */
+internal const val BRIDGES_METADATA_KEY = "keliver.bridges"
+private val BRIDGE_NAME = Regex("[A-Za-z_][A-Za-z0-9_.]*")
+private val BRIDGE_ITEM = Regex("(${BRIDGE_NAME.pattern})@([1-9][0-9]{0,8})(?:#([0-9a-f]{16}))?")
+
+/**
+ * The bridges in a `keliver.bridges` value (`ShopActions@2#cd5829702ffe49be,Other@1`), or null
+ * when it is malformed (an unknown form, a name twice). An empty value needs none.
+ */
+internal fun parseBridges(value: String): Map<String, NeededBridge>? {
+  if (value.isEmpty()) return emptyMap()
+  val needed = linkedMapOf<String, NeededBridge>()
+  for (item in value.split(',')) {
+    val m = BRIDGE_ITEM.matchEntire(item) ?: return null
+    if (needed.put(m.groupValues[1], NeededBridge(m.groupValues[2].toInt(), m.groupValues[3].ifEmpty { null })) != null) return null
+  }
+  return needed
+}
+
+/** Why a bundle needing [needed] must not run on a host serving [served], or null when it may. */
+internal fun bridgeProblem(needed: Map<String, NeededBridge>, served: Map<String, HostBridge>): String? {
+  for ((name, need) in needed) {
+    val have = served[name]
+    when {
+      have == null -> return "bridge refused: the bundle needs $name@${need.min}, which this host does not serve"
+      have.version < need.min -> return "bridge refused: the bundle needs $name@${need.min}; this host serves version ${have.version}"
+      have.version == need.min && need.shape != null && have.shape != null && need.shape != have.shape ->
+        return "bridge refused: the bundle was built against another $name@${need.min} contract (shape ${need.shape}; this host's is ${have.shape})"
+    }
+  }
+  return null
+}
+
+/** The same check on a manifest's `keliver.bridges` [value] (null: the bundle needs none). */
+internal fun manifestBridgeProblem(value: String?, served: Map<String, HostBridge>): String? {
+  if (value == null) return null
+  val needed = parseBridges(value) ?: return "bridge refused: malformed $BRIDGES_METADATA_KEY"
+  return bridgeProblem(needed, served)
+}
+
+/** A manifest's `keliver.bridges`, read from its JSON before Zipline has verified it: used only to refuse. */
+internal fun manifestBridges(manifestJson: String): String? = runCatching {
+  val metadata = (Json.parseToJsonElement(manifestJson) as JsonObject)["metadata"] as? JsonObject
+  val value = metadata?.get(BRIDGES_METADATA_KEY) ?: return@runCatching null
+  // Present but not a string: malformed, never "needs none".
+  (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: "\u0000"
+}.getOrElse { null }
 
 /**
  * The install's bucket for a staged rollout of [sequence], 0..99: the first four
@@ -86,6 +160,7 @@ internal fun rolloutBucket(installId: String, sequence: Long): Int {
 
 private val SEGMENT = Regex("[A-Za-z0-9._-]+")
 private val SHA256 = Regex("[0-9a-f]{64}")
+private val SHAPE = Regex("[0-9a-f]{16}")
 
 /** The manifest metadata key that carries the publish sequence, inside the signed part of the manifest. */
 internal const val SEQUENCE_METADATA_KEY = "keliver.sequence"
@@ -189,7 +264,27 @@ private fun admits(constraints: JsonObject, sequence: Long, facts: HostFacts): B
     val rollout = number("rollout")?.takeIf { it in 0..100 } ?: return false
     if (sequence > facts.floor && rolloutBucket(facts.installId, sequence) >= rollout) return false
   }
+  if ("bridges" in constraints) {
+    val needed = indexBridges(constraints["bridges"]) ?: return false
+    if (bridgeProblem(needed, facts.bridges) != null) return false
+  }
   return true
+}
+
+/** An entry's `bridges` constraint (`{"ShopActions": {"min": 2, "shape": "…"}}`), or null when malformed. */
+private fun indexBridges(element: Any?): Map<String, NeededBridge>? {
+  val o = element as? JsonObject ?: return null
+  return o.mapValues { (name, v) ->
+    if (!BRIDGE_NAME.matches(name)) return null
+    val b = v as? JsonObject ?: return null
+    if (!setOf("min", "shape").containsAll(b.keys)) return null
+    val min = (b["min"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull?.takeIf { it >= 1 } ?: return null
+    val shape = when (val sh = b["shape"]) {
+      null -> null
+      else -> (sh as? JsonPrimitive)?.takeIf { it.isString && SHAPE.matches(it.content) }?.content ?: return null
+    }
+    NeededBridge(min, shape)
+  }
 }
 
 /** A relative path under bundles/: no scheme, no leading '/', no '.' or '..' segment. */
@@ -217,6 +312,7 @@ internal class ManifestPinningHttpClient(
   manifestUrl: String,
   sha256: String?,
   private val floor: () -> Long = { 0 },
+  private val bridges: () -> Map<String, HostBridge> = { ServedBridges.all },
 ) : ZiplineHttpClient() {
   /** Manifest URL -> the sha256 the index holds it to (null: the floor only). Copied on write. */
   @Volatile private var pinned: Map<String, String?> = mapOf(manifestUrl to sha256)
@@ -241,7 +337,9 @@ internal class ManifestPinningHttpClient(
         val actual = body.sha256().hex()
         if (actual != sha256) throw IOException("manifest sha256 mismatch: $url is $actual, the index says $sha256")
       }
-      rollbackProblem(manifestSequence(body.utf8()), floor())?.let { throw IOException(it) }
+      val json = body.utf8()
+      rollbackProblem(manifestSequence(json), floor())?.let { throw IOException(it) }
+      manifestBridgeProblem(manifestBridges(json), bridges())?.let { throw IOException(it) }
     }
     return body
   }
@@ -265,6 +363,9 @@ internal fun reportReason(outcome: String, detail: String): String {
     d.isEmpty() -> ""
     "sha256 mismatch" in d -> "sha256-mismatch"
     "rollback refused" in d -> "below-floor"
+    // Before "signature": a bridge refusal's text can name a contract, never a signature.
+    "bridge refused" in d && "another" in d && "contract" in d -> "bridge-shape"
+    "bridge refused" in d -> "bridge-missing"
     "signature" in d || "verif" in d -> "signature"
     "lookup failed" in d || "nothing is cached" in d -> "lookup-failed"
     listOf("timeout", "timed out", "connect", "unreachable", "resolve", "unknownhost", "network", "offline", "reset").any { it in d } -> "network"
