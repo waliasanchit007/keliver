@@ -402,10 +402,11 @@ bundle the host can serve (found in B4a's review). The host then binds what it d
 
 Adoption plan item 4, step 5. B3 generates the bridge and B4 gates bundles on it. B5 is what is
 left for an app to use one end to end: a hook in both hosts that declares and binds the app's
-bridges, a way for the hosts' builds to see the app's contract, the first guest-to-host call
-through Zipline, and the reference app on a bridge. It is split by what each part needs: the
-first three need nothing published, the last needs the three `keliver-bridge*` modules on Maven
-Central (a libraries release, which needs the owner).
+bridges, the first guest-to-host call through Zipline, a way for the hosts' and the editor's
+builds to see the app's contract, and the reference app on a bridge. What each step needs is
+named in "Steps": the hook and the round trip need nothing published; everything an adopter
+builds against needs the three `keliver-bridge*` modules on Maven Central (a libraries release,
+which needs the owner).
 
 ### 1. The hook: one list, declared with the configuration
 
@@ -425,78 +426,69 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
   So a host from the next tools release builds against the libraries apps already use (0.4.1,
   and the reference app's 0.3.3), and an app without a bridge changes nothing. The host knows
   only what B4 needs; the app's `bind` calls the generated `<Name>Bridge.bind`. `main` is the
-  host's main dispatcher (Swift cannot name one), and `log` the host's own log.
+  host's main dispatcher (Swift cannot name one). `log` is the host's log in debug builds only:
+  the guard logs a throw's message, which may hold the app's data, and B3 kept it out of
+  anything a release build writes.
 - **Android:** `KeliverConfig(…, bridges = listOf(…))`, and `fromBuild(context, …, bridges)`:
   ```kotlin
   KeliverBridgeBinding(ShopActionsBridge.NAME, ShopActionsBridge.VERSION, ShopActionsBridge.SHAPE) {
-    ShopActionsBridge.bind(it.zipline, AppShopActions(context), it.main, it.log)
+    ShopActionsBridge.bind(it.zipline, shopActions, it.main, it.log)
   }
   ```
   The app's `ShopActions` implementation is its delegate; `it.main` when it touches UI, or its
   own context.
-- **iOS:** `Keliver.shared.bridges`, set from Swift before the host starts, like
-  `requestPolicy` (set later, it is logged and applies from the next process start):
+- **iOS:** `Keliver.shared.bridges`, set from Swift before the host starts:
   ```swift
+  let shopActions = AppShopActions()   // the callbacks, made beforehand on the main thread
   Keliver.shared.bridges = [
     KeliverBridgeBinding(name: ShopActionsBridge.shared.NAME, version: ShopActionsBridge.shared.VERSION,
                          shape: ShopActionsBridge.shared.SHAPE) { scope in
-      ShopActionsBridge.shared.bind(zipline: scope.zipline, callbacks: AppShopActions(),
+      ShopActionsBridge.shared.bind(zipline: scope.zipline, callbacks: shopActions,
                                     context: scope.main, log: scope.log)
     }
   ]
   ```
-  Swift implements `ShopActionsCallbacks` (§4, item 4) and hands it to the generated `bind`
-  inside the closure; the `Zipline` and the context stay opaque to it.
+  Swift implements `ShopActionsCallbacks` (§4, item 4) and hands it to the generated `bind`.
+  The closure runs on Zipline's loader thread, not the main thread: the first Swift closure the
+  host calls off it (B3 §4 said Kotlin would call `bind`; the host cannot name the app's
+  generated types, so Swift does, and only that). So it must only call `bind` with objects made
+  before, and the callbacks themselves are called on `scope.main`. Under Swift 6's language mode
+  a closure formed in a main-actor context is main-actor isolated and traps off the main thread,
+  so it must be marked `@Sendable` there; the template builds in Swift 5 mode. B5a's iOS
+  self-test compiles this snippet with `xcodebuild`, in the template's mode.
 - **What the host does with the list:**
-  - At configuration (Android: `KeliverHost.create`; iOS: `start()`, on the main thread,
-    before the lookup), it checks the list and sets `ServedBridges.all` from it (name to version
-    and shape). A list it refuses is the app's programming error, so it throws, as a config
-    with `httpClient` and no `requestPolicy` does: a name `parseBridges` would not accept, a
-    version below 1, a shape that is not 16 hex digits, a name twice, or a name the host binds
-    itself (`HostSqlDriver`, `HostHttp`, `KeliverTrace`).
-  - In `bindServices`, after its own services, it calls each binding's `bind` with that
-    process's Zipline. A `bind` that throws fails the code load, as a failing service bind does
-    today (it is reported, and the host falls back).
-- **What the host cannot check:** that a binding binds the name it declared. Zipline's list of
-  bound names is internal. A binding whose `bind` binds another bridge's service, or nothing,
-  passes the gate and fails at the guest's first call; the template's kdoc says to build each
-  binding from one generated object's constants and `bind`. A helper generated next to
-  `<Name>Bridge` would remove the repetition, but it would need the binding type in a library;
-  it is a follow-up with the next libraries release.
+  - **The check**, in `BundleIndex.kt` (the same file in both hosts, so the relay's
+    `BridgeGateTest` tests it): a name `parseBridges` would not accept, a version outside
+    1..999999999, a shape that is not 16 lowercase hex digits, a name twice, or a name the host
+    binds itself (`HostSqlDriver`, `HostHttp`, `KeliverTrace`) is the app's programming error.
+    Android refuses it in `KeliverConfig`'s constructor, as it refuses `httpClient` without
+    `requestPolicy`. iOS refuses it in the `bridges` setter, so the crash names the Swift line
+    that set it (an uncaught Kotlin exception ends the process; nothing here is `@Throws`).
+  - **Each host its own list.** Android allows one host per key (`claim`), so a process may
+    have two; each host passes its own served bridges to its lookups (`HostFacts.bridges`), its
+    `ManifestPinningHttpClient` and its `AcceptCachedBundle`. B4a's process-wide
+    `ServedBridges` goes. iOS takes one copy of the list when the host starts, gates on it and
+    binds it; a list set later is logged and applies from the next process start, as
+    `requestPolicy` is.
+  - **Binding, and what was bound.** In `bindServices`, the app's bindings run first, each on
+    its own, and then the host's services. Zipline's `bind` replaces a service of the same name
+    without a word, so the host's services come last and an app's binding can never stand in
+    for them. Every `bind` fires the code load's `EventListener.bindService(zipline, name,
+    service)`, which both hosts already implement (`LoggingEventListener`). The host records the
+    names each binding bound: exactly its declared name, or the load fails with
+    `bridge bind failed: ShopActions bound [] (it must bind ShopActions)`.
+  - **A binding that throws** (anything but cancellation, an `Error` included) fails the load
+    as `bridge bind failed: ShopActions: <the throwable's class>`, its message in the debug log
+    only. Both are reported under a new reason, `bridge-bind`, which the relay's `/report`
+    accepts. `bindServices` runs for every load, so the fall-back to the last good bundle fails
+    the same way: the screen shows "Bundle did not load" until a fixed app is installed. That is
+    the right end for a programming error, and the report says which.
 
-### 2. The hosts' builds see the app's contract
-
-The generated classes live in the app's contract module. Today both hosts are standalone
-Gradle builds that depend on Maven Central only (`settings.gradle`), and they redeclare the
-guest's services by shape (`GuestContract.kt`). A bridge cannot be redeclared that way: its
-generated adapter and `SHAPE` must be the ones the guest was built with.
-
-- **The contract is its own Gradle build** in the app's repository (for example `bridge/`,
-  with its own `settings.gradle`): Kotlin Multiplatform with `js` (the guest), `jvm` (an Android
-  host consumes the JVM variant) and the two iOS targets, with the Zipline plugin, KSP and
-  `keliver-bridge-codegen`. The guest's build and each host's `settings.gradle` include it with
-  `includeBuild`, and depend on it by its coordinates. No publishing, and one source.
-- **One Zipline version on both sides.** The contract is compiled with the Zipline plugin, and
-  its adapters must match the runtime of the guest's build and of each host. The contract build
-  takes Zipline's and Kotlin's versions from the same pins the scaffolders write into the hosts
-  (`@@ZIPLINE_VERSION@@`, `@@KOTLIN_VERSION@@`), and B5c's self-test checks they agree.
-- **The iOS framework exports it.** Swift sees only what the framework exports, and an export
-  does not carry over to dependencies. So the host's `build.gradle` depends on the contract and
-  on `keliver-bridge` with `api` and `export`s both (`BridgeCall` is in `keliver-bridge`).
-- **The templates stay generic:** both hosts read one Gradle property,
-  `keliver.bridgeContract=<group>:<name>` with `keliver.bridgeContractBuild=<dir>`; with it
-  set, `settings.gradle` includes that build and `build.gradle` adds the dependency (and, on
-  iOS, the exports). Unset, both builds are as today. A scaffolder flag
-  (`--bridge-contract <dir>`) writes the two properties.
-- **The bundle's declaration** (`keliver.bridges` in `zipline { metadata }`, B4) stays written
-  by hand in the guest's build. The value comes from the same generated constants. Writing it
-  from them is B4's follow-up.
-
-### 3. The first guest-to-host round trip
+### 2. The first guest-to-host round trip
 
 B3b found that Zipline 1.22 has no public in-process endpoint pair, so the generated code has
-not yet carried a call from a guest to a host. Zipline's JVM and iOS runtimes do load JS
-modules (`Zipline.loadJsModule`, used by `ZiplineLoader`). So the first round trip runs in
+not yet carried a call from a guest to a host. Zipline's JVM runtime loads JS modules
+(`Zipline.loadJsModule`, public; `ZiplineLoader` uses it). So the first round trip runs in
 `keliver-bridge-fixture`, in this repository's CI, before any host or device:
 
 - The fixture gains a guest: a JS executable that takes `ShopActionsBridge` and binds a small
@@ -505,48 +497,92 @@ modules (`Zipline.loadJsModule`, used by `ZiplineLoader`). So the first round tr
 - A JVM test loads the guest's built modules into a real `Zipline` (QuickJS), binds the host
   side with `ShopActionsBridge.bind` (both forms: `impl`, and `callbacks` through the adapter),
   and checks each function's answer, a `null`, a failure (`fail` and a throw: the guest gets
-  one line, not the host's stack trace), a timeout, the guest cancelling a call
-  (`onCancel` runs), and fire-and-forget.
-- The same test on the iOS simulator (`iosSimulatorArm64Test`), where Zipline runs on
-  Kotlin/Native. The Swift side (a Swift class implementing the protocol, with its boxing)
-  needs a Swift app; it is checked in B5d.
+  one line, not the host's stack trace), a timeout (the fixture gains a function with a short
+  limit; today's are 30 s or none), the guest cancelling a call (`onCancel` runs), and
+  fire-and-forget.
+- The iOS simulator runs the same test if Kotlin/Native's Zipline loads JS the same way (not
+  yet checked); otherwise the iOS side is first carried end to end on the simulator in step 4.
 
-### 4. B4's gate on a device, before any bridge exists
+### 3. The builds see the app's contract
+
+The generated classes live in the app's contract module. Today both hosts are standalone
+Gradle builds that depend on Maven Central and Google only (`settings.gradle`,
+`FAIL_ON_PROJECT_REPOS`), and they redeclare the guest's services by shape (`GuestContract.kt`).
+A bridge cannot be redeclared that way: its generated adapter and `SHAPE` must be the ones the
+guest was built with. And the editor compiles the app's `logic/` for wasm
+(`keliver-new-editor.sh`), where Zipline and the generated code do not exist.
+
+- **The contract is its own Gradle build** in the app's repository (for example `bridge/`,
+  with its own `settings.gradle`): Kotlin Multiplatform with `js` (the guest), `jvm` targeting
+  Java 17 (an Android host consumes the JVM variant) and the two iOS targets, with the Zipline
+  plugin, KSP (its version pinned with Kotlin's) and `keliver-bridge-codegen`. The guest's
+  build and each host's `settings.gradle` include it with `includeBuild` and depend on it by
+  its coordinates: no publishing, one source. An included build keeps its own repositories, so
+  the hosts' rule does not reach it.
+- **One Zipline version on both sides.** The contract's adapters must match the runtime of the
+  guest's build and of each host, so the contract build takes Zipline's and Kotlin's versions
+  from the pins the scaffolders write into the hosts, and step 3's self-test checks they agree.
+- **The iOS framework exports it.** Swift sees only what the framework exports, and an export
+  does not carry over to dependencies, so the host's `build.gradle` depends on the contract and
+  on `keliver-bridge` with `api` and exports both (`BridgeCall` is in `keliver-bridge`).
+- **Presenters see the app's interface, and the editor compiles it from source.** A presenter
+  takes `ShopActions` (the annotated interface), not anything generated. The device target gets
+  one from `ShopActionsBridge.take(zipline)` at the edge, as other services are adapted there;
+  the editor compiles the contract's own sources (the interface and its `@Serializable` types,
+  without the generated code) into its wasm build, and its preview passes a fake. That needs
+  `keliver-bridge-annotations` to gain a `wasmJs` target (it holds two `SOURCE`-retention
+  annotations), and an interface file that uses nothing else from `keliver-bridge`.
+- **The templates stay generic:** both hosts read one Gradle property,
+  `keliver.bridgeContract=<group>:<name>` with `keliver.bridgeContractBuild=<dir>`; with them
+  set, `settings.gradle` includes that build and `build.gradle` adds the dependency (and, on
+  iOS, the exports). Unset, both builds are as today. A scaffolder flag
+  (`--bridge-contract <dir>`) writes the two properties, and the editor scaffolder adds the
+  contract's sources.
+- **The bundle's declaration** (`keliver.bridges` in `zipline { metadata }`, B4) stays written
+  by hand in the guest's build. The value comes from the same generated constants. Writing it
+  from them is B4's follow-up.
+
+### 4. B4's gate on a device, before any bridge is called
 
 The device scenarios B4 lists need only a bundle that declares a bridge, not one that calls it:
-`keliver.bridges` is metadata in the guest's build. So the reference app can check B4 on the CI
-emulator and simulator with the published libraries, once a tools release carries B4a and the
-hook:
+`keliver.bridges` is metadata in the guest's build. The reference app's pull-request runs use
+this checkout's scaffolders (its README), so these run on the CI emulator and simulator as soon
+as the hook is merged, with the published libraries:
 
 - a host serving no bridge, and an entry needing one: skipped at lookup (the host starts the
   newest entry without it), as S16 does for a capability;
 - the same bundle with its index entry's `bridges` removed: refused at load from the signed
-  manifest (`bridge-missing`), and the host falls back;
+  manifest (`bridge-missing`), and the host falls back. The publisher and the relay derive the
+  entry from the manifest, so this entry is a hand-edited static index;
 - a host declaring the bridge at the bundle's version with another shape: skipped at lookup
-  (`bridge-shape` when refused at load).
-
-A declared bridge here is a name with no service behind it, so these scenarios do not call it.
+  (`bridge-shape` when refused at load). That host's binding binds a stub service under the
+  name (§1 requires the name to be bound): a one-function `ZiplineService` in the scenario's
+  host, which the guest never calls.
 
 ### 5. The reference app on a bridge
 
 The reference app is built only from the published tools zip and Maven Central (its README), so
-it moves to a generated bridge when `keliver-bridge*` are published (a libraries release, which
-needs the owner); until then it uses none of this checkout's modules. After that release, its CI
-checks on both platforms: one action the screens use (an item's reorder hint, say: the guest
-asks, the host answers, the screen shows it), in the view hierarchy and through the iOS tap
-driver; the Swift callbacks, with a real protocol conformance; and a call that fails on the
-host, shown as the guest's error state.
+it moves to a generated bridge when `keliver-bridge*` are published; until then it uses none of
+this checkout's modules. After that release, its CI checks on both platforms: one action the
+screens use (an item's reorder hint, say: the guest asks, the host answers, the screen shows
+it), in the view hierarchy and through the iOS tap driver; the Swift callbacks, with a real
+protocol conformance; a call that fails on the host, shown as the guest's error state; and that
+its editor still builds and previews the screen with a fake.
 
 ### Steps
 
-1. **B5a** (templates; next tools release): `KeliverBridgeBinding` and the list in both hosts,
-   the checks, `ServedBridges` from the list, the binding in `bindServices`. Tests: JVM tests in
-   the Android host (the checks, `ServedBridges` before the first lookup, `bindServices` calling
-   each `bind` once); the iOS host kit's `jvmTest` for the shared checks; both self-tests for
-   the wiring.
-2. **B5b** (`keliver-bridge-fixture`; this repository's CI): the round trip in §3, on the JVM
-   and the iOS simulator.
-3. **B5c** (templates and scaffolders): the contract build in §2, with a scaffolder self-test
-   that builds both hosts against a fixture contract from this checkout.
-4. **B5d** (the reference app, after a tools release with B4a and B5a): B4's device scenarios
-   (§4) with the published libraries; after the libraries release, the bridge itself (§5).
+1. **B5a** (templates and the relay; next tools release; nothing published needed): §1, in
+   both hosts: `KeliverBridgeBinding`, the check in `BundleIndex.kt`, each host's own served
+   bridges in place of `ServedBridges`, app bindings first with the bound names checked, the
+   `bridge-bind` reason (and the relay's `/report` accepting it), the debug-only log. Tests: the
+   relay's `BridgeGateTest` for the check; JVM tests in the Android host for the config; both
+   self-tests for the wiring, the iOS one also compiling §1's Swift snippet against the
+   template's framework with a stand-in bridge.
+2. **B5b** (`keliver-bridge-fixture`; this repository's CI; nothing published needed): §2.
+3. **B5c** (`keliver-bridge-annotations` gains `wasmJs`; the templates' contract properties, the
+   scaffolder flags): §3. It can be built and tested in this repository against the checkout's
+   modules, but it reaches adopters only with the libraries release, so the tools release that
+   ships it follows that one.
+4. **B5d** (the reference app): §4 once B5a is merged (pull-request runs, this checkout's
+   scaffolders, published libraries); §5 after the libraries release and the tools release with
+   B5c.
