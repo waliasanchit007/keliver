@@ -1,4 +1,5 @@
-# Sourced by ci/prepare.sh (Android) and ci/w3/ios-static.sh (iOS). B5's third device scenario
+# Sourced by ci/prepare.sh (the Android build), ci/w3/ios-static.sh (the iOS build) and
+# ci/w3/android-static.sh (for the shapes). B5's third device scenario
 # (docs/BRIDGE_CODEGEN_DESIGN.md, "B5" §4; S17c and S17d): the static route's host declares one
 # app bridge, CiStub@1 at shape $W3_BRIDGE_SHAPE, and binds a one-function ZiplineService under
 # that name (§1 requires the declared name to be bound). No guest calls it. Every load of that

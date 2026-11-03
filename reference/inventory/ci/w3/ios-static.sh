@@ -108,23 +108,33 @@ CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 sed -i '' 's|BUNDLE_SERVER: String = "[^"]*"|BUNDLE_SERVER: String = "https://localhost:8443"|' "$CFG"
 # B5 (S17c, S17d; ci/w3/bridge-stub.sh): this build also declares and binds the app bridge
 # CiStub@1, set from Swift before the host starts (Keliver.shared.bridges). iOSApp.swift is put
-# back and CiBridge.kt removed after the build, so later builds are the scaffolded host. A host
-# from before B5a is built as it is.
+# back and CiBridge.kt removed after the build, so later builds are the scaffolded host. Should
+# the bridged build fail, that is a FAIL, and the host is built again without the bridge, so the
+# rest of the static route still runs. A host from before B5a is built as it is.
 . "$HERE/w3/bridge-stub.sh"
+w3_host_build(){
+  ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
+      -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
+      CODE_SIGNING_ALLOWED=NO build ) > "$EV/w3-xcodebuild.log" 2>&1
+}
 W3_BRIDGED=0; CIB=""; SWIFTAPP="$APP/host-ios/iosApp/iOSApp.swift"
 if [ -f "$SWIFTAPP" ] && CIB="$(w3_bridge_stub "$APP/host-ios/src/iosMain/kotlin")"; then
   cp "$SWIFTAPP" "$W3/iOSApp.swift.saved"
   python3 -c 'import sys; p=sys.argv[1]; s=open(p).read(); a="struct iOSApp: App {\n"; assert s.count(a)==1; s=s.replace("import SwiftUI\n","import SwiftUI\nimport KeliverHost\n",1).replace(a,a+"    init() { Keliver.shared.bridges = CiBridgeKt.ciBridges() } // CI only (S17c, S17d)\n\n"); open(p,"w").write(s)' "$SWIFTAPP" \
     && W3_BRIDGED=1 || bad "B5: iOSApp.swift has no 'struct iOSApp: App {': CiStub not declared"
 fi
-( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
-    -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
-    CODE_SIGNING_ALLOWED=NO build ) > "$EV/w3-xcodebuild.log" 2>&1 \
-  && ok "W3: the host rebuilt for https://localhost:8443$([ "$W3_BRIDGED" = 1 ] && echo ", declaring and binding the app bridge CiStub@1 (B5)")" \
-  || { bad "W3: xcodebuild failed"; grep -E '^e: |error:' "$EV/w3-xcodebuild.log" | head; }
+if [ "$W3_BRIDGED" = 1 ] && ! w3_host_build; then
+  bad "B5: the host did not build with the app bridge CiStub; building it without"; grep -E '^e: |error:' "$EV/w3-xcodebuild.log" | head
+  cp "$EV/w3-xcodebuild.log" "$EV/w3-xcodebuild-bridged.log"; W3_BRIDGED=0
+fi
 if [ -n "$CIB" ]; then
   cp "$W3/iOSApp.swift.saved" "$SWIFTAPP" && rm -f "$CIB" && ! grep -rqs 'ciBridges' "$APP/host-ios/src" "$APP/host-ios/iosApp" \
     || bad "B5: the scaffolded iOSApp.swift was not put back"
+fi
+if [ "$W3_BRIDGED" = 1 ] || w3_host_build; then
+  ok "W3: the host rebuilt for https://localhost:8443$([ "$W3_BRIDGED" = 1 ] && echo ", declaring and binding the app bridge CiStub@1 (B5)")"
+else
+  bad "W3: xcodebuild failed"; grep -E '^e: |error:' "$EV/w3-xcodebuild.log" | head
 fi
 xcrun simctl uninstall "$UDID" "$BID"; xcrun simctl install "$UDID" "$APPB"
 
@@ -331,13 +341,13 @@ cp "$W3/index.s15" "$W3/site/bundles/index.json"
 w3_v7_requests(){  # the static server's requests under bundles/v7/ since line $1 of its log
   tail -n +"$(( $1 + 1 ))" "$EV/w3-server.log" | grep -E "^GET /bundles/v7/" || true
 }
-w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges; $4 the bridge's name; $5 what the host refuses with; $6 what it is
-  local skipped="$1" refused="$2" value="$3" name="$4" refusal="$5" what="$6" V7="" n0 req C
+w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges (one bridge); $4 what the host refuses with; $5 what it is
+  local skipped="$1" refused="$2" value="$3" refusal="$4" what="$5" V7="" n0 req C
   cp "$APP/build.gradle" "$W3/build.gradle.s17"
   printf '\n// %s (CI only): this bundle calls a bridge no host here can take.\nzipline { metadata.put("keliver.bridges", "%s") }\n' "$skipped" "$value" >> "$APP/build.gradle"
   w3_title Attic Cellar && w3_publish "v7-$skipped" && grep -q "published v7 (sequence 7, channel stable" "$EV/w3-publish-v7-$skipped.log" \
-    && python3 -c 'import json,sys; i=json.load(open(sys.argv[1])); e=[x for x in i["entries"] if x["sequence"]==7][0]; m=json.load(open(sys.argv[2])); sys.exit(0 if m.get("metadata",{}).get("keliver.bridges")==sys.argv[3] and sys.argv[4] in e.get("constraints",{}).get("bridges",{}) else 1)' \
-      "$W3/site/bundles/index.json" "$W3/site/bundles/v7/manifest.zipline.json" "$value" "$name" \
+    && python3 -c 'import json,sys; i=json.load(open(sys.argv[1])); e=[x for x in i["entries"] if x["sequence"]==7][0]; m=json.load(open(sys.argv[2])); import re; n,mn,sh=re.fullmatch(r"([^@]+)@([0-9]+)(?:#([0-9a-f]{16}))?",sys.argv[3]).groups(); w={"min":int(mn)}; w.update({"shape":sh} if sh else {}); sys.exit(0 if m.get("metadata",{}).get("keliver.bridges")==sys.argv[3] and e.get("constraints",{}).get("bridges",{}).get(n)==w else 1)' \
+      "$W3/site/bundles/index.json" "$W3/site/bundles/v7/manifest.zipline.json" "$value" \
     && V7=1 && ok "$skipped: v7's signed manifest declares $value, and the CLI put it in v7's entry" || { bad "$skipped: publish v7 declaring a bridge"; tail -20 "$EV/w3-publish-v7-$skipped.log"; }
   cp "$W3/build.gradle.s17" "$APP/build.gradle"
   w3_title Cellar Attic || bad "$skipped: the screen's title was not put back to Attic"
@@ -373,13 +383,13 @@ w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges; $4 the 
   cp "$W3/index.s15" "$W3/site/bundles/index.json" && rm -rf "${W3:?}/site/bundles/v7"
 }
 if grep -rq 'BRIDGES_METADATA_KEY' "$APP/host-ios/src/iosMain/kotlin"; then
-  w3_v7_bridged S17 S17b AbsentBridge@1 AbsentBridge \
+  w3_v7_bridged S17 S17b AbsentBridge@1 \
     "bridge refused: the bundle needs AbsentBridge@1, which this host does not serve" "a bridge this host does not serve"
 else
   echo "  SKIP  S17, S17b: this host predates B4 (no bridge gate in its BundleIndex.kt); not counted"
 fi
 if [ "$W3_BRIDGED" = 1 ]; then
-  w3_v7_bridged S17c S17d "CiStub@1#$W3_BRIDGE_OTHER_SHAPE" CiStub \
+  w3_v7_bridged S17c S17d "CiStub@1#$W3_BRIDGE_OTHER_SHAPE" \
     "bridge refused: the bundle was built against another CiStub@1 contract (shape $W3_BRIDGE_OTHER_SHAPE; this host's is $W3_BRIDGE_SHAPE)" \
     "CiStub@1 at another shape than this host's"
 else

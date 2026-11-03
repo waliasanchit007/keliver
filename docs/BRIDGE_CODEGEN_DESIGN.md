@@ -567,8 +567,7 @@ guest was built with. And the editor compiles the app's `logic/` for wasm
 The device scenarios B4 lists need only a bundle that declares a bridge, not one that calls it:
 `keliver.bridges` is metadata in the guest's build. The reference app's pull-request runs use
 this checkout's scaffolders (its README), so these run on the CI emulator and simulator with the
-published libraries: the first two now (they need only B4a, merged), the third once the hook is
-merged:
+published libraries: the first two need only B4a, the third the hook (B5a) too:
 
 - a host serving no bridge, and an entry needing one: skipped at lookup (the host starts the
   newest entry without it), as S16 does for a capability;
@@ -626,6 +625,6 @@ its editor still builds and previews the screen with a fake.
    contract's build and that repository. Its iOS self-test compiles a Swift
    conformance to a real generated `<Name>Callbacks` (boxed primitives, `BridgeCall`) with
    `xcodebuild`.
-4. **B5d** (the reference app): §4's three scenarios (S17 and S17b, #213; S17c and S17d once
-   B5a was merged), in pull-request runs with this checkout's scaffolders and the published
-   libraries; §5 after the libraries release and the tools release with B5c.
+4. **B5d** (the reference app): §4's three scenarios (S17 and S17b, #213; S17c and S17d,
+   #217), in pull-request runs with this checkout's scaffolders and the published libraries; §5
+   after the libraries release and the tools release with B5c.

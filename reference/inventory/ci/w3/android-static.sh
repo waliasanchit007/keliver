@@ -334,13 +334,13 @@ cp "$W3/index.s15" "$W3/site/bundles/index.json"
 w3_v7_requests(){  # the static server's requests under bundles/v7/ since line $1 of its log
   tail -n +"$(( $1 + 1 ))" "$EV/w3-server.log" | grep -E "^GET /bundles/v7/" || true
 }
-w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges; $4 the bridge's name; $5 what the host refuses with; $6 what it is
-  local skipped="$1" refused="$2" value="$3" name="$4" refusal="$5" what="$6" V7="" n0 req C
+w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges (one bridge); $4 what the host refuses with; $5 what it is
+  local skipped="$1" refused="$2" value="$3" refusal="$4" what="$5" V7="" n0 req C
   cp "$APP/build.gradle" "$W3/build.gradle.s17"
   printf '\n// %s (CI only): this bundle calls a bridge no host here can take.\nzipline { metadata.put("keliver.bridges", "%s") }\n' "$skipped" "$value" >> "$APP/build.gradle"
   w3_title Attic Cellar && w3_publish "v7-$skipped" && grep -q "published v7 (sequence 7, channel stable" "$EV/w3-publish-v7-$skipped.log" \
-    && python3 -c 'import json,sys; i=json.load(open(sys.argv[1])); e=[x for x in i["entries"] if x["sequence"]==7][0]; m=json.load(open(sys.argv[2])); sys.exit(0 if m.get("metadata",{}).get("keliver.bridges")==sys.argv[3] and sys.argv[4] in e.get("constraints",{}).get("bridges",{}) else 1)' \
-      "$W3/site/bundles/index.json" "$W3/site/bundles/v7/manifest.zipline.json" "$value" "$name" \
+    && python3 -c 'import json,sys; i=json.load(open(sys.argv[1])); e=[x for x in i["entries"] if x["sequence"]==7][0]; m=json.load(open(sys.argv[2])); import re; n,mn,sh=re.fullmatch(r"([^@]+)@([0-9]+)(?:#([0-9a-f]{16}))?",sys.argv[3]).groups(); w={"min":int(mn)}; w.update({"shape":sh} if sh else {}); sys.exit(0 if m.get("metadata",{}).get("keliver.bridges")==sys.argv[3] and e.get("constraints",{}).get("bridges",{}).get(n)==w else 1)' \
+      "$W3/site/bundles/index.json" "$W3/site/bundles/v7/manifest.zipline.json" "$value" \
     && V7=1 && ok "$skipped: v7's signed manifest declares $value, and the CLI put it in v7's entry" || { bad "$skipped: publish v7 declaring a bridge"; tail -20 "$EV/w3-publish-v7-$skipped.log"; }
   cp "$W3/build.gradle.s17" "$APP/build.gradle"
   w3_title Cellar Attic || bad "$skipped: the screen's title was not put back to Attic"
@@ -377,13 +377,13 @@ w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges; $4 the 
   cp "$W3/index.s15" "$W3/site/bundles/index.json" && rm -rf "${W3:?}/site/bundles/v7"
 }
 if grep -rq 'BRIDGES_METADATA_KEY' "$APP/host-android/src/main/kotlin"; then
-  w3_v7_bridged S17 S17b AbsentBridge@1 AbsentBridge \
+  w3_v7_bridged S17 S17b AbsentBridge@1 \
     "bridge refused: the bundle needs AbsentBridge@1, which this host does not serve" "a bridge this host does not serve"
 else
   skip "S17, S17b: this host predates B4 (no bridge gate in its BundleIndex.kt)"
 fi
 if [ "${W3_BRIDGED:-0}" = 1 ]; then
-  w3_v7_bridged S17c S17d "CiStub@1#$W3_BRIDGE_OTHER_SHAPE" CiStub \
+  w3_v7_bridged S17c S17d "CiStub@1#$W3_BRIDGE_OTHER_SHAPE" \
     "bridge refused: the bundle was built against another CiStub@1 contract (shape $W3_BRIDGE_OTHER_SHAPE; this host's is $W3_BRIDGE_SHAPE)" \
     "CiStub@1 at another shape than this host's"
 else
