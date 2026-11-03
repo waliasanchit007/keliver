@@ -170,8 +170,9 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **From 0.3.18 (both hosts):** still the 0.4.1 libraries. The bridge gate: a
   bundle can declare the app bridges it calls in its signed `keliver.bridges`
   metadata, `keliver-publish` copies them into its index entry, and a host
-  skips an entry needing a bridge it does not serve (at that version, and at
-  that very version the same contract shape), and refuses such a manifest at
+  skips an entry needing a bridge it does not serve (at that version or later,
+  and at that very version with the same contract shape when both name one),
+  and refuses such a manifest at
   load, on the network and from its cache (`bridge-missing`, `bridge-shape`).
   A host serves the bridges the app declares: Android
   `KeliverConfig.bridges` (or `KeliverConfig.fromBuild(…, bridges = …)`), iOS

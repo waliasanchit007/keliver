@@ -408,7 +408,7 @@ carry `constraints`:
   it cannot serve (`bridge refused: …`, reported as `bridge-missing` or
   `bridge-shape`), even when the index entry says otherwise.
   [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md), section "B4". A host
-  serves the bridges the app declares in its configuration (B5, next), known
+  serves the bridges the app declares in its configuration (B5, below), known
   before the first lookup; an app that declares none serves none, and its host
   skips every entry that names one.
 - **Serving your app's bridges** (B5, `Bridges.kt`; from tools 0.3.18): list them in

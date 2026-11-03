@@ -7,10 +7,10 @@ What is in it since 0.3.17 (`7ea8940c3`):
 - #205 (B4a: the bridge gate);
 - #210 (B5a: hosts that serve an app's bridges);
 - the tools bundle's `host/README.md` (from `DEVICE_HOST.md`) describes both, the iOS tap
-  driver the reference app's CI uses (#197, #199), and the leak bound of the reference app's CI
+  driver the reference app's CI uses (#197–#199), and the leak bound of the reference app's CI
   (#214).
 
-#195–#204, #206–#209 and #211–#217 move the reference app and its CI (the S17–S17d device
+#194 records the 0.3.17 release. #195, #196, #200–#204, #206, #208, #209 and #211–#217 move the reference app and its CI (the S17–S17d device
 scenarios run B4 and B5 on the CI emulator and simulator), add the bridge libraries
 (`keliver-bridge`, its annotations and the KSP processor, B3; not published), and keep the
 records.
@@ -36,14 +36,15 @@ contract shape it was built against (a generated bridge's `NAME`, `VERSION` and 
   `constraints.bridges` (`{"ShopActions": {"min": 2, "shape": "…"}}`). It is never typed into
   the index. A malformed value is refused at publish, and nothing is stored.
 - A host takes an entry only when it serves each bridge at that version or later, and, at that
-  very version, with the same shape. Otherwise it skips the entry and takes the newest one it
+  very version, with the same shape (compared when both the bundle and the host name one).
+  Otherwise it skips the entry and takes the newest one it
   can run.
 - A host checks the manifest's signed value again at load, on the network and on a cache start,
   and refuses a bundle it cannot serve (`bridge refused: …`), even when the index entry says
   nothing. With a report URL it reports `bridge-missing` or `bridge-shape`, and falls back as
   for any refused bundle.
-- The relay's `/report` accepts those reasons, and `screen-failed` and `exception`, which hosts
-  already sent.
+- The relay's `/report` accepts those reasons and B5a's `bridge-bind`, and also the outcome
+  `screen-failed` and the reason `exception`, which hosts already sent.
 - The relay's legacy `/bundles/latest` (hosts from tools 0.3.7 or earlier) never answers with a
   bundle that names a bridge.
 
@@ -76,7 +77,8 @@ debug builds only).
 
 The generated bridge code (`keliver-bridge*`) is **not published yet**: it reaches apps with the
 next libraries release. Until then, a binding can bind any `ZiplineService` under the declared
-name, as the reference app's CI does with a stub (S17c, S17d).
+name, as the reference app's CI does with a stub: S2 checks that every load runs its binding,
+and S17c and S17d gate on its shape.
 
 `DEVICE_HOST.md` ("Serving your app's bridges"); `BRIDGE_CODEGEN_DESIGN.md`, section "B5".
 
@@ -101,7 +103,8 @@ name, as the reference app's CI does with a stub (S17c, S17d).
 Run before this release, on `main`'s templates (the same host code as the candidate):
 - the reference app's pull-request runs of #217: the CI emulator (reference-app `41579853553`)
   and simulator (ios-host `41579853306`) ran S2's binding check and S17–S17d, all PASS, with
-  hosts scaffolded by this checkout and built against the published libraries.
+  hosts scaffolded by this checkout and built against the published libraries the reference
+  app pins (0.3.3, not 0.4.1).
 
 Not verified for this release:
 - a real generated bridge bound by a host, and a guest calling it on a device: the generated
