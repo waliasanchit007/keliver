@@ -34,7 +34,7 @@ SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
 unset RELAY_PORT   # only the work dir says which port its app was built for
-. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, DEVICE_KIND, HOST_ADDR, RELAY_PORT
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, W3_BRIDGED, DEVICE_KIND, HOST_ADDR, RELAY_PORT
 # W7: what prepare.sh built the hosts for (KELIVER_DEVICE there). A work dir
 # from before W7 has neither line: it was built for the emulator.
 DEVICE_KIND="${DEVICE_KIND:-emulator}"; HOST_ADDR="${HOST_ADDR:-10.0.2.2}"

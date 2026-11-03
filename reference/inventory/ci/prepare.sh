@@ -222,7 +222,8 @@ echo "APK=$EV/production-host.apk" >> "$WORK/env"
 # The static route (ci/w3/android-static.sh, run by device.sh) needs no relay:
 # keliver-publish from this checkout (no published tools bundle has it yet), a
 # CA and server certificate that only the emulator will trust, and the same
-# production host built for https://$HOST_ADDR:8443 (only the server differs).
+# production host built for https://$HOST_ADDR:8443, declaring one app bridge
+# (B5, below; otherwise only the server differs).
 W3="$WORK/w3"; mkdir -p "$W3"
 # The zip's own keliver-publish and publish-target scaffolder when it ships them
 # (0.3.8 on) and the hosts come from the zip; otherwise this checkout's.
@@ -242,11 +243,37 @@ if [ "$DEVICE_KIND" = physical ]; then
     && ok "W7: the HTTPS debug builds of host-android trust the throwaway CA in the APK (physical device)" \
     || { bad "W7: the test CA overlay failed"; cat "$EV/w7-test-ca-host.log"; }
 fi
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
-  > "$EV/w3-host-build.log" 2>&1 \
-  && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
-  && ok "W3: the production host, built for https://$HOST_ADDR:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
-{ echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
+# B5 (S17c, S17d; ci/w3/bridge-stub.sh): this one host also declares and binds the app bridge
+# CiStub@1. HostApp.kt is put back and CiBridge.kt removed after the build, so every other host
+# here is the scaffolded one. Should the bridged build fail, that is a FAIL, and the host is built
+# again without the bridge, so the rest of the static route still runs. A host from before B5a is
+# built as it is.
+. "$HERE/w3/bridge-stub.sh"
+w3_host_build(){  # the static host, into production-host-static.apk
+  ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
+    > "$EV/w3-host-build.log" 2>&1 \
+    && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk"
+}
+W3_BRIDGED=0; CIB=""; HOSTAPP="$(find "$APP/host-android/src/main/kotlin" -name HostApp.kt | head -1)"
+if [ -n "$HOSTAPP" ] && CIB="$(w3_bridge_stub "$APP/host-android/src/main/kotlin")"; then
+  cp "$HOSTAPP" "$W3/HostApp.kt.saved"
+  sed -i.bak 's/KeliverHost\.create(this)/KeliverHost.create(this, KeliverConfig.fromBuild(this, bridges = ciBridges()))/' "$HOSTAPP" && rm -f "$HOSTAPP.bak"
+  grep -q 'bridges = ciBridges()' "$HOSTAPP" && W3_BRIDGED=1 || bad "B5: HostApp.kt does not create its host with KeliverHost.create(this): CiStub not declared"
+fi
+if [ "$W3_BRIDGED" = 1 ] && ! w3_host_build; then
+  bad "B5: the static host did not build with the app bridge CiStub; building it without"; tail -30 "$EV/w3-host-build.log"
+  cp "$EV/w3-host-build.log" "$EV/w3-host-build-bridged.log"; W3_BRIDGED=0
+fi
+if [ -n "$CIB" ]; then
+  cp "$W3/HostApp.kt.saved" "$HOSTAPP" && rm -f "$CIB" && ! grep -rqs 'ciBridges' "$APP/host-android/src" \
+    || bad "B5: the scaffolded HostApp.kt was not put back"
+fi
+if [ "$W3_BRIDGED" = 1 ] || w3_host_build; then
+  ok "W3: the production host, built for https://$HOST_ADDR:8443$([ "$W3_BRIDGED" = 1 ] && echo ", declaring and binding the app bridge CiStub@1 (B5)")"
+else
+  bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"
+fi
+{ echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; echo "W3_BRIDGED=$W3_BRIDGED"; } >> "$WORK/env"
 # W5 (U1) and W6 (V1): the same host, built to check for updates when it comes
 # back to the foreground (on-resume) and to POST its reports to the static
 # server's /report (keliver.reportUrl); only those settings differ. A host with
