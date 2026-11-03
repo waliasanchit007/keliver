@@ -396,7 +396,7 @@ carry `constraints`:
   is not an integer skips gated entries. Gates hold below the floor too, because
   they are about what the code needs.
 
-- **`bridges`** (B4, not yet in a tools release): the app's generated bridges
+- **`bridges`** (B4, from tools 0.3.18): the app's generated bridges
   the bundle calls, each with the oldest version it can talk to and the contract
   shape it was built against (`{"ShopActions": {"min": 2, "shape": "…"}}`). The
   publisher copies it from the manifest's **signed** `keliver.bridges` metadata
@@ -411,7 +411,7 @@ carry `constraints`:
   serves the bridges the app declares in its configuration (B5, next), known
   before the first lookup; an app that declares none serves none, and its host
   skips every entry that names one.
-- **Serving your app's bridges** (B5, `Bridges.kt`): list them in
+- **Serving your app's bridges** (B5, `Bridges.kt`; from tools 0.3.18): list them in
   `KeliverConfig(bridges = …)` or `KeliverConfig.fromBuild(context, …,
   bridges = …)` (Android) or `Keliver.shared.bridges` (iOS, from Swift, before
   the host starts), one `KeliverBridgeBinding` per generated `<Name>Bridge`:
