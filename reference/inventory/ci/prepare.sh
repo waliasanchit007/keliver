@@ -242,11 +242,26 @@ if [ "$DEVICE_KIND" = physical ]; then
     && ok "W7: the HTTPS debug builds of host-android trust the throwaway CA in the APK (physical device)" \
     || { bad "W7: the test CA overlay failed"; cat "$EV/w7-test-ca-host.log"; }
 fi
+# B5 (S17c, S17d; ci/w3/bridge-stub.sh): this one host also declares and binds the app bridge
+# CiStub@1. HostApp.kt is put back and CiBridge.kt removed after the build, so every other host
+# here is the scaffolded one. A host from before B5a is built as it is.
+. "$HERE/w3/bridge-stub.sh"
+W3_BRIDGED=0; CIB=""; HOSTAPP="$(find "$APP/host-android/src/main/kotlin" -name HostApp.kt | head -1)"
+if [ -n "$HOSTAPP" ] && CIB="$(w3_bridge_stub "$APP/host-android/src/main/kotlin")"; then
+  cp "$HOSTAPP" "$W3/HostApp.kt.saved"
+  sed -i.bak 's/KeliverHost\.create(this)/KeliverHost.create(this, KeliverConfig.fromBuild(this, bridges = ciBridges()))/' "$HOSTAPP" && rm -f "$HOSTAPP.bak"
+  grep -q 'bridges = ciBridges()' "$HOSTAPP" && W3_BRIDGED=1 || bad "B5: HostApp.kt does not create its host with KeliverHost.create(this): CiStub not declared"
+fi
 ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
   > "$EV/w3-host-build.log" 2>&1 \
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
-  && ok "W3: the production host, built for https://$HOST_ADDR:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
-{ echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
+  && ok "W3: the production host, built for https://$HOST_ADDR:8443$([ "$W3_BRIDGED" = 1 ] && echo ", declaring and binding the app bridge CiStub@1 (B5)")" \
+  || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
+if [ -n "$CIB" ]; then
+  cp "$W3/HostApp.kt.saved" "$HOSTAPP" && rm -f "$CIB" && ! grep -rqs 'ciBridges' "$APP/host-android/src" \
+    || bad "B5: the scaffolded HostApp.kt was not put back"
+fi
+{ echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; echo "W3_BRIDGED=$W3_BRIDGED"; } >> "$WORK/env"
 # W5 (U1) and W6 (V1): the same host, built to check for updates when it comes
 # back to the foreground (on-resume) and to POST its reports to the static
 # server's /report (keliver.reportUrl); only those settings differ. A host with

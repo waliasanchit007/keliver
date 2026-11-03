@@ -3,7 +3,8 @@
 # SERVE_PID, and its ok/bad/launch/drive/fold; prepare.sh built W3_PUBLISH
 # (keliver-publish from this checkout), W3_TLS (a throwaway CA and server
 # certificate) and W3_APK (the same production host, built for
-# https://$HOST_ADDR:8443; 10.0.2.2 on the emulator).
+# https://$HOST_ADDR:8443, 10.0.2.2 on the emulator, and declaring and binding
+# one app bridge, CiStub@1: B5, ci/w3/bridge-stub.sh).
 #   S2  signed v1 loads through bundles/index.json over HTTPS ("Depot")
 #   S4  an edit, published as v2 by the CLI, reaches the host ("Warehouse")
 #   S5  checked against another app's public key, the CLI refuses this app's
@@ -26,6 +27,9 @@
 #   S17 (B4) v7 ("Cellar") declares a bridge this host does not serve: skipped
 #       at lookup; S17b with the index lying about it, refused from the signed
 #       manifest, and the host falls back (hosts from before B4: skipped)
+#   S17c (B5) v7 needs CiStub@1, which this host serves, at another shape than
+#       its own: skipped at lookup; S17d with the index lying about it,
+#       refused from the signed manifest (hosts from before B5a: skipped)
 #   S7  server down: the host starts from its cached newest bundle ($LAST_V)
 #   S9  (W4.2) the stored floor above that cached bundle, offline: refused
 #   S9c (W5) the lookup answers, but everything it offers is below the floor:
@@ -109,6 +113,12 @@ grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v1/manifest.zipline.
   && ok "S2: signed v1 loaded through bundles/index.json over HTTPS" \
   || { bad "S2: v1 did not load from the static server"; grep "$HOST_TAG" "$EV/logcat-static-v1.txt" | head -8; }
 drive title Depot S2static; fold "S2: v1 shows Depot" $?
+# B5: this host declares the app bridge CiStub@1 (prepare.sh, ci/w3/bridge-stub.sh), and binds it
+# before its own services on every load; a binding that bound anything else would fail the load.
+if [ "${W3_BRIDGED:-0}" = 1 ]; then
+  grep -q "$HOST_TAG: bridge: CiStub: binding" "$EV/logcat-static-v1.txt" && grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-static-v1.txt" \
+    && ok "S2: the load ran the app's bridge binding (CiStub), and succeeded" || bad "S2: no CiStub binding before the load: $(grep -E "$HOST_TAG: (bridge|codeLoad)" "$EV/logcat-static-v1.txt" | head -3 | tr '\n' ' ')"
+fi
 
 # R1 (W2.1): a rotation recreates the activity, not the host. The activity logs
 # each creation (the positive control: it must be two), and the lookup and the
@@ -316,52 +326,68 @@ cp "$W3/index.s15" "$W3/site/bundles/index.json"
 # with a report URL reports it as bridge-missing, not checked here) and falls back to the cached
 # v6. v7 and its entry are removed afterwards, so S7-S9b see the index S15 left. A host from
 # before B4 (a published 0.3.17 zip's) has no bridge gate: skipped.
+# S17c, S17d (B5 §4, the third scenario): the same with a bridge this host does serve, CiStub@1,
+# but at another shape than the one it declares (prepare.sh, ci/w3/bridge-stub.sh): skipped at
+# lookup, then refused from the signed manifest (bridge-shape when reported). A host from before
+# B5a declares no bridge: skipped.
+. "$HERE/w3/bridge-stub.sh"  # W3_BRIDGE_SHAPE, W3_BRIDGE_OTHER_SHAPE
 w3_v7_requests(){  # the static server's requests under bundles/v7/ since line $1 of its log
   tail -n +"$(( $1 + 1 ))" "$EV/w3-server.log" | grep -E "^GET /bundles/v7/" || true
 }
-if grep -rq 'BRIDGES_METADATA_KEY' "$APP/host-android/src/main/kotlin"; then
+w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges; $4 the bridge's name; $5 what the host refuses with; $6 what it is
+  local skipped="$1" refused="$2" value="$3" name="$4" refusal="$5" what="$6" V7="" n0 req C
   cp "$APP/build.gradle" "$W3/build.gradle.s17"
-  printf '\n// S17 (CI only): this bundle calls a bridge no host serves.\nzipline { metadata.put("keliver.bridges", "AbsentBridge@1") }\n' >> "$APP/build.gradle"
-  V7=""
-  w3_title Attic Cellar && w3_publish v7-bridged && grep -q "published v7 (sequence 7, channel stable" "$EV/w3-publish-v7-bridged.log" \
-    && python3 -c 'import json,sys; i=json.load(open(sys.argv[1])); e=[x for x in i["entries"] if x["sequence"]==7][0]; m=json.load(open(sys.argv[2])); sys.exit(0 if m.get("metadata",{}).get("keliver.bridges")=="AbsentBridge@1" and "AbsentBridge" in e.get("constraints",{}).get("bridges",{}) else 1)' \
-      "$W3/site/bundles/index.json" "$W3/site/bundles/v7/manifest.zipline.json" \
-    && V7=1 && ok "S17: v7's signed manifest declares AbsentBridge@1, and the CLI put it in v7's entry" || { bad "S17: publish v7 declaring a bridge"; tail -20 "$EV/w3-publish-v7-bridged.log"; }
+  printf '\n// %s (CI only): this bundle calls a bridge no host here can take.\nzipline { metadata.put("keliver.bridges", "%s") }\n' "$skipped" "$value" >> "$APP/build.gradle"
+  w3_title Attic Cellar && w3_publish "v7-$skipped" && grep -q "published v7 (sequence 7, channel stable" "$EV/w3-publish-v7-$skipped.log" \
+    && python3 -c 'import json,sys; i=json.load(open(sys.argv[1])); e=[x for x in i["entries"] if x["sequence"]==7][0]; m=json.load(open(sys.argv[2])); sys.exit(0 if m.get("metadata",{}).get("keliver.bridges")==sys.argv[3] and sys.argv[4] in e.get("constraints",{}).get("bridges",{}) else 1)' \
+      "$W3/site/bundles/index.json" "$W3/site/bundles/v7/manifest.zipline.json" "$value" "$name" \
+    && V7=1 && ok "$skipped: v7's signed manifest declares $value, and the CLI put it in v7's entry" || { bad "$skipped: publish v7 declaring a bridge"; tail -20 "$EV/w3-publish-v7-$skipped.log"; }
   cp "$W3/build.gradle.s17" "$APP/build.gradle"
-  w3_title Cellar Attic || bad "S17: the screen's title was not put back to Attic"
+  w3_title Cellar Attic || bad "$skipped: the screen's title was not put back to Attic"
   if [ -n "$V7" ]; then
-    w3_caps HostSqlDriver@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-s17.json"
+    w3_caps HostSqlDriver@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-$skipped.json"
     n0="$(wc -l < "$EV/w3-server.log")"
-    launch prod "$EV/logcat-static-bridge-skipped.txt"
-    C="$EV/logcat-static-bridge-skipped.txt"
+    launch prod "$EV/logcat-static-bridge-skipped-$skipped.txt"
+    C="$EV/logcat-static-bridge-skipped-$skipped.txt"
     grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v6/manifest.zipline.json (index sequence 6," "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
-      && ok "S17: v7 needs a bridge this host does not serve: skipped, v6 loaded" || bad "S17: v7 needs a bridge this host does not serve: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+      && ok "$skipped: v7 needs $what: skipped, v6 loaded" || bad "$skipped: v7 needs $what: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
     req="$(w3_v7_requests "$n0")"
-    { [ -z "$req" ] && ! grep -q "bundles/v7/" "$C"; } && ok "S17: nothing under bundles/v7/ was asked for (the server's log and the host's)" || bad "S17: v7 was asked for: $(echo "$req" | head -2 | tr '\n' ' ')"
-    drive title Attic S17static; fold "S17: the screen still reads Attic" $?
+    { [ -z "$req" ] && ! grep -q "bundles/v7/" "$C"; } && ok "$skipped: nothing under bundles/v7/ was asked for (the server's log and the host's)" || bad "$skipped: v7 was asked for: $(echo "$req" | head -2 | tr '\n' ' ')"
+    drive title Attic "${skipped}static"; fold "$skipped: the screen still reads Attic" $?
     python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); e=[x for x in i["entries"] if x["sequence"]==7][0]; e["constraints"].pop("bridges"); e["constraints"] or e.pop("constraints"); json.dump(i,open(p,"w"))' \
-      "$W3/site/bundles/index.json" && cp "$W3/site/bundles/index.json" "$EV/w3-index-s17b.json" \
-      && ok "S17b: v7's entry no longer says it needs a bridge" || bad "S17b: could not edit the index"
+      "$W3/site/bundles/index.json" && cp "$W3/site/bundles/index.json" "$EV/w3-index-$refused.json" \
+      && ok "$refused: v7's entry no longer says it needs a bridge" || bad "$refused: could not edit the index"
     n0="$(wc -l < "$EV/w3-server.log")"
-    launch prod "$EV/logcat-static-bridge-refused.txt"
-    C="$EV/logcat-static-bridge-refused.txt"
+    launch prod "$EV/logcat-static-bridge-refused-$refused.txt"
+    C="$EV/logcat-static-bridge-refused-$refused.txt"
     grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$C" \
-      && grep -q "bridge refused: the bundle needs AbsentBridge@1, which this host does not serve" "$C" \
-      && ok "S17b: v7's signed manifest needs a bridge this host does not serve: refused" || bad "S17b: v7 refused from its signed metadata: $(grep -E 'loading|codeLoad|refused|falling' "$C" | head -4 | tr '\n' ' ')"
+      && grep -qF "$refusal" "$C" \
+      && ok "$refused: v7's signed manifest needs $what: refused" || bad "$refused: v7 refused from its signed metadata: $(grep -E 'loading|codeLoad|refused|falling' "$C" | head -4 | tr '\n' ' ')"
     req="$(w3_v7_requests "$n0")"
     { echo "$req" | grep -q "^GET /bundles/v7/manifest.zipline.json " && ! echo "$req" | grep -qv "^GET /bundles/v7/manifest.zipline.json "; } \
-      && ok "S17b: only v7's manifest was fetched, none of its modules" || bad "S17b: under bundles/v7/ the server served: $(echo "$req" | head -3 | tr '\n' ' ')"
+      && ok "$refused: only v7's manifest was fetched, none of its modules" || bad "$refused: under bundles/v7/ the server served: $(echo "$req" | head -3 | tr '\n' ' ')"
     grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle (last loaded from https://$HOST_ADDR:8443/bundles/v6/" "$C" \
       && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=6 source=cache" "$C" \
       && ! grep "$HOST_TAG: codeLoadSuccess" "$C" | grep -qv "sequence=6 source=cache" \
-      && ok "S17b: the host fell back to the cached last good bundle (v6, from the cache), and loaded nothing else" || bad "S17b: no fall-back after the refusal: $(grep -E 'codeLoad|falling|not load' "$C" | tail -3 | tr '\n' ' ')"
-    drive title Attic S17bstatic; fold "S17b: the screen reads Attic, not Cellar" $?
+      && ok "$refused: the host fell back to the cached last good bundle (v6, from the cache), and loaded nothing else" || bad "$refused: no fall-back after the refusal: $(grep -E 'codeLoad|falling|not load' "$C" | tail -3 | tr '\n' ' ')"
+    drive title Attic "${refused}static"; fold "$refused: the screen reads Attic, not Cellar" $?
   else
-    bad "S17, S17b: not run, v7 was not published"
+    bad "$skipped, $refused: not run, v7 was not published"
   fi
   cp "$W3/index.s15" "$W3/site/bundles/index.json" && rm -rf "${W3:?}/site/bundles/v7"
+}
+if grep -rq 'BRIDGES_METADATA_KEY' "$APP/host-android/src/main/kotlin"; then
+  w3_v7_bridged S17 S17b AbsentBridge@1 AbsentBridge \
+    "bridge refused: the bundle needs AbsentBridge@1, which this host does not serve" "a bridge this host does not serve"
 else
   skip "S17, S17b: this host predates B4 (no bridge gate in its BundleIndex.kt)"
+fi
+if [ "${W3_BRIDGED:-0}" = 1 ]; then
+  w3_v7_bridged S17c S17d "CiStub@1#$W3_BRIDGE_OTHER_SHAPE" CiStub \
+    "bridge refused: the bundle was built against another CiStub@1 contract (shape $W3_BRIDGE_OTHER_SHAPE; this host's is $W3_BRIDGE_SHAPE)" \
+    "CiStub@1 at another shape than this host's"
+else
+  skip "S17c, S17d: this host declares no bridge (from before B5a)"
 fi
 
 # The newest bundle this host has run, for S7, S9 and S9b.

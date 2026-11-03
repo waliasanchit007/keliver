@@ -583,7 +583,12 @@ merged:
 The first two are S17 and S17b in the reference app's static route
 (`reference/inventory/ci/w3/android-static.sh` and `ios-static.sh`), on the CI emulator and
 simulator in its pull-request runs, whose hosts this checkout scaffolds; a hand-run of a
-published zip from before B4 skips them.
+published zip from before B4 skips them. The third is S17c, and its refusal at load S17d: the
+static route's host declares `CiStub@1` at one shape and binds a stub under that name
+(`ci/w3/bridge-stub.sh`, written for that one build and removed after it; on iOS set from Swift
+before the host starts), and v7 declares `CiStub@1` at another. That host runs its binding on
+every load of the static route, so S2 also checks that the binding ran and the load succeeded.
+A host from before B5a declares no bridge: skipped.
 
 ### 5. The reference app on a bridge
 
@@ -621,6 +626,6 @@ its editor still builds and previews the screen with a fake.
    contract's build and that repository. Its iOS self-test compiles a Swift
    conformance to a real generated `<Name>Callbacks` (boxed primitives, `BridgeCall`) with
    `xcodebuild`.
-4. **B5d** (the reference app): §4's first two scenarios now and the third once B5a is merged
-   (pull-request runs, this checkout's scaffolders, published libraries); §5 after the
-   libraries release and the tools release with B5c.
+4. **B5d** (the reference app): §4's three scenarios (S17 and S17b, #213; S17c and S17d once
+   B5a was merged), in pull-request runs with this checkout's scaffolders and the published
+   libraries; §5 after the libraries release and the tools release with B5c.
