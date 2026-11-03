@@ -393,7 +393,7 @@ if [ "$W3_BRIDGED" = 1 ]; then
     "bridge refused: the bundle was built against another CiStub@1 contract (shape $W3_BRIDGE_OTHER_SHAPE; this host's is $W3_BRIDGE_SHAPE)" \
     "CiStub@1 at another shape than this host's"
 else
-  echo "  SKIP  S17c, S17d: this host declares no bridge (from before B5a); not counted"
+  echo "  SKIP  S17c, S17d: this host declares no bridge (from before B5a, or its bridged build failed: see the B5 FAIL); not counted"
 fi
 
 # The newest bundle this host has run, for S7, S9 and S9b.
