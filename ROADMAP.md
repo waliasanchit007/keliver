@@ -14,7 +14,7 @@ The step-by-step record of every release and its evidence:
   Cash App Redwood on Zipline), the `keliver-material` widget set, layout and
   lazy layouts, navigation, HTTP and SQL capabilities, and the portal's editor
   libraries. Pre-1.0: pin an exact version ([`docs/API_STABILITY.md`](./docs/API_STABILITY.md)).
-- **Tools bundle** `keliver-portal-tools` 0.3.17 (a GitHub release asset):
+- **Tools bundle** `keliver-portal-tools` 0.3.18 (a GitHub release asset):
   `keliver-init` scaffolds an app, `keliver-portal` runs the relay and the
   visual editor, `keliver-run-android` puts the app's screens on a phone or
   emulator (checked on the CI emulator and a physical Android phone),

@@ -18,9 +18,9 @@ there: the launch's frames only); CI's memory cycles have a leak bound (#214). I
 K3 is released (tools 0.3.15), and K4 ran on the CI emulator and simulator
 (#165; against the published 0.3.15 hosts in #171), and the Android host on a Galaxy A12 (#174). Item 4:
 B1 (Android) is released (tools 0.3.15), B2 (iOS) is released (tools 0.3.16),
-B3 is merged (#201–#203, not published), B4a is merged (#205) and its gate runs on the CI
-emulator and simulator (#213), B5 is open: its design (#208), the hosts' hook (#210) and the first guest-to-host
-round trip (#211) are merged. Items 5 and 7 are not
+B3 is merged (#201–#203, not published), B4a is released (#205, tools 0.3.18) and its gate runs on the CI
+emulator and simulator (#213), B5 is open: its design (#208) and the first guest-to-host round trip (#211) are
+merged, the hosts' hook is released (#210, tools 0.3.18), and B5's third device scenario runs in CI (#217). Items 5 and 7 are not
 started. Item 6: rows 1 (#108, #115), 2 (#109), 3 (#114) and 4
 (#111) are done, and so is a debug host that picks up a publish while it is
 open (Android #145, released in tools 0.3.13 and checked on a physical phone;

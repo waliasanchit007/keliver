@@ -1,7 +1,8 @@
 # keliver-portal-tools 0.3.18 — release notes
 
-**Status: CANDIDATE.** Not released. The verification table below is filled in as each step of
-`PORTAL_TOOLS_RELEASE.md` is done.
+**Status: RELEASED** 2026-11-03 (10:38:06Z), by `PORTAL_TOOLS_RELEASE.md`, under the
+owner's 2026-10-27 handover. Tag `portal-tools-v0.3.18` (annotated, `154c03871`) →
+`878311ae9a42611aa5fbd49c20c2d5436fe16d49`. Not marked "Latest" (`--latest=false`).
 
 What is in it since 0.3.17 (`7ea8940c3`):
 - #205 (B4a: the bridge gate);
@@ -77,7 +78,7 @@ debug builds only).
 
 The generated bridge code (`keliver-bridge*`) is **not published yet**: it reaches apps with the
 next libraries release. Until then, a binding can bind any `ZiplineService` under the declared
-name, as the reference app's CI does with a stub: S2 checks that every load runs its binding,
+name, as the reference app's CI does with a stub: S2 checks that a load ran its binding,
 and S17c and S17d gate on its shape.
 
 `DEVICE_HOST.md` ("Serving your app's bridges"); `BRIDGE_CODEGEN_DESIGN.md`, section "B5".
@@ -86,19 +87,19 @@ and S17c and S17d gate on its shape.
 
 | what | identity |
 |---|---|
-| source commit | (the candidate commit on this release's PR) |
-| zip | |
-| `.sha256` file | |
-| `VERSION.json` | |
-| device host APK | |
-| candidate build | |
-| packaged checks in that build | |
-| device job | |
-| checked locally | |
-| tag push | |
-| stored assets | |
-| draft download-back | |
-| public download | |
+| source commit | `878311ae9a42611aa5fbd49c20c2d5436fe16d49` (the candidate commit on PR #218; `VERSION.json`'s `sourceCommit`, `sourceDirtyFiles` 0). A first candidate, `ac595864f`, was replaced before its build finished (run `41597988720`, cancelled): the fact-check found `DEVICE_HOST.md`, shipped as `host/README.md`, still calling B5 "next" |
+| zip | `keliver-portal-tools-0.3.18.zip`, sha256 `f85960e47d68f22974a281404c02375f4337d4643ee5525b7d5738d2d9757992`, 92,150,799 bytes |
+| `.sha256` file | 98 bytes, sha256 `bd3c2d8e729808f231ffede2079480d55db5a8335ccd69027c0e23c84becfd4a` |
+| `VERSION.json` | toolsVersion 0.3.18, mavenDependencyVersion 0.4.1 |
+| device host APK | `host/keliver-device-host-0.3.18.apk`, sha256 `4cbf08702120af7634c779fac1109a9aef8d87f3029117548772e49c90fb1bb7`; no `assets/portal_ed25519.pub` |
+| candidate build | `portal-tools.yml` run `41598629891` (bundle job `125791828208`) at `878311ae9`; retained artifact `13214467311` (artifact zip `88646157…`) |
+| packaged checks in that build | adopter acceptance 25/0 (with the U21 identity gate), foreign-relay refusal 6/0, store identity 11/0, device-host hygiene 10/0, store recovery 144/0, production-host scaffolder 86/0 (from `scripts/`) and 76/0 (from the package), iOS host 77/0 and 77/0, publish target 51/0 and 33/0, screen and component scaffolders 9/0, `keliver-run-android` 22/0, the embed floor 11/0, `keliver-publish` 41/0, key permissions 63/0; the bash-3.2, store-resolver and caller-refusal checks 134/0, 32/0 and 73/0; guest bundle signing 4/0 |
+| device job | `portal-tools.yml` run `41619915837` (job `125862734408`), dispatched from `release/tools-0.3.18` at `878311ae9` (the candidate itself) against the artifact above, APK sha256 pinned: the device verifier 19/0 and its packaged acceptance 28/0, on the CI emulator |
+| checked locally | the artifact downloaded through `gh api …/actions/artifacts/13214467311/zip` (`88646157…`): both sha256s, `VERSION.json`, no key in the APK, both hosts' `Bridges.kt` in `templates/`, and every template file equal to `878311ae9`'s (the zip adds only the generated `production-host-embed/dependency-floor.json`); `host/README.md` says "from tools 0.3.18" and "(B5, below)" |
+| tag push | ran only `portal-tools.yml`'s read-only rebuild (`41620684522`), never attached; step 3 found no workflow at `878311ae9` that can write a release (`portal-tools.yml` is `contents: read`; `publish.yml` listens on `v*`; `ci.yml` ignores tags; the listed `release.yaml` is not in that tree), so nothing was disabled |
+| stored assets | release `432558117`: the zip (asset `705221688`) and the `.sha256` (asset `705221684`), server digests and sizes equal to the files above |
+| draft download-back | worked: sha256 `f85960e4…`, 92,150,799 bytes |
+| public download | worked from the releasing machine after publishing: the zip `f85960e4…`, 92,150,799 bytes, and the public `.sha256` names the same hash |
 
 Run before this release, on `main`'s templates (the same host code as the candidate):
 - the reference app's pull-request runs of #217: the CI emulator (reference-app `41579853553`)
