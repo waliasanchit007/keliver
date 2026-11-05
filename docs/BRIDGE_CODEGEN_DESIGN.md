@@ -423,7 +423,7 @@ before the first lookup (B4's rule: declaring at `bind` comes too late for a col
   )
   class KeliverBridgeScope(val zipline: Zipline, val main: CoroutineContext, val log: (String) -> Unit)
   ```
-  So a host from the next tools release builds against the libraries apps already use (0.4.1,
+  So a host from tools 0.3.18 on builds against the libraries apps already use (0.4.1,
   and the reference app's 0.3.3), and an app without a bridge changes nothing. The host knows
   only what B4 needs; the app's `bind` calls the generated `<Name>Bridge.bind`. `main` is the
   host's main dispatcher (Swift cannot name one). `log` is the host's log in debug builds only:
@@ -601,7 +601,7 @@ its editor still builds and previews the screen with a fake.
 
 ### Steps
 
-1. **B5a** (templates and the relay; next tools release; nothing published needed): §1, in
+1. **B5a** (templates and the relay; tools 0.3.18; nothing published needed): §1, in
    both hosts: `KeliverBridgeBinding`, the check in `BundleIndex.kt`, each host's own served
    bridges in place of `ServedBridges`, app bindings first with the bound names checked, the
    `bridge-bind` reason (and the relay's `/report` accepting it), the debug-only log. Tests: the

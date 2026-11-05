@@ -167,6 +167,23 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   `frames` is ignored on both hosts, and the iOS host's console lines can no
   longer be split by another thread's. A host scaffolded earlier gets none of
   it until it is scaffolded again.
+- **From 0.3.18 (both hosts):** still the 0.4.1 libraries. The bridge gate: a
+  bundle can declare the app bridges it calls in its signed `keliver.bridges`
+  metadata, `keliver-publish` copies them into its index entry, and a host
+  skips an entry needing a bridge it does not serve (at that version or later,
+  and at that very version with the same contract shape when both name one),
+  and refuses such a manifest at
+  load, on the network and from its cache (`bridge-missing`, `bridge-shape`).
+  A host serves the bridges the app declares: Android
+  `KeliverConfig.bridges` (or `KeliverConfig.fromBuild(…, bridges = …)`), iOS
+  `Keliver.shared.bridges` set from Swift before the host starts, one
+  `KeliverBridgeBinding` per bridge, bound before the host's own services on
+  every code load; a binding that binds anything but its own name, or throws,
+  fails the load (`bridge-bind`). An app that declares none serves none, and
+  its host skips every entry needing one (`DEVICE_HOST.md`, "bridges" and
+  "Serving your app's bridges"). The generated bridge code itself
+  (`keliver-bridge*`) is not published yet. A host scaffolded earlier gets none
+  of it until it is scaffolded again, and skips every entry needing a bridge.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

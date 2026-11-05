@@ -489,7 +489,8 @@ the 2026-10-27 documentation audit. No security or data-loss defect is open
    0.3.16. **2026-11-02:** B3 merged, not published (#201 design, #202 runtime,
    #203 codegen; `BRIDGE_CODEGEN_DESIGN.md`); B4 designed there; B4a merged (#205), its gate
    on the CI emulator and simulator (#213); B5 designed (#208), its first guest-to-host round
-   trip merged (#211, JVM), the hosts' hook merged (#210, in the next tools release).
+   trip merged (#211, JVM), the hosts' hook merged (#210); B4a and B5a released in tools
+   0.3.18 (2026-11-03), and B5's third device scenario runs in CI (#217).
 9. **Start-up** (adoption item 2): M3 released (#179, tools 0.3.16, 2026-10-31); M4's
    host-side frame profile released (#186, tools 0.3.17; composition apart from encoding needs a
    library release); M5's memory profile released on both hosts (#188 iOS, #191 Android; tools 0.3.17); M3's later-screen case and both
