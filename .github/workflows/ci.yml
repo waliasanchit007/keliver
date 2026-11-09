@@ -18,9 +18,12 @@ concurrency:
 
 jobs:
   # The docs fast path (docs/PLAN_2026-11.md section 14). A pull request that
-  # changes only Markdown (*.md anywhere, or anything under docs/) skips the
-  # build and the embed floor: the docs job below is its check. Pushes to main
-  # and manual runs always build.
+  # changes only Markdown (*.md) skips the build and the embed floor: the docs
+  # job below is its check. Markdown the build reads counts as code:
+  # docs/PORTAL_ADOPTER_GUIDE.md is bundled into portal-mcp and checked by its
+  # GuideTest. Pushes to main and manual runs always build. (grep reads all of
+  # its input from a here-string: `cmd | grep -q` under pipefail can report a
+  # SIGPIPE'd writer as a failed match on a long list.)
   changes:
     name: Changed paths
     runs-on: ubuntu-latest
@@ -38,7 +41,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          if git diff --name-only "$BASE" HEAD | grep -Evq '\.md$|^docs/'; then
+          changed="$(git diff --name-only "$BASE" HEAD)"
+          if grep -Evq '\.md$' <<<"$changed" || grep -Eq '^docs/PORTAL_ADOPTER_GUIDE\.md$' <<<"$changed"; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
             echo "docs only: the build and the embed floor are skipped"
@@ -289,7 +293,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" != "pull_request" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          if git diff --name-only "$BASE" HEAD | grep -Eq '^scripts/(templates/production-host[^/]*/|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$'; then
+          changed="$(git diff --name-only "$BASE" HEAD)"
+          if grep -Eq '^scripts/(templates/production-host[^/]*/|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -324,8 +329,8 @@ jobs:
           set -euo pipefail
           if [ "$EVENT" != "pull_request" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           changed="$(git diff --name-only "$BASE" HEAD)"
-          echo "$changed" | sed 's/^/  /'
-          if echo "$changed" | grep -Eq '^(portal-[^/]+|keliver-[^/]+|web-spike|editor-e2e|gradle|build-support[^/]*|kotlin-js-store)/|^(build\.gradle|settings\.gradle|gradle\.properties|\.github/workflows/ci\.yml)$'; then
+          while IFS= read -r f; do echo "  $f"; done <<<"$changed"
+          if grep -Eq '^(portal-[^/]+|keliver-[^/]+|web-spike|editor-e2e|gradle|build-support[^/]*|kotlin-js-store)/|^(build\.gradle|settings\.gradle|gradle\.properties|\.github/workflows/ci\.yml)$' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

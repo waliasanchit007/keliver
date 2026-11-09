@@ -23,7 +23,8 @@ name: reference-app
 # Runs on a pull request that touches the reference app or this workflow, on a
 # push to main that touches the same paths (so main's state is checked and the
 # Gradle cache below is written from main), and on demand. A newer push to the
-# same pull request cancels the older run (docs/PLAN_2026-11.md section 14).
+# same pull request cancels the older run; runs on main never cancel each other
+# (docs/PLAN_2026-11.md section 14).
 on:
   pull_request:
     # The production host's templates, the publishing route and keliver-publish
@@ -89,8 +90,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: reference-app-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: reference-app-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   reference-app:
     runs-on: ubuntu-latest
@@ -116,17 +117,25 @@ jobs:
       # outputs. A restore that hangs (ci.yml's build job saw that on Linux with
       # a whole Gradle home) is cut at 10 minutes and the run goes on cold. A run
       # started by hand, the published-only proof, always resolves from scratch.
+      # The harness moves user.home into its work dir, so GRADLE_USER_HOME is set
+      # explicitly, or the cache would never be read. Saved from main only.
       - name: Restore Gradle downloads
+        id: cache
         if: github.event_name != 'workflow_dispatch'
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         timeout-minutes: 10
         continue-on-error: true
         with:
           path: |
-            ~/.gradle/caches/modules-2
-            ~/.gradle/wrapper
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
           key: reference-app-gradle-${{ runner.os }}-${{ hashFiles('reference/inventory/bootstrap.sh', 'scripts/templates/production-host/build.gradle', 'scripts/templates/production-host-embed/**/*.gradle') }}
           restore-keys: reference-app-gradle-${{ runner.os }}-
+      - name: Use the cache
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          mkdir -p "$HOME/ci-cache/gradle-home"
+          echo "GRADLE_USER_HOME=$HOME/ci-cache/gradle-home" >> "$GITHUB_ENV"
 
       - name: Download the PUBLIC tools 0.3.18 release, as the adopter guide does
         run: |
@@ -186,6 +195,16 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu ${{ inputs.emulator_gpu || 'swiftshader_indirect' }}
           disable-animations: true
           script: bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
+
+      - name: Save Gradle downloads
+        if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: |
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: Keep the evidence
         if: always()

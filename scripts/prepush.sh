@@ -53,7 +53,7 @@ if [ -n "$wf" ]; then
   step "actionlint"
   if command -v actionlint >/dev/null 2>&1; then
     # shellcheck disable=SC2086
-    actionlint -shellcheck= $wf || failed+=("actionlint")
+    actionlint $wf || failed+=("actionlint")
   else echo "  (actionlint not installed: skipped)"; fi
 fi
 sh_files="$(echo "$changed" | grep -E '\.sh$' | while read -r f; do [ -f "$f" ] && echo "$f"; done || true)"
@@ -72,11 +72,15 @@ modules="$(
   done
 )"
 tasks=()
+tmp_err="$(mktemp)"; trap 'rm -f "$tmp_err"' EXIT
 if [ -n "$modules" ]; then
   step "which test tasks the changed modules have: $(echo "$modules" | tr '\n' ' ')"
   report_args=()
   for m in $modules; do report_args+=(":$m:tasks" "--all"); done
-  listing="$(./gradlew -q --console=plain "${report_args[@]}" -DRELEASE_SIGNING_ENABLED=false 2>/dev/null || true)"
+  # A build that cannot even configure is a failure, not "no tests".
+  if ! listing="$(./gradlew -q --console=plain "${report_args[@]}" -DRELEASE_SIGNING_ENABLED=false 2>"$tmp_err")"; then  # lint: bash32-ok
+    tail -20 "$tmp_err"; failed+=("gradle-configure")
+  fi
   # Each report starts with "Tasks runnable from project ':<module>'".
   want="test jvmTest jsTest wasmJsTest apiCheck"
   [ "$ios" = 1 ] && want="$want iosSimulatorArm64Test"
@@ -87,26 +91,33 @@ if [ -n "$modules" ]; then
       { t = $1; if (p != "" && (t in ok)) print p ":" t }'
   )
 fi
-if echo "$changed" | grep -Eq '^(keliver-[^/]*schema[^/]*|portal-schema-codegen)/'; then
+# Here-strings, not `echo | grep -q`: under pipefail a SIGPIPE'd echo reads as no match.
+if grep -Eq '^(keliver-[^/]*schema[^/]*|portal-schema-codegen)/' <<<"$changed"; then
   tasks+=(":portal-schema-codegen:checkPortalCode")
 fi
-if [ "${#tasks[@]}" -gt 0 ]; then
-  step "gradle ${tasks[*]}"
+if grep -Eq '^(build-support[^/]*/|gradle/|build\.gradle$|settings\.gradle$|gradle\.properties$)' <<<"$changed"; then
+  echo; echo "NOTE: the root build changed (build-support/, gradle/ or the root build files): run the full build"
+  echo "      (./gradlew build apiCheck) or let CI's full graph check it; this script runs only module tests."
+fi
+if [ "${#tasks[@]}" -gt 0 ]; then  # lint: bash32-ok
+  step "gradle ${tasks[*]}"  # lint: bash32-ok
   if [ "$dry" = 1 ]; then echo "  (dry run)"
   else
     # shellcheck disable=SC2086
-    ./gradlew --console=plain --continue "${tasks[@]}" -DRELEASE_SIGNING_ENABLED=false ${PREPUSH_GRADLE_ARGS:-} || failed+=("gradle")
+    ./gradlew --console=plain --continue "${tasks[@]}" -DRELEASE_SIGNING_ENABLED=false ${PREPUSH_GRADLE_ARGS:-} || failed+=("gradle")  # lint: bash32-ok
   fi
 fi
 
 # 4. what CI will run beyond this
 step "CI jobs this change triggers (not run here)"
-echo "$changed" | grep -Eq '^(scripts/keliver-new-ios-host|scripts/templates/ios-host|reference/inventory/ci/(ios\.sh|ocr\.swift|w[2358]/|m0/)|reference/embed/ios/|scripts/keliver-publish|portal-relay/src/main/kotlin/(StaticIndex|KeliverPublish|PublishSignature|KeyRotation)\.kt|\.github/workflows/ios-host\.yml)' \
+grep -Eq '^(scripts/keliver-new-ios-host|scripts/templates/(ios-host|publish/)|reference/inventory/ci/(ios\.sh|ocr\.swift|w[2358]/|m0/)|reference/inventory/app/src/jsMain/kotlin/device/|reference/embed/ios/|scripts/keliver-publish|portal-relay/src/main/kotlin/(StaticIndex|KeliverPublish|PublishSignature|KeyRotation)\.kt|\.github/workflows/ios-host\.yml)' <<<"$changed" \
   && echo "  ios-host (simulator)"
-echo "$changed" | grep -Eq '^(reference/|scripts/templates/(production-host|publish)|scripts/keliver-(new-production-host|new-publish-target|publish|run-android)|portal-relay/src/main/kotlin/(StaticIndex|KeliverPublish|PublishSignature|KeyRotation)\.kt|\.github/workflows/reference-app\.yml)' \
+grep -Eq '^(reference/|scripts/templates/(production-host|publish)|scripts/keliver-(new-production-host|new-publish-target|publish|run-android)|portal-relay/src/main/kotlin/(StaticIndex|KeliverPublish|PublishSignature|KeyRotation)\.kt|\.github/workflows/reference-app\.yml)' <<<"$changed" \
   && echo "  reference-app (emulator)"
-if echo "$changed" | grep -Evq '\.md$|^docs/'; then echo "  ci.yml Build (full graph)"; else echo "  ci.yml docs fast path only"; fi
+if grep -Evq '\.md$' <<<"$changed" || grep -Eq '^docs/PORTAL_ADOPTER_GUIDE\.md$' <<<"$changed"; then
+  echo "  ci.yml Build (full graph)"
+else echo "  ci.yml docs fast path only"; fi
 
 echo
-if [ "${#failed[@]}" -gt 0 ]; then echo "prepush: FAILED: ${failed[*]}"; exit 1; fi
+if [ "${#failed[@]}" -gt 0 ]; then echo "prepush: FAILED: ${failed[*]}"; exit 1; fi  # lint: bash32-ok
 echo "prepush: clean"

@@ -6,9 +6,10 @@
 #      #anchors are not checked);
 #   2. tables: every row has as many cells as its header (escaped \| and pipes
 #      inside `code` do not count);
-#   3. hygiene, on the lines the change ADDS (any file, not only Markdown): no
-#      private-network addresses, no private key blocks, no Apple team ids in
-#      DEVELOPMENT_TEAM. Names that must never appear (an employer, a product)
+#   3. hygiene, on the lines the change ADDS (any file but test sources and
+#      this script): no private-network addresses (the Android emulator's own
+#      10.0.2.x and Genymotion's 10.0.3.2 are allowed), no private key blocks,
+#      no Apple team ids in DEVELOPMENT_TEAM (placeholders allowed). Names that must never appear (an employer, a product)
 #      are not written here either: put one extended regex per line in the
 #      file named by KELIVER_HYGIENE_PATTERNS (default
 #      ~/.config/keliver/hygiene-patterns), which stays on the developer's
@@ -43,13 +44,21 @@ fi
 patterns_file="${KELIVER_HYGIENE_PATTERNS:-$HOME/.config/keliver/hygiene-patterns}"
 added_file="$(mktemp)"
 trap 'rm -f "$added_file"' EXIT
-git diff -U0 --no-color "$base" -- . ':(exclude)scripts/docs-check.sh' | { grep -E '^\+([^+]|$)' || true; } > "$added_file"
+git diff -U0 --no-color "$base" -- . ':(exclude)scripts/docs-check.sh' > "$added_file"
 
 python3 - "$patterns_file" "$added_file" "${files[@]+"${files[@]}"}" <<'PY'
 import os, re, sys
 
-patterns_file, added_file, files = sys.argv[1], sys.argv[2], sys.argv[3:]
-added = open(added_file, encoding='utf-8', errors='replace').read().splitlines()
+patterns_file, diff_file, files = sys.argv[1], sys.argv[2], sys.argv[3:]
+# (path, text) of every added line, from a -U0 diff; test sources are skipped.
+added = []
+test_src = re.compile(r'(^|/)src/[A-Za-z]*[Tt]est/|(^|/)test/|Test\.kt$|_test\.')
+path = None
+for raw in open(diff_file, encoding='utf-8', errors='replace').read().splitlines():
+    if raw.startswith('+++ '):
+        path = raw[6:] if raw.startswith('+++ b/') else None
+    elif raw.startswith('+') and path and not test_src.search(path):
+        added.append((path, raw[1:]))
 fail = 0
 
 def report(msg):
@@ -91,7 +100,8 @@ for path in files:
         # 2. tables
         stripped = bare.strip()
         if stripped.startswith('|'):
-            cells = len(re.split(r'(?<!\\)\|', stripped.strip('|')))
+            inner = stripped[1:-1] if stripped.endswith('|') and len(stripped) > 1 else stripped[1:]
+            cells = len(re.split(r'(?<!\\)\|', inner))
             if header_cells is None:
                 header_cells = cells
             elif re.fullmatch(r'\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?', stripped):
@@ -103,9 +113,11 @@ for path in files:
 
 # 3. hygiene on added lines
 generic = [
-    (r'\b192\.168\.\d{1,3}\.\d{1,3}\b|\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b|\b172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}\b', 'a private-network address'),
+    # 10.0.2.x is the Android emulator's own network (10.0.2.2 = the host
+    # machine), 10.0.3.2 Genymotion's alias for it: not LAN addresses.
+    (r'\b192\.168\.\d{1,3}\.\d{1,3}\b|\b10\.(?!0\.2\.\d{1,3}\b|0\.3\.2\b)\d{1,3}\.\d{1,3}\.\d{1,3}\b|\b172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}\b', 'a private-network address'),
     (r'-----BEGIN [A-Z ]*PRIVATE KEY-----', 'a private key block'),
-    (r'DEVELOPMENT_TEAM\s*=\s*[A-Z0-9]{10}\b', 'an Apple team id'),
+    (r'DEVELOPMENT_TEAM\s*=\s*(?!ABCDE12345\b|X{10}\b|0{10}\b)[A-Z0-9]{10}\b', 'an Apple team id'),
 ]
 extra = []
 if os.path.isfile(patterns_file):
@@ -113,13 +125,13 @@ if os.path.isfile(patterns_file):
         p = p.strip()
         if p and not p.startswith('#'):
             extra.append((p, 'a name from the local hygiene list'))
-for line in added:
+for path, line in added:
     for rx, what in generic:
         if re.search(rx, line):
-            report(f"hygiene: an added line carries {what}: {line[1:][:120]}")
+            report(f"hygiene: {path}: an added line carries {what}: {line[:120]}")
     for rx, what in extra:
         if re.search(rx, line, re.I):
-            report(f"hygiene: an added line carries {what} (pattern hidden)")
+            report(f"hygiene: {path}: an added line carries {what} (pattern hidden)")
 
 print(f"docs-check: {len(files)} Markdown file(s), {len(added)} added line(s), "
       f"{'local hygiene list used' if extra else 'generic hygiene only'}: "
