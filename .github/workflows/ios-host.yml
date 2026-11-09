@@ -23,8 +23,17 @@
 #      Screens are read by macOS Vision.
 #
 # Read-only: no secrets, no publishing. The keys are disposable and generated
-# inside the run. Triggered on pull requests touching the iOS host. A workflow
-# can't be dispatched until it is on the default branch.
+# inside the run. A workflow can't be dispatched until it is on the default
+# branch.
+#
+# Speed (docs/PLAN_2026-11.md section 14). The self-test and the OTA route run
+# as two jobs at once. A pull request that touches none of the timing paths
+# skips T2's two release-type builds (about 50 minutes on a hosted runner);
+# pushes to main, the nightly run and a run started by hand always run
+# everything. A newer push to the same pull request cancels the older run.
+# Hosted runners cache the Kotlin/Native toolchain (~/.konan) and Gradle's
+# downloads; the repository variable IOS_RUNNER can route both jobs to another
+# runner label (unset: macos-15).
 name: ios-host
 on:
   pull_request:
@@ -49,13 +58,84 @@ on:
       - "portal-relay/src/main/kotlin/KeyRotation.kt"
       - "scripts/templates/publish/**"
       - ".github/workflows/ios-host.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/keliver-new-ios-host.sh"
+      - "scripts/keliver-new-ios-host-selftest.sh"
+      - "scripts/templates/ios-host/**"
+      - "reference/inventory/ci/ios.sh"
+      - "reference/inventory/ci/ocr.swift"
+      - "reference/inventory/ci/w3/**"
+      - "reference/inventory/ci/w2/**"
+      - "reference/inventory/ci/w5/**"
+      - "reference/inventory/ci/w8/**"
+      - "reference/inventory/ci/m0/**"
+      - "reference/inventory/app/src/jsMain/kotlin/device/**"
+      - "reference/embed/ios/**"
+      - "scripts/templates/ios-host-embed/**"
+      - "scripts/keliver-publish"
+      - "portal-relay/src/main/kotlin/StaticIndex.kt"
+      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
+      - "portal-relay/src/main/kotlin/PublishSignature.kt"
+      - "portal-relay/src/main/kotlin/KeyRotation.kt"
+      - "scripts/templates/publish/**"
+      - ".github/workflows/ios-host.yml"
+  schedule:
+    - cron: "37 1 * * *"
   workflow_dispatch: {}
 permissions:
   contents: read
+concurrency:
+  group: ios-host-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 jobs:
+  selftest:
+    name: ios-host self-test (xcodebuild)
+    runs-on: ${{ vars.IOS_RUNNER || 'macos-15' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      # The self-test isolates its Gradle home and Konan dir; these variables
+      # point them at a cached place instead of a fresh one (its documented knob).
+      - name: Restore the Kotlin/Native toolchain and Gradle downloads
+        if: runner.environment == 'github-hosted'
+        uses: actions/cache@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ~/ios-ci-cache/konan
+            ~/ios-ci-cache/gradle-home/caches/modules-2
+            ~/ios-ci-cache/gradle-home/wrapper
+          key: ios-selftest-${{ runner.os }}-${{ hashFiles('scripts/templates/ios-host/build.gradle', 'scripts/templates/ios-host/settings.gradle', 'scripts/templates/ios-host/gradle.properties', 'scripts/keliver-new-ios-host.sh') }}
+          restore-keys: ios-selftest-${{ runner.os }}-
+      - name: The iOS host scaffolder's self-test, with xcodebuild
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/ios-evidence"
+          if [ "${{ runner.environment }}" = github-hosted ]; then
+            export KELIVER_SELFTEST_GRADLE_HOME="$HOME/ios-ci-cache/gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/ios-ci-cache/konan"
+          fi
+          bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
+            | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-host-selftest-evidence-${{ github.run_id }}
+          path: ios-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
   ios-host:
-    runs-on: macos-15
-    # Observed 99-162 minutes with M0 (runner speed varies; 160 was hit once).
+    runs-on: ${{ vars.IOS_RUNNER || 'macos-15' }}
+    # Observed 99-162 minutes with M0 and T2 (runner speed varies). A pull
+    # request without T2 needs about 50 minutes less.
     timeout-minutes: 200
     permissions:
       contents: read
@@ -68,10 +148,44 @@ jobs:
       KELIVER_SCAFFOLD_FROM: ${{ github.event_name == 'workflow_dispatch' && 'zip' || 'repo' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+
+      # T2 (m0/ios-timing.sh) on a pull request only when it touches what T2
+      # checks: the timing code, the build configurations, the host's Gradle
+      # build, the harness's timing scripts or this workflow.
+      - id: groups
+        name: Which groups run
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          t2=run
+          if [ "$EVENT" = pull_request ]; then
+            changed="$(git diff --name-only "$BASE" HEAD)"
+            echo "$changed" | sed 's/^/  /'
+            echo "$changed" | grep -Eq '^scripts/templates/ios-host[^/]*/(src/(timing|notiming)/|Configuration/|iosApp\.xcodeproj/|build\.gradle|settings\.gradle|gradle\.properties)|^reference/inventory/ci/(m0/|ios\.sh$)|^scripts/keliver-new-ios-host\.sh$|^\.github/workflows/ios-host\.yml$' || t2=skip
+          fi
+          echo "KELIVER_IOS_T2=$t2" | tee -a "$GITHUB_ENV"
+
+      # Not in a run started by hand: the published-only proof resolves from scratch.
+      - name: Restore the Kotlin/Native toolchain and Gradle downloads
+        if: runner.environment == 'github-hosted' && github.event_name != 'workflow_dispatch'
+        uses: actions/cache@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ~/.konan
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: ios-host-${{ runner.os }}-${{ hashFiles('scripts/templates/ios-host/build.gradle', 'scripts/templates/ios-host/settings.gradle', 'scripts/templates/ios-host/gradle.properties', 'reference/inventory/bootstrap.sh') }}
+          restore-keys: ios-host-${{ runner.os }}-
 
       - name: The toolchain
         run: |
@@ -97,12 +211,6 @@ jobs:
             f85960e47d68f22974a281404c02375f4337d4643ee5525b7d5738d2d9757992
           unzip -p keliver-portal-tools-0.3.18.zip 'keliver-portal-tools-0.3.18/VERSION.json' \
             | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == '878311ae9a42611aa5fbd49c20c2d5436fe16d49'"
-
-      - name: The iOS host scaffolder's self-test, with xcodebuild
-        run: |
-          set -o pipefail
-          bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
-            | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
 
       - name: iOS production OTA on the simulator — P1–P7
         run: |

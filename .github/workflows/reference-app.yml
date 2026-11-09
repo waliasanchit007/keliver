@@ -20,11 +20,31 @@
 # Read-only. Nothing here can create a release, attach an asset, publish a
 # package or move a tag.
 name: reference-app
-# Runs on a pull request that touches the reference app or this workflow, and on
-# demand. Not on push: it downloads a published release and boots an emulator,
-# which is a check of the adopter route, not of every commit.
+# Runs on a pull request that touches the reference app or this workflow, on a
+# push to main that touches the same paths (so main's state is checked and the
+# Gradle cache below is written from main), and on demand. A newer push to the
+# same pull request cancels the older run (docs/PLAN_2026-11.md section 14).
 on:
   pull_request:
+    # The production host's templates, the publishing route and keliver-publish
+    # (W3) are what the emulator checks exercise, so changes to them run it too.
+    paths:
+      - "reference/**"
+      - ".github/workflows/reference-app.yml"
+      - "scripts/templates/production-host/**"
+      - "scripts/templates/production-host-embed/**"
+      - "scripts/templates/publish/**"
+      - "scripts/keliver-new-production-host.sh"
+      - "scripts/keliver-new-publish-target.sh"
+      - "scripts/keliver-publish"
+      - "scripts/keliver-publish-selftest.sh"
+      - "scripts/keliver-run-android.sh"
+      - "portal-relay/src/main/kotlin/StaticIndex.kt"
+      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
+      - "portal-relay/src/main/kotlin/PublishSignature.kt"
+      - "portal-relay/src/main/kotlin/KeyRotation.kt"
+  push:
+    branches: [main]
     # The production host's templates, the publishing route and keliver-publish
     # (W3) are what the emulator checks exercise, so changes to them run it too.
     paths:
@@ -68,6 +88,9 @@ on:
         default: swiftshader_indirect
 permissions:
   contents: read
+concurrency:
+  group: reference-app-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 jobs:
   reference-app:
     runs-on: ubuntu-latest
@@ -89,6 +112,21 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # Gradle's downloads only (dependencies and the wrapper), never build
+      # outputs. A restore that hangs (ci.yml's build job saw that on Linux with
+      # a whole Gradle home) is cut at 10 minutes and the run goes on cold. A run
+      # started by hand, the published-only proof, always resolves from scratch.
+      - name: Restore Gradle downloads
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/cache@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: reference-app-gradle-${{ runner.os }}-${{ hashFiles('reference/inventory/bootstrap.sh', 'scripts/templates/production-host/build.gradle', 'scripts/templates/production-host-embed/**/*.gradle') }}
+          restore-keys: reference-app-gradle-${{ runner.os }}-
 
       - name: Download the PUBLIC tools 0.3.18 release, as the adopter guide does
         run: |
