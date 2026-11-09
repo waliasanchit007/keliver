@@ -1,5 +1,9 @@
 # Keliver — Roadmap & improvement backlog
 
+> **2026-11-09:** the plan of record is [`PLAN_2026-11.md`](PLAN_2026-11.md). Its milestones
+> (MS0–MS8) order everything below; "Current priorities" (ranked 2026-10-27) is kept as written,
+> and its open items are mapped in that plan's section 7.
+
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
 its evidence — nothing here is speculative. **Status: 2026-10-27.** "Current
 priorities" (below the adoption findings) is the ranked list to pick work from;
@@ -422,7 +426,16 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## Current priorities
 
-**Ranked 2026-10-27**, by user impact, correctness, security, then dependency
+**From 2026-11-09, ranked by [`PLAN_2026-11.md`](PLAN_2026-11.md):** MS0 housekeeping (that
+plan's pull request, an Android emulator image); MS1 Kotlin 2.4.20 with Zipline 1.28.0; MS2 and
+MS3, Gates A and B of the proposed Compose-generated API on the 2026-10 product proof's feature;
+MS4 the generated API in full if Gate B confirms it, with the bridges (B5c) and the editor's
+catalog; MS5 libraries 0.5.0 and a tools release; MS6 the editor for teams (named states, Live
+without mappers, a device preview, change requests, a release view, crash rollback); MS7 the full
+private proof; MS8 reach (a hosted editor, changes requested in plain language, W7, design
+partners).
+
+**Ranked 2026-10-27** (kept as written), by user impact, correctness, security, then dependency
 order. Every item comes from the adoption findings above, `KNOWN_BUGS.md`, or
 the 2026-10-27 documentation audit. No security or data-loss defect is open
 (U35/U36 fixed in tools 0.3.11, U27/U29 in 0.3.6, U30 in 0.3.9).

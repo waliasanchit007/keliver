@@ -11,8 +11,9 @@ previews, and one-click **Export Kotlin** (the output is real code).
 > **Status: public on Maven Central — `0.4.1`.** Add `mavenCentral()` and
 > depend on `dev.keliver:keliver-host:0.4.1` (host) /
 > `dev.keliver:keliver-guest:0.4.1` (guest) — no GitHub PAT, no extra repo.
-> `keliver-material` is a Compose/Material3-parity widget library (76 widgets —
-> see [`docs/WIDGET_PARITY.md`](./docs/WIDGET_PARITY.md)) so you build
+> `keliver-material` is a widget library named after Material 3 (76 widgets —
+> see [`docs/WIDGET_PARITY.md`](./docs/WIDGET_PARITY.md) for how close its
+> parameters are to Compose's) so you build
 > server-driven screens without authoring a schema. `0.3.0` adds Icon +
 > ListItem, DropdownMenu/SegmentedButtonRow in the portal, and publishes
 > `dev.keliver:portal-sql` (the SDUI data layer). Start a new app in seconds
@@ -236,6 +237,8 @@ ships by accident. See [`docs/API_STABILITY.md`](./docs/API_STABILITY.md).
 
 ## What's planned
 
+[`docs/PLAN_2026-11.md`](./docs/PLAN_2026-11.md) — the plan of record: what Keliver is for,
+the bar, and the milestones with their gates.
 [`docs/ROADMAP.md`](./docs/ROADMAP.md) — the backlog, in priority order, with
 a status line on each item. Where things stand: [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md)
 (status at a glance) and [`docs/DELIVERY_PLAN.md`](./docs/DELIVERY_PLAN.md)

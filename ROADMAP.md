@@ -1,6 +1,6 @@
 # Keliver roadmap
 
-Adopter-facing summary, updated 2026-10-29. The working backlog, ranked and
+Adopter-facing summary, updated 2026-11-09. The working backlog, ranked and
 with a status line on every item, is [`docs/ROADMAP.md`](./docs/ROADMAP.md)
 ("Current priorities"). Where things stand, kept apart as shipped, merged but
 unreleased, demonstrated, and open: [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md).
@@ -30,35 +30,29 @@ Start here: [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md), then
 
 ## Next
 
-In order (details and evidence in `docs/ROADMAP.md`):
+From 2026-11-09 the plan is [`docs/PLAN_2026-11.md`](./docs/PLAN_2026-11.md). In order:
 
-1. ~~**Tools 0.3.13**~~ and ~~**libraries 0.4.1**~~: released 2026-10-27
-   (the editor you work in, a debug Android host that picks up a publish while
-   the app is open, adopter-route fixes; per-app editors on 0.4.1).
-2. ~~**Live updates on iOS**~~: released in tools 0.3.14 (2026-10-28);
-   checked on the simulator and on a physical iPhone (2026-10-29).
-3. **A host kit for existing apps**: the glue every embed had to write (a
-   fallback to the screen being replaced, a status API, user-safe states, a
-   request allow-list). Released in tools 0.3.14 on both host templates. The
-   templates after it (#165, with `screen-failed` on iOS) are checked on the
-   CI emulator and simulator through the reference embed apps, and so are the
-   published 0.3.15 hosts; the Android host has also passed on a physical
-   phone (2026-10-29, #174), the iOS one not yet.
-   The dependency-floor report (K3) is released in tools 0.3.15.
-4. **A bridge generator**, so an app's own host calls are generated, not
-   hand-copied. First step released in tools 0.3.15 (B1, Android): guests'
-   data calls go through the app's own signed-in HTTP client, behind the
-   allow-list. The iOS step (B2: the app adds its credentials through a
-   header callback) is released in tools 0.3.16. The bridge gate (B4a) and
-   hosts that serve an app's bridges (B5a) are released in tools 0.3.18; the
-   generated bridge code waits on a libraries release.
-5. **Start-up and memory**, measured before optimised. M3 (the code load
-   starts at host start) is released in tools 0.3.16; on a Galaxy A12 it did
-   not speed up a screen opened at launch. The guest frame profile (M4) and
-   the memory profile on both hosts (M5) are released in tools 0.3.17, with
-   CI emulator and simulator numbers; a phone's are not taken yet.
-6. **A physical-device proof** with release-signed builds and a real HTTPS
+1. **Writing a screen is writing Compose** (proposed; two gates decide it). The
+   guest API would be generated from Compose's own API: the same names,
+   parameters, types and slots, with only the imports different. Hosts would draw
+   with the real Compose functions, so screens look and move like native ones. If
+   the gates confirm it, it ships in libraries **0.5.0**, with Kotlin 2.4.20 and the
+   generated bridge code.
+2. **The editor for teams:** every state of every screen with real or recorded
+   data, safe edits, a preview on a phone from a link, change requests with
+   screenshots, publishing with a rollout percentage, and rollback.
+3. **Tools for coding agents:** `keliver check` with machine-readable results,
+   rendered states an agent can see, an `llms.txt`, and agent guides in new apps.
+4. **Delivery operations:** crash rollback on the device, a release view, a CI
+   action, and smaller updates.
+5. **A physical-device proof** with release-signed builds and a real HTTPS
    server, and an external adopter.
+
+Done since 2026-10: libraries 0.4.1 with the editor program (#140, #141), and in
+tools 0.3.13 to 0.3.18 live updates on both hosts, the host kit for existing apps, the dependency-floor report, HostHttp through the
+app's own client on both platforms, start-up and memory profiles, and the bridge
+gate with hosts that serve an app's bridges. The list this replaced is in git
+history.
 
 ## Deliberately out of scope
 

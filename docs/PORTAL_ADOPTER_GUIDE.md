@@ -129,10 +129,10 @@ mechanism your client provides, or name the server explicitly.
 | `find_usages` | where a bound field, action or design token is used |
 | `device_screenshot` | a frame from a connected device |
 
-`device_screenshot` runs `adb` from the macOS default SDK location,
-`~/Library/Android/sdk/platform-tools/adb`, and nowhere else: it does not read
-`ANDROID_HOME` or `PATH`. With the SDK anywhere else (or on Linux) the tool
-fails; take the screenshot with `adb exec-out screencap -p` yourself.
+`device_screenshot` looks for `adb` in `$ANDROID_HOME/platform-tools` (or
+`$ANDROID_SDK_ROOT`'s), then the Android Studio default (`~/Library/Android/sdk` on
+macOS, `~/Android/Sdk` on Linux), then on `PATH`. If none is found it says so; you
+can always take the screenshot with `adb exec-out screencap -p` yourself.
 
 **Screen names are bare**, as `list_screens` returns them: `home`, not
 `default/home`.

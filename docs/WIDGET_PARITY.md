@@ -1,5 +1,10 @@
 # keliver-material — widget parity audit
 
+> **Direction (2026-11-09):** [`PLAN_2026-11.md`](PLAN_2026-11.md) (WS2) proposes generating the
+> guest API from Compose's own API, with the same names, parameters, types and slots, and hosts
+> calling the real Compose functions; its Gates A and B decide it. This audit describes today's
+> hand-written schema, which would then stay as a legacy schema.
+
 Goal: authoring a keliver screen should feel like writing native Compose
 Material3. This is the living audit of how close we are (last full pass:
 2026-07-12, schema batch 15).
