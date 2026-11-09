@@ -32,11 +32,12 @@ Start here: [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md), then
 
 From 2026-11-09 the plan is [`docs/PLAN_2026-11.md`](./docs/PLAN_2026-11.md). In order:
 
-1. **Writing a screen is writing Compose.** The guest API is to be generated from
-   Compose's own API: the same names, parameters, types and slots, with only the
-   imports different. Hosts draw with the real Compose functions, so screens look
-   and move exactly like native ones. It ships in libraries **0.5.0**, with Kotlin
-   2.4.20 and the generated bridge code.
+1. **Writing a screen is writing Compose** (proposed; two gates decide it). The
+   guest API would be generated from Compose's own API: the same names,
+   parameters, types and slots, with only the imports different. Hosts would draw
+   with the real Compose functions, so screens look and move like native ones. If
+   the gates confirm it, it ships in libraries **0.5.0**, with Kotlin 2.4.20 and the
+   generated bridge code.
 2. **The editor for teams:** every state of every screen with real or recorded
    data, safe edits, a preview on a phone from a link, change requests with
    screenshots, publishing with a rollout percentage, and rollback.
@@ -47,8 +48,8 @@ From 2026-11-09 the plan is [`docs/PLAN_2026-11.md`](./docs/PLAN_2026-11.md). In
 5. **A physical-device proof** with release-signed builds and a real HTTPS
    server, and an external adopter.
 
-Done since 2026-10, in tools 0.3.13 to 0.3.18: live updates on both hosts, the
-host kit for existing apps, the dependency-floor report, HostHttp through the
+Done since 2026-10: libraries 0.4.1 with the editor program (#140, #141), and in
+tools 0.3.13 to 0.3.18 live updates on both hosts, the host kit for existing apps, the dependency-floor report, HostHttp through the
 app's own client on both platforms, start-up and memory profiles, and the bridge
 gate with hosts that serve an app's bridges. The list this replaced is in git
 history.
