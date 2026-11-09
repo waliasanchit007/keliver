@@ -1,7 +1,7 @@
 # Keliver current state
 
 **Base snapshot date:** 2026-07-23
-**Last updated:** 2026-11-02 (status at a glance below; details in the `Post-snapshot:` sections and in `DELIVERY_PLAN.md`'s Status table)
+**Last updated:** 2026-11-09 (the plan of record is now [`PLAN_2026-11.md`](PLAN_2026-11.md); status at a glance below; details in the `Post-snapshot:` sections and in `DELIVERY_PLAN.md`'s Status table)
 **Repository baseline:** `94519abf5` (`#13` flow preview complete and live-verified)
 
 This document is the factual handoff point before the next implementation
