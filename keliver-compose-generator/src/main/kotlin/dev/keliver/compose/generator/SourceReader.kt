@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); as in portal-ingest's PsiEnv.
+@file:OptIn(CoreEnvironmentDeprecation::class)
+
 package dev.keliver.compose.generator
 
 import java.io.File
 import java.util.zip.ZipFile
+import org.jetbrains.kotlin.CoreEnvironmentDeprecation
+import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
@@ -36,7 +41,7 @@ class SourceReader(sourceJars: List<File>) {
   private val factory: KtPsiFactory by lazy {
     val env = KotlinCoreEnvironment.createForProduction(
       Disposer.newDisposable(),
-      CompilerConfiguration(),
+      CompilerConfiguration.create(),
       EnvironmentConfigFiles.JVM_CONFIG_FILES,
     )
     KtPsiFactory(env.project)

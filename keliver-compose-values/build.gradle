@@ -21,6 +21,9 @@ kotlin {
         api projects.keliverRuntime
         api libs.jetbrains.compose.runtime
         api libs.kotlinx.serialization.json
+        // Otherwise compose-runtime brings coroutines 1.9.0, whose JS klib fails to link against
+        // Kotlin 2.4's stdlib (SubclassOptInRequired's constructor changed).
+        api libs.kotlinx.coroutines.core
       }
     }
     commonTest {
