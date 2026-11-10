@@ -27,6 +27,12 @@ breaks consumers; there is no binary compatibility with 0.4.x.** An app moving t
   `$stableprop` klib symbols are gone and the `ComposableSingletons` getters were
   renamed; neither is hand-written API, but code compiled against 0.4.x links to them.
 
+New:
+
+- `keliver-nav`: `@ScreenState("name")` and `NamedState(route, fixtures)` declare
+  a screen's named states next to it: a typed route plus an HTTP fixture set. The
+  relay lists them at `GET /states` (`docs/PORTAL_USAGE.md`, "Named states").
+
 ## Keliver 0.4.1 - 2026-10-27
 
 The editor libraries. Hand-written sources changed only in `portal-editor`,

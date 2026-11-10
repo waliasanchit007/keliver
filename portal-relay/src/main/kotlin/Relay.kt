@@ -1314,6 +1314,25 @@ fun main(args: Array<String>) {
     }
   }
 
+  // S1 (ADOPTION_PLAN item 5): the @ScreenState declarations next to each
+  // screen. Read-only. `?screen=` names one screen (404 when the app has no
+  // such screen); without it, every screen that declares states.
+  server.createContext("/states") { ex ->
+    handle(ex) {
+      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
+      val q = query(ex)
+      val project = safe(q["project"] ?: "default")
+      val dir = screensDirFor(project)
+      val screen = q["screen"]?.let(::safe)
+      if (screen == null) {
+        respond(ex, 200, ScreenStatesIndex.toJson(ScreenStatesIndex.forDir(dir)))
+      } else {
+        if (!knownScreen(project, screen)) throw UnknownScreen(project, screen, screenNames(project))
+        respond(ex, 200, ScreenStatesIndex.toJson(screen, ScreenStatesIndex.forFile(File(dir, "$screen.kt"))))
+      }
+    }
+  }
+
   server.createContext("/screens") { ex ->
     handle(ex) {
       val project = safe(query(ex)["project"] ?: "default")
