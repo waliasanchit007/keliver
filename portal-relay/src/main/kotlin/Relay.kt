@@ -1584,14 +1584,14 @@ fun main(args: Array<String>) {
     }
   }
 
-  // ED3: where the device proxy is, for the editor's link and QR code. Read-only.
+  // ED3: where the device proxy is, for the editor's link and QR code, and its own listeners. Read-only.
   val proxyUrls = proxyAddress?.let { DeviceProxy.urls(it, proxyPort) }
   server.createContext("/device-proxy") { ex ->
     handle(ex) {
       if (ex.requestMethod != "GET") {
         respond(ex, 405)
       } else {
-        respond(ex, 200, DeviceProxy.statusJson(proxyUrls))
+        respond(ex, 200, DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0))
       }
     }
   }

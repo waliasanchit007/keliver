@@ -8,6 +8,7 @@ import java.net.NetworkInterface
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -32,7 +33,8 @@ import kotlinx.serialization.json.jsonPrimitive
  *   browsers on this machine only: a LAN client is not authenticated and can
  *   read everything this proxy serves.
  * - Its event streams come from its own [BundleEvents] ([MAX_LISTENERS], at most
- *   [MAX_LISTENERS_PER_IP] per remote address), so LAN clients never take the relay's.
+ *   [MAX_LISTENERS_PER_IP] per non-loopback remote address: [listenerKey]), so LAN
+ *   clients never take the relay's.
  */
 internal class DeviceProxy(private val bundlesDir: File, private val events: BundleEvents?) {
   sealed interface Route {
@@ -61,7 +63,7 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
           Route.Events -> {
             val e = events
             if (e == null) { empty(ex, 404); return@createContext }
-            val remote = ex.remoteAddress?.address?.hostAddress ?: "?"
+            val remote = listenerKey(ex.remoteAddress)
             if (!e.hasRoom(remote)) { empty(ex, 503); return@createContext }
             ex.responseHeaders.add("Content-Type", "text/event-stream")
             ex.responseHeaders.add("Cache-Control", "no-cache")
@@ -106,17 +108,19 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
   }
 
   /**
-   * Streams [f]; a client that stops reading is cut off after [sendLimitMs]: the thread
-   * blocked in the socket channel's write is interrupted, which closes that channel.
+   * Streams [f]; a send not finished [sendDeadlineMs] after it started is cut off, whether the
+   * client stopped reading or reads too slowly: the thread blocked in the socket channel's write
+   * is interrupted, which closes that channel.
    */
   private fun sendFile(ex: HttpExchange, f: File, type: String) {
+    val size = Files.size(f.toPath())
     ex.responseHeaders.add("Content-Type", type)
     ex.responseHeaders.add("X-Content-Type-Options", "nosniff")
-    ex.sendResponseHeaders(200, Files.size(f.toPath()))
+    ex.sendResponseHeaders(200, size)
     val thread = Thread.currentThread()
     val lock = Any()
     var done = false
-    val cut = watchdog.schedule({ synchronized(lock) { if (!done) thread.interrupt() } }, sendLimitMs, TimeUnit.MILLISECONDS)
+    val cut = watchdog.schedule({ synchronized(lock) { if (!done) thread.interrupt() } }, sendDeadlineMs(size), TimeUnit.MILLISECONDS)
     try {
       ex.responseBody.use { out -> Files.copy(f.toPath(), out) }
     } finally {
@@ -146,12 +150,36 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
 
     /** The proxy's own event-stream quota: never the relay's slots (BundleEvents is per server). */
     const val MAX_LISTENERS = 8
+
+    /** Per non-loopback remote address ([listenerKey]); loopback peers share only [MAX_LISTENERS]. */
     const val MAX_LISTENERS_PER_IP = 2
 
-    /** How long one file may take to send before the connection is cut. */
+    /**
+     * The per-address limit's key for a connection from [remote]: its IP, or null for a loopback
+     * peer, which only the proxy's [MAX_LISTENERS] limits. The Android emulator (10.0.2.2),
+     * Genymotion (10.0.3.2), the iOS simulator and `adb reverse` all arrive from 127.0.0.1, so a
+     * per-address limit there would cap every local device together.
+     */
+    internal fun listenerKey(remote: InetSocketAddress?): String? {
+      val a = remote?.address ?: return "?"
+      return if (a.isLoopbackAddress) null else a.hostAddress
+    }
+
+    /** How long any file may take to send, plus one second per [sendFloorBytesPerSecond] of it. */
     internal var sendLimitMs = 60_000L
 
-    private val watchdog = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "device-proxy-watchdog").apply { isDaemon = true } }
+    /** The slowest average rate at which a file is sent in full (16 KiB/s, about 128 kbit/s). */
+    internal var sendFloorBytesPerSecond = 16L * 1024
+
+    /** When a send of [size] bytes is cut off, counted from its start (not from its last progress). */
+    internal fun sendDeadlineMs(size: Long): Long = sendLimitMs + size * 1000 / sendFloorBytesPerSecond
+
+    /** One thread; a send that finishes cancels its cut, and a cancelled cut leaves the queue at once. */
+    private val watchdog = ScheduledThreadPoolExecutor(1) { r -> Thread(r, "device-proxy-watchdog").apply { isDaemon = true } }
+      .apply { removeOnCancelPolicy = true }
+
+    /** The cuts still queued (tests). */
+    internal val watchdogQueued: Int get() = watchdog.queue.size
 
     /** The file names [manifestJson]'s modules list (plain names only; anything else is not served). */
     fun moduleFiles(manifestJson: String): Set<String> = runCatching {
@@ -239,14 +267,17 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
       return hosts.map { "http://$it:$port" }
     }
 
-    /** The relay's `GET /device-proxy` answer: off, or each URL with its QR code (an SVG made here). */
-    fun statusJson(urls: List<String>?): String {
+    /**
+     * The relay's `GET /device-proxy` answer: off, or each URL with its QR code (an SVG made here)
+     * and how many event streams the proxy holds ([listening]; the relay's own are its devices count).
+     */
+    fun statusJson(urls: List<String>?, listening: Int = 0): String {
       if (urls == null) return "{\"enabled\":false,\"env\":${jsonString(ENV)}}"
       val items = urls.joinToString(",") { u ->
         val qr = runCatching { jsonString(QrCode.encode(u).toSvg()) }.getOrDefault("null") // too long: link only
         "{\"url\":${jsonString(u)},\"qrSvg\":$qr}"
       }
-      return "{\"enabled\":true,\"urls\":[$items]}"
+      return "{\"enabled\":true,\"urls\":[$items],\"listening\":$listening}"
     }
   }
 }

@@ -174,10 +174,12 @@ class DeviceProxyTest {
   @Test
   fun theStatusSaysOffOrGivesEachUrlWithItsQrCode() {
     assertEquals(false, Json.parseToJsonElement(DeviceProxy.statusJson(null)).jsonObject["enabled"]!!.jsonPrimitive.content.toBoolean())
-    val on = Json.parseToJsonElement(DeviceProxy.statusJson(listOf("http://10.0.2.2:8078"))).jsonObject
+    val on = Json.parseToJsonElement(DeviceProxy.statusJson(listOf("http://10.0.2.2:8078"), listening = 3)).jsonObject
     val item = (on["urls"] as kotlinx.serialization.json.JsonArray)[0].jsonObject
     assertEquals("http://10.0.2.2:8078", item["url"]!!.jsonPrimitive.content)
     assertTrue(item["qrSvg"]!!.jsonPrimitive.content.startsWith("<svg "))
+    // The proxy's own listeners, a count apart from the relay's devicesListening.
+    assertEquals(3, on["listening"]!!.jsonPrimitive.content.toInt())
   }
 
   @Test
@@ -190,6 +192,8 @@ class DeviceProxyTest {
     // M1: the proxy has its own listeners; the relay's (and its devices count) are not shared.
     assertTrue("DeviceProxy(bundlesDir, deviceProxyEvents).start(proxyAddress, proxyPort)" in relay)
     assertTrue("\\\"devicesListening\\\":\${bundleEvents.listening}" in relay)
+    // /device-proxy counts the proxy's own listeners, apart (and only when the proxy is on).
+    assertTrue("DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0)" in relay)
     // A port taken on the proxy's own address is exit 64, before the relay serves.
     assertTrue(relay.indexOf("DeviceProxy(bundlesDir, deviceProxyEvents).start") < relay.indexOf("  server.start()"))
   }
@@ -204,14 +208,17 @@ class DeviceProxyTest {
   }
 
   @Test
-  fun lanListenersNeverTakeTheRelaysSlots() {
+  fun localDevicesShareOnlyTheProxysQuotaAndNeverTakeTheRelaysSlots() {
     val relayEvents = BundleEvents({ 1 }) // the relay's own, as Relay.kt keeps it
     val sockets = mutableListOf<Socket>()
     try {
+      // The emulator, Genymotion, the iOS simulator and adb reverse all arrive from 127.0.0.1:
+      // they share the proxy's MAX_LISTENERS, with no per-address limit; the rest are refused.
       val codes = (1..32).map { listen().also { sockets += it.first }.second }
-      // One address gets MAX_LISTENERS_PER_IP streams; the rest are refused, and the relay is untouched.
-      assertEquals(DeviceProxy.MAX_LISTENERS_PER_IP, codes.count { it == 200 }, "$codes")
+      assertEquals(DeviceProxy.MAX_LISTENERS, codes.count { it == 200 }, "$codes")
       assertTrue(codes.all { it == 200 || it == 503 }, "$codes")
+      assertEquals(DeviceProxy.MAX_LISTENERS, events.listening)
+      // The relay is untouched.
       assertTrue(relayEvents.hasRoom())
       assertEquals(0, relayEvents.listening)
     } finally {
@@ -221,18 +228,47 @@ class DeviceProxyTest {
   }
 
   @Test
+  fun thePerAddressKeyIsTheIpExceptForLoopback() {
+    fun key(ip: String) = DeviceProxy.listenerKey(java.net.InetSocketAddress(InetAddress.getByName(ip), 40000))
+    for (ip in listOf("127.0.0.1", "127.0.0.2", "::1")) assertNull(key(ip), ip)
+    assertEquals("192.168.1.20", key("192.168.1.20"))
+    assertEquals("10.0.0.1", key("10.0.0.1"))
+    assertEquals(InetAddress.getByName("fd00::1").hostAddress, key("fd00::1"))
+    assertEquals("?", DeviceProxy.listenerKey(null)) // no address: limited, like one LAN peer
+  }
+
+  @Test
   fun theProxysQuotaAndThePerAddressLimit() {
+    fun key(ip: String) = DeviceProxy.listenerKey(java.net.InetSocketAddress(InetAddress.getByName(ip), 40000))
     val e = BundleEvents({ 1 }, heartbeatSeconds = 3600, maxListeners = DeviceProxy.MAX_LISTENERS, maxPerKey = DeviceProxy.MAX_LISTENERS_PER_IP)
     try {
-      repeat(DeviceProxy.MAX_LISTENERS_PER_IP) { assertTrue(e.subscribe(java.io.ByteArrayOutputStream(), "10.0.0.1")) }
-      assertTrue(!e.hasRoom("10.0.0.1"))
-      assertTrue(!e.subscribe(java.io.ByteArrayOutputStream(), "10.0.0.1"))
-      var n = 2
-      while (e.hasRoom("10.0.0.$n")) e.subscribe(java.io.ByteArrayOutputStream(), "10.0.0.${n++}")
+      // A LAN address gets MAX_LISTENERS_PER_IP streams.
+      repeat(DeviceProxy.MAX_LISTENERS_PER_IP) { assertTrue(e.subscribe(java.io.ByteArrayOutputStream(), key("10.0.0.1"))) }
+      assertTrue(!e.hasRoom(key("10.0.0.1")))
+      assertTrue(!e.subscribe(java.io.ByteArrayOutputStream(), key("10.0.0.1")))
+      // Loopback is not limited per address, so three or more local devices are admitted, up to the quota.
+      var local = 0
+      while (e.hasRoom(key("127.0.0.1"))) assertTrue(e.subscribe(java.io.ByteArrayOutputStream(), key("127.0.0.1"))).also { local++ }
+      assertEquals(DeviceProxy.MAX_LISTENERS - DeviceProxy.MAX_LISTENERS_PER_IP, local)
+      assertTrue(local >= 3, "$local")
       assertEquals(DeviceProxy.MAX_LISTENERS, e.listening)
-      assertTrue(!e.hasRoom("10.9.9.9"))
+      // The quota is full for everyone.
+      assertTrue(!e.hasRoom(key("10.9.9.9")))
+      assertTrue(!e.hasRoom(key("127.0.0.1")))
     } finally {
       e.close()
+    }
+    val lan = BundleEvents({ 1 }, heartbeatSeconds = 3600, maxListeners = DeviceProxy.MAX_LISTENERS, maxPerKey = DeviceProxy.MAX_LISTENERS_PER_IP)
+    try {
+      var n = 1
+      while (lan.hasRoom(key("10.0.0.$n"))) {
+        repeat(DeviceProxy.MAX_LISTENERS_PER_IP) { lan.subscribe(java.io.ByteArrayOutputStream(), key("10.0.0.$n")) }
+        n++
+      }
+      assertEquals(DeviceProxy.MAX_LISTENERS, lan.listening)
+      assertEquals(DeviceProxy.MAX_LISTENERS / DeviceProxy.MAX_LISTENERS_PER_IP, n - 1)
+    } finally {
+      lan.close()
     }
   }
 
@@ -259,7 +295,9 @@ class DeviceProxyTest {
     File(v5, "big.zipline").writeBytes(big)
     File(v5, "manifest.zipline.json").writeText("""{"modules":{"big":{"url":"big.zipline","sha256":"x"}}}""")
     val before = DeviceProxy.sendLimitMs
+    val floorBefore = DeviceProxy.sendFloorBytesPerSecond
     DeviceProxy.sendLimitMs = 500
+    DeviceProxy.sendFloorBytesPerSecond = Long.MAX_VALUE // no allowance for the size: cut at 500 ms
     try {
       Socket("127.0.0.1", port).use { s ->
         s.receiveBufferSize = 4096
@@ -279,7 +317,25 @@ class DeviceProxyTest {
       assertEquals(200, raw("GET", "/bundles/index.json").first)
     } finally {
       DeviceProxy.sendLimitMs = before
+      DeviceProxy.sendFloorBytesPerSecond = floorBefore
     }
+  }
+
+  @Test
+  fun aSendsDeadlineGrowsWithItsSize() {
+    // Counted from the send's start: 60 s, plus a second per 16 KiB (a 128 kbit/s floor).
+    assertEquals(60_000L, DeviceProxy.sendDeadlineMs(0))
+    assertEquals(61_000L, DeviceProxy.sendDeadlineMs(16L * 1024))
+    assertEquals(60_000L + 256_000L, DeviceProxy.sendDeadlineMs(4L shl 20)) // a 4 MiB module: 316 s
+  }
+
+  @Test
+  fun aFinishedSendLeavesNoCutQueued() {
+    repeat(3) { assertEquals(200, raw("GET", "/bundles/v1/main.zipline").first) }
+    // A cancelled cut leaves the watchdog's queue at once, not 60 s later.
+    val until = System.currentTimeMillis() + 5_000
+    while (DeviceProxy.watchdogQueued > 0 && System.currentTimeMillis() < until) Thread.sleep(20)
+    assertEquals(0, DeviceProxy.watchdogQueued)
   }
 
   @Test
