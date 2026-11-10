@@ -1,0 +1,32 @@
+// Gate A prototype: the generated group's Redwood schema (src/main/kotlin/…/Generated.kt is written by
+// :keliver-compose-generator:generateComposeApi; Extras.kt is hand-written). Not published by default.
+import static dev.keliver.buildsupport.TargetGroup.Tooling
+
+redwoodBuild {
+  targets(Tooling)
+  // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
+  // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'dev.keliver.schema'
+
+dependencies {
+  api projects.keliverComposeValues
+  api projects.keliverMaterialSchema
+  api projects.keliverLayoutSchema
+  api projects.keliverLazylayoutSchema
+}
+
+redwoodSchema {
+  type = 'dev.keliver.compose.gatea.KeliverComposeGateA'
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

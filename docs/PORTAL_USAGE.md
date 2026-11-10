@@ -365,6 +365,28 @@ numbers.
 - Endpoint: `GET /tokens?project=<p>`; agents: the MCP `list_tokens` tool.
   Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Design tokens are grammar".
 
+## Named states
+
+A screen file may declare named states (`dev.keliver.nav`, 0.5.0): a typed route
+plus the name of an HTTP fixture set.
+
+```kotlin
+@ScreenState("review")
+fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review")
+```
+
+- The name and `fixtures` must be plain string literals; the body is one
+  `NamedState(...)` call (expression body or a single `return`); the function
+  takes no parameters. Anything else is listed under `problems`, not as a state.
+- State functions are not `@Composable`, so they cost the screen no RawCode and
+  write-back never touches them. Routes are edited in Kotlin (D8).
+- Endpoint: `GET /states?project=<p>&screen=<s>` (one screen; 404 for an unknown
+  screen) or `GET /states?project=<p>` (every screen that declares states).
+  Each state: `name`, `function`, `route` (source text), `routeType`, `fixtures`.
+- Previewing a state is meant to use `fixtures` as the persona's
+  `httpFixtureSet` (D7: only `HostHttp` is substituted). The editor's state list
+  is not built yet.
+
 ## Conditions and conditional values
 
 A value or a block chosen by a field is portal grammar — in a component by its

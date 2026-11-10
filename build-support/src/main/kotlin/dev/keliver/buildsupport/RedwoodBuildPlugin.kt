@@ -301,6 +301,15 @@ class RedwoodBuildPlugin : Plugin<Project> {
     plugins.withId("org.jetbrains.kotlin.multiplatform") {
       val kotlin = extensions.getByName("kotlin") as KotlinMultiplatformExtension
 
+      // Compose runtime 1.11 still depends on kotlinx-coroutines 1.9.0, whose klibs were built
+      // against Kotlin 2.0 and call the old SubclassOptInRequired(KClass) constructor, which the
+      // Kotlin 2.4 stdlib no longer has. A module that gets coroutines only through Compose then
+      // fails to link a JS/wasm executable. The constraint is published in the Gradle module
+      // metadata, so consumers of these libraries resolve the Kotlin 2.4-built coroutines too.
+      dependencies.constraints.add("commonMainApi", libs.kotlinx.coroutines.core.get().toString()) {
+        it.because("coroutines < 1.11 klibs do not link against the Kotlin 2.4 stdlib")
+      }
+
       // We set the JVM target (the bytecode version) above for all Kotlin-based Java bytecode
       // compilations, but we also need to set the JDK API version for the Kotlin JVM targets to
       // prevent linking against newer JDK APIs (the Android targets link against the android.jar).
