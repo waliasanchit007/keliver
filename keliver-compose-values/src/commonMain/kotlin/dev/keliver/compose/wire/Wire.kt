@@ -1,0 +1,68 @@
+/*
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.compose.wire
+
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.SerialKind
+import kotlinx.serialization.descriptors.buildSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.float
+import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * A codec that writes one JSON element (docs/COMPOSE_GENERATOR_DESIGN.md §6). The protocol only
+ * ever encodes with kotlinx.serialization's Json, so every mirror codec is JSON-level: a number,
+ * a short string or a small object, chosen to read well in a protocol trace.
+ */
+public abstract class JsonCodec<T>(name: String) : KSerializer<T> {
+  // CONTEXTUAL, not a primitive kind: Kotlin/JS's encodeToDynamic (the guest's fast protocol
+  // path) writes a top-level primitive-kind value through a primitive encoder, which flattened
+  // an array value (an Alignment's [h,v]) to its first element. Found on the emulator in Gate A.
+  @OptIn(ExperimentalSerializationApi::class, InternalSerializationApi::class)
+  override val descriptor: SerialDescriptor = buildSerialDescriptor(name, SerialKind.CONTEXTUAL)
+
+  public abstract fun toJson(value: T): JsonElement
+  public abstract fun fromJson(json: JsonElement): T
+
+  override fun serialize(encoder: Encoder, value: T) {
+    (encoder as JsonEncoder).encodeJsonElement(toJson(value))
+  }
+
+  override fun deserialize(decoder: Decoder): T = fromJson((decoder as JsonDecoder).decodeJsonElement())
+}
+
+/** A float from a JSON number, or NaN for the unspecified marker `"u"`. */
+internal fun JsonElement.floatOrUnspecified(): Float {
+  val p = jsonPrimitive
+  return if (p.isString && p.content == "u") Float.NaN else p.float
+}
+
+internal fun floatOrUnspecified(value: Float): JsonElement =
+  if (value.isNaN()) JsonPrimitive("u") else JsonPrimitive(value.toCompact())
+
+/** 16.0f writes as 16, 1.5f as 1.5: shorter traces, the same value. */
+internal fun Float.toCompact(): Number {
+  val i = toInt()
+  return if (i.toFloat() == this) i else this
+}

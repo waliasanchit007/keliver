@@ -1,0 +1,60 @@
+// Gate A prototype: the host renderers. src/commonMain/…/Generated.kt is generated (each renderer calls the
+// real Compose function); Runtime.kt (children, converters) and Extras.kt (the shimmer) are hand-written.
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
+
+redwoodBuild {
+  targets(ToolkitComposeUi)
+  // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
+  // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeGateaWidget
+        api projects.keliverMaterialComposeui
+        implementation projects.keliverWidgetComposeui
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.coil.compose.full
+        implementation libs.jetbrains.compose.ui
+      }
+    }
+    jvmTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.jetbrains.compose.ui.test
+        implementation rootProject.ext.skikoHostRuntime()
+        implementation projects.keliverComposeGateaCompose
+        implementation projects.keliverComposeGateaProtocolGuest
+        implementation projects.keliverComposeGateaProtocolHost
+        implementation projects.keliverProtocolGuest
+        implementation projects.keliverProtocolHost
+        implementation projects.keliverCompose
+        implementation projects.keliverLeakDetector
+        implementation projects.keliverLayoutComposeui
+        implementation projects.keliverLazylayoutComposeui
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.keliver.compose.gatea.composeui'
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

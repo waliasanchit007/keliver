@@ -1,0 +1,70 @@
+// Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md): reads Compose's published API (Kotlin metadata
+// of the CMP desktop jars) and sources (their -sources.jar) and writes the checked-in sources of the
+// generated group: a Redwood schema, the guest stubs in dev.keliver.compose.*, the host renderers,
+// the lock file and editor metadata. Not published.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+dependencies {
+  implementation libs.kotlin.compilerEmbeddable // PSI for default expressions, and its shaded ASM
+  implementation "org.jetbrains.kotlin:kotlin-metadata-jvm:${libs.versions.kotlin.get()}"
+  implementation libs.kotlinx.serialization.json
+  testImplementation libs.junit
+  testImplementation libs.kotlin.test.junit
+}
+
+// Pinned to what Gate A was verified on (not jbCompose); see libs.versions.toml.
+def cmp = libs.versions.composeGeneratorInput.get()
+def coil = libs.versions.coil.get()
+
+// The Compose API the generator reads: desktop JVM jars (metadata) and their sources.
+configurations {
+  composeApi {
+    canBeConsumed = false
+    attributes { attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME)) }
+  }
+  composeSources { canBeConsumed = false; transitive = false }
+}
+dependencies {
+  composeApi "org.jetbrains.compose.foundation:foundation-layout-desktop:$cmp"
+  composeApi "org.jetbrains.compose.foundation:foundation-desktop:$cmp"
+  composeApi "org.jetbrains.compose.material3:material3-desktop:$cmp"
+  composeApi "org.jetbrains.compose.ui:ui-desktop:$cmp"
+  composeApi "io.coil-kt.coil3:coil-compose-jvm:$coil"
+  composeApi "io.coil-kt.coil3:coil-compose-core-jvm:$coil"
+  composeSources "org.jetbrains.compose.foundation:foundation-layout-desktop:$cmp:sources@jar"
+  composeSources "org.jetbrains.compose.foundation:foundation-desktop:$cmp:sources@jar"
+  composeSources "org.jetbrains.compose.material3:material3-desktop:$cmp:sources@jar"
+  composeSources "org.jetbrains.compose.ui:ui-desktop:$cmp:sources@jar"
+  composeSources "io.coil-kt.coil3:coil-compose-jvm:$coil:sources@jar"
+  composeSources "io.coil-kt.coil3:coil-compose-core-jvm:$coil:sources@jar"
+}
+
+def generatorArgs = { List extra ->
+  [
+    '--config', file('gatea.json').absolutePath,
+    '--lock', file('gatea.lock.json').absolutePath,
+    '--classpath', configurations.composeApi.asPath,
+    '--sources', configurations.composeSources.asPath,
+    '--out-schema', rootProject.file('keliver-compose-gatea-schema/src/main/kotlin').absolutePath,
+    '--out-guest', rootProject.file('keliver-compose-gatea-compose/src/commonMain/kotlin').absolutePath,
+    '--out-host', rootProject.file('keliver-compose-gatea-composeui/src/commonMain/kotlin').absolutePath,
+    '--out-editor', rootProject.file('keliver-compose-gatea-schema/gatea.editor.json').absolutePath,
+  ] + extra
+}
+
+tasks.register('generateComposeApi', JavaExec) {
+  group = 'build'
+  description = 'Regenerate the Gate A group (schema, guest stubs, host renderers, lock, editor metadata) from Compose'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.compose.generator.MainKt'
+  args = generatorArgs([])
+}
+
+tasks.register('checkComposeApi', JavaExec) {
+  group = 'verification'
+  description = 'Fails when the checked-in generated sources or lock differ from a fresh generation, or the lock changed other than by appends'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.compose.generator.MainKt'
+  args = generatorArgs(['--check'])
+}

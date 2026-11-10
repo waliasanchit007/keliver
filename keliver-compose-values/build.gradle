@@ -1,0 +1,35 @@
+// Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md §4, §6): the guest's mirrors of Compose's value
+// types (Dp, Color, Shape, TextStyle, Alignment, …) with their wire codecs, written by hand once.
+// Published only with -PkeliverComposePrototype (never by a normal release).
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
+  // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverRuntime
+        api libs.jetbrains.compose.runtime
+        api libs.kotlinx.serialization.json
+        // Otherwise compose-runtime brings coroutines 1.9.0, whose JS klib fails to link against
+        // Kotlin 2.4's stdlib (SubclassOptInRequired's constructor changed).
+        api libs.kotlinx.coroutines.core
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
