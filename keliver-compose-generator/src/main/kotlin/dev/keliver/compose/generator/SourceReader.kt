@@ -1,0 +1,71 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ * Licensed under the Apache License, Version 2.0.
+ */
+package dev.keliver.compose.generator
+
+import java.io.File
+import java.util.zip.ZipFile
+import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
+import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
+import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
+import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtPsiFactory
+import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+
+/**
+ * Reads the sources jars (docs/COMPOSE_GENERATOR_DESIGN.md §1): each parameter's default
+ * expression as written, whether the function is `@Composable`, its KDoc, and the file's imports
+ * (so a copied default expression can be imported on both sides).
+ */
+class SourceReader(sourceJars: List<File>) {
+  private val factory: KtPsiFactory by lazy {
+    val env = KotlinCoreEnvironment.createForProduction(
+      Disposer.newDisposable(), CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+    )
+    KtPsiFactory(env.project)
+  }
+
+  /** Source entries by package path, common source sets first. */
+  private val byPackage: Map<String, List<Pair<ZipFile, String>>> = sourceJars.flatMap { jar ->
+    val zip = ZipFile(jar)
+    zip.entries().asSequence().filter { it.name.endsWith(".kt") }.map { zip to it.name }.toList()
+  }.groupBy { (_, name) -> name.substringAfter('/').substringBeforeLast('/', "") }
+    .mapValues { (_, list) -> list.sortedBy { (_, n) -> if (n.startsWith("commonMain/")) 0 else 1 } }
+
+  private val parsed = mutableMapOf<String, KtFile>()
+
+  fun complete(decl: DeclInfo) {
+    val files = byPackage[decl.pkg.replace('.', '/')] ?: error("${decl.spec}: no sources for ${decl.pkg}")
+    for ((zip, name) in files) {
+      val file = parsed.getOrPut(name) {
+        factory.createFile(name.substringAfterLast('/'), zip.getInputStream(zip.getEntry(name)).use { it.readBytes().decodeToString() })
+      }
+      val fn = file.collectDescendantsOfType<KtNamedFunction>().firstOrNull { f ->
+        f.name == decl.name &&
+          f.valueParameters.map { it.name } == decl.params.map { it.name } &&
+          (decl.owner == null && f.parent is KtFile || decl.owner != null && (f.parent.parent as? KtClass)?.name == decl.owner) &&
+          (decl.receiver == null || f.receiverTypeReference != null)
+      } ?: continue
+      decl.isComposable = fn.annotationEntries.any { it.shortName?.asString() == "Composable" }
+      decl.kdoc = fn.docComment?.getDefaultSection()?.getContent()?.trim()?.let(::firstSentence)
+      decl.params.zip(fn.valueParameters).forEach { (p, kp) -> p.defaultText = kp.defaultValue?.text?.replace(Regex("\\s+"), " ") }
+      decl.imports = file.importDirectives.mapNotNull { d ->
+        val fq = d.importedFqName?.asString() ?: return@mapNotNull null
+        (d.aliasName ?: fq.substringAfterLast('.')) to fq
+      }.toMap()
+      decl.sourcePath = name
+      return
+    }
+    error("${decl.spec}: not found in the sources")
+  }
+}
+
+internal fun firstSentence(text: String): String {
+  val flat = text.replace(Regex("\\s+"), " ")
+  val end = flat.indexOf(". ")
+  return if (end < 0) flat.removeSuffix(".") + "." else flat.substring(0, end + 1)
+}
