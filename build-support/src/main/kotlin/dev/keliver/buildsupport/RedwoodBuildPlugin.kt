@@ -32,6 +32,7 @@ import dev.keliver.buildsupport.TargetGroup.TreehouseCommon
 import dev.keliver.buildsupport.TargetGroup.TreehouseGuest
 import dev.keliver.buildsupport.TargetGroup.TreehouseHost
 import java.io.File
+import java.lang.reflect.Proxy
 import kotlinx.validation.ApiValidationExtension
 import kotlinx.validation.ExperimentalBCVApi
 import org.gradle.accessors.dm.LibrariesForLibs
@@ -179,9 +180,8 @@ class RedwoodBuildPlugin : Plugin<Project> {
     plugins.withId("com.android.base") {
       val android = extensions.getByName("android") as BaseExtension
       android.apply {
-        // 37: Zipline 1.28.0's Android artifacts require it (their AAR metadata's minCompileSdk).
-        // This is this build's own compileSdk. Consumers are not forced to 37 as a whole: only an
-        // app that pulls Zipline 1.28 in transitively (the treehouse/Zipline modules) needs it.
+        // 37: Zipline 1.28.0's and AndroidX Compose 1.12's Android artifacts require it (their AAR
+        // metadata's minCompileSdk), so consumers of either compile against 37 too.
         compileSdkVersion(37)
         compileOptions {
           it.sourceCompatibility = JavaVersion.VERSION_11
@@ -197,12 +197,6 @@ class RedwoodBuildPlugin : Plugin<Project> {
           it.isCheckReleaseBuilds = false // Full lint runs as part of 'build' task.
         }
       }
-    }
-
-    // Paparazzi 1.3 cannot render against API 37 (it has no build properties for it), and the
-    // modules that use it do not depend on Zipline, so they stay on 35.
-    plugins.withId("app.cash.paparazzi") {
-      (extensions.getByName("android") as BaseExtension).compileSdkVersion(35)
     }
 
     plugins.withId("com.android.application") {
@@ -234,6 +228,32 @@ class RedwoodBuildPlugin : Plugin<Project> {
             "LayoutLib and sdk-common depend on Guava's -jre published variant." +
               "See https://github.com/cashapp/paparazzi/issues/906.",
           )
+        }
+      }
+
+      // These modules compile against 37 (AndroidX Compose 1.12 requires it), but Paparazzi 1.3's
+      // layoutlib is older: it copies android.os.Build from layoutlib's _Original_Build and fails
+      // on the nested classes API 37 added. Its tests run against API 35's android.jar instead.
+      // Paparazzi 2.0 (AGP 9 support) needs a Java 21 runtime; drop this when the build moves.
+      val sdkDir = (extensions.getByName("android") as BaseExtension).sdkDirectory
+      val testAndroidJar = File(sdkDir, "platforms/android-35/android.jar")
+      tasks.withType(Test::class.java).configureEach { test ->
+        test.doFirst {
+          // Paparazzi 1.3 installs its own HTML test reporter (reflectively, through the internal
+          // AbstractTestTask.setTestReporter); it calls a Gradle-internal API that Gradle 9.6+
+          // changed (TestResultsProvider.hasOutput) and fails the task after the tests pass.
+          // Swap in a no-op one the same way. A snapshot mismatch still fails the test itself, and
+          // the JUnit XML results are kept; only Paparazzi's HTML report is lost.
+          val setter = AbstractTestTask::class.java.declaredMethods.single { it.name == "setTestReporter" }
+          val reporterType = setter.parameterTypes.single()
+          val noOp = Proxy.newProxyInstance(reporterType.classLoader, arrayOf(reporterType)) { _, _, _ -> null }
+          setter.isAccessible = true
+          setter.invoke(test, noOp)
+
+          check(testAndroidJar.isFile) { "Paparazzi tests need the API 35 SDK platform: $testAndroidJar" }
+          // AGP puts a (mockable) copy of compileSdk's android.jar on the unit-test classpath.
+          test.classpath = test.classpath.filter { it.name != "android.jar" } +
+            files(testAndroidJar)
         }
       }
     }
