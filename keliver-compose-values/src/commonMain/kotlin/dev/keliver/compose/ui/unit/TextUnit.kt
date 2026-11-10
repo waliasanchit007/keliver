@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.ui.unit
 
@@ -17,7 +28,11 @@ import kotlinx.serialization.json.jsonPrimitive
 /** The type of a [TextUnit], as in Compose. */
 @JvmInline
 public value class TextUnitType(internal val type: Int) {
-  override fun toString(): String = when (type) { 1 -> "Sp"; 2 -> "Em"; else -> "Unspecified" }
+  override fun toString(): String = when (type) {
+    1 -> "Sp"
+    2 -> "Em"
+    else -> "Unspecified"
+  }
   public companion object {
     public val Unspecified: TextUnitType = TextUnitType(0)
     public val Sp: TextUnitType = TextUnitType(1)
@@ -37,8 +52,11 @@ public value class TextUnit internal constructor(internal val packed: Long) {
   public val value: Float get() = Float.fromBits((packed and 0xFFFFFFFFL).toInt())
   public val isSp: Boolean get() = type == TextUnitType.Sp
   public val isEm: Boolean get() = type == TextUnitType.Em
+
   @Stable public operator fun times(other: Float): TextUnit = pack(type, value * other)
+
   @Stable public operator fun times(other: Int): TextUnit = pack(type, value * other)
+
   @Stable public operator fun div(other: Float): TextUnit = pack(type, value / other)
   override fun toString(): String = when (type) {
     TextUnitType.Sp -> "$value.sp"
@@ -55,13 +73,21 @@ internal fun pack(type: TextUnitType, value: Float): TextUnit =
   TextUnit((type.type.toLong() shl 32) or (value.toRawBits().toLong() and 0xFFFFFFFFL))
 
 @Stable public fun TextUnit(value: Float, type: TextUnitType): TextUnit = pack(type, value)
+
 @Stable public val TextUnit.isSpecified: Boolean get() = type != TextUnitType.Unspecified
+
 @Stable public val TextUnit.isUnspecified: Boolean get() = type == TextUnitType.Unspecified
+
 @Stable public val Int.sp: TextUnit get() = pack(TextUnitType.Sp, toFloat())
+
 @Stable public val Float.sp: TextUnit get() = pack(TextUnitType.Sp, this)
+
 @Stable public val Double.sp: TextUnit get() = pack(TextUnitType.Sp, toFloat())
+
 @Stable public val Int.em: TextUnit get() = pack(TextUnitType.Em, toFloat())
+
 @Stable public val Float.em: TextUnit get() = pack(TextUnitType.Em, this)
+
 @Stable public val Double.em: TextUnit get() = pack(TextUnitType.Em, toFloat())
 
 public object TextUnitCodec : JsonCodec<TextUnit>("dev.keliver.compose.TextUnit") {

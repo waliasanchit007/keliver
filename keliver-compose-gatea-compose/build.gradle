@@ -33,3 +33,12 @@ redwoodSchema {
   source = projects.keliverComposeGateaSchema
   type = 'dev.keliver.compose.gatea.KeliverComposeGateA'
 }
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

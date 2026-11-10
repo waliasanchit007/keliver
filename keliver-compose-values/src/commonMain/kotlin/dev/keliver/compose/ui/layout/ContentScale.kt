@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.ui.layout
 
@@ -21,11 +32,17 @@ public class ContentScale private constructor(public val name: String) {
   override fun toString(): String = "ContentScale.$name"
   public companion object {
     @Stable public val Crop: ContentScale = ContentScale("Crop")
+
     @Stable public val Fit: ContentScale = ContentScale("Fit")
+
     @Stable public val FillHeight: ContentScale = ContentScale("FillHeight")
+
     @Stable public val FillWidth: ContentScale = ContentScale("FillWidth")
+
     @Stable public val Inside: ContentScale = ContentScale("Inside")
+
     @Stable public val None: ContentScale = ContentScale("None")
+
     @Stable public val FillBounds: ContentScale = ContentScale("FillBounds")
     internal fun of(name: String): ContentScale = ContentScale(name)
   }

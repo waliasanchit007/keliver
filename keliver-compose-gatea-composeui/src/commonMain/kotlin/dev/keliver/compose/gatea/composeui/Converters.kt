@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.gatea.composeui
 
@@ -38,12 +49,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import dev.keliver.compose.foundation.ScrollState as K_ScrollState
 import dev.keliver.compose.foundation.layout.Arrangement as K_Arrangement
 import dev.keliver.compose.foundation.layout.PaddingValues as K_PaddingValues
 import dev.keliver.compose.foundation.shape.CornerBasedShape as K_CornerBasedShape
 import dev.keliver.compose.foundation.shape.CornerSize as K_CornerSize
 import dev.keliver.compose.foundation.shape.CutCornerShape as K_CutCornerShape
-import dev.keliver.compose.foundation.ScrollState as K_ScrollState
 import dev.keliver.compose.ui.Alignment as K_Alignment
 import dev.keliver.compose.ui.graphics.Color as K_Color
 import dev.keliver.compose.ui.graphics.FilterQuality as K_FilterQuality

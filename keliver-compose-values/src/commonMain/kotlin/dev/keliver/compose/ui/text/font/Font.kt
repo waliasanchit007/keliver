@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.ui.text.font
 
@@ -28,22 +39,39 @@ public class FontWeight(public val weight: Int) : Comparable<FontWeight> {
 
   public companion object {
     @Stable public val W100: FontWeight = FontWeight(100)
+
     @Stable public val W200: FontWeight = FontWeight(200)
+
     @Stable public val W300: FontWeight = FontWeight(300)
+
     @Stable public val W400: FontWeight = FontWeight(400)
+
     @Stable public val W500: FontWeight = FontWeight(500)
+
     @Stable public val W600: FontWeight = FontWeight(600)
+
     @Stable public val W700: FontWeight = FontWeight(700)
+
     @Stable public val W800: FontWeight = FontWeight(800)
+
     @Stable public val W900: FontWeight = FontWeight(900)
+
     @Stable public val Thin: FontWeight = W100
+
     @Stable public val ExtraLight: FontWeight = W200
+
     @Stable public val Light: FontWeight = W300
+
     @Stable public val Normal: FontWeight = W400
+
     @Stable public val Medium: FontWeight = W500
+
     @Stable public val SemiBold: FontWeight = W600
+
     @Stable public val Bold: FontWeight = W700
+
     @Stable public val ExtraBold: FontWeight = W800
+
     @Stable public val Black: FontWeight = W900
   }
 }
@@ -61,6 +89,7 @@ public value class FontStyle(public val value: Int) {
   override fun toString(): String = if (value == 1) "Italic" else "Normal"
   public companion object {
     @Stable public val Normal: FontStyle = FontStyle(0)
+
     @Stable public val Italic: FontStyle = FontStyle(1)
   }
 }
@@ -84,10 +113,15 @@ public class FontFamily private constructor(public val name: String) {
 
   public companion object {
     @Stable public val Default: FontFamily = FontFamily("default")
+
     @Stable public val SansSerif: FontFamily = FontFamily("sans")
+
     @Stable public val Serif: FontFamily = FontFamily("serif")
+
     @Stable public val Monospace: FontFamily = FontFamily("mono")
+
     @Stable public val Cursive: FontFamily = FontFamily("cursive")
+
     /** A family the host registered under [name] (a Keliver extra, not Compose API). */
     public fun named(name: String): FontFamily = FontFamily(name)
   }

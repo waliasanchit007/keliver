@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.ui.graphics
 
@@ -15,6 +26,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 
 /** As `androidx.compose.ui.graphics.DefaultAlpha`. */
+@Suppress("ktlint:standard:property-naming") // Compose's own name.
 public const val DefaultAlpha: Float = 1.0f
 
 /** The guest mirror of `androidx.compose.ui.graphics.FilterQuality`. Wire: Compose's int value. */
@@ -24,8 +36,11 @@ public const val DefaultAlpha: Float = 1.0f
 public value class FilterQuality internal constructor(public val value: Int) {
   public companion object {
     @Stable public val None: FilterQuality = FilterQuality(0)
+
     @Stable public val Low: FilterQuality = FilterQuality(1)
+
     @Stable public val Medium: FilterQuality = FilterQuality(2)
+
     @Stable public val High: FilterQuality = FilterQuality(3)
   }
 }

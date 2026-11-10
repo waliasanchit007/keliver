@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.gatea.composeui
 
@@ -8,23 +19,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleCard as GuestSampleCard
@@ -50,13 +60,11 @@ import dev.keliver.ui.UiConfiguration
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import androidx.compose.runtime.BroadcastFrameClock
 
 /**
  * Gate A's fidelity criterion on the JVM (docs/COMPOSE_GENERATOR_DESIGN.md §16): one screen file,
@@ -75,7 +83,8 @@ class SameSourceTest {
     assertEquals(body(File(dir, "native/SampleCard.kt")), body(File(dir, "guest/SampleCard.kt")))
     val guestImports = File(dir, "guest/SampleCard.kt").readLines().filter { it.startsWith("import ") }
     val nativeImports = File(dir, "native/SampleCard.kt").readLines().filter { it.startsWith("import ") }
-    assertEquals(nativeImports, guestImports.map { it.replace("import dev.keliver.compose.", "import androidx.compose.") })
+    // Sorted: the formatter orders imports lexically, and the rewrite changes a prefix.
+    assertEquals(nativeImports.sorted(), guestImports.map { it.replace("import dev.keliver.compose.", "import androidx.compose.") }.sorted())
   }
 
   @Test fun samePixels() = runComposeUiTest {
@@ -127,10 +136,14 @@ private fun differingPixels(a: ImageBitmap, b: ImageBitmap): Int {
   val pb = b.toPixelMap()
   var n = 0
   var box = intArrayOf(Int.MAX_VALUE, Int.MAX_VALUE, -1, -1)
-  for (y in 0 until a.height) for (x in 0 until a.width) if (pa[x, y] != pb[x, y]) {
-    n++
-    box = intArrayOf(minOf(box[0], x), minOf(box[1], y), maxOf(box[2], x), maxOf(box[3], y))
-    if (n < 4) println("differs at $x,$y: ${pa[x, y]} vs ${pb[x, y]}")
+  for (y in 0 until a.height) {
+    for (x in 0 until a.width) {
+      if (pa[x, y] != pb[x, y]) {
+        n++
+        box = intArrayOf(minOf(box[0], x), minOf(box[1], y), maxOf(box[2], x), maxOf(box[3], y))
+        if (n < 4) println("differs at $x,$y: ${pa[x, y]} vs ${pb[x, y]}")
+      }
+    }
   }
   if (n > 0) {
     println("differing box: ${box.toList()}")

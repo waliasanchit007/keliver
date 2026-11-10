@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.material3
 
@@ -17,13 +28,16 @@ import dev.keliver.compose.ui.text.TextStyle
  */
 public object MaterialTheme {
   public val colorScheme: ColorScheme
-    @Composable @ReadOnlyComposable get() = ColorScheme
+    @Composable @ReadOnlyComposable
+    get() = ColorScheme
 
   public val typography: Typography
-    @Composable @ReadOnlyComposable get() = Typography
+    @Composable @ReadOnlyComposable
+    get() = Typography
 
   public val shapes: Shapes
-    @Composable @ReadOnlyComposable get() = Shapes
+    @Composable @ReadOnlyComposable
+    get() = Shapes
 }
 
 private fun c(name: String) = Color.reference("colorScheme.$name")
@@ -101,11 +115,13 @@ public object Shapes {
 /** `LocalTextStyle.current` is a reference to the host's text style where the widget renders. */
 public object LocalTextStyle {
   public val current: TextStyle
-    @Composable @ReadOnlyComposable get() = TextStyle.reference("LocalTextStyle")
+    @Composable @ReadOnlyComposable
+    get() = TextStyle.reference("LocalTextStyle")
 }
 
 /** `LocalContentColor.current` is a reference to the host's content colour where the widget renders. */
 public object LocalContentColor {
   public val current: Color
-    @Composable @ReadOnlyComposable get() = Color.reference("LocalContentColor")
+    @Composable @ReadOnlyComposable
+    get() = Color.reference("LocalContentColor")
 }

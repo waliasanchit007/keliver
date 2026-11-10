@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.foundation.shape
 
@@ -25,7 +36,9 @@ public class CornerSize internal constructor(internal val dp: Dp?, internal val 
 }
 
 @Stable public fun CornerSize(size: Dp): CornerSize = CornerSize(size, null)
+
 @Stable public fun CornerSize(percent: Int): CornerSize = CornerSize(null, percent)
+
 @Stable public val ZeroCornerSize: CornerSize = CornerSize(0.dp)
 
 /** The guest mirror of `androidx.compose.foundation.shape.CornerBasedShape`. */
@@ -36,7 +49,8 @@ public abstract class CornerBasedShape internal constructor(
   public val bottomEnd: CornerSize,
   public val bottomStart: CornerSize,
 ) : Shape() {
-  override fun equals(other: Any?): Boolean = other != null && other::class == this::class &&
+  override fun equals(other: Any?): Boolean = other != null &&
+    other::class == this::class &&
     (other as CornerBasedShape).let { it.topStart == topStart && it.topEnd == topEnd && it.bottomEnd == bottomEnd && it.bottomStart == bottomStart }
   override fun hashCode(): Int = listOf(this::class.simpleName, topStart, topEnd, bottomEnd, bottomStart).hashCode()
 }
@@ -53,7 +67,9 @@ public class RoundedCornerShape(
 }
 
 @Stable public fun RoundedCornerShape(corner: CornerSize): RoundedCornerShape = RoundedCornerShape(corner, corner, corner, corner)
+
 @Stable public fun RoundedCornerShape(size: Dp): RoundedCornerShape = RoundedCornerShape(CornerSize(size))
+
 @Stable public fun RoundedCornerShape(percent: Int): RoundedCornerShape = RoundedCornerShape(CornerSize(percent))
 
 @Stable
@@ -76,4 +92,5 @@ public class CutCornerShape(
 ) : CornerBasedShape(topStart, topEnd, bottomEnd, bottomStart)
 
 @Stable public fun CutCornerShape(size: Dp): CutCornerShape = CornerSize(size).let { CutCornerShape(it, it, it, it) }
+
 @Stable public fun CutCornerShape(percent: Int): CutCornerShape = CornerSize(percent).let { CutCornerShape(it, it, it, it) }

@@ -47,3 +47,12 @@ kotlin {
 android {
   namespace 'dev.keliver.compose.gatea.composeui'
 }
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.ui.graphics
 
@@ -36,6 +47,7 @@ import kotlinx.serialization.json.put
 @Serializable(with = ColorCodec::class)
 public value class Color(public val value: ULong) {
   public val isReference: Boolean get() = (value and 0x3FUL) == REF_SPACE
+
   /** The reference's name ([ColorRefs]), or null for a literal colour. */
   public val referenceName: String? get() = if (isReference) ColorRefs.names[((value shr 16) and 0xFFFFUL).toInt()] else null
   public val alpha: Float get() = when {
@@ -46,6 +58,7 @@ public value class Color(public val value: ULong) {
   public val red: Float get() = ((argb shr 16) and 0xFF) / 255f
   public val green: Float get() = ((argb shr 8) and 0xFF) / 255f
   public val blue: Float get() = (argb and 0xFF) / 255f
+
   /** The sRGB ARGB int of a literal colour. */
   public val argb: Int get() = (value shr 32).toInt()
 
@@ -68,17 +81,29 @@ public value class Color(public val value: ULong) {
 
   public companion object {
     @Stable public val Black: Color = Color(0xFF000000)
+
     @Stable public val DarkGray: Color = Color(0xFF444444)
+
     @Stable public val Gray: Color = Color(0xFF888888)
+
     @Stable public val LightGray: Color = Color(0xFFCCCCCC)
+
     @Stable public val White: Color = Color(0xFFFFFFFF)
+
     @Stable public val Red: Color = Color(0xFFFF0000)
+
     @Stable public val Green: Color = Color(0xFF00FF00)
+
     @Stable public val Blue: Color = Color(0xFF0000FF)
+
     @Stable public val Yellow: Color = Color(0xFFFFFF00)
+
     @Stable public val Cyan: Color = Color(0xFF00FFFF)
+
     @Stable public val Magenta: Color = Color(0xFFFF00FF)
+
     @Stable public val Transparent: Color = Color(0x00000000)
+
     @Stable public val Unspecified: Color = Color(0x10UL)
 
     internal const val REF_SPACE_INT: Int = 0x3F
@@ -96,6 +121,7 @@ public value class Color(public val value: ULong) {
 private val REF_SPACE: ULong = 0x3FUL
 
 @Stable public fun Color(color: Long): Color = Color((color.toULong() and 0xFFFFFFFFUL) shl 32)
+
 @Stable public fun Color(color: Int): Color = Color((color.toULong() and 0xFFFFFFFFUL) shl 32)
 
 @Stable
@@ -105,10 +131,14 @@ public fun Color(red: Int, green: Int, blue: Int, alpha: Int = 0xFF): Color = Co
 
 @Stable
 public fun Color(red: Float, green: Float, blue: Float, alpha: Float = 1f): Color = Color(
-  (red * 255f).roundToInt(), (green * 255f).roundToInt(), (blue * 255f).roundToInt(), (alpha * 255f).roundToInt(),
+  (red * 255f).roundToInt(),
+  (green * 255f).roundToInt(),
+  (blue * 255f).roundToInt(),
+  (alpha * 255f).roundToInt(),
 )
 
 @Stable public val Color.isSpecified: Boolean get() = this != Color.Unspecified
+
 @Stable public val Color.isUnspecified: Boolean get() = this == Color.Unspecified
 
 /** Shadows' default colour, as `androidx.compose.ui.graphics.DefaultShadowColor`. */

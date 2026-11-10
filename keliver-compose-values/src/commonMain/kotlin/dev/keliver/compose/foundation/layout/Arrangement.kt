@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.compose.foundation.layout
 
@@ -42,21 +53,32 @@ public object Arrangement {
   }
 
   @Immutable
-  public interface HorizontalOrVertical : Horizontal, Vertical {
+  public interface HorizontalOrVertical :
+    Horizontal,
+    Vertical {
     override val spacing: Dp get() = Dp(0f)
   }
 
   @Stable public val Start: Horizontal = Named("start")
+
   @Stable public val End: Horizontal = Named("end")
+
   @Stable public val Top: Vertical = Named("top")
+
   @Stable public val Bottom: Vertical = Named("bottom")
+
   @Stable public val Center: HorizontalOrVertical = Named("center")
+
   @Stable public val SpaceEvenly: HorizontalOrVertical = Named("se")
+
   @Stable public val SpaceBetween: HorizontalOrVertical = Named("sb")
+
   @Stable public val SpaceAround: HorizontalOrVertical = Named("sa")
 
   @Stable public fun spacedBy(space: Dp): HorizontalOrVertical = SpacedAligned(space, null)
+
   @Stable public fun spacedBy(space: Dp, alignment: Alignment.Horizontal): Horizontal = SpacedAligned(space, alignment.bias)
+
   @Stable public fun spacedBy(space: Dp, alignment: Alignment.Vertical): Vertical = SpacedAligned(space, alignment.bias)
 
   internal data class Named(override val code: String) : HorizontalOrVertical
