@@ -320,6 +320,12 @@ for runs 1–4, any device screenshot.
 
 ## Device screenshots — D14's third leg
 
+> **2026-11-10:** CI's emulator moved from `aosp_atd` to `google_apis` (the owner's decision;
+> `docs/PLAN_2026-11.md` section 14). A local `google_apis` arm64 API 35 emulator gave a valid
+> 720×1600 `screencap` of the inventory screen the same night. With `google_apis`, each device
+> `screencap` now COUNTS (`KELIVER_SHOTS_MUST_BE_VALID=1`): VALID passes, BLANK fails. The host-side
+> capture stays evidence only. The runs below are the `aosp_atd` history.
+
 D14 asks for a *device render screenshot*. **Runs 1–4 took none.** Their device
 evidence is the view hierarchy (`uiautomator dump`) and logcat: D3, P2, P4 and P6
 assert on-screen text and its bounds, which shows what the device laid out, not

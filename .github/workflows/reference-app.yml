@@ -75,13 +75,15 @@ on:
         options: [emulator, physical]
         default: emulator
       # D14's screenshot leg: every capture on aosp_atd with swiftshader_indirect
-      # has been black (docs/REFERENCE_APP.md, "Device screenshots"). These try
-      # other images and renderers by hand; pull requests keep the defaults.
+      # was black (docs/REFERENCE_APP.md, "Device screenshots"); google_apis
+      # captures are pictures, so CI uses it since 2026-11-10 (the owner's
+      # decision) and counts each device screencap. These inputs try other images
+      # and renderers by hand; pull requests keep the defaults.
       emulator_target:
-        description: "system image (aosp_atd is CI's)"
+        description: "system image (google_apis is CI's)"
         type: choice
-        options: [aosp_atd, google_apis, default]
-        default: aosp_atd
+        options: [google_apis, aosp_atd, default]
+        default: google_apis
       emulator_gpu:
         description: "emulator -gpu mode (swiftshader_indirect is CI's)"
         type: choice
@@ -189,12 +191,12 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
-          target: ${{ inputs.emulator_target || 'aosp_atd' }}
+          target: ${{ inputs.emulator_target || 'google_apis' }}
           arch: x86_64
           profile: pixel_5
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu ${{ inputs.emulator_gpu || 'swiftshader_indirect' }}
           disable-animations: true
-          script: bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
+          script: KELIVER_SHOTS_MUST_BE_VALID=${{ (inputs.emulator_target || 'google_apis') == 'google_apis' && '1' || '0' }} bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
 
       - name: Save Gradle downloads
         if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && steps.cache.outputs.cache-hit != 'true'

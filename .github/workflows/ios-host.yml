@@ -37,8 +37,19 @@
 # GRADLE_USER_HOME and KONAN_DATA_DIR at the cache, which the harness's
 # user.home isolation would otherwise move into its work dir); only runs on
 # main save them, and a run started by hand (the published-only proof) never
-# restores them. The repository variable IOS_RUNNER can route both jobs to
-# another runner label (unset: macos-15).
+# restores them.
+#
+# The repository variable IOS_RUNNER routes both jobs to another runner label
+# (unset: macos-15); since 2026-11-10 it is the self-hosted Mac (the owner's
+# decision). A pull request from a fork always runs on a hosted runner, so no
+# outside code runs on that machine. On a self-hosted runner: the relay moves
+# to KELIVER_RELAY_PORT=8478 (the machine's own portal keeps :8077), Gradle and
+# Kotlin/Native use persistent homes under ~/.keliver-ci (a gradle.properties
+# placed there by the machine's owner carries any proxy trust store), T2 always
+# runs (it is fast there), a release download the network refuses falls back to
+# a copy under ~/.keliver-ci/dl that must match the pinned hash (recorded in the
+# evidence), and ci/selfhosted/reset.sh removes what a cancelled run left
+# behind. The two jobs share the one runner, so they run one after the other.
 name: ios-host
 on:
   pull_request:
@@ -97,7 +108,7 @@ concurrency:
 jobs:
   selftest:
     name: ios-host self-test (xcodebuild)
-    runs-on: ${{ vars.IOS_RUNNER || 'macos-15' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.IOS_RUNNER || 'macos-15' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -123,11 +134,17 @@ jobs:
       - name: The iOS host scaffolder's self-test, with xcodebuild
         env:
           USE_CACHE: ${{ runner.environment == 'github-hosted' && github.event_name != 'workflow_dispatch' }}
+          SELF_HOSTED: ${{ runner.environment == 'self-hosted' }}
         run: |
           set -o pipefail
           mkdir -p "$GITHUB_WORKSPACE/ios-evidence"
           if [ "$USE_CACHE" = true ]; then
             export KELIVER_SELFTEST_GRADLE_HOME="$HOME/ci-cache/gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/ci-cache/konan"
+          elif [ "$SELF_HOSTED" = true ]; then
+            mkdir -p "$HOME/.keliver-ci/selftest-gradle-home" "$HOME/.keliver-ci/konan"
+            [ -f "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties" ] || [ ! -f "$HOME/.keliver-ci/gradle-home/gradle.properties" ] \
+              || cp "$HOME/.keliver-ci/gradle-home/gradle.properties" "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties"
+            export KELIVER_SELFTEST_GRADLE_HOME="$HOME/.keliver-ci/selftest-gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/.keliver-ci/konan"
           fi
           bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
             | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
@@ -153,7 +170,7 @@ jobs:
           retention-days: 30
 
   ios-host:
-    runs-on: ${{ vars.IOS_RUNNER || 'macos-15' }}
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.IOS_RUNNER || 'macos-15' }}
     # Observed 99-175 minutes with M0 and T2 (runner speed varies: one run took
     # 366, and run 42691755854 was cut off at 200 minutes, every phase about 1.6x
     # slower than usual, no FAIL). A full run (main, nightly, by hand, or a pull
@@ -223,6 +240,18 @@ jobs:
           echo "GRADLE_USER_HOME=$HOME/ci-cache/gradle-home" >> "$GITHUB_ENV"
           echo "KONAN_DATA_DIR=$HOME/ci-cache/konan" >> "$GITHUB_ENV"
 
+      - name: Self-hosted runner setup
+        if: runner.environment == 'self-hosted'
+        run: |
+          mkdir -p "$HOME/.keliver-ci/gradle-home" "$HOME/.keliver-ci/konan"
+          {
+            echo "KELIVER_RELAY_PORT=8478"
+            echo "GRADLE_USER_HOME=$HOME/.keliver-ci/gradle-home"
+            echo "KONAN_DATA_DIR=$HOME/.keliver-ci/konan"
+            echo "KELIVER_IOS_T2=run"
+          } >> "$GITHUB_ENV"
+          bash reference/inventory/ci/selfhosted/reset.sh "$(dirname "$RUNNER_TEMP")" 8478
+
       - name: The toolchain
         run: |
           xcodebuild -version
@@ -235,10 +264,19 @@ jobs:
           mkdir -p "$RUNNER_TEMP/dl" "$GITHUB_WORKSPACE/ios-evidence"
           cd "$RUNNER_TEMP/dl"
           base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.18
-          curl -fsSLO "$base/keliver-portal-tools-0.3.18.zip"
-          curl -fsSLO "$base/keliver-portal-tools-0.3.18.zip.sha256"
+          if curl -fsSLO "$base/keliver-portal-tools-0.3.18.zip" && curl -fsSLO "$base/keliver-portal-tools-0.3.18.zip.sha256"; then
+            how="downloaded: $base/keliver-portal-tools-0.3.18.zip"
+          elif [ "${{ runner.environment }}" = self-hosted ] && [ -f "$HOME/.keliver-ci/dl/keliver-portal-tools-0.3.18.zip" ]; then
+            # The network refused the public download (a proxy that blocks release
+            # assets); the local copy must still be the pinned bytes (checked below).
+            cp "$HOME/.keliver-ci/dl/keliver-portal-tools-0.3.18.zip" .
+            echo "f85960e47d68f22974a281404c02375f4337d4643ee5525b7d5738d2d9757992  keliver-portal-tools-0.3.18.zip" > keliver-portal-tools-0.3.18.zip.sha256
+            how="NOT downloaded (the public download failed on this self-hosted runner): the local copy ~/.keliver-ci/dl/keliver-portal-tools-0.3.18.zip, checked against the pinned hash"
+          else
+            echo "the public download failed"; exit 1
+          fi
           {
-            echo "downloaded: $base/keliver-portal-tools-0.3.18.zip"
+            echo "$how"
             shasum -a 256 -c keliver-portal-tools-0.3.18.zip.sha256
             shasum -a 256 keliver-portal-tools-0.3.18.zip
             unzip -p keliver-portal-tools-0.3.18.zip 'keliver-portal-tools-0.3.18/VERSION.json'
