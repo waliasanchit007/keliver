@@ -197,6 +197,12 @@ class RedwoodBuildPlugin : Plugin<Project> {
       }
     }
 
+    // Paparazzi 1.3 cannot render against API 37 (it has no build properties for it), and the
+    // modules that use it do not depend on Zipline, so they stay on 35.
+    plugins.withId("app.cash.paparazzi") {
+      (extensions.getByName("android") as BaseExtension).compileSdkVersion(35)
+    }
+
     plugins.withId("com.android.application") {
       val android = extensions.getByName("android") as BaseExtension
       android.packagingOptions.apply {
