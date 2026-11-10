@@ -135,8 +135,9 @@ class KeliverCheckTest {
     val f = KeliverCheck.editor(dir, loadPortalConfig(dir))
     val errors = f.filter { it.severity == "error" }
     assertTrue(errors.any { it.file == "src/components/PriceTag.kt" && it.line == 8 && it.message.startsWith("RawCode") }, errors.toString())
-    assertTrue(errors.any { it.file == "src/components/Empty.kt" && it.message.contains("no @Composable") }, errors.toString())
-    assertTrue(f.last().message.contains("2 component(s)"), f.last().message)
+    assertTrue(errors.none { it.file == "src/components/Empty.kt" }, errors.toString())
+    assertTrue(f.any { it.file == "src/components/Empty.kt" && it.severity == "info" && it.message.startsWith("not a component") }, f.toString())
+    assertTrue(f.last().message.contains("1 component(s)"), f.last().message)
   }
 
   @Test fun duplicatedRawCodeGetsBothLines() {

@@ -78,7 +78,8 @@ A new key does not bump it. A key removed or changed in meaning does.
 - **api:** works line by line on source with comments removed. Code inside multi-line raw strings, and
   strings containing rule text, can give false positives. Every match is a warning to look at, not proof.
 - **Components:** the editor check reads each component's body the way the relay opens a component
-  document (`Recognizer.recognize(asComponent = true)`). Each of these is an error:
-  - a file with no `@Composable`;
+  document (`Recognizer.recognize(asComponent = true)`). A file with no `@Composable` (models,
+  constants) is `info`, "not a component: skipped, as the editor does", and is not counted: the relay
+  skips it too. Each of these is an error:
   - a component whose body is not recognized;
   - a component whose first `@Composable` is not the registered component, which the relay refuses to open.

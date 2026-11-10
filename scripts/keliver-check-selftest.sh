@@ -127,12 +127,12 @@ has "a summary line ends the stream" "$WORK/clean.jsonl" '"check":"summary","sch
 if grep -q jvm-done "$WORK/clean.jsonl"; then bad "the jvm-done marker leaked"; else ok "the jvm-done marker is not in the output"; fi
 has "a human summary on stderr" "$WORK/clean.txt" 'editor   ok'
 
-echo "==> an opaque component"
+echo "==> a helper file in components/"
 new_app "$WORK/comp" 5000 ok
 printf 'package app.components\nval notAComponent = 1\n' >"$WORK/comp/src/components/Nothing.kt"
 run comp "$WORK/comp" --only editor
-expect "a component file with no @Composable" 1 "$rc"
-has "it is an error on its file" "$WORK/comp.jsonl" '"file":"src/components/Nothing.kt","message":"no @Composable'
+expect "a components/ file with no @Composable passes, as the editor skips it" 0 "$rc"
+has "it is info on its file" "$WORK/comp.jsonl" '"file":"src/components/Nothing.kt","message":"not a component: skipped, as the editor does'
 
 echo "==> RawCode, an unsupported API, over budget"
 new_app "$WORK/dirty" 500 ok

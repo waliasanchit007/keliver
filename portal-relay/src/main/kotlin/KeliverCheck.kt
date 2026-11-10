@@ -104,11 +104,13 @@ object KeliverCheck {
       }
       r.exceptionOrNull()?.let { out += Finding("editor", "error", "ingest failed: $it", rel); raw++ }
       val (spec, doc) = r.getOrNull() ?: continue
-      components++
       if (spec == null) {
-        out += Finding("editor", "error", "no @Composable component in this file: the editor cannot open it", rel); raw++
+        // The relay skips such files silently (ComponentRegistryState: `?: continue`), so a helper
+        // file in components/ (models, constants) is not a problem and not a component.
+        out += Finding("editor", "info", "not a component: skipped, as the editor does (no @Composable in this file)", rel)
         continue
       }
+      components++
       doc?.let { d ->
         val found = rawCodes(d.root, text)
         raw += found.size
