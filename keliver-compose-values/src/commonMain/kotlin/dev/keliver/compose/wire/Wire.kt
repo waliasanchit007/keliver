@@ -5,9 +5,11 @@
 package dev.keliver.compose.wire
 
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.SerialKind
+import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
@@ -23,7 +25,11 @@ import kotlinx.serialization.json.jsonPrimitive
  * a short string or a small object, chosen to read well in a protocol trace.
  */
 public abstract class JsonCodec<T>(name: String) : KSerializer<T> {
-  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(name, PrimitiveKind.STRING)
+  // CONTEXTUAL, not a primitive kind: Kotlin/JS's encodeToDynamic (the guest's fast protocol
+  // path) writes a top-level primitive-kind value through a primitive encoder, which flattened
+  // an array value (an Alignment's [h,v]) to its first element. Found on the emulator in Gate A.
+  @OptIn(ExperimentalSerializationApi::class, InternalSerializationApi::class)
+  override val descriptor: SerialDescriptor = buildSerialDescriptor(name, SerialKind.CONTEXTUAL)
 
   public abstract fun toJson(value: T): JsonElement
   public abstract fun fromJson(json: JsonElement): T
