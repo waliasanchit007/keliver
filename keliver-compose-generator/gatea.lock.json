@@ -1,7 +1,7 @@
 {
   "group": "gatea",
-  "level": 1,
-  "nextWidgetTag": 9,
+  "level": 2,
+  "nextWidgetTag": 10,
   "nextModifierTag": 26,
   "widgets": {
     "androidx.compose.foundation.layout/Box(modifier:androidx.compose.ui.Modifier)": {
@@ -33,6 +33,21 @@
         "content": 4
       },
       "since": 1
+    },
+    "androidx.compose.foundation.layout/FlowRow(modifier:androidx.compose.ui.Modifier,horizontalArrangement:androidx.compose.foundation.layout.Arrangement.Horizontal,verticalArrangement:androidx.compose.foundation.layout.Arrangement.Vertical,itemVerticalAlignment:androidx.compose.ui.Alignment.Vertical,maxItemsInEachRow:kotlin.Int,maxLines:kotlin.Int,overflow:androidx.compose.foundation.layout.FlowRowOverflow,content:@Composable androidx.compose.foundation.layout.FlowRowScope.()->kotlin.Unit)": {
+      "tag": 9,
+      "name": "GenFlowRow1",
+      "params": {
+        "modifier": 1,
+        "horizontalArrangement": 2,
+        "verticalArrangement": 3,
+        "itemVerticalAlignment": 4,
+        "maxItemsInEachRow": 5,
+        "maxLines": 6,
+        "overflow": 7,
+        "content": 8
+      },
+      "since": 2
     },
     "androidx.compose.foundation.layout/Row(modifier:androidx.compose.ui.Modifier,horizontalArrangement:androidx.compose.foundation.layout.Arrangement.Horizontal,verticalAlignment:androidx.compose.ui.Alignment.Vertical,content:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit)": {
       "tag": 3,

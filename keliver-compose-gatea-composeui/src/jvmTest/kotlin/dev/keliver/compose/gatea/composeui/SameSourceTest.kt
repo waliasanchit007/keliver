@@ -65,7 +65,7 @@ import androidx.compose.runtime.BroadcastFrameClock
  */
 @OptIn(ExperimentalTestApi::class)
 class SameSourceTest {
-  private val tags = listOf("AAA", "Monthly", "Secured")
+  private val tags = listOf("AAA", "Monthly", "Secured", "Listed on NSE", "Tax free", "Senior")
 
   @Test fun onlyImportsDiffer() {
     val dir = File("src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples")

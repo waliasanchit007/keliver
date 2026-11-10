@@ -13,6 +13,7 @@
     "androidx.compose.foundation.layout.Row(modifier,horizontalArrangement,verticalAlignment,content)",
     "androidx.compose.foundation.layout.Column(modifier,verticalArrangement,horizontalAlignment,content)",
     "androidx.compose.foundation.layout.Spacer(modifier)",
+    "androidx.compose.foundation.layout.FlowRow(modifier,horizontalArrangement,verticalArrangement,itemVerticalAlignment,maxItemsInEachRow,maxLines,overflow,content)",
     "androidx.compose.foundation.layout.padding(all)",
     "androidx.compose.foundation.layout.padding(horizontal,vertical)",
     "androidx.compose.foundation.layout.padding(start,top,end,bottom)",

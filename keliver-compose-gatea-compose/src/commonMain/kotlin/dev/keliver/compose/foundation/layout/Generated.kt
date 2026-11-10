@@ -14,6 +14,7 @@ import dev.keliver.compose.gatea.compose.GenColumnScopeWeight1Impl
 import dev.keliver.compose.gatea.compose.GenFillMaxHeight1Impl
 import dev.keliver.compose.gatea.compose.GenFillMaxSize1Impl
 import dev.keliver.compose.gatea.compose.GenFillMaxWidth1Impl
+import dev.keliver.compose.gatea.compose.GenFlowRow1
 import dev.keliver.compose.gatea.compose.GenHeight1Impl
 import dev.keliver.compose.gatea.compose.GenPadding1Impl
 import dev.keliver.compose.gatea.compose.GenPadding2Impl
@@ -106,6 +107,43 @@ public fun Spacer(
     modifier = split.modifier,
   )
 }
+
+/** [FlowRow] is a layout that fills items from left to right (ltr) in LTR layouts or right to left (rtl) in RTL layouts and when it runs out of space, moves to the next "row" or "line" positioned on the bottom, and then continues filling items until the items run out. */
+@androidx.compose.runtime.Composable
+public fun FlowRow(
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal = Arrangement.Start,
+  verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical = Arrangement.Top,
+  itemVerticalAlignment: dev.keliver.compose.ui.Alignment.Vertical = Alignment.Top,
+  maxItemsInEachRow: kotlin.Int = Int.MAX_VALUE,
+  maxLines: kotlin.Int = Int.MAX_VALUE,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.FlowRowScope.() -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  GenFlowRow1(
+    horizontalArrangement = horizontalArrangement,
+    verticalArrangement = verticalArrangement,
+    itemVerticalAlignment = itemVerticalAlignment,
+    maxItemsInEachRow = maxItemsInEachRow,
+    maxLines = maxLines,
+    content = { FlowRowScopeInstance.content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'overflow': a androidx.compose.foundation.layout.FlowRowOverflow cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun FlowRow(
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal = Arrangement.Start,
+  verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical = Arrangement.Top,
+  itemVerticalAlignment: dev.keliver.compose.ui.Alignment.Vertical = Alignment.Top,
+  maxItemsInEachRow: kotlin.Int = Int.MAX_VALUE,
+  maxLines: kotlin.Int = Int.MAX_VALUE,
+  overflow: dev.keliver.compose.foundation.layout.FlowRowOverflow = TODO("unreachable"),
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.FlowRowScope.() -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: 'overflow': a androidx.compose.foundation.layout.FlowRowOverflow cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11).")
 
 /** Apply [all] dp of additional space along each edge of the content, left, top, right and bottom. */
 @androidx.compose.runtime.Stable
@@ -237,6 +275,14 @@ public interface ColumnScope {
 @PublishedApi
 internal object ColumnScopeInstance : ColumnScope
 
+/** The guest's `androidx.compose.foundation.layout.FlowRowScope`. */
+@androidx.compose.runtime.Immutable
+public interface FlowRowScope {
+}
+
+@PublishedApi
+internal object FlowRowScopeInstance : FlowRowScope
+
 /** The guest's `androidx.compose.foundation.layout.RowScope`. */
 @androidx.compose.runtime.Immutable
 public interface RowScope {
@@ -261,4 +307,7 @@ public interface RowScope {
 
 @PublishedApi
 internal object RowScopeInstance : RowScope
+
+/** Placeholder: Compose's `FlowRowOverflow` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
+public class FlowRowOverflow private constructor()
 

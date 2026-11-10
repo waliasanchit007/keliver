@@ -9,6 +9,7 @@ import dev.keliver.compose.foundation.clickable
 import dev.keliver.compose.foundation.layout.Arrangement
 import dev.keliver.compose.foundation.layout.Box
 import dev.keliver.compose.foundation.layout.Column
+import dev.keliver.compose.foundation.layout.FlowRow
 import dev.keliver.compose.foundation.layout.Row
 import dev.keliver.compose.foundation.layout.Spacer
 import dev.keliver.compose.foundation.layout.fillMaxWidth
@@ -59,7 +60,7 @@ fun SampleCard(title: String, rate: String, tags: List<String>, onOpen: () -> Un
       }
       Icon(Icons.Filled.ChevronRight, contentDescription = "Open")
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
       for (tag in tags) {
         Box(Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 10.dp, vertical = 4.dp)) {
           Text(tag, fontSize = 12.sp, textAlign = TextAlign.Center)

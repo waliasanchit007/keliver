@@ -71,6 +71,7 @@ import dev.keliver.compose.gatea.widget.GenAsyncImage1
 import dev.keliver.compose.gatea.widget.GenBox1
 import dev.keliver.compose.gatea.widget.GenBox2
 import dev.keliver.compose.gatea.widget.GenColumn1
+import dev.keliver.compose.gatea.widget.GenFlowRow1
 import dev.keliver.compose.gatea.widget.GenIcon1
 import dev.keliver.compose.gatea.widget.GenRow1
 import dev.keliver.compose.gatea.widget.GenSpacer1
@@ -172,6 +173,42 @@ internal class ComposeUiGenSpacer1 : GenSpacer1<@Composable (Modifier) -> Unit>,
     run {
       androidx.compose.foundation.layout.Spacer(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenSpacer1),
+      )
+    }
+  }
+}
+
+/** Calls the real `androidx.compose.foundation.layout.FlowRow`. */
+internal class ComposeUiGenFlowRow1 : GenFlowRow1<@Composable (Modifier) -> Unit>, GeneratedWidget {
+  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  override var modifierEventSink: ((Int) -> Unit)? = null
+  private var p_horizontalArrangement: Any? by mutableStateOf<Any?>(Unset)
+  override fun horizontalArrangement(horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal) { p_horizontalArrangement = horizontalArrangement }
+  private var p_verticalArrangement: Any? by mutableStateOf<Any?>(Unset)
+  override fun verticalArrangement(verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical) { p_verticalArrangement = verticalArrangement }
+  private var p_itemVerticalAlignment: Any? by mutableStateOf<Any?>(Unset)
+  override fun itemVerticalAlignment(itemVerticalAlignment: dev.keliver.compose.ui.Alignment.Vertical) { p_itemVerticalAlignment = itemVerticalAlignment }
+  private var p_maxItemsInEachRow: Any? by mutableStateOf<Any?>(Unset)
+  override fun maxItemsInEachRow(maxItemsInEachRow: kotlin.Int) { p_maxItemsInEachRow = maxItemsInEachRow }
+  private var p_maxLines: Any? by mutableStateOf<Any?>(Unset)
+  override fun maxLines(maxLines: kotlin.Int) { p_maxLines = maxLines }
+  override val content: ScopedChildren = ScopedChildren()
+  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
+  override val value: @Composable (Modifier) -> Unit = { incoming ->
+    if (p_horizontalArrangement !== Unset && p_verticalArrangement !== Unset && p_itemVerticalAlignment !== Unset && p_maxItemsInEachRow !== Unset && p_maxLines !== Unset) {
+      val horizontalArrangement = (p_horizontalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Horizontal).toCompose()
+      val verticalArrangement = (p_verticalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Vertical).toCompose()
+      val itemVerticalAlignment = (p_itemVerticalAlignment as dev.keliver.compose.ui.Alignment.Vertical).toCompose()
+      val maxItemsInEachRow = (p_maxItemsInEachRow as kotlin.Int)
+      val maxLines = (p_maxLines as kotlin.Int)
+      androidx.compose.foundation.layout.FlowRow(
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenFlowRow1),
+        horizontalArrangement = horizontalArrangement,
+        verticalArrangement = verticalArrangement,
+        itemVerticalAlignment = itemVerticalAlignment,
+        maxItemsInEachRow = maxItemsInEachRow,
+        maxLines = maxLines,
+        content = { this@ComposeUiGenFlowRow1.content.Render(this) },
       )
     }
   }
@@ -326,6 +363,7 @@ public class ComposeUiKeliverComposeGateAWidgetFactory : KeliverComposeGateAWidg
   override fun GenRow1(): GenRow1<@Composable (Modifier) -> Unit> = ComposeUiGenRow1()
   override fun GenColumn1(): GenColumn1<@Composable (Modifier) -> Unit> = ComposeUiGenColumn1()
   override fun GenSpacer1(): GenSpacer1<@Composable (Modifier) -> Unit> = ComposeUiGenSpacer1()
+  override fun GenFlowRow1(): GenFlowRow1<@Composable (Modifier) -> Unit> = ComposeUiGenFlowRow1()
   override fun GenText1(): GenText1<@Composable (Modifier) -> Unit> = ComposeUiGenText1()
   override fun GenIcon1(): GenIcon1<@Composable (Modifier) -> Unit> = ComposeUiGenIcon1()
   override fun GenAsyncImage1(): GenAsyncImage1<@Composable (Modifier) -> Unit> = ComposeUiGenAsyncImage1()

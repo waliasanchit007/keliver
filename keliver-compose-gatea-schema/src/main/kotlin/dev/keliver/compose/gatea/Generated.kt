@@ -19,6 +19,7 @@ import dev.keliver.schema.Widget
     GenRow1::class,
     GenColumn1::class,
     GenSpacer1::class,
+    GenFlowRow1::class,
     GenText1::class,
     GenIcon1::class,
     GenAsyncImage1::class,
@@ -63,6 +64,9 @@ public object GenBoxScope
 /** The schema's marker for `androidx.compose.foundation.layout.ColumnScope`. */
 public object GenColumnScope
 
+/** The schema's marker for `androidx.compose.foundation.layout.FlowRowScope`. */
+public object GenFlowRowScope
+
 /** The schema's marker for `androidx.compose.foundation.layout.RowScope`. */
 public object GenRowScope
 
@@ -102,6 +106,18 @@ public data class GenColumn1(
 /** `androidx.compose.foundation.layout.Spacer`: Component that represents an empty space layout, whose size can be defined using [Modifier.width], [Modifier.height] and [Modifier.size] modifiers. */
 @Widget(5)
 public data class GenSpacer1(
+  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
+)
+
+/** `androidx.compose.foundation.layout.FlowRow`: [FlowRow] is a layout that fills items from left to right (ltr) in LTR layouts or right to left (rtl) in RTL layouts and when it runs out of space, moves to the next "row" or "line" positioned on the bottom, and then continues filling items until the items run out. */
+@Widget(9)
+public data class GenFlowRow1(
+  @Property(2) val horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal,
+  @Property(3) val verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical,
+  @Property(4) val itemVerticalAlignment: dev.keliver.compose.ui.Alignment.Vertical,
+  @Property(5) val maxItemsInEachRow: kotlin.Int,
+  @Property(6) val maxLines: kotlin.Int,
+  @Children(8) val content: GenFlowRowScope.() -> Unit,
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )
 
