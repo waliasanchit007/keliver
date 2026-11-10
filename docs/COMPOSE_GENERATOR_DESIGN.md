@@ -488,3 +488,24 @@ across the Compose version MS1 brings, with appends only.
 4. The renderers in the Android development host; the listing screen ported; screenshots, first
    frame and bundle size against today's port on the emulator. The private code and numbers stay
    out of this repository; the verdict goes in, criterion by criterion.
+
+## 19. What the Gate A prototype does differently
+
+The prototype (the `keliver-compose-*` modules) follows this note except where noted; each point is
+a Gate B item. Results: [`GATE_A_VERDICT.md`](GATE_A_VERDICT.md).
+
+- **Reader.** Kotlin metadata is read with `kotlin-metadata-jvm` over the desktop jars, not a FIR
+  session (§1): the same declarations, with far less setup. Overloads with the same parameter names
+  are told apart by a simple type in the config (`size(size:Dp)`).
+- **One group, its own root schema.** The generated declarations form one group, `gatea`, whose
+  schema is a new root with `keliver-material` (and layout, lazy layout) as dependencies, so nothing
+  existing changes (§14 attaches groups to the legacy root instead). A guest that uses it needs the
+  root's protocol factory, and its legacy widgets travel under offset tags.
+- **Stubs are not `inline`** (§4): Redwood's children node is not inline.
+- **Modifiers.** A nullable modifier parameter is left out of the stub (Redwood's modifier
+  serializers cannot take one); an expression default in a modifier travels as the value plus an
+  `…IsDefault` flag rather than as `null`.
+- **Defaults.** Case 3 (§5, the presence split) is not implemented; no Gate A parameter needed it.
+- **Not generated yet:** error stubs for every other declaration of an included package (only a
+  curated two, plus those the classifier produces), scope supertypes, `*Defaults` mirrors, optional
+  slots, the D2 gate's metadata (the level is in the lock; nothing reads it yet), widget groups.
