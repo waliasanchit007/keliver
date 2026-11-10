@@ -5,13 +5,18 @@
  * byte-identical (comments, formatting, RawCode, imports).
  * Run: ./gradlew :portal-schema-codegen:runWriteBackSpike
  */
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
+@file:OptIn(CoreEnvironmentDeprecation::class)
+
 package dev.keliver.portal.codegen.spike
 
+import org.jetbrains.kotlin.CoreEnvironmentDeprecation
+import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.core.CoreApplicationEnvironment
 import org.jetbrains.kotlin.com.intellij.lang.jvm.facade.JvmElementProvider
-import org.jetbrains.kotlin.com.intellij.mock.MockProject
+import org.jetbrains.kotlin.com.intellij.mock.MockComponentManager
 import org.jetbrains.kotlin.com.intellij.openapi.extensions.ExtensionPoint
 import org.jetbrains.kotlin.com.intellij.openapi.extensions.Extensions
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
@@ -65,7 +70,7 @@ interface CheckoutBindings {
  * recipe: register the tree-mutation extension points + a pass-through
  * PomModel (mutations run inside PomModel transactions in IntelliJ).
  */
-private fun enablePsiMutations(project: MockProject) {
+private fun enablePsiMutations(project: MockComponentManager) {
   val area = Extensions.getRootArea()
   fun ep(name: String, clazz: Class<*>) {
     if (!area.hasExtensionPoint(name)) {
@@ -94,9 +99,9 @@ private fun enablePsiMutations(project: MockProject) {
 fun main() {
   val disposable = Disposer.newDisposable()
   val env = KotlinCoreEnvironment.createForProduction(
-    disposable, CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+    disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
   )
-  enablePsiMutations(env.project as MockProject)
+  enablePsiMutations(env.project as MockComponentManager)
   val factory = KtPsiFactory(env.project)
 
   // Test 1: SetProp — replace the Button call (text -> "Purchase", add enabled).

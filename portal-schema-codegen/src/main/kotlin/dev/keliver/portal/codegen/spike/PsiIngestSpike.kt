@@ -4,8 +4,13 @@
  * walk WITHOUT name resolution, RawCode spans byte-exact, <500ms warm.
  * Run: ./gradlew :portal-schema-codegen:runPsiSpike
  */
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
+@file:OptIn(CoreEnvironmentDeprecation::class)
+
 package dev.keliver.portal.codegen.spike
 
+import org.jetbrains.kotlin.CoreEnvironmentDeprecation
+import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
@@ -89,7 +94,7 @@ fun main() {
   val disposable = Disposer.newDisposable()
   val t0 = System.nanoTime()
   val env = KotlinCoreEnvironment.createForProduction(
-    disposable, CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+    disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
   )
   val factory = KtPsiFactory(env.project)
   val tEnv = System.nanoTime()

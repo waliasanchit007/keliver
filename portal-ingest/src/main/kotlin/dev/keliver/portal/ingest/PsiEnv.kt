@@ -1,9 +1,14 @@
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
+@file:OptIn(CoreEnvironmentDeprecation::class)
+
 package dev.keliver.portal.ingest
 
+import org.jetbrains.kotlin.CoreEnvironmentDeprecation
+import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.lang.jvm.facade.JvmElementProvider
-import org.jetbrains.kotlin.com.intellij.mock.MockProject
+import org.jetbrains.kotlin.com.intellij.mock.MockComponentManager
 import org.jetbrains.kotlin.com.intellij.openapi.extensions.ExtensionPoint
 import org.jetbrains.kotlin.com.intellij.openapi.extensions.Extensions
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
@@ -29,9 +34,10 @@ object PsiEnv {
 
   private val env: KotlinCoreEnvironment by lazy {
     val e = KotlinCoreEnvironment.createForProduction(
-      disposable, CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+      disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
     )
-    enablePsiMutations(e.project as MockProject)
+    enablePsiMutations(e.project as MockComponentManager)
+    HeadlessPsiMutations.install()
     e
   }
 
@@ -41,7 +47,7 @@ object PsiEnv {
   fun parse(name: String, source: String): KtFile = factory.createFile(name.substringAfterLast('/'), source)
 
   /** ktlint/detekt recipe — required for PSI mutation (M4), harmless for parse. */
-  private fun enablePsiMutations(project: MockProject) {
+  private fun enablePsiMutations(project: MockComponentManager) {
     val area = Extensions.getRootArea()
     fun ep(name: String, clazz: Class<*>) {
       if (!area.hasExtensionPoint(name)) {

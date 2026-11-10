@@ -13,7 +13,8 @@ dependencies {
   testImplementation libs.kotlin.test.junit
 }
 
-def cmp = libs.versions.jbCompose.get()
+// Pinned to what Gate A was verified on (not jbCompose); see libs.versions.toml.
+def cmp = libs.versions.composeGeneratorInput.get()
 def coil = libs.versions.coil.get()
 
 // The Compose API the generator reads: desktop JVM jars (metadata) and their sources.

@@ -67,3 +67,8 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask).configur
 tasks.matching { it.name.contains('ZiplineApi') || it.name.startsWith('ziplineApi') }.configureEach {
   dependsOn('kspCommonMainKotlinMetadata')
 }
+// KSP 2.3's platform tasks (kspKotlinJvm, kspKotlinIosSimulatorArm64, ...) read the commonMain source
+// set, which includes the metadata task's output, and are not KotlinCompilationTasks.
+tasks.matching { it.name.startsWith('ksp') && it.name != 'kspCommonMainKotlinMetadata' }.configureEach {
+  dependsOn('kspCommonMainKotlinMetadata')
+}

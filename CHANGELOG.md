@@ -9,6 +9,24 @@
 
 ## [Unreleased]
 
+## Unreleased (0.5.0)
+
+The toolchain upgrade to Kotlin 2.4.20 and Zipline 1.28.0 (#222). **This release
+breaks consumers; there is no binary compatibility with 0.4.x.** An app moving to
+0.5.0 must:
+
+- build with **Kotlin 2.4 or later**: the libraries are Kotlin 2.4 klibs. Zipline
+  comes in as **1.28**.
+- set **minSdk 23** for every Android artifact (AndroidX Compose 1.11 and Zipline
+  1.28 both need it).
+- set **compileSdk 37** if it depends on the treehouse/Zipline modules: Zipline
+  1.28's AARs require it. Apps that use only the other modules are not forced to 37.
+- drop **iosX64** (the Intel iOS simulator): it is no longer published.
+- use **Compose Multiplatform 1.11.1** / **AndroidX Compose 1.11**.
+- **recompile** everything built against 0.4.x. The compiler-generated
+  `$stableprop` klib symbols are gone and the `ComposableSingletons` getters were
+  renamed; neither is hand-written API, but code compiled against 0.4.x links to them.
+
 ## Keliver 0.4.1 - 2026-10-27
 
 The editor libraries. Hand-written sources changed only in `portal-editor`,
