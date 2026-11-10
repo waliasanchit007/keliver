@@ -167,6 +167,7 @@ public final class dev/keliver/layout/Size {
 }
 
 public final class dev/keliver/layout/Spacer {
+	public fun <init> ()V
 	public synthetic fun <init> (DDILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (DDLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-T8gvEZc ()D

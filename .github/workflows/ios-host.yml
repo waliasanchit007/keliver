@@ -148,7 +148,11 @@ jobs:
               || cp "$HOME/.keliver-ci/gradle-home/gradle.properties" "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties"
             export KELIVER_SELFTEST_GRADLE_HOME="$HOME/.keliver-ci/selftest-gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/.keliver-ci/konan"
           fi
-          bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
+          # On a self-hosted machine whose owner keeps a "one heavy build at a time" lock,
+          # ~/.keliver-ci/lock-cmd names its wrapper (machine-local, not in the repo): the job
+          # waits for and holds it, so local builds can't starve the runner or crash xcodebuild.
+          LOCK=(); if [ "$SELF_HOSTED" = true ] && [ -x "$(cat "$HOME/.keliver-ci/lock-cmd" 2>/dev/null)" ]; then LOCK=("$(cat "$HOME/.keliver-ci/lock-cmd")" "ci:ios-host-selftest"); fi
+          "${LOCK[@]}" bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
             | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
       # Saved from main only: one copy, not one per pull request (the
       # repository's cache space is shared with ci.yml's).
@@ -290,8 +294,12 @@ jobs:
             | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == '878311ae9a42611aa5fbd49c20c2d5436fe16d49'"
 
       - name: iOS production OTA on the simulator — P1–P7
+        env:
+          SELF_HOSTED: ${{ runner.environment == 'self-hosted' }}
         run: |
-          bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
+          # The machine's heavy-build lock, as in the self-test job.
+          LOCK=(); if [ "$SELF_HOSTED" = true ] && [ -x "$(cat "$HOME/.keliver-ci/lock-cmd" 2>/dev/null)" ]; then LOCK=("$(cat "$HOME/.keliver-ci/lock-cmd")" "ci:ios-host-ota"); fi
+          "${LOCK[@]}" bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
             "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.18.zip"
 
       - name: Save the Kotlin/Native toolchain and Gradle downloads

@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Using CoroutineDispatcher as a context key needs this opt-in on Kotlin 2.4.20 / coroutines 1.11.
+@file:OptIn(ExperimentalStdlibApi::class)
+
 package dev.keliver.bridge
 
 import kotlin.coroutines.CoroutineContext

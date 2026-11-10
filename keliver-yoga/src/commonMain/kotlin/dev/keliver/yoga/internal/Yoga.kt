@@ -814,7 +814,7 @@ internal object Yoga {
     updateStyleIndexed(node, edge, CompactValue.ofMaybe(value, unit), values)
   }
 
-  private fun <T : Enum<T>?> updateStyleIndexed(
+  private fun <T : Enum<T>> updateStyleIndexed(
     node: YGNode,
     edge: T,
     value: CompactValue,
@@ -824,11 +824,11 @@ internal object Yoga {
       node, value,
       { _: YGStyle, value: CompactValue ->
         !CompactValue.equalsTo(
-          values.invoke(node.style).getCompactValue(edge!!.ordinal), value,
+          values.invoke(node.style).getCompactValue(edge.ordinal), value,
         )
       },
     ) { _: YGStyle, _: CompactValue? ->
-      values.invoke(node.style)[edge!!.ordinal] = value
+      values.invoke(node.style)[edge.ordinal] = value
     }
   }
 

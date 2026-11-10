@@ -27,9 +27,6 @@ import dev.keliver.tooling.schema.SchemaAnnotation.DependencyAnnotation
 import java.io.File
 import java.net.URLClassLoader
 import org.jetbrains.kotlin.KtSourceElement
-import org.jetbrains.kotlin.KtVirtualFileSourceFile
-import org.jetbrains.kotlin.cli.common.GroupedKtSources
-import org.jetbrains.kotlin.cli.common.LegacyK2CliPipeline
 import org.jetbrains.kotlin.cli.common.config.addKotlinSourceRoots
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.ERROR
@@ -37,24 +34,21 @@ import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.EXCEPTIO
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.LOGGING
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
-import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.jetbrains.kotlin.cli.jvm.compiler.VfsBasedProjectEnvironment
-import org.jetbrains.kotlin.cli.jvm.compiler.legacy.pipeline.IncrementalCompilationApi
-import org.jetbrains.kotlin.cli.jvm.compiler.legacy.pipeline.ModuleCompilerInput
-import org.jetbrains.kotlin.cli.jvm.compiler.legacy.pipeline.compileModuleToAnalyzedFirViaLightTreeIncrementally
+import org.jetbrains.kotlin.cli.common.moduleChunk
+import org.jetbrains.kotlin.cli.common.modules.ModuleBuilder
+import org.jetbrains.kotlin.cli.common.modules.ModuleChunk
+import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
+import org.jetbrains.kotlin.cli.pipeline.ConfigurationPipelineArtifact
+import org.jetbrains.kotlin.cli.pipeline.jvm.JvmFrontendPipelinePhase
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
-import org.jetbrains.kotlin.com.intellij.openapi.vfs.StandardFileSystems
-import org.jetbrains.kotlin.com.intellij.openapi.vfs.VirtualFileManager
-import org.jetbrains.kotlin.com.intellij.psi.search.GlobalSearchScope
-import org.jetbrains.kotlin.config.CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY
-import org.jetbrains.kotlin.config.CommonConfigurationKeys.MODULE_NAME
-import org.jetbrains.kotlin.config.CommonConfigurationKeys.USE_FIR
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.config.JVMConfigurationKeys.JDK_HOME
+import org.jetbrains.kotlin.config.jdkHome
+import org.jetbrains.kotlin.config.moduleName
+import org.jetbrains.kotlin.config.useFir
+import org.jetbrains.kotlin.config.useLightTree
 import org.jetbrains.kotlin.descriptors.ClassKind.OBJECT
-import org.jetbrains.kotlin.diagnostics.DiagnosticReporterFactory
+import org.jetbrains.kotlin.diagnostics.impl.DiagnosticsCollectorImpl
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirFile
@@ -64,7 +58,7 @@ import org.jetbrains.kotlin.fir.declarations.primaryConstructorIfAny
 import org.jetbrains.kotlin.fir.declarations.utils.classId
 import org.jetbrains.kotlin.fir.declarations.utils.isData
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
-import org.jetbrains.kotlin.fir.expressions.FirArrayLiteral
+import org.jetbrains.kotlin.fir.expressions.FirCollectionLiteral
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.FirGetClassCall
 import org.jetbrains.kotlin.fir.expressions.FirLiteralExpression
@@ -87,14 +81,12 @@ import org.jetbrains.kotlin.fir.types.classId
 import org.jetbrains.kotlin.fir.types.customAnnotations
 import org.jetbrains.kotlin.fir.types.isBasicFunctionType
 import org.jetbrains.kotlin.fir.types.isMarkedNullable
-import org.jetbrains.kotlin.fir.types.parameterName
 import org.jetbrains.kotlin.fir.types.receiverType
 import org.jetbrains.kotlin.fir.types.renderReadable
 import org.jetbrains.kotlin.fir.types.type
+import org.jetbrains.kotlin.fir.types.valueParameterName
 import org.jetbrains.kotlin.fir.types.variance
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
-import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmProtoBufUtil.DEFAULT_MODULE_NAME
-import org.jetbrains.kotlin.modules.TargetId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -136,62 +128,22 @@ public fun parseProtocolSchema(
     }
   }
 
-  val configuration = CompilerConfiguration()
-  configuration.put(MODULE_NAME, "schema")
-  configuration.put(MESSAGE_COLLECTOR_KEY, messageCollector)
-  configuration.put(USE_FIR, true)
-  configuration.put(JDK_HOME, javaHome)
+  // The frontend phase reports into the diagnostics collector; nothing here prints its diagnostics.
+  val configuration = CompilerConfiguration.create(DiagnosticsCollectorImpl(), messageCollector)
+  configuration.moduleName = "schema"
+  configuration.useFir = true
+  configuration.useLightTree = true
+  configuration.jdkHome = javaHome
   configuration.addKotlinSourceRoots(sources.map { it.absolutePath })
   configuration.addJvmClasspathRoots(dependencies.toList())
+  configuration.moduleChunk = ModuleChunk(listOf(ModuleBuilder("schema", "", "java-production")))
 
+  // Kotlin 2.4 removed the legacy K2 CLI pipeline (compileModuleToAnalyzedFirViaLightTreeIncrementally);
+  // the JVM frontend phase is what the compiler itself (and kapt) run to get analyzed FIR.
   val disposable = Disposer.newDisposable()
-  val environment = KotlinCoreEnvironment.createForProduction(
-    disposable,
-    configuration,
-    EnvironmentConfigFiles.JVM_CONFIG_FILES,
-  )
-  val project = environment.project
-
-  val localFileSystem = VirtualFileManager.getInstance().getFileSystem(
-    StandardFileSystems.FILE_PROTOCOL,
-  )
-  val files = sources
-    .flatMap { it.walkTopDown().filter(File::isFile) }
-    .map { localFileSystem.findFileByPath(it.absolutePath)!! }
-
-  val sourceFiles = files.map(::KtVirtualFileSourceFile).toSet()
-
-  @OptIn(LegacyK2CliPipeline::class)
-  val input = ModuleCompilerInput(
-    targetId = TargetId(DEFAULT_MODULE_NAME, "keliver-parser"),
-    groupedSources = GroupedKtSources(
-      platformSources = sourceFiles,
-      commonSources = emptyList(),
-      sourcesByModuleName = mapOf(DEFAULT_MODULE_NAME to sourceFiles),
-    ),
-    configuration = configuration,
-  )
-
-  val reporter = DiagnosticReporterFactory.createReporter(messageCollector)
-
-  val globalScope = GlobalSearchScope.allScope(project)
-  val packagePartProvider = environment.createPackagePartProvider(globalScope)
-  val projectEnvironment = VfsBasedProjectEnvironment(
-    project = project,
-    localFileSystem = localFileSystem,
-    getPackagePartProviderFn = { packagePartProvider },
-  )
-
-  @OptIn(IncrementalCompilationApi::class, LegacyK2CliPipeline::class)
-  val output = compileModuleToAnalyzedFirViaLightTreeIncrementally(
-    projectEnvironment = projectEnvironment,
-    messageCollector = messageCollector,
-    compilerConfiguration = configuration,
-    input = input,
-    diagnosticsReporter = reporter,
-    incrementalExcludesScope = null,
-  )
-  val platformOutput = output.outputs.first()
+  val output = JvmFrontendPipelinePhase.executePhase(ConfigurationPipelineArtifact(configuration, disposable))
+    ?: throw IllegalStateException("Kotlin frontend produced no output for schema sources: $sources")
+  val platformOutput = output.frontendOutput.outputs.first()
   val firFiles = platformOutput.fir
   val firSession = platformOutput.session
 
@@ -472,7 +424,7 @@ private fun FirContext.parseWidget(
             documentation = documentation,
             parameters = arguments.map {
               ParsedParameter(
-                name = it.type?.parameterName?.identifier,
+                name = it.type?.valueParameterName(firSession)?.identifier,
                 type = it.toFqType(),
               )
             },
@@ -710,7 +662,7 @@ private fun FirContext.findSchemaAnnotation(
     ?: return null
 
   val membersArray = annotation.argumentMapping
-    .mapping[Name.identifier("members")] as? FirArrayLiteral
+    .mapping[Name.identifier("members")] as? FirCollectionLiteral
     ?: throw AssertionError(annotation.source?.text)
   val members = membersArray.argumentList
     .arguments
@@ -725,7 +677,7 @@ private fun FirContext.findSchemaAnnotation(
     }
 
   val dependenciesArray = annotation.argumentMapping
-    .mapping[Name.identifier("dependencies")] as? FirArrayLiteral
+    .mapping[Name.identifier("dependencies")] as? FirCollectionLiteral
   val dependencies = dependenciesArray?.arguments.orEmpty()
     .map {
       val functionCall = it as? FirFunctionCall
@@ -752,14 +704,14 @@ private fun FirContext.findSchemaAnnotation(
     }
 
   val reservedWidgetsArray = annotation.argumentMapping
-    .mapping[Name.identifier("reservedWidgets")] as FirArrayLiteral?
+    .mapping[Name.identifier("reservedWidgets")] as FirCollectionLiteral?
   val reservedWidgets = reservedWidgetsArray?.arguments.orEmpty()
     .map {
       (it as FirLiteralExpression).valueAsInt()
     }
 
   val reservedModifiersArray = annotation.argumentMapping
-    .mapping[Name.identifier("reservedModifiers")] as FirArrayLiteral?
+    .mapping[Name.identifier("reservedModifiers")] as FirCollectionLiteral?
   val reservedModifiers = reservedModifiersArray?.arguments.orEmpty()
     .map {
       (it as FirLiteralExpression).valueAsInt()
@@ -791,14 +743,14 @@ private fun FirContext.findWidgetAnnotation(
     ?: throw AssertionError(annotation.source?.text)
 
   val reservedPropertiesArray = annotation.argumentMapping
-    .mapping[Name.identifier("reservedProperties")] as FirArrayLiteral?
+    .mapping[Name.identifier("reservedProperties")] as FirCollectionLiteral?
   val reservedProperties = reservedPropertiesArray?.arguments.orEmpty()
     .map {
       (it as FirLiteralExpression).valueAsInt()
     }
 
   val reservedChildrenArray = annotation.argumentMapping
-    .mapping[Name.identifier("reservedChildren")] as FirArrayLiteral?
+    .mapping[Name.identifier("reservedChildren")] as FirCollectionLiteral?
   val reservedChildren = reservedChildrenArray?.arguments.orEmpty()
     .map {
       (it as FirLiteralExpression).valueAsInt()
@@ -966,7 +918,8 @@ private fun ConeTypeProjection.toFqType(): FqType {
   }
 }
 
-private fun FirLiteralExpression.valueAsInt() = (value as Long).toInt()
+// Kotlin 2.4's FIR holds an Int literal's value as an Int; earlier releases held a Long.
+private fun FirLiteralExpression.valueAsInt() = (value as Number).toInt()
 private fun FirLiteralExpression.valueAsBoolean() = value as Boolean
 
 private fun ClassId.toFqType() = FqType(
@@ -987,3 +940,9 @@ private object FqNames {
   val Widget = FqName("dev.keliver.schema.Widget")
   val Unit = FqName("kotlin.Unit")
 }
+
+/**
+ * Kotlin 2.4 removed `FirResolvedQualifier.classId`; this is its former definition.
+ */
+private val FirResolvedQualifier.classId: ClassId?
+  get() = relativeClassFqName?.let { ClassId(packageFqName, it, isLocal = false) }

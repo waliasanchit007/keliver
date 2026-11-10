@@ -179,13 +179,17 @@ class RedwoodBuildPlugin : Plugin<Project> {
     plugins.withId("com.android.base") {
       val android = extensions.getByName("android") as BaseExtension
       android.apply {
-        compileSdkVersion(35)
+        // 37: Zipline 1.28.0's Android artifacts require it (their AAR metadata's minCompileSdk).
+        // This is this build's own compileSdk. Consumers are not forced to 37 as a whole: only an
+        // app that pulls Zipline 1.28 in transitively (the treehouse/Zipline modules) needs it.
+        compileSdkVersion(37)
         compileOptions {
           it.sourceCompatibility = JavaVersion.VERSION_11
           it.targetCompatibility = JavaVersion.VERSION_11
         }
         defaultConfig {
-          it.minSdk = 21
+          // 23 for every Android artifact: AndroidX Compose 1.11 and Zipline 1.28.0 both need it.
+          it.minSdk = 23
           it.targetSdk = 33
         }
         lintOptions {
@@ -193,6 +197,12 @@ class RedwoodBuildPlugin : Plugin<Project> {
           it.isCheckReleaseBuilds = false // Full lint runs as part of 'build' task.
         }
       }
+    }
+
+    // Paparazzi 1.3 cannot render against API 37 (it has no build properties for it), and the
+    // modules that use it do not depend on Zipline, so they stay on 35.
+    plugins.withId("app.cash.paparazzi") {
+      (extensions.getByName("android") as BaseExtension).compileSdkVersion(35)
     }
 
     plugins.withId("com.android.application") {
@@ -243,7 +253,8 @@ class RedwoodBuildPlugin : Plugin<Project> {
       it.compilerOptions {
         jvmTarget.set(JvmTarget.fromTarget(javaVersion.toString()))
         freeCompilerArgs.addAll(
-          "-Xjvm-default=all",
+          // The Kotlin 2.2+ spelling of -Xjvm-default=all (deprecated, a warning on 2.4).
+          "-jvm-default=no-compatibility",
         )
       }
     }
@@ -275,9 +286,9 @@ class RedwoodBuildPlugin : Plugin<Project> {
       // prevent linking against newer JDK APIs (the Android targets link against the android.jar).
       kotlin.targets.withType(KotlinJvmTarget::class.java) { target ->
         target.compilations.configureEach {
-          it.kotlinOptions.freeCompilerArgs += listOf(
-            "-Xjdk-release=$javaVersion",
-          )
+          it.compileTaskProvider.configure { task ->
+            task.compilerOptions.freeCompilerArgs.add("-Xjdk-release=$javaVersion")
+          }
         }
       }
 
@@ -308,7 +319,9 @@ class RedwoodBuildPlugin : Plugin<Project> {
     tasks.withType(KotlinJsCompile::class.java) {
       it.compilerOptions.freeCompilerArgs.addAll(
         // https://github.com/JetBrains/compose-multiplatform/issues/3421
-        "-Xpartial-linkage=disable",
+        // Kotlin 2.4 cannot turn partial linkage off (-Xpartial-linkage is deprecated); reporting
+        // its findings as errors keeps an unlinkable call a compile failure, as "disable" did.
+        "-Xpartial-linkage-loglevel=ERROR",
         // https://github.com/JetBrains/compose-multiplatform/issues/3418
         "-Xklib-enable-signature-clash-checks=false",
         // Translate capturing lambdas into anonymous JS functions rather than hoisting parameters
@@ -726,5 +739,5 @@ private fun Project.applyKotlinMultiplatform(block: KotlinMultiplatformExtension
 private fun KotlinMultiplatformExtension.iosTargets() {
   iosArm64()
   iosSimulatorArm64()
-  iosX64()
+  // No iosX64 (Intel simulators): Compose Multiplatform 1.11 no longer publishes it.
 }

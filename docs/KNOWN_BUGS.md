@@ -884,6 +884,19 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U40. Headless PSI cannot parenthesize or promote a string template: a NullPointerException — OPEN, LATENT (found 2026-11-10)
+
+Write-back mutates Kotlin PSI with no IDE around it. Two kinds of `replace` reformat the new code:
+- an operand whose new expression needs parentheses (`a + b` with `b` replaced by `c ?: d`);
+- a `$name` string-template entry replaced by an expression that needs `${…}`.
+
+Both go through `CodeStyleManager`, which the headless environment does not register. They
+throw a `NullPointerException`. The same is true on Kotlin 2.2 and on 2.4 with
+`HeadlessPsiMutations`; `HeadlessPsiMutationsTest` pins both (PR #222, which ran the same cases on
+main at Kotlin 2.2). Write-back has never reached these paths (on 2.2 it would have crashed), so
+nothing is broken today. A future edit that needs parentheses or a template promotion must build
+the text itself (offset-based, as `ContractWriteBack` does) rather than call `replace`.
+
 ### U39. A double-click right after a screen settles can select a component instance without opening it — OPEN, CAUSE UNRESOLVED; NARROWED (found 2026-10-27)
 
 **What happened.** The editor E2E test K1 double-clicks the SummaryCard instance
@@ -2877,6 +2890,13 @@ UI pattern is not worth destabilizing the released line.
 **Tripwire.** Whenever keliver next bumps Kotlin/compose (for any reason), re-run
 the recipe above and drop the two `@Ignore`s if they pass — the toolchain cost is
 then already amortized. Tracked as task #45.
+
+**Re-run 2026-11-10 on the Kotlin 2.4.20 / CMP 1.11.1 upgrade (#222): still
+fails, identically.** The tripwire fired and disproved the toolchain theory above:
+with the post-1.8.2 runtime both tests fail as before, every removal a
+`Remove(detach=false)` and no re-`Add`. So a newer Compose runtime does **not** fix
+this. **The quarantine stays and the root cause is open again**; point 3 above and
+the "defer to the next compose-toolchain bump" decision no longer hold.
 
 **Owner.** Keliver.
 

@@ -1,5 +1,5 @@
 // Klib ABI Dump
-// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, wasmJs]
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
 // Rendering settings:
 // - Signature version: 2
 // - Show manifest properties: true
@@ -18,16 +18,8 @@ final class dev.keliver.ui.basic.composeui/ComposeUiRedwoodUiBasicWidgetFactory 
 
 final val dev.keliver.ui.basic.composeui/Typography // dev.keliver.ui.basic.composeui/Typography|{}Typography[0]
     final fun <get-Typography>(): androidx.compose.material/Typography // dev.keliver.ui.basic.composeui/Typography.<get-Typography>|<get-Typography>(){}[0]
-final val dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiButton$stableprop // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiButton$stableprop|#static{}dev_keliver_ui_basic_composeui_ComposeUiButton$stableprop[0]
-final val dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiImage$stableprop // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiImage$stableprop|#static{}dev_keliver_ui_basic_composeui_ComposeUiImage$stableprop[0]
 final val dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiRedwoodUiBasicWidgetFactory$stableprop // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiRedwoodUiBasicWidgetFactory$stableprop|#static{}dev_keliver_ui_basic_composeui_ComposeUiRedwoodUiBasicWidgetFactory$stableprop[0]
-final val dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiText$stableprop // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiText$stableprop|#static{}dev_keliver_ui_basic_composeui_ComposeUiText$stableprop[0]
-final val dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiTextInput$stableprop // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiTextInput$stableprop|#static{}dev_keliver_ui_basic_composeui_ComposeUiTextInput$stableprop[0]
 
 final fun dev.keliver.ui.basic.composeui/ComposeUiRedwoodUiBasicWidgetSystem(coil3/ImageLoader): dev.keliver.ui.basic.widget/RedwoodUiBasicWidgetSystem<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.keliver.ui.basic.composeui/ComposeUiRedwoodUiBasicWidgetSystem|ComposeUiRedwoodUiBasicWidgetSystem(coil3.ImageLoader){}[0]
 final fun dev.keliver.ui.basic.composeui/RedwoodUiBasicTheme(kotlin/Boolean, kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.ui.basic.composeui/RedwoodUiBasicTheme|RedwoodUiBasicTheme(kotlin.Boolean;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiButton$stableprop_getter(): kotlin/Int // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiButton$stableprop_getter|dev_keliver_ui_basic_composeui_ComposeUiButton$stableprop_getter(){}[0]
-final fun dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiImage$stableprop_getter(): kotlin/Int // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiImage$stableprop_getter|dev_keliver_ui_basic_composeui_ComposeUiImage$stableprop_getter(){}[0]
 final fun dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiRedwoodUiBasicWidgetFactory$stableprop_getter(): kotlin/Int // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiRedwoodUiBasicWidgetFactory$stableprop_getter|dev_keliver_ui_basic_composeui_ComposeUiRedwoodUiBasicWidgetFactory$stableprop_getter(){}[0]
-final fun dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiText$stableprop_getter(): kotlin/Int // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiText$stableprop_getter|dev_keliver_ui_basic_composeui_ComposeUiText$stableprop_getter(){}[0]
-final fun dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiTextInput$stableprop_getter(): kotlin/Int // dev.keliver.ui.basic.composeui/dev_keliver_ui_basic_composeui_ComposeUiTextInput$stableprop_getter|dev_keliver_ui_basic_composeui_ComposeUiTextInput$stableprop_getter(){}[0]
