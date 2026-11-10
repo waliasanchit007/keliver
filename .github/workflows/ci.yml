@@ -76,7 +76,9 @@ jobs:
     name: Build (full graph, incl. iOS)
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ${{ vars.CI_RUNNER || 'macos-latest' }}
+    # A pull request from a fork always builds on a hosted runner, so no outside
+    # code reaches a self-hosted machine even if CI_RUNNER names one.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.CI_RUNNER || 'macos-latest' }}
     # 90: calibrated against the self-hosted Mac at 30, then 60. On GitHub-hosted
     # macos-latest (CI_RUNNER) the full graph takes 50-60 minutes, and at 60 the
     # last test steps were cut off as "cancelled" again and again (2026-10-10/11,
