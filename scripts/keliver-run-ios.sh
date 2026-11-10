@@ -81,7 +81,8 @@ echo "$NAME: the portal on port $PORT has published bundle sequence $LATEST"
 # 2. The simulator. simctl lists simulators only, so a phone's UDID is never found here.
 command -v xcrun >/dev/null && command -v xcodebuild >/dev/null \
   || fail "Xcode's xcrun and xcodebuild are needed: this runs on a Mac with Xcode (xcode-select -p names the one in use)."
-SIMS="$(xcrun simctl list -j devices 2>&1)" || fail "xcrun simctl list devices failed: $(printf '%s' "$SIMS" | head -3 | tr '\n' ' ')"
+# Its warnings (on stderr) stay out of the JSON read below.
+SIMS="$(xcrun simctl list -j devices)" || fail "xcrun simctl list devices failed (above)."
 # One line, "<udid>|<state>|<name>|<runtime>", or the reason none is chosen.
 SIM="$(printf '%s' "$SIMS" | python3 -I -c '
 import json, re, sys

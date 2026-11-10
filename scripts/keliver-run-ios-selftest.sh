@@ -14,8 +14,11 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PARENT="${1:?usage: $0 <disposable-parent> [--package <unpacked tools bundle>]}"
-mkdir -p "$PARENT"
-RUN="$(mktemp -d "$(cd "$PARENT" && pwd -P)/keliver-run-ios-XXXXXX")"
+# It writes a fixture store (a public key) for the scaffolding case: never under the real
+# store, the Gradle home or $PORTAL_STORE.
+# shellcheck source=keliver-test-isolation-guard.sh
+. "$ROOT/scripts/keliver-test-isolation-guard.sh"
+RUN="$(keliver_make_run_dir "$PARENT" run-ios)" || exit $?
 if [ "${2:-}" = "--package" ]; then
   CMD="$(cd "${3:?--package needs a directory}" && pwd -P)/bin/keliver-run-ios.sh"
 else
@@ -39,7 +42,10 @@ echo "xcrun $*" >> "$FAKE_LOG"
 [ "${1:-}" = simctl ] || { echo "stand-in xcrun: only simctl" >&2; exit 1; }
 shift
 case "$1" in
-  list) cat "$FAKE_SIMS" ;;
+  list)  # simctl's warnings go to stderr, beside the JSON on stdout
+    echo "stand-in simctl: a warning on stderr" >&2
+    [ "${FAKE_LIST_FAILS:-}" = 1 ] && { echo "CoreSimulatorService connection became invalid" >&2; exit 1; }
+    cat "$FAKE_SIMS" ;;
   bootstatus) echo "Device booted" ;;
   install) [ -f "$3/Info.plist" ] || { echo "no app at $3" >&2; exit 1; } ;;
   terminate) ;;
@@ -195,6 +201,10 @@ for t in bash dirname readlink python3 curl sed head tr; do p="$(command -v "$t"
 PATH="$NOX" "$CMD" "$APP" > "$RUN/noxcode.out" 2>&1; RC=$?
 [ "$RC" != 0 ] && says noxcode "Xcode's xcrun and xcodebuild are needed" \
   && ok "no Xcode (as on Linux): refused, naming Xcode" || bad "no Xcode: rc=$RC $(tail -2 "$RUN/noxcode.out" | tr '\n' ' ')"
+
+FAKE_LIST_FAILS=1 run listfails "$APP"
+[ "$RC" != 0 ] && says listfails "xcrun simctl list devices failed" && says listfails "CoreSimulatorService connection became invalid" && only_listed \
+  && ok "simctl cannot list the simulators: refused, with simctl's own error" || bad "a failed list: rc=$RC $(tail -2 "$RUN/listfails.out" | tr '\n' ' ')"
 
 python3 -c 'import json,sys; json.dump({"devices": {"com.apple.CoreSimulator.SimRuntime.watchOS-11-2": []}}, open(sys.argv[1], "w"))' "$FAKE_SIMS"
 run nosim "$APP"
