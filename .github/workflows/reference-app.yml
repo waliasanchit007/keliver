@@ -20,11 +20,32 @@
 # Read-only. Nothing here can create a release, attach an asset, publish a
 # package or move a tag.
 name: reference-app
-# Runs on a pull request that touches the reference app or this workflow, and on
-# demand. Not on push: it downloads a published release and boots an emulator,
-# which is a check of the adopter route, not of every commit.
+# Runs on a pull request that touches the reference app or this workflow, on a
+# push to main that touches the same paths (so main's state is checked and the
+# Gradle cache below is written from main), and on demand. A newer push to the
+# same pull request cancels the older run; runs on main never cancel each other
+# (docs/PLAN_2026-11.md section 14).
 on:
   pull_request:
+    # The production host's templates, the publishing route and keliver-publish
+    # (W3) are what the emulator checks exercise, so changes to them run it too.
+    paths:
+      - "reference/**"
+      - ".github/workflows/reference-app.yml"
+      - "scripts/templates/production-host/**"
+      - "scripts/templates/production-host-embed/**"
+      - "scripts/templates/publish/**"
+      - "scripts/keliver-new-production-host.sh"
+      - "scripts/keliver-new-publish-target.sh"
+      - "scripts/keliver-publish"
+      - "scripts/keliver-publish-selftest.sh"
+      - "scripts/keliver-run-android.sh"
+      - "portal-relay/src/main/kotlin/StaticIndex.kt"
+      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
+      - "portal-relay/src/main/kotlin/PublishSignature.kt"
+      - "portal-relay/src/main/kotlin/KeyRotation.kt"
+  push:
+    branches: [main]
     # The production host's templates, the publishing route and keliver-publish
     # (W3) are what the emulator checks exercise, so changes to them run it too.
     paths:
@@ -54,13 +75,15 @@ on:
         options: [emulator, physical]
         default: emulator
       # D14's screenshot leg: every capture on aosp_atd with swiftshader_indirect
-      # has been black (docs/REFERENCE_APP.md, "Device screenshots"). These try
-      # other images and renderers by hand; pull requests keep the defaults.
+      # was black (docs/REFERENCE_APP.md, "Device screenshots"); google_apis
+      # captures are pictures, so CI uses it since 2026-11-10 (the owner's
+      # decision) and counts each device screencap. These inputs try other images
+      # and renderers by hand; pull requests keep the defaults.
       emulator_target:
-        description: "system image (aosp_atd is CI's)"
+        description: "system image (google_apis is CI's)"
         type: choice
-        options: [aosp_atd, google_apis, default]
-        default: aosp_atd
+        options: [google_apis, aosp_atd, default]
+        default: google_apis
       emulator_gpu:
         description: "emulator -gpu mode (swiftshader_indirect is CI's)"
         type: choice
@@ -68,6 +91,9 @@ on:
         default: swiftshader_indirect
 permissions:
   contents: read
+concurrency:
+  group: reference-app-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   reference-app:
     runs-on: ubuntu-latest
@@ -89,6 +115,29 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # Gradle's downloads only (dependencies and the wrapper), never build
+      # outputs. A restore that hangs (ci.yml's build job saw that on Linux with
+      # a whole Gradle home) is cut at 10 minutes and the run goes on cold. A run
+      # started by hand, the published-only proof, always resolves from scratch.
+      # The harness moves user.home into its work dir, so GRADLE_USER_HOME is set
+      # explicitly, or the cache would never be read. Saved from main only.
+      - name: Restore Gradle downloads
+        id: cache
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/cache/restore@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
+          key: reference-app-gradle-${{ runner.os }}-${{ hashFiles('reference/inventory/bootstrap.sh', 'scripts/templates/production-host/build.gradle', 'scripts/templates/production-host-embed/**/*.gradle') }}
+          restore-keys: reference-app-gradle-${{ runner.os }}-
+      - name: Use the cache
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          mkdir -p "$HOME/ci-cache/gradle-home"
+          echo "GRADLE_USER_HOME=$HOME/ci-cache/gradle-home" >> "$GITHUB_ENV"
 
       - name: Download the PUBLIC tools 0.3.18 release, as the adopter guide does
         run: |
@@ -142,12 +191,22 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
-          target: ${{ inputs.emulator_target || 'aosp_atd' }}
+          target: ${{ inputs.emulator_target || 'google_apis' }}
           arch: x86_64
           profile: pixel_5
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu ${{ inputs.emulator_gpu || 'swiftshader_indirect' }}
           disable-animations: true
-          script: bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
+          script: KELIVER_SHOTS_MUST_BE_VALID=${{ (inputs.emulator_target || 'google_apis') == 'google_apis' && '1' || '0' }} bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
+
+      - name: Save Gradle downloads
+        if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: |
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: Keep the evidence
         if: always()

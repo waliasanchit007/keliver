@@ -112,51 +112,58 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   fi
   m0_memory T4
 
-  # T2: the Benchmark configuration. A Release-type build refuses an Info.plist
-  # ATS exception (the scaffolder wrote one for the relay's http://), so it is
-  # set aside for these builds and put back.
-  PLIST="$APP/host-ios/iosApp/Info.plist"; cp "$PLIST" "$WORK/m0-info.plist.saved"
-  /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" "$PLIST" > /dev/null 2>&1 || true
-  m0_build(){  # $1 configuration
-    ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration "$1" \
-        -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd-m0" \
-        CODE_SIGNING_ALLOWED=NO build ) > "$EV/m0-xcodebuild-$1.log" 2>&1
-  }
-  if m0_build Benchmark; then
-    ok "T2: the Benchmark configuration built (a release Kotlin framework)"
-    BAPP="$(find "$WORK/dd-m0/Build/Products/Benchmark-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
-    # Installed over the Debug build: the app's data (cache, rollback floor) stays for W8.
-    xcrun simctl install "$UDID" "$BAPP"
-    m0_launch T2 tap
-    C="$EV/T2.console.txt"
-    grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && ok "T2: the Benchmark build verified and ran v9" \
-      || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$C" | head -3 | tr '\n' ' ')"
-    m0_marks T2 "$C"
-    m0_frames "T3 (Benchmark)" "$C" T2
-    # The positive control for the Release check below: these names are in a build that has them.
-    m0_has_all=1
-    for m0_n in KeliverTrace FrameWindow KeliverMemory; do
-      find "$BAPP" -type f -perm -u+x -exec grep -aqE "$m0_n" {} \; -print | grep -q . || m0_has_all=0
-    done
-    [ "$m0_has_all" = 1 ] \
-      && ok "T2: the Benchmark build's binaries carry KeliverTrace, FrameWindow and KeliverMemory (the Release check can see them)" \
-      || bad "T2: the Benchmark build's binaries lack a timing class name: the Release check would prove nothing"
-    m0_memory "T4-Benchmark"
+  # T2 builds two release-type Kotlin frameworks (about 50 of the run's minutes on a
+  # hosted runner). ios-host.yml sets KELIVER_IOS_T2=skip on a pull request that touches
+  # none of the timing paths; main, the nightly run and a run started by hand always run it.
+  if [ "${KELIVER_IOS_T2:-run}" = run ]; then
+    # T2: the Benchmark configuration. A Release-type build refuses an Info.plist
+    # ATS exception (the scaffolder wrote one for the relay's http://), so it is
+    # set aside for these builds and put back.
+    PLIST="$APP/host-ios/iosApp/Info.plist"; cp "$PLIST" "$WORK/m0-info.plist.saved"
+    /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" "$PLIST" > /dev/null 2>&1 || true
+    m0_build(){  # $1 configuration
+      ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration "$1" \
+          -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd-m0" \
+          CODE_SIGNING_ALLOWED=NO build ) > "$EV/m0-xcodebuild-$1.log" 2>&1
+    }
+    if m0_build Benchmark; then
+      ok "T2: the Benchmark configuration built (a release Kotlin framework)"
+      BAPP="$(find "$WORK/dd-m0/Build/Products/Benchmark-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
+      # Installed over the Debug build: the app's data (cache, rollback floor) stays for W8.
+      xcrun simctl install "$UDID" "$BAPP"
+      m0_launch T2 tap
+      C="$EV/T2.console.txt"
+      grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && ok "T2: the Benchmark build verified and ran v9" \
+        || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$C" | head -3 | tr '\n' ' ')"
+      m0_marks T2 "$C"
+      m0_frames "T3 (Benchmark)" "$C" T2
+      # The positive control for the Release check below: these names are in a build that has them.
+      m0_has_all=1
+      for m0_n in KeliverTrace FrameWindow KeliverMemory; do
+        find "$BAPP" -type f -perm -u+x -exec grep -aqE "$m0_n" {} \; -print | grep -q . || m0_has_all=0
+      done
+      [ "$m0_has_all" = 1 ] \
+        && ok "T2: the Benchmark build's binaries carry KeliverTrace, FrameWindow and KeliverMemory (the Release check can see them)" \
+        || bad "T2: the Benchmark build's binaries lack a timing class name: the Release check would prove nothing"
+      m0_memory "T4-Benchmark"
+    else
+      bad "T2: the Benchmark build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Benchmark.log" | head
+    fi
+    # The store configuration has none of it: its binary names no KeliverTrace.
+    if m0_build Release; then
+      RAPP="$(find "$WORK/dd-m0/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
+      # Class names, which the binary keeps in ASCII (Kotlin string constants are UTF-16).
+      ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow|KeliverMemory' {} \; -print | grep -q . \
+        && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, FrameWindow or KeliverMemory)" || bad "T2: the Release build carries timing code"
+    else
+      bad "T2: the Release build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Release.log" | head
+    fi
+    cp "$WORK/m0-info.plist.saved" "$PLIST"
+    # Back to the Debug build for the rows after this one, its data kept.
+    xcrun simctl install "$UDID" "$APPB"
   else
-    bad "T2: the Benchmark build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Benchmark.log" | head
+    echo "  SKIP  T2: KELIVER_IOS_T2=skip (this pull request touches no timing path; main and the nightly run cover it)"
   fi
-  # The store configuration has none of it: its binary names no KeliverTrace.
-  if m0_build Release; then
-    RAPP="$(find "$WORK/dd-m0/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
-    # Class names, which the binary keeps in ASCII (Kotlin string constants are UTF-16).
-    ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow|KeliverMemory' {} \; -print | grep -q . \
-      && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, FrameWindow or KeliverMemory)" || bad "T2: the Release build carries timing code"
-  else
-    bad "T2: the Release build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Release.log" | head
-  fi
-  cp "$WORK/m0-info.plist.saved" "$PLIST"
-  # Back to the Debug build for the rows after this one, its data kept.
-  xcrun simctl install "$UDID" "$APPB"
   kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
 else
   echo "  SKIP  T1-T2: this host predates the timing marks (not counted)"

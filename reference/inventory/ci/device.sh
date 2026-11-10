@@ -22,8 +22,12 @@
 # in prepare.sh), and the exit status is non-zero if any fails.
 #
 # DEVICE SCREENSHOTS are taken too (shot, below) and checked for being a picture
-# at all, but they are VISUAL evidence and outside the pass/fail count: a blank
-# frame is recorded as BLANK in shots.results, never counted as a render.
+# at all. On an image whose captures are pictures (google_apis, CI's default
+# since 2026-11-10) the workflow sets KELIVER_SHOTS_MUST_BE_VALID=1 and each
+# device screencap counts: VALID passes, BLANK fails (D14's screenshot leg).
+# Otherwise (aosp_atd, whose captures were always black) they stay visual
+# evidence outside the count, recorded in shots.results. VALID says a frame was
+# drawn, not that it is right; what it shows is for a person to look at.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -64,7 +68,14 @@ fold(){ local label="$1" rc="$2"; [ "$rc" -eq 0 ] && ok "$label" || bad "$label 
 shot(){  # $1 = label
   local f="$EV/shot-$1-screencap.png" d="$EV/shot-$1-emulator.d" g
   adb -s "$SERIAL" exec-out screencap -p > "$f" 2>/dev/null
-  printf '%s screencap %s\n' "$1" "$(python3 "$HERE/shot.py" "$f")" | tee -a "$EV/shots.results"
+  local v; v="$(python3 "$HERE/shot.py" "$f")"
+  printf '%s screencap %s\n' "$1" "$v" | tee -a "$EV/shots.results"
+  if [ "${KELIVER_SHOTS_MUST_BE_VALID:-0}" = 1 ]; then
+    case "$v" in
+      *VALID) ok "D14 screenshot $1: the device's screencap is a picture ($v)" ;;
+      *) bad "D14 screenshot $1: the device's screencap is not a picture ($v)" ;;
+    esac
+  fi
   [ "$IS_EMU" = 1 ] || return 0   # the host-side capture exists only on an emulator
   mkdir -p "$d"
   adb -s "$SERIAL" emu screenrecord screenshot "$d" > "$d.log" 2>&1
