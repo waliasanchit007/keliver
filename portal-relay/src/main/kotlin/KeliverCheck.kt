@@ -96,19 +96,31 @@ object KeliverCheck {
     for (f in if (componentsDir.isDirectory) ktFiles(componentsDir) else emptyList()) {
       val rel = rel(appDir, f)
       val text = f.readText()
-      val r = runCatching { Recognizer.recognizeComponent(fileId(f), text, registry, tokens) }
+      // The spec (name, diagnostic) as the registry sees it; the body as the relay
+      // opens a component document (DocumentService.forComponent: recognize asComponent).
+      val r = runCatching {
+        Recognizer.recognizeComponent(fileId(f), text, registry, tokens)?.spec to
+          Recognizer.recognize(fileId(f), text, registry, tokens, asComponent = true)
+      }
       r.exceptionOrNull()?.let { out += Finding("editor", "error", "ingest failed: $it", rel); raw++ }
-      val rec = r.getOrNull() ?: continue
+      val (spec, doc) = r.getOrNull() ?: continue
       components++
-      rec.root?.let { root ->
-        val found = rawCodes(root, text)
+      if (spec == null) {
+        out += Finding("editor", "error", "no @Composable component in this file: the editor cannot open it", rel); raw++
+        continue
+      }
+      doc?.let { d ->
+        val found = rawCodes(d.root, text)
         raw += found.size
         found.forEach { (node, line) -> out += rawFinding(rel, line, node) }
       }
-      // An opaque component (no body tree) previews as a box: say why.
-      if (rec.root == null || rec.spec.diagnostic != null) {
-        val why = rec.spec.diagnostic ?: "the body is not recognized"
-        out += Finding("editor", "error", "component ${rec.spec.name} is opaque in the editor: $why", rel); raw++
+      // The relay refuses a document whose function is not the component's
+      // (DocumentService.forComponent), so that, like no body, is a box.
+      if (doc == null || doc.screenName != spec.name || spec.diagnostic != null) {
+        val why = spec.diagnostic
+          ?: if (doc == null) "the body is not recognized"
+          else "the file's first @Composable is ${doc.screenName}, not ${spec.name}"
+        out += Finding("editor", "error", "component ${spec.name} is opaque in the editor: $why", rel); raw++
       }
     }
     out += if (raw == 0) {
@@ -127,6 +139,12 @@ object KeliverCheck {
    * Every RawCode node in [root] with its 1-based line in [source], in tree
    * order. RawCode keeps its source verbatim, so each is looked for after the
    * previous one (null when the text is not in the file).
+   *
+   * Limits (docs/KELIVER_CHECK.md): a text search, not a source position. When
+   * the search from the cursor misses it falls back to the first match in the
+   * file, so a snippet that also appears earlier (a comment, a string, an
+   * identical statement) can get the earlier line; it assumes tree order is
+   * source order. Follow-up: carry the PSI offset on DocNode.RawCode.
    */
   internal fun rawCodes(root: DocNode, source: String): List<Pair<DocNode.RawCode, Int?>> {
     val text = source.replace("\r\n", "\n")
@@ -164,7 +182,7 @@ object KeliverCheck {
     Rule("androidx", Regex("""^\s*import\s+androidx\.(?!compose\.runtime\.)"""),
       "AndroidX is Android-only; a guest uses androidx.compose.runtime and Keliver widgets only"),
     Rule("ios-platform", Regex("""^\s*import\s+platform\."""), "iOS/Kotlin-Native platform API: not available to a Kotlin/JS guest"),
-    Rule("java", Regex("""^\s*import\s+javax?\."""),
+    Rule("java", Regex("""^\s*import\s+(java\.|javax\.(?!inject\.))"""), // javax.inject is di-reflection's
       "JVM API (java.io, java.net, java.util.concurrent, reflection…): not on Kotlin/JS"),
     Rule("jvm-reflection", Regex("""::class\.java\b|\.javaClass\b|Class\.forName\(|import\s+kotlin\.reflect\.(full|jvm)\."""),
       "JVM reflection: not on Kotlin/JS"),
@@ -248,9 +266,17 @@ object KeliverCheck {
     return Json { ignoreUnknownKeys = true }.decodeFromString(CheckSection.serializer(), f.readText()).check
   }
 
-  fun budget(appDir: File, config: PortalConfig, check: CheckConfig): List<Finding> {
+  /** What this run's compile did, from the wrapper: [result] "pass" | "fail", or null when it did not run. */
+  data class CompileRun(val result: String?, val startedEpochSeconds: Long?)
+
+  fun budget(appDir: File, config: PortalConfig, check: CheckConfig, compile: CompileRun = CompileRun(null, null)): List<Finding> {
     val budget = check.bundleBudgetBytes
       ?: return listOf(Finding("budget", "skip", "no check.bundleBudgetBytes in keliver.portal.json"))
+    // A failed compile leaves the last good bundle behind: measuring it would pass a broken build.
+    if (compile.result == "fail") {
+      return listOf(Finding("budget", "skip", "the compile failed in this run: the bundle in ${config.publishOutput} is stale",
+        extra = mapOf("budgetBytes" to budget)))
+    }
     val dir = File(appDir, config.publishOutput)
     if (!dir.isDirectory) {
       return listOf(Finding("budget", "error", "no built bundle at ${config.publishOutput} (run the compile check first)",
@@ -259,10 +285,18 @@ object KeliverCheck {
     val files = dir.walkTopDown().filter { it.isFile }.toList()
     val bytes = files.sumOf { it.length() }
     val largest = files.maxByOrNull { it.length() }?.let { "${rel(dir, it)} ${it.length()} B" }
-    val extra = mapOf("bytes" to bytes, "budgetBytes" to budget, "files" to files.size, "largest" to largest)
+    // Rebuilt by this run: some file is at least as new as the compile's start. False when
+    // the task was up to date, or when check.compileTask does not write publishOutput.
+    val rebuilt = compile.startedEpochSeconds?.let { s -> files.any { it.lastModified() >= s * 1000 } }
+    val note = when (rebuilt) {
+      null -> " (not compiled by this run)"
+      false -> " (not rewritten by this run's compile: up to date, or check.compileTask does not write publishOutput)"
+      true -> ""
+    }
+    val extra = mapOf("bytes" to bytes, "budgetBytes" to budget, "files" to files.size, "largest" to largest, "rebuilt" to rebuilt)
     return listOf(
-      if (bytes > budget) Finding("budget", "error", "bundle is $bytes B, over the budget of $budget B", config.publishOutput, extra = extra)
-      else Finding("budget", "pass", "bundle is $bytes B of a $budget B budget", config.publishOutput, extra = extra),
+      if (bytes > budget) Finding("budget", "error", "bundle is $bytes B, over the budget of $budget B$note", config.publishOutput, extra = extra)
+      else Finding("budget", "pass", "bundle is $bytes B of a $budget B budget$note", config.publishOutput, extra = extra),
     )
   }
 
@@ -277,14 +311,14 @@ object KeliverCheck {
 
   val ALL = listOf("editor", "api", "budget", "goldens")
 
-  fun run(appDir: File, only: List<String>): List<Finding> {
+  fun run(appDir: File, only: List<String>, compile: CompileRun = CompileRun(null, null)): List<Finding> {
     val config = loadPortalConfig(appDir)
     val check = checkConfig(appDir)
     return only.flatMap {
       when (it) {
         "editor" -> editor(appDir, config)
         "api" -> api(appDir, config)
-        "budget" -> budget(appDir, config, check)
+        "budget" -> budget(appDir, config, check, compile)
         "goldens" -> goldens()
         else -> emptyList()
       }
@@ -300,10 +334,15 @@ fun main(args: Array<String>) {
   var dir: String? = null
   var only = KeliverCheck.ALL
   var printTask = false
+  var compileResult: String? = null
+  var compileStarted: Long? = null
   var i = 0
   while (i < args.size) {
     when (val a = args[i]) {
       "--only" -> only = (args.getOrNull(++i) ?: usage("--only needs a value")).split(',').filter { it.isNotBlank() }
+      "--compile-result" -> compileResult = (args.getOrNull(++i)?.takeIf { it == "pass" || it == "fail" }
+        ?: usage("--compile-result needs pass or fail"))
+      "--compile-started" -> compileStarted = (args.getOrNull(++i)?.toLongOrNull() ?: usage("--compile-started needs epoch seconds"))
       "--print-compile-task" -> printTask = true
       "-h", "--help" -> usage("help")
       else -> if (a.startsWith("--") || dir != null) usage("unknown argument $a") else dir = a
@@ -321,11 +360,19 @@ fun main(args: Array<String>) {
       println(KeliverCheck.checkConfig(appDir).compileTask ?: loadPortalConfig(appDir).publishTask)
       exitProcess(0)
     }
-    KeliverCheck.run(appDir, only)
+    KeliverCheck.run(appDir, only, KeliverCheck.CompileRun(compileResult, compileStarted))
   } catch (e: kotlinx.serialization.SerializationException) {
     System.err.println("keliver-check-jvm: keliver.portal.json is not readable: ${e.message}")
     exitProcess(2)
+  } catch (e: Throwable) {
+    // Never let a crash read as "no findings": the wrapper turns exit 2 (and a
+    // stream without the jvm-done line) into an environment failure.
+    System.err.println("keliver-check-jvm: the checks crashed: $e")
+    e.printStackTrace()
+    exitProcess(2)
   }
   findings.forEach { println(it.toJson()) }
+  // The end-of-stream marker: the wrapper treats a stream without it as a crash.
+  println("""{"check":"jvm-done"}""")
   exitProcess(if (findings.any { it.severity == "error" }) 1 else 0)
 }

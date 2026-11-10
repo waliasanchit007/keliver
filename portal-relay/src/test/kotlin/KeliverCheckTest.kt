@@ -1,3 +1,4 @@
+import dev.keliver.portal.document.DocNode
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
@@ -98,6 +99,55 @@ class KeliverCheckTest {
     assertEquals(60L, pass.extra["bytes"])
     File(dir, "build/bundle/lib.zipline").writeBytes(ByteArray(50))
     assertEquals("error", KeliverCheck.run(dir, listOf("budget")).single().severity)
+  }
+
+  @Test fun budgetSkipsAStaleBundleAfterAFailedCompile() {
+    val dir = app("""{"screensDir":"src/screens","publishOutput":"build/bundle","check":{"bundleBudgetBytes":100}}""")
+    File(dir, "build/bundle").mkdirs()
+    File(dir, "build/bundle/app.zipline").writeBytes(ByteArray(60))
+    assertEquals("skip", KeliverCheck.run(dir, listOf("budget"), KeliverCheck.CompileRun("fail", 1L)).single().severity)
+    // Compiled by this run but not rewritten: measured, and said so.
+    File(dir, "build/bundle/app.zipline").setLastModified(1_000L)
+    val stale = KeliverCheck.run(dir, listOf("budget"), KeliverCheck.CompileRun("pass", 2_000_000_000L)).single()
+    assertEquals(false, stale.extra["rebuilt"])
+    assertTrue(stale.message.contains("not rewritten"), stale.message)
+    val fresh = KeliverCheck.run(dir, listOf("budget"), KeliverCheck.CompileRun("pass", 1L)).single()
+    assertEquals(true, fresh.extra["rebuilt"])
+  }
+
+  @Test fun componentsAreReadAsTheRelayOpensThem() {
+    val dir = app("""{"screensDir":"src/screens","componentsDir":"src/components","publishOutput":"build/bundle"}""")
+    File(dir, "src/components").mkdirs()
+    File(dir, "src/components/PriceTag.kt").writeText(
+      """
+      package app.components
+      import androidx.compose.runtime.Composable
+      import dev.keliver.material.compose.Text
+
+      @Composable
+      fun PriceTag(label: String) {
+        Text(text = label)
+        val x = listOf(1).size
+      }
+      """.trimIndent(),
+    )
+    File(dir, "src/components/Empty.kt").writeText("package app.components\nval nothing = 1\n")
+    val f = KeliverCheck.editor(dir, loadPortalConfig(dir))
+    val errors = f.filter { it.severity == "error" }
+    assertTrue(errors.any { it.file == "src/components/PriceTag.kt" && it.line == 8 && it.message.startsWith("RawCode") }, errors.toString())
+    assertTrue(errors.any { it.file == "src/components/Empty.kt" && it.message.contains("no @Composable") }, errors.toString())
+    assertTrue(f.last().message.contains("2 component(s)"), f.last().message)
+  }
+
+  @Test fun duplicatedRawCodeGetsBothLines() {
+    val src = "a\nX\nb\nX\n"
+    val root = DocNode.Widget(
+      dev.keliver.portal.document.Handle(1), "Column", children = listOf(
+        DocNode.RawCode(dev.keliver.portal.document.Handle(2), "X"),
+        DocNode.RawCode(dev.keliver.portal.document.Handle(3), "X"),
+      ),
+    )
+    assertEquals(listOf(2, 4), KeliverCheck.rawCodes(root, src).map { it.second })
   }
 
   @Test fun compileTaskDefaultsToThePublishTask() {
