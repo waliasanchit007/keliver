@@ -61,6 +61,16 @@ def keliverPublishStartScripts = tasks.register('keliverPublishStartScripts', Cr
 }
 distributions { main { contents { from(keliverPublishStartScripts) { into 'bin' } } } }
 
+// `keliver check` (PLAN_2026-11 WS5): the file-reading checks (editor ingest, unsupported
+// APIs, the bundle budget); bin/keliver-check runs the compile and then this.
+def keliverCheckStartScripts = tasks.register('keliverCheckStartScripts', CreateStartScripts) {
+  mainClass = 'KeliverCheckKt'
+  applicationName = 'keliver-check-jvm'
+  outputDir = layout.buildDirectory.dir('keliver-check-scripts').get().asFile
+  classpath = tasks.named('startScripts').get().classpath
+}
+distributions { main { contents { from(keliverCheckStartScripts) { into 'bin' } } } }
+
 // The production hosts' index reader and bridge binding (scripts/templates/*/BundleIndex.kt
 // and Bridges.kt) are template source with a @@PACKAGE@@ placeholder. Compile the Android
 // copies into the tests, so BundleIndexTest and BridgeGateTest run the code the scaffolders
