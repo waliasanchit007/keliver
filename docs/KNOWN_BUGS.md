@@ -884,6 +884,20 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U41. Four library JS/wasm test tasks do not run in CI — OPEN (found 2026-11-10)
+
+PR #229 made CI run every library's `jsTest` and `wasmJsTest`, except four that fail for reasons
+unrelated to linking:
+- `keliver-widget-composeui:jsTest`, `keliver-widget:wasmJsTest` and
+  `keliver-widget-composeui:wasmJsTest`: the test runner cannot find `skiko.mjs`. The published
+  wasm artifacts are not shown to be affected (`web-spike` compiles and runs the Compose wasm
+  render chain in CI), but nothing tests a consumer's wasm executable loading these modules
+  outside the editor.
+- `keliver-leak-detector:wasmJsTest`: `delayForGc` has no wasm `actual`, so its common tests have
+  never compiled for wasm. Older than the Kotlin 2.4 upgrade.
+
+Each needs its own fix; until then the four are listed as exclusions in `ci.yml`.
+
 ### U40. Headless PSI cannot parenthesize or promote a string template: a NullPointerException — OPEN, LATENT (found 2026-11-10)
 
 Write-back mutates Kotlin PSI with no IDE around it. Two kinds of `replace` reformat the new code:
