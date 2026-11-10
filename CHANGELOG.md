@@ -22,7 +22,19 @@ breaks consumers; there is no binary compatibility with 0.4.x.** An app moving t
 - set **compileSdk 37** if it depends on the treehouse/Zipline modules: Zipline
   1.28's AARs require it. Apps that use only the other modules are not forced to 37.
 - drop **iosX64** (the Intel iOS simulator): it is no longer published.
-- use **Compose Multiplatform 1.11.1** / **AndroidX Compose 1.11**.
+- use **Compose Multiplatform 1.12.2** / **AndroidX Compose 1.12.1** (MS1b). AndroidX
+  Compose 1.12's AARs require **compileSdk 37**, so with 0.5.0 every Android consumer of a
+  Compose module compiles against 37, not only the Zipline ones.
+- build Android with **AGP 9** (Keliver builds with 9.5.1) on **Gradle 9.6 or later** (the
+  wrapper is 9.9.0) and **JDK 17**. `dev.keliver:keliver-gradle-plugin` and `keliver-tooling-lint`
+  are now Java 17 bytecode (AGP 9 and lint 32 publish only Java 17 variants); the libraries stay
+  Java 11 bytecode.
+- `dev.keliver.lint` still expects `com.android.library`/`com.android.application` with
+  `org.jetbrains.kotlin.android` or `kotlin.multiplatform`'s `androidTarget()`: on AGP 9 set
+  `android.builtInKotlin=false` and `android.newDsl=false` (as Keliver's own build does) until it
+  learns AGP 9's built-in Kotlin and `com.android.kotlin.multiplatform.library`.
+- `androidx.collection:collection` 1.5.0 replaces `org.jetbrains.compose.collection-internal`
+  (CMP 1.12 no longer publishes it).
 - **recompile** everything built against 0.4.x. The compiler-generated
   `$stableprop` klib symbols are gone and the `ComposableSingletons` getters were
   renamed; neither is hand-written API, but code compiled against 0.4.x links to them.
