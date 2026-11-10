@@ -18,3 +18,17 @@ public final class dev/keliver/nav/KeliverNavHostKt {
 	public static final fun getLocalKeliverNavController ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
 
+public final class dev/keliver/nav/NamedState {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/Object;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFixtures ()Ljava/lang/String;
+	public final fun getRoute ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/keliver/nav/ScreenState : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+
