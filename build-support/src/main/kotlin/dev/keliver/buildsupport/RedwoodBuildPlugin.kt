@@ -114,6 +114,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
 
     target.configureCommonSpotless()
     target.configureCommonTesting()
+    target.configureSkikoForWebTests()
     target.configureCommonAndroid()
     target.configureCommonKotlin()
   }
