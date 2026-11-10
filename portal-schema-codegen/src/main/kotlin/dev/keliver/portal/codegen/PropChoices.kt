@@ -1,6 +1,11 @@
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
+@file:OptIn(CoreEnvironmentDeprecation::class)
+
 package dev.keliver.portal.codegen
 
 import java.io.File
+import org.jetbrains.kotlin.CoreEnvironmentDeprecation
+import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
@@ -87,7 +92,7 @@ internal fun layoutEnumChoices(loader: ClassLoader): Map<MappedKind, List<Choice
 internal fun readPropDocs(dir: File): Map<String, String> {
   val disposable = Disposer.newDisposable()
   try {
-    val env = KotlinCoreEnvironment.createForProduction(disposable, CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES)
+    val env = KotlinCoreEnvironment.createForProduction(disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES)
     val factory = KtPsiFactory(env.project)
     val out = linkedMapOf<String, String>()
     dir.walkTopDown().filter { it.isFile && it.extension == "kt" }.sortedBy { it.path }.forEach { f ->
