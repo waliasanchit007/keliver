@@ -179,13 +179,15 @@ class RedwoodBuildPlugin : Plugin<Project> {
     plugins.withId("com.android.base") {
       val android = extensions.getByName("android") as BaseExtension
       android.apply {
-        compileSdkVersion(35)
+        // 37: Zipline 1.28.0's Android artifacts require it (their AAR metadata's minCompileSdk).
+        compileSdkVersion(37)
         compileOptions {
           it.sourceCompatibility = JavaVersion.VERSION_11
           it.targetCompatibility = JavaVersion.VERSION_11
         }
         defaultConfig {
-          it.minSdk = 21
+          // 23: the floor of Zipline 1.28.0 and AndroidX Compose 1.11.
+          it.minSdk = 23
           it.targetSdk = 33
         }
         lintOptions {
@@ -275,9 +277,9 @@ class RedwoodBuildPlugin : Plugin<Project> {
       // prevent linking against newer JDK APIs (the Android targets link against the android.jar).
       kotlin.targets.withType(KotlinJvmTarget::class.java) { target ->
         target.compilations.configureEach {
-          it.kotlinOptions.freeCompilerArgs += listOf(
-            "-Xjdk-release=$javaVersion",
-          )
+          it.compileTaskProvider.configure { task ->
+            task.compilerOptions.freeCompilerArgs.add("-Xjdk-release=$javaVersion")
+          }
         }
       }
 
@@ -726,5 +728,5 @@ private fun Project.applyKotlinMultiplatform(block: KotlinMultiplatformExtension
 private fun KotlinMultiplatformExtension.iosTargets() {
   iosArm64()
   iosSimulatorArm64()
-  iosX64()
+  // No iosX64 (Intel simulators): Compose Multiplatform 1.11 no longer publishes it.
 }

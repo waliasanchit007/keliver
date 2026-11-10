@@ -21,9 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         kotlin:
-          - "2.1.0"   # current pin (sanity check)
-          - "2.1.20"
-          - "2.2.0"
+          - "2.4.20"  # current pin (sanity check); Zipline 1.28.0 is built on it
+          - "2.4.21"
 
     steps:
       - uses: actions/checkout@v4
