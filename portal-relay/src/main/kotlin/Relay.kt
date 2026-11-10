@@ -409,6 +409,11 @@ private fun newestBundleVersion(): Int? =
 /** Live device updates: `GET /bundles/events` (BundleEvents.kt), announced after each stored bundle. */
 private val bundleEvents by lazy { BundleEvents(::newestBundleVersion) }
 
+/** ED3: the device proxy's own listeners, so LAN clients never take the relay's slots or its devices count. */
+private val deviceProxyEvents by lazy {
+  BundleEvents(::newestBundleVersion, maxListeners = DeviceProxy.MAX_LISTENERS, maxPerKey = DeviceProxy.MAX_LISTENERS_PER_IP)
+}
+
 /**
  * M6: publish compiles the CANONICAL app project as-is (screens/ are already
  * the source of truth in git; logic/ + entry are hand-owned) -> sign -> store.
@@ -1514,7 +1519,10 @@ fun main(args: Array<String>) {
       when (ex.requestMethod) {
         "POST" -> {
           val (ok, logText) = publish()
-          if (ok) bundleEvents.announce()
+          if (ok) {
+            bundleEvents.announce()
+            deviceProxyEvents.announce()
+          }
           respond(ex, if (ok) 200 else 422, logText, contentType = "text/plain")
         }
         else -> respond(ex, 405)
@@ -1589,9 +1597,15 @@ fun main(args: Array<String>) {
   }
 
   server.executor = null
+  // The proxy starts before the relay serves anything, so a port taken on its own address is a clean exit 64.
+  if (proxyAddress != null) {
+    runCatching { DeviceProxy(bundlesDir, deviceProxyEvents).start(proxyAddress, proxyPort) }.onFailure {
+      System.err.println("portal-server: the device proxy cannot listen on ${proxyAddress.hostAddress}:$proxyPort ($it); set ${DeviceProxy.PORT_ENV}.")
+      kotlin.system.exitProcess(64)
+    }
+  }
   server.start()
   if (proxyAddress != null) {
-    DeviceProxy(bundlesDir, bundleEvents).start(proxyAddress, proxyPort)
     println(
       "portal-server: device proxy on ${if (proxyAddress.isAnyLocalAddress) "every interface" else proxyAddress.hostAddress}:$proxyPort " +
         "(${DeviceProxy.ENV}) — GET /bundles/* only; debug hosts: ${proxyUrls!!.joinToString(" ")}",

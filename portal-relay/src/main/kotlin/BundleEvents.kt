@@ -26,6 +26,8 @@ internal class BundleEvents(
   heartbeatSeconds: Long = 15,
   /** At most this many devices listen at once; more are refused (503). */
   private val maxListeners: Int = 32,
+  /** At most this many listeners may share one key (the device proxy's key is the remote IP). */
+  private val maxPerKey: Int = Int.MAX_VALUE,
 ) {
   /**
    * A listening device: its stream, and how to close its connection (the exchange, not just the stream).
@@ -33,7 +35,7 @@ internal class BundleEvents(
    * announcement queued before them passes it by, so its stream always starts with the preamble.
    * Only the writer thread reads or sets it.
    */
-  private class Listener(val out: OutputStream, val close: () -> Unit) {
+  private class Listener(val out: OutputStream, val key: String?, val close: () -> Unit) {
     var ready = false
   }
 
@@ -50,13 +52,23 @@ internal class BundleEvents(
   /** How many devices are listening now (the editor's devices chip shows it). */
   val listening: Int get() = listeners.size
 
-  /** Whether one more device may listen. */
-  fun hasRoom(): Boolean = listeners.size < maxListeners
+  /** Whether one more device may listen (one more under [key], when given). */
+  fun hasRoom(key: String? = null): Boolean =
+    listeners.size < maxListeners && (key == null || listeners.count { it.key == key } < maxPerKey)
 
-  /** Adds [out] and sends it the store's newest version; [close] closes its connection when it goes away. */
-  fun subscribe(out: OutputStream, close: () -> Unit = { out.close() }) {
-    val listener = Listener(out, close)
-    listeners += listener // counted at once, so hasRoom() holds the limit
+  /**
+   * Adds [out] and sends it the store's newest version; [close] closes its connection when it goes away.
+   * When there is no room after all ([hasRoom] and this are not one step) it closes [out] and returns false.
+   */
+  fun subscribe(out: OutputStream, key: String? = null, close: () -> Unit = { out.close() }): Boolean {
+    val listener = Listener(out, key, close)
+    synchronized(this) {
+      if (!hasRoom(key)) {
+        runCatching { close() }
+        return false
+      }
+      listeners += listener // counted at once, so hasRoom() holds the limit
+    }
     try {
       writer.execute {
         if (send(listener, PREAMBLE + event(newest()))) listener.ready = true else drop(listener)
@@ -64,6 +76,7 @@ internal class BundleEvents(
     } catch (_: java.util.concurrent.RejectedExecutionException) {
       drop(listener) // the relay is shutting down
     }
+    return true
   }
 
   /** Tells every listener the store changed; call after a bundle is completely stored. Returns at once. */

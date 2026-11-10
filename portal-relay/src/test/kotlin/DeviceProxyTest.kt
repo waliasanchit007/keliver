@@ -26,7 +26,7 @@ class DeviceProxyTest {
   private val tmp = Files.createTempDirectory("device-proxy").toFile()
   private val bundles = File(tmp, "store/bundles").apply { mkdirs() }
   private val module = ByteArray(300) { (it * 7).toByte() }
-  private val events = BundleEvents({ 1 })
+  private val events = BundleEvents({ 1 }, maxListeners = DeviceProxy.MAX_LISTENERS, maxPerKey = DeviceProxy.MAX_LISTENERS_PER_IP)
   private val server = DeviceProxy(bundles, events).start(InetAddress.getByName("127.0.0.1"), 0)
   private val port = server.address.port
 
@@ -187,7 +187,110 @@ class DeviceProxyTest {
     val relay = File("src/main/kotlin/Relay.kt").readText()
     // The relay's own server is unchanged in where it binds: the proxy is a second server.
     assertTrue("HttpServer.create(InetSocketAddress(bindAddress, PORT), 0)" in relay)
-    assertTrue("DeviceProxy(bundlesDir, bundleEvents).start(proxyAddress, proxyPort)" in relay)
+    // M1: the proxy has its own listeners; the relay's (and its devices count) are not shared.
+    assertTrue("DeviceProxy(bundlesDir, deviceProxyEvents).start(proxyAddress, proxyPort)" in relay)
+    assertTrue("\\\"devicesListening\\\":\${bundleEvents.listening}" in relay)
+    // A port taken on the proxy's own address is exit 64, before the relay serves.
+    assertTrue(relay.indexOf("DeviceProxy(bundlesDir, deviceProxyEvents).start") < relay.indexOf("  server.start()"))
+  }
+
+  /** Opens an event stream on the proxy; returns the socket (left open) and the status code. */
+  private fun listen(): Pair<Socket, Int> {
+    val s = Socket("127.0.0.1", port)
+    s.soTimeout = 5_000
+    s.getOutputStream().write("GET /bundles/events HTTP/1.1\r\nHost: 127.0.0.1:$port\r\n\r\n".toByteArray())
+    val head = ByteArray(64).let { b -> String(b, 0, s.getInputStream().read(b)) }
+    return s to head.substringAfter(' ').take(3).toInt()
+  }
+
+  @Test
+  fun lanListenersNeverTakeTheRelaysSlots() {
+    val relayEvents = BundleEvents({ 1 }) // the relay's own, as Relay.kt keeps it
+    val sockets = mutableListOf<Socket>()
+    try {
+      val codes = (1..32).map { listen().also { sockets += it.first }.second }
+      // One address gets MAX_LISTENERS_PER_IP streams; the rest are refused, and the relay is untouched.
+      assertEquals(DeviceProxy.MAX_LISTENERS_PER_IP, codes.count { it == 200 }, "$codes")
+      assertTrue(codes.all { it == 200 || it == 503 }, "$codes")
+      assertTrue(relayEvents.hasRoom())
+      assertEquals(0, relayEvents.listening)
+    } finally {
+      sockets.forEach { it.close() }
+      relayEvents.close()
+    }
+  }
+
+  @Test
+  fun theProxysQuotaAndThePerAddressLimit() {
+    val e = BundleEvents({ 1 }, heartbeatSeconds = 3600, maxListeners = DeviceProxy.MAX_LISTENERS, maxPerKey = DeviceProxy.MAX_LISTENERS_PER_IP)
+    try {
+      repeat(DeviceProxy.MAX_LISTENERS_PER_IP) { assertTrue(e.subscribe(java.io.ByteArrayOutputStream(), "10.0.0.1")) }
+      assertTrue(!e.hasRoom("10.0.0.1"))
+      assertTrue(!e.subscribe(java.io.ByteArrayOutputStream(), "10.0.0.1"))
+      var n = 2
+      while (e.hasRoom("10.0.0.$n")) e.subscribe(java.io.ByteArrayOutputStream(), "10.0.0.${n++}")
+      assertEquals(DeviceProxy.MAX_LISTENERS, e.listening)
+      assertTrue(!e.hasRoom("10.9.9.9"))
+    } finally {
+      e.close()
+    }
+  }
+
+  @Test
+  fun onlyTheFilesTheManifestListsAreServed() {
+    val v1 = File(bundles, "v1")
+    File(v1, "main.zipline.map").writeText("""{"sources":["/Users/someone/src/Screen.kt"]}""")
+    File(v1, "other.zipline").writeText("stray compile output")
+    assertEquals(200, raw("GET", "/bundles/v1/manifest.zipline.json").first)
+    assertEquals(200, raw("GET", "/bundles/v1/main.zipline").first)
+    for (p in listOf("meta.json", "main.zipline.map", "other.zipline")) assertEquals(404, raw("GET", "/bundles/v1/$p").first, p)
+    // Without a readable manifest, no module is served.
+    val v4 = File(bundles, "v4").apply { mkdirs() }
+    File(v4, "main.zipline").writeBytes(module)
+    assertEquals(404, raw("GET", "/bundles/v4/main.zipline").first)
+    assertEquals(setOf("a.zipline", "b.zipline"), DeviceProxy.moduleFiles("""{"modules":{"a":{"url":"a.zipline"},"b":{"url":"b.zipline"}}}"""))
+    assertEquals(emptySet(), DeviceProxy.moduleFiles("not json"))
+  }
+
+  @Test
+  fun aClientThatStopsReadingIsCutOff() {
+    val big = ByteArray(64 shl 20)
+    val v5 = File(bundles, "v5").apply { mkdirs() }
+    File(v5, "big.zipline").writeBytes(big)
+    File(v5, "manifest.zipline.json").writeText("""{"modules":{"big":{"url":"big.zipline","sha256":"x"}}}""")
+    val before = DeviceProxy.sendLimitMs
+    DeviceProxy.sendLimitMs = 500
+    try {
+      Socket("127.0.0.1", port).use { s ->
+        s.receiveBufferSize = 4096
+        s.soTimeout = 10_000
+        s.getOutputStream().write("GET /bundles/v5/big.zipline HTTP/1.1\r\nHost: 127.0.0.1:$port\r\n\r\n".toByteArray())
+        Thread.sleep(2_000) // not reading: the send stalls and is cut
+        var total = 0L
+        val buf = ByteArray(65536)
+        while (true) {
+          val n = runCatching { s.getInputStream().read(buf) }.getOrDefault(-1)
+          if (n < 0) break
+          total += n
+        }
+        assertTrue(total < big.size, "read $total of ${big.size}")
+      }
+      // The pool thread is free again.
+      assertEquals(200, raw("GET", "/bundles/index.json").first)
+    } finally {
+      DeviceProxy.sendLimitMs = before
+    }
+  }
+
+  @Test
+  fun theStatusEscapesItsStrings() {
+    val odd = "http://x/\"a\\b\n</script> "
+    val item = (Json.parseToJsonElement(DeviceProxy.statusJson(listOf(odd))).jsonObject["urls"] as kotlinx.serialization.json.JsonArray)[0].jsonObject
+    assertEquals(odd, item["url"]!!.jsonPrimitive.content)
+    // A URL too long for a QR code still answers, with the link only.
+    val long = "http://x/" + "y".repeat(300)
+    val item2 = (Json.parseToJsonElement(DeviceProxy.statusJson(listOf(long))).jsonObject["urls"] as kotlinx.serialization.json.JsonArray)[0].jsonObject
+    assertEquals(kotlinx.serialization.json.JsonNull, item2["qrSvg"])
   }
 
   // ── QR codes ───────────────────────────────────────────────────────────
