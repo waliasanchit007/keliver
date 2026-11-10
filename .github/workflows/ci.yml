@@ -11,10 +11,12 @@ on:
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
 
-# Cancel older runs on the same ref when a new push lands.
+# Cancel an older pull request run when a new push lands. Pushes to main are never cancelled:
+# only a main run that finishes saves the Gradle cache every pull request reads, and merges
+# often land minutes apart (2026-11-11: two main runs in a row were cancelled by the next merge).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # The docs fast path (docs/PLAN_2026-11.md section 14). A pull request that
@@ -84,8 +86,10 @@ jobs:
     # last test steps were cut off as "cancelled" again and again (2026-10-10/11,
     # e.g. runs 38151539258, 38151768857, 38155940708). They are free for public
     # repos, so a generous ceiling costs nothing; a tight one reads like someone
-    # stopped the run.
-    timeout-minutes: 90
+    # stopped the run. 150 since 2026-11-11: after Kotlin 2.4.20 and the JS/wasm test
+    # step the job takes 85-100 minutes, and every build at 90 was cancelled in its
+    # last step (e.g. runs 42886398822, 42886269065), main's included, so no cache was saved.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
         with:
