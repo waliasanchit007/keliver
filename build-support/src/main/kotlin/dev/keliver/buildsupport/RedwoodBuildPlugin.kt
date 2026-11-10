@@ -251,7 +251,8 @@ class RedwoodBuildPlugin : Plugin<Project> {
       it.compilerOptions {
         jvmTarget.set(JvmTarget.fromTarget(javaVersion.toString()))
         freeCompilerArgs.addAll(
-          "-Xjvm-default=all",
+          // The Kotlin 2.2+ spelling of -Xjvm-default=all (deprecated, a warning on 2.4).
+          "-jvm-default=no-compatibility",
         )
       }
     }
@@ -316,7 +317,9 @@ class RedwoodBuildPlugin : Plugin<Project> {
     tasks.withType(KotlinJsCompile::class.java) {
       it.compilerOptions.freeCompilerArgs.addAll(
         // https://github.com/JetBrains/compose-multiplatform/issues/3421
-        "-Xpartial-linkage=disable",
+        // Kotlin 2.4 cannot turn partial linkage off (-Xpartial-linkage is deprecated); reporting
+        // its findings as errors keeps an unlinkable call a compile failure, as "disable" did.
+        "-Xpartial-linkage-loglevel=ERROR",
         // https://github.com/JetBrains/compose-multiplatform/issues/3418
         "-Xklib-enable-signature-clash-checks=false",
         // Translate capturing lambdas into anonymous JS functions rather than hoisting parameters
