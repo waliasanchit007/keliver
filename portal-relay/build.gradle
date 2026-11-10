@@ -48,6 +48,8 @@ dependencies {
   // hand-rolled check. Test-only.
   testImplementation libs.zipline.loader
   testImplementation libs.kotlin.test.junit
+  // ED3: decode the relay's own QR codes with an independent decoder. Test-only.
+  testImplementation 'com.google.zxing:core:3.5.3'
 }
 
 // W3: keliver-publish, the relay's publish without the relay. Its start script

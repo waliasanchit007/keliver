@@ -215,6 +215,14 @@ The harness installs debug builds, plus one R8 release signed with the debug key
     the relay's edit and publish endpoints, so use it only on a network you
     trust and only for this step. macOS may ask whether Java may accept
     incoming connections: allow it, or the phone gets no answer.
+  - Better (ED3, not yet in a released tools bundle): leave the relay on
+    loopback and start it with `KELIVER_DEVICE_PROXY=all`. A second server on
+    port 8078 (`KELIVER_DEVICE_PROXY_PORT`) answers only `GET` on
+    `/bundles/index.json`, `/bundles/events` and `/bundles/v<N>/<file>`, so the
+    network reaches the published bundles and nothing else. Point the host at
+    `http://<LAN IP>:8078`; the editor's devices chip shows the URL, a QR code
+    and the debug-host command. `KELIVER_DEVICE_PROXY=loopback` serves the
+    emulator (`http://10.0.2.2:8078`).
   - With a LAN IP, scaffold with `--bundle-server http://<LAN IP>:8077`, so the
     ATS exception names that host. Accept the **Local Network** prompt on the
     first launch. That prompt appears inside the script's first 40-second
