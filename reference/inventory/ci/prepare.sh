@@ -413,12 +413,15 @@ fi
 # The same scaffolder, with --embed, writes keliver-host/ into a plain View-based
 # app whose own files carry only the documented edits (KELIVER EMBED). Built
 # for W3's static HTTPS server; and once more trusting a key that is not this
-# app's, for the refusal check.
+# app's, for the refusal check. Its API base (HostHttp) is the same server's
+# /api: the app's RequestPolicy refuses some of the guest's requests there
+# (X11), and the server's log shows which ones reached it.
 EMB_APP="$WORK/embed"; rm -rf "$EMB_APP"; cp -R "$REPO/reference/embed/android" "$EMB_APP"
 cp "$APP/gradlew" "$EMB_APP/" && cp -R "$APP/gradle" "$EMB_APP/"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$EMB_APP/local.properties"
-( cd "$APP" && "$PROD_SCAFFOLD" --embed --into "$EMB_APP" --bundle-server "https://$HOST_ADDR:8443" ) > "$EV/w2-embed-scaffold.log" 2>&1 \
-  && ok "W2: keliver-new-production-host.sh --embed ($PROD_WHICH) wrote keliver-host/ into the existing app" \
+( cd "$APP" && "$PROD_SCAFFOLD" --embed --into "$EMB_APP" --bundle-server "https://$HOST_ADDR:8443" \
+    --api-base-url "https://$HOST_ADDR:8443/api" ) > "$EV/w2-embed-scaffold.log" 2>&1 \
+  && ok "W2: keliver-new-production-host.sh --embed ($PROD_WHICH) wrote keliver-host/ into the existing app (HostHttp to https://$HOST_ADDR:8443/api)" \
   || { bad "W2: --embed failed"; cat "$EV/w2-embed-scaffold.log"; }
 # W7: on a phone, the fixture's debug and R8 release builds trust the CA themselves
 # (a release build is not debuggable, so the CA goes in its own source set too).
