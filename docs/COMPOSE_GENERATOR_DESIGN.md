@@ -40,9 +40,9 @@ the editor would need, and that stays on a branch until a pull request after Gat
 - **The guest already runs the real Compose runtime** (`org.jetbrains.compose.runtime`, through
   `keliver-compose`), with a frame clock the host drives. Only the UI layer is Keliver's.
 
-## Decisions
+Sections 1 to 14 are the decisions; 15 is a worked example; 16 and 17 scope the gates.
 
-### 1. Input: Compose's binaries for signatures, its source jars for defaults
+## 1. Input: Compose's binaries for signatures, its source jars for defaults
 
 | What | Read from | How |
 |---|---|---|
@@ -60,7 +60,7 @@ qualified names. Every other public declaration in an included package becomes a
 (section 11), so a guest never sees "unresolved reference" for a Compose name, only an error that
 names the alternative.
 
-### 2. The pipeline: emit a Redwood schema, reuse everything after it
+## 2. The pipeline: emit a Redwood schema, reuse everything after it
 
 The generator (a JVM tool module, `keliver-compose-generator`, run by a Gradle task with a
 `check…` staleness guard as `portal-schema-codegen` has) emits **checked-in sources**, per group:
@@ -78,7 +78,7 @@ The generator (a JVM tool module, `keliver-compose-generator`, run by a Gradle t
 
 Checked in, every regeneration is a reviewable diff, and the lock file's diff is the API change.
 
-### 3. Overloads, tags and the lock file
+## 3. Overloads, tags and the lock file
 
 - **One wire widget per Compose overload.** The guest compiler picks the overload, because the
   stubs have the same overload set as Compose; the chosen stub knows its own tag. No resolution
@@ -99,7 +99,7 @@ Checked in, every regeneration is a reviewable diff, and the lock file's diff is
 - **The group level** is an integer in the lock that grows by one whenever a generation appends
   anything to that group. It is what the compatibility gate compares (section 12).
 
-### 4. Guest stubs: Compose's signatures in `dev.keliver.compose.*`
+## 4. Guest stubs: Compose's signatures in `dev.keliver.compose.*`
 
 - **Package rule:** prefix `dev.keliver.` and drop a leading `androidx.`:
   `androidx.compose.material3.Text` becomes `dev.keliver.compose.material3.Text`,
@@ -131,7 +131,7 @@ Checked in, every regeneration is a reviewable diff, and the lock file's diff is
   passes it fails to compile with the message. Kotlin has no deprecation on a single parameter,
   so this is the only compile-time route.
 
-### 5. Default against explicit
+## 5. Default against explicit
 
 A host must call Compose with Compose's default when the guest left the argument out. Each
 parameter falls into one of three cases, decided by the generator from the default expression:
@@ -159,7 +159,7 @@ Why not every combination: Kotlin can only use a default by leaving the argument
 text, so "pass it only when present" for n parameters is 2ⁿ call sites. Case 2 covers almost all
 of them with one call site.
 
-### 6. Value codecs (written by hand, once)
+## 6. Value codecs (written by hand, once)
 
 Each mirror type has one `@Serializable(with = …)` serializer (guest and host) and one host
 converter to the real Compose value, given a theme resolver. Encodings are short JSON, chosen to
@@ -182,7 +182,7 @@ read well in a protocol trace:
 | `*Defaults.*()` factories (`ButtonDefaults.buttonColors(containerColor = …)`) | `{"call":"ButtonDefaults.buttonColors","args":{…}}` | one hand-written call-record codec; the factories themselves are generated like widgets, and the host calls the real factory |
 | Coil `model: Any?` | a URL string, or an `ImageRequest` call record (`data`, `crossfade`) | another runtime type is reported, not sent |
 
-### 7. Theme references resolve on the host
+## 7. Theme references resolve on the host
 
 `MaterialTheme.colorScheme.primary`, `MaterialTheme.typography.titleMedium`,
 `MaterialTheme.shapes.medium`, `LocalContentColor.current` and `LocalTextStyle.current` are
@@ -194,7 +194,7 @@ with no guest change and no recomposition in the guest. For guest logic that rea
 and the value's reference is kept as long as no arithmetic touches it (an arithmetic result is a
 literal; a lint check can flag that).
 
-### 8. Host renderers call the real function
+## 8. Host renderers call the real function
 
 A generated renderer implements the generated widget interface for the Compose host (the
 `Widget<@Composable (Modifier) -> Unit>` shape every composeui widget has today): each property
@@ -216,7 +216,7 @@ reserved event `modifierEvent(handle, args)` that the host's `clickable` calls. 
 replaces the lambda in the table without changing the chain, so a new lambda does not resend
 modifiers. This works on generated widgets; a legacy widget keeps its own click properties.
 
-### 9. Slots, children and scopes
+## 9. Slots, children and scopes
 
 - `content: @Composable RowScope.() -> Unit` is a `@Children` with that scope (Redwood supports
   scoped children). Several slots (`TopAppBar`'s `title`, `navigationIcon`, `actions`) are several
@@ -235,7 +235,7 @@ modifiers. This works on generated widgets; a legacy widget keeps its own click 
   `BoxWithConstraints`) comes to the guest as an event when it changes, one round trip; a
   composable to place (`decorationBox`'s `innerTextField`) is a placeholder child the host fills.
 
-### 10. Host-owned state and per-frame APIs
+## 10. Host-owned state and per-frame APIs
 
 | API | Runs on | Crosses the bridge |
 |---|---|---|
@@ -246,7 +246,7 @@ modifiers. This works on generated widgets; a legacy widget keeps its own click 
 | `Modifier.graphicsLayer { … }` | the block runs in the guest at composition, against a recording scope; the assigned values become a static element (animated references stay references) | the recorded values on change; reading layer-phase values (`size`) in the block is an error stub |
 | `Canvas`, `drawBehind`, `drawWithContent` | drawing commands recorded in the guest, replayed by the host; `size` comes from the host after the first layout | the command list on change (Gate B) |
 
-### 11. What cannot work fails at compile time
+## 11. What cannot work fails at compile time
 
 Error stubs are `@Deprecated(message, level = ERROR)` declarations with Compose's signature, so a
 call fails to compile with a message that names the alternative. A curated table maps each to its
@@ -262,7 +262,7 @@ one naming its category. First entries:
 | `onTextLayout`, `ColorProducer` overloads, a custom `Shape`/`Arrangement` | the declarative alternative, by name |
 | Android-only APIs (`AndroidView`, `BackHandler` from activity) | `dev.keliver.compose.BackHandler` (exists today), an app component |
 
-### 12. The compatibility gate (extends D2)
+## 12. The compatibility gate (extends D2)
 
 - **What a bundle needs** is written by its build into the signed manifest metadata,
   `keliver.compose = "foundation-layout@1,material3@1"`: each generated group the guest depends
@@ -286,7 +286,7 @@ one naming its category. First entries:
   (the stubs' tags are constants that survive dead-code elimination, so a manifest step can scan
   the JavaScript) is open question 4.
 
-### 13. The editor
+## 13. The editor
 
 - **Metadata the generator emits, per widget, modifier and parameter:** palette group (the Compose
   package), property kind (from the codec: colour, dp, text unit, text style, shape, alignment,
@@ -304,7 +304,7 @@ one naming its category. First entries:
 - **Gate A does not exercise the editor** (the plan: Gate A uses D14's compile and screenshot
   steps). It emits the metadata, so that Gate B starts from it.
 
-### 14. The legacy schema, side by side, and widget groups
+## 14. The legacy schema, side by side, and widget groups
 
 - **Wire:** `KeliverMaterial` stays the root schema with its tags, so every bundle and host
   built today is unchanged. The generated groups join it as Redwood dependencies at new dependency
@@ -436,9 +436,19 @@ listing screen needs:
 - the generated renderers in the Android development host; the screen ported from its native
   source with only imports changed, and compared with today's port on the emulator.
 
+**The baseline is native Compose, not only today's port.** The listing screen is written once as
+one plain-Compose source file. The same file is compiled twice: as native Compose (Compose's
+imports) inside the host app, and as the guest (`dev.keliver.compose.*` imports); a script writes
+one from the other and diffs them, so "only imports differ" is checked, not claimed. The host app
+draws the native copy in an activity set up exactly as the Keliver screen (the same edge-to-edge
+window, theme and insets), so three screenshots are taken on the same emulator and host: A
+(today's Keliver port), B (the generated-API guest) and native. The web version is a fourth only
+if it is reachable without signing in; nobody signs in or requests a one-time password for it.
+
 Its criteria are the plan's: plain Compose with only imports changed (the import diff is the
 whole diff, outside the app's own private helpers, which are counted and reported); screenshots
-match; no hand-written renderer for a generated widget; first frame no slower than today's port;
+match (B against native pixel for pixel where nothing animates; A against both by eye, since
+today's layouts are Yoga's); no hand-written renderer for a generated widget; first frame no slower than today's port;
 a new component costs minutes (timed: add one Compose function outside the set, regenerate, see
 it render). Also recorded: the guest bundle's size against today's port, and how many of the
 generated parameters needed case 3 of section 5.
@@ -468,7 +478,7 @@ across the Compose version MS1 brings, with appends only.
 | 12 | Hosts that embed a generated renderer raise the app's Compose floor (item 3's K3) | The floor report; Gate B on the upgraded stack |
 | 13 | Error stubs that miss a declaration leave "unresolved reference" | The generic stub for every non-generated public declaration of an included package; Gate B's agent-written screen |
 
-## Steps (phase 2)
+## 18. Steps (phase 2)
 
 1. `keliver-compose-generator`: the FIR and source-jar readers, the lock file, the group levels,
    golden-file tests on Gate A's include list.
