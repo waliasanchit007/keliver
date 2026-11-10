@@ -24,6 +24,23 @@ kotlin {
         implementation libs.jetbrains.compose.ui
       }
     }
+    jvmTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.jetbrains.compose.ui.test
+        implementation rootProject.ext.skikoHostRuntime()
+        implementation projects.keliverComposeGateaCompose
+        implementation projects.keliverComposeGateaProtocolGuest
+        implementation projects.keliverComposeGateaProtocolHost
+        implementation projects.keliverProtocolGuest
+        implementation projects.keliverProtocolHost
+        implementation projects.keliverCompose
+        implementation projects.keliverLeakDetector
+        implementation projects.keliverLayoutComposeui
+        implementation projects.keliverLazylayoutComposeui
+      }
+    }
   }
 }
 

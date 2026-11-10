@@ -112,7 +112,7 @@ public fun Color(red: Float, green: Float, blue: Float, alpha: Float = 1f): Colo
 @Stable public val Color.isUnspecified: Boolean get() = this == Color.Unspecified
 
 /** Shadows' default colour, as `androidx.compose.ui.graphics.DefaultShadowColor`. */
-public val DefaultShadowColor: Color = Color.Black
+public val DefaultShadowColor: Color = Color(0xFF000000)
 
 /** The theme values a [Color] can refer to; the index is part of the guest's packing only. */
 public object ColorRefs {
