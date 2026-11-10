@@ -433,6 +433,22 @@ xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulato
   -configuration Debug CODE_SIGNING_ALLOWED=NO build                  # or open it in Xcode
 ```
 
+**On a simulator, in one command** (from the next tools release): with the
+portal running and a bundle published, run
+
+```bash
+$KP/keliver-run-ios.sh                # --udid <udid> when more than one simulator is booted
+```
+
+It is `keliver-run-android.sh` for an iOS simulator. It takes the only booted
+simulator, or else boots an iPhone on the newest iOS runtime; it never picks a
+phone. It scaffolds `host-ios/` if the app has none, builds a debug host into
+`build/keliver-run-ios/`, installs and starts it, and waits until the host has
+loaded your bundle from `http://localhost:<port>` (a simulator reaches this
+Mac directly). A `host-ios/` made for another server is pointed at your relay
+for that launch only; `host-ios/` is not changed. The host's log is
+`build/keliver-run-ios/host.log`.
+
 Your portal's public key and the servers go into
 `host-ios/src/iosMain/kotlin/<package>/HostConfig.kt`; commit that file. A
 release build refuses `http://`. A debug build also takes the bundle server
