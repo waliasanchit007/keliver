@@ -5,6 +5,8 @@
 package dev.keliver.compose.wire
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
@@ -21,7 +23,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * a short string or a small object, chosen to read well in a protocol trace.
  */
 public abstract class JsonCodec<T>(name: String) : KSerializer<T> {
-  override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor.let { SerialDescriptorProxy(name, it) }
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(name, PrimitiveKind.STRING)
 
   public abstract fun toJson(value: T): JsonElement
   public abstract fun fromJson(json: JsonElement): T
@@ -32,11 +34,6 @@ public abstract class JsonCodec<T>(name: String) : KSerializer<T> {
 
   override fun deserialize(decoder: Decoder): T = fromJson((decoder as JsonDecoder).decodeJsonElement())
 }
-
-private class SerialDescriptorProxy(
-  override val serialName: String,
-  private val delegate: SerialDescriptor,
-) : SerialDescriptor by delegate
 
 /** A float from a JSON number, or NaN for the unspecified marker `"u"`. */
 internal fun JsonElement.floatOrUnspecified(): Float {

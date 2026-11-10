@@ -1,0 +1,28 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeValues
+        api projects.keliverComposeGateaModifiers
+        api projects.keliverMaterialWidget
+        api projects.keliverLayoutWidget
+        api projects.keliverLazylayoutWidget
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeGateaSchema
+  type = 'dev.keliver.compose.gatea.KeliverComposeGateA'
+}

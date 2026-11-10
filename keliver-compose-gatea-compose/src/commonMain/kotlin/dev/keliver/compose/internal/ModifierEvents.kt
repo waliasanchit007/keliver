@@ -1,0 +1,49 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ * Licensed under the Apache License, Version 2.0.
+ */
+package dev.keliver.compose.internal
+
+import dev.keliver.Modifier
+
+/**
+ * A lambda modifier (`Modifier.clickable { … }`) before it reaches the protocol: the lambda stays
+ * in the guest, and [factory] builds the wire element from the handle the widget assigns
+ * (docs/COMPOSE_GENERATOR_DESIGN.md §8). Never sent: [splitModifierEvents] replaces it.
+ */
+public class ModifierEventElement(
+  public val lambda: () -> Unit,
+  public val factory: (handle: Int) -> Modifier.Element,
+) : Modifier.UnscopedElement {
+  // Equal to any other event element: what goes on the wire is the factory's element, and the
+  // lambda may change on every recomposition without resending the chain.
+  override fun equals(other: Any?): Boolean = other is ModifierEventElement
+  override fun hashCode(): Int = 1
+}
+
+/** A widget's chain without lambdas, and the event sink that calls them by handle. */
+public class SplitModifier(public val modifier: Modifier, public val events: ((Int) -> Unit)?)
+
+public fun splitModifierEvents(modifier: Modifier): SplitModifier {
+  var hasEvents = false
+  modifier.forEach { if (it is ModifierEventElement) hasEvents = true }
+  if (!hasEvents) return SplitModifier(modifier, null)
+  val lambdas = ArrayList<() -> Unit>()
+  var out: Modifier = Modifier
+  modifier.forEach { e ->
+    out = out then if (e is ModifierEventElement) {
+      lambdas += e.lambda
+      e.factory(lambdas.size - 1)
+    } else {
+      e
+    }
+  }
+  return SplitModifier(out) { handle -> lambdas.getOrNull(handle)?.invoke() }
+}
+
+/** Compose's `model: Any?` on the wire: a URL. Other models are Gate B. */
+public fun imageModel(model: Any?): String? = when (model) {
+  null -> null
+  is String -> model
+  else -> model.toString()
+}

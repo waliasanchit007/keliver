@@ -1,0 +1,35 @@
+// Gate A prototype: the guest API. src/commonMain/kotlin/dev/keliver/** /Generated.kt are the generated stubs
+// (Compose's signatures in dev.keliver.compose.*); the internal composables come from the Redwood generator.
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'dev.keliver.generator.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeGateaWidget
+        api projects.keliverMaterialCompose
+        api projects.keliverLayoutCompose
+        api projects.keliverLazylayoutCompose
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeGateaSchema
+  type = 'dev.keliver.compose.gatea.KeliverComposeGateA'
+}

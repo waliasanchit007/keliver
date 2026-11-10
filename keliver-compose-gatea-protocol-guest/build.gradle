@@ -1,0 +1,24 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'dev.keliver.generator.protocol.guest'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeGateaWidget
+        implementation projects.keliverProtocolGuest
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeGateaSchema
+  type = 'dev.keliver.compose.gatea.KeliverComposeGateA'
+}

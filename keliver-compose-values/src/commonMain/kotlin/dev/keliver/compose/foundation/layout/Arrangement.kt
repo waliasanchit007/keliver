@@ -62,9 +62,11 @@ public object Arrangement {
   internal data class Named(override val code: String) : HorizontalOrVertical
 
   /** `spacedBy`; [bias] is the alignment's bias, or null for none. */
-  public data class SpacedAligned internal constructor(val space: Dp, val bias: Float?) : HorizontalOrVertical {
+  public class SpacedAligned internal constructor(public val space: Dp, public val bias: Float?) : HorizontalOrVertical {
     override val code: String get() = "sp"
     override val spacing: Dp get() = space
+    override fun equals(other: Any?): Boolean = other is SpacedAligned && other.space == space && other.bias == bias
+    override fun hashCode(): Int = space.hashCode() * 31 + bias.hashCode()
   }
 
   internal fun toJson(code: String, value: Any): JsonElement =

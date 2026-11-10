@@ -45,7 +45,9 @@ class ApiReader(jars: List<File>) {
   /** Finds the declaration a config spec names: `pkg.name(p1,p2)` or `pkg.Owner#name(p1,p2)`. */
   fun find(spec: String): DeclInfo {
     val head = spec.substringBefore('(')
-    val paramNames = spec.substringAfter('(').removeSuffix(")").split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    // A parameter is `name` or `name:SimpleType` (to tell `size(size: Dp)` from `size(size: DpSize)`).
+    val paramSpecs = spec.substringAfter('(').removeSuffix(")").split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    val paramNames = paramSpecs.map { it.substringBefore(':') }
     val owner = head.substringBefore('#', "").takeIf { '#' in head }?.substringAfterLast('.')
     val name = head.substringAfterLast('#').substringAfterLast('.')
     val pkg = if (owner != null) head.substringBefore('#').substringBeforeLast('.') else head.substringBeforeLast('.')
@@ -63,7 +65,8 @@ class ApiReader(jars: List<File>) {
         else -> emptyList()
       }
       candidates += functions.filter { f ->
-        f.name == name && f.visibility == Visibility.PUBLIC && f.valueParameters.map { it.name } == paramNames
+        f.name == name && f.visibility == Visibility.PUBLIC && f.valueParameters.map { it.name } == paramNames &&
+          paramSpecs.zip(f.valueParameters).all { (ps, vp) -> ':' !in ps || vp.type.toRef().simpleName == ps.substringAfter(':') }
       }
     }
     val f = candidates.distinctBy { fn -> fn.valueParameters.joinToString { it.name + ":" + it.type.toRef().canonical() } }
@@ -75,6 +78,7 @@ class ApiReader(jars: List<File>) {
       owner = owner,
       receiver = f.receiverParameterType?.toRef(),
       params = f.valueParameters.map { ParamInfo(it.name, it.type.toRef(), it.declaresDefaultValue) },
+
       returns = f.returnType.toRef(),
       isInline = f.isInline,
     )

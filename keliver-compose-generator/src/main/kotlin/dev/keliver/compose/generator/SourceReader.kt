@@ -47,6 +47,7 @@ class SourceReader(sourceJars: List<File>) {
       val fn = file.collectDescendantsOfType<KtNamedFunction>().firstOrNull { f ->
         f.name == decl.name &&
           f.valueParameters.map { it.name } == decl.params.map { it.name } &&
+          f.valueParameters.zip(decl.params).all { (kp, p) -> kp.typeReference?.text?.let { sameType(it, p.type) } ?: true } &&
           (decl.owner == null && f.parent is KtFile || decl.owner != null && (f.parent.parent as? KtClass)?.name == decl.owner) &&
           (decl.receiver == null || f.receiverTypeReference != null)
       } ?: continue
@@ -68,4 +69,11 @@ internal fun firstSentence(text: String): String {
   val flat = text.replace(Regex("\\s+"), " ")
   val end = flat.indexOf(". ")
   return if (end < 0) flat.removeSuffix(".") + "." else flat.substring(0, end + 1)
+}
+
+/** Whether a source type text names [t] (by simple name, ignoring annotations and nullability). */
+internal fun sameType(text: String, t: TypeRef): Boolean {
+  val clean = text.replace(Regex("@[A-Za-z.]+(\\([^)]*\\))?\\s*"), "").trim().removeSuffix("?").trim()
+  if (t.isFunction) return "->" in clean
+  return clean.substringBefore('<').substringAfterLast('.') == t.simpleName || clean.startsWith("(")
 }

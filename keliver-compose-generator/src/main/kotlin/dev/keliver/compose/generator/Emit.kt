@@ -196,24 +196,26 @@ class Emitter(private val config: Config, private val plans: List<Plan>) {
     }
   }
 
-  private fun placeholderClasses(names: List<String>): String = buildString {
-    // Nested placeholder names (`AsyncImagePainter.State`) nest inside their outer placeholder.
-    val tree = sortedMapOf<String, MutableList<String>>()
+  private fun placeholderClasses(names: List<String>): String {
+    // Nested placeholder names (`AsyncImagePainter.State.Loading`) nest inside their outer placeholders.
+    class Node(val children: java.util.TreeMap<String, Node> = java.util.TreeMap())
+    val root = Node()
     for (n in names) {
-      val outer = n.substringBefore('.')
-      tree.getOrPut(outer) { mutableListOf() }.apply { if ('.' in n) add(n.substringAfter('.')) }
+      var node = root
+      for (part in n.split('.')) node = node.children.getOrPut(part) { Node() }
     }
-    for ((outer, nested) in tree) {
-      append("/** Placeholder: Compose's `$outer` cannot reach a guest yet ($DESIGN §11). */\n")
-      append("public class $outer private constructor()")
-      if (nested.isEmpty()) {
-        append("\n\n")
+    fun render(name: String, node: Node, indent: String): String = buildString {
+      if (indent.isEmpty()) append("/** Placeholder: Compose's `$name` cannot reach a guest yet ($DESIGN §11). */\n")
+      append("${indent}public class $name private constructor()")
+      if (node.children.isEmpty()) {
+        append("\n")
       } else {
         append(" {\n")
-        nested.distinct().forEach { append("  public class $it private constructor()\n") }
-        append("}\n\n")
+        node.children.forEach { (n, c) -> append(render(n, c, "$indent  ")) }
+        append("$indent}\n")
       }
     }
+    return root.children.entries.joinToString("") { (n, c) -> render(n, c, "") + "\n" }
   }
 
   private fun paramDecl(c: Classified, imports: MutableSet<String>, errorOverload: Boolean): String {
@@ -382,6 +384,10 @@ class Emitter(private val config: Config, private val plans: List<Plan>) {
       imports += "$schemaPkg.widget.Extra$e"
       body.append("  override fun Extra$e(): Extra$e<@Composable (Modifier) -> Unit> = ComposeUiExtra$e()\n")
     }
+    // Redwood's factory hook for unscoped modifiers: generated widgets apply their own (applyGenerated).
+    for (mod in modifiers.filter { it.decl.kind == DeclKind.MODIFIER }) {
+      body.append("  override fun ${mod.entry.name}(value: @Composable (Modifier) -> Unit, modifier: ${mod.entry.name}) {}\n")
+    }
     body.append("}\n\n")
     // Modifiers.
     body.append("/** Applies a generated widget's own (unscoped) generated modifiers, in the guest's order. */\n")
@@ -455,7 +461,7 @@ class Emitter(private val config: Config, private val plans: List<Plan>) {
     }
     val call = "$receiver.${d.name}(${args.joinToString(", ")})"
     if (d.kind == DeclKind.MODIFIER) imports += "${d.pkg}.${d.name}"
-    return if (locals.isEmpty()) call else "{ ${locals.joinToString("; ")}; $call }"
+    return if (locals.isEmpty()) call else "run { ${locals.joinToString("; ")}; $call }"
   }
 
   // ---------------------------------------------------------------------------------------------

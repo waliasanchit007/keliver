@@ -17,7 +17,7 @@
     "androidx.compose.foundation.layout.padding(horizontal,vertical)",
     "androidx.compose.foundation.layout.padding(start,top,end,bottom)",
     "androidx.compose.foundation.layout.padding(paddingValues)",
-    "androidx.compose.foundation.layout.size(size)",
+    "androidx.compose.foundation.layout.size(size:Dp)",
     "androidx.compose.foundation.layout.size(width,height)",
     "androidx.compose.foundation.layout.width(width)",
     "androidx.compose.foundation.layout.height(height)",
@@ -52,7 +52,7 @@
   "errors": [
     {"spec": "androidx.compose.ui.layout.Layout(content,modifier,measurePolicy)",
      "message": "custom measuring runs per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component."},
-    {"spec": "androidx.compose.ui.input.pointer.pointerInput(key1,block)",
+    {"spec": "androidx.compose.ui.input.pointer.pointerInput(key1,block:Function0)",
      "message": "raw pointer handlers run per event on the host. Use Modifier.clickable (or, in Gate B, combinedClickable, draggable, anchoredDraggable)."}
   ],
   "typeMessages": {

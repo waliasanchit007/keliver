@@ -1,0 +1,333 @@
+{
+  "group": "gatea",
+  "level": 1,
+  "nextWidgetTag": 9,
+  "nextModifierTag": 26,
+  "widgets": {
+    "androidx.compose.foundation.layout/Box(modifier:androidx.compose.ui.Modifier)": {
+      "tag": 2,
+      "name": "GenBox2",
+      "params": {
+        "modifier": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/Box(modifier:androidx.compose.ui.Modifier,contentAlignment:androidx.compose.ui.Alignment,propagateMinConstraints:kotlin.Boolean,content:@Composable androidx.compose.foundation.layout.BoxScope.()->kotlin.Unit)": {
+      "tag": 1,
+      "name": "GenBox1",
+      "params": {
+        "modifier": 1,
+        "contentAlignment": 2,
+        "propagateMinConstraints": 3,
+        "content": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/Column(modifier:androidx.compose.ui.Modifier,verticalArrangement:androidx.compose.foundation.layout.Arrangement.Vertical,horizontalAlignment:androidx.compose.ui.Alignment.Horizontal,content:@Composable androidx.compose.foundation.layout.ColumnScope.()->kotlin.Unit)": {
+      "tag": 4,
+      "name": "GenColumn1",
+      "params": {
+        "modifier": 1,
+        "verticalArrangement": 2,
+        "horizontalAlignment": 3,
+        "content": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/Row(modifier:androidx.compose.ui.Modifier,horizontalArrangement:androidx.compose.foundation.layout.Arrangement.Horizontal,verticalAlignment:androidx.compose.ui.Alignment.Vertical,content:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit)": {
+      "tag": 3,
+      "name": "GenRow1",
+      "params": {
+        "modifier": 1,
+        "horizontalArrangement": 2,
+        "verticalAlignment": 3,
+        "content": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/Spacer(modifier:androidx.compose.ui.Modifier)": {
+      "tag": 5,
+      "name": "GenSpacer1",
+      "params": {
+        "modifier": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.material3/Icon(imageVector:androidx.compose.ui.graphics.vector.ImageVector,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,tint:androidx.compose.ui.graphics.Color)": {
+      "tag": 7,
+      "name": "GenIcon1",
+      "params": {
+        "imageVector": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "tint": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.material3/Text(text:kotlin.String,modifier:androidx.compose.ui.Modifier,color:androidx.compose.ui.graphics.Color,fontSize:androidx.compose.ui.unit.TextUnit,fontStyle:androidx.compose.ui.text.font.FontStyle?,fontWeight:androidx.compose.ui.text.font.FontWeight?,fontFamily:androidx.compose.ui.text.font.FontFamily?,letterSpacing:androidx.compose.ui.unit.TextUnit,textDecoration:androidx.compose.ui.text.style.TextDecoration?,textAlign:androidx.compose.ui.text.style.TextAlign?,lineHeight:androidx.compose.ui.unit.TextUnit,overflow:androidx.compose.ui.text.style.TextOverflow,softWrap:kotlin.Boolean,maxLines:kotlin.Int,minLines:kotlin.Int,onTextLayout:((androidx.compose.ui.text.TextLayoutResult)->kotlin.Unit)?,style:androidx.compose.ui.text.TextStyle)": {
+      "tag": 6,
+      "name": "GenText1",
+      "params": {
+        "text": 1,
+        "modifier": 2,
+        "color": 3,
+        "fontSize": 4,
+        "fontStyle": 5,
+        "fontWeight": 6,
+        "fontFamily": 7,
+        "letterSpacing": 8,
+        "textDecoration": 9,
+        "textAlign": 10,
+        "lineHeight": 11,
+        "overflow": 12,
+        "softWrap": 13,
+        "maxLines": 14,
+        "minLines": 15,
+        "onTextLayout": 16,
+        "style": 17
+      },
+      "since": 1
+    },
+    "coil3.compose/AsyncImage(model:kotlin.Any?,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,transform:(coil3.compose.AsyncImagePainter.State)->coil3.compose.AsyncImagePainter.State,onState:((coil3.compose.AsyncImagePainter.State)->kotlin.Unit)?,alignment:androidx.compose.ui.Alignment,contentScale:androidx.compose.ui.layout.ContentScale,alpha:kotlin.Float,colorFilter:androidx.compose.ui.graphics.ColorFilter?,filterQuality:androidx.compose.ui.graphics.FilterQuality,clipToBounds:kotlin.Boolean)": {
+      "tag": 8,
+      "name": "GenAsyncImage1",
+      "params": {
+        "model": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "transform": 4,
+        "onState": 5,
+        "alignment": 6,
+        "contentScale": 7,
+        "alpha": 8,
+        "colorFilter": 9,
+        "filterQuality": 10,
+        "clipToBounds": 11
+      },
+      "since": 1
+    }
+  },
+  "modifiers": {
+    "androidx.compose.foundation.layout/BoxScope#align(alignment:androidx.compose.ui.Alignment)": {
+      "tag": 16,
+      "name": "GenBoxScopeAlign1",
+      "params": {
+        "alignment": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/BoxScope#matchParentSize()": {
+      "tag": 17,
+      "name": "GenBoxScopeMatchParentSize1",
+      "params": {},
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/ColumnScope#align(alignment:androidx.compose.ui.Alignment.Horizontal)": {
+      "tag": 15,
+      "name": "GenColumnScopeAlign1",
+      "params": {
+        "alignment": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/ColumnScope#weight(weight:kotlin.Float,fill:kotlin.Boolean)": {
+      "tag": 14,
+      "name": "GenColumnScopeWeight1",
+      "params": {
+        "weight": 1,
+        "fill": 2
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/RowScope#align(alignment:androidx.compose.ui.Alignment.Vertical)": {
+      "tag": 13,
+      "name": "GenRowScopeAlign1",
+      "params": {
+        "alignment": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/RowScope#weight(weight:kotlin.Float,fill:kotlin.Boolean)": {
+      "tag": 12,
+      "name": "GenRowScopeWeight1",
+      "params": {
+        "weight": 1,
+        "fill": 2
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/fillMaxHeight(fraction:kotlin.Float)": {
+      "tag": 10,
+      "name": "GenFillMaxHeight1",
+      "params": {
+        "fraction": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/fillMaxSize(fraction:kotlin.Float)": {
+      "tag": 11,
+      "name": "GenFillMaxSize1",
+      "params": {
+        "fraction": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/fillMaxWidth(fraction:kotlin.Float)": {
+      "tag": 9,
+      "name": "GenFillMaxWidth1",
+      "params": {
+        "fraction": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/height(height:androidx.compose.ui.unit.Dp)": {
+      "tag": 8,
+      "name": "GenHeight1",
+      "params": {
+        "height": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/padding(all:androidx.compose.ui.unit.Dp)": {
+      "tag": 1,
+      "name": "GenPadding1",
+      "params": {
+        "all": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/padding(horizontal:androidx.compose.ui.unit.Dp,vertical:androidx.compose.ui.unit.Dp)": {
+      "tag": 2,
+      "name": "GenPadding2",
+      "params": {
+        "horizontal": 1,
+        "vertical": 2
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/padding(paddingValues:androidx.compose.foundation.layout.PaddingValues)": {
+      "tag": 4,
+      "name": "GenPadding4",
+      "params": {
+        "paddingValues": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/padding(start:androidx.compose.ui.unit.Dp,top:androidx.compose.ui.unit.Dp,end:androidx.compose.ui.unit.Dp,bottom:androidx.compose.ui.unit.Dp)": {
+      "tag": 3,
+      "name": "GenPadding3",
+      "params": {
+        "start": 1,
+        "top": 2,
+        "end": 3,
+        "bottom": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/size(size:androidx.compose.ui.unit.Dp)": {
+      "tag": 5,
+      "name": "GenSize1",
+      "params": {
+        "size": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/size(width:androidx.compose.ui.unit.Dp,height:androidx.compose.ui.unit.Dp)": {
+      "tag": 6,
+      "name": "GenSize2",
+      "params": {
+        "width": 1,
+        "height": 2
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation.layout/width(width:androidx.compose.ui.unit.Dp)": {
+      "tag": 7,
+      "name": "GenWidth1",
+      "params": {
+        "width": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation/background(color:androidx.compose.ui.graphics.Color,shape:androidx.compose.ui.graphics.Shape)": {
+      "tag": 18,
+      "name": "GenBackground1",
+      "params": {
+        "color": 1,
+        "shape": 2
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation/border(width:androidx.compose.ui.unit.Dp,color:androidx.compose.ui.graphics.Color,shape:androidx.compose.ui.graphics.Shape)": {
+      "tag": 19,
+      "name": "GenBorder1",
+      "params": {
+        "width": 1,
+        "color": 2,
+        "shape": 3
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation/clickable(enabled:kotlin.Boolean,onClickLabel:kotlin.String?,role:androidx.compose.ui.semantics.Role?,onClick:()->kotlin.Unit)": {
+      "tag": 20,
+      "name": "GenClickable1",
+      "params": {
+        "enabled": 1,
+        "onClickLabel": 2,
+        "role": 3,
+        "onClick": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation/horizontalScroll(state:androidx.compose.foundation.ScrollState,enabled:kotlin.Boolean,flingBehavior:androidx.compose.foundation.gestures.FlingBehavior?,reverseScrolling:kotlin.Boolean)": {
+      "tag": 21,
+      "name": "GenHorizontalScroll1",
+      "params": {
+        "state": 1,
+        "enabled": 2,
+        "flingBehavior": 3,
+        "reverseScrolling": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.foundation/verticalScroll(state:androidx.compose.foundation.ScrollState,enabled:kotlin.Boolean,flingBehavior:androidx.compose.foundation.gestures.FlingBehavior?,reverseScrolling:kotlin.Boolean)": {
+      "tag": 22,
+      "name": "GenVerticalScroll1",
+      "params": {
+        "state": 1,
+        "enabled": 2,
+        "flingBehavior": 3,
+        "reverseScrolling": 4
+      },
+      "since": 1
+    },
+    "androidx.compose.ui.draw/alpha(alpha:kotlin.Float)": {
+      "tag": 24,
+      "name": "GenAlpha1",
+      "params": {
+        "alpha": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.ui.draw/clip(shape:androidx.compose.ui.graphics.Shape)": {
+      "tag": 23,
+      "name": "GenClip1",
+      "params": {
+        "shape": 1
+      },
+      "since": 1
+    },
+    "androidx.compose.ui.draw/shadow(elevation:androidx.compose.ui.unit.Dp,shape:androidx.compose.ui.graphics.Shape,clip:kotlin.Boolean,ambientColor:androidx.compose.ui.graphics.Color,spotColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 25,
+      "name": "GenShadow1",
+      "params": {
+        "elevation": 1,
+        "shape": 2,
+        "clip": 3,
+        "ambientColor": 4,
+        "spotColor": 5
+      },
+      "since": 1
+    }
+  }
+}

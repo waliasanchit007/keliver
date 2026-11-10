@@ -1,0 +1,32 @@
+// Gate A prototype: the host renderers. src/commonMain/…/Generated.kt is generated (each renderer calls the
+// real Compose function); Runtime.kt (children, converters) and Extras.kt (the shimmer) are hand-written.
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
+
+redwoodBuild {
+  targets(ToolkitComposeUi)
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeGateaWidget
+        api projects.keliverMaterialComposeui
+        implementation projects.keliverWidgetComposeui
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.coil.compose.full
+        implementation libs.jetbrains.compose.ui
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.keliver.compose.gatea.composeui'
+}
