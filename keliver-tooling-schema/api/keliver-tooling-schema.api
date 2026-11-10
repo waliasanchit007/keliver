@@ -107,6 +107,7 @@ public abstract interface class dev/keliver/tooling/schema/ProtocolSchemaSet : d
 	public fun getAll ()Ljava/util/List;
 	public abstract fun getDependencies ()Ljava/util/Map;
 	public abstract fun getSchema ()Ldev/keliver/tooling/schema/ProtocolSchema;
+	public synthetic fun getSchema ()Ldev/keliver/tooling/schema/Schema;
 }
 
 public final class dev/keliver/tooling/schema/ProtocolSchemaSet$Companion {
