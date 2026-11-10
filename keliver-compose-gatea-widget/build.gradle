@@ -1,0 +1,30 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
+  // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
+  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeValues
+        api projects.keliverComposeGateaModifiers
+        api projects.keliverMaterialWidget
+        api projects.keliverLayoutWidget
+        api projects.keliverLazylayoutWidget
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeGateaSchema
+  type = 'dev.keliver.compose.gatea.KeliverComposeGateA'
+}

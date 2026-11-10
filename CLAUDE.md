@@ -38,8 +38,11 @@ them visually in a web portal that round-trips to the .kt files in git.
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle
 command. `gh` resolves to upstream cashapp/redwood — use
-`GH_REPO=waliasanchit007/keliver`. CI runs on the self-hosted `keliver-mac`
-runner. `git-lfs` is required before cloning — `*.png` is LFS-tracked, and a
+`GH_REPO=waliasanchit007/keliver`. `ci.yml`'s build runs on hosted macOS
+(repo variable `CI_RUNNER=macos-latest`); `ios-host.yml` runs on the owner's
+self-hosted Mac `keliver-mac` (`IOS_RUNNER=self-hosted`; fork PRs stay hosted;
+its relay uses :8478, never the owner's :8077). `scripts/prepush.sh` runs the
+local checks for what a branch changed. `git-lfs` is required before cloning — `*.png` is LFS-tracked, and a
 clone without it fails checkout partway.
 
 **Key modules:** `keliver-material*` (76-widget lib + schema), `portal-relay`
