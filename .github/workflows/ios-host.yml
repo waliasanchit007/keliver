@@ -154,9 +154,12 @@ jobs:
 
   ios-host:
     runs-on: ${{ vars.IOS_RUNNER || 'macos-15' }}
-    # Observed 99-162 minutes with M0 and T2 (runner speed varies). A pull
-    # request without T2 needs about 50 minutes less.
-    timeout-minutes: 200
+    # Observed 99-175 minutes with M0 and T2 (runner speed varies: one run took
+    # 366, and run 42691755854 was cut off at 200 minutes, every phase about 1.6x
+    # slower than usual, no FAIL). A full run (main, nightly, by hand, or a pull
+    # request touching T2's paths) gets 300 minutes; a pull request without T2
+    # needs about 50 minutes less.
+    timeout-minutes: 300
     permissions:
       contents: read
     env:
