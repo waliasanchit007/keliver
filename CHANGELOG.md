@@ -27,6 +27,15 @@ breaks consumers; there is no binary compatibility with 0.4.x.** An app moving t
   `$stableprop` klib symbols are gone and the `ComposableSingletons` getters were
   renamed; neither is hand-written API, but code compiled against 0.4.x links to them.
 
+Every multiplatform library's Gradle module metadata carries a constraint raising
+kotlinx-coroutines-core to **1.11.0**. Compose runtime 1.11 still asks for 1.9.0, a
+Kotlin 2.0 klib that calls a `SubclassOptInRequired` constructor the Kotlin 2.4 stdlib
+dropped, so a JS/wasm executable that got coroutines only through Compose failed to
+link. No action is needed. The constraint applies on every platform, Android and JVM
+included, for Gradle consumers: an app that pins coroutines below 1.11 has to lift that
+pin. (A Maven-only JVM consumer sees it only as `dependencyManagement`, which Maven does not
+pass on; the link failure it prevents exists only on JS/wasm, which always build with Gradle.)
+
 ## Keliver 0.4.1 - 2026-10-27
 
 The editor libraries. Hand-written sources changed only in `portal-editor`,
