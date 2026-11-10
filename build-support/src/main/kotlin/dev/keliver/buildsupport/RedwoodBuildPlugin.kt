@@ -180,13 +180,15 @@ class RedwoodBuildPlugin : Plugin<Project> {
       val android = extensions.getByName("android") as BaseExtension
       android.apply {
         // 37: Zipline 1.28.0's Android artifacts require it (their AAR metadata's minCompileSdk).
+        // This is this build's own compileSdk. Consumers are not forced to 37 as a whole: only an
+        // app that pulls Zipline 1.28 in transitively (the treehouse/Zipline modules) needs it.
         compileSdkVersion(37)
         compileOptions {
           it.sourceCompatibility = JavaVersion.VERSION_11
           it.targetCompatibility = JavaVersion.VERSION_11
         }
         defaultConfig {
-          // 23: the floor of Zipline 1.28.0 and AndroidX Compose 1.11.
+          // 23 for every Android artifact: AndroidX Compose 1.11 and Zipline 1.28.0 both need it.
           it.minSdk = 23
           it.targetSdk = 33
         }

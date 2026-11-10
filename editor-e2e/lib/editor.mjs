@@ -62,7 +62,14 @@ export class Editor {
     await this.page.waitFor(`document.querySelectorAll('.tree-row').length > 0`,
       { timeout: 60000, message: 'the outline never listed any node (editor did not load, or cannot reach the relay)' });
     this.outlineReadyMs = Date.now() - t0;
-    await this.page.waitFor(`document.querySelector('#PreviewHost canvas') != null`,
+    // Compose Multiplatform 1.11's ComposeViewport draws into a canvas inside an open shadow
+    // root on a descendant (#PreviewHost > div > div::shadow > div > canvas); earlier versions
+    // put the canvas in the light DOM. Search both.
+    await this.page.waitFor(`(() => {
+        const has = (root) => root.querySelector('canvas') != null
+          || [...root.querySelectorAll('*')].some((e) => e.shadowRoot != null && has(e.shadowRoot));
+        const h = document.querySelector('#PreviewHost');
+        return h != null && has(h); })()`,
       { timeout: 30000, message: 'the canvas was never created' });
     if (readyColor != null) {
       await this.waitForColor(readyColor, { message: 'the canvas never drew the screen' });
