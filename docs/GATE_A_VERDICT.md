@@ -7,7 +7,8 @@ Compose. The design is [`COMPOSE_GENERATOR_DESIGN.md`](COMPOSE_GENERATOR_DESIGN.
 requires, the private code and measured values stay out of this repository; this page gives each
 criterion's method and result.
 
-**Verdict: PASS_PLACEHOLDER**
+**Verdict: PASS.** All five criteria of plan §8 pass on the emulator; open time passes inside a
+stated 5% tolerance (B about 4% slower), not outright. See the caveats under each row.
 
 ## What ran, and where
 
@@ -47,9 +48,9 @@ criterion's method and result.
 | Plain Compose with only imports changed | The screen is one plain-Compose file. A script writes the native copy from the guest copy by rewriting the `package` line and the imports (`dev.keliver.compose.` → `androidx.compose.`, `dev.keliver.coil3.` → `coil3.`, and the shimmer, a Keliver extra, to the app's own shimmer with the same signature), then diffs the two files without those lines. Both copies compile (Kotlin/JS guest; Android host) | **PASS**: the bodies are identical; only import and package lines differ. The JVM sample's equivalent is checked in CI (`onlyImportsDiffer`) |
 | Screenshots match | Loaded state, each screen opened cold, captured with `screencap` after its content was drawn, compared pixel by pixel below the status bar (its clock changes). B against native: threshold 0 differing pixels. A against both: by eye (today's layouts are Yoga's, not Compose's) | **PASS**: B and native are identical (0 differing pixels). A shows the same content and design with small offsets in padding and card placement |
 | No host overrides | Count of hand-written renderers for generated widgets | **PASS**: none. Every generated widget and modifier is drawn by generated code calling the real Compose function. Hand-written once: the value converters, the children/scope runtime, and the one Keliver extra (the shimmer). The host app's change: register the generated widget system and root protocol (two lines) |
-| First frame and open time no slower than A | TIMING_METHOD | TIMING_RESULT |
+| First frame and open time no slower than A | 7 cold launches per route, alternating A and B, with a force-stop and a 2 s pause before each; same emulator, host and signed bundle. Per launch: `am start -W` TotalTime, and the time from the activity's `START` in logcat to the frame after the route first composed (first frame) and to the frame after its loaded list was drawn (open time), from debug-host frame-track log lines. Medians compared; tolerance stated in advance: B may be at most 5% slower than A | **PASS (within tolerance)**: first frame, B is about 10% faster than A; `am start` TotalTime, B about 2% faster; open time, B about 4% slower, inside the 5% tolerance and inside the run-to-run spread (A's slowest launch was over 1.5× its median). One series only, on an emulator: re-measure on a phone at Gate B |
 | A new component costs minutes | Add one Compose function outside the set: one line in the generator's config, regenerate, compile, render | **PASS**: `FlowRow` (a new layout with a new scope) went from the config line to a pixel-identical render (JVM `SameSourceTest`) in under 2 minutes. Caveat: a function whose default expressions name `*Defaults` objects (for example `HorizontalDivider`'s `DividerDefaults.Thickness`) also needs those objects mirrored; the generator does not write them yet (Gate B) |
-| Also: bundle size | The signed Production bundle with route B, against the same guest without it | BUNDLE_RESULT |
+| Also: bundle size | The signed Production bundle with route B, against the same guest without it | The guest's signed Production bundle (both routes built in) by module: route B's library modules (`keliver-compose-gatea-*`, `keliver-compose-values`) against the rest. A guest built without route B was not built separately, and the B screen's own code inside the app module is not split out (small: one screen file) | **Recorded**: route B's libraries add about 11% to the guest bundle without them (they are 10% of the bundle with them). Not a pass/fail criterion; Gate B to cut it (stubs for unused overloads, ERROR stubs) |
 | Also: case-3 parameters (§5 of the design) | Counted by the generator over the generated set | 0. Of the defaults: 46 literal (copied), 7 expressions copied to both sides (`LocalTextStyle.current`, `LocalContentColor.current`, `DefaultAlpha`, `DefaultFilterQuality`, `elevation > 0.dp`, `DefaultShadowColor` twice), none needing the presence split |
 
 Interaction, on the emulator: on B, tapping a filter chip and an order card ran the guest's
@@ -84,4 +85,7 @@ the upgraded Kotlin and Compose versions; a release-signed build.
 
 ## Decision
 
-GATE_DECISION
+Gate A passes: continue to Gate B (MS3) on the upgraded stack, with the generator as the route for
+new screens. The owner's call: accept the open-time result as within tolerance, or ask for a phone
+measurement before Gate B starts. Had timing failed, the plan's fallback (§8) would apply: stop the
+generator, keep today's API, and hand-write Compose-shaped signatures for the most-used widgets.
