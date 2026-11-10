@@ -31,7 +31,10 @@ Every multiplatform library's Gradle module metadata carries a constraint raisin
 kotlinx-coroutines-core to **1.11.0**. Compose runtime 1.11 still asks for 1.9.0, a
 Kotlin 2.0 klib that calls a `SubclassOptInRequired` constructor the Kotlin 2.4 stdlib
 dropped, so a JS/wasm executable that got coroutines only through Compose failed to
-link. No action is needed. An app that pins coroutines below 1.11 has to lift that pin.
+link. No action is needed. The constraint applies on every platform, Android and JVM
+included, for Gradle consumers: an app that pins coroutines below 1.11 has to lift that
+pin. (A Maven-only JVM consumer sees it only as `dependencyManagement`, which Maven does not
+pass on; the link failure it prevents exists only on JS/wasm, which always build with Gradle.)
 
 ## Keliver 0.4.1 - 2026-10-27
 

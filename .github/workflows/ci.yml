@@ -225,7 +225,7 @@ jobs:
       # keliver-runtime, keliver-lazylayout-api and keliver-nav while their library compiles
       # passed). Kotlin/JS tests are cheap. Left out, each already failing for a reason of its
       # own: keliver-widget-composeui:jsTest and keliver-widget/-widget-composeui:wasmJsTest
-      # (skiko.mjs is not packaged for the test runner) and keliver-leak-detector:wasmJsTest
+      # (skiko.mjs is not packaged for the test runner) and keliver-leak-detector:wasmJsTest (docs/KNOWN_BUGS.md U41)
       # (commonTest `delayForGc` has no wasm actual).
       - name: Test (JS and wasm, all libraries)
         run: >
