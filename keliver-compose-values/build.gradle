@@ -5,6 +5,8 @@ import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
+  // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
+  // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
   if (rootProject.hasProperty('keliverComposePrototype')) publishing()
 }
 

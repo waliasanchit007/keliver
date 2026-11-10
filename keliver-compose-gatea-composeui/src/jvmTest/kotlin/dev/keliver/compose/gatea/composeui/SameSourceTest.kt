@@ -89,7 +89,7 @@ class SameSourceTest {
 
   @Test fun samePixels() = runComposeUiTest {
     var opened = 0
-    val host = guestOnHost { GuestSampleCard("A long bond title that will not fit on one line", "11.5% yearly", tags) { opened++ } }
+    val host = guestOnHost { GuestSampleCard("A long item title that will not fit on one line", "Subtitle", tags) { opened++ } }
     // Both render in the same place, one after the other: a spot shadow depends on where in the
     // window it is drawn.
     var showGuest by mutableStateOf(false)
@@ -99,7 +99,7 @@ class SameSourceTest {
           if (showGuest) {
             Box(Modifier.testTag("guest")) { host.root.Render(null) }
           } else {
-            NativeSampleCard("A long bond title that will not fit on one line", "11.5% yearly", tags) {}
+            NativeSampleCard("A long item title that will not fit on one line", "Subtitle", tags) {}
           }
         }
       }
