@@ -285,7 +285,9 @@ analytics) need a contract.
 
 ## Item 5. Device state catalogue and snapshot runner
 
-**Status 2026-10-27:** not started.
+**Status 2026-11-10:** S1's library and ingest parts and the relay's `GET /states` route are in
+review (`@ScreenState`/`NamedState` in `keliver-nav`); the editor's state list and preview are not
+built yet.
 
 **Evidence.**
 - iOS was verified with improvised parts: a fixtures-only `?demo=` route parameter, debug

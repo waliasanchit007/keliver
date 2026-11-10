@@ -6,6 +6,13 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-nav>
+open annotation class dev.keliver.nav/ScreenState : kotlin/Annotation { // dev.keliver.nav/ScreenState|null[0]
+    constructor <init>(kotlin/String) // dev.keliver.nav/ScreenState.<init>|<init>(kotlin.String){}[0]
+
+    final val name // dev.keliver.nav/ScreenState.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.keliver.nav/ScreenState.name.<get-name>|<get-name>(){}[0]
+}
+
 final class <#A: kotlin/Any> dev.keliver.nav/KeliverNavController { // dev.keliver.nav/KeliverNavController|null[0]
     final val backstack // dev.keliver.nav/KeliverNavController.backstack|{}backstack[0]
         final fun <get-backstack>(): kotlin.collections/List<#A> // dev.keliver.nav/KeliverNavController.backstack.<get-backstack>|<get-backstack>(){}[0]
@@ -20,11 +27,26 @@ final class <#A: kotlin/Any> dev.keliver.nav/KeliverNavController { // dev.keliv
     final fun replaceAll(#A) // dev.keliver.nav/KeliverNavController.replaceAll|replaceAll(1:0){}[0]
 }
 
+final class <#A: kotlin/Any> dev.keliver.nav/NamedState { // dev.keliver.nav/NamedState|null[0]
+    constructor <init>(#A, kotlin/String) // dev.keliver.nav/NamedState.<init>|<init>(1:0;kotlin.String){}[0]
+
+    final val fixtures // dev.keliver.nav/NamedState.fixtures|{}fixtures[0]
+        final fun <get-fixtures>(): kotlin/String // dev.keliver.nav/NamedState.fixtures.<get-fixtures>|<get-fixtures>(){}[0]
+    final val route // dev.keliver.nav/NamedState.route|{}route[0]
+        final fun <get-route>(): #A // dev.keliver.nav/NamedState.route.<get-route>|<get-route>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.nav/NamedState.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.nav/NamedState.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.nav/NamedState.toString|toString(){}[0]
+}
+
 final val dev.keliver.nav/LocalKeliverNavController // dev.keliver.nav/LocalKeliverNavController|{}LocalKeliverNavController[0]
     final fun <get-LocalKeliverNavController>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.keliver.nav/KeliverNavController<*>?> // dev.keliver.nav/LocalKeliverNavController.<get-LocalKeliverNavController>|<get-LocalKeliverNavController>(){}[0]
 final val dev.keliver.nav/dev_keliver_nav_KeliverNavController$stableprop // dev.keliver.nav/dev_keliver_nav_KeliverNavController$stableprop|#static{}dev_keliver_nav_KeliverNavController$stableprop[0]
+final val dev.keliver.nav/dev_keliver_nav_NamedState$stableprop // dev.keliver.nav/dev_keliver_nav_NamedState$stableprop|#static{}dev_keliver_nav_NamedState$stableprop[0]
 
 final fun <#A: kotlin/Any> dev.keliver.nav/KeliverNavHost(dev.keliver.nav/KeliverNavController<#A>, kotlin/Function3<#A, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.nav/KeliverNavHost|KeliverNavHost(dev.keliver.nav.KeliverNavController<0:0>;kotlin.Function3<0:0,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]
 final fun <#A: kotlin/Any> dev.keliver.nav/rememberKeliverNavController(#A, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.nav/KeliverNavController<#A> // dev.keliver.nav/rememberKeliverNavController|rememberKeliverNavController(0:0;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]
 final fun dev.keliver.nav/dev_keliver_nav_KeliverNavController$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_KeliverNavController$stableprop_getter|dev_keliver_nav_KeliverNavController$stableprop_getter(){}[0]
+final fun dev.keliver.nav/dev_keliver_nav_NamedState$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_NamedState$stableprop_getter|dev_keliver_nav_NamedState$stableprop_getter(){}[0]
 final inline fun <#A: reified kotlin/Any> dev.keliver.nav/currentKeliverNavController(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.nav/KeliverNavController<#A> // dev.keliver.nav/currentKeliverNavController|currentKeliverNavController(androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]
