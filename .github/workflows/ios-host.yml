@@ -48,8 +48,12 @@
 # placed there by the machine's owner carries any proxy trust store), T2 always
 # runs (it is fast there), a release download the network refuses falls back to
 # a copy under ~/.keliver-ci/dl that must match the pinned hash (recorded in the
-# evidence), and ci/selfhosted/reset.sh removes what a cancelled run left
-# behind. The two jobs share the one runner, so they run one after the other.
+# evidence), and ci/selfhosted/reset.sh (at the start of each job, after its
+# own stand-in test reset-test.sh) removes what a cancelled or orphaned run
+# left behind. If the machine's owner names a "one heavy build at a time"
+# wrapper in ~/.keliver-ci/lock-cmd (machine-local, not in the repo), each
+# job's harness waits for and holds that lock, and the log says whether it
+# did. The two jobs share the one runner, so they run one after the other.
 name: ios-host
 on:
   pull_request:
@@ -64,6 +68,8 @@ on:
       - "reference/inventory/ci/w5/**"
       - "reference/inventory/ci/w8/**"
       - "reference/inventory/ci/m0/**"
+      - "reference/inventory/ci/selfhosted/**"
+      - "reference/inventory/app/build.gradle"
       - "reference/inventory/app/src/jsMain/kotlin/device/**"
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
@@ -87,6 +93,8 @@ on:
       - "reference/inventory/ci/w5/**"
       - "reference/inventory/ci/w8/**"
       - "reference/inventory/ci/m0/**"
+      - "reference/inventory/ci/selfhosted/**"
+      - "reference/inventory/app/build.gradle"
       - "reference/inventory/app/src/jsMain/kotlin/device/**"
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
@@ -116,6 +124,13 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # As in the OTA job: an earlier job's orphaned harness would otherwise
+      # still hold the machine's lock, and this job would wait out its timeout.
+      - name: Self-hosted runner reset
+        if: runner.environment == 'self-hosted'
+        run: |
+          bash reference/inventory/ci/selfhosted/reset-test.sh "$RUNNER_TEMP/reset-test"
+          bash reference/inventory/ci/selfhosted/reset.sh "$(dirname "$RUNNER_TEMP")" 8478
       # The self-test isolates its Gradle home and Konan dir; its documented
       # knobs point them at the cache instead of a fresh place.
       - name: Restore the Kotlin/Native toolchain and Gradle downloads
@@ -152,6 +167,8 @@ jobs:
           # ~/.keliver-ci/lock-cmd names its wrapper (machine-local, not in the repo): the job
           # waits for and holds it, so local builds can't starve the runner or crash xcodebuild.
           LOCK=(); if [ "$SELF_HOSTED" = true ] && [ -x "$(cat "$HOME/.keliver-ci/lock-cmd" 2>/dev/null)" ]; then LOCK=("$(cat "$HOME/.keliver-ci/lock-cmd")" "ci:ios-host-selftest"); fi
+          if [ "${#LOCK[@]}" -gt 0 ]; then echo "lock: waiting for and holding ${LOCK[0]}"
+          elif [ "$SELF_HOSTED" = true ]; then echo "lock: NOT used (~/.keliver-ci/lock-cmd is missing or does not name an executable)"; fi
           "${LOCK[@]}" bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
             | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
       # Saved from main only: one copy, not one per pull request (the
@@ -257,6 +274,7 @@ jobs:
             echo "KONAN_DATA_DIR=$HOME/.keliver-ci/konan"
             echo "KELIVER_IOS_T2=run"
           } >> "$GITHUB_ENV"
+          bash reference/inventory/ci/selfhosted/reset-test.sh "$RUNNER_TEMP/reset-test"
           bash reference/inventory/ci/selfhosted/reset.sh "$(dirname "$RUNNER_TEMP")" "$relay_port"
 
       - name: The toolchain
@@ -299,6 +317,8 @@ jobs:
         run: |
           # The machine's heavy-build lock, as in the self-test job.
           LOCK=(); if [ "$SELF_HOSTED" = true ] && [ -x "$(cat "$HOME/.keliver-ci/lock-cmd" 2>/dev/null)" ]; then LOCK=("$(cat "$HOME/.keliver-ci/lock-cmd")" "ci:ios-host-ota"); fi
+          if [ "${#LOCK[@]}" -gt 0 ]; then echo "lock: waiting for and holding ${LOCK[0]}"
+          elif [ "$SELF_HOSTED" = true ]; then echo "lock: NOT used (~/.keliver-ci/lock-cmd is missing or does not name an executable)"; fi
           "${LOCK[@]}" bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
             "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.18.zip"
 
