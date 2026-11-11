@@ -79,16 +79,31 @@ public class StandardAppLifecycle(
 
   internal val coroutineScope = CoroutineScope(coroutineExceptionHandler)
 
+  /** How [start] finds the host's [KeliverTrace]; tests replace it. */
+  internal var keliverTraceLookup: () -> KeliverTrace? = ::takeKeliverTrace
+
+  /**
+   * Where each composition ends, for a host that profiles frames (M4); null when the host binds no
+   * [KeliverTrace], and then a frame costs one null check more.
+   */
+  internal var frameTrace: FrameTrace? = null
+    private set
+
   override fun start(host: Host) {
     check(!started) { "already started" }
     this.started = true
     this.host = host
 
     prepareEnvironment(coroutineExceptionHandler)
+    frameTrace = keliverTraceLookup()?.let(::FrameTrace)
   }
 
   override fun sendFrame(timeNanos: Long) {
+    // Each Recomposer recomposes, and applies to the guest's widgets, in its frame callback, so
+    // the frame's composition is done when this returns.
     broadcastFrameClock.sendFrame(timeNanos)
+    frameTrace?.composed()
+    // Each UI sends the change list its composition made.
     for (frameListener in frameListeners) {
       frameListener.onFrame(timeNanos)
     }

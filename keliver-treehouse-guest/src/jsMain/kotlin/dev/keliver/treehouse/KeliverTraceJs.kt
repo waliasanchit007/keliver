@@ -1,0 +1,33 @@
+/*
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.treehouse
+
+import app.cash.zipline.Zipline
+
+/**
+ * Asks Zipline which services the host bound, so a host without KeliverTrace (every store build)
+ * is never called, not even once. `Zipline.clientNames` is internal to Zipline (1.28), hence the
+ * suppression, as [prepareEnvironment] reaches into kotlinx.coroutines; a Zipline that renames it
+ * fails this module's compilation, and one that fails it at run time turns the profile off.
+ */
+@Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+internal actual fun takeKeliverTrace(): KeliverTrace? = try {
+  val zipline = Zipline.get()
+  if (KELIVER_TRACE in zipline.clientNames) zipline.take<KeliverTrace>(KELIVER_TRACE) else null
+} catch (e: Throwable) {
+  // Not a Zipline guest, or one this lookup cannot reach: no frame profile, and nothing else lost.
+  null
+}
