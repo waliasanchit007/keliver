@@ -81,10 +81,10 @@ public class TopAppBarColors(call: dev.keliver.compose.wire.DefaultsCall) : dev.
 
 /** The guest's `androidx.compose.material3.ButtonDefaults`: the members the generated API names (design §5–§7). */
 public object ButtonDefaults {
-  /** Compose's value when this was generated (Compose Multiplatform 1.11.1, material3 1.9.0, coil 3.3.0). */
+  /** Compose's value when this was generated (Compose Multiplatform 1.12.2, material3 1.9.0, coil 3.3.0). */
   public val ContentPadding: dev.keliver.compose.foundation.layout.PaddingValues = dev.keliver.compose.foundation.layout.PaddingValues(start = dev.keliver.compose.ui.unit.Dp(24f), top = dev.keliver.compose.ui.unit.Dp(8f), end = dev.keliver.compose.ui.unit.Dp(24f), bottom = dev.keliver.compose.ui.unit.Dp(8f))
 
-  /** Compose's value when this was generated (Compose Multiplatform 1.11.1, material3 1.9.0, coil 3.3.0). */
+  /** Compose's value when this was generated (Compose Multiplatform 1.12.2, material3 1.9.0, coil 3.3.0). */
   public val TextButtonContentPadding: dev.keliver.compose.foundation.layout.PaddingValues = dev.keliver.compose.foundation.layout.PaddingValues(start = dev.keliver.compose.ui.unit.Dp(12f), top = dev.keliver.compose.ui.unit.Dp(8f), end = dev.keliver.compose.ui.unit.Dp(12f), bottom = dev.keliver.compose.ui.unit.Dp(8f))
 
   /** Creates a [ButtonColors] that represents the default container and content colors used in a [Button]. */
@@ -245,7 +245,7 @@ public object CardDefaults {
 
 /** The guest's `androidx.compose.material3.DividerDefaults`: the members the generated API names (design §5–§7). */
 public object DividerDefaults {
-  /** Compose's value when this was generated (Compose Multiplatform 1.11.1, material3 1.9.0, coil 3.3.0). */
+  /** Compose's value when this was generated (Compose Multiplatform 1.12.2, material3 1.9.0, coil 3.3.0). */
   public val Thickness: dev.keliver.compose.ui.unit.Dp = dev.keliver.compose.ui.unit.Dp(1f)
 
   /** A reference: the host reads `DividerDefaults.color` where the widget renders. */
@@ -285,7 +285,7 @@ public object IconButtonDefaults {
 
 /** The guest's `androidx.compose.material3.TopAppBarDefaults`: the members the generated API names (design §5–§7). */
 public object TopAppBarDefaults {
-  /** Compose's value when this was generated (Compose Multiplatform 1.11.1, material3 1.9.0, coil 3.3.0). */
+  /** Compose's value when this was generated (Compose Multiplatform 1.12.2, material3 1.9.0, coil 3.3.0). */
   public val TopAppBarExpandedHeight: dev.keliver.compose.ui.unit.Dp = dev.keliver.compose.ui.unit.Dp(64f)
 
   /** Creates a [TopAppBarColors] for small [TopAppBar]. */

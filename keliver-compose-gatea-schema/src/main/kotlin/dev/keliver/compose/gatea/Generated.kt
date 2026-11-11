@@ -11,7 +11,7 @@ import dev.keliver.schema.Schema
 import dev.keliver.schema.Schema.Dependency
 import dev.keliver.schema.Widget
 
-// Read from: Compose Multiplatform 1.11.1, material3 1.9.0, coil 3.3.0.
+// Read from: Compose Multiplatform 1.12.2, material3 1.9.0, coil 3.3.0.
 /** Group `gatea` (lock level in keliver-compose-generator/gatea.lock.json). */
 @Schema(
   members = [
