@@ -12,8 +12,10 @@
 #     8443-8445) whose command line lies under this runner's work directory.
 #     A process outside it (someone's own portal) is reported and left alone.
 # The work-dir match covers any job of this runner. That is safe because one
-# runner instance runs one job at a time; a second runner instance on the same
-# machine would need its own work dir passed here.
+# runner instance runs one job at a time. The simulator sweep is NOT scoped by
+# work dir: it deletes every keliver-ios-ci-<n>[-<m>] simulator on the machine,
+# whichever runner made it. So this assumes ONE runner instance per machine; a
+# second one would need the simulator name tagged with its work dir first.
 # Usage: reset.sh <runner work dir> <relay port>
 # Test: reset-test.sh (stand-ins; touches no simulator).
 set -uo pipefail
