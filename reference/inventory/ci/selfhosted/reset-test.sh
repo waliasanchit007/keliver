@@ -8,6 +8,8 @@
 #       (the foreground build), and an orphaned self-test, are stopped whole:
 #       every process exits, and both scripts' EXIT traps ran
 #   R4  a matching script under a sibling dir (<work>2/) is left alone
+#   R5  a process that only names the script (tail -f <work>/.../ios.sh, as a
+#       pager or editor would) is left alone: only bash running it is a harness
 # Usage: reset-test.sh [scratch dir]
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -80,8 +82,12 @@ harness "$IOS"; harness "$SELF"; harness "$OTHER"
 bash "$T/lock-wrapper.sh" ci:test bash "$IOS" "$W/_temp/ios" & wrapper=$!
 bash "$SELF" "$W/_temp/selftest" & selftest=$!
 bash "$OTHER" "$T/work2/_temp/ios" & other=$!
-spawned+=("$wrapper" "$selftest" "$other")
-for _ in $(seq 1 50); do [ -s "$IOS.child" ] && [ -s "$SELF.child" ] && [ -s "$OTHER.child" ] && break; sleep 0.1; done
+VIEWED="$W/_temp/d/reference/inventory/ci/ios.sh"
+harness "$VIEWED"
+tail -f "$VIEWED" >/dev/null & viewer=$!
+spawned+=("$wrapper" "$selftest" "$other" "$viewer")
+# Up to 20 s: a loaded shared machine can be slow to start three bash trees.
+for _ in $(seq 1 200); do [ -s "$IOS.child" ] && [ -s "$SELF.child" ] && [ -s "$OTHER.child" ] && break; sleep 0.1; done
 ios="$(pgrep -P "$wrapper" | head -1)"
 ios_child="$(cat "$IOS.child" 2>/dev/null)"; self_child="$(cat "$SELF.child" 2>/dev/null)"
 other_child="$(cat "$OTHER.child" 2>/dev/null)"
@@ -106,6 +112,7 @@ else
   if grep -qxF "released ci:test" "$EVENTS"; then ok "R3: the lock wrapper's EXIT trap ran (the lock is released)"; else bad "R3: the lock wrapper's EXIT trap did not run"; fi
   if grep -q "outlived" "$EVENTS"; then bad "R3: a child carried on after its kill"; fi
   if alive "$other" && alive "$other_child" && alive "$other_grand"; then ok "R4: the script under work2/ is left alone"; else bad "R4: the script under work2/ was stopped"; fi
+  if alive "$viewer"; then ok "R5: tail -f of a harness script under the work dir is left alone"; else bad "R5: tail -f of $VIEWED was stopped"; fi
 fi
 
 echo

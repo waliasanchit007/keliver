@@ -50,9 +50,24 @@ freeze() { # <pid>: stops it and every process below it; prints them, parents fi
   local child
   for child in $(pgrep -P "$1" 2>/dev/null); do freeze "$child"; done
 }
+runs_harness() { # <command line>: bash runs a harness script (bash itself, or the lock
+  # wrapper whose arguments are "bash <script> ..."). A pager, editor or tail with the
+  # script's path among its arguments has no "bash <script>" pair, so it is left alone.
+  local -a w; local i
+  read -ra w <<<"$1"
+  for ((i = 0; i + 1 < ${#w[@]}; i++)); do
+    case "${w[i]}" in bash | */bash) ;; *) continue ;; esac
+    case "${w[i + 1]}" in
+      reference/inventory/ci/ios.sh | */reference/inventory/ci/ios.sh) return 0 ;;
+      scripts/keliver-new-ios-host-selftest.sh | */scripts/keliver-new-ios-host-selftest.sh) return 0 ;;
+    esac
+  done
+  return 1
+}
 ours=" "
 for pid in $(pgrep -f 'reference/inventory/ci/ios\.sh|scripts/keliver-new-ios-host-selftest\.sh' 2>/dev/null); do
-  case "$(ps -o command= -p "$pid" 2>/dev/null)" in *"$work/"*) ours="$ours$pid " ;; esac
+  cmd="$(ps -o command= -p "$pid" 2>/dev/null)"
+  case "$cmd" in *"$work/"*) runs_harness "$cmd" && ours="$ours$pid " ;; esac
 done
 tree=()
 for pid in $ours; do
