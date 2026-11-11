@@ -36,6 +36,7 @@ tasks.withType(Test).configureEach {
 
 dependencies {
   implementation projects.keliverCapabilities // #16 H1: pure HostHttp replay envelope
+  implementation projects.keliverHttpFixtures // S2: matcher shared with the hosts' debug replay
   implementation projects.portalCore
   implementation projects.portalFlow     // #13 F1: FlowSpec (declarations parsed by ingest)
   implementation projects.portalDocument // V2 M1: live document + op engine

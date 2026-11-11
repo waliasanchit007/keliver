@@ -1,0 +1,33 @@
+// The HTTP fixture matcher shared by the portal relay and (next) the debug
+// replay provider in both hosts, so a device can't drift from preview. Pure
+// Kotlin: no Zipline, no I/O, no clock. See docs/ADOPTION_PLAN_2026-10.md
+// item 5 (S2).
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
+
+redwoodBuild {
+  targets(CommonWithAndroid + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverCapabilities
+        api libs.kotlinx.serialization.json
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.keliver.http.fixtures'
+}
