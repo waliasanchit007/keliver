@@ -175,7 +175,7 @@ public class CanvasSlots internal constructor(
 
   /** The slot [name]'s content, its scoped modifiers resolved against [scope] (the slot lambda's receiver). */
   @Composable
-  public fun render(name: String, scope: Any?) {
+  public fun Render(name: String, scope: Any?) {
     val children = if (slotted) {
       (node.children.firstOrNull { it is DocNode.Widget && it.type == "slot:$name" } as? DocNode.Widget)?.children.orEmpty()
     } else {

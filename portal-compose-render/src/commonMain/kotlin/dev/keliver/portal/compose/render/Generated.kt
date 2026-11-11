@@ -46,7 +46,7 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
         modifier = modifier,
         contentAlignment = contentAlignment,
         propagateMinConstraints = propagateMinConstraints,
-        content = { slots.render("content", this) },
+        content = { slots.Render("content", this) },
       )
     }
     "dev.keliver.compose.foundation.layout.Box#2" -> {
@@ -61,7 +61,7 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
         modifier = modifier,
         horizontalArrangement = horizontalArrangement,
         verticalAlignment = verticalAlignment,
-        content = { slots.render("content", this) },
+        content = { slots.Render("content", this) },
       )
     }
     "dev.keliver.compose.foundation.layout.Column#4" -> {
@@ -71,7 +71,7 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
         modifier = modifier,
         verticalArrangement = verticalArrangement,
         horizontalAlignment = horizontalAlignment,
-        content = { slots.render("content", this) },
+        content = { slots.Render("content", this) },
       )
     }
     "dev.keliver.compose.foundation.layout.Spacer#5" -> {
@@ -92,7 +92,7 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
         itemVerticalAlignment = itemVerticalAlignment,
         maxItemsInEachRow = maxItemsInEachRow,
         maxLines = maxLines,
-        content = { slots.render("content", this) },
+        content = { slots.Render("content", this) },
       )
     }
     "dev.keliver.compose.material3.Text#6" -> {

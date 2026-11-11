@@ -561,7 +561,7 @@ class Emitter(private val config: Config, private val plans: List<Plan>) {
         val t = c.param.type
         when (c.kind) {
           ParamKind.MODIFIER -> args += "$n = modifier"
-          ParamKind.SLOT -> args += "$n = { slots.render(\"$n\", ${if (t.receiver != null) "this" else "null"}) }"
+          ParamKind.SLOT -> args += "$n = { slots.Render(\"$n\", ${if (t.receiver != null) "this" else "null"}) }"
           ParamKind.EVENT -> args += "$n = a.action${t.functionParams.size}(\"$n\")"
           ParamKind.VALUE -> {
             body.append("      val $n = ${canvasValue(c, d, imports, missing = "return a.missing(\"$n\")")}\n")
