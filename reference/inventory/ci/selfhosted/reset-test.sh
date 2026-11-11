@@ -6,7 +6,8 @@
 #   R2  with no orphan, nothing is stopped and there is no wait
 #   R3  an orphaned ios.sh under its lock wrapper, with a child and a grandchild
 #       (the foreground build), and an orphaned self-test, are stopped whole:
-#       every process exits, and both scripts' EXIT traps ran
+#       every process exits, both scripts' EXIT traps ran, and the lock wrapper's
+#       ran after ios.sh's (the lock is not released under a running trap)
 #   R4  a matching script under a sibling dir (<work>2/) is left alone
 #   R5  a process that only names the script (tail -f <work>/.../ios.sh, as a
 #       pager or editor would) is left alone: only bash running it is a harness
@@ -110,6 +111,12 @@ else
     bad "R3: the scripts' EXIT traps did not run: $(tr '\n' ';' < "$EVENTS")"
   fi
   if grep -qxF "released ci:test" "$EVENTS"; then ok "R3: the lock wrapper's EXIT trap ran (the lock is released)"; else bad "R3: the lock wrapper's EXIT trap did not run"; fi
+  # The wrapper is signalled only after its script's trap has finished.
+  if [ "$(grep -nxF "trap $IOS" "$EVENTS" | cut -d: -f1)" -lt "$(grep -nxF "released ci:test" "$EVENTS" | cut -d: -f1)" ] 2>/dev/null; then
+    ok "R3: the lock is released after ios.sh's EXIT trap"
+  else
+    bad "R3: the lock was released before ios.sh's EXIT trap: $(tr '\n' ';' < "$EVENTS")"
+  fi
   if grep -q "outlived" "$EVENTS"; then bad "R3: a child carried on after its kill"; fi
   if alive "$other" && alive "$other_child" && alive "$other_grand"; then ok "R4: the script under work2/ is left alone"; else bad "R4: the script under work2/ was stopped"; fi
   if alive "$viewer"; then ok "R5: tail -f of a harness script under the work dir is left alone"; else bad "R5: tail -f of $VIEWED was stopped"; fi

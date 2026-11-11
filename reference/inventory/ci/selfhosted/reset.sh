@@ -43,7 +43,8 @@ running() { # <pid>: still running (a zombie has exited; its parent just hasn't 
 # reach the runner itself. Each process is frozen (SIGSTOP) before its children are
 # listed, so none can start another while the tree is taken; then each gets SIGTERM and
 # SIGCONT, deepest first, so the scripts' EXIT traps (ios.sh deletes its simulator and
-# stops its relay) run after their children are gone.
+# stops its relay) run after their children are gone. The topmost process is signalled
+# only once the rest of its tree has exited (up to 60 s), then gets 15 s itself.
 freeze() { # <pid>: stops it and every process below it; prints them, parents first
   kill -STOP "$1" 2>/dev/null || return 0
   echo "$1"
@@ -69,26 +70,38 @@ for pid in $(pgrep -f 'reference/inventory/ci/ios\.sh|scripts/keliver-new-ios-ho
   cmd="$(ps -o command= -p "$pid" 2>/dev/null)"
   case "$cmd" in *"$work/"*) runs_harness "$cmd" && ours="$ours$pid " ;; esac
 done
-tree=()
+tree=(); roots=" "
 for pid in $ours; do
   # The lock wrapper and the script it runs both match: take the tree from the topmost.
   case "$ours" in *" $(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ') "*) continue ;; esac
   case " ${tree[*]-} " in *" $pid "*) continue ;; esac
   echo "reset: stopping an earlier job's harness: $(ps -o pid=,command= -p "$pid" 2>/dev/null | cut -c1-200)"
+  roots="$roots$pid "
   while read -r p; do tree+=("$p"); done < <(freeze "$pid")
 done
-if [ "${#tree[@]}" -gt 0 ]; then
-  for ((i = ${#tree[@]} - 1; i >= 0; i--)); do
-    kill -TERM "${tree[i]}" 2>/dev/null; kill -CONT "${tree[i]}" 2>/dev/null
-  done
-  # Bounded: the scripts' EXIT traps shut down a simulator and a relay.
-  for _ in $(seq 1 60); do
-    alive=(); for p in "${tree[@]}"; do running "$p" && alive+=("$p"); done
-    [ "${#alive[@]}" -eq 0 ] && break
+signal() { local p; for p in "$@"; do kill -TERM "$p"; kill -CONT "$p"; done 2>/dev/null; }
+wait_gone() { # <seconds> <pid>...: until none is running, or the time is up; leaves the rest in alive
+  local n="$1" p; shift
+  for _ in $(seq 1 "$n"); do
+    alive=(); for p in "$@"; do running "$p" && alive+=("$p"); done
+    [ "${#alive[@]}" -eq 0 ] && return 0
     sleep 1
   done
+}
+if [ "${#tree[@]}" -gt 0 ]; then
+  # The topmost process of each tree (the lock wrapper, whose EXIT trap releases the
+  # lock, or a script with no wrapper) goes last, once everything below it has exited:
+  # ios.sh's EXIT trap is still deleting its simulator and stopping its relay until then.
+  below=(); top=()
+  for ((i = ${#tree[@]} - 1; i >= 0; i--)); do
+    case "$roots" in *" ${tree[i]} "*) top+=("${tree[i]}") ;; *) below+=("${tree[i]}") ;; esac
+  done
+  # Bounded: the scripts' EXIT traps shut down a simulator and a relay.
+  if [ "${#below[@]}" -gt 0 ]; then signal "${below[@]}"; wait_gone 60 "${below[@]}"; fi
+  signal "${top[@]}"
+  wait_gone 15 "${tree[@]}"
   if [ "${#alive[@]}" -gt 0 ]; then
-    echo "reset: ${#alive[@]} of its ${#tree[@]} processes outlived 60 s; killed: ${alive[*]}"
+    echo "reset: ${#alive[@]} of its ${#tree[@]} processes outlived their wait; killed: ${alive[*]}"
     kill -KILL "${alive[@]}" 2>/dev/null
   else
     echo "reset: the earlier harness's ${#tree[@]} processes have exited"
