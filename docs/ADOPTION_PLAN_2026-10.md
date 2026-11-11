@@ -343,6 +343,10 @@ built yet.
    with their fixture set as the persona's `httpFixtureSet`).
 2. S2: the shared multiplatform fixture matcher, then the embedded replay provider (debug only),
    with a release-build self-test that it is absent.
+   The matcher is `keliver-http-fixtures` (#224). The provider is `keliver-http-replay-debug`
+   (0.5.0). Its host wiring and the self-test are designed in
+   [`DEBUG_HTTP_REPLAY.md`](DEBUG_HTTP_REPLAY.md), and the templates take them up once 0.5.0 is
+   published.
 3. S3: the Android runner, plus a CI emulator job that publishes the PNGs and timings as
    artifacts.
 4. S4: the iOS runner on the simulator in CI (`simctl`).
