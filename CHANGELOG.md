@@ -36,6 +36,33 @@ included, for Gradle consumers: an app that pins coroutines below 1.11 has to li
 pin. (A Maven-only JVM consumer sees it only as `dependencyManagement`, which Maven does not
 pass on; the link failure it prevents exists only on JS/wasm, which always build with Gradle.)
 
+New:
+
+- `keliver-nav`: `@ScreenState("name")` and `NamedState(route, fixtures)` declare
+  a screen's named states next to it: a typed route plus an HTTP fixture set. The
+  relay lists them at `GET /states` (`docs/PORTAL_USAGE.md`, "Named states") (#226).
+- `keliver-http-fixtures` (new module; jvm, android, iOS, js, wasmJs): the relay's
+  HTTP fixture matching rules, shared so hosts can replay fixtures too (#224).
+- `keliver-treehouse-guest`: guests report where each composition ends to a host
+  that binds `KeliverTrace` with `fun composed()` (M4's guest frame profile;
+  `docs/DEVICE_HOST.md`, "The guest frame profile"). A host that binds no
+  `KeliverTrace` gets no call and pays nothing (#237).
+
+Changed:
+
+- `keliver-leak-detector` on wasmJs: `LeakDetector.timeBasedIn` now returns a working
+  detector instead of the no-op one, as js already did; it uses JS `WeakRef`, and the
+  engine's `gc()` when exposed. Without an exposed `gc()` it relies on the engine's own
+  collection, so a short `leakThreshold` can report objects the browser has not
+  collected yet (#231).
+
+Tools bundle (its own release line; in the next tools release, not in 0.5.0):
+
+- `bin/keliver-run-ios.sh` runs the app's screens on an iOS simulator in one command:
+  it picks or boots a simulator, scaffolds `host-ios/` when absent, builds a debug host
+  pointed at the local portal, installs and launches it, and waits until the host has
+  loaded the newest bundle. It never publishes and never targets a physical device (#235).
+
 ## Keliver 0.4.1 - 2026-10-27
 
 The editor libraries. Hand-written sources changed only in `portal-editor`,
