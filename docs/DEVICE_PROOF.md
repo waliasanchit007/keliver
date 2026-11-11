@@ -223,6 +223,10 @@ The harness installs debug builds, plus one R8 release signed with the debug key
     `http://<LAN IP>:8078`; the editor's devices chip shows the URL, a QR code
     and the debug-host command. `KELIVER_DEVICE_PROXY=loopback` serves the
     emulator (`http://10.0.2.2:8078`).
+  - The QR code is a **debug link** (ED3; `DEVICE_HOST.md`, "The debug link"):
+    scan it with the phone's camera and a Debug build of a host scaffolded
+    with it asks, keeps the server and closes; open it again. A release build
+    has no such link. The bare URL and the `adb` command stay beside it.
   - With a LAN IP, scaffold with `--bundle-server http://<LAN IP>:8077`, so the
     ATS exception names that host. Accept the **Local Network** prompt on the
     first launch. That prompt appears inside the script's first 40-second

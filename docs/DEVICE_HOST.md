@@ -451,6 +451,57 @@ yourself:** your own signing config for a release APK.
 The generic host above deliberately does not grow into that. It exists so that
 a new adopter can see their screens on a device without writing Android code.
 
+**The debug link** (both hosts, debug builds only; ED3). The relay's device
+proxy (`KELIVER_DEVICE_PROXY`, `DEVICE_PROOF.md`) serves the published bundles
+on its own port, and the editor's "On a device" panel shows each proxy URL as a
+QR code of this link:
+
+```
+keliver-<app package>://keliver-debug/bundles?server=<the proxy URL, percent-encoded>
+keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.20%3A8078
+```
+
+- **The scheme** is `keliver-` and the app's package (its screens'
+  `<package>.screens`, less `.screens`; lower case, `_` as `-`). The
+  scaffolders build it in, and the relay computes it from the same screens, so
+  one app's link does not open another app.
+- **What a debug host accepts**: that scheme and the host `keliver-debug`
+  (either in any case), the path `/bundles` exactly, and one `server=`
+  parameter, percent-encoded at most once, and nothing else (no fragment). The
+  server must be `http://` or `https://`; an IPv4 literal, a bracketed IPv6
+  literal or `localhost` (never a host name, so a link cannot send the host to
+  a name some DNS answers; not the unspecified or multicast addresses); the
+  proxy's port exactly (`DEBUG_LINK_PORT`, the relay's port + 1 when
+  scaffolded; edit it if `KELIVER_DEVICE_PROXY_PORT` moves the proxy); and no
+  user, query, fragment or path. One check does this on both platforms:
+  `DebugBundleLink.kt` (the Android template's `src/debug`, copied into the iOS
+  host), with its test vectors in `DebugBundleLinkTest.kt`.
+- **What it does**: it shows what it would load and asks first (any app or web
+  page can open a link). On Android it then writes `files/keliver/bundle-server`,
+  as the `adb run-as` switch does, and restarts the app. On iOS it keeps the
+  server in the app's defaults and closes the app; open it again (a
+  `KELIVER_BUNDLE_SERVER` launch variable still wins). "Use the build's server"
+  goes back. It moves only where bundles come from: every manifest still
+  verifies against the embedded key, the rollback floor holds, and the cached
+  last good bundle is used only on its own origin. An Android build allows
+  cleartext only when its own server is `http://`; the link says so rather
+  than set a server it cannot reach. The iOS Debug configuration allows local
+  networking (`NSAllowsLocalNetworking`) for it.
+- **Debug builds only.** Android: the activity, its check and its intent filter
+  are in `src/debug`, and the activity also needs `BuildConfig.DEBUG` and a
+  debuggable app. iOS: the `Debug` configuration alone sets
+  `KELIVER_DEBUG_LINK` (Kotlin's `src/debuglink`, Swift's `.onOpenURL`) and uses
+  `iosApp/Info-Debug.plist`, `Info.plist` plus the URL type and local
+  networking; every other configuration compiles `src/nodebuglink`, and a
+  release framework refuses `KELIVER_DEBUG_LINK` and a `keliver-` URL scheme in
+  its Info.plist (`checkReleaseUrls`). Keep `Info-Debug.plist` in step when you
+  edit `Info.plist`. The self-tests check a release APK's manifest and dex, and
+  the iOS configurations and plists; CI's T2 checks a Release app's binary and
+  Info.plist.
+- **Without a camera**: `adb shell am start -a android.intent.action.VIEW -d '<link>'`,
+  or `xcrun simctl openurl booted '<link>'`. The editor shows both, with the
+  bare URL and the `adb run-as` command as before.
+
 **Timing marks** (both hosts, from tools 0.3.10; M0 of `ADOPTION_PLAN_2026-10.md`).
 For measuring startup, a host records these moments:
 
@@ -867,7 +918,9 @@ for byte):
   shell, not an app) reaches it. A release build never runs live updates
   (`keliver.updates=live` becomes `on-resume`). The self-test's `--build`
   checks a release APK: `DEBUG` false, not debuggable, and nothing exported
-  but the launcher activity unless a permission guards it.
+  but the launcher activity unless a permission guards it. The debug link
+  (§2, "The debug link") is the module's `src/debug`: an app's debug build
+  merges its activity and intent filter, a release build none of it.
 - **R8**: the module's consumer rules keep Zipline's bridged services, which
   are called by name. A minified release of the reference app loads and
   renders (X7 below).
