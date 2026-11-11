@@ -16,11 +16,11 @@
 package dev.keliver.portal.compose.render
 
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleCard
+import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.DocNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
 
 /**
  * ED0's canvas criterion, on the editor's own target (wasmJs) and on the JVM: Gate A's sample
@@ -65,4 +65,4 @@ class CanvasWireTest {
   )
 }
 
-internal fun sampleCardDocument(): DocNode = Json.decodeFromString(DocNode.serializer(), SAMPLE_CARD_DOCUMENT)
+internal fun sampleCardDocument(): DocNode = DocJson.decodeFromString(DocNode.serializer(), SAMPLE_CARD_DOCUMENT)

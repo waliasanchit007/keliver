@@ -15,6 +15,7 @@
  */
 package dev.keliver.portal.compose.render
 
+import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.ingest.ComposeCatalog
 import dev.keliver.portal.ingest.ComposeIngest
@@ -32,7 +33,7 @@ import kotlinx.serialization.json.Json
 class SampleCardDocumentTest {
   @Test fun theGoldenDocumentIsTheSampleAsIngested() {
     val root = ingestSampleCard()
-    val json = Json { prettyPrint = true }.encodeToString(DocNode.serializer(), root)
+    val json = Json(DocJson) { prettyPrint = true }.encodeToString(DocNode.serializer(), root)
     val text = buildString {
       append("// Written by SampleCardDocumentTest (jvmTest) from Gate A's sample through portal-ingest's ED0 flag. Do not edit:\n")
       append("// run :portal-compose-render:jvmTest -Ped0.updateGolden=true and review the diff.\n")
