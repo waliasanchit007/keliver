@@ -218,9 +218,12 @@ jobs:
       # the Zipline plugin; it is not published, so the build above does not compile it. Its
       # jvmTest also builds keliver-bridge-fixture-guest (a Kotlin/JS Zipline guest) and runs
       # the first guest-to-host round trip through it (B5b).
+      # keliver-http-fixtures has no Android target (so no `test` task either): its
+      # matcher's JVM run is listed here, its JS and wasm runs in the step below.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
+          :keliver-http-fixtures:jvmTest
           :portal-render:wasmJsTest
           :portal-render:jsTest
           :portal-document:jvmTest
@@ -271,6 +274,7 @@ jobs:
           :keliver-widget-testing:jsTest :keliver-yoga:jsTest :portal-core:jsTest :portal-device-guest:jsTest
           :portal-flow:jsTest :portal-published-guest:jsTest :portal-sql:jsTest :portal-sql-spike:jsTest
           :portal-app-lib:jsTest
+          :keliver-http-fixtures:jsTest :keliver-http-fixtures:wasmJsTest
           :keliver-capabilities:wasmJsTest :keliver-compose:wasmJsTest :keliver-composeui:wasmJsTest
           :keliver-layout-api:wasmJsTest :keliver-layout-compose:wasmJsTest
           :keliver-layout-composeui:wasmJsTest :keliver-layout-modifiers:wasmJsTest

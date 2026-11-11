@@ -210,18 +210,22 @@ internal class HttpReplayService(
     return LoadedFixtureSet(
       id = id,
       revision = revision(bytes),
-      file = fixture.copy(matchHeaders = fixture.matchHeaders.map { it.lowercase() }),
+      file = fixture,
       expiresAt = expiresAt,
       matcher = matcher,
     )
   }
 
-  /** Dates are the relay's (the shared module has no clock); every other rule is shared. */
+  /**
+   * Dates are the relay's (the shared module has no clock); every other rule, the
+   * `formatVersion` check included, is the shared matcher's. It runs first, so a set
+   * of an unsupported version is reported as that before its dates are read.
+   */
   private fun validateFixture(fixture: HttpFixtureSetFile): Pair<Instant?, HttpFixtureMatcher> {
-    require(fixture.formatVersion == 1) { "unsupported formatVersion ${fixture.formatVersion}" }
+    val matcher = HttpFixtureMatcher(fixture)
     Instant.parse(fixture.recordedAt)
     val expiresAt = fixture.expiresAt?.let(Instant::parse)
-    return expiresAt to HttpFixtureMatcher(fixture)
+    return expiresAt to matcher
   }
 
   private fun failure(

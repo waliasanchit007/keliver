@@ -15,6 +15,7 @@
  */
 package dev.keliver.http.fixtures
 
+import dev.drewhamilton.poko.Poko
 import dev.keliver.capabilities.HostHttpRequest
 import dev.keliver.capabilities.HostHttpResponse
 import kotlinx.serialization.Serializable
@@ -24,15 +25,27 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
+// The public value types below are Poko classes, not data classes: they have value
+// equality, hashCode and toString, but no `copy` or `componentN`. A later field can then
+// be added with a default value, and the old constructor kept as a secondary one,
+// without breaking binary compatibility (a data class's `copy` signature can't be kept).
+
 /** The on-disk HTTP fixture set (`formatVersion` 1), as reviewed into an app repository. */
 @Serializable
-public data class HttpFixtureSet(
-  val formatVersion: Int,
-  /** ISO-8601 instant. Date rules are the caller's: this module has no clock. */
-  val recordedAt: String,
-  val expiresAt: String? = null,
-  val matchHeaders: List<String> = listOf("accept", "content-type"),
-  val entries: List<HttpFixtureEntry>,
+@Poko
+public class HttpFixtureSet(
+  public val formatVersion: Int,
+  /**
+   * ISO-8601 instant. Date rules are the caller's: this module has no clock, and
+   * [HttpFixtureMatcher] neither parses [recordedAt] nor [expiresAt] nor refuses an
+   * expired set.
+   */
+  public val recordedAt: String,
+  /** ISO-8601 instant after which the caller should refuse the set; see [recordedAt]. */
+  public val expiresAt: String? = null,
+  /** Header names that take part in matching, compared lower-cased. */
+  public val matchHeaders: List<String> = listOf("accept", "content-type"),
+  public val entries: List<HttpFixtureEntry>,
 )
 
 /**
@@ -41,28 +54,42 @@ public data class HttpFixtureSet(
  * sequence reaches it.
  */
 @Serializable
-public data class HttpFixtureEntry(
-  val request: HostHttpRequest,
-  val response: HostHttpResponse,
-  val reuse: Boolean = false,
+@Poko
+public class HttpFixtureEntry(
+  public val request: HostHttpRequest,
+  public val response: HostHttpResponse,
+  public val reuse: Boolean = false,
 )
 
 /** The outcome of [HttpFixtureMatcher.select]. */
 public sealed interface HttpFixtureSelection {
   /** Serve [response]; the caller stores [nextIndex] as the cursor for this request key. */
-  public data class Match(val response: HostHttpResponse, val nextIndex: Int) : HttpFixtureSelection
+  @Poko
+  public class Match(
+    public val response: HostHttpResponse,
+    public val nextIndex: Int,
+  ) : HttpFixtureSelection
 
   /** No outbound call is ever made: answer with [HttpFixtureMatcher.MISS_STATUS] and [reason]. */
-  public data class Miss(val reason: String) : HttpFixtureSelection
+  @Poko
+  public class Miss(public val reason: String) : HttpFixtureSelection
 }
 
 /**
  * The exact-match rules, identical wherever fixtures replay (relay preview or a debug host).
  *
  * A request matches on its normalised key: upper-cased method, path, query sorted by key,
- * the lower-cased [HttpFixtureSet.matchHeaders] only, and the body — with sensitive query
- * values and JSON keys redacted exactly as recording redacts them. Construction validates
- * the set (everything except its dates) and throws [IllegalArgumentException] on a bad one.
+ * the lower-cased [HttpFixtureSet.matchHeaders] only, and the body. Sensitive query
+ * values and JSON keys are redacted exactly as recording redacts them, and a JSON body is
+ * compared re-encoded (whitespace ignored, key order kept); any other body is compared
+ * byte for byte and is never redacted.
+ *
+ * Construction validates the set and throws [IllegalArgumentException] on a bad one:
+ * `formatVersion` 1, at least one entry, unique and non-sensitive match headers, relative
+ * request paths, no [HttpFixtureRedaction.sensitiveHeaders] in a request or a response,
+ * sensitive query values and JSON keys (at any depth) already redacted, bodies of at most
+ * [MAX_BODY_BYTES] UTF-8 bytes without control characters other than tab, LF and CR, and
+ * `reuse = true` only on the last of a request's duplicates. It does not check the dates.
  *
  * Stateless: the caller owns cursors (per session, per [requestKey]) and passes the index.
  */
@@ -71,11 +98,17 @@ public class HttpFixtureMatcher(set: HttpFixtureSet) {
   private val entriesByKey: Map<String, List<HttpFixtureEntry>>
 
   init {
-    validate(set, matchHeaders)
+    validate(set)
     entriesByKey = set.entries.groupBy { requestKey(it.request) }
   }
 
-  /** The normalised key two requests must share to match. */
+  /**
+   * The key two requests must share to match, for keying the caller's cursors.
+   *
+   * Opaque: compare keys for equality and nothing else. Its content (today the normalised
+   * request, redacted) is not part of the API and may change in any release, for example
+   * to a digest, so don't parse it, show it or store it across versions.
+   */
   public fun requestKey(request: HostHttpRequest): String {
     val headers = request.headers.entries.associate { it.key.lowercase() to it.value }
     val query = request.query.mapValues { (key, value) ->
@@ -105,11 +138,26 @@ public class HttpFixtureMatcher(set: HttpFixtureSet) {
     return HttpFixtureSelection.Match(entry.response, if (entry.reuse) index else index + 1)
   }
 
+  private fun validate(set: HttpFixtureSet) {
+    require(set.formatVersion == 1) { "unsupported formatVersion ${set.formatVersion}" }
+    require(set.entries.isNotEmpty()) { "fixture set has no entries" }
+    require(matchHeaders.distinct().size == matchHeaders.size) { "matchHeaders must be unique" }
+    require(matchHeaders.none { it in HttpFixtureRedaction.sensitiveHeaders }) {
+      "sensitive headers cannot participate in matching"
+    }
+    set.entries.forEach(::validateEntry)
+    set.entries.groupBy { requestKey(it.request) }.forEach { (_, entries) ->
+      require(entries.dropLast(1).none { it.reuse }) {
+        "reuse=true is allowed only on the final duplicate request"
+      }
+    }
+  }
+
   public companion object {
     /** The status a replay miss answers with ("424-style"). */
     public const val MISS_STATUS: Int = 424
 
-    /** Largest request or response body a fixture may hold (1 MiB). */
+    /** Largest request or response body a fixture may hold, in UTF-8 bytes (1 MiB). */
     public const val MAX_BODY_BYTES: Int = 1024 * 1024
   }
 }
@@ -131,17 +179,29 @@ public object HttpFixtureRedaction {
     RegexOption.IGNORE_CASE,
   )
 
+  /**
+   * True when [key] (a query key or a JSON object key) names a sensitive value: it
+   * matches the built-in pattern, or it is one of [additionalKeys]. Both sides are
+   * compared lower-cased, so `"Nickname"` matches `setOf("nickname")` and the reverse.
+   */
   public fun isSensitiveKey(key: String, additionalKeys: Set<String> = emptySet()): Boolean =
-    key.lowercase() in additionalKeys || sensitiveKeys.containsMatchIn(key)
+    isSensitive(key, additionalKeys.lowercased())
 
-  /** [body] with every sensitive JSON key's value replaced; non-JSON is returned unchanged. */
+  /**
+   * [body] with every sensitive JSON key's value replaced, at any depth (inside nested
+   * objects and arrays), and re-encoded without insignificant whitespace. Any other body
+   * — one that isn't a JSON object or array, a bare JSON literal such as `42` or `OK`
+   * included — is returned unchanged: it has no keys, so it is neither redacted nor
+   * normalised, and it replays and matches byte for byte.
+   */
   public fun redactJson(body: String, additionalKeys: Set<String> = emptySet()): String {
-    val element = runCatching { Json.parseToJsonElement(body) }.getOrNull() ?: return body
+    val element = jsonContainer(body) ?: return body
+    val additional = additionalKeys.lowercased()
 
     fun redact(value: JsonElement): JsonElement = when (value) {
       is JsonObject -> JsonObject(
         value.mapValues { (key, child) ->
-          if (isSensitiveKey(key, additionalKeys)) JsonPrimitive(REDACTED) else redact(child)
+          if (isSensitive(key, additional)) JsonPrimitive(REDACTED) else redact(child)
         },
       )
       is JsonArray -> JsonArray(value.map(::redact))
@@ -150,27 +210,29 @@ public object HttpFixtureRedaction {
 
     return Json.encodeToString(JsonElement.serializer(), redact(element))
   }
+
+  private fun isSensitive(key: String, lowercasedAdditional: Set<String>): Boolean =
+    key.lowercase() in lowercasedAdditional || sensitiveKeys.containsMatchIn(key)
+
+  private fun Set<String>.lowercased(): Set<String> =
+    if (all { it == it.lowercase() }) this else mapTo(HashSet()) { it.lowercase() }
 }
 
 private const val REDACTED = "<redacted>"
 
-private fun HttpFixtureMatcher.validate(set: HttpFixtureSet, matchHeaders: List<String>) {
-  require(set.formatVersion == 1) { "unsupported formatVersion ${set.formatVersion}" }
-  require(set.entries.isNotEmpty()) { "fixture set has no entries" }
-  require(matchHeaders.distinct().size == matchHeaders.size) { "matchHeaders must be unique" }
-  require(matchHeaders.none { it in HttpFixtureRedaction.sensitiveHeaders }) {
-    "sensitive headers cannot participate in matching"
-  }
-  set.entries.forEach(::validateEntry)
-  set.entries.groupBy { requestKey(it.request) }.forEach { (_, entries) ->
-    require(entries.dropLast(1).none { it.reuse }) {
-      "reuse=true is allowed only on the final duplicate request"
-    }
-  }
-}
+/**
+ * [body] parsed, when it is a JSON object or array. kotlinx's tree parser also reads any
+ * bare token without whitespace or JSON punctuation (`a=1&b=2`, `OK`) as a literal, so a
+ * primitive is treated as not-JSON: re-encoding it would only drop its surrounding
+ * whitespace (a recorded `OK\n` replaying as `OK`).
+ */
+private fun jsonContainer(body: String): JsonElement? =
+  runCatching { Json.parseToJsonElement(body) }.getOrNull()?.takeIf { it is JsonObject || it is JsonArray }
 
 private fun validateEntry(entry: HttpFixtureEntry) {
   val request = entry.request
+  // HostHttpRequest's own init refuses these paths first (also when a fixture file is
+  // decoded); the fixture rule is kept here so it doesn't rest on that class alone.
   require(request.path.startsWith('/') && "://" !in request.path) {
     "request path must be relative: ${request.path}"
   }
@@ -197,7 +259,7 @@ private fun validateBody(body: String, scope: String) {
   require(body.none { it.code < 0x20 && it != '\t' && it != '\n' && it != '\r' }) {
     "$scope body contains unsupported control characters"
   }
-  val element = runCatching { Json.parseToJsonElement(body) }.getOrNull() ?: return
+  val element = jsonContainer(body) ?: return
   requireNoSensitiveJson(element)
 }
 
