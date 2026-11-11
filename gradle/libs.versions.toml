@@ -4,18 +4,19 @@ kotlinx-browser = "0.3"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 androidx-activity = "1.10.1"
-androidx-compose-ui = "1.11.2"
-jbCompose = "1.11.1"
+androidx-compose-ui = "1.12.1"
+jbCompose = "1.12.2"
 # The Compose API the Gate A generator (keliver-compose-generator) READS, pinned to the version Gate A
 # was verified on so the checked-in generated group and its staleness guard stay byte-identical.
 # Gate B moves it to jbCompose. The generated modules themselves compile against jbCompose.
 composeGeneratorInput = "1.8.2"
 # The Skia build jbCompose uses (bump it with jbCompose: the desktop runtime must match the
 # skiko that compose-ui pulls in). Only its desktop runtime is a direct (test) dependency.
-skiko = "0.144.6"
+skiko = "0.150.2"
 ksp = "2.3.13"
-lint = "31.12.0"
-paparazzi = "1.3.2"
+# AGP's lint is AGP + 23 (AGP 9.3.1 -> 32.3.1).
+lint = "32.3.1"
+paparazzi = "1.3.5"
 zipline = "1.28.0"
 coil = "3.3.0"
 okio = "3.17.0"
@@ -71,7 +72,9 @@ autoService-kspCompiler = "dev.zacsweers.autoservice:auto-service-ksp:1.2.0"
 
 google-material = { module = "com.google.android.material:material", version = "1.12.0" }
 
-jetbrains-compose-collection = { module = "org.jetbrains.compose.collection-internal:collection", version.ref = "jbCompose" }
+# CMP 1.12 stopped publishing its collection-internal fork: AndroidX collection has JS/Wasm itself.
+# 1.5.0 is what androidx.compose.runtime 1.12.1 requires.
+jetbrains-compose-collection = { module = "androidx.collection:collection", version = "1.5.0" }
 jetbrains-compose-gradlePlugin = { module = "org.jetbrains.compose:compose-gradle-plugin", version.ref = "jbCompose" }
 jetbrains-compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "jbCompose" }
 jetbrains-compose-material = { module = "org.jetbrains.compose.material:material", version.ref = "jbCompose" }
@@ -100,7 +103,8 @@ coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version
 coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version = "3.0.3" }
 
-androidGradlePlugin = { module = "com.android.tools.build:gradle", version = "8.12.0" }
+# 9.3.1: the newest AGP that Kotlin 2.4.20 lists as fully supported (8.5.2-9.3.1; Gradle up to 9.7.0).
+androidGradlePlugin = { module = "com.android.tools.build:gradle", version = "9.3.1" }
 burst = { module = "app.cash.burst:burst", version.ref = "burst" }
 burst-gradle-plugin = { module = "app.cash.burst:burst-gradle-plugin", version.ref = "burst" }
 kotlinPoet = { module = "com.squareup:kotlinpoet", version = "2.2.0" }

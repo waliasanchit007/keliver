@@ -54,12 +54,13 @@ gradlePlugin {
 }
 
 tasks.withType(JavaCompile).configureEach {
-  sourceCompatibility = JavaVersion.VERSION_11.toString()
-  targetCompatibility = JavaVersion.VERSION_11.toString()
+  // AGP 9 is published for Java 17 consumers only.
+  sourceCompatibility = JavaVersion.VERSION_17.toString()
+  targetCompatibility = JavaVersion.VERSION_17.toString()
 }
 
 tasks.withType(KotlinJvmCompile).configureEach {
   compilerOptions {
-    jvmTarget.set(JvmTarget.JVM_11)
+    jvmTarget.set(JvmTarget.JVM_17)
   }
 }

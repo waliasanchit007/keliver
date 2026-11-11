@@ -147,7 +147,7 @@ exit 0
 EOS
 chmod +x "$WORK/uncompilable-scaffolder.sh"
 mkdir -p "$WORK/wrapper"
-cp -R "$ROOT/gradlew" "$ROOT/gradle" "$WORK/wrapper/" 2>/dev/null || true
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$WORK/wrapper" 2>/dev/null || true
 "$SMOKE" "$VERSION" --scaffolder "$WORK/uncompilable-scaffolder.sh" --out "$WORK/failcompile" >/dev/null 2>&1
 chk "failed compilation step fails (distinct from scaffolding)" 1 "$?"
 
