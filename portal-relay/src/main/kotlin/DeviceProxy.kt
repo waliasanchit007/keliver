@@ -309,12 +309,38 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
      * DebugBundleLink accepts. Null for a scheme or URL not of the shapes this relay makes.
      */
     fun debugLink(scheme: String, url: String): String? {
-      if (!LINK_SCHEME.matches(scheme) || !PROXY_URL.matches(url)) return null
+      val m = PROXY_URL.matchEntire(url)
+      if (!LINK_SCHEME.matches(scheme) || m == null) return null
+      if (!linkAddress(m.groupValues[1]) || m.groupValues[2].toInt() !in 1024..65535) return null
       val encoded = url.replace(":", "%3A").replace("/", "%2F").replace("[", "%5B").replace("]", "%5D")
       return "$scheme://keliver-debug/bundles?server=$encoded"
     }
 
     /** What [urls] makes: http, an IPv4 or bracketed IPv6 literal, a port. */
-    private val PROXY_URL = Regex("""^http://(\d{1,3}(\.\d{1,3}){3}|\[[0-9a-fA-F:]+]):\d{1,5}$""")
+    private val PROXY_URL = Regex("""^http://(\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+]):(\d{1,5})$""")
+
+    /**
+     * Whether a debug host takes a link to [host] (a literal of [PROXY_URL]): loopback, private,
+     * link-local or shared (100.64.0.0/10) IPv4, or `::1`, fc00::/7 or fe80::/10, the ranges of the
+     * hosts' DebugBundleLink. A relay on a public address shows its bare URL only, with no link.
+     */
+    private fun linkAddress(host: String): Boolean {
+      if (host.startsWith("[")) {
+        // A bracketed literal is parsed, never looked up; an invalid one throws.
+        val a = runCatching { InetAddress.getByName(host) }.getOrNull() ?: return false
+        val b = a.address
+        return b.size == 16 && (a.isLoopbackAddress || (b[0].toInt() and 0xfe) == 0xfc || a.isLinkLocalAddress)
+      }
+      val o = host.split('.').map { it.toInt() }
+      if (o.any { it > 255 }) return false
+      return when (o[0]) {
+        127, 10 -> true
+        172 -> o[1] in 16..31
+        192 -> o[1] == 168
+        169 -> o[1] == 254
+        100 -> o[1] in 64..127
+        else -> false
+      }
+    }
   }
 }

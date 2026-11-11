@@ -343,13 +343,13 @@ grep -q 'android:scheme="keliver-com.example.demo"' "$D/AndroidManifest.xml" 2>/
   && grep -q 'android:name="com.example.demo.host.KeliverDebugLinkActivity"' "$D/AndroidManifest.xml" \
   && grep -q '^class KeliverDebugLinkActivity : Activity()' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
   && grep -q 'internal const val DEBUG_LINK_SCHEME = "keliver-com.example.demo"' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
-  && grep -q 'internal const val DEBUG_LINK_PORT = 8078$' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
+  && ! grep -q 'DEBUG_LINK_PORT' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
   && grep -q 'if (!BuildConfig.DEBUG || (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) == 0)' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
   && grep -q '^internal object DebugBundleLink' "$D/kotlin/$P/DebugBundleLink.kt" \
   && [ -f "$H/src/testDebug/kotlin/$P/DebugBundleLinkTest.kt" ] \
   && ! grep -rqE 'keliver-debug|KeliverDebugLinkActivity|DebugBundleLink' "$H/src/main" \
   && [ ! -e "$H/src/release" ] \
-  && ok "ED3: the debug link (keliver-com.example.demo://keliver-debug/bundles, port 8078) is in src/debug only: none of it in src/main" \
+  && ok "ED3: the debug link (keliver-com.example.demo://keliver-debug/bundles, any port from 1024) is in src/debug only: none of it in src/main" \
   || bad "ED3: the debug link is not wired, or reaches src/main"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges)' "$M" && grep -q 'facts = facts' "$M" \

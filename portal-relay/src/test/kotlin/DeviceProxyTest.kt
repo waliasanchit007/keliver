@@ -202,17 +202,43 @@ class DeviceProxyTest {
 
   @Test
   fun theHostsDebugLinkCheckAcceptsEveryLinkTheRelayMakes() {
-    val lan = setOf(InetAddress.getByName("192.168.1.20"), InetAddress.getByName("10.1.2.3"), InetAddress.getByName("127.0.0.1"))
-    val urls = DeviceProxy.urls(InetAddress.getByName("127.0.0.1"), 8078) +
-      DeviceProxy.urls(InetAddress.getByName("0.0.0.0"), 8078) { lan } +
-      DeviceProxy.urls(InetAddress.getByName("fd00::12"), 8078)
+    val lan = setOf(
+      InetAddress.getByName("192.168.1.20"), InetAddress.getByName("10.1.2.3"), InetAddress.getByName("127.0.0.1"),
+      InetAddress.getByName("172.20.0.5"), InetAddress.getByName("100.100.1.2"),
+    )
     val scheme = "keliver-com.example.shop"
-    for (u in urls) {
-      // The host template's own check (scripts/templates/production-host/src/debug), compiled in here.
-      assertEquals(u, hosttemplate.DebugBundleLink.server(DeviceProxy.debugLink(scheme, u), scheme, 8078), u)
-      // Only on the proxy's port.
-      assertNull(hosttemplate.DebugBundleLink.server(DeviceProxy.debugLink(scheme, u), scheme, 8077), u)
+    for (port in listOf(1024, 8078, 9000, 65535)) {
+      val urls = DeviceProxy.urls(InetAddress.getByName("127.0.0.1"), port) +
+        DeviceProxy.urls(InetAddress.getByName("0.0.0.0"), port) { lan } +
+        DeviceProxy.urls(InetAddress.getByName("fd00::12"), port) +
+        DeviceProxy.urls(InetAddress.getByName("fe80::1"), port) +
+        DeviceProxy.urls(InetAddress.getByName("::1"), port)
+      for (u in urls) {
+        // The host template's own check (scripts/templates/production-host/src/debug), compiled in here.
+        assertEquals(u, hosttemplate.DebugBundleLink.server(DeviceProxy.debugLink(scheme, u), scheme), u)
+      }
     }
+  }
+
+  @Test
+  fun noLinkWhereTheHostWouldRefuseIt() {
+    val scheme = "keliver-com.example.shop"
+    // A public address, or a port below 1024: the bare URL only, as the host refuses such a link.
+    val urls = DeviceProxy.urls(InetAddress.getByName("0.0.0.0"), 8078) {
+      setOf(InetAddress.getByName("8.8.8.8"), InetAddress.getByName("172.32.0.1"), InetAddress.getByName("100.128.0.1"))
+    }.filter { it != "http://10.0.2.2:8078" } +
+      DeviceProxy.urls(InetAddress.getByName("2606:4700::1111"), 8078) +
+      DeviceProxy.urls(InetAddress.getByName("192.168.1.20"), 80) +
+      DeviceProxy.urls(InetAddress.getByName("192.168.1.20"), 1023)
+    assertEquals(6, urls.size, urls.toString())
+    for (u in urls) {
+      assertNull(DeviceProxy.debugLink(scheme, u), u)
+      assertNull(hosttemplate.DebugBundleLink.bundleServer(u), u) // the host agrees
+    }
+    val items = (Json.parseToJsonElement(DeviceProxy.statusJson(listOf("http://8.8.8.8:8078"), linkScheme = scheme)).jsonObject["urls"]
+      as kotlinx.serialization.json.JsonArray).map { it.jsonObject }
+    assertEquals("null", items.single()["link"].toString())
+    assertEquals(QrCode.encode("http://8.8.8.8:8078").toSvg(), items.single()["qrSvg"]!!.jsonPrimitive.content)
   }
 
   @Test

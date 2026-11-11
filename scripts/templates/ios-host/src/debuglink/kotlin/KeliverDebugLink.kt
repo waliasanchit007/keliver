@@ -24,13 +24,6 @@ import platform.UIKit.UIViewController
 /** This app's debug link scheme, as iosApp/Info-Debug.plist declares it: `keliver-` and the app's package. */
 internal const val DEBUG_LINK_SCHEME = "@@DEBUG_LINK_SCHEME@@"
 
-/**
- * The only port a debug link may name: the relay's device proxy (KELIVER_DEVICE_PROXY_PORT, by
- * default the relay's port + 1, from keliver.portal.json when this host was scaffolded). Change it
- * here if your proxy listens elsewhere.
- */
-internal const val DEBUG_LINK_PORT = @@DEBUG_LINK_PORT@@
-
 /** Where a debug link's server is kept (this app's own defaults). */
 private const val DEBUG_BUNDLE_SERVER_KEY = "keliver.debugBundleServer"
 
@@ -39,14 +32,15 @@ internal fun debugLinkBundleServer(): String? {
   if (!Platform.isDebugBinary) return null
   val value = NSUserDefaults.standardUserDefaults.stringForKey(DEBUG_BUNDLE_SERVER_KEY)?.trim()
   // Written only from a checked link; checked again, so a value edited by other means is ignored.
-  return value?.let { DebugBundleLink.bundleServer(it, DEBUG_LINK_PORT) }
+  return value?.let { DebugBundleLink.bundleServer(it) }
 }
 
 /**
  * Opens `<DEBUG_LINK_SCHEME>://keliver-debug/bundles?server=<URL>` (the editor's "On a device" QR
- * code, scanned with the camera, or `xcrun simctl openurl booted '<link>'`). Swift calls it from
+ * code, scanned with the Camera app, or `xcrun simctl openurl booted '<link>'`). Swift calls it from
  * `.onOpenURL` (iosApp/iOSApp.swift, under `#if KELIVER_DEBUG_LINK`). It checks the link
- * ([DebugBundleLink.server]: an address or localhost, the proxy's port, nothing else), asks, then
+ * ([DebugBundleLink.server]: a loopback, private or link-local address or localhost, a port from
+ * 1024 up, nothing else), asks, then
  * keeps the server in this app's defaults and closes the app: the host reads its bundle server
  * once per process, so the next launch loads from there. True when the link was this host's to
  * handle (its scheme), whatever came of it.
@@ -60,16 +54,17 @@ internal fun debugLinkBundleServer(): String? {
 public fun openKeliverDebugLink(url: String): Boolean {
   if (!Platform.isDebugBinary) return false
   if (!url.startsWith("$DEBUG_LINK_SCHEME:", ignoreCase = true)) return false
-  val server = DebugBundleLink.server(url, DEBUG_LINK_SCHEME, DEBUG_LINK_PORT)
+  val server = DebugBundleLink.server(url, DEBUG_LINK_SCHEME)
   val current = NSUserDefaults.standardUserDefaults.stringForKey(DEBUG_BUNDLE_SERVER_KEY)
   val alert: UIAlertController
   if (server == null) {
-    consoleLine("KeliverHost: debug link refused: not $DEBUG_LINK_SCHEME://${DebugBundleLink.HOST}${DebugBundleLink.PATH}?server=<http(s)://<address>:$DEBUG_LINK_PORT>")
+    consoleLine("KeliverHost: debug link refused: not $DEBUG_LINK_SCHEME://${DebugBundleLink.HOST}${DebugBundleLink.PATH}?server=<http(s)://<private address>:<port>>")
     alert = UIAlertController.alertControllerWithTitle(
       "Not a Keliver debug link",
       "This debug build takes a bundle server from a link only as " +
         "$DEBUG_LINK_SCHEME://${DebugBundleLink.HOST}${DebugBundleLink.PATH}?server=<URL>, where the URL is " +
-        "http(s)://<an IP address or localhost>:$DEBUG_LINK_PORT (the relay's device proxy). Nothing was changed.",
+        "http(s)://<a loopback, private or link-local IP address, or localhost>:<port 1024 or above> " +
+        "(the relay's device proxy). Nothing was changed.",
       UIAlertControllerStyleAlert,
     )
     alert.addAction(UIAlertAction.actionWithTitle("Close", UIAlertActionStyleCancel, null))

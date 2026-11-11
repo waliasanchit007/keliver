@@ -352,12 +352,12 @@ PY
 grep -q "System.getenv('KELIVER_DEBUG_LINK') == 'YES' ? 'src/debuglink/kotlin' : 'src/nodebuglink/kotlin'" "$H/build.gradle" \
   && grep -q 'public fun openKeliverDebugLink(url: String): Boolean' "$DL/KeliverDebugLink.kt" 2>/dev/null \
   && grep -q 'internal const val DEBUG_LINK_SCHEME = "keliver-com.example.demo"' "$DL/KeliverDebugLink.kt" \
-  && grep -q 'internal const val DEBUG_LINK_PORT = 8078$' "$DL/KeliverDebugLink.kt" \
+  && ! grep -q 'DEBUG_LINK_PORT' "$DL/KeliverDebugLink.kt" \
   && grep -q 'internal inline fun debugLinkBundleServer(): String? = null' "$NDL/KeliverDebugLink.kt" 2>/dev/null \
   && [ ! -e "$NDL/DebugBundleLink.kt" ] && ! grep -rqE 'openKeliverDebugLink|DebugBundleLink|keliver-debug' "$NDL" "$K" \
   && grep -q 'val fromLink = debugLinkBundleServer() ?: return BUNDLE_SERVER to null' "$K/MainViewController.kt" \
   && grep -B1 -A3 '^#if KELIVER_DEBUG_LINK$' "$H/iosApp/iOSApp.swift" | grep -q 'KeliverDebugLinkKt.openKeliverDebugLink(url: url.absoluteString)' \
-  && ok "ED3: the link's handler is in src/debuglink only (scheme keliver-com.example.demo, the proxy's port 8078); every other build compiles a no-op" \
+  && ok "ED3: the link's handler is in src/debuglink only (scheme keliver-com.example.demo, any port from 1024); every other build compiles a no-op" \
   || bad "ED3: the debug link's Kotlin or Swift is not wired as Debug-only"
 [ -n "$PH" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/debug/kotlin/DebugBundleLink.kt" | cmp -s - "$DL/DebugBundleLink.kt" \
   && cmp -s "$DL/DebugBundleLink.kt" "$H/src/jvmTest/kotlin/com/example/demo/host/DebugBundleLink.kt" \

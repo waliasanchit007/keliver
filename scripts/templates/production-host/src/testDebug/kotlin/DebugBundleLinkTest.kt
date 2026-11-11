@@ -10,7 +10,7 @@ import kotlin.test.assertNull
  */
 class DebugBundleLinkTest {
   private val scheme = "keliver-com.example.shop"
-  private fun server(link: String?) = DebugBundleLink.server(link, scheme, 8078)
+  private fun server(link: String?) = DebugBundleLink.server(link, scheme)
   private fun link(encodedServer: String) = "$scheme://keliver-debug/bundles?server=$encodedServer"
   private fun enc(s: String) = s.replace("%", "%25").replace(":", "%3A").replace("/", "%2F").replace("[", "%5B").replace("]", "%5D")
 
@@ -25,7 +25,7 @@ class DebugBundleLinkTest {
       "http://[fe80::1]:8078" to "http://[fe80::1]:8078",
       "http://[FD00:AB::12]:8078" to "http://[fd00:ab::12]:8078",
       "http://[::1]:8078" to "http://[::1]:8078",
-      "http://[2001:db8:0:0:0:0:0:1]:8078" to "http://[2001:db8:0:0:0:0:0:1]:8078",
+      "http://[fd00:0:0:0:0:0:0:1]:8078" to "http://[fd00:0:0:0:0:0:0:1]:8078",
     )
     for ((given, want) in vectors) {
       assertEquals(want, server(link(enc(given))), given)
@@ -34,6 +34,37 @@ class DebugBundleLinkTest {
     assertEquals("http://192.168.1.20:8078", server(link("http://192.168.1.20:8078")))
     // The scheme and host in any case (iOS matches schemes without case); the path exactly.
     assertEquals("http://10.0.2.2:8078", server("KELIVER-com.Example.SHOP://Keliver-Debug/bundles?server=${enc("http://10.0.2.2:8078")}"))
+  }
+
+  @Test fun onlyLoopbackPrivateLinkLocalAndSharedAddresses() {
+    val accepted = listOf(
+      "127.0.0.1", "127.255.255.254", "10.0.0.1", "10.255.255.255",
+      "172.16.0.1", "172.31.255.254", "192.168.0.1", "192.168.255.255",
+      "169.254.0.1", "169.254.255.254", "100.64.0.1", "100.127.255.254",
+      "[::1]", "[0:0:0:0:0:0:0:1]", "[fc00::1]", "[fd12:3456::1]", "[fdff:ffff::1]",
+      "[fe80::1]", "[fe80::a:b:c:d]", "[febf::1]",
+    )
+    for (a in accepted) assertEquals("http://$a:8078", server(link(enc("http://$a:8078"))), a)
+    val refused = listOf(
+      // The public internet (and documentation addresses).
+      "8.8.8.8", "1.1.1.1", "[2606:4700::1111]", "[2001:db8::1]",
+      // Just outside each range.
+      "172.15.255.255", "172.32.0.1", "192.167.1.1", "192.169.1.1", "169.253.1.1", "169.255.1.1",
+      "100.63.255.255", "100.128.0.1", "11.0.0.1", "126.255.255.255", "128.0.0.1",
+      "[fbff::1]", "[fe00::1]", "[fec0::1]", "[ff02::1]", "[::2]", "[1::1]", "[::1:1]",
+      // Unspecified, multicast and broadcast.
+      "0.0.0.0", "224.0.0.1", "255.255.255.255", "[::]",
+    )
+    for (a in refused) assertNull(server(link(enc("http://$a:8078"))), a)
+  }
+
+  @Test fun anyPortFrom1024Up() {
+    for (p in listOf(1024, 8077, 8078, 9000, 65535)) {
+      assertEquals("http://192.168.1.20:$p", server(link(enc("http://192.168.1.20:$p"))), "$p")
+    }
+    for (p in listOf("1", "80", "443", "1023", "65536", "99999", "0", "01024")) {
+      assertNull(server(link(enc("http://192.168.1.20:$p"))), p)
+    }
   }
 
   @Test fun anythingElseIsRefused() {
@@ -70,7 +101,7 @@ class DebugBundleLinkTest {
     for (l in refused) assertNull(server(l), l.toString())
   }
 
-  @Test fun theServerMustBeTheProxyOnAnAddress() {
+  @Test fun theServerMustBeAPortOnAnAddress() {
     val refused = listOf(
       // http(s) only.
       "ftp://192.168.1.20:8078", "file:///etc/passwd", "javascript:alert(1)", "HTTP://192.168.1.20:8078",
@@ -79,13 +110,13 @@ class DebugBundleLinkTest {
       "http://example.com:8078", "http://evil.localhost:8078", "http://LOCALHOST:8078", "http://localhost.:8078",
       "http://192.168.1.20.nip.io:8078", "http://0x7f000001:8078", "http://2130706433:8078", "http://127.1:8078",
       "http://192.168.001.020:8078", "http://192.168.1.256:8078", "http://192.168.1:8078", "http://192.168.1.20.1:8078",
-      // Not the unspecified or a multicast or broadcast address.
-      "http://0.0.0.0:8078", "http://224.0.0.1:8078", "http://255.255.255.255:8078", "http://[::]:8078",
-      "http://[ff02::1]:8078", "http://[::ffff:192.168.1.20]:8078", "http://[fe80::1%25en0]:8078", "http://[fe80::1%en0]:8078",
+      // No zone or embedded IPv4 part, and well formed.
+      "http://[::ffff:192.168.1.20]:8078", "http://[fe80::1%25en0]:8078", "http://[fe80::1%en0]:8078",
       "http://[1:2:3:4:5:6:7:8:9]:8078", "http://[1::2::3]:8078", "http://[12345::1]:8078", "http://[fe80::1:8078",
-      // The proxy's port, given explicitly.
-      "http://192.168.1.20", "http://192.168.1.20:", "http://192.168.1.20:8077", "http://192.168.1.20:80",
-      "http://192.168.1.20:08078", "http://192.168.1.20:18078", "http://192.168.1.20:8078:8078", "http://[::1]8078",
+      "http://[fe80:0:0:0:0:0:0:0:1]:8078",
+      // A port, given explicitly.
+      "http://192.168.1.20", "http://192.168.1.20:", "http://192.168.1.20:08078", "http://192.168.1.20:8078:8078",
+      "http://[::1]8078", "http://192.168.1.20:+8078", "http://192.168.1.20:8078a",
       // No user, query, fragment or path.
       "http://user@192.168.1.20:8078", "http://user:pw@192.168.1.20:8078", "http://192.168.1.20:8078@10.0.0.1:8078",
       "http://192.168.1.20:8078?x=1", "http://192.168.1.20:8078/#x", "http://192.168.1.20:8078/bundles",
@@ -93,7 +124,7 @@ class DebugBundleLinkTest {
     )
     for (s in refused) {
       assertNull(server(link(enc(s))), s)
-      assertNull(DebugBundleLink.bundleServer(s, 8078), s)
+      assertNull(DebugBundleLink.bundleServer(s), s)
     }
   }
 
@@ -110,10 +141,5 @@ class DebugBundleLinkTest {
     }
     // Lower-case escapes are escapes too.
     assertEquals("http://192.168.1.20:8078", server(link("http%3a%2f%2f192.168.1.20%3a8078")))
-  }
-
-  @Test fun anotherPortIsAnotherHostsChoice() {
-    assertEquals("http://192.168.1.20:9000", DebugBundleLink.server(link(enc("http://192.168.1.20:9000")), scheme, 9000))
-    assertNull(DebugBundleLink.server(link(enc("http://192.168.1.20:8078")), scheme, 9000))
   }
 }

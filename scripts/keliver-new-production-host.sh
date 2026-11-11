@@ -162,14 +162,9 @@ PY
 PACKAGE="$ROOT_PKG.host"
 # ED3, DEBUG builds only: the debug link (src/debug) that points the host at the relay's device
 # proxy. Its scheme is `keliver-` and the app's package (lower case, '_' as '-'), the rule the
-# relay's GET /device-proxy uses for the editor's QR code; its port is the proxy's, the relay's
-# port (keliver.portal.json, default 8077) + 1.
+# relay's GET /device-proxy uses for the editor's QR code. Any port from 1024 up, so moving the
+# proxy (KELIVER_DEVICE_PROXY_PORT) needs no change to the host.
 DEBUG_LINK_SCHEME="keliver-$(printf '%s' "$ROOT_PKG" | tr 'A-Z_' 'a-z-')"
-DEBUG_LINK_PORT="$(python3 -c "import json,sys
-try:
-    p = json.load(open(sys.argv[1])).get('port', 8077)
-except Exception: p = 8077
-print(p + 1 if isinstance(p, int) and not isinstance(p, bool) and 1 <= p < 65535 else 8078)" "$APP/keliver.portal.json")"
 # The Keliver version the GUEST uses, so host and guest do not drift apart.
 KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
 try:
@@ -539,14 +534,14 @@ subst() { # <src> <dst>
   mkdir -p "$(dirname "$2")"
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$AGP_VERSION" "$CHANNEL" \
-    "$DEBUG_LINK_SCHEME" "$DEBUG_LINK_PORT" <<'PY'
+    "$DEBUG_LINK_SCHEME" <<'PY'
 import sys
-src, dst, name, pkg, appid, server, api, kv, zv, ktv, cv, agp, channel, link_scheme, link_port = sys.argv[1:16]
+src, dst, name, pkg, appid, server, api, kv, zv, ktv, cv, agp, channel, link_scheme = sys.argv[1:15]
 s = open(src, encoding='utf-8').read()
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'APPLICATION_ID': appid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'AGP_VERSION': agp, 'CHANNEL': channel,
-             'DEBUG_LINK_SCHEME': link_scheme, 'DEBUG_LINK_PORT': link_port}.items():
+             'DEBUG_LINK_SCHEME': link_scheme}.items():
     s = s.replace('@@' + k + '@@', v)
 assert '@@' not in s, 'unsubstituted placeholder in ' + src
 open(dst, 'w', encoding='utf-8').write(s)
@@ -620,7 +615,7 @@ if $EMBED; then
   echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
   echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
   echo "                   commit $MODULE/src/main/assets/keliver/portal_ed25519.pub"
-  echo "  debug link       $DEBUG_LINK_SCHEME://keliver-debug/bundles?server=<the device proxy, port $DEBUG_LINK_PORT>   (debug builds only)"
+  echo "  debug link       $DEBUG_LINK_SCHEME://keliver-debug/bundles?server=<the device proxy>   (debug builds only)"
   echo "next, in YOUR app (nothing of it was changed):"
   echo "  settings.gradle:      include ':$MODULE'"
   echo "  app/build.gradle:     implementation project(':$MODULE')"
@@ -640,7 +635,7 @@ echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable
 echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
 echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
 echo "                   commit host-android/src/main/assets/keliver/portal_ed25519.pub"
-echo "  debug link       $DEBUG_LINK_SCHEME://keliver-debug/bundles?server=<the device proxy, port $DEBUG_LINK_PORT>   (debug builds only)"
+echo "  debug link       $DEBUG_LINK_SCHEME://keliver-debug/bundles?server=<the device proxy>   (debug builds only)"
 echo "next:"
 echo "  ./gradlew -p host-android assembleDebug     (needs an Android SDK: ANDROID_HOME, or host-android/local.properties)"
 echo "  a release build needs https:// servers and your own signing config in host-android/build.gradle"

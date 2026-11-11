@@ -20,16 +20,10 @@ import java.io.File
 internal const val DEBUG_LINK_SCHEME = "@@DEBUG_LINK_SCHEME@@"
 
 /**
- * The only port a debug link may name: the relay's device proxy (KELIVER_DEVICE_PROXY_PORT, by
- * default the relay's port + 1, from keliver.portal.json when this host was scaffolded). Change it
- * here if your proxy listens elsewhere.
- */
-internal const val DEBUG_LINK_PORT = @@DEBUG_LINK_PORT@@
-
-/**
- * Opens `<DEBUG_LINK_SCHEME>://keliver-debug/bundles?server=<URL>` (the editor's "On a device" QR
- * code, or `adb shell am start -a android.intent.action.VIEW -d '<link>'`): it checks the link
- * ([DebugBundleLink.server]: an address or localhost, the proxy's port, nothing else), asks, then
+ * Opens `<DEBUG_LINK_SCHEME>://keliver-debug/bundles?server=<URL>` (the editor's "On a device"
+ * panel: `adb shell "am start -a android.intent.action.VIEW -d '<link>'"`, or its QR code where a
+ * camera app offers to open such a link): it checks the link ([DebugBundleLink.server]: a
+ * loopback, private or link-local address or localhost, a port from 1024 up, nothing else), asks, then
  * sets the bundle server on the device as the adb run-as switch does (files/keliver/bundle-server,
  * read by KeliverConfig.fromBuild) and restarts the app, whose host then looks up from there.
  *
@@ -47,25 +41,28 @@ class KeliverDebugLinkActivity : Activity() {
     }
     val serverFile = File(filesDir, DEBUG_BUNDLE_SERVER_FILE)
     val current = runCatching { serverFile.takeIf { it.isFile }?.readText()?.trim() }.getOrNull()?.takeIf { it.isNotEmpty() }
-    val server = DebugBundleLink.server(intent?.dataString, DEBUG_LINK_SCHEME, DEBUG_LINK_PORT)
+    val server = DebugBundleLink.server(intent?.dataString, DEBUG_LINK_SCHEME)
     val dialog = AlertDialog.Builder(this).setOnCancelListener { finish() }
     when {
       server == null -> {
-        Log.w(TAG, "debug link refused: not $DEBUG_LINK_SCHEME://${DebugBundleLink.HOST}${DebugBundleLink.PATH}?server=<http(s)://<address>:$DEBUG_LINK_PORT>")
+        Log.w(TAG, "debug link refused: not $DEBUG_LINK_SCHEME://${DebugBundleLink.HOST}${DebugBundleLink.PATH}?server=<http(s)://<private address>:<port>>")
         dialog.setTitle("Not a Keliver debug link")
           .setMessage(
             "This debug build takes a bundle server from a link only as " +
               "$DEBUG_LINK_SCHEME://${DebugBundleLink.HOST}${DebugBundleLink.PATH}?server=<URL>, where the URL is " +
-              "http(s)://<an IP address or localhost>:$DEBUG_LINK_PORT (the relay's device proxy). Nothing was changed.",
+              "http(s)://<a loopback, private or link-local IP address, or localhost>:<port 1024 or above> " +
+              "(the relay's device proxy). Nothing was changed.",
           )
           .setPositiveButton("Close") { _, _ -> finish() }
       }
       server.startsWith("http:") && !cleartextPermitted(server.substringAfter("://").substringBeforeLast(':').removeSurrounding("[", "]")) -> {
-        Log.w(TAG, "debug link refused: this build does not allow cleartext to $server")
+        Log.w(TAG, "debug link refused: this build allows no cleartext http:// to $server (built against an https:// server?)")
         dialog.setTitle("This build cannot reach $server")
           .setMessage(
-            "It allows no cleartext http:// there. The standalone host's debug build allows it when its " +
-              "keliver.bundleServer is http://; an app that embeds the host decides in its own manifest. Nothing was changed.",
+            "The device proxy is plain http://, and this build allows no cleartext http://. A standalone host's " +
+              "debug build allows it only when its keliver.bundleServer (or another server it was built with) is " +
+              "http://, so a host built against an https:// server cannot use the proxy; an app that embeds the " +
+              "host decides in its own manifest. Nothing was changed.",
           )
           .setPositiveButton("Close") { _, _ -> finish() }
       }

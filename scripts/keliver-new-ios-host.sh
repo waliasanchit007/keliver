@@ -159,15 +159,10 @@ PY
 PACKAGE="$ROOT_PKG.host"
 # ED3, the Debug configuration only: the debug link (src/debuglink, iosApp/Info-Debug.plist) that
 # points the host at the relay's device proxy. Its scheme is `keliver-` and the app's package
-# (lower case, '_' as '-'), the rule the relay's GET /device-proxy uses for the editor's QR code;
-# its port is the proxy's, the relay's port (keliver.portal.json, default 8077) + 1. The same
-# rule as keliver-new-production-host.sh.
+# (lower case, '_' as '-'), the rule the relay's GET /device-proxy uses for the editor's QR code
+# (the same rule as keliver-new-production-host.sh). Any port from 1024 up, so moving the proxy
+# (KELIVER_DEVICE_PROXY_PORT) needs no change to the host.
 DEBUG_LINK_SCHEME="keliver-$(printf '%s' "$ROOT_PKG" | tr 'A-Z_' 'a-z-')"
-DEBUG_LINK_PORT="$(python3 -c "import json,sys
-try:
-    p = json.load(open(sys.argv[1])).get('port', 8077)
-except Exception: p = 8077
-print(p + 1 if isinstance(p, int) and not isinstance(p, bool) and 1 <= p < 65535 else 8078)" "$APP/keliver.portal.json")"
 # The Keliver version the GUEST uses, so host and guest do not drift apart.
 KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
 try:
@@ -272,15 +267,15 @@ subst() { # <src> <dst>
   mkdir -p "$(dirname "$2")"
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$KEY_HEX" "$PRODUCT_NAME" \
-    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" "$DEBUG_LINK_SCHEME" "$DEBUG_LINK_PORT" "$ATS_DEBUG_BLOCK" <<'PY'
+    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" "$DEBUG_LINK_SCHEME" "$ATS_DEBUG_BLOCK" <<'PY'
 import sys
-src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel, link_scheme, link_port, ats_debug = sys.argv[1:20]
+src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel, link_scheme, ats_debug = sys.argv[1:19]
 s = open(src, encoding='utf-8').read()
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'BUNDLE_ID': bid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'KEY_HEX': key.lower(),
              'PRODUCT_NAME': product, 'PKG_PATH': pkgpath, 'CHANNEL': channel,
-             'DEBUG_LINK_SCHEME': link_scheme, 'DEBUG_LINK_PORT': link_port,
+             'DEBUG_LINK_SCHEME': link_scheme,
              'ATS_DEBUG_BLOCK': ats_debug + '\n',
              'ATS_BLOCK': (ats + '\n') if ats else ''}.items():
     s = s.replace('@@' + k + '@@', v)
@@ -378,7 +373,7 @@ echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable
 echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
 echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
 echo "                   commit host-ios/src/iosMain/kotlin/$PKG_PATH/HostConfig.kt"
-echo "  debug link       $DEBUG_LINK_SCHEME://keliver-debug/bundles?server=<the device proxy, port $DEBUG_LINK_PORT>   (the Debug configuration only)"
+echo "  debug link       $DEBUG_LINK_SCHEME://keliver-debug/bundles?server=<the device proxy>   (the Debug configuration only)"
 echo "next:"
 echo "  xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \\"
 echo "    -configuration Debug CODE_SIGNING_ALLOWED=NO build      (or open it in Xcode)"
