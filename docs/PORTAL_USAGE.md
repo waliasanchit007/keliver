@@ -158,9 +158,12 @@ Configure the checked-in fixture directory relative to the app repository:
 ```
 
 Each `<id>.json` file contains `formatVersion`, `recordedAt`, optional
-`expiresAt`, `matchHeaders`, and request/response `entries`. Matching is exact
-over normalized method, relative path, sorted query, selected lowercase
-headers, and body. Duplicate requests replay in file order within one Live
+`expiresAt`, `matchHeaders`, request/response `entries`, and optional
+`redactedKeys` (the `additionalSensitiveKeys` it was recorded with; absent
+means none). Matching is exact over normalized method, relative path, sorted
+query, selected lowercase headers, and body; the live request is redacted with
+the built-in sensitive keys and `redactedKeys` first, so a recorded
+`<redacted>` value matches. Duplicate requests replay in file order within one Live
 session; only a final entry marked `reuse: true` can repeat.
 
 The relay validates fixture paths, sizes, expiry, forbidden auth/cookie headers,
@@ -214,7 +217,10 @@ the CLI process arguments. Recording accepts only loopback callers, exact
 configured browser Origins, server-owned HTTPS targets, and public DNS results.
 It disables redirects/proxies/cookies/retries, injects auth only inside the
 relay, bounds bodies and headers, and redacts before returning, hashing,
-auditing, or writing.
+auditing, or writing. A form body (`application/x-www-form-urlencoded`, or a
+body shaped like `k=v&…`) is never redacted, so recording refuses one whose keys
+include a sensitive one (422 `form_body_with_sensitive_key`), and a fixture file
+whose request holds one does not load.
 
 The result stays under `<httpFixturesDir>/.candidates/`. Inspect it carefully,
 then copy it to `<httpFixturesDir>/<fixture-set>.json` as an ordinary reviewed
@@ -377,15 +383,32 @@ fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review"
 
 - The name and `fixtures` must be plain string literals; the body is one
   `NamedState(...)` call (expression body or a single `return`); the function
-  takes no parameters. Anything else is listed under `problems`, not as a state.
+  is top-level and takes no parameters or receiver. Anything else — a state
+  declared inside an object, a class or another function included — is listed
+  under `problems` with the reason, not as a state, and never skipped silently.
+- `@ScreenState` and `NamedState` are recognized by what the file's imports bind
+  them to: `import dev.keliver.nav.ScreenState` (or an alias of it, or
+  `import dev.keliver.nav.*`), or written out in full
+  (`@dev.keliver.nav.ScreenState(…)`, `dev.keliver.nav.NamedState(…)`). A
+  `@ScreenState` imported from another package is someone else's annotation and
+  is ignored; one that no import binds is reported.
 - State functions are not `@Composable`, so they cost the screen no RawCode and
   write-back never touches them. Routes are edited in Kotlin (D8).
 - Endpoint: `GET /states?project=<p>&screen=<s>` (one screen; 404 for an unknown
-  screen) or `GET /states?project=<p>` (every screen that declares states).
+  screen) or `GET /states?project=<p>` (every screen that declares states or
+  has problems). `project` defaults to `default`; any method but GET is 405.
   Each state: `name`, `function`, `route` (source text), `routeType`, `fixtures`.
+- A screen that exists only as a store draft — created in the editor, with no
+  `.kt` in the screens directory yet — is a known screen, so `?screen=` answers
+  200 with `"states": []` and no problems, not 404. Its states appear once its
+  `.kt` exists.
+- The relay keeps each screen file's parse until the file's modification time or
+  size changes, so a request re-reads only the screens edited since the last one.
 - Previewing a state is meant to use `fixtures` as the persona's
-  `httpFixtureSet` (D7: only `HostHttp` is substituted). The editor's state list
-  is not built yet.
+  `httpFixtureSet` (D7: only `HostHttp` is substituted). Planned, not built yet:
+  the editor's state list and preview, and opening a state on a debug device
+  (through a generated registry: guest code is Kotlin/JS, which can't find
+  annotations at run time).
 
 ## Conditions and conditional values
 
