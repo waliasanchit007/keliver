@@ -8,7 +8,7 @@ PR #105 (library 0.3.4). Sections below use the ROADMAP's item numbers.
 The rule for all of it: **what an adopter had to discover by review becomes the default.** Every
 serious defect in the proof was in host glue that each adopter writes for themselves.
 
-**Status (2026-11-02; from 2026-11-09 the open items are scheduled in [`PLAN_2026-11.md`](PLAN_2026-11.md), section 7).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
+**Status (2026-11-02; from 2026-11-09 the open items are scheduled in [`PLAN_2026-11.md`](PLAN_2026-11.md), section 7; since 2026-11-10 `main` is on that plan's MS1 stack, Kotlin 2.4.20 and Zipline 1.28.0 (#222), which no published artifact carries yet).** Item 1 is done (libraries 0.3.4). Item 2: M0 (#116),
 M1 (#110) and M2 on Android (#119) are done, M2 on iOS is deferred (it needs a
 signing team), M3 is released (#179, tools 0.3.16; on a Galaxy A12 it gained nothing for a
 screen opened at launch, and, as one line on the 0.3.15 host, cut a screen opened 3 s later from 816 to 267 ms cold), M4's

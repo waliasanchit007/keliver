@@ -1,6 +1,9 @@
 # Keliver roadmap
 
-Adopter-facing summary, updated 2026-11-09. The working backlog, ranked and
+Adopter-facing summary, updated 2026-11-11 (`main` is on Kotlin 2.4.20, Zipline
+1.28.0 and Compose Multiplatform 1.11.1 since 2026-11-10, with minSdk 23 and no
+iosX64; that reaches you with libraries 0.5.0, and everything published below is
+still on Kotlin 2.2.0). The working backlog, ranked and
 with a status line on every item, is [`docs/ROADMAP.md`](./docs/ROADMAP.md)
 ("Current priorities"). Where things stand, kept apart as shipped, merged but
 unreleased, demonstrated, and open: [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md).
