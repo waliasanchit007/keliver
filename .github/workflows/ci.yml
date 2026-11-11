@@ -171,6 +171,11 @@ jobs:
       - name: keliver-run-android (no device)
         run: scripts/keliver-run-android-selftest.sh "$RUNNER_TEMP/run-android"
 
+      # keliver-run-ios.sh the same way, with xcrun/xcodebuild/open stand-ins:
+      # it never reaches this runner's Xcode or simulators. Seconds.
+      - name: keliver-run-ios (no simulator)
+        run: scripts/keliver-run-ios-selftest.sh "$RUNNER_TEMP/run-ios"
+
       # Enforce the test suite + API binary-compatibility surface.
       # Previously skipped (-x test), which let a stripped test
       # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.
@@ -218,12 +223,12 @@ jobs:
       # the Zipline plugin; it is not published, so the build above does not compile it. Its
       # jvmTest also builds keliver-bridge-fixture-guest (a Kotlin/JS Zipline guest) and runs
       # the first guest-to-host round trip through it (B5b).
-      # keliver-http-fixtures has no Android target (so no `test` task either): its
-      # matcher's JVM run is listed here, its JS and wasm runs in the step below.
+      # keliver-http-fixtures (the HTTP fixture matcher) has no Android target, so no `test`
+      # task: it and the debug replay provider built on it (item 5, S2) run here, by name, on
+      # every target they have. List them once; the JS and wasm step below leaves them out.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
-          :keliver-http-fixtures:jvmTest
           :portal-render:wasmJsTest
           :portal-render:jsTest
           :portal-document:jvmTest
@@ -240,6 +245,13 @@ jobs:
           :keliver-bridge-fixture:compileKotlinJs
           :keliver-bridge-fixture:compileKotlinIosSimulatorArm64
           :keliver-bridge-fixture:ziplineApiCheck
+          :keliver-http-fixtures:jvmTest
+          :keliver-http-fixtures:jsTest
+          :keliver-http-fixtures:wasmJsTest
+          :keliver-http-fixtures:iosSimulatorArm64Test
+          :keliver-http-replay-debug:jvmTest
+          :keliver-http-replay-debug:jsTest
+          :keliver-http-replay-debug:iosSimulatorArm64Test
           -DRELEASE_SIGNING_ENABLED=false
 
       # Every library's Kotlin/JS and wasm tests. Linking a test EXECUTABLE is the only place a
@@ -273,7 +285,6 @@ jobs:
           :portal-core:jsTest :portal-device-guest:jsTest
           :portal-flow:jsTest :portal-published-guest:jsTest :portal-sql:jsTest :portal-sql-spike:jsTest
           :portal-app-lib:jsTest
-          :keliver-http-fixtures:jsTest :keliver-http-fixtures:wasmJsTest
           :keliver-capabilities:wasmJsTest :keliver-compose:wasmJsTest :keliver-composeui:wasmJsTest
           :keliver-layout-api:wasmJsTest :keliver-layout-compose:wasmJsTest
           :keliver-layout-composeui:wasmJsTest :keliver-layout-modifiers:wasmJsTest
