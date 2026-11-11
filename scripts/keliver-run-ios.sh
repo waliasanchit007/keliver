@@ -135,7 +135,7 @@ if [ ! -d "$HOST" ]; then
   ( cd "$APP_DIR" && "$HERE/keliver-new-ios-host.sh" --bundle-server "$SERVER" ) || fail "scaffolding host-ios/ failed (above)."
 fi
 [ -d "$HOST/iosApp.xcodeproj" ] || fail "$HOST has no iosApp.xcodeproj: is it a host from keliver-new-ios-host.sh?"
-CONFIG="$(find "$HOST/src/iosMain/kotlin" -name HostConfig.kt 2>/dev/null | head -1)"
+CONFIG="$(find "$HOST/src/iosMain/kotlin" -name HostConfig.kt 2>/dev/null | head -1 || true)"
 [ -n "$CONFIG" ] || fail "cannot find HostConfig.kt under $HOST/src/iosMain/kotlin."
 config_value() { sed -n "s/.*const val $1: String = \"\([^\"]*\)\".*/\1/p" "$CONFIG" | head -1; }
 BUILT_FOR="$(config_value BUNDLE_SERVER)"

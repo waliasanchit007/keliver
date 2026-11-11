@@ -347,6 +347,14 @@ run oldhost "$OLDHOST"
   && ok "a host from before 0.3.10 made for another server: refused before the build, saying what to change" \
   || bad "a pre-0.3.10 host: rc=$RC $(tail -2 "$RUN/oldhost.out" | tr '\n' ' ')"
 
+# A host-ios/ with an Xcode project and no Kotlin sources: refused by name, before the build.
+NOSRC="$RUN/nosrc"; mkdir -p "$NOSRC/host-ios/iosApp.xcodeproj"
+printf '{"port": %s}\n' "$PORT" > "$NOSRC/keliver.portal.json"
+run nosrc "$NOSRC"
+[ "$RC" != 0 ] && says nosrc "cannot find HostConfig.kt under $NOSRC/host-ios/src/iosMain/kotlin" && ! grep -q '^xcodebuild ' "$FAKE_LOG" \
+  && ok "a host-ios/ with no HostConfig.kt: refused, naming where it looked; nothing built" \
+  || bad "no HostConfig.kt: rc=$RC $(tail -2 "$RUN/nosrc.out" | tr '\n' ' ')"
+
 # --- an app with no host-ios/: scaffolded for this relay --------------------------------
 NEW="$RUN/new"; STORE="$RUN/store"
 mkdir -p "$NEW/src/jsMain/kotlin/screens" "$STORE/keys" "$RUN/home"
