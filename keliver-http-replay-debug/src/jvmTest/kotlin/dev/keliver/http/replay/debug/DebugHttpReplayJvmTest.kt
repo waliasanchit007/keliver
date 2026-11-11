@@ -46,6 +46,50 @@ class DebugHttpReplayJvmTest {
     assertEquals(424, provider.execute(HttpRequest("GET", "/sequence")).status)
   }
 
+  /**
+   * The relay parses `recordedAt` and `expiresAt` with `java.time.Instant`, this module with
+   * `kotlin.time.Instant`. Over these edge strings they agree (both reject, or both accept with
+   * the same instant) except for the three pinned below, which docs/DEBUG_HTTP_REPLAY.md names.
+   * A new disagreement, from either library, fails this test.
+   */
+  @Test fun datesParseAsTheRelayParsesThem() {
+    val edges = listOf(
+      "2026-07-27T10:00:00Z",
+      "2026-07-27T10:00:00.123456789Z",
+      "2026-07-27t10:00:00z",
+      "2026-07-27T10:00:00+05:30",
+      "2026-07-27T10:00:00-00:00",
+      "2026-07-27T10:00:00+0530",
+      "2026-07-27T10:00:00+05",
+      "2026-07-27T10:00Z",
+      "2026-07-27T10Z",
+      "2026-07-27T10:00:00",
+      "2026-07-27",
+      "2026-07-27 10:00:00Z",
+      "+12026-07-27T10:00:00Z",
+      "2026-02-30T10:00:00Z",
+      "2026-07-27T24:00:00Z",
+      "2026-07-27T23:59:60Z",
+      " 2026-07-27T10:00:00Z",
+      "yesterday",
+    )
+    val disagreements = edges.mapNotNull { text ->
+      val relay = runCatching { java.time.Instant.parse(text).toEpochMilli() }.getOrNull()
+      val here = runCatching { kotlin.time.Instant.parse(text).toEpochMilliseconds() }.getOrNull()
+      if (relay == here) null else "$text: relay=$relay here=$here"
+    }
+    assertEquals(
+      listOf(
+        // An hour-only offset: accepted here, refused by the relay.
+        "2026-07-27T10:00:00+05: relay=null here=1785128400000",
+        // End of day and a leap second: accepted by the relay, refused here.
+        "2026-07-27T24:00:00Z: relay=1785196800000 here=null",
+        "2026-07-27T23:59:60Z: relay=1785196799000 here=null",
+      ),
+      disagreements,
+    )
+  }
+
   /** The provider has no network dependency at all: no HTTP client is on its runtime classpath. */
   @Test fun noHttpClientIsOnTheRuntimeClasspath() {
     listOf(

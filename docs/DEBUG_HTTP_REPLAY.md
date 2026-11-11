@@ -47,7 +47,10 @@ and is also passed to `onMiss`:
 | 400 | an invalid request (blank method, a path that is not relative) or set name |
 | 413 | a request body over 1 MiB |
 | 404 | no set with that id |
-| 422 | the set is invalid: a bad name, over 4 MiB, bad JSON or dates, or any matcher rule |
+| 422 | the set is invalid: over 4 MiB, bad JSON or dates, or any matcher rule |
+
+A set whose id breaks the name rule is listed invalid by `catalog()`, but a request can never
+reach it: the same name check answers the request 400 first.
 | 410 | the set has expired (`expiresAt` reached) |
 
 Sequences are the relay's: requests with the same key replay in file order, a final `reuse`
@@ -70,7 +73,20 @@ from the relay, on purpose:
   relay's replay service checks it, and an invalid request gets the `replay_miss` shape with
   status 400.
 - Dates parse with `kotlin.time.Instant`, not `java.time.Instant`, so for an invalid
-  `recordedAt` or `expiresAt` the 422 reason is worded differently.
+  `recordedAt` or `expiresAt` the 422 reason is worded differently. The two also differ on
+  three edge forms (the JVM test `datesParseAsTheRelayParsesThem` pins them, and agreement on
+  15 others: offsets, fractions, lower case, missing seconds and so on): an hour-only offset
+  (`+05`) is accepted here and refused by the relay, and `T24:00:00Z` and a leap second
+  (`23:59:60Z`) are accepted by the relay and refused here. The relay is the authority: a set
+  it reports invalid is not reviewed, so in practice only the last two can reach a device, as a
+  set that is valid in the editor and 422 here.
+- The catalog has no `revision`: the relay's descriptor carries one for its write-back, and a
+  device never writes a set back.
+- Each set is loaded once, when `DebugHttpReplay` is built. The relay reads the file again on
+  every request, so an edit to it applies at once (and starts its cursors again); here a new
+  set needs a new `DebugHttpReplay`.
+- A set is found by its exact id. The relay finds it by file name, so on a case-insensitive
+  filesystem (macOS's default) `Review` finds `review.json` there and is a 404 here.
 
 ## Wiring it into a debug host (design)
 
@@ -105,7 +121,10 @@ template gets it from the build's structure, not from a runtime flag.
    `KELIVER_TIMING` is set today.
 2. In `build.gradle`, when `KELIVER_REPLAY` is `YES`, `iosMain` gets the dependency and
    `src/replay/kotlin`; otherwise it gets `src/noreplay/kotlin`. A `linkRelease*` task fails
-   if `KELIVER_REPLAY` is `YES`, the way `checkReleaseUrls` guards release links.
+   if `KELIVER_REPLAY` is `YES`, the way `checkReleaseUrls` guards release links. The build
+   also fails when `KELIVER_REPLAY` is `YES` and Xcode's `CONFIGURATION` is not `Debug`, so
+   setting the variable globally (at the project level, or in a CI environment) cannot put
+   replay into a Release or other configuration's build.
 3. The data: a Run Script phase copies the same `*.json` files into the app bundle's
    `keliver-http-fixtures/`, only when `KELIVER_REPLAY` is `YES`. `KeliverReplay` reads them
    through `NSBundle.mainBundle`.
