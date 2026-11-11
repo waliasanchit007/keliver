@@ -2,15 +2,23 @@
 // replay provider in both hosts, so a device can't drift from preview. Pure
 // Kotlin: no Zipline, no I/O, no clock. See docs/ADOPTION_PLAN_2026-10.md
 // item 5 (S2).
+//
+// No Android target, like keliver-capabilities (its one API dependency) and
+// keliver-http: the code uses no Android API, so an Android host consumes the
+// JVM variant (as the Android host templates already do for keliver-http), and
+// an AAR would only add a second API dump to keep in step. One can be added
+// later without breaking anyone. Without it the module has no `test` task, so
+// CI runs its jvmTest, jsTest and wasmJsTest by name (.github/workflows/ci.yml).
 import dev.keliver.buildsupport.WasmJs
-import static dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
-  targets(CommonWithAndroid + WasmJs.Browser)
+  targets(Common + WasmJs.Browser)
   publishing()
 }
 
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'dev.drewhamilton.poko'
 
 kotlin {
   sourceSets {
@@ -26,8 +34,4 @@ kotlin {
       }
     }
   }
-}
-
-android {
-  namespace 'dev.keliver.http.fixtures'
 }

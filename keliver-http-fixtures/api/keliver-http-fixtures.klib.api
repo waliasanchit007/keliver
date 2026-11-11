@@ -15,9 +15,6 @@ sealed interface dev.keliver.http.fixtures/HttpFixtureSelection { // dev.keliver
         final val response // dev.keliver.http.fixtures/HttpFixtureSelection.Match.response|{}response[0]
             final fun <get-response>(): dev.keliver.capabilities/HostHttpResponse // dev.keliver.http.fixtures/HttpFixtureSelection.Match.response.<get-response>|<get-response>(){}[0]
 
-        final fun component1(): dev.keliver.capabilities/HostHttpResponse // dev.keliver.http.fixtures/HttpFixtureSelection.Match.component1|component1(){}[0]
-        final fun component2(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSelection.Match.component2|component2(){}[0]
-        final fun copy(dev.keliver.capabilities/HostHttpResponse = ..., kotlin/Int = ...): dev.keliver.http.fixtures/HttpFixtureSelection.Match // dev.keliver.http.fixtures/HttpFixtureSelection.Match.copy|copy(dev.keliver.capabilities.HostHttpResponse;kotlin.Int){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureSelection.Match.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSelection.Match.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Match.toString|toString(){}[0]
@@ -29,8 +26,6 @@ sealed interface dev.keliver.http.fixtures/HttpFixtureSelection { // dev.keliver
         final val reason // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.reason|{}reason[0]
             final fun <get-reason>(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.reason.<get-reason>|<get-reason>(){}[0]
 
-        final fun component1(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.component1|component1(){}[0]
-        final fun copy(kotlin/String = ...): dev.keliver.http.fixtures/HttpFixtureSelection.Miss // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.copy|copy(kotlin.String){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.toString|toString(){}[0]
@@ -47,10 +42,6 @@ final class dev.keliver.http.fixtures/HttpFixtureEntry { // dev.keliver.http.fix
     final val reuse // dev.keliver.http.fixtures/HttpFixtureEntry.reuse|{}reuse[0]
         final fun <get-reuse>(): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureEntry.reuse.<get-reuse>|<get-reuse>(){}[0]
 
-    final fun component1(): dev.keliver.capabilities/HostHttpRequest // dev.keliver.http.fixtures/HttpFixtureEntry.component1|component1(){}[0]
-    final fun component2(): dev.keliver.capabilities/HostHttpResponse // dev.keliver.http.fixtures/HttpFixtureEntry.component2|component2(){}[0]
-    final fun component3(): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureEntry.component3|component3(){}[0]
-    final fun copy(dev.keliver.capabilities/HostHttpRequest = ..., dev.keliver.capabilities/HostHttpResponse = ..., kotlin/Boolean = ...): dev.keliver.http.fixtures/HttpFixtureEntry // dev.keliver.http.fixtures/HttpFixtureEntry.copy|copy(dev.keliver.capabilities.HostHttpRequest;dev.keliver.capabilities.HostHttpResponse;kotlin.Boolean){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureEntry.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureEntry.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureEntry.toString|toString(){}[0]
@@ -84,7 +75,7 @@ final class dev.keliver.http.fixtures/HttpFixtureMatcher { // dev.keliver.http.f
 }
 
 final class dev.keliver.http.fixtures/HttpFixtureSet { // dev.keliver.http.fixtures/HttpFixtureSet|null[0]
-    constructor <init>(kotlin/Int, kotlin/String, kotlin/String? = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry>) // dev.keliver.http.fixtures/HttpFixtureSet.<init>|<init>(kotlin.Int;kotlin.String;kotlin.String?;kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.keliver.http.fixtures.HttpFixtureEntry>){}[0]
+    constructor <init>(kotlin/Int, kotlin/String, kotlin/String? = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry>, kotlin.collections/List<kotlin/String> = ...) // dev.keliver.http.fixtures/HttpFixtureSet.<init>|<init>(kotlin.Int;kotlin.String;kotlin.String?;kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.keliver.http.fixtures.HttpFixtureEntry>;kotlin.collections.List<kotlin.String>){}[0]
 
     final val entries // dev.keliver.http.fixtures/HttpFixtureSet.entries|{}entries[0]
         final fun <get-entries>(): kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry> // dev.keliver.http.fixtures/HttpFixtureSet.entries.<get-entries>|<get-entries>(){}[0]
@@ -96,13 +87,9 @@ final class dev.keliver.http.fixtures/HttpFixtureSet { // dev.keliver.http.fixtu
         final fun <get-matchHeaders>(): kotlin.collections/List<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureSet.matchHeaders.<get-matchHeaders>|<get-matchHeaders>(){}[0]
     final val recordedAt // dev.keliver.http.fixtures/HttpFixtureSet.recordedAt|{}recordedAt[0]
         final fun <get-recordedAt>(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSet.recordedAt.<get-recordedAt>|<get-recordedAt>(){}[0]
+    final val redactedKeys // dev.keliver.http.fixtures/HttpFixtureSet.redactedKeys|{}redactedKeys[0]
+        final fun <get-redactedKeys>(): kotlin.collections/List<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureSet.redactedKeys.<get-redactedKeys>|<get-redactedKeys>(){}[0]
 
-    final fun component1(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSet.component1|component1(){}[0]
-    final fun component2(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSet.component2|component2(){}[0]
-    final fun component3(): kotlin/String? // dev.keliver.http.fixtures/HttpFixtureSet.component3|component3(){}[0]
-    final fun component4(): kotlin.collections/List<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureSet.component4|component4(){}[0]
-    final fun component5(): kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry> // dev.keliver.http.fixtures/HttpFixtureSet.component5|component5(){}[0]
-    final fun copy(kotlin/Int = ..., kotlin/String = ..., kotlin/String? = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry> = ...): dev.keliver.http.fixtures/HttpFixtureSet // dev.keliver.http.fixtures/HttpFixtureSet.copy|copy(kotlin.Int;kotlin.String;kotlin.String?;kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.keliver.http.fixtures.HttpFixtureEntry>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureSet.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSet.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSet.toString|toString(){}[0]
@@ -127,6 +114,8 @@ final object dev.keliver.http.fixtures/HttpFixtureRedaction { // dev.keliver.htt
     final val sensitiveHeaders // dev.keliver.http.fixtures/HttpFixtureRedaction.sensitiveHeaders|{}sensitiveHeaders[0]
         final fun <get-sensitiveHeaders>(): kotlin.collections/Set<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureRedaction.sensitiveHeaders.<get-sensitiveHeaders>|<get-sensitiveHeaders>(){}[0]
 
+    final fun isJsonContainer(kotlin/String): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureRedaction.isJsonContainer|isJsonContainer(kotlin.String){}[0]
     final fun isSensitiveKey(kotlin/String, kotlin.collections/Set<kotlin/String> = ...): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureRedaction.isSensitiveKey|isSensitiveKey(kotlin.String;kotlin.collections.Set<kotlin.String>){}[0]
     final fun redactJson(kotlin/String, kotlin.collections/Set<kotlin/String> = ...): kotlin/String // dev.keliver.http.fixtures/HttpFixtureRedaction.redactJson|redactJson(kotlin.String;kotlin.collections.Set<kotlin.String>){}[0]
+    final fun sensitiveFormKey(kotlin/String, kotlin/String? = ..., kotlin.collections/Set<kotlin/String> = ...): kotlin/String? // dev.keliver.http.fixtures/HttpFixtureRedaction.sensitiveFormKey|sensitiveFormKey(kotlin.String;kotlin.String?;kotlin.collections.Set<kotlin.String>){}[0]
 }

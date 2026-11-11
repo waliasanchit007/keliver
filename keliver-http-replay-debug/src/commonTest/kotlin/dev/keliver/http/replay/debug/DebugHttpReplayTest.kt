@@ -107,6 +107,23 @@ class DebugHttpReplayTest {
     assertEquals(listOf(DebugHttpReplayMiss(424, "profile", "POST", "/v1/profile", "no matching request")), misses)
   }
 
+  @Test fun theFilesRedactedKeysApplyToTheLiveRequest() = runTest {
+    // Recorded with `nickname` as an additional sensitive key: the file stores it redacted and
+    // lists it, so the live value is redacted the same way before matching.
+    val recorded = entry(
+      "/v1/verify",
+      "ok",
+      method = "POST",
+      extra = ""","body":"{\"nickname\":\"<redacted>\",\"safe\":\"yes\"}"""",
+    )
+    val withKeys = file(recorded).replace("\"formatVersion\":1,", "\"formatVersion\":1,\"redactedKeys\":[\"nickname\"],")
+    val live = HttpRequest(method = "POST", path = "/v1/verify", body = """{"nickname":"bob","safe":"yes"}""")
+
+    assertEquals("ok", replay("keys" to withKeys).provider("keys").execute(live).body)
+    // An older file without the field can't match the live value.
+    assertEquals(424, replay("old" to file(recorded)).provider("old").execute(live).status)
+  }
+
   @Test fun aFailingMissCallbackDoesNotChangeTheAnswer() = runTest {
     val provider = replay("s" to file(entry("/p", "ok"))).provider("s") { error("logging failed") }
     assertEquals(424, provider.execute(get("/q")).status)

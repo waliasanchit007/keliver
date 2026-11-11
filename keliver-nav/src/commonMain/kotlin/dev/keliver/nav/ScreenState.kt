@@ -18,21 +18,33 @@ package dev.keliver.nav
 /**
  * Marks a function as a named state of the screen declared in the same file.
  *
- * A named state is a typed route plus the name of an HTTP fixture set. Opening
- * it runs the screen's real presenter for [NamedState.route]; only the
- * `HostHttp` capability is replaced, by replay of [NamedState.fixtures].
+ * A named state is a typed route plus the name of an HTTP fixture set.
  *
- * Declare states next to the screen, one function per state, each returning a
- * [NamedState] built from literals:
+ * Declare states next to the screen, one top-level function per state, taking
+ * no parameters and returning a [NamedState] built from literals:
  *
  * ```
  * @ScreenState("review")
  * fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review")
  * ```
  *
- * The portal reads these declarations from source: it lists them per screen,
- * and the editor previews a state with [NamedState.fixtures] as the persona's
- * HTTP fixture set. [name] must be unique within the screen file.
+ * [name] must be unique within the screen file.
+ *
+ * **What exists today:** the portal reads these declarations from source and
+ * lists them per screen (`GET /states`); a declaration it can't read is listed
+ * as a problem, not skipped.
+ *
+ * **Planned (not built yet):** opening a state, in the editor or on a debug
+ * device, will run the screen's real presenter for [NamedState.route] with only
+ * the `HostHttp` capability replaced, by replay of [NamedState.fixtures].
+ *
+ * **Retention is [AnnotationRetention.BINARY], on purpose.** Guest code runs as
+ * Kotlin/JS, which has no runtime annotation reflection, so `RUNTIME` would give
+ * a device nothing to look states up with. The route for a device is a
+ * generated registry: a later codegen step reads these annotations (from source,
+ * or from compiled class files and klibs, which `BINARY` keeps them in) and
+ * emits the list of states as ordinary code. Changing to `RUNTIME` later would
+ * not break callers; the reverse would.
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
