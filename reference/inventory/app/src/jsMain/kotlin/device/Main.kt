@@ -2,8 +2,16 @@ package inventory.device
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineService
+import dev.keliver.http.HostHttpProvider
+import dev.keliver.http.HttpRequest
+import dev.keliver.layout.compose.Column
+import dev.keliver.material.compose.StyledText
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.StandardAppLifecycle
@@ -12,6 +20,7 @@ import dev.keliver.treehouse.ZiplineTreehouseUi
 import dev.keliver.treehouse.asZiplineTreehouseUi
 import dev.keliver.hostkit.KeliverScreenHost
 import inventory.logic.InventoryApp
+import kotlinx.coroutines.CancellationException
 
 /**
  * The service the generic keliver device host take()s.
@@ -30,7 +39,8 @@ private class AppUi(val route: String = "", private val screen: KeliverScreenHos
   override fun Show() {
     // Hand-edited: the scaffolder wires one screen + one presenter; this app
     // navigates between two, so it mounts its own root (logic/InventoryApp.kt).
-    InventoryApp()
+    // K4's k4/policy route shows the request-policy check in its place.
+    if (route.substringBefore('?') == "k4/policy") PolicyCheck() else InventoryApp()
     // The inventory is in memory: shown on the first frame (M0's content mark).
     LaunchedEffect(Unit) { KeliverTiming.mark("content") }
     // Hand-edited for the host kit's device checks (K4): the route as the guest received it,
@@ -46,6 +56,58 @@ private class AppUi(val route: String = "", private val screen: KeliverScreenHos
 
   override fun close() {
     screen?.close() // the host's handle for this screen, released with it
+  }
+}
+
+/**
+ * K4 (the Android check X11): three HostHttp requests, one after another, and what came of each.
+ * The embedding app's RequestPolicy allows GET ping and nothing state-changing, so POST ping (a
+ * state-changing call) and GET admin (not in its allow-list) must fail here with the host's
+ * "HostHttp refused: …" before any network call, and the screen must show that, not a crash.
+ * GET ping is the positive control: it reaches the API. Each outcome is also a timing mark
+ * (debug builds), so the host's log has the guest's side too. Kept in this file because ios.sh
+ * copies this file, not the device/ directory, into its app.
+ */
+@Composable
+private fun PolicyCheck() {
+  var lines by remember { mutableStateOf(listOf("Request policy")) }
+  LaunchedEffect(Unit) {
+    val http = Zipline.get().take<HostHttpProvider>("HostHttp")
+    try {
+      for ((method, path) in listOf("POST" to "ping", "GET" to "admin", "GET" to "ping")) {
+        lines = lines + policyAttempt(http, method, path)
+      }
+    } finally {
+      // A host that binds no HostHttp: closing it would be one more failing call.
+      runCatching { http.close() }
+    }
+  }
+  Column {
+    lines.forEach { StyledText(text = it, fontSize = 16) }
+  }
+}
+
+/** "Refused: POST ping" and the host's reason, "Allowed: GET ping (200)", or "Failed: …" and why. */
+private suspend fun policyAttempt(http: HostHttpProvider, method: String, path: String): List<String> {
+  val what = "$method $path"
+  val mark = "policy-${method.lowercase()}-$path"
+  return try {
+    val status = http.execute(HttpRequest(method = method, path = path)).status
+    KeliverTiming.mark("$mark-$status")
+    listOf("Allowed: $what ($status)")
+  } catch (e: CancellationException) {
+    throw e
+  } catch (e: Throwable) {
+    // The host's throwable arrives as a ZiplineException carrying its text: the class name,
+    // "HostHttp refused: <why>", then the host's frames.
+    val text = e.message.orEmpty()
+    if ("HostHttp refused: " in text) {
+      KeliverTiming.mark("$mark-refused")
+      listOf("Refused: $what", text.substringAfter("HostHttp refused: ").lineSequence().first())
+    } else {
+      KeliverTiming.mark("$mark-failed")
+      listOf("Failed: $what", text.lineSequence().first())
+    }
   }
 }
 
@@ -67,6 +129,6 @@ private class AppPresenter(json: kotlinx.serialization.json.Json) : PortalPresen
 fun main() {
   val zipline = Zipline.get()
   // If your presenter needs HTTP, the host binds a HostHttpProvider under
-  // "HostHttp": zipline.take<HostHttpProvider>("HostHttp").
+  // "HostHttp": zipline.take<HostHttpProvider>("HostHttp") (PolicyCheck, above).
   zipline.bind<PortalPresenter>("PortalPresenter", AppPresenter(zipline.json))
 }

@@ -32,4 +32,7 @@ kotlin { jvmToolchain(17) }
 dependencies {
   implementation 'androidx.core:core-ktx:1.16.0'
   implementation project(':keliver-host') // KELIVER EMBED
+  // The host kit: ExistingApp's RequestPolicy names its origin as an okhttp3.HttpUrl
+  // (an app with its own OkHttp client has this already).
+  implementation 'com.squareup.okhttp3:okhttp:5.1.0'
 }
