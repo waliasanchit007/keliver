@@ -15,6 +15,7 @@
  */
 package dev.keliver.treehouse
 
+import app.cash.zipline.ZiplineApiMismatchException
 import app.cash.zipline.ZiplineService
 
 /** The name a host binds its timing service under (M0; docs/DEVICE_HOST.md, "Timing marks"). */
@@ -44,11 +45,18 @@ internal interface KeliverTrace : ZiplineService {
 internal expect fun takeKeliverTrace(): KeliverTrace?
 
 /**
- * Tells the host where each composition ends (M4). A call that fails ends it: a host whose
- * KeliverTrace has no [KeliverTrace.composed] (the hosts of tools 0.3.10 to 0.3.18 bind one with
- * `mark` only) is asked once, and never again.
+ * Tells the host where each composition ends (M4). A call that fails ends it, and is never
+ * repeated; the frame itself goes on.
+ *
+ * A host whose KeliverTrace has no [KeliverTrace.composed] (the hosts of tools 0.3.10 to 0.3.18
+ * bind one with `mark` only) fails the call with [ZiplineApiMismatchException]: that is expected,
+ * and turns the profile off silently. Any other failure (a host whose `composed()` throws, a
+ * closed Zipline) is [report]ed once, so the host's console says why its frames lost their split.
  */
-internal class FrameTrace(private val service: KeliverTrace) {
+internal class FrameTrace(
+  private val service: KeliverTrace,
+  private val report: (String) -> Unit = ::println,
+) {
   private var failed = false
 
   fun composed() {
@@ -58,6 +66,9 @@ internal class FrameTrace(private val service: KeliverTrace) {
     } catch (e: Throwable) {
       // Not close()d: that would close the host's KeliverTrace, which the guest's marks use too.
       failed = true
+      if (e !is ZiplineApiMismatchException) {
+        report("Keliver: the guest frame profile is off; KeliverTrace.composed() failed: $e")
+      }
     }
   }
 }

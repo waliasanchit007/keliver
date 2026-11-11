@@ -17,7 +17,10 @@ package dev.keliver.treehouse
 
 import app.cash.zipline.ZiplineApiMismatchException
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
@@ -151,6 +154,45 @@ class FrameTraceTest {
       "compose 2",
       "send changes",
     )
+  }
+
+  @Test fun aHostWithoutComposedTurnsTheProfileOffSilently() {
+    val reports = mutableListOf<String>()
+    var calls = 0
+    val frameTrace = FrameTrace(
+      service = object : KeliverTrace {
+        override fun composed() {
+          calls++
+          throw ZiplineApiMismatchException("no such method (incompatible API versions?)")
+        }
+      },
+      report = { reports += it },
+    )
+
+    repeat(3) { frameTrace.composed() }
+
+    assertThat(calls).isEqualTo(1)
+    assertThat(reports).isEmpty()
+  }
+
+  @Test fun anyOtherFailureTurnsTheProfileOffAndIsReportedOnce() {
+    val reports = mutableListOf<String>()
+    var calls = 0
+    val frameTrace = FrameTrace(
+      service = object : KeliverTrace {
+        override fun composed() {
+          calls++
+          throw IllegalStateException("the host's composed() broke")
+        }
+      },
+      report = { reports += it },
+    )
+
+    repeat(3) { frameTrace.composed() }
+
+    assertThat(calls).isEqualTo(1)
+    assertThat(reports).hasSize(1)
+    assertThat(reports.single()).contains("the host's composed() broke")
   }
 
   @Test fun beforeStartThereIsNoTrace() {
