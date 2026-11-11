@@ -70,8 +70,8 @@ plugins {
 EOF
 printf 'android.useAndroidX=true\norg.gradle.jvmargs=-Xmx2g\n' > "$EX/gradle.properties"
 printf 'sdk.dir=%s\n' "$SDK" > "$EX/local.properties"
-cp "$ROOT/gradlew" "$EX/"; mkdir -p "$EX/gradle/wrapper"
-cp "$ROOT/gradle/wrapper/gradle-wrapper.jar" "$ROOT/gradle/wrapper/gradle-wrapper.properties" "$EX/gradle/wrapper/"
+# The Gradle the template's AGP runs on, not this repo's (templates/app-wrapper).
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$EX"
 
 ( cd "$APP" && HOME="$WORK/home" PORTAL_STORE="$WORK/store" KELIVER_EMBED_FLOOR=none \
     "$SCAFFOLD" --embed --into "$EX" --module keliver-host \
