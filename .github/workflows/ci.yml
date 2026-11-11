@@ -175,6 +175,11 @@ jobs:
       - name: keliver-run-android (no device)
         run: scripts/keliver-run-android-selftest.sh "$RUNNER_TEMP/run-android"
 
+      # keliver-run-ios.sh the same way, with xcrun/xcodebuild/open stand-ins:
+      # it never reaches this runner's Xcode or simulators. Seconds.
+      - name: keliver-run-ios (no simulator)
+        run: scripts/keliver-run-ios-selftest.sh "$RUNNER_TEMP/run-ios"
+
       # Enforce the test suite + API binary-compatibility surface.
       # Previously skipped (-x test), which let a stripped test
       # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.

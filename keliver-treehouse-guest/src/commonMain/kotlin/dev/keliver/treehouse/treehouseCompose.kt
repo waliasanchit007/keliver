@@ -102,6 +102,10 @@ private class RedwoodZiplineTreehouseUi(
 
     composition.bind(treehouseUi)
 
+    // The first composition is done (setContent composes and applies at once): tell a host that
+    // profiles frames (M4) before its change list goes.
+    appLifecycle.frameTrace?.composed()
+
     // Explicitly emit the initial changes produced by calling 'setContent' (within 'bind').
     // All other changes are initiated and emitted by the [onFrame] callback.
     guestAdapter.emitChanges()
