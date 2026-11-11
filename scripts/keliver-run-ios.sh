@@ -8,8 +8,8 @@
 # bundle published (⬆ Publish in the editor, or curl -X POST http://localhost:<port>/publish). It:
 #   1. finds the relay on keliver.portal.json's "port" (default 8077) and checks
 #      that it has published a bundle;
-#   2. picks the simulator: --udid, or the only booted one, or else an iPhone on the
-#      newest iOS runtime, which it boots (xcrun simctl list devices lists them).
+#   2. picks the simulator: --udid, or the only booted one, or else one on the newest
+#      iOS runtime (an iPhone when it has one), which it boots and leaves booted.
 #      Simulators only: a phone is never chosen;
 #   3. scaffolds host-ios/ (keliver-new-ios-host.sh) when the app has none;
 #   4. builds a DEBUG host for that simulator (xcodebuild, into build/keliver-run-ios/)

@@ -226,7 +226,7 @@ PATH="$NOX" "$CMD" "$APP" > "$RUN/noxcode.out" 2>&1; RC=$?
 FAKE_LIST_FAILS=1 run listfails "$APP"
 [ "$RC" != 0 ] && says listfails "xcrun simctl list devices failed" && says listfails "CoreSimulatorService connection became invalid" && only_listed \
   && says listfails "xcode-select -s /Applications/Xcode.app" \
-  && ok "simctl cannot list the simulators: refused, with simctl's own error and the xcode-select hint"|| bad "a failed list: rc=$RC $(tail -2 "$RUN/listfails.out" | tr '\n' ' ')"
+  && ok "simctl cannot list the simulators: refused, with simctl's own error and the xcode-select hint" || bad "a failed list: rc=$RC $(tail -2 "$RUN/listfails.out" | tr '\n' ' ')"
 
 python3 -c 'import json,sys; json.dump({"devices": {"com.apple.CoreSimulator.SimRuntime.watchOS-11-2": []}}, open(sys.argv[1], "w"))' "$FAKE_SIMS"
 run nosim "$APP"
