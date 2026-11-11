@@ -51,6 +51,13 @@ abstract class AbstractFlexContainerTest<T : Any> {
 
   protected open val viewMeasurementIsImpreciseAfterAnItemSizeChanges = false
 
+  /**
+   * Called first by the tests that measure a vertical [flexContainer] with an unbounded height: one
+   * nested in a vertical container of its own kind, or in a scroll wrapper. An implementation that
+   * cannot be measured there skips those tests here.
+   */
+  protected open fun assumeMeasurableWithUnboundedHeight() {}
+
   abstract fun flexContainer(
     direction: FlexDirection,
     backgroundColor: Int = defaultBackgroundColor,
@@ -525,6 +532,7 @@ abstract class AbstractFlexContainerTest<T : Any> {
   }
 
   @Test fun testNestedColumnsWithFlex() {
+    assumeMeasurableWithUnboundedHeight()
     val outerContainer = flexContainer(FlexDirection.Column)
     outerContainer.width(Constraint.Fill)
     outerContainer.height(Constraint.Fill)
@@ -943,6 +951,7 @@ abstract class AbstractFlexContainerTest<T : Any> {
   }
 
   @Test fun testIntrinsicContentSizeWhenSubviewsWrap() {
+    assumeMeasurableWithUnboundedHeight()
     val fullWidthParent = widgetFactory.column()
 
     flexContainer(FlexDirection.Column)
@@ -984,6 +993,7 @@ abstract class AbstractFlexContainerTest<T : Any> {
   }
 
   @Test fun testIntrinsicContentSizeWhenSubviewsRequireScrolling() {
+    assumeMeasurableWithUnboundedHeight()
     val column = flexContainer(FlexDirection.Column)
       .apply {
         width(Constraint.Fill)
@@ -1004,6 +1014,7 @@ abstract class AbstractFlexContainerTest<T : Any> {
    * even if the enclosing container didn't require that.
    */
   @Test fun testFillAndOverflowScroll() {
+    assumeMeasurableWithUnboundedHeight()
     val column = flexContainer(FlexDirection.Column)
       .apply {
         width(Constraint.Fill)

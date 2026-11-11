@@ -215,11 +215,16 @@ EOF
 
 printf 'build/\n.gradle/\n' > "$APP/editor/.gitignore"
 
-# Gradle wrapper: reuse the app's (version-aligned), else keliver's.
-if [ -f "$APP/gradlew" ]; then SRC="$APP"; else SRC="$KELIVER"; fi
-cp "$SRC/gradlew" "$APP/editor/"
-mkdir -p "$APP/editor/gradle/wrapper"
-cp "$SRC/gradle/wrapper/gradle-wrapper.jar" "$SRC/gradle/wrapper/gradle-wrapper.properties" "$APP/editor/gradle/wrapper/"
+# Gradle wrapper: reuse the app's (version-aligned), else the one for the
+# toolchain this template pins (scripts/templates/app-wrapper), never the
+# checkout's own build wrapper.
+if [ -f "$APP/gradlew" ]; then
+  cp "$APP/gradlew" "$APP/editor/"
+  mkdir -p "$APP/editor/gradle/wrapper"
+  cp "$APP/gradle/wrapper/gradle-wrapper.jar" "$APP/gradle/wrapper/gradle-wrapper.properties" "$APP/editor/gradle/wrapper/"
+else
+  bash "$KELIVER/scripts/keliver-app-wrapper.sh" "$APP/editor"
+fi
 
 echo "scaffolded $APP/editor for $NAME"
 echo "next:"
