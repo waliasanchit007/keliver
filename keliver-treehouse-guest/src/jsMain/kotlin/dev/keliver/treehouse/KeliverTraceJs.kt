@@ -13,20 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Zipline's internals, here only (see takeKeliverTrace).
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+
 package dev.keliver.treehouse
 
 import app.cash.zipline.Zipline
+import app.cash.zipline.theOnlyZipline
 
 /**
  * Asks Zipline which services the host bound, so a host without KeliverTrace (every store build)
- * is never called, not even once. `Zipline.clientNames` is internal to Zipline (1.28), hence the
- * suppression, as [prepareEnvironment] reaches into kotlinx.coroutines; a Zipline that renames it
- * fails this module's compilation, and one that fails it at run time turns the profile off.
+ * is never called, not even once.
+ *
+ * The guest's Zipline is the one its `main` made with `Zipline.get(itsSerializersModule)`, read
+ * from Zipline's internal `theOnlyZipline`: calling [Zipline.get] here would have to name that
+ * same module, which this library cannot know (a different one throws). Zipline's internals are
+ * reached with the suppression, as [prepareEnvironment] reaches into kotlinx.coroutines; a Zipline
+ * (1.28 today) that renames them fails this module's compilation, and one that fails at run time
+ * turns the profile off.
  */
-@Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 internal actual fun takeKeliverTrace(): KeliverTrace? = try {
-  val zipline = Zipline.get()
-  if (KELIVER_TRACE in zipline.clientNames) zipline.take<KeliverTrace>(KELIVER_TRACE) else null
+  val zipline: Zipline? = theOnlyZipline
+  if (zipline != null && KELIVER_TRACE in zipline.clientNames) {
+    zipline.take<KeliverTrace>(KELIVER_TRACE)
+  } else {
+    null
+  }
 } catch (e: Throwable) {
   // Not a Zipline guest, or one this lookup cannot reach: no frame profile, and nothing else lost.
   null

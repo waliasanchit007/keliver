@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+
 package dev.keliver.treehouse
 
+import app.cash.zipline.theOnlyZipline
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import kotlin.test.Test
 
 class FrameTraceJsTest {
@@ -35,5 +39,12 @@ class FrameTraceJsTest {
     repeat(3) { frameTrace.composed() }
 
     assertThat(calls).isEqualTo(1)
+  }
+
+  @Test fun outsideZiplineThereIsNoTraceAndNoFailure() {
+    // No Zipline.get() has run in this JavaScript engine: no profile, and the lookup does not
+    // create a Zipline of its own (that would fix its serializers module for the guest).
+    assertThat(takeKeliverTrace()).isNull()
+    assertThat(theOnlyZipline).isNull()
   }
 }

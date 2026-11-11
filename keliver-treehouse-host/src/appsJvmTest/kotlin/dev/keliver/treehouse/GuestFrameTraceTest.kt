@@ -35,6 +35,9 @@ import kotlinx.coroutines.test.runTest
  * its composition is done, inside the host's call (a screen's start, or a frame), and before the
  * change list that composition made reaches the host. A host that binds no KeliverTrace, or one
  * without composed(), gets no such call and the screen works as before.
+ *
+ * The test-app guest's main calls Zipline.get() with its own serializers module, as real guests
+ * do; the library must find the host's KeliverTrace without naming that module.
  */
 class GuestFrameTraceTest {
   /** The host's timing service as a host that profiles compositions binds it, by shape. */
