@@ -98,6 +98,17 @@ class ScreenStatesIndexTest {
     assertEquals(5, c.parses)
     c.index.forFile(file)
     assertEquals(5, c.parses)
+
+    // A same-size file renamed over it with the same modification time (an editor's
+    // atomic save, `cp -p`) is seen through its inode.
+    val time = Files.getLastModifiedTime(file.toPath())
+    val replacement = d.resolve(".Detail.kt.tmp")
+    replacement.writeText(withStates.replace("\"review\")", "\"REVIEW\")"))
+    Files.setLastModifiedTime(replacement.toPath(), time)
+    Files.move(replacement.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    assertEquals(time, Files.getLastModifiedTime(file.toPath()))
+    assertEquals(listOf("REVIEW"), c.index.forFile(file).states.map { it.name })
+    assertEquals(6, c.parses)
   }
 
   @Test fun aDeletedFileIsForgottenAndARecreatedOneIsRead() {

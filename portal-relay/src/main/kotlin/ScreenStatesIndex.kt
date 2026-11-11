@@ -19,7 +19,7 @@ import kotlinx.serialization.json.putJsonObject
 /**
  * S1 (ADOPTION_PLAN item 5): the `@ScreenState` declarations of an app's
  * screens, for `GET /states`. The screen .kt files are the only copy; each
- * file's parse is kept until the file's modification time or size changes, so
+ * file's parse is kept until the file's modification time, size or inode changes, so
  * a request re-parses only the screens edited since the last one.
  *
  * A screen's JSON: `{"states":[{"name","function","route","routeType","fixtures"}],
@@ -29,7 +29,12 @@ import kotlinx.serialization.json.putJsonObject
 class ScreenStatesIndex(
   private val recognize: (fileName: String, source: String) -> ScreenStates = ScreenStateRecognizer::recognize,
 ) {
-  private class Parsed(val modified: FileTime, val size: Long, val states: ScreenStates)
+  /**
+   * [fileKey] is the inode where the platform has one (null otherwise): it catches a file
+   * replaced by another with the same size and modification time (`cp -p`, `rsync -t`,
+   * an editor that writes a new file and renames it over the old one).
+   */
+  private class Parsed(val modified: FileTime, val size: Long, val fileKey: Any?, val states: ScreenStates)
 
   /** By absolute path. Bounded by the screen files there are: a gone file's entry is dropped. */
   private val parsed = ConcurrentHashMap<String, Parsed>()
@@ -42,14 +47,18 @@ class ScreenStatesIndex(
       parsed.remove(key)
       return ScreenStates(emptyList())
     }
-    parsed[key]?.let { if (it.modified == attrs.lastModifiedTime() && it.size == attrs.size()) return it.states }
+    parsed[key]?.let {
+      if (it.modified == attrs.lastModifiedTime() && it.size == attrs.size() && it.fileKey == attrs.fileKey()) {
+        return it.states
+      }
+    }
     // Attributes are read before the text: a write in between leaves an entry the next
     // request sees as changed, never a stale one that looks current.
     val states = runCatching { recognize(file.name, file.readText()) }.getOrElse {
       // Not kept: a read that failed is tried again next time.
       return ScreenStates(emptyList(), listOf("cannot read ${file.name}: ${it.message}"))
     }
-    parsed[key] = Parsed(attrs.lastModifiedTime(), attrs.size(), states)
+    parsed[key] = Parsed(attrs.lastModifiedTime(), attrs.size(), attrs.fileKey(), states)
     return states
   }
 
