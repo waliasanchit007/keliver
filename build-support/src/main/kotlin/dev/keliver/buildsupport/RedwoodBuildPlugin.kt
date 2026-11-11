@@ -114,6 +114,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
 
     target.configureCommonSpotless()
     target.configureCommonTesting()
+    target.configureSkikoForWebTests()
     target.configureCommonAndroid()
     target.configureCommonKotlin()
   }
@@ -401,7 +402,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         project.applyKotlinMultiplatform {
           androidTarget().publishLibraryVariants("release")
           iosTargets()
-          js().browser()       // Compose-for-Web (legacy js canvas)
+          js().browser() // Compose-for-Web (legacy js canvas)
           modifiedGroup[WasmJs]?.applyTo(this) // opt-in Compose-for-Web (Wasm canvas — skiko)
           jvm()
         }

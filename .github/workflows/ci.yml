@@ -245,10 +245,8 @@ jobs:
       # Every library's Kotlin/JS and wasm tests. Linking a test EXECUTABLE is the only place a
       # klib ABI mismatch shows up (coroutines 1.9.0 against the Kotlin 2.4 stdlib broke
       # keliver-runtime, keliver-lazylayout-api and keliver-nav while their library compiles
-      # passed). Kotlin/JS tests are cheap. Left out, each already failing for a reason of its
-      # own: keliver-widget-composeui:jsTest and keliver-widget/-widget-composeui:wasmJsTest
-      # (skiko.mjs is not packaged for the test runner) and keliver-leak-detector:wasmJsTest (docs/KNOWN_BUGS.md U41)
-      # (commonTest `delayForGc` has no wasm actual).
+      # passed). Kotlin/JS tests are cheap. A test that loads compose-ui needs Skiko's runtime
+      # beside its executable; build-support puts it there (SkikoWebTests.kt, docs/KNOWN_BUGS.md U41).
       - name: Test (JS and wasm, all libraries)
         run: >
           ./gradlew --continue
@@ -270,8 +268,9 @@ jobs:
           :keliver-treehouse:jsTest :keliver-treehouse-guest:jsTest :keliver-treehouse-guest-compose:jsTest
           :keliver-ui-basic-api:jsTest :keliver-ui-basic-compose:jsTest :keliver-ui-basic-composeui:jsTest
           :keliver-ui-basic-modifiers:jsTest :keliver-ui-basic-testing:jsTest :keliver-ui-basic-widget:jsTest
-          :keliver-vm:jsTest :keliver-widget:jsTest :keliver-widget-shared-test:jsTest
-          :keliver-widget-testing:jsTest :keliver-yoga:jsTest :portal-core:jsTest :portal-device-guest:jsTest
+          :keliver-vm:jsTest :keliver-widget:jsTest :keliver-widget-composeui:jsTest
+          :keliver-widget-shared-test:jsTest :keliver-widget-testing:jsTest :keliver-yoga:jsTest
+          :portal-core:jsTest :portal-device-guest:jsTest
           :portal-flow:jsTest :portal-published-guest:jsTest :portal-sql:jsTest :portal-sql-spike:jsTest
           :portal-app-lib:jsTest
           :keliver-http-fixtures:jsTest :keliver-http-fixtures:wasmJsTest
@@ -282,8 +281,9 @@ jobs:
           :keliver-layout-widget:wasmJsTest :keliver-lazylayout-api:wasmJsTest
           :keliver-lazylayout-compose:wasmJsTest :keliver-lazylayout-composeui:wasmJsTest
           :keliver-lazylayout-shared-test:wasmJsTest :keliver-lazylayout-testing:wasmJsTest
-          :keliver-lazylayout-widget:wasmJsTest :keliver-material-api:wasmJsTest
-          :keliver-material-compose:wasmJsTest :keliver-material-composeui:wasmJsTest
+          :keliver-lazylayout-widget:wasmJsTest :keliver-leak-detector:wasmJsTest
+          :keliver-material-api:wasmJsTest :keliver-material-compose:wasmJsTest
+          :keliver-material-composeui:wasmJsTest
           :keliver-material-modifiers:wasmJsTest :keliver-material-protocol-guest-web:wasmJsTest
           :keliver-material-protocol-host-web:wasmJsTest :keliver-material-testing:wasmJsTest
           :keliver-material-widget:wasmJsTest :keliver-protocol:wasmJsTest :keliver-protocol-guest:wasmJsTest
@@ -291,6 +291,7 @@ jobs:
           :keliver-testing:wasmJsTest :keliver-ui-basic-api:wasmJsTest :keliver-ui-basic-compose:wasmJsTest
           :keliver-ui-basic-composeui:wasmJsTest :keliver-ui-basic-modifiers:wasmJsTest
           :keliver-ui-basic-testing:wasmJsTest :keliver-ui-basic-widget:wasmJsTest
+          :keliver-widget:wasmJsTest :keliver-widget-composeui:wasmJsTest
           :keliver-widget-shared-test:wasmJsTest :keliver-widget-testing:wasmJsTest :keliver-yoga:wasmJsTest
           :portal-core:wasmJsTest :portal-document:wasmJsTest :portal-flow:wasmJsTest
           :portal-presenter-spike:wasmJsTest :web-spike:wasmJsTest
