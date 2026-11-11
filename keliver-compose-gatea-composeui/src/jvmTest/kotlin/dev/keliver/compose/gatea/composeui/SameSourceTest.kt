@@ -73,7 +73,7 @@ import kotlinx.serialization.json.Json
  */
 @OptIn(ExperimentalTestApi::class)
 class SameSourceTest {
-  private val tags = listOf("AAA", "Monthly", "Secured", "Listed on NSE", "Tax free", "Senior")
+  private val tags = listOf("Unread", "Weekly", "Starred", "From a teammate", "Has files", "Archived")
 
   @Test fun onlyImportsDiffer() {
     val dir = File("src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples")
@@ -127,7 +127,7 @@ class SameSourceTest {
 
   @Composable
   private fun Theme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF006A60), secondaryContainer = Color(0xFFFFE9B0)), content = content)
+    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF6750A4), secondaryContainer = Color(0xFFE8DEF8)), content = content)
   }
 }
 

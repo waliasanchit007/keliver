@@ -18,7 +18,8 @@ import org.jetbrains.kotlin.psi.KtValueArgument
  *
  * Not surgical here (the caller reports why): a modifier list that changes by more than one
  * element, removing a positional argument that a later positional argument follows, a template's
- * or a conditional's new value, and a slot added or removed.
+ * or a conditional's new value, a slot added or removed, removing an argument with a comment beside
+ * it, and an edit that leaves a call with no arguments whose overload is then ambiguous.
  */
 internal object ComposeWriteBack {
   sealed interface Result {
@@ -27,7 +28,11 @@ internal object ComposeWriteBack {
     class No(val why: String) : Result
   }
 
-  /** Edits [call] (a node of [entry]) from [parsed]'s arguments and modifiers to [target]'s. */
+  /**
+   * Edits [call] (a node of [entry]) from [parsed]'s arguments and modifiers to [target]'s.
+   * [overloads] are [entry]'s and its siblings': a call left with no arguments must still bind to
+   * [entry] alone (`Modifier.padding()` is ambiguous, and the compiler would refuse it).
+   */
   fun editArguments(
     call: KtCallExpression,
     entry: ComposeCatalog.Entry,
@@ -36,6 +41,7 @@ internal object ComposeWriteBack {
     catalog: ComposeCatalog,
     bindingsParam: String?,
     factory: KtPsiFactory,
+    overloads: List<ComposeCatalog.Entry> = listOf(entry),
   ): Result {
     val imports = LinkedHashSet<String>()
     val spell = Speller(bindingsParam, imports)
@@ -46,6 +52,9 @@ internal object ComposeWriteBack {
         val text = spell.chain(target.modifiers, catalog) ?: return Result.No(spell.why!!)
         val r = editList(call, entry, mapOf("modifier" to Change.Add(text)), factory)
         if (r != null) return Result.No(r)
+      } else if (target.modifiers.isEmpty()) {
+        // The last element went: the argument goes too, as the inverse of adding it to a call with none.
+        editList(call, entry, mapOf("modifier" to Change.Remove), factory)?.let { return Result.No(it) }
       } else {
         val expr = arg.getArgumentExpression()!!
         val text = editChain(expr, parsed.modifiers, target.modifiers, catalog, spell, factory) ?: return Result.No(spell.why!!)
@@ -76,6 +85,9 @@ internal object ComposeWriteBack {
       changes.remove(name)
     }
     if (changes.isNotEmpty()) editList(call, entry, changes, factory)?.let { return Result.No(it) }
+    if (call.valueArguments.isEmpty() && overloads.size > 1) {
+      ComposeSyntax.emptyCallBindsTo(call, overloads, entry)?.let { return Result.No("the edit would leave `${call.text}`: $it") }
+    }
     return Result.Ok(imports)
   }
 
@@ -110,6 +122,7 @@ internal object ComposeWriteBack {
     // Edits as (start, end, replacement) relative to the list, applied from the end.
     val edits = mutableListOf<Triple<Int, Int, String>>()
     val multiLine = inList.isNotEmpty() && inList.all { startsLine(list.text, it.textRange.startOffset - base) }
+    val removed = sortedMapOf<Int, String>()
     for ((name, c) in changes) {
       when (c) {
         is Change.Replace -> {
@@ -119,13 +132,25 @@ internal object ComposeWriteBack {
         Change.Remove -> {
           val a = args[name] ?: return "`$name` is not in the call"
           val i = inList.indexOf(a)
-          if (a.getArgumentName() == null && inList.drop(i + 1).any { it.getArgumentName() == null }) {
+          if (a.getArgumentName() == null && inList.drop(i + 1).any { it.getArgumentName() == null && inList.indexOf(it) !in removed }) {
             return "removing the positional `$name` would shift the positional arguments after it"
           }
-          edits += removal(list.text, inList.map { it.textRange.startOffset - base to it.textRange.endOffset - base }, i, multiLine)
+          removed[i] = name
         }
         is Change.Add -> {}
       }
+    }
+    // Consecutive removed arguments go as one piece (their separators would otherwise overlap).
+    val ranges = inList.map { it.textRange.startOffset - base to it.textRange.endOffset - base }
+    for (run in runs(removed.keys.toList())) {
+      val r = removal(list.text, ranges, run.first(), run.last(), multiLine)
+      // A comment beside an argument would go with it: refused, not guessed where it belongs.
+      var around = list.text.substring(r.first, r.second)
+      for (k in run) around = around.replaceFirst(inList[k].text, "")
+      if ("/*" in around || "//" in around) {
+        return "a comment beside ${run.joinToString { "`${removed[it]}`" }} would go with it (not written surgically in the ED0 spike)"
+      }
+      edits += r
     }
     val adds = changes.entries.filter { it.value is Change.Add }.map { (n, c) -> "$n = ${(c as Change.Add).text}" }
     if (adds.isNotEmpty()) {
@@ -152,24 +177,31 @@ internal object ComposeWriteBack {
     return null
   }
 
-  /** The range of argument [i] of [ranges] (in [text]) with its separator, for removal. */
-  private fun removal(text: String, ranges: List<Pair<Int, Int>>, i: Int, multiLine: Boolean): Triple<Int, Int, String> {
-    val (s, e) = ranges[i]
+  /** [sorted] indices grouped into runs of consecutive ones. */
+  private fun runs(sorted: List<Int>): List<List<Int>> {
+    val out = mutableListOf<MutableList<Int>>()
+    for (i in sorted) if (out.lastOrNull()?.last() == i - 1) out.last() += i else out += mutableListOf(i)
+    return out
+  }
+
+  /** The range of arguments [i]..[j] of [ranges] (in the list's [text]) with their separators, for removal. */
+  private fun removal(text: String, ranges: List<Pair<Int, Int>>, i: Int, j: Int, multiLine: Boolean): Triple<Int, Int, String> {
+    val s = ranges[i].first
+    val e = ranges[j].second
+    if (i == 0 && j == ranges.lastIndex) return Triple(1, text.length - 1, "") // every argument: `()`
     if (multiLine) {
       val lineStart = text.lastIndexOf('\n', s - 1) + 1
       var end = e
       if (text.substring(end).trimStart(' ').startsWith(",")) end = text.indexOf(',', end) + 1
       val nl = text.indexOf('\n', end)
-      val last = i == ranges.lastIndex
-      if (last && !text.substring(e).trimStart(' ').startsWith(",") && i > 0) {
-        // The previous argument loses its comma along with this line.
-        val prevEnd = ranges[i - 1].second
-        val comma = text.indexOf(',', prevEnd)
+      if (j == ranges.lastIndex && !text.substring(e).trimStart(' ').startsWith(",")) {
+        // The argument before the run loses its comma along with the run's lines.
+        val comma = text.indexOf(',', ranges[i - 1].second)
         return Triple(comma, if (nl < 0) end else nl, "")
       }
       return Triple(lineStart, if (nl < 0) end else nl + 1, "")
     }
-    return if (i > 0) Triple(ranges[i - 1].second, e, "") else Triple(s, if (ranges.size > 1) ranges[1].first else e, "")
+    return if (i > 0) Triple(ranges[i - 1].second, e, "") else Triple(s, ranges[j + 1].first, "")
   }
 
   private fun startsLine(text: String, offset: Int): Boolean = text.substring(text.lastIndexOf('\n', offset - 1) + 1, offset).isBlank() && '\n' in text.substring(0, offset)
@@ -204,7 +236,9 @@ internal object ComposeWriteBack {
           if (oe[i].second == ne[i].second) continue
           val entry = catalog.modifier(kind(oe[i].first)) ?: return spell.no("`${kind(oe[i].first)}` is not a generated modifier")
           val call = calls[i]
-          val edited = editElementCall(call, entry, oe[i].second, ne[i].second, spell, factory) ?: return null
+          // Its siblings: the same name's overloads in the same scope (a scope's members, or the top-level ones).
+          val overloads = catalog.modifiersNamed(entry.name).filter { it.scope == entry.scope }
+          val edited = editElementCall(call, entry, oe[i].second, ne[i].second, spell, factory, overloads) ?: return null
           text.replace(call.textRange.startOffset - base, call.textRange.endOffset - base, edited)
         }
       }
@@ -252,12 +286,13 @@ internal object ComposeWriteBack {
     new: Map<String, PropValue>,
     spell: Speller,
     factory: KtPsiFactory,
+    overloads: List<ComposeCatalog.Entry>,
   ): String? {
     // Work on a copy: the element is spliced into the chain's text by the caller.
     val copy = factory.createExpression(call.text) as KtCallExpression
     val parsed = DocNode.Widget(dev.keliver.portal.document.Handle(0), entry.type, old)
     val target = DocNode.Widget(dev.keliver.portal.document.Handle(0), entry.type, new)
-    return when (val r = editArguments(copy, entry, parsed, target, ComposeCatalog(emptyList(), emptyList()), spell.bindingsParam, factory)) {
+    return when (val r = editArguments(copy, entry, parsed, target, ComposeCatalog(emptyList(), emptyList()), spell.bindingsParam, factory, overloads)) {
       is Result.Ok -> copy.text.also { spell.imports += r.imports }
       is Result.No -> spell.no(r.why)
     }

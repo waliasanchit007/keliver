@@ -516,7 +516,7 @@ object WriteBack {
   ): Boolean {
     val call = psi[parsed.handle.v] as? KtCallExpression ?: return bail("the ${entry.name} call was not found")
     if (parsed.props != target.props || !sameModifiers(parsed.modifiers, target.modifiers)) {
-      when (val r = ComposeWriteBack.editArguments(call, entry, parsed, target, catalog, bindings.get(), factory)) {
+      when (val r = ComposeWriteBack.editArguments(call, entry, parsed, target, catalog, bindings.get(), factory, catalog.widgetOverloads(entry.guest))) {
         is ComposeWriteBack.Result.Ok -> need(r.imports)
         is ComposeWriteBack.Result.No -> return bail(r.why)
       }

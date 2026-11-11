@@ -291,7 +291,7 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                             "props": {
                                 "text": {
                                     "kind": "dev.keliver.portal.document.PropValue.Bind",
-                                    "field": "rate"
+                                    "field": "subtitle"
                                 },
                                 "color": {
                                     "kind": "dev.keliver.portal.document.PropValue.Lit",

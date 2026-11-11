@@ -31,11 +31,11 @@ import kotlin.test.assertTrue
  */
 class CanvasWireTest {
   private val title = "A long item title that will not fit on one line"
-  private val rate = "Subtitle"
-  private val tags = listOf("AAA", "Monthly", "Secured", "Listed on NSE", "Tax free", "Senior")
+  private val subtitle = "Subtitle"
+  private val tags = listOf("Unread", "Weekly", "Starred", "From a teammate", "Has files", "Archived")
 
   @Test fun theCanvasSendsTheCompiledScreensChanges() {
-    val compiled = GuestWire { SampleCard(title, rate, tags) {} }
+    val compiled = GuestWire { SampleCard(title, subtitle, tags) {} }
     val problems = mutableListOf<String>()
     val canvas = GuestWire { ComposeCanvas(sampleCardDocument(), env(problems)) }
     val expected = compiled.take()
@@ -50,7 +50,7 @@ class CanvasWireTest {
   @Test fun aChangedBindingRecomposesLikeTheCompiledScreen() {
     // Fewer tags: the Repeat's rows go, as the compiled loop's do.
     val few = tags.take(2)
-    val compiled = GuestWire { SampleCard(title, rate, few) {} }
+    val compiled = GuestWire { SampleCard(title, subtitle, few) {} }
     val problems = mutableListOf<String>()
     val canvas = GuestWire { ComposeCanvas(sampleCardDocument(), env(problems, few)) }
     assertEquals(compiled.take(), canvas.take())
@@ -60,7 +60,7 @@ class CanvasWireTest {
   }
 
   private fun env(problems: MutableList<String>, tagList: List<String> = tags) = CanvasEnv(
-    bind = { mapOf("title" to title, "rate" to rate, "tags" to tagList)[it] },
+    bind = { mapOf("title" to title, "subtitle" to subtitle, "tags" to tagList)[it] },
     problem = { problems += it },
   )
 }

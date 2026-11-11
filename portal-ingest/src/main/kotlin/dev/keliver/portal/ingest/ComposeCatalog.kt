@@ -143,8 +143,25 @@ object ComposeIngest {
       ?.split(File.pathSeparator)?.map(::File)?.let(ComposeCatalog::load)
   }
 
-  /** The catalog when ED0's Compose-shaped ingest is on, else null. */
-  fun catalog(): ComposeCatalog? = override.get() ?: fromProperty
+  /**
+   * The catalog when ED0's Compose-shaped ingest is on, else null. On, it needs the prototype
+   * `keliver-compose-values` on the classpath, which no shipped consumer has (portal-ingest takes it
+   * `compileOnly`): there it fails here, with that reason, rather than partway through a read.
+   */
+  fun catalog(): ComposeCatalog? = (override.get() ?: fromProperty)?.also { check(valuesPresent) { MISSING_VALUES } }
+
+  private const val MISSING_VALUES: String =
+    "ED0's Compose-shaped ingest is on, but the prototype keliver-compose-values is not on the classpath " +
+      "(portal-ingest takes it compileOnly, so no shipped tool carries it)"
+
+  private val valuesPresent: Boolean by lazy {
+    try {
+      Class.forName("dev.keliver.compose.ui.graphics.Color", false, ComposeIngest::class.java.classLoader)
+      true
+    } catch (_: ClassNotFoundException) {
+      false
+    }
+  }
 
   /** Runs [block] with ED0 on for this thread, reading against [catalog]. */
   fun <T> with(catalog: ComposeCatalog, block: () -> T): T {

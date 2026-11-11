@@ -2,7 +2,7 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.PropValue
-import dev.keliver.portal.ingest.ComposeFixtures.OFFER_SCREEN
+import dev.keliver.portal.ingest.ComposeFixtures.INBOX_SCREEN
 import dev.keliver.portal.ingest.ComposeFixtures.raws
 import dev.keliver.portal.ingest.ComposeFixtures.recognize
 import dev.keliver.portal.ingest.ComposeFixtures.widgets
@@ -71,7 +71,7 @@ class ComposeIngestTest {
   }
 
   @Test fun aStyleBScreenIngestsWithNoRawCode() {
-    val rec = recognize(OFFER_SCREEN)
+    val rec = recognize(INBOX_SCREEN)
     assertEquals(emptyList(), rec.rawReasons)
     val texts = widgets(rec.root).filter { it.type == "$m3.Text#6" }
     assertEquals(PropValue.Bind("title"), texts[0].props["text"])
@@ -146,8 +146,64 @@ class ComposeIngestTest {
     // The Box with content and the one without are two overloads.
     assertEquals(listOf("$layout.Box#2"), widgets(recognize(box("Box(Modifier.size(8.dp))")).root).drop(1).map { it.type })
     assertEquals(listOf("$layout.Box#1"), widgets(recognize(box("Box(Modifier.size(8.dp)) {}")).root).drop(1).map { it.type })
-    // `padding()` fits #2 and #3 using only defaults: Kotlin takes the one leaving fewer defaults unused.
-    assertEquals(listOf("0:padding#2"), chain(".padding()"))
+    // `padding(16.dp)` fits #1 with no default and #2/#3 with some: the one without defaults wins.
+    // `padding()` fits #2 and #3, both on defaults only: Kotlin's tie-break is yes/no, not a count,
+    // so the compiler refuses it as ambiguous, and so does ingest.
+    val empty = recognize(box("Text(\"a\", Modifier.padding())")).rawReasons.single()
+    assertTrue("`padding(…)` is ambiguous between overloads #2, #3" in empty, empty)
+  }
+
+  @Test fun aCallWhoseResolutionIsNotCertainIsRawCode() {
+    fun screen(imports: String, body: String, more: String = "") = """
+      package app.screens
+
+      import androidx.compose.runtime.Composable
+      $imports
+
+      @Composable
+      fun S(b: SBindings) {
+        Column {
+          $body
+        }
+      }
+      $more
+      interface SBindings
+    """.trimIndent()
+    // Two star imports that each give a generated `Text`: the compiler refuses it.
+    val twoTexts = ComposeCatalog.parse(
+      ComposeFixtures.gateAJson,
+      """{"group": "ed0-dup", "widgets": [{"name": "Text", "compose": "androidx.compose.foundation.text.BasicText", "guest": "dev.keliver.compose.foundation.text.Text", "palette": "x", "tag": 103, "schemaClass": "GenText103", "params": [{"name": "text", "kind": "string", "type": "kotlin.String"}]}], "modifiers": []}""",
+    )
+    val ambiguous = ComposeIngest.with(twoTexts) {
+      Recognizer.recognize("S.kt", screen("import $layout.Column\nimport $m3.*\nimport dev.keliver.compose.foundation.text.*", "Text(\"a\")"))!!
+    }
+    assertEquals(
+      listOf("`Text(…)` is ambiguous between `$m3.Text`, `dev.keliver.compose.foundation.text.Text` (two star imports)"),
+      ambiguous.rawReasons,
+    )
+    // Two guest star imports and a name neither generates (`Button`): never the legacy `Button`.
+    val stars = recognize(screen("import $m3.*\nimport $layout.*", "Button(onClick = {}) { Text(\"a\") }"))
+    assertEquals(listOf("$layout.Column#4"), widgets(stars.root).map { it.type })
+    assertTrue("may give a guest declaration the generated catalog does not include" in stars.rawReasons.single(), stars.rawReasons.single())
+    // An explicit import of Compose's own API is neither a generated nor a legacy widget.
+    val own = recognize(screen("import $layout.Column\nimport $m3.Text\nimport androidx.compose.material3.Card", "Card { Text(\"a\") }"))
+    assertEquals(listOf("`Card(…)` is `androidx.compose.material3.Card`, Compose's own API: neither a generated nor a legacy widget"), own.rawReasons)
+    // A same-file declaration shadows a star import: the call is the file's own `Text`, not Text#6.
+    val shadowed = recognize(screen("import $layout.Column\nimport $m3.*", "Text(\"a\")", more = "@Composable fun Text(s: String) {}\n"))
+    assertEquals(listOf("`Text(…)` is declared in this file too, so it may not be the generated widget"), shadowed.rawReasons)
+    // …and so does a same-file extension for a modifier.
+    val ownPadding = recognize(
+      screen(
+        "import $layout.Column\nimport $m3.Text\nimport $layout.*\nimport dev.keliver.compose.ui.Modifier\nimport dev.keliver.compose.ui.unit.Dp\nimport dev.keliver.compose.ui.unit.dp",
+        "Text(\"a\", Modifier.padding(4.dp))",
+        more = "fun Modifier.padding(all: Dp): Modifier = this\n",
+      ),
+    )
+    val why = ownPadding.rawReasons.single()
+    assertTrue("`.padding(…)` is declared in this file too, so it may not be the generated modifier" in why, why)
+    // A file that imports no guest name keeps today's reading, even with the flag on.
+    val legacyOnly = recognize(screen("import dev.keliver.layout.compose.Column\nimport androidx.compose.material3.Card", "Card {}"))
+    assertTrue(widgets(legacyOnly.root).none { '#' in it.type })
   }
 
   @Test fun scopedModifiersResolveAgainstTheParentsScope() {
@@ -166,8 +222,8 @@ class ComposeIngestTest {
       box(
         """
         ListItem(
-          headlineContent = { Text("Bonds") },
-          supportingContent = { Text("7.5% a year") },
+          headlineContent = { Text("Inbox") },
+          supportingContent = { Text("3 new") },
           leadingContent = { Icon(Icons.Filled.Search, contentDescription = null) },
         )
         """.trimIndent(),
@@ -178,10 +234,10 @@ class ComposeIngestTest {
     assertEquals("$m3.ListItem#101", item.type)
     // One node per slot passed, in source order; the absent optional slots have none.
     assertEquals(listOf("slot:headlineContent", "slot:supportingContent", "slot:leadingContent"), item.children.map { (it as DocNode.Widget).type })
-    assertEquals(PropValue.Lit("s", s = "7.5% a year"), ((item.children[1] as DocNode.Widget).children.single() as DocNode.Widget).props["text"])
+    assertEquals(PropValue.Lit("s", s = "3 new"), ((item.children[1] as DocNode.Widget).children.single() as DocNode.Widget).props["text"])
     // A trailing lambda is the last parameter (TopAppBar's scoped `actions`), and its content has RowScope.
     val bar = recognize(
-      box("TopAppBar(title = { Text(\"Offers\") }) { Text(\"a\", Modifier.weight(1f)) }")
+      box("TopAppBar(title = { Text(\"Messages\") }) { Text(\"a\", Modifier.weight(1f)) }")
         .replace("import $m3.Text", "import $m3.Text\nimport $m3.TopAppBar"),
     )
     assertEquals(emptyList(), bar.rawReasons)

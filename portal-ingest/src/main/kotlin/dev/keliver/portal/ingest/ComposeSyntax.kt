@@ -8,6 +8,7 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLambdaArgument
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtValueArgument
 
@@ -17,10 +18,12 @@ import org.jetbrains.kotlin.psi.KtValueArgument
  *  - **Resolution by import.** A callee is the catalog's widget only when the file's imports make
  *    its simple name that guest declaration (an explicit import, an alias, or a star import of
  *    its package), so a legacy `Text` and `dev.keliver.compose.material3.Text` live in one project.
+ *    Where that is not certain (two stars, a same-file declaration, Compose's own API), the call
+ *    is RawCode with the reason ([ComposeContext.callee]).
  *  - **Overloads** are chosen as Kotlin chooses them, closely enough for screen code: arguments map
  *    to parameters by position, name and trailing lambda; a candidate needs every required one;
- *    each argument must read as its parameter's kind; the candidate that leaves the fewest
- *    defaults unused wins, and a tie is ambiguous (RawCode, as the compiler would refuse it).
+ *    each argument must read as its parameter's kind; of several that fit, the one candidate that
+ *    uses no default value wins, and any other tie is ambiguous (RawCode, as the compiler refuses it).
  *  - **Modifier chains** are ordered lists of elements, repeats allowed: `Modifier.a(…).b(…)`.
  *
  * The document keeps a Compose node in today's types: its type is `<guest fq>#<tag>`; its props are
@@ -34,6 +37,9 @@ internal class ComposeContext(val catalog: ComposeCatalog, file: KtFile) {
   private val explicit = HashMap<String, String>()
   private val stars = ArrayList<String>()
 
+  /** The file's top-level declarations by name: they shadow a star import (and clash with an explicit one). */
+  private val declared: Set<String> = file.declarations.mapNotNullTo(HashSet()) { (it as? KtNamedDeclaration)?.name }
+
   init {
     for (d in file.importDirectives) {
       val fq = d.importedFqName?.asString() ?: continue
@@ -41,14 +47,74 @@ internal class ComposeContext(val catalog: ComposeCatalog, file: KtFile) {
     }
   }
 
+  /** Whether the file imports any guest name (`dev.keliver.compose.*`): only such a file is read the Compose way. */
+  private val importsGuest: Boolean = explicit.values.any(::isGuest) || stars.any { it == GUEST_ROOT || isGuest(it) }
+
+  /** Whether the file declares a top-level [name]. */
+  fun declares(name: String): Boolean = name in declared
+
+  /** How a call to [simple] reads in this file. */
+  sealed interface Callee {
+    /** A generated widget: [fq] has overloads in the catalog. */
+    class Widget(val fq: String) : Callee
+
+    /** Not read: [why] is the RawCode reason. */
+    class Raw(val why: String) : Callee
+  }
+
+  /**
+   * The callee [simple] names, as Kotlin resolves it closely enough for screen code, or null when
+   * today's grammar reads it (by its simple name, as it always has). In a file that imports a guest
+   * name, a call is RawCode, never a guess, when:
+   *  - it is shadowed by (or clashes with) a top-level declaration of the same file;
+   *  - two star imports both give a generated widget of that name (the compiler refuses it);
+   *  - an explicit import makes it a guest name the catalog does not generate, or Compose's own
+   *    API (`androidx.compose.material3.Card`), which is neither a generated nor a legacy widget;
+   *  - no explicit import names it and a guest star import may (a guest declaration the catalog
+   *    does not generate), unless it is the file's own or a project component ([components]).
+   * A file that imports no guest name, an explicit import of a legacy or app name, and anything
+   * else keep today's reading.
+   */
+  fun callee(simple: String, components: Set<String>): Callee? {
+    if (!importsGuest) return null
+    val shadowed = "`$simple(…)` is declared in this file too, so it may not be the generated widget"
+    explicit[simple]?.let { fq ->
+      return when {
+        catalog.widgetOverloads(fq).isNotEmpty() -> if (declares(simple)) Callee.Raw(shadowed) else Callee.Widget(fq)
+        isGuest(fq) -> Callee.Raw("`$simple(…)` is `$fq`, which the generated catalog does not include")
+        isComposeOwn(fq) -> Callee.Raw("`$simple(…)` is `$fq`, Compose's own API: neither a generated nor a legacy widget")
+        else -> null
+      }
+    }
+    val generated = stars.map { "$it.$simple" }.filter { catalog.widgetOverloads(it).isNotEmpty() }
+    if (generated.size > 1) {
+      return Callee.Raw("`$simple(…)` is ambiguous between ${generated.joinToString { "`$it`" }} (two star imports)")
+    }
+    generated.singleOrNull()?.let { return if (declares(simple)) Callee.Raw(shadowed) else Callee.Widget(it) }
+    if (declares(simple) || simple in components) return null
+    val guestStars = stars.filter { it == GUEST_ROOT || isGuest(it) }
+    if (guestStars.isNotEmpty()) {
+      return Callee.Raw(
+        "`$simple(…)` is not imported by name, and ${guestStars.joinToString { "`$it.*`" }} may give a guest declaration the generated catalog does not include",
+      )
+    }
+    return null
+  }
+
+  private fun isGuest(fq: String): Boolean = fq.startsWith("$GUEST_ROOT.")
+
+  private fun isComposeOwn(fq: String): Boolean =
+    (fq.startsWith("androidx.compose.") && !fq.startsWith("androidx.compose.runtime.")) || fq.startsWith("org.jetbrains.compose.")
+
+  private companion object {
+    const val GUEST_ROOT = "dev.keliver.compose"
+  }
+
   /** What [simple] names in this file among [known] fully qualified names (explicit imports first). */
   fun resolve(simple: String, known: (String) -> Boolean): String? {
     explicit[simple]?.let { return it.takeIf(known) }
     return stars.map { "$it.$simple" }.filter(known).singleOrNull()
   }
-
-  /** The guest widget the callee [simple] names, or null (not imported from a generated group). */
-  fun widget(simple: String): String? = resolve(simple) { catalog.widgetOverloads(it).isNotEmpty() }
 
   /** Whether the file imports the top-level modifier [entry] under its name (or a star of its package). */
   fun imports(entry: ComposeCatalog.Entry): Boolean = resolve(entry.name) { it == entry.guest } != null
@@ -65,8 +131,8 @@ internal class ComposeContext(val catalog: ComposeCatalog, file: KtFile) {
 internal object ComposeSyntax {
   /** A call's arguments bound to one overload's parameters. */
   class Binding(val entry: ComposeCatalog.Entry, val args: Map<String, KtValueArgument>) {
-    /** Parameters the call leaves at their default (Kotlin prefers the overload with fewest). */
-    val unusedDefaults: Int get() = entry.params.count { it.name !in args && !it.required && it.kind != "modifier" }
+    /** Whether the call leaves any parameter at its default (Kotlin prefers the one overload that does not). */
+    val usesDefaults: Boolean get() = entry.params.any { it.name !in args && !it.required }
   }
 
   /** A binding, or why the call does not bind. */
@@ -98,10 +164,26 @@ internal object ComposeSyntax {
         else "`$shown(…)` matches no generated overload (${reasons.distinct().joinToString("; ")})",
       )
     }
-    val best = ok.minOf { it.unusedDefaults }
-    val chosen = ok.filter { it.unusedDefaults == best }
-    if (chosen.size > 1) return Bound.No("`$shown(…)` is ambiguous between overloads ${chosen.joinToString { "#${it.entry.tag}" }}")
-    return Bound.Ok(chosen.single())
+    if (ok.size == 1) return Bound.Ok(ok.single())
+    // Kotlin's last tie-break is yes/no, not a count: a candidate that uses no default value beats
+    // ones that use some. Any other tie (two without defaults, or every candidate using defaults —
+    // `Modifier.padding()`) is an ambiguity the compiler refuses.
+    val withoutDefaults = ok.filter { !it.usesDefaults }
+    if (withoutDefaults.size == 1) return Bound.Ok(withoutDefaults.single())
+    val tied = withoutDefaults.ifEmpty { ok }
+    return Bound.No("`$shown(…)` is ambiguous between overloads ${tied.joinToString { "#${it.entry.tag}" }}")
+  }
+
+  /**
+   * Whether [call] (one with no value arguments, the only case decided without reading kinds) binds
+   * to exactly [entry] among [overloads] — what write-back checks before it leaves a call empty.
+   */
+  fun emptyCallBindsTo(call: KtCallExpression, overloads: List<ComposeCatalog.Entry>, entry: ComposeCatalog.Entry): String? {
+    when (val b = bind(call, overloads) { _, _ -> null }) {
+      is Bound.Ok -> if (b.binding.entry.tag == entry.tag) return null
+      is Bound.No -> return b.why
+    }
+    return "`${call.text}` would bind to another overload than #${entry.tag}"
   }
 
   private fun map(

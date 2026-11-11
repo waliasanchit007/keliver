@@ -39,11 +39,11 @@ internal object ComposeFixtures {
 
   fun <T> ed0(block: () -> T): T = ComposeIngest.with(catalog, block)
 
-  fun recognize(source: String, file: String = "app/screens/OfferScreen.kt", asComponent: Boolean = false): Recognized =
+  fun recognize(source: String, file: String = "app/screens/InboxScreen.kt", asComponent: Boolean = false): Recognized =
     ed0 { Recognizer.recognize(file, source, asComponent = asComponent) } ?: error("no screen")
 
-  fun doc(source: String, file: String = "app/screens/OfferScreen.kt", asComponent: Boolean = false): UiDocument =
-    recognize(source, file, asComponent).let { UiDocument("offer", it.root, it.contract, 0, 1000) }
+  fun doc(source: String, file: String = "app/screens/InboxScreen.kt", asComponent: Boolean = false): UiDocument =
+    recognize(source, file, asComponent).let { UiDocument("inbox", it.root, it.contract, 0, 1000) }
 
   fun raws(n: DocNode): List<DocNode.RawCode> = when (n) {
     is DocNode.RawCode -> listOf(n)
@@ -57,7 +57,7 @@ internal object ComposeFixtures {
   }
 
   /** A Style B screen in Compose's shape, the guest imports only. */
-  val OFFER_SCREEN: String = """
+  val INBOX_SCREEN: String = """
     package app.screens
 
     import androidx.compose.runtime.Composable
@@ -78,9 +78,9 @@ internal object ComposeFixtures {
     import dev.keliver.compose.ui.unit.sp
 
     @Composable
-    fun OfferScreen(b: OfferScreenBindings) {
+    fun InboxScreen(b: InboxScreenBindings) {
       Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // The offer row.
+        // The header row.
         Row(
           modifier = Modifier.fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
@@ -88,15 +88,15 @@ internal object ComposeFixtures {
           verticalAlignment = Alignment.CenterVertically,
         ) {
           Text(b.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-          Text(b.rate, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+          Text(b.unread, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         }
-        Text("Fixed income", fontSize = 16.sp, color = Color(0xFF1F1F1F), maxLines = 1)
+        Text("Recent messages", fontSize = 16.sp, color = Color(0xFF1F1F1F), maxLines = 1)
       }
     }
 
-    interface OfferScreenBindings {
+    interface InboxScreenBindings {
       val title: String
-      val rate: String
+      val unread: String
     }
   """.trimIndent() + "\n"
 }

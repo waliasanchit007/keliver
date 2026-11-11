@@ -662,9 +662,9 @@ object Recognizer {
 
     /**
      * A statement the generated catalog claims: a `for` loop (a Repeat), a call the file's imports
-     * resolve to a generated widget (a Compose node, or RawCode with the reason), or a call to an
-     * imported `dev.keliver.compose.*` name the catalog does not generate (RawCode: read by its
-     * simple name it could be taken for a legacy widget). Null = today's grammar reads it.
+     * resolve to a generated widget (a Compose node, or RawCode with the reason), or a call whose
+     * resolution is not certain ([ComposeContext.callee]: RawCode, since read by its simple name it
+     * could be taken for a legacy widget). Null = today's grammar reads it.
      */
     private fun composeStatement(expr: KtExpression, itemScope: Set<String>, parentType: String?): DocNode? {
       val cc = compose ?: return null
@@ -683,12 +683,11 @@ object Recognizer {
       }
       val call = expr as? KtCallExpression ?: return null
       val simple = (call.calleeExpression as? org.jetbrains.kotlin.psi.KtNameReferenceExpression)?.getReferencedName() ?: return null
-      cc.widget(simple)?.let { return composeNode(call, it, itemScope, parentType) }
-      val imported = cc.resolve(simple) { true }
-      if (imported != null && imported.startsWith("dev.keliver.compose.")) {
-        return raw(expr, "`$simple(…)` is `$imported`, which the generated catalog does not include")
+      return when (val c = cc.callee(simple, componentNames)) {
+        is ComposeContext.Callee.Widget -> composeNode(call, c.fq, itemScope, parentType)
+        is ComposeContext.Callee.Raw -> raw(expr, c.why)
+        null -> null
       }
-      return null
     }
 
     /** `for (x in items) { … }` over a list binding — the Repeat `items.forEach { x -> … }` is. */
@@ -810,10 +809,12 @@ object Recognizer {
       calls.forEachIndexed { i, c ->
         val name = c.calleeExpression!!.text
         val all = cc.catalog.modifiersNamed(name)
-        val candidates = all.filter { m -> if (m.scope == null) cc.imports(m) else m.scope == scope }
+        // A top-level extension the file declares shadows an imported one (a scope's member still wins).
+        val candidates = all.filter { m -> if (m.scope == null) cc.imports(m) && !cc.declares(name) else m.scope == scope }
         if (candidates.isEmpty()) {
           composeWhy = when {
             all.isEmpty() -> "`.$name(…)` is not a generated modifier"
+            cc.declares(name) && all.any { it.scope == null } -> "`.$name(…)` is declared in this file too, so it may not be the generated modifier"
             all.all { it.scope != null } -> "`.$name(…)` is a member of ${all.mapNotNull { it.scope?.substringAfterLast('.') }.distinct().joinToString("/")}, not of this content's scope (${scope?.substringAfterLast('.') ?: "none"})"
             else -> "`.$name(…)` is not imported from a generated group"
           }

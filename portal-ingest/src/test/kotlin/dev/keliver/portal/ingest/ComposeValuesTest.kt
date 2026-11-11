@@ -39,7 +39,7 @@ class ComposeValuesTest {
   private val cases = listOf(
     DP to "16.dp", DP to "16.5.dp", DP to "Dp.Unspecified",
     TEXT_UNIT to "12.sp", TEXT_UNIT to "1.2.em", TEXT_UNIT to "TextUnit.Unspecified",
-    COLOR to "Color(0xFFE7F0FF)", COLOR to "Color.White", COLOR to "Color.Unspecified", COLOR to "LocalContentColor.current",
+    COLOR to "Color(0xFFEEF0F4)", COLOR to "Color.White", COLOR to "Color.Unspecified", COLOR to "LocalContentColor.current",
     COLOR to "MaterialTheme.colorScheme.primary", COLOR to "MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)",
     SHAPE to "RoundedCornerShape(12.dp)", SHAPE to "CircleShape", SHAPE to "RectangleShape", SHAPE to "RoundedCornerShape(percent = 25)",
     SHAPE to "RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)", SHAPE to "CutCornerShape(8.dp)", SHAPE to "MaterialTheme.shapes.medium",
