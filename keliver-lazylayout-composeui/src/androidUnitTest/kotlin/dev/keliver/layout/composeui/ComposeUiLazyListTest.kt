@@ -37,6 +37,7 @@ import dev.keliver.snapshot.testing.ComposeUiTestWidgetFactory
 import dev.keliver.ui.Px
 import dev.keliver.widget.compose.ComposeWidgetChildren
 import dev.keliver.yoga.FlexDirection
+import org.junit.Assume
 import org.junit.Rule
 
 @Burst
@@ -52,6 +53,16 @@ class ComposeUiLazyListTest(
   )
 
   override val widgetFactory = ComposeUiTestWidgetFactory
+
+  /**
+   * Compose's LazyColumn refuses an infinite maximum height ("Vertically scrollable component was
+   * measured with an infinity maximum height constraints"), in an app as in a test. Up to Compose
+   * 1.11 the render here swallowed that exception and snapshotted a blank screen (the four images
+   * under src/test/snapshots are blank); Compose 1.12 lets it fail the test.
+   */
+  override fun assumeMeasurableWithUnboundedHeight() {
+    Assume.assumeTrue("LazyColumn cannot be measured with an unbounded height", false)
+  }
 
   override fun flexContainer(
     direction: FlexDirection,
