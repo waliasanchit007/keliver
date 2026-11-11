@@ -57,8 +57,9 @@ from the relay, on purpose:
 - A session is a provider object, not a `session` query parameter. The relay's cursor cap and
   30-minute expiry are not needed, because a session holds at most one cursor per distinct
   request in its set.
-- A provider answers one request at a time, so two identical requests in flight never get the
-  same position. The relay reads a cursor and writes it back in two separate steps.
+- A provider answers one request at a time under its own lock, so two identical requests in
+  flight never get the same position. The relay gets the same from its HTTP server, which
+  handles one request at a time.
 - The guest gets the miss as a response: a 424 with the error JSON, which `KeliverHttp`'s typed
   calls raise as `KeliverHttpException(424, …)`. The editor's preview client and the portal's
   device hosts turn the relay's non-2xx answer into an exception instead, so code that reads
