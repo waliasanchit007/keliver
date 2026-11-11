@@ -85,8 +85,8 @@ printf '{ "screensDir": "src/jsMain/kotlin/screens" }\n' > "$APP/keliver.portal.
 printf 'package dev.keliver.floor.screens\n\nfun HomeScreen() {}\n' > "$APP/src/jsMain/kotlin/screens/home.kt"
 printf '%s\n' "$(printf 'ab%.0s' $(seq 1 32))" > "$STORE/keys/ed25519.pub"
 cp -R "$ROOT/scripts/fixtures/embed-older-compose" "$EX"
-cp "$ROOT/gradlew" "$EX/"; mkdir -p "$EX/gradle/wrapper"
-cp "$ROOT/gradle/wrapper/gradle-wrapper.jar" "$ROOT/gradle/wrapper/gradle-wrapper.properties" "$EX/gradle/wrapper/"
+# The Gradle the fixture's AGP runs on, not this repo's (templates/app-wrapper).
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$EX"
 printf 'sdk.dir=%s\n' "$SDK" > "$EX/local.properties"
 export JAVA_TOOL_OPTIONS="-Duser.home=$DISP/home" PORTAL_STORE="$STORE"
 keliver_require_isolated_store "$DISP" "$APP" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
