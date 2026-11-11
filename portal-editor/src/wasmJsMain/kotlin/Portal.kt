@@ -2155,8 +2155,10 @@ private fun showDeviceLinks() {
             "A debug host loads the newest PUBLISHED bundle from one of these (project $p, $s) — publish to send the " +
               "state you are editing. " +
               (
-                if (links.any { it.link != null }) "Scan a QR code with the device's camera: a DEBUG build of this app " +
-                  "opens it, asks, and restarts on that server (a release build has no such link). Or point the host at the URL:"
+                if (links.any { it.link != null }) "Open a QR code's link in a DEBUG build of this app: it asks, then " +
+                  "restarts on that server (a release build has no such link). The iPhone Camera app opens it; many " +
+                  "Android camera apps show it as text only, so on Android run the adb shell \"am start …\" command " +
+                  "below. Or point the host at the URL:"
                 else "Point the host at a URL, then restart the app:"
                 ),
           ),

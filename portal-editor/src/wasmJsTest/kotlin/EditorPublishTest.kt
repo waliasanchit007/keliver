@@ -115,7 +115,8 @@ class EditorPublishTest {
   @Test fun theDebugLinkCanBeOpenedWithoutACamera() {
     val link = "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F10.0.2.2%3A8078"
     val (adb, simctl) = debugLinkCommands(link)
-    assertEquals("adb shell am start -a android.intent.action.VIEW -d '$link'", adb)
+    // Quoted twice: the local shell keeps the double quotes' content whole, the device's shell the link.
+    assertEquals("adb shell \"am start -a android.intent.action.VIEW -d '$link'\"", adb)
     assertEquals("xcrun simctl openurl booted '$link'", simctl)
   }
 }

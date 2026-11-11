@@ -105,9 +105,11 @@ internal fun debugHostCommand(url: String): String =
 
 /**
  * How [link] (a debug link, from [deviceLinks]) is opened without a camera: on an Android device or
- * emulator over adb, and on a booted iOS simulator. A debug build asks before it changes anything.
+ * emulator over adb (the reliable Android route: many Android camera apps show such a QR code as
+ * text), and on a booted iOS simulator. A debug build asks before it changes anything. The adb
+ * command quotes the link for the device's shell too, not only for the local one.
  */
 internal fun debugLinkCommands(link: String): List<String> = listOf(
-  "adb shell am start -a android.intent.action.VIEW -d '$link'",
+  "adb shell \"am start -a android.intent.action.VIEW -d '$link'\"",
   "xcrun simctl openurl booted '$link'",
 )
