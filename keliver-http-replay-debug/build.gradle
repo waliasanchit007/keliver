@@ -1,0 +1,38 @@
+// DEBUG BUILDS ONLY. An in-process HostHttpProvider that answers a guest's
+// HostHttp requests from reviewed fixture sets, with the relay's exact-match
+// rules (keliver-http-fixtures), and never makes an outbound call: it has no
+// HTTP client, no base URL and no network dependency at all. A host adds it
+// with `debugImplementation` (Android) or a Debug-only dependency (iOS), so a
+// release build cannot compile a reference to it. Wiring and the release-build
+// self-test that proves its absence: docs/DEBUG_HTTP_REPLAY.md.
+//
+// A separate module (not keliver-http-fixtures) because HostHttpProvider is a
+// ZiplineService and Zipline has no wasm target; keliver-http-fixtures stays
+// Zipline-free so the wasm editor can share it.
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverHttp
+        api projects.keliverHttpFixtures
+        implementation libs.kotlinx.coroutines.core
+        implementation libs.kotlinx.serialization.json
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}

@@ -218,6 +218,8 @@ jobs:
       # the Zipline plugin; it is not published, so the build above does not compile it. Its
       # jvmTest also builds keliver-bridge-fixture-guest (a Kotlin/JS Zipline guest) and runs
       # the first guest-to-host round trip through it (B5b).
+      # The HTTP fixture matcher and the debug replay provider built on it (item 5, S2) run
+      # on every target they have; `test` reaches only the matcher's Android unit tests.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
@@ -237,6 +239,13 @@ jobs:
           :keliver-bridge-fixture:compileKotlinJs
           :keliver-bridge-fixture:compileKotlinIosSimulatorArm64
           :keliver-bridge-fixture:ziplineApiCheck
+          :keliver-http-fixtures:jvmTest
+          :keliver-http-fixtures:jsTest
+          :keliver-http-fixtures:wasmJsTest
+          :keliver-http-fixtures:iosSimulatorArm64Test
+          :keliver-http-replay-debug:jvmTest
+          :keliver-http-replay-debug:jsTest
+          :keliver-http-replay-debug:iosSimulatorArm64Test
           -DRELEASE_SIGNING_ENABLED=false
 
       # Every library's Kotlin/JS and wasm tests. Linking a test EXECUTABLE is the only place a
