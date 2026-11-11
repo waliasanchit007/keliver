@@ -39,8 +39,8 @@ internal object DebugBundleLink {
    *   answers), then `:` and a port from [MIN_PORT] to 65535, then nothing or `/`: no user, query,
    *   fragment or other path;
    * - that address is loopback, private, link-local or shared (carrier-grade NAT, which VPNs such
-   *   as Tailscale use): 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16,
-   *   100.64.0.0/10, `::1`, fc00::/7 or fe80::/10. A link never sends the host to the internet.
+   *   as Tailscale use): IPv4 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16 or 100.64/10, or
+   *   IPv6 `::1`, fc00::/7 or fe80::/10. A link never sends the host to the internet.
    * What it returns has no trailing `/`, and an IPv6 literal in lower case.
    */
   fun server(link: String?, scheme: String): String? {
@@ -93,8 +93,8 @@ internal object DebugBundleLink {
   }
 
   /**
-   * A dotted-quad IPv4 literal (four decimal octets, no leading zeros) in 127.0.0.0/8, 10.0.0.0/8,
-   * 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 or 100.64.0.0/10.
+   * A dotted-quad IPv4 literal (four decimal octets, no leading zeros) in 127/8, 10/8, 172.16/12,
+   * 192.168/16, 169.254/16 or 100.64/10.
    */
   internal fun ipv4(s: String): Boolean {
     val parts = s.split('.')

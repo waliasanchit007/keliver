@@ -474,9 +474,9 @@ keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.2
   server must be `http://` or `https://`; an IPv4 literal, a bracketed IPv6
   literal (no zone id) or `localhost`, never a host name, so a link cannot
   send the host to a name some DNS answers; a loopback, private, link-local or
-  shared address only (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`,
-  `192.168.0.0/16`, `169.254.0.0/16`, `100.64.0.0/10` as VPNs such as
-  Tailscale use, `::1`, `fc00::/7`, `fe80::/10`), so a link never sends the
+  shared address only (IPv4 `127/8`, `10/8`, `172.16/12`, `192.168/16`,
+  `169.254/16`, `100.64/10` as VPNs such as Tailscale use; IPv6 `::1`,
+  `fc00::/7`, `fe80::/10`), so a link never sends the
   host to the internet; any port from 1024 to 65535 (moving the proxy with
   `KELIVER_DEVICE_PROXY_PORT` needs no change to the host); and no user,
   query, fragment or path. The relay makes no link for a URL outside these
