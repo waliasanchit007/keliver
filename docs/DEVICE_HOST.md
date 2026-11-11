@@ -1003,6 +1003,8 @@ server fed by `keliver-publish`:
 **Not measured:**
 - native navigation on iOS (the simulator CI's only taps are the reference app's P3 and
   T3, in its own host, not the embedded one);
+- the app's `RequestPolicy` refusing a call on iOS (X11 runs on the Android
+  emulator only; the iOS host's `RequestPolicy` has a JVM unit test, no device run);
 - an app on another Kotlin or AGP than the one combination CI builds (CI also
   BUILDS an app on older Compose, activity, core, lifecycle, coroutines and
   OkHttp 4, raised to the floor, but does not run it);

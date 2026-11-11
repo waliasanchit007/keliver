@@ -35,6 +35,14 @@ class RequestPolicyTest {
     assertNull(policy(RequestPolicy.Rule("HEAD", "orders")).refusal("HEAD", "orders"))
   }
 
+  /** The same sentences as the Android host's, which its device check X11 greps for. */
+  @Test fun theRefusalReasonsAreTheSentencesTheAndroidHostGives() {
+    val p = policy(RequestPolicy.Rule("GET", "ping"))
+    assertEquals("POST is a state-changing call, and this build does not allow them", p.refusal("POST", "ping"))
+    assertEquals("GET /admin is not in the allow-list", p.refusal("GET", "admin"))
+    assertNull(p.refusal("GET", "ping"))
+  }
+
   @Test fun thePolicyMustNameTheApiBasesOrigin() {
     assertTrue("is not the policy's origin" in policy(origin = "https://other.example.com").baseRefusal(base)!!)
     assertTrue("is not the policy's origin" in policy(origin = "https://api.example.com:8443").baseRefusal(base)!!)

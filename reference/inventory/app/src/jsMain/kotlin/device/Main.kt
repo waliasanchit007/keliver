@@ -72,20 +72,21 @@ private class AppUi(val route: String = "", private val screen: KeliverScreenHos
 private fun PolicyCheck() {
   var lines by remember { mutableStateOf(listOf("Request policy")) }
   LaunchedEffect(Unit) {
-    val http = Zipline.get().take<HostHttpProvider>("HostHttp")
-    try {
-      for ((method, path) in listOf("POST" to "ping", "GET" to "admin", "GET" to "ping")) {
-        lines = lines + policyAttempt(http, method, path)
-      }
-    } finally {
-      // A host that binds no HostHttp: closing it would be one more failing call.
-      runCatching { http.close() }
+    for ((method, path) in listOf("POST" to "ping", "GET" to "admin", "GET" to "ping")) {
+      lines = lines + policyAttempt(hostHttp, method, path)
     }
   }
   Column {
     lines.forEach { StyledText(text = it, fontSize = 16) }
   }
 }
+
+/**
+ * The host's HostHttp, taken once for this code load and never closed: closing a taken service
+ * tells the host to drop its end, so a second visit to k4/policy in the same load would fail.
+ * Lazy, so a route that never makes a request never takes it.
+ */
+private val hostHttp: HostHttpProvider by lazy { Zipline.get().take<HostHttpProvider>("HostHttp") }
 
 /** "Refused: POST ping" and the host's reason, "Allowed: GET ping (200)", or "Failed: …" and why. */
 private suspend fun policyAttempt(http: HostHttpProvider, method: String, path: String): List<String> {
@@ -129,6 +130,6 @@ private class AppPresenter(json: kotlinx.serialization.json.Json) : PortalPresen
 fun main() {
   val zipline = Zipline.get()
   // If your presenter needs HTTP, the host binds a HostHttpProvider under
-  // "HostHttp": zipline.take<HostHttpProvider>("HostHttp") (PolicyCheck, above).
+  // "HostHttp": zipline.take<HostHttpProvider>("HostHttp"), once per load (hostHttp, above).
   zipline.bind<PortalPresenter>("PortalPresenter", AppPresenter(zipline.json))
 }
