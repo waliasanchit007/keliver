@@ -53,6 +53,10 @@
 # or open host-ios/iosApp.xcodeproj in Xcode. A device build needs your team
 # and signing (host-ios/Configuration/Config.xcconfig).
 #
+# The Debug configuration also opens keliver-<app package>://keliver-debug/
+# bundles?server=URL (the editor's "On a device" QR code: src/debuglink,
+# iosApp/Info-Debug.plist, docs/DEVICE_HOST.md); no other configuration has it.
+#
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
 # app's appRuntime.keliverVersion, else 0.4.1), KELIVER_HOST_ZIPLINE_VERSION,
 # KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION.
@@ -84,7 +88,7 @@ while [ $# -gt 0 ]; do
     --embed)           EMBED=true; shift ;;
     --into)            need "$1" $#; INTO="$2"; shift 2 ;;
     --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,61p' "$SELF"; exit 0 ;;
+    -h|--help)         sed -n '2,65p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -374,6 +378,7 @@ echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable
 echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
 echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
 echo "                   commit host-ios/src/iosMain/kotlin/$PKG_PATH/HostConfig.kt"
+echo "  debug link       $DEBUG_LINK_SCHEME://keliver-debug/bundles?server=<the device proxy, port $DEBUG_LINK_PORT>   (the Debug configuration only)"
 echo "next:"
 echo "  xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \\"
 echo "    -configuration Debug CODE_SIGNING_ALLOWED=NO build      (or open it in Xcode)"

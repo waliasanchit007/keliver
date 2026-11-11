@@ -336,6 +336,21 @@ grep -q 'Debug.getMemoryInfo(info)' "$T/KeliverMemory.kt" 2>/dev/null \
   && ! grep -rq 'MEMORY_CYCLE' "$H/src/notiming" "$H/src/main" \
   && ok "M5: the memory profile and its cycle in debug and benchmark, a no-op elsewhere" \
   || bad "M5: the memory profile is not wired, or reaches a build without the marks"
+# ED3: the debug link, in the debug source set only: its activity, its check and its intent filter.
+D="$H/src/debug"
+grep -q 'android:scheme="keliver-com.example.demo"' "$D/AndroidManifest.xml" 2>/dev/null \
+  && grep -q 'android:host="keliver-debug"' "$D/AndroidManifest.xml" && grep -q 'android:path="/bundles"' "$D/AndroidManifest.xml" \
+  && grep -q 'android:name="com.example.demo.host.KeliverDebugLinkActivity"' "$D/AndroidManifest.xml" \
+  && grep -q '^class KeliverDebugLinkActivity : Activity()' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
+  && grep -q 'internal const val DEBUG_LINK_SCHEME = "keliver-com.example.demo"' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
+  && grep -q 'internal const val DEBUG_LINK_PORT = 8078$' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
+  && grep -q 'if (!BuildConfig.DEBUG || (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) == 0)' "$D/kotlin/$P/KeliverDebugLinkActivity.kt" \
+  && grep -q '^internal object DebugBundleLink' "$D/kotlin/$P/DebugBundleLink.kt" \
+  && [ -f "$H/src/testDebug/kotlin/$P/DebugBundleLinkTest.kt" ] \
+  && ! grep -rqE 'keliver-debug|KeliverDebugLinkActivity|DebugBundleLink' "$H/src/main" \
+  && [ ! -e "$H/src/release" ] \
+  && ok "ED3: the debug link (keliver-com.example.demo://keliver-debug/bundles, port 8078) is in src/debug only: none of it in src/main" \
+  || bad "ED3: the debug link is not wired, or reaches src/main"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges)' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
@@ -403,6 +418,9 @@ same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt Produ
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the library and the standalone host (one set of sources)"
+diff -r "$H/src/debug" "$L/src/debug" > /dev/null 2>&1 \
+  && ok "ED3: the library has the same debug link in its debug source set (an app's debug build merges it, its release build none of it)" \
+  || bad "ED3: the library's src/debug differs from the standalone host's"
 embed_refuses "a second run over the module" "already exists" --embed --into "$EX" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$EX" | grep -q '^\.keliver-host\.' && bad "an --embed staging directory was left behind" || ok "no --embed staging directory left behind"
 
@@ -435,6 +453,9 @@ if [ "$BUILD" = 1 ]; then
     fw="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.FrameWindowTest.xml"
     [ -f "$fw" ] && grep -q 'failures="0" errors="0"' "$fw" && ! grep -q 'tests="0"' "$fw" \
       && ok "M4: the frame window's tests ran: $(grep -o 'tests="[0-9]*"' "$fw" | head -1)" || bad "M4: the frame window's tests did not run, or failed"
+    dlt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.DebugBundleLinkTest.xml"
+    [ -f "$dlt" ] && grep -q 'failures="0" errors="0"' "$dlt" && ! grep -q 'tests="0"' "$dlt" \
+      && ok "ED3: the debug link's tests ran: $(grep -o 'tests="[0-9]*"' "$dlt" | head -1)" || bad "ED3: the debug link's tests did not run, or failed"
     # A release build with an http:// server is refused.
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease > "$DISP/assemble-release.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \
@@ -480,6 +501,19 @@ PY
       exposed="$(python3 "$DISP/manifest-exposed.py" "$DISP/release-manifest.txt")"
       [ -z "$exposed" ] && ok "debug surfaces: a release build is not debuggable and exports only its launcher, or what a permission guards" \
         || bad "debug surfaces: $exposed"
+      # ED3: the debug link. The positive control first: the debug APK has its filter and its
+      # class, so the release check below can see them.
+      dbg_apk="$(find "$H/build/outputs/apk/debug" -name '*.apk' 2>/dev/null | head -1)"
+      "$aapt2" dump xmltree --file AndroidManifest.xml "$dbg_apk" > "$DISP/debug-manifest.txt" 2>&1
+      dex_has(){ unzip -p "$1" 'classes*.dex' 2>/dev/null | LC_ALL=C grep -aqE "$2"; }
+      grep -q '"keliver-com.example.demo"' "$DISP/debug-manifest.txt" && grep -q '"keliver-debug"' "$DISP/debug-manifest.txt" \
+        && grep -q 'KeliverDebugLinkActivity' "$DISP/debug-manifest.txt" && dex_has "$dbg_apk" 'KeliverDebugLinkActivity' && dex_has "$dbg_apk" 'DebugBundleLink' \
+        && ok "ED3: the debug APK has the debug link (its intent filter for keliver-com.example.demo://keliver-debug, its activity and check in the dex)" \
+        || bad "ED3: the debug APK lacks the debug link: the release check would prove nothing"
+      ! grep -qE 'keliver-debug|keliver-com\.example\.demo|KeliverDebugLinkActivity' "$DISP/release-manifest.txt" \
+        && ! dex_has "$rel_apk" 'KeliverDebugLinkActivity|DebugBundleLink|keliver-debug' \
+        && ok "ED3: the release APK has no debug link: no intent filter or activity in its manifest, no handler class in its dex" \
+        || bad "ED3: the release APK carries the debug link"
     else
       bad "debug surfaces: no release build to check (rc=$rc, apk '${rel_apk}', aapt2 '${aapt2}')"
     fi
