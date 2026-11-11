@@ -505,7 +505,9 @@ PY
       # class, so the release check below can see them.
       dbg_apk="$(find "$H/build/outputs/apk/debug" -name '*.apk' 2>/dev/null | head -1)"
       "$aapt2" dump xmltree --file AndroidManifest.xml "$dbg_apk" > "$DISP/debug-manifest.txt" 2>&1
-      dex_has(){ unzip -p "$1" 'classes*.dex' 2>/dev/null | LC_ALL=C grep -aqE "$2"; }
+      # The dex files to a file first: `grep -q` stops at the first match, and under pipefail the
+      # unzip it cut off would turn a match into a failure.
+      dex_has(){ unzip -p "$1" 'classes*.dex' > "$DISP/dex.bin" 2>/dev/null && LC_ALL=C grep -aqE "$2" "$DISP/dex.bin"; }
       grep -q '"keliver-com.example.demo"' "$DISP/debug-manifest.txt" && grep -q '"keliver-debug"' "$DISP/debug-manifest.txt" \
         && grep -q 'KeliverDebugLinkActivity' "$DISP/debug-manifest.txt" && dex_has "$dbg_apk" 'KeliverDebugLinkActivity' && dex_has "$dbg_apk" 'DebugBundleLink' \
         && ok "ED3: the debug APK has the debug link (its intent filter for keliver-com.example.demo://keliver-debug, its activity and check in the dex)" \
