@@ -47,6 +47,12 @@ New:
   that binds `KeliverTrace` with `fun composed()` (M4's guest frame profile;
   `docs/DEVICE_HOST.md`, "The guest frame profile"). A host that binds no
   `KeliverTrace` gets no call and pays nothing (#237).
+- `keliver-http-replay-debug` (new; debug builds only): `DebugHttpReplay` and
+  `DebugHttpReplayProvider`, an in-process `HostHttpProvider` that replays reviewed HTTP
+  fixture sets with the relay's exact-match rules (the recorded response, or a 424 miss)
+  and never makes an outbound call. Add it with `debugImplementation` (Android) or a
+  Debug-only dependency (iOS). Wiring and the release-build self-test:
+  `docs/DEBUG_HTTP_REPLAY.md` (#232).
 
 Changed:
 
@@ -62,6 +68,16 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   it picks or boots a simulator, scaffolds `host-ios/` when absent, builds a debug host
   pointed at the local portal, installs and launches it, and waits until the host has
   loaded the newest bundle. It never publishes and never targets a physical device (#235).
+- `bin/keliver-check` checks an app without the editor: it compiles, ingests every
+  screen (RawCode reported with file and line), warns on unsupported APIs and checks the
+  bundle budget (`check.bundleBudgetBytes`). It prints JSON lines (keys in
+  `docs/KELIVER_CHECK.md`) and exits 0 (no errors), 1 (errors; warnings too with `--strict`) or 2 (could not check)
+  (#225).
+- The portal's device proxy: `KELIVER_DEVICE_PROXY=loopback|all|<IP>` starts a second,
+  read-only server (port + 1) that serves only the published bundles, so a phone or
+  emulator on the LAN can load them; the editor's devices chip shows its URLs, QR codes
+  and the debug-host command. A LAN client is not authenticated (`docs/DEVICE_PROOF.md`)
+  (#227).
 
 ## Keliver 0.4.1 - 2026-10-27
 
