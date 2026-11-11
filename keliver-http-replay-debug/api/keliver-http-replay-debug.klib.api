@@ -1,0 +1,62 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-http-replay-debug>
+final class dev.keliver.http.replay.debug/DebugHttpReplay { // dev.keliver.http.replay.debug/DebugHttpReplay|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/Function0<kotlin.time/Instant> = ...) // dev.keliver.http.replay.debug/DebugHttpReplay.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.Function0<kotlin.time.Instant>){}[0]
+
+    final fun catalog(): kotlin.collections/List<dev.keliver.http.replay.debug/DebugHttpReplaySetInfo> // dev.keliver.http.replay.debug/DebugHttpReplay.catalog|catalog(){}[0]
+    final fun provider(kotlin/String, kotlin/Function1<dev.keliver.http.replay.debug/DebugHttpReplayMiss, kotlin/Unit> = ...): dev.keliver.http.replay.debug/DebugHttpReplayProvider // dev.keliver.http.replay.debug/DebugHttpReplay.provider|provider(kotlin.String;kotlin.Function1<dev.keliver.http.replay.debug.DebugHttpReplayMiss,kotlin.Unit>){}[0]
+}
+
+final class dev.keliver.http.replay.debug/DebugHttpReplayMiss { // dev.keliver.http.replay.debug/DebugHttpReplayMiss|null[0]
+    constructor <init>(kotlin/Int, kotlin/String, kotlin/String, kotlin/String, kotlin/String) // dev.keliver.http.replay.debug/DebugHttpReplayMiss.<init>|<init>(kotlin.Int;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+
+    final val fixtureSet // dev.keliver.http.replay.debug/DebugHttpReplayMiss.fixtureSet|{}fixtureSet[0]
+        final fun <get-fixtureSet>(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplayMiss.fixtureSet.<get-fixtureSet>|<get-fixtureSet>(){}[0]
+    final val method // dev.keliver.http.replay.debug/DebugHttpReplayMiss.method|{}method[0]
+        final fun <get-method>(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplayMiss.method.<get-method>|<get-method>(){}[0]
+    final val path // dev.keliver.http.replay.debug/DebugHttpReplayMiss.path|{}path[0]
+        final fun <get-path>(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplayMiss.path.<get-path>|<get-path>(){}[0]
+    final val reason // dev.keliver.http.replay.debug/DebugHttpReplayMiss.reason|{}reason[0]
+        final fun <get-reason>(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplayMiss.reason.<get-reason>|<get-reason>(){}[0]
+    final val status // dev.keliver.http.replay.debug/DebugHttpReplayMiss.status|{}status[0]
+        final fun <get-status>(): kotlin/Int // dev.keliver.http.replay.debug/DebugHttpReplayMiss.status.<get-status>|<get-status>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.replay.debug/DebugHttpReplayMiss.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.http.replay.debug/DebugHttpReplayMiss.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplayMiss.toString|toString(){}[0]
+}
+
+final class dev.keliver.http.replay.debug/DebugHttpReplayProvider : dev.keliver.http/HostHttpProvider { // dev.keliver.http.replay.debug/DebugHttpReplayProvider|null[0]
+    final var fixtureSet // dev.keliver.http.replay.debug/DebugHttpReplayProvider.fixtureSet|{}fixtureSet[0]
+        final fun <get-fixtureSet>(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplayProvider.fixtureSet.<get-fixtureSet>|<get-fixtureSet>(){}[0]
+
+    final suspend fun execute(dev.keliver.http/HttpRequest): dev.keliver.http/HttpResponse // dev.keliver.http.replay.debug/DebugHttpReplayProvider.execute|execute(dev.keliver.http.HttpRequest){}[0]
+    final suspend fun startSession(kotlin/String? = ...) // dev.keliver.http.replay.debug/DebugHttpReplayProvider.startSession|startSession(kotlin.String?){}[0]
+}
+
+final class dev.keliver.http.replay.debug/DebugHttpReplaySetInfo { // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo|null[0]
+    constructor <init>(kotlin/String, kotlin/Boolean, kotlin/Int, kotlin/String?, kotlin/Boolean, kotlin/String? = ...) // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.<init>|<init>(kotlin.String;kotlin.Boolean;kotlin.Int;kotlin.String?;kotlin.Boolean;kotlin.String?){}[0]
+
+    final val entries // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.entries|{}entries[0]
+        final fun <get-entries>(): kotlin/Int // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.entries.<get-entries>|<get-entries>(){}[0]
+    final val error // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.error|{}error[0]
+        final fun <get-error>(): kotlin/String? // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.error.<get-error>|<get-error>(){}[0]
+    final val expired // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.expired|{}expired[0]
+        final fun <get-expired>(): kotlin/Boolean // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.expired.<get-expired>|<get-expired>(){}[0]
+    final val expiresAt // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.expiresAt|{}expiresAt[0]
+        final fun <get-expiresAt>(): kotlin/String? // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.expiresAt.<get-expiresAt>|<get-expiresAt>(){}[0]
+    final val id // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.id|{}id[0]
+        final fun <get-id>(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.id.<get-id>|<get-id>(){}[0]
+    final val valid // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.valid|{}valid[0]
+        final fun <get-valid>(): kotlin/Boolean // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.valid.<get-valid>|<get-valid>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.http.replay.debug/DebugHttpReplaySetInfo.toString|toString(){}[0]
+}

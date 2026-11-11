@@ -88,6 +88,8 @@ include ':keliver-host'
 include ':keliver-http'
 // Shared HTTP fixture matcher (relay replay + debug host replay). ADOPTION_PLAN item 5, S2.
 include ':keliver-http-fixtures'
+// DEBUG BUILDS ONLY: the in-process fixture replay HostHttpProvider. docs/DEBUG_HTTP_REPLAY.md.
+include ':keliver-http-replay-debug'
 
 include ':keliver-layout-api'
 include ':keliver-layout-compose'
