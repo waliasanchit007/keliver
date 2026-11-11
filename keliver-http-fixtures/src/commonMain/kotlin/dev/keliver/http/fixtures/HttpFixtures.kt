@@ -87,7 +87,8 @@ public sealed interface HttpFixtureSelection {
  * Construction validates the set and throws [IllegalArgumentException] on a bad one:
  * `formatVersion` 1, at least one entry, unique and non-sensitive match headers, relative
  * request paths, no [HttpFixtureRedaction.sensitiveHeaders] in a request or a response,
- * sensitive query values and JSON keys (at any depth) already redacted, bodies of at most
+ * sensitive query values and JSON keys (at any depth) already redacted, no form-encoded
+ * request body with a sensitive key ([HttpFixtureRedaction.sensitiveFormKey]), bodies of at most
  * [MAX_BODY_BYTES] UTF-8 bytes without control characters other than tab, LF and CR, and
  * `reuse = true` only on the last of a request's duplicates. It does not check the dates.
  *
@@ -220,6 +221,36 @@ public object HttpFixtureRedaction {
    */
   public fun isJsonContainer(body: String): Boolean = jsonContainer(body) != null
 
+  /**
+   * The first sensitive key of [body] read as an `application/x-www-form-urlencoded`
+   * body, or null when it has none or is not one. [body] is read as a form when
+   * [contentType] names that media type, or when it has a form's shape: no whitespace
+   * inside, at least one `=`, and not a JSON object or array. Keys are percent-decoded
+   * (`+` is a space) and are also checked part by part (`user[password]`, `user.password`).
+   *
+   * A form body is never redacted, so a fixture can't hold one with a sensitive key:
+   * recording refuses it and [HttpFixtureMatcher] refuses a set whose request has one.
+   */
+  public fun sensitiveFormKey(
+    body: String,
+    contentType: String? = null,
+    additionalKeys: Set<String> = emptySet(),
+  ): String? {
+    val text = body.trim()
+    val declared = contentType?.substringBefore(';')?.trim()
+      .equals(FORM_MEDIA_TYPE, ignoreCase = true)
+    val shaped = '=' in text && text.none { it.isWhitespace() } && text.first() != '{' && text.first() != '['
+    if (!declared && !shaped) return null
+    val additional = additionalKeys.lowercased()
+    for (pair in text.split('&')) {
+      val key = formDecode(pair.substringBefore('='))
+      if (key.isEmpty()) continue
+      if (isSensitive(key, additional)) return key
+      if (key.split('[', ']', '.').any { it.isNotEmpty() && isSensitive(it, additional) }) return key
+    }
+    return null
+  }
+
   private fun isSensitive(key: String, lowercasedAdditional: Set<String>): Boolean =
     key.lowercase() in lowercasedAdditional || sensitiveKeys.containsMatchIn(key)
 
@@ -228,6 +259,34 @@ public object HttpFixtureRedaction {
 }
 
 private const val REDACTED = "<redacted>"
+
+private const val FORM_MEDIA_TYPE = "application/x-www-form-urlencoded"
+
+/** A form key or value decoded: `+` is a space, `%XX` a UTF-8 byte; a malformed escape stays as written. */
+private fun formDecode(text: String): String {
+  if ('%' !in text && '+' !in text) return text
+  val utf8 = text.replace('+', ' ').encodeToByteArray()
+  val out = ByteArray(utf8.size)
+  var n = 0
+  var i = 0
+  while (i < utf8.size) {
+    val hex = if (utf8[i] == '%'.code.toByte() && i + 2 < utf8.size) {
+      "${utf8[i + 1].toInt().toChar()}${utf8[i + 2].toInt().toChar()}".toIntOrNull(16)
+    } else {
+      null
+    }
+    if (hex != null) {
+      out[n++] = hex.toByte()
+      i += 3
+    } else {
+      out[n++] = utf8[i++]
+    }
+  }
+  return out.decodeToString(0, n)
+}
+
+private fun contentType(headers: Map<String, String>): String? =
+  headers.entries.firstOrNull { it.key.equals("content-type", ignoreCase = true) }?.value
 
 /**
  * [body] parsed, when it is a JSON object or array. Only a body whose first
@@ -281,7 +340,13 @@ private fun validateEntry(entry: HttpFixtureEntry) {
       "sensitive query key '$key' must be redacted"
     }
   }
-  request.body?.let { validateBody(it, "request") }
+  request.body?.let { body ->
+    validateBody(body, "request")
+    val formKey = HttpFixtureRedaction.sensitiveFormKey(body, contentType(request.headers))
+    require(formKey == null) {
+      "form-encoded request body has sensitive key '$formKey' (form bodies are not redacted)"
+    }
+  }
   validateBody(entry.response.body, "response")
 }
 
@@ -291,7 +356,7 @@ private fun validateHeaders(headers: Map<String, String>, scope: String) {
 }
 
 private fun validateBody(body: String, scope: String) {
-  require(utf8Length(body) <=HttpFixtureMatcher.MAX_BODY_BYTES) {
+  require(utf8Length(body) <= HttpFixtureMatcher.MAX_BODY_BYTES) {
     "$scope body exceeds 1 MiB"
   }
   require(body.none { it.code < 0x20 && it != '\t' && it != '\n' && it != '\r' }) {

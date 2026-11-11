@@ -214,7 +214,10 @@ the CLI process arguments. Recording accepts only loopback callers, exact
 configured browser Origins, server-owned HTTPS targets, and public DNS results.
 It disables redirects/proxies/cookies/retries, injects auth only inside the
 relay, bounds bodies and headers, and redacts before returning, hashing,
-auditing, or writing.
+auditing, or writing. A form body (`application/x-www-form-urlencoded`, or a
+body shaped like `k=v&…`) is never redacted, so recording refuses one whose keys
+include a sensitive one (422 `form_body_with_sensitive_key`), and a fixture file
+whose request holds one does not load.
 
 The result stays under `<httpFixturesDir>/.candidates/`. Inspect it carefully,
 then copy it to `<httpFixturesDir>/<fixture-set>.json` as an ordinary reviewed

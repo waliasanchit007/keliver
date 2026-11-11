@@ -262,6 +262,19 @@ internal class HttpRecordingService(
     if ((request.body?.encodeToByteArray()?.size ?: 0) > MAX_RECORD_BODY_BYTES) {
       return failure(413, "request_too_large")
     }
+    // A form body is never redacted, so one that carries a sensitive key (built-in or
+    // configured) is refused before anything leaves the relay.
+    val contentType = request.headers.entries.firstOrNull { it.key.equals("content-type", ignoreCase = true) }?.value
+    if (
+      request.body != null &&
+      HttpFixtureRedaction.sensitiveFormKey(
+        request.body.orEmpty(),
+        contentType,
+        recordingConfig.additionalSensitiveKeys.toSet(),
+      ) != null
+    ) {
+      return failure(422, "form_body_with_sensitive_key")
+    }
     // "Unredactable" uses the redactor's own predicate: only a JSON object or array has
     // keys to redact, and a bare token such as `a=1&password=x` is not one.
     if (

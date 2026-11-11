@@ -239,10 +239,10 @@ class HttpFixtureMatcherTest {
   }
 
   @Test fun aNonJsonBodyMatchesByteForByteAndIsNeverRedacted() {
-    val form = "a=1&b=2&password=hunter2"
+    val form = "a=1&b=2&nick=bob"
     val matcher = accepts(set(entry(request(method = "POST", body = form), "ok")))
     assertEquals("ok", matcher.body(request(method = "POST", body = form), 0))
-    for (other in listOf("b=2&a=1&password=hunter2", "$form ", "$form\n", " $form", "a=1&b=2&password=other", "A=1&b=2&password=hunter2")) {
+    for (other in listOf("b=2&a=1&nick=bob", "$form ", "$form\n", " $form", "a=1&b=2&nick=other", "A=1&b=2&nick=bob")) {
       assertEquals("no matching request", matcher.miss(request(method = "POST", body = other)), other)
     }
     // Bare tokens that kotlinx would read as a JSON literal keep their bytes too.
@@ -306,6 +306,39 @@ class HttpFixtureMatcherTest {
     assertTrue(HttpFixtureRedaction.isSensitiveKey("nickname", setOf("nickname")))
     assertEquals(false, HttpFixtureRedaction.isSensitiveKey("tokens_left"))
     assertEquals("not json", HttpFixtureRedaction.redactJson("not json"))
+  }
+
+  @Test fun aFormRequestBodyWithASensitiveKeyIsRefused() {
+    val formType = mapOf("Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8")
+    // By its shape, with or without a Content-Type; keys decoded and read part by part.
+    for (body in listOf(
+      "username=a&password=hunter2",
+      "password=hunter2\n",
+      "a=1&pass%77ord=x",
+      "user%5Bpassword%5D=x",
+      "user.api_key=x",
+      "a=1&session",
+    )) {
+      rejects("form-encoded request body has sensitive key") {
+        set(entry(request(method = "POST", headers = formType, body = body), "ok"))
+      }
+    }
+    rejects("form-encoded request body has sensitive key 'password'") {
+      set(entry(request(method = "POST", body = "username=a&password=hunter2"), "ok"))
+    }
+    // A redacted value is refused too: form bodies are not redacted on replay, so it could never match.
+    rejects("sensitive key 'password'") { set(entry(request(method = "POST", body = "password=<redacted>"), "ok")) }
+    // With a declared form Content-Type, whitespace doesn't hide a key.
+    rejects("sensitive key 'token'") { set(entry(request(method = "POST", headers = formType, body = "note=a b&token=x"), "ok")) }
+    // Not forms: JSON (checked as JSON), text with spaces, no '=' at all, and a response body.
+    accepts(set(entry(request(method = "POST", body = """{"q":"password=x"}"""), "ok")))
+    accepts(set(entry(request(method = "POST", body = "set password=x please"), "ok")))
+    accepts(set(entry(request(method = "POST", body = "password"), "ok")))
+    accepts(set(entry(request(method = "POST", body = "a=1&nick=bob"), "password=x")))
+    assertEquals("nickname", HttpFixtureRedaction.sensitiveFormKey("a=1&nickname=b", additionalKeys = setOf("NICKNAME")))
+    assertEquals(null, HttpFixtureRedaction.sensitiveFormKey("a=1&nickname=b"))
+    // A malformed escape is kept as written.
+    assertEquals("pass%7word", HttpFixtureRedaction.sensitiveFormKey("pass%7word=x", additionalKeys = setOf("pass%7word")))
   }
 
   @Test fun onlyObjectsAndArraysAreJsonContainers() {

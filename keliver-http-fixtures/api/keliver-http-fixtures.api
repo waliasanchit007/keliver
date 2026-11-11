@@ -44,6 +44,8 @@ public final class dev/keliver/http/fixtures/HttpFixtureRedaction {
 	public static synthetic fun isSensitiveKey$default (Ldev/keliver/http/fixtures/HttpFixtureRedaction;Ljava/lang/String;Ljava/util/Set;ILjava/lang/Object;)Z
 	public final fun redactJson (Ljava/lang/String;Ljava/util/Set;)Ljava/lang/String;
 	public static synthetic fun redactJson$default (Ldev/keliver/http/fixtures/HttpFixtureRedaction;Ljava/lang/String;Ljava/util/Set;ILjava/lang/Object;)Ljava/lang/String;
+	public final fun sensitiveFormKey (Ljava/lang/String;Ljava/lang/String;Ljava/util/Set;)Ljava/lang/String;
+	public static synthetic fun sensitiveFormKey$default (Ldev/keliver/http/fixtures/HttpFixtureRedaction;Ljava/lang/String;Ljava/lang/String;Ljava/util/Set;ILjava/lang/Object;)Ljava/lang/String;
 }
 
 public abstract interface class dev/keliver/http/fixtures/HttpFixtureSelection {

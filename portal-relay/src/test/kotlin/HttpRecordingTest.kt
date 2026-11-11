@@ -258,6 +258,31 @@ class HttpRecordingTest {
     assertTrue(candidateText(repo).let { "<redacted>" in it && "bob" !in it })
   }
 
+  @Test fun aFormBodyWithASensitiveKeyIsRefusedBeforeTheTransport() = withRepo { repo, store ->
+    var calls = 0
+    val service = service(
+      repo,
+      store,
+      transport = RecordingTransport { _, _, _, _ ->
+        calls++
+        HostHttpResponse(200, "{}")
+      },
+      config = config(additionalSensitiveKeys = listOf("nickname")),
+    )
+    val session = session(service)
+    val formType = mapOf("content-type" to "application/x-www-form-urlencoded")
+    for (request in listOf(
+      HostHttpRequest("POST", "/login", body = "username=a&password=hunter2"),
+      HostHttpRequest("POST", "/login", headers = formType, body = "username=a&password=hunter2"),
+      HostHttpRequest("POST", "/login", headers = formType, body = "note=a b&nickname=bob"),
+    )) {
+      val refused = assertIs<HttpRecordingResult.Failure>(service.record(session, request))
+      assertEquals(422 to "form_body_with_sensitive_key", refused.status to refused.error.reason, request.body)
+    }
+    assertEquals(0, calls)
+    assertTrue(File(repo, ".").walkTopDown().none { it.isFile && it.parentFile.name == ".candidates" })
+  }
+
   private fun session(service: HttpRecordingService): String {
     val created = assertIs<HttpRecordingResult.Success>(
       service.createSession(HttpRecordSessionCommand("profile-api", "profile")),
