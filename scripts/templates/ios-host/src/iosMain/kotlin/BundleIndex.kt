@@ -16,6 +16,9 @@
  * the network (ManifestPinningHttpClient) and on a cache start. The floor rises
  * only after a load succeeded, so after Zipline verified that sequence's
  * signature. Not protected: a reinstall or cleared app data resets the floor.
+ * One exception, crash rollback (WS6, CrashRollback.kt): the newest bundle that proved healthy
+ * on this install may run below the floor, from this install's own copy of its manifest, once
+ * every bundle above it that this install loaded was set aside for failing on it.
  *
  * Bridges (B4, docs/BRIDGE_CODEGEN_DESIGN.md): a bundle that calls an app's generated bridges
  * names them, with the oldest version it can talk to, in its SIGNED metadata
@@ -88,6 +91,12 @@ internal data class HostFacts(
    * passes its own; none (the default) skips every entry, and refuses every manifest, that needs one.
    */
   val bridges: Map<String, HostBridge> = emptyMap(),
+  /**
+   * WS6: the highest sequence set aside on this install for failing on it (CrashGuard.setAside;
+   * 0: none). Entries at or below it are skipped, until a newer one arrives: going back is to
+   * this install's own healthy bundle (CrashGuard.rollbackTo), never to an older entry.
+   */
+  val setAside: Long = 0,
 )
 
 /** A bridge this host serves: its contract version and shape (a generated `<Name>Bridge`'s VERSION and SHAPE). */
@@ -260,6 +269,7 @@ internal fun pickFromIndex(
 private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersion: Int, channel: String, facts: HostFacts): IndexPick? {
   // Numbers are JSON numbers: "8" (a string) is not a sequence, a widget version or a constraint.
   val sequence = (e["sequence"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.takeIf { it > 0 } ?: return null
+  if (sequence <= facts.setAside) return null
   val entryChannel = when (val c = e["channel"]) {
     null -> DEFAULT_CHANNEL
     else -> (c as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
@@ -334,6 +344,9 @@ internal fun manifestPathOk(path: String): Boolean =
  * differ from the first. They only ever refuse: a sequence read here is not yet
  * verified, so it never raises the floor. Every other download is unchanged.
  *
+ * [crash] (WS6) refuses a set-aside sequence there too. [pinLocal] serves the
+ * bundle crash rollback goes back to from this install's own copy, not the network.
+ *
  * [pin] adds another manifest to check (W5: an update, or the fall-back to the
  * last good bundle) before the host hands Zipline its URL. Earlier pins stay:
  * a download still in flight for one of them is checked as before, and a pin
@@ -346,10 +359,31 @@ internal class ManifestPinningHttpClient(
   manifestUrl: String,
   sha256: String?,
   private val floor: () -> Long = { 0 },
+  private val crash: CrashGuard? = null,
   private val bridges: () -> Map<String, HostBridge> = { emptyMap() },
 ) : ZiplineHttpClient() {
   /** Manifest URL -> the sha256 the index holds it to (null: the floor only). Copied on write. */
   @Volatile private var pinned: Map<String, String?> = mapOf(manifestUrl to sha256)
+
+  /** WS6: manifest URL -> this install's own copy of its manifest, served without the network. Copied on write. */
+  @Volatile private var local: Map<String, KeptBundle> = emptyMap()
+
+  /** The manifest each pinned URL last served, after its checks (WS6 keeps the one that proves healthy). Copied on write. */
+  @Volatile private var served: Map<String, ByteString> = emptyMap()
+
+  /**
+   * WS6: serve [kept]'s manifest for its URL from this install's own copy (crash rollback goes
+   * back to it), never from the network. It is held to its kept sequence exactly, which may be
+   * below the floor (CrashGuard.rollbackTo decides that it may), and to the bridges; Zipline
+   * verifies its signature, and fetches its modules (from its cache, or the network) by the
+   * sha256 each has in that signed manifest.
+   */
+  fun pinLocal(kept: KeptBundle) {
+    local = local + (kept.manifestUrl to kept)
+  }
+
+  /** The manifest [manifestUrl] last served (pinned URLs only), as text; null when none did. */
+  fun servedManifest(manifestUrl: String): String? = served[manifestUrl]?.utf8()
 
   /**
    * Hold [manifestUrl] to [sha256] and to the floor. A null [sha256] (no index
@@ -363,6 +397,11 @@ internal class ManifestPinningHttpClient(
   fun pinnedSha256(manifestUrl: String): String? = pinned[manifestUrl]
 
   override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString {
+    local[url]?.let { kept ->
+      if (manifestSequence(kept.manifest) != kept.sequence) throw IOException("the kept manifest for $url is not sequence ${kept.sequence}")
+      manifestBridgeProblem(manifestBridges(kept.manifest), bridges())?.let { throw IOException(it) }
+      return kept.manifest.encodeUtf8().also { served = served + (url to it) }
+    }
     val body = delegate.download(url, requestHeaders)
     val pinned = pinned
     if (url in pinned) {
@@ -372,8 +411,11 @@ internal class ManifestPinningHttpClient(
         if (actual != sha256) throw IOException("manifest sha256 mismatch: $url is $actual, the index says $sha256")
       }
       val json = body.utf8()
-      rollbackProblem(manifestSequence(json), floor())?.let { throw IOException(it) }
+      val sequence = manifestSequence(json)
+      rollbackProblem(sequence, floor())?.let { throw IOException(it) }
+      crash?.setAsideProblem(sequence)?.let { throw IOException(it) }
       manifestBridgeProblem(manifestBridges(json), bridges())?.let { throw IOException(it) }
+      served = served + (url to body)
     }
     return body
   }
@@ -382,6 +424,16 @@ internal class ManifestPinningHttpClient(
     url: String,
     requestHeaders: List<Pair<String, String>>,
   ): Flow<String> = delegate.openDevelopmentServerWebSocket(url, requestHeaders)
+}
+
+/**
+ * Why a bundle in Zipline's cache (a verified manifest at [sequence]) must not run on a cache
+ * start: W4's floor and a set-aside sequence (WS6), except that the bundle crash rollback goes
+ * back to ([CrashGuard.rollbackTo]) may run below the floor.
+ */
+internal fun cachedBundleProblem(sequence: Long?, floor: Long, crash: CrashGuard?): String? {
+  if (crash != null && sequence != null && sequence == crash.rollbackTo(floor)?.sequence) return null
+  return rollbackProblem(sequence, floor) ?: crash?.setAsideProblem(sequence)
 }
 
 /**
@@ -394,7 +446,14 @@ internal fun reportReason(outcome: String, detail: String): String {
   return when {
     outcome == "refused" -> "config"
     outcome == "screen-failed" -> "exception"
+    // WS6: what the host runs in place of the bundle it set aside.
+    outcome == CRASH_ROLLBACK_OUTCOME -> when {
+      CRASH_TO_APP_VIEW in detail -> "app-view"
+      CRASH_TO_NEWER in detail -> "newer-bundle"
+      else -> "previous-good"
+    }
     d.isEmpty() -> ""
+    SET_ASIDE_REFUSED in d -> "set-aside"
     "sha256 mismatch" in d -> "sha256-mismatch"
     "rollback refused" in d -> "below-floor"
     // Before "signature": a bridge's text can name a contract, never a signature.

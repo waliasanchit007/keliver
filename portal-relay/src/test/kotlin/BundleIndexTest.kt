@@ -1,5 +1,16 @@
 import app.cash.zipline.loader.ZiplineHttpClient
+import hosttemplate.CRASH_ROLLBACK_OUTCOME
+import hosttemplate.CRASH_TO_APP_VIEW
+import hosttemplate.CRASH_TO_NEWER
+import hosttemplate.CrashGuard
+import hosttemplate.CrashKind
+import hosttemplate.CrashStep
+import hosttemplate.CrashStore
 import hosttemplate.HostFacts
+import hosttemplate.KeptBundle
+import hosttemplate.cachedBundleProblem
+import hosttemplate.crashGoingBackTo
+import hosttemplate.crashRollbackDetail
 import hosttemplate.MAX_INDEX_BYTES
 import hosttemplate.ManifestPinningHttpClient
 import hosttemplate.reportReason
@@ -297,6 +308,100 @@ class BundleIndexTest {
   }
 
   @Test
+  fun crashRollbackReportsAFixedReason() {
+    // WS6: what runs in place of a set-aside bundle, and a manifest refused for being set aside.
+    val step = CrashStep.SetAside(5, 2, CrashKind.EXCEPTION)
+    assertEquals("previous-good", reportReason(CRASH_ROLLBACK_OUTCOME, crashRollbackDetail(step, 2, crashGoingBackTo(4))))
+    assertEquals("previous-good", reportReason(CRASH_ROLLBACK_OUTCOME, crashRollbackDetail(step, 2, crashGoingBackTo(null))))
+    assertEquals("newer-bundle", reportReason(CRASH_ROLLBACK_OUTCOME, crashRollbackDetail(step, 2, CRASH_TO_NEWER)))
+    assertEquals("app-view", reportReason(CRASH_ROLLBACK_OUTCOME, crashRollbackDetail(step, 2, CRASH_TO_APP_VIEW)))
+    val guard = setAsideGuard()
+    assertEquals("set-aside", reportReason("not-loaded", guard.setAsideProblem(5)!!))
+  }
+
+  /** A crash guard whose bundle 4 proved healthy (kept from the network) and whose 5 was set aside. */
+  private fun setAsideGuard(): CrashGuard =
+    CrashGuard(MapStore(mutableMapOf()), "c").also { g ->
+      g.loadStarting(4)
+      g.loaded(4, V4, M4)
+      assertTrue(g.healthy(4))
+      g.loadStarting(5)
+      g.failed(5, CrashKind.LOAD)
+      g.failed(5, CrashKind.LOAD)
+    }
+
+  private class MapStore(private val values: MutableMap<String, String>) : CrashStore {
+    override fun read(key: String) = values[key]
+    override fun write(values: Map<String, String?>): Boolean {
+      values.forEach { (k, v) -> if (v == null) this.values.remove(k) else this.values[k] = v }
+      return true
+    }
+    override fun <T> locked(block: () -> T): T = block()
+  }
+
+  private val V4 = "https://cdn.example/bundles/v4/manifest.zipline.json"
+  private val V5 = "https://cdn.example/bundles/v5/manifest.zipline.json"
+  private val M4 = """{"modules":{},"metadata":{"keliver.sequence":"4"}}"""
+  private val M5 = """{"modules":{},"metadata":{"keliver.sequence":"5"}}"""
+
+  @Test
+  fun setAsideEntriesAndEverythingBelowThemAreSkipped() {
+    // WS6: until a newer one arrives, nothing at or below the set-aside sequence is picked:
+    // going back is to this install's own healthy bundle, never to an older index entry.
+    val index = index(entry(4), entry(5), entry(6))
+    assertEquals(6, pickFromIndex(index, caps, facts = HostFacts("i", 1, 5, setAside = 5)).getOrThrow().sequence)
+    assertTrue(pickFromIndex(index(entry(4), entry(5)), caps, facts = HostFacts("i", 1, 5, setAside = 5)).isFailure)
+    assertEquals(5, pickFromIndex(index(entry(4), entry(5)), caps, facts = HostFacts("i", 1, 5)).getOrThrow().sequence)
+  }
+
+  @Test
+  fun aSetAsideManifestIsRefusedOnTheNetworkAndOnACacheStart() = runBlocking {
+    val guard = setAsideGuard()
+    val fake = Fake(mapOf(V4 to M4.encodeUtf8(), V5 to M5.encodeUtf8()))
+    val e = assertFailsWith<IOException> { ManifestPinningHttpClient(fake, V5, null, floor = { 5 }, crash = guard).download(V5, emptyList()) }
+    assertTrue(e.message!!.startsWith("set aside: sequence 5"), e.message)
+    // The cache: 5 refused; 4, the bundle crash rollback goes back to, allowed below the floor; 3 still below it.
+    assertTrue(cachedBundleProblem(5, 5, guard)!!.startsWith("set aside:"))
+    assertEquals(null, cachedBundleProblem(4, 5, guard))
+    assertTrue("below 5" in cachedBundleProblem(3, 5, guard)!!)
+    assertTrue("no signed sequence" in cachedBundleProblem(null, 5, guard)!!)
+    // A newer bundle raised the floor: no going back below it.
+    assertTrue("below 6" in cachedBundleProblem(4, 6, guard)!!)
+    assertEquals(null, cachedBundleProblem(6, 6, guard))
+    // Without crash rollback, the floor alone.
+    assertTrue("below 5" in cachedBundleProblem(4, 5, null)!!)
+  }
+
+  @Test
+  fun theKeptManifestIsServedWithoutTheNetworkAndHeldToItsSequence() = runBlocking {
+    val guard = setAsideGuard()
+    val kept = guard.rollbackTo(5)!!
+    assertEquals(KeptBundle(4, V4, M4), kept)
+    // The network has nothing (offline, or the bundle was removed from the server).
+    val offline = Fake(emptyMap())
+    val client = ManifestPinningHttpClient(offline, V5, null, floor = { 5 }, crash = guard)
+    client.pinLocal(kept)
+    assertEquals(M4.encodeUtf8(), client.download(V4, emptyList()))
+    assertEquals(M4, client.servedManifest(V4))
+    // A kept copy that is not its sequence (tampered) is refused.
+    val c2 = ManifestPinningHttpClient(offline, V5, null, floor = { 5 }, crash = guard)
+    c2.pinLocal(KeptBundle(4, V4, M5))
+    assertTrue("not sequence 4" in assertFailsWith<IOException> { c2.download(V4, emptyList()) }.message!!)
+  }
+
+  @Test
+  fun theManifestAPinnedUrlServedIsRemembered() = runBlocking {
+    // WS6 keeps what loaded from the network, once it proves healthy.
+    val fake = Fake(mapOf(V4 to M4.encodeUtf8(), V5 to M5.encodeUtf8()))
+    val client = ManifestPinningHttpClient(fake, V4, null, floor = { 0 })
+    assertEquals(null, client.servedManifest(V4))
+    client.download(V4, emptyList())
+    assertEquals(M4, client.servedManifest(V4))
+    client.download(V5, emptyList()) // not pinned: not remembered
+    assertEquals(null, client.servedManifest(V5))
+  }
+
+  @Test
   fun theAndroidAndIosHostsShipTheSameFile() {
     val android = File("../scripts/templates/production-host/src/main/kotlin/BundleIndex.kt").readText()
     val ios = File("../scripts/templates/ios-host/src/iosMain/kotlin/BundleIndex.kt").readText()
@@ -305,6 +410,15 @@ class BundleIndexTest {
     assertEquals(
       File("../scripts/templates/production-host/src/main/kotlin/Bridges.kt").readText(),
       File("../scripts/templates/ios-host/src/iosMain/kotlin/Bridges.kt").readText(),
+    )
+    // WS6: crash rollback, and its tests, the same on both.
+    assertEquals(
+      File("../scripts/templates/production-host/src/main/kotlin/CrashRollback.kt").readText(),
+      File("../scripts/templates/ios-host/src/commonMain/kotlin/CrashRollback.kt").readText(),
+    )
+    assertEquals(
+      File("../scripts/templates/production-host/src/test/kotlin/CrashRollbackTest.kt").readText(),
+      File("../scripts/templates/ios-host/src/jvmTest/kotlin/CrashRollbackTest.kt").readText(),
     )
   }
 }

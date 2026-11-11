@@ -32,6 +32,15 @@ package @@PACKAGE@@
 // outcome (loaded, fell back, update applied or failed, not loaded): your
 // collector. Empty: no reports leave the device (Keliver.onReport still gets
 // them). A release build refuses http://.
+//
+// CRASH_THRESHOLD (WS6, crash rollback): how many failures of one bundle on this
+// install set it aside (its code did not load, it threw, or the app ended while
+// it loaded or showed, before it proved healthy); the host then goes back to the
+// last bundle that proved healthy here, or to the app's own view. 0 turns crash
+// rollback off. CRASH_WINDOW_MILLIS: how long screens show a new bundle, with
+// no failure, before it proves healthy.
+internal const val CRASH_THRESHOLD: Int = 2
+internal const val CRASH_WINDOW_MILLIS: Long = 10_000L
 internal const val PORTAL_PUBLIC_KEY_HEX: String = "@@KEY_HEX@@"
 internal const val PORTAL_NEXT_PUBLIC_KEY_HEX: String = ""
 internal const val BUNDLE_SERVER: String = "@@BUNDLE_SERVER@@"

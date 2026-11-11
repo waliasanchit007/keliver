@@ -137,7 +137,7 @@ PY
 # W3: the lookup reads bundles/index.json, holds the manifest to its sha256,
 # and falls back to the relay's bundles/latest only on a 404.
 grep -q '/bundles/index.json"' "$K/MainViewController.kt" && grep -q 'status == 404' "$K/MainViewController.kt" \
-  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor)' "$K/MainViewController.kt" \
+  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor, crash)' "$K/MainViewController.kt" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
 # W2: one host per process (Keliver), started once; every view controller only observes it.
@@ -150,12 +150,12 @@ grep -q '^public object Keliver {' "$K/MainViewController.kt" && grep -q 'if (st
 # keys (the highest), and written under each.
 grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'floorAcross(trust.publicKeysHex.map' "$K/MainViewController.kt" \
   && grep -q 'raiseFloor(trust, sequence)' "$K/MainViewController.kt" && grep -q 'raiseFloor(trust, floor())' "$K/MainViewController.kt" \
-  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor, Keliver.served)' "$K/MainViewController.kt" \
+  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor, crash, Keliver.served)' "$K/MainViewController.kt" \
   && grep -q 'manifestSequence(manifest.metadata)' "$K/MainViewController.kt" && grep -q 'sequence?.let(onSequence)' "$K/MainViewController.kt" \
   && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
   || bad "W4.2: the rollback floor is not wired"
 # B4: the bridge check runs where the floor's does, and a refused manifest is unloadable.
-grep -A12 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
+grep -A16 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
   && grep -q '"bridge refused:" in reason' "$K/MainViewController.kt" \
   && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$K/BundleIndex.kt" \
   && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
@@ -166,9 +166,9 @@ V="$K/MainViewController.kt"
 grep -q '  public var bridges: List<KeliverBridgeBinding> = emptyList()' "$V" \
   && grep -A4 '  public var bridges: List<KeliverBridgeBinding>' "$V" | grep -q 'servedBridgesOf(value.map { it.declared })' \
   && grep -A8 '    if (started) return' "$V" | grep -q 'served = servedBridgesOf(bridges.map { it.declared })' \
-  && [ "$(grep -c 'HostFacts(' "$V")" = "$(grep -cE 'HostFacts\(.*, (Keliver\.)?served\)' "$V")" ] \
+  && [ "$(grep -c 'HostFacts(' "$V")" = "$(grep -cE 'HostFacts\(.*, (Keliver\.)?served[,)]' "$V")" ] \
   && [ "$(grep -c 'ManifestPinningHttpClient(' "$V")" = "$(grep -c 'ManifestPinningHttpClient(.*) { served }' "$V")" ] \
-  && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, (Keliver\.)?served\)' "$V")" ] \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, crash, (Keliver\.)?served\)' "$V")" ] \
   && ! grep -q 'ServedBridges' "$V" "$K/BundleIndex.kt" \
   && grep -q 'val bridges = Keliver.startedBridges' "$V" \
   && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, Keliver.bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
@@ -334,9 +334,28 @@ grep -q 'val n = write(1, pinned.addressOf(at), (bytes.size - at).convert()).toI
   && ok "the host's console lines are one write each, under a lock (no println)" \
   || bad "a host console line can be split by another thread's (println, or no ConsoleLine.kt)"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
-grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served)' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
+grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside = crash.setAside())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$K/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
+# WS6: crash rollback, as on Android. The ledger (src/commonMain/CrashRollback.kt, the Android
+# host's file) and its JVM tests are scaffolded; a failure counts only once a manifest verified,
+# the marker is written (synchronize) before the code runs and checked at the next start,
+# set-aside entries are skipped on the network and the cache, the floor's one exception is in
+# one place, the threshold and window are HostConfig's, it is reported, and DEBUG logs it loudly.
+C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
+[ -f "$C" ] && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
+  && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$V" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$V" \
+  && grep -q 'onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count(CrashKind.LOAD))' "$V" \
+  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
+  && grep -q 'CrashGuard(DefaultsCrashStore(), cacheName(trust), CRASH_THRESHOLD)' "$V" && grep -q 'return defaults.synchronize()' "$V" \
+  && grep -q '^internal const val CRASH_THRESHOLD: Int = 2$' "$K/HostConfig.kt" && grep -q '^internal const val CRASH_WINDOW_MILLIS: Long = 10_000L$' "$K/HostConfig.kt" \
+  && grep -q 'cachedBundleProblem(manifestSequence(manifest.metadata), floor(), crash)' "$V" \
+  && grep -q 'report(CRASH_ROLLBACK_OUTCOME, step.sequence, "", detail)' "$V" \
+  && grep -q 'if (kotlin.native.Platform.isDebugBinary) log("!!!!!!!! CRASH ROLLBACK !!!!!!!!")' "$V" \
+  && [ "$(grep -c '    syncCrashWindow()$' "$V")" -ge 2 ] && grep -q 'delay(CRASH_WINDOW_MILLIS.milliseconds)' "$V" \
+  && ! grep -q 'rollbackProblem(manifestSequence(manifest.metadata), floor())' "$V" \
+  && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
+  || bad "WS6: crash rollback is not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
 grep -A2 '^  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))$' "$K/MainViewController.kt" \
   | grep -q '^  app.start()$' \
@@ -451,6 +470,9 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-ios jvmTest > "$DISP/jvm-tests.log" 2>&1 ); rc=$?
     [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (jvmTest: RequestPolicy, KeliverRoute)" \
       || bad "the host kit's JVM tests failed (rc=$rc): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/jvm-tests.log" | head -6 | tr '\n' ' ')"
+    cr="$H/build/test-results/jvmTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
+    [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
+      && ok "WS6: crash rollback's tests ran on the JVM target: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
     # B2: HostHttp with the app's credentials, over NSURLSession to a local server, on a simulator
     # (KELIVER_SELFTEST_SIMULATOR: a simulator name or UDID, when Kotlin's default is not installed).
     ( cd "$APP" && ./gradlew --console=plain -p host-ios iosSimulatorArm64Test \
