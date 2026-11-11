@@ -189,7 +189,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
           it.targetCompatibility = JavaVersion.VERSION_11
         }
         defaultConfig {
-          // 23 for every Android artifact: AndroidX Compose 1.11 and Zipline 1.28.0 both need it.
+          // 23 for every Android artifact: AndroidX Compose (since 1.11) and Zipline 1.28.0 need it.
           it.minSdk = 23
           it.targetSdk = 33
         }
