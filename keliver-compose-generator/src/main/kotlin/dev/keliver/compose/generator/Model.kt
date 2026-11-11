@@ -74,7 +74,13 @@ data class DeclInfo(
   /** Simple name → fully qualified name, from the source file's imports. */
   var imports: Map<String, String> = emptyMap(),
   var sourcePath: String? = null,
+  /** Compose's `@Deprecated` level (`WARNING`, `ERROR`, `HIDDEN`) on this declaration, or null. */
+  var deprecation: String? = null,
+  var deprecationMessage: String? = null,
 ) {
+  /** Kept in the jar for binary compatibility only: callers cannot see it (design §3). */
+  val isHidden: Boolean get() = deprecation == "HIDDEN"
+
   val kind: DeclKind
     get() = when {
       returns.fq == MODIFIER && owner != null -> DeclKind.SCOPED_MODIFIER

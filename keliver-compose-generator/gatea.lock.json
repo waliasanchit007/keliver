@@ -1,8 +1,8 @@
 {
   "group": "gatea",
-  "level": 2,
-  "nextWidgetTag": 10,
-  "nextModifierTag": 26,
+  "level": 4,
+  "nextWidgetTag": 27,
+  "nextModifierTag": 32,
   "widgets": {
     "androidx.compose.foundation.layout/Box(modifier:androidx.compose.ui.Modifier)": {
       "tag": 2,
@@ -10,7 +10,8 @@
       "params": {
         "modifier": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {}
     },
     "androidx.compose.foundation.layout/Box(modifier:androidx.compose.ui.Modifier,contentAlignment:androidx.compose.ui.Alignment,propagateMinConstraints:kotlin.Boolean,content:@Composable androidx.compose.foundation.layout.BoxScope.()->kotlin.Unit)": {
       "tag": 1,
@@ -21,7 +22,12 @@
         "propagateMinConstraints": 3,
         "content": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "contentAlignment": 1,
+        "propagateMinConstraints": 1,
+        "content": 1
+      }
     },
     "androidx.compose.foundation.layout/Column(modifier:androidx.compose.ui.Modifier,verticalArrangement:androidx.compose.foundation.layout.Arrangement.Vertical,horizontalAlignment:androidx.compose.ui.Alignment.Horizontal,content:@Composable androidx.compose.foundation.layout.ColumnScope.()->kotlin.Unit)": {
       "tag": 4,
@@ -32,7 +38,12 @@
         "horizontalAlignment": 3,
         "content": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "verticalArrangement": 1,
+        "horizontalAlignment": 1,
+        "content": 1
+      }
     },
     "androidx.compose.foundation.layout/FlowRow(modifier:androidx.compose.ui.Modifier,horizontalArrangement:androidx.compose.foundation.layout.Arrangement.Horizontal,verticalArrangement:androidx.compose.foundation.layout.Arrangement.Vertical,itemVerticalAlignment:androidx.compose.ui.Alignment.Vertical,maxItemsInEachRow:kotlin.Int,maxLines:kotlin.Int,overflow:androidx.compose.foundation.layout.FlowRowOverflow,content:@Composable androidx.compose.foundation.layout.FlowRowScope.()->kotlin.Unit)": {
       "tag": 9,
@@ -47,7 +58,15 @@
         "overflow": 7,
         "content": 8
       },
-      "since": 2
+      "since": 2,
+      "wire": {
+        "horizontalArrangement": 2,
+        "verticalArrangement": 2,
+        "itemVerticalAlignment": 2,
+        "maxItemsInEachRow": 2,
+        "maxLines": 2,
+        "content": 2
+      }
     },
     "androidx.compose.foundation.layout/Row(modifier:androidx.compose.ui.Modifier,horizontalArrangement:androidx.compose.foundation.layout.Arrangement.Horizontal,verticalAlignment:androidx.compose.ui.Alignment.Vertical,content:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit)": {
       "tag": 3,
@@ -58,7 +77,12 @@
         "verticalAlignment": 3,
         "content": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "horizontalArrangement": 1,
+        "verticalAlignment": 1,
+        "content": 1
+      }
     },
     "androidx.compose.foundation.layout/Spacer(modifier:androidx.compose.ui.Modifier)": {
       "tag": 5,
@@ -66,7 +90,202 @@
       "params": {
         "modifier": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {}
+    },
+    "androidx.compose.foundation.lazy/LazyColumn(modifier:androidx.compose.ui.Modifier,state:androidx.compose.foundation.lazy.LazyListState,contentPadding:androidx.compose.foundation.layout.PaddingValues,reverseLayout:kotlin.Boolean,verticalArrangement:androidx.compose.foundation.layout.Arrangement.Vertical,horizontalAlignment:androidx.compose.ui.Alignment.Horizontal,flingBehavior:androidx.compose.foundation.gestures.FlingBehavior,userScrollEnabled:kotlin.Boolean,overscrollEffect:androidx.compose.foundation.OverscrollEffect?,content:androidx.compose.foundation.lazy.LazyListScope.()->kotlin.Unit)": {
+      "tag": 14,
+      "name": "GenLazyColumn1",
+      "params": {
+        "modifier": 1,
+        "state": 2,
+        "contentPadding": 3,
+        "reverseLayout": 4,
+        "verticalArrangement": 5,
+        "horizontalAlignment": 6,
+        "flingBehavior": 7,
+        "userScrollEnabled": 8,
+        "overscrollEffect": 9,
+        "content": 10,
+        "content.before": 11,
+        "content.after": 12,
+        "content.viewport": 13
+      },
+      "since": 4,
+      "wire": {
+        "state": 4,
+        "contentPadding": 4,
+        "reverseLayout": 4,
+        "verticalArrangement": 4,
+        "horizontalAlignment": 4,
+        "userScrollEnabled": 4,
+        "content": 4,
+        "content.before": 4,
+        "content.after": 4,
+        "content.viewport": 4
+      }
+    },
+    "androidx.compose.foundation.lazy/LazyRow(modifier:androidx.compose.ui.Modifier,state:androidx.compose.foundation.lazy.LazyListState,contentPadding:androidx.compose.foundation.layout.PaddingValues,reverseLayout:kotlin.Boolean,horizontalArrangement:androidx.compose.foundation.layout.Arrangement.Horizontal,verticalAlignment:androidx.compose.ui.Alignment.Vertical,flingBehavior:androidx.compose.foundation.gestures.FlingBehavior,userScrollEnabled:kotlin.Boolean,overscrollEffect:androidx.compose.foundation.OverscrollEffect?,content:androidx.compose.foundation.lazy.LazyListScope.()->kotlin.Unit)": {
+      "tag": 15,
+      "name": "GenLazyRow1",
+      "params": {
+        "modifier": 1,
+        "state": 2,
+        "contentPadding": 3,
+        "reverseLayout": 4,
+        "horizontalArrangement": 5,
+        "verticalAlignment": 6,
+        "flingBehavior": 7,
+        "userScrollEnabled": 8,
+        "overscrollEffect": 9,
+        "content": 10,
+        "content.before": 11,
+        "content.after": 12,
+        "content.viewport": 13
+      },
+      "since": 4,
+      "wire": {
+        "state": 4,
+        "contentPadding": 4,
+        "reverseLayout": 4,
+        "horizontalArrangement": 4,
+        "verticalAlignment": 4,
+        "userScrollEnabled": 4,
+        "content": 4,
+        "content.before": 4,
+        "content.after": 4,
+        "content.viewport": 4
+      }
+    },
+    "androidx.compose.foundation/Image(imageVector:androidx.compose.ui.graphics.vector.ImageVector,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,alignment:androidx.compose.ui.Alignment,contentScale:androidx.compose.ui.layout.ContentScale,alpha:kotlin.Float,colorFilter:androidx.compose.ui.graphics.ColorFilter?)": {
+      "tag": 13,
+      "name": "GenImage2",
+      "params": {
+        "imageVector": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "alignment": 4,
+        "contentScale": 5,
+        "alpha": 6,
+        "colorFilter": 7
+      },
+      "since": 4,
+      "wire": {
+        "imageVector": 4,
+        "contentDescription": 4,
+        "alignment": 4,
+        "contentScale": 4,
+        "alpha": 4,
+        "colorFilter": 4
+      }
+    },
+    "androidx.compose.foundation/Image(painter:androidx.compose.ui.graphics.painter.Painter,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,alignment:androidx.compose.ui.Alignment,contentScale:androidx.compose.ui.layout.ContentScale,alpha:kotlin.Float,colorFilter:androidx.compose.ui.graphics.ColorFilter?)": {
+      "tag": 12,
+      "name": "GenImage1",
+      "params": {
+        "painter": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "alignment": 4,
+        "contentScale": 5,
+        "alpha": 6,
+        "colorFilter": 7
+      },
+      "since": 4,
+      "wire": {
+        "painter": 4,
+        "contentDescription": 4,
+        "alignment": 4,
+        "contentScale": 4,
+        "alpha": 4,
+        "colorFilter": 4
+      }
+    },
+    "androidx.compose.material3/Button(onClick:()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,enabled:kotlin.Boolean,shape:androidx.compose.ui.graphics.Shape,colors:androidx.compose.material3.ButtonColors,elevation:androidx.compose.material3.ButtonElevation?,border:androidx.compose.foundation.BorderStroke?,contentPadding:androidx.compose.foundation.layout.PaddingValues,interactionSource:androidx.compose.foundation.interaction.MutableInteractionSource?,content:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit)": {
+      "tag": 21,
+      "name": "GenButton1",
+      "params": {
+        "onClick": 1,
+        "modifier": 2,
+        "enabled": 3,
+        "shape": 4,
+        "colors": 5,
+        "elevation": 6,
+        "border": 7,
+        "contentPadding": 8,
+        "interactionSource": 9,
+        "content": 10
+      },
+      "since": 4,
+      "wire": {
+        "onClick": 4,
+        "enabled": 4,
+        "shape": 4,
+        "colors": 4,
+        "elevation": 4,
+        "border": 4,
+        "contentPadding": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/Card(modifier:androidx.compose.ui.Modifier,shape:androidx.compose.ui.graphics.Shape,colors:androidx.compose.material3.CardColors,elevation:androidx.compose.material3.CardElevation,border:androidx.compose.foundation.BorderStroke?,content:@Composable androidx.compose.foundation.layout.ColumnScope.()->kotlin.Unit)": {
+      "tag": 19,
+      "name": "GenCard1",
+      "params": {
+        "modifier": 1,
+        "shape": 2,
+        "colors": 3,
+        "elevation": 4,
+        "border": 5,
+        "content": 6
+      },
+      "since": 4,
+      "wire": {
+        "shape": 4,
+        "colors": 4,
+        "elevation": 4,
+        "border": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/Card(onClick:()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,enabled:kotlin.Boolean,shape:androidx.compose.ui.graphics.Shape,colors:androidx.compose.material3.CardColors,elevation:androidx.compose.material3.CardElevation,border:androidx.compose.foundation.BorderStroke?,interactionSource:androidx.compose.foundation.interaction.MutableInteractionSource?,content:@Composable androidx.compose.foundation.layout.ColumnScope.()->kotlin.Unit)": {
+      "tag": 20,
+      "name": "GenCard2",
+      "params": {
+        "onClick": 1,
+        "modifier": 2,
+        "enabled": 3,
+        "shape": 4,
+        "colors": 5,
+        "elevation": 6,
+        "border": 7,
+        "interactionSource": 8,
+        "content": 9
+      },
+      "since": 4,
+      "wire": {
+        "onClick": 4,
+        "enabled": 4,
+        "shape": 4,
+        "colors": 4,
+        "elevation": 4,
+        "border": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/HorizontalDivider(modifier:androidx.compose.ui.Modifier,thickness:androidx.compose.ui.unit.Dp,color:androidx.compose.ui.graphics.Color)": {
+      "tag": 25,
+      "name": "GenHorizontalDivider1",
+      "params": {
+        "modifier": 1,
+        "thickness": 2,
+        "color": 3
+      },
+      "since": 4,
+      "wire": {
+        "thickness": 4,
+        "color": 4
+      }
     },
     "androidx.compose.material3/Icon(imageVector:androidx.compose.ui.graphics.vector.ImageVector,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,tint:androidx.compose.ui.graphics.Color)": {
       "tag": 7,
@@ -77,7 +296,171 @@
         "modifier": 3,
         "tint": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "imageVector": 1,
+        "contentDescription": 1,
+        "tint": 1
+      }
+    },
+    "androidx.compose.material3/Icon(painter:androidx.compose.ui.graphics.painter.Painter,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,tint:androidx.compose.ui.graphics.Color)": {
+      "tag": 16,
+      "name": "GenIcon2",
+      "params": {
+        "painter": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "tint": 4
+      },
+      "since": 4,
+      "wire": {
+        "painter": 4,
+        "contentDescription": 4,
+        "tint": 4
+      }
+    },
+    "androidx.compose.material3/IconButton(onClick:()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,enabled:kotlin.Boolean,colors:androidx.compose.material3.IconButtonColors,interactionSource:androidx.compose.foundation.interaction.MutableInteractionSource?,shape:androidx.compose.ui.graphics.Shape,content:@Composable ()->kotlin.Unit)": {
+      "tag": 24,
+      "name": "GenIconButton1",
+      "params": {
+        "onClick": 1,
+        "modifier": 2,
+        "enabled": 3,
+        "colors": 4,
+        "interactionSource": 5,
+        "shape": 6,
+        "content": 7
+      },
+      "since": 4,
+      "wire": {
+        "onClick": 4,
+        "enabled": 4,
+        "colors": 4,
+        "shape": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/OutlinedButton(onClick:()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,enabled:kotlin.Boolean,shape:androidx.compose.ui.graphics.Shape,colors:androidx.compose.material3.ButtonColors,elevation:androidx.compose.material3.ButtonElevation?,border:androidx.compose.foundation.BorderStroke?,contentPadding:androidx.compose.foundation.layout.PaddingValues,interactionSource:androidx.compose.foundation.interaction.MutableInteractionSource?,content:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit)": {
+      "tag": 23,
+      "name": "GenOutlinedButton1",
+      "params": {
+        "onClick": 1,
+        "modifier": 2,
+        "enabled": 3,
+        "shape": 4,
+        "colors": 5,
+        "elevation": 6,
+        "border": 7,
+        "contentPadding": 8,
+        "interactionSource": 9,
+        "content": 10
+      },
+      "since": 4,
+      "wire": {
+        "onClick": 4,
+        "enabled": 4,
+        "shape": 4,
+        "colors": 4,
+        "elevation": 4,
+        "border": 4,
+        "contentPadding": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/Surface(modifier:androidx.compose.ui.Modifier,shape:androidx.compose.ui.graphics.Shape,color:androidx.compose.ui.graphics.Color,contentColor:androidx.compose.ui.graphics.Color,tonalElevation:androidx.compose.ui.unit.Dp,shadowElevation:androidx.compose.ui.unit.Dp,border:androidx.compose.foundation.BorderStroke?,content:@Composable ()->kotlin.Unit)": {
+      "tag": 17,
+      "name": "GenSurface1",
+      "params": {
+        "modifier": 1,
+        "shape": 2,
+        "color": 3,
+        "contentColor": 4,
+        "tonalElevation": 5,
+        "shadowElevation": 6,
+        "border": 7,
+        "content": 8
+      },
+      "since": 4,
+      "wire": {
+        "shape": 4,
+        "color": 4,
+        "contentColor": 4,
+        "tonalElevation": 4,
+        "shadowElevation": 4,
+        "border": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/Surface(onClick:()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,enabled:kotlin.Boolean,shape:androidx.compose.ui.graphics.Shape,color:androidx.compose.ui.graphics.Color,contentColor:androidx.compose.ui.graphics.Color,tonalElevation:androidx.compose.ui.unit.Dp,shadowElevation:androidx.compose.ui.unit.Dp,border:androidx.compose.foundation.BorderStroke?,interactionSource:androidx.compose.foundation.interaction.MutableInteractionSource?,content:@Composable ()->kotlin.Unit)": {
+      "tag": 18,
+      "name": "GenSurface2",
+      "params": {
+        "onClick": 1,
+        "modifier": 2,
+        "enabled": 3,
+        "shape": 4,
+        "color": 5,
+        "contentColor": 6,
+        "tonalElevation": 7,
+        "shadowElevation": 8,
+        "border": 9,
+        "interactionSource": 10,
+        "content": 11
+      },
+      "since": 4,
+      "wire": {
+        "onClick": 4,
+        "enabled": 4,
+        "shape": 4,
+        "color": 4,
+        "contentColor": 4,
+        "tonalElevation": 4,
+        "shadowElevation": 4,
+        "border": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/Text(text:kotlin.String,modifier:androidx.compose.ui.Modifier,color:androidx.compose.ui.graphics.Color,autoSize:androidx.compose.foundation.text.TextAutoSize?,fontSize:androidx.compose.ui.unit.TextUnit,fontStyle:androidx.compose.ui.text.font.FontStyle?,fontWeight:androidx.compose.ui.text.font.FontWeight?,fontFamily:androidx.compose.ui.text.font.FontFamily?,letterSpacing:androidx.compose.ui.unit.TextUnit,textDecoration:androidx.compose.ui.text.style.TextDecoration?,textAlign:androidx.compose.ui.text.style.TextAlign?,lineHeight:androidx.compose.ui.unit.TextUnit,overflow:androidx.compose.ui.text.style.TextOverflow,softWrap:kotlin.Boolean,maxLines:kotlin.Int,minLines:kotlin.Int,onTextLayout:((androidx.compose.ui.text.TextLayoutResult)->kotlin.Unit)?,style:androidx.compose.ui.text.TextStyle)": {
+      "tag": 10,
+      "name": "GenText2",
+      "params": {
+        "text": 1,
+        "modifier": 2,
+        "color": 3,
+        "autoSize": 4,
+        "fontSize": 5,
+        "fontStyle": 6,
+        "fontWeight": 7,
+        "fontFamily": 8,
+        "letterSpacing": 9,
+        "textDecoration": 10,
+        "textAlign": 11,
+        "lineHeight": 12,
+        "overflow": 13,
+        "softWrap": 14,
+        "maxLines": 15,
+        "minLines": 16,
+        "onTextLayout": 17,
+        "style": 18
+      },
+      "since": 3,
+      "wire": {
+        "text": 3,
+        "color": 3,
+        "fontSize": 3,
+        "fontStyle": 3,
+        "fontWeight": 3,
+        "fontFamily": 3,
+        "letterSpacing": 3,
+        "textDecoration": 3,
+        "textAlign": 3,
+        "lineHeight": 3,
+        "overflow": 3,
+        "softWrap": 3,
+        "maxLines": 3,
+        "minLines": 3,
+        "style": 3
+      }
     },
     "androidx.compose.material3/Text(text:kotlin.String,modifier:androidx.compose.ui.Modifier,color:androidx.compose.ui.graphics.Color,fontSize:androidx.compose.ui.unit.TextUnit,fontStyle:androidx.compose.ui.text.font.FontStyle?,fontWeight:androidx.compose.ui.text.font.FontWeight?,fontFamily:androidx.compose.ui.text.font.FontFamily?,letterSpacing:androidx.compose.ui.unit.TextUnit,textDecoration:androidx.compose.ui.text.style.TextDecoration?,textAlign:androidx.compose.ui.text.style.TextAlign?,lineHeight:androidx.compose.ui.unit.TextUnit,overflow:androidx.compose.ui.text.style.TextOverflow,softWrap:kotlin.Boolean,maxLines:kotlin.Int,minLines:kotlin.Int,onTextLayout:((androidx.compose.ui.text.TextLayoutResult)->kotlin.Unit)?,style:androidx.compose.ui.text.TextStyle)": {
       "tag": 6,
@@ -101,7 +484,107 @@
         "onTextLayout": 16,
         "style": 17
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "text": 1,
+        "color": 1,
+        "fontSize": 1,
+        "fontStyle": 1,
+        "fontWeight": 1,
+        "fontFamily": 1,
+        "letterSpacing": 1,
+        "textDecoration": 1,
+        "textAlign": 1,
+        "lineHeight": 1,
+        "overflow": 1,
+        "softWrap": 1,
+        "maxLines": 1,
+        "minLines": 1,
+        "style": 1
+      }
+    },
+    "androidx.compose.material3/TextButton(onClick:()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,enabled:kotlin.Boolean,shape:androidx.compose.ui.graphics.Shape,colors:androidx.compose.material3.ButtonColors,elevation:androidx.compose.material3.ButtonElevation?,border:androidx.compose.foundation.BorderStroke?,contentPadding:androidx.compose.foundation.layout.PaddingValues,interactionSource:androidx.compose.foundation.interaction.MutableInteractionSource?,content:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit)": {
+      "tag": 22,
+      "name": "GenTextButton1",
+      "params": {
+        "onClick": 1,
+        "modifier": 2,
+        "enabled": 3,
+        "shape": 4,
+        "colors": 5,
+        "elevation": 6,
+        "border": 7,
+        "contentPadding": 8,
+        "interactionSource": 9,
+        "content": 10
+      },
+      "since": 4,
+      "wire": {
+        "onClick": 4,
+        "enabled": 4,
+        "shape": 4,
+        "colors": 4,
+        "elevation": 4,
+        "border": 4,
+        "contentPadding": 4,
+        "content": 4
+      }
+    },
+    "androidx.compose.material3/TopAppBar(title:@Composable ()->kotlin.Unit,modifier:androidx.compose.ui.Modifier,navigationIcon:@Composable ()->kotlin.Unit,actions:@Composable androidx.compose.foundation.layout.RowScope.()->kotlin.Unit,expandedHeight:androidx.compose.ui.unit.Dp,windowInsets:androidx.compose.foundation.layout.WindowInsets,colors:androidx.compose.material3.TopAppBarColors,scrollBehavior:androidx.compose.material3.TopAppBarScrollBehavior?)": {
+      "tag": 26,
+      "name": "GenTopAppBar1",
+      "params": {
+        "title": 1,
+        "modifier": 2,
+        "navigationIcon": 3,
+        "actions": 4,
+        "expandedHeight": 5,
+        "windowInsets": 6,
+        "colors": 7,
+        "scrollBehavior": 8
+      },
+      "since": 4,
+      "wire": {
+        "title": 4,
+        "navigationIcon": 4,
+        "actions": 4,
+        "expandedHeight": 4,
+        "colors": 4
+      }
+    },
+    "coil3.compose/AsyncImage(model:kotlin.Any?,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,placeholder:androidx.compose.ui.graphics.painter.Painter?,error:androidx.compose.ui.graphics.painter.Painter?,fallback:androidx.compose.ui.graphics.painter.Painter?,onLoading:((coil3.compose.AsyncImagePainter.State.Loading)->kotlin.Unit)?,onSuccess:((coil3.compose.AsyncImagePainter.State.Success)->kotlin.Unit)?,onError:((coil3.compose.AsyncImagePainter.State.Error)->kotlin.Unit)?,alignment:androidx.compose.ui.Alignment,contentScale:androidx.compose.ui.layout.ContentScale,alpha:kotlin.Float,colorFilter:androidx.compose.ui.graphics.ColorFilter?,filterQuality:androidx.compose.ui.graphics.FilterQuality,clipToBounds:kotlin.Boolean)": {
+      "tag": 11,
+      "name": "GenAsyncImage2",
+      "params": {
+        "model": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "placeholder": 4,
+        "error": 5,
+        "fallback": 6,
+        "onLoading": 7,
+        "onSuccess": 8,
+        "onError": 9,
+        "alignment": 10,
+        "contentScale": 11,
+        "alpha": 12,
+        "colorFilter": 13,
+        "filterQuality": 14,
+        "clipToBounds": 15
+      },
+      "since": 4,
+      "wire": {
+        "model": 4,
+        "contentDescription": 4,
+        "placeholder": 4,
+        "error": 4,
+        "alignment": 4,
+        "contentScale": 4,
+        "alpha": 4,
+        "colorFilter": 4,
+        "filterQuality": 4,
+        "clipToBounds": 4
+      }
     },
     "coil3.compose/AsyncImage(model:kotlin.Any?,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,transform:(coil3.compose.AsyncImagePainter.State)->coil3.compose.AsyncImagePainter.State,onState:((coil3.compose.AsyncImagePainter.State)->kotlin.Unit)?,alignment:androidx.compose.ui.Alignment,contentScale:androidx.compose.ui.layout.ContentScale,alpha:kotlin.Float,colorFilter:androidx.compose.ui.graphics.ColorFilter?,filterQuality:androidx.compose.ui.graphics.FilterQuality,clipToBounds:kotlin.Boolean)": {
       "tag": 8,
@@ -119,7 +602,17 @@
         "filterQuality": 10,
         "clipToBounds": 11
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "model": 1,
+        "contentDescription": 1,
+        "alignment": 1,
+        "contentScale": 1,
+        "alpha": 1,
+        "filterQuality": 1,
+        "clipToBounds": 1,
+        "colorFilter": 4
+      }
     }
   },
   "modifiers": {
@@ -129,13 +622,17 @@
       "params": {
         "alignment": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "alignment": 1
+      }
     },
     "androidx.compose.foundation.layout/BoxScope#matchParentSize()": {
       "tag": 17,
       "name": "GenBoxScopeMatchParentSize1",
       "params": {},
-      "since": 1
+      "since": 1,
+      "wire": {}
     },
     "androidx.compose.foundation.layout/ColumnScope#align(alignment:androidx.compose.ui.Alignment.Horizontal)": {
       "tag": 15,
@@ -143,7 +640,10 @@
       "params": {
         "alignment": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "alignment": 1
+      }
     },
     "androidx.compose.foundation.layout/ColumnScope#weight(weight:kotlin.Float,fill:kotlin.Boolean)": {
       "tag": 14,
@@ -152,7 +652,11 @@
         "weight": 1,
         "fill": 2
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "weight": 1,
+        "fill": 1
+      }
     },
     "androidx.compose.foundation.layout/RowScope#align(alignment:androidx.compose.ui.Alignment.Vertical)": {
       "tag": 13,
@@ -160,7 +664,10 @@
       "params": {
         "alignment": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "alignment": 1
+      }
     },
     "androidx.compose.foundation.layout/RowScope#weight(weight:kotlin.Float,fill:kotlin.Boolean)": {
       "tag": 12,
@@ -169,7 +676,11 @@
         "weight": 1,
         "fill": 2
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "weight": 1,
+        "fill": 1
+      }
     },
     "androidx.compose.foundation.layout/fillMaxHeight(fraction:kotlin.Float)": {
       "tag": 10,
@@ -177,7 +688,10 @@
       "params": {
         "fraction": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "fraction": 1
+      }
     },
     "androidx.compose.foundation.layout/fillMaxSize(fraction:kotlin.Float)": {
       "tag": 11,
@@ -185,7 +699,10 @@
       "params": {
         "fraction": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "fraction": 1
+      }
     },
     "androidx.compose.foundation.layout/fillMaxWidth(fraction:kotlin.Float)": {
       "tag": 9,
@@ -193,7 +710,10 @@
       "params": {
         "fraction": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "fraction": 1
+      }
     },
     "androidx.compose.foundation.layout/height(height:androidx.compose.ui.unit.Dp)": {
       "tag": 8,
@@ -201,7 +721,10 @@
       "params": {
         "height": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "height": 1
+      }
     },
     "androidx.compose.foundation.layout/padding(all:androidx.compose.ui.unit.Dp)": {
       "tag": 1,
@@ -209,7 +732,10 @@
       "params": {
         "all": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "all": 1
+      }
     },
     "androidx.compose.foundation.layout/padding(horizontal:androidx.compose.ui.unit.Dp,vertical:androidx.compose.ui.unit.Dp)": {
       "tag": 2,
@@ -218,7 +744,11 @@
         "horizontal": 1,
         "vertical": 2
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "horizontal": 1,
+        "vertical": 1
+      }
     },
     "androidx.compose.foundation.layout/padding(paddingValues:androidx.compose.foundation.layout.PaddingValues)": {
       "tag": 4,
@@ -226,7 +756,10 @@
       "params": {
         "paddingValues": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "paddingValues": 1
+      }
     },
     "androidx.compose.foundation.layout/padding(start:androidx.compose.ui.unit.Dp,top:androidx.compose.ui.unit.Dp,end:androidx.compose.ui.unit.Dp,bottom:androidx.compose.ui.unit.Dp)": {
       "tag": 3,
@@ -237,7 +770,13 @@
         "end": 3,
         "bottom": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "start": 1,
+        "top": 1,
+        "end": 1,
+        "bottom": 1
+      }
     },
     "androidx.compose.foundation.layout/size(size:androidx.compose.ui.unit.Dp)": {
       "tag": 5,
@@ -245,7 +784,10 @@
       "params": {
         "size": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "size": 1
+      }
     },
     "androidx.compose.foundation.layout/size(width:androidx.compose.ui.unit.Dp,height:androidx.compose.ui.unit.Dp)": {
       "tag": 6,
@@ -254,7 +796,11 @@
         "width": 1,
         "height": 2
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "width": 1,
+        "height": 1
+      }
     },
     "androidx.compose.foundation.layout/width(width:androidx.compose.ui.unit.Dp)": {
       "tag": 7,
@@ -262,7 +808,54 @@
       "params": {
         "width": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "width": 1
+      }
+    },
+    "androidx.compose.foundation.lazy/LazyItemScope#animateItem(fadeInSpec:androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>?,placementSpec:androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>?,fadeOutSpec:androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>?)": {
+      "tag": 31,
+      "name": "GenLazyItemScopeAnimateItem1",
+      "params": {
+        "fadeInSpec": 1,
+        "placementSpec": 2,
+        "fadeOutSpec": 3
+      },
+      "since": 4,
+      "wire": {}
+    },
+    "androidx.compose.foundation.lazy/LazyItemScope#fillParentMaxHeight(fraction:kotlin.Float)": {
+      "tag": 30,
+      "name": "GenLazyItemScopeFillParentMaxHeight1",
+      "params": {
+        "fraction": 1
+      },
+      "since": 4,
+      "wire": {
+        "fraction": 4
+      }
+    },
+    "androidx.compose.foundation.lazy/LazyItemScope#fillParentMaxSize(fraction:kotlin.Float)": {
+      "tag": 28,
+      "name": "GenLazyItemScopeFillParentMaxSize1",
+      "params": {
+        "fraction": 1
+      },
+      "since": 4,
+      "wire": {
+        "fraction": 4
+      }
+    },
+    "androidx.compose.foundation.lazy/LazyItemScope#fillParentMaxWidth(fraction:kotlin.Float)": {
+      "tag": 29,
+      "name": "GenLazyItemScopeFillParentMaxWidth1",
+      "params": {
+        "fraction": 1
+      },
+      "since": 4,
+      "wire": {
+        "fraction": 4
+      }
     },
     "androidx.compose.foundation/background(color:androidx.compose.ui.graphics.Color,shape:androidx.compose.ui.graphics.Shape)": {
       "tag": 18,
@@ -271,7 +864,24 @@
         "color": 1,
         "shape": 2
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "color": 1,
+        "shape": 1
+      }
+    },
+    "androidx.compose.foundation/border(border:androidx.compose.foundation.BorderStroke,shape:androidx.compose.ui.graphics.Shape)": {
+      "tag": 27,
+      "name": "GenBorder2",
+      "params": {
+        "border": 1,
+        "shape": 2
+      },
+      "since": 4,
+      "wire": {
+        "border": 4,
+        "shape": 4
+      }
     },
     "androidx.compose.foundation/border(width:androidx.compose.ui.unit.Dp,color:androidx.compose.ui.graphics.Color,shape:androidx.compose.ui.graphics.Shape)": {
       "tag": 19,
@@ -281,7 +891,28 @@
         "color": 2,
         "shape": 3
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "width": 1,
+        "color": 1,
+        "shape": 1
+      }
+    },
+    "androidx.compose.foundation/clickable(enabled:kotlin.Boolean,onClickLabel:kotlin.String?,role:androidx.compose.ui.semantics.Role?,interactionSource:androidx.compose.foundation.interaction.MutableInteractionSource?,onClick:()->kotlin.Unit)": {
+      "tag": 26,
+      "name": "GenClickable2",
+      "params": {
+        "enabled": 1,
+        "onClickLabel": 2,
+        "role": 3,
+        "interactionSource": 4,
+        "onClick": 5
+      },
+      "since": 3,
+      "wire": {
+        "enabled": 3,
+        "onClick": 3
+      }
     },
     "androidx.compose.foundation/clickable(enabled:kotlin.Boolean,onClickLabel:kotlin.String?,role:androidx.compose.ui.semantics.Role?,onClick:()->kotlin.Unit)": {
       "tag": 20,
@@ -292,7 +923,11 @@
         "role": 3,
         "onClick": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "enabled": 1,
+        "onClick": 1
+      }
     },
     "androidx.compose.foundation/horizontalScroll(state:androidx.compose.foundation.ScrollState,enabled:kotlin.Boolean,flingBehavior:androidx.compose.foundation.gestures.FlingBehavior?,reverseScrolling:kotlin.Boolean)": {
       "tag": 21,
@@ -303,7 +938,12 @@
         "flingBehavior": 3,
         "reverseScrolling": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "state": 1,
+        "enabled": 1,
+        "reverseScrolling": 1
+      }
     },
     "androidx.compose.foundation/verticalScroll(state:androidx.compose.foundation.ScrollState,enabled:kotlin.Boolean,flingBehavior:androidx.compose.foundation.gestures.FlingBehavior?,reverseScrolling:kotlin.Boolean)": {
       "tag": 22,
@@ -314,7 +954,12 @@
         "flingBehavior": 3,
         "reverseScrolling": 4
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "state": 1,
+        "enabled": 1,
+        "reverseScrolling": 1
+      }
     },
     "androidx.compose.ui.draw/alpha(alpha:kotlin.Float)": {
       "tag": 24,
@@ -322,7 +967,10 @@
       "params": {
         "alpha": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "alpha": 1
+      }
     },
     "androidx.compose.ui.draw/clip(shape:androidx.compose.ui.graphics.Shape)": {
       "tag": 23,
@@ -330,7 +978,10 @@
       "params": {
         "shape": 1
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "shape": 1
+      }
     },
     "androidx.compose.ui.draw/shadow(elevation:androidx.compose.ui.unit.Dp,shape:androidx.compose.ui.graphics.Shape,clip:kotlin.Boolean,ambientColor:androidx.compose.ui.graphics.Color,spotColor:androidx.compose.ui.graphics.Color)": {
       "tag": 25,
@@ -342,7 +993,216 @@
         "ambientColor": 4,
         "spotColor": 5
       },
-      "since": 1
+      "since": 1,
+      "wire": {
+        "elevation": 1,
+        "shape": 1,
+        "clip": 1,
+        "ambientColor": 1,
+        "spotColor": 1
+      }
+    }
+  },
+  "nextFactoryTag": 16,
+  "factories": {
+    "androidx.compose.material3/ButtonDefaults#buttonColors()": {
+      "tag": 4,
+      "name": "ButtonDefaults.buttonColors1",
+      "params": {},
+      "since": 4,
+      "wire": {}
+    },
+    "androidx.compose.material3/ButtonDefaults#buttonColors(containerColor:androidx.compose.ui.graphics.Color,contentColor:androidx.compose.ui.graphics.Color,disabledContainerColor:androidx.compose.ui.graphics.Color,disabledContentColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 5,
+      "name": "ButtonDefaults.buttonColors2",
+      "params": {
+        "containerColor": 1,
+        "contentColor": 2,
+        "disabledContainerColor": 3,
+        "disabledContentColor": 4
+      },
+      "since": 4,
+      "wire": {
+        "containerColor": 4,
+        "contentColor": 4,
+        "disabledContainerColor": 4,
+        "disabledContentColor": 4
+      }
+    },
+    "androidx.compose.material3/ButtonDefaults#buttonElevation(defaultElevation:androidx.compose.ui.unit.Dp,pressedElevation:androidx.compose.ui.unit.Dp,focusedElevation:androidx.compose.ui.unit.Dp,hoveredElevation:androidx.compose.ui.unit.Dp,disabledElevation:androidx.compose.ui.unit.Dp)": {
+      "tag": 6,
+      "name": "ButtonDefaults.buttonElevation1",
+      "params": {
+        "defaultElevation": 1,
+        "pressedElevation": 2,
+        "focusedElevation": 3,
+        "hoveredElevation": 4,
+        "disabledElevation": 5
+      },
+      "since": 4,
+      "wire": {
+        "defaultElevation": 4,
+        "pressedElevation": 4,
+        "focusedElevation": 4,
+        "hoveredElevation": 4,
+        "disabledElevation": 4
+      }
+    },
+    "androidx.compose.material3/ButtonDefaults#outlinedButtonBorder(enabled:kotlin.Boolean)": {
+      "tag": 11,
+      "name": "ButtonDefaults.outlinedButtonBorder1",
+      "params": {
+        "enabled": 1
+      },
+      "since": 4,
+      "wire": {
+        "enabled": 4
+      }
+    },
+    "androidx.compose.material3/ButtonDefaults#outlinedButtonColors()": {
+      "tag": 9,
+      "name": "ButtonDefaults.outlinedButtonColors1",
+      "params": {},
+      "since": 4,
+      "wire": {}
+    },
+    "androidx.compose.material3/ButtonDefaults#outlinedButtonColors(containerColor:androidx.compose.ui.graphics.Color,contentColor:androidx.compose.ui.graphics.Color,disabledContainerColor:androidx.compose.ui.graphics.Color,disabledContentColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 10,
+      "name": "ButtonDefaults.outlinedButtonColors2",
+      "params": {
+        "containerColor": 1,
+        "contentColor": 2,
+        "disabledContainerColor": 3,
+        "disabledContentColor": 4
+      },
+      "since": 4,
+      "wire": {
+        "containerColor": 4,
+        "contentColor": 4,
+        "disabledContainerColor": 4,
+        "disabledContentColor": 4
+      }
+    },
+    "androidx.compose.material3/ButtonDefaults#textButtonColors()": {
+      "tag": 7,
+      "name": "ButtonDefaults.textButtonColors1",
+      "params": {},
+      "since": 4,
+      "wire": {}
+    },
+    "androidx.compose.material3/ButtonDefaults#textButtonColors(containerColor:androidx.compose.ui.graphics.Color,contentColor:androidx.compose.ui.graphics.Color,disabledContainerColor:androidx.compose.ui.graphics.Color,disabledContentColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 8,
+      "name": "ButtonDefaults.textButtonColors2",
+      "params": {
+        "containerColor": 1,
+        "contentColor": 2,
+        "disabledContainerColor": 3,
+        "disabledContentColor": 4
+      },
+      "since": 4,
+      "wire": {
+        "containerColor": 4,
+        "contentColor": 4,
+        "disabledContainerColor": 4,
+        "disabledContentColor": 4
+      }
+    },
+    "androidx.compose.material3/CardDefaults#cardColors()": {
+      "tag": 1,
+      "name": "CardDefaults.cardColors1",
+      "params": {},
+      "since": 4,
+      "wire": {}
+    },
+    "androidx.compose.material3/CardDefaults#cardColors(containerColor:androidx.compose.ui.graphics.Color,contentColor:androidx.compose.ui.graphics.Color,disabledContainerColor:androidx.compose.ui.graphics.Color,disabledContentColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 2,
+      "name": "CardDefaults.cardColors2",
+      "params": {
+        "containerColor": 1,
+        "contentColor": 2,
+        "disabledContainerColor": 3,
+        "disabledContentColor": 4
+      },
+      "since": 4,
+      "wire": {
+        "containerColor": 4,
+        "contentColor": 4,
+        "disabledContainerColor": 4,
+        "disabledContentColor": 4
+      }
+    },
+    "androidx.compose.material3/CardDefaults#cardElevation(defaultElevation:androidx.compose.ui.unit.Dp,pressedElevation:androidx.compose.ui.unit.Dp,focusedElevation:androidx.compose.ui.unit.Dp,hoveredElevation:androidx.compose.ui.unit.Dp,draggedElevation:androidx.compose.ui.unit.Dp,disabledElevation:androidx.compose.ui.unit.Dp)": {
+      "tag": 3,
+      "name": "CardDefaults.cardElevation1",
+      "params": {
+        "defaultElevation": 1,
+        "pressedElevation": 2,
+        "focusedElevation": 3,
+        "hoveredElevation": 4,
+        "draggedElevation": 5,
+        "disabledElevation": 6
+      },
+      "since": 4,
+      "wire": {
+        "defaultElevation": 4,
+        "pressedElevation": 4,
+        "focusedElevation": 4,
+        "hoveredElevation": 4,
+        "draggedElevation": 4,
+        "disabledElevation": 4
+      }
+    },
+    "androidx.compose.material3/IconButtonDefaults#iconButtonColors()": {
+      "tag": 12,
+      "name": "IconButtonDefaults.iconButtonColors1",
+      "params": {},
+      "since": 4,
+      "wire": {}
+    },
+    "androidx.compose.material3/IconButtonDefaults#iconButtonColors(containerColor:androidx.compose.ui.graphics.Color,contentColor:androidx.compose.ui.graphics.Color,disabledContainerColor:androidx.compose.ui.graphics.Color,disabledContentColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 13,
+      "name": "IconButtonDefaults.iconButtonColors2",
+      "params": {
+        "containerColor": 1,
+        "contentColor": 2,
+        "disabledContainerColor": 3,
+        "disabledContentColor": 4
+      },
+      "since": 4,
+      "wire": {
+        "containerColor": 4,
+        "contentColor": 4,
+        "disabledContainerColor": 4,
+        "disabledContentColor": 4
+      }
+    },
+    "androidx.compose.material3/TopAppBarDefaults#topAppBarColors()": {
+      "tag": 14,
+      "name": "TopAppBarDefaults.topAppBarColors1",
+      "params": {},
+      "since": 4,
+      "wire": {}
+    },
+    "androidx.compose.material3/TopAppBarDefaults#topAppBarColors(containerColor:androidx.compose.ui.graphics.Color,scrolledContainerColor:androidx.compose.ui.graphics.Color,navigationIconContentColor:androidx.compose.ui.graphics.Color,titleContentColor:androidx.compose.ui.graphics.Color,actionIconContentColor:androidx.compose.ui.graphics.Color,subtitleContentColor:androidx.compose.ui.graphics.Color)": {
+      "tag": 15,
+      "name": "TopAppBarDefaults.topAppBarColors2",
+      "params": {
+        "containerColor": 1,
+        "scrolledContainerColor": 2,
+        "navigationIconContentColor": 3,
+        "titleContentColor": 4,
+        "actionIconContentColor": 5,
+        "subtitleContentColor": 6
+      },
+      "since": 4,
+      "wire": {
+        "containerColor": 4,
+        "scrolledContainerColor": 4,
+        "navigationIconContentColor": 4,
+        "titleContentColor": 4,
+        "actionIconContentColor": 4,
+        "subtitleContentColor": 4
+      }
     }
   }
 }

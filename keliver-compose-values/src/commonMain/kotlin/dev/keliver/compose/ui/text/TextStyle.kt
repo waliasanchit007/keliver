@@ -97,10 +97,17 @@ public class TextStyle(
     ).also { it.reference = reference }
   }
 
-  override fun equals(other: Any?): Boolean = other is TextStyle && other.reference == reference &&
-    other.color == color && other.fontSize == fontSize && other.fontWeight == fontWeight &&
-    other.fontStyle == fontStyle && other.fontFamily == fontFamily && other.letterSpacing == letterSpacing &&
-    other.textDecoration == textDecoration && other.textAlign == textAlign && other.lineHeight == lineHeight
+  override fun equals(other: Any?): Boolean = other is TextStyle &&
+    other.reference == reference &&
+    other.color == color &&
+    other.fontSize == fontSize &&
+    other.fontWeight == fontWeight &&
+    other.fontStyle == fontStyle &&
+    other.fontFamily == fontFamily &&
+    other.letterSpacing == letterSpacing &&
+    other.textDecoration == textDecoration &&
+    other.textAlign == textAlign &&
+    other.lineHeight == lineHeight
 
   override fun hashCode(): Int = listOf(reference, color, fontSize, fontWeight, fontStyle, fontFamily, letterSpacing, textDecoration, textAlign, lineHeight).hashCode()
 

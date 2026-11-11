@@ -15,9 +15,12 @@
  */
 package dev.keliver.compose.gatea.composeui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CutCornerShape
@@ -28,14 +31,19 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -49,17 +57,24 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import dev.keliver.compose.foundation.BorderStroke as K_BorderStroke
 import dev.keliver.compose.foundation.ScrollState as K_ScrollState
 import dev.keliver.compose.foundation.layout.Arrangement as K_Arrangement
 import dev.keliver.compose.foundation.layout.PaddingValues as K_PaddingValues
+import dev.keliver.compose.foundation.lazy.LazyListStateWire as K_LazyListStateWire
 import dev.keliver.compose.foundation.shape.CornerBasedShape as K_CornerBasedShape
 import dev.keliver.compose.foundation.shape.CornerSize as K_CornerSize
 import dev.keliver.compose.foundation.shape.CutCornerShape as K_CutCornerShape
 import dev.keliver.compose.ui.Alignment as K_Alignment
+import dev.keliver.compose.ui.graphics.BlendMode as K_BlendMode
 import dev.keliver.compose.ui.graphics.Color as K_Color
+import dev.keliver.compose.ui.graphics.ColorFilter as K_ColorFilter
 import dev.keliver.compose.ui.graphics.FilterQuality as K_FilterQuality
 import dev.keliver.compose.ui.graphics.Shape as K_Shape
 import dev.keliver.compose.ui.graphics.ShapeReference as K_ShapeReference
+import dev.keliver.compose.ui.graphics.painter.ColorPainter as K_ColorPainter
+import dev.keliver.compose.ui.graphics.painter.Painter as K_Painter
+import dev.keliver.compose.ui.graphics.painter.VectorPainter as K_VectorPainter
 import dev.keliver.compose.ui.graphics.vector.ImageVector as K_ImageVector
 import dev.keliver.compose.ui.layout.ContentScale as K_ContentScale
 import dev.keliver.compose.ui.semantics.Role as K_Role
@@ -73,6 +88,7 @@ import dev.keliver.compose.ui.text.style.TextOverflow as K_TextOverflow
 import dev.keliver.compose.ui.unit.Dp as K_Dp
 import dev.keliver.compose.ui.unit.TextUnit as K_TextUnit
 import dev.keliver.compose.ui.unit.TextUnitType as K_TextUnitType
+import dev.keliver.compose.wire.DefaultsValue
 
 /*
  * The host half of the value codecs (docs/COMPOSE_GENERATOR_DESIGN.md §6, §7), written by hand
@@ -89,7 +105,6 @@ internal fun K_TextUnit.toCompose(): TextUnit = when (type) {
 }
 
 @Composable
-@ReadOnlyComposable
 internal fun K_Color.toCompose(): Color {
   val ref = referenceName ?: return if (this == K_Color.Unspecified) Color.Unspecified else Color(argb)
   val base = resolveColor(ref)
@@ -97,9 +112,9 @@ internal fun K_Color.toCompose(): Color {
 }
 
 @Composable
-@ReadOnlyComposable
 private fun resolveColor(name: String): Color {
   if (name == "LocalContentColor") return LocalContentColor.current
+  if (!name.startsWith("colorScheme.")) return defaultsColor(name) ?: Color.Unspecified
   val s = MaterialTheme.colorScheme
   return when (name.removePrefix("colorScheme.")) {
     "primary" -> s.primary
@@ -145,25 +160,27 @@ private fun resolveColor(name: String): Color {
 private fun K_CornerSize.toCompose(): CornerSize = percentOrNull()?.let { CornerSize(it) } ?: CornerSize(dpOrNull()!!.toCompose())
 
 @Composable
-@ReadOnlyComposable
 internal fun K_Shape.toCompose(): Shape = when (this) {
   is K_CutCornerShape -> CutCornerShape(topStart.toCompose(), topEnd.toCompose(), bottomEnd.toCompose(), bottomStart.toCompose())
   is K_CornerBasedShape -> RoundedCornerShape(topStart.toCompose(), topEnd.toCompose(), bottomEnd.toCompose(), bottomStart.toCompose())
-  is K_ShapeReference -> MaterialTheme.shapes.let { s ->
-    when (name.removePrefix("shapes.")) {
-      "extraSmall" -> s.extraSmall
-      "small" -> s.small
-      "medium" -> s.medium
-      "large" -> s.large
-      "extraLarge" -> s.extraLarge
-      else -> RectangleShape
+  is K_ShapeReference -> if (!name.startsWith("shapes.")) {
+    defaultsShape(name) ?: RectangleShape // a generated `*Defaults` shape (`ButtonDefaults.shape`)
+  } else {
+    MaterialTheme.shapes.let { s ->
+      when (name.removePrefix("shapes.")) {
+        "extraSmall" -> s.extraSmall
+        "small" -> s.small
+        "medium" -> s.medium
+        "large" -> s.large
+        "extraLarge" -> s.extraLarge
+        else -> RectangleShape
+      }
     }
   }
   else -> RectangleShape
 }
 
 @Composable
-@ReadOnlyComposable
 internal fun K_TextStyle.toCompose(): TextStyle {
   val base = when (val r = reference) {
     null -> TextStyle.Default
@@ -302,3 +319,73 @@ internal fun K_ImageVector.toCompose(): ImageVector = iconByName(name) ?: Icons.
 /** Host-owned state (§10): the real ScrollState lives where the scroll modifier renders. */
 @Composable
 internal fun K_ScrollState.toCompose(): ScrollState = rememberScrollState(initial)
+
+/**
+ * Host-owned state (§10): the real LazyListState lives where the list renders; each new scroll
+ * command from the guest runs once on it.
+ */
+@Composable
+internal fun K_LazyListStateWire.toCompose(): LazyListState {
+  val state = rememberLazyListState(initialIndex, initialOffset)
+  val command = command
+  LaunchedEffect(command?.id) {
+    if (command == null) return@LaunchedEffect
+    if (command.animated) state.animateScrollToItem(command.index, command.offset) else state.scrollToItem(command.index, command.offset)
+  }
+  return state
+}
+
+/** A border: solid, or made by the real `*Defaults` factory the guest recorded a call to. */
+@Composable
+internal fun K_BorderStroke.toCompose(): BorderStroke =
+  call?.let { defaultsBorderStroke(it) } ?: BorderStroke(width.toCompose(), color.toCompose())
+
+/** An icon's vector painter or a colour painter (the painters a guest can describe, §6). */
+@Composable
+internal fun K_Painter.toCompose(): Painter = when (this) {
+  is K_VectorPainter -> rememberVectorPainter(image.toCompose())
+  is K_ColorPainter -> ColorPainter(color.toCompose())
+  else -> ColorPainter(Color.Unspecified)
+}
+
+@Composable
+internal fun K_ColorFilter.toCompose(): ColorFilter = ColorFilter.tint(color.toCompose(), blendMode.toCompose())
+
+internal fun K_BlendMode.toCompose(): BlendMode = when (this) {
+  K_BlendMode.Clear -> BlendMode.Clear
+  K_BlendMode.Src -> BlendMode.Src
+  K_BlendMode.Dst -> BlendMode.Dst
+  K_BlendMode.SrcOver -> BlendMode.SrcOver
+  K_BlendMode.DstOver -> BlendMode.DstOver
+  K_BlendMode.DstIn -> BlendMode.DstIn
+  K_BlendMode.SrcOut -> BlendMode.SrcOut
+  K_BlendMode.DstOut -> BlendMode.DstOut
+  K_BlendMode.SrcAtop -> BlendMode.SrcAtop
+  K_BlendMode.DstAtop -> BlendMode.DstAtop
+  K_BlendMode.Xor -> BlendMode.Xor
+  K_BlendMode.Plus -> BlendMode.Plus
+  K_BlendMode.Modulate -> BlendMode.Modulate
+  K_BlendMode.Screen -> BlendMode.Screen
+  K_BlendMode.Overlay -> BlendMode.Overlay
+  K_BlendMode.Darken -> BlendMode.Darken
+  K_BlendMode.Lighten -> BlendMode.Lighten
+  K_BlendMode.ColorDodge -> BlendMode.ColorDodge
+  K_BlendMode.ColorBurn -> BlendMode.ColorBurn
+  K_BlendMode.Hardlight -> BlendMode.Hardlight
+  K_BlendMode.Softlight -> BlendMode.Softlight
+  K_BlendMode.Difference -> BlendMode.Difference
+  K_BlendMode.Exclusion -> BlendMode.Exclusion
+  K_BlendMode.Multiply -> BlendMode.Multiply
+  K_BlendMode.Hue -> BlendMode.Hue
+  K_BlendMode.Saturation -> BlendMode.Saturation
+  K_BlendMode.Color -> BlendMode.Color
+  K_BlendMode.Luminosity -> BlendMode.Luminosity
+  else -> BlendMode.SrcIn
+}
+
+/** The guest passed an explicit `null` where Compose's default is not null (design §5). */
+internal fun Any.isExplicitNull(): Boolean = when (this) {
+  is DefaultsValue -> call.isExplicitNull
+  is K_BorderStroke -> call?.isExplicitNull == true
+  else -> false
+}

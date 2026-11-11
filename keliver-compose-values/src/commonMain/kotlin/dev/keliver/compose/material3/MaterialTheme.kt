@@ -119,6 +119,33 @@ public object LocalTextStyle {
     get() = TextStyle.reference("LocalTextStyle")
 }
 
+/**
+ * As `androidx.compose.material3.contentColorFor`: the theme's "on" colour for a theme colour
+ * (`primary` → `onPrimary`), else `LocalContentColor.current`. Both are references the host
+ * resolves. Unlike Compose, a literal colour that happens to equal a theme colour is not matched
+ * (the guest does not know the host's theme values); as a parameter's default (`Surface`'s
+ * `contentColor`) this never matters, since the host evaluates the default itself (design §5).
+ */
+@Composable
+@ReadOnlyComposable
+public fun contentColorFor(backgroundColor: Color): Color {
+  val on = if (backgroundColor.alpha == 1f) contentColorNames[backgroundColor.referenceName] else null
+  return on?.let { Color.reference(it) } ?: LocalContentColor.current
+}
+
+private val contentColorNames: Map<String?, String> = buildMap {
+  for (n in listOf("primary", "secondary", "tertiary", "background", "error", "surface", "surfaceVariant")) {
+    put("colorScheme.$n", "colorScheme.on${n.replaceFirstChar { it.uppercase() }}")
+  }
+  for (n in listOf("primary", "secondary", "tertiary", "error")) {
+    put("colorScheme.${n}Container", "colorScheme.on${n.replaceFirstChar { it.uppercase() }}Container")
+  }
+  put("colorScheme.inverseSurface", "colorScheme.inverseOnSurface")
+  for (n in listOf("surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest")) {
+    put("colorScheme.$n", "colorScheme.onSurface")
+  }
+}
+
 /** `LocalContentColor.current` is a reference to the host's content colour where the widget renders. */
 public object LocalContentColor {
   public val current: Color

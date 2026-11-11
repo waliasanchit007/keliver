@@ -507,5 +507,80 @@ a Gate B item. Results: [`GATE_A_VERDICT.md`](GATE_A_VERDICT.md).
   `…IsDefault` flag rather than as `null`.
 - **Defaults.** Case 3 (§5, the presence split) is not implemented; no Gate A parameter needed it.
 - **Not generated yet:** error stubs for every other declaration of an included package (only a
-  curated two, plus those the classifier produces), scope supertypes, `*Defaults` mirrors, optional
-  slots, the D2 gate's metadata (the level is in the lock; nothing reads it yet), widget groups.
+  curated two, plus those the classifier produces), optional slots, the D2 gate's metadata (the
+  level is in the lock; nothing reads it yet), widget groups. (Scope supertypes and `*Defaults`
+  mirrors: Gate B part a, §20.)
+
+## 20. Gate B, part a: the generator on the stack's Compose, and a wider set
+
+Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only). What changed:
+
+- **Input.** The generator reads the desktop artifacts of the same catalog aliases the renderers
+  compile against (`jbCompose` for foundation and ui, material3's own pin, coil), so bumping
+  `jbCompose` fails `checkComposeApi` until the group is regenerated. Gate A's separate
+  `composeGeneratorInput` pin is gone. The schema's header names the versions read.
+- **Hidden overloads (§3).** A configured overload that Compose now hides keeps its lock entry and
+  wire shape, gets no stub (an `ERROR`-level one keeps Compose's message), and its renderer calls
+  the visible overload with the parameters both have. The generator refuses a hidden overload
+  whose visible successor is not configured, so a Compose bump cannot silently drop one. Compose's
+  `WARNING` deprecations are copied onto the stubs.
+- **The lock records what travels.** Each entry's `wire` maps the parameters sent on the wire to
+  the level they started at. A parameter that starts travelling later (its type gained a codec)
+  is an append at a new level with the tag it always had; a synthetic one (a lazy list's window)
+  takes the next free tag. Stopping, or changing a level, fails `checkAppendOnly`. Factories
+  (below) have their own tags. Renderers treat a parameter with a default as "not sent" until it
+  arrives, so a guest built before a parameter travelled still renders.
+- **`*Defaults` mirrors (§5–§7).** Every `XxxDefaults.member` a configured default names is
+  mirrored into `keliver-compose-values` (`GeneratedDefaults.kt`): a `@Composable` getter of a
+  colour or shape becomes a reference the host resolves by calling it (`ButtonDefaults.shape`,
+  `DividerDefaults.color`); a plain value is read from the jar at generation time and written as a
+  literal (`DividerDefaults.Thickness`, `ButtonDefaults.ContentPadding`); a function returning a
+  type only factories make (`ButtonColors`, `CardElevation`) is mirrored with all its public
+  overloads as a recorded call (`DefaultsCall`, the lock's `factories`) that the host makes with
+  the real factory. As for a widget's parameters (§5), the call records only the arguments that
+  differ from their defaults, and the host evaluates each missing one with Compose's default
+  expression, in parameter order: `CardDefaults.cardColors(containerColor = Color.White)` gets the
+  host's `contentColorFor(Color.White)` (which matches White to a theme colour the guest cannot
+  see), not the guest's approximation. A default that names a non-public value
+  (`FilledButtonTokens.ContainerElevation`, material3's `DisabledAlpha`) has that value written in
+  as a literal on both sides. A member that cannot be mirrored, or a factory of a type the config
+  says cannot cross (`ScrollableDefaults.flingBehavior()`), becomes an `ERROR` member, and a widget
+  parameter defaulting to it is left out of the stub with that reason.
+- **Explicit null (§5's wrap).** A nullable parameter with a non-null default (`Button`'s
+  `elevation`, `OutlinedButton`'s `border`) sends `null` for "the default" and a marker for an
+  explicit `null`, for the types that have one (factory-made types and `BorderStroke`).
+- **New codecs:** `BorderStroke` (solid colour, or a factory call), `Painter` (an icon's vector
+  painter, `ColorPainter`), `ColorFilter.tint`, and the host-owned `LazyListState` (below).
+  `contentColorFor` is mirrored by hand (theme references to their "on" colours).
+- **Lazy lists (§16).** A `LazyListScope.() -> Unit` parameter is windowed: the guest's
+  hand-written, Compose-shaped `LazyListScope` (`item`, `items`, `itemsIndexed`, keys) feeds
+  keliver-lazylayout's loading strategy, which composes only a window of items; each composed item
+  travels as one `ExtraLazyItem` node, and the window's place in the list (`content.before`,
+  `content.after`) and the host's viewport (`content.viewport`, an event) are synthetic
+  properties. The host calls the real `LazyColumn` with the whole count, renders each item's
+  children inside the real `LazyItemScope` (so `fillParentMaxWidth` and `animateItem` are
+  Compose's), and shows a 48 dp placeholder outside the window. `LazyListState` is host-owned
+  (§10): `scrollToItem` and `animateScrollToItem` are commands in the `state` property;
+  `firstVisibleItemIndex` and its offset follow the viewport event.
+- **Scope supertypes** are mirrored (`FlowRowScope : RowScope`).
+- **The lock across the Compose move, level by level.** Gate A left level 2 (read from CMP 1.8.2).
+  `GeneratorTest.theLockCarriesGateAsWithAppendsOnly` keeps that lock as a fixture and fails if
+  any of its tags, parameter tags or levels change; Redwood's own `redwoodApiGenerate`, which
+  refuses removals, accepted the schema (198 lines added to `keliver-api.xml`, none removed).
+  - *Level 3: CMP 1.11.1 with Gate A's set*, only what Compose itself changed. material3 1.9.0's
+    `Text` gained `autoSize` as a new overload and hid the old one: the old one keeps widget 6
+    (its renderer calls the new one), the new one is widget 10 (`autoSize` is dropped for now:
+    an `ERROR` overload names it). foundation 1.11.1 hid
+    `clickable(enabled, onClickLabel, role, onClick)` for one that adds `interactionSource`: the
+    old one keeps modifier 20, the new one is modifier 26. Each Gate A entry gained its `wire`
+    map, at the level it was created (an append nothing reads as new). `FlowRow` carries
+    Compose's new `WARNING` deprecation (its `overflow`).
+  - *Level 4: the wider set.* Widgets 11–26 (coil's `AsyncImage` with painters, which a `Painter`
+    codec now makes possible; `Image` with a painter and with a vector; `LazyColumn`, `LazyRow`;
+    `Icon` with a painter; `Surface` and its clickable form; `Card` and its clickable form;
+    `Button`, `TextButton`, `OutlinedButton`, `IconButton`; `HorizontalDivider`; `TopAppBar`),
+    modifiers 27–31 (`border(BorderStroke, Shape)`; `LazyItemScope`'s `fillParentMaxSize`,
+    `fillParentMaxWidth`, `fillParentMaxHeight`, `animateItem`), factories 1–15, and one
+    parameter of an old entry that starts travelling: widget 8 (`AsyncImage`) sends
+    `colorFilter`, with the tag (9) it always had, from level 4. `Scaffold` is an `ERROR` stub
+    (its content takes the host-measured `PaddingValues`).
