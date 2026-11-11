@@ -105,6 +105,13 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    roughly 6 to 16 ms of 56 on the 130-change one. On an iPhone 13 (2026-11-02,
    `results-2026-11-02-iphone-m4-m5`), only the launch's frames: the XCTest tap driver needs an
    App ID that only an Apple account signed in to Xcode can register.
+   **2026-11-11, open (library 0.5.0):** the guest's half of the split. `StandardAppLifecycle`
+   calls the host's `KeliverTrace.composed()` between a frame's composition and its change
+   lists, and so does a screen's start; the host's clock times it, so `lead` splits into
+   composition and encoding (`DEVICE_HOST.md`, "The guest frame profile"). With no
+   `KeliverTrace` bound the guest makes no call. Checked by JVM and JS unit tests, and by a test
+   that runs the test-app guest in QuickJS on the JVM. Not done: the hosts printing it in the
+   `frames` line (templates and `frames.py`, a later tools release), and numbers from a device.
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
    **2026-11-01, merged (#188; released in tools 0.3.17):** the iOS host's debug and Benchmark builds log a `memory`
@@ -336,6 +343,10 @@ built yet.
    with their fixture set as the persona's `httpFixtureSet`).
 2. S2: the shared multiplatform fixture matcher, then the embedded replay provider (debug only),
    with a release-build self-test that it is absent.
+   The matcher is `keliver-http-fixtures` (#224). The provider is `keliver-http-replay-debug`
+   (0.5.0). Its host wiring and the self-test are designed in
+   [`DEBUG_HTTP_REPLAY.md`](DEBUG_HTTP_REPLAY.md), and the templates take them up once 0.5.0 is
+   published.
 3. S3: the Android runner, plus a CI emulator job that publishes the PNGs and timings as
    artifacts.
 4. S4: the iOS runner on the simulator in CI (`simctl`).

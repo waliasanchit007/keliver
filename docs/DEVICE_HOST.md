@@ -571,12 +571,31 @@ Each span is `p50/p95/max` in microseconds, or `-` when the window has none.
   (`callStart`/`callEnd`), and the timing wrapper around each screen's
   `ZiplineTreehouseUi.Host` times `sendChanges` and posts a message before and after the
   apply (Android: asynchronous messages, as `Dispatchers.Main` posts the apply).
-- **What it cannot split:** composition from encoding inside `guest` and `lead`. That needs
-  a timestamp inside the guest's runtime, a library change. `apply` is the host's own apply
+- **What it cannot split yet:** composition from encoding inside `guest` and `lead`. A guest
+  built on library 0.5.0 reports the boundary (next point); the hosts' `frames` line does not
+  print it yet, which is a later tools release. `apply` is the host's own apply
   of the list. The host UI's own recomposition, layout and draw come at its next frame and
   are not in it, except now and then: main-thread work that gets in between the two posts
   (Android: another asynchronous message due in that moment; iOS: a display-link render while
   the main queue was idle between them) is counted, which shows in p95 and max.
+- **The guest's half of the split** (library 0.5.0, `keliver-treehouse-guest`): the guest
+  calls `composed()` on the host's `KeliverTrace` once its composition is done, before it
+  sends the change lists that composition made: in each frame (inside `sendFrame`) and when a
+  screen starts (inside `ZiplineTreehouseUi.start`, which sends the screen's first list).
+  Timed by the host when it arrives, it splits `lead` in two. Composition runs from the
+  frame's start to that call: the guest recomposes and applies the result to its widgets,
+  which records the changes and serializes each changed value as it goes. Encoding runs from
+  that call to the change list's arrival: Zipline encodes the list in the guest, the call
+  crosses, and the host decodes it. A host takes the call by adding `fun composed()` to its
+  `KeliverTrace` interface (by shape, as `mark` is).
+  - **Off:** the guest looks the service up once, when its lifecycle starts. A host that binds
+    no `KeliverTrace` (a store build) gets no call at all, and a frame costs the guest one null
+    check. A host whose `KeliverTrace` has no `composed()` (the templates of tools 0.3.10 to
+    0.3.18) fails the first call, and the guest does not call it again. Any other failure of
+    the call also turns the profile off, and the guest prints why once (`Keliver: the guest
+    frame profile is off; …`), which reaches the host's console.
+  - **On:** one more call from the guest to the host per frame and per screen start. It falls
+    inside `guest`, and the time it takes to arrive is counted as composition.
 - **Output:** the same as the marks' (logcat tag `KeliverTiming`, the iOS console, and
   `timing.log`), but not `Keliver.shared.onTrace`, whose marks are moments. A screen's first
   change list, sent from its start rather than in a frame, has no `lead`. Frames are sent
