@@ -155,18 +155,21 @@ class HttpFixtureMatcherTest {
   @Test fun bodiesAreLimitedToOneMebibyteOfUtf8() {
     val limit = HttpFixtureMatcher.MAX_BODY_BYTES
     assertEquals(1024 * 1024, limit)
+    // Each large string is built once: repeat() over 1 MiB is slow in the development
+    // wasm build that ChromeHeadless runs.
+    val ascii = "a".repeat(limit)
     // Exactly at the limit is fine, in either direction.
-    accepts(set(entry(request(method = "POST", body = "a".repeat(limit)), "b".repeat(limit))))
-    rejects("request body exceeds 1 MiB") { set(entry(request(method = "POST", body = "a".repeat(limit + 1)), "ok")) }
-    rejects("response body exceeds 1 MiB") { set(entry(request(), "b".repeat(limit + 1))) }
-    // The limit counts UTF-8 bytes, not characters: "é" is two bytes.
-    accepts(set(entry(request(), "é".repeat(limit / 2))))
-    rejects("response body exceeds 1 MiB") { set(entry(request(), "é".repeat(limit / 2) + "x")) }
-    // Three-byte and four-byte (surrogate pair) characters.
-    accepts(set(entry(request(), "€".repeat(limit / 3) + "x")))
-    rejects("response body exceeds 1 MiB") { set(entry(request(), "€".repeat(limit / 3) + "xx")) }
-    accepts(set(entry(request(), "😀".repeat(limit / 4))))
-    rejects("response body exceeds 1 MiB") { set(entry(request(), "😀".repeat(limit / 4) + "x")) }
+    accepts(set(entry(request(method = "POST", body = ascii), ascii)))
+    rejects("request body exceeds 1 MiB") { set(entry(request(method = "POST", body = ascii + "a"), "ok")) }
+    rejects("response body exceeds 1 MiB") { set(entry(request(), ascii + "b")) }
+    // The limit counts UTF-8 bytes, not characters: "é" is two bytes, "€" three and a
+    // surrogate pair four.
+    for ((char, bytes) in listOf("é" to 2, "€" to 3, "😀" to 4)) {
+      val wide = char.repeat(limit / bytes)
+      val padding = "x".repeat(limit % bytes)
+      accepts(set(entry(request(), wide + padding)))
+      rejects("response body exceeds 1 MiB") { set(entry(request(), wide + padding + "x")) }
+    }
   }
 
   @Test fun controlCharactersOtherThanTabLfAndCrAreRefused() {
