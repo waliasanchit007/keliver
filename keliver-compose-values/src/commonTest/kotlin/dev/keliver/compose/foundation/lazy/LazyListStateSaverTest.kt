@@ -21,6 +21,7 @@ import androidx.compose.runtime.saveable.SaverScope
 import dev.keliver.compose.wire.KeliverGeneratedApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,7 +34,7 @@ class LazyListStateSaverTest {
     val state = LazyListState()
     scope.launch { state.scrollToItem(42) }
     clock.sendFrame(0L)
-    assertEquals(1, state.pendingScroll?.id)
+    val first = state.pendingScroll!!.id
     state.onHostViewport(40, 50, 12)
 
     @Suppress("UNCHECKED_CAST")
@@ -48,6 +49,23 @@ class LazyListStateSaverTest {
     // The next command's id follows the saved one: never an id a host has already run.
     scope.launch { restored.scrollToItem(3) }
     clock.sendFrame(1L)
-    assertEquals(2, restored.pendingScroll?.id)
+    assertEquals(first + 1, restored.pendingScroll?.id)
+  }
+
+  /**
+   * A state that was not restored can't know which id a restored host last ran, so it doesn't
+   * count from a fixed start: two new states (one before an Android process death, one after it)
+   * don't send the same first id. Equal by chance is one in 2^32.
+   */
+  @Test fun newStatesDoNotStartFromTheSameId() {
+    val clock = BroadcastFrameClock()
+    val scope = CoroutineScope(Dispatchers.Unconfined + clock)
+    val before = LazyListState()
+    val after = LazyListState()
+    scope.launch { before.scrollToItem(1) }
+    scope.launch { after.scrollToItem(1) }
+    clock.sendFrame(0L)
+    assertNotEquals(before.pendingScroll!!.id, after.pendingScroll!!.id)
+    assertNotEquals(0, before.pendingScroll!!.id, "0 is the id of a host that ran nothing")
   }
 }

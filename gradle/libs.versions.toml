@@ -82,7 +82,8 @@ jetbrains-compose-material-icons-core = { module = "org.jetbrains.compose.materi
 # ~50 names referenced in MaterialIcons.kt land in bundles — the map defeats DCE
 # per-icon, so keep the map curated, not exhaustive).
 jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version = "1.7.3" }
-# Material 3 is versioned on its own since CMP 1.9; 1.9.0 is the release CMP 1.11.1 pairs with.
+# Material 3 is versioned on its own since CMP 1.9, so this pin does not follow jbCompose; moving it
+# is its own step (the Compose generator reads it: regenerate and lock).
 jetbrains-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version = "1.9.0" }
 jetbrains-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "jbCompose" }
 jetbrains-compose-runtime-saveable = { module = "org.jetbrains.compose.runtime:runtime-saveable", version.ref = "jbCompose" }

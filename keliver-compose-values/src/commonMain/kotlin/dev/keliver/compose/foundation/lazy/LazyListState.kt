@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import dev.keliver.compose.wire.JsonCodec
 import dev.keliver.compose.wire.KeliverGeneratedApi
+import kotlin.random.Random
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -80,10 +81,12 @@ public class LazyListState(
   private var command: ScrollCommand? by mutableStateOf(null)
 
   /**
-   * The id of the last command this state issued, carried across a save and restore, so a
-   * restored state's commands never reuse an id the host has already run.
+   * The id of the last command this state issued. A new state starts from a random id and a
+   * restored one from its saved id, so neither reuses an id the host has already run: the host
+   * keeps the id it ran across its own save and restore, which a guest that was not restored (an
+   * Android process death keeps the host's saved state but not the guest's) cannot know.
    */
-  private var lastCommandId = 0
+  private var lastCommandId = Random.nextInt()
 
   /** The latest programmatic scroll, read by the guest's window of composed items. */
   @KeliverGeneratedApi
@@ -103,7 +106,8 @@ public class LazyListState(
 
   private suspend fun scroll(index: Int, scrollOffset: Int, animated: Boolean) {
     require(index >= 0) { "Index should be non-negative ($index)" }
-    lastCommandId++
+    // 0 is never sent: it is the id a list that has not run a command yet holds.
+    lastCommandId = (lastCommandId + 1).let { if (it == 0) 1 else it }
     command = ScrollCommand(lastCommandId, index, scrollOffset, animated)
     withFrameNanos { }
   }
@@ -137,7 +141,10 @@ public fun rememberLazyListState(
   LazyListState(initialFirstVisibleItemIndex, initialFirstVisibleItemScrollOffset)
 }
 
-/** A programmatic scroll; [id] grows by one per command, so the host runs each once. */
+/**
+ * A programmatic scroll; [id] grows by one per command from a random start (never 0), so the host
+ * runs each once, even after a restore that kept the host's saved state but not the guest's.
+ */
 @Immutable
 public class ScrollCommand(public val id: Int, public val index: Int, public val offset: Int, public val animated: Boolean) {
   override fun equals(other: Any?): Boolean =

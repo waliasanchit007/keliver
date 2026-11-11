@@ -348,7 +348,9 @@ internal fun K_ScrollState.toCompose(): ScrollState = rememberScrollState(initia
  * command from the guest runs once on it. The id of the last command run is saved beside the
  * state, so a subtree recreated from saved state (a lazy item, a back-stack entry, a recreated
  * activity) keeps the position the user scrolled to instead of running the guest's last command
- * again. (The guest's ids keep growing across its own save and restore: `LazyListState.Saver`.)
+ * again. (The guest's ids keep growing across its own save and restore, `LazyListState.Saver`, and a
+ * guest that was not restored starts from a random id, so its first command is not mistaken for one
+ * this host already ran.)
  */
 @Composable
 internal fun K_LazyListStateWire.toCompose(): LazyListState {

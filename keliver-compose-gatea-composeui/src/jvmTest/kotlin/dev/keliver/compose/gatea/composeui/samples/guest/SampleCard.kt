@@ -52,7 +52,7 @@ import dev.keliver.compose.ui.unit.sp
 
 @Suppress("ktlint:compose:modifier-missing-check")
 @Composable
-fun SampleCard(title: String, quantity: String,tags: List<String>, onOpen: () -> Unit) {
+fun SampleCard(title: String, quantity: String, tags: List<String>, onOpen: () -> Unit) {
   Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Row(
       modifier = Modifier.fillMaxWidth()

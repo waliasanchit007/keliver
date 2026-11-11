@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Text
+import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -34,6 +35,7 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.keliver.compose.foundation.clickable as guestClickable
+import dev.keliver.compose.foundation.lazy.LazyListState as GuestLazyListState
 import dev.keliver.compose.foundation.lazy.LazyListStateWire
 import dev.keliver.compose.foundation.lazy.ScrollCommand
 import dev.keliver.compose.material3.ButtonColors as GuestButtonColors
@@ -41,11 +43,15 @@ import dev.keliver.compose.material3.Text as GuestText
 import dev.keliver.compose.material3.TextButton as GuestTextButton
 import dev.keliver.compose.ui.Modifier as GuestModifier
 import dev.keliver.compose.wire.DefaultsCall
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -136,5 +142,46 @@ class HostCompatibilityTest {
     wire = LazyListStateWire(0, 0, ScrollCommand(2, 10, 0, animated = false))
     waitForIdle()
     assertEquals(10, state!!.firstVisibleItemIndex, "a new command still runs")
+  }
+
+  /**
+   * The host's saved state restored, the guest's not (an Android process death: the host's
+   * `rememberSaveable` survives in the Bundle, the guest's state in memory does not). The new
+   * guest's first command still runs, though the host saved the id of the old guest's command.
+   */
+  @OptIn(KeliverGeneratedApi::class)
+  @Test fun aRestoredHostRunsAFreshGuestsFirstCommand() = runComposeUiTest {
+    val clock = BroadcastFrameClock()
+    val scope = CoroutineScope(Dispatchers.Unconfined + clock)
+    fun GuestLazyListState.command(index: Int): LazyListStateWire {
+      scope.launch { scrollToItem(index) }
+      clock.sendFrame(0L)
+      return wire
+    }
+
+    var wire by mutableStateOf(GuestLazyListState().command(42))
+    var show by mutableStateOf(true)
+    var state: LazyListState? = null
+    setContent {
+      val holder = rememberSaveableStateHolder()
+      Box(Modifier.size(300.dp, 400.dp)) {
+        if (show) {
+          holder.SaveableStateProvider("list") {
+            val s = wire.toCompose()
+            state = s
+            LazyColumn(state = s) { items(500) { Text("Row $it", Modifier.height(40.dp)) } }
+          }
+        }
+      }
+    }
+    waitForIdle()
+    assertEquals(42, state!!.firstVisibleItemIndex, "the old guest's command ran")
+
+    show = false
+    waitForIdle()
+    wire = GuestLazyListState().command(10)
+    show = true
+    waitForIdle()
+    assertEquals(10, state!!.firstVisibleItemIndex, "the fresh guest's first command ran on the restored host")
   }
 }

@@ -564,7 +564,9 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
   `firstVisibleItemIndex` and its offset follow the viewport event. The guest's
   `rememberLazyListState` saves the position with a `Saver`, as Compose's does, and the host saves
   the id of the last command it ran beside its state, so a restored subtree does not run the
-  guest's last command again.
+  guest's last command again. A guest state that was not restored (an Android process death keeps
+  the host's saved state, not the guest's) numbers its commands from a random start, so its first
+  command is not taken for one the host already ran.
 - **A newer guest on an older host.** A `*Defaults` factory the host does not know (appended at a
   later level) gives Compose's own default for that parameter where it renders, and an icon
   outside the host's groups a placeholder; each is reported once (`GeneratedMismatches`), never a
@@ -595,3 +597,6 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
     parameter of an old entry that starts travelling: widget 8 (`AsyncImage`) sends
     `colorFilter`, with the tag (9) it always had, from level 4. `Scaffold` is an `ERROR` stub
     (its content takes the host-measured `PaddingValues`).
+  - *CMP 1.12.2 (from main's move to it).* The group is now read from CMP 1.12.2 and material3
+    1.9.0; the regenerated schema differs only in the versions its header names, so no level 5 was
+    needed and level 4 is the newest.
