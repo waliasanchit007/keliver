@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtReturnExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
@@ -54,9 +55,12 @@ data class ScreenStates(
  * The annotation and `NamedState` are matched by what the file's imports bind
  * them to, not by their short names: `dev.keliver.nav.ScreenState` written out,
  * imported (also under an alias, or by `import dev.keliver.nav.*`), or used in
- * package `dev.keliver.nav` itself. A `@ScreenState` another import binds
- * elsewhere is some other annotation and is ignored; one no import binds is
- * reported (the file can't compile without the import).
+ * package `dev.keliver.nav` itself, or through a `typealias` of it that this file
+ * declares. A `@ScreenState` another import binds elsewhere is some other
+ * annotation and is ignored; one no import binds is reported (the file can't
+ * compile without the import). The recognizer reads one file: an annotation
+ * through a typealias declared in another file is not seen as a state, and
+ * neither listed nor reported.
  *
  * The state's name and fixture set must be plain string literals (the portal
  * lists them without running code); the body is a `NamedState(...)` call
@@ -244,6 +248,9 @@ object ScreenStateRecognizer {
     /** Top-level names this file declares, which a star import doesn't override. */
     private val own: Set<String>,
   ) {
+    /** This file's typealiases of our annotation. */
+    val aliases = LinkedHashSet<String>()
+
     /** Does short name [name] (a visible name, possibly an alias) bind [fq]? */
     fun bindingOf(name: String, fq: String): Binding {
       explicit[name]?.let { return if (it == fq) Binding.Ours else Binding.Elsewhere }
@@ -259,9 +266,11 @@ object ScreenStateRecognizer {
     }
 
     /** How annotation [entry] binds `@ScreenState`; [Binding.Elsewhere] for any other annotation. */
-    fun annotation(entry: KtAnnotationEntry): Binding {
-      val written = compact(entry.typeReference?.text ?: return Binding.Elsewhere)
+    fun annotation(entry: KtAnnotationEntry): Binding = annotation(compact(entry.typeReference?.text ?: return Binding.Elsewhere))
+
+    private fun annotation(written: String): Binding {
       if ('.' in written) return if (written == ANNOTATION_FQ) Binding.Ours else Binding.Elsewhere
+      if (written in aliases) return Binding.Ours
       return when (val b = bindingOf(written, ANNOTATION_FQ)) {
         // Unbound is only worth reporting when it is spelled like ours.
         Binding.Unbound -> if (written == ANNOTATION) b else Binding.Elsewhere
@@ -281,7 +290,15 @@ object ScreenStateRecognizer {
           }
         }
         val own = file.declarations.mapNotNull { (it as? KtNamedDeclaration)?.name }.toSet()
-        return ImportScope(file.packageFqName.asString(), explicit, stars, own)
+        val scope = ImportScope(file.packageFqName.asString(), explicit, stars, own)
+        // `typealias Snap = ScreenState` in this file, in source order (so an alias of an
+        // earlier alias resolves too). One declared in another file can't be seen here.
+        for (alias in file.declarations.filterIsInstance<KtTypeAlias>()) {
+          val name = alias.name ?: continue
+          val target = compact(alias.getTypeReference()?.text ?: continue)
+          if (scope.annotation(target) == Binding.Ours) scope.aliases += name
+        }
+        return scope
       }
     }
   }

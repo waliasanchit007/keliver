@@ -168,6 +168,20 @@ class ScreenStateRecognizerTest {
       """@State("al") fun al() = Named(route = Home, fixtures = "al")""",
     )
     assertEquals(listOf("al"), alias.states.map { it.name }, alias.problems.toString())
+    // A typealias this file declares, of the imported or the qualified name, or of another alias.
+    for (head in listOf(
+      "import dev.keliver.nav.ScreenState\ntypealias Snap = ScreenState",
+      "typealias Snap = dev.keliver.nav.ScreenState",
+      "typealias Base = dev.keliver.nav.ScreenState\ntypealias Snap = Base",
+    )) {
+      val typeAlias = recognize(head, """@Snap("ta") fun ta() = dev.keliver.nav.NamedState(route = Home, fixtures = "ta")""")
+      assertEquals(ScreenStates(listOf(ScreenStateSpec("ta", "ta", "Home", "Home", "ta"))), typeAlias, head)
+    }
+    // A typealias of someone else's annotation is not ours.
+    assertEquals(
+      ScreenStates(emptyList()),
+      recognize("typealias Snap = com.example.ScreenState", """@Snap("x") fun x() = dev.keliver.nav.NamedState(Home, "x")"""),
+    )
     val samePackage = recognize("package dev.keliver.nav", """@ScreenState("p") fun p() = NamedState(Home, "p")""")
     assertEquals(listOf("p"), samePackage.states.map { it.name })
 
