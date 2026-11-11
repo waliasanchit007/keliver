@@ -91,6 +91,10 @@ public class DebugHttpReplay(
    * its `HostHttp`. [onMiss] is told about every answer that is not a recorded response (the
    * 424 miss and the 4xx failures), in the order they are answered and never two at once. It
    * should only record (a log line, a list); an exception it throws is dropped.
+   *
+   * [onMiss] runs while the provider holds its session lock, which is not reentrant: it must
+   * not call back into the same provider ([DebugHttpReplayProvider.startSession] or
+   * [DebugHttpReplayProvider.execute], for example through `runBlocking`), or it deadlocks.
    */
   public fun provider(
     fixtureSet: String,
