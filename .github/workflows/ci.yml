@@ -11,10 +11,12 @@ on:
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
 
-# Cancel older runs on the same ref when a new push lands.
+# Cancel an older pull request run when a new push lands. Pushes to main are never cancelled:
+# only a main run that finishes saves the Gradle cache every pull request reads, and merges
+# often land minutes apart (2026-11-11: two main runs in a row were cancelled by the next merge).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # The docs fast path (docs/PLAN_2026-11.md section 14). A pull request that
@@ -76,14 +78,18 @@ jobs:
     name: Build (full graph, incl. iOS)
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ${{ vars.CI_RUNNER || 'macos-latest' }}
+    # A pull request from a fork always builds on a hosted runner, so no outside
+    # code reaches a self-hosted machine even if CI_RUNNER names one.
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.CI_RUNNER || 'macos-latest' }}
     # 90: calibrated against the self-hosted Mac at 30, then 60. On GitHub-hosted
     # macos-latest (CI_RUNNER) the full graph takes 50-60 minutes, and at 60 the
     # last test steps were cut off as "cancelled" again and again (2026-10-10/11,
     # e.g. runs 38151539258, 38151768857, 38155940708). They are free for public
     # repos, so a generous ceiling costs nothing; a tight one reads like someone
-    # stopped the run.
-    timeout-minutes: 90
+    # stopped the run. 150 since 2026-11-11: after Kotlin 2.4.20 and the JS/wasm test
+    # step the job takes 85-100 minutes, and every build at 90 was cancelled in its
+    # last step (e.g. runs 42886398822, 42886269065), main's included, so no cache was saved.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
         with:
@@ -130,6 +136,19 @@ jobs:
         run: >
           ./gradlew
           :portal-schema-codegen:checkPortalCode
+          -DRELEASE_SIGNING_ENABLED=false
+
+      # Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md): the generated group's checked-in
+      # sources and lock must match a fresh generation from Compose, and the lock may only grow.
+      # Regenerate with `./gradlew :keliver-compose-generator:generateComposeApi` and commit.
+      - name: Compose-generated group is fresh
+        run: >
+          ./gradlew
+          :keliver-compose-generator:checkComposeApi
+          :keliver-compose-generator:test
+          :keliver-compose-values:jvmTest
+          :keliver-compose-values:jsTest
+          :keliver-compose-gatea-composeui:jvmTest
           -DRELEASE_SIGNING_ENABLED=false
 
       # Compiled component preview: the dogfood editor's adapters file must be
@@ -223,10 +242,8 @@ jobs:
       # Every library's Kotlin/JS and wasm tests. Linking a test EXECUTABLE is the only place a
       # klib ABI mismatch shows up (coroutines 1.9.0 against the Kotlin 2.4 stdlib broke
       # keliver-runtime, keliver-lazylayout-api and keliver-nav while their library compiles
-      # passed). Kotlin/JS tests are cheap. Left out, each already failing for a reason of its
-      # own: keliver-widget-composeui:jsTest and keliver-widget/-widget-composeui:wasmJsTest
-      # (skiko.mjs is not packaged for the test runner) and keliver-leak-detector:wasmJsTest (docs/KNOWN_BUGS.md U41)
-      # (commonTest `delayForGc` has no wasm actual).
+      # passed). Kotlin/JS tests are cheap. A test that loads compose-ui needs Skiko's runtime
+      # beside its executable; build-support puts it there (SkikoWebTests.kt, docs/KNOWN_BUGS.md U41).
       - name: Test (JS and wasm, all libraries)
         run: >
           ./gradlew --continue
@@ -248,8 +265,9 @@ jobs:
           :keliver-treehouse:jsTest :keliver-treehouse-guest:jsTest :keliver-treehouse-guest-compose:jsTest
           :keliver-ui-basic-api:jsTest :keliver-ui-basic-compose:jsTest :keliver-ui-basic-composeui:jsTest
           :keliver-ui-basic-modifiers:jsTest :keliver-ui-basic-testing:jsTest :keliver-ui-basic-widget:jsTest
-          :keliver-vm:jsTest :keliver-widget:jsTest :keliver-widget-shared-test:jsTest
-          :keliver-widget-testing:jsTest :keliver-yoga:jsTest :portal-core:jsTest :portal-device-guest:jsTest
+          :keliver-vm:jsTest :keliver-widget:jsTest :keliver-widget-composeui:jsTest
+          :keliver-widget-shared-test:jsTest :keliver-widget-testing:jsTest :keliver-yoga:jsTest
+          :portal-core:jsTest :portal-device-guest:jsTest
           :portal-flow:jsTest :portal-published-guest:jsTest :portal-sql:jsTest :portal-sql-spike:jsTest
           :portal-app-lib:jsTest
           :keliver-capabilities:wasmJsTest :keliver-compose:wasmJsTest :keliver-composeui:wasmJsTest
@@ -259,8 +277,9 @@ jobs:
           :keliver-layout-widget:wasmJsTest :keliver-lazylayout-api:wasmJsTest
           :keliver-lazylayout-compose:wasmJsTest :keliver-lazylayout-composeui:wasmJsTest
           :keliver-lazylayout-shared-test:wasmJsTest :keliver-lazylayout-testing:wasmJsTest
-          :keliver-lazylayout-widget:wasmJsTest :keliver-material-api:wasmJsTest
-          :keliver-material-compose:wasmJsTest :keliver-material-composeui:wasmJsTest
+          :keliver-lazylayout-widget:wasmJsTest :keliver-leak-detector:wasmJsTest
+          :keliver-material-api:wasmJsTest :keliver-material-compose:wasmJsTest
+          :keliver-material-composeui:wasmJsTest
           :keliver-material-modifiers:wasmJsTest :keliver-material-protocol-guest-web:wasmJsTest
           :keliver-material-protocol-host-web:wasmJsTest :keliver-material-testing:wasmJsTest
           :keliver-material-widget:wasmJsTest :keliver-protocol:wasmJsTest :keliver-protocol-guest:wasmJsTest
@@ -268,6 +287,7 @@ jobs:
           :keliver-testing:wasmJsTest :keliver-ui-basic-api:wasmJsTest :keliver-ui-basic-compose:wasmJsTest
           :keliver-ui-basic-composeui:wasmJsTest :keliver-ui-basic-modifiers:wasmJsTest
           :keliver-ui-basic-testing:wasmJsTest :keliver-ui-basic-widget:wasmJsTest
+          :keliver-widget:wasmJsTest :keliver-widget-composeui:wasmJsTest
           :keliver-widget-shared-test:wasmJsTest :keliver-widget-testing:wasmJsTest :keliver-yoga:wasmJsTest
           :portal-core:wasmJsTest :portal-document:wasmJsTest :portal-flow:wasmJsTest
           :portal-presenter-spike:wasmJsTest :web-spike:wasmJsTest

@@ -180,8 +180,13 @@ Decide on optimisations only after M2–M5.
   report, builds the app, and compares what Gradle resolved.
 - **K4 on a phone** (#174): X6 and X8–X10 on a Galaxy A12 (2026-10-29), the Android host from
   the published 0.3.15 zip.
-- **Not yet:** K4 on an iPhone; a `RequestPolicy` refusal on a
-  device (its rules are covered by JVM tests on both hosts).
+- **`RequestPolicy` on the emulator** (X11, `ci/w2/android-embed.sh`): the embedded host refuses
+  a guest's state-changing call and a path outside the app's allow-list before the network (the
+  API server's log has only the allowed request), and the guest shows the refusals on its
+  screen. The origin rule is not a guest's to break (a guest's paths are relative); it stays
+  covered by the JVM tests.
+- **Not yet:** K4 on an iPhone; a `RequestPolicy` refusal on iOS (its rules are covered by JVM
+  tests there).
 
 **Evidence.**
 - `keliver-new-production-host.sh --embed` and `keliver-new-ios-host.sh --embed` gave a working
@@ -287,7 +292,9 @@ analytics) need a contract.
 
 ## Item 5. Device state catalogue and snapshot runner
 
-**Status 2026-10-27:** not started.
+**Status 2026-11-10:** S1's library and ingest parts and the relay's `GET /states` route are in
+review (`@ScreenState`/`NamedState` in `keliver-nav`); the editor's state list and preview are not
+built yet.
 
 **Evidence.**
 - iOS was verified with improvised parts: a fixtures-only `?demo=` route parameter, debug

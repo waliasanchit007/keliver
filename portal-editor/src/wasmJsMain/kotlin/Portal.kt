@@ -1240,6 +1240,14 @@ private fun buildTopbar() {
   )
   bar.appendChild(Ui.el("span", "topbar-sep"))
   devicesChip = Ui.el("span", "devices-chip", "")
+  // ED3: the chip opens the device proxy's link and QR code.
+  if (!playground) {
+    devicesChip.setAttribute("role", "button")
+    devicesChip.setAttribute("tabindex", "0")
+    devicesChip.setAttribute("style", "cursor:pointer;")
+    devicesChip.addEventListener("click", { _ -> showDeviceLinks() })
+    devicesChip.addEventListener("keydown", { ev -> if ((ev as KeyboardEvent).key == "Enter") showDeviceLinks() })
+  }
   bar.appendChild(devicesChip)
   publishBtn = topAction("⬆ Publish", "to devices", "Build and sign every screen of this app and store it as the next bundle. " +
     "Devices running the app load it on their next update check.", "btn primary") { confirmPublish() }
@@ -2098,6 +2106,82 @@ private fun buildExportOverlay() {
   flowGraphBody.setAttribute("style", "padding:8px 4px; overflow:auto;")
   flowGraphOverlay.appendChild(flowGraphBody)
   document.body?.appendChild(flowGraphOverlay)
+
+  // ED3: "On a device" — the device proxy's link and QR code (opened from the devices chip).
+  deviceOverlay = Ui.el("div", "overlay")
+  deviceOverlay.setAttribute("style", "display:none;")
+  val dHead = Ui.el("div", "head", "On a device")
+  val dClose = Ui.button("✕", "btn icon") { deviceOverlay.setAttribute("style", "display:none;") }
+  dClose.setAttribute("title", "Close (Esc)")
+  dClose.setAttribute("style", "margin-left:auto;")
+  dHead.appendChild(dClose)
+  deviceOverlay.appendChild(dHead)
+  deviceBody = Ui.el("div", "")
+  deviceBody.setAttribute("style", "padding:8px 4px; overflow:auto;")
+  deviceOverlay.appendChild(deviceBody)
+  document.body?.appendChild(deviceOverlay)
+}
+
+private lateinit var deviceOverlay: HTMLElement
+private lateinit var deviceBody: HTMLElement
+
+/** ED3: where a debug host loads this app's bundles from — the relay's device proxy — as a link and a QR code. */
+private fun showDeviceLinks() {
+  flowGraphOverlay.setAttribute("style", "display:none;")
+  exportOverlay.setAttribute("style", "display:none;")
+  Ui.clear(deviceBody)
+  deviceBody.appendChild(Ui.el("div", "muted", "loading /device-proxy…"))
+  deviceOverlay.removeAttribute("style")
+  serverGet("/device-proxy") { txt ->
+    Ui.clear(deviceBody)
+    val links = deviceLinks(txt)
+    val t = editTarget()
+    val p = t.project
+    val s = t.component?.let { "component $it" } ?: "screen ${t.screen}"
+    when {
+      links == null -> deviceBody.appendChild(Ui.el("div", "muted", "This relay has no device proxy (it predates it)."))
+      links.isEmpty() -> deviceBody.appendChild(
+        Ui.el(
+          "div", "muted",
+          "The device proxy is off. Start the relay with KELIVER_DEVICE_PROXY=loopback (the emulator) or " +
+            "KELIVER_DEVICE_PROXY=all (a phone on this network): it serves GET /bundles/* only, on its own port, " +
+            "so the relay's edit and publish endpoints stay on this machine.",
+        ),
+      )
+      else -> {
+        deviceBody.appendChild(
+          Ui.el(
+            "div", "muted",
+            "A debug host loads the newest PUBLISHED bundle from one of these (project $p, $s) — publish to send the " +
+              "state you are editing. Point the host at a URL, then restart the app:",
+          ),
+        )
+        for (link in links) {
+          val row = Ui.el("div", "")
+          row.setAttribute("style", "display:flex; gap:12px; align-items:center; margin:10px 0;")
+          link.qrSvg?.let { svg ->
+            val qr = Ui.el("div", "")
+            qr.setAttribute("style", "width:132px; height:132px; flex:none;")
+            qr.setAttribute("title", link.url)
+            qr.innerHTML = svg // checked against the relay's own SVG shape (deviceLinks)
+            row.appendChild(qr)
+          }
+          val text = Ui.el("div", "")
+          val a = Ui.el("a", "", link.url)
+          a.setAttribute("href", link.url + "/bundles/index.json")
+          a.setAttribute("target", "_blank")
+          a.setAttribute("rel", "noopener noreferrer")
+          text.appendChild(a)
+          val cmd = Ui.el("pre", "", debugHostCommand(link.url))
+          cmd.setAttribute("style", "white-space:pre-wrap; font-size:11px;")
+          text.appendChild(cmd)
+          text.appendChild(Ui.button("Copy command", "btn") { copyToClipboard(debugHostCommand(link.url)) })
+          row.appendChild(text)
+          deviceBody.appendChild(row)
+        }
+      }
+    }
+  }
 }
 
 /**

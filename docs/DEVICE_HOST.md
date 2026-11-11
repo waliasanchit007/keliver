@@ -818,6 +818,9 @@ for byte):
 
   A refused request fails in the guest with "HostHttp refused: …" and is
   logged (the path only in a debug build); nothing reaches the network.
+  The guest cannot catch it by type: Zipline hands it a `ZiplineException`
+  whose message carries the host's text, so look for "HostHttp refused: " in
+  it (the reference app's `device/Main.kt` does, for X11).
   Without a policy every path under the API base is allowed, as before: an
   app embedding Keliver screens should set one. Redirects are never followed
   and the method-override and path-override headers (`X-HTTP-Method-Override`,
@@ -1002,8 +1005,11 @@ server fed by `keliver-publish`:
   R8-minified release loading and rendering (X7); and the host kit (K4), from
   the app's deep links: a route reaching the guest with only the allowed query
   keys (X8), the guest closing its screen through the app's `onClose` (X9),
-  and the guest throwing: `screen-failed`, the app's `onUnavailable`, the
-  process alive (X10);
+  the guest throwing: `screen-failed`, the app's `onUnavailable`, the
+  process alive (X10), and the app's `RequestPolicy` refusing a
+  state-changing call and a path outside its allow-list before the network
+  (the API server's log has only the allowed request), the guest showing the
+  refusals on its screen (X11);
 - iOS simulator: the native views and the guest's screen in one screenshot
   (I1); a signed load (I2); the floor stored in the app's defaults (I4);
   another key's bundle looked up and refused, the app's `onUnavailable`
