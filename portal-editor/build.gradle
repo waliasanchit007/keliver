@@ -62,3 +62,10 @@ kotlin {
     }
   }
 }
+
+// CMP 1.12 checks that wasm Compose UI tests are bundled by webpack (an executable binary). This
+// module is a published library, its tests do not render through Skiko, and they ran without a
+// binary before; an executable here would change what the library builds.
+tasks.named { it == 'checkComposeUiTestConfigurationForWasmJs' }.configureEach {
+  enabled = false
+}

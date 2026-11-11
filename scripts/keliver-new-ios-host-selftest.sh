@@ -36,8 +36,8 @@ mkdir -p "$APP/src/jsMain/kotlin/screens" "$APP/src/jsMain/kotlin/logic"
 printf '{ "screensDir": "src/jsMain/kotlin/screens" }\n' > "$APP/keliver.portal.json"
 printf "rootProject.name = 'demo'\n" > "$APP/settings.gradle"
 printf 'package com.example.demo.screens\n\nfun HomeScreen() {}\n' > "$APP/src/jsMain/kotlin/screens/home.kt"
-cp "$ROOT/gradlew" "$APP/"; mkdir -p "$APP/gradle/wrapper"
-cp "$ROOT/gradle/wrapper/gradle-wrapper.jar" "$ROOT/gradle/wrapper/gradle-wrapper.properties" "$APP/gradle/wrapper/"
+# The Gradle the template's Kotlin runs on, not this repo's (templates/app-wrapper).
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$APP"
 STORE="$DISP/store"; mkdir -p "$STORE/keys" "$DISP/home"
 KEY="$STORE/keys/ed25519.pub"; printf '%s\n' "$(printf 'ab%.0s' $(seq 1 32))" > "$KEY"
 PRIV="$STORE/keys/ed25519.priv"; ( umask 077; printf '%s' "$(printf 'cd%.0s' $(seq 1 32))" > "$PRIV" )
