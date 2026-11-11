@@ -15,6 +15,7 @@
  */
 package dev.keliver.http.replay.debug
 
+import dev.drewhamilton.poko.Poko
 import dev.keliver.capabilities.HostHttpRequest
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
@@ -223,22 +224,24 @@ public class DebugHttpReplayProvider internal constructor(
  * 410 for an expired one, 413 for a request body over 1 MiB and 422 for an invalid set: the
  * relay's statuses. The response's body is the relay's error JSON with these fields.
  */
-public data class DebugHttpReplayMiss(
-  val status: Int,
-  val fixtureSet: String,
-  val method: String,
-  val path: String,
-  val reason: String,
+@Poko
+public class DebugHttpReplayMiss(
+  public val status: Int,
+  public val fixtureSet: String,
+  public val method: String,
+  public val path: String,
+  public val reason: String,
 )
 
 /** One fixture set in [DebugHttpReplay.catalog]. [expired] is as of the call. */
-public data class DebugHttpReplaySetInfo(
-  val id: String,
-  val valid: Boolean,
-  val entries: Int,
-  val expiresAt: String?,
-  val expired: Boolean,
-  val error: String? = null,
+@Poko
+public class DebugHttpReplaySetInfo(
+  public val id: String,
+  public val valid: Boolean,
+  public val entries: Int,
+  public val expiresAt: String?,
+  public val expired: Boolean,
+  public val error: String? = null,
 )
 
 internal sealed interface ReplayOutcome {

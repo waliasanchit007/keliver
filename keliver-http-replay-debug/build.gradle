@@ -17,6 +17,10 @@ redwoodBuild {
 }
 
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+// Poko, not data classes, for the public value types: a field can be added
+// later (the relay's descriptor already has `revision`) without changing a
+// copy() or componentN() signature.
+apply plugin: 'dev.drewhamilton.poko'
 
 kotlin {
   sourceSets {
