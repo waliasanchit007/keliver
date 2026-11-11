@@ -180,6 +180,66 @@ class DeviceProxyTest {
     assertTrue(item["qrSvg"]!!.jsonPrimitive.content.startsWith("<svg "))
     // The proxy's own listeners, a count apart from the relay's devicesListening.
     assertEquals(3, on["listening"]!!.jsonPrimitive.content.toInt())
+    // Without the app's link scheme: no link, and the QR code is the bare URL's.
+    assertEquals(kotlinx.serialization.json.JsonNull, item["link"])
+    assertEquals(QrCode.encode("http://10.0.2.2:8078").toSvg(), item["qrSvg"]!!.jsonPrimitive.content)
+  }
+
+  @Test
+  fun withTheAppsSchemeTheQrCodeIsTheDebugLink() {
+    val on = Json.parseToJsonElement(DeviceProxy.statusJson(listOf("http://192.168.1.20:8078", "http://[fd00::12]:8078"), linkScheme = "keliver-com.example.shop")).jsonObject
+    val items = (on["urls"] as kotlinx.serialization.json.JsonArray).map { it.jsonObject }
+    val link = "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.20%3A8078"
+    assertEquals("http://192.168.1.20:8078", items[0]["url"]!!.jsonPrimitive.content) // the bare URL stays
+    assertEquals(link, items[0]["link"]!!.jsonPrimitive.content)
+    assertEquals(QrCode.encode(link).toSvg(), items[0]["qrSvg"]!!.jsonPrimitive.content)
+    assertEquals(link, decode(link))
+    assertEquals(
+      "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F%5Bfd00%3A%3A12%5D%3A8078",
+      items[1]["link"]!!.jsonPrimitive.content,
+    )
+  }
+
+  @Test
+  fun theHostsDebugLinkCheckAcceptsEveryLinkTheRelayMakes() {
+    val lan = setOf(InetAddress.getByName("192.168.1.20"), InetAddress.getByName("10.1.2.3"), InetAddress.getByName("127.0.0.1"))
+    val urls = DeviceProxy.urls(InetAddress.getByName("127.0.0.1"), 8078) +
+      DeviceProxy.urls(InetAddress.getByName("0.0.0.0"), 8078) { lan } +
+      DeviceProxy.urls(InetAddress.getByName("fd00::12"), 8078)
+    val scheme = "keliver-com.example.shop"
+    for (u in urls) {
+      // The host template's own check (scripts/templates/production-host/src/debug), compiled in here.
+      assertEquals(u, hosttemplate.DebugBundleLink.server(DeviceProxy.debugLink(scheme, u), scheme, 8078), u)
+      // Only on the proxy's port.
+      assertNull(hosttemplate.DebugBundleLink.server(DeviceProxy.debugLink(scheme, u), scheme, 8077), u)
+    }
+  }
+
+  @Test
+  fun theDebugLinkIsMadeOnlyFromTheRelaysOwnShapes() {
+    assertEquals(
+      "keliver-dev.example.inventory://keliver-debug/bundles?server=http%3A%2F%2F10.0.2.2%3A8078",
+      DeviceProxy.debugLink("keliver-dev.example.inventory", "http://10.0.2.2:8078"),
+    )
+    for (scheme in listOf("http", "keliver-", "keliver-Com.x", "keliver-com.x/y", "keliver-com.x:", "javascript", "keliver-1x")) {
+      assertNull(DeviceProxy.debugLink(scheme, "http://10.0.2.2:8078"), scheme)
+    }
+    for (url in listOf("https://10.0.2.2:8078", "http://evil.example:8078", "http://10.0.2.2:8078/x", "http://10.0.2.2", "http://10.0.2.2:8078?a&b")) {
+      assertNull(DeviceProxy.debugLink("keliver-com.x", url), url)
+    }
+  }
+
+  @Test
+  fun theLinkSchemeFollowsTheScaffoldersPackageRule() {
+    fun screen(pkg: String) = "// a screen\npackage $pkg\n\nimport x.y\n"
+    assertEquals("keliver-com.example.shop", DeviceProxy.linkScheme(listOf(screen("com.example.shop.screens"), screen("com.example.shop.screens"))))
+    assertEquals("keliver-com.my-app.v2", DeviceProxy.linkScheme(listOf(screen("com.My_App.V2.screens"))))
+    assertNull(DeviceProxy.linkScheme(emptyList()), "no screens")
+    assertNull(DeviceProxy.linkScheme(listOf(screen("com.a.screens"), screen("com.b.screens"))), "two packages")
+    assertNull(DeviceProxy.linkScheme(listOf(screen("com.a.screens"), "fun x() {}")), "a screen without a package")
+    assertNull(DeviceProxy.linkScheme(listOf(screen("com.a.ui"))), "not <package>.screens")
+    assertNull(DeviceProxy.linkScheme(listOf(screen("screens"))), "no package before .screens")
+    assertNull(DeviceProxy.linkScheme(listOf(screen("_x.screens"))), "a scheme must start with a letter")
   }
 
   @Test
@@ -193,7 +253,7 @@ class DeviceProxyTest {
     assertTrue("DeviceProxy(bundlesDir, deviceProxyEvents).start(proxyAddress, proxyPort)" in relay)
     assertTrue("\\\"devicesListening\\\":\${bundleEvents.listening}" in relay)
     // /device-proxy counts the proxy's own listeners, apart (and only when the proxy is on).
-    assertTrue("DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0)" in relay)
+    assertTrue("DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0, appLinkScheme())" in relay)
     // A port taken on the proxy's own address is exit 64, before the relay serves.
     assertTrue(relay.indexOf("DeviceProxy(bundlesDir, deviceProxyEvents).start") < relay.indexOf("  server.start()"))
   }

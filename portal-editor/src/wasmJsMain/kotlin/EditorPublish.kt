@@ -3,6 +3,7 @@
  * build log stays one click away — and which bundle devices get now.
  */
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -60,8 +61,12 @@ internal fun devicesListening(text: String): Int? = runCatching {
   Json.parseToJsonElement(text).jsonObject["devicesListening"]?.jsonPrimitive?.content?.toInt()
 }.getOrNull()
 
-/** ED3: a bundle server URL a debug host can use (the relay's device proxy), and its QR code as an SVG. */
-internal data class DeviceLink(val url: String, val qrSvg: String?)
+/**
+ * ED3: a bundle server URL a debug host can use (the relay's device proxy); the debug link that
+ * points a debug host there ([link]: null from a relay that makes none, or for an app whose screens
+ * name no single package); and a QR code as an SVG, of [link] when there is one, else of [url].
+ */
+internal data class DeviceLink(val url: String, val qrSvg: String?, val link: String? = null)
 
 /** The QR codes the relay makes (QrCode.toSvg): one rect and one path of plain moves. Anything else is not inserted. */
 private val QR_SVG = Regex(
@@ -80,10 +85,29 @@ internal fun deviceLinks(text: String): List<DeviceLink>? = runCatching {
   o["urls"]!!.jsonArray.mapNotNull { e ->
     val item = e.jsonObject
     val url = item["url"]?.jsonPrimitive?.content?.takeIf { PROXY_URL.matches(it) } ?: return@mapNotNull null
-    DeviceLink(url, item["qrSvg"]?.jsonPrimitive?.content?.takeIf { QR_SVG.matches(it) })
+    // The link must be the one for THIS url: else the QR code (of the link) and the URL shown beside it disagree.
+    val link = (item["link"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+    val linkOk = link == null || (DEBUG_LINK.matchEntire(link)?.groupValues?.get(2)?.let(::decodeServer) == url)
+    if (!linkOk) return@mapNotNull DeviceLink(url, null, null) // not the relay's own: neither it nor its QR code
+    DeviceLink(url, item["qrSvg"]?.jsonPrimitive?.content?.takeIf { QR_SVG.matches(it) }, link)
   }
 }.getOrNull()
+
+/** The debug link the relay makes (DeviceProxy.debugLink): the app's scheme, then the proxy URL percent-encoded. */
+private val DEBUG_LINK = Regex("""^(keliver-[a-z][a-z0-9.-]{0,99})://keliver-debug/bundles\?server=([A-Za-z0-9.%]+)$""")
+
+private fun decodeServer(s: String): String =
+  s.replace("%3A", ":").replace("%2F", "/").replace("%5B", "[").replace("%5D", "]")
 
 /** How a debug Android host is pointed at [url] (the host template's debugBundleServer); then restart the app. */
 internal fun debugHostCommand(url: String): String =
   "adb shell run-as <applicationId> sh -c 'mkdir -p files/keliver && echo $url > files/keliver/bundle-server'"
+
+/**
+ * How [link] (a debug link, from [deviceLinks]) is opened without a camera: on an Android device or
+ * emulator over adb, and on a booted iOS simulator. A debug build asks before it changes anything.
+ */
+internal fun debugLinkCommands(link: String): List<String> = listOf(
+  "adb shell am start -a android.intent.action.VIEW -d '$link'",
+  "xcrun simctl openurl booted '$link'",
+)

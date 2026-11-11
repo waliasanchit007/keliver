@@ -81,4 +81,41 @@ class EditorPublishTest {
   @Test fun theDebugHostCommandNamesTheUrl() {
     assertTrue("echo http://10.0.2.2:8078 > files/keliver/bundle-server" in debugHostCommand("http://10.0.2.2:8078"))
   }
+
+  // ED3 follow-up: the QR code is the debug link; the bare URL and the adb command stay beside it.
+  private fun statusWithLink(url: String, link: String?, qr: String) =
+    """{"enabled":true,"urls":[{"url":"$url","link":${link?.let { "\"$it\"" } ?: "null"},"qrSvg":"${qr.replace("\"", "\\\"")}"}]}"""
+
+  @Test fun theRelaysDebugLinkIsKeptWithItsUrl() {
+    val link = "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.20%3A8078"
+    assertEquals(
+      listOf(DeviceLink("http://192.168.1.20:8078", svg, link)),
+      deviceLinks(statusWithLink("http://192.168.1.20:8078", link, svg)),
+    )
+    val v6 = "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F%5Bfd00%3A0%3A0%3A0%3A0%3A0%3A0%3A12%5D%3A8078"
+    assertEquals(v6, deviceLinks(statusWithLink("http://[fd00:0:0:0:0:0:0:12]:8078", v6, svg))!!.single().link)
+    // A relay that makes no link (or an app without one package): the bare URL, as before.
+    assertEquals(listOf(DeviceLink("http://10.0.2.2:8078", svg, null)), deviceLinks(statusWithLink("http://10.0.2.2:8078", null, svg)))
+  }
+
+  @Test fun aLinkThatIsNotTheRelaysOwnDropsTheLinkAndItsQrCode() {
+    val url = "http://192.168.1.20:8078"
+    for (bad in listOf(
+      "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F10.0.0.9%3A8078", // another server than the URL shown
+      "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.20%3A8078&x=1",
+      "javascript:alert(1)",
+      "https://evil.example/?server=http%3A%2F%2F192.168.1.20%3A8078",
+      "keliver-com.example.shop://keliver-debug/other?server=http%3A%2F%2F192.168.1.20%3A8078",
+      "keliver-COM.x://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.20%3A8078",
+    )) {
+      assertEquals(listOf(DeviceLink(url, null, null)), deviceLinks(statusWithLink(url, bad, svg)), bad)
+    }
+  }
+
+  @Test fun theDebugLinkCanBeOpenedWithoutACamera() {
+    val link = "keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F10.0.2.2%3A8078"
+    val (adb, simctl) = debugLinkCommands(link)
+    assertEquals("adb shell am start -a android.intent.action.VIEW -d '$link'", adb)
+    assertEquals("xcrun simctl openurl booted '$link'", simctl)
+  }
 }

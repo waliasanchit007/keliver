@@ -638,6 +638,16 @@ private fun screensDirFor(project: String): File =
   if (project == "default" && appScreensDir.parentFile.exists()) appScreensDir
   else File(File(root, "kotlin"), project)
 
+/**
+ * ED3: this app's debug link scheme (DeviceProxy.linkScheme), from the app's own screens, read on
+ * each GET /device-proxy; null when they declare no single `<package>.screens` (the editor then
+ * shows the bare URL only).
+ */
+private fun appLinkScheme(): String? = runCatching {
+  val files = appScreensDir.listFiles { f -> f.isFile && f.name.endsWith(".kt") }?.sortedBy { it.name }.orEmpty()
+  DeviceProxy.linkScheme(files.take(200).map { it.readText() })
+}.getOrNull()
+
 /** C1: project components live next to screens (default project = the repo dir). */
 private val appComponentsDir = File(repoDir, config.resolvedComponentsDir())
 
@@ -1610,7 +1620,7 @@ fun main(args: Array<String>) {
       if (ex.requestMethod != "GET") {
         respond(ex, 405)
       } else {
-        respond(ex, 200, DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0))
+        respond(ex, 200, DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0, appLinkScheme()))
       }
     }
   }
