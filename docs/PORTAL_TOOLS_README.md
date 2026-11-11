@@ -21,6 +21,7 @@ bin/keliver-publish                # publish a signed bundle to a static host/CD
 bin/keliver-new-production-host.sh # (app root) your own production Android host
 bin/keliver-new-ios-host.sh        # (app root) your own production iOS host
 bin/keliver-run-android.sh         # (app root) your screens on a phone or emulator: build, install, start
+bin/keliver-run-ios.sh             # (app root, a Mac with Xcode) your screens on an iOS simulator: build, install, start
 bin/keliver-store-path.sh          # print the document store an app resolves to
 bin/keliver-store-recover.sh       # rebind a store to an app that moved or was renamed
 bin/keliver-adopt-legacy-store.sh  # copy the old shared ~/.keliver-portal store into one app's
@@ -245,6 +246,33 @@ your `gradle.properties` is not changed), runs `adb reverse` for that port
 (nothing listens on your network), installs and starts it, and waits for the
 host to load your bundle from the relay. A debug host scaffolded from tools
 0.3.13 on then updates live on each publish. It never publishes and touches only the device you choose.
+
+### bin/keliver-run-ios.sh (from the next tools release)
+
+```bash
+bin/keliver-run-ios.sh [--udid UDID] [app-dir]
+```
+
+The same for an iOS simulator, on a Mac with Xcode (selected with
+`xcode-select`, with an iOS simulator runtime installed) and `python3`: with
+the portal running and a bundle published, it takes `--udid`, the only booted
+simulator, or else boots a simulator on the newest iOS runtime, an iPhone when
+that runtime has one (simulators only, never a phone). It
+scaffolds `host-ios/` if the app has none, builds a debug host for that
+simulator into `build/keliver-run-ios/` (a simulator reaches this Mac's
+`http://localhost:<port>` directly), installs and starts it, and waits for the
+host to load your bundle from the relay. A `host-ios/` made for another server
+is pointed at the relay for that launch (a debug build's
+`KELIVER_BUNDLE_SERVER`), built with a copy of its `Info.plist` that allows
+`http://` to localhost; `host-ios/` is not changed. That launch counts only
+when the host says it took the launch's server (a release Kotlin framework in
+the Debug configuration ignores it, and the command says so). The host's log
+is `build/keliver-run-ios/host.log`. A debug host from tools 0.3.14 on then
+updates live on each publish. It never publishes and touches only the
+simulator it chose; a simulator it boots stays booted and the host stays
+installed. It refuses two booted simulators without `--udid`, a `host-ios/`
+from before tools 0.3.10 made for another server, and a failed build (showing
+the compiler's error; the whole log is `build/keliver-run-ios/build.log`).
 
 ### bin/keliver-new-ios-host.sh
 
