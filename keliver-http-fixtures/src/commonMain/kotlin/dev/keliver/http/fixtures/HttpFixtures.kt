@@ -212,6 +212,14 @@ public object HttpFixtureRedaction {
     return Json.encodeToString(JsonElement.serializer(), redact(element))
   }
 
+  /**
+   * True when [body] is a JSON object or array: the only bodies [redactJson] redacts and
+   * normalises. A bare token that a lenient reader would take for a JSON literal
+   * (`a=1&password=x`, `OK`) is not one, so a recorder can use this to refuse a body it
+   * has no way to redact.
+   */
+  public fun isJsonContainer(body: String): Boolean = jsonContainer(body) != null
+
   private fun isSensitive(key: String, lowercasedAdditional: Set<String>): Boolean =
     key.lowercase() in lowercasedAdditional || sensitiveKeys.containsMatchIn(key)
 

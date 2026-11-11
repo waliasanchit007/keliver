@@ -112,6 +112,7 @@ final object dev.keliver.http.fixtures/HttpFixtureRedaction { // dev.keliver.htt
     final val sensitiveHeaders // dev.keliver.http.fixtures/HttpFixtureRedaction.sensitiveHeaders|{}sensitiveHeaders[0]
         final fun <get-sensitiveHeaders>(): kotlin.collections/Set<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureRedaction.sensitiveHeaders.<get-sensitiveHeaders>|<get-sensitiveHeaders>(){}[0]
 
+    final fun isJsonContainer(kotlin/String): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureRedaction.isJsonContainer|isJsonContainer(kotlin.String){}[0]
     final fun isSensitiveKey(kotlin/String, kotlin.collections/Set<kotlin/String> = ...): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureRedaction.isSensitiveKey|isSensitiveKey(kotlin.String;kotlin.collections.Set<kotlin.String>){}[0]
     final fun redactJson(kotlin/String, kotlin.collections/Set<kotlin/String> = ...): kotlin/String // dev.keliver.http.fixtures/HttpFixtureRedaction.redactJson|redactJson(kotlin.String;kotlin.collections.Set<kotlin.String>){}[0]
 }

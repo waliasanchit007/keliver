@@ -223,6 +223,51 @@ class HttpRecordingTest {
     assertFalse(called)
   }
 
+  @Test fun aBareTokenIsNotJsonForTheUnredactableGuard() = withRepo { repo, store ->
+    var responseBody = "{}"
+    var calls = 0
+    val service = service(
+      repo,
+      store,
+      transport = RecordingTransport { _, _, _, _ ->
+        calls++
+        HostHttpResponse(200, responseBody)
+      },
+      config = config(additionalSensitiveKeys = listOf("nickname")),
+    )
+    val session = session(service)
+
+    // kotlinx reads a bare token as a JSON literal; the guard must not take it for JSON,
+    // because redaction leaves it unchanged.
+    val request = assertIs<HttpRecordingResult.Failure>(
+      service.record(session, HostHttpRequest("POST", "/profile", body = "nick=bob")),
+    )
+    assertEquals(422 to "unredactable_request", request.status to request.error.reason)
+    assertEquals(0, calls)
+
+    responseBody = "a=1&nickname=bob"
+    val response = assertIs<HttpRecordingResult.Failure>(
+      service.record(session, HostHttpRequest("POST", "/profile", body = """{"a":1}""")),
+    )
+    assertEquals(422 to "unredactable_response", response.status to response.error.reason)
+
+    responseBody = """{"nickname":"bob"}"""
+    assertIs<HttpRecordingResult.Success>(
+      service.record(session, HostHttpRequest("POST", "/profile", body = """{"a":1}""")),
+    )
+    assertTrue(candidateText(repo).let { "<redacted>" in it && "bob" !in it })
+  }
+
+  private fun session(service: HttpRecordingService): String {
+    val created = assertIs<HttpRecordingResult.Success>(
+      service.createSession(HttpRecordSessionCommand("profile-api", "profile")),
+    )
+    return Json.decodeFromString<HttpRecordSessionCreated>(created.body).session
+  }
+
+  private fun candidateText(repo: File): String =
+    File(repo, ".").walkTopDown().single { it.isFile && it.parentFile.name == ".candidates" }.readText()
+
   private fun service(
     repo: File,
     store: File,
@@ -233,9 +278,10 @@ class HttpRecordingTest {
     transport: RecordingTransport = RecordingTransport { _, _, _, _ ->
       HostHttpResponse(200, "{}")
     },
+    config: PortalConfig = config(),
   ): HttpRecordingService = HttpRecordingService(
     repoDir = repo,
-    config = config(),
+    config = config,
     storeDir = store,
     enabledByEnvironment = enabled,
     environment = { name -> if (name == "PROFILE_API_TOKEN") "server-auth" else null },
@@ -244,8 +290,9 @@ class HttpRecordingTest {
     transport = transport,
   )
 
-  private fun config(): PortalConfig = PortalConfig(
+  private fun config(additionalSensitiveKeys: List<String> = emptyList()): PortalConfig = PortalConfig(
     httpRecording = HttpRecordingConfig(
+      additionalSensitiveKeys = additionalSensitiveKeys,
       allowedOrigins = listOf("http://localhost:8096"),
       upstreams = mapOf(
         "profile-api" to HttpRecordingUpstream(

@@ -307,4 +307,13 @@ class HttpFixtureMatcherTest {
     assertEquals(false, HttpFixtureRedaction.isSensitiveKey("tokens_left"))
     assertEquals("not json", HttpFixtureRedaction.redactJson("not json"))
   }
+
+  @Test fun onlyObjectsAndArraysAreJsonContainers() {
+    for (body in listOf("{}", " [1] ", "\n{\"a\":{\"b\":[]}}\n")) {
+      assertTrue(HttpFixtureRedaction.isJsonContainer(body), body)
+    }
+    for (body in listOf("", " ", "a=1&password=x", "OK", "42", "true", "\"s\"", "{", "[1,", "<a/>")) {
+      assertEquals(false, HttpFixtureRedaction.isJsonContainer(body), body)
+    }
+  }
 }

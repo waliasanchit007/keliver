@@ -39,6 +39,7 @@ public final class dev/keliver/http/fixtures/HttpFixtureMatcher$Companion {
 public final class dev/keliver/http/fixtures/HttpFixtureRedaction {
 	public static final field INSTANCE Ldev/keliver/http/fixtures/HttpFixtureRedaction;
 	public final fun getSensitiveHeaders ()Ljava/util/Set;
+	public final fun isJsonContainer (Ljava/lang/String;)Z
 	public final fun isSensitiveKey (Ljava/lang/String;Ljava/util/Set;)Z
 	public static synthetic fun isSensitiveKey$default (Ldev/keliver/http/fixtures/HttpFixtureRedaction;Ljava/lang/String;Ljava/util/Set;ILjava/lang/Object;)Z
 	public final fun redactJson (Ljava/lang/String;Ljava/util/Set;)Ljava/lang/String;
