@@ -162,6 +162,11 @@ class HttpFixtureMatcherTest {
     // The limit counts UTF-8 bytes, not characters: "é" is two bytes.
     accepts(set(entry(request(), "é".repeat(limit / 2))))
     rejects("response body exceeds 1 MiB") { set(entry(request(), "é".repeat(limit / 2) + "x")) }
+    // Three-byte and four-byte (surrogate pair) characters.
+    accepts(set(entry(request(), "€".repeat(limit / 3) + "x")))
+    rejects("response body exceeds 1 MiB") { set(entry(request(), "€".repeat(limit / 3) + "xx")) }
+    accepts(set(entry(request(), "😀".repeat(limit / 4))))
+    rejects("response body exceeds 1 MiB") { set(entry(request(), "😀".repeat(limit / 4) + "x")) }
   }
 
   @Test fun controlCharactersOtherThanTabLfAndCrAreRefused() {

@@ -99,7 +99,13 @@ public class HttpFixtureMatcher(set: HttpFixtureSet) {
 
   init {
     validate(set)
+    // Each entry's key is computed once, after its entry has passed validation.
     entriesByKey = set.entries.groupBy { requestKey(it.request) }
+    entriesByKey.values.forEach { entries ->
+      require(entries.dropLast(1).none { it.reuse }) {
+        "reuse=true is allowed only on the final duplicate request"
+      }
+    }
   }
 
   /**
@@ -146,11 +152,6 @@ public class HttpFixtureMatcher(set: HttpFixtureSet) {
       "sensitive headers cannot participate in matching"
     }
     set.entries.forEach(::validateEntry)
-    set.entries.groupBy { requestKey(it.request) }.forEach { (_, entries) ->
-      require(entries.dropLast(1).none { it.reuse }) {
-        "reuse=true is allowed only on the final duplicate request"
-      }
-    }
   }
 
   public companion object {
@@ -221,13 +222,42 @@ public object HttpFixtureRedaction {
 private const val REDACTED = "<redacted>"
 
 /**
- * [body] parsed, when it is a JSON object or array. kotlinx's tree parser also reads any
- * bare token without whitespace or JSON punctuation (`a=1&b=2`, `OK`) as a literal, so a
- * primitive is treated as not-JSON: re-encoding it would only drop its surrounding
- * whitespace (a recorded `OK\n` replaying as `OK`).
+ * [body] parsed, when it is a JSON object or array. Only a body whose first
+ * non-whitespace character is `{` or `[` is parsed at all: kotlinx's tree parser also
+ * reads any bare token without whitespace or JSON punctuation (`a=1&b=2`, `OK`) as a
+ * literal, and a primitive is not-JSON here (re-encoding it would only drop its
+ * surrounding whitespace, a recorded `OK\n` replaying as `OK`). Skipping the parse also
+ * keeps large text and HTML bodies cheap.
  */
-private fun jsonContainer(body: String): JsonElement? =
-  runCatching { Json.parseToJsonElement(body) }.getOrNull()?.takeIf { it is JsonObject || it is JsonArray }
+private fun jsonContainer(body: String): JsonElement? {
+  val first = body.firstOrNull { !it.isWhitespace() }
+  if (first != '{' && first != '[') return null
+  return runCatching { Json.parseToJsonElement(body) }.getOrNull()
+    ?.takeIf { it is JsonObject || it is JsonArray }
+}
+
+/**
+ * [body]'s UTF-8 length, without allocating. A lone surrogate counts as U+FFFD's three
+ * bytes, the most any platform's [String.encodeToByteArray] writes for it.
+ */
+private fun utf8Length(body: String): Int {
+  var bytes = 0
+  var i = 0
+  while (i < body.length) {
+    val c = body[i]
+    bytes += when {
+      c.code < 0x80 -> 1
+      c.code < 0x800 -> 2
+      c.isHighSurrogate() && i + 1 < body.length && body[i + 1].isLowSurrogate() -> {
+        i++
+        4
+      }
+      else -> 3
+    }
+    i++
+  }
+  return bytes
+}
 
 private fun validateEntry(entry: HttpFixtureEntry) {
   val request = entry.request
@@ -253,7 +283,7 @@ private fun validateHeaders(headers: Map<String, String>, scope: String) {
 }
 
 private fun validateBody(body: String, scope: String) {
-  require(body.encodeToByteArray().size <= HttpFixtureMatcher.MAX_BODY_BYTES) {
+  require(utf8Length(body) <=HttpFixtureMatcher.MAX_BODY_BYTES) {
     "$scope body exceeds 1 MiB"
   }
   require(body.none { it.code < 0x20 && it != '\t' && it != '\n' && it != '\r' }) {
