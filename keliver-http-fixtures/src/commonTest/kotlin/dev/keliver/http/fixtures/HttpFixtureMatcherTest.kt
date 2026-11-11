@@ -46,12 +46,14 @@ class HttpFixtureMatcherTest {
     formatVersion: Int = 1,
     recordedAt: String = "2026-11-01T00:00:00Z",
     expiresAt: String? = null,
+    redactedKeys: List<String> = emptyList(),
   ) = HttpFixtureSet(
     formatVersion = formatVersion,
     recordedAt = recordedAt,
     expiresAt = expiresAt,
     matchHeaders = matchHeaders,
     entries = entries.toList(),
+    redactedKeys = redactedKeys,
   )
 
   private fun HttpFixtureMatcher.body(request: HostHttpRequest, index: Int): String =
@@ -298,6 +300,7 @@ class HttpFixtureMatcherTest {
     )
     assertEquals(listOf("accept", "content-type"), set.matchHeaders)
     assertEquals(false, set.entries.single().reuse)
+    assertEquals(emptyList(), set.redactedKeys)
     assertEquals("ok", HttpFixtureMatcher(set).body(request(path = "/p"), 0))
   }
 
@@ -307,6 +310,32 @@ class HttpFixtureMatcherTest {
     assertEquals(false, HttpFixtureRedaction.isSensitiveKey("tokens_left"))
     assertEquals("not json", HttpFixtureRedaction.redactJson("not json"))
   }
+
+  @Test fun theSetsRedactedKeysApplyToTheLiveRequestAndToValidation() {
+    val recorded = request(
+      method = "POST",
+      query = mapOf("Nickname" to "<redacted>", "view" to "full"),
+      body = """{"nickname":"<redacted>","safe":"yes"}""",
+    )
+    val matcher = accepts(set(entry(recorded, "ok"), redactedKeys = listOf("NickName")))
+    val live = request(
+      method = "POST",
+      query = mapOf("Nickname" to "bob", "view" to "full"),
+      body = """{"nickname":"bob","safe":"yes"}""",
+    )
+    assertEquals("ok", matcher.body(live, 0))
+    assertEquals("no matching request", matcher.miss(request(method = "POST", query = mapOf("Nickname" to "bob"), body = live.body)))
+    // Without the field (an older file) the same set can't match a live value...
+    assertEquals("no matching request", accepts(set(entry(recorded, "ok"))).miss(live))
+    // ... and a value left unredacted under a listed key is refused, in a query, JSON or a form.
+    rejects("sensitive query key 'Nickname'") { set(entry(live.copyWith(body = null), "ok"), redactedKeys = listOf("nickname")) }
+    rejects("sensitive JSON key 'nickname'") { set(entry(request(), """[{"nickname":"bob"}]"""), redactedKeys = listOf("nickname")) }
+    rejects("sensitive key 'nickname'") { set(entry(request(method = "POST", body = "nickname=bob"), "ok"), redactedKeys = listOf("nickname")) }
+    rejects("redactedKeys must not be blank") { set(entry(request(), "ok"), redactedKeys = listOf(" ")) }
+  }
+
+  private fun HostHttpRequest.copyWith(body: String?) =
+    HostHttpRequest(method = method, path = path, query = query, headers = headers, body = body)
 
   @Test fun aFormRequestBodyWithASensitiveKeyIsRefused() {
     val formType = mapOf("Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8")

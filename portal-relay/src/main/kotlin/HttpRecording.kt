@@ -434,6 +434,9 @@ internal class HttpRecordingService(
       .toString(),
     matchHeaders = upstream.forwardHeaders.filter { it in setOf("accept", "content-type") }.sorted(),
     entries = session.entries.toList(),
+    // The configured keys this candidate was redacted with, so replay redacts the live
+    // request with them too (the built-in pattern needs no record).
+    redactedKeys = recordingConfig.additionalSensitiveKeys.sorted(),
   )
 
   private fun redactRequest(

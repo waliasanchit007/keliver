@@ -70,14 +70,15 @@ public final class dev/keliver/http/fixtures/HttpFixtureSelection$Miss : dev/kel
 
 public final class dev/keliver/http/fixtures/HttpFixtureSet {
 	public static final field Companion Ldev/keliver/http/fixtures/HttpFixtureSet$Companion;
-	public fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getEntries ()Ljava/util/List;
 	public final fun getExpiresAt ()Ljava/lang/String;
 	public final fun getFormatVersion ()I
 	public final fun getMatchHeaders ()Ljava/util/List;
 	public final fun getRecordedAt ()Ljava/lang/String;
+	public final fun getRedactedKeys ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

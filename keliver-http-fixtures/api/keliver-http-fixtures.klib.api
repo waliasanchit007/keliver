@@ -75,7 +75,7 @@ final class dev.keliver.http.fixtures/HttpFixtureMatcher { // dev.keliver.http.f
 }
 
 final class dev.keliver.http.fixtures/HttpFixtureSet { // dev.keliver.http.fixtures/HttpFixtureSet|null[0]
-    constructor <init>(kotlin/Int, kotlin/String, kotlin/String? = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry>) // dev.keliver.http.fixtures/HttpFixtureSet.<init>|<init>(kotlin.Int;kotlin.String;kotlin.String?;kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.keliver.http.fixtures.HttpFixtureEntry>){}[0]
+    constructor <init>(kotlin/Int, kotlin/String, kotlin/String? = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry>, kotlin.collections/List<kotlin/String> = ...) // dev.keliver.http.fixtures/HttpFixtureSet.<init>|<init>(kotlin.Int;kotlin.String;kotlin.String?;kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.keliver.http.fixtures.HttpFixtureEntry>;kotlin.collections.List<kotlin.String>){}[0]
 
     final val entries // dev.keliver.http.fixtures/HttpFixtureSet.entries|{}entries[0]
         final fun <get-entries>(): kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry> // dev.keliver.http.fixtures/HttpFixtureSet.entries.<get-entries>|<get-entries>(){}[0]
@@ -87,6 +87,8 @@ final class dev.keliver.http.fixtures/HttpFixtureSet { // dev.keliver.http.fixtu
         final fun <get-matchHeaders>(): kotlin.collections/List<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureSet.matchHeaders.<get-matchHeaders>|<get-matchHeaders>(){}[0]
     final val recordedAt // dev.keliver.http.fixtures/HttpFixtureSet.recordedAt|{}recordedAt[0]
         final fun <get-recordedAt>(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSet.recordedAt.<get-recordedAt>|<get-recordedAt>(){}[0]
+    final val redactedKeys // dev.keliver.http.fixtures/HttpFixtureSet.redactedKeys|{}redactedKeys[0]
+        final fun <get-redactedKeys>(): kotlin.collections/List<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureSet.redactedKeys.<get-redactedKeys>|<get-redactedKeys>(){}[0]
 
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureSet.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSet.hashCode|hashCode(){}[0]

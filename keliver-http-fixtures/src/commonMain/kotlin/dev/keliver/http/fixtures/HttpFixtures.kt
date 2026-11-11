@@ -46,6 +46,13 @@ public class HttpFixtureSet(
   /** Header names that take part in matching, compared lower-cased. */
   public val matchHeaders: List<String> = listOf("accept", "content-type"),
   public val entries: List<HttpFixtureEntry>,
+  /**
+   * Keys redacted beyond the built-in pattern when the set was recorded (the relay's
+   * `additionalSensitiveKeys`), compared lower-cased. [HttpFixtureMatcher] redacts a live
+   * request with them too, so a value recorded as `<redacted>` under one of them matches,
+   * and refuses a set where one is left unredacted. Absent in older files: empty.
+   */
+  public val redactedKeys: List<String> = emptyList(),
 )
 
 /**
@@ -80,7 +87,8 @@ public sealed interface HttpFixtureSelection {
  *
  * A request matches on its normalised key: upper-cased method, path, query sorted by key,
  * the lower-cased [HttpFixtureSet.matchHeaders] only, and the body. Sensitive query
- * values and JSON keys are redacted exactly as recording redacts them, and a JSON body is
+ * values and JSON keys (the built-in pattern plus [HttpFixtureSet.redactedKeys]) are
+ * redacted exactly as recording redacted them, and a JSON body is
  * compared re-encoded (whitespace ignored, key order kept); any other body is compared
  * byte for byte and is never redacted.
  *
@@ -96,6 +104,7 @@ public sealed interface HttpFixtureSelection {
  */
 public class HttpFixtureMatcher(set: HttpFixtureSet) {
   private val matchHeaders: List<String> = set.matchHeaders.map { it.lowercase() }
+  private val redactedKeys: Set<String> = set.redactedKeys.mapTo(LinkedHashSet()) { it.lowercase() }
   private val entriesByKey: Map<String, List<HttpFixtureEntry>>
 
   init {
@@ -119,9 +128,9 @@ public class HttpFixtureMatcher(set: HttpFixtureSet) {
   public fun requestKey(request: HostHttpRequest): String {
     val headers = request.headers.entries.associate { it.key.lowercase() to it.value }
     val query = request.query.mapValues { (key, value) ->
-      if (HttpFixtureRedaction.isSensitiveKey(key)) REDACTED else value
+      if (HttpFixtureRedaction.isSensitiveKey(key, redactedKeys)) REDACTED else value
     }
-    val body = request.body?.let { HttpFixtureRedaction.redactJson(it) }.orEmpty()
+    val body = request.body?.let { HttpFixtureRedaction.redactJson(it, redactedKeys) }.orEmpty()
     return buildString {
       append(request.method.uppercase())
       append('\n')
@@ -152,7 +161,8 @@ public class HttpFixtureMatcher(set: HttpFixtureSet) {
     require(matchHeaders.none { it in HttpFixtureRedaction.sensitiveHeaders }) {
       "sensitive headers cannot participate in matching"
     }
-    set.entries.forEach(::validateEntry)
+    require(redactedKeys.none { it.isBlank() }) { "redactedKeys must not be blank" }
+    set.entries.forEach { validateEntry(it, redactedKeys) }
   }
 
   public companion object {
@@ -326,7 +336,7 @@ private fun utf8Length(body: String): Int {
   return bytes
 }
 
-private fun validateEntry(entry: HttpFixtureEntry) {
+private fun validateEntry(entry: HttpFixtureEntry, redactedKeys: Set<String>) {
   val request = entry.request
   // HostHttpRequest's own init refuses these paths first (also when a fixture file is
   // decoded); the fixture rule is kept here so it doesn't rest on that class alone.
@@ -336,18 +346,18 @@ private fun validateEntry(entry: HttpFixtureEntry) {
   validateHeaders(request.headers, "request")
   validateHeaders(entry.response.headers, "response")
   request.query.forEach { (key, value) ->
-    require(!HttpFixtureRedaction.isSensitiveKey(key) || value == REDACTED) {
+    require(!HttpFixtureRedaction.isSensitiveKey(key, redactedKeys) || value == REDACTED) {
       "sensitive query key '$key' must be redacted"
     }
   }
   request.body?.let { body ->
-    validateBody(body, "request")
-    val formKey = HttpFixtureRedaction.sensitiveFormKey(body, contentType(request.headers))
+    validateBody(body, "request", redactedKeys)
+    val formKey = HttpFixtureRedaction.sensitiveFormKey(body, contentType(request.headers), redactedKeys)
     require(formKey == null) {
       "form-encoded request body has sensitive key '$formKey' (form bodies are not redacted)"
     }
   }
-  validateBody(entry.response.body, "response")
+  validateBody(entry.response.body, "response", redactedKeys)
 }
 
 private fun validateHeaders(headers: Map<String, String>, scope: String) {
@@ -355,7 +365,7 @@ private fun validateHeaders(headers: Map<String, String>, scope: String) {
   require(sensitive == null) { "$scope contains forbidden header '$sensitive'" }
 }
 
-private fun validateBody(body: String, scope: String) {
+private fun validateBody(body: String, scope: String, redactedKeys: Set<String>) {
   require(utf8Length(body) <= HttpFixtureMatcher.MAX_BODY_BYTES) {
     "$scope body exceeds 1 MiB"
   }
@@ -363,20 +373,20 @@ private fun validateBody(body: String, scope: String) {
     "$scope body contains unsupported control characters"
   }
   val element = jsonContainer(body) ?: return
-  requireNoSensitiveJson(element)
+  requireNoSensitiveJson(element, redactedKeys)
 }
 
-private fun requireNoSensitiveJson(element: JsonElement) {
+private fun requireNoSensitiveJson(element: JsonElement, redactedKeys: Set<String>) {
   when (element) {
     is JsonObject -> element.forEach { (key, value) ->
-      if (HttpFixtureRedaction.isSensitiveKey(key)) {
+      if (HttpFixtureRedaction.isSensitiveKey(key, redactedKeys)) {
         require(value is JsonPrimitive && value.content == REDACTED) {
           "sensitive JSON key '$key' must be redacted"
         }
       }
-      requireNoSensitiveJson(value)
+      requireNoSensitiveJson(value, redactedKeys)
     }
-    is JsonArray -> element.forEach(::requireNoSensitiveJson)
+    is JsonArray -> element.forEach { requireNoSensitiveJson(it, redactedKeys) }
     is JsonPrimitive -> Unit
   }
 }

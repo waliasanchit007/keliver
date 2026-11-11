@@ -283,6 +283,33 @@ class HttpRecordingTest {
     assertTrue(File(repo, ".").walkTopDown().none { it.isFile && it.parentFile.name == ".candidates" })
   }
 
+  @Test fun valuesRedactedWithConfiguredKeysMatchOnReplay() = withRepo { repo, store ->
+    val config = config(additionalSensitiveKeys = listOf("nickname"))
+    val service = service(
+      repo,
+      store,
+      transport = RecordingTransport { _, _, _, _ -> HostHttpResponse(200, """{"nickname":"bob","n":1}""") },
+      config = config,
+    )
+    val session = session(service)
+    val request = HostHttpRequest(
+      method = "POST",
+      path = "/profile",
+      query = mapOf("nickname" to "bob"),
+      body = """{"nickname":"bob","safe":"yes"}""",
+    )
+    assertIs<HttpRecordingResult.Success>(service.record(session, request))
+    assertIs<HttpRecordingResult.Success>(service.close(session))
+    val text = candidateText(repo)
+    assertFalse("bob" in text, text)
+    assertContains(text, """"redactedKeys":["nickname"]""")
+
+    val reviewed = File(repo, "portal-fixtures/http/profile.json")
+    reviewed.writeText(text)
+    val match = assertIs<HttpReplayResult.Match>(HttpReplayService(repo, config, clock).replay("profile", "s", request))
+    assertEquals("""{"nickname":"<redacted>","n":1}""", match.response.body)
+  }
+
   private fun session(service: HttpRecordingService): String {
     val created = assertIs<HttpRecordingResult.Success>(
       service.createSession(HttpRecordSessionCommand("profile-api", "profile")),

@@ -158,9 +158,12 @@ Configure the checked-in fixture directory relative to the app repository:
 ```
 
 Each `<id>.json` file contains `formatVersion`, `recordedAt`, optional
-`expiresAt`, `matchHeaders`, and request/response `entries`. Matching is exact
-over normalized method, relative path, sorted query, selected lowercase
-headers, and body. Duplicate requests replay in file order within one Live
+`expiresAt`, `matchHeaders`, request/response `entries`, and optional
+`redactedKeys` (the `additionalSensitiveKeys` it was recorded with; absent
+means none). Matching is exact over normalized method, relative path, sorted
+query, selected lowercase headers, and body; the live request is redacted with
+the built-in sensitive keys and `redactedKeys` first, so a recorded
+`<redacted>` value matches. Duplicate requests replay in file order within one Live
 session; only a final entry marked `reuse: true` can repeat.
 
 The relay validates fixture paths, sizes, expiry, forbidden auth/cookie headers,
