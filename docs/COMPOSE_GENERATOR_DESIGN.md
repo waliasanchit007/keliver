@@ -337,7 +337,7 @@ The screen code, as written for Android (only the imports differ in the guest):
 
 ```kotlin
 @Composable
-fun OfferRow(title: String, rate: String) {
+fun ItemRow(title: String, quantity: String) {
   Row(
     modifier = Modifier.fillMaxWidth()
       .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
@@ -345,7 +345,7 @@ fun OfferRow(title: String, rate: String) {
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-    Text(rate, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+    Text(quantity, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
   }
 }
 ```
@@ -390,7 +390,7 @@ dependency 13, so its `Text` overload 1 is widget tag `13_000_001`):
 
 ```
 create   id=9 tag=13000001
-property id=9 tag=1 "Starter plan"                                // text
+property id=9 tag=1 "Packing tape"                                // text
 property id=9 tag=3 "u"                                           // color: Color.Unspecified, a literal default, sent
 property id=9 tag=17 {"ref":"typography.titleMedium"}             // style
 modifier id=9 [[10000301,{"weight":1.0}]]                         // RowScope.weight, foundation-layout

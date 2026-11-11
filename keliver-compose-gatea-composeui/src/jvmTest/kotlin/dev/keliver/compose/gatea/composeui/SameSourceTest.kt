@@ -84,7 +84,7 @@ import kotlinx.serialization.json.Json
  */
 @OptIn(ExperimentalTestApi::class)
 class SameSourceTest {
-  private val tags = listOf("AAA", "Monthly", "Secured", "Listed on NSE", "Tax free", "Senior")
+  private val tags = listOf("Fragile", "Bulk", "In stock", "Ships today", "Gift wrap", "Returnable")
 
   @Test fun onlyImportsDiffer() {
     val dir = File("src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples")
@@ -193,7 +193,7 @@ class SameSourceTest {
 
   @Test fun samePixels() = runComposeUiTest {
     var opened = 0
-    val host = guestOnHost { GuestSampleCard("A long item title that will not fit on one line", "Subtitle", tags) { opened++ } }
+    val host = guestOnHost { GuestSampleCard("A long item title that will not fit on one line", "Qty 12", tags) { opened++ } }
     // Both render in the same place, one after the other: a spot shadow depends on where in the
     // window it is drawn.
     var showGuest by mutableStateOf(false)
@@ -203,7 +203,7 @@ class SameSourceTest {
           if (showGuest) {
             Box(Modifier.testTag("guest")) { host.root.Render(null) }
           } else {
-            NativeSampleCard("A long item title that will not fit on one line", "Subtitle", tags) {}
+            NativeSampleCard("A long item title that will not fit on one line", "Qty 12", tags) {}
           }
         }
       }
@@ -231,7 +231,7 @@ class SameSourceTest {
 
   @Composable
   private fun Theme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF006A60), secondaryContainer = Color(0xFFFFE9B0)), content = content)
+    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF6750A4), secondaryContainer = Color(0xFFE8DEF8)), content = content)
   }
 }
 
