@@ -464,16 +464,23 @@ keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.2
 - **The scheme** is `keliver-` and the app's package (its screens'
   `<package>.screens`, less `.screens`; lower case, `_` as `-`). The
   scaffolders build it in, and the relay computes it from the same screens, so
-  one app's link does not open another app.
+  one app's link does not open another app. Installs of the same screens share
+  it, though: the standalone host and an app that embeds the same screens, or
+  two debug flavors, all register it (Android then shows a chooser; iOS picks
+  one app by no stated rule), so keep one such debug build on a device.
 - **What a debug host accepts**: that scheme and the host `keliver-debug`
   (either in any case), the path `/bundles` exactly, and one `server=`
   parameter, percent-encoded at most once, and nothing else (no fragment). The
   server must be `http://` or `https://`; an IPv4 literal, a bracketed IPv6
-  literal or `localhost` (never a host name, so a link cannot send the host to
-  a name some DNS answers; not the unspecified or multicast addresses); the
-  proxy's port exactly (`DEBUG_LINK_PORT`, the relay's port + 1 when
-  scaffolded; edit it if `KELIVER_DEVICE_PROXY_PORT` moves the proxy); and no
-  user, query, fragment or path. One check does this on both platforms:
+  literal (no zone id) or `localhost`, never a host name, so a link cannot
+  send the host to a name some DNS answers; a loopback, private, link-local or
+  shared address only (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`,
+  `192.168.0.0/16`, `169.254.0.0/16`, `100.64.0.0/10` as VPNs such as
+  Tailscale use, `::1`, `fc00::/7`, `fe80::/10`), so a link never sends the
+  host to the internet; any port from 1024 to 65535 (moving the proxy with
+  `KELIVER_DEVICE_PROXY_PORT` needs no change to the host); and no user,
+  query, fragment or path. The relay makes no link for a URL outside these
+  (a relay on a public address shows its bare URL only). One check does this on both platforms:
   `DebugBundleLink.kt` (the Android template's `src/debug`, copied into the iOS
   host), with its test vectors in `DebugBundleLinkTest.kt`.
 - **What it does**: it shows what it would load and asks first (any app or web
@@ -483,10 +490,17 @@ keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.2
   `KELIVER_BUNDLE_SERVER` launch variable still wins). "Use the build's server"
   goes back. It moves only where bundles come from: every manifest still
   verifies against the embedded key, the rollback floor holds, and the cached
-  last good bundle is used only on its own origin. An Android build allows
-  cleartext only when its own server is `http://`; the link says so rather
-  than set a server it cannot reach. The iOS Debug configuration allows local
-  networking (`NSAllowsLocalNetworking`) for it.
+  last good bundle is used only on its own origin. The iOS Debug configuration
+  allows local networking (`NSAllowsLocalNetworking`) for it.
+- **Android hosts built against an `https://` server cannot use the proxy.**
+  The device proxy is plain `http://`, and a standalone Android host's debug
+  build allows cleartext only when a server it was scaffolded or built with
+  (`keliver.bundleServer`, the API base, the report URL) is `http://`. A host
+  scaffolded with `--bundle-server https://…` therefore refuses the link
+  ("This build cannot reach …", naming the cause) rather than set a server it
+  cannot reach; the `adb run-as` switch has the same limit. Build it with an
+  `http://` `keliver.bundleServer` for this, or, for an app that embeds the
+  host, allow cleartext to the proxy in that app's debug manifest.
 - **Debug builds only.** Android: the activity, its check and its intent filter
   are in `src/debug`, and the activity also needs `BuildConfig.DEBUG` and a
   debuggable app. iOS: the `Debug` configuration alone sets
@@ -497,9 +511,17 @@ keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.2
   its Info.plist (`checkReleaseUrls`). Keep `Info-Debug.plist` in step when you
   edit `Info.plist`. The self-tests check a release APK's manifest and dex, and
   the iOS configurations and plists; CI's T2 checks a Release app's binary and
-  Info.plist.
-- **Without a camera**: `adb shell am start -a android.intent.action.VIEW -d '<link>'`,
-  or `xcrun simctl openurl booted '<link>'`. The editor shows both, with the
+  Info.plist. A configuration made by duplicating Debug (a "Staging" one
+  shipped to testers, say) carries the link too, since `checkReleaseUrls` runs
+  only on release framework builds: duplicate Release instead, or remove
+  `KELIVER_DEBUG_LINK` and `Info-Debug.plist` from the copy.
+- **Opening it.** The iOS Camera app offers to open a registered custom scheme,
+  so scanning the QR code works there (not yet tried on a phone). Many Android
+  camera and Lens apps show a QR code that is not `http(s)` as plain text with
+  nothing to tap, so on Android use adb, the reliable route:
+  `adb shell "am start -a android.intent.action.VIEW -d '<link>'"` (quoted
+  twice, so the device's shell also sees one argument). A simulator:
+  `xcrun simctl openurl booted '<link>'`. The editor shows both, with the
   bare URL and the `adb run-as` command as before.
 
 **Timing marks** (both hosts, from tools 0.3.10; M0 of `ADOPTION_PLAN_2026-10.md`).

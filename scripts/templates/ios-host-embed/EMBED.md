@@ -48,7 +48,11 @@ standalone host `keliver-new-ios-host.sh` writes). Its settings are in
 
    The editor's "On a device" QR code then points that build at the relay's
    device proxy. A release build of the framework refuses `KELIVER_DEBUG_LINK`
-   and a `keliver-` URL scheme in the Info.plist Xcode builds.
+   and a `keliver-` URL scheme in the Info.plist Xcode builds. That check runs
+   only on release framework builds, so a configuration you make by
+   duplicating Debug (a tester "Staging" build) keeps the link: duplicate
+   Release for those instead. Every install of these screens (this app and the
+   standalone host) registers the same scheme; keep one on a device.
 
 ## In your code
 
