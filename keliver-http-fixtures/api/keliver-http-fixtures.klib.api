@@ -1,0 +1,132 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-http-fixtures>
+sealed interface dev.keliver.http.fixtures/HttpFixtureSelection { // dev.keliver.http.fixtures/HttpFixtureSelection|null[0]
+    final class Match : dev.keliver.http.fixtures/HttpFixtureSelection { // dev.keliver.http.fixtures/HttpFixtureSelection.Match|null[0]
+        constructor <init>(dev.keliver.capabilities/HostHttpResponse, kotlin/Int) // dev.keliver.http.fixtures/HttpFixtureSelection.Match.<init>|<init>(dev.keliver.capabilities.HostHttpResponse;kotlin.Int){}[0]
+
+        final val nextIndex // dev.keliver.http.fixtures/HttpFixtureSelection.Match.nextIndex|{}nextIndex[0]
+            final fun <get-nextIndex>(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSelection.Match.nextIndex.<get-nextIndex>|<get-nextIndex>(){}[0]
+        final val response // dev.keliver.http.fixtures/HttpFixtureSelection.Match.response|{}response[0]
+            final fun <get-response>(): dev.keliver.capabilities/HostHttpResponse // dev.keliver.http.fixtures/HttpFixtureSelection.Match.response.<get-response>|<get-response>(){}[0]
+
+        final fun component1(): dev.keliver.capabilities/HostHttpResponse // dev.keliver.http.fixtures/HttpFixtureSelection.Match.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSelection.Match.component2|component2(){}[0]
+        final fun copy(dev.keliver.capabilities/HostHttpResponse = ..., kotlin/Int = ...): dev.keliver.http.fixtures/HttpFixtureSelection.Match // dev.keliver.http.fixtures/HttpFixtureSelection.Match.copy|copy(dev.keliver.capabilities.HostHttpResponse;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureSelection.Match.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSelection.Match.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Match.toString|toString(){}[0]
+    }
+
+    final class Miss : dev.keliver.http.fixtures/HttpFixtureSelection { // dev.keliver.http.fixtures/HttpFixtureSelection.Miss|null[0]
+        constructor <init>(kotlin/String) // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): dev.keliver.http.fixtures/HttpFixtureSelection.Miss // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSelection.Miss.toString|toString(){}[0]
+    }
+}
+
+final class dev.keliver.http.fixtures/HttpFixtureEntry { // dev.keliver.http.fixtures/HttpFixtureEntry|null[0]
+    constructor <init>(dev.keliver.capabilities/HostHttpRequest, dev.keliver.capabilities/HostHttpResponse, kotlin/Boolean = ...) // dev.keliver.http.fixtures/HttpFixtureEntry.<init>|<init>(dev.keliver.capabilities.HostHttpRequest;dev.keliver.capabilities.HostHttpResponse;kotlin.Boolean){}[0]
+
+    final val request // dev.keliver.http.fixtures/HttpFixtureEntry.request|{}request[0]
+        final fun <get-request>(): dev.keliver.capabilities/HostHttpRequest // dev.keliver.http.fixtures/HttpFixtureEntry.request.<get-request>|<get-request>(){}[0]
+    final val response // dev.keliver.http.fixtures/HttpFixtureEntry.response|{}response[0]
+        final fun <get-response>(): dev.keliver.capabilities/HostHttpResponse // dev.keliver.http.fixtures/HttpFixtureEntry.response.<get-response>|<get-response>(){}[0]
+    final val reuse // dev.keliver.http.fixtures/HttpFixtureEntry.reuse|{}reuse[0]
+        final fun <get-reuse>(): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureEntry.reuse.<get-reuse>|<get-reuse>(){}[0]
+
+    final fun component1(): dev.keliver.capabilities/HostHttpRequest // dev.keliver.http.fixtures/HttpFixtureEntry.component1|component1(){}[0]
+    final fun component2(): dev.keliver.capabilities/HostHttpResponse // dev.keliver.http.fixtures/HttpFixtureEntry.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureEntry.component3|component3(){}[0]
+    final fun copy(dev.keliver.capabilities/HostHttpRequest = ..., dev.keliver.capabilities/HostHttpResponse = ..., kotlin/Boolean = ...): dev.keliver.http.fixtures/HttpFixtureEntry // dev.keliver.http.fixtures/HttpFixtureEntry.copy|copy(dev.keliver.capabilities.HostHttpRequest;dev.keliver.capabilities.HostHttpResponse;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureEntry.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureEntry.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureEntry.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.http.fixtures/HttpFixtureEntry> { // dev.keliver.http.fixtures/HttpFixtureEntry.$serializer|null[0]
+        final val descriptor // dev.keliver.http.fixtures/HttpFixtureEntry.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.http.fixtures/HttpFixtureEntry.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.http.fixtures/HttpFixtureEntry.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.http.fixtures/HttpFixtureEntry // dev.keliver.http.fixtures/HttpFixtureEntry.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.http.fixtures/HttpFixtureEntry) // dev.keliver.http.fixtures/HttpFixtureEntry.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.http.fixtures.HttpFixtureEntry){}[0]
+    }
+
+    final object Companion { // dev.keliver.http.fixtures/HttpFixtureEntry.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.http.fixtures/HttpFixtureEntry> // dev.keliver.http.fixtures/HttpFixtureEntry.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.http.fixtures/HttpFixtureMatcher { // dev.keliver.http.fixtures/HttpFixtureMatcher|null[0]
+    constructor <init>(dev.keliver.http.fixtures/HttpFixtureSet) // dev.keliver.http.fixtures/HttpFixtureMatcher.<init>|<init>(dev.keliver.http.fixtures.HttpFixtureSet){}[0]
+
+    final fun requestKey(dev.keliver.capabilities/HostHttpRequest): kotlin/String // dev.keliver.http.fixtures/HttpFixtureMatcher.requestKey|requestKey(dev.keliver.capabilities.HostHttpRequest){}[0]
+    final fun select(dev.keliver.capabilities/HostHttpRequest, kotlin/Int): dev.keliver.http.fixtures/HttpFixtureSelection // dev.keliver.http.fixtures/HttpFixtureMatcher.select|select(dev.keliver.capabilities.HostHttpRequest;kotlin.Int){}[0]
+
+    final object Companion { // dev.keliver.http.fixtures/HttpFixtureMatcher.Companion|null[0]
+        final const val MAX_BODY_BYTES // dev.keliver.http.fixtures/HttpFixtureMatcher.Companion.MAX_BODY_BYTES|{}MAX_BODY_BYTES[0]
+            final fun <get-MAX_BODY_BYTES>(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureMatcher.Companion.MAX_BODY_BYTES.<get-MAX_BODY_BYTES>|<get-MAX_BODY_BYTES>(){}[0]
+        final const val MISS_STATUS // dev.keliver.http.fixtures/HttpFixtureMatcher.Companion.MISS_STATUS|{}MISS_STATUS[0]
+            final fun <get-MISS_STATUS>(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureMatcher.Companion.MISS_STATUS.<get-MISS_STATUS>|<get-MISS_STATUS>(){}[0]
+    }
+}
+
+final class dev.keliver.http.fixtures/HttpFixtureSet { // dev.keliver.http.fixtures/HttpFixtureSet|null[0]
+    constructor <init>(kotlin/Int, kotlin/String, kotlin/String? = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry>) // dev.keliver.http.fixtures/HttpFixtureSet.<init>|<init>(kotlin.Int;kotlin.String;kotlin.String?;kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.keliver.http.fixtures.HttpFixtureEntry>){}[0]
+
+    final val entries // dev.keliver.http.fixtures/HttpFixtureSet.entries|{}entries[0]
+        final fun <get-entries>(): kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry> // dev.keliver.http.fixtures/HttpFixtureSet.entries.<get-entries>|<get-entries>(){}[0]
+    final val expiresAt // dev.keliver.http.fixtures/HttpFixtureSet.expiresAt|{}expiresAt[0]
+        final fun <get-expiresAt>(): kotlin/String? // dev.keliver.http.fixtures/HttpFixtureSet.expiresAt.<get-expiresAt>|<get-expiresAt>(){}[0]
+    final val formatVersion // dev.keliver.http.fixtures/HttpFixtureSet.formatVersion|{}formatVersion[0]
+        final fun <get-formatVersion>(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSet.formatVersion.<get-formatVersion>|<get-formatVersion>(){}[0]
+    final val matchHeaders // dev.keliver.http.fixtures/HttpFixtureSet.matchHeaders|{}matchHeaders[0]
+        final fun <get-matchHeaders>(): kotlin.collections/List<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureSet.matchHeaders.<get-matchHeaders>|<get-matchHeaders>(){}[0]
+    final val recordedAt // dev.keliver.http.fixtures/HttpFixtureSet.recordedAt|{}recordedAt[0]
+        final fun <get-recordedAt>(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSet.recordedAt.<get-recordedAt>|<get-recordedAt>(){}[0]
+
+    final fun component1(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSet.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSet.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // dev.keliver.http.fixtures/HttpFixtureSet.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/List<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureSet.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry> // dev.keliver.http.fixtures/HttpFixtureSet.component5|component5(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/String = ..., kotlin/String? = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.keliver.http.fixtures/HttpFixtureEntry> = ...): dev.keliver.http.fixtures/HttpFixtureSet // dev.keliver.http.fixtures/HttpFixtureSet.copy|copy(kotlin.Int;kotlin.String;kotlin.String?;kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.keliver.http.fixtures.HttpFixtureEntry>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureSet.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.http.fixtures/HttpFixtureSet.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.http.fixtures/HttpFixtureSet.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.http.fixtures/HttpFixtureSet> { // dev.keliver.http.fixtures/HttpFixtureSet.$serializer|null[0]
+        final val descriptor // dev.keliver.http.fixtures/HttpFixtureSet.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.http.fixtures/HttpFixtureSet.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.http.fixtures/HttpFixtureSet.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.http.fixtures/HttpFixtureSet // dev.keliver.http.fixtures/HttpFixtureSet.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.http.fixtures/HttpFixtureSet) // dev.keliver.http.fixtures/HttpFixtureSet.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.http.fixtures.HttpFixtureSet){}[0]
+    }
+
+    final object Companion { // dev.keliver.http.fixtures/HttpFixtureSet.Companion|null[0]
+        final val $childSerializers // dev.keliver.http.fixtures/HttpFixtureSet.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.http.fixtures/HttpFixtureSet> // dev.keliver.http.fixtures/HttpFixtureSet.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final object dev.keliver.http.fixtures/HttpFixtureRedaction { // dev.keliver.http.fixtures/HttpFixtureRedaction|null[0]
+    final val sensitiveHeaders // dev.keliver.http.fixtures/HttpFixtureRedaction.sensitiveHeaders|{}sensitiveHeaders[0]
+        final fun <get-sensitiveHeaders>(): kotlin.collections/Set<kotlin/String> // dev.keliver.http.fixtures/HttpFixtureRedaction.sensitiveHeaders.<get-sensitiveHeaders>|<get-sensitiveHeaders>(){}[0]
+
+    final fun isSensitiveKey(kotlin/String, kotlin.collections/Set<kotlin/String> = ...): kotlin/Boolean // dev.keliver.http.fixtures/HttpFixtureRedaction.isSensitiveKey|isSensitiveKey(kotlin.String;kotlin.collections.Set<kotlin.String>){}[0]
+    final fun redactJson(kotlin/String, kotlin.collections/Set<kotlin/String> = ...): kotlin/String // dev.keliver.http.fixtures/HttpFixtureRedaction.redactJson|redactJson(kotlin.String;kotlin.collections.Set<kotlin.String>){}[0]
+}

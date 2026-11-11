@@ -59,3 +59,31 @@ internal fun devicesChip(newest: Pair<Int, String>?, at: (String) -> String, lis
 internal fun devicesListening(text: String): Int? = runCatching {
   Json.parseToJsonElement(text).jsonObject["devicesListening"]?.jsonPrimitive?.content?.toInt()
 }.getOrNull()
+
+/** ED3: a bundle server URL a debug host can use (the relay's device proxy), and its QR code as an SVG. */
+internal data class DeviceLink(val url: String, val qrSvg: String?)
+
+/** The QR codes the relay makes (QrCode.toSvg): one rect and one path of plain moves. Anything else is not inserted. */
+private val QR_SVG = Regex(
+  """^<svg xmlns="http://www\.w3\.org/2000/svg" viewBox="0 0 \d+ \d+" shape-rendering="crispEdges"><rect width="\d+" height="\d+" fill="#fff"/><path d="[Mhvz0-9,\-]*" fill="#000"/></svg>$""",
+)
+private val PROXY_URL = Regex("""^http://(\d{1,3}(\.\d{1,3}){3}|\[[0-9a-fA-F:]+]):\d{1,5}$""")
+
+/**
+ * The relay's `GET /device-proxy` [text]: the links (an empty list: the proxy is off), or null
+ * from a relay that has no device proxy. A URL or QR code not of the shape the relay makes is dropped.
+ */
+internal fun deviceLinks(text: String): List<DeviceLink>? = runCatching {
+  val o = Json.parseToJsonElement(text).jsonObject
+  val enabled = o["enabled"]?.jsonPrimitive?.content ?: return@runCatching null
+  if (enabled != "true") return@runCatching emptyList()
+  o["urls"]!!.jsonArray.mapNotNull { e ->
+    val item = e.jsonObject
+    val url = item["url"]?.jsonPrimitive?.content?.takeIf { PROXY_URL.matches(it) } ?: return@mapNotNull null
+    DeviceLink(url, item["qrSvg"]?.jsonPrimitive?.content?.takeIf { QR_SVG.matches(it) })
+  }
+}.getOrNull()
+
+/** How a debug Android host is pointed at [url] (the host template's debugBundleServer); then restart the app. */
+internal fun debugHostCommand(url: String): String =
+  "adb shell run-as <applicationId> sh -c 'mkdir -p files/keliver && echo $url > files/keliver/bundle-server'"

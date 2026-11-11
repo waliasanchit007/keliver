@@ -8,6 +8,10 @@ androidx-compose-ui = "1.11.2"
 # Also the Compose API the generator (keliver-compose-generator) reads: bumping it fails the generated
 # group's staleness guard (checkComposeApi) until the group is regenerated, with lock appends only.
 jbCompose = "1.11.1"
+# The Compose API the Gate A generator (keliver-compose-generator) READS, pinned to the version Gate A
+# was verified on so the checked-in generated group and its staleness guard stay byte-identical.
+# Gate B moves it to jbCompose. The generated modules themselves compile against jbCompose.
+composeGeneratorInput = "1.8.2"
 # The Skia build jbCompose uses (bump it with jbCompose: the desktop runtime must match the
 # skiko that compose-ui pulls in). Only its desktop runtime is a direct (test) dependency.
 skiko = "0.144.6"

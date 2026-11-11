@@ -53,4 +53,32 @@ class EditorPublishTest {
     assertNull(devicesListening("""{"project":"p","screen":"s","version":4,"writeBack":null}"""), "an older relay")
     assertNull(devicesListening("not json"))
   }
+
+  // ED3: the device proxy's links.
+  private val svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges"><rect width="29" height="29" fill="#fff"/><path d="M4,4h1v1h-1zM5,4h1v1h-1z" fill="#000"/></svg>"""
+
+  private fun status(url: String, qr: String) =
+    """{"enabled":true,"urls":[{"url":"$url","qrSvg":"${qr.replace("\"", "\\\"")}"}]}"""
+
+  @Test fun theDeviceProxysLinksAndQrCodes() {
+    assertEquals(listOf(DeviceLink("http://10.0.2.2:8078", svg)), deviceLinks(status("http://10.0.2.2:8078", svg)))
+    assertEquals(emptyList(), deviceLinks("""{"enabled":false,"env":"KELIVER_DEVICE_PROXY"}"""), "off")
+    assertNull(deviceLinks("""{"error":"not found"}"""), "a relay without the proxy")
+    assertNull(deviceLinks("not json"))
+  }
+
+  @Test fun onlyTheRelaysOwnShapesAreShown() {
+    // A QR code with anything but the relay's plain shapes is not inserted into the page.
+    val script = svg.replace("<path", "<script>alert(1)</script><path")
+    assertEquals(listOf(DeviceLink("http://10.0.2.2:8078", null)), deviceLinks(status("http://10.0.2.2:8078", script)))
+    val onload = svg.replace("<rect ", "<rect onload=\"x()\" ")
+    assertEquals(listOf(DeviceLink("http://10.0.2.2:8078", null)), deviceLinks(status("http://10.0.2.2:8078", onload)))
+    for (bad in listOf("javascript:alert(1)", "http://evil.example:8078", "https://10.0.2.2:8078", "http://10.0.2.2:8078/x")) {
+      assertEquals(emptyList(), deviceLinks(status(bad, svg)), bad)
+    }
+  }
+
+  @Test fun theDebugHostCommandNamesTheUrl() {
+    assertTrue("echo http://10.0.2.2:8078 > files/keliver/bundle-server" in debugHostCommand("http://10.0.2.2:8078"))
+  }
 }

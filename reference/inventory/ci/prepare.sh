@@ -403,7 +403,9 @@ if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
     echo "  NOTE  W8: no tools from before W8 to scaffold with ($(tail -1 "$EV/w8-legacy-tools.log" 2>/dev/null)): K3 and K6 use this checkout's one-key host"
   fi
   { echo "W8_OK=1"; echo "W8_NEXT=$W8/next"; echo "W8_BOTH_APK=$EV/production-host-both.apk"; echo "W8_NEXT_APK=$EV/production-host-next.apk"
-    echo "W8_LEGACY_APK=${W8_LEGACY_APK:-$W3_APK}"; echo "W8_LEGACY_IS_PRE_W8=$([ -n "$W8_LEGACY_APK" ] && echo 1 || echo 0)"; } >> "$WORK/env"
+    # Without the old tools (the download failed), K3 and K6 fall back to W3's one-key host.
+    # W3_APK lives only in $WORK/env, so it is spelled out; both names may be unset (set -u).
+    echo "W8_LEGACY_APK=${W8_LEGACY_APK:-$EV/production-host-static.apk}"; echo "W8_LEGACY_IS_PRE_W8=$([ -n "${W8_LEGACY_APK:-}" ] && echo 1 || echo 0)"; } >> "$WORK/env"
 else
   echo "  SKIP  W8: $W3_PUBLISH has no --new-signing-key, or the host template predates key rotation; not counted"
   echo "W8_OK=0" >> "$WORK/env"
@@ -413,12 +415,15 @@ fi
 # The same scaffolder, with --embed, writes keliver-host/ into a plain View-based
 # app whose own files carry only the documented edits (KELIVER EMBED). Built
 # for W3's static HTTPS server; and once more trusting a key that is not this
-# app's, for the refusal check.
+# app's, for the refusal check. Its API base (HostHttp) is the same server's
+# /api: the app's RequestPolicy refuses some of the guest's requests there
+# (X11), and the server's log shows which ones reached it.
 EMB_APP="$WORK/embed"; rm -rf "$EMB_APP"; cp -R "$REPO/reference/embed/android" "$EMB_APP"
 cp "$APP/gradlew" "$EMB_APP/" && cp -R "$APP/gradle" "$EMB_APP/"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$EMB_APP/local.properties"
-( cd "$APP" && "$PROD_SCAFFOLD" --embed --into "$EMB_APP" --bundle-server "https://$HOST_ADDR:8443" ) > "$EV/w2-embed-scaffold.log" 2>&1 \
-  && ok "W2: keliver-new-production-host.sh --embed ($PROD_WHICH) wrote keliver-host/ into the existing app" \
+( cd "$APP" && "$PROD_SCAFFOLD" --embed --into "$EMB_APP" --bundle-server "https://$HOST_ADDR:8443" \
+    --api-base-url "https://$HOST_ADDR:8443/api" ) > "$EV/w2-embed-scaffold.log" 2>&1 \
+  && ok "W2: keliver-new-production-host.sh --embed ($PROD_WHICH) wrote keliver-host/ into the existing app (HostHttp to https://$HOST_ADDR:8443/api)" \
   || { bad "W2: --embed failed"; cat "$EV/w2-embed-scaffold.log"; }
 # W7: on a phone, the fixture's debug and R8 release builds trust the CA themselves
 # (a release build is not debuggable, so the CA goes in its own source set too).
