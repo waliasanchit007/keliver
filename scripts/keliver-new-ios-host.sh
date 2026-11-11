@@ -153,6 +153,17 @@ print(next(iter(pkgs))[: -len('.screens')])
 PY
 )" || fail "${ROOT_PKG#ERROR }"
 PACKAGE="$ROOT_PKG.host"
+# ED3, the Debug configuration only: the debug link (src/debuglink, iosApp/Info-Debug.plist) that
+# points the host at the relay's device proxy. Its scheme is `keliver-` and the app's package
+# (lower case, '_' as '-'), the rule the relay's GET /device-proxy uses for the editor's QR code;
+# its port is the proxy's, the relay's port (keliver.portal.json, default 8077) + 1. The same
+# rule as keliver-new-production-host.sh.
+DEBUG_LINK_SCHEME="keliver-$(printf '%s' "$ROOT_PKG" | tr 'A-Z_' 'a-z-')"
+DEBUG_LINK_PORT="$(python3 -c "import json,sys
+try:
+    p = json.load(open(sys.argv[1])).get('port', 8077)
+except Exception: p = 8077
+print(p + 1 if isinstance(p, int) and not isinstance(p, bool) and 1 <= p < 65535 else 8078)" "$APP/keliver.portal.json")"
 # The Keliver version the GUEST uses, so host and guest do not drift apart.
 KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
 try:
@@ -236,18 +247,37 @@ if hosts:
     print('\t\t</dict>\n\t</dict>')
 PY
 )"
+# The Debug configuration's (iosApp/Info-Debug.plist): the same exceptions, and local networking
+# (an IP literal on this network, the device proxy a debug link names) — never in a release build.
+ATS_DEBUG_BLOCK="$(python3 - "$BUNDLE_SERVER" "$API_BASE_URL" <<'PY'
+import re, sys
+hosts = []
+for url in sys.argv[1:]:
+    m = re.match(r'^http://(\[[^\]]+\]|[^/:?#]+)', url)
+    if m and m.group(1).lower() not in hosts: hosts.append(m.group(1).lower())
+print('\t<key>NSAppTransportSecurity</key>\n\t<dict>\n\t\t<key>NSAllowsLocalNetworking</key>\n\t\t<true/>')
+if hosts:
+    print('\t\t<key>NSExceptionDomains</key>\n\t\t<dict>')
+    for h in hosts:
+        print('\t\t\t<key>%s</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSExceptionAllowsInsecureHTTPLoads</key>\n\t\t\t\t<true/>\n\t\t\t</dict>' % h.strip('[]'))
+    print('\t\t</dict>')
+print('\t</dict>')
+PY
+)"
 subst() { # <src> <dst>
   mkdir -p "$(dirname "$2")"
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$KEY_HEX" "$PRODUCT_NAME" \
-    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" <<'PY'
+    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" "$DEBUG_LINK_SCHEME" "$DEBUG_LINK_PORT" "$ATS_DEBUG_BLOCK" <<'PY'
 import sys
-src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel = sys.argv[1:17]
+src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel, link_scheme, link_port, ats_debug = sys.argv[1:20]
 s = open(src, encoding='utf-8').read()
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'BUNDLE_ID': bid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'KEY_HEX': key.lower(),
              'PRODUCT_NAME': product, 'PKG_PATH': pkgpath, 'CHANNEL': channel,
+             'DEBUG_LINK_SCHEME': link_scheme, 'DEBUG_LINK_PORT': link_port,
+             'ATS_DEBUG_BLOCK': ats_debug + '\n',
              'ATS_BLOCK': (ats + '\n') if ats else ''}.items():
     s = s.replace('@@' + k + '@@', v)
 assert '@@' not in s, 'unsubstituted placeholder in ' + src
@@ -275,7 +305,7 @@ PY
   rm -f "$STAGE/gradle/libs.versions.toml"
 else
   for f in settings.gradle gradle.properties build.gradle iosApp/iOSApp.swift iosApp/ContentView.swift \
-           iosApp/Info.plist iosApp.xcodeproj/project.pbxproj Configuration/Config.xcconfig \
+           iosApp/Info.plist iosApp/Info-Debug.plist iosApp.xcodeproj/project.pbxproj Configuration/Config.xcconfig \
            src/nativeInterop/cinterop/sqlite3.def; do
     subst "$TEMPLATES/$f" "$STAGE/$f"
   done
@@ -292,11 +322,19 @@ for set in commonMain jvmTest iosTest; do
 done
 # Timing marks (M0), the guest frame profile (M4) and the memory profile (M5): the real ones when Xcode's KELIVER_TIMING
 # is YES (Debug, Benchmark), a no-op otherwise.
-for set in timing notiming; do
+for set in timing notiming debuglink nodebuglink; do
   for f in "$TEMPLATES"/src/$set/kotlin/*.kt; do
     subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
   done
 done
+# ED3: the debug link's check is the Android host's own file (one source for both hosts), in the
+# Debug configuration's set and, with its vectors, in the JVM tests.
+LINK_SRC="$(dirname "$TEMPLATES")/production-host/src"
+[ -f "$LINK_SRC/debug/kotlin/DebugBundleLink.kt" ] && [ -f "$LINK_SRC/testDebug/kotlin/DebugBundleLinkTest.kt" ] \
+  || fail "the debug link's templates are missing ($LINK_SRC)."
+subst "$LINK_SRC/debug/kotlin/DebugBundleLink.kt" "$STAGE/src/debuglink/kotlin/$PKG_PATH/DebugBundleLink.kt"
+subst "$LINK_SRC/debug/kotlin/DebugBundleLink.kt" "$STAGE/src/jvmTest/kotlin/$PKG_PATH/DebugBundleLink.kt"
+subst "$LINK_SRC/testDebug/kotlin/DebugBundleLinkTest.kt" "$STAGE/src/jvmTest/kotlin/$PKG_PATH/DebugBundleLinkTest.kt"
 cat > "$STAGE/.gitignore" <<'GI'
 /build/
 /.gradle/

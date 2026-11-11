@@ -57,6 +57,8 @@ on:
       - "scripts/keliver-new-ios-host.sh"
       - "scripts/keliver-new-ios-host-selftest.sh"
       - "scripts/templates/ios-host/**"
+      - "scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt"
+      - "scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt"
       - "reference/inventory/ci/ios.sh"
       - "reference/inventory/ci/ocr.swift"
       - "reference/inventory/ci/w3/**"
@@ -80,6 +82,8 @@ on:
       - "scripts/keliver-new-ios-host.sh"
       - "scripts/keliver-new-ios-host-selftest.sh"
       - "scripts/templates/ios-host/**"
+      - "scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt"
+      - "scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt"
       - "reference/inventory/ci/ios.sh"
       - "reference/inventory/ci/ocr.swift"
       - "reference/inventory/ci/w3/**"
@@ -202,7 +206,8 @@ jobs:
           java-version: 17
 
       # T2 (m0/ios-timing.sh) on a pull request only when it touches what T2
-      # checks: the host's Kotlin (timing, no-timing, iosMain: HostConfig's
+      # checks: the host's Kotlin (timing, no-timing, the debug link (ED3: its
+      # sets, and its check under production-host/src/debug), iosMain: HostConfig's
       # release checks), the app shell and its Info.plist, the build
       # configurations, the host's Gradle build, the harness's timing scripts or
       # this workflow.
@@ -219,7 +224,7 @@ jobs:
             while IFS= read -r f; do echo "  $f"; done <<<"$changed"
             # A here-string, not a pipe: `echo | grep -q` under pipefail reads a
             # SIGPIPE'd echo as no match on a long list, and would skip T2.
-            grep -Eq '^scripts/templates/ios-host[^/]*/(src/(timing|notiming|iosMain)/|iosApp/|Configuration/|iosApp\.xcodeproj/|build\.gradle|settings\.gradle|gradle\.properties)|^reference/inventory/ci/(m0/|ios\.sh$)|^scripts/keliver-new-ios-host\.sh$|^\.github/workflows/ios-host\.yml$' <<<"$changed" || t2=skip
+            grep -Eq '^scripts/templates/ios-host[^/]*/(src/(timing|notiming|debuglink|nodebuglink|iosMain)/|iosApp/|Configuration/|iosApp\.xcodeproj/|build\.gradle|settings\.gradle|gradle\.properties)|^reference/inventory/ci/(m0/|ios\.sh$)|^scripts/templates/production-host/src/debug/kotlin/DebugBundleLink\.kt$|^scripts/keliver-new-ios-host\.sh$|^\.github/workflows/ios-host\.yml$' <<<"$changed" || t2=skip
           fi
           echo "KELIVER_IOS_T2=$t2" | tee -a "$GITHUB_ENV"
 
