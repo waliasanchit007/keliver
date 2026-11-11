@@ -105,6 +105,13 @@ below), its later-screen case measured on a Galaxy A12; M4's host-side frame pro
    roughly 6 to 16 ms of 56 on the 130-change one. On an iPhone 13 (2026-11-02,
    `results-2026-11-02-iphone-m4-m5`), only the launch's frames: the XCTest tap driver needs an
    App ID that only an Apple account signed in to Xcode can register.
+   **2026-11-11, open (library 0.5.0):** the guest's half of the split. `StandardAppLifecycle`
+   calls the host's `KeliverTrace.composed()` between a frame's composition and its change
+   lists, and so does a screen's start; the host's clock times it, so `lead` splits into
+   composition and encoding (`DEVICE_HOST.md`, "The guest frame profile"). With no
+   `KeliverTrace` bound the guest makes no call. Checked by JVM and JS unit tests, and by a test
+   that runs the test-app guest in QuickJS on the JVM. Not done: the hosts printing it in the
+   `frames` line (templates and `frames.py`, a later tools release), and numbers from a device.
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
    **2026-11-01, merged (#188; released in tools 0.3.17):** the iOS host's debug and Benchmark builds log a `memory`
@@ -173,8 +180,13 @@ Decide on optimisations only after M2–M5.
   report, builds the app, and compares what Gradle resolved.
 - **K4 on a phone** (#174): X6 and X8–X10 on a Galaxy A12 (2026-10-29), the Android host from
   the published 0.3.15 zip.
-- **Not yet:** K4 on an iPhone; a `RequestPolicy` refusal on a
-  device (its rules are covered by JVM tests on both hosts).
+- **`RequestPolicy` on the emulator** (X11, `ci/w2/android-embed.sh`): the embedded host refuses
+  a guest's state-changing call and a path outside the app's allow-list before the network (the
+  API server's log has only the allowed request), and the guest shows the refusals on its
+  screen. The origin rule is not a guest's to break (a guest's paths are relative); it stays
+  covered by the JVM tests.
+- **Not yet:** K4 on an iPhone; a `RequestPolicy` refusal on iOS (its rules are covered by JVM
+  tests there).
 
 **Evidence.**
 - `keliver-new-production-host.sh --embed` and `keliver-new-ios-host.sh --embed` gave a working

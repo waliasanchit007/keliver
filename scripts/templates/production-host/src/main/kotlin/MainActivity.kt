@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,7 +30,10 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     Log.d(TAG, "screen created (the host is the Application's, not this activity's)")
     route = KeliverRoute.from(intent?.dataString, ROUTE_QUERY_KEYS)
-    setContent { KeliverScreen((application as HostApp).keliver, Modifier.fillMaxSize(), route = route) }
+    // safeDrawingPadding: from Android 15 an app targeting SDK 35 is drawn edge to edge, so
+    // without it the screen's top sits under the status bar. Earlier versions report no
+    // insets here (the window still fits the system bars), so nothing changes there.
+    setContent { KeliverScreen((application as HostApp).keliver, Modifier.fillMaxSize().safeDrawingPadding(), route = route) }
   }
 
   override fun onNewIntent(intent: Intent) {

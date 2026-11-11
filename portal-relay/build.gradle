@@ -36,6 +36,7 @@ tasks.withType(Test).configureEach {
 
 dependencies {
   implementation projects.keliverCapabilities // #16 H1: pure HostHttp replay envelope
+  implementation projects.keliverHttpFixtures // S2: matcher shared with the hosts' debug replay
   implementation projects.portalCore
   implementation projects.portalFlow     // #13 F1: FlowSpec (declarations parsed by ingest)
   implementation projects.portalDocument // V2 M1: live document + op engine
@@ -48,6 +49,8 @@ dependencies {
   // hand-rolled check. Test-only.
   testImplementation libs.zipline.loader
   testImplementation libs.kotlin.test.junit
+  // ED3: decode the relay's own QR codes with an independent decoder. Test-only.
+  testImplementation 'com.google.zxing:core:3.5.3'
 }
 
 // W3: keliver-publish, the relay's publish without the relay. Its start script
@@ -60,6 +63,16 @@ def keliverPublishStartScripts = tasks.register('keliverPublishStartScripts', Cr
   classpath = tasks.named('startScripts').get().classpath
 }
 distributions { main { contents { from(keliverPublishStartScripts) { into 'bin' } } } }
+
+// `keliver check` (PLAN_2026-11 WS5): the file-reading checks (editor ingest, unsupported
+// APIs, the bundle budget); bin/keliver-check runs the compile and then this.
+def keliverCheckStartScripts = tasks.register('keliverCheckStartScripts', CreateStartScripts) {
+  mainClass = 'KeliverCheckKt'
+  applicationName = 'keliver-check-jvm'
+  outputDir = layout.buildDirectory.dir('keliver-check-scripts').get().asFile
+  classpath = tasks.named('startScripts').get().classpath
+}
+distributions { main { contents { from(keliverCheckStartScripts) { into 'bin' } } } }
 
 // The production hosts' index reader and bridge binding (scripts/templates/*/BundleIndex.kt
 // and Bridges.kt) are template source with a @@PACKAGE@@ placeholder. Compile the Android

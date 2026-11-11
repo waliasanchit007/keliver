@@ -142,11 +142,17 @@ jobs:
             export KELIVER_SELFTEST_GRADLE_HOME="$HOME/ci-cache/gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/ci-cache/konan"
           elif [ "$SELF_HOSTED" = true ]; then
             mkdir -p "$HOME/.keliver-ci/selftest-gradle-home" "$HOME/.keliver-ci/konan"
-            [ -f "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties" ] || [ ! -f "$HOME/.keliver-ci/gradle-home/gradle.properties" ] \
+            # -s, not -f: the self-test's own trust-store grep leaves an EMPTY file
+            # behind when it finds nothing, which would block this copy for good.
+            [ -s "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties" ] || [ ! -f "$HOME/.keliver-ci/gradle-home/gradle.properties" ] \
               || cp "$HOME/.keliver-ci/gradle-home/gradle.properties" "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties"
             export KELIVER_SELFTEST_GRADLE_HOME="$HOME/.keliver-ci/selftest-gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/.keliver-ci/konan"
           fi
-          bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
+          # On a self-hosted machine whose owner keeps a "one heavy build at a time" lock,
+          # ~/.keliver-ci/lock-cmd names its wrapper (machine-local, not in the repo): the job
+          # waits for and holds it, so local builds can't starve the runner or crash xcodebuild.
+          LOCK=(); if [ "$SELF_HOSTED" = true ] && [ -x "$(cat "$HOME/.keliver-ci/lock-cmd" 2>/dev/null)" ]; then LOCK=("$(cat "$HOME/.keliver-ci/lock-cmd")" "ci:ios-host-selftest"); fi
+          "${LOCK[@]}" bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
             | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
       # Saved from main only: one copy, not one per pull request (the
       # repository's cache space is shared with ci.yml's).
@@ -244,13 +250,14 @@ jobs:
         if: runner.environment == 'self-hosted'
         run: |
           mkdir -p "$HOME/.keliver-ci/gradle-home" "$HOME/.keliver-ci/konan"
+          relay_port=8478
           {
-            echo "KELIVER_RELAY_PORT=8478"
+            echo "KELIVER_RELAY_PORT=$relay_port"
             echo "GRADLE_USER_HOME=$HOME/.keliver-ci/gradle-home"
             echo "KONAN_DATA_DIR=$HOME/.keliver-ci/konan"
             echo "KELIVER_IOS_T2=run"
           } >> "$GITHUB_ENV"
-          bash reference/inventory/ci/selfhosted/reset.sh "$(dirname "$RUNNER_TEMP")" 8478
+          bash reference/inventory/ci/selfhosted/reset.sh "$(dirname "$RUNNER_TEMP")" "$relay_port"
 
       - name: The toolchain
         run: |
@@ -287,8 +294,12 @@ jobs:
             | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == '878311ae9a42611aa5fbd49c20c2d5436fe16d49'"
 
       - name: iOS production OTA on the simulator — P1–P7
+        env:
+          SELF_HOSTED: ${{ runner.environment == 'self-hosted' }}
         run: |
-          bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
+          # The machine's heavy-build lock, as in the self-test job.
+          LOCK=(); if [ "$SELF_HOSTED" = true ] && [ -x "$(cat "$HOME/.keliver-ci/lock-cmd" 2>/dev/null)" ]; then LOCK=("$(cat "$HOME/.keliver-ci/lock-cmd")" "ci:ios-host-ota"); fi
+          "${LOCK[@]}" bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
             "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.18.zip"
 
       - name: Save the Kotlin/Native toolchain and Gradle downloads
