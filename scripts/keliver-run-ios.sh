@@ -44,6 +44,11 @@ while [ $# -gt 0 ]; do
     *) APP_DIR="$1"; shift ;;
   esac
 done
+for v in "KELIVER_RUN_WAIT_SECONDS=$WAIT" "KELIVER_RUN_QUIET_SECONDS=$QUIET"; do
+  case "${v#*=}" in
+    ''|*[!0-9]*) echo "$NAME: ${v%%=*} must be a whole number of seconds, not \"${v#*=}\"" >&2; exit 2 ;;
+  esac
+done
 [ -d "$APP_DIR" ] || fail "no such directory: $APP_DIR"
 APP_DIR="$(cd "$APP_DIR" && pwd -P)"
 [ -f "$APP_DIR/keliver.portal.json" ] || fail "$APP_DIR has no keliver.portal.json: run this in a Keliver app (keliver-init makes one)."
@@ -82,7 +87,8 @@ echo "$NAME: the portal on port $PORT has published bundle sequence $LATEST"
 command -v xcrun >/dev/null && command -v xcodebuild >/dev/null \
   || fail "Xcode's xcrun and xcodebuild are needed: this runs on a Mac with Xcode (xcode-select -p names the one in use)."
 # Its warnings (on stderr) stay out of the JSON read below.
-SIMS="$(xcrun simctl list -j devices)" || fail "xcrun simctl list devices failed (above)."
+SIMS="$(xcrun simctl list -j devices)" \
+  || fail "xcrun simctl list devices failed (above). If xcode-select -p names the Command Line Tools rather than Xcode, point it at Xcode: sudo xcode-select -s /Applications/Xcode.app"
 # One line, "<udid>|<state>|<name>|<runtime>", or the reason none is chosen.
 SIM="$(printf '%s' "$SIMS" | python3 -I -c '
 import json, re, sys
@@ -232,7 +238,15 @@ while [ "$t" -lt "$WAIT" ]; do
   sleep 3; t=$((t + 3))
   line="$(hostlog | grep -E 'codeLoadSuccess |codeLoadFailed|refusing to load|refusing a manifest URL|bundle index: |bundle lookup failed|bundle lookup: HTTP|no compatible bundle' | head -1 || true)"
   case "$line" in
-    *"codeLoadSuccess "*"source=network"*) outcome=ok; break ;;
+    *"codeLoadSuccess "*"source=network"*)
+      # A host made for another server reached $SERVER only if it says it took the launch's
+      # server: a release Kotlin framework ignores it and loads from its own BUNDLE_SERVER.
+      if [ -n "$LAUNCH_SERVER" ] && ! hostlog | grep -qF "bundle server from the launch environment (a debug build): $LAUNCH_SERVER"; then
+        outcome=notoverridden
+      else
+        outcome=ok
+      fi
+      break ;;
     *"codeLoadSuccess "*) outcome=cache; break ;;
     ?*) outcome=failed; break ;;
   esac
@@ -263,6 +277,8 @@ fi
 hostlog | tail -12 >&2 || true
 case "$outcome" in
   cache)  fail "the host started from its cached bundle, not from $SERVER: it did not reach the relay (its log is above)." ;;
+  notoverridden)
+    fail "the host loaded a bundle, but not from $SERVER: it never said it took the bundle server from the launch environment, so it looked at ${BUILT_FOR:-its HostConfig.kt server}. The launch override was not taken: only a debug Kotlin framework reads it (is the Debug configuration building a release one?). Or set BUNDLE_SERVER = \"$SERVER\" in $CONFIG." ;;
   failed) fail "the host did not load a bundle: $(printf '%s' "$line" | sed 's/.*KeliverHost: //')" ;;
 esac
 [ -s "$HOSTLOG" ] || fail "the host printed nothing within ${WAIT} s: did it start? ($OUT/launch.log, $OUT/host-stderr.log)"

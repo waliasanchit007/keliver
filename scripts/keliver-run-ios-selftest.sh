@@ -55,8 +55,12 @@ case "$1" in
     for a in "$@"; do case "$a" in --stdout=*) out="${a#--stdout=}" ;; esac; done
     [ -n "$out" ] || { echo "stand-in: no --stdout" >&2; exit 1; }
     n=$(( $(cat "$FAKE_LAUNCHES" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$FAKE_LAUNCHES"
-    if [ "${FAKE_QUIET_LAUNCHES:-0}" -ge "$n" ]; then : > "$out"; echo "launched: 4242"; exit 0; fi
+    # A quiet launch leaves --stdout as it found it: an old host.log is the command's to remove.
+    if [ "${FAKE_QUIET_LAUNCHES:-0}" -ge "$n" ]; then echo "launched: 4242"; exit 0; fi
     { echo "KeliverHost: verifying manifests with portal-ed25519 abcd1234…; updates live"
+      # A debug Kotlin framework says it took the launch's server; a release one (FAKE_RELEASE_FRAMEWORK) ignores it.
+      [ -n "${SIMCTL_CHILD_KELIVER_BUNDLE_SERVER:-}" ] && [ "${FAKE_RELEASE_FRAMEWORK:-}" != 1 ] \
+        && echo "KeliverHost: bundle server from the launch environment (a debug build): $SIMCTL_CHILD_KELIVER_BUNDLE_SERVER"
       [ -n "${FAKE_OUTCOME:-}" ] && echo "KeliverHost: $FAKE_OUTCOME"; } > "$out"
     echo "launched: 4242" ;;
 esac
@@ -107,14 +111,24 @@ json.dump({"devices": {
 PY
 }
 
-# A relay: /devstate, and /bundles/index.json from $RUN/index.json.
+# A relay: /devstate, and /bundles/index.json from $RUN/index.json. It logs every request's
+# method and path to $RUN/relay.log, and answers any POST (a publish) with 404.
 PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')"
+RELAY_LOG="$RUN/relay.log"
 cat > "$RUN/relay.py" <<'PY'
 import http.server, sys
 root = sys.argv[2]
 class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
+    def note(self):
+        with open(root + "/relay.log", "a") as f:
+            f.write("%s %s\n" % (self.command, self.path))
+    def do_POST(self):
+        self.note(); self.send_response(404); self.end_headers()
+    def do_PUT(self): self.do_POST()
+    def do_DELETE(self): self.do_POST()
     def do_GET(self):
+        self.note()
         if self.path == "/devstate":
             body = b'{"ok":true}'
         elif self.path == "/bundles/index.json":
@@ -165,7 +179,7 @@ BEFORE="$(digest "$APP")"
 
 run() {  # $1 = label; then the command's arguments. Output in $RUN/$1.out, status in $RC.
   local label="$1"; shift
-  : > "$FAKE_LOG"; rm -f "$FAKE_LAUNCHES"
+  : > "$FAKE_LOG"; : > "$RELAY_LOG"; rm -f "$FAKE_LAUNCHES"
   PATH="$FAKE:$PATH" KELIVER_RUN_WAIT_SECONDS="${WAIT:-6}" "$CMD" "$@" > "$RUN/$label.out" 2>&1; RC=$?
 }
 says() { grep -qF -- "$2" "$RUN/$1.out"; }
@@ -175,6 +189,10 @@ only_listed() { ! grep '^xcrun ' "$FAKE_LOG" | grep -qv '^xcrun simctl list -j d
 # --- refusals before anything is asked of a simulator ---------------------------------
 run help --help
 [ "$RC" = 0 ] && says help "this app's screens on an iOS simulator" && ok "--help prints what it does" || bad "--help: rc=$RC"
+
+WAIT=two run badwait "$RUN"
+[ "$RC" = 2 ] && says badwait 'KELIVER_RUN_WAIT_SECONDS must be a whole number of seconds, not "two"' && [ ! -s "$FAKE_LOG" ] \
+  && ok "a KELIVER_RUN_WAIT_SECONDS that is not a number: refused (usage), naming it" || bad "a non-numeric wait: rc=$RC $(head -2 "$RUN/badwait.out")"
 
 mkdir -p "$RUN/not-an-app"
 run notapp "$RUN/not-an-app"
@@ -187,6 +205,9 @@ run norelay "$APP"
 
 python3 "$RUN/relay.py" "$PORT" "$RUN" & RELAY_PID=$!
 for _ in $(seq 1 50); do curl -sf -m 1 -o /dev/null "http://127.0.0.1:$PORT/devstate" && break; sleep 0.1; done
+# The relay's log would show a publish: the "never publishes" row below can fail.
+: > "$RELAY_LOG"; curl -s -m 5 -o /dev/null -X POST "http://127.0.0.1:$PORT/publish" || true
+grep -qx "POST /publish" "$RELAY_LOG" && ok "the stand-in relay logs a POST /publish (so a publish would be seen)" || bad "the relay did not log a POST: $(cat "$RELAY_LOG")"
 
 echo '{"format":1,"entries":[]}' > "$RUN/index.json"
 run nobundle "$APP"
@@ -204,7 +225,8 @@ PATH="$NOX" "$CMD" "$APP" > "$RUN/noxcode.out" 2>&1; RC=$?
 
 FAKE_LIST_FAILS=1 run listfails "$APP"
 [ "$RC" != 0 ] && says listfails "xcrun simctl list devices failed" && says listfails "CoreSimulatorService connection became invalid" && only_listed \
-  && ok "simctl cannot list the simulators: refused, with simctl's own error" || bad "a failed list: rc=$RC $(tail -2 "$RUN/listfails.out" | tr '\n' ' ')"
+  && says listfails "xcode-select -s /Applications/Xcode.app" \
+  && ok "simctl cannot list the simulators: refused, with simctl's own error and the xcode-select hint"|| bad "a failed list: rc=$RC $(tail -2 "$RUN/listfails.out" | tr '\n' ' ')"
 
 python3 -c 'import json,sys; json.dump({"devices": {"com.apple.CoreSimulator.SimRuntime.watchOS-11-2": []}}, open(sys.argv[1], "w"))' "$FAKE_SIMS"
 run nosim "$APP"
@@ -256,7 +278,10 @@ grep -qx "open -a Simulator --args -CurrentDeviceUDID $PHONE_B" "$L" && ok "it s
 others="$(grep '^xcrun simctl' "$L" | grep -v "^xcrun simctl list -j devices$" | grep -v " $PHONE_B" || true)"
 [ -z "$others" ] && ! grep -q "$PHONE_A" "$L" && ok "every simctl call names the chosen simulator: the other booted one is never touched" \
   || bad "simctl calls not on the chosen simulator: $others"
-grep -qi 'publish' "$L" && bad "it asked something to publish" || ok "it never publishes"
+relay_asked="$(sort -u "$RELAY_LOG" | tr '\n' ' ')"
+[ "$relay_asked" = "GET /bundles/index.json GET /devstate " ] && ! grep -qi 'publish' "$L" \
+  && ok "it never publishes: of the relay it asks only GET /devstate and GET /bundles/index.json" \
+  || bad "it asked the relay for more than reading: $relay_asked"
 [ "$(digest "$APP")" = "$BEFORE" ] && ok "the app's files are unchanged (all it writes is under build/)" || bad "it changed the app's files"
 says happy "takes the new bundle while it is open" && says happy "$OUT/host.log" \
   && ok "it says how updates reach the open app, and where the host's log is" || bad "no live-update or log line: $(tail -3 "$RUN/happy.out" | tr '\n' ' ')"
@@ -289,6 +314,23 @@ FAKE_QUIET_LAUNCHES=1 KELIVER_RUN_QUIET_SECONDS=3 WAIT=12 run quiet "$APP"
 FAKE_QUIET_LAUNCHES=9 KELIVER_RUN_QUIET_SECONDS=3 run neverstarted "$APP"
 [ "$RC" != 0 ] && says neverstarted "the host printed nothing within 6 s: did it start?" && [ "$(calls '^xcrun simctl launch')" = 2 ] \
   && ok "a host that never prints: one relaunch, then it fails, saying so" || bad "a host that never starts: rc=$RC $(tail -3 "$RUN/neverstarted.out" | tr '\n' ' ')"
+
+# A host.log left by an earlier run that loaded from the network: a launch that prints nothing
+# must not be read as a success from it.
+mkdir -p "$OUT"; echo "KeliverHost: codeLoadSuccess modules=4 sequence=3 source=network" > "$OUT/host.log"
+FAKE_QUIET_LAUNCHES=9 KELIVER_RUN_QUIET_SECONDS=3 run stalelog "$APP"
+[ "$RC" != 0 ] && says stalelog "the host printed nothing within 6 s" && ! says stalelog "loaded bundle sequence" \
+  && ok "an old host.log saying codeLoadSuccess, and a launch that prints nothing: it fails (the old log is removed first)" \
+  || bad "a stale host.log: rc=$RC $(tail -3 "$RUN/stalelog.out" | tr '\n' ' ')"
+
+# An app under a path with spaces.
+SPACED="$RUN/with spaces/my app"; mkdir -p "$SPACED"
+printf '{"port": %s}\n' "$PORT" > "$SPACED/keliver.portal.json"
+host_ios "$SPACED" "http://localhost:$PORT" ats
+run spaced "$SPACED"
+[ "$RC" = 0 ] && says spaced "loaded bundle sequence 3" && grep -qx "xcodebuild-cwd $SPACED" "$FAKE_LOG" \
+  && grep -qF -- "--stdout=$SPACED/build/keliver-run-ios/host.log" "$FAKE_LOG" \
+  && ok "an app under a path with spaces: built, started and loaded" || bad "a path with spaces: rc=$RC $(tail -3 "$RUN/spaced.out" | tr '\n' ' ')"
 
 export FAKE_OUTCOME="bundle lookup failed: Could not connect to the server."
 run lookupfails "$APP"
@@ -335,6 +377,18 @@ assert p["NSAppTransportSecurity"]["NSExceptionDomains"]["localhost"]["NSExcepti
 assert p["CADisableMinimumFrameDurationOnPhone"] is True
 PY
 [ "$(digest "$OTHER")" = "$OTHER_BEFORE" ] && ok "host-ios/ is unchanged (HostConfig.kt and Info.plist as they were)" || bad "it changed the other app's files"
+says other "loaded bundle sequence 3" && grep -qF "bundle server from the launch environment (a debug build): http://localhost:$PORT" "$OTHER/build/keliver-run-ios/host.log" \
+  && ok "success counted only with the host's own line that it took the launch's server" || bad "the override line: $(cat "$OTHER/build/keliver-run-ios/host.log")"
+
+# The same host, but its Debug configuration builds a release Kotlin framework: the launch's
+# server is ignored, and the host loads from its own BUNDLE_SERVER (source=network all the same).
+FAKE_RELEASE_FRAMEWORK=1 run notoverridden "$OTHER"
+[ "$RC" != 0 ] && grep -qx "launch-env http://localhost:$PORT" "$FAKE_LOG" \
+  && says notoverridden "the host loaded a bundle, but not from http://localhost:$PORT" \
+  && says notoverridden "The launch override was not taken" && says notoverridden "so it looked at https://bundles.example.com" \
+  && ! says notoverridden "running —" \
+  && ok "a host that ignores the launch's server (a release framework): not a success; it says the override was not taken" \
+  || bad "an ignored override: rc=$RC $(tail -3 "$RUN/notoverridden.out" | tr '\n' ' ')"
 
 # The same, from before tools 0.3.10: its debug build reads no server at launch.
 OLDHOST="$RUN/oldhost"; mkdir -p "$OLDHOST"
