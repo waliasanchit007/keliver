@@ -53,13 +53,14 @@ class GuestFrameTraceTest {
 
   @Test fun eachCompositionsEndIsReportedBeforeItsChangeList() = runTest {
     val log = mutableListOf<String>()
+    var composedCalls = 0
     val trace = object : KeliverTrace {
       override fun mark(name: String) {
         log += "mark $name"
       }
 
       override fun composed() {
-        log += "composed"
+        composedCalls++
       }
     }
     val tester = TreehouseTester(this)
@@ -79,17 +80,20 @@ class GuestFrameTraceTest {
     assertThat((view.views.single() as ButtonValue).text).isEqualTo("This is TreehouseTesterTestHappyPathStep2")
 
     assertThat(log).containsExactly(
+      // The app's lifecycle starts: the guest asks once which services the host bound.
+      "serviceNames",
       // The screen's start: its first composition, then its first change list.
       "start {",
-      "composed",
+      "KeliverTrace.composed",
       "sendChanges",
       "start }",
-      // A frame: its composition, then its change list.
+      // A frame: its composition, then its change list. Once per frame, not more.
       "sendFrame {",
-      "composed",
+      "KeliverTrace.composed",
       "sendChanges",
       "sendFrame }",
     )
+    assertThat(composedCalls).isEqualTo(2)
 
     treehouseApp.stop()
     treehouseApp.close()
@@ -109,10 +113,13 @@ class GuestFrameTraceTest {
 
     tester.openAndChangeTheScreen()
 
-    // The guest's one composed() failed in Zipline (no such function) and was not repeated: the
-    // frame's call log has nothing between its start and its change list.
+    // The guest's one composed() reached the host, failed in Zipline (the host's service has no
+    // such function), and was not repeated: the frame's call log has nothing between its start
+    // and its change list.
     assertThat(log).containsExactly(
+      "serviceNames",
       "start {",
+      "KeliverTrace.unknownFunction",
       "sendChanges",
       "start }",
       "sendFrame {",
@@ -129,7 +136,10 @@ class GuestFrameTraceTest {
 
     tester.openAndChangeTheScreen()
 
+    // The guest asked once which services the host bound, found no KeliverTrace, and never
+    // called it: not in the start, not in the frame.
     assertThat(log).containsExactly(
+      "serviceNames",
       "start {",
       "sendChanges",
       "start }",
@@ -172,7 +182,8 @@ class GuestFrameTraceTest {
 
   /**
    * Logs the host's calls into a screen's start and a frame ("start {" … "start }"), and the
-   * change lists the guest sends the host (Zipline reports a guest's call to the host as well).
+   * guest's calls to the host (Zipline reports those as well): its change lists, its calls into
+   * KeliverTrace, and its one lookup of the host's service names.
    */
   private class CallLog(private val log: MutableList<String>) : EventListener.Factory {
     override fun create(app: TreehouseApp<*>, manifestUrl: String?) = object : EventListener() {
@@ -182,6 +193,17 @@ class GuestFrameTraceTest {
           signature.startsWith("fun start(dev.keliver.treehouse.ZiplineTreehouseUi.Host)") -> log += "start {"
           signature.startsWith("fun sendFrame(") -> log += "sendFrame {"
           signature.startsWith("fun sendChanges(") -> log += "sendChanges"
+          // Every call the guest makes into the host's KeliverTrace, including one the host's
+          // service has no function for: Zipline reports that as "fun unknownFunction()".
+          call.serviceName == "KeliverTrace" -> {
+            log += "KeliverTrace." + signature.substringAfter("fun ").substringBefore("(")
+            return null
+          }
+          // The guest's question to the host: which services did you bind?
+          call.serviceName == "zipline/host" && signature.startsWith("val serviceNames:") -> {
+            log += "serviceNames"
+            return null
+          }
           else -> return null
         }
         return signature
