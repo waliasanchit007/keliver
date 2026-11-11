@@ -29,8 +29,9 @@ import app.cash.zipline.theOnlyZipline
  * from Zipline's internal `theOnlyZipline`: calling [Zipline.get] here would have to name that
  * same module, which this library cannot know (a different one throws). Zipline's internals are
  * reached with the suppression, as [prepareEnvironment] reaches into kotlinx.coroutines; a Zipline
- * (1.28 today) that renames them fails this module's compilation, and one that fails at run time
- * turns the profile off.
+ * (1.28 today) that renames them fails this module's compilation. An app that resolves such a
+ * Zipline against this already-built library gets a partial-linkage warning when it links its
+ * guest, and the lookup throws at run time, inside the `try` below: the profile turns off.
  */
 internal actual fun takeKeliverTrace(): KeliverTrace? = try {
   val zipline: Zipline? = theOnlyZipline
