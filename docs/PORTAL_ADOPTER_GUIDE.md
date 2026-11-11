@@ -433,6 +433,32 @@ xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulato
   -configuration Debug CODE_SIGNING_ALLOWED=NO build                  # or open it in Xcode
 ```
 
+**On a simulator, in one command** (from the next tools release): with the
+portal running and a bundle published, run
+
+```bash
+$KP/keliver-run-ios.sh                # --udid <udid> when more than one simulator is booted
+```
+
+It is `keliver-run-android.sh` for an iOS simulator. It needs a Mac with Xcode
+(`xcode-select -p` naming Xcode, not the Command Line Tools), at least one iOS
+simulator runtime installed, and `python3`. It takes the only booted
+simulator, or else boots a simulator on the newest iOS runtime (an iPhone when
+that runtime has one); it never picks a phone. It scaffolds `host-ios/` if the
+app has none, builds a debug host into `build/keliver-run-ios/`, installs and
+starts it, and waits until the host has loaded your bundle from
+`http://localhost:<port>` (a simulator reaches this Mac directly). A
+`host-ios/` made for another server is pointed at your relay for that launch
+only, and counts as loaded only when the host says it took that server;
+`host-ios/` is not changed. The host's log is `build/keliver-run-ios/host.log`.
+A simulator it boots stays booted, and the host it installs stays installed.
+
+It refuses, saying why, when two or more simulators are booted (choose one with
+`--udid`), when `host-ios/` is made for another server and is from before tools
+0.3.10 (it takes no server at launch: set `BUNDLE_SERVER` in `HostConfig.kt`),
+and when the build fails (the compiler's error, and the whole log in
+`build/keliver-run-ios/build.log`).
+
 Your portal's public key and the servers go into
 `host-ios/src/iosMain/kotlin/<package>/HostConfig.kt`; commit that file. A
 release build refuses `http://`. A debug build also takes the bundle server
