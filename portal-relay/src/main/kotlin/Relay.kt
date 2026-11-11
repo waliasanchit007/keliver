@@ -409,6 +409,11 @@ private fun newestBundleVersion(): Int? =
 /** Live device updates: `GET /bundles/events` (BundleEvents.kt), announced after each stored bundle. */
 private val bundleEvents by lazy { BundleEvents(::newestBundleVersion) }
 
+/** ED3: the device proxy's own listeners, so LAN clients never take the relay's slots or its devices count. */
+private val deviceProxyEvents by lazy {
+  BundleEvents(::newestBundleVersion, maxListeners = DeviceProxy.MAX_LISTENERS, maxPerKey = DeviceProxy.MAX_LISTENERS_PER_IP)
+}
+
 /**
  * M6: publish compiles the CANONICAL app project as-is (screens/ are already
  * the source of truth in git; logic/ + entry are hand-owned) -> sign -> store.
@@ -1087,6 +1092,21 @@ fun main(args: Array<String>) {
     System.err.println("portal-server: ${it.message}")
     kotlin.system.exitProcess(64)
   }
+  // ED3: the device proxy, off unless asked for; settled as early as the relay's own address.
+  val proxyAddress = runCatching { DeviceProxy.bindAddress(System.getenv(DeviceProxy.ENV)) }.getOrElse {
+    System.err.println("portal-server: ${it.message}")
+    kotlin.system.exitProcess(64)
+  }
+  val proxyPort = runCatching { DeviceProxy.port(System.getenv(DeviceProxy.PORT_ENV), PORT) }.getOrElse {
+    System.err.println("portal-server: ${it.message}")
+    kotlin.system.exitProcess(64)
+  }
+  if (proxyAddress != null) {
+    RelayAccess.portTakenBy(proxyPort)?.let { taken ->
+      System.err.println("portal-server: the device proxy's port $proxyPort is already in use (answering on $taken); set ${DeviceProxy.PORT_ENV}.")
+      kotlin.system.exitProcess(64)
+    }
+  }
   RelayAccess.portTakenBy(PORT)?.let { taken ->
     System.err.println(
       "portal-server: port $PORT is already in use (answering on $taken). Stop that process, " +
@@ -1518,7 +1538,10 @@ fun main(args: Array<String>) {
       when (ex.requestMethod) {
         "POST" -> {
           val (ok, logText) = publish()
-          if (ok) bundleEvents.announce()
+          if (ok) {
+            bundleEvents.announce()
+            deviceProxyEvents.announce()
+          }
           respond(ex, if (ok) 200 else 422, logText, contentType = "text/plain")
         }
         else -> respond(ex, 405)
@@ -1580,8 +1603,33 @@ fun main(args: Array<String>) {
     }
   }
 
+  // ED3: where the device proxy is, for the editor's link and QR code, and its own listeners. Read-only.
+  val proxyUrls = proxyAddress?.let { DeviceProxy.urls(it, proxyPort) }
+  server.createContext("/device-proxy") { ex ->
+    handle(ex) {
+      if (ex.requestMethod != "GET") {
+        respond(ex, 405)
+      } else {
+        respond(ex, 200, DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0))
+      }
+    }
+  }
+
   server.executor = null
+  // The proxy starts before the relay serves anything, so a port taken on its own address is a clean exit 64.
+  if (proxyAddress != null) {
+    runCatching { DeviceProxy(bundlesDir, deviceProxyEvents).start(proxyAddress, proxyPort) }.onFailure {
+      System.err.println("portal-server: the device proxy cannot listen on ${proxyAddress.hostAddress}:$proxyPort ($it); set ${DeviceProxy.PORT_ENV}.")
+      kotlin.system.exitProcess(64)
+    }
+  }
   server.start()
+  if (proxyAddress != null) {
+    println(
+      "portal-server: device proxy on ${if (proxyAddress.isAnyLocalAddress) "every interface" else proxyAddress.hostAddress}:$proxyPort " +
+        "(${DeviceProxy.ENV}) — GET /bundles/* only; debug hosts: ${proxyUrls!!.joinToString(" ")}",
+    )
+  }
   println("portal-server: :$PORT — store=$root repo=$repoDir  active=${activeScreen()}")
   println("portal-server: endpoints /projects /screens /draft /active /tree /publickey /publish /bundles")
 }
