@@ -163,7 +163,7 @@ object Recognizer {
       undeclared = if (unknownWhy != null) UNKNOWN_TYPE else null,
       unknownWhy = unknownWhy,
     )
-    val walk = Walker(screenCtx, components, lookup, decls)
+    val walk = Walker(screenCtx, components, lookup, decls, composeContext(file))
     val root = walk.rootOf(body)
     val contract = ifaceClass?.let { iface ->
       Contract(
@@ -334,6 +334,9 @@ object Recognizer {
       )
     }
     val acceptsModifier = paramTypes["modifier"]?.let(::isModifierType) == true
+    val compose = composeContext(file)
+    // ED0: a List parameter is a binding a Repeat iterates (`for (tag in tags)`).
+    if (compose != null) paramTypes.filter { (n, t) -> t.trim().startsWith("List<") && n !in eventParams }.keys.forEach { valueParams += it }
     val ctx = NameCtx.Component(
       valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
       modifierParam = acceptsModifier,
@@ -344,6 +347,7 @@ object Recognizer {
       components,
       lookup,
       typeDecls(file),
+      compose,
     )
     val root = walk.rootOf(body)
     val hasRaw = containsRawCode(root)
@@ -375,6 +379,10 @@ object Recognizer {
     )
     return RecognizedComponent(spec, root, name, walk.psiByHandle, file, lookup, walk.condParser(), walk.rawReasons.toList())
   }
+
+  /** ED0 (docs/ED0_SPIKE.md): the Compose-shaped reading of [file], only while its flag is on. */
+  private fun composeContext(file: org.jetbrains.kotlin.psi.KtFile): ComposeContext? =
+    ComposeIngest.catalog()?.let { ComposeContext(it, file) }
 
   private fun containsRawCode(n: DocNode): Boolean = when (n) {
     is DocNode.RawCode -> true
@@ -421,6 +429,8 @@ object Recognizer {
     private val tokens: TokenLookup = TokenLookup { null },
     /** K4: the file's top-level classes and interfaces — a Repeat's item type is read here. */
     private val typeDecls: Map<String, KtClass> = emptyMap(),
+    /** ED0: the generated catalog and the file's imports when the flag is on; null = today's grammar. */
+    private val compose: ComposeContext? = null,
   ) {
     private val componentNames = components.names()
     /**
@@ -558,6 +568,7 @@ object Recognizer {
           mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
           children = children)
       }
+      if (compose != null) composeStatement(expr, itemScope, parentType)?.let { return it }
 
       val call = expr as? KtCallExpression
       val type = call?.calleeExpression?.text
@@ -642,6 +653,184 @@ object Recognizer {
         ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
         .map { statementToNode(it, itemScope, type) }
       return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
+    }
+
+    // ── ED0 spike (docs/ED0_SPIKE.md): Compose-shaped code, only while its flag is on ──────────
+
+    /** Why the last Compose argument or chain did not read (the RawCode reason). */
+    private var composeWhy: String? = null
+
+    /**
+     * A statement the generated catalog claims: a `for` loop (a Repeat), a call the file's imports
+     * resolve to a generated widget (a Compose node, or RawCode with the reason), or a call to an
+     * imported `dev.keliver.compose.*` name the catalog does not generate (RawCode: read by its
+     * simple name it could be taken for a legacy widget). Null = today's grammar reads it.
+     */
+    private fun composeStatement(expr: KtExpression, itemScope: Set<String>, parentType: String?): DocNode? {
+      val cc = compose ?: return null
+      recognizeFor(expr)?.let { (items, itemVar, bodyStmts) ->
+        val had = itemVar in itemTypes
+        val outer = itemTypes[itemVar]
+        itemTypes[itemVar] = itemMemberTypes(items)
+        val children = try {
+          bodyStmts.map { statementToNode(it, itemScope + itemVar, parentType) }
+        } finally {
+          if (had) itemTypes[itemVar] = outer else itemTypes.remove(itemVar)
+        }
+        return DocNode.Widget(track(nextTemp(), expr), "Repeat",
+          mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
+          children = children)
+      }
+      val call = expr as? KtCallExpression ?: return null
+      val simple = (call.calleeExpression as? org.jetbrains.kotlin.psi.KtNameReferenceExpression)?.getReferencedName() ?: return null
+      cc.widget(simple)?.let { return composeNode(call, it, itemScope, parentType) }
+      val imported = cc.resolve(simple) { true }
+      if (imported != null && imported.startsWith("dev.keliver.compose.")) {
+        return raw(expr, "`$simple(…)` is `$imported`, which the generated catalog does not include")
+      }
+      return null
+    }
+
+    /** `for (x in items) { … }` over a list binding — the Repeat `items.forEach { x -> … }` is. */
+    private fun recognizeFor(expr: KtExpression): Triple<String, String, List<KtExpression>>? {
+      val f = expr as? org.jetbrains.kotlin.psi.KtForExpression ?: return null
+      val param = f.loopParameter ?: return null
+      if (param.destructuringDeclaration != null || param.typeReference != null) return null
+      val itemVar = param.name ?: return null
+      val range = f.loopRange?.text?.trim() ?: return null
+      val items = when (ctx) {
+        is NameCtx.Screen -> ctx.bindingsParam?.let {
+          Regex("^${Regex.escape(it)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(range)?.groupValues?.get(1)
+        }
+        is NameCtx.Component -> range.takeIf { it in ctx.valueParams }
+      } ?: return null
+      val body = (f.body as? KtBlockExpression)?.statements ?: return null
+      return Triple(items, itemVar, body)
+    }
+
+    /** A call to the generated widget [fq]: its overload, arguments, modifier list and slots. */
+    private fun composeNode(call: KtCallExpression, fq: String, itemScope: Set<String>, parentType: String?): DocNode {
+      val cc = compose!!
+      val scope = cc.scopeOf(parentType)
+      composeWhy = null
+      val bound = ComposeSyntax.bind(call, cc.catalog.widgetOverloads(fq)) { p, arg -> composeFits(p, arg, scope, itemScope) }
+      val b = when (bound) {
+        is ComposeSyntax.Bound.Ok -> bound.binding
+        is ComposeSyntax.Bound.No -> return raw(call, bound.why)
+      }
+      val e = b.entry
+      val props = LinkedHashMap<String, PropValue>()
+      var modifiers: Map<String, PropValue> = emptyMap()
+      for (p in e.params) {
+        val arg = b.args[p.name] ?: continue
+        when (p.kind) {
+          "modifier" -> modifiers = composeChain(arg.getArgumentExpression(), scope, itemScope)!!
+          "slot" -> {}
+          else -> props[p.name] = composeArg(p, arg, itemScope)!!
+        }
+      }
+      val single = e.singleContentSlot
+      val slotArgs = b.args.filterKeys { e.param(it)?.kind == "slot" }.entries.sortedBy { it.value.textOffset }
+      val children = if (single != null) {
+        ComposeSyntax.lambdaOf(b.args.getValue(single.name))!!.bodyExpression?.statements.orEmpty()
+          .map { statementToNode(it, itemScope, e.type) }
+      } else {
+        slotArgs.map { (name, arg) ->
+          val lambda = ComposeSyntax.lambdaOf(arg)!!
+          DocNode.Widget(
+            track(nextTemp(), lambda), "slot:$name",
+            children = lambda.bodyExpression?.statements.orEmpty().map { statementToNode(it, itemScope, "${e.type}/$name") },
+          )
+        }
+      }
+      return DocNode.Widget(track(nextTemp(), call), e.type, props, modifiers, children)
+    }
+
+    /** Null when [arg] reads as [p]'s kind; else why not. */
+    private fun composeFits(p: ComposeCatalog.Param, arg: org.jetbrains.kotlin.psi.KtValueArgument, scope: String?, itemScope: Set<String>): String? {
+      composeWhy = null
+      return when (p.kind) {
+        "modifier" -> if (composeChain(arg.getArgumentExpression(), scope, itemScope) != null) null else composeWhy
+        "slot" -> if (ComposeSyntax.lambdaOf(arg) != null) null else "a slot takes a `{ … }` lambda"
+        else -> if (composeArg(p, arg, itemScope) != null) null else composeWhy ?: "`${arg.text.oneLine()}` is outside the grammar"
+      }
+    }
+
+    /**
+     * A Compose argument's value: an event as an action; a binding (a screen field, a component
+     * parameter, an item — `tag` in `for (tag in tags)` too); a String literal or template, an Int,
+     * Boolean or Float literal; `null` where the parameter is nullable; any other type through the
+     * value table ([ComposeValues], kept as its wire JSON in a `"c"` literal).
+     */
+    private fun composeArg(p: ComposeCatalog.Param, arg: org.jetbrains.kotlin.psi.KtValueArgument, itemScope: Set<String>): PropValue? {
+      val ve = arg.getArgumentExpression() ?: return null.also { composeWhy = "an empty argument" }
+      val t = ve.text.trim()
+      fun no(why: String): PropValue? = null.also { composeWhy = why }
+      if (p.kind == "event") {
+        return parseValue(ve, ctx, itemScope, componentNames) as? PropValue.Action
+          ?: no("`${t.oneLine()}` is not an action (`{ b.x() }`, `b::x`, or a component's event parameter)")
+      }
+      if (t == "null") return if (p.nullable) PropValue.Lit("c", s = "null") else no("`null` for the non-null `${p.name}`")
+      if (t in itemScope) return PropValue.Bind(t)
+      when (val v = parseValue(ve, ctx, itemScope, componentNames)) {
+        is PropValue.Bind -> return v
+        is PropValue.Action -> return no("an action is not a ${p.type?.substringAfterLast('.')}")
+        else -> {}
+      }
+      val type = p.type ?: return no("`${p.name}` has no value type")
+      return when (type) {
+        "kotlin.String", "kotlin.Any" -> parseLiteral(t)?.takeIf { it.tag == "s" }
+          ?: TemplateSyntax.parse(ve) { templateRef(it, itemScope) }
+          ?: no("`${t.oneLine()}` is not a String literal, template or binding")
+        "kotlin.Int" -> parseLiteral(t)?.takeIf { it.tag == "i" }
+          ?: when (t) {
+            "Int.MAX_VALUE" -> PropValue.Lit("i", i = Int.MAX_VALUE)
+            else -> no("`${t.oneLine()}` is not an Int literal or binding")
+          }
+        "kotlin.Boolean" -> parseLiteral(t)?.takeIf { it.tag == "b" } ?: no("`${t.oneLine()}` is not a Boolean literal or binding")
+        "kotlin.Float" -> ComposeValues.floatLiteral(ve)?.let { PropValue.Lit("d", d = it.toDouble()) }
+          ?: no("`${t.oneLine()}` is not a Float literal (`1f`) or binding")
+        else -> when (val r = ComposeValues.read(ve, type)) {
+          is ComposeValues.Read.Ok -> PropValue.Lit("c", s = r.json)
+          is ComposeValues.Read.No -> no(r.why)
+        }
+      }
+    }
+
+    /**
+     * A `Modifier.a(…).b(…)` chain as the ordered element map ([ComposeSyntax] keys). An element is
+     * a generated modifier the file imports (or, scoped, one of the content's [scope]); null with
+     * [composeWhy] when any element is not.
+     */
+    private fun composeChain(expr: KtExpression?, scope: String?, itemScope: Set<String>): Map<String, PropValue>? {
+      val cc = compose!!
+      val calls = ComposeSyntax.chain(expr)
+        ?: return null.also { composeWhy = "`${expr?.text?.oneLine()}` is not a `Modifier.…` chain" }
+      val out = LinkedHashMap<String, PropValue>()
+      calls.forEachIndexed { i, c ->
+        val name = c.calleeExpression!!.text
+        val all = cc.catalog.modifiersNamed(name)
+        val candidates = all.filter { m -> if (m.scope == null) cc.imports(m) else m.scope == scope }
+        if (candidates.isEmpty()) {
+          composeWhy = when {
+            all.isEmpty() -> "`.$name(…)` is not a generated modifier"
+            all.all { it.scope != null } -> "`.$name(…)` is a member of ${all.mapNotNull { it.scope?.substringAfterLast('.') }.distinct().joinToString("/")}, not of this content's scope (${scope?.substringAfterLast('.') ?: "none"})"
+            else -> "`.$name(…)` is not imported from a generated group"
+          }
+          return null
+        }
+        val bound = ComposeSyntax.bind(c, candidates) { p, arg -> composeFits(p, arg, scope, itemScope) }
+        val b = when (bound) {
+          is ComposeSyntax.Bound.Ok -> bound.binding
+          is ComposeSyntax.Bound.No -> return null.also { composeWhy = bound.why }
+        }
+        out[ComposeSyntax.elementKey(i, b.entry)] = PropValue.Lit("b", b = true)
+        for (p in b.entry.params) {
+          val arg = b.args[p.name] ?: continue
+          out[ComposeSyntax.argKey(i, b.entry, p.name)] = composeArg(p, arg, itemScope) ?: return null
+        }
+      }
+      return out
     }
 
     /**

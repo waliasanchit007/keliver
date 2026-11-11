@@ -50,6 +50,8 @@ def generatorArgs = { List extra ->
     '--out-guest', rootProject.file('keliver-compose-gatea-compose/src/commonMain/kotlin').absolutePath,
     '--out-host', rootProject.file('keliver-compose-gatea-composeui/src/commonMain/kotlin').absolutePath,
     '--out-editor', rootProject.file('keliver-compose-gatea-schema/gatea.editor.json').absolutePath,
+    // ED0 spike (docs/ED0_SPIKE.md): the editor canvas's interpreter from a document node to the stubs.
+    '--out-editor-render', rootProject.file('portal-compose-render/src/commonMain/kotlin').absolutePath,
   ] + extra
 }
 

@@ -1,0 +1,76 @@
+// ED0 spike (docs/ED0_SPIKE.md): the editor canvas for Compose-shaped screens. A document read from
+// Compose-shaped code (portal-ingest, behind its ED0 flag) is drawn by calling the generated guest
+// stubs, so its changes travel the protocol into the generated host renderers as a device's do.
+// src/commonMain/…/Generated.kt is written by :keliver-compose-generator:generateComposeApi; the
+// rest is hand-written. A spike on a branch: not published, and nothing shipped depends on it.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+def samples = rootProject.file('keliver-compose-gatea-composeui/src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples')
+
+kotlin {
+  jvm()
+  wasmJs { browser() }
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.portalDocument
+        api projects.keliverComposeGateaCompose
+        implementation libs.kotlinx.serialization.json
+        implementation libs.jetbrains.compose.runtime
+      }
+    }
+    commonTest {
+      // Gate A's sample screen, compiled against the guest stubs: what the canvas is compared with.
+      kotlin.srcDir(new File(samples, 'guest'))
+      dependencies {
+        implementation libs.kotlin.test
+        implementation projects.keliverComposeGateaProtocolGuest
+        implementation projects.keliverProtocolGuest
+        implementation projects.keliverProtocolHost
+      }
+    }
+    jvmTest {
+      // The same screen as native Compose: what the canvas's pixels are compared with.
+      kotlin.srcDir(new File(samples, 'native'))
+      dependencies {
+        implementation projects.portalIngest
+        implementation projects.keliverComposeGateaComposeui
+        implementation projects.keliverComposeGateaProtocolHost
+        implementation projects.keliverMaterialComposeui
+        implementation projects.keliverLayoutComposeui
+        implementation projects.keliverLazylayoutComposeui
+        implementation projects.keliverLeakDetector
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.jetbrains.compose.ui
+        implementation libs.jetbrains.compose.ui.test
+        implementation libs.coil.compose.full
+        implementation rootProject.ext.skikoHostRuntime()
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
+
+tasks.named('jvmTest').configure {
+  systemProperty('dev.keliver.portal.ed0.editorJson', rootProject.file('keliver-compose-gatea-schema/gatea.editor.json').absolutePath)
+  systemProperty('dev.keliver.portal.ed0.sample', new File(samples, 'guest/SampleCard.kt').absolutePath)
+  systemProperty('dev.keliver.portal.ed0.golden', file('src/commonTest/kotlin/dev/keliver/portal/compose/render/SampleCardDocument.kt').absolutePath)
+  // -Ped0.updateGolden=true rewrites the golden document from the sample (then review its diff).
+  systemProperty('dev.keliver.portal.ed0.updateGolden', providers.gradleProperty('ed0.updateGolden').getOrElse('false'))
+  inputs.file(rootProject.file('keliver-compose-gatea-schema/gatea.editor.json'))
+  inputs.file(new File(samples, 'guest/SampleCard.kt'))
+}
+
+// The generator writes Generated.kt (its staleness guard compares it byte for byte) and the JVM
+// test writes the golden document: no spotless on either.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude('src/**/Generated.kt', 'src/commonTest/**/SampleCardDocument.kt')
+    }
+  }
+}

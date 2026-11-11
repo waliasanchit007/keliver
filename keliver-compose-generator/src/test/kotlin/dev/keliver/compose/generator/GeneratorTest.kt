@@ -17,6 +17,9 @@ package dev.keliver.compose.generator
 
 import java.io.File
 import kotlin.test.Test
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -72,6 +75,30 @@ class GeneratorTest {
     assertEquals(2, next.level)
     assertEquals(listOf(1, 2), next.modifiers.values.map { it.tag }.sorted())
     assertTrue(checkAppendOnly(first, next).isEmpty())
+  }
+
+  @Test fun codecNames() {
+    assertEquals("dev.keliver.compose.ui.graphics.ColorCodec", codecFq("dev.keliver.compose.ui.graphics.Color"))
+    assertEquals("dev.keliver.compose.ui.HorizontalAlignmentCodec", codecFq("dev.keliver.compose.ui.Alignment.Horizontal"))
+    assertEquals("dev.keliver.compose.foundation.layout.VerticalArrangementCodec", codecFq("dev.keliver.compose.foundation.layout.Arrangement.Vertical"))
+  }
+
+  @Test fun editorMetadataHasWhatED0Reads() {
+    // ED0 (docs/ED0_SPIKE.md): every parameter in Compose's order (modifier too), guest names, types and scopes.
+    val o = kotlinx.serialization.json.Json.parseToJsonElement(File("../keliver-compose-gatea-schema/gatea.editor.json").readText()).jsonObject
+    fun entries(k: String) = o.getValue(k).jsonArray.map { it.jsonObject }
+    fun s(e: kotlinx.serialization.json.JsonObject, k: String) = e[k]?.jsonPrimitive?.content
+    val text = entries("widgets").first { s(it, "name") == "Text" }
+    assertEquals("dev.keliver.compose.material3.Text", s(text, "guest"))
+    val params = text.getValue("params").jsonArray.map { it.jsonObject }
+    assertEquals(listOf("text", "modifier", "color"), params.take(3).map { s(it, "name") })
+    assertEquals("dev.keliver.compose.ui.graphics.Color", s(params[2], "type"))
+    val icon = entries("widgets").first { s(it, "name") == "Icon" }
+    assertEquals("true", icon.getValue("params").jsonArray.map { it.jsonObject }.first { s(it, "name") == "contentDescription" }["nullable"]?.jsonPrimitive?.content)
+    val row = entries("widgets").first { s(it, "name") == "Row" }
+    assertEquals("dev.keliver.compose.foundation.layout.RowScope", row.getValue("params").jsonArray.map { it.jsonObject }.first { s(it, "name") == "content" }.let { s(it, "scope") })
+    val weight = entries("modifiers").first { s(it, "compose") == "androidx.compose.foundation.layout.RowScope.weight" }
+    assertEquals("dev.keliver.compose.foundation.layout.RowScope", s(weight, "scope"))
   }
 
   @Test fun checkedInLockMatchesItsConfig() {

@@ -44,7 +44,18 @@ fun loadConfig(file: File): Config {
 }
 
 /** Everything one generation writes: relative path under an output root → text. */
-class Output(val schema: Map<String, String>, val guest: Map<String, String>, val host: Map<String, String>, val editor: String, val lock: Lock)
+class Output(
+  val schema: Map<String, String>,
+  val guest: Map<String, String>,
+  val host: Map<String, String>,
+  val editor: String,
+  val lock: Lock,
+  /** ED0: the editor canvas's interpreter (portal-compose-render), relative path → text. */
+  val editorRender: Map<String, String> = emptyMap(),
+)
+
+/** The package of the editor canvas's generated interpreter (ED0, docs/ED0_SPIKE.md). */
+const val EDITOR_RENDER_PACKAGE = "dev.keliver.portal.compose.render"
 
 fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List<File>): Output {
   val api = ApiReader(classpath)
@@ -54,7 +65,7 @@ fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List
   val lock = LockBuilder(oldLock)
   val plans = plan(config, decls, lock) + errorDecls.map { (d, message) -> Plan.ErrorStub(d, classify(d), "Keliver: $message") }
   val e = Emitter(config, plans)
-  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.editor(), lock.build())
+  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)))
 }
 
 fun main(argv: Array<String>) {
@@ -68,7 +79,8 @@ fun main(argv: Array<String>) {
   val sources = arg("--sources").split(File.pathSeparator).map(::File)
   val out = generate(config, oldLock, classpath, sources)
 
-  val roots = listOf(File(arg("--out-schema")) to out.schema, File(arg("--out-guest")) to out.guest, File(arg("--out-host")) to out.host)
+  val roots = listOf(File(arg("--out-schema")) to out.schema, File(arg("--out-guest")) to out.guest, File(arg("--out-host")) to out.host) +
+    (if ("--out-editor-render" in args) listOf(File(arg("--out-editor-render")) to out.editorRender) else emptyList())
   val expected = buildMap {
     for ((root, files) in roots) for ((path, text) in files) put(File(root, path), text)
     put(File(arg("--out-editor")), out.editor)
