@@ -109,6 +109,26 @@ fun successorOf(hidden: DeclInfo, decls: List<DeclInfo>): DeclInfo? = decls
   .filter { d -> d.params.filter { p -> hidden.params.none { it.name == p.name } }.all { it.hasDefault } }
   .minByOrNull { d -> d.params.size }
 
+/** What a plan's wire carries, parameter by parameter: equal shapes mean an equal wire apart from tags. */
+private fun wireShape(p: Plan.Generated): List<String> = p.wire.map { c ->
+  val t = c.param.type
+  "${c.param.name}:${c.kind}:${TypeMap.wireType(t, t.nullable || c.defaultCase == DefaultCase.EXPRESSION)}:${c.defaultCase}:${c.explicitNull}"
+}
+
+/**
+ * The entry each visible overload's stub sends (design §3): its own, unless a hidden predecessor's
+ * wire carries exactly the same parameters, in which case the predecessor's. Compose adding a
+ * parameter that does not travel yet (material3's `Text(autoSize)`, foundation's
+ * `clickable(interactionSource)`) then changes nothing on the wire, and a guest built now still
+ * renders on a host built before the new entry existed. The new entry stays in the lock; the stub
+ * moves to it once one of the added parameters travels.
+ */
+fun sentAs(plans: List<Plan.Generated>): Map<Plan.Generated, Plan.Generated> = plans.filter { !it.hidden }.mapNotNull { v ->
+  plans.filter { h -> h.hidden && h.successor == v.decl && wireShape(h) == wireShape(v) }
+    .minByOrNull { it.entry.tag }
+    ?.let { v to it }
+}.toMap()
+
 /** Why [expr] cannot be copied into a guest stub (it names a `*Defaults` member with no mirror), or null. */
 fun defaultsProblem(defaults: DefaultsMirror?, expr: String, decl: DeclInfo): String? =
   defaults?.resolve(expr, decl.imports, decl.pkg)?.filterIsInstance<DefaultsMirror.Member.Unsupported>()?.firstOrNull()

@@ -21,10 +21,13 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import dev.keliver.compose.wire.JsonCodec
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -68,6 +71,7 @@ public class LazyListState(
     private set
 
   /** The index of the last visible item, as the host last reported it (Compose: `layoutInfo`). */
+  @KeliverGeneratedApi
   public var lastVisibleItemIndex: Int by mutableIntStateOf(firstVisibleItemIndex)
     private set
 
@@ -75,10 +79,18 @@ public class LazyListState(
 
   private var command: ScrollCommand? by mutableStateOf(null)
 
+  /**
+   * The id of the last command this state issued, carried across a save and restore, so a
+   * restored state's commands never reuse an id the host has already run.
+   */
+  private var lastCommandId = 0
+
   /** The latest programmatic scroll, read by the guest's window of composed items. */
+  @KeliverGeneratedApi
   public val pendingScroll: ScrollCommand? get() = command
 
   /** What the list sends as its `state` property; reading it subscribes to new commands. */
+  @KeliverGeneratedApi
   public val wire: LazyListStateWire get() = LazyListStateWire(initialIndex, initialOffset, command)
 
   public suspend fun scrollToItem(index: Int, scrollOffset: Int = 0) {
@@ -91,24 +103,39 @@ public class LazyListState(
 
   private suspend fun scroll(index: Int, scrollOffset: Int, animated: Boolean) {
     require(index >= 0) { "Index should be non-negative ($index)" }
-    command = ScrollCommand((command?.id ?: 0) + 1, index, scrollOffset, animated)
+    lastCommandId++
+    command = ScrollCommand(lastCommandId, index, scrollOffset, animated)
     withFrameNanos { }
   }
 
-  /** Called by the list with the host's viewport (generated code; not for screens). */
+  /** Called by the list with the host's viewport. */
+  @KeliverGeneratedApi
   public fun onHostViewport(firstIndex: Int, lastIndex: Int, firstOffset: Int) {
     firstVisibleItemIndex = firstIndex
     lastVisibleItemIndex = lastIndex
     firstVisibleItemScrollOffset = firstOffset
   }
+
+  public companion object {
+    /**
+     * As Compose's `LazyListState.Saver`: saves the position (and the last command's id), so a
+     * restored guest starts where the host last reported, without a command to re-run.
+     */
+    public val Saver: Saver<LazyListState, *> = listSaver(
+      save = { listOf(it.firstVisibleItemIndex, it.firstVisibleItemScrollOffset, it.lastCommandId) },
+      restore = { LazyListState(it[0], it[1]).apply { lastCommandId = it[2] } },
+    )
+  }
 }
 
-/** As `androidx.compose.foundation.lazy.rememberLazyListState`. */
+/** As `androidx.compose.foundation.lazy.rememberLazyListState`: saved and restored with [LazyListState.Saver]. */
 @Composable
 public fun rememberLazyListState(
   initialFirstVisibleItemIndex: Int = 0,
   initialFirstVisibleItemScrollOffset: Int = 0,
-): LazyListState = remember { LazyListState(initialFirstVisibleItemIndex, initialFirstVisibleItemScrollOffset) }
+): LazyListState = rememberSaveable(saver = LazyListState.Saver) {
+  LazyListState(initialFirstVisibleItemIndex, initialFirstVisibleItemScrollOffset)
+}
 
 /** A programmatic scroll; [id] grows by one per command, so the host runs each once. */
 @Immutable

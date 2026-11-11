@@ -150,6 +150,25 @@ class GeneratorTest {
     assertTrue(runCatching { plan(config, listOf(hidden), LockBuilder(lock)) }.isFailure)
   }
 
+  @Test fun aSuccessorWhoseNewParameterDoesNotTravelSendsTheOldTag() {
+    val old = widgetDecl("Text", "text" to false, "maxLines" to true)
+    val lock = LockBuilder(Lock("g")).apply { widget(old, wire = listOf("text", "maxLines")) }.build()
+    val hidden = old.copy().apply { deprecation = "HIDDEN" }
+    val config = Config("g", "p", "S", emptyList(), emptyList(), emptyList(), emptyMap(), emptyList(), emptyList())
+    // Compose adds `autoSize`, a type with no codec: it does not travel, so the wire is the old one.
+    val autoSize = ParamInfo("autoSize", TypeRef("androidx.compose.foundation.text.TextAutoSize", nullable = true), hasDefault = true, defaultText = "null")
+    val current = old.copy(params = old.params + autoSize)
+    val plans = plan(config, listOf(hidden, current), LockBuilder(lock)).filterIsInstance<Plan.Generated>()
+    val visible = plans.single { !it.hidden }
+    val predecessor = plans.single { it.hidden }
+    assertTrue(visible.entry.tag != predecessor.entry.tag, "the new overload keeps its own lock entry")
+    assertEquals(predecessor, sentAs(plans)[visible], "a guest still sends the old tag, which an old host knows")
+    // Once a new parameter travels, the stub sends the new entry.
+    val travelling = old.copy(params = old.params + ParamInfo("minLines", TypeRef("kotlin.Int"), hasDefault = true, defaultText = "1"))
+    val later = plan(config, listOf(hidden, travelling), LockBuilder(lock)).filterIsInstance<Plan.Generated>()
+    assertEquals(emptyMap(), sentAs(later))
+  }
+
   @Test fun deprecationIsReadFromTheSources() {
     assertEquals("Use the other one", stringLiteral("\"Use the \" + \"other one\""))
   }

@@ -144,11 +144,16 @@ class SameSourceTest {
     assertEquals(native.width to native.height, guest.width to guest.height, "sizes")
     assertEquals(0, differingPixels(native, guest, "build/gate-b/orders-diff.png"), "pixels that differ between native Compose and the generated guest")
 
-    // A generated widget's own event (Card's and TextButton's onClick, not a modifier lambda).
+    // A generated widget's own event (not a modifier lambda): the first card's TextButton…
     onAllNodesWithText("Details").onFirst().performClick()
     waitForIdle()
     host.pump()
     assertEquals(listOf("Order 1042"), opened)
+    // …and the second Card's own onClick, by a tap on its title (inside the card, not a button).
+    onNodeWithText("Order 1041").performClick()
+    waitForIdle()
+    host.pump()
+    assertEquals(listOf("Order 1042", "Order 1041"), opened)
   }
 
   /**

@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:OptIn(KeliverGeneratedApi::class)
+
 package dev.keliver.compose.foundation.lazy
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import dev.keliver.compose.gatea.compose.ExtraLazyItem
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.lazylayout.compose.LazyListState as WindowState
 
 /*
@@ -188,23 +191,41 @@ public class LazyWindow internal constructor(private val state: LazyListState) {
 
 @Composable
 private fun Items(intervals: Intervals, range: IntRange) {
+  val sent = HashMap<String, Any>()
   for (index in range) {
     val interval = intervals.locate(index)
     val local = index - interval.start
     val itemKey = interval.key?.invoke(local)
     val content = interval.content
+    val wire = itemKey?.let(::wireKey)
+    if (wire != null) checkWireKey(sent, wire, itemKey)
     key(itemKey ?: index) {
-      ExtraLazyItem(key = itemKey?.let(::wireKey), content = { LazyItemScopeInstance.content(local) })
+      ExtraLazyItem(key = wire, content = { LazyItemScopeInstance.content(local) })
     }
   }
 }
 
-/** A guest key as the host's item key: typed, so `1` and `"1"` stay distinct; strings save in a Bundle. */
-private fun wireKey(key: Any): String = when (key) {
+/**
+ * A guest key as the host's item key: typed, so `1` and `"1"` stay distinct; strings save in a
+ * Bundle. A key of another type travels as its `toString()`, so two different keys that print the
+ * same would be one key on the host (which sees only the composed window's keys; the rest are
+ * placeholders keyed by index): [checkWireKey] refuses that in the window, in the guest, with a
+ * message, where Compose (which compares the keys themselves) would not.
+ */
+internal fun wireKey(key: Any): String = when (key) {
   is String -> "s:$key"
   is Int -> "i:$key"
   is Long -> "l:$key"
-  else -> "o:$key"
+  else -> "o:${key::class.simpleName}:$key"
+}
+
+internal fun checkWireKey(sent: MutableMap<String, Any>, wire: String, key: Any) {
+  val earlier = sent.put(wire, key) ?: return
+  require(earlier == key) {
+    "Keliver: the lazy list keys $earlier and $key differ but have the same toString(), which is how a key " +
+      "that is not a String, Int or Long reaches the host. Use a String, Int or Long key, or give the key type a distinct toString()."
+  }
+  // An equal key twice is Compose's own error, which the host reports as Compose does.
 }
 
 @Composable

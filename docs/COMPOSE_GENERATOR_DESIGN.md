@@ -561,7 +561,14 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
   children inside the real `LazyItemScope` (so `fillParentMaxWidth` and `animateItem` are
   Compose's), and shows a 48 dp placeholder outside the window. `LazyListState` is host-owned
   (§10): `scrollToItem` and `animateScrollToItem` are commands in the `state` property;
-  `firstVisibleItemIndex` and its offset follow the viewport event.
+  `firstVisibleItemIndex` and its offset follow the viewport event. The guest's
+  `rememberLazyListState` saves the position with a `Saver`, as Compose's does, and the host saves
+  the id of the last command it ran beside its state, so a restored subtree does not run the
+  guest's last command again.
+- **A newer guest on an older host.** A `*Defaults` factory the host does not know (appended at a
+  later level) gives Compose's own default for that parameter where it renders, and an icon
+  outside the host's groups a placeholder; each is reported once (`GeneratedMismatches`), never a
+  crash in composition.
 - **Scope supertypes** are mirrored (`FlowRowScope : RowScope`).
 - **The lock across the Compose move, level by level.** Gate A left level 2 (read from CMP 1.8.2).
   `GeneratorTest.theLockCarriesGateAsWithAppendsOnly` keeps that lock as a fixture and fails if
@@ -572,7 +579,11 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
     (its renderer calls the new one), the new one is widget 10 (`autoSize` is dropped for now:
     an `ERROR` overload names it). foundation 1.11.1 hid
     `clickable(enabled, onClickLabel, role, onClick)` for one that adds `interactionSource`: the
-    old one keeps modifier 20, the new one is modifier 26. Each Gate A entry gained its `wire`
+    old one keeps modifier 20, the new one is modifier 26. While the added parameter does not
+    travel, the new overload's wire is the old one's apart from its tags, so its stub still sends
+    the old entry (widget 6, modifier 20) and a guest built now renders on a host built before
+    level 3; the new entries stay in the lock, and a stub moves to its own entry once an added
+    parameter travels (`sentAs`). Each Gate A entry gained its `wire`
     map, at the level it was created (an append nothing reads as new). `FlowRow` carries
     Compose's new `WARNING` deprecation (its `overflow`).
   - *Level 4: the wider set.* Widgets 11–26 (coil's `AsyncImage` with painters, which a `Painter`

@@ -913,7 +913,7 @@ internal class ComposeUiGenButton1 : GenButton1<@Composable (Modifier) -> Unit>,
       val enabled = (p_enabled as kotlin.Boolean?) ?: true
       val shape = (p_shape as dev.keliver.compose.ui.graphics.Shape?)?.toCompose() ?: ButtonDefaults.shape
       val colors = (p_colors as dev.keliver.compose.material3.ButtonColors?)?.toCompose() ?: ButtonDefaults.buttonColors()
-      val elevation = (p_elevation as dev.keliver.compose.material3.ButtonElevation?).let { v -> if (v == null) ButtonDefaults.buttonElevation() else if (v.isExplicitNull()) null else v.toCompose() }
+      val elevation = (p_elevation as dev.keliver.compose.material3.ButtonElevation?).let { v -> if (v == null) ButtonDefaults.buttonElevation() else if (v.isExplicitNull()) null else v.toCompose() ?: ButtonDefaults.buttonElevation() }
       val border = (p_border as dev.keliver.compose.foundation.BorderStroke?)?.toCompose()
       val contentPadding = (p_contentPadding as dev.keliver.compose.foundation.layout.PaddingValues?)?.toCompose() ?: ButtonDefaults.ContentPadding
       androidx.compose.material3.Button(
@@ -1215,52 +1215,52 @@ internal fun Modifier.applyScoped(chain: KeliverModifier, scope: Any?): Modifier
 
 /** Makes the guest's recorded `ButtonColors` by calling the real factory. */
 @Composable
-internal fun dev.keliver.compose.material3.ButtonColors.toCompose(): androidx.compose.material3.ButtonColors = when (call.factory) {
+internal fun dev.keliver.compose.material3.ButtonColors.toCompose(): androidx.compose.material3.ButtonColors? = when (call.factory) {
   4 -> androidx.compose.material3.ButtonDefaults.buttonColors()
   5 -> run { val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val contentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: Color.Unspecified; val disabledContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val disabledContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: Color.Unspecified; androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor, disabledContainerColor = disabledContainerColor, disabledContentColor = disabledContentColor) }
   7 -> androidx.compose.material3.ButtonDefaults.textButtonColors()
   8 -> run { val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val contentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: Color.Unspecified; val disabledContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val disabledContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: Color.Unspecified; androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = containerColor, contentColor = contentColor, disabledContainerColor = disabledContainerColor, disabledContentColor = disabledContentColor) }
   9 -> androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
   10 -> run { val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val contentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: Color.Unspecified; val disabledContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val disabledContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: Color.Unspecified; androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = containerColor, contentColor = contentColor, disabledContainerColor = disabledContainerColor, disabledContentColor = disabledContentColor) }
-  else -> error("unknown factory ${call.factory}")
+  else -> { reportMismatchOnce("ButtonColors: unknown factory ${call.factory}; Compose's default instead"); null }
 }
 
 /** Makes the guest's recorded `ButtonElevation` by calling the real factory. */
 @Composable
-internal fun dev.keliver.compose.material3.ButtonElevation.toCompose(): androidx.compose.material3.ButtonElevation = when (call.factory) {
+internal fun dev.keliver.compose.material3.ButtonElevation.toCompose(): androidx.compose.material3.ButtonElevation? = when (call.factory) {
   6 -> run { val defaultElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(1)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); val pressedElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(2)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); val focusedElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(3)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); val hoveredElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(4)?.toCompose() ?: androidx.compose.ui.unit.Dp(1f); val disabledElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(5)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); androidx.compose.material3.ButtonDefaults.buttonElevation(defaultElevation = defaultElevation, pressedElevation = pressedElevation, focusedElevation = focusedElevation, hoveredElevation = hoveredElevation, disabledElevation = disabledElevation) }
-  else -> error("unknown factory ${call.factory}")
+  else -> { reportMismatchOnce("ButtonElevation: unknown factory ${call.factory}; Compose's default instead"); null }
 }
 
 /** Makes the guest's recorded `CardColors` by calling the real factory. */
 @Composable
-internal fun dev.keliver.compose.material3.CardColors.toCompose(): androidx.compose.material3.CardColors = when (call.factory) {
+internal fun dev.keliver.compose.material3.CardColors.toCompose(): androidx.compose.material3.CardColors? = when (call.factory) {
   1 -> androidx.compose.material3.CardDefaults.cardColors()
   2 -> run { val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val contentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: contentColorFor(containerColor); val disabledContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val disabledContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: contentColor.copy(0.38f); androidx.compose.material3.CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor, disabledContainerColor = disabledContainerColor, disabledContentColor = disabledContentColor) }
-  else -> error("unknown factory ${call.factory}")
+  else -> { reportMismatchOnce("CardColors: unknown factory ${call.factory}; Compose's default instead"); null }
 }
 
 /** Makes the guest's recorded `CardElevation` by calling the real factory. */
 @Composable
-internal fun dev.keliver.compose.material3.CardElevation.toCompose(): androidx.compose.material3.CardElevation = when (call.factory) {
+internal fun dev.keliver.compose.material3.CardElevation.toCompose(): androidx.compose.material3.CardElevation? = when (call.factory) {
   3 -> run { val defaultElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(1)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); val pressedElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(2)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); val focusedElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(3)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); val hoveredElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(4)?.toCompose() ?: androidx.compose.ui.unit.Dp(1f); val draggedElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(5)?.toCompose() ?: androidx.compose.ui.unit.Dp(6f); val disabledElevation = call.arg<dev.keliver.compose.ui.unit.Dp>(6)?.toCompose() ?: androidx.compose.ui.unit.Dp(0f); androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = defaultElevation, pressedElevation = pressedElevation, focusedElevation = focusedElevation, hoveredElevation = hoveredElevation, draggedElevation = draggedElevation, disabledElevation = disabledElevation) }
-  else -> error("unknown factory ${call.factory}")
+  else -> { reportMismatchOnce("CardElevation: unknown factory ${call.factory}; Compose's default instead"); null }
 }
 
 /** Makes the guest's recorded `IconButtonColors` by calling the real factory. */
 @Composable
-internal fun dev.keliver.compose.material3.IconButtonColors.toCompose(): androidx.compose.material3.IconButtonColors = when (call.factory) {
+internal fun dev.keliver.compose.material3.IconButtonColors.toCompose(): androidx.compose.material3.IconButtonColors? = when (call.factory) {
   12 -> androidx.compose.material3.IconButtonDefaults.iconButtonColors()
   13 -> run { val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val contentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: LocalContentColor.current; val disabledContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val disabledContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: contentColor.copy(alpha = 0.38f); androidx.compose.material3.IconButtonDefaults.iconButtonColors(containerColor = containerColor, contentColor = contentColor, disabledContainerColor = disabledContainerColor, disabledContentColor = disabledContentColor) }
-  else -> error("unknown factory ${call.factory}")
+  else -> { reportMismatchOnce("IconButtonColors: unknown factory ${call.factory}; Compose's default instead"); null }
 }
 
 /** Makes the guest's recorded `TopAppBarColors` by calling the real factory. */
 @Composable
-internal fun dev.keliver.compose.material3.TopAppBarColors.toCompose(): androidx.compose.material3.TopAppBarColors = when (call.factory) {
+internal fun dev.keliver.compose.material3.TopAppBarColors.toCompose(): androidx.compose.material3.TopAppBarColors? = when (call.factory) {
   14 -> androidx.compose.material3.TopAppBarDefaults.topAppBarColors()
   15 -> run { val containerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(1)?.toCompose() ?: Color.Unspecified; val scrolledContainerColor = call.arg<dev.keliver.compose.ui.graphics.Color>(2)?.toCompose() ?: Color.Unspecified; val navigationIconContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(3)?.toCompose() ?: Color.Unspecified; val titleContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(4)?.toCompose() ?: Color.Unspecified; val actionIconContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(5)?.toCompose() ?: Color.Unspecified; val subtitleContentColor = call.arg<dev.keliver.compose.ui.graphics.Color>(6)?.toCompose() ?: Color.Unspecified; androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = containerColor, scrolledContainerColor = scrolledContainerColor, navigationIconContentColor = navigationIconContentColor, titleContentColor = titleContentColor, actionIconContentColor = actionIconContentColor, subtitleContentColor = subtitleContentColor) }
-  else -> error("unknown factory ${call.factory}")
+  else -> { reportMismatchOnce("TopAppBarColors: unknown factory ${call.factory}; Compose's default instead"); null }
 }
 
 /** A border the guest recorded as a `*Defaults` factory call, made by the real factory. */

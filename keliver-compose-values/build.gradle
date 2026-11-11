@@ -21,6 +21,8 @@ kotlin {
       dependencies {
         api projects.keliverRuntime
         api libs.jetbrains.compose.runtime
+        // rememberLazyListState saves its position, as Compose's does (LazyListState.Saver).
+        api libs.jetbrains.compose.runtime.saveable
         api libs.kotlinx.serialization.json
         // Otherwise compose-runtime brings coroutines 1.9.0, whose JS klib fails to link against
         // Kotlin 2.4's stdlib (SubclassOptInRequired's constructor changed).

@@ -16,7 +16,7 @@ import dev.keliver.compose.gatea.compose.GenIconButton1
 import dev.keliver.compose.gatea.compose.GenOutlinedButton1
 import dev.keliver.compose.gatea.compose.GenSurface1
 import dev.keliver.compose.gatea.compose.GenSurface2
-import dev.keliver.compose.gatea.compose.GenText2
+import dev.keliver.compose.gatea.compose.GenText1
 import dev.keliver.compose.gatea.compose.GenTextButton1
 import dev.keliver.compose.gatea.compose.GenTopAppBar1
 import dev.keliver.compose.ui.graphics.Color
@@ -47,7 +47,7 @@ public fun Text(
 ) {
   val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
   val default_style = LocalTextStyle.current
-  GenText2(
+  GenText1(
     text = text,
     color = color,
     fontSize = fontSize,
@@ -189,7 +189,7 @@ public fun Surface(
   )
 }
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun Surface(
   onClick: () -> kotlin.Unit,
@@ -203,7 +203,7 @@ public fun Surface(
   border: dev.keliver.compose.foundation.BorderStroke? = null,
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   content: @androidx.compose.runtime.Composable () -> kotlin.Unit,
-): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** [Material Design filled card](https://m3.material.io/components/cards/overview) Cards contain contain content and actions that relate information about a subject. */
 @androidx.compose.runtime.Composable
@@ -259,7 +259,7 @@ public fun Card(
   )
 }
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun Card(
   onClick: () -> kotlin.Unit,
@@ -271,7 +271,7 @@ public fun Card(
   border: dev.keliver.compose.foundation.BorderStroke? = null,
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.ColumnScope.() -> kotlin.Unit,
-): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** [Material Design button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
 @androidx.compose.runtime.Composable
@@ -305,7 +305,7 @@ public fun Button(
   )
 }
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun Button(
   onClick: () -> kotlin.Unit,
@@ -318,7 +318,7 @@ public fun Button(
   contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.ContentPadding,
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
-): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** [Material Design text button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
 @androidx.compose.runtime.Composable
@@ -351,7 +351,7 @@ public fun TextButton(
   )
 }
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun TextButton(
   onClick: () -> kotlin.Unit,
@@ -364,7 +364,7 @@ public fun TextButton(
   contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.TextButtonContentPadding,
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
-): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** [Material Design outlined button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
 @androidx.compose.runtime.Composable
@@ -398,7 +398,7 @@ public fun OutlinedButton(
   )
 }
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun OutlinedButton(
   onClick: () -> kotlin.Unit,
@@ -411,7 +411,7 @@ public fun OutlinedButton(
   contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.ContentPadding,
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
-): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** [Material Design standard icon button](https://m3.material.io/components/icon-button/overview) Icon buttons help people take supplementary actions with a single tap. */
 @androidx.compose.runtime.Composable
@@ -437,7 +437,7 @@ public fun IconButton(
   )
 }
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun IconButton(
   onClick: () -> kotlin.Unit,
@@ -447,7 +447,7 @@ public fun IconButton(
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   shape: dev.keliver.compose.ui.graphics.Shape = IconButtonDefaults.standardShape,
   content: @androidx.compose.runtime.Composable () -> kotlin.Unit,
-): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** [Material Design divider](https://m3.material.io/components/divider/overview) A divider is a thin line that groups content in lists and layouts. */
 @androidx.compose.runtime.Composable

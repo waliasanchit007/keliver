@@ -86,8 +86,8 @@
     "coil3.compose.AsyncImagePainter.State": "image-loading state callbacks are Gate B.",
     "androidx.compose.foundation.gestures.FlingBehavior": "custom fling behaviour runs per frame on the host.",
     "androidx.compose.foundation.OverscrollEffect": "custom overscroll runs per frame on the host.",
-    "androidx.compose.foundation.interaction.MutableInteractionSource": "interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).",
-    "androidx.compose.foundation.Indication": "custom indications run per frame on the host. Use clickable(enabled, onClickLabel, role, onClick).",
+    "androidx.compose.foundation.interaction.MutableInteractionSource": "interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.",
+    "androidx.compose.foundation.Indication": "custom indications run per frame on the host. Leave it out: the theme's ripple applies.",
     "androidx.compose.material3.TopAppBarScrollBehavior": "scroll behaviours connect the bar to the host's nested scrolling (Gate B, part b).",
     "androidx.compose.foundation.layout.WindowInsets": "window insets are the host's (Gate B, part b); the default applies."
   },

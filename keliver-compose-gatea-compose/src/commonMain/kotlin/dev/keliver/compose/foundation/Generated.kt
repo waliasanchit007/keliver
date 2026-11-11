@@ -7,7 +7,7 @@ package dev.keliver.compose.foundation
 import dev.keliver.compose.gatea.compose.GenBackground1Impl
 import dev.keliver.compose.gatea.compose.GenBorder1Impl
 import dev.keliver.compose.gatea.compose.GenBorder2Impl
-import dev.keliver.compose.gatea.compose.GenClickable2Impl
+import dev.keliver.compose.gatea.compose.GenClickable1Impl
 import dev.keliver.compose.gatea.compose.GenHorizontalScroll1Impl
 import dev.keliver.compose.gatea.compose.GenImage1
 import dev.keliver.compose.gatea.compose.GenImage2
@@ -62,18 +62,18 @@ public fun dev.keliver.compose.ui.Modifier.clickable(
   enabled: kotlin.Boolean = true,
   onClick: () -> kotlin.Unit,
 ): dev.keliver.compose.ui.Modifier {
-  return then(dev.keliver.compose.internal.ModifierEventElement(onClick) { handle -> GenClickable2Impl(enabled = enabled, onClick = handle) })
+  return then(dev.keliver.compose.internal.ModifierEventElement(onClick) { handle -> GenClickable1Impl(enabled = enabled, onClick = handle) })
 }
-@Deprecated("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.clickable(
   enabled: kotlin.Boolean = true,
   onClickLabel: kotlin.String? = null,
   role: dev.keliver.compose.ui.semantics.Role? = null,
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   onClick: () -> kotlin.Unit,
-): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.clickable(
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource?,
   indication: dev.keliver.compose.foundation.Indication?,
@@ -81,7 +81,7 @@ public fun dev.keliver.compose.ui.Modifier.clickable(
   onClickLabel: kotlin.String? = null,
   role: dev.keliver.compose.ui.semantics.Role? = null,
   onClick: () -> kotlin.Unit,
-): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** Modify element to allow to scroll horizontally when width of the content is bigger than max constraints allow. */
 @androidx.compose.runtime.Stable

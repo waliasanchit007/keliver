@@ -78,6 +78,10 @@ class Emitter(
   private val generated = plans.filterIsInstance<Plan.Generated>()
   private val widgets = generated.filter { it.decl.kind == DeclKind.WIDGET }
   private val modifiers = generated.filter { it.decl.kind != DeclKind.WIDGET }
+
+  /** The schema class a visible overload's stub sends: its own, or a hidden predecessor's with the same wire. */
+  private val aliases = sentAs(generated)
+  private fun sent(p: Plan.Generated): String = (aliases[p] ?: p).entry.name
   private val schemaPkg = config.schemaPackage
   private val composePkg = "$schemaPkg.compose"
   private val scopes: List<String> = (
@@ -178,7 +182,7 @@ class Emitter(
             if (d.deprecation == "ERROR") sb.append(errorStub(d, p.params, "Compose: ${d.deprecationMessage ?: "deprecated"}", imports(d.mirrorPkg)))
             continue
           }
-          imports(d.mirrorPkg) += "$composePkg.${p.entry.name}" + if (d.kind == DeclKind.WIDGET) "" else "Impl"
+          imports(d.mirrorPkg) += "$composePkg.${sent(p)}" + if (d.kind == DeclKind.WIDGET) "" else "Impl"
           if (d.kind == DeclKind.WIDGET) sb.append(widgetStub(p, imports(d.mirrorPkg))) else sb.append(modifierStub(p, imports(d.mirrorPkg), member = false))
           if (p.dropped.isNotEmpty()) sb.append(errorStub(d, p.params, p.dropped.joinToString(" ") { dropMessage(config, it) }, imports(d.mirrorPkg)))
         }
@@ -199,7 +203,7 @@ class Emitter(
         when (p) {
           is Plan.Generated -> {
             if (p.hidden) continue
-            imports(pkg) += "$composePkg.${p.entry.name}Impl"
+            imports(pkg) += "$composePkg.${sent(p)}Impl"
             sb.append(modifierStub(p, imports(pkg), member = true).prependIndent("  ")).append('\n')
             if (p.dropped.isNotEmpty()) sb.append(errorStub(p.decl, p.params, p.dropped.joinToString(" ") { dropMessage(config, it) }, imports(pkg), member = true).prependIndent("  ")).append('\n')
           }
@@ -233,7 +237,9 @@ class Emitter(
       val pkg = path.substringBeforeLast('/').replace('/', '.')
       buildString {
         append(HEADER)
-        append("@file:Suppress(\"ktlint\", \"RedundantVisibilityModifier\", \"UNUSED_PARAMETER\", \"unused\", \"DEPRECATION\", \"UNREACHABLE_CODE\")\n\n")
+        append("@file:Suppress(\"ktlint\", \"RedundantVisibilityModifier\", \"UNUSED_PARAMETER\", \"unused\", \"DEPRECATION\", \"UNREACHABLE_CODE\")\n")
+        if (pkg in generatedApiPkgs) append("@file:OptIn(dev.keliver.compose.wire.KeliverGeneratedApi::class)\n")
+        append("\n")
         append("package $pkg\n\n")
         importsByPkg[pkg].orEmpty().filter { it.substringBeforeLast('.') != pkg }
           .sorted().forEach { append("import $it\n") }
@@ -278,6 +284,9 @@ class Emitter(
 
   private var currentDecl: DeclInfo? = null
 
+  /** Guest packages whose stubs use a mirror's `@KeliverGeneratedApi` members (`LazyListState.wire`). */
+  private val generatedApiPkgs = mutableSetOf<String>()
+
   private fun widgetStub(p: Plan.Generated, imports: MutableSet<String>): String = buildString {
     val d = p.decl
     currentDecl = d
@@ -295,7 +304,7 @@ class Emitter(
       val state = p.lazyState ?: error("${d.spec}: a lazy list needs a LazyListState parameter")
       append("  val window_${c.param.name} = dev.keliver.compose.foundation.lazy.rememberLazyWindow(${state.param.name}, ${c.param.name})\n")
     }
-    append("  ${p.entry.name}(\n")
+    append("  ${sent(p)}(\n")
     for (c in p.wire) {
       val n = c.param.name
       when (c.kind) {
@@ -315,7 +324,10 @@ class Emitter(
           c.param.type.fq == TypeMap.IMAGE_MODEL -> append("    $n = dev.keliver.compose.internal.imageModel($n),\n")
           c.explicitNull -> append("    $n = if ($n == default_$n) null else ($n ?: ${mirrorFq(c.param.type.fq)}.ExplicitNull),\n")
           c.defaultCase == DefaultCase.EXPRESSION -> append("    $n = if ($n == default_$n) null else $n,\n")
-          c.param.type.fq in TypeMap.wireValue -> append("    $n = $n.wire,\n")
+          c.param.type.fq in TypeMap.wireValue -> {
+            append("    $n = $n.wire,\n")
+            generatedApiPkgs += d.mirrorPkg
+          }
           else -> append("    $n = $n,\n")
         }
         else -> append("    $n = $n,\n")
@@ -349,7 +361,7 @@ class Emitter(
         }
       }
     }
-    val impl = "${p.entry.name}Impl"
+    val impl = "${sent(p)}Impl"
     val construct = if (args.isEmpty()) impl else "$impl(${args.joinToString(", ")})"
     val event = p.params.firstOrNull { it.kind == ParamKind.EVENT }
     if (event != null) {
@@ -529,7 +541,8 @@ class Emitter(
         if (default != null && c.defaultCase != DefaultCase.NONE) imports += expressionImports(default, d, mirror = false)
         when {
           c.explicitNull ->
-            "val $n = (p_$n as $wt).let { v -> if (v == null) $default else if (v.isExplicitNull()) null else v.toCompose() }"
+            // A factory-made value from a factory this host does not know is null: Compose's default.
+            "val $n = (p_$n as $wt).let { v -> if (v == null) $default else if (v.isExplicitNull()) null else v.toCompose()${if (t.fq in TypeMap.opaque) " ?: $default" else ""} }"
           c.defaultCase == DefaultCase.EXPRESSION -> "val $n = (p_$n as $wt)${if (plain) "" else "?.toCompose()"} ?: $default"
           c.defaultCase == DefaultCase.LITERAL -> {
             val nwt = if (wt.endsWith("?")) wt else "$wt?"
@@ -697,9 +710,12 @@ class Emitter(
     val made = factories.filter { it.error == null }
     for (fq in TypeMap.opaque.filter { t -> made.any { it.decl.returns.fq == t } }) {
       append("/** Makes the guest's recorded `${fq.substringAfterLast('.')}` by calling the real factory. */\n")
-      append("@Composable\ninternal fun ${mirrorFq(fq)}.toCompose(): $fq = when (call.factory) {\n")
+      // Null for a factory appended after this host was built (a newer guest): reported once, and the
+      // parameter then takes Compose's own default where it renders (a TextButton's colours are
+      // `textButtonColors()`), as an unknown icon renders a placeholder. Never a crash in composition.
+      append("@Composable\ninternal fun ${mirrorFq(fq)}.toCompose(): $fq? = when (call.factory) {\n")
       for (f in made.filter { it.decl.returns.fq == fq }) append("  ${f.entry!!.tag} -> ${factoryCall(f, imports)}\n")
-      append("  else -> error(\"unknown factory \${call.factory}\")\n}\n\n")
+      append("  else -> { reportMismatchOnce(\"${fq.substringAfterLast('.')}: unknown factory \${call.factory}; Compose's default instead\"); null }\n}\n\n")
     }
     append("/** A border the guest recorded as a `*Defaults` factory call, made by the real factory. */\n")
     append("@Composable\ninternal fun defaultsBorderStroke(call: dev.keliver.compose.wire.DefaultsCall): androidx.compose.foundation.BorderStroke? = when (call.factory) {\n")

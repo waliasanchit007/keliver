@@ -32,6 +32,10 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.graphics.BlendMode
@@ -313,8 +317,27 @@ internal fun K_Role.toCompose(): Role = when (this) {
   else -> Role.Button
 }
 
+/**
+ * Where a host reports what a newer guest sent that it does not know (an icon, a `*Defaults` factory)
+ * and drew a fallback for instead. Each message is reported once per process.
+ */
+internal object GeneratedMismatches {
+  var sink: (String) -> Unit = { println("keliver-compose: $it") }
+  private val seen = mutableSetOf<String>()
+
+  fun report(message: String) {
+    if (seen.add(message)) sink(message)
+  }
+
+  /** For tests: forget what was reported. */
+  fun reset() = seen.clear()
+}
+
+internal fun reportMismatchOnce(message: String) = GeneratedMismatches.report(message)
+
 /** An icon outside the host's icon groups renders a neutral placeholder, never a crash. */
-internal fun K_ImageVector.toCompose(): ImageVector = iconByName(name) ?: Icons.Filled.Info
+internal fun K_ImageVector.toCompose(): ImageVector = iconByName(name)
+  ?: Icons.Filled.Info.also { reportMismatchOnce("icon $name: not in this host's icon groups; a placeholder instead") }
 
 /** Host-owned state (§10): the real ScrollState lives where the scroll modifier renders. */
 @Composable
@@ -322,14 +345,19 @@ internal fun K_ScrollState.toCompose(): ScrollState = rememberScrollState(initia
 
 /**
  * Host-owned state (§10): the real LazyListState lives where the list renders; each new scroll
- * command from the guest runs once on it.
+ * command from the guest runs once on it. The id of the last command run is saved beside the
+ * state, so a subtree recreated from saved state (a lazy item, a back-stack entry, a recreated
+ * activity) keeps the position the user scrolled to instead of running the guest's last command
+ * again. (The guest's ids keep growing across its own save and restore: `LazyListState.Saver`.)
  */
 @Composable
 internal fun K_LazyListStateWire.toCompose(): LazyListState {
   val state = rememberLazyListState(initialIndex, initialOffset)
+  var ran by rememberSaveable { mutableIntStateOf(0) }
   val command = command
   LaunchedEffect(command?.id) {
-    if (command == null) return@LaunchedEffect
+    if (command == null || command.id == ran) return@LaunchedEffect
+    ran = command.id
     if (command.animated) state.animateScrollToItem(command.index, command.offset) else state.scrollToItem(command.index, command.offset)
   }
   return state
