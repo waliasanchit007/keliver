@@ -239,12 +239,17 @@ class RedwoodBuildPlugin : Plugin<Project> {
       val sdkDir = (extensions.getByName("android") as BaseExtension).sdkDirectory
       val testAndroidJar = File(sdkDir, "platforms/android-35/android.jar")
       tasks.withType(Test::class.java).configureEach { test ->
+        // Only AGP's unit-test tasks (testDebugUnitTest, testReleaseUnitTest), where Paparazzi
+        // runs. A Kotlin Multiplatform module's desktop jvmTest is a Test task too, and must keep
+        // Gradle's reporter and stay free of android.jar.
+        if (!(test.name.startsWith("test") && test.name.endsWith("UnitTest"))) return@configureEach
         test.doFirst {
           // Paparazzi 1.3 installs its own HTML test reporter (reflectively, through the internal
           // AbstractTestTask.setTestReporter); it calls a Gradle-internal API that Gradle 9.6+
           // changed (TestResultsProvider.hasOutput) and fails the task after the tests pass.
-          // Swap in a no-op one the same way. A snapshot mismatch still fails the test itself, and
-          // the JUnit XML results are kept; only Paparazzi's HTML report is lost.
+          // Swap in a no-op one the same way. The JUnit XML results are kept; only Paparazzi's
+          // HTML report is lost. Note that these tasks only render the snapshots; they compare
+          // nothing. Only verifyPaparazzi* fails on a visual change, and CI does not run it.
           val setter = AbstractTestTask::class.java.declaredMethods.single { it.name == "setTestReporter" }
           val reporterType = setter.parameterTypes.single()
           val noOp = Proxy.newProxyInstance(reporterType.classLoader, arrayOf(reporterType)) { _, _, _ -> null }
