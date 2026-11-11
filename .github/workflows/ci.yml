@@ -148,6 +148,7 @@ jobs:
           :keliver-compose-generator:test
           :keliver-compose-values:jvmTest
           :keliver-compose-values:jsTest
+          :keliver-compose-gatea-compose:jvmTest
           :keliver-compose-gatea-composeui:jvmTest
           -DRELEASE_SIGNING_ENABLED=false
 
