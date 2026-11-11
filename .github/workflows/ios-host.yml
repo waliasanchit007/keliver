@@ -157,10 +157,16 @@ jobs:
             export KELIVER_SELFTEST_GRADLE_HOME="$HOME/ci-cache/gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/ci-cache/konan"
           elif [ "$SELF_HOSTED" = true ]; then
             mkdir -p "$HOME/.keliver-ci/selftest-gradle-home" "$HOME/.keliver-ci/konan"
-            # -s, not -f: the self-test's own trust-store grep leaves an EMPTY file
-            # behind when it finds nothing, which would block this copy for good.
-            [ -s "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties" ] || [ ! -f "$HOME/.keliver-ci/gradle-home/gradle.properties" ] \
-              || cp "$HOME/.keliver-ci/gradle-home/gradle.properties" "$HOME/.keliver-ci/selftest-gradle-home/gradle.properties"
+            # Copied whenever the self-test's copy carries no trust store and the
+            # owner's file does: the self-test's own trust-store grep leaves an EMPTY
+            # file behind when it finds nothing, and a file without the trust store
+            # (empty or not) would otherwise block this copy for good. The self-test
+            # home holds nothing else of its own, so nothing is lost by replacing it.
+            ts='^systemProp\.javax\.net\.ssl\.trustStore'
+            src="$HOME/.keliver-ci/gradle-home/gradle.properties" dst="$HOME/.keliver-ci/selftest-gradle-home/gradle.properties"
+            if ! grep -Eq "$ts" "$dst" 2>/dev/null && grep -Eq "$ts" "$src" 2>/dev/null; then
+              cp "$src" "$dst" && echo "copied the trust store's gradle.properties into the self-test's Gradle home"
+            fi
             export KELIVER_SELFTEST_GRADLE_HOME="$HOME/.keliver-ci/selftest-gradle-home" KELIVER_SELFTEST_KONAN_DATA_DIR="$HOME/.keliver-ci/konan"
           fi
           # On a self-hosted machine whose owner keeps a "one heavy build at a time" lock,
