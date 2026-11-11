@@ -226,6 +226,12 @@ jobs:
           scripts/keliver-run-android-selftest.sh "$RUNNER_TEMP/run-android-pkg" \
             --package "$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*)"
           echo "::endgroup::"
+          echo "::group::keliver-run-ios, from the package"
+          # The candidate zip's own bin/ copy (and its keliver-new-ios-host.sh, for
+          # an app with no host-ios/), with xcrun/xcodebuild stand-ins: no Xcode here.
+          scripts/keliver-run-ios-selftest.sh "$RUNNER_TEMP/run-ios-pkg" \
+            --package "$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*)"
+          echo "::endgroup::"
           echo "::group::the embed dependency floor (K3), from the package"
           # The floor this candidate carries (templates/production-host-embed/
           # dependency-floor.json, written by build-portal-tools.sh), printed by
