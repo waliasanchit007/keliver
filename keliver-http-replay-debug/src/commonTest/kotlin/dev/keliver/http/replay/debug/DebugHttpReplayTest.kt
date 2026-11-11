@@ -291,6 +291,12 @@ class DebugHttpReplayTest {
     assertTrue("reuse=true is allowed only on the final" in catalog.getValue("reuse-early").error.orEmpty())
   }
 
+  @Test fun theCatalogIsInTheRelaysFileNameOrder() {
+    // The relay sorts `<id>.json` file names: '-' sorts before '.', so `a-b.json` is first.
+    val replay = replay("a" to file(entry("/p", "ok")), "a-b" to file(entry("/p", "ok")), "B" to file(entry("/p", "ok")))
+    assertEquals(listOf("B", "a-b", "a"), replay.catalog().map { it.id })
+  }
+
   @Test fun theCatalogReportsExpiryAsOfTheCall() {
     var now = fixedNow
     val replay = DebugHttpReplay(mapOf("s" to file(entry("/p", "ok"), expiresAt = "2026-07-28T00:00:00Z")), now = { now })

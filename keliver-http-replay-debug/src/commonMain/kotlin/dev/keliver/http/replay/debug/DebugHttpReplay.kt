@@ -56,7 +56,8 @@ public class DebugHttpReplay(
   private val now: () -> Instant = { Clock.System.now() },
 ) {
   private val sets: Map<String, Result<LoadedSet>> = fixtureFiles.entries
-    .sortedBy { it.key }
+    // The relay lists sets by file name, so `a-b.json` comes before `a.json`.
+    .sortedBy { "${it.key}.json" }
     .associate { (id, text) -> id to runCatching { load(id, text) } }
 
   /** Every fixture set given, by id: whether it loaded, and if not, why. */
