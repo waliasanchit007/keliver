@@ -884,19 +884,49 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U41. Four library JS/wasm test tasks do not run in CI — OPEN (found 2026-11-10)
+### U41. Four library JS/wasm test tasks did not run in CI — FIXED (found 2026-11-10, fixed 2026-11-11)
 
-PR #229 made CI run every library's `jsTest` and `wasmJsTest`, except four that fail for reasons
-unrelated to linking:
-- `keliver-widget-composeui:jsTest`, `keliver-widget:wasmJsTest` and
-  `keliver-widget-composeui:wasmJsTest`: the test runner cannot find `skiko.mjs`. The published
-  wasm artifacts are not shown to be affected (`web-spike` compiles and runs the Compose wasm
-  render chain in CI), but nothing tests a consumer's wasm executable loading these modules
-  outside the editor.
-- `keliver-leak-detector:wasmJsTest`: `delayForGc` has no wasm `actual`, so its common tests have
-  never compiled for wasm. Older than the Kotlin 2.4 upgrade.
+PR #229 made CI run every library's `jsTest` and `wasmJsTest`, except four that failed for reasons
+unrelated to linking. All four now pass and run in CI's "Test (JS and wasm, all libraries)" step.
 
-Each needs its own fix; until then the four are listed as exclusions in `ci.yml`.
+**Skiko's runtime** (`keliver-widget-composeui:jsTest`, `keliver-widget:wasmJsTest`,
+`keliver-widget-composeui:wasmJsTest`). compose-ui's js and wasm code imports `./skiko.mjs`, and
+nothing put that file beside the test executables. Node failed with `Cannot find module
+'./skiko.mjs'` (required by `skiko-kjs.js`), webpack with `Can't resolve './skiko.mjs'`.
+`keliver-widget` has compose-ui only through its `keliver-snapshot-testing` test dependency, which
+is enough for a wasm executable: it imports every module when it is instantiated.
+- Compose's Gradle plugin (`org.jetbrains.compose`) copies the runtime beside every web binary of
+  a module that applies it (`portal-editor` and `portal-render` do). It is the wrong tool for a
+  library. Applied to `keliver-widget-composeui`, it also copied the runtime into the js MAIN
+  resources: the published js klib went from 14 KB to 3.4 MB, and the js and wasmJs publications
+  gained a resources variant. It would also not have helped `keliver-widget`, because it only acts
+  when compose-ui is on the MAIN classpath.
+- **Fix:** build-support (`SkikoWebTests.kt`) adds `org.jetbrains.skiko:skiko-js-wasm-runtime`
+  (everything but `META-INF`) to the sync task of every js and wasmJs TEST executable whose runtime
+  classpath has Skiko. It uses the Skiko version that classpath resolved. Only test directories
+  change: the js klib stays at 14 KB, and the publications have no new variant. Modules that apply
+  the Compose plugin are left to it.
+
+**leak-detector on wasm.** `delayForGc` had no wasm `actual`, so the common tests never compiled
+for wasm. Had they compiled, they would have failed: the wasm `WeakReference` held a strong
+reference, and `hasWeakReference()` answered false (a no-op from the web spike). So
+`LeakDetector.timeBasedIn` returned the no-op detector, which the tests' `before()` rejects.
+- **Fix:** the wasm actuals now use JS `WeakRef` and `globalThis.gc`, as the js ones do. A
+  Kotlin/Wasm object crosses into JS as itself, so the WeakRef observes the caller's object.
+  `delayForGc` has its wasm actual.
+- The wasm tests run in headless Chrome with `--js-flags=--expose-gc` and a 30 s mocha timeout
+  (`keliver-leak-detector/karma.config.d/expose-gc.js`), as the js tests run in Node with
+  `--expose-gc`.
+- **Behaviour change:** on wasmJs, `LeakDetector.timeBasedIn` now returns a working detector rather
+  than `none()`. The only wasm caller in this repo (the editor) passes `LeakDetector.none()`
+  itself.
+
+**Evidence (2026-11-11, local, Chrome 157 headless; Node from the Kotlin Gradle plugin).** Before:
+the three Skiko tasks failed with the errors quoted above. After: `keliver-widget-composeui`
+17/17 on js (Node) and 17/17 on wasm, `keliver-widget` 16/16 on wasm, and `keliver-leak-detector`
+3/3 on wasm. `detectLeak` asserts a leak report, which fires only after 10 s on the monotonic
+clock, so the wasm run really waited and collected. `detectCollection` shows a collected object
+reads back as null.
 
 ### U40. Headless PSI cannot parenthesize or promote a string template: a NullPointerException — OPEN, LATENT (found 2026-11-10)
 

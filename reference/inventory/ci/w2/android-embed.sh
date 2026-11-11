@@ -21,6 +21,10 @@
 #   X9  the guest closes its screen: the app's onClose replaces the view
 #   X10 the guest throws while its screen shows: screen-failed, and the app's
 #       onUnavailable replaces the view; the process lives
+#   X11 the app's RequestPolicy refuses the guest's HostHttp requests (a
+#       state-changing method; a path outside its allow-list) before any network
+#       call: the server's log has only the allowed request, and the guest's
+#       screen shows the refusals, not a crash or the app's fallback
 # X6 also checks that the app's onUnavailable ran (its native fallback shows).
 echo "--- 5. W2: the host embedded in an existing app"
 W2_ID="${W2_ID:-com.example.existing}"
@@ -159,6 +163,45 @@ grep -q 'text="Native fallback"' "$EV/w2-X10.xml" && grep -q 'text="Native heade
   && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
   && ok "X10: the app's fallback took the Keliver view's place; the app is still running" || bad "X10: the screen after the exception is not the app's"
 w2_crashed "$EV/logcat-embed-crash.txt" && bad "X10: the guest's exception crashed the process" || ok "X10: no process crash"
+
+# X11: the app's RequestPolicy (ExistingApp: the API base's origin, GET ping only, nothing
+# state-changing) on a device. On the route k4/policy the guest sends POST ping (state-changing)
+# and GET admin (not in the allow-list), then GET ping, the positive control. The API base is
+# this server's /api (prepare.sh), and the server logs every request it gets: the allowed one
+# must be there, and nothing else under /api. The host's debug build logs each refusal's reason.
+mkdir -p "$W3/site/api" && printf 'pong\n' > "$W3/site/api/ping"
+srv0="$(wc -l < "$EV/w2-server.log" | tr -d ' ')"
+w2_route "existing://k4/policy" "$EV/logcat-embed-policy.txt"
+w2_dump X11
+tail -n +"$((srv0 + 1))" "$EV/w2-server.log" > "$EV/w2-server-policy.log"
+rm -rf "${W3:?}/site/api"
+grep -q "KeliverTiming: route-k4-policy " "$EV/logcat-embed-policy.txt" \
+  && grep -q "$HOST_TAG: HostHttp refused: POST is a state-changing call" "$EV/logcat-embed-policy.txt" \
+  && grep -q "$HOST_TAG: HostHttp refused: GET /admin is not in the allow-list" "$EV/logcat-embed-policy.txt" \
+  && ok "X11: the host refused POST ping (state-changing) and GET admin (not in the allow-list) by the app's RequestPolicy" \
+  || bad "X11: no refusal in the host's log: $(grep -E "KeliverTiming: (route|policy)|$HOST_TAG: HostHttp|ExistingApp" "$EV/logcat-embed-policy.txt" | head -5 | tr '\n' ' ')"
+# Every request under /api that reached the server, as "<method> <path> <status>".
+grep -E '^[A-Z]+ /api([/? ]|$)' "$EV/w2-server-policy.log" > "$EV/w2-server-policy-api.log"
+grep -qxF 'GET /api/ping 200' "$EV/w2-server-policy-api.log" && ! grep -vqxF 'GET /api/ping 200' "$EV/w2-server-policy-api.log" \
+  && ok "X11: the server got the allowed GET /api/ping and no other request under /api: the refused two never reached the network" \
+  || bad "X11: the server's requests under /api: $(tr '\n' ';' < "$EV/w2-server-policy-api.log") (expected only GET /api/ping 200)"
+grep -q "KeliverTiming: policy-post-ping-refused " "$EV/logcat-embed-policy.txt" \
+  && grep -q "KeliverTiming: policy-get-admin-refused " "$EV/logcat-embed-policy.txt" \
+  && grep -q "KeliverTiming: policy-get-ping-200 " "$EV/logcat-embed-policy.txt" \
+  && ok "X11: the guest got both refusals as \"HostHttp refused\" failures, and GET ping's 200" \
+  || bad "X11: the guest's outcomes: $(grep -E "KeliverTiming: policy" "$EV/logcat-embed-policy.txt" | sed 's/.*KeliverTiming: //' | tr '\n' ' ')"
+grep -q 'text="Refused: POST ping"' "$EV/w2-X11.xml" \
+  && grep -q 'text="POST is a state-changing call, and this build does not allow them"' "$EV/w2-X11.xml" \
+  && grep -q 'text="Refused: GET admin"' "$EV/w2-X11.xml" \
+  && grep -q 'text="GET /admin is not in the allow-list"' "$EV/w2-X11.xml" \
+  && grep -q 'text="Allowed: GET ping (200)"' "$EV/w2-X11.xml" \
+  && ok "X11: the guest's screen shows the two refusals with the policy's reasons, and the allowed call" \
+  || bad "X11: the screen's texts: $(grep -oE 'text="[^"]+"' "$EV/w2-X11.xml" | tr '\n' ' ')"
+grep -q 'text="Native header"' "$EV/w2-X11.xml" && ! grep -q 'text="Native fallback"' "$EV/w2-X11.xml" \
+  && ! grep -q "ExistingApp: keliver unavailable" "$EV/logcat-embed-policy.txt" && ! w2_crashed "$EV/logcat-embed-policy.txt" \
+  && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
+  && ok "X11: a refusal is the guest's to show: no screen-failed, no fallback, no crash; the app is still running" \
+  || bad "X11: the refusals took the screen or the app down: $(grep -E "ExistingApp|$HOST_TAG: (codeLoad|uncaught)" "$EV/logcat-embed-policy.txt" | head -3 | tr '\n' ' ')"
 
 # X6: the same app trusting another key: nothing loads in the Keliver view, the
 # native views stay, the process lives.

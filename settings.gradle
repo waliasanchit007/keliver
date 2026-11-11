@@ -86,6 +86,8 @@ include ':keliver-host'
 // HTTP shim: HostHttpProvider ZiplineService + KeliverHttp typed
 // wrapper. Re-exported from both facades. See issue #7.
 include ':keliver-http'
+// Shared HTTP fixture matcher (relay replay + debug host replay). ADOPTION_PLAN item 5, S2.
+include ':keliver-http-fixtures'
 
 include ':keliver-layout-api'
 include ':keliver-layout-compose'

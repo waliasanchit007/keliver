@@ -74,6 +74,10 @@ cp scripts/keliver-portal scripts/keliver-init "$STAGE/bin/"
 # is its JVM entry point, installed with the relay above).
 cp scripts/keliver-publish "$STAGE/bin/"
 [ -x "$STAGE/relay/bin/keliver-publish-jvm" ] || { echo "relay/bin/keliver-publish-jvm is missing from the relay install" >&2; exit 1; }
+# WS5: keliver-check (compile, editor ingest, unsupported APIs, bundle budget);
+# relay/bin/keliver-check-jvm is its file-reading half.
+cp scripts/keliver-check "$STAGE/bin/"
+[ -x "$STAGE/relay/bin/keliver-check-jvm" ] || { echo "relay/bin/keliver-check-jvm is missing from the relay install" >&2; exit 1; }
 # Scaffolders so external app repos get the same DX (C1 new-component; ② new-editor).
 cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/keliver-new-editor.sh \
    scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh \
@@ -107,7 +111,7 @@ cp -R scripts/templates/guest "$STAGE/templates/"
 # refusal is printed from.
 cp scripts/keliver-store-path.sh scripts/keliver-record-http.sh \
    scripts/keliver-adopt-legacy-store.sh scripts/keliver-store-recover.sh "$STAGE/bin/"
-chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" "$STAGE/bin/keliver-publish" \
+chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" "$STAGE/bin/keliver-publish" "$STAGE/bin/keliver-check" \
   "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh" "$STAGE/bin/keliver-new-editor.sh" \
   "$STAGE/bin/keliver-new-device-target.sh" "$STAGE/bin/keliver-install-device-host.sh" \
   "$STAGE/bin/keliver-new-production-host.sh" "$STAGE/bin/keliver-new-publish-target.sh" \

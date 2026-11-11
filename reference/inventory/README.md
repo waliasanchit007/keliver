@@ -24,7 +24,7 @@ Two portal-owned screens, one hand-owned presenter layer, deterministic data:
 | `logic/InventoryState.kt` | you | eight fixed items (`SeedInventory`), search, selection, quantity adjustments (never below zero) |
 | `logic/InventoryPresenter.kt`, `logic/ItemPresenter.kt` | you | the screens' `Bindings`, read live from the state |
 | `logic/InventoryApp.kt` | you | navigation: the list, or the selected item |
-| `device/Main.kt` | you | scaffolded by `keliver-new-device-target.sh`, then edited to mount `InventoryApp` |
+| `device/Main.kt` | you | scaffolded by `keliver-new-device-target.sh`, then edited to mount `InventoryApp`, plus the host kit's test routes (K4: close, crash, and a request-policy check over HostHttp, which is why `build.gradle` adds `keliver-http`) |
 | `editor/.../InventoryPreview.kt` | you | the per-app Live preview entry (both screens, real presenters) |
 
 The behaviour it is checked against is in [`EXPECTATIONS.md`](EXPECTATIONS.md),

@@ -1,0 +1,178 @@
+#!/bin/bash
+# keliver-check — one command that says whether this app's guest is in shape:
+# for an app developer, a CI job, or a coding agent (PLAN_2026-11 WS5). Ships in
+# keliver-portal-tools; needs Java 17+.
+#
+#   keliver-check [app-dir] [--skip-compile] [--only compile,editor,api,budget,goldens] [--strict]
+#
+# Checks, in order:
+#   compile  the guest compiles: the app's check.compileTask (keliver.portal.json),
+#            else its publishTask, through the app's ./gradlew. Its output is
+#            also what the budget measures.
+#   editor   the portal's ingest on every screen and component file (the same
+#            recognizer the relay runs): each RawCode is an error with file:line,
+#            and so is a component the editor can only show as a box (D14).
+#   api      a deny-list scan of the guest's source for APIs a Kotlin/JS guest in
+#            QuickJS cannot use (Android/iOS platform, java.*, reflection,
+#            Dagger, HTTP clients, DB drivers, files). Warnings: line-based.
+#   budget   every file under publishOutput against check.bundleBudgetBytes;
+#            skipped when there is no budget, and when this run's compile
+#            failed (a stale bundle is not measured). check.compileTask must be
+#            a task that writes publishOutput.
+#   goldens  state screenshots against goldens: NOT IMPLEMENTED (a WS5 TODO
+#            hook; it reports "skip").
+#
+# What it touches: compile runs the APP'S OWN ./gradlew, which writes build/
+# into the app and may download dependencies. The other checks only read files
+# (no network, nothing written into the app). Nothing is published.
+# Screens and components are read from their dirs flat, as the relay does; the
+# api scan walks the guest's source dirs recursively. A RawCode's line is found
+# by searching for its text in the file, so it can be null or, for identical
+# snippets, point at an earlier copy: see docs/KELIVER_CHECK.md.
+#
+# keliver.portal.json:   "check": { "compileTask": ":guest:compileProductionZipline",
+#                                   "bundleBudgetBytes": 600000 }
+#
+# Output: stdout is JSON lines, one object per finding or per passing check:
+#   {"check":"editor","severity":"error","file":"…","line":12,"message":"…","text":"…"}
+# severity is error | warning | info | pass | skip. The last line is
+#   {"check":"summary","schema":1,"severity":"pass"|"error","errors":N,"warnings":N,"exit":N}
+# Every key is documented in docs/KELIVER_CHECK.md (in the Keliver repo).
+# A short human summary goes to stderr.
+#
+# Exit status: 0 clean (warnings allowed, unless --strict); 1 findings;
+# 2 usage or environment (no keliver.portal.json, no Java, no relay install,
+# or the file checks crashed).
+#-- end of help
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUNDLE="$(cd "$HERE/.." && pwd)"
+# As keliver-publish: the tools bundle's relay install holds the JVM entry
+# point; KELIVER_RELAY_HOME points at another (portal-relay's installDist).
+JVM="${KELIVER_RELAY_HOME:-$BUNDLE/relay}/bin/keliver-check-jvm"
+
+usage() { echo "keliver-check: $1" >&2; echo "usage: keliver-check [app-dir] [--skip-compile] [--only LIST] [--strict]" >&2; exit 2; }
+
+APP_ARG=""
+SKIP_COMPILE=false
+STRICT=false
+ONLY="compile,editor,api,budget,goldens"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) sed -n '2,/^#-- end of help/p' "${BASH_SOURCE[0]}" | sed '$d'; exit 0 ;;
+    --skip-compile) SKIP_COMPILE=true ;;
+    --strict) STRICT=true ;;
+    --only) [ $# -ge 2 ] || usage "--only needs a value"; ONLY="$2"; shift ;;
+    -*) usage "unknown option $1" ;;
+    *) [ -z "$APP_ARG" ] || usage "one app directory only (got '$APP_ARG' and '$1')"; APP_ARG="$1" ;;
+  esac
+  shift
+done
+APP_DIR="$(cd "${APP_ARG:-.}" 2>/dev/null && pwd -P)" || usage "no such directory: ${APP_ARG:-.}"
+APP_LOGICAL="$(cd "${APP_ARG:-.}" && pwd)"
+[ -f "$APP_DIR/keliver.portal.json" ] || { echo "keliver-check: $APP_DIR has no keliver.portal.json (run it in a Keliver app)" >&2; exit 2; }
+[ -x "$JVM" ] || { echo "keliver-check: $JVM not found (run from an unpacked keliver-portal-tools, or set KELIVER_RELAY_HOME)" >&2; exit 2; }
+
+want() { case ",$ONLY," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
+JVM_ONLY=""
+set -f # --only '*' must not glob
+for c in $(echo "$ONLY" | tr ',' ' '); do
+  case "$c" in
+    compile) ;;
+    editor|api|budget|goldens) JVM_ONLY="${JVM_ONLY:+$JVM_ONLY,}$c" ;;
+    *) usage "unknown check $c" ;;
+  esac
+done
+set +f
+
+# A JSON string from shell text. ANSI escapes and control characters other
+# than tab and newline (\r included) are dropped, so every line stays JSON.
+ESC="$(printf '\033')"
+json_str() { printf '%s' "$1" | LC_ALL=C sed -e "s/$ESC\[[0-9;?]*[A-Za-z]//g" | LC_ALL=C tr -d '\000-\010\013-\037\177' | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk 'BEGIN{ORS=""} NR>1{print "\\n"} {print}' | sed -e 's/^/"/' -e 's/$/"/'; }
+
+OUT="$(mktemp "${TMPDIR:-/tmp}/keliver-check.XXXXXX")"
+trap 'rm -f "$OUT" "$OUT.log" "$OUT.jvm"' EXIT
+COMPILE_RESULT=""   # pass | fail | empty: not run
+COMPILE_STARTED=""
+
+# --- compile -------------------------------------------------------------------
+if want compile; then
+  if $SKIP_COMPILE; then
+    echo '{"check":"compile","severity":"skip","message":"--skip-compile"}' >>"$OUT"
+  else
+    TASK="$("$JVM" "$APP_DIR" --print-compile-task 2>/dev/null)"
+    st=$?
+    [ $st = 0 ] && [ -n "$TASK" ] || { echo "keliver-check: could not read the compile task from keliver.portal.json" >&2; exit 2; }
+    # A Gradle task path, never an option or several words.
+    case "$TASK" in
+      -*|*[!A-Za-z0-9:_.-]*) echo "keliver-check: compile task '$TASK' is not a Gradle task path" >&2; exit 2 ;;
+    esac
+    [ -x "$APP_DIR/gradlew" ] || { echo "keliver-check: $APP_DIR/gradlew not found (the compile check runs the app's own Gradle)" >&2; exit 2; }
+    echo "keliver-check: compiling ($TASK)…" >&2
+    COMPILE_STARTED="$(date +%s)"
+    # The signing block keliver-new-publish-target.sh writes finds the store through this.
+    if KELIVER_TOOLS_BIN="${KELIVER_TOOLS_BIN:-$HERE}" "$APP_DIR/gradlew" -p "$APP_DIR" -q "$TASK" >"$OUT.log" 2>&1; then
+      COMPILE_RESULT=pass
+      printf '{"check":"compile","severity":"pass","message":%s,"task":%s}\n' "$(json_str "$TASK compiled")" "$(json_str "$TASK")" >>"$OUT"
+    else
+      COMPILE_RESULT=fail
+      # Kotlin's own e: lines carry file:line:col — one finding each; else the log's tail.
+      errs="$(grep -E '^e: ' "$OUT.log" | head -50)"
+      if [ -n "$errs" ]; then
+        echo "$errs" | while IFS= read -r l; do
+          loc="$(echo "$l" | sed -nE 's#^e: (file://)?([^ ]+\.kts?):([0-9]+):[0-9]+ .*#\2 \3#p')"
+          f="${loc% *}"; n="${loc##* }"; f="${f#"$APP_DIR"/}"; f="${f#"$APP_LOGICAL"/}"
+          if [ -n "$loc" ]; then
+            printf '{"check":"compile","severity":"error","file":%s,"line":%s,"message":%s}\n' "$(json_str "$f")" "$n" "$(json_str "${l#e: }")"
+          else
+            printf '{"check":"compile","severity":"error","message":%s}\n' "$(json_str "${l#e: }")"
+          fi
+        done >>"$OUT"
+      else
+        printf '{"check":"compile","severity":"error","message":%s,"task":%s}\n' \
+          "$(json_str "$TASK failed: $(tail -20 "$OUT.log")")" "$(json_str "$TASK")" >>"$OUT"
+      fi
+    fi
+  fi
+fi
+
+# --- editor, api, budget, goldens (the JVM half) --------------------------------
+if [ -n "$JVM_ONLY" ]; then
+  "$JVM" "$APP_DIR" --only "$JVM_ONLY" \
+    ${COMPILE_RESULT:+--compile-result "$COMPILE_RESULT"} ${COMPILE_STARTED:+--compile-started "$COMPILE_STARTED"} \
+    >"$OUT.jvm" 2>"$OUT.log"
+  st=$?
+  # The JVM half ends its stream with {"check":"jvm-done"}. Without it (a crash,
+  # an uncaught exception exiting 1) the run is an environment failure, never a pass.
+  if { [ $st != 0 ] && [ $st != 1 ]; } || [ "$(tail -n 1 "$OUT.jvm")" != '{"check":"jvm-done"}' ]; then
+    echo "keliver-check: the file checks failed to run (exit $st):" >&2; cat "$OUT.log" >&2; exit 2
+  fi
+  sed '$d' "$OUT.jvm" >>"$OUT"
+fi
+
+# --- summary ---------------------------------------------------------------------
+errors=$(grep -c '"severity":"error"' "$OUT")
+warnings=$(grep -c '"severity":"warning"' "$OUT")
+exit_code=0
+[ "$errors" -gt 0 ] && exit_code=1
+$STRICT && [ "$warnings" -gt 0 ] && exit_code=1
+sev=pass; [ $exit_code = 1 ] && sev=error
+cat "$OUT"
+printf '{"check":"summary","schema":1,"severity":"%s","errors":%s,"warnings":%s,"exit":%s}\n' "$sev" "$errors" "$warnings" "$exit_code"
+
+{
+  echo "keliver-check: $APP_DIR"
+  for c in compile editor api budget goldens; do
+    want "$c" || continue
+    e=$(grep "\"check\":\"$c\"" "$OUT" | grep -c '"severity":"error"')
+    w=$(grep "\"check\":\"$c\"" "$OUT" | grep -c '"severity":"warning"')
+    s=$(grep "\"check\":\"$c\"" "$OUT" | grep -c '"severity":"skip"')
+    if [ "$e" -gt 0 ]; then r="FAIL ($e error(s))"; elif [ "$w" -gt 0 ]; then r="WARN ($w warning(s))"; elif [ "$s" -gt 0 ]; then r="skip"; else r="ok"; fi
+    printf '  %-8s %s\n' "$c" "$r"
+  done
+  grep -E '"severity":"(error|warning)"' "$OUT" | head -10 | sed -nE 's/.*"check":"([a-z]+)".*"severity":"([a-z]+)"(,"file":"([^"]*)")?(,"line":([0-9]+))?,"message":"([^"]*)".*/    \2 \1 \4:\6 \7/p'
+  [ $((errors + warnings)) -gt 10 ] && echo "    … (all of them in the JSON lines on stdout)"
+  echo "  exit $exit_code"
+} >&2
+exit $exit_code
