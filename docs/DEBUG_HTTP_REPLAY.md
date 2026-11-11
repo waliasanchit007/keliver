@@ -48,10 +48,10 @@ and is also passed to `onMiss`:
 | 413 | a request body over 1 MiB |
 | 404 | no set with that id |
 | 422 | the set is invalid: over 4 MiB, bad JSON or dates, or any matcher rule |
+| 410 | the set has expired (`expiresAt` reached) |
 
 A set whose id breaks the name rule is listed invalid by `catalog()`, but a request can never
 reach it: the same name check answers the request 400 first.
-| 410 | the set has expired (`expiresAt` reached) |
 
 Sequences are the relay's: requests with the same key replay in file order, a final `reuse`
 entry repeats, and anything else past the end misses. A miss moves no cursor. Where it differs
