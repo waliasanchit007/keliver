@@ -600,3 +600,49 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
   - *CMP 1.12.2 (from main's move to it).* The group is now read from CMP 1.12.2 and material3
     1.9.0; the regenerated schema differs only in the versions its header names, so no level 5 was
     needed and level 4 is the newest.
+
+## 21. Gate B, part c: the generated group on the iOS simulator
+
+The renderers are Compose UI code and already compiled for iOS. Part c checks that on iOS they draw
+the same pixels as native Compose, in two ways.
+
+- **The same-source test on the simulator.** `SameSourceTest` (its samples, the guest-on-host
+  harness, the pixel comparison) moved from `jvmTest` to a `sameSourceTest` source set that both
+  `jvmTest` and `iosTest` depend on. It is not `commonTest`, because then Android unit tests and
+  JS/wasm would compile it. On iOS the same three tests run under CMP's `runComposeUiTest`, and
+  `captureToImage` works there. The tolerance is the JVM's: 0 differing pixels. CI's iOS step runs
+  `:keliver-compose-gatea-composeui:iosSimulatorArm64Test`. The captures land in
+  `build/gate-ios/` (the test task passes the directory as `SIMCTL_CHILD_GATE_IOS_ARTIFACTS`).
+  `onlyImportsDiffer` stays on the JVM (`SameSourceFilesTest`), because it reads the source files.
+  The test host draws at density 1 (360 × 640 captures), so this is the renderer's fidelity at 1×,
+  not at a phone's density.
+- **A real simulator app** (`scripts/keliver-gateb-ios-sim.sh`, with two modules that are included
+  only with `-Pkeliver.gatebIos`):
+  - `keliver-compose-gatea-sample-guest` is a Kotlin/JS Zipline guest. Its sources are the test's
+    guest samples (a `srcDir`, not a copy). The production bundle is signed with a scratch Ed25519
+    key made in its build directory. It signs after the compile, as `portal-published-guest` does,
+    not through `signingKeys` (U31).
+  - `keliver-compose-gatea-sample-ios` is an iOS app written only in Kotlin, with no Xcode project.
+    It is a Kotlin/Native executable with a `UIApplicationMain` entry point and an `Info.plist`,
+    packed into `GateB.app` and signed ad hoc by the script. A launch argument picks one of two
+    modes:
+    - the native copy of a sample;
+    - the same file loaded from the signed bundle through Treehouse, the real protocol and
+      `KeliverComposeGateAHostProtocol.Factory`, into the generated renderers.
+
+    Both modes use the same theme and the same safe-area padding. The app trusts only the scratch
+    key.
+  - `keliver-run-ios` isn't reused because it serves an adopter app. It needs a relay, a published
+    bundle and a host scaffolded against Maven Central, and the prototype modules aren't published.
+  - The script runs these steps, and deletes the simulator and stops the server whatever happens:
+    1. it creates its own simulator (an iPhone on the newest runtime), and with `--with-tests` runs
+       the test above on it;
+    2. it serves the bundle on its own port (8494 by default; 8077, 8096 and 8478 are refused) and
+       fixes the status bar at 9:41;
+    3. it screenshots both modes of both samples with `simctl io screenshot` and compares the whole
+       screens, status bar included. A control, two different samples, must differ;
+    4. it times cold launches of the two routes, alternating them.
+  - First frame is measured from `main()` to the start of the frame after the one in which the
+    sample's root was first composed. In native mode that is the first composition. In guest mode it
+    is the frame after the host created the guest's first `Column`: a delegating widget factory
+    marks it.

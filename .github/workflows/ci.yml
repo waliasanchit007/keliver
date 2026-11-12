@@ -224,6 +224,9 @@ jobs:
       # the Zipline plugin; it is not published, so the build above does not compile it. Its
       # jvmTest also builds keliver-bridge-fixture-guest (a Kotlin/JS Zipline guest) and runs
       # the first guest-to-host round trip through it (B5b).
+      # keliver-compose-gatea-composeui's iOS test is Gate B part c's same-source pixel test
+      # (SameSourceTest, shared with its jvmTest): native Compose against the generated guest
+      # through the real protocol, 0 differing pixels, on the simulator.
       # keliver-http-fixtures (the HTTP fixture matcher) has no Android target, so no `test`
       # task: it and the debug replay provider built on it (item 5, S2) run here, by name, on
       # every target they have. List them once; the JS and wasm step below leaves them out.
@@ -253,6 +256,7 @@ jobs:
           :keliver-http-replay-debug:jvmTest
           :keliver-http-replay-debug:jsTest
           :keliver-http-replay-debug:iosSimulatorArm64Test
+          :keliver-compose-gatea-composeui:iosSimulatorArm64Test
           -DRELEASE_SIGNING_ENABLED=false
 
       # Every library's Kotlin/JS and wasm tests. Linking a test EXECUTABLE is the only place a

@@ -1,0 +1,89 @@
+// Gate B part c (docs/COMPOSE_GENERATOR_DESIGN.md §21): a minimal iOS simulator app, written in
+// Kotlin only (no Xcode project): a UIApplication whose window shows one same-source sample either
+// drawn by native Compose (its copy in samples/native) or loaded from the signed guest bundle of
+// keliver-compose-gatea-sample-guest through Treehouse into the generated host renderers.
+// scripts/keliver-gateb-ios-sim.sh builds it (assembleGateBApp), installs it on a simulator it
+// creates, screenshots both modes and compares them.
+//
+// Prototype only: included only with -Pkeliver.gatebIos (settings.gradle), never published.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.zipline' // rewrites the host's zipline.take/bind
+
+def samples = rootProject.file('keliver-compose-gatea-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/gatea/composeui/samples/native')
+
+// The scratch public key the guest signs with, as a Kotlin constant.
+def keyDir = file("$buildDir/generated/gatebKey/kotlin")
+def generateGateBKey = tasks.register('generateGateBKey') {
+  dependsOn(':keliver-compose-gatea-sample-guest:gatebKeys')
+  def pub = project(':keliver-compose-gatea-sample-guest').layout.buildDirectory.file('gateb-keys/ed25519.pub')
+  inputs.file(pub)
+  outputs.dir(keyDir)
+  doLast {
+    def hex = pub.get().asFile.text.trim()
+    if (!(hex ==~ /[0-9a-f]{64}/)) throw new GradleException("gateb: the scratch public key is not 64 hex digits")
+    keyDir.deleteDir()
+    keyDir.mkdirs()
+    new File(keyDir, 'GateBKey.kt').text =
+      "package dev.keliver.compose.gatea.sample.ios\n\n// GENERATED (generateGateBKey).\ninternal const val GATEB_PUBLIC_KEY_HEX: String = \"$hex\"\n"
+  }
+}
+tasks.configureEach { t ->
+  if (t.name.startsWith('compileKotlinIos')) t.dependsOn(generateGateBKey)
+}
+
+kotlin {
+  iosSimulatorArm64 {
+    binaries.executable('GateB') {
+      entryPoint = 'dev.keliver.compose.gatea.sample.ios.main'
+      binaryOption('bundleId', 'dev.keliver.gateb')
+      linkerOpts.add('-lsqlite3') // Zipline's bundle cache
+    }
+  }
+
+  sourceSets {
+    iosMain {
+      kotlin.srcDir(samples)
+      kotlin.srcDir(keyDir)
+      dependencies {
+        implementation projects.keliverComposeGateaSampleGuest
+        implementation projects.keliverComposeGateaComposeui
+        implementation projects.keliverTreehouseHost
+        implementation projects.keliverTreehouseHostComposeui
+        implementation projects.keliverComposeGateaProtocolHost
+        implementation projects.keliverMaterialComposeui
+        implementation projects.keliverLayoutComposeui
+        implementation projects.keliverLazylayoutComposeui
+        implementation projects.keliverLeakDetector
+        implementation libs.zipline
+        implementation libs.zipline.loader
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.jetbrains.compose.ui
+        implementation libs.coil.compose.full
+        implementation libs.kotlinx.coroutines.core
+        implementation libs.okio
+      }
+    }
+  }
+}
+
+// build-support disables every iOS release link (sample apps never needed one); first-frame times
+// want an optimised binary, so this app's release link is turned back on.
+afterEvaluate {
+  tasks.named('linkGateBReleaseExecutableIosSimulatorArm64').configure { enabled = true }
+}
+
+// GateB.app: the linked executable and an Info.plist. Unsigned here; the script signs it ad hoc.
+def buildType = providers.gradleProperty('gatebBuildType').orElse('debug')
+tasks.register('assembleGateBApp', Sync) {
+  def type = buildType.get()
+  def binary = kotlin.iosSimulatorArm64().binaries.getExecutable('GateB', type)
+  dependsOn(binary.linkTaskProvider)
+  from(binary.outputFile) { rename { 'GateB' } }
+  from('src/app') { include 'Info.plist' }
+  into(layout.buildDirectory.dir("gateb/${type}/GateB.app"))
+}

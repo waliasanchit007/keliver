@@ -28,7 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -66,7 +66,6 @@ import dev.keliver.ui.Cancellable
 import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -81,24 +80,14 @@ import kotlinx.serialization.json.Json
  * Gate A's fidelity criterion on the JVM (docs/COMPOSE_GENERATOR_DESIGN.md §16): one screen file,
  * compiled once against Compose and once against the generated guest API, renders the same pixels.
  * The guest side goes through the real protocol, as JSON, into the generated host renderers.
+ *
+ * Shared by jvmTest and the iOS simulator tests (Gate B part c): the same samples, the same harness
+ * and the same tolerance (0 differing pixels), on desktop Skia and on iOS. `SameSourceFilesTest`
+ * (JVM) checks that the two copies of each sample differ only in imports.
  */
 @OptIn(ExperimentalTestApi::class)
 class SameSourceTest {
   private val tags = listOf("Fragile", "Bulk", "In stock", "Ships today", "Gift wrap", "Returnable")
-
-  @Test fun onlyImportsDiffer() {
-    val dir = File("src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples")
-    fun body(f: File) = f.readLines().filterNot {
-      it.startsWith("import ") || it.startsWith("package ") || it.startsWith("//")
-    }
-    for (sample in listOf("SampleCard.kt", "SampleOrders.kt")) {
-      assertEquals(body(File(dir, "native/$sample")), body(File(dir, "guest/$sample")), sample)
-      val guestImports = File(dir, "guest/$sample").readLines().filter { it.startsWith("import ") }
-      val nativeImports = File(dir, "native/$sample").readLines().filter { it.startsWith("import ") }
-      // Sorted: the formatter orders imports lexically, and the rewrite changes a prefix.
-      assertEquals(nativeImports.sorted(), guestImports.map { it.replace("import dev.keliver.compose.", "import androidx.compose.") }.sorted(), sample)
-    }
-  }
 
   private val orders = listOf(
     "Order 1042" to "Out for delivery",
@@ -137,12 +126,11 @@ class SameSourceTest {
     }
     waitForIdle()
     val guest = onNodeWithTag("slot").captureToImage()
-    File("build/gate-b").mkdirs()
-    javax.imageio.ImageIO.write(native.toAwtImage(), "png", File("build/gate-b/orders-native.png"))
-    javax.imageio.ImageIO.write(guest.toAwtImage(), "png", File("build/gate-b/orders-guest.png"))
-    File("build/gate-b/orders-wire.json").writeText(host.wire.joinToString("\n"))
+    saveImage("gate-b/orders-native.png", native)
+    saveImage("gate-b/orders-guest.png", guest)
+    writeArtifact("gate-b/orders-wire.json", host.wire.joinToString("\n").encodeToByteArray())
     assertEquals(native.width to native.height, guest.width to guest.height, "sizes")
-    assertEquals(0, differingPixels(native, guest, "build/gate-b/orders-diff.png"), "pixels that differ between native Compose and the generated guest")
+    assertEquals(0, differingPixels(native, guest, "gate-b/orders-diff.png"), "pixels that differ between native Compose and the generated guest")
 
     // A generated widget's own event (not a modifier lambda): the first card's TextButton…
     onAllNodesWithText("Details").onFirst().performClick()
@@ -220,10 +208,9 @@ class SameSourceTest {
     host.pump()
     waitForIdle()
     val guest = onNodeWithTag("slot").captureToImage()
-    File("build/gate-a").mkdirs()
-    javax.imageio.ImageIO.write(native.toAwtImage(), "png", File("build/gate-a/native.png"))
-    javax.imageio.ImageIO.write(guest.toAwtImage(), "png", File("build/gate-a/guest.png"))
-    File("build/gate-a/wire.json").writeText(host.wire.joinToString("\n"))
+    saveImage("gate-a/native.png", native)
+    saveImage("gate-a/guest.png", guest)
+    writeArtifact("gate-a/wire.json", host.wire.joinToString("\n").encodeToByteArray())
     assertEquals(native.width to native.height, guest.width to guest.height, "sizes")
     val diff = differingPixels(native, guest)
     assertEquals(0, diff, "pixels that differ between native Compose and the generated guest")
@@ -240,15 +227,17 @@ class SameSourceTest {
   }
 }
 
-private fun differingPixels(a: ImageBitmap, b: ImageBitmap, diffPath: String = "build/gate-a/diff.png"): Int {
+internal fun differingPixels(a: ImageBitmap, b: ImageBitmap, diffPath: String = "gate-a/diff.png"): Int {
   val pa = a.toPixelMap()
   val pb = b.toPixelMap()
   var n = 0
   var box = intArrayOf(Int.MAX_VALUE, Int.MAX_VALUE, -1, -1)
+  val diff = IntArray(a.width * a.height) { WHITE }
   for (y in 0 until a.height) {
     for (x in 0 until a.width) {
       if (pa[x, y] != pb[x, y]) {
         n++
+        diff[y * a.width + x] = RED
         box = intArrayOf(minOf(box[0], x), minOf(box[1], y), maxOf(box[2], x), maxOf(box[3], y))
         if (n < 4) println("differs at $x,$y: ${pa[x, y]} vs ${pb[x, y]}")
       }
@@ -256,12 +245,30 @@ private fun differingPixels(a: ImageBitmap, b: ImageBitmap, diffPath: String = "
   }
   if (n > 0) {
     println("differing box: ${box.toList()}")
-    val img = java.awt.image.BufferedImage(a.width, a.height, java.awt.image.BufferedImage.TYPE_INT_RGB)
-    for (y in 0 until a.height) for (x in 0 until a.width) img.setRGB(x, y, if (pa[x, y] != pb[x, y]) 0xFF0000 else 0xFFFFFF)
-    javax.imageio.ImageIO.write(img, "png", File(diffPath))
+    writePng(diffPath, a.width, a.height, diff)
   }
   return n
 }
+
+private const val WHITE = 0xFFFFFFFF.toInt()
+private const val RED = 0xFFFF0000.toInt()
+
+/** Writes [image] as a PNG under this platform's artifact directory (see [writeArtifact]). */
+internal fun saveImage(path: String, image: ImageBitmap) {
+  val pixels = image.toPixelMap()
+  val w = image.width
+  writePng(path, w, image.height, IntArray(w * image.height) { pixels[it % w, it / w].toArgb() })
+}
+
+/**
+ * Writes [bytes] to [path] under the platform's artifact directory: `build/` on the JVM (the test's
+ * working directory is the module), `build/gate-ios/` on the iOS simulator (passed in by the test task).
+ * Evidence only: a platform that can't write says so and the test carries on.
+ */
+internal expect fun writeArtifact(path: String, bytes: ByteArray)
+
+/** Encodes ARGB [pixels] (row-major) as a PNG and writes it with [writeArtifact]. */
+internal expect fun writePng(path: String, width: Int, height: Int, pixels: IntArray)
 
 /** A guest composition whose changes travel as JSON into generated host renderers. */
 @OptIn(ExperimentalTestApi::class)
@@ -285,7 +292,7 @@ internal class GuestOnHost(
     val text = json.encodeToString(ListSerializer(Change.serializer()), changes)
     wire += text
     val decoded = json.decodeFromString(ListSerializer(Change.serializer()), text)
-    decoded.filterIsInstance<dev.keliver.protocol.Create>().forEach { created.merge(it.tag.value, 1, Int::plus) }
+    decoded.filterIsInstance<dev.keliver.protocol.Create>().forEach { created[it.tag.value] = (created[it.tag.value] ?: 0) + 1 }
     hostAdapter.sendChanges(decoded.mapNotNull { UiChange.fromProtocol(protocol, it) })
   }
 
