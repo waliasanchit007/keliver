@@ -86,7 +86,7 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                 "3:background#18.color": {
                     "kind": "dev.keliver.portal.document.PropValue.Lit",
                     "tag": "c",
-                    "s": "4293390591"
+                    "s": "4293849332"
                 },
                 "4:border#19": {
                     "kind": "dev.keliver.portal.document.PropValue.Lit",
@@ -174,7 +174,7 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                         "2:background#18.color": {
                             "kind": "dev.keliver.portal.document.PropValue.Lit",
                             "tag": "c",
-                            "s": "4282492574"
+                            "s": "4284960932"
                         }
                     },
                     "children": [
