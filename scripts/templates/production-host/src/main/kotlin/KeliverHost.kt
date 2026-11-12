@@ -503,8 +503,9 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private val unavailableAttempts = java.util.concurrent.atomic.AtomicInteger()
 
   /** The host cannot show a screen: says so on [state] (W6's [outcome] and its reason) and reports it. */
-  private fun unavailable(outcome: String, title: String, message: String, detail: String, sequence: Long? = null) {
+  private fun unavailable(outcome: String, title: String, message: String, detail: String, sequence: Long? = null, report: Boolean = true) {
     mutableState.value = KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message, unavailableAttempts.incrementAndGet())
+    if (!report) return
     // A retried start reports its first crash-rollback to the app's view only, as it does "no bundle".
     if (outcome == CRASH_ROLLBACK_OUTCOME) { if (reportedCrashView) return; reportedCrashView = true }
     report(outcome, sequence, detail = detail)
@@ -829,10 +830,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     prefs.raiseFloor(floorNames, floor())
     // WS6: crash rollback's ledger, per key as the floor is. A "not yet healthy" marker the last
     // process left set means it ended while a new bundle loaded or showed: one more failure.
-    val crash = CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold)
+    val crash = CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold, android.os.Process.myPid(), System::currentTimeMillis)
     this.crash = crash
     crash.screens(screensShown > 0) // main thread: a screen may already be waiting for code
-    val startStep = crash.atStart(lastExitCrashed())
+    val startStep = crash.atStart(::lastExitCrashed)
     crashLog(startStep)
     // Short timeouts: offline, this decides how long the app waits before it
     // starts from the cache. Each lookup gives its calls only what is left of
@@ -866,9 +867,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       }
       crash.floorSetAside(floor()) -> {
         // Nothing this install ran before the set-aside bundle is left: the app's own view.
-        val detail = (startStep as? CrashStep.SetAside)?.let { crashRollbackDetail(it, config.crashThreshold, CRASH_TO_APP_VIEW) }
+        // Reported only when the bundle was set aside at this start (L1): the start that set it
+        // aside reported it, so a release owner counts one report per set-aside, not one per start.
+        val setAsideNow = startStep as? CrashStep.SetAside
+        val detail = setAsideNow?.let { crashRollbackDetail(it, config.crashThreshold, CRASH_TO_APP_VIEW) }
           ?: "crash rollback: sequence ${crash.setAside()} is set aside on this install; $CRASH_TO_APP_VIEW"
-        unavailable(CRASH_ROLLBACK_OUTCOME, "Set aside", detail.take(300), detail = detail, sequence = crash.setAside())
+        Log.w(TAG, detail)
+        unavailable(CRASH_ROLLBACK_OUTCOME, "Set aside", detail.take(300), detail = detail, sequence = crash.setAside(), report = setAsideNow != null)
         // Nothing was created: the next screen to start() looks for a newer bundle.
         started.set(false)
       }
@@ -891,23 +896,33 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   }
 
   /**
-   * WS6: whether this process's previous run ended in a crash, from the system's record of it
-   * (Android 11+, ApplicationExitInfo): a Java or native crash, an ANR or a failed start count; a
-   * force-stop, a user's swipe or a low-memory kill do not. Null when the system cannot say
-   * (before Android 11, or no record): the "not yet healthy" marker alone counts then.
+   * WS6: whether the process [pid], which set the "not yet healthy" marker at [markedAt] (epoch
+   * ms), ended in a crash, from the system's record of exactly that process (Android 11+,
+   * ApplicationExitInfo, matched by pid and not older than the marker): a Java or native crash,
+   * an ANR or a failed start count, and so does a low-memory kill while it was in the foreground
+   * (the marker is only set while a screen shows, and a foreground app is the last the system
+   * kills for memory, so that is most likely the bundle's own memory; iOS counts its jetsam kills
+   * too). A force-stop, a user's swipe or a low-memory kill in the background do not. Null when
+   * the system cannot say (before Android 11, a marker without a pid, or no record of that
+   * process, as after a reboot): the marker alone counts then.
    */
-  private fun lastExitCrashed(): Boolean? {
-    if (Build.VERSION.SDK_INT < 30) return null
+  private fun lastExitCrashed(pid: Int, markedAt: Long): Boolean? {
+    if (Build.VERSION.SDK_INT < 30 || pid <= 0) return null
     return runCatching {
       val am = context.getSystemService(android.app.ActivityManager::class.java) ?: return null
       val me = android.app.Application.getProcessName()
-      val last = am.getHistoricalProcessExitReasons(context.packageName, 0, 8).firstOrNull { it.processName == me } ?: return null
-      last.reason in setOf(
+      val exit = am.getHistoricalProcessExitReasons(context.packageName, pid, 4)
+        .firstOrNull { it.pid == pid && it.processName == me && it.timestamp >= markedAt } ?: return null
+      when (exit.reason) {
         android.app.ApplicationExitInfo.REASON_CRASH,
         android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,
         android.app.ApplicationExitInfo.REASON_ANR,
         android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE,
-      )
+        -> true
+        android.app.ApplicationExitInfo.REASON_LOW_MEMORY ->
+          exit.importance <= android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+        else -> false
+      }
     }.getOrNull()
   }
 

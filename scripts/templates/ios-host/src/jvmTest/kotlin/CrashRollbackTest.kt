@@ -49,9 +49,10 @@ class CrashRollbackTest {
   }
 
   @Test fun theLedgerRoundTripsAndAnUnreadableOneIsEmpty() {
-    val l = CrashLedger(trial = 9, failures = 1, running = true, setAside = 7, healthy = 6)
+    val l = CrashLedger(trial = 9, failures = 1, running = true, setAside = 7, healthy = 6, pid = 4242, markedAt = 1_700_000_000_000)
     assertEquals(l, CrashLedger.decode(l.encode()))
-    for (bad in listOf(null, "", "garbage", "2;9;1;1;7;6", "1;9;1;2;7;6", "1;-9;1;1;7;6", "1;9;x;1;7;6", "1;9;1;1;7")) {
+    assertEquals(CrashLedger(trial = 9, failures = 1, running = true, setAside = 7, healthy = 6), CrashLedger.decode("1;9;1;1;7;6"), "the first format, without the pid and time")
+    for (bad in listOf(null, "", "garbage", "2;9;1;1;7;6", "1;9;1;2;7;6", "1;-9;1;1;7;6", "1;9;x;1;7;6", "1;9;1;1;7", "2;9;1;1;7;6;x;0", "2;9;1;1;7;6;-1;0", "1;9;1;1;7;6;1;1")) {
       assertEquals(CrashLedger(), CrashLedger.decode(bad), "decode($bad)")
     }
   }
@@ -127,10 +128,31 @@ class CrashRollbackTest {
     val g = guard()
     g.loadStarting(5)
     g.windowOpened(5)
-    assertEquals(CrashStep.None, g.atStart(lastExitCrashed = false), "a force-stop (ApplicationExitInfo: user requested)")
+    assertEquals(CrashStep.None, g.atStart { _, _ -> false }, "a force-stop (ApplicationExitInfo: user requested)")
     assertEquals(CrashLedger(trial = 5), g.ledger(), "the marker is cleared, nothing counted")
     g.windowOpened(5)
-    assertEquals(CrashStep.Counted(5, 1, CrashKind.PROCESS), g.atStart(lastExitCrashed = true))
+    assertEquals(CrashStep.Counted(5, 1, CrashKind.PROCESS), g.atStart { _, _ -> true })
+  }
+
+  @Test fun theSystemIsAskedAboutTheProcessThatSetTheMarker() {
+    var clock = 1_000L
+    val g = CrashGuard(store, "keliver-production-abcd", pid = 4242, now = { clock })
+    g.screens(true)
+    g.loadStarting(5)
+    assertEquals(CrashLedger(trial = 5, running = true, pid = 4242, markedAt = 1_000), g.ledger())
+    g.loaded(5, null, null)
+    assertEquals(CrashLedger(trial = 5), g.ledger(), "cleared: no pid or time left behind")
+    clock = 2_000
+    g.windowOpened(5)
+    var asked: Pair<Int, Long>? = null
+    // A later process (another pid) asks: the record it is given is for 4242, from 2000 on.
+    val next = CrashGuard(store, "keliver-production-abcd", pid = 5151, now = { 9_000 })
+    assertEquals(CrashStep.None, next.atStart { pid, at -> asked = pid to at; false })
+    assertEquals(4242 to 2_000L, asked)
+    // No record for that process (a reboot, say): the marker alone counts.
+    next.screens(true)
+    next.windowOpened(5)
+    assertEquals(CrashStep.Counted(5, 1, CrashKind.PROCESS), CrashGuard(store, "keliver-production-abcd").atStart { _, _ -> null })
   }
 
   @Test fun aStartWithoutTheMarkerCountsNothing() {

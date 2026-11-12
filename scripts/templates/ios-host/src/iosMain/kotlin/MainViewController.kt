@@ -221,7 +221,8 @@ private sealed interface HostState {
    * [retry]: nothing was created, so the next start() may look again. [outcome]: the report's,
    * when it is neither no-bundle nor refused (WS6's crash-rollback, for [sequence]).
    */
-  data class Message(val title: String, val text: String, val retry: Boolean = false, val outcome: String? = null, val sequence: Long? = null) : HostState
+  /** [report]: false when the outcome was already reported (WS6: a bundle set aside at an earlier start). */
+  data class Message(val title: String, val text: String, val retry: Boolean = false, val outcome: String? = null, val sequence: Long? = null, val report: Boolean = true) : HostState
   data class Running(val app: TreehouseApp<PortalPresenter>) : HostState
 }
 
@@ -464,8 +465,9 @@ public object Keliver {
   }
 
   /** The host cannot show a screen: says so on [state] (W6's [outcome] and its reason) and reports it. Main thread. */
-  private fun unavailable(outcome: String, title: String, message: String, detail: String, sequence: Long? = null) {
+  private fun unavailable(outcome: String, title: String, message: String, detail: String, sequence: Long? = null, report: Boolean = true) {
     setState(KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message, ++unavailableAttempts))
+    if (!report) return
     // A retried start reports its first crash-rollback to the app's view only, as it does "no bundle".
     if (outcome == CRASH_ROLLBACK_OUTCOME) { if (reportedCrashView) return; reportedCrashView = true }
     report(outcome, sequence, detail = detail)
@@ -651,7 +653,7 @@ public object Keliver {
         is HostState.Running -> setState(KeliverHostState.Running(s.app))
         is HostState.Message -> {
           if (s.retry) started = false
-          unavailable(s.outcome ?: if (s.retry) "no-bundle" else "refused", s.title, s.text, detail = s.text, sequence = s.sequence)
+          unavailable(s.outcome ?: if (s.retry) "no-bundle" else "refused", s.title, s.text, detail = s.text, sequence = s.sequence, report = s.report)
         }
       }
     }
@@ -1256,10 +1258,12 @@ private suspend fun startHost(): HostState {
     crash.floorSetAside(floor()) -> {
       // Nothing this install ran before the set-aside bundle is left: the app's own view. Nothing
       // was created: the next screen to start() looks for a newer bundle.
-      val detail = (startStep as? CrashStep.SetAside)?.let { crashRollbackDetail(it, CRASH_THRESHOLD, CRASH_TO_APP_VIEW) }
+      // Reported only when the bundle was set aside at this start (L1): one report per set-aside.
+      val setAsideNow = startStep as? CrashStep.SetAside
+      val detail = setAsideNow?.let { crashRollbackDetail(it, CRASH_THRESHOLD, CRASH_TO_APP_VIEW) }
         ?: "crash rollback: sequence ${crash.setAside()} is set aside on this install; $CRASH_TO_APP_VIEW"
       log(detail)
-      HostState.Message("Set aside", detail.take(300), retry = true, outcome = CRASH_ROLLBACK_OUTCOME, sequence = crash.setAside())
+      HostState.Message("Set aside", detail.take(300), retry = true, outcome = CRASH_ROLLBACK_OUTCOME, sequence = crash.setAside(), report = setAsideNow != null)
     }
     lastGood != null -> {
       log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")

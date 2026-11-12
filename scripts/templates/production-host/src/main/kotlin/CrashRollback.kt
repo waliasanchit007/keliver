@@ -126,7 +126,9 @@ internal enum class CrashKind(val text: String) {
 
 /**
  * The install's crash state for one key. [trial]: the sequence on trial (0: none), with its
- * [failures]; [running]: the "started, not yet healthy" marker; [setAside]: the highest sequence
+ * [failures]; [running]: the "started, not yet healthy" marker, with the [pid] of the process that
+ * set it and when ([markedAt], epoch ms; both 0 where the host gives none), so the system's exit
+ * record for exactly that process is the one asked (Android); [setAside]: the highest sequence
  * set aside (0: none); [healthy]: the newest sequence that proved healthy here (0: none).
  */
 internal data class CrashLedger(
@@ -135,25 +137,29 @@ internal data class CrashLedger(
   val running: Boolean = false,
   val setAside: Long = 0,
   val healthy: Long = 0,
+  val pid: Int = 0,
+  val markedAt: Long = 0,
 ) {
-  fun encode(): String = "1;$trial;$failures;${if (running) 1 else 0};$setAside;$healthy"
+  fun encode(): String = "2;$trial;$failures;${if (running) 1 else 0};$setAside;$healthy;$pid;$markedAt"
 
   companion object {
     /**
-     * A stored ledger, or an empty one when there is none or it is unreadable. Empty is the safe
-     * side: nothing is set aside (a crashing bundle gets its tries again) and nothing may run
-     * below the floor (there is no bundle to go back to).
+     * A stored ledger (this format, or the first one, without the pid and time), or an empty one
+     * when there is none or it is unreadable. Empty forgets what was set aside (a crashing bundle
+     * gets its tries again) and leaves nothing to go back to below the floor.
      */
     fun decode(text: String?): CrashLedger {
       val p = text?.split(';') ?: return CrashLedger()
-      if (p.size != 6 || p[0] != "1") return CrashLedger()
+      if (!((p.size == 6 && p[0] == "1") || (p.size == 8 && p[0] == "2"))) return CrashLedger()
       val trial = p[1].toLongOrNull()
       val failures = p[2].toIntOrNull()
       val setAside = p[4].toLongOrNull()
       val healthy = p[5].toLongOrNull()
-      if (trial == null || failures == null || setAside == null || healthy == null) return CrashLedger()
-      if (trial < 0 || failures < 0 || setAside < 0 || healthy < 0 || p[3] !in setOf("0", "1")) return CrashLedger()
-      return CrashLedger(trial, failures, p[3] == "1", setAside, healthy)
+      val pid = if (p.size == 8) p[6].toIntOrNull() else 0
+      val markedAt = if (p.size == 8) p[7].toLongOrNull() else 0L
+      if (trial == null || failures == null || setAside == null || healthy == null || pid == null || markedAt == null) return CrashLedger()
+      if (trial < 0 || failures < 0 || setAside < 0 || healthy < 0 || pid < 0 || markedAt < 0 || p[3] !in setOf("0", "1")) return CrashLedger()
+      return CrashLedger(trial, failures, p[3] == "1", setAside, healthy, pid, markedAt)
     }
   }
 }
@@ -202,12 +208,15 @@ internal interface CrashStore {
 /**
  * The counting, the threshold, setting aside and the one exception to the floor, for the key
  * whose cache is [cacheName]. [threshold] 0 turns crash rollback off: nothing is counted or set
- * aside, and nothing runs below the floor. From any thread.
+ * aside, and nothing runs below the floor. [pid] and [now] (epoch ms) are stored with the marker
+ * ([CrashLedger.pid]); a host that cannot ask how a process ended leaves them 0. From any thread.
  */
 internal class CrashGuard(
   private val store: CrashStore,
   cacheName: String,
   val threshold: Int = DEFAULT_CRASH_THRESHOLD,
+  private val pid: Int = 0,
+  private val now: () -> Long = { 0L },
 ) {
   val enabled: Boolean = threshold > 0
   private val ledgerKey = "crashLedger-$cacheName"
@@ -239,7 +248,8 @@ internal class CrashGuard(
   }
 
   /** [this] with the "started, not yet healthy" marker set ([on]) or cleared. */
-  private fun CrashLedger.marked(on: Boolean): CrashLedger = copy(running = on)
+  private fun CrashLedger.marked(on: Boolean): CrashLedger =
+    copy(running = on, pid = if (on) this@CrashGuard.pid else 0, markedAt = if (on) now() else 0)
 
   private fun save(ledger: CrashLedger, extra: Map<String, String?> = emptyMap()) {
     store.write(mapOf(ledgerKey to ledger.encode()) + extra)
@@ -248,15 +258,16 @@ internal class CrashGuard(
   /**
    * At a host start, before the lookup: a marker the last process left set means it ended while
    * the bundle on trial loaded, or while a screen showed it before it proved healthy. When the
-   * system says how that process ended ([lastExitCrashed]: Android 11+'s ApplicationExitInfo),
-   * only a crash counts: a process stopped on purpose (a force-stop, say) does not. Null: it
-   * cannot say (iOS, older Android), and the marker alone counts.
+   * system says how that process ended ([lastExitCrashed], asked for the pid that set the marker
+   * and the time it did: Android 11+'s ApplicationExitInfo), only a crash counts: a process
+   * stopped on purpose (a force-stop, say) does not. Null: it cannot say (iOS, older Android, no
+   * record for that process), and the marker alone counts.
    */
-  fun atStart(lastExitCrashed: Boolean? = null): CrashStep = store.locked {
+  fun atStart(lastExitCrashed: (pid: Int, markedAtMillis: Long) -> Boolean? = { _, _ -> null }): CrashStep = store.locked {
     val l = ledger()
     when {
       !l.running -> CrashStep.None
-      !enabled || l.trial <= 0 || lastExitCrashed == false -> CrashStep.None.also { save(l.copy(running = false)) }
+      !enabled || l.trial <= 0 || lastExitCrashed(l.pid, l.markedAt) == false -> CrashStep.None.also { save(l.marked(false)) }
       else -> fail(l, l.trial, CrashKind.PROCESS)
     }
   }
@@ -362,18 +373,18 @@ internal class CrashGuard(
   private fun fail(l: CrashLedger, sequence: Long, kind: CrashKind): CrashStep {
     val failures = l.failures + 1
     if (failures < threshold) {
-      save(l.copy(failures = failures, running = false))
+      save(l.copy(failures = failures).marked(false))
       return CrashStep.Counted(sequence, failures, kind)
     }
     if (sequence == l.healthy) {
       // The bundle the host went back to failed its own trial: there is nothing left to go back
       // to. Forgotten, with its kept manifest: the floor's own bundle stays set aside, so the host
       // shows the app's own view, and stops retrying, until a newer sequence is published.
-      save(l.copy(trial = 0, failures = 0, running = false, healthy = 0), mapOf(candidateKey to null, healthyKey to null))
+      save(l.copy(trial = 0, failures = 0, healthy = 0).marked(false), mapOf(candidateKey to null, healthyKey to null))
       return CrashStep.SetAside(sequence, failures, kind)
     }
     save(
-      l.copy(trial = 0, failures = 0, running = false, setAside = maxOf(l.setAside, sequence)),
+      l.copy(trial = 0, failures = 0, setAside = maxOf(l.setAside, sequence)).marked(false),
       mapOf(candidateKey to null),
     )
     return CrashStep.SetAside(sequence, failures, kind)
@@ -393,7 +404,7 @@ internal class CrashGuard(
       // The healthy one passing its own trial again (after going back to it) keeps what was kept for it.
       val keep = if (kept == null && sequence == l.healthy) emptyMap() else mapOf(healthyKey to kept?.encode())
       save(
-        l.copy(trial = 0, failures = 0, running = false, healthy = sequence),
+        l.copy(trial = 0, failures = 0, healthy = sequence).marked(false),
         mapOf(candidateKey to null) + keep,
       )
       true

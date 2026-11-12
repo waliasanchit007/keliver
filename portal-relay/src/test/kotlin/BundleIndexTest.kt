@@ -390,6 +390,19 @@ class BundleIndexTest {
   }
 
   @Test
+  fun theKeptManifestServesOnlyUntilAnotherUrlIsPinned() = runBlocking {
+    // WS6 (L4): an update pinned later must not be answered with the kept manifest, even at its URL.
+    val guard = setAsideGuard()
+    val kept = guard.rollbackTo(5)!!
+    val client = ManifestPinningHttpClient(Fake(mapOf(V4 to M5.encodeUtf8())), V5, null, floor = { 5 }, crash = guard)
+    client.pinLocal(kept)
+    assertEquals(M4.encodeUtf8(), client.download(V4, emptyList()))
+    client.pin(V5, null)
+    // Now V4 goes to the network (here it answers sequence 5's manifest at that URL), not the kept copy.
+    assertEquals(M5.encodeUtf8(), client.download(V4, emptyList()))
+  }
+
+  @Test
   fun theManifestAPinnedUrlServedIsRemembered() = runBlocking {
     // WS6 keeps what loaded from the network, once it proves healthy.
     val fake = Fake(mapOf(V4 to M4.encodeUtf8(), V5 to M5.encodeUtf8()))

@@ -376,10 +376,11 @@ internal class ManifestPinningHttpClient(
    * back to it), never from the network. It is held to its kept sequence exactly, which may be
    * below the floor (CrashGuard.rollbackTo decides that it may), and to the bridges; Zipline
    * verifies its signature, and fetches its modules (from its cache, or the network) by the
-   * sha256 each has in that signed manifest.
+   * sha256 each has in that signed manifest. Only the latest is held, and only until another
+   * URL is [pin]ned: a later update at that URL comes from the network, through the floor.
    */
   fun pinLocal(kept: KeptBundle) {
-    local = local + (kept.manifestUrl to kept)
+    local = mapOf(kept.manifestUrl to kept)
   }
 
   /** The manifest [manifestUrl] last served (pinned URLs only), as text; null when none did. */
@@ -391,6 +392,7 @@ internal class ManifestPinningHttpClient(
    */
   fun pin(manifestUrl: String, sha256: String?) {
     pinned = pinned + (manifestUrl to (sha256 ?: pinned[manifestUrl]))
+    local = local.filterKeys { it == manifestUrl } // WS6: the kept manifest serves only until another URL is pinned
   }
 
   /** The sha256 [manifestUrl] is held to, or null (none, or not pinned). */
