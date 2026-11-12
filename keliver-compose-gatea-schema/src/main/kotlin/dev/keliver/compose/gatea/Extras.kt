@@ -15,6 +15,7 @@
  */
 package dev.keliver.compose.gatea
 
+import dev.keliver.schema.Children
 import dev.keliver.schema.Property
 import dev.keliver.schema.Widget
 
@@ -29,4 +30,15 @@ import dev.keliver.schema.Widget
 public data class ExtraShimmer(
   @Property(1) val shape: dev.keliver.compose.ui.graphics.Shape,
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
+)
+
+/**
+ * One item of a generated lazy list's window (docs/COMPOSE_GENERATOR_DESIGN.md §16): the guest's
+ * item key (typed, as a string) and the item's content, which the host renders in the real
+ * `LazyItemScope`. Structure only; screens never name it.
+ */
+@Widget(501)
+public data class ExtraLazyItem(
+  @Property(1) val key: String?,
+  @Children(1) val content: GenLazyItemScope.() -> Unit,
 )

@@ -97,6 +97,85 @@ class ApiReader(jars: List<File>) {
     )
   }
 
+  private fun classMetadata(classFq: String): kotlin.metadata.KmClass? {
+    val pkg = packageOf(classFq)
+    val simple = classFq.removePrefix("$pkg.").replace('.', '$')
+    val e = byPackage[pkg.replace('.', '/')]?.firstOrNull { it.name.substringAfterLast('/') == "$simple.class" } ?: return null
+    return (KotlinClassMetadata.readLenient(readMetadata(e) ?: return null) as? KotlinClassMetadata.Class)?.kmClass
+  }
+
+  /** Every public top-level function [name] in [pkg] (or member of [owner]), as config specs. */
+  fun overloadSpecs(pkg: String, owner: String?, name: String): List<String> {
+    val entries = byPackage[pkg.replace('.', '/')] ?: return emptyList()
+    val specs = mutableListOf<String>()
+    for (e in entries) {
+      if (owner != null && e.name.substringAfterLast('/').removeSuffix(".class") != owner) continue
+      val md = readMetadata(e) ?: continue
+      val functions = when (val m = KotlinClassMetadata.readLenient(md)) {
+        is KotlinClassMetadata.FileFacade -> if (owner == null) m.kmPackage.functions else emptyList()
+        is KotlinClassMetadata.MultiFileClassPart -> if (owner == null) m.kmPackage.functions else emptyList()
+        is KotlinClassMetadata.Class -> if (owner != null) m.kmClass.functions else emptyList()
+        else -> emptyList()
+      }
+      functions.filter { it.name == name && it.visibility == Visibility.PUBLIC }.forEach { f ->
+        specs += "$pkg.${owner?.let { "$it#" } ?: ""}$name(${f.valueParameters.joinToString(",") { it.name }})"
+      }
+    }
+    return specs.distinct()
+  }
+
+  /** A class's direct supertypes (`FlowRowScope` → `RowScope`, …), fully qualified. */
+  fun supertypes(classFq: String): List<String> = classMetadata(classFq)?.supertypes.orEmpty()
+    .mapNotNull { (it.classifier as? KmClassifier.Class)?.name?.replace('/', '.') }
+
+  /** A public property of an object (`ButtonDefaults.shape`): its type, or null if there is none. */
+  fun property(ownerFq: String, name: String): TypeRef? = classMetadata(ownerFq)?.properties
+    ?.firstOrNull { it.name == name && it.visibility == Visibility.PUBLIC }?.returnType?.toRef()
+
+  /** Whether [classFq] is a class callers outside its module can name (null: not a class on the classpath). */
+  fun isPublicClass(classFq: String): Boolean? = classMetadata(classFq)?.visibility?.let { it == Visibility.PUBLIC }
+
+  /** A property of a class or object of any visibility (`FilledButtonTokens.ContainerElevation`): its type. */
+  fun anyProperty(ownerFq: String, name: String): TypeRef? =
+    classMetadata(ownerFq)?.properties?.firstOrNull { it.name == name }?.returnType?.toRef()
+
+  /**
+   * A top-level property of [pkg] (`androidx.compose.material3.DisabledAlpha`): the JVM class that
+   * holds it, its type, and whether it is public; null if the package has none by that name.
+   */
+  fun topLevelProperty(pkg: String, name: String): Triple<String, TypeRef, Boolean>? {
+    for (e in byPackage[pkg.replace('.', '/')].orEmpty()) {
+      val md = readMetadata(e) ?: continue
+      val props = when (val m = KotlinClassMetadata.readLenient(md)) {
+        is KotlinClassMetadata.FileFacade -> m.kmPackage.properties
+        is KotlinClassMetadata.MultiFileClassPart -> m.kmPackage.properties
+        else -> continue
+      }
+      val p = props.firstOrNull { it.name == name } ?: continue
+      return Triple(e.name.removeSuffix(".class").replace('/', '.'), p.returnType.toRef(), p.visibility == Visibility.PUBLIC)
+    }
+    return null
+  }
+
+  /** Every public overload of an object's function (`ButtonDefaults.buttonColors`), in declaration order. */
+  fun functions(ownerFq: String, name: String): List<DeclInfo> {
+    val km = classMetadata(ownerFq) ?: return emptyList()
+    val pkg = packageOf(ownerFq)
+    val owner = ownerFq.removePrefix("$pkg.")
+    return km.functions.filter { it.name == name && it.visibility == Visibility.PUBLIC }.map { f ->
+      DeclInfo(
+        spec = "$pkg.$owner#$name(${f.valueParameters.joinToString(",") { it.name }})",
+        pkg = pkg,
+        name = name,
+        owner = owner,
+        receiver = f.receiverParameterType?.toRef(),
+        params = f.valueParameters.map { ParamInfo(it.name, it.type.toRef(), it.declaresDefaultValue) },
+        returns = f.returnType.toRef(),
+        isInline = f.isInline,
+      )
+    }
+  }
+
   private fun readMetadata(e: Entry): Metadata? {
     val bytes = e.zip.getInputStream(e.zip.getEntry(e.name)).use { it.readBytes() }
     var result: Metadata? = null

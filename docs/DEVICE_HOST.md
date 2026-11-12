@@ -514,6 +514,79 @@ yourself:** your own signing config for a release APK.
 The generic host above deliberately does not grow into that. It exists so that
 a new adopter can see their screens on a device without writing Android code.
 
+**The debug link** (both hosts, debug builds only; ED3). The relay's device
+proxy (`KELIVER_DEVICE_PROXY`, `DEVICE_PROOF.md`) serves the published bundles
+on its own port, and the editor's "On a device" panel shows each proxy URL as a
+QR code of this link:
+
+```
+keliver-<app package>://keliver-debug/bundles?server=<the proxy URL, percent-encoded>
+keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.20%3A8078
+```
+
+- **The scheme** is `keliver-` and the app's package (its screens'
+  `<package>.screens`, less `.screens`; lower case, `_` as `-`). The
+  scaffolders build it in, and the relay computes it from the same screens, so
+  one app's link does not open another app. Installs of the same screens share
+  it, though: the standalone host and an app that embeds the same screens, or
+  two debug flavors, all register it (Android then shows a chooser; iOS picks
+  one app by no stated rule), so keep one such debug build on a device.
+- **What a debug host accepts**: that scheme and the host `keliver-debug`
+  (either in any case), the path `/bundles` exactly, and one `server=`
+  parameter, percent-encoded at most once, and nothing else (no fragment). The
+  server must be `http://` or `https://`; an IPv4 literal, a bracketed IPv6
+  literal (no zone id) or `localhost`, never a host name, so a link cannot
+  send the host to a name some DNS answers; a loopback, private, link-local or
+  shared address only (IPv4 `127/8`, `10/8`, `172.16/12`, `192.168/16`,
+  `169.254/16`, `100.64/10` as VPNs such as Tailscale use; IPv6 `::1`,
+  `fc00::/7`, `fe80::/10`), so a link never sends the
+  host to the internet; any port from 1024 to 65535 (moving the proxy with
+  `KELIVER_DEVICE_PROXY_PORT` needs no change to the host); and no user,
+  query, fragment or path. The relay makes no link for a URL outside these
+  (a relay on a public address shows its bare URL only). One check does this on both platforms:
+  `DebugBundleLink.kt` (the Android template's `src/debug`, copied into the iOS
+  host), with its test vectors in `DebugBundleLinkTest.kt`.
+- **What it does**: it shows what it would load and asks first (any app or web
+  page can open a link). On Android it then writes `files/keliver/bundle-server`,
+  as the `adb run-as` switch does, and restarts the app. On iOS it keeps the
+  server in the app's defaults and closes the app; open it again (a
+  `KELIVER_BUNDLE_SERVER` launch variable still wins). "Use the build's server"
+  goes back. It moves only where bundles come from: every manifest still
+  verifies against the embedded key, the rollback floor holds, and the cached
+  last good bundle is used only on its own origin. The iOS Debug configuration
+  allows local networking (`NSAllowsLocalNetworking`) for it.
+- **Android hosts built against an `https://` server cannot use the proxy.**
+  The device proxy is plain `http://`, and a standalone Android host's debug
+  build allows cleartext only when a server it was scaffolded or built with
+  (`keliver.bundleServer`, the API base, the report URL) is `http://`. A host
+  scaffolded with `--bundle-server https://…` therefore refuses the link
+  ("This build cannot reach …", naming the cause) rather than set a server it
+  cannot reach; the `adb run-as` switch has the same limit. Build it with an
+  `http://` `keliver.bundleServer` for this, or, for an app that embeds the
+  host, allow cleartext to the proxy in that app's debug manifest.
+- **Debug builds only.** Android: the activity, its check and its intent filter
+  are in `src/debug`, and the activity also needs `BuildConfig.DEBUG` and a
+  debuggable app. iOS: the `Debug` configuration alone sets
+  `KELIVER_DEBUG_LINK` (Kotlin's `src/debuglink`, Swift's `.onOpenURL`) and uses
+  `iosApp/Info-Debug.plist`, `Info.plist` plus the URL type and local
+  networking; every other configuration compiles `src/nodebuglink`, and a
+  release framework refuses `KELIVER_DEBUG_LINK` and a `keliver-` URL scheme in
+  its Info.plist (`checkReleaseUrls`). Keep `Info-Debug.plist` in step when you
+  edit `Info.plist`. The self-tests check a release APK's manifest and dex, and
+  the iOS configurations and plists; CI's T2 checks a Release app's binary and
+  Info.plist. A configuration made by duplicating Debug (a "Staging" one
+  shipped to testers, say) carries the link too, since `checkReleaseUrls` runs
+  only on release framework builds: duplicate Release instead, or remove
+  `KELIVER_DEBUG_LINK` and `Info-Debug.plist` from the copy.
+- **Opening it.** The iOS Camera app offers to open a registered custom scheme,
+  so scanning the QR code works there (not yet tried on a phone). Many Android
+  camera and Lens apps show a QR code that is not `http(s)` as plain text with
+  nothing to tap, so on Android use adb, the reliable route:
+  `adb shell "am start -a android.intent.action.VIEW -d '<link>'"` (quoted
+  twice, so the device's shell also sees one argument). A simulator:
+  `xcrun simctl openurl booted '<link>'`. The editor shows both, with the
+  bare URL and the `adb run-as` command as before.
+
 **Timing marks** (both hosts, from tools 0.3.10; M0 of `ADOPTION_PLAN_2026-10.md`).
 For measuring startup, a host records these moments:
 
@@ -958,7 +1031,9 @@ for byte):
   shell, not an app) reaches it. A release build never runs live updates
   (`keliver.updates=live` becomes `on-resume`). The self-test's `--build`
   checks a release APK: `DEBUG` false, not debuggable, and nothing exported
-  but the launcher activity unless a permission guards it.
+  but the launcher activity unless a permission guards it. The debug link
+  (§2, "The debug link") is the module's `src/debug`: an app's debug build
+  merges its activity and intent filter, a release build none of it.
 - **R8**: the module's consumer rules keep Zipline's bridged services, which
   are called by name. A minified release of the reference app loads and
   renders (X7 below).

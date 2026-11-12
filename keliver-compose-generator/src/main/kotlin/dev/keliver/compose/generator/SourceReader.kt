@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); as in portal-ingest's PsiEnv.
 @file:OptIn(CoreEnvironmentDeprecation::class)
 
 package dev.keliver.compose.generator
@@ -26,9 +25,10 @@ import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 
@@ -66,22 +66,59 @@ class SourceReader(sourceJars: List<File>) {
         f.name == decl.name &&
           f.valueParameters.map { it.name } == decl.params.map { it.name } &&
           f.valueParameters.zip(decl.params).all { (kp, p) -> kp.typeReference?.text?.let { sameType(it, p.type) } ?: true } &&
-          (decl.owner == null && f.parent is KtFile || decl.owner != null && (f.parent.parent as? KtClass)?.name == decl.owner) &&
+          (decl.owner == null && f.parent is KtFile || decl.owner != null && (f.parent.parent as? KtClassOrObject)?.name == decl.owner) &&
           (decl.receiver == null || f.receiverTypeReference != null)
       } ?: continue
       decl.isComposable = fn.annotationEntries.any { it.shortName?.asString() == "Composable" }
+      fn.annotationEntries.firstOrNull { it.shortName?.asString() == "Deprecated" }?.let { d ->
+        val args = d.valueArguments
+        val level = args.firstOrNull { it.getArgumentName()?.asName?.asString() == "level" }
+          ?.getArgumentExpression()?.text?.substringAfterLast('.')
+        decl.deprecation = level ?: "WARNING"
+        decl.deprecationMessage = (args.firstOrNull { it.getArgumentName()?.asName?.asString() == "message" } ?: args.firstOrNull { it.getArgumentName() == null })
+          ?.getArgumentExpression()?.text?.let(::stringLiteral)
+      }
       decl.kdoc = fn.docComment?.getDefaultSection()?.getContent()?.trim()?.let(::firstSentence)
       decl.params.zip(fn.valueParameters).forEach { (p, kp) -> p.defaultText = kp.defaultValue?.text?.replace(Regex("\\s+"), " ") }
-      decl.imports = file.importDirectives.mapNotNull { d ->
-        val fq = d.importedFqName?.asString() ?: return@mapNotNull null
-        (d.aliasName ?: fq.substringAfterLast('.')) to fq
-      }.toMap()
+      decl.imports = imports(file)
       decl.sourcePath = name
       return
     }
     error("${decl.spec}: not found in the sources")
   }
+
+  private fun parsedFiles(pkg: String): List<KtFile> =
+    byPackage[pkg.replace('.', '/')].orEmpty().map { (zip, name) ->
+      parsed.getOrPut(name) {
+        factory.createFile(name.substringAfterLast('/'), zip.getInputStream(zip.getEntry(name)).use { it.readBytes().decodeToString() })
+      }
+    }
+
+  /** An object property in the sources (`ButtonDefaults.shape`), with its file's imports. */
+  fun property(ownerFq: String, name: String): SourceProperty? {
+    val pkg = packageOf(ownerFq)
+    val owner = ownerFq.removePrefix("$pkg.")
+    for (file in parsedFiles(pkg)) {
+      val obj = file.collectDescendantsOfType<KtClassOrObject>().firstOrNull { it.name == owner } ?: continue
+      val p = obj.declarations.filterIsInstance<KtProperty>().firstOrNull { it.name == name } ?: continue
+      val composable = p.getter?.annotationEntries.orEmpty().any { it.shortName?.asString() == "Composable" } ||
+        p.annotationEntries.any { it.shortName?.asString() == "Composable" && it.useSiteTarget?.text == "get" }
+      return SourceProperty(composable, imports(file), p.initializer?.text ?: p.getter?.bodyExpression?.text)
+    }
+    return null
+  }
+
+  private fun imports(file: KtFile): Map<String, String> = file.importDirectives.mapNotNull { d ->
+    val fq = d.importedFqName?.asString() ?: return@mapNotNull null
+    (d.aliasName ?: fq.substringAfterLast('.')) to fq
+  }.toMap()
 }
+
+class SourceProperty(val composableGetter: Boolean, val imports: Map<String, String>, val initializer: String?)
+
+/** The text of a Kotlin string literal expression (concatenations joined), without quotes. */
+internal fun stringLiteral(expr: String): String =
+  Regex("\"((?:[^\"\\\\]|\\\\.)*)\"").findAll(expr).joinToString("") { it.groupValues[1] }.replace(Regex("\\s+"), " ")
 
 internal fun firstSentence(text: String): String {
   val flat = text.replace(Regex("\\s+"), " ")

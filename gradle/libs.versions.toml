@@ -5,11 +5,9 @@ kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 androidx-activity = "1.10.1"
 androidx-compose-ui = "1.12.1"
+# Also the Compose API the generator (keliver-compose-generator) reads: bumping it fails the generated
+# group's staleness guard (checkComposeApi) until the group is regenerated, with lock appends only.
 jbCompose = "1.12.2"
-# The Compose API the Gate A generator (keliver-compose-generator) READS, pinned to the version Gate A
-# was verified on so the checked-in generated group and its staleness guard stay byte-identical.
-# Gate B moves it to jbCompose. The generated modules themselves compile against jbCompose.
-composeGeneratorInput = "1.8.2"
 # The Skia build jbCompose uses (bump it with jbCompose: the desktop runtime must match the
 # skiko that compose-ui pulls in). Only its desktop runtime is a direct (test) dependency.
 skiko = "0.150.2"
@@ -84,7 +82,8 @@ jetbrains-compose-material-icons-core = { module = "org.jetbrains.compose.materi
 # ~50 names referenced in MaterialIcons.kt land in bundles — the map defeats DCE
 # per-icon, so keep the map curated, not exhaustive).
 jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version = "1.7.3" }
-# Material 3 is versioned on its own since CMP 1.9; 1.9.0 is the release CMP 1.11.1 pairs with.
+# Material 3 is versioned on its own since CMP 1.9, so this pin does not follow jbCompose; moving it
+# is its own step (the Compose generator reads it: regenerate and lock).
 jetbrains-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version = "1.9.0" }
 jetbrains-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "jbCompose" }
 jetbrains-compose-runtime-saveable = { module = "org.jetbrains.compose.runtime:runtime-saveable", version.ref = "jbCompose" }

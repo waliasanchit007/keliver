@@ -16,6 +16,7 @@
 package dev.keliver.compose.gatea.composeui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
@@ -32,13 +33,21 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import dev.keliver.compose.foundation.lazy.LazyListState as GuestLazyListState
+import dev.keliver.compose.gatea.composeui.samples.guest.LongList as GuestLongList
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleCard as GuestSampleCard
+import dev.keliver.compose.gatea.composeui.samples.guest.SampleOrders as GuestSampleOrders
 import dev.keliver.compose.gatea.composeui.samples.native.SampleCard as NativeSampleCard
+import dev.keliver.compose.gatea.composeui.samples.native.SampleOrders as NativeSampleOrders
 import dev.keliver.compose.gatea.protocol.guest.KeliverComposeGateAProtocolWidgetSystemFactory
 import dev.keliver.compose.gatea.protocol.host.KeliverComposeGateAHostProtocol
 import dev.keliver.layout.composeui.ComposeUiRedwoodLayoutWidgetFactory
@@ -60,9 +69,11 @@ import dev.keliver.ui.UiConfiguration
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
@@ -73,23 +84,121 @@ import kotlinx.serialization.json.Json
  */
 @OptIn(ExperimentalTestApi::class)
 class SameSourceTest {
-  private val tags = listOf("AAA", "Monthly", "Secured", "Listed on NSE", "Tax free", "Senior")
+  private val tags = listOf("Fragile", "Bulk", "In stock", "Ships today", "Gift wrap", "Returnable")
 
   @Test fun onlyImportsDiffer() {
     val dir = File("src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples")
     fun body(f: File) = f.readLines().filterNot {
       it.startsWith("import ") || it.startsWith("package ") || it.startsWith("//")
     }
-    assertEquals(body(File(dir, "native/SampleCard.kt")), body(File(dir, "guest/SampleCard.kt")))
-    val guestImports = File(dir, "guest/SampleCard.kt").readLines().filter { it.startsWith("import ") }
-    val nativeImports = File(dir, "native/SampleCard.kt").readLines().filter { it.startsWith("import ") }
-    // Sorted: the formatter orders imports lexically, and the rewrite changes a prefix.
-    assertEquals(nativeImports.sorted(), guestImports.map { it.replace("import dev.keliver.compose.", "import androidx.compose.") }.sorted())
+    for (sample in listOf("SampleCard.kt", "SampleOrders.kt")) {
+      assertEquals(body(File(dir, "native/$sample")), body(File(dir, "guest/$sample")), sample)
+      val guestImports = File(dir, "guest/$sample").readLines().filter { it.startsWith("import ") }
+      val nativeImports = File(dir, "native/$sample").readLines().filter { it.startsWith("import ") }
+      // Sorted: the formatter orders imports lexically, and the rewrite changes a prefix.
+      assertEquals(nativeImports.sorted(), guestImports.map { it.replace("import dev.keliver.compose.", "import androidx.compose.") }.sorted(), sample)
+    }
+  }
+
+  private val orders = listOf(
+    "Order 1042" to "Out for delivery",
+    "Order 1041" to "Packed",
+    "Order 1039" to "Delivered on Monday",
+    "Order 1036" to "Refund in progress",
+  )
+
+  /**
+   * Gate B's sample: TopAppBar (slots, a `*Defaults` factory with a theme reference), LazyColumn
+   * (a window, `LazyItemScope.fillParentMaxWidth`, keys), Surface with a border, Card with factory
+   * colours and elevation, Image with a vector painter and a tint, Button, TextButton,
+   * OutlinedButton (a factory-made border), HorizontalDivider (a snapshot and a reference).
+   */
+  @Test fun samePixelsForTheListingSample() = runComposeUiTest {
+    val opened = mutableListOf<String>()
+    val host = guestOnHost { GuestSampleOrders(orders, onBack = {}, onOpen = { opened += it }) }
+    var showGuest by mutableStateOf(false)
+    setContent {
+      Theme {
+        Box(Modifier.size(360.dp, 640.dp).testTag("slot")) {
+          if (showGuest) {
+            Box(Modifier.testTag("guest")) { host.root.Render(null) }
+          } else {
+            NativeSampleOrders(orders, onBack = {}, onOpen = {})
+          }
+        }
+      }
+    }
+    waitForIdle()
+    val native = onNodeWithTag("slot").captureToImage()
+    showGuest = true
+    repeat(3) {
+      waitForIdle()
+      host.pump()
+    }
+    waitForIdle()
+    val guest = onNodeWithTag("slot").captureToImage()
+    File("build/gate-b").mkdirs()
+    javax.imageio.ImageIO.write(native.toAwtImage(), "png", File("build/gate-b/orders-native.png"))
+    javax.imageio.ImageIO.write(guest.toAwtImage(), "png", File("build/gate-b/orders-guest.png"))
+    File("build/gate-b/orders-wire.json").writeText(host.wire.joinToString("\n"))
+    assertEquals(native.width to native.height, guest.width to guest.height, "sizes")
+    assertEquals(0, differingPixels(native, guest, "build/gate-b/orders-diff.png"), "pixels that differ between native Compose and the generated guest")
+
+    // A generated widget's own event (not a modifier lambda): the first card's TextButton…
+    onAllNodesWithText("Details").onFirst().performClick()
+    waitForIdle()
+    host.pump()
+    assertEquals(listOf("Order 1042"), opened)
+    // …and the second Card's own onClick, by a tap on its title (inside the card, not a button).
+    onNodeWithText("Order 1041").performClick()
+    waitForIdle()
+    host.pump()
+    assertEquals(listOf("Order 1042", "Order 1041"), opened)
+  }
+
+  /**
+   * LazyColumn through the lazy-layout windowing (design §16): only a window of the items crosses;
+   * a host scroll moves the guest's window and the state's mirrored fields; a guest command
+   * (`scrollToItem`) scrolls the host's real state.
+   */
+  @Test fun lazyWindowFollowsTheHost() = runComposeUiTest {
+    val state = GuestLazyListState()
+    val host = guestOnHost { GuestLongList(state, count = 500) }
+    setContent {
+      Theme {
+        Box(Modifier.size(300.dp, 400.dp)) { host.root.Render(null) }
+      }
+    }
+    repeat(3) {
+      waitForIdle()
+      host.pump()
+    }
+    waitForIdle()
+    onNodeWithText("Row 0").assertExists()
+    val items = host.created[501] ?: 0
+    assertTrue(items in 10..40, "a window of the 500 items crossed, not all of them: $items")
+
+    onNode(hasScrollToIndexAction()).performScrollToIndex(300)
+    repeat(4) {
+      waitForIdle()
+      host.pump()
+    }
+    waitForIdle()
+    onNodeWithText("Row 300").assertExists()
+    assertEquals(300, state.firstVisibleItemIndex, "the host's viewport reached the guest's state")
+
+    CoroutineScope(Dispatchers.Unconfined + host.clock).launch { state.scrollToItem(42) }
+    repeat(4) {
+      host.pump()
+      waitForIdle()
+    }
+    onNodeWithText("Row 42").assertExists()
+    assertEquals(42, state.firstVisibleItemIndex, "the guest's command scrolled the host's state")
   }
 
   @Test fun samePixels() = runComposeUiTest {
     var opened = 0
-    val host = guestOnHost { GuestSampleCard("A long item title that will not fit on one line", "Subtitle", tags) { opened++ } }
+    val host = guestOnHost { GuestSampleCard("A long item title that will not fit on one line", "Qty 12", tags) { opened++ } }
     // Both render in the same place, one after the other: a spot shadow depends on where in the
     // window it is drawn.
     var showGuest by mutableStateOf(false)
@@ -99,7 +208,7 @@ class SameSourceTest {
           if (showGuest) {
             Box(Modifier.testTag("guest")) { host.root.Render(null) }
           } else {
-            NativeSampleCard("A long item title that will not fit on one line", "Subtitle", tags) {}
+            NativeSampleCard("A long item title that will not fit on one line", "Qty 12", tags) {}
           }
         }
       }
@@ -127,11 +236,11 @@ class SameSourceTest {
 
   @Composable
   private fun Theme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF006A60), secondaryContainer = Color(0xFFFFE9B0)), content = content)
+    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF6750A4), secondaryContainer = Color(0xFFE8DEF8)), content = content)
   }
 }
 
-private fun differingPixels(a: ImageBitmap, b: ImageBitmap): Int {
+private fun differingPixels(a: ImageBitmap, b: ImageBitmap, diffPath: String = "build/gate-a/diff.png"): Int {
   val pa = a.toPixelMap()
   val pb = b.toPixelMap()
   var n = 0
@@ -149,7 +258,7 @@ private fun differingPixels(a: ImageBitmap, b: ImageBitmap): Int {
     println("differing box: ${box.toList()}")
     val img = java.awt.image.BufferedImage(a.width, a.height, java.awt.image.BufferedImage.TYPE_INT_RGB)
     for (y in 0 until a.height) for (x in 0 until a.width) img.setRGB(x, y, if (pa[x, y] != pb[x, y]) 0xFF0000 else 0xFFFFFF)
-    javax.imageio.ImageIO.write(img, "png", File("build/gate-a/diff.png"))
+    javax.imageio.ImageIO.write(img, "png", File(diffPath))
   }
   return n
 }
@@ -166,6 +275,9 @@ internal class GuestOnHost(
   private val json = Json
   val wire = mutableListOf<String>()
 
+  /** Widgets created on the host, by widget tag (offset tags for dependency schemas). */
+  val created = mutableMapOf<Int, Int>()
+
   fun pump() {
     clock.sendFrame(0L)
     val changes = guestAdapter.takeChanges()
@@ -173,6 +285,7 @@ internal class GuestOnHost(
     val text = json.encodeToString(ListSerializer(Change.serializer()), changes)
     wire += text
     val decoded = json.decodeFromString(ListSerializer(Change.serializer()), text)
+    decoded.filterIsInstance<dev.keliver.protocol.Create>().forEach { created.merge(it.tag.value, 1, Int::plus) }
     hostAdapter.sendChanges(decoded.mapNotNull { UiChange.fromProtocol(protocol, it) })
   }
 

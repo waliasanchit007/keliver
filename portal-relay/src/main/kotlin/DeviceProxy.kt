@@ -268,16 +268,79 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
     }
 
     /**
-     * The relay's `GET /device-proxy` answer: off, or each URL with its QR code (an SVG made here)
-     * and how many event streams the proxy holds ([listening]; the relay's own are its devices count).
+     * The relay's `GET /device-proxy` answer: off, or each URL with its debug link ([debugLink] with
+     * [linkScheme]; null without one), the QR code of that link, or of the bare URL when there is no
+     * link (an SVG made here), and how many event streams the proxy holds ([listening]; the relay's
+     * own are its devices count).
      */
-    fun statusJson(urls: List<String>?, listening: Int = 0): String {
+    fun statusJson(urls: List<String>?, listening: Int = 0, linkScheme: String? = null): String {
       if (urls == null) return "{\"enabled\":false,\"env\":${jsonString(ENV)}}"
       val items = urls.joinToString(",") { u ->
-        val qr = runCatching { jsonString(QrCode.encode(u).toSvg()) }.getOrDefault("null") // too long: link only
-        "{\"url\":${jsonString(u)},\"qrSvg\":$qr}"
+        val link = linkScheme?.let { debugLink(it, u) }
+        val qr = runCatching { jsonString(QrCode.encode(link ?: u).toSvg()) }.getOrDefault("null") // too long: text only
+        "{\"url\":${jsonString(u)},\"link\":${link?.let(::jsonString) ?: "null"},\"qrSvg\":$qr}"
       }
       return "{\"enabled\":true,\"urls\":[$items],\"listening\":$listening}"
+    }
+
+    /** The host link scheme's own grammar: `keliver-` and a package, as keliver-new-*-host.sh writes it. */
+    private val LINK_SCHEME = Regex("""^keliver-[a-z][a-z0-9.-]{0,99}$""")
+
+    /** The package rule both host scaffolders use: every screen declares one `<package>.screens`. */
+    private val PACKAGE_LINE = Regex("""^\s*package\s+([A-Za-z_][A-Za-z0-9_.]*)\s*$""", RegexOption.MULTILINE)
+
+    /**
+     * The debug link scheme of the app whose screens are [screenSources] (their texts): `keliver-`
+     * and the app's package (its screens' one `<package>.screens`, less `.screens`), lower case,
+     * `_` as `-` — what keliver-new-production-host.sh and keliver-new-ios-host.sh build into a
+     * debug host. Null unless every screen declares that same package.
+     */
+    fun linkScheme(screenSources: List<String>): String? {
+      val pkgs = screenSources.map { PACKAGE_LINE.find(it)?.groupValues?.get(1) }.toSet()
+      // Every screen: one package, and none without one (a null in the set).
+      val root = pkgs.singleOrNull()?.takeIf { it.endsWith(".screens") }?.removeSuffix(".screens")
+      if (screenSources.isEmpty() || root.isNullOrEmpty()) return null
+      return "keliver-${root.lowercase().replace('_', '-')}".takeIf { LINK_SCHEME.matches(it) }
+    }
+
+    /**
+     * ED3: the debug link a debug host opens to load bundles from [url] (a proxy URL of [urls]):
+     * `<scheme>://keliver-debug/bundles?server=<url, percent-encoded>`, the shape the hosts'
+     * DebugBundleLink accepts. Null for a scheme or URL not of the shapes this relay makes.
+     */
+    fun debugLink(scheme: String, url: String): String? {
+      val m = PROXY_URL.matchEntire(url)
+      if (!LINK_SCHEME.matches(scheme) || m == null) return null
+      if (!linkAddress(m.groupValues[1]) || m.groupValues[2].toInt() !in 1024..65535) return null
+      val encoded = url.replace(":", "%3A").replace("/", "%2F").replace("[", "%5B").replace("]", "%5D")
+      return "$scheme://keliver-debug/bundles?server=$encoded"
+    }
+
+    /** What [urls] makes: http, an IPv4 or bracketed IPv6 literal, a port. */
+    private val PROXY_URL = Regex("""^http://(\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+]):(\d{1,5})$""")
+
+    /**
+     * Whether a debug host takes a link to [host] (a literal of [PROXY_URL]): loopback, private,
+     * link-local or shared (100.64.0.0/10) IPv4, or `::1`, fc00::/7 or fe80::/10, the ranges of the
+     * hosts' DebugBundleLink. A relay on a public address shows its bare URL only, with no link.
+     */
+    private fun linkAddress(host: String): Boolean {
+      if (host.startsWith("[")) {
+        // A bracketed literal is parsed, never looked up; an invalid one throws.
+        val a = runCatching { InetAddress.getByName(host) }.getOrNull() ?: return false
+        val b = a.address
+        return b.size == 16 && (a.isLoopbackAddress || (b[0].toInt() and 0xfe) == 0xfc || a.isLinkLocalAddress)
+      }
+      val o = host.split('.').map { it.toInt() }
+      if (o.any { it > 255 }) return false
+      return when (o[0]) {
+        127, 10 -> true
+        172 -> o[1] in 16..31
+        192 -> o[1] == 168
+        169 -> o[1] == 254
+        100 -> o[1] in 64..127
+        else -> false
+      }
     }
   }
 }

@@ -32,9 +32,33 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import dev.keliver.Modifier as KeliverModifier
+import dev.keliver.compose.gatea.widget.ExtraLazyItem
 import dev.keliver.compose.gatea.widget.ExtraShimmer
 import dev.keliver.compose.ui.graphics.RectangleShape as K_RectangleShape
 import dev.keliver.compose.ui.graphics.Shape as K_Shape
+
+/**
+ * One item of a generated lazy list's window (design §16): structure, not a widget a screen names.
+ * The list's renderer draws [content] inside the real `LazyListScope.items` lambda; [key] is the
+ * guest's item key, typed (`s:…`, `i:…`), so the host's item keeps its state across window moves.
+ */
+internal class ComposeUiExtraLazyItem :
+  ExtraLazyItem<@Composable (Modifier) -> Unit>,
+  GeneratedWidget {
+  override var modifier: KeliverModifier = KeliverModifier
+  override var modifierEventSink: ((Int) -> Unit)? = null
+  var key: String? = null
+    private set
+
+  override fun key(key: String?) {
+    this.key = key
+  }
+
+  override val content: ScopedChildren = ScopedChildren()
+
+  /** Only if a guest places an item outside a lazy list: its children, unscoped. */
+  override val value: @Composable (Modifier) -> Unit = { content.Render(null) }
+}
 
 /**
  * The one hand-written renderer: `dev.keliver.compose.extras.Shimmer`, a Keliver extra (not

@@ -109,6 +109,7 @@ public fun Spacer(
 }
 
 /** [FlowRow] is a layout that fills items from left to right (ltr) in LTR layouts or right to left (rtl) in RTL layouts and when it runs out of space, moves to the next "row" or "line" positioned on the bottom, and then continues filling items until the items run out. */
+@Deprecated("Compose: The overflow parameter has been deprecated")
 @androidx.compose.runtime.Composable
 public fun FlowRow(
   modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
@@ -277,7 +278,7 @@ internal object ColumnScopeInstance : ColumnScope
 
 /** The guest's `androidx.compose.foundation.layout.FlowRowScope`. */
 @androidx.compose.runtime.Immutable
-public interface FlowRowScope {
+public interface FlowRowScope : dev.keliver.compose.foundation.layout.RowScope {
 }
 
 @PublishedApi
@@ -310,4 +311,7 @@ internal object RowScopeInstance : RowScope
 
 /** Placeholder: Compose's `FlowRowOverflow` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class FlowRowOverflow private constructor()
+
+/** Placeholder: Compose's `WindowInsets` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
+public class WindowInsets private constructor()
 

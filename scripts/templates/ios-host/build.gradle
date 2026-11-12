@@ -103,6 +103,11 @@ def checkReleaseUrls = tasks.register('checkReleaseUrls') {
     if (exceptions) {
       throw new GradleException("A release build must not ship App Transport Security exceptions; ${infoPlist} has ${exceptions.join(', ')}. Remove its NSAppTransportSecurity block.")
     }
+    // ED3: the debug link is the Debug configuration's alone (its Info-Debug.plist, src/debuglink).
+    if (System.getenv('KELIVER_DEBUG_LINK') == 'YES' || infoPlist.text =~ /(?s)CFBundleURLSchemes<\/key>\s*<array>(?:(?!<\/array>).)*<string>keliver-/) {
+      throw new GradleException("A release build must not ship the debug link: unset KELIVER_DEBUG_LINK for this configuration " +
+        "(only Debug sets it), and keep the link's URL type out of ${infoPlist} (it belongs in iosApp/Info-Debug.plist).")
+    }
   }
 }
 tasks.configureEach { t ->
@@ -159,6 +164,10 @@ kotlin {
       // Debug and Benchmark configurations set (Benchmark: Release settings, never shipped).
       // Release, and a build outside Xcode, compile the no-op src/notiming/ instead.
       kotlin.srcDir(System.getenv('KELIVER_TIMING') == 'YES' ? 'src/timing/kotlin' : 'src/notiming/kotlin')
+      // ED3: the debug link (the editor's "On a device" QR code) only when Xcode's build setting
+      // KELIVER_DEBUG_LINK is YES, which only the Debug configuration sets. Every other build,
+      // and a build outside Xcode, compiles src/nodebuglink/: no handler, no stored server.
+      kotlin.srcDir(System.getenv('KELIVER_DEBUG_LINK') == 'YES' ? 'src/debuglink/kotlin' : 'src/nodebuglink/kotlin')
       dependencies {
         implementation 'dev.keliver:keliver-treehouse-host:@@KELIVER_VERSION@@'
         implementation 'dev.keliver:keliver-treehouse-host-composeui:@@KELIVER_VERSION@@'

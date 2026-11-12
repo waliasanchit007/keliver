@@ -84,6 +84,10 @@ def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/Bridges.kt'))
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/CrashRollback.kt'))
   from(rootProject.file('scripts/templates/production-host/src/test/kotlin/CrashRollbackTest.kt'))
+  // ED3: the debug link's check (src/debug; both hosts' debug builds use it) and its vectors;
+  // DeviceProxyTest holds the relay's links to what that check accepts.
+  from(rootProject.file('scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt'))
   filter { line -> line.replace('@@PACKAGE@@', 'hosttemplate') }
   into layout.buildDirectory.dir('generated/hostTemplate/kotlin')
 }

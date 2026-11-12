@@ -52,25 +52,25 @@ import dev.keliver.compose.ui.unit.sp
 
 @Suppress("ktlint:compose:modifier-missing-check")
 @Composable
-fun SampleCard(title: String, rate: String, tags: List<String>, onOpen: () -> Unit) {
+fun SampleCard(title: String, quantity: String, tags: List<String>, onOpen: () -> Unit) {
   Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Row(
       modifier = Modifier.fillMaxWidth()
         .shadow(1.dp, RoundedCornerShape(12.dp), clip = false)
         .clip(RoundedCornerShape(12.dp))
-        .background(Color(0xFFE7F0FF))
+        .background(Color(0xFFF7F2FA))
         .border(1.dp, Color(0xFFEDEDED), RoundedCornerShape(12.dp))
         .clickable { onOpen() }
         .padding(horizontal = 16.dp, vertical = 12.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      Box(Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF41A69E)), contentAlignment = Alignment.Center) {
+      Box(Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF625B71)), contentAlignment = Alignment.Center) {
         Icon(Icons.Filled.Search, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
       }
       Spacer(Modifier.width(12.dp))
       Column(Modifier.weight(1f)) {
         Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1F1F1F), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(rate, style = LocalTextStyle.current.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+        Text(quantity, style = LocalTextStyle.current.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
       }
       Icon(Icons.Filled.ChevronRight, contentDescription = "Open")
     }
