@@ -5,6 +5,7 @@
 package dev.keliver.coil3.compose
 
 import dev.keliver.compose.gatea.compose.GenAsyncImage1
+import dev.keliver.compose.gatea.compose.GenAsyncImage2
 import dev.keliver.compose.ui.Alignment
 import dev.keliver.compose.ui.graphics.DefaultAlpha
 import dev.keliver.compose.ui.graphics.drawscope.DrawScope.Companion.DefaultFilterQuality
@@ -19,6 +20,7 @@ public fun AsyncImage(
   alignment: dev.keliver.compose.ui.Alignment = Alignment.Center,
   contentScale: dev.keliver.compose.ui.layout.ContentScale = ContentScale.Fit,
   alpha: kotlin.Float = DefaultAlpha,
+  colorFilter: dev.keliver.compose.ui.graphics.ColorFilter? = null,
   filterQuality: dev.keliver.compose.ui.graphics.FilterQuality = DefaultFilterQuality,
   clipToBounds: kotlin.Boolean = true,
 ) {
@@ -31,6 +33,7 @@ public fun AsyncImage(
     alignment = alignment,
     contentScale = contentScale,
     alpha = if (alpha == default_alpha) null else alpha,
+    colorFilter = colorFilter,
     filterQuality = if (filterQuality == default_filterQuality) null else filterQuality,
     clipToBounds = clipToBounds,
     modifierEvent = split.events,
@@ -38,7 +41,7 @@ public fun AsyncImage(
   )
 }
 
-@Deprecated("Keliver: 'transform': image-loading state callbacks are Gate B. Keliver: 'onState': image-loading state callbacks are Gate B. Keliver: 'colorFilter': colour filters are Gate B.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'transform': image-loading state callbacks are Gate B. Keliver: 'onState': image-loading state callbacks are Gate B.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun AsyncImage(
   model: kotlin.Any?,
@@ -52,9 +55,43 @@ public fun AsyncImage(
   colorFilter: dev.keliver.compose.ui.graphics.ColorFilter? = null,
   filterQuality: dev.keliver.compose.ui.graphics.FilterQuality = DefaultFilterQuality,
   clipToBounds: kotlin.Boolean = true,
-): Unit = throw UnsupportedOperationException("Keliver: 'transform': image-loading state callbacks are Gate B. Keliver: 'onState': image-loading state callbacks are Gate B. Keliver: 'colorFilter': colour filters are Gate B.")
+): Unit = throw UnsupportedOperationException("Keliver: 'transform': image-loading state callbacks are Gate B. Keliver: 'onState': image-loading state callbacks are Gate B.")
 
-@Deprecated("Keliver: this overload's 'placeholder', 'error', 'fallback', 'onLoading', 'onSuccess', 'onError', 'colorFilter' cannot cross to the host, and without them it is another overload. Leave them out.", level = DeprecationLevel.ERROR)
+/** A composable that executes an [ImageRequest] asynchronously and renders the result. */
+@androidx.compose.runtime.Composable
+public fun AsyncImage(
+  model: kotlin.Any?,
+  contentDescription: kotlin.String?,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  placeholder: dev.keliver.compose.ui.graphics.painter.Painter? = null,
+  error: dev.keliver.compose.ui.graphics.painter.Painter? = null,
+  alignment: dev.keliver.compose.ui.Alignment = Alignment.Center,
+  contentScale: dev.keliver.compose.ui.layout.ContentScale = ContentScale.Fit,
+  alpha: kotlin.Float = DefaultAlpha,
+  colorFilter: dev.keliver.compose.ui.graphics.ColorFilter? = null,
+  filterQuality: dev.keliver.compose.ui.graphics.FilterQuality = DefaultFilterQuality,
+  clipToBounds: kotlin.Boolean = true,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_alpha = DefaultAlpha
+  val default_filterQuality = DefaultFilterQuality
+  GenAsyncImage2(
+    model = dev.keliver.compose.internal.imageModel(model),
+    contentDescription = contentDescription,
+    placeholder = placeholder,
+    error = error,
+    alignment = alignment,
+    contentScale = contentScale,
+    alpha = if (alpha == default_alpha) null else alpha,
+    colorFilter = colorFilter,
+    filterQuality = if (filterQuality == default_filterQuality) null else filterQuality,
+    clipToBounds = clipToBounds,
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'fallback': an explicit null for a parameter whose default is not null needs a wire marker this type lacks (docs/COMPOSE_GENERATOR_DESIGN.md §5). Leave it out. Keliver: 'onLoading': a ((coil3.compose.AsyncImagePainter.State.Loading)->kotlin.Unit)? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'onSuccess': a ((coil3.compose.AsyncImagePainter.State.Success)->kotlin.Unit)? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'onError': a ((coil3.compose.AsyncImagePainter.State.Error)->kotlin.Unit)? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun AsyncImage(
   model: kotlin.Any?,
@@ -72,7 +109,7 @@ public fun AsyncImage(
   colorFilter: dev.keliver.compose.ui.graphics.ColorFilter? = null,
   filterQuality: dev.keliver.compose.ui.graphics.FilterQuality = DefaultFilterQuality,
   clipToBounds: kotlin.Boolean = true,
-): Unit = throw UnsupportedOperationException("Keliver: this overload's 'placeholder', 'error', 'fallback', 'onLoading', 'onSuccess', 'onError', 'colorFilter' cannot cross to the host, and without them it is another overload. Leave them out.")
+): Unit = throw UnsupportedOperationException("Keliver: 'fallback': an explicit null for a parameter whose default is not null needs a wire marker this type lacks (docs/COMPOSE_GENERATOR_DESIGN.md §5). Leave it out. Keliver: 'onLoading': a ((coil3.compose.AsyncImagePainter.State.Loading)->kotlin.Unit)? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'onSuccess': a ((coil3.compose.AsyncImagePainter.State.Success)->kotlin.Unit)? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'onError': a ((coil3.compose.AsyncImagePainter.State.Error)->kotlin.Unit)? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11).")
 
 /** Placeholder: Compose's `AsyncImagePainter` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class AsyncImagePainter private constructor() {

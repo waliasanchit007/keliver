@@ -13,9 +13,24 @@ dependencies {
   testImplementation libs.kotlin.test.junit
 }
 
-// Pinned to what Gate A was verified on (not jbCompose); see libs.versions.toml.
-def cmp = libs.versions.composeGeneratorInput.get()
-def coil = libs.versions.coil.get()
+// The generator reads exactly the Compose the generated renderers compile against: each input is the
+// desktop (JVM) artifact of a catalog alias the composeui module depends on, at that alias's version
+// (jbCompose for foundation and ui; material3's own pin, which CMP versions separately; coil). There is
+// no separate generator pin: bumping jbCompose moves the generator's input with it, and the staleness
+// guard (checkComposeApi) then fails until the group is regenerated, with the lock appended to only.
+def desktopOf = { alias, String artifact = null, String platform = 'desktop' ->
+  def d = alias.get()
+  "${d.module.group}:${artifact ?: d.module.name}-${platform}:${d.versionConstraint.requiredVersion}"
+}
+def composeInputs = [
+  desktopOf(libs.jetbrains.compose.foundation, 'foundation-layout'),
+  desktopOf(libs.jetbrains.compose.foundation),
+  desktopOf(libs.jetbrains.compose.material3),
+  desktopOf(libs.jetbrains.compose.ui.asProvider()),
+  desktopOf(libs.jetbrains.compose.ui.asProvider(), 'ui-graphics'),
+  desktopOf(libs.coil.compose.full, null, 'jvm'),
+  desktopOf(libs.coil.compose.asProvider(), null, 'jvm'),
+]
 
 // The Compose API the generator reads: desktop JVM jars (metadata) and their sources.
 configurations {
@@ -26,19 +41,14 @@ configurations {
   composeSources { canBeConsumed = false; transitive = false }
 }
 dependencies {
-  composeApi "org.jetbrains.compose.foundation:foundation-layout-desktop:$cmp"
-  composeApi "org.jetbrains.compose.foundation:foundation-desktop:$cmp"
-  composeApi "org.jetbrains.compose.material3:material3-desktop:$cmp"
-  composeApi "org.jetbrains.compose.ui:ui-desktop:$cmp"
-  composeApi "io.coil-kt.coil3:coil-compose-jvm:$coil"
-  composeApi "io.coil-kt.coil3:coil-compose-core-jvm:$coil"
-  composeSources "org.jetbrains.compose.foundation:foundation-layout-desktop:$cmp:sources@jar"
-  composeSources "org.jetbrains.compose.foundation:foundation-desktop:$cmp:sources@jar"
-  composeSources "org.jetbrains.compose.material3:material3-desktop:$cmp:sources@jar"
-  composeSources "org.jetbrains.compose.ui:ui-desktop:$cmp:sources@jar"
-  composeSources "io.coil-kt.coil3:coil-compose-jvm:$coil:sources@jar"
-  composeSources "io.coil-kt.coil3:coil-compose-core-jvm:$coil:sources@jar"
+  composeInputs.each {
+    composeApi it
+    composeSources "$it:sources@jar"
+  }
 }
+
+// Recorded in the generated files' header, so a regeneration's diff names the Compose it read.
+def composeInputVersions = "Compose Multiplatform ${libs.versions.jbCompose.get()}, material3 ${libs.jetbrains.compose.material3.get().versionConstraint.requiredVersion}, coil ${libs.versions.coil.get()}"
 
 def generatorArgs = { List extra ->
   [
@@ -49,7 +59,9 @@ def generatorArgs = { List extra ->
     '--out-schema', rootProject.file('keliver-compose-gatea-schema/src/main/kotlin').absolutePath,
     '--out-guest', rootProject.file('keliver-compose-gatea-compose/src/commonMain/kotlin').absolutePath,
     '--out-host', rootProject.file('keliver-compose-gatea-composeui/src/commonMain/kotlin').absolutePath,
+    '--out-values', rootProject.file('keliver-compose-values/src/commonMain/kotlin').absolutePath,
     '--out-editor', rootProject.file('keliver-compose-gatea-schema/gatea.editor.json').absolutePath,
+    '--input', composeInputVersions,
   ] + extra
 }
 

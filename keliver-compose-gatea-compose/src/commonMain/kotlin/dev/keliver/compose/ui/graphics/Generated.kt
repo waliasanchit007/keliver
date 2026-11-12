@@ -8,6 +8,3 @@ package dev.keliver.compose.ui.graphics
 /** Placeholder: Compose's `Brush` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class Brush private constructor()
 
-/** Placeholder: Compose's `ColorFilter` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
-public class ColorFilter private constructor()
-

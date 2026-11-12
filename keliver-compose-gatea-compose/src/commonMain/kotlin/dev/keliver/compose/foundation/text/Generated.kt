@@ -2,9 +2,9 @@
 // change keliver-compose-generator/gatea.json and run :keliver-compose-generator:generateComposeApi.
 @file:Suppress("ktlint", "RedundantVisibilityModifier", "UNUSED_PARAMETER", "unused", "DEPRECATION", "UNREACHABLE_CODE")
 
-package dev.keliver.compose.ui.graphics.painter
+package dev.keliver.compose.foundation.text
 
 
-/** Placeholder: Compose's `Painter` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
-public class Painter private constructor()
+/** Placeholder: Compose's `TextAutoSize` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
+public class TextAutoSize private constructor()
 

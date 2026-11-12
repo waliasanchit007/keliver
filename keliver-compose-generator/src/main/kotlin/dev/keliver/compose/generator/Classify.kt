@@ -44,28 +44,66 @@ object TypeMap {
     "androidx.compose.ui.layout.ContentScale",
     "androidx.compose.ui.graphics.vector.ImageVector",
     "androidx.compose.ui.semantics.Role",
+    // Gate B, part a.
+    "androidx.compose.foundation.BorderStroke",
+    "androidx.compose.foundation.lazy.LazyListState",
+    "androidx.compose.ui.graphics.painter.Painter",
+    "androidx.compose.ui.graphics.ColorFilter",
   )
   private val primitives = setOf("kotlin.String", "kotlin.Boolean", "kotlin.Int", "kotlin.Float", "kotlin.Long", "kotlin.Double")
+
+  /** Types only a `*Defaults` factory makes (`ButtonColors`): generated `DefaultsValue` classes. */
+  val opaque: MutableSet<String> = sortedSetOf()
+
+  /** Host-owned state (design §10): the guest's object is a handle, always sent (never "the default"). */
+  val hostState: Set<String> = setOf("androidx.compose.foundation.ScrollState", "androidx.compose.foundation.lazy.LazyListState")
+
+  /**
+   * A mutable guest handle travels as the immutable value its `wire` property reads (so reading it
+   * subscribes the stub to new commands, and a new command re-sends the property).
+   */
+  val wireValue: Map<String, String> = mapOf(
+    "androidx.compose.foundation.lazy.LazyListState" to "dev.keliver.compose.foundation.lazy.LazyListStateWire",
+  )
+
+  /** Types whose wire form can say "explicitly null" (design §5's wrap). */
+  fun hasExplicitNull(t: TypeRef): Boolean = t.fq == "androidx.compose.foundation.BorderStroke" || t.fq in opaque
 
   /** Compose's `model: Any?` (Coil): a URL string on the wire. */
   const val IMAGE_MODEL = "kotlin.Any"
 
-  fun isMapped(t: TypeRef): Boolean = !t.isFunction && t.args.isEmpty() && (t.fq in mirrored || t.fq in primitives || t.fq == IMAGE_MODEL)
+  const val LAZY_LIST_SCOPE = "androidx.compose.foundation.lazy.LazyListScope"
+
+  fun isMapped(t: TypeRef): Boolean =
+    !t.isFunction && t.args.isEmpty() && (t.fq in mirrored || t.fq in primitives || t.fq == IMAGE_MODEL || t.fq in opaque)
   fun isPrimitive(t: TypeRef): Boolean = t.fq in primitives
 
   /** The type as the guest and the schema write it. */
   fun wireType(t: TypeRef, nullable: Boolean): String = when (t.fq) {
     IMAGE_MODEL -> "kotlin.String?"
-    else -> mirrorFq(t.fq) + if (nullable) "?" else ""
+    else -> (wireValue[t.fq] ?: mirrorFq(t.fq)) + if (nullable) "?" else ""
   }
 }
 
-enum class ParamKind { MODIFIER, SLOT, EVENT, VALUE, DROP, BLOCK }
+/**
+ * MODIFIER: the modifier chain. SLOT: a composable lambda (children). EVENT: a guest lambda the host
+ * calls. VALUE: a mirrored value. LAZY: a lazy list's `LazyListScope.() -> Unit` content, windowed
+ * (design §16). DROP: left out of the stub (kept in an ERROR overload). BLOCK: makes the whole
+ * declaration an ERROR stub.
+ */
+enum class ParamKind { MODIFIER, SLOT, EVENT, VALUE, LAZY, DROP, BLOCK }
 
 /** Case 1, 2 or 3 of docs/COMPOSE_GENERATOR_DESIGN.md §5 for a VALUE parameter with a default. */
 enum class DefaultCase { NONE, LITERAL, EXPRESSION }
 
-data class Classified(val param: ParamInfo, val kind: ParamKind, val defaultCase: DefaultCase, val reason: String? = null)
+data class Classified(
+  val param: ParamInfo,
+  val kind: ParamKind,
+  val defaultCase: DefaultCase,
+  val reason: String? = null,
+  /** A nullable parameter with a non-null default: an explicit `null` travels as a marker (design §5). */
+  val explicitNull: Boolean = false,
+)
 
 private val literalPatterns = listOf(
   Regex("""null|true|false"""),
@@ -78,12 +116,19 @@ private val literalPatterns = listOf(
 
 fun isLiteralDefault(text: String): Boolean = literalPatterns.any { it.matches(text.trim()) }
 
-fun classify(decl: DeclInfo): List<Classified> = decl.params.map { p ->
+/**
+ * Classifies [decl]'s parameters. [unsupportedDefault] says why a default expression cannot be
+ * copied to the guest (it names a `*Defaults` member with no mirror), or null when it can.
+ */
+fun classify(decl: DeclInfo, unsupportedDefault: (String) -> String? = { null }): List<Classified> = decl.params.map { p ->
   val t = p.type
+  val defaultProblem = p.defaultText?.takeIf { p.hasDefault && !isLiteralDefault(it) }?.let(unsupportedDefault)
   val kind = when {
     p.name == "modifier" && t.fq == MODIFIER -> ParamKind.MODIFIER
     t.isFunction && t.composable && t.functionParams.isEmpty() && t.functionReturn?.fq == "kotlin.Unit" && !t.nullable && !t.suspend ->
       ParamKind.SLOT
+    t.isFunction && !t.composable && !t.suspend && t.receiver?.fq == TypeMap.LAZY_LIST_SCOPE && t.functionParams.isEmpty() &&
+      t.functionReturn?.fq == "kotlin.Unit" && decl.kind == DeclKind.WIDGET -> ParamKind.LAZY
     t.isFunction &&
       !t.composable &&
       !t.suspend &&
@@ -93,16 +138,26 @@ fun classify(decl: DeclInfo): List<Classified> = decl.params.map { p ->
       t.functionParams.all { TypeMap.isPrimitive(it) } -> ParamKind.EVENT
     // Redwood's modifier serializers cannot take a nullable property (KotlinPoet writes `T?::class`).
     TypeMap.isMapped(t) && t.nullable && decl.kind != DeclKind.WIDGET && p.hasDefault -> ParamKind.DROP
+    defaultProblem != null -> ParamKind.DROP
+    // A nullable parameter whose default is not null needs an explicit-null marker on the wire.
+    TypeMap.isMapped(t) && t.nullable && p.hasDefault && p.defaultText != "null" && !TypeMap.hasExplicitNull(t) -> ParamKind.DROP
     TypeMap.isMapped(t) -> ParamKind.VALUE
     p.hasDefault -> ParamKind.DROP
     else -> ParamKind.BLOCK
   }
   val case = when {
     kind != ParamKind.VALUE || !p.hasDefault -> DefaultCase.NONE
+    t.fq in TypeMap.hostState -> DefaultCase.LITERAL // a handle: always sent
     isLiteralDefault(p.defaultText ?: error("${decl.spec}: ${p.name} has a default but no source text")) -> DefaultCase.LITERAL
     else -> DefaultCase.EXPRESSION
   }
-  Classified(p, kind, case, reason = if (kind == ParamKind.DROP || kind == ParamKind.BLOCK) t.canonical() else null)
+  val reason = when {
+    kind == ParamKind.DROP && defaultProblem != null -> "default: $defaultProblem"
+    kind == ParamKind.DROP && TypeMap.isMapped(t) && t.nullable && decl.kind == DeclKind.WIDGET -> "nullable with a non-null default"
+    kind == ParamKind.DROP || kind == ParamKind.BLOCK -> t.canonical()
+    else -> null
+  }
+  Classified(p, kind, case, reason, explicitNull = kind == ParamKind.VALUE && t.nullable && case == DefaultCase.EXPRESSION)
 }
 
 /** Types an error stub's signature names that have no mirror: placeholder classes are generated. */

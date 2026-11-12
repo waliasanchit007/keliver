@@ -15,17 +15,25 @@
  */
 package dev.keliver.compose.wire
 
+import dev.keliver.compose.foundation.BorderStroke
 import dev.keliver.compose.foundation.ScrollState
 import dev.keliver.compose.foundation.layout.Arrangement
 import dev.keliver.compose.foundation.layout.PaddingValues
+import dev.keliver.compose.foundation.lazy.LazyListStateWire
+import dev.keliver.compose.foundation.lazy.ScrollCommand
 import dev.keliver.compose.foundation.shape.CircleShape
 import dev.keliver.compose.foundation.shape.RoundedCornerShape
 import dev.keliver.compose.material3.ColorScheme
 import dev.keliver.compose.material3.Typography
 import dev.keliver.compose.ui.Alignment
 import dev.keliver.compose.ui.graphics.Color
+import dev.keliver.compose.ui.graphics.ColorFilter
 import dev.keliver.compose.ui.graphics.RectangleShape
 import dev.keliver.compose.ui.graphics.Shape
+import dev.keliver.compose.ui.graphics.painter.ColorPainter
+import dev.keliver.compose.ui.graphics.painter.Painter
+import dev.keliver.compose.ui.graphics.painter.VectorPainter
+import dev.keliver.compose.ui.graphics.vector.ImageVector
 import dev.keliver.compose.ui.text.TextStyle
 import dev.keliver.compose.ui.text.font.FontWeight
 import dev.keliver.compose.ui.unit.Dp
@@ -75,5 +83,35 @@ class CodecTest {
     roundTrip(Shape.serializer(), CircleShape, "{\"rr\":[\"50%\",\"50%\",\"50%\",\"50%\"]}")
     roundTrip(Shape.serializer(), RectangleShape, "\"rect\"")
     roundTrip(TextStyle.serializer(), Typography.titleMedium.copy(fontWeight = FontWeight.Bold), "{\"ref\":\"typography.titleMedium\",\"set\":{\"fontWeight\":700}}")
+  }
+
+  @Test fun gateBValues() {
+    roundTrip(BorderStroke.serializer(), BorderStroke(1.dp, Color(0xFFD0D0D0)), "{\"w\":1,\"c\":4291875024}")
+    roundTrip(BorderStroke.serializer(), BorderStroke.ofCall(DefaultsCall(7, mapOf(1 to defaultsArg(true)))), "{\"f\":7,\"a\":{\"1\":true}}")
+    roundTrip(BorderStroke.serializer(), BorderStroke.ExplicitNull, "{\"f\":0}")
+    roundTrip(Painter.serializer(), VectorPainter.of(ImageVector("Filled.Info")), "{\"vec\":\"Filled.Info\"}")
+    roundTrip(Painter.serializer(), ColorPainter(ColorScheme.primary), "{\"color\":{\"ref\":\"colorScheme.primary\"}}")
+    roundTrip(ColorFilter.serializer(), ColorFilter.tint(Color.White), "{\"tint\":4294967295,\"bm\":5}")
+    roundTrip(LazyListStateWire.serializer(), LazyListStateWire(3, 0, null), "{\"i\":3,\"o\":0}")
+    roundTrip(LazyListStateWire.serializer(), LazyListStateWire(0, 0, ScrollCommand(2, 42, 8, true)), "{\"i\":0,\"o\":0,\"c\":[2,42,8,true]}")
+  }
+
+  @Test fun defaultsCallArguments() {
+    val call = DefaultsCall(3, mapOf(1 to defaultsArg(ColorScheme.primary), 2 to defaultsArg(2.dp)))
+    assertEquals(ColorScheme.primary, call.arg<Color>(1))
+    assertEquals(2.dp, call.arg<Dp>(2))
+    assertEquals(null, call.arg<Dp>(3))
+    assertEquals(call, DefaultsCall.fromJson(call.toJson()))
+  }
+
+  @Test fun defaultsColourReferences() {
+    // A generated `*Defaults` colour is a reference like a theme colour, with its own name.
+    val divider = Color.reference("DividerDefaults.color")
+    assertEquals("DividerDefaults.color", divider.referenceName)
+    roundTrip(Color.serializer(), divider, "{\"ref\":\"DividerDefaults.color\"}")
+    // A reference's alpha is a byte (0.5f packs as 128/255), so compare values, not text.
+    val faded = divider.copy(alpha = 0.5f)
+    assertEquals(faded, Json.decodeFromString(Color.serializer(), Json.encodeToString(Color.serializer(), faded)))
+    assertEquals(128, kotlin.math.round(faded.alpha * 255f).toInt())
   }
 }
