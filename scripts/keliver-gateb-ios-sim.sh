@@ -61,7 +61,10 @@ trap cleanup EXIT INT TERM
 
 # 1. Build the bundle and the app.
 echo "$NAME: building the guest bundle and the $TYPE app (Gradle; log in $OUT/logs/gradle.log)"
+# The release link's devirtualization pass is heavy: it runs in its own process with its own heap,
+# not in a shared daemon (whose heap ran out once).
 ( cd "$ROOT" && ./gradlew --console=plain -Pkeliver.gatebIos -PgatebBuildType="$TYPE" -DRELEASE_SIGNING_ENABLED=false \
+    -Pkotlin.native.disableCompilerDaemon=true -Pkotlin.native.jvmArgs=-Xmx6g \
     :keliver-compose-gatea-sample-guest:compileProductionExecutableKotlinJsZipline \
     :keliver-compose-gatea-sample-ios:assembleGateBApp ) > "$OUT/logs/gradle.log" 2>&1 \
   || { grep -E '^e: |What went wrong' -A4 "$OUT/logs/gradle.log" | head -30 >&2; fail "the build failed; see $OUT/logs/gradle.log"; }
