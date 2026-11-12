@@ -155,6 +155,21 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
       # Class names, which the binary keeps in ASCII (Kotlin string constants are UTF-16).
       ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'KeliverTrace|FrameWindow|KeliverMemory' {} \; -print | grep -q . \
         && ok "T2: the Release build's binaries carry no timing code (no KeliverTrace, FrameWindow or KeliverMemory)" || bad "T2: the Release build carries timing code"
+      # ED3: the debug link is the Debug configuration's alone. Positive control first: the Debug
+      # app (APPB) has its handler and its URL type, so the Release check below can see them.
+      if [ -d "$APP/host-ios/src/debuglink" ]; then
+        dl_debug_bin="$(find "$APPB" -type f -perm -u+x -exec grep -aqE 'DebugBundleLink' {} \; -print | head -1)"
+        dl_debug_plist="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$APPB/Info.plist" 2>/dev/null)"
+        [ -n "$dl_debug_bin" ] && case "$dl_debug_plist" in keliver-*) true ;; *) false ;; esac \
+          && ok "ED3: the Debug build carries the debug link (DebugBundleLink, the URL scheme $dl_debug_plist)" \
+          || bad "ED3: the Debug build lacks the debug link's handler or URL type: the Release check would prove nothing"
+        ! find "$RAPP" -type f -perm -u+x -exec grep -aqE 'DebugBundleLink|openKeliverDebugLink' {} \; -print | grep -q . \
+          && ! /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes' "$RAPP/Info.plist" > /dev/null 2>&1 \
+          && ok "ED3: the Release build has no debug link (no DebugBundleLink or openKeliverDebugLink, no URL type)" \
+          || bad "ED3: the Release build carries the debug link's handler or URL type"
+      else
+        echo "  SKIP  ED3: this host predates the debug link (not counted)"
+      fi
     else
       bad "T2: the Release build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Release.log" | head
     fi
