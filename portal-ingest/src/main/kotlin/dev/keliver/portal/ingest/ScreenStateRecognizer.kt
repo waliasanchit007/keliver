@@ -1,16 +1,25 @@
 package dev.keliver.portal.ingest
 
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
+import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtReturnExpression
-import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtValueArgument
+import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 
 /**
  * One `@ScreenState` declaration of a screen file (ADOPTION_PLAN item 5, S1).
@@ -43,25 +52,60 @@ data class ScreenStates(
  * fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review")
  * ```
  *
+ * The annotation and `NamedState` are matched by what the file's imports bind
+ * them to, not by their short names: `dev.keliver.nav.ScreenState` written out,
+ * imported (also under an alias, or by `import dev.keliver.nav.*`), or used in
+ * package `dev.keliver.nav` itself, or through a `typealias` of it that this file
+ * declares. A `@ScreenState` another import binds elsewhere is some other
+ * annotation and is ignored; one no import binds is reported (the file can't
+ * compile without the import). The recognizer reads one file: an annotation
+ * through a typealias declared in another file is not seen as a state, and
+ * neither listed nor reported.
+ *
  * The state's name and fixture set must be plain string literals (the portal
- * lists them without running code); the body is a `NamedState(...)` call, as an
- * expression body or a single `return`. A declaration outside that shape is not
- * a state and is reported in [ScreenStates.problems], as is a repeated name
- * (the first declaration wins). These functions are not `@Composable`, so the
- * screen grammar never reads them: they cost the screen no RawCode.
+ * lists them without running code); the body is a `NamedState(...)` call
+ * (also written `dev.keliver.nav.NamedState(...)`), as an expression body or a
+ * single `return`; the function is top-level and takes no parameters or
+ * receiver. A declaration outside that shape — a state inside an object or a
+ * class included — is not a state and is reported in [ScreenStates.problems],
+ * never skipped silently, as is a repeated name (the first declaration wins).
+ * These functions are not `@Composable`, so the screen grammar never reads
+ * them: they cost the screen no RawCode.
  */
 object ScreenStateRecognizer {
   const val ANNOTATION = "ScreenState"
   const val STATE_CLASS = "NamedState"
+  const val PACKAGE = "dev.keliver.nav"
+  const val ANNOTATION_FQ = "$PACKAGE.$ANNOTATION"
+  const val STATE_CLASS_FQ = "$PACKAGE.$STATE_CLASS"
 
   fun recognize(fileName: String, source: String): ScreenStates {
     val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
+    val scope = ImportScope.of(file)
     val states = ArrayList<ScreenStateSpec>()
     val problems = ArrayList<String>()
-    for (fn in file.declarations.filterIsInstance<KtNamedFunction>()) {
-      val ann = fn.annotationEntries.firstOrNull { it.shortName?.asString() == ANNOTATION } ?: continue
+    // Every function in the file, in source order: a state nested in an object,
+    // a class or another function is reported, not passed over.
+    for (fn in file.collectDescendantsOfType<KtNamedFunction>()) {
       val fnName = fn.name ?: continue
-      when (val r = read(fnName, ann, fn)) {
+      val ann = fn.annotationEntries.firstNotNullOfOrNull { entry ->
+        when (scope.annotation(entry)) {
+          Binding.Ours -> entry to null
+          Binding.Unbound -> entry to "@$ANNOTATION is not imported from $PACKAGE (add `import $ANNOTATION_FQ`)"
+          Binding.Elsewhere -> null
+        }
+      } ?: continue
+      val label = if (fn.isTopLevel) fnName else "${container(fn).first}.$fnName"
+      val unbound = ann.second
+      if (unbound != null) {
+        problems += "$label: $unbound"
+        continue
+      }
+      if (!fn.isTopLevel) {
+        problems += "$label: a state must be a top-level function; this one is inside ${container(fn).second}"
+        continue
+      }
+      when (val r = read(fnName, ann.first, fn, scope)) {
         is Read.Ok -> if (states.any { it.name == r.spec.name }) {
           problems += "$fnName: state '${r.spec.name}' is already declared by ${states.first { it.name == r.spec.name }.function}()"
         } else {
@@ -78,19 +122,20 @@ object ScreenStateRecognizer {
     data class Bad(val why: String) : Read
   }
 
-  private fun read(fnName: String, ann: KtAnnotationEntry, fn: KtNamedFunction): Read {
+  private fun read(fnName: String, ann: KtAnnotationEntry, fn: KtNamedFunction, scope: ImportScope): Read {
     val annArgs = ann.valueArgumentList?.arguments.orEmpty()
     val name = str(arg(annArgs, "name", 0))
       ?: return Read.Bad("@$ANNOTATION needs its name as a plain string literal")
     if (name.isBlank()) return Read.Bad("@$ANNOTATION name is empty")
     if (fn.valueParameters.isNotEmpty()) return Read.Bad("a state function takes no parameters")
+    if (fn.receiverTypeReference != null) return Read.Bad("a state function takes no receiver")
     val body = when (val b = fn.bodyExpression) {
       is KtBlockExpression -> (b.statements.singleOrNull() as? KtReturnExpression)?.returnedExpression
       else -> b
     }
-    val call = body as? KtCallExpression
-    if (call == null || (call.calleeExpression as? KtNameReferenceExpression)?.getReferencedName() != STATE_CLASS) {
-      return Read.Bad("the body must be a single $STATE_CLASS(route = …, fixtures = \"…\") call")
+    val call = when (val c = stateCall(body, scope)) {
+      is Call.Ok -> c.call
+      is Call.Bad -> return Read.Bad(c.why)
     }
     val args = call.valueArguments
     val route = arg(args, "route", 0) ?: return Read.Bad("$STATE_CLASS has no route")
@@ -98,6 +143,65 @@ object ScreenStateRecognizer {
       ?: return Read.Bad("$STATE_CLASS fixtures must be a plain string literal")
     if (fixtures.isBlank()) return Read.Bad("$STATE_CLASS fixtures is empty")
     return Read.Ok(ScreenStateSpec(name, fnName, route.text, routeType(route), fixtures))
+  }
+
+  private sealed interface Call {
+    data class Ok(val call: KtCallExpression) : Call
+    data class Bad(val why: String) : Call
+  }
+
+  /** The `NamedState(...)` call [body] is, short or fully qualified, or why it isn't one. */
+  private fun stateCall(body: KtExpression?, scope: ImportScope): Call {
+    val shape = "the body must be a single $STATE_CLASS(route = …, fixtures = \"…\") call"
+    return when (body) {
+      is KtCallExpression -> {
+        val callee = (body.calleeExpression as? KtNameReferenceExpression)?.getReferencedName()
+          ?: return Call.Bad(shape)
+        when (scope.bindingOf(callee, STATE_CLASS_FQ)) {
+          Binding.Ours -> Call.Ok(body)
+          Binding.Unbound ->
+            if (callee == STATE_CLASS) Call.Bad("$STATE_CLASS is not imported from $PACKAGE (add `import $STATE_CLASS_FQ`)")
+            else Call.Bad(shape)
+          Binding.Elsewhere ->
+            if (callee == STATE_CLASS) {
+              Call.Bad("$STATE_CLASS here is ${scope.explicit[callee]?.let { "`$it`" } ?: "this file's own $STATE_CLASS"}, not $STATE_CLASS_FQ")
+            } else {
+              Call.Bad(shape)
+            }
+        }
+      }
+      is KtDotQualifiedExpression -> {
+        val sel = body.selectorExpression as? KtCallExpression
+        val callee = (sel?.calleeExpression as? KtNameReferenceExpression)?.getReferencedName()
+        when {
+          sel == null || callee != STATE_CLASS -> Call.Bad(shape)
+          "${compact(body.receiverExpression.text)}.$callee" == STATE_CLASS_FQ -> Call.Ok(sel)
+          else -> Call.Bad(
+            "$STATE_CLASS is qualified as `${compact(body.receiverExpression.text)}.$callee`; " +
+              "write `$STATE_CLASS_FQ(…)` or import it",
+          )
+        }
+      }
+      else -> Call.Bad(shape)
+    }
+  }
+
+  /** A nested function's enclosing declaration: its name for the problem's label, and how to say it. */
+  private fun container(fn: KtNamedFunction): Pair<String, String> {
+    val parent = fn.getStrictParentOfType<KtDeclaration>()
+    val name = (parent as? KtNamedDeclaration)?.name
+    return when {
+      parent is KtObjectDeclaration && parent.isCompanion() -> {
+        val owner = parent.getStrictParentOfType<KtClassOrObject>()?.name
+        (owner?.let { "$it.${name ?: "Companion"}" } ?: (name ?: "Companion")) to
+          "the companion object of ${owner ?: "a class"}"
+      }
+      parent is KtObjectDeclaration -> (name ?: "object") to (if (name != null) "object $name" else "an object expression")
+      parent is KtClass && parent.isInterface() -> (name ?: "interface") to "interface $name"
+      parent is KtClass -> (name ?: "class") to "class $name"
+      parent is KtNamedFunction -> (name ?: "function") to "function $name()"
+      else -> (name ?: "declaration") to "another declaration"
+    }
   }
 
   private fun routeType(e: KtExpression): String? = when (e) {
@@ -123,5 +227,79 @@ object ScreenStateRecognizer {
     val t = e as? KtStringTemplateExpression ?: return null
     if (t.entries.any { it !is KtLiteralStringTemplateEntry }) return null
     return t.entries.joinToString("") { it.text }
+  }
+
+  private fun compact(text: String): String = text.filterNot(Char::isWhitespace)
+
+  /** What a name in the file refers to, as far as its imports and package say. */
+  private enum class Binding { Ours, Elsewhere, Unbound }
+
+  /**
+   * The file's imports, read the way Kotlin resolves a top-level name: an
+   * explicit import (or alias) first, then the file's own package, then star
+   * imports. The package's other files are not visible here, so a star import
+   * of `dev.keliver.nav` counts as ours unless this file declares the name.
+   */
+  private class ImportScope(
+    private val pkg: String,
+    /** Visible name (the alias, or the last segment) -> imported FQ name. */
+    val explicit: Map<String, String>,
+    private val stars: Set<String>,
+    /** Top-level names this file declares, which a star import doesn't override. */
+    private val own: Set<String>,
+  ) {
+    /** This file's typealiases of our annotation. */
+    val aliases = LinkedHashSet<String>()
+
+    /** Does short name [name] (a visible name, possibly an alias) bind [fq]? */
+    fun bindingOf(name: String, fq: String): Binding {
+      explicit[name]?.let { return if (it == fq) Binding.Ours else Binding.Elsewhere }
+      val fqPackage = fq.substringBeforeLast('.')
+      val simple = fq.substringAfterLast('.')
+      if (name != simple) return Binding.Unbound
+      if (pkg == fqPackage) return Binding.Ours
+      if (name in own) return Binding.Elsewhere
+      if (fqPackage in stars) return Binding.Ours
+      // Another name is imported under our class's name only by aliasing it, handled above;
+      // a star import of another package might bind it, but then it isn't ours either.
+      return Binding.Unbound
+    }
+
+    /** How annotation [entry] binds `@ScreenState`; [Binding.Elsewhere] for any other annotation. */
+    fun annotation(entry: KtAnnotationEntry): Binding = annotation(compact(entry.typeReference?.text ?: return Binding.Elsewhere))
+
+    private fun annotation(written: String): Binding {
+      if ('.' in written) return if (written == ANNOTATION_FQ) Binding.Ours else Binding.Elsewhere
+      if (written in aliases) return Binding.Ours
+      return when (val b = bindingOf(written, ANNOTATION_FQ)) {
+        // Unbound is only worth reporting when it is spelled like ours.
+        Binding.Unbound -> if (written == ANNOTATION) b else Binding.Elsewhere
+        else -> b
+      }
+    }
+
+    companion object {
+      fun of(file: KtFile): ImportScope {
+        val explicit = LinkedHashMap<String, String>()
+        val stars = LinkedHashSet<String>()
+        for (d in file.importDirectives) {
+          val fq = d.importedFqName?.asString() ?: continue
+          when {
+            d.isAllUnder -> stars += fq
+            else -> explicit[d.aliasName ?: fq.substringAfterLast('.')] = fq
+          }
+        }
+        val own = file.declarations.mapNotNull { (it as? KtNamedDeclaration)?.name }.toSet()
+        val scope = ImportScope(file.packageFqName.asString(), explicit, stars, own)
+        // `typealias Snap = ScreenState` in this file, in source order (so an alias of an
+        // earlier alias resolves too). One declared in another file can't be seen here.
+        for (alias in file.declarations.filterIsInstance<KtTypeAlias>()) {
+          val name = alias.name ?: continue
+          val target = compact(alias.getTypeReference()?.text ?: continue)
+          if (scope.annotation(target) == Binding.Ours) scope.aliases += name
+        }
+        return scope
+      }
+    }
   }
 }

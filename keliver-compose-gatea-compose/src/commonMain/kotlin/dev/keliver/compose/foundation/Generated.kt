@@ -6,10 +6,16 @@ package dev.keliver.compose.foundation
 
 import dev.keliver.compose.gatea.compose.GenBackground1Impl
 import dev.keliver.compose.gatea.compose.GenBorder1Impl
+import dev.keliver.compose.gatea.compose.GenBorder2Impl
 import dev.keliver.compose.gatea.compose.GenClickable1Impl
 import dev.keliver.compose.gatea.compose.GenHorizontalScroll1Impl
+import dev.keliver.compose.gatea.compose.GenImage1
+import dev.keliver.compose.gatea.compose.GenImage2
 import dev.keliver.compose.gatea.compose.GenVerticalScroll1Impl
+import dev.keliver.compose.ui.Alignment
+import dev.keliver.compose.ui.graphics.DefaultAlpha
 import dev.keliver.compose.ui.graphics.RectangleShape
+import dev.keliver.compose.ui.layout.ContentScale
 
 /** Draws [shape] with a solid [color] behind the content. */
 @androidx.compose.runtime.Stable
@@ -35,12 +41,14 @@ public fun dev.keliver.compose.ui.Modifier.border(
 ): dev.keliver.compose.ui.Modifier {
   return then(GenBorder1Impl(width = width, color = color, shape = shape))
 }
-@Deprecated("Keliver: 'border': BorderStroke is Gate B. Use border(width, color, shape).", level = DeprecationLevel.ERROR)
+/** Modify element to add border with appearance specified with a [border] and a [shape] and clip it. */
+@androidx.compose.runtime.Stable
 public fun dev.keliver.compose.ui.Modifier.border(
   border: dev.keliver.compose.foundation.BorderStroke,
   shape: dev.keliver.compose.ui.graphics.Shape = RectangleShape,
-): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'border': BorderStroke is Gate B. Use border(width, color, shape).")
-
+): dev.keliver.compose.ui.Modifier {
+  return then(GenBorder2Impl(border = border, shape = shape))
+}
 @Deprecated("Keliver: 'brush': brushes are Gate B. Use a solid Color.", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.border(
   width: dev.keliver.compose.ui.unit.Dp,
@@ -56,15 +64,16 @@ public fun dev.keliver.compose.ui.Modifier.clickable(
 ): dev.keliver.compose.ui.Modifier {
   return then(dev.keliver.compose.internal.ModifierEventElement(onClick) { handle -> GenClickable1Impl(enabled = enabled, onClick = handle) })
 }
-@Deprecated("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.clickable(
   enabled: kotlin.Boolean = true,
   onClickLabel: kotlin.String? = null,
   role: dev.keliver.compose.ui.semantics.Role? = null,
+  interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
   onClick: () -> kotlin.Unit,
-): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out.")
+): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'onClickLabel': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'role': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
-@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.clickable(
   interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource?,
   indication: dev.keliver.compose.foundation.Indication?,
@@ -72,7 +81,7 @@ public fun dev.keliver.compose.ui.Modifier.clickable(
   onClickLabel: kotlin.String? = null,
   role: dev.keliver.compose.ui.semantics.Role? = null,
   onClick: () -> kotlin.Unit,
-): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).")
+): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
 
 /** Modify element to allow to scroll horizontally when width of the content is bigger than max constraints allow. */
 @androidx.compose.runtime.Stable
@@ -126,8 +135,55 @@ public fun dev.keliver.compose.ui.Modifier.verticalScroll(
   reverseScrolling: kotlin.Boolean = false,
 ): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'overscrollEffect': custom overscroll runs per frame on the host.")
 
-/** Placeholder: Compose's `BorderStroke` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
-public class BorderStroke private constructor()
+/** Creates a composable that lays out and draws a given [Painter]. */
+@androidx.compose.runtime.Composable
+public fun Image(
+  painter: dev.keliver.compose.ui.graphics.painter.Painter,
+  contentDescription: kotlin.String?,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  alignment: dev.keliver.compose.ui.Alignment = Alignment.Center,
+  contentScale: dev.keliver.compose.ui.layout.ContentScale = ContentScale.Fit,
+  alpha: kotlin.Float = DefaultAlpha,
+  colorFilter: dev.keliver.compose.ui.graphics.ColorFilter? = null,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_alpha = DefaultAlpha
+  GenImage1(
+    painter = painter,
+    contentDescription = contentDescription,
+    alignment = alignment,
+    contentScale = contentScale,
+    alpha = if (alpha == default_alpha) null else alpha,
+    colorFilter = colorFilter,
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+/** A composable that lays out and draws a given [ImageVector]. */
+@androidx.compose.runtime.Composable
+public fun Image(
+  imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector,
+  contentDescription: kotlin.String?,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  alignment: dev.keliver.compose.ui.Alignment = Alignment.Center,
+  contentScale: dev.keliver.compose.ui.layout.ContentScale = ContentScale.Fit,
+  alpha: kotlin.Float = DefaultAlpha,
+  colorFilter: dev.keliver.compose.ui.graphics.ColorFilter? = null,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_alpha = DefaultAlpha
+  GenImage2(
+    imageVector = imageVector,
+    contentDescription = contentDescription,
+    alignment = alignment,
+    contentScale = contentScale,
+    alpha = if (alpha == default_alpha) null else alpha,
+    colorFilter = colorFilter,
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
 
 /** Placeholder: Compose's `Indication` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class Indication private constructor()

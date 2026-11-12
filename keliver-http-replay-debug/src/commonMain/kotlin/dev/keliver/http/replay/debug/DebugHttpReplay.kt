@@ -283,18 +283,22 @@ private val JSON = Json {
   explicitNulls = true
 }
 
-/** The relay's `load` and `validateFixture`, for text instead of a file. */
+/**
+ * The relay's `load` and `validateFixture`, for text instead of a file, in the relay's order:
+ * the shared matcher's rules first (the `formatVersion` check included), then the dates, so a
+ * set fails with the same reason on a device as in the relay.
+ */
 private fun load(id: String, text: String): LoadedSet {
   require(SAFE_NAME.matches(id)) { "invalid fixture-set filename: $id.json" }
   require(text.encodeToByteArray().size <= MAX_FILE_BYTES) { "fixture file exceeds 4 MiB" }
   val set = JSON.decodeFromString(HttpFixtureSet.serializer(), text)
-  require(set.formatVersion == 1) { "unsupported formatVersion ${set.formatVersion}" }
+  val matcher = HttpFixtureMatcher(set)
   Instant.parse(set.recordedAt)
   val expiresAt = set.expiresAt?.let(Instant::parse)
   return LoadedSet(
     entries = set.entries.size,
     expiresAtText = set.expiresAt,
     expiresAt = expiresAt,
-    matcher = HttpFixtureMatcher(set),
+    matcher = matcher,
   )
 }

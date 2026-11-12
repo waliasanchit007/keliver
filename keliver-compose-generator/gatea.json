@@ -37,6 +37,7 @@
     "androidx.compose.foundation.border(border,shape)",
     "androidx.compose.foundation.border(width,brush,shape)",
     "androidx.compose.foundation.clickable(enabled,onClickLabel,role,onClick)",
+    "androidx.compose.foundation.clickable(enabled,onClickLabel,role,interactionSource,onClick)",
     "androidx.compose.foundation.clickable(interactionSource,indication,enabled,onClickLabel,role,onClick)",
     "androidx.compose.foundation.horizontalScroll(state,enabled,flingBehavior,reverseScrolling)",
     "androidx.compose.foundation.horizontalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",
@@ -46,31 +47,53 @@
     "androidx.compose.ui.draw.alpha(alpha)",
     "androidx.compose.ui.draw.shadow(elevation,shape,clip,ambientColor,spotColor)",
     "androidx.compose.material3.Text(text,modifier,color,fontSize,fontStyle,fontWeight,fontFamily,letterSpacing,textDecoration,textAlign,lineHeight,overflow,softWrap,maxLines,minLines,onTextLayout,style)",
+    "androidx.compose.material3.Text(text,modifier,color,autoSize,fontSize,fontStyle,fontWeight,fontFamily,letterSpacing,textDecoration,textAlign,lineHeight,overflow,softWrap,maxLines,minLines,onTextLayout,style)",
     "androidx.compose.material3.Icon(imageVector,contentDescription,modifier,tint)",
     "coil3.compose.AsyncImage(model,contentDescription,modifier,transform,onState,alignment,contentScale,alpha,colorFilter,filterQuality,clipToBounds)",
-    "coil3.compose.AsyncImage(model,contentDescription,modifier,placeholder,error,fallback,onLoading,onSuccess,onError,alignment,contentScale,alpha,colorFilter,filterQuality,clipToBounds)"
+    "coil3.compose.AsyncImage(model,contentDescription,modifier,placeholder,error,fallback,onLoading,onSuccess,onError,alignment,contentScale,alpha,colorFilter,filterQuality,clipToBounds)",
+    "androidx.compose.foundation.Image(painter,contentDescription,modifier,alignment,contentScale,alpha,colorFilter)",
+    "androidx.compose.foundation.Image(imageVector,contentDescription,modifier,alignment,contentScale,alpha,colorFilter)",
+    "androidx.compose.foundation.lazy.LazyColumn(modifier,state,contentPadding,reverseLayout,verticalArrangement,horizontalAlignment,flingBehavior,userScrollEnabled,overscrollEffect,content)",
+    "androidx.compose.foundation.lazy.LazyRow(modifier,state,contentPadding,reverseLayout,horizontalArrangement,verticalAlignment,flingBehavior,userScrollEnabled,overscrollEffect,content)",
+    "androidx.compose.foundation.lazy.LazyItemScope#fillParentMaxSize(fraction)",
+    "androidx.compose.foundation.lazy.LazyItemScope#fillParentMaxWidth(fraction)",
+    "androidx.compose.foundation.lazy.LazyItemScope#fillParentMaxHeight(fraction)",
+    "androidx.compose.foundation.lazy.LazyItemScope#animateItem(fadeInSpec,placementSpec,fadeOutSpec)",
+    "androidx.compose.material3.Icon(painter,contentDescription,modifier,tint)",
+    "androidx.compose.material3.Surface(modifier,shape,color,contentColor,tonalElevation,shadowElevation,border,content)",
+    "androidx.compose.material3.Surface(onClick,modifier,enabled,shape,color,contentColor,tonalElevation,shadowElevation,border,interactionSource,content)",
+    "androidx.compose.material3.Card(modifier,shape,colors,elevation,border,content)",
+    "androidx.compose.material3.Card(onClick,modifier,enabled,shape,colors,elevation,border,interactionSource,content)",
+    "androidx.compose.material3.Button(onClick,modifier,enabled,shape,colors,elevation,border,contentPadding,interactionSource,content)",
+    "androidx.compose.material3.TextButton(onClick,modifier,enabled,shape,colors,elevation,border,contentPadding,interactionSource,content)",
+    "androidx.compose.material3.OutlinedButton(onClick,modifier,enabled,shape,colors,elevation,border,contentPadding,interactionSource,content)",
+    "androidx.compose.material3.IconButton(onClick,modifier,enabled,colors,interactionSource,shape,content)",
+    "androidx.compose.material3.HorizontalDivider(modifier,thickness,color)",
+    "androidx.compose.material3.TopAppBar(title,modifier,navigationIcon,actions,expandedHeight,windowInsets,colors,scrollBehavior)"
   ],
   "errors": [
     {"spec": "androidx.compose.ui.layout.Layout(content,modifier,measurePolicy)",
      "message": "custom measuring runs per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component."},
     {"spec": "androidx.compose.ui.input.pointer.pointerInput(key1,block:Function0)",
-     "message": "raw pointer handlers run per event on the host. Use Modifier.clickable (or, in Gate B, combinedClickable, draggable, anchoredDraggable)."}
+     "message": "raw pointer handlers run per event on the host. Use Modifier.clickable (or, in Gate B, combinedClickable, draggable, anchoredDraggable)."},
+    {"spec": "androidx.compose.material3.Scaffold(modifier,topBar,bottomBar,snackbarHost,floatingActionButton,floatingActionButtonPosition,containerColor,contentColor,contentWindowInsets,content)",
+     "message": "Scaffold's content takes the PaddingValues the host measures (a slot with a parameter: Gate B, part b). Use a Column with the TopAppBar and Modifier.weight(1f) on the content."}
   ],
   "typeMessages": {
     "androidx.compose.ui.text.TextLayoutResult": "a text layout result is measured on the host and cannot reach the guest. Use maxLines and overflow.",
+    "androidx.compose.foundation.text.TextAutoSize": "auto-sized text is not in the generated API yet (Gate B, part b). Use fontSize with maxLines and overflow.",
     "androidx.compose.ui.graphics.Brush": "brushes are Gate B. Use a solid Color.",
-    "androidx.compose.foundation.BorderStroke": "BorderStroke is Gate B. Use border(width, color, shape).",
-    "androidx.compose.ui.graphics.painter.Painter": "painters are Gate B. Use AsyncImage with a URL, or an icon.",
     "coil3.compose.AsyncImagePainter.State": "image-loading state callbacks are Gate B.",
-    "androidx.compose.ui.graphics.ColorFilter": "colour filters are Gate B.",
     "androidx.compose.foundation.gestures.FlingBehavior": "custom fling behaviour runs per frame on the host.",
     "androidx.compose.foundation.OverscrollEffect": "custom overscroll runs per frame on the host.",
-    "androidx.compose.foundation.interaction.MutableInteractionSource": "interaction sources are host state (Gate B). Use clickable(enabled, onClickLabel, role, onClick).",
-    "androidx.compose.foundation.Indication": "custom indications run per frame on the host. Use clickable(enabled, onClickLabel, role, onClick)."
+    "androidx.compose.foundation.interaction.MutableInteractionSource": "interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.",
+    "androidx.compose.foundation.Indication": "custom indications run per frame on the host. Leave it out: the theme's ripple applies.",
+    "androidx.compose.material3.TopAppBarScrollBehavior": "scroll behaviours connect the bar to the host's nested scrolling (Gate B, part b).",
+    "androidx.compose.foundation.layout.WindowInsets": "window insets are the host's (Gate B, part b); the default applies."
   },
   "icons": [
     "AutoMirrored.Filled.ArrowBack", "AutoMirrored.Filled.TrendingUp", "Filled.ChevronRight", "Filled.Close",
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
-  "extras": ["Shimmer"]
+  "extras": ["Shimmer", "LazyItem"]
 }

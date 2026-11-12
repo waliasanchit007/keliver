@@ -35,7 +35,6 @@ import dev.keliver.portal.serializeTree
 import kotlinx.serialization.encodeToString
 import java.io.File
 import java.net.InetSocketAddress
-import java.net.URLDecoder
 import java.security.MessageDigest
 
 /**
@@ -272,9 +271,6 @@ private val httpRecordingService = HttpRecordingService(
   storeDir = root,
   enabledByEnvironment = System.getenv("PORTAL_HTTP_RECORD") == "1",
 )
-
-/** project/screen names are path segments — restrict to a safe charset. */
-private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), "_").ifEmpty { "unnamed" }
 
 private fun screenFile(project: String, screen: String) = File(File(root, safe(project)), "${safe(screen)}.json")
 
@@ -549,12 +545,6 @@ private fun publish(): Pair<Boolean, String> {
   return true to log.toString()
 }
 
-private fun query(ex: HttpExchange): Map<String, String> =
-  (ex.requestURI.rawQuery ?: "").split('&').filter { '=' in it }.associate {
-    val (k, v) = it.split('=', limit = 2)
-    k to URLDecoder.decode(v, "UTF-8")
-  }
-
 private fun respond(ex: HttpExchange, code: Int, body: String? = null, contentType: String = "application/json") {
   if (body == null) { ex.sendResponseHeaders(code, -1); ex.close(); return }
   val bytes = body.encodeToByteArray()
@@ -637,6 +627,16 @@ private val appScreensDir = File(repoDir, config.screensDir)
 private fun screensDirFor(project: String): File =
   if (project == "default" && appScreensDir.parentFile.exists()) appScreensDir
   else File(File(root, "kotlin"), project)
+
+/**
+ * ED3: this app's debug link scheme (DeviceProxy.linkScheme), from the app's own screens, read on
+ * each GET /device-proxy; null when they declare no single `<package>.screens` (the editor then
+ * shows the bare URL only).
+ */
+private fun appLinkScheme(): String? = runCatching {
+  val files = appScreensDir.listFiles { f -> f.isFile && f.name.endsWith(".kt") }?.sortedBy { it.name }.orEmpty()
+  DeviceProxy.linkScheme(files.take(200).map { it.readText() })
+}.getOrNull()
 
 /** C1: project components live next to screens (default project = the repo dir). */
 private val appComponentsDir = File(repoDir, config.resolvedComponentsDir())
@@ -1335,23 +1335,18 @@ fun main(args: Array<String>) {
   }
 
   // S1 (ADOPTION_PLAN item 5): the @ScreenState declarations next to each
-  // screen. Read-only. `?screen=` names one screen (404 when the app has no
-  // such screen); without it, every screen that declares states.
-  server.createContext("/states") { ex ->
-    handle(ex) {
-      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
-      val q = query(ex)
-      val project = safe(q["project"] ?: "default")
-      val dir = screensDirFor(project)
-      val screen = q["screen"]?.let(::safe)
-      if (screen == null) {
-        respond(ex, 200, ScreenStatesIndex.toJson(ScreenStatesIndex.forDir(dir)))
-      } else {
-        if (!knownScreen(project, screen)) throw UnknownScreen(project, screen, screenNames(project))
-        respond(ex, 200, ScreenStatesIndex.toJson(screen, ScreenStatesIndex.forFile(File(dir, "$screen.kt"))))
-      }
-    }
-  }
+  // screen, GET only. `?screen=` names one screen (404 when the app has no
+  // such screen); without it, every screen that declares states. Each file's
+  // parse is kept until it changes (ScreenStatesIndex).
+  ScreenStatesIndex.register(
+    server,
+    ScreenStatesIndex(),
+    object : ScreenStatesIndex.Screens {
+      override fun dir(project: String) = screensDirFor(project)
+      override fun known(project: String, screen: String) = knownScreen(project, screen)
+      override fun names(project: String) = screenNames(project)
+    },
+  ) { ex, block -> handle(ex, block) }
 
   server.createContext("/screens") { ex ->
     handle(ex) {
@@ -1610,7 +1605,7 @@ fun main(args: Array<String>) {
       if (ex.requestMethod != "GET") {
         respond(ex, 405)
       } else {
-        respond(ex, 200, DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0))
+        respond(ex, 200, DeviceProxy.statusJson(proxyUrls, if (proxyUrls != null) deviceProxyEvents.listening else 0, appLinkScheme()))
       }
     }
   }

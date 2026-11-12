@@ -108,10 +108,12 @@ public value class Color(public val value: ULong) {
 
     internal const val REF_SPACE_INT: Int = 0x3F
 
-    /** A reference to a host theme value by [name] (one of [ColorRefs.names]). */
+    /**
+     * A reference to a host theme value by [name]: one of [ColorRefs.names], or a generated
+     * `*Defaults` colour (`DividerDefaults.color`), which the host resolves by calling it.
+     */
     public fun reference(name: String, alpha: Float = 1f): Color {
-      val index = ColorRefs.names.indexOf(name)
-      require(index >= 0) { "unknown colour reference $name" }
+      val index = ColorRefs.indexOf(name)
       val a = (alpha.coerceIn(0f, 1f) * 255f).roundToInt().toULong()
       return Color((index.toULong() shl 16) or (a shl 8) or REF_SPACE)
     }
@@ -144,9 +146,13 @@ public fun Color(red: Float, green: Float, blue: Float, alpha: Float = 1f): Colo
 /** Shadows' default colour, as `androidx.compose.ui.graphics.DefaultShadowColor`. */
 public val DefaultShadowColor: Color = Color(0xFF000000)
 
-/** The theme values a [Color] can refer to; the index is part of the guest's packing only. */
+/**
+ * The theme values a [Color] can refer to; the index is part of the guest's packing only (the wire
+ * carries the name). The fixed names come first; a generated `*Defaults` colour (`Xxx.yyy` where
+ * `Xxx` ends in `Defaults`) is added the first time it is referenced.
+ */
 public object ColorRefs {
-  public val names: List<String> = listOf(
+  private val all: MutableList<String> = mutableListOf(
     "LocalContentColor",
     "colorScheme.primary", "colorScheme.onPrimary", "colorScheme.primaryContainer", "colorScheme.onPrimaryContainer",
     "colorScheme.inversePrimary", "colorScheme.secondary", "colorScheme.onSecondary", "colorScheme.secondaryContainer",
@@ -159,6 +165,17 @@ public object ColorRefs {
     "colorScheme.surfaceContainerHighest", "colorScheme.surfaceContainerLow", "colorScheme.surfaceContainerLowest",
     "colorScheme.surfaceDim",
   )
+
+  public val names: List<String> get() = all
+
+  public fun indexOf(name: String): Int {
+    val i = all.indexOf(name)
+    if (i >= 0) return i
+    require(name.substringBefore('.').endsWith("Defaults")) { "unknown colour reference $name" }
+    require(all.size < 0xFFFF) { "too many colour references" }
+    all += name
+    return all.size - 1
+  }
 }
 
 public object ColorCodec : JsonCodec<Color>("dev.keliver.compose.Color") {

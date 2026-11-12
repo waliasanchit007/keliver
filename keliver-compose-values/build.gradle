@@ -1,5 +1,6 @@
 // Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md §4, §6): the guest's mirrors of Compose's value
-// types (Dp, Color, Shape, TextStyle, Alignment, …) with their wire codecs, written by hand once.
+// types (Dp, Color, Shape, TextStyle, Alignment, …) with their wire codecs, written by hand once, and
+// (GeneratedDefaults.kt, Gate B) the `*Defaults` objects and factory-made types the generator mirrors.
 // Published only with -PkeliverComposePrototype (never by a normal release).
 import dev.keliver.buildsupport.WasmJs
 import static dev.keliver.buildsupport.TargetGroup.Common
@@ -22,6 +23,8 @@ kotlin {
       dependencies {
         api projects.keliverRuntime
         api libs.jetbrains.compose.runtime
+        // rememberLazyListState saves its position, as Compose's does (LazyListState.Saver).
+        api libs.jetbrains.compose.runtime.saveable
         api libs.kotlinx.serialization.json
         // Otherwise compose-runtime brings coroutines 1.9.0, whose JS klib fails to link against
         // Kotlin 2.4's stdlib (SubclassOptInRequired's constructor changed).
@@ -32,6 +35,16 @@ kotlin {
       dependencies {
         implementation libs.kotlin.test
       }
+    }
+  }
+}
+
+// GeneratedDefaults.kt (the `*Defaults` mirrors and factory-made types) is written by
+// :keliver-compose-generator:generateComposeApi and compared byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/GeneratedDefaults.kt")
     }
   }
 }
