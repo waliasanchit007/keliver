@@ -365,7 +365,8 @@ C="${M%/*}/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$M" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$M" \
   && grep -q 'onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count(CrashKind.LOAD))' "$M" \
-  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$M" && grep -q 'val startStep = crash.atStart()' "$M" \
+  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$M" && grep -q 'val startStep = crash.atStart(lastExitCrashed())' "$M" \
+  && grep -q 'android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,' "$M" \
   && grep -q 'CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold)' "$M" \
   && grep -q 'if (v == null) remove(k) else putString(k, v) } }.commit()' "$M" \
   && grep -q '  val crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,' "$M" && grep -q '  val crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,' "$M" \
@@ -463,7 +464,9 @@ if [ "$BUILD" = 1 ]; then
       ok "assembleDebug succeeded: $(basename "$apk"), $(wc -c < "$apk" | tr -d ' ') bytes"
       unzip -p "$apk" assets/keliver/portal_ed25519.pub | tr -d '[:space:]' | cmp -s - <(tr -d '[:space:]' < "$KEY") \
         && ok "the APK embeds exactly the scaffolded public key" || bad "the APK's embedded key differs"
-      unzip -l "$apk" | grep -q ' AndroidManifest.xml$' && ok "the APK has a manifest" || bad "the APK has no manifest"
+      # The listing first: under pipefail, grep -q stopping early could end unzip with SIGPIPE.
+      unzip -l "$apk" > "$DISP/apk-listing.txt" 2>&1
+      grep -q ' AndroidManifest.xml$' "$DISP/apk-listing.txt" && ok "the APK has a manifest" || bad "the APK has no manifest"
       find "$H/build/generated/source/buildConfig/debug" -name BuildConfig.java -exec cat {} + | grep -q 'KELIVER_UPDATES = "live"' \
         && ok "the debug build, keliver.updates empty, takes live updates" || bad "the debug build's KELIVER_UPDATES is not live"
     else
