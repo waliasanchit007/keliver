@@ -36,7 +36,7 @@ unpublished prototypes.
 
 A Compose node stays a `DocNode.Widget`; ED0 only fills it differently:
 
-- **type** `<guest fq>#<lock tag>`, for example `dev.keliver.compose.material3.Text#6`. The tag
+- **type** `<guest fq>#<lock tag>`, for example `dev.keliver.compose.material3.Text#10`. The tag
   names the overload (`Box#1` takes content, `Box#2` does not).
 - **props**: the arguments the call passes, by parameter name. A Compose value is a `"c"` literal
   holding its wire JSON (the same JSON the protocol carries): `16.dp` is `"16"`,
@@ -90,9 +90,10 @@ A Compose node stays a `DocNode.Widget`; ED0 only fills it differently:
   spelling reads back as the same value. Values are recognised **by their text, not by import**:
   `Icons.Filled.X` or `MaterialTheme.colorScheme.x` reads as the table's value even where an
   app's own object of that name is meant;
-- **optional and multiple slots**: `ListItem` (one required and four optional slots) and
-  `TopAppBar` (a required `title` and a RowScope `actions` trailing lambda). Gate A's group has
-  neither, so the test describes them in the generator's metadata format;
+- **optional and multiple slots**: `ListItem` (one required and four optional slots; the group
+  does not generate it, so the test describes it in the generator's metadata format) and the
+  group's own `TopAppBar` (a required `title` and a RowScope `actions` slot). Its last parameter
+  is `scrollBehavior`, so a trailing block does not bind to `actions`: RawCode, as Kotlin refuses it;
 - **outside the grammar is RawCode with its reason**: `Color(red = …)`, `Modifier.semantics {}`,
   a parameter that cannot cross to the host (`FlowRow(overflow = …)`), and a modifier held in a
   variable.
@@ -152,6 +153,9 @@ original byte for byte.** The one-way edit (a middle element removed) checks the
 - **Pixels on wasm are not captured**: this repository's wasm test runner cannot capture Compose
   pixels (skiko, U41). The wasm evidence is the protocol equality. The host renderers are common
   code and compile for wasmJs, but their pixels are checked on the JVM.
+- **The canvas does not draw lazy lists** (`LazyColumn`, `LazyRow`, generated since Gate B part a):
+  their content is a `LazyListScope` block, not a slot, so the interpreter leaves them out and the
+  canvas reports the node. A host-state parameter (`LazyListState`) is never a document value.
 - **The canvas draws a bound Compose value (for example a `Color` from a binding) at its
   default** and reports it. Bound Strings, Ints, Booleans and lists are drawn.
 - **Write-back that is not surgical** (refused with a reason, never guessed): reordering or

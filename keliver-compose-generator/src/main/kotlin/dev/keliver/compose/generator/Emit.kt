@@ -817,6 +817,9 @@ class Emitter(
     body.append("@Composable\ninternal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, slots: CanvasSlots): Boolean {\n")
     body.append("  when (type) {\n")
     for (w in widgets) {
+      // A lazy list's content is a LazyListScope block, not a slot: the canvas does not draw it yet
+      // (renderGenerated says false, and the canvas reports the node instead of guessing).
+      if (w.params.any { it.kind == ParamKind.LAZY }) continue
       val d = w.decl
       currentDecl = d
       body.append("    \"${d.mirrorPkg}.${d.name}#${w.entry.tag}\" -> {\n")
@@ -888,15 +891,24 @@ class Emitter(
   private fun canvasValue(c: Classified, d: DeclInfo, imports: MutableSet<String>, missing: String): String {
     val t = c.param.type
     val n = c.param.name
+    val default = c.param.defaultText
+    // A host-state handle that travels as its wire value (`LazyListState`) is never a document
+    // value: the canvas always takes the stub's default (a fresh state), as a new screen does.
+    if (t.fq in TypeMap.wireValue) {
+      if (default == null) return missing
+      imports += expressionImports(default, d, mirror = true)
+      return "($default)"
+    }
     val read = when {
       t.fq == TypeMap.IMAGE_MODEL -> "a.string(\"$n\")"
       t.fq == "kotlin.String" -> "a.string(\"$n\")"
       t.fq == "kotlin.Int" -> "a.int(\"$n\")"
       t.fq == "kotlin.Boolean" -> "a.bool(\"$n\")"
       t.fq == "kotlin.Float" -> "a.float(\"$n\")"
+      // A type only a `*Defaults` factory makes (`ButtonColors`): its generated class's own codec.
+      t.fq in TypeMap.opaque -> "a.value(\"$n\", ${mirrorFq(t.fq)}.Codec)"
       else -> "a.value(\"$n\", ${codecFq(mirrorFq(t.fq))})"
     }
-    val default = c.param.defaultText
     return when {
       default == null -> if (t.nullable) read else "$read ?: $missing"
       else -> {

@@ -34,24 +34,24 @@ class ComposeIngestTest {
     val types = widgets(rec.root).map { it.type.substringAfterLast('.') }
     assertEquals(
       listOf(
-        "Column#4", "Row#3", "Box#1", "Icon#7", "Spacer#5", "Column#4", "Text#6", "Text#6", "Icon#7",
-        "FlowRow#9", "Repeat", "Box#1", "Text#6", "Spacer#5",
+        "Column#4", "Row#3", "Box#1", "Icon#7", "Spacer#5", "Column#4", "Text#10", "Text#10", "Icon#7",
+        "FlowRow#9", "Repeat", "Box#1", "Text#10", "Spacer#5",
       ),
       types,
     )
     val row = widgets(rec.root)[1]
     // The modifier list in chain order, every element its overload's key.
     assertEquals(
-      listOf("0:fillMaxWidth#9", "1:shadow#25", "2:clip#23", "3:background#18", "4:border#19", "5:clickable#20", "6:padding#2"),
+      listOf("0:fillMaxWidth#9", "1:shadow#25", "2:clip#23", "3:background#18", "4:border#19", "5:clickable#26", "6:padding#2"),
       row.modifiers.keys.filter { '.' !in it },
     )
     assertEquals(PropValue.Lit("c", s = "1"), row.modifiers["1:shadow#25.elevation"])
     assertEquals(PropValue.Lit("c", s = """{"rr":[12,12,12,12]}"""), row.modifiers["1:shadow#25.shape"])
     assertEquals(PropValue.Lit("b", b = false), row.modifiers["1:shadow#25.clip"])
-    assertEquals(PropValue.Action("onOpen"), row.modifiers["5:clickable#20.onClick"])
+    assertEquals(PropValue.Action("onOpen"), row.modifiers["5:clickable#26.onClick"])
     assertEquals(PropValue.Lit("c", s = "16"), row.modifiers["6:padding#2.horizontal"])
     assertEquals(PropValue.Lit("c", s = "0.0"), row.props["verticalAlignment"])
-    val texts = widgets(rec.root).filter { it.type == "$m3.Text#6" }
+    val texts = widgets(rec.root).filter { it.type == "$m3.Text#10" }
     assertEquals(PropValue.Bind("title"), texts[0].props["text"])
     assertEquals(PropValue.Lit("c", s = "\"16sp\""), texts[0].props["fontSize"])
     assertEquals(PropValue.Lit("c", s = "600"), texts[0].props["fontWeight"])
@@ -73,7 +73,7 @@ class ComposeIngestTest {
   @Test fun aStyleBScreenIngestsWithNoRawCode() {
     val rec = recognize(INBOX_SCREEN)
     assertEquals(emptyList(), rec.rawReasons)
-    val texts = widgets(rec.root).filter { it.type == "$m3.Text#6" }
+    val texts = widgets(rec.root).filter { it.type == "$m3.Text#10" }
     assertEquals(PropValue.Bind("title"), texts[0].props["text"])
     assertEquals(PropValue.Lit("c", s = """{"ref":"typography.titleMedium"}"""), texts[0].props["style"])
     assertEquals(PropValue.Lit("c", s = "700"), texts[1].props["fontWeight"])
@@ -101,7 +101,7 @@ class ComposeIngestTest {
     val l = recognize(legacy)
     assertEquals(listOf("Column", "Text"), widgets(l.root).map { it.type }, "legacy imports keep today's widgets")
     val generated = legacy.replace("dev.keliver.layout.compose.Column", "$layout.Column").replace("dev.keliver.material.compose.Text", "$m3.Text")
-    assertEquals(listOf("$layout.Column#4", "$m3.Text#6"), widgets(recognize(generated).root).map { it.type })
+    assertEquals(listOf("$layout.Column#4", "$m3.Text#10"), widgets(recognize(generated).root).map { it.type })
     // One file: a legacy widget and a generated one side by side, and an alias.
     val mixed = """
       package app.screens
@@ -121,12 +121,12 @@ class ComposeIngestTest {
 
       interface MixedBindings
     """.trimIndent()
-    assertEquals(listOf("$layout.Column#4", "StyledText", "$m3.Text#6"), widgets(recognize(mixed).root).map { it.type })
+    assertEquals(listOf("$layout.Column#4", "StyledText", "$m3.Text#10"), widgets(recognize(mixed).root).map { it.type })
     // A guest name the catalog does not generate is never read as the legacy widget of that name.
-    val button = generated.replace("import $m3.Text", "import $m3.Button\nimport $m3.Text")
-      .replace("Text(text = \"Hello\")", "Button(onClick = {}) { Text(text = \"Hello\") }")
-    val rb = recognize(button)
-    assertEquals(listOf("`Button(…)` is `$m3.Button`, which the generated catalog does not include"), rb.rawReasons)
+    val checkbox = generated.replace("import $m3.Text", "import $m3.Checkbox\nimport $m3.Text")
+      .replace("Text(text = \"Hello\")", "Checkbox(checked = true, onCheckedChange = null)")
+    val rb = recognize(checkbox)
+    assertEquals(listOf("`Checkbox(…)` is `$m3.Checkbox`, which the generated catalog does not include"), rb.rawReasons)
   }
 
   @Test fun overloadsAreChosenAsKotlinChoosesThem() {
@@ -181,14 +181,14 @@ class ComposeIngestTest {
       listOf("`Text(…)` is ambiguous between `$m3.Text`, `dev.keliver.compose.foundation.text.Text` (two star imports)"),
       ambiguous.rawReasons,
     )
-    // Two guest star imports and a name neither generates (`Button`): never the legacy `Button`.
-    val stars = recognize(screen("import $m3.*\nimport $layout.*", "Button(onClick = {}) { Text(\"a\") }"))
+    // Two guest star imports and a name neither generates (`Checkbox`): never a legacy widget of that name.
+    val stars = recognize(screen("import $m3.*\nimport $layout.*", "Checkbox(checked = true, onCheckedChange = null)"))
     assertEquals(listOf("$layout.Column#4"), widgets(stars.root).map { it.type })
     assertTrue("may give a guest declaration the generated catalog does not include" in stars.rawReasons.single(), stars.rawReasons.single())
     // An explicit import of Compose's own API is neither a generated nor a legacy widget.
     val own = recognize(screen("import $layout.Column\nimport $m3.Text\nimport androidx.compose.material3.Card", "Card { Text(\"a\") }"))
     assertEquals(listOf("`Card(…)` is `androidx.compose.material3.Card`, Compose's own API: neither a generated nor a legacy widget"), own.rawReasons)
-    // A same-file declaration shadows a star import: the call is the file's own `Text`, not Text#6.
+    // A same-file declaration shadows a star import: the call is the file's own `Text`, not Text#10.
     val shadowed = recognize(screen("import $layout.Column\nimport $m3.*", "Text(\"a\")", more = "@Composable fun Text(s: String) {}\n"))
     assertEquals(listOf("`Text(…)` is declared in this file too, so it may not be the generated widget"), shadowed.rawReasons)
     // …and so does a same-file extension for a modifier.
@@ -235,14 +235,19 @@ class ComposeIngestTest {
     // One node per slot passed, in source order; the absent optional slots have none.
     assertEquals(listOf("slot:headlineContent", "slot:supportingContent", "slot:leadingContent"), item.children.map { (it as DocNode.Widget).type })
     assertEquals(PropValue.Lit("s", s = "3 new"), ((item.children[1] as DocNode.Widget).children.single() as DocNode.Widget).props["text"])
-    // A trailing lambda is the last parameter (TopAppBar's scoped `actions`), and its content has RowScope.
+    // TopAppBar's scoped `actions` slot, named: its content has RowScope.
     val bar = recognize(
-      box("TopAppBar(title = { Text(\"Messages\") }) { Text(\"a\", Modifier.weight(1f)) }")
+      box("TopAppBar(title = { Text(\"Messages\") }, actions = { Text(\"a\", Modifier.weight(1f)) })")
         .replace("import $m3.Text", "import $m3.Text\nimport $m3.TopAppBar"),
     )
     assertEquals(emptyList(), bar.rawReasons)
     val top = widgets(bar.root)[1]
     assertEquals(listOf("slot:title", "slot:actions"), top.children.map { (it as DocNode.Widget).type })
+    // Its last parameter is `scrollBehavior`, not a lambda: a trailing block does not bind, as Kotlin refuses it.
+    val trailing = recognize(
+      box("TopAppBar(title = { Text(\"Messages\") }) { Text(\"a\") }").replace("import $m3.Text", "import $m3.Text\nimport $m3.TopAppBar"),
+    )
+    assertEquals(listOf("`TopAppBar(…)`: overload #26 takes no trailing lambda"), trailing.rawReasons)
     assertEquals(listOf("0:weight#12", "0:weight#12.weight"), ((top.children[1] as DocNode.Widget).children.single() as DocNode.Widget).modifiers.keys.toList())
   }
 

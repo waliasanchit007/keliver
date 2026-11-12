@@ -86,7 +86,7 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                 "3:background#18.color": {
                     "kind": "dev.keliver.portal.document.PropValue.Lit",
                     "tag": "c",
-                    "s": "4293849332"
+                    "s": "4294439674"
                 },
                 "4:border#19": {
                     "kind": "dev.keliver.portal.document.PropValue.Lit",
@@ -108,12 +108,12 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                     "tag": "c",
                     "s": "{\"rr\":[12,12,12,12]}"
                 },
-                "5:clickable#20": {
+                "5:clickable#26": {
                     "kind": "dev.keliver.portal.document.PropValue.Lit",
                     "tag": "b",
                     "b": true
                 },
-                "5:clickable#20.onClick": {
+                "5:clickable#26.onClick": {
                     "kind": "dev.keliver.portal.document.PropValue.Action",
                     "name": "onOpen"
                 },
@@ -174,7 +174,7 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                         "2:background#18.color": {
                             "kind": "dev.keliver.portal.document.PropValue.Lit",
                             "tag": "c",
-                            "s": "4284960932"
+                            "s": "4284636017"
                         }
                     },
                     "children": [
@@ -251,7 +251,7 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                         {
                             "kind": "dev.keliver.portal.document.DocNode.Widget",
                             "handle": -4,
-                            "type": "dev.keliver.compose.material3.Text#6",
+                            "type": "dev.keliver.compose.material3.Text#10",
                             "props": {
                                 "text": {
                                     "kind": "dev.keliver.portal.document.PropValue.Bind",
@@ -287,11 +287,11 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                         {
                             "kind": "dev.keliver.portal.document.DocNode.Widget",
                             "handle": -5,
-                            "type": "dev.keliver.compose.material3.Text#6",
+                            "type": "dev.keliver.compose.material3.Text#10",
                             "props": {
                                 "text": {
                                     "kind": "dev.keliver.portal.document.PropValue.Bind",
-                                    "field": "subtitle"
+                                    "field": "quantity"
                                 },
                                 "color": {
                                     "kind": "dev.keliver.portal.document.PropValue.Lit",
@@ -410,7 +410,7 @@ internal const val SAMPLE_CARD_DOCUMENT: String = """{
                                 {
                                     "kind": "dev.keliver.portal.document.DocNode.Widget",
                                     "handle": -9,
-                                    "type": "dev.keliver.compose.material3.Text#6",
+                                    "type": "dev.keliver.compose.material3.Text#10",
                                     "props": {
                                         "text": {
                                             "kind": "dev.keliver.portal.document.PropValue.Bind",

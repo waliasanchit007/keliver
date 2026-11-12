@@ -53,7 +53,7 @@ class ComposeWriteBackTest {
 
   @Test fun aPropertyChangeWritesOnlyItsToken() {
     val (mid, end) = roundTrip(INBOX_SCREEN) { d ->
-      listOf(DocOp.SetProp(node(d, ".Text#6", 2).handle, "fontSize", PropValue.Lit("c", s = "\"18sp\"")))
+      listOf(DocOp.SetProp(node(d, ".Text#10", 2).handle, "fontSize", PropValue.Lit("c", s = "\"18sp\"")))
     }
     assertEquals(splice(INBOX_SCREEN, "fontSize = 16.sp", "fontSize = 18.sp"), mid)
     assertEquals(INBOX_SCREEN, end)
@@ -78,7 +78,7 @@ class ComposeWriteBackTest {
 
   @Test fun aThemeReferenceReplacesALiteralAndTheImportsFollow() {
     val (mid, end) = roundTrip(INBOX_SCREEN) { d ->
-      listOf(DocOp.SetProp(node(d, ".Text#6", 2).handle, "color", PropValue.Lit("c", s = """{"ref":"colorScheme.primary"}""")))
+      listOf(DocOp.SetProp(node(d, ".Text#10", 2).handle, "color", PropValue.Lit("c", s = """{"ref":"colorScheme.primary"}""")))
     }
     // `Color` lost its last use, so its import goes; the undo brings both back where they were.
     val expected = splice(INBOX_SCREEN, "color = Color(0xFF1F1F1F)", "color = MaterialTheme.colorScheme.primary")
@@ -89,7 +89,7 @@ class ComposeWriteBackTest {
 
   @Test fun aNewArgumentIsNamedAndLastAndItsRemovalGivesTheFileBack() {
     val (mid, end) = roundTrip(INBOX_SCREEN) { d ->
-      listOf(DocOp.SetProp(node(d, ".Text#6", 1).handle, "maxLines", PropValue.Lit("i", i = 2)))
+      listOf(DocOp.SetProp(node(d, ".Text#10", 1).handle, "maxLines", PropValue.Lit("i", i = 2)))
     }
     assertEquals(splice(INBOX_SCREEN, "fontWeight = FontWeight.Bold)", "fontWeight = FontWeight.Bold, maxLines = 2)"), mid)
     assertEquals(INBOX_SCREEN, end)
@@ -155,7 +155,7 @@ class ComposeWriteBackTest {
     val name = "SampleCard.kt"
     // A property: the title's maxLines.
     val (mid, end) = roundTrip(sample, asComponent = true, fileName = name) { d ->
-      listOf(DocOp.SetProp(node(d, ".Text#6").handle, "maxLines", PropValue.Lit("i", i = 2)))
+      listOf(DocOp.SetProp(node(d, ".Text#10").handle, "maxLines", PropValue.Lit("i", i = 2)))
     }
     assertEquals(splice(sample, "maxLines = 1,", "maxLines = 2,"), mid)
     assertEquals(sample, end)
@@ -229,7 +229,7 @@ class ComposeWriteBackTest {
 
   @Test fun theSecondOfTwoRepeatedElementsIsEditedAlone() {
     val (mid, end) = roundTrip(messageScreen, fileName = messageFile) { d ->
-      listOf(DocOp.SetModifier(node(d, ".Text#6").handle, "2:padding#1.all", PropValue.Lit("c", s = "6")))
+      listOf(DocOp.SetModifier(node(d, ".Text#10").handle, "2:padding#1.all", PropValue.Lit("c", s = "6")))
     }
     assertEquals(splice(messageScreen, ".background(Color.White).padding(4.dp))", ".background(Color.White).padding(6.dp))"), mid)
     assertEquals(messageScreen, end)
@@ -237,7 +237,7 @@ class ComposeWriteBackTest {
 
   @Test fun anEventPassedAsATrailingLambdaIsReplacedInPlace() {
     val (mid, end) = roundTrip(messageScreen, fileName = messageFile) { d ->
-      listOf(DocOp.SetModifier(node(d, ".Text#6", 1).handle, "0:clickable#20.onClick", PropValue.Action("open")))
+      listOf(DocOp.SetModifier(node(d, ".Text#10", 1).handle, "0:clickable#26.onClick", PropValue.Action("open")))
     }
     assertEquals(splice(messageScreen, "Modifier.clickable { b.archive() }", "Modifier.clickable { b.open() }"), mid)
     assertEquals(messageScreen, end)
@@ -245,7 +245,7 @@ class ComposeWriteBackTest {
 
   @Test fun removingAnArgumentBesideACommentIsRefused() {
     val d0 = doc(messageScreen, messageFile)
-    val target = d0.apply(DocOp.RemoveProp(node(d0, ".Text#6", 2).handle, "color")).doc
+    val target = d0.apply(DocOp.RemoveProp(node(d0, ".Text#10", 2).handle, "color")).doc
     val o = ed0 { WriteBack.attempt(messageScreen, target, fileName = messageFile, base = d0) }
     assertTrue(o is WriteBack.Outcome.NotSurgical && "a comment beside `color` would go with it" in o.reason, o.toString())
   }
@@ -265,7 +265,7 @@ class ComposeWriteBackTest {
 
   @Test fun aModifierArgumentIsAddedToACallWithNone() {
     val (mid, end) = roundTrip(messageScreen, fileName = messageFile) { d ->
-      val subject = node(d, ".Text#6", 4)
+      val subject = node(d, ".Text#10", 4)
       listOf(
         DocOp.SetModifier(subject.handle, "0:padding#1", PropValue.Lit("b", b = true)),
         DocOp.SetModifier(subject.handle, "0:padding#1.all", PropValue.Lit("c", s = "8")),
@@ -287,7 +287,7 @@ class ComposeWriteBackTest {
   @Test fun twoAdjacentArgumentsAreRemovedAsOnePiece() {
     // One way: the undo would add them back named and last, which is not where they were.
     val d0 = doc(INBOX_SCREEN)
-    val text = node(d0, ".Text#6", 2)
+    val text = node(d0, ".Text#10", 2)
     val target = d0.applyBatch(listOf(DocOp.RemoveProp(text.handle, "fontSize"), DocOp.RemoveProp(text.handle, "color"))).result!!.doc
     val mid = merge(INBOX_SCREEN, target, d0, asComponent = false, fileName = file)
     val expected = splice(INBOX_SCREEN, "Text(\"Recent messages\", fontSize = 16.sp, color = Color(0xFF1F1F1F), maxLines = 1)", "Text(\"Recent messages\", maxLines = 1)")

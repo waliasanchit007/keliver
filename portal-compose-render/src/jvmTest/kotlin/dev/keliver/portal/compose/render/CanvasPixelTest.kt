@@ -82,14 +82,14 @@ import kotlinx.serialization.json.Json
 @OptIn(ExperimentalTestApi::class)
 class CanvasPixelTest {
   private val title = "A long item title that will not fit on one line"
-  private val subtitle = "Subtitle"
-  private val tags = listOf("Unread", "Weekly", "Starred", "From a teammate", "Has files", "Archived")
+  private val quantity = "12 units"
+  private val tags = listOf("Fragile", "Bulk", "In stock", "Ships today", "Gift wrap", "Returnable")
 
   @Test fun theCanvasDrawsTheNativeScreensPixels() = runComposeUiTest {
     val actions = mutableListOf<String>()
     val problems = mutableListOf<String>()
     val env = CanvasEnv(
-      bind = { mapOf("title" to title, "subtitle" to subtitle, "tags" to tags)[it] },
+      bind = { mapOf("title" to title, "quantity" to quantity, "tags" to tags)[it] },
       action = { name, _ -> actions += name },
       problem = { problems += it },
     )
@@ -102,7 +102,7 @@ class CanvasPixelTest {
           if (showCanvas) {
             Box(Modifier.testTag("canvas")) { host.root.Render(null) }
           } else {
-            NativeSampleCard(title, subtitle, tags) {}
+            NativeSampleCard(title, quantity, tags) {}
           }
         }
       }

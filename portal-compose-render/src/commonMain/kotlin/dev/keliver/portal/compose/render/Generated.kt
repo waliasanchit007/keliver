@@ -18,8 +18,15 @@ import dev.keliver.compose.foundation.layout.padding
 import dev.keliver.compose.foundation.layout.size
 import dev.keliver.compose.foundation.layout.width
 import dev.keliver.compose.foundation.verticalScroll
+import dev.keliver.compose.material3.ButtonDefaults
+import dev.keliver.compose.material3.CardDefaults
+import dev.keliver.compose.material3.DividerDefaults
+import dev.keliver.compose.material3.IconButtonDefaults
 import dev.keliver.compose.material3.LocalContentColor
 import dev.keliver.compose.material3.LocalTextStyle
+import dev.keliver.compose.material3.MaterialTheme
+import dev.keliver.compose.material3.TopAppBarDefaults
+import dev.keliver.compose.material3.contentColorFor
 import dev.keliver.compose.ui.Alignment
 import dev.keliver.compose.ui.Modifier
 import dev.keliver.compose.ui.draw.alpha
@@ -130,6 +137,41 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
         style = style,
       )
     }
+    "dev.keliver.compose.material3.Text#10" -> {
+      val text = a.string("text") ?: return a.missing("text")
+      val color = a.value("color", dev.keliver.compose.ui.graphics.ColorCodec) ?: (Color.Unspecified)
+      val fontSize = a.value("fontSize", dev.keliver.compose.ui.unit.TextUnitCodec) ?: (TextUnit.Unspecified)
+      val fontStyle = if (a.has("fontStyle")) a.value("fontStyle", dev.keliver.compose.ui.text.font.FontStyleCodec) else (null)
+      val fontWeight = if (a.has("fontWeight")) a.value("fontWeight", dev.keliver.compose.ui.text.font.FontWeightCodec) else (null)
+      val fontFamily = if (a.has("fontFamily")) a.value("fontFamily", dev.keliver.compose.ui.text.font.FontFamilyCodec) else (null)
+      val letterSpacing = a.value("letterSpacing", dev.keliver.compose.ui.unit.TextUnitCodec) ?: (TextUnit.Unspecified)
+      val textDecoration = if (a.has("textDecoration")) a.value("textDecoration", dev.keliver.compose.ui.text.style.TextDecorationCodec) else (null)
+      val textAlign = if (a.has("textAlign")) a.value("textAlign", dev.keliver.compose.ui.text.style.TextAlignCodec) else (null)
+      val lineHeight = a.value("lineHeight", dev.keliver.compose.ui.unit.TextUnitCodec) ?: (TextUnit.Unspecified)
+      val overflow = a.value("overflow", dev.keliver.compose.ui.text.style.TextOverflowCodec) ?: (TextOverflow.Clip)
+      val softWrap = a.bool("softWrap") ?: (true)
+      val maxLines = a.int("maxLines") ?: (Int.MAX_VALUE)
+      val minLines = a.int("minLines") ?: (1)
+      val style = a.value("style", dev.keliver.compose.ui.text.TextStyleCodec) ?: (LocalTextStyle.current)
+      dev.keliver.compose.material3.Text(
+        text = text,
+        modifier = modifier,
+        color = color,
+        fontSize = fontSize,
+        fontStyle = fontStyle,
+        fontWeight = fontWeight,
+        fontFamily = fontFamily,
+        letterSpacing = letterSpacing,
+        textDecoration = textDecoration,
+        textAlign = textAlign,
+        lineHeight = lineHeight,
+        overflow = overflow,
+        softWrap = softWrap,
+        maxLines = maxLines,
+        minLines = minLines,
+        style = style,
+      )
+    }
     "dev.keliver.compose.material3.Icon#7" -> {
       val imageVector = a.value("imageVector", dev.keliver.compose.ui.graphics.vector.ImageVectorCodec) ?: return a.missing("imageVector")
       val contentDescription = a.string("contentDescription")
@@ -147,6 +189,7 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
       val alignment = a.value("alignment", dev.keliver.compose.ui.AlignmentCodec) ?: (Alignment.Center)
       val contentScale = a.value("contentScale", dev.keliver.compose.ui.layout.ContentScaleCodec) ?: (ContentScale.Fit)
       val alpha = a.float("alpha") ?: (DefaultAlpha)
+      val colorFilter = if (a.has("colorFilter")) a.value("colorFilter", dev.keliver.compose.ui.graphics.ColorFilterCodec) else (null)
       val filterQuality = a.value("filterQuality", dev.keliver.compose.ui.graphics.FilterQualityCodec) ?: (DefaultFilterQuality)
       val clipToBounds = a.bool("clipToBounds") ?: (true)
       dev.keliver.coil3.compose.AsyncImage(
@@ -156,8 +199,240 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
         alignment = alignment,
         contentScale = contentScale,
         alpha = alpha,
+        colorFilter = colorFilter,
         filterQuality = filterQuality,
         clipToBounds = clipToBounds,
+      )
+    }
+    "dev.keliver.coil3.compose.AsyncImage#11" -> {
+      val model = a.string("model")
+      val contentDescription = a.string("contentDescription")
+      val placeholder = if (a.has("placeholder")) a.value("placeholder", dev.keliver.compose.ui.graphics.painter.PainterCodec) else (null)
+      val error = if (a.has("error")) a.value("error", dev.keliver.compose.ui.graphics.painter.PainterCodec) else (null)
+      val alignment = a.value("alignment", dev.keliver.compose.ui.AlignmentCodec) ?: (Alignment.Center)
+      val contentScale = a.value("contentScale", dev.keliver.compose.ui.layout.ContentScaleCodec) ?: (ContentScale.Fit)
+      val alpha = a.float("alpha") ?: (DefaultAlpha)
+      val colorFilter = if (a.has("colorFilter")) a.value("colorFilter", dev.keliver.compose.ui.graphics.ColorFilterCodec) else (null)
+      val filterQuality = a.value("filterQuality", dev.keliver.compose.ui.graphics.FilterQualityCodec) ?: (DefaultFilterQuality)
+      val clipToBounds = a.bool("clipToBounds") ?: (true)
+      dev.keliver.coil3.compose.AsyncImage(
+        model = model,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        placeholder = placeholder,
+        error = error,
+        alignment = alignment,
+        contentScale = contentScale,
+        alpha = alpha,
+        colorFilter = colorFilter,
+        filterQuality = filterQuality,
+        clipToBounds = clipToBounds,
+      )
+    }
+    "dev.keliver.compose.foundation.Image#12" -> {
+      val painter = a.value("painter", dev.keliver.compose.ui.graphics.painter.PainterCodec) ?: return a.missing("painter")
+      val contentDescription = a.string("contentDescription")
+      val alignment = a.value("alignment", dev.keliver.compose.ui.AlignmentCodec) ?: (Alignment.Center)
+      val contentScale = a.value("contentScale", dev.keliver.compose.ui.layout.ContentScaleCodec) ?: (ContentScale.Fit)
+      val alpha = a.float("alpha") ?: (DefaultAlpha)
+      val colorFilter = if (a.has("colorFilter")) a.value("colorFilter", dev.keliver.compose.ui.graphics.ColorFilterCodec) else (null)
+      dev.keliver.compose.foundation.Image(
+        painter = painter,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        alignment = alignment,
+        contentScale = contentScale,
+        alpha = alpha,
+        colorFilter = colorFilter,
+      )
+    }
+    "dev.keliver.compose.foundation.Image#13" -> {
+      val imageVector = a.value("imageVector", dev.keliver.compose.ui.graphics.vector.ImageVectorCodec) ?: return a.missing("imageVector")
+      val contentDescription = a.string("contentDescription")
+      val alignment = a.value("alignment", dev.keliver.compose.ui.AlignmentCodec) ?: (Alignment.Center)
+      val contentScale = a.value("contentScale", dev.keliver.compose.ui.layout.ContentScaleCodec) ?: (ContentScale.Fit)
+      val alpha = a.float("alpha") ?: (DefaultAlpha)
+      val colorFilter = if (a.has("colorFilter")) a.value("colorFilter", dev.keliver.compose.ui.graphics.ColorFilterCodec) else (null)
+      dev.keliver.compose.foundation.Image(
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        alignment = alignment,
+        contentScale = contentScale,
+        alpha = alpha,
+        colorFilter = colorFilter,
+      )
+    }
+    "dev.keliver.compose.material3.Icon#16" -> {
+      val painter = a.value("painter", dev.keliver.compose.ui.graphics.painter.PainterCodec) ?: return a.missing("painter")
+      val contentDescription = a.string("contentDescription")
+      val tint = a.value("tint", dev.keliver.compose.ui.graphics.ColorCodec) ?: (LocalContentColor.current)
+      dev.keliver.compose.material3.Icon(
+        painter = painter,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        tint = tint,
+      )
+    }
+    "dev.keliver.compose.material3.Surface#17" -> {
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (RectangleShape)
+      val color = a.value("color", dev.keliver.compose.ui.graphics.ColorCodec) ?: (MaterialTheme.colorScheme.surface)
+      val contentColor = a.value("contentColor", dev.keliver.compose.ui.graphics.ColorCodec) ?: (contentColorFor(color))
+      val tonalElevation = a.value("tonalElevation", dev.keliver.compose.ui.unit.DpCodec) ?: (0.dp)
+      val shadowElevation = a.value("shadowElevation", dev.keliver.compose.ui.unit.DpCodec) ?: (0.dp)
+      val border = if (a.has("border")) a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) else (null)
+      dev.keliver.compose.material3.Surface(
+        modifier = modifier,
+        shape = shape,
+        color = color,
+        contentColor = contentColor,
+        tonalElevation = tonalElevation,
+        shadowElevation = shadowElevation,
+        border = border,
+        content = { slots.Render("content", null) },
+      )
+    }
+    "dev.keliver.compose.material3.Surface#18" -> {
+      val enabled = a.bool("enabled") ?: (true)
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (RectangleShape)
+      val color = a.value("color", dev.keliver.compose.ui.graphics.ColorCodec) ?: (MaterialTheme.colorScheme.surface)
+      val contentColor = a.value("contentColor", dev.keliver.compose.ui.graphics.ColorCodec) ?: (contentColorFor(color))
+      val tonalElevation = a.value("tonalElevation", dev.keliver.compose.ui.unit.DpCodec) ?: (0.dp)
+      val shadowElevation = a.value("shadowElevation", dev.keliver.compose.ui.unit.DpCodec) ?: (0.dp)
+      val border = if (a.has("border")) a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) else (null)
+      dev.keliver.compose.material3.Surface(
+        onClick = a.action0("onClick"),
+        modifier = modifier,
+        enabled = enabled,
+        shape = shape,
+        color = color,
+        contentColor = contentColor,
+        tonalElevation = tonalElevation,
+        shadowElevation = shadowElevation,
+        border = border,
+        content = { slots.Render("content", null) },
+      )
+    }
+    "dev.keliver.compose.material3.Card#19" -> {
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (CardDefaults.shape)
+      val colors = a.value("colors", dev.keliver.compose.material3.CardColors.Codec) ?: (CardDefaults.cardColors())
+      val elevation = a.value("elevation", dev.keliver.compose.material3.CardElevation.Codec) ?: (CardDefaults.cardElevation())
+      val border = if (a.has("border")) a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) else (null)
+      dev.keliver.compose.material3.Card(
+        modifier = modifier,
+        shape = shape,
+        colors = colors,
+        elevation = elevation,
+        border = border,
+        content = { slots.Render("content", this) },
+      )
+    }
+    "dev.keliver.compose.material3.Card#20" -> {
+      val enabled = a.bool("enabled") ?: (true)
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (CardDefaults.shape)
+      val colors = a.value("colors", dev.keliver.compose.material3.CardColors.Codec) ?: (CardDefaults.cardColors())
+      val elevation = a.value("elevation", dev.keliver.compose.material3.CardElevation.Codec) ?: (CardDefaults.cardElevation())
+      val border = if (a.has("border")) a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) else (null)
+      dev.keliver.compose.material3.Card(
+        onClick = a.action0("onClick"),
+        modifier = modifier,
+        enabled = enabled,
+        shape = shape,
+        colors = colors,
+        elevation = elevation,
+        border = border,
+        content = { slots.Render("content", this) },
+      )
+    }
+    "dev.keliver.compose.material3.Button#21" -> {
+      val enabled = a.bool("enabled") ?: (true)
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (ButtonDefaults.shape)
+      val colors = a.value("colors", dev.keliver.compose.material3.ButtonColors.Codec) ?: (ButtonDefaults.buttonColors())
+      val elevation = if (a.has("elevation")) a.value("elevation", dev.keliver.compose.material3.ButtonElevation.Codec) else (ButtonDefaults.buttonElevation())
+      val border = if (a.has("border")) a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) else (null)
+      val contentPadding = a.value("contentPadding", dev.keliver.compose.foundation.layout.PaddingValuesCodec) ?: (ButtonDefaults.ContentPadding)
+      dev.keliver.compose.material3.Button(
+        onClick = a.action0("onClick"),
+        modifier = modifier,
+        enabled = enabled,
+        shape = shape,
+        colors = colors,
+        elevation = elevation,
+        border = border,
+        contentPadding = contentPadding,
+        content = { slots.Render("content", this) },
+      )
+    }
+    "dev.keliver.compose.material3.TextButton#22" -> {
+      val enabled = a.bool("enabled") ?: (true)
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (ButtonDefaults.textShape)
+      val colors = a.value("colors", dev.keliver.compose.material3.ButtonColors.Codec) ?: (ButtonDefaults.textButtonColors())
+      val elevation = if (a.has("elevation")) a.value("elevation", dev.keliver.compose.material3.ButtonElevation.Codec) else (null)
+      val border = if (a.has("border")) a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) else (null)
+      val contentPadding = a.value("contentPadding", dev.keliver.compose.foundation.layout.PaddingValuesCodec) ?: (ButtonDefaults.TextButtonContentPadding)
+      dev.keliver.compose.material3.TextButton(
+        onClick = a.action0("onClick"),
+        modifier = modifier,
+        enabled = enabled,
+        shape = shape,
+        colors = colors,
+        elevation = elevation,
+        border = border,
+        contentPadding = contentPadding,
+        content = { slots.Render("content", this) },
+      )
+    }
+    "dev.keliver.compose.material3.OutlinedButton#23" -> {
+      val enabled = a.bool("enabled") ?: (true)
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (ButtonDefaults.outlinedShape)
+      val colors = a.value("colors", dev.keliver.compose.material3.ButtonColors.Codec) ?: (ButtonDefaults.outlinedButtonColors())
+      val elevation = if (a.has("elevation")) a.value("elevation", dev.keliver.compose.material3.ButtonElevation.Codec) else (null)
+      val border = if (a.has("border")) a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) else (ButtonDefaults.outlinedButtonBorder(enabled))
+      val contentPadding = a.value("contentPadding", dev.keliver.compose.foundation.layout.PaddingValuesCodec) ?: (ButtonDefaults.ContentPadding)
+      dev.keliver.compose.material3.OutlinedButton(
+        onClick = a.action0("onClick"),
+        modifier = modifier,
+        enabled = enabled,
+        shape = shape,
+        colors = colors,
+        elevation = elevation,
+        border = border,
+        contentPadding = contentPadding,
+        content = { slots.Render("content", this) },
+      )
+    }
+    "dev.keliver.compose.material3.IconButton#24" -> {
+      val enabled = a.bool("enabled") ?: (true)
+      val colors = a.value("colors", dev.keliver.compose.material3.IconButtonColors.Codec) ?: (IconButtonDefaults.iconButtonColors())
+      val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (IconButtonDefaults.standardShape)
+      dev.keliver.compose.material3.IconButton(
+        onClick = a.action0("onClick"),
+        modifier = modifier,
+        enabled = enabled,
+        colors = colors,
+        shape = shape,
+        content = { slots.Render("content", null) },
+      )
+    }
+    "dev.keliver.compose.material3.HorizontalDivider#25" -> {
+      val thickness = a.value("thickness", dev.keliver.compose.ui.unit.DpCodec) ?: (DividerDefaults.Thickness)
+      val color = a.value("color", dev.keliver.compose.ui.graphics.ColorCodec) ?: (DividerDefaults.color)
+      dev.keliver.compose.material3.HorizontalDivider(
+        modifier = modifier,
+        thickness = thickness,
+        color = color,
+      )
+    }
+    "dev.keliver.compose.material3.TopAppBar#26" -> {
+      val expandedHeight = a.value("expandedHeight", dev.keliver.compose.ui.unit.DpCodec) ?: (TopAppBarDefaults.TopAppBarExpandedHeight)
+      val colors = a.value("colors", dev.keliver.compose.material3.TopAppBarColors.Codec) ?: (TopAppBarDefaults.topAppBarColors())
+      dev.keliver.compose.material3.TopAppBar(
+        title = { slots.Render("title", null) },
+        modifier = modifier,
+        navigationIcon = { slots.Render("navigationIcon", null) },
+        actions = { slots.Render("actions", this) },
+        expandedHeight = expandedHeight,
+        colors = colors,
       )
     }
     else -> return false
@@ -188,12 +463,18 @@ internal fun applyGenerated(m: Modifier, key: String, a: CanvasArgs, scope: Any?
     "matchParentSize#17" -> (scope as? dev.keliver.compose.foundation.layout.BoxScope)?.run { m.matchParentSize() }
     "background#18" -> run { val color = a.value("color", dev.keliver.compose.ui.graphics.ColorCodec) ?: return null; val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (RectangleShape); m.background(color = color, shape = shape) }
     "border#19" -> run { val width = a.value("width", dev.keliver.compose.ui.unit.DpCodec) ?: return null; val color = a.value("color", dev.keliver.compose.ui.graphics.ColorCodec) ?: return null; val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (RectangleShape); m.border(width = width, color = color, shape = shape) }
+    "border#27" -> run { val border = a.value("border", dev.keliver.compose.foundation.BorderStrokeCodec) ?: return null; val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (RectangleShape); m.border(border = border, shape = shape) }
     "clickable#20" -> run { val enabled = a.bool("enabled") ?: (true); m.clickable(enabled = enabled, onClick = a.action0("onClick")) }
+    "clickable#26" -> run { val enabled = a.bool("enabled") ?: (true); m.clickable(enabled = enabled, onClick = a.action0("onClick")) }
     "horizontalScroll#21" -> run { val state = a.value("state", dev.keliver.compose.foundation.ScrollStateCodec) ?: return null; val enabled = a.bool("enabled") ?: (true); val reverseScrolling = a.bool("reverseScrolling") ?: (false); m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
     "verticalScroll#22" -> run { val state = a.value("state", dev.keliver.compose.foundation.ScrollStateCodec) ?: return null; val enabled = a.bool("enabled") ?: (true); val reverseScrolling = a.bool("reverseScrolling") ?: (false); m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
     "clip#23" -> run { val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: return null; m.clip(shape = shape) }
     "alpha#24" -> run { val alpha = a.float("alpha") ?: return null; m.alpha(alpha = alpha) }
     "shadow#25" -> run { val elevation = a.value("elevation", dev.keliver.compose.ui.unit.DpCodec) ?: return null; val shape = a.value("shape", dev.keliver.compose.ui.graphics.ShapeCodec) ?: (RectangleShape); val clip = a.bool("clip") ?: (elevation > 0.dp); val ambientColor = a.value("ambientColor", dev.keliver.compose.ui.graphics.ColorCodec) ?: (DefaultShadowColor); val spotColor = a.value("spotColor", dev.keliver.compose.ui.graphics.ColorCodec) ?: (DefaultShadowColor); m.shadow(elevation = elevation, shape = shape, clip = clip, ambientColor = ambientColor, spotColor = spotColor) }
+    "fillParentMaxSize#28" -> run { val fraction = a.float("fraction") ?: (1f); (scope as? dev.keliver.compose.foundation.lazy.LazyItemScope)?.run { m.fillParentMaxSize(fraction = fraction) } }
+    "fillParentMaxWidth#29" -> run { val fraction = a.float("fraction") ?: (1f); (scope as? dev.keliver.compose.foundation.lazy.LazyItemScope)?.run { m.fillParentMaxWidth(fraction = fraction) } }
+    "fillParentMaxHeight#30" -> run { val fraction = a.float("fraction") ?: (1f); (scope as? dev.keliver.compose.foundation.lazy.LazyItemScope)?.run { m.fillParentMaxHeight(fraction = fraction) } }
+    "animateItem#31" -> (scope as? dev.keliver.compose.foundation.lazy.LazyItemScope)?.run { m.animateItem() }
     else -> null
   }
 }

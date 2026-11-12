@@ -6,13 +6,14 @@ import java.io.File
 
 /**
  * ED0 spike fixtures: the generated catalog (Gate A's group, as `keliver-compose-generator` writes
- * it) and, for the slot shapes Gate A's group does not have, two Material 3 widgets described the
- * way the generator describes a widget (optional slots, several named slots, a scoped slot).
+ * it) and, for a slot shape the group does not have (one required and four optional slots), a
+ * Material 3 `ListItem` described the way the generator describes a widget. The group's own
+ * `TopAppBar` has the other shape (a required title, optional slots, one scoped).
  */
 internal object ComposeFixtures {
   val gateAJson: String by lazy { File(System.getProperty("dev.keliver.portal.ed0.editorJson")).readText() }
 
-  /** `ListItem` (one required, four optional slots) and `TopAppBar` (a required title, two optional slots, one scoped). */
+  /** `ListItem` (one required, four optional slots). */
   const val SLOT_WIDGETS: String = """
     {"group": "ed0-slots", "widgets": [
       {"name": "ListItem", "compose": "androidx.compose.material3.ListItem", "guest": "dev.keliver.compose.material3.ListItem", "palette": "androidx.compose.material3", "tag": 101, "schemaClass": "GenListItem1", "params": [
@@ -23,12 +24,6 @@ internal object ComposeFixtures {
         {"name": "leadingContent", "kind": "slot", "optional": true, "default": "null", "defaultCase": "none"},
         {"name": "trailingContent", "kind": "slot", "optional": true, "default": "null", "defaultCase": "none"},
         {"name": "tonalElevation", "kind": "dp", "type": "dev.keliver.compose.ui.unit.Dp", "default": "ListItemDefaults.Elevation", "defaultCase": "expression"}
-      ]},
-      {"name": "TopAppBar", "compose": "androidx.compose.material3.TopAppBar", "guest": "dev.keliver.compose.material3.TopAppBar", "palette": "androidx.compose.material3", "tag": 102, "schemaClass": "GenTopAppBar1", "params": [
-        {"name": "title", "kind": "slot"},
-        {"name": "modifier", "kind": "modifier"},
-        {"name": "navigationIcon", "kind": "slot", "optional": true, "default": "{}", "defaultCase": "none"},
-        {"name": "actions", "kind": "slot", "scope": "dev.keliver.compose.foundation.layout.RowScope", "optional": true, "default": "{}", "defaultCase": "none"}
       ]}
     ], "modifiers": []}
   """
