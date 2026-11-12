@@ -242,6 +242,66 @@ class CrashRollbackTest {
     assertNull(g.rollbackTo(5))
   }
 
+  /** Stands in for a host's IOException (java.io's on Android, okio's on iOS). */
+  private class FakeIoException(message: String) : Exception(message)
+
+  /** Named as Zipline's is: a guest's JavaScript error. */
+  private class QuickJsException(message: String) : Exception(message)
+
+  private val io: (Throwable) -> Boolean = { it is FakeIoException }
+
+  private fun progress(modules: Int, block: CodeLoadProgress.() -> Unit = {}) = CodeLoadProgress().apply { manifestReady(modules); block() }
+
+  @Test fun aLoadThatFailsBeforeItsCodeEvaluatesIsNotTheBundles() {
+    // Offline, a 404 or a timeout on the first module: nothing evaluated.
+    assertFalse(progress(3) { downloadFailed() }.failureIsTheBundles(FakeIoException("HTTP 404"), io))
+    assertFalse(progress(3).failureIsTheBundles(IllegalStateException("signature"), io), "nothing evaluated: the signature, the floor, a bridge binding")
+    assertFalse(progress(3).evaluationBegan)
+  }
+
+  @Test fun aModuleFetchThatFailsAfterAnotherEvaluatedIsNotTheBundles() {
+    // Modules download concurrently: the first evaluated, then the third's download failed.
+    val p = progress(3) { assertTrue(moduleLoadStart()); moduleLoadEnd(); downloadFailed() }
+    assertTrue(p.evaluationBegan)
+    assertFalse(p.failureIsTheBundles(FakeIoException("timeout"), io))
+    // A module whose bytes do not match the sha256 its manifest signs: between modules, no download event.
+    val mismatch = progress(3) { moduleLoadStart(); moduleLoadEnd() }
+    assertFalse(mismatch.failureIsTheBundles(IllegalStateException("checksum mismatch for app"), io))
+    // An I/O failure anywhere in the cause chain is not the bundle's, even while a module evaluates.
+    val wrapped = progress(3) { moduleLoadStart() }
+    assertFalse(wrapped.failureIsTheBundles(RuntimeException("load", FakeIoException("reset")), io))
+  }
+
+  @Test fun aFailureFromTheBundlesCodeIsTheBundles() {
+    assertTrue(progress(3) { moduleLoadStart() }.failureIsTheBundles(IllegalStateException("threw"), io), "a module threw while it evaluated")
+    assertTrue(progress(2) { repeat(2) { moduleLoadStart(); moduleLoadEnd() } }.failureIsTheBundles(IllegalStateException("take"), io), "after every module: the presenter")
+    assertTrue(progress(3) { moduleLoadStart(); moduleLoadEnd(); mainFunctionStart() }.failureIsTheBundles(IllegalStateException("main"), io))
+    assertTrue(progress(3) { moduleLoadStart(); moduleLoadEnd() }.failureIsTheBundles(RuntimeException("x", QuickJsException("TypeError")), io), "a QuickJS error")
+    val second = progress(3)
+    assertTrue(second.moduleLoadStart())
+    assertFalse(second.moduleLoadStart(), "only the first module starts the trial")
+  }
+
+  @Test fun aModuleFetchThatFailsNeverSetsAGoodBundleAside() {
+    val g = guard()
+    g.runsHealthy(4)
+    // Two starts whose module downloads fail before any code evaluated: never on trial.
+    repeat(2) {
+      val p = progress(3) { downloadFailed() }
+      assertEquals(CrashStep.None, g.loadFailed(5, p.failureIsTheBundles(FakeIoException("offline"), io)))
+    }
+    assertEquals(CrashLedger(healthy = 4), g.ledger())
+    // A start whose code began to evaluate (marker set) and whose later module fetch failed: the marker clears, nothing counts.
+    g.loadStarting(5)
+    val p = progress(3) { moduleLoadStart(); moduleLoadEnd(); downloadFailed() }
+    assertEquals(CrashStep.None, g.loadFailed(5, p.failureIsTheBundles(FakeIoException("offline"), io)))
+    assertEquals(CrashLedger(trial = 5, healthy = 4), g.ledger())
+    assertEquals(CrashStep.None, g.atStart(), "no marker left: the next start counts nothing")
+    assertNull(g.rollbackTo(5))
+    // Its code failing does count.
+    assertEquals(CrashStep.Counted(5, 1, CrashKind.LOAD), g.loadFailed(5, theBundles = true))
+  }
+
   @Test fun theReportDetailSaysWhatRunsInstead() {
     val step = CrashStep.SetAside(5, 2, CrashKind.EXCEPTION)
     val back = crashRollbackDetail(step, 2, crashGoingBackTo(4))

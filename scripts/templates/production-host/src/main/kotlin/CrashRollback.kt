@@ -6,9 +6,12 @@
  *
  * A bundle newer than the newest one that proved healthy on this install is ON TRIAL. Each of
  * these is one failure of the bundle on trial, counted per install and per signed sequence:
- * - its code did not load, after its manifest had verified (a module or the guest's main
- *   function threw, a bridge did not bind); a failure before that (the network, the signature,
- *   the floor) is not the bundle's and is not counted;
+ * - its code did not load, and the failure came from its code ([CodeLoadProgress]): a module
+ *   threw while it evaluated, or the guest's main function or its presenter did. Nothing that
+ *   fails before its code begins to evaluate, or that is a download, is the bundle's, and none
+ *   of it is counted: the network (offline, a 404, a timeout), the signature, the floor, a
+ *   module whose bytes do not match the sha256 its manifest signs, or an app's bridge binding
+ *   (the host's own code, which would fail for any bundle);
  * - its code threw (an uncaught guest exception) before it proved healthy;
  * - the process ended while its code loaded, or while a screen showed it before it proved
  *   healthy: the "started, not yet healthy" marker is still set at the next start. The marker
@@ -60,6 +63,58 @@ internal const val SET_ASIDE_REFUSED = "set aside:"
 
 /** The largest manifest kept to go back to; a larger one is not kept (and there is no going back to it). */
 internal const val MAX_KEPT_MANIFEST_CHARS = 256 * 1024
+
+/**
+ * One code load's progress, from Zipline's events, to tell whether its failure is the bundle's
+ * (its code's) or a download's. Zipline downloads a bundle's modules concurrently and evaluates
+ * each in QuickJS once it and the modules it needs have arrived, so a module can still be
+ * downloading, or fail its sha256, after another began to evaluate. A failure is the bundle's
+ * only when its code began to evaluate, no download of this load failed, the failure is not an
+ * I/O one, and it came from code: a QuickJS error, a module that was evaluating (it threw), or
+ * after every module evaluated (the main function, the presenter). A failure between modules
+ * is a fetch's (a sha256 mismatch, say). One per code load; its events come from Zipline's
+ * threads.
+ */
+internal class CodeLoadProgress {
+  @kotlin.concurrent.Volatile private var modules = -1
+  @kotlin.concurrent.Volatile private var started = 0
+  @kotlin.concurrent.Volatile private var ended = 0
+  @kotlin.concurrent.Volatile private var mainStarted = false
+  @kotlin.concurrent.Volatile private var downloadFailed = false
+
+  /** The verified manifest names [modules] modules (manifestReady). */
+  fun manifestReady(modules: Int) {
+    this.modules = modules
+  }
+
+  /** A download (the manifest's or a module's) failed: nothing about this load's failure is the bundle's. */
+  fun downloadFailed() {
+    downloadFailed = true
+  }
+
+  /** A module begins to evaluate. True for the first: the bundle's code begins to run (CrashGuard.loadStarting). */
+  fun moduleLoadStart(): Boolean = ++started == 1
+
+  fun moduleLoadEnd() {
+    ended++
+  }
+
+  fun mainFunctionStart() {
+    mainStarted = true
+  }
+
+  /** Whether the bundle's code began to evaluate in this load. */
+  val evaluationBegan: Boolean get() = started > 0
+
+  /** Whether [exception], this load's failure, is the bundle's; [io] says whether one throwable is an I/O failure (the host's IOException). */
+  fun failureIsTheBundles(exception: Throwable, io: (Throwable) -> Boolean): Boolean {
+    if (started == 0 || downloadFailed) return false
+    val chain = generateSequence(exception) { it.cause }.take(16).toList()
+    if (chain.any(io)) return false
+    if (chain.any { it::class.simpleName == "QuickJsException" }) return true
+    return started > ended || mainStarted || (modules in 0..ended)
+  }
+}
 
 /** What failed (for the app's detail and the debug log; reports carry only fixed reasons). */
 internal enum class CrashKind(val text: String) {
@@ -181,8 +236,10 @@ internal class CrashGuard(
   }
 
   /**
-   * A verified manifest at [sequence] is about to load (Zipline's manifestReady): a bundle newer
-   * than the healthy one goes on trial, and the marker is set (and written) before its code runs.
+   * The code of a verified manifest at [sequence] begins to evaluate (Zipline's first
+   * moduleLoadStart, [CodeLoadProgress.moduleLoadStart]): a bundle newer than the healthy one
+   * goes on trial, and the marker is set (and written) before its code runs. Not before: a load
+   * that never got that far (its downloads failed) is not the bundle's.
    */
   fun loadStarting(sequence: Long?) {
     if (!enabled || sequence == null) return
@@ -231,6 +288,21 @@ internal class CrashGuard(
       val l = ledger()
       if (l.trial == sequence && l.running) save(l.copy(running = false))
     }
+  }
+
+  /**
+   * [sequence]'s code load failed: counted ([CrashKind.LOAD]) only when [theBundles]
+   * ([CodeLoadProgress.failureIsTheBundles]); otherwise (a download, I/O) its marker is cleared
+   * and nothing is counted.
+   */
+  fun loadFailed(sequence: Long?, theBundles: Boolean): CrashStep {
+    if (theBundles) return failed(sequence, CrashKind.LOAD)
+    if (!enabled || sequence == null) return CrashStep.None
+    store.locked {
+      val l = ledger()
+      if (l.trial == sequence && l.running) save(l.copy(running = false))
+    }
+    return CrashStep.None
   }
 
   /** [sequence] failed ([kind]): counted when it is on trial, and set aside at the threshold. */

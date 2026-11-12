@@ -1417,7 +1417,7 @@ private fun createApp(
     // Raise the rollback floor to the sequence that just ran: Zipline verified this
     // manifest's signature, and so its metadata, before loading it.
     eventListenerFactory = LoggingEventListenerFactory(
-      // WS6: a verified manifest is about to load: a new bundle goes on trial, its marker written first.
+      // WS6: a verified bundle's code begins to evaluate: a new bundle goes on trial, its marker written first.
       onReady = { sequence -> crash.loadStarting(sequence) },
       onSuccess = { sequence, url ->
         KeliverTiming.mark("code")
@@ -1429,8 +1429,8 @@ private fun createApp(
       // Before any code ran: fall back to the cached last good bundle once (W5),
       // as a start with a failed lookup does (the floor holds; Zipline verifies
       // the cached manifest again). Otherwise the host says the load failed.
-      // WS6: step is what the failure did to the bundle on trial (a load that failed after its
-      // manifest verified counts; one that failed before, on the network or the signature, does not).
+      // WS6: step is what the failure did to the bundle on trial (a load whose code failed counts;
+      // a download, the network, the signature or the floor does not: CodeLoadProgress).
       onFailed = { reason, step ->
         appScope.launch {
           Keliver.crashLog(step)
@@ -1560,21 +1560,38 @@ private class LoggingEventListener(
   /** WS6: the verified sequence this load runs (null until its manifest is ready, or without one). */
   @Volatile private var sequence: Long? = null
   @Volatile private var counted = false
+  /** WS6: how far this load got, to tell its code's failure from a download's (CodeLoadProgress). */
+  private val progress = CodeLoadProgress()
 
   /** WS6: counts this load's failure once, against the verified sequence it loads. Zipline's thread. */
-  private fun count(kind: CrashKind): CrashStep {
+  private fun count(step: () -> CrashStep): CrashStep {
     if (counted) return CrashStep.None
     counted = true
-    return crash.failed(sequence, kind)
+    return step()
   }
 
   // B5: Zipline reports every bind here, inside bind(): what an app's bridge binding bound.
   override fun bindService(name: String, service: ZiplineService) = Keliver.bridgeBinds.bound(name)
 
-  // WS6: the manifest verified, and its modules load next: from here a failure is the bundle's.
+  // WS6: the manifest verified; its modules download next, and then evaluate.
   override fun manifestReady(manifest: ZiplineManifest) {
     sequence = manifestSequence(manifest.metadata)
-    onReady(sequence)
+    progress.manifestReady(manifest.modules.size)
+  }
+
+  override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()
+
+  // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
+  override fun moduleLoadStart(moduleId: String): Any? {
+    if (progress.moduleLoadStart()) onReady(sequence)
+    return null
+  }
+
+  override fun moduleLoadEnd(moduleId: String, startValue: Any?) = progress.moduleLoadEnd()
+
+  override fun mainFunctionStart(applicationName: String): Any? {
+    progress.mainFunctionStart()
+    return null
   }
 
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
@@ -1593,12 +1610,14 @@ private class LoggingEventListener(
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     log("codeLoadFailed: ${exception.message}")
-    // Only after its manifest was ready (sequence set): a network, floor or signature failure is not the bundle's.
-    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count(CrashKind.LOAD))
+    // Counted only when its code failed (CodeLoadProgress): a download, the network, the floor or
+    // the signature is not the bundle's.
+    val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }
+    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count { crash.loadFailed(sequence, theBundles) })
   }
   override fun uncaughtException(exception: Throwable) {
     log("uncaughtException: ${exception.message}")
-    onUncaught(count(CrashKind.EXCEPTION))
+    onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) })
   }
   // The memory profile (M5): QuickJS before any code loads. Debug and Benchmark builds only.
   override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)

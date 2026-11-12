@@ -382,9 +382,14 @@ take it because it is newer.
 A bundle newer than the last one that proved healthy on this install is **on
 trial**. Each of these is one failure of it, counted per install and per signed
 sequence:
-- its code did not load after its manifest verified (a module or the guest's
-  main function threw, a bridge did not bind). A failure before that (the
-  network, the signature, the floor) is not the bundle's and is not counted;
+- its code did not load, and the failure came from its code: a module threw
+  while it evaluated, or the guest's main function or its presenter did.
+  Nothing that fails before its code begins to evaluate, or that is a download,
+  is counted: the network (offline, a 404, a timeout, a module download that
+  fails while another module already evaluated), the signature, the floor, a
+  module whose bytes do not match the sha256 its manifest signs, or an app's
+  bridge binding (the host's own code, which would fail for any bundle). Such a
+  start shows `not-loaded` and the next one tries again;
 - its code threw (an uncaught guest exception) before it proved healthy;
 - the process ended while its code loaded, or while a screen showed it before
   it proved healthy. A "started, not yet healthy" marker, written before the

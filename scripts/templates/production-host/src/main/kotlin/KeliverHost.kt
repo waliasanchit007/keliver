@@ -1090,7 +1090,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       // Raise the rollback floor to the sequence that just ran: Zipline verified
       // this manifest's signature, and so its metadata, before loading it.
       eventListenerFactory = LoggingEventListenerFactory(
-        // WS6: a verified manifest is about to load: a new bundle goes on trial, its marker written first.
+        // WS6: a verified bundle's code begins to evaluate: a new bundle goes on trial, its marker written first.
         onReady = { sequence -> crash.loadStarting(sequence) },
         onSuccess = { sequence, url ->
           crashed.value = null // new code: no longer the code that threw
@@ -1138,8 +1138,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         // the same way a start with a failed lookup uses it (the floor holds, and
         // Zipline verifies the cached manifest against the key again). Otherwise a
         // failed load would leave the screen blank; say so instead.
-        // WS6: step is what the failure did to the bundle on trial (a load that failed after its
-        // manifest verified counts; one that failed before, on the network or the signature, does not).
+        // WS6: step is what the failure did to the bundle on trial (a load whose code failed counts;
+        // a download, the network, the signature or the floor does not: CodeLoadProgress).
         onFailed = { reason, step ->
           scope.launch {
             crashLog(step)
@@ -1546,6 +1546,8 @@ private class LoggingEventListener(
   /** WS6: the verified sequence this load runs (null until its manifest is ready, or without one). */
   @Volatile private var sequence: Long? = null
   private val counted = AtomicBoolean(false)
+  /** WS6: how far this load got, to tell its code's failure from a download's (CodeLoadProgress). */
+  private val progress = CodeLoadProgress()
 
   /** WS6: counts this load's failure once, against the verified sequence it loads. */
   private fun count(kind: CrashKind): CrashStep =
@@ -1554,10 +1556,25 @@ private class LoggingEventListener(
   // B5: Zipline reports every bind here, inside bind(): what an app's bridge binding bound.
   override fun bindService(name: String, service: ZiplineService) = bridgeBinds.bound(name)
 
-  // WS6: the manifest verified, and its modules load next: from here a failure is the bundle's.
+  // WS6: the manifest verified; its modules download next, and then evaluate.
   override fun manifestReady(manifest: ZiplineManifest) {
     sequence = manifestSequence(manifest.metadata)
-    onReady(sequence)
+    progress.manifestReady(manifest.modules.size)
+  }
+
+  override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()
+
+  // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
+  override fun moduleLoadStart(moduleId: String): Any? {
+    if (progress.moduleLoadStart()) onReady(sequence)
+    return null
+  }
+
+  override fun moduleLoadEnd(moduleId: String, startValue: Any?) = progress.moduleLoadEnd()
+
+  override fun mainFunctionStart(applicationName: String): Any? {
+    progress.mainFunctionStart()
+    return null
   }
 
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
@@ -1576,8 +1593,11 @@ private class LoggingEventListener(
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     Log.e(TAG, "codeLoadFailed: ${exception.message}", exception)
-    // Only after its manifest was ready (sequence set): a network, floor or signature failure is not the bundle's.
-    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count(CrashKind.LOAD))
+    // Counted only when its code failed (CodeLoadProgress): a download, the network, the floor or
+    // the signature is not the bundle's.
+    val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }
+    val step = if (counted.compareAndSet(false, true)) crash.loadFailed(sequence, theBundles) else CrashStep.None
+    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", step)
   }
   override fun uncaughtException(exception: Throwable) {
     Log.e(TAG, "uncaughtException: ${exception.message}", exception)
