@@ -272,11 +272,20 @@ internal class CrashGuard(
     if (!enabled || sequence == null) return
     store.locked {
       val l = ledger()
-      if (sequence <= l.healthy || sequence == l.setAside) return@locked
+      if (!mayGoOnTrial(l, sequence)) return@locked
       evaluating = sequence
       save((if (l.trial == sequence) l else l.copy(trial = sequence, failures = 0)).marked(shown))
     }
   }
+
+  /**
+   * A bundle newer than the healthy one, unless it is set aside; and the healthy one itself while
+   * the host has gone back to it (something above it is set aside): it gets a trial of its own,
+   * since what the set-aside bundle left behind (its data, migrated) or modules gone from the
+   * server can make it fail too ([fail] then drops it).
+   */
+  private fun mayGoOnTrial(l: CrashLedger, sequence: Long): Boolean =
+    (sequence > l.healthy && sequence != l.setAside) || (sequence == l.healthy && l.setAside > l.healthy)
 
   /** [sequence]'s code is no longer evaluating (it loaded, or the load failed). Under the store's lock. */
   private fun evaluated(sequence: Long) {
@@ -356,6 +365,13 @@ internal class CrashGuard(
       save(l.copy(failures = failures, running = false))
       return CrashStep.Counted(sequence, failures, kind)
     }
+    if (sequence == l.healthy) {
+      // The bundle the host went back to failed its own trial: there is nothing left to go back
+      // to. Forgotten, with its kept manifest: the floor's own bundle stays set aside, so the host
+      // shows the app's own view, and stops retrying, until a newer sequence is published.
+      save(l.copy(trial = 0, failures = 0, running = false, healthy = 0), mapOf(candidateKey to null, healthyKey to null))
+      return CrashStep.SetAside(sequence, failures, kind)
+    }
     save(
       l.copy(trial = 0, failures = 0, running = false, setAside = maxOf(l.setAside, sequence)),
       mapOf(candidateKey to null),
@@ -374,9 +390,11 @@ internal class CrashGuard(
       val l = ledger()
       if (l.trial != sequence) return@locked false
       val kept = KeptBundle.decode(store.read(candidateKey))?.takeIf { it.sequence == sequence }
+      // The healthy one passing its own trial again (after going back to it) keeps what was kept for it.
+      val keep = if (kept == null && sequence == l.healthy) emptyMap() else mapOf(healthyKey to kept?.encode())
       save(
         l.copy(trial = 0, failures = 0, running = false, healthy = sequence),
-        mapOf(candidateKey to null, healthyKey to kept?.encode()),
+        mapOf(candidateKey to null) + keep,
       )
       true
     }

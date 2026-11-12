@@ -242,6 +242,67 @@ class CrashRollbackTest {
     assertFalse(g.floorSetAside(6))
   }
 
+  /** 4 proved healthy, 5 (the floor) was set aside: the host goes back to 4. */
+  private fun CrashGuard.wentBackTo4() {
+    runsHealthy(4)
+    loadStarting(5)
+    failed(5, CrashKind.EXCEPTION)
+    failed(5, CrashKind.EXCEPTION)
+    assertEquals(4, assertNotNull(rollbackTo(5)).sequence)
+  }
+
+  @Test fun theBundleGoneBackToGetsATrialOfItsOwn() {
+    val g = guard()
+    g.wentBackTo4()
+    g.loadStarting(4)
+    assertEquals(CrashLedger(trial = 4, running = true, setAside = 5, healthy = 4), g.ledger(), "4 is on trial again")
+    assertTrue(g.onTrial(4))
+    // From the kept manifest, which loads through a pinned URL: the same manifest is kept again.
+    g.loaded(4, "https://b.example/bundles/v4/manifest.zipline.json", manifest(4))
+    g.windowOpened(4)
+    assertTrue(g.healthy(4))
+    assertEquals(CrashLedger(setAside = 5, healthy = 4), g.ledger())
+    assertEquals(4, assertNotNull(g.rollbackTo(5)).sequence, "still the bundle to go back to")
+    // A cache start of it keeps no manifest of its own, and loses nothing.
+    g.loadStarting(4)
+    g.loaded(4, null, null)
+    assertTrue(g.healthy(4))
+    assertEquals(4, assertNotNull(g.rollbackTo(5)).sequence)
+  }
+
+  @Test fun aBundleGoneBackToThatFailsLeavesTheAppsViewAndIsNotRetried() {
+    val g = guard()
+    g.wentBackTo4()
+    // 4 crashes too (the data 5 migrated, say): the process dies while it shows, twice.
+    g.loadStarting(4)
+    g.loaded(4, null, null)
+    g.windowOpened(4)
+    assertEquals(CrashStep.Counted(4, 1, CrashKind.PROCESS), g.atStart())
+    assertNotNull(g.rollbackTo(5), "one failure: it runs again")
+    g.loadStarting(4)
+    assertEquals(CrashStep.SetAside(4, 2, CrashKind.EXCEPTION), g.failed(4, CrashKind.EXCEPTION))
+    assertEquals(CrashLedger(setAside = 5), g.ledger(), "forgotten; 5 stays set aside")
+    assertNull(store.values["crashHealthy-keliver-production-abcd"], "its kept manifest is dropped")
+    assertNull(g.rollbackTo(5), "nothing to go back to")
+    assertTrue(g.floorSetAside(5), "the app's own view, start after start")
+    assertNotNull(g.setAsideProblem(5))
+    // Not retried: below the floor, it is no longer the exception to it.
+    assertEquals(CrashStep.None, g.atStart())
+    assertNull(g.rollbackTo(5))
+    // A newer sequence ends it.
+    assertFalse(g.floorSetAside(6))
+    g.loadStarting(6)
+    assertEquals(6, g.ledger().trial)
+  }
+
+  @Test fun theHealthyBundleIsOnTrialOnlyWhileTheHostHasGoneBackToIt() {
+    val g = guard()
+    g.runsHealthy(4)
+    g.loadStarting(4)
+    assertEquals(CrashLedger(healthy = 4), g.ledger(), "nothing set aside: 4 is simply healthy")
+    assertEquals(CrashStep.None, g.failed(4, CrashKind.EXCEPTION))
+  }
+
   @Test fun withNothingHealthyThereIsNothingToGoBackTo() {
     val g = guard()
     g.loadStarting(5)
