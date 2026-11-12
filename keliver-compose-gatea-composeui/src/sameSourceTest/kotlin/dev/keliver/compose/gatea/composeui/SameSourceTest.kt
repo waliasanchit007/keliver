@@ -43,9 +43,11 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.keliver.compose.foundation.lazy.LazyListState as GuestLazyListState
+import dev.keliver.compose.gatea.composeui.samples.guest.ItemDetail as GuestItemDetail
 import dev.keliver.compose.gatea.composeui.samples.guest.LongList as GuestLongList
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleCard as GuestSampleCard
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleOrders as GuestSampleOrders
+import dev.keliver.compose.gatea.composeui.samples.native.ItemDetail as NativeItemDetail
 import dev.keliver.compose.gatea.composeui.samples.native.SampleCard as NativeSampleCard
 import dev.keliver.compose.gatea.composeui.samples.native.SampleOrders as NativeSampleOrders
 import dev.keliver.compose.gatea.protocol.guest.KeliverComposeGateAProtocolWidgetSystemFactory
@@ -142,6 +144,49 @@ class SameSourceTest {
     waitForIdle()
     host.pump()
     assertEquals(listOf("Order 1042", "Order 1041"), opened)
+  }
+
+  /**
+   * Gate B-d's sample, written by an agent from a spec: an item-detail screen with a top bar, a lazy
+   * list (cards, equal-width stat cards, history rows with dividers), and a bottom button row.
+   */
+  @Test fun samePixelsForTheItemDetailSample() = runComposeUiTest {
+    var reordered = 0
+    var adjusted = 0
+    val host = guestOnHost { GuestItemDetail(onBack = {}, onAdjust = { adjusted++ }, onReorder = { reordered++ }) }
+    var showGuest by mutableStateOf(false)
+    setContent {
+      Theme {
+        Box(Modifier.size(360.dp, 640.dp).testTag("slot")) {
+          if (showGuest) {
+            Box(Modifier.testTag("guest")) { host.root.Render(null) }
+          } else {
+            NativeItemDetail(onBack = {}, onAdjust = {}, onReorder = {})
+          }
+        }
+      }
+    }
+    waitForIdle()
+    val native = onNodeWithTag("slot").captureToImage()
+    showGuest = true
+    repeat(3) {
+      waitForIdle()
+      host.pump()
+    }
+    waitForIdle()
+    val guest = onNodeWithTag("slot").captureToImage()
+    saveImage("gate-b/item-detail-native.png", native)
+    saveImage("gate-b/item-detail-guest.png", guest)
+    writeArtifact("gate-b/item-detail-wire.json", host.wire.joinToString("\n").encodeToByteArray())
+    assertEquals(native.width to native.height, guest.width to guest.height, "sizes")
+    assertEquals(0, differingPixels(native, guest, "gate-b/item-detail-diff.png"), "pixels that differ between native Compose and the generated guest")
+
+    // The Button's own onClick, through the guest route.
+    onNodeWithText("Reorder").performClick()
+    waitForIdle()
+    host.pump()
+    assertEquals(1, reordered, "the guest's onReorder ran")
+    assertEquals(0, adjusted, "onAdjust did not run")
   }
 
   /**

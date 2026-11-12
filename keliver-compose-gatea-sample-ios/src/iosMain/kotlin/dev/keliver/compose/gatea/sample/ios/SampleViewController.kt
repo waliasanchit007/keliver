@@ -43,12 +43,14 @@ import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
 import coil3.PlatformContext
 import dev.keliver.compose.gatea.composeui.ComposeUiKeliverComposeGateAWidgetFactory
+import dev.keliver.compose.gatea.composeui.samples.native.ItemDetail
 import dev.keliver.compose.gatea.composeui.samples.native.SampleCard
 import dev.keliver.compose.gatea.composeui.samples.native.SampleOrders
 import dev.keliver.compose.gatea.protocol.host.KeliverComposeGateAHostProtocol
 import dev.keliver.compose.gatea.sample.GateBSampleData
 import dev.keliver.compose.gatea.sample.GateBSamples
 import dev.keliver.compose.gatea.sample.SAMPLE_CARD
+import dev.keliver.compose.gatea.sample.SAMPLE_ITEM
 import dev.keliver.compose.gatea.widget.GenColumn1
 import dev.keliver.compose.gatea.widget.KeliverComposeGateAWidgetFactory
 import dev.keliver.compose.gatea.widget.KeliverComposeGateAWidgetSystem
@@ -108,12 +110,12 @@ internal fun sampleViewController(launch: LaunchArguments): UIViewController = C
 @Composable
 private fun NativeSample(sample: String) {
   SideEffect { contentArrived = true }
-  if (sample == SAMPLE_CARD) {
-    Box(Modifier.fillMaxWidth()) {
+  when (sample) {
+    SAMPLE_CARD -> Box(Modifier.fillMaxWidth()) {
       SampleCard(GateBSampleData.CARD_TITLE, GateBSampleData.CARD_QUANTITY, GateBSampleData.tags) {}
     }
-  } else {
-    SampleOrders(GateBSampleData.orders, onBack = {}, onOpen = {})
+    SAMPLE_ITEM -> ItemDetail(onBack = {}, onAdjust = {}, onReorder = {})
+    else -> SampleOrders(GateBSampleData.orders, onBack = {}, onOpen = {})
   }
 }
 

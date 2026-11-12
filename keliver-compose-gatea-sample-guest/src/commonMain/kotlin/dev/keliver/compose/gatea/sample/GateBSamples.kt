@@ -19,7 +19,7 @@ import app.cash.zipline.ZiplineService
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.ZiplineTreehouseUi
 
-/** The Gate B sample guest: one same-source sample screen by name ([SAMPLE_ORDERS] or [SAMPLE_CARD]). */
+/** The Gate B sample guest: one same-source sample screen by name ([SAMPLE_ORDERS], [SAMPLE_CARD] or [SAMPLE_ITEM]). */
 interface GateBSamples :
   AppService,
   ZiplineService {
@@ -28,6 +28,7 @@ interface GateBSamples :
 
 const val SAMPLE_ORDERS = "orders"
 const val SAMPLE_CARD = "card"
+const val SAMPLE_ITEM = "item"
 
 /**
  * The samples' data, shared by the guest and the iOS host's native copy (the same values as

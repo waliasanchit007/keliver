@@ -13,7 +13,7 @@
 #   3. CREATES a simulator (newest iOS runtime, an iPhone), with --with-tests first runs
 #      :keliver-compose-gatea-composeui:iosSimulatorArm64Test on it, then boots it, fixes its
 #      status bar, installs the app;
-#   4. for each sample (orders, card) launches the app twice — the screen drawn by native
+#   4. for each sample (orders, card, item: Gate B-d's ItemDetail) launches the app twice — the screen drawn by native
 #      Compose, and the same file loaded from the signed bundle through the real protocol into the
 #      generated renderers — screenshots each (xcrun simctl io screenshot) and compares the pixels;
 #   5. times first frames: N cold launches per route, alternating (the app logs main() to the
@@ -136,7 +136,7 @@ launch() { # mode sample tag
 }
 
 # 4. Screenshots and pixels.
-for sample in orders card; do
+for sample in orders card item; do
   for mode in native guest; do
     ms="$(launch "$mode" "$sample" "shot-$sample-$mode")" || fail "the $mode $sample screen did not draw"
     sleep 2 # settle (no animation in the samples; shadows and images are drawn by then)
@@ -194,7 +194,7 @@ def write_png(path, w, h, rows):
 lines = ["# Gate B part c: the simulator run", "",
          f"Device: {device}, {runtime.rsplit('.', 1)[-1]}; app build: {build}; guest bundle: {bundle_bytes} bytes of modules.", "",
          "| Sample | Screenshot | Differing pixels (native vs guest) | Bounding box |", "|---|---|---|---|"]
-for sample in ("orders", "card"):
+for sample in ("orders", "card", "item"):
     w, h, a = read_png(os.path.join(out, f"{sample}-native.png"))
     w2, h2, b = read_png(os.path.join(out, f"{sample}-guest.png"))
     if (w, h) != (w2, h2):

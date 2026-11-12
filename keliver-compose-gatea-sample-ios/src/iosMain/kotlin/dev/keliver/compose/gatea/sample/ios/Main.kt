@@ -45,7 +45,7 @@ internal var startedAt = 0.0
 
 /**
  * The launch arguments (`simctl launch <udid> dev.keliver.gateb <mode> <sample> [manifest URL]`):
- * mode `native` or `guest`, sample `orders` or `card`.
+ * mode `native` or `guest`, sample `orders`, `card` or `item`.
  */
 internal class LaunchArguments(val mode: String, val sample: String, val manifestUrl: String?)
 

@@ -26,7 +26,7 @@ class SameSourceFilesTest {
     fun body(f: File) = f.readLines().filterNot {
       it.startsWith("import ") || it.startsWith("package ") || it.startsWith("//")
     }
-    for (sample in listOf("SampleCard.kt", "SampleOrders.kt")) {
+    for (sample in listOf("SampleCard.kt", "SampleOrders.kt", "ItemDetail.kt")) {
       assertEquals(body(File(dir, "native/$sample")), body(File(dir, "guest/$sample")), sample)
       val guestImports = File(dir, "guest/$sample").readLines().filter { it.startsWith("import ") }
       val nativeImports = File(dir, "native/$sample").readLines().filter { it.startsWith("import ") }

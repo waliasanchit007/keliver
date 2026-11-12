@@ -17,6 +17,7 @@ package dev.keliver.compose.gatea.sample
 
 import androidx.compose.runtime.Composable
 import app.cash.zipline.Zipline
+import dev.keliver.compose.gatea.composeui.samples.guest.ItemDetail
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleCard
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleOrders
 import dev.keliver.compose.gatea.protocol.guest.KeliverComposeGateAProtocolWidgetSystemFactory
@@ -46,6 +47,7 @@ private class SampleUi(private val name: String) : TreehouseUi {
   @Composable
   override fun Show() {
     when (name) {
+      SAMPLE_ITEM -> ItemDetail(onBack = {}, onAdjust = {}, onReorder = {})
       SAMPLE_CARD -> SampleCard(GateBSampleData.CARD_TITLE, GateBSampleData.CARD_QUANTITY, GateBSampleData.tags) {}
       else -> SampleOrders(GateBSampleData.orders, onBack = {}, onOpen = {})
     }
