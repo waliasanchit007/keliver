@@ -17,12 +17,15 @@
  *   loaded and before it proved healthy. The "started, not yet healthy" marker is still set at
  *   the next start. The marker is set only while a screen shows (cleared when none does, even
  *   while code is still loading), so an app sent to the background and ended there is not a
- *   failure, nor is a load that runs in the background (an update check, a start the user left). Where the system says how the process ended (Android 11 and later),
- *   only a crash or an ANR counts; elsewhere (iOS) a process stopped in the foreground during
- *   that window (a debugger's stop, say) counts too.
+ *   failure, nor is a load that runs in the background (an update check, a start the user
+ *   left). Where the system says how exactly that process ended (Android 11 and later, matched
+ *   by the pid stored with the marker), only a crash, an ANR, a failed start or a low-memory
+ *   kill in the foreground counts; elsewhere (iOS, or no record) any process ended in the
+ *   foreground during that window counts, a debugger's stop too.
  * It proves healthy once screens have shown it for the crash window (10 s by default) with no
- * failure. At the threshold (2 by default; 0 turns all of this off) it is SET ASIDE: persisted,
- * and skipped on the network and on a cache start until a NEWER sequence arrives.
+ * failure; nothing after that is counted (a crash on a route opened later is never seen). At
+ * the threshold (2 by default; 0 turns all of this off) it is SET ASIDE: persisted, and skipped
+ * on the network and on a cache start until a NEWER sequence arrives.
  *
  * The rollback rule. W4's floor is unchanged: it still rises as soon as a load succeeded, and
  * nothing below it runs, from the network or the cache, with ONE exception: the newest bundle
@@ -36,7 +39,17 @@
  * bundle this install last ran healthily, and nothing older; the network can still serve
  * nothing below the floor. With no such bundle (a first install, or a host from before this),
  * the host shows the app's own view instead (`onUnavailable`, outcome `crash-rollback`).
- * Either way the host reports `crash-rollback` (W6).
+ * Either way the host reports `crash-rollback` (W6), once, at the set-aside.
+ *
+ * The bundle gone back to is on trial again while the host runs it in place of the set-aside
+ * one: if it fails too, it is forgotten with its kept manifest, and the host shows the app's
+ * own view without retrying until a newer sequence arrives.
+ *
+ * Trust. The ledger is kept per signing key (a rotation starts it afresh) in the app's
+ * preferences, next to the floor, and is not authenticated: whoever can write them could name
+ * an old signed manifest to go back to, below the floor. They can already reset the floor
+ * itself, so this shares the floor's trust rather than adding a hole. An unreadable ledger
+ * reads as empty.
  */
 package @@PACKAGE@@
 

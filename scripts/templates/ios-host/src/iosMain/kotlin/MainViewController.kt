@@ -32,8 +32,9 @@
  * Crash rollback (WS6, CrashRollback.kt in src/commonMain): a bundle newer than
  * the last one that proved healthy on this install is on trial until screens
  * have shown it for CRASH_WINDOW_MILLIS (HostConfig.kt) with no failure. A
- * code-load failure, an uncaught guest exception, or the process ending while
- * it loads or shows counts against it; at CRASH_THRESHOLD failures it is set
+ * failure of its code to load (not a download's), an uncaught guest exception,
+ * or the process ending while a screen shows it loading or on trial counts
+ * against it; at CRASH_THRESHOLD failures it is set
  * aside (skipped until a newer sequence arrives) and the host goes back to the
  * last bundle that proved healthy here, from its own copy of that manifest: the
  * one bundle allowed below the floor, and only then. With none, it shows the

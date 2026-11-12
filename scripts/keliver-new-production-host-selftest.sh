@@ -356,18 +356,27 @@ grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), fl
   && grep -q 'longVersionCode' "$M" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, versionCode, floor)" || bad "W4.5: constraints are not wired"
-# WS6: crash rollback. The ledger (CrashRollback.kt) and its JVM tests are scaffolded; a failure
-# counts only once a manifest verified (manifestReady), the "not yet healthy" marker is written
-# before the code runs and checked at the next start, set-aside entries are skipped on the
-# network and the cache, W4's floor keeps its one exception in one place (cachedBundleProblem),
-# the threshold and window are KeliverConfig's, it is reported, and a debug build logs it loudly.
+# WS6: crash rollback. The ledger (CrashRollback.kt) and its JVM tests are scaffolded; the trial
+# starts once the bundle's code begins to evaluate (the first moduleLoadStart), a load failure
+# counts only when it came from that code (CodeLoadProgress: not a download), the "not yet
+# healthy" marker is written before the code runs, only while a screen shows (screens), and
+# checked at the next start against the exit record of the pid that set it, set-aside entries
+# are skipped on the network and the cache, W4's floor keeps its one exception in one place
+# (cachedBundleProblem), the threshold and window are KeliverConfig's, it is reported (the
+# app's view once, at the set-aside), and a debug build logs it loudly.
 C="${M%/*}/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$M" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$M" \
-  && grep -q 'onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count(CrashKind.LOAD))' "$M" \
-  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$M" && grep -q 'val startStep = crash.atStart(lastExitCrashed())' "$M" \
+  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$M" \
+  && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$M" \
+  && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }' "$M" \
+  && grep -q 'crash.loadFailed(sequence, theBundles)' "$M" \
+  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$M" && grep -q 'val startStep = crash.atStart(::lastExitCrashed)' "$M" \
+  && grep -q 'crash?.screens(true)' "$M" && grep -q 'crash?.screens(screensShown > 0)' "$M" \
   && grep -q 'android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,' "$M" \
-  && grep -q 'CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold)' "$M" \
+  && grep -q '.firstOrNull { it.pid == pid && it.processName == me && it.timestamp >= markedAt }' "$M" \
+  && grep -q 'report = setAsideNow != null)' "$M" \
+  && grep -q 'CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold, android.os.Process.myPid(), System::currentTimeMillis)' "$M" \
   && grep -q 'if (v == null) remove(k) else putString(k, v) } }.commit()' "$M" \
   && grep -q '  val crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,' "$M" && grep -q '  val crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,' "$M" \
   && grep -q 'cachedBundleProblem(manifestSequence(manifest.metadata), floor(), crash)' "$M" \

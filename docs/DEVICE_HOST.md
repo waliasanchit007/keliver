@@ -391,15 +391,22 @@ sequence:
   bridge binding (the host's own code, which would fail for any bundle). Such a
   start shows `not-loaded` and the next one tries again;
 - its code threw (an uncaught guest exception) before it proved healthy;
-- the process ended while its code loaded, or while a screen showed it before
-  it proved healthy. A "started, not yet healthy" marker, written before the
-  code runs, is still set at the next start. It is cleared while no screen shows
-  the bundle, so an app sent to the background and ended there is no failure.
-  On Android 11 and later the host also asks the system how that process ended
-  (`ApplicationExitInfo`): only a crash, a native crash, an ANR or a failed
-  start counts, never a force-stop or a swipe. iOS has no such record: there a
-  process stopped in the foreground within the window (Xcode's stop button, a
-  simulator `terminate`) counts too.
+- the process ended while a screen showed: while the bundle's code evaluated,
+  or once it had loaded and before it proved healthy. A "started, not yet
+  healthy" marker, written before the code runs, is still set at the next
+  start. It is set only while a screen shows, and cleared when none does, even
+  while code is still loading: an app sent to the background and ended there is
+  no failure, nor is a load that runs in the background (an update check, a
+  start the user left at once). On Android 11 and later the host also asks the
+  system how exactly that process ended (`ApplicationExitInfo`, matched by the
+  pid stored with the marker): a crash, a native crash, an ANR, a failed start,
+  or a low-memory kill while it was in the foreground counts; a force-stop, a
+  swipe or a low-memory kill in the background does not. With no record of that
+  process (Android 10 and earlier, or after a reboot) the marker alone counts.
+  iOS has no such record either, so there any process ended in the foreground
+  within the window counts: a crash, a jetsam (memory) kill, and also Xcode's
+  stop button or a simulator `terminate`. A user's swipe-away goes through the
+  background first, which clears the marker.
 
 A bundle **proves healthy** once screens have shown it for the crash window
 with no failure. At the **threshold** it is **set aside**: persisted, and
@@ -408,6 +415,20 @@ published. Then the host goes back to the newest bundle that proved healthy on
 this install, in the same process when it can, or, with none (a first install,
 or an install from before crash rollback), shows the app's own view
 (`onUnavailable`, outcome `crash-rollback`).
+
+The bundle the host goes back to gets **a trial of its own**: what the set-aside
+bundle left behind (data it migrated, say), or modules gone from the server, can
+make it fail too. If it reaches the threshold, it is forgotten along with its
+kept manifest, and the host shows the app's own view, without retrying, until a
+newer sequence is published. (A download failure is not counted for it either:
+that start shows `not-loaded`, and the next tries again.)
+
+**What it does not see.** A bundle is judged only during its window. A crash
+after it proved healthy is never counted, so a bundle that crashes only on a
+route the user opens later than the window (10 s on show by default) is never
+set aside; raise the window (`crashWindowMillis`, `CRASH_WINDOW_MILLIS`) to
+watch longer, at the cost of a slower verdict. Android before 11 cannot tell a
+crash from a force-stop, so there both count.
 
 | Setting | Android (`KeliverConfig`) | iOS (`HostConfig.kt`) | Default |
 |---|---|---|---|
@@ -434,7 +455,11 @@ the floor past the set-aside one and ends the exception.
 sequence, with a fixed reason for what runs instead: `previous-good` (the last
 healthy bundle, or the running one when an update was set aside),
 `newer-bundle` (the index already offers a newer one) or `app-view` (nothing to
-go back to). A manifest refused for being set aside reports `set-aside`.
+go back to; reported once, by the start that set the bundle aside, not by every
+later start that shows the app's view). A manifest refused for being set aside
+reports `set-aside`. A relay older than the host drops `crash-rollback`
+reports (an outcome it does not know), so upgrade the relay that collects
+them.
 Counted failures that are below the threshold are not reported; a guest that
 threw also reports `screen-failed` for each screen that showed it, as before. A
 debug build logs every count and every set-aside loudly (`CRASH ROLLBACK`).
@@ -442,6 +467,14 @@ To recover, publish a fix: it is newer, so hosts take it.
 
 **Not protected:** "clear data" or a reinstall forgets what was set aside (and
 the floor, as above), and a bundle without a signed sequence is never counted.
+The ledger is kept per signing key, as the floor is, so a key rotation (W8)
+starts it afresh: nothing is set aside under the new key, and there is nothing
+to go back to, until a bundle proves healthy under it. A set-aside sequence
+re-signed with the new key gets its tries again. The ledger lives in the app's
+preferences next to the floor and shares its trust: it is not authenticated,
+and someone who can write those preferences could name an old signed manifest
+as the one to go back to and run it below the floor. That is no new hole: they
+can already reset the floor itself. An unreadable ledger reads as empty.
 
 **Channels** (both hosts). A host is built for one channel, `--channel` on
 either scaffolder (default `stable`; Android `keliver.channel` in
@@ -861,7 +894,10 @@ iOS keeps no record of how the last process ended, so a process stopped in the
 foreground while a new bundle is in its crash window (Xcode's stop button, a
 simulator `terminate`) counts as a failure: when you iterate on a new bundle
 in the simulator, let it show for the window first, or set `CRASH_THRESHOLD`
-to 0 while you do. Reports reach `Keliver.onReport`.
+to 0 while you do (and in CI scenarios that terminate the app soon after a new
+bundle shows). An app the user sends to the background, or swipes away from
+the switcher, is not counted: the background clears the marker first. Reports
+reach `Keliver.onReport`.
 
 
 ## 4. Embedding the host in an existing app

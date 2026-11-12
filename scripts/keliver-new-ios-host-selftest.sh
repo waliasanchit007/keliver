@@ -381,15 +381,22 @@ grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$K/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
 # WS6: crash rollback, as on Android. The ledger (src/commonMain/CrashRollback.kt, the Android
-# host's file) and its JVM tests are scaffolded; a failure counts only once a manifest verified,
-# the marker is written (synchronize) before the code runs and checked at the next start,
-# set-aside entries are skipped on the network and the cache, the floor's one exception is in
-# one place, the threshold and window are HostConfig's, it is reported, and DEBUG logs it loudly.
+# host's file) and its JVM tests are scaffolded; the trial starts once the bundle's code begins
+# to evaluate, a load failure counts only when it came from that code (not a download), the
+# marker is written (synchronize) before the code runs, only while a screen shows, and checked
+# at the next start, set-aside entries are skipped on the network and the cache, the floor's one
+# exception is in one place, the threshold and window are HostConfig's, it is reported (the
+# app's view once, at the set-aside), and DEBUG logs it loudly.
 C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$V" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$V" \
-  && grep -q 'onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count(CrashKind.LOAD))' "$V" \
-  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
+  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$V" \
+  && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$V" \
+  && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }' "$V" \
+  && grep -q 'count { crash.loadFailed(sequence, theBundles) }' "$V" \
+  && grep -q 'onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) })' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
+  && grep -q 'crash?.screens(true)' "$V" && grep -q 'crash?.screens(screensShown > 0)' "$V" \
+  && grep -q 'report = setAsideNow != null)' "$V" \
   && grep -q 'CrashGuard(DefaultsCrashStore(), cacheName(trust), CRASH_THRESHOLD)' "$V" && grep -q 'return defaults.synchronize()' "$V" \
   && grep -q '^internal const val CRASH_THRESHOLD: Int = 2$' "$K/HostConfig.kt" && grep -q '^internal const val CRASH_WINDOW_MILLIS: Long = 10_000L$' "$K/HostConfig.kt" \
   && grep -q 'cachedBundleProblem(manifestSequence(manifest.metadata), floor(), crash)' "$V" \

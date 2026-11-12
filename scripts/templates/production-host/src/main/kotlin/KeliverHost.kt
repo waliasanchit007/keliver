@@ -41,9 +41,10 @@
  *
  * Crash rollback (WS6, CrashRollback.kt): a bundle newer than the last one that
  * proved healthy on this install is on trial until screens have shown it for
- * KeliverConfig.crashWindowMillis with no failure. A code-load failure, an
- * uncaught guest exception, or the process ending while it loads or shows
- * counts against it; at KeliverConfig.crashThreshold failures it is set aside
+ * KeliverConfig.crashWindowMillis with no failure. A failure of its code to
+ * load (not a download's), an uncaught guest exception, or the process
+ * crashing while a screen shows it loading or on trial counts against it; at
+ * KeliverConfig.crashThreshold failures it is set aside
  * (skipped until a newer sequence arrives) and the host goes back to the last
  * bundle that proved healthy here, from its own copy of that manifest: the one
  * bundle allowed below the floor, and only then. With none, it shows the app's
