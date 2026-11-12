@@ -29,7 +29,9 @@ class CrashRollbackTest {
   }
 
   private val store = MemoryStore()
-  private fun guard(threshold: Int = DEFAULT_CRASH_THRESHOLD) = CrashGuard(store, "keliver-production-abcd", threshold)
+  /** A guard for the test's store; [shown]: whether a screen shows as code loads (most tests: one does). */
+  private fun guard(threshold: Int = DEFAULT_CRASH_THRESHOLD, shown: Boolean = true) =
+    CrashGuard(store, "keliver-production-abcd", threshold).apply { screens(shown) }
   private fun manifest(sequence: Long) = """{"metadata":{"keliver.sequence":"$sequence"},"modules":{}}"""
 
   /** [sequence] loads from the network, a screen shows it, and it proves healthy. */
@@ -73,6 +75,40 @@ class CrashRollbackTest {
     assertTrue(g.ledger().running)
     g.windowClosed(5)
     assertFalse(g.ledger().running, "no screen: an app ended in the background is no failure")
+  }
+
+  @Test fun aLoadWithNoScreenShownNeverSetsTheMarker() {
+    // A start the user left at once, or an update check in the background: the system ends the
+    // process while the code still loads. That is no failure.
+    val g = guard(shown = false)
+    g.loadStarting(5)
+    assertEquals(CrashLedger(trial = 5), g.ledger(), "on trial, but no marker")
+    assertEquals(CrashStep.None, g.atStart())
+    assertEquals(0, g.ledger().failures)
+  }
+
+  @Test fun theMarkerFollowsTheScreensWhileCodeLoads() {
+    val g = guard()
+    g.loadStarting(5)
+    assertTrue(g.ledger().running, "a screen waits for this code")
+    g.screens(false)
+    assertFalse(g.ledger().running, "the user left while it loaded: cleared, even though it is still loading")
+    assertEquals(CrashStep.None, g.atStart(), "ended in the background: not counted")
+    g.loadStarting(5)
+    g.screens(false)
+    g.screens(true)
+    assertTrue(g.ledger().running, "back on show while it still loads")
+    g.loaded(5, null, null)
+    assertFalse(g.ledger().running)
+    g.screens(false)
+    g.screens(true)
+    assertFalse(g.ledger().running, "once loaded, the crash window (windowOpened) sets it, not the screens")
+    // A load that failed is no longer loading: the screens leave the ledger alone.
+    g.loadStarting(5)
+    g.loadFailed(5, theBundles = false)
+    g.screens(false)
+    g.screens(true)
+    assertFalse(g.ledger().running)
   }
 
   @Test fun aProcessThatEndedDuringTheWindowCountsAtTheNextStart() {

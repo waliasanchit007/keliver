@@ -13,10 +13,11 @@
  *   module whose bytes do not match the sha256 its manifest signs, or an app's bridge binding
  *   (the host's own code, which would fail for any bundle);
  * - its code threw (an uncaught guest exception) before it proved healthy;
- * - the process ended while its code loaded, or while a screen showed it before it proved
- *   healthy: the "started, not yet healthy" marker is still set at the next start. The marker
- *   is cleared while no screen shows the bundle, so an app sent to the background and ended
- *   there is not a failure. Where the system says how the process ended (Android 11 and later),
+ * - the process ended while a screen showed: while the bundle's code evaluated, or once it had
+ *   loaded and before it proved healthy. The "started, not yet healthy" marker is still set at
+ *   the next start. The marker is set only while a screen shows (cleared when none does, even
+ *   while code is still loading), so an app sent to the background and ended there is not a
+ *   failure, nor is a load that runs in the background (an update check, a start the user left). Where the system says how the process ended (Android 11 and later),
  *   only a crash or an ANR counts; elsewhere (iOS) a process stopped in the foreground during
  *   that window (a debugger's stop, say) counts too.
  * It proves healthy once screens have shown it for the crash window (10 s by default) with no
@@ -213,7 +214,32 @@ internal class CrashGuard(
   private val candidateKey = "crashCandidate-$cacheName"
   private val healthyKey = "crashHealthy-$cacheName"
 
+  /** Whether a screen shows now ([screens]); under the store's lock. */
+  private var shown = false
+
+  /** The sequence whose code is evaluating now (between [loadStarting] and its end); under the store's lock. */
+  private var evaluating: Long? = null
+
   fun ledger(): CrashLedger = CrashLedger.decode(store.read(ledgerKey))
+
+  /**
+   * Whether a screen shows now: the host says so on every change (main thread). Code that is
+   * still evaluating has its marker set only while a screen shows, so a load that goes on after
+   * the user left the app (or an update check in the background) and is ended there by the
+   * system never counts.
+   */
+  fun screens(shown: Boolean) {
+    if (!enabled) return
+    store.locked {
+      this.shown = shown
+      val s = evaluating ?: return@locked
+      val l = ledger()
+      if (l.trial == s && l.running != shown) save(l.marked(shown))
+    }
+  }
+
+  /** [this] with the "started, not yet healthy" marker set ([on]) or cleared. */
+  private fun CrashLedger.marked(on: Boolean): CrashLedger = copy(running = on)
 
   private fun save(ledger: CrashLedger, extra: Map<String, String?> = emptyMap()) {
     store.write(mapOf(ledgerKey to ledger.encode()) + extra)
@@ -238,16 +264,23 @@ internal class CrashGuard(
   /**
    * The code of a verified manifest at [sequence] begins to evaluate (Zipline's first
    * moduleLoadStart, [CodeLoadProgress.moduleLoadStart]): a bundle newer than the healthy one
-   * goes on trial, and the marker is set (and written) before its code runs. Not before: a load
-   * that never got that far (its downloads failed) is not the bundle's.
+   * goes on trial, and, while a screen shows ([screens]), the marker is set (and written) before
+   * its code runs. Not before: a load that never got that far (its downloads failed) is not the
+   * bundle's.
    */
   fun loadStarting(sequence: Long?) {
     if (!enabled || sequence == null) return
     store.locked {
       val l = ledger()
       if (sequence <= l.healthy || sequence == l.setAside) return@locked
-      save(if (l.trial == sequence) l.copy(running = true) else l.copy(trial = sequence, failures = 0, running = true))
+      evaluating = sequence
+      save((if (l.trial == sequence) l else l.copy(trial = sequence, failures = 0)).marked(shown))
     }
+  }
+
+  /** [sequence]'s code is no longer evaluating (it loaded, or the load failed). Under the store's lock. */
+  private fun evaluated(sequence: Long) {
+    if (evaluating == sequence) evaluating = null
   }
 
   /**
@@ -258,6 +291,7 @@ internal class CrashGuard(
   fun loaded(sequence: Long?, manifestUrl: String?, manifest: String?) {
     if (!enabled || sequence == null) return
     store.locked {
+      evaluated(sequence)
       val l = ledger()
       if (l.trial != sequence) return@locked
       val kept = if (manifestUrl != null && manifest != null && manifest.length <= MAX_KEPT_MANIFEST_CHARS && '\n' !in manifestUrl) {
@@ -265,7 +299,7 @@ internal class CrashGuard(
       } else {
         emptyMap()
       }
-      save(l.copy(running = false), kept)
+      save(l.marked(false), kept)
     }
   }
 
@@ -277,7 +311,7 @@ internal class CrashGuard(
     if (!enabled || sequence == null) return
     store.locked {
       val l = ledger()
-      if (l.trial == sequence && !l.running) save(l.copy(running = true))
+      if (l.trial == sequence && !l.running) save(l.marked(true))
     }
   }
 
@@ -286,7 +320,7 @@ internal class CrashGuard(
     if (!enabled || sequence == null) return
     store.locked {
       val l = ledger()
-      if (l.trial == sequence && l.running) save(l.copy(running = false))
+      if (l.trial == sequence && l.running) save(l.marked(false))
     }
   }
 
@@ -299,8 +333,9 @@ internal class CrashGuard(
     if (theBundles) return failed(sequence, CrashKind.LOAD)
     if (!enabled || sequence == null) return CrashStep.None
     store.locked {
+      evaluated(sequence)
       val l = ledger()
-      if (l.trial == sequence && l.running) save(l.copy(running = false))
+      if (l.trial == sequence && l.running) save(l.marked(false))
     }
     return CrashStep.None
   }
@@ -309,6 +344,7 @@ internal class CrashGuard(
   fun failed(sequence: Long?, kind: CrashKind): CrashStep {
     if (!enabled || sequence == null) return CrashStep.None
     return store.locked {
+      evaluated(sequence)
       val l = ledger()
       if (l.trial != sequence) CrashStep.None else fail(l, sequence, kind)
     }

@@ -612,6 +612,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val open = screensShown > 0 && !codeFailed && guard.onTrial(sequence)
     if (open && crashWindow?.isActive != true) {
       guard.windowOpened(sequence)
+      Log.i(TAG, "crash rollback: sequence $sequence is on trial: shown; it proves healthy after ${config.crashWindowMillis} ms on show with no failure")
       crashWindow = scope.launch {
         delay(config.crashWindowMillis)
         if (codeSequence == sequence && guard.healthy(sequence)) {
@@ -830,6 +831,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // process left set means it ended while a new bundle loaded or showed: one more failure.
     val crash = CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold)
     this.crash = crash
+    crash.screens(screensShown > 0) // main thread: a screen may already be waiting for code
     val startStep = crash.atStart(lastExitCrashed())
     crashLog(startStep)
     // Short timeouts: offline, this decides how long the app waits before it
@@ -1345,6 +1347,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   fun screenShown() {
     screensShown++
     syncLiveListener()
+    crash?.screens(true) // WS6: code still loading has its marker set only while a screen shows
     syncCrashWindow()
   }
 
@@ -1352,6 +1355,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   fun screenHidden() {
     screensShown = (screensShown - 1).coerceAtLeast(0)
     syncLiveListener()
+    crash?.screens(screensShown > 0)
     syncCrashWindow()
   }
 

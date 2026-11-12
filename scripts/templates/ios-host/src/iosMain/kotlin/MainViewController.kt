@@ -515,6 +515,7 @@ public object Keliver {
     val open = screensShown > 0 && !codeFailed && guard.onTrial(sequence)
     if (open && crashWindow?.isActive != true) {
       guard.windowOpened(sequence)
+      log("crash rollback: sequence $sequence is on trial: shown; it proves healthy after ${CRASH_WINDOW_MILLIS} ms on show with no failure")
       crashWindow = appScope.launch {
         delay(CRASH_WINDOW_MILLIS.milliseconds)
         if (codeSequence == sequence && guard.healthy(sequence)) {
@@ -817,14 +818,19 @@ public object Keliver {
   private fun screenShown() {
     screensShown++
     syncLiveListener()
+    crash?.screens(true) // WS6: code still loading has its marker set only while a screen shows
     syncCrashWindow()
   }
 
   private fun screenHidden() {
     screensShown = (screensShown - 1).coerceAtLeast(0)
     syncLiveListener()
+    crash?.screens(screensShown > 0)
     syncCrashWindow()
   }
+
+  /** WS6: whether a screen shows now (main thread), for a crash guard created after one appeared. */
+  internal fun anyScreenShown(): Boolean = screensShown > 0
 
   /** UPDATES = "live" in a DEBUG binary ([updatesMode] makes it "on-resume" in a release one). */
   @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
@@ -1226,6 +1232,7 @@ private suspend fun startHost(): HostState {
   // process left set means it ended while a new bundle loaded or showed: one more failure.
   val crash = CrashGuard(DefaultsCrashStore(), cacheName(trust), CRASH_THRESHOLD)
   Keliver.crash = crash
+  crash.screens(Keliver.anyScreenShown()) // main thread: a screen may already be waiting for code
   val startStep = crash.atStart()
   Keliver.crashLog(startStep)
   // What the index's constraints are checked against (W4.5), and what is set aside (WS6).
