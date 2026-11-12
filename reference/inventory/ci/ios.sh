@@ -30,7 +30,7 @@
 # host framework embedded in an existing SwiftUI app (ci/w2/ios-embed.sh).
 # Then W5's U1: an update applied when the app returns to the foreground
 # (ci/w5/ios-update.sh). Then WS6's crash rollback (ci/ws6/ios-crash.sh):
-# C1-C6. Then M0's timing marks, in the Debug and Benchmark
+# C1-C6 and C8. Then M0's timing marks, in the Debug and Benchmark
 # builds (ci/m0/ios-timing.sh): T1-T4. Then W8, a signing-key rotation
 # (ci/w8/ios-rotation.sh): K1-K8.
 #

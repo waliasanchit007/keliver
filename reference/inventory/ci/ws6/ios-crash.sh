@@ -11,6 +11,17 @@
 #   C4  REPORT_URL received crash-rollback for sequence 2, reason previous-good, 8 fields only
 #   C5  the next start skips sequence 2 and starts from sequence 1 again, counting nothing
 #   C6  a newer good bundle (sequence 3) is not held back by the set-aside one
+#   C8  the app's own view: a fresh install that only ever saw a crashing bundle (sequence
+#       4) sets it aside after 2 failures with nothing to go back to; the next start shows
+#       the app's view again without loading it; REPORT_URL received one crash-rollback for
+#       it (app-view), not one per start
+# (Android's C7, a force-stop inside the window that is not counted, has no iOS row: iOS
+# keeps no record of how a process ended, so there it counts; see docs/DEVICE_HOST.md.)
+# Every launch here and in the scenarios after it (ios.sh's launch, M0's m0_launch) keeps the
+# process 25-30 s, past the 10 s crash window, before terminating it. Afterwards CRASH_THRESHOLD
+# is set to 0 in HostConfig.kt, so the hosts M0 and W8 build have crash rollback off and their
+# terminates can never set a bundle aside; the Debug host M0's T1 runs was built before, and
+# relies on that wait.
 echo "--- WS6: crash rollback"
 if ! grep -rqs 'CrashGuard' "$APP/host-ios/src/iosMain/kotlin"; then
   echo "  SKIP  C1-C6: this host predates crash rollback (WS6) (not counted)"
@@ -99,9 +110,43 @@ PY
     || bad "C6: sequence 3 did not load: $(grep -E 'KeliverHost' "$EV/ws6-C6.console.txt" | tail -4 | tr '\n' ' ')"
   reads ws6-C6 Pantry && ok "C6: the screen reads 'Pantry' (sequence 3)" || bad "C6: 'Pantry' is not on the screen: $(tr '\n' '|' < "$EV/ws6-C6.ocr.txt" | cut -c1-200)"
 
+  # C8: the app's own view. A fresh install whose only bundle crashes.
+  sed -i '' "s/^      text = \"Pantry\",$/      text = listOf(\"Pantry\")[1],/" "$SCREEN"
+  grep -q 'text = listOf("Pantry")\[1\],' "$SCREEN" || bad "C8: could not make the screen throw"
+  cr_publish v4 && grep -q "published v4 (sequence 4" "$EV/ws6-publish-v4.log" \
+    && ok "C8: keliver-publish wrote sequence 4, whose screen throws as it shows" || { bad "C8: publish sequence 4"; tail -20 "$EV/ws6-publish-v4.log"; }
+  xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+  xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
+  launch ws6-C8a
+  grep -q "KeliverHost: crash rollback: sequence 4 failed on this install (its code threw): 1 of 2" "$EV/ws6-C8a.console.txt" \
+    && ok "C8: a fresh install loaded sequence 4, which threw: 1 of 2" \
+    || bad "C8: no failure counted for sequence 4: $(grep -E 'KeliverHost' "$EV/ws6-C8a.console.txt" | tail -5 | tr '\n' ' ')"
+  launch ws6-C8b
+  grep -q "crash rollback: sequence 4 set aside after 2 of 2 failures on this install (the last: its code threw); nothing that ran on this install before it is left: the app's own view" "$EV/ws6-C8b.console.txt" \
+    && ok "C8: sequence 4 threw again: set aside, with nothing to go back to: the app's own view" \
+    || bad "C8: sequence 4 was not set aside to the app's view: $(grep -E 'KeliverHost' "$EV/ws6-C8b.console.txt" | tail -5 | tr '\n' ' ')"
+  launch ws6-C8c
+  C="$EV/ws6-C8c.console.txt"
+  grep -q "KeliverHost: crash rollback: sequence 4 is set aside on this install; nothing that ran on this install before it is left" "$C" \
+    && ! grep -q "sequence=4" "$C" \
+    && ok "C8: the next start showed the app's view again, without loading sequence 4" \
+    || bad "C8: $(grep -E 'KeliverHost' "$C" | tail -5 | tr '\n' ' ')"
+  python3 - "$EV/ws6-server.log" <<'PY' && ok "C8: REPORT_URL received one crash-rollback for sequence 4 (app-view), not one per start" || bad "C8: the app-view reports are wrong"
+import json, sys
+reports = [json.loads(l[len("REPORT "):]) for l in open(sys.argv[1], encoding="utf-8", errors="replace") if l.startswith("REPORT ")]
+cr = [r for r in reports if r.get("outcome") == "crash-rollback" and r.get("sequence") == 4]
+print("  crash-rollback reports for sequence 4:", [r.get("reason") for r in cr])
+sys.exit(0 if len(cr) == 1 and cr[0]["reason"] == "app-view" else 1)
+PY
+
   # Leave the app and the simulator as W5 left them.
-  w3_title Pantry "$CR_TITLE" || bad "C6: could not put the title back to $CR_TITLE"
+  sed -i '' "s/^      text = listOf(\"Pantry\")\[1\],$/      text = \"Pantry\",/" "$SCREEN"
+  w3_title Pantry "$CR_TITLE" || bad "C8: could not put the title back to $CR_TITLE"
   kill "$CR_PID" 2>/dev/null; wait "$CR_PID" 2>/dev/null
   xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
   xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
+  # The hosts later scenarios build (M0's Benchmark and Release, W8's) have crash rollback off.
+  CR_CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
+  sed -i '' 's|CRASH_THRESHOLD: Int = [0-9]*|CRASH_THRESHOLD: Int = 0|' "$CR_CFG"
+  grep -q 'CRASH_THRESHOLD: Int = 0' "$CR_CFG" || bad "C8: could not set CRASH_THRESHOLD to 0 for the scenarios after WS6"
 fi
