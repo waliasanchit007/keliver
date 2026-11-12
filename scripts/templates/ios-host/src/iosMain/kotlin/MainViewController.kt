@@ -1035,12 +1035,19 @@ private class ScreenFailedWidgets(
  * rebuild. It moves only where bundles come from. Every manifest still verifies against the
  * embedded key, the rollback floor still holds, and the cached last good bundle is used only on
  * the origin it came from. A release binary ignores the environment.
+ *
+ * Without one, a Debug build (KELIVER_DEBUG_LINK = YES: src/debuglink) takes the server a scanned
+ * debug link set (ED3: [debugLinkBundleServer], the editor's "On a device" QR code); every other
+ * build compiles src/nodebuglink, where that is always null. The second value says where the
+ * server came from (null: BUNDLE_SERVER).
  */
 @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
-internal fun bundleServerSetting(): Pair<String, Boolean> {
-  if (!kotlin.native.Platform.isDebugBinary) return BUNDLE_SERVER to false
+internal fun bundleServerSetting(): Pair<String, String?> {
+  if (!kotlin.native.Platform.isDebugBinary) return BUNDLE_SERVER to null
   val fromLaunch = (NSProcessInfo.processInfo.environment["KELIVER_BUNDLE_SERVER"] as? String)?.trim()
-  return if (fromLaunch.isNullOrEmpty()) BUNDLE_SERVER to false else fromLaunch to true
+  if (!fromLaunch.isNullOrEmpty()) return fromLaunch to "the launch environment"
+  val fromLink = debugLinkBundleServer() ?: return BUNDLE_SERVER to null
+  return fromLink to "a debug link"
 }
 
 /**
@@ -1068,8 +1075,8 @@ private suspend fun startHost(): HostState {
   }
   trust as ProductionTrust.Verified
   log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates ${updatesMode()}")
-  val (serverUrl, fromLaunch) = bundleServerSetting()
-  if (fromLaunch) log("bundle server from the launch environment (a debug build): $serverUrl")
+  val (serverUrl, from) = bundleServerSetting()
+  if (from != null) log("bundle server from $from (a debug build): $serverUrl")
   // parse() reads only the origin and path; a query or fragment must not reach the base URL the
   // host appends its paths to (the build checks BUNDLE_SERVER for both; the launch value is checked here).
   val server = BundleServer.parse(serverUrl)?.takeIf { '?' !in serverUrl && '#' !in serverUrl } ?: run {

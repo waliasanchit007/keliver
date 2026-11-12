@@ -2153,7 +2153,14 @@ private fun showDeviceLinks() {
           Ui.el(
             "div", "muted",
             "A debug host loads the newest PUBLISHED bundle from one of these (project $p, $s) — publish to send the " +
-              "state you are editing. Point the host at a URL, then restart the app:",
+              "state you are editing. " +
+              (
+                if (links.any { it.link != null }) "Open a QR code's link in a DEBUG build of this app: it asks, then " +
+                  "restarts on that server (a release build has no such link). The iPhone Camera app opens it; many " +
+                  "Android camera apps show it as text only, so on Android run the adb shell \"am start …\" command " +
+                  "below. Or point the host at the URL:"
+                else "Point the host at a URL, then restart the app:"
+                ),
           ),
         )
         for (link in links) {
@@ -2162,7 +2169,7 @@ private fun showDeviceLinks() {
           link.qrSvg?.let { svg ->
             val qr = Ui.el("div", "")
             qr.setAttribute("style", "width:132px; height:132px; flex:none;")
-            qr.setAttribute("title", link.url)
+            qr.setAttribute("title", link.link ?: link.url)
             qr.innerHTML = svg // checked against the relay's own SVG shape (deviceLinks)
             row.appendChild(qr)
           }
@@ -2172,6 +2179,12 @@ private fun showDeviceLinks() {
           a.setAttribute("target", "_blank")
           a.setAttribute("rel", "noopener noreferrer")
           text.appendChild(a)
+          link.link?.let { l ->
+            val linkText = Ui.el("pre", "", (listOf(l) + debugLinkCommands(l)).joinToString("\n"))
+            linkText.setAttribute("style", "white-space:pre-wrap; word-break:break-all; font-size:11px;")
+            text.appendChild(linkText)
+            text.appendChild(Ui.button("Copy link", "btn") { copyToClipboard(l) })
+          }
           val cmd = Ui.el("pre", "", debugHostCommand(link.url))
           cmd.setAttribute("style", "white-space:pre-wrap; font-size:11px;")
           text.appendChild(cmd)
