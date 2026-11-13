@@ -94,7 +94,7 @@ class IntegratedParityTest {
       Bindings(
         title = "Account",
         showDetails = true,
-        detail = "KYC verified",
+        detail = "Email verified",
         rows = listOf(Row("row-1", "Notifications"), Row("row-2", "Security")),
         draft = "hello",
       ),

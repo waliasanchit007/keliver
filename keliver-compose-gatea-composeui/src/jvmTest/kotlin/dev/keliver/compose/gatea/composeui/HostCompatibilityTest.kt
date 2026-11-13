@@ -150,7 +150,8 @@ class HostCompatibilityTest {
    * guest's first command still runs, though the host saved the id of the old guest's command.
    */
   @OptIn(KeliverGeneratedApi::class)
-  @Test fun aRestoredHostRunsAFreshGuestsFirstCommand() = runComposeUiTest {
+  @Test
+  fun aRestoredHostRunsAFreshGuestsFirstCommand() = runComposeUiTest {
     val clock = BroadcastFrameClock()
     val scope = CoroutineScope(Dispatchers.Unconfined + clock)
     fun GuestLazyListState.command(index: Int): LazyListStateWire {
