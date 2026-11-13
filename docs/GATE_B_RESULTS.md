@@ -11,7 +11,7 @@ What it answers: the design's §10 animation rows (host-side `AnimatedVisibility
 `animateContentSize`; `animate*AsState` as host-side *animated references* against the guest's
 frame clock), its risks 7 (animated values on the host against the guest's frame clock) and 8
 (renderers that reference Material 3 keep R8 from removing it), and §14's "Gate B measures app size
-and decides". How it is built: design §21.
+and decides". How it is built: design §22.
 
 **Recommendation: host references for `animate*AsState`.** On the emulator both forms draw host
 frames equally fast, but the guest's frame clock delivered about 29 new values a second to a host

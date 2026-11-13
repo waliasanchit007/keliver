@@ -1,0 +1,80 @@
+// Gate B part c (docs/COMPOSE_GENERATOR_DESIGN.md §21): the same-source samples as a signed Zipline
+// guest. Its Kotlin/JS sources ARE the guest copies SameSourceTest compares on the JVM and the iOS
+// simulator (a srcDir, not a copy). The iOS host that loads it is keliver-compose-gatea-sample-ios;
+// scripts/keliver-gateb-ios-sim.sh builds both and runs them on a simulator it creates.
+//
+// Prototype only: included in the build only with -Pkeliver.gatebIos (settings.gradle), never
+// published. The signing key is a scratch Ed25519 pair generated into this module's build dir.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.zipline'
+
+def samples = rootProject.file('keliver-compose-gatea-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/gatea/composeui/samples/guest')
+
+kotlin {
+  iosSimulatorArm64() // the host takes the GateBSamples interface
+  js {
+    outputModuleName = 'keliver-compose-gatea-sample-guest'
+    browser()
+    binaries.executable()
+  }
+
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverTreehouse
+        api libs.zipline
+      }
+    }
+    jsMain {
+      kotlin.srcDir(samples)
+      dependencies {
+        api projects.keliverTreehouseGuest
+        implementation projects.keliverComposeGateaCompose
+        implementation projects.keliverComposeGateaProtocolGuest
+        implementation libs.jetbrains.compose.runtime
+      }
+    }
+  }
+}
+
+zipline {
+  apiTracking = false
+}
+
+// A scratch Ed25519 pair (raw 32-byte seed and public key, hex), made once per build dir with the
+// JDK. The host embeds the public half (its generateGateBKey task); this module signs with the
+// private half after the compile, as portal-published-guest does (never through signingKeys, U31).
+def keyDir = layout.buildDirectory.dir('gateb-keys')
+def gatebKeys = tasks.register('gatebKeys') {
+  outputs.dir(keyDir)
+  doLast {
+    def dir = keyDir.get().asFile
+    def priv = new File(dir, 'ed25519.priv')
+    def pub = new File(dir, 'ed25519.pub')
+    if (priv.isFile() && pub.isFile()) return
+    dir.mkdirs()
+    def pair = java.security.KeyPairGenerator.getInstance('Ed25519').generateKeyPair()
+    // PKCS#8 and X.509 encodings of Ed25519 end with the raw 32 bytes.
+    def raw = { byte[] encoded -> encoded[(encoded.length - 32)..<encoded.length] as byte[] }
+    priv.text = raw(pair.private.encoded).encodeHex().toString()
+    pub.text = raw(pair.public.encoded).encodeHex().toString()
+    priv.setReadable(false, false)
+    priv.setReadable(true, true)
+  }
+}
+
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compileTask ->
+  compileTask.dependsOn(gatebKeys)
+  compileTask.inputs.files(gatebKeys)
+  compileTask.doLast {
+    def manifestFile = new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json')
+    def hex = new File(keyDir.get().asFile, 'ed25519.priv').text.trim()
+    if (!(hex ==~ /[0-9a-f]{64}/)) throw new GradleException("gateb: the scratch key is not 64 hex digits")
+    def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
+      .addEd25519('gateb-ed25519', okio.ByteString.decodeHex(hex))
+      .build()
+    def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
+    manifestFile.text = signer.sign(manifest).encodeJson()
+  }
+}

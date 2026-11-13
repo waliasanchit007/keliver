@@ -72,6 +72,13 @@ include ':keliver-compose-gatea-compose'
 include ':keliver-compose-gatea-protocol-guest'
 include ':keliver-compose-gatea-protocol-host'
 include ':keliver-compose-gatea-composeui'
+// Gate B part c: the same-source samples as a signed guest bundle and a Kotlin-only iOS simulator
+// app that loads it. Only with -Pkeliver.gatebIos (scripts/keliver-gateb-ios-sim.sh), so CI's
+// full graph neither links the app nor compiles the bundle.
+if (providers.gradleProperty('keliver.gatebIos').present) {
+  include ':keliver-compose-gatea-sample-guest'
+  include ':keliver-compose-gatea-sample-ios'
+}
 include ':keliver-composeui'
 include ':keliver-gradle-plugin'
 
