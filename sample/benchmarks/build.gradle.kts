@@ -73,6 +73,17 @@ android {
   experimentalProperties["android.experimental.self-instrumenting"] = true
 }
 
+// Gate B-e (prototype only, docs/GATE_B_RESULTS.md): the animation frame-timing benchmark of the
+// generated group's route. Without -PkeliverComposePrototype it is not compiled.
+if (providers.gradleProperty("keliverComposePrototype").isPresent) {
+  android.sourceSets.getByName("main").kotlin.srcDir("src/gateb/kotlin")
+  // The prototype stack's machines have JDK 17, not 11 (the bytecode target stays 11).
+  extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+    jvmToolchain(17)
+    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+  }
+}
+
 dependencies {
   implementation(libs.androidx.benchmark.macro.junit4)
   implementation(libs.androidx.test.ext.junit)

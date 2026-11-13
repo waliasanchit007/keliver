@@ -5,6 +5,19 @@
 package dev.keliver.portal.compose.render
 
 import androidx.compose.runtime.Composable
+import dev.keliver.compose.animation.AnimatedVisibility
+import dev.keliver.compose.animation.animateContentSize
+import dev.keliver.compose.animation.core.Spring
+import dev.keliver.compose.animation.core.VisibilityThreshold
+import dev.keliver.compose.animation.core.spring
+import dev.keliver.compose.animation.expandHorizontally
+import dev.keliver.compose.animation.expandIn
+import dev.keliver.compose.animation.expandVertically
+import dev.keliver.compose.animation.fadeIn
+import dev.keliver.compose.animation.fadeOut
+import dev.keliver.compose.animation.shrinkHorizontally
+import dev.keliver.compose.animation.shrinkOut
+import dev.keliver.compose.animation.shrinkVertically
 import dev.keliver.compose.foundation.background
 import dev.keliver.compose.foundation.border
 import dev.keliver.compose.foundation.clickable
@@ -14,6 +27,7 @@ import dev.keliver.compose.foundation.layout.fillMaxHeight
 import dev.keliver.compose.foundation.layout.fillMaxSize
 import dev.keliver.compose.foundation.layout.fillMaxWidth
 import dev.keliver.compose.foundation.layout.height
+import dev.keliver.compose.foundation.layout.offset
 import dev.keliver.compose.foundation.layout.padding
 import dev.keliver.compose.foundation.layout.size
 import dev.keliver.compose.foundation.layout.width
@@ -31,6 +45,8 @@ import dev.keliver.compose.ui.Alignment
 import dev.keliver.compose.ui.Modifier
 import dev.keliver.compose.ui.draw.alpha
 import dev.keliver.compose.ui.draw.clip
+import dev.keliver.compose.ui.draw.rotate
+import dev.keliver.compose.ui.draw.scale
 import dev.keliver.compose.ui.draw.shadow
 import dev.keliver.compose.ui.graphics.Color
 import dev.keliver.compose.ui.graphics.DefaultAlpha
@@ -39,6 +55,7 @@ import dev.keliver.compose.ui.graphics.RectangleShape
 import dev.keliver.compose.ui.graphics.drawscope.DrawScope.Companion.DefaultFilterQuality
 import dev.keliver.compose.ui.layout.ContentScale
 import dev.keliver.compose.ui.text.style.TextOverflow
+import dev.keliver.compose.ui.unit.IntSize
 import dev.keliver.compose.ui.unit.TextUnit
 import dev.keliver.compose.ui.unit.dp
 
@@ -435,6 +452,48 @@ internal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, sl
         colors = colors,
       )
     }
+    "dev.keliver.compose.animation.AnimatedVisibility#27" -> {
+      val visible = a.bool("visible") ?: return a.missing("visible")
+      val enter = a.value("enter", dev.keliver.compose.animation.EnterTransitionCodec) ?: (fadeIn() + expandIn())
+      val exit = a.value("exit", dev.keliver.compose.animation.ExitTransitionCodec) ?: (shrinkOut() + fadeOut())
+      val label = a.string("label") ?: ("AnimatedVisibility")
+      dev.keliver.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = enter,
+        exit = exit,
+        label = label,
+        content = { slots.Render("content", this) },
+      )
+    }
+    "dev.keliver.compose.animation.AnimatedVisibility#28" -> {
+      val visible = a.bool("visible") ?: return a.missing("visible")
+      val enter = a.value("enter", dev.keliver.compose.animation.EnterTransitionCodec) ?: (fadeIn() + expandVertically())
+      val exit = a.value("exit", dev.keliver.compose.animation.ExitTransitionCodec) ?: (fadeOut() + shrinkVertically())
+      val label = a.string("label") ?: ("AnimatedVisibility")
+      dev.keliver.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = enter,
+        exit = exit,
+        label = label,
+        content = { slots.Render("content", this) },
+      )
+    }
+    "dev.keliver.compose.animation.AnimatedVisibility#29" -> {
+      val visible = a.bool("visible") ?: return a.missing("visible")
+      val enter = a.value("enter", dev.keliver.compose.animation.EnterTransitionCodec) ?: (fadeIn() + expandHorizontally())
+      val exit = a.value("exit", dev.keliver.compose.animation.ExitTransitionCodec) ?: (fadeOut() + shrinkHorizontally())
+      val label = a.string("label") ?: ("AnimatedVisibility")
+      dev.keliver.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = enter,
+        exit = exit,
+        label = label,
+        content = { slots.Render("content", this) },
+      )
+    }
     else -> return false
   }
   return true
@@ -475,6 +534,11 @@ internal fun applyGenerated(m: Modifier, key: String, a: CanvasArgs, scope: Any?
     "fillParentMaxWidth#29" -> run { val fraction = a.float("fraction") ?: (1f); (scope as? dev.keliver.compose.foundation.lazy.LazyItemScope)?.run { m.fillParentMaxWidth(fraction = fraction) } }
     "fillParentMaxHeight#30" -> run { val fraction = a.float("fraction") ?: (1f); (scope as? dev.keliver.compose.foundation.lazy.LazyItemScope)?.run { m.fillParentMaxHeight(fraction = fraction) } }
     "animateItem#31" -> (scope as? dev.keliver.compose.foundation.lazy.LazyItemScope)?.run { m.animateItem() }
+    "offset#32" -> run { val x = a.value("x", dev.keliver.compose.ui.unit.DpCodec) ?: (0.dp); val y = a.value("y", dev.keliver.compose.ui.unit.DpCodec) ?: (0.dp); m.offset(x = x, y = y) }
+    "rotate#33" -> run { val degrees = a.float("degrees") ?: return null; m.rotate(degrees = degrees) }
+    "scale#34" -> run { val scale = a.float("scale") ?: return null; m.scale(scale = scale) }
+    "animateContentSize#35" -> run { val animationSpec = (spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, )); m.animateContentSize(animationSpec = animationSpec) }
+    "animateContentSize#36" -> run { val animationSpec = (spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, )); val alignment = a.value("alignment", dev.keliver.compose.ui.AlignmentCodec) ?: (Alignment.TopStart); m.animateContentSize(animationSpec = animationSpec, alignment = alignment) }
     else -> null
   }
 }

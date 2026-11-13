@@ -41,6 +41,9 @@ import dev.keliver.schema.Widget
     GenIconButton1::class,
     GenHorizontalDivider1::class,
     GenTopAppBar1::class,
+    GenAnimatedVisibility1::class,
+    GenColumnScopeAnimatedVisibility1::class,
+    GenRowScopeAnimatedVisibility1::class,
     ExtraShimmer::class,
     ExtraLazyItem::class,
     GenPadding1::class,
@@ -74,6 +77,12 @@ import dev.keliver.schema.Widget
     GenLazyItemScopeFillParentMaxWidth1::class,
     GenLazyItemScopeFillParentMaxHeight1::class,
     GenLazyItemScopeAnimateItem1::class,
+    GenOffset1::class,
+    GenRotate1::class,
+    GenScale1::class,
+    GenAnimateContentSize1::class,
+    GenAnimateContentSize2::class,
+    ExtraAnimated::class,
   ],
   dependencies = [
     Dependency(1, dev.keliver.layout.RedwoodLayout::class),
@@ -82,6 +91,9 @@ import dev.keliver.schema.Widget
   ],
 )
 public interface KeliverComposeGateA
+
+/** The schema's marker for `androidx.compose.animation.AnimatedVisibilityScope`. */
+public object GenAnimatedVisibilityScope
 
 /** The schema's marker for `androidx.compose.foundation.layout.BoxScope`. */
 public object GenBoxScope
@@ -419,6 +431,39 @@ public data class GenTopAppBar1(
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )
 
+/** `androidx.compose.animation.AnimatedVisibility`: [AnimatedVisibility] composable animates the appearance and disappearance of its content, as [visible] value changes. */
+@Widget(27)
+public data class GenAnimatedVisibility1(
+  @Property(1) val visible: kotlin.Boolean,
+  @Property(3) val enter: dev.keliver.compose.animation.EnterTransition?,
+  @Property(4) val exit: dev.keliver.compose.animation.ExitTransition?,
+  @Property(5) val label: kotlin.String?,
+  @Children(6) val content: GenAnimatedVisibilityScope.() -> Unit,
+  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
+)
+
+/** `androidx.compose.animation.AnimatedVisibility`: [ColumnScope.AnimatedVisibility] composable animates the appearance and disappearance of its content when the [AnimatedVisibility] is in a [Column]. */
+@Widget(28)
+public data class GenColumnScopeAnimatedVisibility1(
+  @Property(1) val visible: kotlin.Boolean,
+  @Property(3) val enter: dev.keliver.compose.animation.EnterTransition?,
+  @Property(4) val exit: dev.keliver.compose.animation.ExitTransition?,
+  @Property(5) val label: kotlin.String?,
+  @Children(6) val content: GenAnimatedVisibilityScope.() -> Unit,
+  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
+)
+
+/** `androidx.compose.animation.AnimatedVisibility`: [RowScope.AnimatedVisibility] composable animates the appearance and disappearance of its content when the [AnimatedVisibility] is in a [Row]. */
+@Widget(29)
+public data class GenRowScopeAnimatedVisibility1(
+  @Property(1) val visible: kotlin.Boolean,
+  @Property(3) val enter: dev.keliver.compose.animation.EnterTransition?,
+  @Property(4) val exit: dev.keliver.compose.animation.ExitTransition?,
+  @Property(5) val label: kotlin.String?,
+  @Children(6) val content: GenAnimatedVisibilityScope.() -> Unit,
+  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
+)
+
 /** `androidx.compose.foundation.layout.padding`: Apply [all] dp of additional space along each edge of the content, left, top, right and bottom. */
 @Modifier(1)
 public data class GenPadding1(
@@ -624,4 +669,38 @@ public data class GenLazyItemScopeFillParentMaxHeight1(
 /** `androidx.compose.foundation.lazy.LazyItemScope.animateItem`: This modifier animates the item appearance (fade in), disappearance (fade out) and placement changes (such as an item reordering). */
 @Modifier(31, GenLazyItemScope::class)
 public object GenLazyItemScopeAnimateItem1
+
+/** `androidx.compose.foundation.layout.offset`: Offset the content by ([x] dp, [y] dp). */
+@Modifier(32)
+public data class GenOffset1(
+  val x: dev.keliver.compose.ui.unit.Dp,
+  val y: dev.keliver.compose.ui.unit.Dp,
+)
+
+/** `androidx.compose.ui.draw.rotate`: Sets the degrees the view is rotated around the center of the composable. */
+@Modifier(33)
+public data class GenRotate1(
+  val degrees: kotlin.Float,
+)
+
+/** `androidx.compose.ui.draw.scale`: Scale the contents of both the horizontal and vertical axis uniformly by the same scale factor. */
+@Modifier(34)
+public data class GenScale1(
+  val scale: kotlin.Float,
+)
+
+/** `androidx.compose.animation.animateContentSize`: This modifier animates its own size when its child modifier (or the child composable if it is already at the tail of the chain) changes size. */
+@Modifier(35)
+public data class GenAnimateContentSize1(
+  val animationSpec: dev.keliver.compose.animation.core.AnimationSpecWire,
+  val animationSpecIsDefault: kotlin.Boolean,
+)
+
+/** `androidx.compose.animation.animateContentSize`: This modifier animates its own size when its child modifier (or the child composable if it is already at the tail of the chain) changes size. */
+@Modifier(36)
+public data class GenAnimateContentSize2(
+  val animationSpec: dev.keliver.compose.animation.core.AnimationSpecWire,
+  val animationSpecIsDefault: kotlin.Boolean,
+  val alignment: dev.keliver.compose.ui.Alignment,
+)
 

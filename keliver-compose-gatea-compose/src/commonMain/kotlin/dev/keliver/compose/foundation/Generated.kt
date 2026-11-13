@@ -23,7 +23,9 @@ public fun dev.keliver.compose.ui.Modifier.background(
   color: dev.keliver.compose.ui.graphics.Color,
   shape: dev.keliver.compose.ui.graphics.Shape = RectangleShape,
 ): dev.keliver.compose.ui.Modifier {
-  return then(GenBackground1Impl(color = color, shape = shape))
+  val animated_color = dev.keliver.compose.internal.animated("color", color)
+  @Suppress("NAME_SHADOWING") val color = dev.keliver.compose.internal.untag(color)
+  return then(animated_color).then(GenBackground1Impl(color = color, shape = shape))
 }
 @Deprecated("Keliver: 'brush': brushes are Gate B. Use a solid Color.", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.background(

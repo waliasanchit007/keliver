@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gate B-e (prototype builds only): the generated group's animation route. Exported so the
+     benchmarks module and `adb shell am start -n dev.keliver.sample/.gateb.GatebActivity -e mode host`
+     can open it. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="dev.keliver.sample.host.gateb.GatebActivity"
+            android:exported="true" />
+    </application>
+</manifest>

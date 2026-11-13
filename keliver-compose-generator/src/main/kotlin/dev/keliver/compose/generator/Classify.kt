@@ -49,6 +49,19 @@ object TypeMap {
     "androidx.compose.foundation.lazy.LazyListState",
     "androidx.compose.ui.graphics.painter.Painter",
     "androidx.compose.ui.graphics.ColorFilter",
+    // Gate B-e: enter and exit transitions (AnimatedVisibility), sent as the parts they were built from.
+    "androidx.compose.animation.EnterTransition",
+    "androidx.compose.animation.ExitTransition",
+  )
+
+  /**
+   * Generic Compose types sent as one non-generic wire class (Gate B-e): the guest writes Compose's
+   * type with its arguments (`FiniteAnimationSpec<IntSize>`), the stub sends `.wire`, and the host
+   * rebuilds the real value for the parameter's type arguments (`toCompose<IntSize>()`).
+   */
+  val generic: Map<String, String> = mapOf(
+    "androidx.compose.animation.core.FiniteAnimationSpec" to "dev.keliver.compose.animation.core.AnimationSpecWire",
+    "androidx.compose.animation.core.AnimationSpec" to "dev.keliver.compose.animation.core.AnimationSpecWire",
   )
   private val primitives = setOf("kotlin.String", "kotlin.Boolean", "kotlin.Int", "kotlin.Float", "kotlin.Long", "kotlin.Double")
 
@@ -74,15 +87,29 @@ object TypeMap {
 
   const val LAZY_LIST_SCOPE = "androidx.compose.foundation.lazy.LazyListScope"
 
-  fun isMapped(t: TypeRef): Boolean =
-    !t.isFunction && t.args.isEmpty() && (t.fq in mirrored || t.fq in primitives || t.fq == IMAGE_MODEL || t.fq in opaque)
+  fun isMapped(t: TypeRef): Boolean = !t.isFunction && (
+    (t.args.isEmpty() && (t.fq in mirrored || t.fq in primitives || t.fq == IMAGE_MODEL || t.fq in opaque)) ||
+      (t.fq in generic && t.args.all { isMapped(it) || it.fq in genericArgs })
+    )
   fun isPrimitive(t: TypeRef): Boolean = t.fq in primitives
+
+  /** Type arguments a generic wire type may carry that are not themselves sent (`IntSize`). */
+  private val genericArgs = setOf("androidx.compose.ui.unit.IntSize", "androidx.compose.ui.unit.IntOffset", "androidx.compose.ui.unit.Dp", "kotlin.Float")
+
+  /** The value a stub sends for a parameter of this type: `.wire` for a handle or a generic type. */
+  fun sendExpr(t: TypeRef, name: String): String = if (t.fq in wireValue || t.fq in generic) "$name.wire" else name
 
   /** The type as the guest and the schema write it. */
   fun wireType(t: TypeRef, nullable: Boolean): String = when (t.fq) {
     IMAGE_MODEL -> "kotlin.String?"
-    else -> (wireValue[t.fq] ?: mirrorFq(t.fq)) + if (nullable) "?" else ""
+    else -> (wireValue[t.fq] ?: generic[t.fq] ?: mirrorFq(t.fq)) + if (nullable) "?" else ""
   }
+
+  /** Mirrors written by hand in keliver-compose-values that never travel alone: no placeholder for them. */
+  val handWritten: Set<String> = setOf("androidx.compose.ui.unit.IntSize", "androidx.compose.ui.unit.IntOffset")
+
+  /** Parameter types an animated reference can stand for (`animate*AsState`, Gate B-e). */
+  val animatable: Set<String> = setOf("kotlin.Float", "androidx.compose.ui.unit.Dp", "androidx.compose.ui.graphics.Color")
 }
 
 /**
@@ -166,7 +193,7 @@ fun unmappedTypes(t: TypeRef): List<String> = buildList {
     if (x.isFunction) {
       x.receiver?.let(::walk)
       x.args.forEach(::walk)
-    } else if (!x.fq.startsWith("kotlin.") && !TypeMap.isMapped(x) && x.fq != MODIFIER) {
+    } else if (!x.fq.startsWith("kotlin.") && !TypeMap.isMapped(x) && x.fq != MODIFIER && x.fq !in TypeMap.handWritten) {
       add(x.fq)
       x.args.forEach(::walk)
     }
