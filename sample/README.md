@@ -321,3 +321,24 @@ Keliver root (one level up; it publishes `KELIVER_VERSION` from
 in `sample/gradle/libs.versions.toml` to that version. The sample's
 `mavenLocal()` repo is checked first, so the local build then wins over
 Central; without the version change the sample keeps resolving 0.1.0.
+
+### Prototype: the Compose-generated API's animation route (Gate B-e)
+
+Not for adopters. With `-PkeliverComposePrototype` the sample moves to main's stack, builds against
+Keliver's unpublished Compose-generated group (`0.0.0-gateb` by default, `-PkeliverVersion` to
+change it) and adds `:gateb-guest` plus a debug/benchmark-only `GatebActivity` with the animation
+benchmark screen written in plain Compose. Publish the prototype to a scratch repository and point
+both builds at it:
+
+```
+# from the Keliver root
+./gradlew publishToMavenLocal -Dmaven.repo.local=/tmp/m2 -PkeliverVersion=0.0.0-gateb \
+  -PkeliverComposePrototype -DRELEASE_SIGNING_ENABLED=false
+# from sample/
+./gradlew :host-android:installDebug -Dmaven.repo.local=/tmp/m2 -PkeliverComposePrototype
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.gateb.GatebActivity -e mode host   # or guest, native-host, native-guest
+./gradlew :benchmarks:connectedBenchmarkAndroidTest -Dmaven.repo.local=/tmp/m2 -PkeliverComposePrototype \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.keliver.sample.benchmarks.GatebAnimationBenchmark
+```
+
+Results and method: [`docs/GATE_B_RESULTS.md`](../docs/GATE_B_RESULTS.md).

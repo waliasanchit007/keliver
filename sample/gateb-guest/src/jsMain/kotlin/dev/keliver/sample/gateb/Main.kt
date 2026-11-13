@@ -25,7 +25,11 @@ private class GatebAppServiceImpl : GatebAppService {
     widgetVersion = 1U,
   )
 
-  override fun launch(mode: String): ZiplineTreehouseUi {
+  override fun launchHost(): ZiplineTreehouseUi = launch("host")
+
+  override fun launchGuest(): ZiplineTreehouseUi = launch("guest")
+
+  private fun launch(mode: String): ZiplineTreehouseUi {
     val ui = object : TreehouseUi {
       @Composable
       override fun Show() {

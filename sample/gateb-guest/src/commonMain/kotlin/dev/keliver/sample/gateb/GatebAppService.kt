@@ -9,10 +9,17 @@ import dev.keliver.treehouse.KeliverAppService
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import kotlinx.serialization.KSerializer
 
-/** Gate B-e's guest service: one screen, the animation benchmark, in a [mode] ("host" or "guest"). */
+/**
+ * Gate B-e's guest service: one screen, the animation benchmark, in one of two modes (the app
+ * service code generator takes functions without parameters, so one function per mode).
+ */
 @KeliverAppService
 public interface GatebAppService : AppService {
-  public fun launch(mode: String): ZiplineTreehouseUi
+  /** `animate*AsState` as animated references: the host animates. */
+  public fun launchHost(): ZiplineTreehouseUi
+
+  /** `Animatable` on the guest's frame clock. */
+  public fun launchGuest(): ZiplineTreehouseUi
 
   public companion object {
     internal class Adapter(

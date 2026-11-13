@@ -98,7 +98,7 @@ class GatebActivity : ComponentActivity() {
           }
           val contentSource = remember {
             object : TreehouseContentSource<GatebAppService> {
-              override fun get(app: GatebAppService) = app.launch(mode)
+              override fun get(app: GatebAppService) = if (mode == "guest") app.launchGuest() else app.launchHost()
             }
           }
           TreehouseContent(treehouseApp = app, widgetSystem = widgetSystem, contentSource = contentSource, modifier = Modifier.fillMaxSize())
@@ -140,7 +140,7 @@ private object CountingListener : EventListener.Factory {
     }
 
     override fun callStart(call: Call): Any? {
-      if (call.function.name.startsWith("sendChanges")) {
+      if ("sendChanges" in call.function.signature) {
         batches.incrementAndGet()
         changes.addAndGet(((call.args.firstOrNull() as? List<*>)?.size ?: 0).toLong())
         val now = System.nanoTime()

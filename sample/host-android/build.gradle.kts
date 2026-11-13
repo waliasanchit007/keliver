@@ -129,7 +129,7 @@ if (composePrototype) {
   tasks.configureEach {
     if (name.startsWith("compile") && name.endsWith("Kotlin")) dependsOn(gatebNative)
     if (name.startsWith("merge") && name.endsWith("Assets")) dependsOn(gatebAssets)
-    if (name.startsWith("generate") && name.endsWith("LintModel")) dependsOn(gatebAssets, gatebNative)
+    if (name.contains("lint", ignoreCase = true)) dependsOn(gatebAssets, gatebNative)
   }
   dependencies {
     for (type in routeBuildTypes) {

@@ -75,6 +75,13 @@ if (composePrototype) {
     }
   }
   include(":gateb-guest")
+  // androidx.compose 1.12 (CMP 1.12.2) declares AGP 9.1 as its minimum; the sample stays on AGP 8.13
+  // and Gradle 9.0 (AGP 9 needs a newer Gradle), so prototype builds skip that AAR-metadata check.
+  gradle.beforeProject {
+    tasks.configureEach {
+      if (name.startsWith("check") && name.endsWith("AarMetadata")) enabled = false
+    }
+  }
 }
 
 include(":schema")
