@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 @file:Suppress("ktlint:standard:property-naming")
+@file:OptIn(KeliverGeneratedApi::class)
 
 package dev.keliver.compose.animation.core
 
@@ -23,6 +24,7 @@ import dev.keliver.compose.ui.unit.Dp
 import dev.keliver.compose.ui.unit.IntOffset
 import dev.keliver.compose.ui.unit.IntSize
 import dev.keliver.compose.wire.JsonCodec
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.compose.wire.toCompact
 import kotlin.math.abs
 import kotlinx.serialization.Serializable
@@ -209,12 +211,34 @@ public object AnimationSpecWireCodec : JsonCodec<AnimationSpecWire>("dev.keliver
 /** The spec as it travels. */
 public val AnimationSpec<*>.wire: AnimationSpecWire get() = AnimationSpecWire(specJson(this))
 
+/**
+ * What the guest's animation mirrors could not send as written (a custom Easing): reported once
+ * per message, and the screen keeps running with a fallback, never a crash in composition.
+ */
+@KeliverGeneratedApi
+public object AnimationMismatches {
+  public var sink: (String) -> Unit = { println("keliver-compose: $it") }
+  private val seen = mutableSetOf<String>()
+
+  public fun report(message: String) {
+    if (seen.add(message)) sink(message)
+  }
+
+  /** For tests: forget what was reported. */
+  public fun reset(): Unit = seen.clear()
+}
+
 private fun easingJson(easing: Easing): JsonElement = when (easing) {
   LinearEasing -> JsonPrimitive("linear")
   is CubicBezierEasing -> JsonArray(easing.points.map { JsonPrimitive(it.toCompact()) })
-  else -> throw IllegalArgumentException(
-    "Keliver: a custom Easing runs per frame and cannot be sent to the host; use CubicBezierEasing or a named easing.",
-  )
+  else -> {
+    // Easing is a fun interface, so a lambda compiles; it runs per frame and cannot travel.
+    AnimationMismatches.report(
+      "a custom Easing runs per frame and cannot be sent to the host; FastOutSlowInEasing (tween's default) instead. " +
+        "Use CubicBezierEasing or a named easing.",
+    )
+    easingJson(FastOutSlowInEasing)
+  }
 }
 
 private fun thresholdJson(value: Any?): JsonElement? = when (value) {

@@ -41,9 +41,12 @@ import kotlinx.serialization.json.put
 /*
  * Animated references (docs/COMPOSE_GENERATOR_DESIGN.md §10, Gate B-e): `animate*AsState` in the
  * guest does not animate. It returns a State whose value is the target, TAGGED so that the
- * generated stubs can recognise it: the target's float bits plus a small count (a few ULPs away
- * from the target, so a guest read gets the target to within ~1e-6 relative), or, for a Color,
- * spare bits of its 64-bit packing that no read uses (a guest read gets the exact target). A
+ * generated stubs can recognise it: the target's float bits plus a count (the count-th float away
+ * from zero; call sites sharing a target take counts 1, 2, 3…), or, for a Color, spare bits of its
+ * 64-bit packing that no component read uses. So a guest read is NOT the exact target: `== target`
+ * is false (Color too), a target of 0f reads as Float.MIN_VALUE (`> 0f` is true), a negative target
+ * reads slightly more negative (`>= -90f` is false). The full semantics, and the read-log
+ * alternative, are in docs/GATE_B_RESULTS.md (decision 2); AnimatedReferencesTest pins them. A
  * generated stub that receives a tagged value sends the exact target and, before its modifier
  * element (or at the end of a widget's chain), an `ExtraAnimated` element naming the parameter and
  * carrying this reference: an id, the spec and the label. The host's renderer wraps that argument
@@ -100,6 +103,9 @@ public object AnimatedReferences {
   internal val floats: HashMap<Int, Registration<Float>> = HashMap()
   internal val dps: HashMap<Int, Registration<Dp>> = HashMap()
   internal val colors: HashMap<ULong, Registration<Color>> = HashMap()
+  internal val floatSlots: HashMap<Int, Slots> = HashMap()
+  internal val dpSlots: HashMap<Int, Slots> = HashMap()
+  internal val colorSlots: HashMap<ULong, Slots> = HashMap()
 
   internal fun newId(): Int = nextId++
 
@@ -117,38 +123,82 @@ public object AnimatedReferences {
   public val size: Int get() = floats.size + dps.size + colors.size
 }
 
-/** One `animate*AsState` call site's registration; removed when the call leaves the composition. */
-private abstract class Handle<T, K>(private val table: HashMap<K, AnimatedReferences.Registration<T>>) : RememberObserver {
+/**
+ * The counts in use for one target: the highest handed out and those released since. Call sites
+ * that share a target take counts 1, 2, 3…, and tagging is O(1) per call (no probing from 1).
+ */
+internal class Slots {
+  var high: Int = 0
+  val free: ArrayList<Int> = ArrayList()
+  var live: Int = 0
+}
+
+/**
+ * One `animate*AsState` call site's registration; removed when the call leaves the composition.
+ * Internal (not private) so that AnimatedReferencesTest can drive it without a composition.
+ */
+internal abstract class Handle<T, K>(
+  private val table: HashMap<K, AnimatedReferences.Registration<T>>,
+  private val slots: HashMap<K, Slots>,
+) : RememberObserver {
   val id: Int = AnimatedReferences.newId()
   private var key: K? = null
+  private var base: K? = null
+  private var count: Int = 0
   private var tagged: T? = null
 
-  abstract fun untaggable(target: T): Boolean
-  abstract fun keyOf(target: T, count: Int): K
-  abstract fun valueOf(key: K, target: T): T
+  /** The target's own key: what a plain read of the target looks up. */
+  abstract fun baseOf(target: T): K
+
+  /** The key of [target] tagged with [count], or null when that count cannot tag it. */
+  abstract fun keyOf(target: T, count: Int): K?
+  abstract fun valueOf(key: K): T
 
   fun tag(target: T, ref: AnimatedRef): T {
-    if (untaggable(target)) {
-      release()
-      return target
-    }
     val current = key
     if (current != null) {
       val r = table[current]
       if (r != null && r.target == target && r.ref == ref) return tagged!!
-      table.remove(current)
     }
-    var count = 1
-    var k = keyOf(target, count)
-    while (table.containsKey(k)) k = keyOf(target, ++count)
-    table[k] = AnimatedReferences.Registration(target, ref)
-    key = k
-    return valueOf(k, target).also { tagged = it }
+    release()
+    // A target that count 1 cannot tag (NaN, ±Infinity, ±MAX_VALUE, Color.Unspecified) is never
+    // tagged: the guest reads it exactly, and the host gets it with no animation.
+    if (keyOf(target, 1) == null) return target
+    val b = baseOf(target)
+    val s = slots.getOrPut(b) { Slots() }
+    while (true) {
+      val c = if (s.free.isNotEmpty()) s.free.removeAt(s.free.size - 1) else ++s.high
+      val k = keyOf(target, c)
+      if (k == null) {
+        // The counts ran out for this target (it is close to the float's limit, or this many call
+        // sites share it): untagged, as above.
+        s.free.add(c)
+        if (s.live == 0) slots.remove(b)
+        return target
+      }
+      // Another target's tag (1f + 2 ULPs is both 1f's count 2 and (1f + 1 ULP)'s count 1): this
+      // count is skipped for good (it never goes back to the free list), so a clash costs once.
+      if (table.containsKey(k)) continue
+      table[k] = AnimatedReferences.Registration(target, ref)
+      s.live++
+      key = k
+      base = b
+      count = c
+      return valueOf(k).also { tagged = it }
+    }
   }
 
   private fun release() {
-    key?.let { table.remove(it) }
+    val k = key ?: return
+    table.remove(k)
+    val b = base!!
+    slots[b]?.let { s ->
+      s.live--
+      if (s.live == 0) slots.remove(b) else s.free.add(count)
+    }
     key = null
+    base = null
+    tagged = null
   }
 
   override fun onRemembered() {}
@@ -156,25 +206,45 @@ private abstract class Handle<T, K>(private val table: HashMap<K, AnimatedRefere
   override fun onAbandoned() = release()
 }
 
-private class FloatHandle : Handle<Float, Int>(AnimatedReferences.floats) {
-  override fun untaggable(target: Float) = target.isNaN() || target.isInfinite()
-  override fun keyOf(target: Float, count: Int) = target.toBits() + count
-  override fun valueOf(key: Int, target: Float) = Float.fromBits(key)
+/**
+ * A float target's bits plus the count: the count-th representable float AWAY from zero. The
+ * tagged value must stay finite and keep the target's sign, so NaN, ±Infinity and ±MAX_VALUE (whose
+ * next float is ±Infinity) cannot be tagged.
+ */
+internal fun taggedFloatBits(target: Float, count: Int): Int? {
+  if (target.isNaN() || target.isInfinite()) return null
+  val bits = target.toBits()
+  val k = bits + count
+  val v = Float.fromBits(k)
+  if (v.isNaN() || v.isInfinite() || (k xor bits) < 0) return null
+  return k
 }
 
-private class DpHandle : Handle<Dp, Int>(AnimatedReferences.dps) {
-  override fun untaggable(target: Dp) = target.value.isNaN() || target.value.isInfinite()
-  override fun keyOf(target: Dp, count: Int) = target.value.toBits() + count
-  override fun valueOf(key: Int, target: Dp) = Dp(Float.fromBits(key))
+internal class FloatHandle : Handle<Float, Int>(AnimatedReferences.floats, AnimatedReferences.floatSlots) {
+  override fun baseOf(target: Float) = target.toBits()
+  override fun keyOf(target: Float, count: Int) = taggedFloatBits(target, count)
+  override fun valueOf(key: Int) = Float.fromBits(key)
 }
 
-private class ColorHandle : Handle<Color, ULong>(AnimatedReferences.colors) {
-  override fun untaggable(target: Color) = target == Color.Unspecified
-  override fun keyOf(target: Color, count: Int): ULong =
-    // A literal keeps its ARGB (bits 32–63) and colour space (bits 0–5); a reference keeps its
-    // name, alpha and marker (bits 0–31). Neither reads the bits the count goes in.
-    if (target.isReference) target.value or (count.toULong() shl 32) else target.value or (count.toULong() shl 8)
-  override fun valueOf(key: ULong, target: Color) = Color(key)
+internal class DpHandle : Handle<Dp, Int>(AnimatedReferences.dps, AnimatedReferences.dpSlots) {
+  override fun baseOf(target: Dp) = target.value.toBits()
+  override fun keyOf(target: Dp, count: Int) = taggedFloatBits(target.value, count)
+  override fun valueOf(key: Int) = Dp(Float.fromBits(key))
+}
+
+internal class ColorHandle : Handle<Color, ULong>(AnimatedReferences.colors, AnimatedReferences.colorSlots) {
+  override fun baseOf(target: Color) = target.value
+
+  // A literal keeps its ARGB (bits 32–63) and colour space (bits 0–5); a reference keeps its name,
+  // alpha and marker (bits 0–31). Neither reads the bits the count goes in (8–31 of a literal,
+  // 32–63 of a reference); a target that already has any of them set is not tagged.
+  override fun keyOf(target: Color, count: Int): ULong? = when {
+    target == Color.Unspecified -> null
+    target.isReference -> if ((target.value shr 32) != 0UL) null else target.value or (count.toULong() shl 32)
+    count >= (1 shl 24) || (target.value and 0xFFFFFF00UL) != 0UL -> null
+    else -> target.value or (count.toULong() shl 8)
+  }
+  override fun valueOf(key: ULong) = Color(key)
 }
 
 private val defaultFloatAnimation: SpringSpec<Float> = spring()

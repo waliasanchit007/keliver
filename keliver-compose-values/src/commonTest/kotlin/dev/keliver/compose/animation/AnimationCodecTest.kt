@@ -17,6 +17,7 @@ package dev.keliver.compose.animation
 
 import dev.keliver.compose.animation.core.AnimatedRef
 import dev.keliver.compose.animation.core.AnimatedRefCodec
+import dev.keliver.compose.animation.core.AnimationMismatches
 import dev.keliver.compose.animation.core.CubicBezierEasing
 import dev.keliver.compose.animation.core.DecodedSpec
 import dev.keliver.compose.animation.core.FastOutSlowInEasing
@@ -29,9 +30,10 @@ import dev.keliver.compose.animation.core.spring
 import dev.keliver.compose.animation.core.tween
 import dev.keliver.compose.animation.core.wire
 import dev.keliver.compose.ui.unit.IntSize
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlinx.serialization.json.Json
@@ -55,8 +57,20 @@ class AnimationCodecTest {
     assertEquals(0.5f to 200f, s.dampingRatio to s.stiffness)
   }
 
-  @Test fun aCustomEasingCannotBeSent() {
-    assertFailsWith<IllegalArgumentException> { tween<Float>(easing = { it * it }).wire }
+  @OptIn(KeliverGeneratedApi::class)
+  @Test fun aCustomEasingIsReportedAndFallsBackToTheDefault() {
+    val reported = ArrayList<String>()
+    val sink = AnimationMismatches.sink
+    AnimationMismatches.reset()
+    AnimationMismatches.sink = { reported += it }
+    try {
+      assertEquals(tween<Float>(300).wire, tween<Float>(300, easing = { it * it }).wire)
+      assertEquals(1, reported.size)
+      assertTrue("custom Easing" in reported.single())
+    } finally {
+      AnimationMismatches.sink = sink
+      AnimationMismatches.reset()
+    }
   }
 
   @Test fun specsAndTransitionsCompareByValue() {
