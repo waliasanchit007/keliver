@@ -8,6 +8,15 @@ dependencies {
   api projects.portalFlow                     // #13 F1: FlowSpec returned by FlowRecognizer
   implementation projects.portalCore          // generated catalog grounds the grammar
   implementation libs.kotlin.compilerEmbeddable
+  // ED0 spike (docs/ED0_SPIKE.md), read only when its flag is on: Compose values are evaluated
+  // into the guest's own mirrors and encoded with their wire codecs. compileOnly, so the prototype
+  // never reaches a shipped classpath (portal-relay, the tools zip); ShippedClasspathTest proves
+  // the flag-off path loads none of its classes.
+  compileOnly projects.keliverComposeValues
+  // The catalog's JSON, flag on only; at run time it comes through portal-document, as before.
+  compileOnly libs.kotlinx.serialization.json
+  testImplementation projects.keliverComposeValues
+  testImplementation libs.kotlinx.serialization.json
   testImplementation libs.junit
   testImplementation libs.kotlin.test.junit
 }
@@ -17,4 +26,20 @@ tasks.named('test').configure {
     'dev.keliver.portal.parityFixtures',
     rootProject.file('portal-parity-fixtures').absolutePath,
   )
+  // ED0 spike: the generated catalog and Gate A's sample screen (its tests turn the flag on themselves).
+  systemProperty('dev.keliver.portal.ed0.editorJson', rootProject.file('keliver-compose-gatea-schema/gatea.editor.json').absolutePath)
+  systemProperty(
+    'dev.keliver.portal.ed0.sample',
+    rootProject.file('keliver-compose-gatea-composeui/src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples/guest/SampleCard.kt').absolutePath,
+  )
+  inputs.file(rootProject.file('keliver-compose-gatea-schema/gatea.editor.json'))
+  inputs.file(rootProject.file('keliver-compose-gatea-composeui/src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples/guest/SampleCard.kt'))
+  // ShippedClasspathTest: what a shipped consumer loads (main output + runtimeClasspath, which has no
+  // keliver-compose-values), plus this module's test classes for the probe it runs there.
+  def shipped = sourceSets.main.runtimeClasspath
+  def probe = sourceSets.test.output.classesDirs
+  inputs.files(shipped).withPropertyName('ed0ShippedClasspath').withNormalizer(ClasspathNormalizer)
+  jvmArgumentProviders.add({
+    ["-Ddev.keliver.portal.ed0.shippedClasspath=${shipped.asPath}", "-Ddev.keliver.portal.ed0.probeClasses=${probe.asPath}"]
+  } as CommandLineArgumentProvider)
 }
