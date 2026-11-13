@@ -30,10 +30,10 @@ tasks.named('test').configure {
   systemProperty('dev.keliver.portal.ed0.editorJson', rootProject.file('keliver-compose-gatea-schema/gatea.editor.json').absolutePath)
   systemProperty(
     'dev.keliver.portal.ed0.sample',
-    rootProject.file('keliver-compose-gatea-composeui/src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples/guest/SampleCard.kt').absolutePath,
+    rootProject.file('keliver-compose-gatea-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/gatea/composeui/samples/guest/SampleCard.kt').absolutePath,
   )
   inputs.file(rootProject.file('keliver-compose-gatea-schema/gatea.editor.json'))
-  inputs.file(rootProject.file('keliver-compose-gatea-composeui/src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples/guest/SampleCard.kt'))
+  inputs.file(rootProject.file('keliver-compose-gatea-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/gatea/composeui/samples/guest/SampleCard.kt'))
   // ShippedClasspathTest: what a shipped consumer loads (main output + runtimeClasspath, which has no
   // keliver-compose-values), plus this module's test classes for the probe it runs there.
   def shipped = sourceSets.main.runtimeClasspath
