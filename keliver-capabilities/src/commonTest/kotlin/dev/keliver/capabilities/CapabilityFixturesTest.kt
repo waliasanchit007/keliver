@@ -35,7 +35,7 @@ class CapabilityFixturesTest {
     val signedIn = AuthState.SignedIn(
       subject = "user-42",
       displayName = "Ari",
-      attributes = mapOf("kyc" to "pending"),
+      attributes = mapOf("verification" to "pending"),
     )
     fixtures.auth.set(signedIn)
     fixtures.flags.set("new-profile", true)

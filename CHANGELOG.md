@@ -11,18 +11,34 @@
 
 ## Unreleased (0.5.0)
 
-The toolchain upgrade to Kotlin 2.4.20 and Zipline 1.28.0 (#222). **This release
+The toolchain upgrade to Kotlin 2.4.20 and Zipline 1.28.0 (#222), then AGP 9.3.1, Gradle 9.7.0
+and Compose Multiplatform 1.12.2 (#234). **This release
 breaks consumers; there is no binary compatibility with 0.4.x.** An app moving to
 0.5.0 must:
 
 - build with **Kotlin 2.4 or later**: the libraries are Kotlin 2.4 klibs. Zipline
   comes in as **1.28**.
-- set **minSdk 23** for every Android artifact (AndroidX Compose 1.11 and Zipline
-  1.28 both need it).
-- set **compileSdk 37** if it depends on the treehouse/Zipline modules: Zipline
-  1.28's AARs require it. Apps that use only the other modules are not forced to 37.
+- set **minSdk 23** for every Android artifact (AndroidX Compose 1.11 and later, and
+  Zipline 1.28, need it).
+- set **compileSdk 37** if it depends on a Compose module or the treehouse/Zipline modules:
+  AndroidX Compose 1.12's and Zipline 1.28's AARs require it. Apps that use only the
+  other modules are not forced to 37.
 - drop **iosX64** (the Intel iOS simulator): it is no longer published.
-- use **Compose Multiplatform 1.11.1** / **AndroidX Compose 1.11**.
+- use **Compose Multiplatform 1.12.2** / **AndroidX Compose 1.12.1**. A per-app editor built
+  on `portal-editor` (keliver-new-editor.sh) needs CMP 1.12 too (#234).
+- build Android with **AGP 9.1.1 or later** on **Gradle 9.3.1 or later** and **JDK 17**:
+  AndroidX Compose UI/foundation/material 1.12.1 declare minAndroidGradlePluginVersion=9.1.0
+  and minCompileSdk=37 in their AAR metadata, and compileSdk 37 needs AGP 9.1.1, which needs
+  Gradle 9.3.1. Keliver builds with AGP 9.3.1 on Gradle 9.7.0, the newest that Kotlin 2.4.20
+  supports. `dev.keliver:keliver-gradle-plugin` and `keliver-tooling-lint` are now Java 17
+  bytecode (AGP 9 and lint 32 publish only Java 17 variants); the libraries stay Java 11
+  bytecode (#234).
+- `dev.keliver.lint` still expects `com.android.library`/`com.android.application` with
+  `org.jetbrains.kotlin.android` or `kotlin.multiplatform`'s `androidTarget()`: on AGP 9 set
+  `android.builtInKotlin=false` and `android.newDsl=false` (as Keliver's own build does) until it
+  learns AGP 9's built-in Kotlin and `com.android.kotlin.multiplatform.library` (#234).
+- `androidx.collection:collection` 1.5.0 replaces `org.jetbrains.compose.collection-internal`
+  (CMP 1.12 no longer publishes it) (#234).
 - **recompile** everything built against 0.4.x. The compiler-generated
   `$stableprop` klib symbols are gone and the `ComposableSingletons` getters were
   renamed; neither is hand-written API, but code compiled against 0.4.x links to them.
@@ -35,6 +51,96 @@ link. No action is needed. The constraint applies on every platform, Android and
 included, for Gradle consumers: an app that pins coroutines below 1.11 has to lift that
 pin. (A Maven-only JVM consumer sees it only as `dependencyManagement`, which Maven does not
 pass on; the link failure it prevents exists only on JS/wasm, which always build with Gradle.)
+
+New:
+
+- `keliver-nav`: `@ScreenState("name")` and `NamedState(route, fixtures)` declare
+  a screen's named states next to it: a typed route plus an HTTP fixture set. The
+  relay lists them at `GET /states` (`docs/PORTAL_USAGE.md`, "Named states") (#226).
+  `@ScreenState` has BINARY retention by design: a device will find states through a
+  generated registry, since Kotlin/JS has no runtime annotation reflection. Opening a
+  state is not built yet (#233).
+- `keliver-http-fixtures` (new module; jvm, iOS, js, wasmJs; Android uses the JVM
+  artifact): the relay's HTTP fixture matching rules, shared so hosts can replay fixtures
+  too (#224). `HttpFixtureSet`, `HttpFixtureEntry` and `HttpFixtureSelection.Match`/`Miss`
+  have no `copy` or `componentN` (Poko classes), so later fields can be added compatibly;
+  `requestKey` is opaque. `HttpFixtureRedaction` compares `additionalKeys`
+  case-insensitively and leaves any body that is not a JSON object or array unchanged,
+  byte for byte. Fixture files have an optional `redactedKeys` list (the extra sensitive
+  keys they were recorded with); the matcher redacts the live request with them, so such
+  values match on replay. New `HttpFixtureRedaction.isJsonContainer` and
+  `sensitiveFormKey`; a fixture whose request holds an
+  `application/x-www-form-urlencoded` body with a sensitive key is refused on load (#233).
+- `keliver-treehouse-guest`: guests report where each composition ends to a host
+  that binds `KeliverTrace` with `fun composed()` (M4's guest frame profile;
+  `docs/DEVICE_HOST.md`, "The guest frame profile"). A host that binds no
+  `KeliverTrace` gets no call and pays nothing (#237).
+- `keliver-http-replay-debug` (new; debug builds only): `DebugHttpReplay` and
+  `DebugHttpReplayProvider`, an in-process `HostHttpProvider` that replays reviewed HTTP
+  fixture sets with the relay's exact-match rules (the recorded response, or a 424 miss)
+  and never makes an outbound call. Add it with `debugImplementation` (Android) or a
+  Debug-only dependency (iOS). Wiring and the release-build self-test:
+  `docs/DEBUG_HTTP_REPLAY.md` (#232).
+
+Changed:
+
+- `keliver-leak-detector` on wasmJs: `LeakDetector.timeBasedIn` now returns a working
+  detector instead of the no-op one, as js already did; it uses JS `WeakRef`, and the
+  engine's `gc()` when exposed. Without an exposed `gc()` it relies on the engine's own
+  collection, so a short `leakThreshold` can report objects the browser has not
+  collected yet (#231).
+
+Tools bundle (its own release line; in the next tools release, not in 0.5.0):
+
+- `bin/keliver-run-ios.sh` runs the app's screens on an iOS simulator in one command:
+  it picks or boots a simulator, scaffolds `host-ios/` when absent, builds a debug host
+  pointed at the local portal, installs and launches it, and waits until the host has
+  loaded the newest bundle. It never publishes and never targets a physical device (#235).
+- `bin/keliver-check` checks an app without the editor: it compiles, ingests every
+  screen (RawCode reported with file and line), warns on unsupported APIs and checks the
+  bundle budget (`check.bundleBudgetBytes`). It prints JSON lines (keys in
+  `docs/KELIVER_CHECK.md`) and exits 0 (no errors), 1 (errors; warnings too with `--strict`) or 2 (could not check)
+  (#225).
+- The portal's device proxy: `KELIVER_DEVICE_PROXY=loopback|all|<IP>` starts a second,
+  read-only server (port + 1) that serves only the published bundles, so a phone or
+  emulator on the LAN can load them; the editor's devices chip shows its URLs, QR codes
+  and the debug-host command. A LAN client is not authenticated (`docs/DEVICE_PROOF.md`)
+  (#227).
+- Debug hosts (Android and iOS templates) accept a debug-only link,
+  `keliver-<package>://keliver-debug/bundles?server=<url>`, that points them at the relay's
+  device proxy; the server must be a loopback, private, link-local or shared (100.64/10)
+  address on a port from 1024. Open it from the editor's "On a device" panel: the iPhone
+  Camera app on its QR code, `adb shell "am start …"` on Android, or `xcrun simctl openurl`
+  on a simulator. Release builds have no such link (ED3) (#240).
+- `GET /device-proxy` returns each URL's debug `link` (none for a public address), and its
+  QR code now encodes the link instead of the bare URL (#240).
+- Portal: recording refuses an `application/x-www-form-urlencoded` request body that
+  contains a sensitive key (422 `form_body_with_sensitive_key`) (#233).
+- Portal: `GET /states` reports `@ScreenState` functions it cannot read (inside an object
+  or class, a qualified or foreign `NamedState`, an unimported annotation) instead of
+  skipping them, matches the annotation by import, full name or same-file typealias, and
+  re-parses only changed screen files (#233).
+- Apps that `keliver-init` creates get the bundle's own Gradle 9.0.0 wrapper
+  (`scripts/templates/app-wrapper`), the version the scaffolders' AGP 8.12.0 needs, not the
+  repository's Gradle (#234).
+- Production hosts (Android and iOS templates): crash rollback (WS6). A bundle that fails on
+  one install `crashThreshold` times (default 2) before proving healthy (10 s on show) is set
+  aside until a newer one is published. Its code failing to load counts, but a download
+  failure never does; so do an uncaught exception, or the app ending in the foreground
+  (Android 11+: only crashes, ANRs and foreground low-memory kills, per the system's exit
+  record). The host goes back to the last bundle that proved healthy on that install, from
+  its own copy of the signed manifest (the only bundle allowed below the rollback floor, and
+  on trial again itself), or shows the app's own view. Configure with
+  `KeliverConfig.crashThreshold`/`crashWindowMillis` or `HostConfig.kt`
+  `CRASH_THRESHOLD`/`CRASH_WINDOW_MILLIS`; 0 turns it off. Each published sequence needs its
+  own manifest URL, as `keliver-publish` writes them (`bundles/v<N>/`): the kept copy is
+  served again for the same URL (`docs/DEVICE_HOST.md`, "Crash rollback") (#242).
+- Reports: new outcome `crash-rollback` (reasons `previous-good`, `newer-bundle`,
+  `app-view`) and reason `set-aside`. The relay's report collector accepts them. **An older
+  relay rejects (400) every report with an outcome or reason it does not know**, so it loses
+  `set-aside` reports as well as `crash-rollback` ones, and a release owner on one never hears
+  that a bundle was set aside: upgrade the relay that collects reports along with the hosts.
+  Android hosts send each report with `Connection: close` (#242).
 
 ## Keliver 0.4.1 - 2026-10-27
 

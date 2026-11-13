@@ -3,6 +3,8 @@
 > **2026-11-09:** the plan of record is [`PLAN_2026-11.md`](PLAN_2026-11.md). Its milestones
 > (MS0–MS8) order everything below; "Current priorities" (ranked 2026-10-27) is kept as written,
 > and its open items are mapped in that plan's section 7.
+> **2026-11-10:** MS1 is merged (#222, `4e8f62e9a`): Kotlin 2.4.20, Zipline 1.28.0, CMP 1.11.1,
+> compileSdk 37 and minSdk 23, no iosX64; nothing published (it ships in libraries 0.5.0).
 
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
 its evidence — nothing here is speculative. **Status: 2026-10-27.** "Current
@@ -427,7 +429,8 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 ## Current priorities
 
 **From 2026-11-09, ranked by [`PLAN_2026-11.md`](PLAN_2026-11.md):** MS0 housekeeping (that
-plan's pull request, an Android emulator image); MS1 Kotlin 2.4.20 with Zipline 1.28.0; MS2 and
+plan's pull request, an Android emulator image); MS1 Kotlin 2.4.20 with Zipline 1.28.0 (merged
+2026-11-10, #222); MS2 and
 MS3, Gates A and B of the proposed Compose-generated API on the 2026-10 product proof's feature;
 MS4 the generated API in full if Gate B confirms it, with the bridges (B5c) and the editor's
 catalog; MS5 libraries 0.5.0 and a tools release; MS6 the editor for teams (named states, Live

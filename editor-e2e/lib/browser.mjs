@@ -36,6 +36,71 @@ export function findChrome() {
  * profile can run a stale cached build: every test gets its own profile.
  */
 export async function launch({ profileDir, width = 1440, height = 900, artifacts }) {
+  // A cold machine's FIRST Chrome start (fonts, shader and disk caches still empty) has
+  // missed a 16 s wait for the DevTools port on hosted ubuntu runners, where every later
+  // start took a second or two. So the first start in this process waits longer, and a
+  // start that misses the port is retried once, on a fresh profile; a second miss fails.
+  // Either case is logged, so a slow start shows in the output instead of hiding.
+  const first = !launched;
+  launched = true;
+  const { proc, port } = await startWithRetry(
+    (dir, waitMs) => startChrome(dir, width, height, waitMs),
+    profileDir, { first, waitMs: PORT_WAIT_MS, firstWaitMs: FIRST_PORT_WAIT_MS });
+  let target = null;
+  for (let i = 0; i < 50 && !target; i++) {
+    try { target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find((t) => t.type === 'page'); } catch { /* retry */ }
+    if (!target) await sleep(100);
+  }
+  if (!target) { proc.kill('SIGKILL'); throw new Error('no page target'); }
+  const page = new Page(proc, target.webSocketDebuggerUrl, { width, height, artifacts });
+  try {
+    await page.open();
+  } catch (e) {
+    proc.kill('SIGKILL'); // a page that never opened must not leave its Chrome running
+    throw e;
+  }
+  return page;
+}
+
+const PORT_WAIT_MS = 16000;
+const FIRST_PORT_WAIT_MS = 45000;
+let launched = false;
+
+export class NoPortError extends Error {
+  constructor(stderr) { super(`Chrome did not open a DevTools port: ${stderr}`); this.stderr = stderr; }
+}
+
+/**
+ * Calls [start] (profile dir, wait in ms) -> {proc, port, ms}, which throws [NoPortError] on a
+ * miss: [firstWaitMs] on the run's [first] start, else [waitMs]; one miss is retried on a fresh
+ * profile ([profileDir]-retry) with [firstWaitMs], a second miss throws. Logs a retry, and a
+ * first start slower than [waitMs]. Exported for its self-test (browser-retry.selftest.mjs).
+ */
+export async function startWithRetry(start, profileDir, { first, waitMs, firstWaitMs, log = console.log }) {
+  const wait = first ? firstWaitMs : waitMs;
+  let started;
+  try {
+    started = await start(profileDir, wait);
+  } catch (e) {
+    if (!(e instanceof NoPortError)) throw e;
+    log(`  [browser] Chrome opened no DevTools port within ${wait / 1000} s${first ? ' (its first start in this run)' : ''}; retrying once on a fresh profile`);
+    try {
+      started = await start(`${profileDir}-retry`, firstWaitMs);
+    } catch (e2) {
+      if (e2 instanceof NoPortError) {
+        throw new Error(`Chrome did not open a DevTools port, twice (within ${wait / 1000} s, then ${firstWaitMs / 1000} s).\nFirst: ${e.stderr}\nSecond: ${e2.stderr}`);
+      }
+      throw e2;
+    }
+    log(`  [browser] the retried Chrome opened its DevTools port after ${started.ms} ms`);
+    return started;
+  }
+  if (first && started.ms > waitMs) log(`  [browser] Chrome's first start took ${started.ms} ms to open its DevTools port (later starts wait ${waitMs / 1000} s)`);
+  return started;
+}
+
+/** Starts Chrome on [profileDir]; resolves {proc, port, ms} once it has written its DevTools port. */
+async function startChrome(profileDir, width, height, waitMs) {
   fs.mkdirSync(profileDir, { recursive: true });
   const args = [
     '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profileDir}`,
@@ -55,27 +120,19 @@ export async function launch({ profileDir, width = 1440, height = 900, artifacts
   let stderr = '';
   proc.stderr.on('data', (d) => { stderr = (stderr + d).slice(-4000); });
   const portFile = path.join(profileDir, 'DevToolsActivePort');
+  const start = Date.now();
   let port = null;
-  for (let i = 0; i < 150 && port == null; i++) {
+  while (port == null && Date.now() - start < waitMs) {
     if (proc.exitCode != null) throw new Error(`Chrome exited (${proc.exitCode}): ${stderr}`);
     try { port = +fs.readFileSync(portFile, 'utf8').split('\n')[0] || null; } catch { /* not yet */ }
     if (port == null) await sleep(100);
   }
-  if (port == null) { proc.kill('SIGKILL'); throw new Error(`Chrome did not open a DevTools port: ${stderr}`); }
-  let target = null;
-  for (let i = 0; i < 50 && !target; i++) {
-    try { target = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find((t) => t.type === 'page'); } catch { /* retry */ }
-    if (!target) await sleep(100);
+  if (port == null) {
+    proc.kill('SIGKILL');
+    await new Promise((r) => { if (proc.exitCode != null || proc.signalCode != null) r(); else proc.once('exit', r); });
+    throw new NoPortError(stderr);
   }
-  if (!target) { proc.kill('SIGKILL'); throw new Error('no page target'); }
-  const page = new Page(proc, target.webSocketDebuggerUrl, { width, height, artifacts });
-  try {
-    await page.open();
-  } catch (e) {
-    proc.kill('SIGKILL'); // a page that never opened must not leave its Chrome running
-    throw e;
-  }
-  return page;
+  return { proc, port, ms: Date.now() - start };
 }
 
 const KEYS = {

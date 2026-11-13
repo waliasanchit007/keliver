@@ -30,7 +30,7 @@ class ComposeCatalog(val widgets: List<Entry>, val modifiers: List<Entry>) {
     val scope: String?,
     val params: List<Param>,
   ) {
-    /** A widget node's type: the guest name and the overload's tag (`…material3.Text#6`). */
+    /** A widget node's type: the guest name and the overload's tag (`…material3.Text#10`). */
     val type: String get() = "$guest#$tag"
 
     /** A modifier element's key in a node's modifier map, after its index (`padding#2`). */

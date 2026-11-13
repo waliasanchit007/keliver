@@ -69,6 +69,14 @@ class RequestPolicyTest {
     assertEquals(201, ok.status)
   }
 
+  /** The device check X11 (reference/inventory/ci/w2/android-embed.sh) greps the host's log for these sentences. */
+  @Test fun theRefusalReasonsAreTheSentencesX11Expects() {
+    val p = policy(RequestPolicy.Rule("GET", "ping"))
+    assertEquals("POST is a state-changing call, and this build does not allow them", p.refusal("POST", "ping"))
+    assertEquals("GET /admin is not in the allow-list", p.refusal("GET", "admin"))
+    assertNull(p.refusal("GET", "ping"))
+  }
+
   @Test fun aPolicyForAnotherOriginThanTheApiBaseRefusesEverything() {
     val elsewhere = RequestPolicy("https://api.example.com/".toHttpUrl(), setOf(RequestPolicy.Rule("GET", "orders")))
     val why = refused { http(elsewhere).execute(HttpRequest("GET", "orders")) }

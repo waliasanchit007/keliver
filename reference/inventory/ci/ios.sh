@@ -204,9 +204,14 @@ phones = [d['identifier'] for d in rt.get('supportedDeviceTypes', []) if d['name
 print(rt['identifier'], (shipped or phones)[0])
 PY
 )"
-# Named per run, so a self-hosted runner's reset (ci/selfhosted/reset.sh) can tell a
-# CI run's leftover from a simulator someone made by running ios.sh by hand.
-UDID="$(xcrun simctl create "keliver-ios-ci-${GITHUB_RUN_ID:-local}" ${SIM#* } ${SIM% *})" || { bad "could not create a simulator ($SIM)"; exit 1; }
+# Named per run attempt, so a self-hosted runner's reset (ci/selfhosted/reset.sh) can
+# tell a CI run's leftover from a simulator someone made by running ios.sh by hand. A
+# rerun's attempts share the run id, so the attempt is in the name too: a rerun's
+# simulator never shares its name with an earlier attempt's (one an orphaned run may
+# still be using or deleting).
+SIM_NAME="keliver-ios-ci-local"
+[ -n "${GITHUB_RUN_ID:-}" ] && SIM_NAME="keliver-ios-ci-$GITHUB_RUN_ID-${GITHUB_RUN_ATTEMPT:-1}"
+UDID="$(xcrun simctl create "$SIM_NAME" ${SIM#* } ${SIM% *})" || { bad "could not create a simulator ($SIM)"; exit 1; }
 echo "simulator: $UDID ($SIM)" | tee "$EV/simulator.txt"
 xcrun simctl boot "$UDID" && xcrun simctl bootstatus "$UDID" -b > /dev/null 2>&1
 xcrun simctl install "$UDID" "$APPB" && ok "P1: the host installed as its own app ($BID)" || bad "P1: install failed"

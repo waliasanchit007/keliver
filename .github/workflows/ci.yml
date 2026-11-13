@@ -11,9 +11,11 @@ on:
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
 
-# Cancel an older pull request run when a new push lands. Pushes to main are never cancelled:
-# only a main run that finishes saves the Gradle cache every pull request reads, and merges
-# often land minutes apart (2026-11-11: two main runs in a row were cancelled by the next merge).
+# Cancel an older pull request run when a new push lands. A running main build is never
+# cancelled (a main run still waiting is replaced by the next one, as GitHub's concurrency
+# groups do): only a main run that finishes saves the Gradle cache every pull request reads,
+# and merges often land minutes apart (2026-11-11: two main runs in a row, e.g. run
+# 42886269065, were cancelled by the next merge under the old rule that cancelled main too).
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -79,7 +81,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     # A pull request from a fork always builds on a hosted runner, so no outside
-    # code reaches a self-hosted machine even if CI_RUNNER names one.
+    # code reaches a self-hosted machine even if CI_RUNNER names one. The fallback
+    # here is macos-latest, while ios-host.yml's is macos-15 on purpose: that
+    # harness is pinned to one Xcode and simulator runtime; this build is not.
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.CI_RUNNER || 'macos-latest' }}
     # 90: calibrated against the self-hosted Mac at 30, then 60. On GitHub-hosted
     # macos-latest (CI_RUNNER) the full graph takes 50-60 minutes, and at 60 the
@@ -88,7 +92,7 @@ jobs:
     # repos, so a generous ceiling costs nothing; a tight one reads like someone
     # stopped the run. 150 since 2026-11-11: after Kotlin 2.4.20 and the JS/wasm test
     # step the job takes 85-100 minutes, and every build at 90 was cancelled in its
-    # last step (e.g. runs 42886398822, 42886269065), main's included, so no cache was saved.
+    # last step (e.g. run 42886398822), main's included, so no cache was saved.
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4

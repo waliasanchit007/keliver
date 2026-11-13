@@ -58,14 +58,14 @@ class PreviewPersonaTest {
   @Test
   fun fixtureDescriptionsAndTypedGraphComeFromTheSamePersona() {
     val persona = PreviewPersona(
-      id = "kyc-pending",
+      id = "verification-pending",
       auth = AuthState.SignedIn(
         subject = "user-42",
         displayName = "Ari",
-        attributes = mapOf("kyc" to "pending"),
+        attributes = mapOf("verification" to "pending"),
       ),
       flags = mapOf("new-profile" to true),
-      states = mapOf("HostKyc@1" to "pending"),
+      states = mapOf("HostVerification@1" to "pending"),
       httpFixtureSet = "profile-pending",
     )
 
@@ -76,7 +76,7 @@ class PreviewPersonaTest {
     assertEquals("new-profile=on", states.getValue(HOST_FLAGS_CAPABILITY))
     assertEquals("recording sink", states.getValue(HOST_ANALYTICS_CAPABILITY))
     assertEquals("replay set: profile-pending", states.getValue(HOST_HTTP_CAPABILITY))
-    assertEquals("pending", states.getValue("HostKyc@1"))
+    assertEquals("pending", states.getValue("HostVerification@1"))
     assertEquals(persona.auth, fixtures.auth.state.value)
     assertTrue(fixtures.flags.isEnabled("new-profile"))
   }
