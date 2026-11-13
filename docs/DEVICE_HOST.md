@@ -263,12 +263,15 @@ that opens.
   while a screen showed it, one record per screen on show (Android from tools
   0.3.14, iOS from 0.3.15). From tools 0.3.16, a host
   whose first load failed loads again at the next update check (§2), so one
-  process can send `not-loaded` more than once, then `loaded`.
-- **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `bridge-missing`
-  and `bridge-shape` (B4, below), `bridge-bind` (B5, below), `signature`,
-  `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
-  `other`. A relay older than the host refuses a reason it does not know, and
-  that report is dropped.
+  process can send `not-loaded` more than once, then `loaded`. WS6 adds
+  `crash-rollback`: a bundle was set aside for failing on this install
+  ("Crash rollback", below).
+- **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `set-aside`
+  (WS6), `bridge-missing` and `bridge-shape` (B4, below), `bridge-bind` (B5,
+  below), `signature`, `lookup-failed`, `network`, `config`, `exception` (for
+  `screen-failed`), `previous-good`, `newer-bundle` or `app-view` (for
+  `crash-rollback`: what runs instead), or `other`. A relay older than the host
+  refuses an outcome or a reason it does not know, and that report is dropped.
 
 Where the records go:
 - **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
@@ -282,6 +285,10 @@ Where the records go:
     above.
   - It is best effort: one try, no redirect followed, never blocking or failing
     a load. Android allows 10 s in all; iOS gives up after 10 s without data.
+    On Android each report goes on a connection of its own (`Connection:
+    close`): with one try, a report sent on a kept connection your collector
+    had already closed would be lost, and reports come in bursts (a crash
+    rollback sends `screen-failed` and `crash-rollback` together).
   - The URL may not carry `user@`, a query or a fragment, and it is never
     logged. A release build refuses `http://`.
   - On iOS, use `https://`: the scaffolded App Transport Security exceptions
@@ -374,6 +381,104 @@ backwards. Ways a publisher can do that by mistake:
 `keliver-publish --republish <v>` publishes v`<v>`'s unchanged modules as a new
 `v<N>/` at the next sequence, signed by the app's `keliverResign` task. Hosts
 take it because it is newer.
+
+**Crash rollback** (WS6, both hosts; `CrashRollback.kt`, the same file in each).
+A bundle newer than the last one that proved healthy on this install is **on
+trial**. Each of these is one failure of it, counted per install and per signed
+sequence:
+- its code did not load, and the failure came from its code: a module threw
+  while it evaluated, or the guest's main function or its presenter did.
+  Nothing that fails before its code begins to evaluate, or that is a download,
+  is counted: the network (offline, a 404, a timeout, a module download that
+  fails while another module already evaluated), the signature, the floor, a
+  module whose bytes do not match the sha256 its manifest signs, or an app's
+  bridge binding (the host's own code, which would fail for any bundle). Such a
+  start shows `not-loaded` and the next one tries again;
+- its code threw (an uncaught guest exception) before it proved healthy;
+- the process ended while a screen showed: while the bundle's code evaluated,
+  or once it had loaded and before it proved healthy. A "started, not yet
+  healthy" marker, written before the code runs, is still set at the next
+  start. It is set only while a screen shows, and cleared when none does, even
+  while code is still loading: an app sent to the background and ended there is
+  no failure, nor is a load that runs in the background (an update check, a
+  start the user left at once). On Android 11 and later the host also asks the
+  system how exactly that process ended (`ApplicationExitInfo`, matched by the
+  pid stored with the marker): a crash, a native crash, an ANR, a failed start,
+  or a low-memory kill while it was in the foreground counts; a force-stop, a
+  swipe or a low-memory kill in the background does not. With no record of that
+  process (Android 10 and earlier, or after a reboot) the marker alone counts.
+  iOS has no such record either, so there any process ended in the foreground
+  within the window counts: a crash, a jetsam (memory) kill, and also Xcode's
+  stop button or a simulator `terminate`. A user's swipe-away goes through the
+  background first, which clears the marker.
+
+A bundle **proves healthy** once screens have shown it for the crash window
+with no failure. At the **threshold** it is **set aside**: persisted, and
+skipped on the network and on a cache start until a newer sequence is
+published. Then the host goes back to the newest bundle that proved healthy on
+this install, in the same process when it can, or, with none (a first install,
+or an install from before crash rollback), shows the app's own view
+(`onUnavailable`, outcome `crash-rollback`).
+
+The bundle the host goes back to gets **a trial of its own**: what the set-aside
+bundle left behind (data it migrated, say), or modules gone from the server, can
+make it fail too. If it reaches the threshold, it is forgotten along with its
+kept manifest, and the host shows the app's own view, without retrying, until a
+newer sequence is published. (A download failure is not counted for it either:
+that start shows `not-loaded`, and the next tries again.)
+
+**What it does not see.** A bundle is judged only during its window. A crash
+after it proved healthy is never counted, so a bundle that crashes only on a
+route the user opens later than the window (10 s on show by default) is never
+set aside; raise the window (`crashWindowMillis`, `CRASH_WINDOW_MILLIS`) to
+watch longer, at the cost of a slower verdict. Android before 11 cannot tell a
+crash from a force-stop, so there both count.
+
+| Setting | Android (`KeliverConfig`) | iOS (`HostConfig.kt`) | Default |
+|---|---|---|---|
+| Failures that set a bundle aside (0 turns crash rollback off) | `crashThreshold` | `CRASH_THRESHOLD` | 2 |
+| How long screens show a new bundle before it proves healthy | `crashWindowMillis` | `CRASH_WINDOW_MILLIS` | 10 000 ms |
+
+**How it keeps the floor.** The floor is unchanged: it still rises as soon as a
+load succeeded, and nothing below it runs, with **one** exception. The newest
+bundle that proved healthy on this install may run below the floor, and only:
+- once every bundle above it that this install loaded has been set aside (the
+  highest set aside is at or above the floor), and
+- from this install's own copy of its signed manifest, kept when it loaded from
+  the network and promoted when it proved healthy (or from Zipline's cache,
+  when that still holds it), never from the network. Zipline verifies its
+  signature again; its modules come from the cache, or from the network by the
+  sha256 each has in that signed manifest.
+
+So someone who can make a new bundle fail (bad API data, say) can bring back
+exactly the bundle this install last ran healthily, nothing older, and the
+network still serves nothing below the floor. A newer bundle that loads raises
+the floor past the set-aside one and ends the exception.
+
+**What a release owner sees.** A `crash-rollback` report (W6) for the set-aside
+sequence, with a fixed reason for what runs instead: `previous-good` (the last
+healthy bundle, or the running one when an update was set aside),
+`newer-bundle` (the index already offers a newer one) or `app-view` (nothing to
+go back to; reported once, by the start that set the bundle aside, not by every
+later start that shows the app's view). A manifest refused for being set aside
+reports `set-aside`. A relay older than the host drops `crash-rollback`
+reports (an outcome it does not know), so upgrade the relay that collects
+them.
+Counted failures that are below the threshold are not reported; a guest that
+threw also reports `screen-failed` for each screen that showed it, as before. A
+debug build logs every count and every set-aside loudly (`CRASH ROLLBACK`).
+To recover, publish a fix: it is newer, so hosts take it.
+
+**Not protected:** "clear data" or a reinstall forgets what was set aside (and
+the floor, as above), and a bundle without a signed sequence is never counted.
+The ledger is kept per signing key, as the floor is, so a key rotation (W8)
+starts it afresh: nothing is set aside under the new key, and there is nothing
+to go back to, until a bundle proves healthy under it. A set-aside sequence
+re-signed with the new key gets its tries again. The ledger lives in the app's
+preferences next to the floor and shares its trust: it is not authenticated,
+and someone who can write those preferences could name an old signed manifest
+as the one to go back to and run it below the floor. That is no new hole: they
+can already reset the floor itself. An unreadable ledger reads as empty.
 
 **Channels** (both hosts). A host is built for one channel, `--channel` on
 either scaffolder (default `stable`; Android `keliver.channel` in
@@ -785,6 +890,18 @@ none in a release build.
 **Rollback protection** is as on Android (§2): a per-key floor in
 `NSUserDefaults`, checked on the network and on the cache start. A reinstall
 resets it.
+
+**Crash rollback** is as on Android (§2, "Crash rollback"), with
+`CRASH_THRESHOLD` and `CRASH_WINDOW_MILLIS` in `HostConfig.kt` and its ledger in
+`NSUserDefaults` (written through with `synchronize()` before the code runs).
+iOS keeps no record of how the last process ended, so a process stopped in the
+foreground while a new bundle is in its crash window (Xcode's stop button, a
+simulator `terminate`) counts as a failure: when you iterate on a new bundle
+in the simulator, let it show for the window first, or set `CRASH_THRESHOLD`
+to 0 while you do (and in CI scenarios that terminate the app soon after a new
+bundle shows). An app the user sends to the background, or swipes away from
+the switcher, is not counted: the background clears the marker first. Reports
+reach `Keliver.onReport`.
 
 
 ## 4. Embedding the host in an existing app

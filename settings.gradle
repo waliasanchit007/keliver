@@ -210,6 +210,7 @@ include ':portal-device-guest' // spike/keliver-web portal M2 Option X: keliver-
 include ':portal-device-android' // spike/keliver-web portal M2 Option X: Android Treehouse host
 include ':portal-schema-codegen' // spike/keliver-web portal P1: schema→portal codegen tool
 include ':portal-render' // spike/keliver-web portal P1: generated WidgetNode interpreter (js+wasm, shared web+device)
+include ':portal-compose-render' // ED0 spike (docs/ED0_SPIKE.md): the canvas for Compose-shaped screens, through the generated stubs
 include ':portal-editor' // item ②: reusable editor shell (per-app editors call runPortalEditor(entry))
 include ':portal-flow' // #13 F1: FlowSpec + flow{} DSL (pure, all targets; apps compile it, relay parses it)
 include ':keliver-capabilities' // #16: pure auth/flags/analytics vocabulary + deterministic fixtures

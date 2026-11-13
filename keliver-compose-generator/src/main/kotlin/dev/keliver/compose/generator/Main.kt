@@ -51,7 +51,12 @@ class Output(
   val values: Map<String, String>,
   val editor: String,
   val lock: Lock,
+  /** ED0: the editor canvas's interpreter (portal-compose-render), relative path → text. */
+  val editorRender: Map<String, String> = emptyMap(),
 )
+
+/** The package of the editor canvas's generated interpreter (ED0, docs/ED0_SPIKE.md). */
+const val EDITOR_RENDER_PACKAGE = "dev.keliver.portal.compose.render"
 
 fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List<File>): Output {
   val api = ApiReader(classpath)
@@ -80,7 +85,7 @@ fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List
   val plans = plan(config, decls, lock, defaults) + errorDecls.map { (d, message) -> Plan.ErrorStub(d, classify(d), "Keliver: $message") }
   val factories = planFactories(config, defaults, lock)
   val e = Emitter(config, plans, factories, defaults, api::supertypes)
-  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build())
+  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)))
 }
 
 fun main(argv: Array<String>) {
@@ -99,7 +104,7 @@ fun main(argv: Array<String>) {
     File(arg("--out-guest")) to out.guest,
     File(arg("--out-host")) to out.host,
     File(arg("--out-values")) to out.values,
-  )
+  ) + (if ("--out-editor-render" in args) listOf(File(arg("--out-editor-render")) to out.editorRender) else emptyList())
   val expected = buildMap {
     for ((root, files) in roots) for ((path, text) in files) put(File(root, path), text)
     put(File(arg("--out-editor")), out.editor)

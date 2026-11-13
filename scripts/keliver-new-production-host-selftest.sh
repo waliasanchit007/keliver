@@ -145,13 +145,13 @@ grep -A2 '^    mutableState.value = KeliverHostState.Running(app)$' "$M" | grep 
   && ok "M3: the code load starts when the host starts, not when the first screen asks" \
   || bad "M3: the host does not start the code load at host start"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
-  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)' "$M" \
+  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor, crash)' "$M" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
 # W4.2: the rollback floor is read per key, guards the network load and the cache
 # start, and rises only from a verified successful load.
-grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor, servedBridges)' "$M" \
-  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)' "$M" \
+grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor, crash, servedBridges)' "$M" \
+  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor, crash)' "$M" \
   && grep -q 'putLong(floorKey(it), sequence)' "$M" && grep -q 'prefs.raiseFloor(floorNames, sequence)' "$M" \
   && grep -q 'edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()' "$M" \
   && grep -q 'floorAcross(cacheNames.map { floor(it) })' "$M" && grep -q 'val floor = { prefs.floor(floorNames) }' "$M" \
@@ -161,7 +161,7 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   || bad "W4.2: the rollback floor is not wired"
 # B4: the bridge check runs where the floor's does: on the cache start (the network load's is
 # inside ManifestPinningHttpClient, in BundleIndex.kt), and a refused manifest is unloadable.
-grep -A12 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
+grep -A16 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
   && grep -q '"bridge refused:" in reason' "$M" \
   && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$(dirname "$M")/BundleIndex.kt" \
   && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
@@ -172,9 +172,9 @@ grep -A12 '^private class AcceptCachedBundle' "$M" | grep -q 'manifestBridgeProb
 grep -q '  bridges: List<KeliverBridgeBinding> = emptyList(),' "$M" && grep -q '  val bridges: List<KeliverBridgeBinding> = bridges.toList()' "$M" \
   && grep -q 'servedBridgesOf(bridges.map { it.declared })' "$M" \
   && grep -q 'private val servedBridges: Map<String, HostBridge> = servedBridgesOf(config.bridges.map { it.declared })' "$M" \
-  && [ "$(grep -c 'HostFacts(' "$M")" = "$(grep -c 'HostFacts(.*, servedBridges)' "$M")" ] \
+  && [ "$(grep -c 'HostFacts(' "$M")" = "$(grep -cE 'HostFacts\(.*, servedBridges[,)]' "$M")" ] \
   && [ "$(grep -c 'ManifestPinningHttpClient(' "$M")" = "$(grep -c 'ManifestPinningHttpClient(.*) { servedBridges }' "$M")" ] \
-  && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, servedBridges)' "$M")" ] \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, crash, servedBridges)' "$M")" ] \
   && ! grep -q 'ServedBridges' "$M" "$(dirname "$M")/BundleIndex.kt" \
   && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
   && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, ::bridgeDebugLog)' \
@@ -352,10 +352,43 @@ grep -q 'android:scheme="keliver-com.example.demo"' "$D/AndroidManifest.xml" 2>/
   && ok "ED3: the debug link (keliver-com.example.demo://keliver-debug/bundles, any port from 1024) is in src/debug only: none of it in src/main" \
   || bad "ED3: the debug link is not wired, or reaches src/main"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
-grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges)' "$M" && grep -q 'facts = facts' "$M" \
+grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges, setAside = crash.setAside())' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, versionCode, floor)" || bad "W4.5: constraints are not wired"
+# WS6: crash rollback. The ledger (CrashRollback.kt) and its JVM tests are scaffolded; the trial
+# starts once the bundle's code begins to evaluate (the first moduleLoadStart), a load failure
+# counts only when it came from that code (CodeLoadProgress: not a download), the "not yet
+# healthy" marker is written before the code runs, only while a screen shows (screens), and
+# checked at the next start against the exit record of the pid that set it, set-aside entries
+# are skipped on the network and the cache, W4's floor keeps its one exception in one place
+# (cachedBundleProblem), the threshold and window are KeliverConfig's, it is reported (the
+# app's view once, at the set-aside), and a debug build logs it loudly.
+C="${M%/*}/CrashRollback.kt"
+[ -f "$C" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
+  && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$M" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$M" \
+  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$M" \
+  && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$M" \
+  && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }' "$M" \
+  && grep -q 'crash.loadFailed(sequence, theBundles)' "$M" \
+  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$M" && grep -q 'val startStep = crash.atStart(::lastExitCrashed)' "$M" \
+  && grep -q 'crash?.screens(true)' "$M" && grep -q 'crash?.screens(screensShown > 0)' "$M" \
+  && grep -q 'android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,' "$M" \
+  && grep -q '.firstOrNull { it.pid == pid && it.processName == me && it.timestamp >= markedAt }' "$M" \
+  && grep -q 'report = setAsideNow != null)' "$M" \
+  && grep -q 'CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold, android.os.Process.myPid(), System::currentTimeMillis)' "$M" \
+  && grep -q 'if (v == null) remove(k) else putString(k, v) } }.commit()' "$M" \
+  && grep -q '  val crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,' "$M" && grep -q '  val crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,' "$M" \
+  && grep -q 'cachedBundleProblem(manifestSequence(manifest.metadata), floor(), crash)' "$M" \
+  && grep -q 'report(CRASH_ROLLBACK_OUTCOME, step.sequence, null, detail)' "$M" \
+  && grep -q 'Request.Builder().url(url).header("Connection", "close")' "$M" \
+  && grep -q 'Log.e(TAG, "!!!!!!!! CRASH ROLLBACK !!!!!!!!")' "$M" \
+  && [ "$(grep -c '    syncCrashWindow()$' "$M")" -ge 2 ] && grep -q 'delay(config.crashWindowMillis)' "$M" \
+  && grep -q 'if (sequence <= facts.setAside) return null' "${M%/*}/BundleIndex.kt" \
+  && grep -q 'crash?.setAsideProblem(sequence)?.let { throw IOException(it) }' "${M%/*}/BundleIndex.kt" \
+  && ! grep -q 'rollbackProblem(manifestSequence(manifest.metadata), floor())' "$M" \
+  && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
+  || bad "WS6: crash rollback is not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 # W4.4: --channel beta, over a removed host-android (the build below then builds a beta host).
@@ -414,7 +447,7 @@ grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q
 grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$L/consumer-rules.pro" \
   && ok "M5: the library's consumer rules keep MemoryUsage (QuickJS builds it through JNI)" || bad "M5: the library's consumer rules do not keep MemoryUsage"
 [ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
-same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
+same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt CrashRollback.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the library and the standalone host (one set of sources)"
@@ -441,7 +474,9 @@ if [ "$BUILD" = 1 ]; then
       ok "assembleDebug succeeded: $(basename "$apk"), $(wc -c < "$apk" | tr -d ' ') bytes"
       unzip -p "$apk" assets/keliver/portal_ed25519.pub | tr -d '[:space:]' | cmp -s - <(tr -d '[:space:]' < "$KEY") \
         && ok "the APK embeds exactly the scaffolded public key" || bad "the APK's embedded key differs"
-      unzip -l "$apk" | grep -q ' AndroidManifest.xml$' && ok "the APK has a manifest" || bad "the APK has no manifest"
+      # The listing first: under pipefail, grep -q stopping early could end unzip with SIGPIPE.
+      unzip -l "$apk" > "$DISP/apk-listing.txt" 2>&1
+      grep -q ' AndroidManifest.xml$' "$DISP/apk-listing.txt" && ok "the APK has a manifest" || bad "the APK has no manifest"
       find "$H/build/generated/source/buildConfig/debug" -name BuildConfig.java -exec cat {} + | grep -q 'KELIVER_UPDATES = "live"' \
         && ok "the debug build, keliver.updates empty, takes live updates" || bad "the debug build's KELIVER_UPDATES is not live"
     else
@@ -453,6 +488,12 @@ if [ "$BUILD" = 1 ]; then
     fw="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.FrameWindowTest.xml"
     [ -f "$fw" ] && grep -q 'failures="0" errors="0"' "$fw" && ! grep -q 'tests="0"' "$fw" \
       && ok "M4: the frame window's tests ran: $(grep -o 'tests="[0-9]*"' "$fw" | head -1)" || bad "M4: the frame window's tests did not run, or failed"
+    cr="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
+    [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
+      && ok "WS6: crash rollback's tests ran: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
+    rs="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.ReportSendTest.xml"
+    [ -f "$rs" ] && grep -q 'failures="0" errors="0"' "$rs" && ! grep -q 'tests="0"' "$rs" \
+      && ok "W6: the report sender's tests ran (a collector that closes loses no report): $(grep -o 'tests="[0-9]*"' "$rs" | head -1)" || bad "W6: the report sender's tests did not run, or failed"
     dlt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.DebugBundleLinkTest.xml"
     [ -f "$dlt" ] && grep -q 'failures="0" errors="0"' "$dlt" && ! grep -q 'tests="0"' "$dlt" \
       && ok "ED3: the debug link's tests ran: $(grep -o 'tests="[0-9]*"' "$dlt" | head -1)" || bad "ED3: the debug link's tests did not run, or failed"

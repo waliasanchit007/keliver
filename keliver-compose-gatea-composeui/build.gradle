@@ -1,9 +1,11 @@
 // Gate A prototype: the host renderers. src/commonMain/…/Generated.kt is generated (each renderer calls the
 // real Compose function); Runtime.kt (children, converters) and Extras.kt (the shimmer) are hand-written.
+import dev.keliver.buildsupport.WasmJs
 import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
 
 redwoodBuild {
-  targets(ToolkitComposeUi)
+  // wasmJs: the editor canvas draws with these renderers in the browser (ED0 spike, docs/ED0_SPIKE.md).
+  targets(ToolkitComposeUi + WasmJs.Browser)
   // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
   // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
   if (rootProject.hasProperty('keliverComposePrototype')) publishing()

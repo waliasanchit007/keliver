@@ -2,10 +2,12 @@
 // types (Dp, Color, Shape, TextStyle, Alignment, …) with their wire codecs, written by hand once, and
 // (GeneratedDefaults.kt, Gate B) the `*Defaults` objects and factory-made types the generator mirrors.
 // Published only with -PkeliverComposePrototype (never by a normal release).
+import dev.keliver.buildsupport.WasmJs
 import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
-  targets(Common)
+  // wasmJs: the editor's canvas (ED0 spike, docs/ED0_SPIKE.md) decodes values with these codecs.
+  targets(Common + WasmJs.Browser)
   // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
   // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
   if (rootProject.hasProperty('keliverComposePrototype')) publishing()
