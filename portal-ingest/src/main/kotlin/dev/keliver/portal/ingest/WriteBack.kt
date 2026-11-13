@@ -254,7 +254,11 @@ object WriteBack {
   internal fun sameModifiers(a: Map<String, PropValue>, b: Map<String, PropValue>): Boolean =
     a == b && modifierOrder(a) == modifierOrder(b)
 
-  private fun modifierOrder(m: Map<String, PropValue>): List<String> = m.keys.map { it.substringBefore('.') }.distinct()
+  private fun modifierOrder(m: Map<String, PropValue>): List<String> {
+    val heads = m.keys.map { it.substringBefore('.') }.distinct()
+    // ED0: a Compose node's elements carry their place in the chain (`3:padding#2`); the map's order is not it.
+    return if (heads.isNotEmpty() && heads.all(ComposeSyntax::isElementKey)) heads.sortedBy { it.substringBefore(':').toInt() } else heads
+  }
 
   /** The imports this merge's splices need (for [ensureImports]); per thread, per merge. */
   private val needed = ThreadLocal<MutableSet<String>>()
@@ -443,6 +447,11 @@ object WriteBack {
     target as DocNode.Widget
     if (parsed.type != target.type) return bail("a ${parsed.type} became a ${target.type}")
 
+    // ED0 spike (docs/ED0_SPIKE.md): a Compose node, only while its flag is on.
+    ComposeIngest.catalog()?.let { catalog ->
+      catalog.widget(parsed.type)?.let { return mergeCompose(parsed, target, it, catalog, psi, factory, components) }
+    }
+
     if (parsed.type == "Condition") return mergeCondition(parsed, target, psi, factory, components, parentType)
     // M5 logic nodes (forEach): props change → full regen (bail); else recurse children.
     if (parsed.type == "Repeat") {
@@ -490,6 +499,46 @@ object WriteBack {
       ?: return target.children.isEmpty() || bail("${target.type} has no `{ … }` block in the file to put children in")
 
     return mergeChildren(parsed.children, target.children, block, psi, factory, components, parsed.type)
+  }
+
+  /**
+   * ED0: a Compose node — its arguments and modifier list by [ComposeWriteBack]'s splices, then its
+   * children: a single content slot's statements, or each `slot:<name>` node's in its lambda.
+   */
+  private fun mergeCompose(
+    parsed: DocNode.Widget,
+    target: DocNode.Widget,
+    entry: ComposeCatalog.Entry,
+    catalog: ComposeCatalog,
+    psi: MutableMap<Long, KtExpression>,
+    factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
+  ): Boolean {
+    val call = psi[parsed.handle.v] as? KtCallExpression ?: return bail("the ${entry.name} call was not found")
+    if (parsed.props != target.props || !sameModifiers(parsed.modifiers, target.modifiers)) {
+      when (val r = ComposeWriteBack.editArguments(call, entry, parsed, target, catalog, bindings.get(), factory, catalog.widgetOverloads(entry.guest))) {
+        is ComposeWriteBack.Result.Ok -> need(r.imports)
+        is ComposeWriteBack.Result.No -> return bail(r.why)
+      }
+    }
+    if (parsed.children.isEmpty() && target.children.isEmpty()) return true
+    val single = entry.singleContentSlot
+    if (single != null) {
+      val block = ComposeWriteBack.binding(call, entry)[single.name]?.let(ComposeSyntax::lambdaOf)?.bodyExpression
+        ?: return bail("${entry.name}'s `${single.name}` block was not found")
+      return mergeChildren(parsed.children, target.children, block, psi, factory, components, parsed.type)
+    }
+    if (parsed.children.map { (it as? DocNode.Widget)?.type } != target.children.map { (it as? DocNode.Widget)?.type }) {
+      return bail("adding or removing a slot of ${entry.name} is not written surgically in the ED0 spike")
+    }
+    for ((p, t) in parsed.children.zip(target.children)) {
+      p as DocNode.Widget
+      t as DocNode.Widget
+      val lambda = psi[p.handle.v] as? org.jetbrains.kotlin.psi.KtLambdaExpression ?: return bail("the ${p.type} lambda was not found")
+      val block = lambda.bodyExpression ?: return bail("the ${p.type} lambda has no body")
+      if (!mergeChildren(p.children, t.children, block, psi, factory, components, "${parsed.type}/${p.type.removePrefix("slot:")}")) return false
+    }
+    return true
   }
 
   /** [call] (`Column { … }`) given [target]'s arguments in a new list after its name, on one line when short. */
@@ -1056,6 +1105,8 @@ object WriteBack {
     is KtDotQualifiedExpression ->
       (expr.selectorExpression as? KtCallExpression)?.lambdaArguments?.firstOrNull()
         ?.getLambdaExpression()?.bodyExpression as? KtBlockExpression
+    // ED0: a Repeat read from `for (x in items) { … }` (only while its flag is on).
+    is org.jetbrains.kotlin.psi.KtForExpression -> expr.body as? KtBlockExpression
     else -> null
   }
 

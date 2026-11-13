@@ -760,27 +760,173 @@ class Emitter(
     append("\n  ]\n}\n")
   }
 
+  /**
+   * One declaration's editor metadata. ED0 (docs/ED0_SPIKE.md) reads it to recognise Compose-shaped
+   * calls: every parameter in Compose's order (the `modifier` one too, so positional arguments map),
+   * each value parameter's guest type, nullability, a slot's scope and whether it is optional, and
+   * the guest's fully qualified name and a scoped modifier's scope (resolution by import and scope).
+   */
   private fun entryJson(p: Plan.Generated): String = buildString {
     val d = p.decl
     append("    {\"name\": \"${d.name}\", \"compose\": \"${d.pkg}.${d.owner?.let { "$it." } ?: ""}${d.name}\", ")
+    append("\"guest\": \"${d.mirrorPkg}.${d.owner?.let { "$it." } ?: ""}${d.name}\", ")
+    d.owner?.let { append("\"scope\": \"${mirrorPackage(d.pkg)}.$it\", ") }
     append("\"palette\": \"${d.pkg}\", \"tag\": ${p.entry.tag}, \"schemaClass\": \"${p.entry.name}\", ")
     d.kdoc?.let { append("\"doc\": ${jsonString(it)}, ") }
     append("\"params\": [")
     append(
-      p.params.filter { it.kind != ParamKind.MODIFIER }.joinToString(", ") { c ->
+      p.params.joinToString(", ") { c ->
+        val t = c.param.type
         val kind = when (c.kind) {
+          ParamKind.MODIFIER -> "modifier"
           ParamKind.SLOT -> "slot"
           ParamKind.LAZY -> "lazy-content"
           ParamKind.EVENT -> "event"
-          ParamKind.DROP -> "unsupported"
-          else -> c.param.type.simpleName.replaceFirstChar { it.lowercase() }
+          ParamKind.DROP, ParamKind.BLOCK -> "unsupported"
+          else -> t.simpleName.replaceFirstChar { it.lowercase() }
         }
-        "{\"name\": \"${c.param.name}\", \"kind\": \"$kind\"" +
-          (c.param.defaultText?.let { ", \"default\": ${jsonString(it)}, \"defaultCase\": \"${c.defaultCase.name.lowercase()}\"" } ?: "") + "}"
+        buildString {
+          append("{\"name\": \"${c.param.name}\", \"kind\": \"$kind\"")
+          if (c.kind == ParamKind.VALUE) append(", \"type\": \"${if (t.fq.startsWith("kotlin.")) t.fq else mirrorFq(t.fq)}\"")
+          if (c.kind == ParamKind.SLOT) t.receiver?.let { append(", \"scope\": \"${mirrorFq(it.fq)}\"") }
+          if (c.kind == ParamKind.SLOT && (c.param.hasDefault || t.nullable)) append(", \"optional\": true")
+          if (t.nullable && c.kind != ParamKind.SLOT) append(", \"nullable\": true")
+          if (c.kind != ParamKind.MODIFIER) {
+            c.param.defaultText?.let { append(", \"default\": ${jsonString(it)}, \"defaultCase\": \"${c.defaultCase.name.lowercase()}\"") }
+          }
+          append("}")
+        }
       },
     )
     append("]}")
   }
+
+  // ---------------------------------------------------------------------------------------------
+  // The editor's canvas (ED0, docs/ED0_SPIKE.md): an interpreter from a recognised document node to
+  // the generated guest stubs, so the canvas draws through the generated renderers as a device does.
+
+  /**
+   * `portal-compose-render`'s Generated.kt: one branch per widget overload and per modifier, each
+   * calling the guest stub with the node's arguments and, for an argument the node does not set,
+   * the stub's own default expression (copied, as the stub copies Compose's).
+   */
+  fun editorRender(pkg: String): Pair<String, String> {
+    val imports = sortedSetOf<String>()
+    val body = StringBuilder()
+    body.append("/** Calls the guest stub for a widget node of [type] (`<guest fq>#<tag>`); false when the type is not generated here. */\n")
+    body.append("@Composable\ninternal fun renderGenerated(type: String, a: CanvasArgs, modifier: Modifier, slots: CanvasSlots): Boolean {\n")
+    body.append("  when (type) {\n")
+    for (w in widgets) {
+      // A lazy list's content is a LazyListScope block, not a slot: the canvas does not draw it yet
+      // (renderGenerated says false, and the canvas reports the node instead of guessing).
+      if (w.params.any { it.kind == ParamKind.LAZY }) continue
+      val d = w.decl
+      currentDecl = d
+      body.append("    \"${d.mirrorPkg}.${d.name}#${w.entry.tag}\" -> {\n")
+      val args = mutableListOf<String>()
+      for (c in w.params) {
+        val n = c.param.name
+        val t = c.param.type
+        when (c.kind) {
+          ParamKind.MODIFIER -> args += "$n = modifier"
+          ParamKind.SLOT -> args += "$n = { slots.Render(\"$n\", ${if (t.receiver != null) "this" else "null"}) }"
+          ParamKind.EVENT -> args += "$n = a.action${t.functionParams.size}(\"$n\")"
+          ParamKind.VALUE -> {
+            body.append("      val $n = ${canvasValue(c, d, imports, missing = "return a.missing(\"$n\")")}\n")
+            args += "$n = $n"
+          }
+          else -> {}
+        }
+      }
+      body.append("      ${d.mirrorPkg}.${d.name}(\n")
+      args.forEach { body.append("        $it,\n") }
+      body.append("      )\n    }\n")
+    }
+    body.append("    else -> return false\n  }\n  return true\n}\n\n")
+
+    body.append("/** Appends the modifier element [key] (`<name>#<tag>`) to [m]; null when it is not generated here, misses an argument or its scope. */\n")
+    body.append("@Composable\ninternal fun applyGenerated(m: Modifier, key: String, a: CanvasArgs, scope: Any?): Modifier? {\n  return when (key) {\n")
+    for (mod in modifiers) {
+      val d = mod.decl
+      currentDecl = d
+      val locals = mutableListOf<String>()
+      val args = mutableListOf<String>()
+      for (c in mod.params) {
+        val n = c.param.name
+        when (c.kind) {
+          ParamKind.VALUE -> {
+            locals += "val $n = ${canvasValue(c, d, imports, missing = "return null")}"
+            args += "$n = $n"
+          }
+          ParamKind.EVENT -> args += "$n = a.action${c.param.type.functionParams.size}(\"$n\")"
+          else -> {}
+        }
+      }
+      val call = "m.${d.name}(${args.joinToString(", ")})"
+      val guarded = if (d.owner == null) {
+        imports += "${d.mirrorPkg}.${d.name}"
+        call
+      } else {
+        "(scope as? ${mirrorPackage(d.pkg)}.${d.owner})?.run { $call }"
+      }
+      val text = if (locals.isEmpty()) guarded else "run { ${locals.joinToString("; ")}; $guarded }"
+      body.append("    \"${d.name}#${mod.entry.tag}\" -> $text\n")
+    }
+    body.append("    else -> null\n  }\n}\n")
+
+    val text = buildString {
+      append(HEADER)
+      append("@file:Suppress(\"ktlint\", \"RedundantVisibilityModifier\", \"DEPRECATION\", \"UNUSED_VARIABLE\")\n\n")
+      append("package $pkg\n\n")
+      (listOf("androidx.compose.runtime.Composable", "dev.keliver.compose.ui.Modifier") + imports).distinct().sorted().forEach { append("import $it\n") }
+      append('\n').append(body)
+    }
+    return "${pkg.replace('.', '/')}/Generated.kt" to text
+  }
+
+  /**
+   * A value argument as the canvas reads it from a node: the node's value when it sets one, else
+   * the stub's default. A required argument the node lacks ends the branch ([CanvasArgs.missing]).
+   */
+  private fun canvasValue(c: Classified, d: DeclInfo, imports: MutableSet<String>, missing: String): String {
+    val t = c.param.type
+    val n = c.param.name
+    val default = c.param.defaultText
+    // A host-state handle that travels as its wire value (`LazyListState`) is never a document
+    // value: the canvas always takes the stub's default (a fresh state), as a new screen does.
+    if (t.fq in TypeMap.wireValue) {
+      if (default == null) return missing
+      imports += expressionImports(default, d, mirror = true)
+      return "($default)"
+    }
+    val read = when {
+      t.fq == TypeMap.IMAGE_MODEL -> "a.string(\"$n\")"
+      t.fq == "kotlin.String" -> "a.string(\"$n\")"
+      t.fq == "kotlin.Int" -> "a.int(\"$n\")"
+      t.fq == "kotlin.Boolean" -> "a.bool(\"$n\")"
+      t.fq == "kotlin.Float" -> "a.float(\"$n\")"
+      // A type only a `*Defaults` factory makes (`ButtonColors`): its generated class's own codec.
+      t.fq in TypeMap.opaque -> "a.value(\"$n\", ${mirrorFq(t.fq)}.Codec)"
+      else -> "a.value(\"$n\", ${codecFq(mirrorFq(t.fq))})"
+    }
+    return when {
+      default == null -> if (t.nullable) read else "$read ?: $missing"
+      else -> {
+        imports += expressionImports(default, d, mirror = true)
+        if (t.nullable) "if (a.has(\"$n\")) $read else ($default)" else "$read ?: ($default)"
+      }
+    }
+  }
+}
+
+/**
+ * The hand-written codec of a mirror type (keliver-compose-values): `<Simple>Codec` beside it, or
+ * `<Inner><Outer>Codec` for a nested type (`Alignment.Horizontal` → `HorizontalAlignmentCodec`).
+ */
+fun codecFq(mirror: String): String {
+  val pkg = packageOf(mirror)
+  val classes = mirror.removePrefix("$pkg.").split('.')
+  return "$pkg." + (if (classes.size == 2) classes[1] + classes[0] else classes.last()) + "Codec"
 }
 
 fun kotlinString(s: String): String = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$") + "\""

@@ -141,6 +141,8 @@ jobs:
       # Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md): the generated group's checked-in
       # sources and lock must match a fresh generation from Compose, and the lock may only grow.
       # Regenerate with `./gradlew :keliver-compose-generator:generateComposeApi` and commit.
+      # portal-compose-render is the ED0 spike's canvas (docs/ED0_SPIKE.md): its golden document
+      # is what portal-ingest reads from Gate A's sample, so an ingest change that moves it fails here.
       - name: Compose-generated group is fresh
         run: >
           ./gradlew
@@ -150,6 +152,8 @@ jobs:
           :keliver-compose-values:jsTest
           :keliver-compose-gatea-compose:jvmTest
           :keliver-compose-gatea-composeui:jvmTest
+          :portal-compose-render:jvmTest
+          :portal-compose-render:wasmJsTest
           -DRELEASE_SIGNING_ENABLED=false
 
       # Compiled component preview: the dogfood editor's adapters file must be
