@@ -102,11 +102,13 @@ With the flag off, the same sample is not Compose nodes (`theFlagIsOffByDefault`
 
 ### Write-back: byte for byte
 
-`ComposeWriteBackTest` (19 tests: **16 round trips with an undo**, 3 refusals, 1 one-way edit and
-1 no-op). A round trip applies document ops, writes back through `WriteBack.attempt` (whose safety
-net re-reads the result as the document), then writes back the inverse ops. **The middle text
-must equal the original with only the edited token changed, and the final text must equal the
-original byte for byte.** The one-way edit (a middle element removed) checks the middle text only.
+`ComposeWriteBackTest` (20 tests: **16 round trips with an undo** in 14 tests, 3 refusals, 2
+one-way edits and 1 no-op). A round trip applies document ops, writes back through
+`WriteBack.attempt` (whose safety net re-reads the result as the document), then writes back the
+inverse ops. **The middle text must equal the original with only the edited token changed, and
+the final text must equal the original byte for byte.** The one-way edits (a middle element
+removed; two adjacent arguments removed, whose undo would add them back named and last) check the
+middle text only.
 
 | Edit | Only this changes |
 |---|---|
@@ -118,6 +120,7 @@ original byte for byte.** The one-way edit (a middle element removed) checks the
 | A new argument on a multi-line call | its own line, same indent, trailing comma kept |
 | A modifier element removed | its `.padding(…)` piece and the line break before it |
 | A middle element removed (one way) | that element only, and its now unused imports |
+| Two adjacent arguments removed from one line (one way) | both with their separators, as one piece |
 | An edit inside a named slot (`ListItem`'s `supportingContent`) | the one `Text` literal |
 | Gate A's sample (3 round trips): `maxLines`, the card's vertical padding, a chip's background inside the `for` loop (a theme colour) | the one token each |
 | The second of two repeated `padding` elements | its `4.dp`; the first `padding` keeps its bytes |
