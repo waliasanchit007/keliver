@@ -381,6 +381,7 @@ C="${M%/*}/CrashRollback.kt"
   && grep -q '  val crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,' "$M" && grep -q '  val crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,' "$M" \
   && grep -q 'cachedBundleProblem(manifestSequence(manifest.metadata), floor(), crash)' "$M" \
   && grep -q 'report(CRASH_ROLLBACK_OUTCOME, step.sequence, null, detail)' "$M" \
+  && grep -q 'Request.Builder().url(url).header("Connection", "close")' "$M" \
   && grep -q 'Log.e(TAG, "!!!!!!!! CRASH ROLLBACK !!!!!!!!")' "$M" \
   && [ "$(grep -c '    syncCrashWindow()$' "$M")" -ge 2 ] && grep -q 'delay(config.crashWindowMillis)' "$M" \
   && grep -q 'if (sequence <= facts.setAside) return null' "${M%/*}/BundleIndex.kt" \
@@ -490,6 +491,9 @@ if [ "$BUILD" = 1 ]; then
     cr="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
     [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
       && ok "WS6: crash rollback's tests ran: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
+    rs="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.ReportSendTest.xml"
+    [ -f "$rs" ] && grep -q 'failures="0" errors="0"' "$rs" && ! grep -q 'tests="0"' "$rs" \
+      && ok "W6: the report sender's tests ran (a collector that closes loses no report): $(grep -o 'tests="[0-9]*"' "$rs" | head -1)" || bad "W6: the report sender's tests did not run, or failed"
     dlt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.DebugBundleLinkTest.xml"
     [ -f "$dlt" ] && grep -q 'failures="0" errors="0"' "$dlt" && ! grep -q 'tests="0"' "$dlt" \
       && ok "ED3: the debug link's tests ran: $(grep -o 'tests="[0-9]*"' "$dlt" | head -1)" || bad "ED3: the debug link's tests did not run, or failed"

@@ -188,6 +188,29 @@ private fun SharedPreferences.raiseFloor(cacheNames: List<String>, sequence: Lon
   if (lower.isEmpty()) return
   edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()
 }
+/** W6: the report URL's client: 10 s in all, nothing retried, no redirect followed. */
+internal fun reportHttpClient(): OkHttpClient =
+  OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false)
+    .followRedirects(false).followSslRedirects(false).build()
+
+/**
+ * W6: POSTs one report ([json]) to [url] with [client] (reportHttpClient), in the background;
+ * [notSent] gets why it was not. On a connection of its own (`Connection: close`): with nothing
+ * retried, a report sent on a kept connection the collector had already closed (an HTTP/1.0
+ * server, or a keep-alive that ran out) was lost, and reports come in bursts (WS6's rollback
+ * sends `screen-failed` and `crash-rollback` at once, moments after `loaded`).
+ */
+internal fun postReport(client: OkHttpClient, url: String, json: String, notSent: (String?) -> Unit) {
+  runCatching {
+    val request = Request.Builder().url(url).header("Connection", "close")
+      .post(json.toRequestBody("application/json".toMediaType())).build()
+    client.newCall(request).enqueue(object : Callback {
+      override fun onFailure(call: Call, e: java.io.IOException) = notSent(e.message)
+      override fun onResponse(call: Call, response: Response) = response.close()
+    })
+  }.onFailure { notSent(it.message) }
+}
+
 /**
  * This install's random id, for staged rollouts (W4.5): made once, kept here.
  * It leaves the device only in reports, and only when a report URL is set (W6).
@@ -492,11 +515,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /** Every outcome, for the app's analytics or crash keys (W6); the newest is replayed to a new collector. */
   val reports: SharedFlow<KeliverReport> = mutableReports.asSharedFlow()
 
-  /** For reports only: 10 s in all, nothing retried, no redirect followed. */
-  private val reportClient by lazy {
-    OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false)
-      .followRedirects(false).followSslRedirects(false).build()
-  }
+  /** For reports only (reportHttpClient). */
+  private val reportClient by lazy { reportHttpClient() }
   // Read once, off the per-report path.
   private val reportInstallId by lazy { runCatching { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).installId() }.getOrDefault("unknown") }
   private val reportHostVersion by lazy { config.hostVersion ?: appVersionCode() }
@@ -662,17 +682,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val url = config.reportUrl ?: return
     // Not the URL: it is the app's, and may carry what logcat should not.
     Log.d(TAG, "report: $outcome sequence=${sequence ?: "none"} reason=${r.reason.ifEmpty { "-" }}")
-    runCatching {
-      val request = Request.Builder().url(url).post(r.toJson().toRequestBody("application/json".toMediaType())).build()
-      reportClient.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: java.io.IOException) {
-          Log.d(TAG, "report not sent: ${e.message}")
-        }
-        override fun onResponse(call: Call, response: Response) {
-          response.close()
-        }
-      })
-    }.onFailure { Log.d(TAG, "report not sent: ${it.message}") }
+    postReport(reportClient, url, r.toJson()) { Log.d(TAG, "report not sent: $it") }
   }
 
   /** What a running app needs to look up and apply a newer bundle. Main thread only. */

@@ -285,6 +285,10 @@ Where the records go:
     above.
   - It is best effort: one try, no redirect followed, never blocking or failing
     a load. Android allows 10 s in all; iOS gives up after 10 s without data.
+    On Android each report goes on a connection of its own (`Connection:
+    close`): with one try, a report sent on a kept connection your collector
+    had already closed would be lost, and reports come in bursts (a crash
+    rollback sends `screen-failed` and `crash-rollback` together).
   - The URL may not carry `user@`, a query or a fragment, and it is never
     logged. A release build refuses `http://`.
   - On iOS, use `https://`: the scaffolded App Transport Security exceptions
