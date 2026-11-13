@@ -3,11 +3,11 @@
 Status: **a spike, behind a flag that is off by default.** Evidence toward Gate B
 (docs/PLAN_2026-11.md §8, MS3). It shows ingest with 0 `RawCode` and byte-for-byte write-back of
 Compose-shaped code, and a **separate canvas library** that draws the generated catalog exactly as
-the device does for the sample's widgets. That canvas is **not wired into `portal-editor`**, so the criterion "the editor
-renders the generated catalog" is only partly met (§4); the owner weighs that at Gate B. D6 and D9
-still stand: nothing here changes how today's schemas ingest, render or write back. Amending D6
-and D9 is a later pull request, after Gate B, with the owner's agreement (§5 below says what it
-would need to say).
+the device does for the sample's widgets. That canvas is **not wired into `portal-editor`**, so
+the criterion "the editor renders the generated catalog" is only partly met (§4); the owner weighs
+that at Gate B. D6 and D9 still stand: nothing here changes how today's schemas ingest, render or
+write back. Amending D6 and D9 is a later pull request, after Gate B, with the owner's agreement
+(§5 below says what it would need to say).
 
 ## 1. What was built
 
