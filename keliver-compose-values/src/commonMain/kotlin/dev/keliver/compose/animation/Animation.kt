@@ -21,8 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
-import dev.keliver.compose.animation.core.AnimationSpec
 import dev.keliver.compose.animation.core.Animatable
+import dev.keliver.compose.animation.core.AnimationSpec
 import dev.keliver.compose.animation.core.FiniteAnimationSpec
 import dev.keliver.compose.animation.core.Spring
 import dev.keliver.compose.animation.core.SpringSpec

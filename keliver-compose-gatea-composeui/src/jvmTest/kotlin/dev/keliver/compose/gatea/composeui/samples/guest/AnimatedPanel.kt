@@ -42,6 +42,7 @@ import dev.keliver.compose.ui.unit.dp
 // Gate B-e's animation sample (docs/GATE_B_RESULTS.md): the native copy differs only in its imports.
 
 /** Host-side animation: `animate*AsState` (animated references), `AnimatedVisibility`, `animateContentSize`. */
+@Suppress("ktlint:compose:modifier-missing-check")
 @Composable
 fun AnimatedPanel(expanded: Boolean) {
   val alpha by animateFloatAsState(if (expanded) 1f else 0.4f, tween(durationMillis = 400, easing = LinearEasing), label = "alpha")
@@ -57,6 +58,7 @@ fun AnimatedPanel(expanded: Boolean) {
 }
 
 /** Guest-side animation: `Animatable` in a `LaunchedEffect`, on the guest's frame clock. */
+@Suppress("ktlint:compose:modifier-missing-check")
 @Composable
 fun FrameClockPanel(expanded: Boolean) {
   val alpha = remember { Animatable(0.4f) }
