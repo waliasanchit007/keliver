@@ -678,19 +678,27 @@ Still prototype-only. Results and the timing comparison: [`GATE_B_RESULTS.md`](G
   `animateColorAsState` are hand-written in `keliver-compose-values` with Compose's signatures. They
   do not animate in the guest: they return a `State` whose value is the target, *tagged* so the
   stubs can recognise it. A `Float` or `Dp` cannot carry a reference (they are plain floats), so
-  the tag is the target's bits plus a small count, a few ULPs away from the target: a guest read
-  gets the target to within ~1e-6 relative, and arithmetic on it gives an untagged literal (the
-  rule §7 has for theme references). A `Color` uses packing bits no read uses, so a guest read is
-  exact. The guest keeps a table from tagged value to reference (id, spec, label); a call site's
-  entry leaves the table when it leaves the composition.
+  the tag is the target's bits plus a count (the count-th float away from zero; call sites sharing
+  a target take 1, 2, 3…), and arithmetic on it gives an untagged literal (the rule §7 has for
+  theme references). A `Color` puts the count in packing bits no component read uses. So a guest
+  read is not the target: `==` fails (Colour too), `0f` reads as `Float.MIN_VALUE`, a negative
+  target reads slightly more negative; docs/GATE_B_RESULTS.md lists the semantics and the read-log
+  alternative, and `AnimatedReferencesTest` pins them. The guest keeps a table from tagged value to
+  reference (id, spec, label); a call site's entry leaves the table when it leaves the composition.
 - **Which parameters accept one** is generator config (`gatea.json`'s `animated`: `alpha`,
   `size`, `width`, `height`, `padding(all)`, `background(color)`, `offset`, `rotate`, `scale`).
   For those, the generated stub sends the exact target and, before the element, an
   `ExtraAnimated(param, ref)` modifier (a hand-written extra, tag 500; at the end of a widget's own
   chain it names the widget's parameter). The generated renderer wraps that argument in the real
-  `animate*AsState`, keyed by the reference's id, so the host animates on its own frame clock and
-  nothing crosses while it runs. A host that predates `ExtraAnimated` ignores it (an unknown
-  modifier) and renders the target without animation. Existing lock entries do not change.
+  `animate*AsState`, in a movable group keyed by the element's reference ids, so the host animates
+  on its own frame clock, nothing crosses while it runs, and inserting a modifier ahead of it does
+  not reset it. A host that predates `ExtraAnimated` ignores it (an unknown modifier) and renders
+  the target without animation. **The lock:** no tag, name or parameter of an existing entry
+  changes, but the behaviour of six existing entries does (`alpha`, both `size`, `width`, `height`,
+  `padding(all)`, `background(color)`: their stubs may now send `ExtraAnimated`, their renderers
+  wrap the argument). Each configured entry carries `"animated": true` in the lock. That is not a
+  wire change (an old host degrades as above), so it does not raise the level; but
+  `checkAppendOnly` refuses dropping it, so taking an entry off the list cannot be silent.
 - **Specs, easings, transitions** are hand-written mirrors with codecs (§6): `tween`, `spring`,
   `snap`, the four standard easings and `CubicBezierEasing`; `EnterTransition`/`ExitTransition`
   (`fadeIn`, `scaleIn`, `expandIn`, `expandVertically`/`Horizontally`, `slideInVertically` and their

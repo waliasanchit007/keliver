@@ -32,11 +32,37 @@ flagged by a lint check, as the design proposed.
 | `Animatable` (Float, Dp; Color in Oklab) with `animateTo`, `snapTo`, `stop` on `withFrameNanos` | **Hand-written**: the guest-side alternative; Compose's `Animatable` is not usable in the guest (it takes the real `ui-unit` and `ui-graphics` types) | `keliver-compose-values` |
 
 How an animated reference crosses: the guest's `animate*AsState` returns the target *tagged* (a
-`Float`/`Dp` a few ULPs from the target; a `Color` in spare packing bits), the stub recognises the
-tag, sends the exact target plus an `ExtraAnimated(param, {id, spec, label})` element, and the
-renderer wraps that argument in the real `animate*AsState` keyed by the id. A guest read gets the
-target (within ~1e-6 relative for Float and Dp); arithmetic on it gives a plain literal; a host that
-predates the element ignores it and shows the target without animation.
+`Float`/`Dp` whose bits are the target's plus a count; a `Color` with the count in packing bits no
+component read uses), the stub recognises the tag, sends the exact target plus an
+`ExtraAnimated(param, {id, spec, label})` element, and the renderer wraps that argument in the real
+`animate*AsState`, in a movable group keyed by the id (a modifier inserted ahead of it does not
+reset it). Arithmetic on a tagged value gives a plain literal; a host that predates the element
+ignores it and shows the target without animation.
+
+**What a guest read of an animated value is (decision 2).** Not the target. `AnimatedReferencesTest`
+(JVM, JS, wasm) pins each of these as it is today:
+
+- The tagged Float is the *count*-th representable float **away from zero**. Call sites that share a
+  target take counts 1, 2, 3…, so the error grows with them: 1,000 call sites animating to `1f`
+  read up to `1f` + 1,000 ULPs ≈ 1.00012.
+- A target of `0f` reads as `Float.MIN_VALUE` (1.4e-45): `alpha > 0f` is true and `alpha == 0f` is
+  false for as long as it is the target. `-0f` reads as `-Float.MIN_VALUE`.
+- A negative target reads slightly more negative: a `-90f` rotation gives `r >= -90f` false, and
+  `floor` of a tagged `-3f` is `-4`.
+- `==` against the target is false for Float, Dp **and Color** (`c == Color.Red`, `when (c)`).
+  Colour component reads (`red`, `alpha`, `argb`) are exact.
+- Untaggable targets are returned as they are, with no animation: NaN, ±Infinity, ±`MAX_VALUE`
+  (and any target whose tag would be non-finite or change sign), `Dp.Unspecified`, `Dp.Infinity`,
+  `Color.Unspecified`.
+- False positives: a plain value equal to a live tag is taken as animated (one ULP from a live
+  target); on Kotlin/JS a whole interval of doubles rounds onto the tag. Unlikely in practice.
+
+The alternative the owner chooses between is a **read log**: `animate*AsState` returns the exact
+target through a `State` whose `value` getter appends `(ref, value)` to a short log; each generated
+stub matches its arguments against the log by exact equality and clears it. Guest reads become
+exact and same-source survives, and `1f - alpha` stays a plain literal as now. Its costs: it depends
+on evaluation order (a `.value` read early and kept while other reads happen would miss its stub),
+and a plain value equal to a just-read target is taken as animated within that call. Not built.
 
 ### Method
 
@@ -47,7 +73,12 @@ predates the element ignores it and shows the target without animation.
    - `hostAnimationMatchesNativeFrameByFrame`: `animateFloatAsState`, `animateDpAsState`,
      `animateColorAsState` (400 ms linear tweens), `ColumnScope.AnimatedVisibility` and
      `animateContentSize` (springs); captured at the start, 16, 96, 192, 304, 400 ms after the
-     toggle and at the end.
+     toggle and at the end. The guest's clock is sent the test clock's own frame times, so a
+     guest-clock animation would advance and send batches;
+     `theBridgeAssertionCatchesAGuestClockAnimation` runs the same schedule on an `Animatable`
+     panel and asserts that it does.
+   - `aModifierInsertedAheadOfAnAnimatedOneKeepsItsAnimation`: padding inserted ahead of an
+     animated `alpha` 160 ms into its tween; compared at 192, 240, 304, 400 ms and the end.
    - `guestFrameClockAnimationReachesNativeEndState`: two `Animatable`s in `LaunchedEffect`s, the
      guest's clock sent the same frame times as the host's.
 2. **Emulator, Macrobenchmark:** the sample (`sample/`, built like an adopter's app against the
@@ -80,8 +111,9 @@ one device, not absolute frame times.
 
 | Test | Result |
 |---|---|
-| Host references, `AnimatedVisibility`, `animateContentSize` against native, frame by frame | **0 differing pixels** at all 7 captured frames (start, 16, 96, 192, 304, 400 ms, end). **0 change batches** crossed while the host animated; the reference itself travelled once |
-| Guest frame clock against native `Animatable` | 0 differing pixels at the start, at two mid frames and at the end (linear tweens, the guest's clock fed the host's frame times). **25 change batches** for a 400 ms animation at 16 ms frames: one per frame |
+| Host references, `AnimatedVisibility`, `animateContentSize` against native, frame by frame | **0 differing pixels** at all 7 captured frames (start, 16, 96, 192, 304, 400 ms, end). **0 change batches** crossed while the host animated; the reference itself travelled once. The same schedule on a guest-clock animation sends batches (asserted) |
+| A modifier inserted ahead of an animated one mid-animation | **0 differing pixels** at every frame after the insertion. Before the movable group per element, the host's `animateFloatAsState` was recreated and the alpha snapped to its target (6,400 differing pixels, the whole box) |
+| Guest frame clock against native `Animatable` | 0 differing pixels at the start, at two mid frames and at the end, all asserted (linear tweens, the guest's clock fed the host's frame times). **25 change batches** for a 400 ms animation at 16 ms frames: one per frame |
 
 **Emulator, frame timing** (two runs of the whole benchmark; per run, the median frame count over
 5 iterations of 5 s, and percentiles over all frames of the 5 iterations):
@@ -147,6 +179,8 @@ natural optional group.
   times). Relative numbers only; the phone checkpoint (plan MS3) should repeat the benchmark and the
   bridge counter. On a phone the guest's rate may be closer to the display rate, or further from it
   at 90/120 Hz.
+- **FrameTimingMetric times only the host's UI thread.** It does not see the guest's QuickJS thread,
+  where the guest frame clock's real cost (recomposition, serialization) is paid.
 - The bridge counter covers `sendChanges` calls into the host (Zipline's `callStart`), not the
   host's `sendFrame` calls into the guest; on the guest frame clock those run every frame too.
 - The guest's 29 values a second is measured from batches, so it is an upper bound on distinct
