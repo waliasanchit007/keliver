@@ -145,6 +145,8 @@ jobs:
       # Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md): the generated group's checked-in
       # sources and lock must match a fresh generation from Compose, and the lock may only grow.
       # Regenerate with `./gradlew :keliver-compose-generator:generateComposeApi` and commit.
+      # portal-compose-render is the ED0 spike's canvas (docs/ED0_SPIKE.md): its golden document
+      # is what portal-ingest reads from Gate A's sample, so an ingest change that moves it fails here.
       - name: Compose-generated group is fresh
         run: >
           ./gradlew
@@ -152,7 +154,10 @@ jobs:
           :keliver-compose-generator:test
           :keliver-compose-values:jvmTest
           :keliver-compose-values:jsTest
+          :keliver-compose-gatea-compose:jvmTest
           :keliver-compose-gatea-composeui:jvmTest
+          :portal-compose-render:jvmTest
+          :portal-compose-render:wasmJsTest
           -DRELEASE_SIGNING_ENABLED=false
 
       # Compiled component preview: the dogfood editor's adapters file must be
@@ -227,8 +232,9 @@ jobs:
       # the Zipline plugin; it is not published, so the build above does not compile it. Its
       # jvmTest also builds keliver-bridge-fixture-guest (a Kotlin/JS Zipline guest) and runs
       # the first guest-to-host round trip through it (B5b).
-      # The HTTP fixture matcher and the debug replay provider built on it (item 5, S2) run
-      # on every target they have; `test` reaches only the matcher's Android unit tests.
+      # keliver-http-fixtures (the HTTP fixture matcher) has no Android target, so no `test`
+      # task: it and the debug replay provider built on it (item 5, S2) run here, by name, on
+      # every target they have. List them once; the JS and wasm step below leaves them out.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
@@ -385,7 +391,7 @@ jobs:
           set -euo pipefail
           if [ "$EVENT" != "pull_request" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           changed="$(git diff --name-only "$BASE" HEAD)"
-          if grep -Eq '^scripts/(templates/production-host[^/]*/|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$' <<<"$changed"; then
+          if grep -Eq '^scripts/(templates/production-host[^/]*/|templates/app-wrapper/|keliver-app-wrapper\.sh$|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

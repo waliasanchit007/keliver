@@ -29,7 +29,8 @@
 # S4-S17 against a static HTTPS server fed only by keliver-publish; and W2, the
 # host framework embedded in an existing SwiftUI app (ci/w2/ios-embed.sh).
 # Then W5's U1: an update applied when the app returns to the foreground
-# (ci/w5/ios-update.sh). Then M0's timing marks, in the Debug and Benchmark
+# (ci/w5/ios-update.sh). Then WS6's crash rollback (ci/ws6/ios-crash.sh):
+# C1-C6 and C8. Then M0's timing marks, in the Debug and Benchmark
 # builds (ci/m0/ios-timing.sh): T1-T4. Then W8, a signing-key rotation
 # (ci/w8/ios-rotation.sh): K1-K8.
 #
@@ -402,6 +403,8 @@ reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || b
 . "$HERE/w2/ios-embed.sh"
 # shellcheck source=w5/ios-update.sh
 . "$HERE/w5/ios-update.sh"
+# shellcheck source=ws6/ios-crash.sh
+. "$HERE/ws6/ios-crash.sh"
 # shellcheck source=m0/ios-timing.sh
 . "$HERE/m0/ios-timing.sh"
 # shellcheck source=w8/ios-rotation.sh

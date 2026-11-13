@@ -15,7 +15,10 @@
  */
 package dev.keliver.compose.ui.graphics.vector
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
+import dev.keliver.compose.ui.graphics.painter.VectorPainter
 import dev.keliver.compose.wire.JsonCodec
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -34,6 +37,10 @@ public class ImageVector(public val name: String) {
   override fun hashCode(): Int = name.hashCode()
   override fun toString(): String = "ImageVector($name)"
 }
+
+/** As `androidx.compose.ui.graphics.vector.rememberVectorPainter(image)`: the host paints the icon. */
+@Composable
+public fun rememberVectorPainter(image: ImageVector): VectorPainter = remember(image) { VectorPainter.of(image) }
 
 public object ImageVectorCodec : JsonCodec<ImageVector>("dev.keliver.compose.ImageVector") {
   override fun toJson(value: ImageVector): JsonElement = JsonPrimitive(value.name)

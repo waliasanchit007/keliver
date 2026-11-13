@@ -4,11 +4,26 @@
 
 package dev.keliver.compose.material3
 
+import dev.keliver.compose.foundation.layout.ColumnScopeInstance
+import dev.keliver.compose.foundation.layout.RowScopeInstance
+import dev.keliver.compose.gatea.compose.GenButton1
+import dev.keliver.compose.gatea.compose.GenCard1
+import dev.keliver.compose.gatea.compose.GenCard2
+import dev.keliver.compose.gatea.compose.GenHorizontalDivider1
 import dev.keliver.compose.gatea.compose.GenIcon1
+import dev.keliver.compose.gatea.compose.GenIcon2
+import dev.keliver.compose.gatea.compose.GenIconButton1
+import dev.keliver.compose.gatea.compose.GenOutlinedButton1
+import dev.keliver.compose.gatea.compose.GenSurface1
+import dev.keliver.compose.gatea.compose.GenSurface2
 import dev.keliver.compose.gatea.compose.GenText1
+import dev.keliver.compose.gatea.compose.GenTextButton1
+import dev.keliver.compose.gatea.compose.GenTopAppBar1
 import dev.keliver.compose.ui.graphics.Color
+import dev.keliver.compose.ui.graphics.RectangleShape
 import dev.keliver.compose.ui.text.style.TextOverflow
 import dev.keliver.compose.ui.unit.TextUnit
+import dev.keliver.compose.ui.unit.dp
 
 /** High level element that displays text and provides semantics / accessibility information. */
 @androidx.compose.runtime.Composable
@@ -53,12 +68,13 @@ public fun Text(
   )
 }
 
-@Deprecated("Keliver: 'onTextLayout': a text layout result is measured on the host and cannot reach the guest. Use maxLines and overflow.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: 'autoSize': auto-sized text is not in the generated API yet (Gate B, part b). Use fontSize with maxLines and overflow. Keliver: 'onTextLayout': a text layout result is measured on the host and cannot reach the guest. Use maxLines and overflow.", level = DeprecationLevel.ERROR)
 @androidx.compose.runtime.Composable
 public fun Text(
   text: kotlin.String,
   modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
   color: dev.keliver.compose.ui.graphics.Color = Color.Unspecified,
+  autoSize: dev.keliver.compose.foundation.text.TextAutoSize? = null,
   fontSize: dev.keliver.compose.ui.unit.TextUnit = TextUnit.Unspecified,
   fontStyle: dev.keliver.compose.ui.text.font.FontStyle? = null,
   fontWeight: dev.keliver.compose.ui.text.font.FontWeight? = null,
@@ -73,7 +89,7 @@ public fun Text(
   minLines: kotlin.Int = 1,
   onTextLayout: ((dev.keliver.compose.ui.text.TextLayoutResult) -> kotlin.Unit)? = null,
   style: dev.keliver.compose.ui.text.TextStyle = LocalTextStyle.current,
-): Unit = throw UnsupportedOperationException("Keliver: 'onTextLayout': a text layout result is measured on the host and cannot reach the guest. Use maxLines and overflow.")
+): Unit = throw UnsupportedOperationException("Keliver: 'autoSize': auto-sized text is not in the generated API yet (Gate B, part b). Use fontSize with maxLines and overflow. Keliver: 'onTextLayout': a text layout result is measured on the host and cannot reach the guest. Use maxLines and overflow.")
 
 /** A Material Design icon component that draws [imageVector] using [tint], with a default value of [LocalContentColor]. */
 @androidx.compose.runtime.Composable
@@ -93,4 +109,419 @@ public fun Icon(
     modifier = split.modifier,
   )
 }
+
+/** A Material Design icon component that draws [painter] using [tint], with a default value of [LocalContentColor]. */
+@androidx.compose.runtime.Composable
+public fun Icon(
+  painter: dev.keliver.compose.ui.graphics.painter.Painter,
+  contentDescription: kotlin.String?,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  tint: dev.keliver.compose.ui.graphics.Color = LocalContentColor.current,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_tint = LocalContentColor.current
+  GenIcon2(
+    painter = painter,
+    contentDescription = contentDescription,
+    tint = if (tint == default_tint) null else tint,
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+/** Material surface is the central metaphor in material design. */
+@androidx.compose.runtime.Composable
+public fun Surface(
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  shape: dev.keliver.compose.ui.graphics.Shape = RectangleShape,
+  color: dev.keliver.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
+  contentColor: dev.keliver.compose.ui.graphics.Color = contentColorFor(color),
+  tonalElevation: dev.keliver.compose.ui.unit.Dp = 0.dp,
+  shadowElevation: dev.keliver.compose.ui.unit.Dp = 0.dp,
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  content: @androidx.compose.runtime.Composable () -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_color = MaterialTheme.colorScheme.surface
+  val default_contentColor = contentColorFor(color)
+  GenSurface1(
+    shape = shape,
+    color = if (color == default_color) null else color,
+    contentColor = if (contentColor == default_contentColor) null else contentColor,
+    tonalElevation = tonalElevation,
+    shadowElevation = shadowElevation,
+    border = border,
+    content = { content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+/** Material surface is the central metaphor in material design. */
+@androidx.compose.runtime.Composable
+public fun Surface(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = RectangleShape,
+  color: dev.keliver.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
+  contentColor: dev.keliver.compose.ui.graphics.Color = contentColorFor(color),
+  tonalElevation: dev.keliver.compose.ui.unit.Dp = 0.dp,
+  shadowElevation: dev.keliver.compose.ui.unit.Dp = 0.dp,
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  content: @androidx.compose.runtime.Composable () -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_color = MaterialTheme.colorScheme.surface
+  val default_contentColor = contentColorFor(color)
+  GenSurface2(
+    onClick = onClick,
+    enabled = enabled,
+    shape = shape,
+    color = if (color == default_color) null else color,
+    contentColor = if (contentColor == default_contentColor) null else contentColor,
+    tonalElevation = tonalElevation,
+    shadowElevation = shadowElevation,
+    border = border,
+    content = { content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun Surface(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = RectangleShape,
+  color: dev.keliver.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
+  contentColor: dev.keliver.compose.ui.graphics.Color = contentColorFor(color),
+  tonalElevation: dev.keliver.compose.ui.unit.Dp = 0.dp,
+  shadowElevation: dev.keliver.compose.ui.unit.Dp = 0.dp,
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
+  content: @androidx.compose.runtime.Composable () -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
+
+/** [Material Design filled card](https://m3.material.io/components/cards/overview) Cards contain contain content and actions that relate information about a subject. */
+@androidx.compose.runtime.Composable
+public fun Card(
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  shape: dev.keliver.compose.ui.graphics.Shape = CardDefaults.shape,
+  colors: dev.keliver.compose.material3.CardColors = CardDefaults.cardColors(),
+  elevation: dev.keliver.compose.material3.CardElevation = CardDefaults.cardElevation(),
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.ColumnScope.() -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_shape = CardDefaults.shape
+  val default_colors = CardDefaults.cardColors()
+  val default_elevation = CardDefaults.cardElevation()
+  GenCard1(
+    shape = if (shape == default_shape) null else shape,
+    colors = if (colors == default_colors) null else colors,
+    elevation = if (elevation == default_elevation) null else elevation,
+    border = border,
+    content = { ColumnScopeInstance.content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+/** [Material Design filled card](https://m3.material.io/components/cards/overview) Cards contain contain content and actions that relate information about a subject. */
+@androidx.compose.runtime.Composable
+public fun Card(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = CardDefaults.shape,
+  colors: dev.keliver.compose.material3.CardColors = CardDefaults.cardColors(),
+  elevation: dev.keliver.compose.material3.CardElevation = CardDefaults.cardElevation(),
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.ColumnScope.() -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_shape = CardDefaults.shape
+  val default_colors = CardDefaults.cardColors()
+  val default_elevation = CardDefaults.cardElevation()
+  GenCard2(
+    onClick = onClick,
+    enabled = enabled,
+    shape = if (shape == default_shape) null else shape,
+    colors = if (colors == default_colors) null else colors,
+    elevation = if (elevation == default_elevation) null else elevation,
+    border = border,
+    content = { ColumnScopeInstance.content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun Card(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = CardDefaults.shape,
+  colors: dev.keliver.compose.material3.CardColors = CardDefaults.cardColors(),
+  elevation: dev.keliver.compose.material3.CardElevation = CardDefaults.cardElevation(),
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.ColumnScope.() -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
+
+/** [Material Design button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
+@androidx.compose.runtime.Composable
+public fun Button(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = ButtonDefaults.shape,
+  colors: dev.keliver.compose.material3.ButtonColors = ButtonDefaults.buttonColors(),
+  elevation: dev.keliver.compose.material3.ButtonElevation? = ButtonDefaults.buttonElevation(),
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.ContentPadding,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_shape = ButtonDefaults.shape
+  val default_colors = ButtonDefaults.buttonColors()
+  val default_elevation = ButtonDefaults.buttonElevation()
+  val default_contentPadding = ButtonDefaults.ContentPadding
+  GenButton1(
+    onClick = onClick,
+    enabled = enabled,
+    shape = if (shape == default_shape) null else shape,
+    colors = if (colors == default_colors) null else colors,
+    elevation = if (elevation == default_elevation) null else (elevation ?: dev.keliver.compose.material3.ButtonElevation.ExplicitNull),
+    border = border,
+    contentPadding = if (contentPadding == default_contentPadding) null else contentPadding,
+    content = { RowScopeInstance.content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun Button(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = ButtonDefaults.shape,
+  colors: dev.keliver.compose.material3.ButtonColors = ButtonDefaults.buttonColors(),
+  elevation: dev.keliver.compose.material3.ButtonElevation? = ButtonDefaults.buttonElevation(),
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.ContentPadding,
+  interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
+
+/** [Material Design text button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
+@androidx.compose.runtime.Composable
+public fun TextButton(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = ButtonDefaults.textShape,
+  colors: dev.keliver.compose.material3.ButtonColors = ButtonDefaults.textButtonColors(),
+  elevation: dev.keliver.compose.material3.ButtonElevation? = null,
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.TextButtonContentPadding,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_shape = ButtonDefaults.textShape
+  val default_colors = ButtonDefaults.textButtonColors()
+  val default_contentPadding = ButtonDefaults.TextButtonContentPadding
+  GenTextButton1(
+    onClick = onClick,
+    enabled = enabled,
+    shape = if (shape == default_shape) null else shape,
+    colors = if (colors == default_colors) null else colors,
+    elevation = elevation,
+    border = border,
+    contentPadding = if (contentPadding == default_contentPadding) null else contentPadding,
+    content = { RowScopeInstance.content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun TextButton(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = ButtonDefaults.textShape,
+  colors: dev.keliver.compose.material3.ButtonColors = ButtonDefaults.textButtonColors(),
+  elevation: dev.keliver.compose.material3.ButtonElevation? = null,
+  border: dev.keliver.compose.foundation.BorderStroke? = null,
+  contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.TextButtonContentPadding,
+  interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
+
+/** [Material Design outlined button](https://m3.material.io/components/buttons/overview) Buttons help people initiate actions, from sending an email, to sharing a document, to liking a post. */
+@androidx.compose.runtime.Composable
+public fun OutlinedButton(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = ButtonDefaults.outlinedShape,
+  colors: dev.keliver.compose.material3.ButtonColors = ButtonDefaults.outlinedButtonColors(),
+  elevation: dev.keliver.compose.material3.ButtonElevation? = null,
+  border: dev.keliver.compose.foundation.BorderStroke? = ButtonDefaults.outlinedButtonBorder(enabled),
+  contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.ContentPadding,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_shape = ButtonDefaults.outlinedShape
+  val default_colors = ButtonDefaults.outlinedButtonColors()
+  val default_border = ButtonDefaults.outlinedButtonBorder(enabled)
+  val default_contentPadding = ButtonDefaults.ContentPadding
+  GenOutlinedButton1(
+    onClick = onClick,
+    enabled = enabled,
+    shape = if (shape == default_shape) null else shape,
+    colors = if (colors == default_colors) null else colors,
+    elevation = elevation,
+    border = if (border == default_border) null else (border ?: dev.keliver.compose.foundation.BorderStroke.ExplicitNull),
+    contentPadding = if (contentPadding == default_contentPadding) null else contentPadding,
+    content = { RowScopeInstance.content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun OutlinedButton(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  shape: dev.keliver.compose.ui.graphics.Shape = ButtonDefaults.outlinedShape,
+  colors: dev.keliver.compose.material3.ButtonColors = ButtonDefaults.outlinedButtonColors(),
+  elevation: dev.keliver.compose.material3.ButtonElevation? = null,
+  border: dev.keliver.compose.foundation.BorderStroke? = ButtonDefaults.outlinedButtonBorder(enabled),
+  contentPadding: dev.keliver.compose.foundation.layout.PaddingValues = ButtonDefaults.ContentPadding,
+  interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
+  content: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
+
+/** [Material Design standard icon button](https://m3.material.io/components/icon-button/overview) Icon buttons help people take supplementary actions with a single tap. */
+@androidx.compose.runtime.Composable
+public fun IconButton(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  colors: dev.keliver.compose.material3.IconButtonColors = IconButtonDefaults.iconButtonColors(),
+  shape: dev.keliver.compose.ui.graphics.Shape = IconButtonDefaults.standardShape,
+  content: @androidx.compose.runtime.Composable () -> kotlin.Unit,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_colors = IconButtonDefaults.iconButtonColors()
+  val default_shape = IconButtonDefaults.standardShape
+  GenIconButton1(
+    onClick = onClick,
+    enabled = enabled,
+    colors = if (colors == default_colors) null else colors,
+    shape = if (shape == default_shape) null else shape,
+    content = { content() },
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun IconButton(
+  onClick: () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  enabled: kotlin.Boolean = true,
+  colors: dev.keliver.compose.material3.IconButtonColors = IconButtonDefaults.iconButtonColors(),
+  interactionSource: dev.keliver.compose.foundation.interaction.MutableInteractionSource? = null,
+  shape: dev.keliver.compose.ui.graphics.Shape = IconButtonDefaults.standardShape,
+  content: @androidx.compose.runtime.Composable () -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: 'interactionSource': interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.")
+
+/** [Material Design divider](https://m3.material.io/components/divider/overview) A divider is a thin line that groups content in lists and layouts. */
+@androidx.compose.runtime.Composable
+public fun HorizontalDivider(
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  thickness: dev.keliver.compose.ui.unit.Dp = DividerDefaults.Thickness,
+  color: dev.keliver.compose.ui.graphics.Color = DividerDefaults.color,
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_thickness = DividerDefaults.Thickness
+  val default_color = DividerDefaults.color
+  GenHorizontalDivider1(
+    thickness = if (thickness == default_thickness) null else thickness,
+    color = if (color == default_color) null else color,
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+/** [Material Design small top app bar](https://m3.material.io/components/top-app-bar/overview) Top app bars display information and actions at the top of a screen. */
+@androidx.compose.runtime.Composable
+public fun TopAppBar(
+  title: @androidx.compose.runtime.Composable () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  navigationIcon: @androidx.compose.runtime.Composable () -> kotlin.Unit = {},
+  actions: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit = {},
+  expandedHeight: dev.keliver.compose.ui.unit.Dp = TopAppBarDefaults.TopAppBarExpandedHeight,
+  colors: dev.keliver.compose.material3.TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
+) {
+  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)
+  val default_expandedHeight = TopAppBarDefaults.TopAppBarExpandedHeight
+  val default_colors = TopAppBarDefaults.topAppBarColors()
+  GenTopAppBar1(
+    title = { title() },
+    navigationIcon = { navigationIcon() },
+    actions = { RowScopeInstance.actions() },
+    expandedHeight = if (expandedHeight == default_expandedHeight) null else expandedHeight,
+    colors = if (colors == default_colors) null else colors,
+    modifierEvent = split.events,
+    modifier = split.modifier,
+  )
+}
+
+@Deprecated("Keliver: 'windowInsets': its default: `TopAppBarDefaults.windowInsets`: a composable androidx.compose.foundation.layout.WindowInsets has no mirror (docs/COMPOSE_GENERATOR_DESIGN.md §5). Leave it out. Keliver: 'scrollBehavior': scroll behaviours connect the bar to the host's nested scrolling (Gate B, part b).", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun TopAppBar(
+  title: @androidx.compose.runtime.Composable () -> kotlin.Unit,
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  navigationIcon: @androidx.compose.runtime.Composable () -> kotlin.Unit = {},
+  actions: @androidx.compose.runtime.Composable dev.keliver.compose.foundation.layout.RowScope.() -> kotlin.Unit = {},
+  expandedHeight: dev.keliver.compose.ui.unit.Dp = TopAppBarDefaults.TopAppBarExpandedHeight,
+  windowInsets: dev.keliver.compose.foundation.layout.WindowInsets = TODO("unreachable"),
+  colors: dev.keliver.compose.material3.TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
+  scrollBehavior: dev.keliver.compose.material3.TopAppBarScrollBehavior? = null,
+): Unit = throw UnsupportedOperationException("Keliver: 'windowInsets': its default: `TopAppBarDefaults.windowInsets`: a composable androidx.compose.foundation.layout.WindowInsets has no mirror (docs/COMPOSE_GENERATOR_DESIGN.md §5). Leave it out. Keliver: 'scrollBehavior': scroll behaviours connect the bar to the host's nested scrolling (Gate B, part b).")
+
+@Deprecated("Keliver: Scaffold's content takes the PaddingValues the host measures (a slot with a parameter: Gate B, part b). Use a Column with the TopAppBar and Modifier.weight(1f) on the content.", level = DeprecationLevel.ERROR)
+@androidx.compose.runtime.Composable
+public fun Scaffold(
+  modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier,
+  topBar: @androidx.compose.runtime.Composable () -> kotlin.Unit = {},
+  bottomBar: @androidx.compose.runtime.Composable () -> kotlin.Unit = {},
+  snackbarHost: @androidx.compose.runtime.Composable () -> kotlin.Unit = {},
+  floatingActionButton: @androidx.compose.runtime.Composable () -> kotlin.Unit = {},
+  floatingActionButtonPosition: dev.keliver.compose.material3.FabPosition = TODO("unreachable"),
+  containerColor: dev.keliver.compose.ui.graphics.Color = MaterialTheme.colorScheme.background,
+  contentColor: dev.keliver.compose.ui.graphics.Color = contentColorFor(containerColor),
+  contentWindowInsets: dev.keliver.compose.foundation.layout.WindowInsets = TODO("unreachable"),
+  content: @androidx.compose.runtime.Composable (dev.keliver.compose.foundation.layout.PaddingValues) -> kotlin.Unit,
+): Unit = throw UnsupportedOperationException("Keliver: Scaffold's content takes the PaddingValues the host measures (a slot with a parameter: Gate B, part b). Use a Column with the TopAppBar and Modifier.weight(1f) on the content.")
+
+/** Placeholder: Compose's `FabPosition` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
+public class FabPosition private constructor()
+
+/** Placeholder: Compose's `TopAppBarScrollBehavior` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
+public class TopAppBarScrollBehavior private constructor()
 

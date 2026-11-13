@@ -88,11 +88,12 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
     const val MAX_LINES = 20_000
     private val KEYS = setOf("installId", "channel", "hostVersion", "sequence", "source", "outcome", "reason", "platform")
     // Every outcome and reason the hosts' reportReason (BundleIndex.kt) can send; HostReportsTest
-    // holds the two together. screen-failed/exception (K1/K2) were missing until B4.
-    private val OUTCOMES = setOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed")
+    // holds the two together. screen-failed/exception (K1/K2) were missing until B4. WS6's crash
+    // rollback adds crash-rollback (previous-good, newer-bundle, app-view) and set-aside.
+    private val OUTCOMES = setOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed", "crash-rollback")
     private val REASONS = setOf(
-      "", "sha256-mismatch", "below-floor", "bridge-missing", "bridge-shape", "bridge-bind", "signature", "lookup-failed",
-      "network", "config", "exception", "other",
+      "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "signature", "lookup-failed",
+      "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "other",
     )
     private val INSTALL_ID = Regex("[A-Za-z0-9-]{1,64}")
     private val CHANNEL = Regex("[a-z0-9][a-z0-9-]{0,31}")

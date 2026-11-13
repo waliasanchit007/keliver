@@ -216,6 +216,12 @@ if [ -n "$WRAPPER" ]; then
   cp "$WRAPPER/gradlew.bat" "$DIR/" 2>/dev/null || true
   mkdir -p "$DIR/gradle/wrapper"
   cp "$WRAPPER/gradle/wrapper/"* "$DIR/gradle/wrapper/" 2>/dev/null || true
+  # From a checkout, the repo's own wrapper follows Keliver's build toolchain,
+  # not the plugins this app pins above: take the Gradle those run on
+  # (scripts/templates/app-wrapper). The tools bundle's wrapper/ is already it.
+  if [ -f "$SCRIPT_DIR/templates/app-wrapper/wrapper.properties" ]; then
+    cp "$SCRIPT_DIR/templates/app-wrapper/wrapper.properties" "$DIR/gradle/wrapper/gradle-wrapper.properties"
+  fi
   chmod +x "$DIR/gradlew" 2>/dev/null || true
 fi
 

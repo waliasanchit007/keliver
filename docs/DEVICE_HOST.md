@@ -263,12 +263,15 @@ that opens.
   while a screen showed it, one record per screen on show (Android from tools
   0.3.14, iOS from 0.3.15). From tools 0.3.16, a host
   whose first load failed loads again at the next update check (§2), so one
-  process can send `not-loaded` more than once, then `loaded`.
-- **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `bridge-missing`
-  and `bridge-shape` (B4, below), `bridge-bind` (B5, below), `signature`,
-  `lookup-failed`, `network`, `config`, `exception` (for `screen-failed`) or
-  `other`. A relay older than the host refuses a reason it does not know, and
-  that report is dropped.
+  process can send `not-loaded` more than once, then `loaded`. WS6 adds
+  `crash-rollback`: a bundle was set aside for failing on this install
+  ("Crash rollback", below).
+- **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `set-aside`
+  (WS6), `bridge-missing` and `bridge-shape` (B4, below), `bridge-bind` (B5,
+  below), `signature`, `lookup-failed`, `network`, `config`, `exception` (for
+  `screen-failed`), `previous-good`, `newer-bundle` or `app-view` (for
+  `crash-rollback`: what runs instead), or `other`. A relay older than the host
+  refuses an outcome or a reason it does not know, and that report is dropped.
 
 Where the records go:
 - **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
@@ -282,6 +285,10 @@ Where the records go:
     above.
   - It is best effort: one try, no redirect followed, never blocking or failing
     a load. Android allows 10 s in all; iOS gives up after 10 s without data.
+    On Android each report goes on a connection of its own (`Connection:
+    close`): with one try, a report sent on a kept connection your collector
+    had already closed would be lost, and reports come in bursts (a crash
+    rollback sends `screen-failed` and `crash-rollback` together).
   - The URL may not carry `user@`, a query or a fragment, and it is never
     logged. A release build refuses `http://`.
   - On iOS, use `https://`: the scaffolded App Transport Security exceptions
@@ -375,6 +382,104 @@ backwards. Ways a publisher can do that by mistake:
 `v<N>/` at the next sequence, signed by the app's `keliverResign` task. Hosts
 take it because it is newer.
 
+**Crash rollback** (WS6, both hosts; `CrashRollback.kt`, the same file in each).
+A bundle newer than the last one that proved healthy on this install is **on
+trial**. Each of these is one failure of it, counted per install and per signed
+sequence:
+- its code did not load, and the failure came from its code: a module threw
+  while it evaluated, or the guest's main function or its presenter did.
+  Nothing that fails before its code begins to evaluate, or that is a download,
+  is counted: the network (offline, a 404, a timeout, a module download that
+  fails while another module already evaluated), the signature, the floor, a
+  module whose bytes do not match the sha256 its manifest signs, or an app's
+  bridge binding (the host's own code, which would fail for any bundle). Such a
+  start shows `not-loaded` and the next one tries again;
+- its code threw (an uncaught guest exception) before it proved healthy;
+- the process ended while a screen showed: while the bundle's code evaluated,
+  or once it had loaded and before it proved healthy. A "started, not yet
+  healthy" marker, written before the code runs, is still set at the next
+  start. It is set only while a screen shows, and cleared when none does, even
+  while code is still loading: an app sent to the background and ended there is
+  no failure, nor is a load that runs in the background (an update check, a
+  start the user left at once). On Android 11 and later the host also asks the
+  system how exactly that process ended (`ApplicationExitInfo`, matched by the
+  pid stored with the marker): a crash, a native crash, an ANR, a failed start,
+  or a low-memory kill while it was in the foreground counts; a force-stop, a
+  swipe or a low-memory kill in the background does not. With no record of that
+  process (Android 10 and earlier, or after a reboot) the marker alone counts.
+  iOS has no such record either, so there any process ended in the foreground
+  within the window counts: a crash, a jetsam (memory) kill, and also Xcode's
+  stop button or a simulator `terminate`. A user's swipe-away goes through the
+  background first, which clears the marker.
+
+A bundle **proves healthy** once screens have shown it for the crash window
+with no failure. At the **threshold** it is **set aside**: persisted, and
+skipped on the network and on a cache start until a newer sequence is
+published. Then the host goes back to the newest bundle that proved healthy on
+this install, in the same process when it can, or, with none (a first install,
+or an install from before crash rollback), shows the app's own view
+(`onUnavailable`, outcome `crash-rollback`).
+
+The bundle the host goes back to gets **a trial of its own**: what the set-aside
+bundle left behind (data it migrated, say), or modules gone from the server, can
+make it fail too. If it reaches the threshold, it is forgotten along with its
+kept manifest, and the host shows the app's own view, without retrying, until a
+newer sequence is published. (A download failure is not counted for it either:
+that start shows `not-loaded`, and the next tries again.)
+
+**What it does not see.** A bundle is judged only during its window. A crash
+after it proved healthy is never counted, so a bundle that crashes only on a
+route the user opens later than the window (10 s on show by default) is never
+set aside; raise the window (`crashWindowMillis`, `CRASH_WINDOW_MILLIS`) to
+watch longer, at the cost of a slower verdict. Android before 11 cannot tell a
+crash from a force-stop, so there both count.
+
+| Setting | Android (`KeliverConfig`) | iOS (`HostConfig.kt`) | Default |
+|---|---|---|---|
+| Failures that set a bundle aside (0 turns crash rollback off) | `crashThreshold` | `CRASH_THRESHOLD` | 2 |
+| How long screens show a new bundle before it proves healthy | `crashWindowMillis` | `CRASH_WINDOW_MILLIS` | 10 000 ms |
+
+**How it keeps the floor.** The floor is unchanged: it still rises as soon as a
+load succeeded, and nothing below it runs, with **one** exception. The newest
+bundle that proved healthy on this install may run below the floor, and only:
+- once every bundle above it that this install loaded has been set aside (the
+  highest set aside is at or above the floor), and
+- from this install's own copy of its signed manifest, kept when it loaded from
+  the network and promoted when it proved healthy (or from Zipline's cache,
+  when that still holds it), never from the network. Zipline verifies its
+  signature again; its modules come from the cache, or from the network by the
+  sha256 each has in that signed manifest.
+
+So someone who can make a new bundle fail (bad API data, say) can bring back
+exactly the bundle this install last ran healthily, nothing older, and the
+network still serves nothing below the floor. A newer bundle that loads raises
+the floor past the set-aside one and ends the exception.
+
+**What a release owner sees.** A `crash-rollback` report (W6) for the set-aside
+sequence, with a fixed reason for what runs instead: `previous-good` (the last
+healthy bundle, or the running one when an update was set aside),
+`newer-bundle` (the index already offers a newer one) or `app-view` (nothing to
+go back to; reported once, by the start that set the bundle aside, not by every
+later start that shows the app's view). A manifest refused for being set aside
+reports `set-aside`. A relay older than the host drops `crash-rollback`
+reports (an outcome it does not know), so upgrade the relay that collects
+them.
+Counted failures that are below the threshold are not reported; a guest that
+threw also reports `screen-failed` for each screen that showed it, as before. A
+debug build logs every count and every set-aside loudly (`CRASH ROLLBACK`).
+To recover, publish a fix: it is newer, so hosts take it.
+
+**Not protected:** "clear data" or a reinstall forgets what was set aside (and
+the floor, as above), and a bundle without a signed sequence is never counted.
+The ledger is kept per signing key, as the floor is, so a key rotation (W8)
+starts it afresh: nothing is set aside under the new key, and there is nothing
+to go back to, until a bundle proves healthy under it. A set-aside sequence
+re-signed with the new key gets its tries again. The ledger lives in the app's
+preferences next to the floor and shares its trust: it is not authenticated,
+and someone who can write those preferences could name an old signed manifest
+as the one to go back to and run it below the floor. That is no new hole: they
+can already reset the floor itself. An unreadable ledger reads as empty.
+
 **Channels** (both hosts). A host is built for one channel, `--channel` on
 either scaffolder (default `stable`; Android `keliver.channel` in
 `gradle.properties`, iOS `CHANNEL` in `HostConfig.kt`). It takes that channel's
@@ -450,6 +555,79 @@ yourself:** your own signing config for a release APK.
 
 The generic host above deliberately does not grow into that. It exists so that
 a new adopter can see their screens on a device without writing Android code.
+
+**The debug link** (both hosts, debug builds only; ED3). The relay's device
+proxy (`KELIVER_DEVICE_PROXY`, `DEVICE_PROOF.md`) serves the published bundles
+on its own port, and the editor's "On a device" panel shows each proxy URL as a
+QR code of this link:
+
+```
+keliver-<app package>://keliver-debug/bundles?server=<the proxy URL, percent-encoded>
+keliver-com.example.shop://keliver-debug/bundles?server=http%3A%2F%2F192.168.1.20%3A8078
+```
+
+- **The scheme** is `keliver-` and the app's package (its screens'
+  `<package>.screens`, less `.screens`; lower case, `_` as `-`). The
+  scaffolders build it in, and the relay computes it from the same screens, so
+  one app's link does not open another app. Installs of the same screens share
+  it, though: the standalone host and an app that embeds the same screens, or
+  two debug flavors, all register it (Android then shows a chooser; iOS picks
+  one app by no stated rule), so keep one such debug build on a device.
+- **What a debug host accepts**: that scheme and the host `keliver-debug`
+  (either in any case), the path `/bundles` exactly, and one `server=`
+  parameter, percent-encoded at most once, and nothing else (no fragment). The
+  server must be `http://` or `https://`; an IPv4 literal, a bracketed IPv6
+  literal (no zone id) or `localhost`, never a host name, so a link cannot
+  send the host to a name some DNS answers; a loopback, private, link-local or
+  shared address only (IPv4 `127/8`, `10/8`, `172.16/12`, `192.168/16`,
+  `169.254/16`, `100.64/10` as VPNs such as Tailscale use; IPv6 `::1`,
+  `fc00::/7`, `fe80::/10`), so a link never sends the
+  host to the internet; any port from 1024 to 65535 (moving the proxy with
+  `KELIVER_DEVICE_PROXY_PORT` needs no change to the host); and no user,
+  query, fragment or path. The relay makes no link for a URL outside these
+  (a relay on a public address shows its bare URL only). One check does this on both platforms:
+  `DebugBundleLink.kt` (the Android template's `src/debug`, copied into the iOS
+  host), with its test vectors in `DebugBundleLinkTest.kt`.
+- **What it does**: it shows what it would load and asks first (any app or web
+  page can open a link). On Android it then writes `files/keliver/bundle-server`,
+  as the `adb run-as` switch does, and restarts the app. On iOS it keeps the
+  server in the app's defaults and closes the app; open it again (a
+  `KELIVER_BUNDLE_SERVER` launch variable still wins). "Use the build's server"
+  goes back. It moves only where bundles come from: every manifest still
+  verifies against the embedded key, the rollback floor holds, and the cached
+  last good bundle is used only on its own origin. The iOS Debug configuration
+  allows local networking (`NSAllowsLocalNetworking`) for it.
+- **Android hosts built against an `https://` server cannot use the proxy.**
+  The device proxy is plain `http://`, and a standalone Android host's debug
+  build allows cleartext only when a server it was scaffolded or built with
+  (`keliver.bundleServer`, the API base, the report URL) is `http://`. A host
+  scaffolded with `--bundle-server https://…` therefore refuses the link
+  ("This build cannot reach …", naming the cause) rather than set a server it
+  cannot reach; the `adb run-as` switch has the same limit. Build it with an
+  `http://` `keliver.bundleServer` for this, or, for an app that embeds the
+  host, allow cleartext to the proxy in that app's debug manifest.
+- **Debug builds only.** Android: the activity, its check and its intent filter
+  are in `src/debug`, and the activity also needs `BuildConfig.DEBUG` and a
+  debuggable app. iOS: the `Debug` configuration alone sets
+  `KELIVER_DEBUG_LINK` (Kotlin's `src/debuglink`, Swift's `.onOpenURL`) and uses
+  `iosApp/Info-Debug.plist`, `Info.plist` plus the URL type and local
+  networking; every other configuration compiles `src/nodebuglink`, and a
+  release framework refuses `KELIVER_DEBUG_LINK` and a `keliver-` URL scheme in
+  its Info.plist (`checkReleaseUrls`). Keep `Info-Debug.plist` in step when you
+  edit `Info.plist`. The self-tests check a release APK's manifest and dex, and
+  the iOS configurations and plists; CI's T2 checks a Release app's binary and
+  Info.plist. A configuration made by duplicating Debug (a "Staging" one
+  shipped to testers, say) carries the link too, since `checkReleaseUrls` runs
+  only on release framework builds: duplicate Release instead, or remove
+  `KELIVER_DEBUG_LINK` and `Info-Debug.plist` from the copy.
+- **Opening it.** The iOS Camera app offers to open a registered custom scheme,
+  so scanning the QR code works there (not yet tried on a phone). Many Android
+  camera and Lens apps show a QR code that is not `http(s)` as plain text with
+  nothing to tap, so on Android use adb, the reliable route:
+  `adb shell "am start -a android.intent.action.VIEW -d '<link>'"` (quoted
+  twice, so the device's shell also sees one argument). A simulator:
+  `xcrun simctl openurl booted '<link>'`. The editor shows both, with the
+  bare URL and the `adb run-as` command as before.
 
 **Timing marks** (both hosts, from tools 0.3.10; M0 of `ADOPTION_PLAN_2026-10.md`).
 For measuring startup, a host records these moments:
@@ -713,6 +891,18 @@ none in a release build.
 `NSUserDefaults`, checked on the network and on the cache start. A reinstall
 resets it.
 
+**Crash rollback** is as on Android (§2, "Crash rollback"), with
+`CRASH_THRESHOLD` and `CRASH_WINDOW_MILLIS` in `HostConfig.kt` and its ledger in
+`NSUserDefaults` (written through with `synchronize()` before the code runs).
+iOS keeps no record of how the last process ended, so a process stopped in the
+foreground while a new bundle is in its crash window (Xcode's stop button, a
+simulator `terminate`) counts as a failure: when you iterate on a new bundle
+in the simulator, let it show for the window first, or set `CRASH_THRESHOLD`
+to 0 while you do (and in CI scenarios that terminate the app soon after a new
+bundle shows). An app the user sends to the background, or swipes away from
+the switcher, is not counted: the background clears the marker first. Reports
+reach `Keliver.onReport`.
+
 
 ## 4. Embedding the host in an existing app
 
@@ -886,7 +1076,9 @@ for byte):
   shell, not an app) reaches it. A release build never runs live updates
   (`keliver.updates=live` becomes `on-resume`). The self-test's `--build`
   checks a release APK: `DEBUG` false, not debuggable, and nothing exported
-  but the launcher activity unless a permission guards it.
+  but the launcher activity unless a permission guards it. The debug link
+  (§2, "The debug link") is the module's `src/debug`: an app's debug build
+  merges its activity and intent filter, a release build none of it.
 - **R8**: the module's consumer rules keep Zipline's bridged services, which
   are called by name. A minified release of the reference app loads and
   renders (X7 below).

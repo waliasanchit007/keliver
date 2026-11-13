@@ -33,7 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.MultiMeasureLayout
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -146,7 +146,11 @@ internal class ComposeUiFlexContainer(
   }
 
   override val value: @Composable (Modifier) -> Unit = { modifier ->
-    Layout(
+    // Yoga's flex algorithm measures a child more than once in one pass (grow and shrink resolve
+    // in a second pass). Compose 1.12 rejects that in a plain Layout; MultiMeasureLayout is
+    // Compose's own opt-in for it, and keeps the layout what it was on Compose 1.11.
+    @Suppress("DEPRECATION")
+    MultiMeasureLayout(
       content = {
         // Observe this so we can manually trigger recomposition.
         recomposeTick

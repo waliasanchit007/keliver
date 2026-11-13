@@ -44,38 +44,75 @@ fun loadConfig(file: File): Config {
 }
 
 /** Everything one generation writes: relative path under an output root → text. */
-class Output(val schema: Map<String, String>, val guest: Map<String, String>, val host: Map<String, String>, val editor: String, val lock: Lock)
+class Output(
+  val schema: Map<String, String>,
+  val guest: Map<String, String>,
+  val host: Map<String, String>,
+  val values: Map<String, String>,
+  val editor: String,
+  val lock: Lock,
+  /** ED0: the editor canvas's interpreter (portal-compose-render), relative path → text. */
+  val editorRender: Map<String, String> = emptyMap(),
+)
+
+/** The package of the editor canvas's generated interpreter (ED0, docs/ED0_SPIKE.md). */
+const val EDITOR_RENDER_PACKAGE = "dev.keliver.portal.compose.render"
 
 fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List<File>): Output {
   val api = ApiReader(classpath)
   val src = SourceReader(sources)
   val decls = config.declarations.map { api.find(it).also(src::complete) }
   val errorDecls = config.errors.map { (spec, message) -> api.find(spec).also(src::complete) to message }
+  val defaults = DefaultsMirror(api, src, classpath, config.typeMessages)
+  // Every *Defaults member a configured default names (this also registers the factory-made types),
+  // then what those factories' own defaults name.
+  for (d in decls) for (p in d.params) p.defaultText?.let { defaults.resolve(it, d.imports, d.pkg) }
+  repeat(2) {
+    for (f in defaults.all.filterIsInstance<DefaultsMirror.Member.Factory>().toList()) {
+      for (o in f.overloads) for (p in o.params) p.defaultText?.let { defaults.resolve(it, o.imports, o.pkg) }
+    }
+  }
+  // A hidden overload needs its visible successor configured: say which overloads Compose has now.
+  val orphans = decls.filter { it.isHidden && successorOf(it, decls) == null }.map { d ->
+    val visible = api.overloadSpecs(d.pkg, d.owner, d.name).filter { spec ->
+      runCatching { api.find(spec).also(src::complete) }.getOrNull()?.isHidden == false
+    }
+    "${d.spec}: hidden in this Compose (${d.deprecationMessage ?: "deprecated, HIDDEN"}). Add its visible successor to " +
+      "${config.group}.json (keep this line: old guests still send its tag). Visible overloads now:\n    " + visible.joinToString("\n    ")
+  }
+  if (orphans.isNotEmpty()) error(orphans.joinToString("\n"))
   val lock = LockBuilder(oldLock)
-  val plans = plan(config, decls, lock) + errorDecls.map { (d, message) -> Plan.ErrorStub(d, classify(d), "Keliver: $message") }
-  val e = Emitter(config, plans)
-  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.editor(), lock.build())
+  val plans = plan(config, decls, lock, defaults) + errorDecls.map { (d, message) -> Plan.ErrorStub(d, classify(d), "Keliver: $message") }
+  val factories = planFactories(config, defaults, lock)
+  val e = Emitter(config, plans, factories, defaults, api::supertypes)
+  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)))
 }
 
 fun main(argv: Array<String>) {
   val args = argv.toList()
   fun arg(name: String) = args[args.indexOf(name) + 1]
   val check = "--check" in args
-  val config = loadConfig(File(arg("--config")))
+  val config = loadConfig(File(arg("--config"))).also { it.input = if ("--input" in args) arg("--input") else null }
   val lockFile = File(arg("--lock"))
   val oldLock = if (lockFile.exists()) lockJson.decodeFromString(Lock.serializer(), lockFile.readText()) else Lock(config.group)
   val classpath = arg("--classpath").split(File.pathSeparator).map(::File)
   val sources = arg("--sources").split(File.pathSeparator).map(::File)
   val out = generate(config, oldLock, classpath, sources)
 
-  val roots = listOf(File(arg("--out-schema")) to out.schema, File(arg("--out-guest")) to out.guest, File(arg("--out-host")) to out.host)
+  val roots = listOf(
+    File(arg("--out-schema")) to out.schema,
+    File(arg("--out-guest")) to out.guest,
+    File(arg("--out-host")) to out.host,
+    File(arg("--out-values")) to out.values,
+  ) + (if ("--out-editor-render" in args) listOf(File(arg("--out-editor-render")) to out.editorRender) else emptyList())
   val expected = buildMap {
     for ((root, files) in roots) for ((path, text) in files) put(File(root, path), text)
     put(File(arg("--out-editor")), out.editor)
     put(lockFile, lockJson.encodeToString(Lock.serializer(), out.lock) + "\n")
   }
-  // A Generated.kt the generator no longer writes is stale.
-  val stale = roots.flatMap { (root, _) -> root.walk().filter { it.name == "Generated.kt" }.toList() }.filter { it !in expected }
+  // A Generated.kt (or GeneratedDefaults.kt) the generator no longer writes is stale.
+  val stale = roots.flatMap { (root, _) -> root.walk().filter { it.name == "Generated.kt" || it.name == GENERATED_DEFAULTS }.toList() }
+    .filter { it !in expected }
 
   val problems = checkAppendOnly(oldLock, out.lock).toMutableList()
   if (check) {

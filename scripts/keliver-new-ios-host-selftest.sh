@@ -36,8 +36,8 @@ mkdir -p "$APP/src/jsMain/kotlin/screens" "$APP/src/jsMain/kotlin/logic"
 printf '{ "screensDir": "src/jsMain/kotlin/screens" }\n' > "$APP/keliver.portal.json"
 printf "rootProject.name = 'demo'\n" > "$APP/settings.gradle"
 printf 'package com.example.demo.screens\n\nfun HomeScreen() {}\n' > "$APP/src/jsMain/kotlin/screens/home.kt"
-cp "$ROOT/gradlew" "$APP/"; mkdir -p "$APP/gradle/wrapper"
-cp "$ROOT/gradle/wrapper/gradle-wrapper.jar" "$ROOT/gradle/wrapper/gradle-wrapper.properties" "$APP/gradle/wrapper/"
+# The Gradle the template's Kotlin runs on, not this repo's (templates/app-wrapper).
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$APP"
 STORE="$DISP/store"; mkdir -p "$STORE/keys" "$DISP/home"
 KEY="$STORE/keys/ed25519.pub"; printf '%s\n' "$(printf 'ab%.0s' $(seq 1 32))" > "$KEY"
 PRIV="$STORE/keys/ed25519.priv"; ( umask 077; printf '%s' "$(printf 'cd%.0s' $(seq 1 32))" > "$PRIV" )
@@ -104,7 +104,7 @@ H="$APP/host-ios"
 K="$H/src/iosMain/kotlin/com/example/demo/host"
 missing=0
 for f in settings.gradle build.gradle gradle.properties .gitignore src/nativeInterop/cinterop/sqlite3.def \
-         iosApp/iOSApp.swift iosApp/ContentView.swift iosApp/Info.plist iosApp.xcodeproj/project.pbxproj \
+         iosApp/iOSApp.swift iosApp/ContentView.swift iosApp/Info.plist iosApp/Info-Debug.plist iosApp.xcodeproj/project.pbxproj \
          Configuration/Config.xcconfig; do
   [ -f "$H/$f" ] || { bad "missing $f"; missing=1; }
 done
@@ -137,7 +137,7 @@ PY
 # W3: the lookup reads bundles/index.json, holds the manifest to its sha256,
 # and falls back to the relay's bundles/latest only on a 404.
 grep -q '/bundles/index.json"' "$K/MainViewController.kt" && grep -q 'status == 404' "$K/MainViewController.kt" \
-  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor)' "$K/MainViewController.kt" \
+  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor, crash)' "$K/MainViewController.kt" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
 # W2: one host per process (Keliver), started once; every view controller only observes it.
@@ -150,12 +150,12 @@ grep -q '^public object Keliver {' "$K/MainViewController.kt" && grep -q 'if (st
 # keys (the highest), and written under each.
 grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'floorAcross(trust.publicKeysHex.map' "$K/MainViewController.kt" \
   && grep -q 'raiseFloor(trust, sequence)' "$K/MainViewController.kt" && grep -q 'raiseFloor(trust, floor())' "$K/MainViewController.kt" \
-  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor, Keliver.served)' "$K/MainViewController.kt" \
+  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor, crash, Keliver.served)' "$K/MainViewController.kt" \
   && grep -q 'manifestSequence(manifest.metadata)' "$K/MainViewController.kt" && grep -q 'sequence?.let(onSequence)' "$K/MainViewController.kt" \
   && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
   || bad "W4.2: the rollback floor is not wired"
 # B4: the bridge check runs where the floor's does, and a refused manifest is unloadable.
-grep -A12 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
+grep -A16 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'manifestBridgeProblem(manifest.metadata\[BRIDGES_METADATA_KEY\], bridges)' \
   && grep -q '"bridge refused:" in reason' "$K/MainViewController.kt" \
   && grep -q 'manifestBridgeProblem(manifestBridges(json), bridges())' "$K/BundleIndex.kt" \
   && ok "B4: the bridge check guards the network load and the cache start, and a refused manifest is unloadable" \
@@ -166,9 +166,9 @@ V="$K/MainViewController.kt"
 grep -q '  public var bridges: List<KeliverBridgeBinding> = emptyList()' "$V" \
   && grep -A4 '  public var bridges: List<KeliverBridgeBinding>' "$V" | grep -q 'servedBridgesOf(value.map { it.declared })' \
   && grep -A8 '    if (started) return' "$V" | grep -q 'served = servedBridgesOf(bridges.map { it.declared })' \
-  && [ "$(grep -c 'HostFacts(' "$V")" = "$(grep -cE 'HostFacts\(.*, (Keliver\.)?served\)' "$V")" ] \
+  && [ "$(grep -c 'HostFacts(' "$V")" = "$(grep -cE 'HostFacts\(.*, (Keliver\.)?served[,)]' "$V")" ] \
   && [ "$(grep -c 'ManifestPinningHttpClient(' "$V")" = "$(grep -c 'ManifestPinningHttpClient(.*) { served }' "$V")" ] \
-  && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, (Keliver\.)?served\)' "$V")" ] \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, crash, (Keliver\.)?served\)' "$V")" ] \
   && ! grep -q 'ServedBridges' "$V" "$K/BundleIndex.kt" \
   && grep -q 'val bridges = Keliver.startedBridges' "$V" \
   && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, Keliver.bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
@@ -324,6 +324,49 @@ grep -q 'task_info(mach_task_self_, TASK_VM_INFO.convert()' "$T/KeliverMemory.kt
   && grep -q 'name == "memory" || name == "frames" -> consoleLine' "$T/KeliverTiming.kt" \
   && ok "M5: the memory profile and its cycle when KELIVER_TIMING=YES, a no-op elsewhere; guest marks cannot use its name" \
   || bad "M5: the memory profile is not wired, or reaches a build without KELIVER_TIMING"
+# ED3: the debug link — the Debug configuration's alone (KELIVER_DEBUG_LINK, Info-Debug.plist).
+DL="$H/src/debuglink/kotlin/com/example/demo/host"; NDL="$H/src/nodebuglink/kotlin/com/example/demo/host"
+PBX="$H/iosApp.xcodeproj/project.pbxproj"
+python3 - "$H/iosApp/Info.plist" "$H/iosApp/Info-Debug.plist" <<'PY' && ok "ED3: only Info-Debug.plist has the debug link's URL type (keliver-com.example.demo) and local networking; otherwise it is Info.plist" || bad "ED3: Info.plist / Info-Debug.plist"
+import plistlib, sys
+rel, dbg = (plistlib.load(open(f, 'rb')) for f in sys.argv[1:3])
+assert 'CFBundleURLTypes' not in rel and 'NSAllowsLocalNetworking' not in rel.get('NSAppTransportSecurity', {}), rel
+assert dbg.pop('CFBundleURLTypes') == [{'CFBundleURLName': 'keliver-debug', 'CFBundleURLSchemes': ['keliver-com.example.demo']}]
+assert dbg['NSAppTransportSecurity'].pop('NSAllowsLocalNetworking') is True
+assert dbg == rel, (dbg, rel)
+PY
+python3 - "$PBX" <<'PY'; dl_configs=$?
+import re, sys
+s = open(sys.argv[1]).read()
+blocks = re.findall(r'/\* (\w+) \*/ = \{\n\t\t\tisa = XCBuildConfiguration;(.*?)\n\t\t\tname = (\w+);', s, re.S)
+assert len(blocks) == 6, len(blocks)
+for _, body, name in blocks:
+    has = 'KELIVER_DEBUG_LINK' in body or 'Info-Debug.plist' in body
+    assert has == (name == 'Debug'), (name, has)
+PY
+[ "$dl_configs" = 0 ] && [ "$(grep -c 'KELIVER_DEBUG_LINK = YES;' "$PBX")" = 1 ] \
+  && [ "$(grep -c 'INFOPLIST_FILE = "iosApp/Info-Debug.plist";' "$PBX")" = 1 ] && [ "$(grep -c 'INFOPLIST_FILE = iosApp/Info.plist;' "$PBX")" = 2 ] \
+  && [ "$(grep -c 'KELIVER_DEBUG_LINK \$(inherited)' "$PBX")" = 1 ] && grep -q '"Info-Debug.plist",' "$PBX" \
+  && ok "ED3: only the Debug configurations set KELIVER_DEBUG_LINK (Kotlin and Swift) and Info-Debug.plist; it is no app resource" \
+  || bad "ED3: the debug link reaches a configuration other than Debug, or Debug lacks it"
+grep -q "System.getenv('KELIVER_DEBUG_LINK') == 'YES' ? 'src/debuglink/kotlin' : 'src/nodebuglink/kotlin'" "$H/build.gradle" \
+  && grep -q 'public fun openKeliverDebugLink(url: String): Boolean' "$DL/KeliverDebugLink.kt" 2>/dev/null \
+  && grep -q 'internal const val DEBUG_LINK_SCHEME = "keliver-com.example.demo"' "$DL/KeliverDebugLink.kt" \
+  && ! grep -q 'DEBUG_LINK_PORT' "$DL/KeliverDebugLink.kt" \
+  && grep -q 'internal inline fun debugLinkBundleServer(): String? = null' "$NDL/KeliverDebugLink.kt" 2>/dev/null \
+  && [ ! -e "$NDL/DebugBundleLink.kt" ] && ! grep -rqE 'openKeliverDebugLink|DebugBundleLink|keliver-debug' "$NDL" "$K" \
+  && grep -q 'val fromLink = debugLinkBundleServer() ?: return BUNDLE_SERVER to null' "$K/MainViewController.kt" \
+  && grep -B1 -A3 '^#if KELIVER_DEBUG_LINK$' "$H/iosApp/iOSApp.swift" | grep -q 'KeliverDebugLinkKt.openKeliverDebugLink(url: url.absoluteString)' \
+  && ok "ED3: the link's handler is in src/debuglink only (scheme keliver-com.example.demo, any port from 1024); every other build compiles a no-op" \
+  || bad "ED3: the debug link's Kotlin or Swift is not wired as Debug-only"
+[ -n "$PH" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/debug/kotlin/DebugBundleLink.kt" | cmp -s - "$DL/DebugBundleLink.kt" \
+  && cmp -s "$DL/DebugBundleLink.kt" "$H/src/jvmTest/kotlin/com/example/demo/host/DebugBundleLink.kt" \
+  && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/testDebug/kotlin/DebugBundleLinkTest.kt" | cmp -s - "$H/src/jvmTest/kotlin/com/example/demo/host/DebugBundleLinkTest.kt" \
+  && ok "ED3: the link's check and its vectors are the Android host's, byte for byte (and run in jvmTest)" \
+  || bad "ED3: the link's check differs from the Android host's"
+grep -q "System.getenv('KELIVER_DEBUG_LINK') == 'YES' || infoPlist.text =~" "$H/build.gradle" \
+  && ok "ED3: a release framework refuses KELIVER_DEBUG_LINK and a keliver- URL scheme in its Info.plist (checkReleaseUrls)" \
+  || bad "ED3: checkReleaseUrls does not refuse the debug link"
 # One locked write a line: println writes the text and its newline apart, so another thread's line
 # could land between them (an ios-host run read "…knheap=-KeliverHost: codeLoadSuccess …").
 grep -q 'val n = write(1, pinned.addressOf(at), (bytes.size - at).convert()).toInt()' "$K/ConsoleLine.kt" 2>/dev/null \
@@ -334,9 +377,35 @@ grep -q 'val n = write(1, pinned.addressOf(at), (bytes.size - at).convert()).toI
   && ok "the host's console lines are one write each, under a lock (no println)" \
   || bad "a host console line can be split by another thread's (println, or no ConsoleLine.kt)"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
-grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served)' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
+grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside = crash.setAside())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$K/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
+# WS6: crash rollback, as on Android. The ledger (src/commonMain/CrashRollback.kt, the Android
+# host's file) and its JVM tests are scaffolded; the trial starts once the bundle's code begins
+# to evaluate, a load failure counts only when it came from that code (not a download), the
+# marker is written (synchronize) before the code runs, only while a screen shows, and checked
+# at the next start, set-aside entries are skipped on the network and the cache, the floor's one
+# exception is in one place, the threshold and window are HostConfig's, it is reported (the
+# app's view once, at the set-aside), and DEBUG logs it loudly.
+C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
+[ -f "$C" ] && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
+  && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$V" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$V" \
+  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$V" \
+  && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$V" \
+  && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }' "$V" \
+  && grep -q 'count { crash.loadFailed(sequence, theBundles) }' "$V" \
+  && grep -q 'onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) })' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
+  && grep -q 'crash?.screens(true)' "$V" && grep -q 'crash?.screens(screensShown > 0)' "$V" \
+  && grep -q 'report = setAsideNow != null)' "$V" \
+  && grep -q 'CrashGuard(DefaultsCrashStore(), cacheName(trust), CRASH_THRESHOLD)' "$V" && grep -q 'return defaults.synchronize()' "$V" \
+  && grep -q '^internal const val CRASH_THRESHOLD: Int = 2$' "$K/HostConfig.kt" && grep -q '^internal const val CRASH_WINDOW_MILLIS: Long = 10_000L$' "$K/HostConfig.kt" \
+  && grep -q 'cachedBundleProblem(manifestSequence(manifest.metadata), floor(), crash)' "$V" \
+  && grep -q 'report(CRASH_ROLLBACK_OUTCOME, step.sequence, "", detail)' "$V" \
+  && grep -q 'if (kotlin.native.Platform.isDebugBinary) log("!!!!!!!! CRASH ROLLBACK !!!!!!!!")' "$V" \
+  && [ "$(grep -c '    syncCrashWindow()$' "$V")" -ge 2 ] && grep -q 'delay(CRASH_WINDOW_MILLIS.milliseconds)' "$V" \
+  && ! grep -q 'rollbackProblem(manifestSequence(manifest.metadata), floor())' "$V" \
+  && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
+  || bad "WS6: crash rollback is not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
 grep -A2 '^  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))$' "$K/MainViewController.kt" \
   | grep -q '^  app.start()$' \
@@ -421,6 +490,11 @@ if [ "$BUILD" = 1 ]; then
       ok "xcodebuild built $(basename "$appb") for the simulator"
       [ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$appb/Info.plist" 2>/dev/null)" = com.example.demo.host ] \
         && ok "the app's bundle id is com.example.demo.host" || bad "the built app's bundle id"
+      # ED3: the Debug build has the debug link: its URL type, and its handler in the binary.
+      [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$appb/Info.plist" 2>/dev/null)" = keliver-com.example.demo ] \
+        && find "$appb" -type f -perm -u+x -exec grep -aqE 'DebugBundleLink' {} \; -print | grep -q . \
+        && ok "ED3: the Debug app has the debug link (URL scheme keliver-com.example.demo, DebugBundleLink in its binary)" \
+        || bad "ED3: the Debug app lacks the debug link's URL type or handler"
       # The embed's SwiftUI screen against the framework just built (K2: onUnavailable reaches Swift).
       fw="$(find "$H/build" "$appb/Frameworks" -name KeliverHost.framework -type d -exec test -d '{}/Modules' ';' -print 2>/dev/null | head -1)"
       if [ -z "$fw" ]; then
@@ -451,6 +525,12 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-ios jvmTest > "$DISP/jvm-tests.log" 2>&1 ); rc=$?
     [ "$rc" = 0 ] && ok "the host kit's JVM tests pass (jvmTest: RequestPolicy, KeliverRoute)" \
       || bad "the host kit's JVM tests failed (rc=$rc): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/jvm-tests.log" | head -6 | tr '\n' ' ')"
+    cr="$H/build/test-results/jvmTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
+    [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
+      && ok "WS6: crash rollback's tests ran on the JVM target: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
+    dlt="$H/build/test-results/jvmTest/TEST-com.example.demo.host.DebugBundleLinkTest.xml"
+    [ -f "$dlt" ] && grep -q 'failures="0" errors="0"' "$dlt" && ! grep -q 'tests="0"' "$dlt" \
+      && ok "ED3: the debug link's vectors ran on the JVM: $(grep -o 'tests="[0-9]*"' "$dlt" | head -1)" || bad "ED3: the debug link's tests did not run, or failed"
     # B2: HostHttp with the app's credentials, over NSURLSession to a local server, on a simulator
     # (KELIVER_SELFTEST_SIMULATOR: a simulator name or UDID, when Kotlin's default is not installed).
     ( cd "$APP" && ./gradlew --console=plain -p host-ios iosSimulatorArm64Test \
@@ -468,6 +548,23 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-ats.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "must not ship App Transport Security exceptions" "$DISP/release-ats.log" \
       && ok "checkReleaseUrls refuses an Info.plist that keeps a cleartext exception" || bad "checkReleaseUrls (ATS): rc=$rc"
+    # ED3: https:// servers and no ATS exception, but the debug link: its URL type in the
+    # Info.plist Xcode builds, or KELIVER_DEBUG_LINK set for a release link. Both refused; the
+    # same Info.plist without the link passes (the control).
+    python3 - "$H/iosApp/Info-Debug.plist" "$DISP/dl-info.plist" "$DISP/clean-info.plist" <<'PY'
+import plistlib, sys
+p = plistlib.load(open(sys.argv[1], 'rb')); p.pop('NSAppTransportSecurity', None)
+plistlib.dump(p, open(sys.argv[2], 'wb'))
+p.pop('CFBundleURLTypes'); plistlib.dump(p, open(sys.argv[3], 'wb'))
+PY
+    dl_check(){ ( cd "$APP" && env SRCROOT="$DISP" INFOPLIST_FILE="$2" "${@:3}" ./gradlew --console=plain -p host-ios checkReleaseUrls ) > "$DISP/release-dl-$1.log" 2>&1; }
+    dl_check clean clean-info.plist; rc_clean=$?
+    dl_check plist dl-info.plist; rc_plist=$?
+    dl_check env clean-info.plist KELIVER_DEBUG_LINK=YES; rc_env=$?
+    [ "$rc_clean" = 0 ] && [ "$rc_plist" != 0 ] && grep -q "must not ship the debug link" "$DISP/release-dl-plist.log" \
+      && [ "$rc_env" != 0 ] && grep -q "must not ship the debug link" "$DISP/release-dl-env.log" \
+      && ok "ED3: checkReleaseUrls refuses the debug link's URL type and KELIVER_DEBUG_LINK=YES (and passes the same Info.plist without them)" \
+      || bad "ED3: checkReleaseUrls and the debug link: clean rc=$rc_clean, URL type rc=$rc_plist, KELIVER_DEBUG_LINK rc=$rc_env"
     cp "$DISP/HostConfig.kt.keep" "$K/HostConfig.kt"
     wired=0
     for link in linkReleaseFrameworkIosArm64 linkReleaseFrameworkIosSimulatorArm64; do

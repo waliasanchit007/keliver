@@ -133,8 +133,12 @@ cp "$APK_SRC" "$STAGE/host/keliver-device-host-$VERSION.apk"
 ( cd "$STAGE/host" && shasum -a 256 "keliver-device-host-$VERSION.apk" > "keliver-device-host-$VERSION.apk.sha256" )
 cp docs/DEVICE_HOST.md "$STAGE/host/README.md"
 # The gradle wrapper so `keliver-init` scaffolds immediately-buildable projects.
-cp gradlew gradlew.bat "$STAGE/wrapper/" 2>/dev/null || true
-cp gradle/wrapper/* "$STAGE/wrapper/gradle/wrapper/"
+# It names the Gradle the scaffolders' pinned AGP/Kotlin/Compose run on
+# (scripts/templates/app-wrapper), NOT this repo's build wrapper: an app on
+# AGP 8.12 fails to configure on Gradle 9.6 or later.
+bash scripts/keliver-app-wrapper.sh "$STAGE/wrapper"
+cmp -s scripts/templates/app-wrapper/wrapper.properties "$STAGE/wrapper/gradle/wrapper/gradle-wrapper.properties" \
+  || { echo "build-portal-tools: the bundle's wrapper is not scripts/templates/app-wrapper's" >&2; exit 1; }
 cp docs/PORTAL_TOOLS_README.md "$STAGE/README.md"
 # W8: the signing-key rotation procedure, which README.md, host/README.md and the guide point to.
 cp docs/KEY_ROTATION.md "$STAGE/KEY_ROTATION.md"
