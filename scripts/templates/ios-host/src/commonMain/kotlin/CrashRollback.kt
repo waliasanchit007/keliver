@@ -305,8 +305,8 @@ internal class CrashGuard(
   /**
    * A bundle newer than the healthy one, unless it is set aside; and the healthy one itself while
    * the host has gone back to it (something above it is set aside): it gets a trial of its own,
-   * since what the set-aside bundle left behind (its data, migrated) or modules gone from the
-   * server can make it fail too ([fail] then drops it).
+   * since what the set-aside bundle left behind (its data, migrated) can make it fail too ([fail]
+   * then drops it). A module it cannot download never counts (H1): that start is `not-loaded`.
    */
   private fun mayGoOnTrial(l: CrashLedger, sequence: Long): Boolean =
     (sequence > l.healthy && sequence != l.setAside) || (sequence == l.healthy && l.setAside > l.healthy)

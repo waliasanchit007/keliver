@@ -62,6 +62,11 @@ NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
 NODE_FLAGS=""
 if [ "$NODE_MAJOR" -lt 22 ]; then NODE_FLAGS="--experimental-websocket"; fi
 
+# The harness's own retry logic (no Chrome, under a second): a broken retry must not
+# turn into a flaky suite.
+# shellcheck disable=SC2086 # NODE_FLAGS is empty or one flag
+node $NODE_FLAGS "$HERE/lib/browser-retry.selftest.mjs"
+
 free_port() { node -e 'const s=require("net").createServer();s.listen(0,"127.0.0.1",()=>{console.log(s.address().port);s.close()})'; }
 RELAY_PORT="${E2E_RELAY_PORT:-$(free_port)}"
 EDITOR_PORT="${E2E_EDITOR_PORT:-$(free_port)}"

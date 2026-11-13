@@ -3,11 +3,11 @@
 Status: **a spike, behind a flag that is off by default.** Evidence toward Gate B
 (docs/PLAN_2026-11.md §8, MS3). It shows ingest with 0 `RawCode` and byte-for-byte write-back of
 Compose-shaped code, and a **separate canvas library** that draws the generated catalog exactly as
-the device does. That canvas is **not wired into `portal-editor`**, so the criterion "the editor
-renders the generated catalog" is only partly met (§4); the owner weighs that at Gate B. D6 and D9
-still stand: nothing here changes how today's schemas ingest, render or write back. Amending D6
-and D9 is a later pull request, after Gate B, with the owner's agreement (§5 below says what it
-would need to say).
+the device does for the sample's widgets. That canvas is **not wired into `portal-editor`**, so
+the criterion "the editor renders the generated catalog" is only partly met (§4); the owner weighs
+that at Gate B. D6 and D9 still stand: nothing here changes how today's schemas ingest, render or
+write back. Amending D6 and D9 is a later pull request, after Gate B, with the owner's agreement
+(§5 below says what it would need to say).
 
 ## 1. What was built
 
@@ -64,11 +64,11 @@ A Compose node stays a `DocNode.Widget`; ED0 only fills it differently:
 - **resolution by import**: a legacy `Text` (`dev.keliver.material.compose.Text`) and the
   generated one in two files of one project, and side by side in one file (with an alias,
   `import …material3.Text as M3Text`). A `dev.keliver.compose.*` name the catalog does not
-  generate (`Button`) is RawCode with that reason. It is never read as a legacy widget of the same
+  generate (`Checkbox`) is RawCode with that reason. It is never read as a legacy widget of the same
   simple name;
 - **resolution that is not certain is RawCode**, in a file that imports any guest name: two star
   imports that both give a generated `Text`; a name two guest star imports might give but the
-  catalog does not generate (`Button` under `material3.*` and `foundation.layout.*`); an explicit
+  catalog does not generate (`Checkbox` under `material3.*` and `foundation.layout.*`); an explicit
   import of Compose's own API (`androidx.compose.material3.Card`); a callee shadowed by a
   top-level declaration of the same file (a `Text` function, a `Modifier.padding` extension). A
   file that imports no guest name keeps today's reading even with the flag on;

@@ -404,7 +404,8 @@ if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
   fi
   { echo "W8_OK=1"; echo "W8_NEXT=$W8/next"; echo "W8_BOTH_APK=$EV/production-host-both.apk"; echo "W8_NEXT_APK=$EV/production-host-next.apk"
     # Without the old tools (the download failed), K3 and K6 fall back to W3's one-key host.
-    # W3_APK lives only in $WORK/env, so it is spelled out; both names may be unset (set -u).
+    # W3_APK lives only in $WORK/env (unset in this shell, set -u), so its path is spelled
+    # out; W8_LEGACY_APK is always set here (empty unless the old tools' host built).
     echo "W8_LEGACY_APK=${W8_LEGACY_APK:-$EV/production-host-static.apk}"; echo "W8_LEGACY_IS_PRE_W8=$([ -n "${W8_LEGACY_APK:-}" ] && echo 1 || echo 0)"; } >> "$WORK/env"
 else
   echo "  SKIP  W8: $W3_PUBLISH has no --new-signing-key, or the host template predates key rotation; not counted"

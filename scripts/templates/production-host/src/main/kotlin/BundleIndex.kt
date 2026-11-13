@@ -378,6 +378,8 @@ internal class ManifestPinningHttpClient(
    * verifies its signature, and fetches its modules (from its cache, or the network) by the
    * sha256 each has in that signed manifest. Only the latest is held, and only until another
    * URL is [pin]ned: a later update at that URL comes from the network, through the floor.
+   * Pinning the same URL again keeps this copy, so every published sequence needs its own
+   * manifest URL (keliver-publish writes each to `v<N>/`).
    */
   fun pinLocal(kept: KeptBundle) {
     local = mapOf(kept.manifestUrl to kept)

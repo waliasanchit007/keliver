@@ -421,11 +421,11 @@ or an install from before crash rollback), shows the app's own view
 (`onUnavailable`, outcome `crash-rollback`).
 
 The bundle the host goes back to gets **a trial of its own**: what the set-aside
-bundle left behind (data it migrated, say), or modules gone from the server, can
-make it fail too. If it reaches the threshold, it is forgotten along with its
-kept manifest, and the host shows the app's own view, without retrying, until a
-newer sequence is published. (A download failure is not counted for it either:
-that start shows `not-loaded`, and the next tries again.)
+bundle left behind (data it migrated, say) can make it fail too. If it reaches
+the threshold, it is forgotten along with its kept manifest, and the host shows
+the app's own view, without retrying, until a newer sequence is published. (A
+download failure, such as a module gone from the server, is not counted for it
+either: that start shows `not-loaded`, and the next tries again.)
 
 **What it does not see.** A bundle is judged only during its window. A crash
 after it proved healthy is never counted, so a bundle that crashes only on a
@@ -448,7 +448,11 @@ bundle that proved healthy on this install may run below the floor, and only:
   the network and promoted when it proved healthy (or from Zipline's cache,
   when that still holds it), never from the network. Zipline verifies its
   signature again; its modules come from the cache, or from the network by the
-  sha256 each has in that signed manifest.
+  sha256 each has in that signed manifest. The kept copy is served for its
+  manifest URL until the host pins another URL; pinning the same URL again
+  keeps it. So **every published sequence needs its own manifest URL**, as
+  `keliver-publish` gives it (`bundles/v<N>/`): a newer bundle published over
+  the kept one's URL would not be fetched while the host has gone back.
 
 So someone who can make a new bundle fail (bad API data, say) can bring back
 exactly the bundle this install last ran healthily, nothing older, and the
@@ -461,9 +465,9 @@ healthy bundle, or the running one when an update was set aside),
 `newer-bundle` (the index already offers a newer one) or `app-view` (nothing to
 go back to; reported once, by the start that set the bundle aside, not by every
 later start that shows the app's view). A manifest refused for being set aside
-reports `set-aside`. A relay older than the host drops `crash-rollback`
-reports (an outcome it does not know), so upgrade the relay that collects
-them.
+reports `set-aside`. A relay older than the host rejects (400) every report
+with an outcome or reason it does not know, so it loses both `crash-rollback`
+and `set-aside` reports: upgrade the relay that collects them.
 Counted failures that are below the threshold are not reported; a guest that
 threw also reports `screen-failed` for each screen that showed it, as before. A
 debug build logs every count and every set-aside loudly (`CRASH ROLLBACK`).
@@ -1214,6 +1218,8 @@ server fed by `keliver-publish`:
 **Not measured:**
 - native navigation on iOS (the simulator CI's only taps are the reference app's P3 and
   T3, in its own host, not the embedded one);
+- the app's `RequestPolicy` refusing a call on iOS (X11 runs on the Android
+  emulator only; the iOS host's `RequestPolicy` has a JVM unit test, no device run);
 - an app on another Kotlin or AGP than the one combination CI builds (CI also
   BUILDS an app on older Compose, activity, core, lifecycle, coroutines and
   OkHttp 4, raised to the floor, but does not run it);

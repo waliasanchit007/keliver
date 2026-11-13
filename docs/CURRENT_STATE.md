@@ -1,7 +1,7 @@
 # Keliver current state
 
 **Base snapshot date:** 2026-07-23
-**Last updated:** 2026-11-09 (the plan of record is now [`PLAN_2026-11.md`](PLAN_2026-11.md); status at a glance below; details in the `Post-snapshot:` sections and in `DELIVERY_PLAN.md`'s Status table)
+**Last updated:** 2026-11-11 (MS1's toolchain upgrade is merged: see "Merged, not released"; the plan of record is now [`PLAN_2026-11.md`](PLAN_2026-11.md); status at a glance below; details in the `Post-snapshot:` sections and in `DELIVERY_PLAN.md`'s Status table)
 **Repository baseline:** `94519abf5` (`#13` flow preview complete and live-verified)
 
 This document is the factual handoff point before the next implementation
@@ -50,6 +50,7 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | what | where | reaches users through |
 |---|---|---|
 | generated action bridges: the runtime `keliver-bridge`, its annotations and the KSP processor `keliver-bridge-codegen` (B3, #201–#203) | new library modules | the next libraries release, which needs the owner |
+| MS1, the toolchain upgrade (#222, 2026-11-10): Kotlin 2.4.20, Zipline 1.28.0, Compose Multiplatform 1.11.1; forced by it, compileSdk 37 and minSdk 23 for every Android artifact, and no iosX64 (MS1's gate in [`PLAN_2026-11.md`](PLAN_2026-11.md) met: full build and CI green, write-back byte-stable; U14 still fails, quarantined) | every library module | libraries 0.5.0 (MS5); the published 0.4.1 and tools 0.3.18 stay on Kotlin 2.2.0 and Zipline 1.22.0 |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 

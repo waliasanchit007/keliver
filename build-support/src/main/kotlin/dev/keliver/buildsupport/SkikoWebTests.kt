@@ -55,7 +55,8 @@ internal fun Project.configureSkikoForWebTests() {
               .incoming.resolutionResult.allComponents
               .map { it.id }
               .filterIsInstance<ModuleComponentIdentifier>()
-              .firstOrNull { it.group == SKIKO_GROUP }
+              // Skiko's own module, not another artifact that might share its group.
+              .firstOrNull { it.group == SKIKO_GROUP && it.module.startsWith("skiko") }
               ?.version
               ?: return@defaultDependencies
             dependencySet.add(
