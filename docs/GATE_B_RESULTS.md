@@ -176,9 +176,8 @@ natural optional group.
 ### Caveats
 
 - **Emulator only, one session, a shared machine** (a CI job and other builds were running at
-  times). Relative numbers only; the phone checkpoint (plan MS3) should repeat the benchmark and the
-  bridge counter. On a phone the guest's rate may be closer to the display rate, or further from it
-  at 90/120 Hz.
+  times). Relative numbers only. The phone checkpoint (below) repeated the benchmark and the bridge
+  counter on a low-end phone: the guest's rate was much further from the display rate there.
 - **FrameTimingMetric times only the host's UI thread.** It does not see the guest's QuickJS thread,
   where the guest frame clock's real cost (recomposition, serialization) is paid.
 - The bridge counter covers `sendChanges` calls into the host (Zipline's `callStart`), not the
@@ -199,3 +198,101 @@ natural optional group.
 - Not mirrored: `keyframes`, `repeatable`, `infiniteRepeatable`, `rememberInfiniteTransition`,
   `AnimatedContent`, `Crossfade`, `updateTransition`, `animateItem`'s specs (still dropped),
   transitions' lambda parameters, `finishedListener` (an `ERROR` overload).
+
+## Phone checkpoint (Android): Gate B-e on a low-end phone
+
+What it answers: whether #244's emulator reading of the animation forms holds on a real low-end
+phone, and what the guest's frame clock delivers there. Phone: a low-end Android phone (Galaxy A12,
+Android 12), 60 Hz display, on wireless adb, 2026-11-14.
+
+**Recommendation: unchanged, and stronger.** Host references for `animate*AsState`. On this phone
+the guest's frame clock delivered **about 3 new values a second** (emulator: about 29) while the host
+drew 32–53 frames a second, so a guest-clock animation visibly steps rather than moves. Host
+references sent the same ~19 changes a second as on the emulator (one batch per change of target)
+and their host frames cost about what native Compose's do. The escape hatch (`Animatable` on the
+guest's frame clock) should be flagged more strongly than a lint warning suggests: on low-end phones
+it is not an animation.
+
+### Method
+
+The same `benchmark` build of the sample's prototype route as #244 (prototype republished from
+main to a scratch repository as `0.0.0-gateb`), with three prototype-only additions:
+
+- `GatebPhone` records the phone's battery level, charging state, temperature, power-saving mode,
+  thermal status and refresh rate next to each measurement, and skips a measurement below a battery
+  level (`gatebMinBattery`, 50% here).
+- `GatebBridgeCounter` is #244's bridge counter as an instrumented test: per form it opens the
+  route, waits 2 s, then for 15 s reads the route's once-a-second bridge log and the host's frames
+  over the same window (`dumpsys gfxinfo`, reset at the start of the window). It runs without
+  Macrobenchmark's compilation step, so its code ran as installed (JIT).
+- `GatebStartupBenchmark` (cold start, `host` against `native-host`, 10 iterations) with
+  `reportFullyDrawn` on the route's first content. **Not measured** (below).
+
+The phone was locked (secure lock screen) and left charging, so the route keeps the screen on and
+draws over the lock screen (`setShowWhenLocked`; it does not unlock the phone), and every
+measurement wakes the screen first. The lock screen behind the route is not drawn while the route
+covers it.
+
+### Results
+
+**Bridge traffic and the guest's rate** (15 s per form, once-a-second readings, medians with the
+range; phone at 75%, charging, 33.6–34.2 °C, thermal status 0, no power saving):
+
+| Form | Change batches / s (= new guest values / s) | Changes / s | Host frames / s (same window) | Emulator (#244): batches / s, changes / s |
+|---|---|---|---|---|
+| host references | 1.3 (1.3–1.4) | 18.8 (18.3–19.3) | 53.1 | 1.4, ~20 |
+| guest frame clock | **2.8 (2.3–3.1)** | 35.5 (29.3–38.7) | 32.1 | **28.5**, ~330 |
+| native, `animate*AsState` | — | — | 42.5 (first form after install; 83% of its frames janky) | — |
+| native, `Animatable` | — | — | 55.5 | — |
+
+**Frame timing** (FrameTimingMetric, 5 iterations × 5 s per form; median frame count over the
+iterations, percentiles over all frames of the 5 iterations, as Macrobenchmark reports them).
+One complete run; its emulator counterpart is #244's run 1 (run 2 was within a few tenths of a
+millisecond of it):
+
+| Form | Frames / 5 s | Frame CPU p50 | p90 | p99 | Overrun p50 | p90 | p99 | Emulator: frames, CPU p50 / p90 / p99, overrun p50 |
+|---|---|---|---|---|---|---|---|---|
+| host references (guest) | 233 | 27.2 ms | 36.4 ms | 82.6 ms | 12.6 ms | 35.4 ms | 136.3 ms | 273, 3.7 / 4.1 / 4.8 ms, −9.8 ms |
+| guest frame clock (guest) | 153 | 21.2 ms | 28.9 ms | 66.0 ms | 7.8 ms | 20.6 ms | 60.3 ms | 285, 3.7 / 4.4 / 5.6 ms, −10.1 ms |
+| native, `animate*AsState` | 190 | 20.4 ms | 37.4 ms | 64.9 ms | 5.3 ms | 42.9 ms | 96.6 ms | 272, 3.7 / 4.2 / 5.1 ms, −9.7 ms |
+| native, `Animatable` | 218 | 19.0 ms | 36.3 ms | 59.3 ms | 4.1 ms | 37.2 ms | 81.7 ms | 273, 3.8 / 4.2 / 4.9 ms, −9.7 ms |
+
+Phone state for this run: the state file was not retrieved (below); the readings about 10 minutes
+before, in an earlier pass whose results were lost, were 77–79%, charging, 33.1–33.3 °C, thermal
+status 0 rising to 1 ("light"), no power saving.
+
+Reading them together:
+
+- **The guest's frame clock is the finding.** About 3 guest frames a second against 28.5 on the
+  emulator, which suggests each guest frame (recomposition of 12 animated boxes in QuickJS,
+  serialization, the bridge) takes roughly a third of a second on this phone (not profiled on the
+  QuickJS thread). The host is not what limits it: in the
+  same window the host drew 32 frames a second. FrameTimingMetric does not show this (the guest
+  form even draws the *fewest* host frames, 153 per 5 s, because there is less on the host to
+  animate), so the bridge counter is the measurement that matters for this form.
+- **Host references stay close to native.** Every form overruns the 16.7 ms frame budget at the
+  median on this phone, native Compose included, so the screen (12 boxes animating alpha, size and
+  colour at once, plus `AnimatedVisibility` and `animateContentSize`) is heavy for the device. Host
+  references drew the most frames (233 per 5 s) at a frame CPU p50 about 7 ms above native's (27.2
+  against 19–20 ms) and a longer p99 tail (82.6 against 59–65 ms). One run is not enough to say how
+  much of that is the generated renderers' cost and how much is the guest's QuickJS thread
+  competing for this phone's CPU while the host animates; the native forms' own spread (190 and
+  218 frames, p90 36–37 ms) is of the same order.
+- The bridge counter's host frame rates (53 host references, 56 native `Animatable`) are higher
+  than the benchmark's (47, 44 frames a second): different windows, and the counter ran without
+  Macrobenchmark's compilation and process restarts per iteration. Its native `animate*AsState`
+  reading came first after the install and is a warm-up figure.
+
+### Caveats
+
+- **One complete frame-timing run, not two.** A first full pass completed on the phone but its
+  outputs were overwritten by the next pass before they were saved; the second pass completed but
+  the wireless adb connection dropped while its outputs were being pulled, so only Macrobenchmark's
+  per-test summaries (frame count min/median/max; CPU and overrun P50/P90/P95/P99) were retrieved,
+  not the per-frame JSON (hence no janky-frame count) or the phone-state file. The phone then left
+  adb entirely, so a second run and the cold-start comparison were not measured.
+- One bridge-counter pass (15 s per form).
+- The phone was charging throughout (75–79%) and warm (33–34 °C, thermal status up to "light").
+- Wireless adb, a secure lock screen behind the route (not drawn while covered), a 60 Hz display.
+  At 90/120 Hz the gap between the guest's rate and the display's would be larger.
+- The A12's numbers are for this phone class; the emulator's were relative only.
