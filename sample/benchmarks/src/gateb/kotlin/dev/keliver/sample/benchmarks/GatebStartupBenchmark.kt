@@ -39,7 +39,10 @@ class GatebStartupBenchmark {
       metrics = listOf(StartupTimingMetric()),
       iterations = ITERATIONS,
       startupMode = StartupMode.COLD,
-      setupBlock = { pressHome() },
+      setupBlock = {
+        device.wakeUp()
+        pressHome()
+      },
     ) {
       startActivityAndWait(Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.gateb.GatebActivity").putExtra("mode", mode))
       val label = "mode: " + mode.removePrefix("native-")

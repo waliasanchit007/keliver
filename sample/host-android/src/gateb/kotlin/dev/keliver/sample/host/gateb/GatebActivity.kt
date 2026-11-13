@@ -7,8 +7,10 @@
 package dev.keliver.sample.host.gateb
 
 import android.content.res.AssetManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,6 +64,15 @@ class GatebActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     val mode = intent.getStringExtra("mode") ?: "host"
     Log.d(TAG, "mode=$mode")
+    // A benchmark route: keep the display on while it is open (a phone's screen timeout would
+    // otherwise stop the frames being measured).
+    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    // A phone left locked for an unattended run: the route draws over the lock screen (it does not
+    // unlock it; nothing else on the phone becomes reachable). Measured that way on the phone.
+    if (Build.VERSION.SDK_INT >= 27) {
+      setShowWhenLocked(true)
+      setTurnScreenOn(true)
+    }
     if (mode.startsWith("native-")) {
       setContent {
         MaterialTheme {

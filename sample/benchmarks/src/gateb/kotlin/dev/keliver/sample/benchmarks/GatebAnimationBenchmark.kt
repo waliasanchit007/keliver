@@ -54,6 +54,7 @@ class GatebAnimationBenchmark {
     iterations = ITERATIONS,
     startupMode = null,
     setupBlock = {
+      device.wakeUp()
       killProcess()
       startActivityAndWait(
         Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.gateb.GatebActivity").putExtra("mode", mode),

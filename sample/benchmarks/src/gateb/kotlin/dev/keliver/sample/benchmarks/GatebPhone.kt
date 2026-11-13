@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.view.Display
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import java.io.File
 import org.junit.Assume.assumeTrue
 
@@ -58,8 +59,12 @@ internal object GatebPhone {
     return battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) * 100 / battery.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
   }
 
-  /** Appends `label: state` to the state file and skips the test below `gatebMinBattery`. */
+  /**
+   * Wakes the screen (a phone left charging turns it off, and UiAutomator then sees no window),
+   * appends `label: state` to the state file and skips the test below `gatebMinBattery`.
+   */
   fun recordAndCheck(label: String) {
+    UiDevice.getInstance(instrumentation).wakeUp()
     record("$label: ${state()}")
     val min = InstrumentationRegistry.getArguments().getString("gatebMinBattery")?.toInt() ?: 0
     val level = batteryLevel()
