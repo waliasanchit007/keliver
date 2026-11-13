@@ -19,6 +19,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -194,6 +195,114 @@ class GeneratorTest {
     val travelling = old.copy(params = old.params + ParamInfo("minLines", TypeRef("kotlin.Int"), hasDefault = true, defaultText = "1"))
     val later = plan(config, listOf(hidden, travelling), LockBuilder(lock)).filterIsInstance<Plan.Generated>()
     assertEquals(emptyMap(), sentAs(later))
+  }
+
+  // Gate B-e: receiver specs, generic wire types, animated parameters, extra modifiers.
+
+  @Test fun aScopedWidgetIsNamedAndKeyedForItsReceiver() {
+    val plain = widgetDecl("AnimatedVisibility", "visible" to false)
+    val column = plain.copy(receiver = TypeRef("androidx.compose.foundation.layout.ColumnScope"))
+    val row = plain.copy(receiver = TypeRef("androidx.compose.foundation.layout.RowScope"))
+    val lock = LockBuilder(Lock("g")).apply {
+      widget(plain)
+      widget(column)
+      widget(row)
+    }.build()
+    assertEquals(
+      setOf("GenAnimatedVisibility1", "GenColumnScopeAnimatedVisibility1", "GenRowScopeAnimatedVisibility1"),
+      lock.widgets.values.map { it.name }.toSet(),
+    )
+    assertTrue(lock.widgets.keys.any { "/ColumnScope.AnimatedVisibility(" in it }, "the receiver is part of the key")
+    assertEquals("ColumnScope", column.widgetReceiver?.simpleName)
+    assertNull(plain.widgetReceiver)
+    // A modifier's Modifier receiver is not a widget receiver: modifiers keep their names.
+    val padding = DeclInfo("x", "androidx.compose.foundation.layout", "padding", null, TypeRef(MODIFIER), emptyList(), TypeRef(MODIFIER), false)
+    assertNull(padding.widgetReceiver)
+    assertEquals("GenPadding1", LockBuilder(Lock("g")).apply { modifier(padding) }.build().modifiers.values.single().name)
+  }
+
+  @Test fun genericTypesTravelAsOneWireClass() {
+    val spec = TypeRef("androidx.compose.animation.core.FiniteAnimationSpec", args = listOf(TypeRef("androidx.compose.ui.unit.IntSize")))
+    assertEquals("dev.keliver.compose.animation.core.FiniteAnimationSpec<dev.keliver.compose.ui.unit.IntSize>", guestType(spec))
+    assertEquals("animationSpec.wire", TypeMap.sendExpr(spec, "animationSpec"))
+    assertEquals("dev.keliver.compose.animation.core.AnimationSpecWire", TypeMap.wireType(spec, false))
+    assertTrue(TypeMap.isMapped(spec))
+    assertFalse(TypeMap.isMapped(spec.copy(args = listOf(TypeRef("com.example.Unknown")))), "an argument that is not sent")
+    assertEquals("size", TypeMap.sendExpr(TypeRef("androidx.compose.ui.unit.Dp"), "size"), "a plain value is sent as it is")
+  }
+
+  private val alphaDecl = DeclInfo(
+    "androidx.compose.ui.draw.alpha(alpha)",
+    "androidx.compose.ui.draw",
+    "alpha",
+    null,
+    TypeRef(MODIFIER),
+    listOf(ParamInfo("alpha", TypeRef("kotlin.Float"), false)),
+    TypeRef(MODIFIER),
+    false,
+  )
+
+  private fun animationConfig(animated: List<String>, extraModifiers: List<String>) =
+    Config("g", "dev.example.schema", "S", emptyList(), emptyList(), emptyList(), emptyMap(), emptyList(), emptyList(), animated, extraModifiers)
+
+  @Test fun anAnimatedParameterGetsAPrologueAndItsRendererWrapsIt() {
+    val config = animationConfig(listOf(alphaDecl.spec), listOf("Animated"))
+    val e = Emitter(config, plan(config, listOf(alphaDecl), LockBuilder(Lock("g"))))
+    val guest = e.guest().values.joinToString("\n")
+    assertTrue("  val animated_alpha = dev.keliver.compose.internal.animated(\"alpha\", alpha)\n" in guest, guest)
+    assertTrue("val alpha = dev.keliver.compose.internal.untag(alpha)" in guest)
+    assertTrue("return then(animated_alpha).then(GenAlpha1Impl(alpha = alpha))" in guest, "ExtraAnimated goes just before its element")
+    val host = e.host().second
+    assertTrue("e.alpha.animated(pending, \"alpha\")" in host)
+    assertTrue("m = androidx.compose.runtime.key(pending.map { it.ref.id }) {" in host, "one movable group per element")
+    assertTrue("for ((e, pending) in paired)" in host)
+    // extraModifiers: a schema member and a no-op Redwood factory hook.
+    assertTrue("ExtraAnimated::class" in e.schema().second)
+    assertTrue("override fun ExtraAnimated(value: @Composable (Modifier) -> Unit, modifier: ExtraAnimated) {}" in host)
+  }
+
+  @Test fun theLockRecordsWhichEntriesAreAnimated() {
+    val plain = LockBuilder(Lock("g")).apply { modifier(alphaDecl) }.build()
+    assertFalse(plain.modifiers.values.single().animated)
+    assertFalse("animated" in lockJson.encodeToString(Lock.serializer(), plain), "written only when true")
+    // Becoming animated is recorded without raising the level (it is not a wire change)…
+    val animated = LockBuilder(plain).apply { modifier(alphaDecl, animated = true) }.build()
+    assertTrue(animated.modifiers.values.single().animated)
+    assertEquals(plain.level, animated.level)
+    assertTrue("\"animated\": true" in lockJson.encodeToString(Lock.serializer(), animated))
+    assertTrue(checkAppendOnly(plain, animated).isEmpty())
+    // …and is kept by a generation that no longer lists it, while dropping it is refused.
+    assertTrue(LockBuilder(animated).apply { modifier(alphaDecl) }.build().modifiers.values.single().animated)
+    assertTrue(checkAppendOnly(animated, plain).isNotEmpty())
+    // The checked-in lock marks the configured entries.
+    val lock = lockJson.decodeFromString(Lock.serializer(), File("gatea.lock.json").readText())
+    assertTrue(lock.modifiers.filterKeys { it.startsWith("androidx.compose.ui.draw/alpha(") }.values.single().animated)
+    assertFalse(lock.modifiers.filterKeys { it.startsWith("androidx.compose.ui.draw/clip(") }.values.single().animated)
+  }
+
+  @Test fun withoutTheAnimatedListNothingIsAnimated() {
+    val config = animationConfig(emptyList(), emptyList())
+    val e = Emitter(config, plan(config, listOf(alphaDecl), LockBuilder(Lock("g"))))
+    val guest = e.guest().values.joinToString("\n")
+    assertFalse("animated_" in guest)
+    assertTrue("return then(GenAlpha1Impl(alpha = alpha))" in guest)
+    val host = e.host().second
+    assertTrue("for (e in elements) {\n    m = when (e) {" in host)
+    assertFalse("pending" in host)
+    assertFalse("ExtraAnimated" in e.schema().second)
+  }
+
+  @Test fun findPicksAnOverloadByItsReceiver() {
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val api = ApiReader(classpath.split(File.pathSeparator).map(::File))
+    val params = "(visible,modifier,enter,exit,label,content)"
+    // Without `@`, of the three AnimatedVisibility(visible, …) overloads the one with no receiver.
+    assertNull(api.find("androidx.compose.animation.AnimatedVisibility$params").receiver)
+    assertEquals("ColumnScope", api.find("androidx.compose.animation.AnimatedVisibility@ColumnScope$params").receiver?.simpleName)
+    assertEquals("RowScope", api.find("androidx.compose.animation.AnimatedVisibility@RowScope$params").receiver?.simpleName)
+    // A modifier's Modifier receiver is kept by the default preference.
+    assertEquals(MODIFIER, api.find("androidx.compose.ui.draw.alpha(alpha)").receiver?.fq)
+    assertTrue(runCatching { api.find("androidx.compose.animation.AnimatedVisibility@BoxScope$params") }.isFailure)
   }
 
   @Test fun deprecationIsReadFromTheSources() {

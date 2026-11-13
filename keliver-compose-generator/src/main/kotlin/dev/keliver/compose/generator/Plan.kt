@@ -226,10 +226,11 @@ fun plan(config: Config, decls: List<DeclInfo>, lock: LockBuilder, defaults: Def
           val dropped = probe.dropped.joinToString { "'${it.param.name}'" }
           Plan.ErrorStub(decl, params, "Keliver: this overload's $dropped cannot cross to the host, and without them it is another overload. Leave them out.")
         } else {
+          val animated = decl.spec in config.animated
           val entry = if (decl.kind == DeclKind.WIDGET) {
-            lock.widget(decl, wireNames(params), syntheticNames(params))
+            lock.widget(decl, wireNames(params), syntheticNames(params), animated)
           } else {
-            lock.modifier(decl, wireNames(params))
+            lock.modifier(decl, wireNames(params), animated)
           }
           Plan.Generated(decl, entry, params)
         }

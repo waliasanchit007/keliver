@@ -77,6 +77,12 @@ tasks.register('generateComposeApi', JavaExec) {
   args = generatorArgs([])
 }
 
+// GeneratorTest.findPicksAnOverloadByItsReceiver reads the same Compose API the generator does.
+tasks.named('test') {
+  inputs.files(configurations.composeApi).withPropertyName('composeApi').withNormalizer(ClasspathNormalizer)
+  doFirst { systemProperty 'keliver.composeApi', configurations.composeApi.asPath }
+}
+
 tasks.register('checkComposeApi', JavaExec) {
   group = 'verification'
   description = 'Fails when the checked-in generated sources or lock differ from a fresh generation, or the lock changed other than by appends'

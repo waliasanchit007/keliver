@@ -810,7 +810,8 @@
       "since": 1,
       "wire": {
         "height": 1
-      }
+      },
+      "animated": true
     },
     "androidx.compose.foundation.layout/offset(x:androidx.compose.ui.unit.Dp,y:androidx.compose.ui.unit.Dp)": {
       "tag": 32,
@@ -823,7 +824,8 @@
       "wire": {
         "x": 5,
         "y": 5
-      }
+      },
+      "animated": true
     },
     "androidx.compose.foundation.layout/padding(all:androidx.compose.ui.unit.Dp)": {
       "tag": 1,
@@ -834,7 +836,8 @@
       "since": 1,
       "wire": {
         "all": 1
-      }
+      },
+      "animated": true
     },
     "androidx.compose.foundation.layout/padding(horizontal:androidx.compose.ui.unit.Dp,vertical:androidx.compose.ui.unit.Dp)": {
       "tag": 2,
@@ -886,7 +889,8 @@
       "since": 1,
       "wire": {
         "size": 1
-      }
+      },
+      "animated": true
     },
     "androidx.compose.foundation.layout/size(width:androidx.compose.ui.unit.Dp,height:androidx.compose.ui.unit.Dp)": {
       "tag": 6,
@@ -899,7 +903,8 @@
       "wire": {
         "width": 1,
         "height": 1
-      }
+      },
+      "animated": true
     },
     "androidx.compose.foundation.layout/width(width:androidx.compose.ui.unit.Dp)": {
       "tag": 7,
@@ -910,7 +915,8 @@
       "since": 1,
       "wire": {
         "width": 1
-      }
+      },
+      "animated": true
     },
     "androidx.compose.foundation.lazy/LazyItemScope#animateItem(fadeInSpec:androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>?,placementSpec:androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>?,fadeOutSpec:androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>?)": {
       "tag": 31,
@@ -967,7 +973,8 @@
       "wire": {
         "color": 1,
         "shape": 1
-      }
+      },
+      "animated": true
     },
     "androidx.compose.foundation/border(border:androidx.compose.foundation.BorderStroke,shape:androidx.compose.ui.graphics.Shape)": {
       "tag": 27,
@@ -1069,7 +1076,8 @@
       "since": 1,
       "wire": {
         "alpha": 1
-      }
+      },
+      "animated": true
     },
     "androidx.compose.ui.draw/clip(shape:androidx.compose.ui.graphics.Shape)": {
       "tag": 23,
@@ -1091,7 +1099,8 @@
       "since": 5,
       "wire": {
         "degrees": 5
-      }
+      },
+      "animated": true
     },
     "androidx.compose.ui.draw/scale(scale:kotlin.Float)": {
       "tag": 34,
@@ -1102,7 +1111,8 @@
       "since": 5,
       "wire": {
         "scale": 5
-      }
+      },
+      "animated": true
     },
     "androidx.compose.ui.draw/shadow(elevation:androidx.compose.ui.unit.Dp,shape:androidx.compose.ui.graphics.Shape,clip:kotlin.Boolean,ambientColor:androidx.compose.ui.graphics.Color,spotColor:androidx.compose.ui.graphics.Color)": {
       "tag": 25,
