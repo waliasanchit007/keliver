@@ -13,7 +13,7 @@ them visually in a web portal that round-trips to the .kt files in git.
   rollout controls). Read it first in any session touching hosts, publishing or releases; update its Status
   table and Next action before stopping.
 - `docs/DECISIONS.md` — finalized architecture decisions (D1–D15). Don't relitigate.
-- `docs/ROADMAP.md` — prioritized backlog with evidence. Pick work from here.
+- `docs/ROADMAP.md` — the backlog with evidence; PLAN_2026-11.md's milestones order it.
 - `docs/SCREEN_ARCHITECTURE.md` — Style B (Screen/Presenter/Bindings) in detail.
 - `docs/PORTAL_USAGE.md`, `docs/KNOWN_BUGS.md`.
 - Reference adoption: **there is currently no external adopter.** The first adopter app
@@ -62,14 +62,12 @@ the editor with `python3 -m http.server --bind 127.0.0.1 8096` FROM `build/porta
 (the promoted last-known-good — NOT web-spike/build/dist directly; serving
 from the wrong dir = white screen, app .wasm 404s). `GET /preview-build` =
 build status. Config paths in keliver.portal.json point at
-portal-app-lib/src/commonMain (js+wasm since P3-12). **CACHE TRAP: the editor
-loader `web-spike.js` has a CONSTANT filename, so after a rebuild the browser
-keeps running the OLD cached loader (and its baked-in stale wasm hash) — your
-fix appears to "not work". The relay's promote() now stamps `?v=<millis>` onto
-the script ref (a625d4233), but a relay predating that fix won't; either
-restart the relay, or hard-reload / bump the `?v=` in
-build/portal-editor-live/index.html, and confirm via read_network_requests
-that the NEW hashed .wasm loaded.**
+portal-app-lib/src/commonMain (js+wasm since P3-12). **Cache trap:** the editor
+loader `web-spike.js` keeps one filename, and it carries the hash of the wasm it
+loads. The relay's promote() stamps `?v=<millis>` onto the script reference so a
+browser fetches the new loader. If a fix seems not to work after a rebuild,
+hard-reload (or bump the `?v=` in build/portal-editor-live/index.html) and check
+in the browser's network requests that the new hashed .wasm loaded.
 
 **Session-earned gotchas:** a new schema widget/modifier MUST also be listed in
 the @Schema members annotation or codegen silently ignores it; Zipline has no
