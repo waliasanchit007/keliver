@@ -42,8 +42,13 @@ class GatebAnimationBenchmark {
 
   @Test fun nativeGuest() = run("native-guest")
 
+  private fun run(mode: String) {
+    GatebPhone.recordAndCheck("animation $mode")
+    measure(mode)
+  }
+
   @OptIn(ExperimentalMetricApi::class)
-  private fun run(mode: String) = rule.measureRepeated(
+  private fun measure(mode: String) = rule.measureRepeated(
     packageName = TARGET_PACKAGE,
     metrics = listOf(FrameTimingMetric()),
     iterations = ITERATIONS,

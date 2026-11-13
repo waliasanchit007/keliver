@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
@@ -66,9 +67,14 @@ class GatebActivity : ComponentActivity() {
         MaterialTheme {
           Surface(Modifier.fillMaxSize()) { NativeAnimationBench(mode.removePrefix("native-")) }
         }
+        // First frame with the screen's content: the startup benchmark's timeToFullDisplay.
+        SideEffect { reportFullyDrawn() }
       }
       return
     }
+    // The guest's first content arrives in its first change batch; report fully drawn once it has
+    // been applied (posted behind it on the main thread), for the startup benchmark.
+    CountingListener.onFirstChanges = { window.decorView.post { reportFullyDrawn() } }
 
     val factory = TreehouseAppFactory(
       context = applicationContext,
@@ -130,6 +136,9 @@ private object CountingListener : EventListener.Factory {
   private val changes = AtomicLong()
   private var windowStart = System.nanoTime()
 
+  /** Called once, after the guest's first `sendChanges` (its first content). */
+  @Volatile var onFirstChanges: (() -> Unit)? = null
+
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = object : EventListener() {
     override fun codeLoadFailed(exception: Exception, startValue: Any?) {
       Log.e("KeliverGateB", "codeLoadFailed", exception)
@@ -153,7 +162,15 @@ private object CountingListener : EventListener.Factory {
       return null
     }
 
-    override fun callEnd(call: Call, result: CallResult, startValue: Any?) {}
+    override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
+      // After the call, the host has applied (or queued on the main thread) the first changes.
+      if ("sendChanges" in call.function.signature) {
+        onFirstChanges?.let { report ->
+          onFirstChanges = null
+          report()
+        }
+      }
+    }
   }
 
   override fun close() {}
