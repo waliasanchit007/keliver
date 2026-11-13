@@ -663,4 +663,9 @@ the same pixels as native Compose, in two ways.
     a delegating widget factory that wraps the first `Column` the host creates. The first series
     (in PR #243's description) was measured before that: the guest was marked when the host created
     the `Column`, before it was composed, and a `snapshotFlow` can resume before that frame, so the
-    guest's number may have been one frame (8–16 ms) early. That does not change the conclusion.
+    guest's number could be early. Re-measured with the symmetric probe (`--runs 7`, same
+    simulator), the guest median moved from 185 to 211 ms while native stayed at 122 ms, and the
+    host created the guest's first `Column` at 168 ms instead of 161. So the old probe favoured the
+    guest by about 20 ms, a little more than one frame, and the gap to native is about +89 ms, not
+    +63. Fidelity, the gate's criterion, is unchanged. The phone checkpoint should time both routes
+    with this probe.

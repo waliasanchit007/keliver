@@ -140,7 +140,7 @@ for label, pattern in (("guest: code loaded (codeLoadSuccess)", r"codeLoadSucces
     v = []
     for i in range(1, runs + 1):  # only this run's launches
         path = os.path.join(out, "logs", f"time-guest-{i}.log")
-    m = re.search(pattern, open(path).read()) if os.path.exists(path) else None
+        m = re.search(pattern, open(path).read()) if os.path.exists(path) else None
         if m: v.append(int(m.group(1)))
     if v: lines.append(f"| {label} | {len(v)} | {statistics.median(v):.0f} | {min(v)} | {max(v)} |")
 lines += ["", "A simulator is not a phone: the Mac's CPU and GPU run it, so the times are for comparing the two routes here, not for absolute numbers.", ""]
@@ -294,5 +294,5 @@ for i in $(seq 1 "$RUNS"); do
 done
 xcrun simctl terminate "$UDID" dev.keliver.gateb >/dev/null 2>&1 || true
 
-report "${DEVNAME//_/ }" "$RUNTIME" "$TYPE" "$BUNDLE_BYTES" || fail "the screens differ; see $OUT/results.md"
+report "${DEVNAME//_/ }" "$RUNTIME" "$TYPE" "$BUNDLE_BYTES" || fail "the comparison failed (differing screens, or the report itself; see above and $OUT/results.md)"
 echo "$NAME: results in $OUT/results.md"
