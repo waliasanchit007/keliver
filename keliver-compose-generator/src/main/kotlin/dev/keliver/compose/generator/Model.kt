@@ -93,9 +93,17 @@ data class DeclInfo(
     get() = buildString {
       append(pkg).append('/')
       owner?.let { append(it).append('#') }
+      widgetReceiver?.let { append(it.simpleName).append('.') }
       append(name)
       append(params.joinToString(",", "(", ")") { "${it.name}:${it.type.canonical()}" })
     }
+
+  /**
+   * A widget that is an extension of a scope (`ColumnScope.AnimatedVisibility`, Gate B-e): its stub
+   * is an extension of the guest's scope, and its renderer calls the receiver-less overload with
+   * this overload's defaults (in Compose those overloads differ only in their default arguments).
+   */
+  val widgetReceiver: TypeRef? get() = receiver?.takeIf { returns.fq != MODIFIER }
 
   /** The guest's package for this declaration: `dev.keliver.` + the package without `androidx.`. */
   val mirrorPkg: String get() = mirrorPackage(pkg)

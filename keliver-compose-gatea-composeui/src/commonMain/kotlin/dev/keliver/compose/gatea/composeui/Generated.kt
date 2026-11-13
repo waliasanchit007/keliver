@@ -5,6 +5,19 @@
 
 package dev.keliver.compose.gatea.composeui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,6 +61,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.DefaultAlpha
@@ -56,10 +72,14 @@ import androidx.compose.ui.graphics.drawscope.DrawScope.Companion.DefaultFilterQ
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import dev.keliver.Modifier as KeliverModifier
+import dev.keliver.compose.gatea.modifier.ExtraAnimated
 import dev.keliver.compose.gatea.modifier.GenAlpha1
+import dev.keliver.compose.gatea.modifier.GenAnimateContentSize1
+import dev.keliver.compose.gatea.modifier.GenAnimateContentSize2
 import dev.keliver.compose.gatea.modifier.GenBackground1
 import dev.keliver.compose.gatea.modifier.GenBorder1
 import dev.keliver.compose.gatea.modifier.GenBorder2
@@ -79,12 +99,15 @@ import dev.keliver.compose.gatea.modifier.GenLazyItemScopeAnimateItem1
 import dev.keliver.compose.gatea.modifier.GenLazyItemScopeFillParentMaxHeight1
 import dev.keliver.compose.gatea.modifier.GenLazyItemScopeFillParentMaxSize1
 import dev.keliver.compose.gatea.modifier.GenLazyItemScopeFillParentMaxWidth1
+import dev.keliver.compose.gatea.modifier.GenOffset1
 import dev.keliver.compose.gatea.modifier.GenPadding1
 import dev.keliver.compose.gatea.modifier.GenPadding2
 import dev.keliver.compose.gatea.modifier.GenPadding3
 import dev.keliver.compose.gatea.modifier.GenPadding4
+import dev.keliver.compose.gatea.modifier.GenRotate1
 import dev.keliver.compose.gatea.modifier.GenRowScopeAlign1
 import dev.keliver.compose.gatea.modifier.GenRowScopeWeight1
+import dev.keliver.compose.gatea.modifier.GenScale1
 import dev.keliver.compose.gatea.modifier.GenShadow1
 import dev.keliver.compose.gatea.modifier.GenSize1
 import dev.keliver.compose.gatea.modifier.GenSize2
@@ -92,6 +115,7 @@ import dev.keliver.compose.gatea.modifier.GenVerticalScroll1
 import dev.keliver.compose.gatea.modifier.GenWidth1
 import dev.keliver.compose.gatea.widget.ExtraLazyItem
 import dev.keliver.compose.gatea.widget.ExtraShimmer
+import dev.keliver.compose.gatea.widget.GenAnimatedVisibility1
 import dev.keliver.compose.gatea.widget.GenAsyncImage1
 import dev.keliver.compose.gatea.widget.GenAsyncImage2
 import dev.keliver.compose.gatea.widget.GenBox1
@@ -100,6 +124,7 @@ import dev.keliver.compose.gatea.widget.GenButton1
 import dev.keliver.compose.gatea.widget.GenCard1
 import dev.keliver.compose.gatea.widget.GenCard2
 import dev.keliver.compose.gatea.widget.GenColumn1
+import dev.keliver.compose.gatea.widget.GenColumnScopeAnimatedVisibility1
 import dev.keliver.compose.gatea.widget.GenFlowRow1
 import dev.keliver.compose.gatea.widget.GenHorizontalDivider1
 import dev.keliver.compose.gatea.widget.GenIcon1
@@ -111,6 +136,7 @@ import dev.keliver.compose.gatea.widget.GenLazyColumn1
 import dev.keliver.compose.gatea.widget.GenLazyRow1
 import dev.keliver.compose.gatea.widget.GenOutlinedButton1
 import dev.keliver.compose.gatea.widget.GenRow1
+import dev.keliver.compose.gatea.widget.GenRowScopeAnimatedVisibility1
 import dev.keliver.compose.gatea.widget.GenSpacer1
 import dev.keliver.compose.gatea.widget.GenSurface1
 import dev.keliver.compose.gatea.widget.GenSurface2
@@ -1101,6 +1127,102 @@ internal class ComposeUiGenTopAppBar1 : GenTopAppBar1<@Composable (Modifier) -> 
   }
 }
 
+/** Calls the real `androidx.compose.animation.AnimatedVisibility`. */
+internal class ComposeUiGenAnimatedVisibility1 : GenAnimatedVisibility1<@Composable (Modifier) -> Unit>, GeneratedWidget {
+  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  override var modifierEventSink: ((Int) -> Unit)? = null
+  private var p_visible: Any? by mutableStateOf<Any?>(Unset)
+  override fun visible(visible: kotlin.Boolean) { p_visible = visible }
+  private var p_enter: Any? by mutableStateOf<Any?>(null)
+  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { p_enter = enter }
+  private var p_exit: Any? by mutableStateOf<Any?>(null)
+  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { p_exit = exit }
+  private var p_label: Any? by mutableStateOf<Any?>(null)
+  override fun label(label: kotlin.String?) { p_label = label }
+  override val content: ScopedChildren = ScopedChildren()
+  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
+  override val value: @Composable (Modifier) -> Unit = { incoming ->
+    if (p_visible !== Unset) {
+      val visible = (p_visible as kotlin.Boolean)
+      val enter = (p_enter as dev.keliver.compose.animation.EnterTransition?)?.toCompose() ?: fadeIn() + expandIn()
+      val exit = (p_exit as dev.keliver.compose.animation.ExitTransition?)?.toCompose() ?: shrinkOut() + fadeOut()
+      val label = (p_label as kotlin.String?) ?: "AnimatedVisibility"
+      androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenAnimatedVisibility1),
+        enter = enter,
+        exit = exit,
+        label = label,
+        content = { this@ComposeUiGenAnimatedVisibility1.content.Render(this) },
+      )
+    }
+  }
+}
+
+/** Calls the real `androidx.compose.animation.AnimatedVisibility`. */
+internal class ComposeUiGenColumnScopeAnimatedVisibility1 : GenColumnScopeAnimatedVisibility1<@Composable (Modifier) -> Unit>, GeneratedWidget {
+  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  override var modifierEventSink: ((Int) -> Unit)? = null
+  private var p_visible: Any? by mutableStateOf<Any?>(Unset)
+  override fun visible(visible: kotlin.Boolean) { p_visible = visible }
+  private var p_enter: Any? by mutableStateOf<Any?>(null)
+  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { p_enter = enter }
+  private var p_exit: Any? by mutableStateOf<Any?>(null)
+  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { p_exit = exit }
+  private var p_label: Any? by mutableStateOf<Any?>(null)
+  override fun label(label: kotlin.String?) { p_label = label }
+  override val content: ScopedChildren = ScopedChildren()
+  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
+  override val value: @Composable (Modifier) -> Unit = { incoming ->
+    if (p_visible !== Unset) {
+      val visible = (p_visible as kotlin.Boolean)
+      val enter = (p_enter as dev.keliver.compose.animation.EnterTransition?)?.toCompose() ?: fadeIn() + expandVertically()
+      val exit = (p_exit as dev.keliver.compose.animation.ExitTransition?)?.toCompose() ?: fadeOut() + shrinkVertically()
+      val label = (p_label as kotlin.String?) ?: "AnimatedVisibility"
+      androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenColumnScopeAnimatedVisibility1),
+        enter = enter,
+        exit = exit,
+        label = label,
+        content = { this@ComposeUiGenColumnScopeAnimatedVisibility1.content.Render(this) },
+      )
+    }
+  }
+}
+
+/** Calls the real `androidx.compose.animation.AnimatedVisibility`. */
+internal class ComposeUiGenRowScopeAnimatedVisibility1 : GenRowScopeAnimatedVisibility1<@Composable (Modifier) -> Unit>, GeneratedWidget {
+  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  override var modifierEventSink: ((Int) -> Unit)? = null
+  private var p_visible: Any? by mutableStateOf<Any?>(Unset)
+  override fun visible(visible: kotlin.Boolean) { p_visible = visible }
+  private var p_enter: Any? by mutableStateOf<Any?>(null)
+  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { p_enter = enter }
+  private var p_exit: Any? by mutableStateOf<Any?>(null)
+  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { p_exit = exit }
+  private var p_label: Any? by mutableStateOf<Any?>(null)
+  override fun label(label: kotlin.String?) { p_label = label }
+  override val content: ScopedChildren = ScopedChildren()
+  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
+  override val value: @Composable (Modifier) -> Unit = { incoming ->
+    if (p_visible !== Unset) {
+      val visible = (p_visible as kotlin.Boolean)
+      val enter = (p_enter as dev.keliver.compose.animation.EnterTransition?)?.toCompose() ?: fadeIn() + expandHorizontally()
+      val exit = (p_exit as dev.keliver.compose.animation.ExitTransition?)?.toCompose() ?: fadeOut() + shrinkHorizontally()
+      val label = (p_label as kotlin.String?) ?: "AnimatedVisibility"
+      androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenRowScopeAnimatedVisibility1),
+        enter = enter,
+        exit = exit,
+        label = label,
+        content = { this@ComposeUiGenRowScopeAnimatedVisibility1.content.Render(this) },
+      )
+    }
+  }
+}
+
 /** The generated widgets' factory; extras (hand-written) are the only hand-written renderers. */
 public class ComposeUiKeliverComposeGateAWidgetFactory : KeliverComposeGateAWidgetFactory<@Composable (Modifier) -> Unit> {
   override fun GenBox1(): GenBox1<@Composable (Modifier) -> Unit> = ComposeUiGenBox1()
@@ -1129,6 +1251,9 @@ public class ComposeUiKeliverComposeGateAWidgetFactory : KeliverComposeGateAWidg
   override fun GenIconButton1(): GenIconButton1<@Composable (Modifier) -> Unit> = ComposeUiGenIconButton1()
   override fun GenHorizontalDivider1(): GenHorizontalDivider1<@Composable (Modifier) -> Unit> = ComposeUiGenHorizontalDivider1()
   override fun GenTopAppBar1(): GenTopAppBar1<@Composable (Modifier) -> Unit> = ComposeUiGenTopAppBar1()
+  override fun GenAnimatedVisibility1(): GenAnimatedVisibility1<@Composable (Modifier) -> Unit> = ComposeUiGenAnimatedVisibility1()
+  override fun GenColumnScopeAnimatedVisibility1(): GenColumnScopeAnimatedVisibility1<@Composable (Modifier) -> Unit> = ComposeUiGenColumnScopeAnimatedVisibility1()
+  override fun GenRowScopeAnimatedVisibility1(): GenRowScopeAnimatedVisibility1<@Composable (Modifier) -> Unit> = ComposeUiGenRowScopeAnimatedVisibility1()
   override fun ExtraShimmer(): ExtraShimmer<@Composable (Modifier) -> Unit> = ComposeUiExtraShimmer()
   override fun ExtraLazyItem(): ExtraLazyItem<@Composable (Modifier) -> Unit> = ComposeUiExtraLazyItem()
   override fun GenPadding1(value: @Composable (Modifier) -> Unit, modifier: GenPadding1) {}
@@ -1152,6 +1277,12 @@ public class ComposeUiKeliverComposeGateAWidgetFactory : KeliverComposeGateAWidg
   override fun GenClip1(value: @Composable (Modifier) -> Unit, modifier: GenClip1) {}
   override fun GenAlpha1(value: @Composable (Modifier) -> Unit, modifier: GenAlpha1) {}
   override fun GenShadow1(value: @Composable (Modifier) -> Unit, modifier: GenShadow1) {}
+  override fun GenOffset1(value: @Composable (Modifier) -> Unit, modifier: GenOffset1) {}
+  override fun GenRotate1(value: @Composable (Modifier) -> Unit, modifier: GenRotate1) {}
+  override fun GenScale1(value: @Composable (Modifier) -> Unit, modifier: GenScale1) {}
+  override fun GenAnimateContentSize1(value: @Composable (Modifier) -> Unit, modifier: GenAnimateContentSize1) {}
+  override fun GenAnimateContentSize2(value: @Composable (Modifier) -> Unit, modifier: GenAnimateContentSize2) {}
+  override fun ExtraAnimated(value: @Composable (Modifier) -> Unit, modifier: ExtraAnimated) {}
 }
 
 /** Applies a generated widget's own (unscoped) generated modifiers, in the guest's order. */
@@ -1160,30 +1291,47 @@ internal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWid
   val elements = ArrayList<KeliverModifier.UnscopedElement>()
   chain.forEachUnscoped { elements += it }
   var m = this
+  val paired = ArrayList<Pair<KeliverModifier.UnscopedElement, List<ExtraAnimated>>>()
+  var animatedRefs: List<ExtraAnimated> = emptyList()
   for (e in elements) {
-    m = when (e) {
-      is GenPadding1 -> run { val all = e.all.toCompose(); m.padding(all = all) }
-      is GenPadding2 -> run { val horizontal = e.horizontal.toCompose(); val vertical = e.vertical.toCompose(); m.padding(horizontal = horizontal, vertical = vertical) }
-      is GenPadding3 -> run { val start = e.start.toCompose(); val top = e.top.toCompose(); val end = e.end.toCompose(); val bottom = e.bottom.toCompose(); m.padding(start = start, top = top, end = end, bottom = bottom) }
-      is GenPadding4 -> run { val paddingValues = e.paddingValues.toCompose(); m.padding(paddingValues = paddingValues) }
-      is GenSize1 -> run { val size = e.size.toCompose(); m.size(size = size) }
-      is GenSize2 -> run { val width = e.width.toCompose(); val height = e.height.toCompose(); m.size(width = width, height = height) }
-      is GenWidth1 -> run { val width = e.width.toCompose(); m.width(width = width) }
-      is GenHeight1 -> run { val height = e.height.toCompose(); m.height(height = height) }
-      is GenFillMaxWidth1 -> run { val fraction = e.fraction; m.fillMaxWidth(fraction = fraction) }
-      is GenFillMaxHeight1 -> run { val fraction = e.fraction; m.fillMaxHeight(fraction = fraction) }
-      is GenFillMaxSize1 -> run { val fraction = e.fraction; m.fillMaxSize(fraction = fraction) }
-      is GenBackground1 -> run { val color = e.color.toCompose(); val shape = e.shape.toCompose(); m.background(color = color, shape = shape) }
-      is GenBorder1 -> run { val width = e.width.toCompose(); val color = e.color.toCompose(); val shape = e.shape.toCompose(); m.border(width = width, color = color, shape = shape) }
-      is GenBorder2 -> run { val border = e.border.toCompose(); val shape = e.shape.toCompose(); m.border(border = border, shape = shape) }
-      is GenClickable1 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
-      is GenClickable2 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
-      is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
-      is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
-      is GenClip1 -> run { val shape = e.shape.toCompose(); m.clip(shape = shape) }
-      is GenAlpha1 -> run { val alpha = e.alpha; m.alpha(alpha = alpha) }
-      is GenShadow1 -> run { val elevation = e.elevation.toCompose(); val shape = e.shape.toCompose(); val clip = if (e.clipIsDefault) elevation > 0.dp else e.clip; val ambientColor = if (e.ambientColorIsDefault) DefaultShadowColor else e.ambientColor.toCompose(); val spotColor = if (e.spotColorIsDefault) DefaultShadowColor else e.spotColor.toCompose(); m.shadow(elevation = elevation, shape = shape, clip = clip, ambientColor = ambientColor, spotColor = spotColor) }
-      else -> m
+    if (e is ExtraAnimated) {
+      animatedRefs = animatedRefs + e
+    } else {
+      paired += e to animatedRefs
+      animatedRefs = emptyList()
+    }
+  }
+  for ((e, pending) in paired) {
+    m = androidx.compose.runtime.key(pending.map { it.ref.id }) {
+      when (e) {
+        is GenPadding1 -> run { val all = e.all.toCompose().animated(pending, "all"); m.padding(all = all) }
+        is GenPadding2 -> run { val horizontal = e.horizontal.toCompose(); val vertical = e.vertical.toCompose(); m.padding(horizontal = horizontal, vertical = vertical) }
+        is GenPadding3 -> run { val start = e.start.toCompose(); val top = e.top.toCompose(); val end = e.end.toCompose(); val bottom = e.bottom.toCompose(); m.padding(start = start, top = top, end = end, bottom = bottom) }
+        is GenPadding4 -> run { val paddingValues = e.paddingValues.toCompose(); m.padding(paddingValues = paddingValues) }
+        is GenSize1 -> run { val size = e.size.toCompose().animated(pending, "size"); m.size(size = size) }
+        is GenSize2 -> run { val width = e.width.toCompose().animated(pending, "width"); val height = e.height.toCompose().animated(pending, "height"); m.size(width = width, height = height) }
+        is GenWidth1 -> run { val width = e.width.toCompose().animated(pending, "width"); m.width(width = width) }
+        is GenHeight1 -> run { val height = e.height.toCompose().animated(pending, "height"); m.height(height = height) }
+        is GenFillMaxWidth1 -> run { val fraction = e.fraction; m.fillMaxWidth(fraction = fraction) }
+        is GenFillMaxHeight1 -> run { val fraction = e.fraction; m.fillMaxHeight(fraction = fraction) }
+        is GenFillMaxSize1 -> run { val fraction = e.fraction; m.fillMaxSize(fraction = fraction) }
+        is GenBackground1 -> run { val color = e.color.toCompose().animated(pending, "color"); val shape = e.shape.toCompose(); m.background(color = color, shape = shape) }
+        is GenBorder1 -> run { val width = e.width.toCompose(); val color = e.color.toCompose(); val shape = e.shape.toCompose(); m.border(width = width, color = color, shape = shape) }
+        is GenBorder2 -> run { val border = e.border.toCompose(); val shape = e.shape.toCompose(); m.border(border = border, shape = shape) }
+        is GenClickable1 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
+        is GenClickable2 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
+        is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
+        is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
+        is GenClip1 -> run { val shape = e.shape.toCompose(); m.clip(shape = shape) }
+        is GenAlpha1 -> run { val alpha = e.alpha.animated(pending, "alpha"); m.alpha(alpha = alpha) }
+        is GenShadow1 -> run { val elevation = e.elevation.toCompose(); val shape = e.shape.toCompose(); val clip = (if (e.clipIsDefault) elevation > 0.dp else e.clip); val ambientColor = (if (e.ambientColorIsDefault) DefaultShadowColor else e.ambientColor.toCompose()); val spotColor = (if (e.spotColorIsDefault) DefaultShadowColor else e.spotColor.toCompose()); m.shadow(elevation = elevation, shape = shape, clip = clip, ambientColor = ambientColor, spotColor = spotColor) }
+        is GenOffset1 -> run { val x = e.x.toCompose().animated(pending, "x"); val y = e.y.toCompose().animated(pending, "y"); m.offset(x = x, y = y) }
+        is GenRotate1 -> run { val degrees = e.degrees.animated(pending, "degrees"); m.rotate(degrees = degrees) }
+        is GenScale1 -> run { val scale = e.scale.animated(pending, "scale"); m.scale(scale = scale) }
+        is GenAnimateContentSize1 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); m.animateContentSize(animationSpec = animationSpec) }
+        is GenAnimateContentSize2 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); val alignment = e.alignment.toCompose(); m.animateContentSize(animationSpec = animationSpec, alignment = alignment) }
+        else -> m
+      }
     }
   }
   return m

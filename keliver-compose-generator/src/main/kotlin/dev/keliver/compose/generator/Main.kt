@@ -40,7 +40,12 @@ fun loadConfig(file: File): Config {
     typeMessages = o["typeMessages"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }.orEmpty(),
     icons = strings("icons"),
     extras = strings("extras"),
-  )
+    animated = strings("animated"),
+    extraModifiers = strings("extraModifiers"),
+  ).also { c ->
+    val unknown = c.animated.filter { it !in c.declarations }
+    require(unknown.isEmpty()) { "animated: not in declarations: $unknown" }
+  }
 }
 
 /** Everything one generation writes: relative path under an output root → text. */

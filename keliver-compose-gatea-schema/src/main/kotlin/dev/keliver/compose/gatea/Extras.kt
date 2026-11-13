@@ -16,6 +16,7 @@
 package dev.keliver.compose.gatea
 
 import dev.keliver.schema.Children
+import dev.keliver.schema.Modifier
 import dev.keliver.schema.Property
 import dev.keliver.schema.Widget
 
@@ -41,4 +42,17 @@ public data class ExtraShimmer(
 public data class ExtraLazyItem(
   @Property(1) val key: String?,
   @Children(1) val content: GenLazyItemScope.() -> Unit,
+)
+
+/**
+ * An animated reference (docs/COMPOSE_GENERATOR_DESIGN.md §10, Gate B-e): the guest's
+ * `animate*AsState` value for [param] of the generated element that follows this one, or, at the
+ * end of a widget's chain, of the widget itself. The host wraps that argument in the real
+ * `animate*AsState` ([ref] carries the id, spec and label). Structure only; screens never name it.
+ * A host built before it ignores it (an unknown modifier) and renders the target with no animation.
+ */
+@Modifier(500)
+public data class ExtraAnimated(
+  val param: String,
+  val ref: dev.keliver.compose.animation.core.AnimatedRef,
 )

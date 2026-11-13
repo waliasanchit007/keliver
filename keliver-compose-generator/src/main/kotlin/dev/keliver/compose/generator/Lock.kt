@@ -15,6 +15,8 @@
  */
 package dev.keliver.compose.generator
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -56,6 +58,15 @@ data class LockEntry(
    * Null in a lock written before Gate B; filled at the entry's own level on the next generation.
    */
   val wire: Map<String, Int>? = null,
+  /**
+   * Gate B-e: the entry's Float, Dp and Color parameters accept animated references (the config's
+   * `animated` list), so its stub may send an `ExtraAnimated` element and its renderer wraps them.
+   * Written only when true. Not a wire change (a host that predates it ignores `ExtraAnimated` and
+   * renders the target), so it does not raise the level; but once set it may not be dropped.
+   */
+  @OptIn(ExperimentalSerializationApi::class)
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  val animated: Boolean = false,
 )
 
 val lockJson = Json {
@@ -98,11 +109,19 @@ class LockBuilder(private val old: Lock) {
    * The entry for [decl] with [wire] travelling parameters and [synthetic] extra tagged ones: the
    * existing entry (appending any synthetic parameter or newly travelling one), or a new one.
    */
-  fun widget(decl: DeclInfo, wire: List<String> = decl.params.map { it.name }, synthetic: List<String> = emptyList()): LockEntry =
-    entry(decl, widgets, isWidget = true, wire, synthetic)
+  fun widget(
+    decl: DeclInfo,
+    wire: List<String> = decl.params.map { it.name },
+    synthetic: List<String> = emptyList(),
+    animated: Boolean = false,
+  ): LockEntry = entry(decl, widgets, isWidget = true, wire, synthetic).withAnimated(decl, widgets, animated)
 
-  fun modifier(decl: DeclInfo, wire: List<String> = decl.params.map { it.name }): LockEntry =
-    entry(decl, modifiers, isWidget = false, wire, emptyList())
+  fun modifier(decl: DeclInfo, wire: List<String> = decl.params.map { it.name }, animated: Boolean = false): LockEntry =
+    entry(decl, modifiers, isWidget = false, wire, emptyList()).withAnimated(decl, modifiers, animated)
+
+  /** Records `animated` (never clears it: checkAppendOnly refuses a dropped one). */
+  private fun LockEntry.withAnimated(decl: DeclInfo, map: MutableMap<String, LockEntry>, animated: Boolean): LockEntry =
+    if (!animated || this.animated) this else copy(animated = true).also { map[decl.key] = it }
 
   /** The entry a declaration already has, without appending one. */
   fun existing(decl: DeclInfo): LockEntry? = (if (decl.kind == DeclKind.WIDGET) widgets else modifiers)[decl.key]
@@ -124,7 +143,7 @@ class LockBuilder(private val old: Lock) {
       return updated
     }
     appended = true
-    val base = (decl.owner ?: "") + decl.name.replaceFirstChar { it.uppercase() }
+    val base = (decl.owner ?: decl.widgetReceiver?.simpleName ?: "") + decl.name.replaceFirstChar { it.uppercase() }
     val siblings = (widgets.values + modifiers.values).count { it.name.removePrefix("Gen").trimEnd { c -> c.isDigit() } == base }
     val name = "Gen$base${siblings + 1}"
     val params = decl.params.withIndex().associate { (i, p) -> p.name to i + 1 } +
@@ -170,6 +189,7 @@ fun checkAppendOnly(old: Lock, new: Lock): List<String> = buildList {
         entry.params.any { (p, t) -> now.params[p] != t } -> add("$kind $key changed a parameter tag")
         entry.wire.orEmpty().any { (p, level) -> now.wire?.get(p) != level } -> add("$kind $key stopped sending a parameter, or changed when it started")
         now.since != entry.since -> add("$kind $key changed its level")
+        entry.animated && !now.animated -> add("$kind $key stopped accepting animated references")
       }
     }
   }

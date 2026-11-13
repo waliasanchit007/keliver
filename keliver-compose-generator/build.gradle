@@ -25,6 +25,8 @@ def desktopOf = { alias, String artifact = null, String platform = 'desktop' ->
 def composeInputs = [
   desktopOf(libs.jetbrains.compose.foundation, 'foundation-layout'),
   desktopOf(libs.jetbrains.compose.foundation),
+  desktopOf(libs.jetbrains.compose.animation),
+  desktopOf(libs.jetbrains.compose.animation, 'animation-core'),
   desktopOf(libs.jetbrains.compose.material3),
   desktopOf(libs.jetbrains.compose.ui.asProvider()),
   desktopOf(libs.jetbrains.compose.ui.asProvider(), 'ui-graphics'),
@@ -73,6 +75,12 @@ tasks.register('generateComposeApi', JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'dev.keliver.compose.generator.MainKt'
   args = generatorArgs([])
+}
+
+// GeneratorTest.findPicksAnOverloadByItsReceiver reads the same Compose API the generator does.
+tasks.named('test') {
+  inputs.files(configurations.composeApi).withPropertyName('composeApi').withNormalizer(ClasspathNormalizer)
+  doFirst { systemProperty 'keliver.composeApi', configurations.composeApi.asPath }
 }
 
 tasks.register('checkComposeApi', JavaExec) {

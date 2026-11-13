@@ -67,7 +67,9 @@ class SourceReader(sourceJars: List<File>) {
           f.valueParameters.map { it.name } == decl.params.map { it.name } &&
           f.valueParameters.zip(decl.params).all { (kp, p) -> kp.typeReference?.text?.let { sameType(it, p.type) } ?: true } &&
           (decl.owner == null && f.parent is KtFile || decl.owner != null && (f.parent.parent as? KtClassOrObject)?.name == decl.owner) &&
-          (decl.receiver == null || f.receiverTypeReference != null)
+          (decl.receiver == null || f.receiverTypeReference != null) &&
+          // An extension widget (`ColumnScope.AnimatedVisibility`) by its receiver; a plain one has none.
+          (decl.widgetReceiver?.let { r -> f.receiverTypeReference?.text?.substringAfterLast('.') == r.simpleName } ?: (decl.receiver != null || f.receiverTypeReference == null))
       } ?: continue
       decl.isComposable = fn.annotationEntries.any { it.shortName?.asString() == "Composable" }
       fn.annotationEntries.firstOrNull { it.shortName?.asString() == "Deprecated" }?.let { d ->

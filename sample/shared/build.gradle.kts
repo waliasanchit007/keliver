@@ -75,6 +75,13 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().all
 // sees the generated sources; jvm/js/iOS targets compile against
 // the un-generated source set and fail to resolve the generated
 // class name.
+// Gate B-e (prototype only): KSP 2.3 (KSP2) also needs its per-target tasks to wait for the metadata one.
+if (providers.gradleProperty("keliverComposePrototype").isPresent) {
+  tasks.configureEach {
+    if (name != "kspCommonMainKotlinMetadata" && name.startsWith("ksp")) dependsOn("kspCommonMainKotlinMetadata")
+  }
+}
+
 kotlin.sourceSets.commonMain.configure {
   kotlin.srcDir("${layout.buildDirectory.get()}/generated/ksp/metadata/commonMain/kotlin")
 }

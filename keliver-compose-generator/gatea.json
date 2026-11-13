@@ -69,8 +69,29 @@
     "androidx.compose.material3.OutlinedButton(onClick,modifier,enabled,shape,colors,elevation,border,contentPadding,interactionSource,content)",
     "androidx.compose.material3.IconButton(onClick,modifier,enabled,colors,interactionSource,shape,content)",
     "androidx.compose.material3.HorizontalDivider(modifier,thickness,color)",
-    "androidx.compose.material3.TopAppBar(title,modifier,navigationIcon,actions,expandedHeight,windowInsets,colors,scrollBehavior)"
+    "androidx.compose.material3.TopAppBar(title,modifier,navigationIcon,actions,expandedHeight,windowInsets,colors,scrollBehavior)",
+    "androidx.compose.foundation.layout.offset(x,y)",
+    "androidx.compose.ui.draw.rotate(degrees)",
+    "androidx.compose.ui.draw.scale(scale)",
+    "androidx.compose.animation.AnimatedVisibility(visible,modifier,enter,exit,label,content)",
+    "androidx.compose.animation.AnimatedVisibility@ColumnScope(visible,modifier,enter,exit,label,content)",
+    "androidx.compose.animation.AnimatedVisibility@RowScope(visible,modifier,enter,exit,label,content)",
+    "androidx.compose.animation.animateContentSize(animationSpec,finishedListener)",
+    "androidx.compose.animation.animateContentSize(animationSpec,alignment,finishedListener)"
   ],
+  "animated": [
+    "androidx.compose.ui.draw.alpha(alpha)",
+    "androidx.compose.foundation.layout.size(size:Dp)",
+    "androidx.compose.foundation.layout.size(width,height)",
+    "androidx.compose.foundation.layout.width(width)",
+    "androidx.compose.foundation.layout.height(height)",
+    "androidx.compose.foundation.layout.padding(all)",
+    "androidx.compose.foundation.background(color,shape)",
+    "androidx.compose.foundation.layout.offset(x,y)",
+    "androidx.compose.ui.draw.rotate(degrees)",
+    "androidx.compose.ui.draw.scale(scale)"
+  ],
+  "extraModifiers": ["Animated"],
   "errors": [
     {"spec": "androidx.compose.ui.layout.Layout(content,modifier,measurePolicy)",
      "message": "custom measuring runs per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component."},
@@ -89,7 +110,8 @@
     "androidx.compose.foundation.interaction.MutableInteractionSource": "interaction sources are host state (Gate B). Leave it out: the host makes its own, with the same press and ripple.",
     "androidx.compose.foundation.Indication": "custom indications run per frame on the host. Leave it out: the theme's ripple applies.",
     "androidx.compose.material3.TopAppBarScrollBehavior": "scroll behaviours connect the bar to the host's nested scrolling (Gate B, part b).",
-    "androidx.compose.foundation.layout.WindowInsets": "window insets are the host's (Gate B, part b); the default applies."
+    "androidx.compose.foundation.layout.WindowInsets": "window insets are the host's (Gate B, part b); the default applies.",
+    "androidx.compose.ui.unit.IntSize": "sizes are measured on the host, and the end of the host's animation is not reported to the guest yet (Gate B-e). Leave it out."
   },
   "icons": [
     "AutoMirrored.Filled.ArrowBack", "AutoMirrored.Filled.TrendingUp", "Filled.ChevronRight", "Filled.Close",

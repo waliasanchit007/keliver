@@ -144,12 +144,12 @@ public interface LazyItemScope {
     return then(GenLazyItemScopeAnimateItem1Impl)
   }
   
-  @Deprecated("Keliver: 'fadeInSpec': a androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'placementSpec': a androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'fadeOutSpec': a androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+  @Deprecated("Keliver: 'fadeInSpec': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'placementSpec': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'fadeOutSpec': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out.", level = DeprecationLevel.ERROR)
   public fun dev.keliver.compose.ui.Modifier.animateItem(
-    fadeInSpec: dev.keliver.compose.animation.core.FiniteAnimationSpec? = null,
-    placementSpec: dev.keliver.compose.animation.core.FiniteAnimationSpec? = null,
-    fadeOutSpec: dev.keliver.compose.animation.core.FiniteAnimationSpec? = null,
-  ): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'fadeInSpec': a androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'placementSpec': a androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11). Keliver: 'fadeOutSpec': a androidx.compose.animation.core.FiniteAnimationSpec<kotlin.Float>? cannot cross to the host in this version of the generated API (docs/COMPOSE_GENERATOR_DESIGN.md §11).")
+    fadeInSpec: dev.keliver.compose.animation.core.FiniteAnimationSpec<kotlin.Float>? = null,
+    placementSpec: dev.keliver.compose.animation.core.FiniteAnimationSpec<dev.keliver.compose.ui.unit.IntOffset>? = null,
+    fadeOutSpec: dev.keliver.compose.animation.core.FiniteAnimationSpec<kotlin.Float>? = null,
+  ): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: 'fadeInSpec': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'placementSpec': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out. Keliver: 'fadeOutSpec': a nullable modifier value is Gate B (docs/COMPOSE_GENERATOR_DESIGN.md §8). Leave it out.")
   
   
 }

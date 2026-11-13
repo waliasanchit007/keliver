@@ -16,6 +16,7 @@ import dev.keliver.compose.gatea.compose.GenFillMaxSize1Impl
 import dev.keliver.compose.gatea.compose.GenFillMaxWidth1Impl
 import dev.keliver.compose.gatea.compose.GenFlowRow1
 import dev.keliver.compose.gatea.compose.GenHeight1Impl
+import dev.keliver.compose.gatea.compose.GenOffset1Impl
 import dev.keliver.compose.gatea.compose.GenPadding1Impl
 import dev.keliver.compose.gatea.compose.GenPadding2Impl
 import dev.keliver.compose.gatea.compose.GenPadding3Impl
@@ -151,7 +152,9 @@ public fun FlowRow(
 public fun dev.keliver.compose.ui.Modifier.padding(
   all: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.compose.ui.Modifier {
-  return then(GenPadding1Impl(all = all))
+  val animated_all = dev.keliver.compose.internal.animated("all", all)
+  @Suppress("NAME_SHADOWING") val all = dev.keliver.compose.internal.untag(all)
+  return then(animated_all).then(GenPadding1Impl(all = all))
 }
 /** Apply [horizontal] dp space along the left and right edges of the content, and [vertical] dp space along the top and bottom edges. */
 @androidx.compose.runtime.Stable
@@ -183,7 +186,9 @@ public fun dev.keliver.compose.ui.Modifier.padding(
 public fun dev.keliver.compose.ui.Modifier.size(
   size: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.compose.ui.Modifier {
-  return then(GenSize1Impl(size = size))
+  val animated_size = dev.keliver.compose.internal.animated("size", size)
+  @Suppress("NAME_SHADOWING") val size = dev.keliver.compose.internal.untag(size)
+  return then(animated_size).then(GenSize1Impl(size = size))
 }
 /** Declare the preferred size of the content to be exactly [width]dp by [height]dp. */
 @androidx.compose.runtime.Stable
@@ -191,21 +196,29 @@ public fun dev.keliver.compose.ui.Modifier.size(
   width: dev.keliver.compose.ui.unit.Dp,
   height: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.compose.ui.Modifier {
-  return then(GenSize2Impl(width = width, height = height))
+  val animated_width = dev.keliver.compose.internal.animated("width", width)
+  @Suppress("NAME_SHADOWING") val width = dev.keliver.compose.internal.untag(width)
+  val animated_height = dev.keliver.compose.internal.animated("height", height)
+  @Suppress("NAME_SHADOWING") val height = dev.keliver.compose.internal.untag(height)
+  return then(animated_width).then(animated_height).then(GenSize2Impl(width = width, height = height))
 }
 /** Declare the preferred width of the content to be exactly [width]dp. */
 @androidx.compose.runtime.Stable
 public fun dev.keliver.compose.ui.Modifier.width(
   width: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.compose.ui.Modifier {
-  return then(GenWidth1Impl(width = width))
+  val animated_width = dev.keliver.compose.internal.animated("width", width)
+  @Suppress("NAME_SHADOWING") val width = dev.keliver.compose.internal.untag(width)
+  return then(animated_width).then(GenWidth1Impl(width = width))
 }
 /** Declare the preferred height of the content to be exactly [height]dp. */
 @androidx.compose.runtime.Stable
 public fun dev.keliver.compose.ui.Modifier.height(
   height: dev.keliver.compose.ui.unit.Dp,
 ): dev.keliver.compose.ui.Modifier {
-  return then(GenHeight1Impl(height = height))
+  val animated_height = dev.keliver.compose.internal.animated("height", height)
+  @Suppress("NAME_SHADOWING") val height = dev.keliver.compose.internal.untag(height)
+  return then(animated_height).then(GenHeight1Impl(height = height))
 }
 /** Have the content fill (possibly only partially) the [Constraints.maxWidth] of the incoming measurement constraints, by setting the [minimum width][Constraints.minWidth] and the [maximum width][Constraints.maxWidth] to be equal to the [maximum width][Constraints.maxWidth] multiplied by [fraction]. */
 @androidx.compose.runtime.Stable
@@ -227,6 +240,18 @@ public fun dev.keliver.compose.ui.Modifier.fillMaxSize(
   fraction: kotlin.Float = 1f,
 ): dev.keliver.compose.ui.Modifier {
   return then(GenFillMaxSize1Impl(fraction = fraction))
+}
+/** Offset the content by ([x] dp, [y] dp). */
+@androidx.compose.runtime.Stable
+public fun dev.keliver.compose.ui.Modifier.offset(
+  x: dev.keliver.compose.ui.unit.Dp = 0.dp,
+  y: dev.keliver.compose.ui.unit.Dp = 0.dp,
+): dev.keliver.compose.ui.Modifier {
+  val animated_x = dev.keliver.compose.internal.animated("x", x)
+  @Suppress("NAME_SHADOWING") val x = dev.keliver.compose.internal.untag(x)
+  val animated_y = dev.keliver.compose.internal.animated("y", y)
+  @Suppress("NAME_SHADOWING") val y = dev.keliver.compose.internal.untag(y)
+  return then(animated_x).then(animated_y).then(GenOffset1Impl(x = x, y = y))
 }
 /** The guest's `androidx.compose.foundation.layout.BoxScope`. */
 @androidx.compose.runtime.Immutable

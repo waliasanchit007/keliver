@@ -51,6 +51,39 @@ dependencyResolutionManagement {
   }
 }
 
+// Gate B-e (prototype only, docs/GATE_B_RESULTS.md): with -PkeliverComposePrototype the sample builds
+// against Keliver's unpublished Compose-generated group (a scratch Maven repository, version
+// 0.0.0-gateb, on main's stack) and adds a debug-only route whose screen is plain Compose against the
+// generated API. Without the property nothing here changes: same versions, same modules.
+val composePrototype = providers.gradleProperty("keliverComposePrototype").isPresent
+if (composePrototype) {
+  dependencyResolutionManagement {
+    // Gradle would import gradle/libs.versions.toml as `libs` itself; let it use another name, so
+    // `libs` is this copy of the same file with the prototype's versions.
+    defaultLibrariesExtensionName = "defaultLibs"
+    versionCatalogs {
+      create("libs") {
+        from(files("gradle/libs.versions.toml"))
+        version("kotlin", "2.4.20")
+        version("ksp", "2.3.13")
+        version("keliver", providers.gradleProperty("keliverVersion").getOrElse("0.0.0-gateb"))
+        version("zipline", "1.28.0")
+        version("composeMultiplatform", "1.12.2")
+        // main's Android artifacts require compileSdk 37 (AAR metadata).
+        version("android-compileSdk", "37")
+      }
+    }
+  }
+  include(":gateb-guest")
+  // androidx.compose 1.12 (CMP 1.12.2) declares AGP 9.1 as its minimum; the sample stays on AGP 8.13
+  // and Gradle 9.0 (AGP 9 needs a newer Gradle), so prototype builds skip that AAR-metadata check.
+  gradle.beforeProject {
+    tasks.configureEach {
+      if (name.startsWith("check") && name.endsWith("AarMetadata")) enabled = false
+    }
+  }
+}
+
 include(":schema")
 include(":shared-widget")
 include(":shared-modifier")

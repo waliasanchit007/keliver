@@ -669,3 +669,50 @@ the same pixels as native Compose, in two ways.
     guest by about 20 ms, a little more than one frame, and the gap to native is about +89 ms, not
     +63. Fidelity, the gate's criterion, is unchanged. The phone checkpoint should time both routes
     with this probe.
+
+## 22. Gate B, part e: animation
+
+Still prototype-only. Results and the timing comparison: [`GATE_B_RESULTS.md`](GATE_B_RESULTS.md).
+
+- **Animated references (§10's proposal), built.** `animateFloatAsState`, `animateDpAsState` and
+  `animateColorAsState` are hand-written in `keliver-compose-values` with Compose's signatures. They
+  do not animate in the guest: they return a `State` whose value is the target, *tagged* so the
+  stubs can recognise it. A `Float` or `Dp` cannot carry a reference (they are plain floats), so
+  the tag is the target's bits plus a count (the count-th float away from zero; call sites sharing
+  a target take 1, 2, 3…), and arithmetic on it gives an untagged literal (the rule §7 has for
+  theme references). A `Color` puts the count in packing bits no component read uses. So a guest
+  read is not the target: `==` fails (Colour too), `0f` reads as `Float.MIN_VALUE`, a negative
+  target reads slightly more negative; docs/GATE_B_RESULTS.md lists the semantics and the read-log
+  alternative, and `AnimatedReferencesTest` pins them. The guest keeps a table from tagged value to
+  reference (id, spec, label); a call site's entry leaves the table when it leaves the composition.
+- **Which parameters accept one** is generator config (`gatea.json`'s `animated`: `alpha`,
+  `size`, `width`, `height`, `padding(all)`, `background(color)`, `offset`, `rotate`, `scale`).
+  For those, the generated stub sends the exact target and, before the element, an
+  `ExtraAnimated(param, ref)` modifier (a hand-written extra, tag 500; at the end of a widget's own
+  chain it names the widget's parameter). The generated renderer wraps that argument in the real
+  `animate*AsState`, in a movable group keyed by the element's reference ids, so the host animates
+  on its own frame clock, nothing crosses while it runs, and inserting a modifier ahead of it does
+  not reset it. A host that predates `ExtraAnimated` ignores it (an unknown modifier) and renders
+  the target without animation. **The lock:** no tag, name or parameter of an existing entry
+  changes, but the behaviour of six existing entries does (`alpha`, both `size`, `width`, `height`,
+  `padding(all)`, `background(color)`: their stubs may now send `ExtraAnimated`, their renderers
+  wrap the argument). Each configured entry carries `"animated": true` in the lock. That is not a
+  wire change (an old host degrades as above), so it does not raise the level; but
+  `checkAppendOnly` refuses dropping it, so taking an entry off the list cannot be silent.
+- **Specs, easings, transitions** are hand-written mirrors with codecs (§6): `tween`, `spring`,
+  `snap`, the four standard easings and `CubicBezierEasing`; `EnterTransition`/`ExitTransition`
+  (`fadeIn`, `scaleIn`, `expandIn`, `expandVertically`/`Horizontally`, `slideInVertically` and their
+  exits) travel as the parts they were built from and are combined again with the real `+`. A
+  generic Compose type (`FiniteAnimationSpec<IntSize>`) is a new mapping: the stub sends `.wire`
+  and the renderer rebuilds the real spec for the parameter's type arguments. Not mirrored:
+  `keyframes`, `repeatable`, `infiniteRepeatable`, custom `Easing` lambdas, transitions' lambda
+  parameters (`initialOffsetY = { … }`), `finishedListener` (an `ERROR` overload).
+- **Generated:** `AnimatedVisibility` (all three overloads: plain, `ColumnScope.` and `RowScope.`;
+  a spec may now name an extension receiver, `AnimatedVisibility@ColumnScope(…)`, and a scoped
+  overload's renderer calls the plain one with that overload's defaults, which is how Compose's
+  overloads differ), `Modifier.animateContentSize` (both overloads), `offset`, `rotate`, `scale`.
+  Lock level 5.
+- **The guest-side alternative**, hand-written: `Animatable` (Float, Dp, Color in Oklab, as
+  Compose's) with `animateTo`/`snapTo`/`stop`, driven by `withFrameNanos` on the guest's frame
+  clock. Tween, spring (Compose's closed form) and snap. Each frame's value is a new property or
+  modifier value: one change batch per frame.

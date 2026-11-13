@@ -242,6 +242,30 @@
     <children tag="3" name="navigationIcon" />
     <children tag="4" name="actions" />
   </widget>
+  <widget tag="27" type="dev.keliver.compose.gatea.GenAnimatedVisibility1">
+    <property tag="1" name="visible" type="kotlin.Boolean" />
+    <property tag="3" name="enter" type="dev.keliver.compose.animation.EnterTransition?" />
+    <property tag="4" name="exit" type="dev.keliver.compose.animation.ExitTransition?" />
+    <property tag="5" name="label" type="kotlin.String?" />
+    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
+    <children tag="6" name="content" />
+  </widget>
+  <widget tag="28" type="dev.keliver.compose.gatea.GenColumnScopeAnimatedVisibility1">
+    <property tag="1" name="visible" type="kotlin.Boolean" />
+    <property tag="3" name="enter" type="dev.keliver.compose.animation.EnterTransition?" />
+    <property tag="4" name="exit" type="dev.keliver.compose.animation.ExitTransition?" />
+    <property tag="5" name="label" type="kotlin.String?" />
+    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
+    <children tag="6" name="content" />
+  </widget>
+  <widget tag="29" type="dev.keliver.compose.gatea.GenRowScopeAnimatedVisibility1">
+    <property tag="1" name="visible" type="kotlin.Boolean" />
+    <property tag="3" name="enter" type="dev.keliver.compose.animation.EnterTransition?" />
+    <property tag="4" name="exit" type="dev.keliver.compose.animation.ExitTransition?" />
+    <property tag="5" name="label" type="kotlin.String?" />
+    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
+    <children tag="6" name="content" />
+  </widget>
   <widget tag="500" type="dev.keliver.compose.gatea.ExtraShimmer">
     <property tag="1" name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
@@ -363,4 +387,27 @@
     <property name="fraction" type="kotlin.Float" />
   </modifier>
   <modifier tag="31" type="dev.keliver.compose.gatea.GenLazyItemScopeAnimateItem1" />
+  <modifier tag="32" type="dev.keliver.compose.gatea.GenOffset1">
+    <property name="x" type="dev.keliver.compose.ui.unit.Dp" />
+    <property name="y" type="dev.keliver.compose.ui.unit.Dp" />
+  </modifier>
+  <modifier tag="33" type="dev.keliver.compose.gatea.GenRotate1">
+    <property name="degrees" type="kotlin.Float" />
+  </modifier>
+  <modifier tag="34" type="dev.keliver.compose.gatea.GenScale1">
+    <property name="scale" type="kotlin.Float" />
+  </modifier>
+  <modifier tag="35" type="dev.keliver.compose.gatea.GenAnimateContentSize1">
+    <property name="animationSpec" type="dev.keliver.compose.animation.core.AnimationSpecWire" />
+    <property name="animationSpecIsDefault" type="kotlin.Boolean" />
+  </modifier>
+  <modifier tag="36" type="dev.keliver.compose.gatea.GenAnimateContentSize2">
+    <property name="alignment" type="dev.keliver.compose.ui.Alignment" />
+    <property name="animationSpec" type="dev.keliver.compose.animation.core.AnimationSpecWire" />
+    <property name="animationSpecIsDefault" type="kotlin.Boolean" />
+  </modifier>
+  <modifier tag="500" type="dev.keliver.compose.gatea.ExtraAnimated">
+    <property name="param" type="kotlin.String" />
+    <property name="ref" type="dev.keliver.compose.animation.core.AnimatedRef" />
+  </modifier>
 </schema>

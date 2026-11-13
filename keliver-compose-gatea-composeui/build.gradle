@@ -21,6 +21,8 @@ kotlin {
         api projects.keliverMaterialComposeui
         implementation projects.keliverWidgetComposeui
         implementation libs.jetbrains.compose.foundation
+        // Gate B-e: animated references and AnimatedVisibility call the real animation API.
+        implementation libs.jetbrains.compose.animation
         implementation libs.jetbrains.compose.material3
         implementation libs.jetbrains.compose.material.icons.core
         implementation libs.jetbrains.compose.material.icons.extended
