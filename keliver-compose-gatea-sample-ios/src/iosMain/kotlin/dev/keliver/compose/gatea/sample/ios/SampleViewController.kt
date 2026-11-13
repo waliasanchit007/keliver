@@ -43,6 +43,7 @@ import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
 import coil3.PlatformContext
 import dev.keliver.compose.gatea.composeui.ComposeUiKeliverComposeGateAWidgetFactory
+import dev.keliver.compose.gatea.composeui.GeneratedWidget
 import dev.keliver.compose.gatea.composeui.samples.native.ItemDetail
 import dev.keliver.compose.gatea.composeui.samples.native.SampleCard
 import dev.keliver.compose.gatea.composeui.samples.native.SampleOrders
@@ -139,23 +140,37 @@ private fun GuestSample(launch: LaunchArguments) {
   TreehouseContent(treehouseApp = app, widgetSystem = widgetSystem, contentSource = source)
 }
 
-/** Marks the guest's content as arrived when the host creates its first Column. */
+/**
+ * Logs when the host creates the guest's first Column, and marks the content as arrived from inside
+ * that Column's first composition: the same point as [NativeSample]'s SideEffect, so both routes'
+ * first-frame probes start from a composed root.
+ */
 private class FirstWidgetProbe(
   private val delegate: KeliverComposeGateAWidgetFactory<@Composable (Modifier) -> Unit>,
 ) : KeliverComposeGateAWidgetFactory<@Composable (Modifier) -> Unit> by delegate {
+  private var created = false
+
   override fun GenColumn1(): GenColumn1<@Composable (Modifier) -> Unit> {
-    if (!contentArrived) {
-      log("first guest widget at ${elapsedMs()} ms")
-      contentArrived = true
+    val widget = delegate.GenColumn1()
+    if (created) return widget
+    created = true
+    log("first guest widget at ${elapsedMs()} ms")
+    // Both interfaces delegated, so the host treats it exactly as the generated widget.
+    return object :
+      GenColumn1<@Composable (Modifier) -> Unit> by widget,
+      GeneratedWidget by (widget as GeneratedWidget) {
+      override val value: @Composable (Modifier) -> Unit = { modifier ->
+        SideEffect { contentArrived = true }
+        widget.value(modifier)
+      }
     }
-    return delegate.GenColumn1()
   }
 }
 
 /**
- * First-frame time: from main() to the start of the frame AFTER the one in which the sample's
- * content was first composed (so that frame has been drawn). Native: composed in the first
- * frame. Guest: composed in the frame after the guest's first change list was applied.
+ * First-frame time: from main() to the start of the second frame after the one in which the
+ * sample's root was first composed (so that frame has been drawn). Both routes mark arrival with
+ * a SideEffect in the root's first composition.
  */
 @Composable
 private fun FirstFrameProbe(mode: String) {

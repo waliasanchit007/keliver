@@ -32,7 +32,8 @@ const val SAMPLE_ITEM = "item"
 
 /**
  * The samples' data, shared by the guest and the iOS host's native copy (the same values as
- * SameSourceTest, so the simulator screens are the ones the tests compare).
+ * SameSourceTest, so the simulator screens are the ones the tests compare; SameSourceFilesTest
+ * checks that its string literals equal the test's, in order).
  */
 object GateBSampleData {
   val orders = listOf(

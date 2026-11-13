@@ -89,14 +89,19 @@ import kotlinx.serialization.json.Json
  */
 @OptIn(ExperimentalTestApi::class)
 class SameSourceTest {
-  private val tags = listOf("Fragile", "Bulk", "In stock", "Ships today", "Gift wrap", "Returnable")
+  internal companion object {
+    // The iOS simulator app keeps a copy in GateBSampleData; SameSourceFilesTest checks they are equal.
+    const val CARD_TITLE = "A long item title that will not fit on one line"
+    const val CARD_QUANTITY = "Qty 12"
+    val tags = listOf("Fragile", "Bulk", "In stock", "Ships today", "Gift wrap", "Returnable")
 
-  private val orders = listOf(
-    "Order 1042" to "Out for delivery",
-    "Order 1041" to "Packed",
-    "Order 1039" to "Delivered on Monday",
-    "Order 1036" to "Refund in progress",
-  )
+    val orders = listOf(
+      "Order 1042" to "Out for delivery",
+      "Order 1041" to "Packed",
+      "Order 1039" to "Delivered on Monday",
+      "Order 1036" to "Refund in progress",
+    )
+  }
 
   /**
    * Gate B's sample: TopAppBar (slots, a `*Defaults` factory with a theme reference), LazyColumn
@@ -231,7 +236,7 @@ class SameSourceTest {
 
   @Test fun samePixels() = runComposeUiTest {
     var opened = 0
-    val host = guestOnHost { GuestSampleCard("A long item title that will not fit on one line", "Qty 12", tags) { opened++ } }
+    val host = guestOnHost { GuestSampleCard(CARD_TITLE, CARD_QUANTITY, tags) { opened++ } }
     // Both render in the same place, one after the other: a spot shadow depends on where in the
     // window it is drawn.
     var showGuest by mutableStateOf(false)
@@ -241,7 +246,7 @@ class SameSourceTest {
           if (showGuest) {
             Box(Modifier.testTag("guest")) { host.root.Render(null) }
           } else {
-            NativeSampleCard("A long item title that will not fit on one line", "Qty 12", tags) {}
+            NativeSampleCard(CARD_TITLE, CARD_QUANTITY, tags) {}
           }
         }
       }

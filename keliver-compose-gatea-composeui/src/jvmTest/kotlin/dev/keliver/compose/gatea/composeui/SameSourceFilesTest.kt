@@ -34,4 +34,14 @@ class SameSourceFilesTest {
       assertEquals(nativeImports.sorted(), guestImports.map { it.replace("import dev.keliver.compose.", "import androidx.compose.") }.sorted(), sample)
     }
   }
+
+  /** The iOS simulator app's copy of the sample data (GateBSampleData) is the tests' data, in the same order. */
+  @Test fun simulatorAppDataIsTheTestData() {
+    val copy = File("../keliver-compose-gatea-sample-guest/src/commonMain/kotlin/dev/keliver/compose/gatea/sample/GateBSamples.kt")
+      .readText().substringAfter("object GateBSampleData")
+    // Its string literals in declaration order: orders, then the card's title, quantity and tags.
+    val expected = SameSourceTest.orders.flatMap { listOf(it.first, it.second) } +
+      SameSourceTest.CARD_TITLE + SameSourceTest.CARD_QUANTITY + SameSourceTest.tags
+    assertEquals(expected, Regex("\"([^\"]*)\"").findAll(copy).map { it.groupValues[1] }.toList())
+  }
 }

@@ -609,11 +609,15 @@ the same pixels as native Compose, in two ways.
 - **The same-source test on the simulator.** `SameSourceTest` (its samples, the guest-on-host
   harness, the pixel comparison) moved from `jvmTest` to a `sameSourceTest` source set that both
   `jvmTest` and `iosTest` depend on. It is not `commonTest`, because then Android unit tests and
-  JS/wasm would compile it. On iOS the same three tests run under CMP's `runComposeUiTest`, and
-  `captureToImage` works there. The tolerance is the JVM's: 0 differing pixels. CI's iOS step runs
-  `:keliver-compose-gatea-composeui:iosSimulatorArm64Test`. The captures land in
+  JS/wasm would compile it. On iOS the same four tests run under CMP's `runComposeUiTest`: three
+  pixel tests (the listing, the item detail, the Gate A card) and the lazy-window test.
+  `captureToImage` works there. The tolerance is the JVM's: 0 differing pixels. CI's Build job
+  runs `:keliver-compose-gatea-composeui:iosSimulatorArm64Test` in its "Test (portal multiplatform
+  modules)" step. The captures land in
   `build/gate-ios/` (the test task passes the directory as `SIMCTL_CHILD_GATE_IOS_ARTIFACTS`).
   `onlyImportsDiffer` stays on the JVM (`SameSourceFilesTest`), because it reads the source files.
+  The simulator app keeps a copy of the samples' data (`GateBSampleData`); `SameSourceFilesTest`
+  also checks that it equals the test's.
   The test host draws at density 1 (360 × 640 captures), so this is the renderer's fidelity at 1×,
   not at a phone's density.
 - **A real simulator app** (`scripts/keliver-gateb-ios-sim.sh`, with two modules that are included
@@ -639,10 +643,24 @@ the same pixels as native Compose, in two ways.
        the test above on it;
     2. it serves the bundle on its own port (8494 by default; 8077, 8096 and 8478 are refused) and
        fixes the status bar at 9:41;
-    3. it screenshots both modes of both samples with `simctl io screenshot` and compares the whole
-       screens, status bar included. A control, two different samples, must differ;
-    4. it times cold launches of the two routes, alternating them.
-  - First frame is measured from `main()` to the start of the frame after the one in which the
-    sample's root was first composed. In native mode that is the first composition. In guest mode it
-    is the frame after the host created the guest's first `Column`: a delegating widget factory
-    marks it.
+    3. it screenshots both modes of the three samples (orders, card, item) with
+       `simctl io screenshot` and compares the whole screens, status bar included. A control, two
+       different samples, must differ. Each guest launch must log the manifest verified with the
+       scratch key and `codeLoadSuccess`, and no `unknownWidget`;
+    4. it times launches of the two routes, alternating them (5 per route by default, `--runs N`).
+
+    It exits non-zero if any sample differs by a pixel or in size, or if a guest launch fails those
+    checks. It first removes the files an earlier run left in its output directory.
+  - **What the timed launches are.** Each is process-cold: `simctl terminate`, 1 s, launch. Nothing
+    else is cold. The page cache is warm, and the guest's Zipline module cache (`cacheName =
+    "gateb"`) was already filled by the screenshot launches. A guest launch therefore fetches and
+    verifies the manifest over loopback (the default freshness check never trusts the cache alone)
+    and loads the modules from the local cache. It is not a first download. The phone checkpoint
+    should measure both an empty cache (a fresh install) and a warm one.
+  - First frame is measured from `main()` to the start of the second frame after the one in which
+    the sample's root was first composed (two `withFrameNanos`). Both routes mark the root from
+    inside its first composition with a `SideEffect`: the native sample directly, the guest through
+    a delegating widget factory that wraps the first `Column` the host creates. The first series
+    (in PR #243's description) was measured before that: the guest was marked when the host created
+    the `Column`, before it was composed, and a `snapshotFlow` can resume before that frame, so the
+    guest's number may have been one frame (8–16 ms) early. That does not change the conclusion.
