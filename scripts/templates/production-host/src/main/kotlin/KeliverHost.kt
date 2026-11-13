@@ -39,6 +39,17 @@
  * the cache. The floor rises only after a load succeeded. Not protected: a
  * reinstall or "clear data" resets it.
  *
+ * Crash rollback (WS6, CrashRollback.kt): a bundle newer than the last one that
+ * proved healthy on this install is on trial until screens have shown it for
+ * KeliverConfig.crashWindowMillis with no failure. A failure of its code to
+ * load (not a download's), an uncaught guest exception, or the process
+ * crashing while a screen shows it loading or on trial counts against it; at
+ * KeliverConfig.crashThreshold failures it is set aside
+ * (skipped until a newer sequence arrives) and the host goes back to the last
+ * bundle that proved healthy here, from its own copy of that manifest: the one
+ * bundle allowed below the floor, and only then. With none, it shows the app's
+ * own view (onUnavailable, outcome crash-rollback). Reported as crash-rollback.
+ *
  * Lifecycle (W2): the host owns its coroutine scope, its one Treehouse app and
  * Zipline, its SQL and HTTP hosts and its image loader, for the life of the
  * process. start() is idempotent: the first screen calls it, and the
@@ -177,6 +188,29 @@ private fun SharedPreferences.raiseFloor(cacheNames: List<String>, sequence: Lon
   if (lower.isEmpty()) return
   edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()
 }
+/** W6: the report URL's client: 10 s in all, nothing retried, no redirect followed. */
+internal fun reportHttpClient(): OkHttpClient =
+  OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false)
+    .followRedirects(false).followSslRedirects(false).build()
+
+/**
+ * W6: POSTs one report ([json]) to [url] with [client] (reportHttpClient), in the background;
+ * [notSent] gets why it was not. On a connection of its own (`Connection: close`): with nothing
+ * retried, a report sent on a kept connection the collector had already closed (an HTTP/1.0
+ * server, or a keep-alive that ran out) was lost, and reports come in bursts (WS6's rollback
+ * sends `screen-failed` and `crash-rollback` at once, moments after `loaded`).
+ */
+internal fun postReport(client: OkHttpClient, url: String, json: String, notSent: (String?) -> Unit) {
+  runCatching {
+    val request = Request.Builder().url(url).header("Connection", "close")
+      .post(json.toRequestBody("application/json".toMediaType())).build()
+    client.newCall(request).enqueue(object : Callback {
+      override fun onFailure(call: Call, e: java.io.IOException) = notSent(e.message)
+      override fun onResponse(call: Call, response: Response) = response.close()
+    })
+  }.onFailure { notSent(it.message) }
+}
+
 /**
  * This install's random id, for staged rollouts (W4.5): made once, kept here.
  * It leaves the device only in reports, and only when a report URL is set (W6).
@@ -229,6 +263,15 @@ class KeliverConfig(
    * is copied: the host gates on, and binds, the bridges as they were here.
    */
   bridges: List<KeliverBridgeBinding> = emptyList(),
+  /**
+   * WS6, crash rollback: how many failures of one bundle on this install set it aside (a
+   * code-load failure, an uncaught guest exception, or the process ending, before it proved
+   * healthy); then the host goes back to the last bundle that proved healthy here, or to the
+   * app's own view. 0 turns crash rollback off.
+   */
+  val crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,
+  /** WS6: how long screens show a new bundle, with no failure, before it proves healthy. */
+  val crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,
 ) {
   val bridges: List<KeliverBridgeBinding> = bridges.toList()
 
@@ -236,6 +279,8 @@ class KeliverConfig(
     require(httpClient == null || requestPolicy != null) {
       "KeliverConfig: an app's own httpClient needs a requestPolicy (the paths guests may call with it)"
     }
+    require(crashThreshold >= 0) { "KeliverConfig.crashThreshold: $crashThreshold is below 0 (0 turns crash rollback off)" }
+    require(crashWindowMillis > 0) { "KeliverConfig.crashWindowMillis: $crashWindowMillis is not a positive duration" }
     try {
       servedBridgesOf(bridges.map { it.declared })
     } catch (e: IllegalArgumentException) {
@@ -249,6 +294,8 @@ class KeliverConfig(
       requestPolicy: RequestPolicy? = null,
       httpClient: OkHttpClient? = null,
       bridges: List<KeliverBridgeBinding> = emptyList(),
+      crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,
+      crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,
     ): KeliverConfig = KeliverConfig(
       bundleServer = debugBundleServer(context) ?: BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
@@ -264,8 +311,21 @@ class KeliverConfig(
       requestPolicy = requestPolicy,
       httpClient = httpClient,
       bridges = bridges,
+      crashThreshold = crashThreshold,
+      crashWindowMillis = crashWindowMillis,
     )
   }
+}
+
+/** WS6: crash rollback's ledger in the host's preferences, written with commit(): a lost marker would miss a crash. */
+private class PrefsCrashStore(private val prefs: SharedPreferences) : CrashStore {
+  // A value of the wrong type (only tampering writes one) reads as none: the empty ledger, the safe side.
+  override fun read(key: String): String? = runCatching { prefs.getString(key, null) }.getOrNull()
+
+  override fun write(values: Map<String, String?>): Boolean =
+    prefs.edit().apply { values.forEach { (k, v) -> if (v == null) remove(k) else putString(k, v) } }.commit()
+
+  override fun <T> locked(block: () -> T): T = synchronized(this) { block() }
 }
 
 /**
@@ -327,10 +387,12 @@ sealed interface KeliverUpdateCheck {
 
 /**
  * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
- * update-applied, update-failed, not-loaded, no-bundle, refused or screen-failed;
+ * update-applied, update-failed, not-loaded, no-bundle, refused, screen-failed
+ * or crash-rollback (WS6: [sequence] was set aside for failing on this install);
  * [source] is network or cache (or null). [reason] is a fixed category
- * (sha256-mismatch, below-floor, bridge-missing, bridge-shape, bridge-bind,
- * signature, lookup-failed, network, config, exception, other); [detail] is
+ * (sha256-mismatch, below-floor, set-aside, bridge-missing, bridge-shape, bridge-bind,
+ * signature, lookup-failed, network, config, exception, other; for crash-rollback
+ * what runs instead: previous-good, newer-bundle or app-view); [detail] is
  * the full message, for the app only: it can hold addresses, paths or URLs, so
  * [toJson], what a report URL receives, leaves it out. [installId] is the
  * random id made on the device for rollouts.
@@ -384,7 +446,9 @@ sealed interface KeliverHostState {
    * (the lookup failed and nothing is cached; the next screen to open looks
    * again), `refused` (the build's key or bundle server is unusable),
    * `not-loaded` (the bundle did not load, and no last good one did either;
-   * the next update check loads again),
+   * the next update check loads again), `crash-rollback` (WS6: the bundle was
+   * set aside for failing on this install, and none proved healthy here before
+   * it; the next screen to open looks for a newer one),
    * or `screen-failed` (the code threw while screens showed it: Treehouse
    * stops it, every screen showing it and every screen opened afterwards calls
    * its `onUnavailable`, one report per screen on show; [KeliverHost.state]
@@ -451,11 +515,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /** Every outcome, for the app's analytics or crash keys (W6); the newest is replayed to a new collector. */
   val reports: SharedFlow<KeliverReport> = mutableReports.asSharedFlow()
 
-  /** For reports only: 10 s in all, nothing retried, no redirect followed. */
-  private val reportClient by lazy {
-    OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false)
-      .followRedirects(false).followSslRedirects(false).build()
-  }
+  /** For reports only (reportHttpClient). */
+  private val reportClient by lazy { reportHttpClient() }
   // Read once, off the per-report path.
   private val reportInstallId by lazy { runCatching { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).installId() }.getOrDefault("unknown") }
   private val reportHostVersion by lazy { config.hostVersion ?: appVersionCode() }
@@ -463,10 +524,14 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private val unavailableAttempts = java.util.concurrent.atomic.AtomicInteger()
 
   /** The host cannot show a screen: says so on [state] (W6's [outcome] and its reason) and reports it. */
-  private fun unavailable(outcome: String, title: String, message: String, detail: String) {
+  private fun unavailable(outcome: String, title: String, message: String, detail: String, sequence: Long? = null, report: Boolean = true) {
     mutableState.value = KeliverHostState.Unavailable(outcome, reportReason(outcome, detail), title, message, unavailableAttempts.incrementAndGet())
-    report(outcome, detail = detail)
+    if (!report) return
+    // A retried start reports its first crash-rollback to the app's view only, as it does "no bundle".
+    if (outcome == CRASH_ROLLBACK_OUTCOME) { if (reportedCrashView) return; reportedCrashView = true }
+    report(outcome, sequence, detail = detail)
   }
+  private var reportedCrashView = false
 
   /**
    * K1's routes: [app]'s UI for [route] through `launchRoute`, which can close itself through
@@ -525,6 +590,76 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     ).also { crashed.value = it }
   }
 
+  /** WS6: crash rollback's ledger for the key this host runs; set when it starts. */
+  @Volatile private var crash: CrashGuard? = null
+
+  /** WS6: the sequence of the code that loaded last, and the crash window running for it. Main thread. */
+  private var codeSequence: Long? = null
+  private var crashWindow: Job? = null
+
+  /** WS6: says what a failure did. Debug builds log it loudly: a developer must not miss a set-aside bundle. */
+  private fun crashLog(step: CrashStep) {
+    val line = when (step) {
+      CrashStep.None -> return
+      is CrashStep.Counted -> "sequence ${step.sequence} failed on this install (${step.kind.text}): " +
+        "${step.failures} of ${config.crashThreshold}; at ${config.crashThreshold} it is set aside"
+      is CrashStep.SetAside -> "sequence ${step.sequence} SET ASIDE after ${step.failures} failures on this install " +
+        "(the last: ${step.kind.text}); it runs again only when a newer sequence is published"
+    }
+    if (BuildConfig.DEBUG) {
+      Log.e(TAG, "!!!!!!!! CRASH ROLLBACK !!!!!!!!")
+      Log.e(TAG, "crash rollback: $line")
+    } else {
+      Log.w(TAG, "crash rollback: $line")
+    }
+  }
+
+  /** WS6: reports [step] (a bundle set aside) with what runs in its place ([instead]). */
+  private fun reportSetAside(step: CrashStep, instead: String) {
+    if (step !is CrashStep.SetAside) return
+    val detail = crashRollbackDetail(step, config.crashThreshold, instead)
+    if (BuildConfig.DEBUG) Log.e(TAG, detail) else Log.w(TAG, detail)
+    report(CRASH_ROLLBACK_OUTCOME, step.sequence, null, detail)
+  }
+
+  /**
+   * WS6, the crash window: open while code on trial has loaded and a screen shows it. When it has
+   * stayed open for crashWindowMillis with no failure, that bundle proved healthy. A screen going
+   * away closes it (and clears the "not yet healthy" marker); the next screen starts it again.
+   * Main thread.
+   */
+  private fun syncCrashWindow() {
+    val guard = crash ?: return
+    val sequence = codeSequence
+    val open = screensShown > 0 && !codeFailed && guard.onTrial(sequence)
+    if (open && crashWindow?.isActive != true) {
+      guard.windowOpened(sequence)
+      Log.i(TAG, "crash rollback: sequence $sequence is on trial: shown; it proves healthy after ${config.crashWindowMillis} ms on show with no failure")
+      crashWindow = scope.launch {
+        delay(config.crashWindowMillis)
+        if (codeSequence == sequence && guard.healthy(sequence)) {
+          Log.i(TAG, "crash rollback: sequence $sequence proved healthy on this install (${config.crashWindowMillis} ms on show, no failure)")
+        }
+      }
+    } else if (!open && crashWindow?.isActive == true) {
+      crashWindow?.cancel()
+      crashWindow = null
+      guard.windowClosed(sequence)
+    }
+  }
+
+  /** WS6: the running code threw; it never proves healthy. Cleared when code loads again. Main thread. */
+  private var codeFailed = false
+
+  /** WS6: [sequence]'s code loaded ([failed]: no, the running code threw): a window that ran was for other code. Main thread. */
+  private fun resetCrashWindow(sequence: Long?, failed: Boolean = false) {
+    crashWindow?.cancel()
+    crashWindow = null
+    codeSequence = sequence
+    codeFailed = failed
+    syncCrashWindow()
+  }
+
   /**
    * Hands [outcome] to [reports] and, with a report URL, POSTs it there. Best
    * effort: a report that cannot be sent is dropped; it never blocks or fails
@@ -547,17 +682,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val url = config.reportUrl ?: return
     // Not the URL: it is the app's, and may carry what logcat should not.
     Log.d(TAG, "report: $outcome sequence=${sequence ?: "none"} reason=${r.reason.ifEmpty { "-" }}")
-    runCatching {
-      val request = Request.Builder().url(url).post(r.toJson().toRequestBody("application/json".toMediaType())).build()
-      reportClient.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: java.io.IOException) {
-          Log.d(TAG, "report not sent: ${e.message}")
-        }
-        override fun onResponse(call: Call, response: Response) {
-          response.close()
-        }
-      })
-    }.onFailure { Log.d(TAG, "report not sent: ${it.message}") }
+    postReport(reportClient, url, r.toJson()) { Log.d(TAG, "report not sent: $it") }
   }
 
   /** What a running app needs to look up and apply a newer bundle. Main thread only. */
@@ -590,7 +715,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       failedUrl = manifestUrls.value
       failedSha256 = failedUrl?.let(pinning::pinnedSha256)
       failedReason = reportReason("not-loaded", reason)
-      unloadable = "rollback refused:" in reason || "bridge refused:" in reason ||
+      unloadable = "rollback refused:" in reason || "bridge refused:" in reason || SET_ASIDE_REFUSED in reason ||
         ("manifest signature for key" in reason && "did not verify" in reason)
     }
 
@@ -714,6 +839,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // must see a floor raised since this host started.
     val floor = { prefs.floor(floorNames) }
     prefs.raiseFloor(floorNames, floor())
+    // WS6: crash rollback's ledger, per key as the floor is. A "not yet healthy" marker the last
+    // process left set means it ended while a new bundle loaded or showed: one more failure.
+    val crash = CrashGuard(PrefsCrashStore(prefs), cacheName, config.crashThreshold, android.os.Process.myPid(), System::currentTimeMillis)
+    this.crash = crash
+    crash.screens(screensShown > 0) // main thread: a screen may already be waiting for code
+    val startStep = crash.atStart(::lastExitCrashed)
+    crashLog(startStep)
     // Short timeouts: offline, this decides how long the app waits before it
     // starts from the cache. Each lookup gives its calls only what is left of
     // LOOKUP_BUDGET_MILLIS (lookupBundle).
@@ -721,32 +853,88 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       .connectTimeout(5, TimeUnit.SECONDS)
       .callTimeout(LOOKUP_BUDGET_MILLIS, TimeUnit.MILLISECONDS)
       .build()
-    // What the index's constraints are checked against (W4.5).
-    val facts = HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges)
+    // What the index's constraints are checked against (W4.5), and what is set aside (WS6).
+    val facts = HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges, setAside = crash.setAside())
     val lookup = LookupContext(server, capabilities, lookupClient, prefs, floor)
     lastLookupAt = SystemClock.elapsedRealtime()
     val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities, facts) }
+    // WS6: the floor's own bundle is set aside, so go back to the newest that proved healthy here.
+    val back = crash.rollbackTo(floor())
     when {
       latest != null -> {
         Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
-        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor) { servedBridges }
+        reportSetAside(startStep, CRASH_TO_NEWER)
+        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor, crash) { servedBridges }
         // A failed load falls back to the cached last good bundle, if there is one (W5).
         startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh, lookup, fallback = lastGood)
       }
+      back != null -> {
+        Log.w(TAG, "crash rollback: sequence ${crash.setAside()} is set aside; starting from sequence ${back.sequence}, the newest that proved healthy on this install (its kept manifest)")
+        reportSetAside(startStep, crashGoingBackTo(back.sequence))
+        // From Zipline's cache when it holds that bundle; otherwise from the kept manifest, never the network.
+        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), back.manifestUrl, null, floor, crash) { servedBridges }
+        http.pinLocal(back)
+        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, back.manifestUrl, AcceptCachedBundle(floor, crash, servedBridges), lookup, fallback = null)
+      }
+      crash.floorSetAside(floor()) -> {
+        // Nothing this install ran before the set-aside bundle is left: the app's own view.
+        // Reported only when the bundle was set aside at this start (L1): the start that set it
+        // aside reported it, so a release owner counts one report per set-aside, not one per start.
+        val setAsideNow = startStep as? CrashStep.SetAside
+        val detail = setAsideNow?.let { crashRollbackDetail(it, config.crashThreshold, CRASH_TO_APP_VIEW) }
+          ?: "crash rollback: sequence ${crash.setAside()} is set aside on this install; $CRASH_TO_APP_VIEW"
+        Log.w(TAG, detail)
+        unavailable(CRASH_ROLLBACK_OUTCOME, "Set aside", detail.take(300), detail = detail, sequence = crash.setAside(), report = setAsideNow != null)
+        // Nothing was created: the next screen to start() looks for a newer bundle.
+        started.set(false)
+      }
       lastGood != null -> {
         Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
+        reportSetAside(startStep, crashGoingBackTo(null))
         // Guarded too: when the cache is refused or empty, Zipline goes on to fetch
         // lastGood from the network, and a lookup that failed proves nothing about
         // that server (it may have failed the lookup on purpose).
-        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor) { servedBridges }
-        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor, servedBridges), lookup, fallback = null)
+        val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor, crash) { servedBridges }
+        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor, crash, servedBridges), lookup, fallback = null)
       }
       else -> {
+        reportSetAside(startStep, CRASH_TO_APP_VIEW)
         unavailable("no-bundle", "No bundle", "No compatible bundle at $server, and none loaded before.", detail = "the lookup failed and nothing is cached")
         // Nothing was created, so the next screen to start() may look again.
         started.set(false)
       }
     }
+  }
+
+  /**
+   * WS6: whether the process [pid], which set the "not yet healthy" marker at [markedAt] (epoch
+   * ms), ended in a crash, from the system's record of exactly that process (Android 11+,
+   * ApplicationExitInfo, matched by pid and not older than the marker): a Java or native crash,
+   * an ANR or a failed start count, and so does a low-memory kill while it was in the foreground
+   * (the marker is only set while a screen shows, and a foreground app is the last the system
+   * kills for memory, so that is most likely the bundle's own memory; iOS counts its jetsam kills
+   * too). A force-stop, a user's swipe or a low-memory kill in the background do not. Null when
+   * the system cannot say (before Android 11, a marker without a pid, or no record of that
+   * process, as after a reboot): the marker alone counts then.
+   */
+  private fun lastExitCrashed(pid: Int, markedAt: Long): Boolean? {
+    if (Build.VERSION.SDK_INT < 30 || pid <= 0) return null
+    return runCatching {
+      val am = context.getSystemService(android.app.ActivityManager::class.java) ?: return null
+      val me = android.app.Application.getProcessName()
+      val exit = am.getHistoricalProcessExitReasons(context.packageName, pid, 4)
+        .firstOrNull { it.pid == pid && it.processName == me && it.timestamp >= markedAt } ?: return null
+      when (exit.reason) {
+        android.app.ApplicationExitInfo.REASON_CRASH,
+        android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,
+        android.app.ApplicationExitInfo.REASON_ANR,
+        android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE,
+        -> true
+        android.app.ApplicationExitInfo.REASON_LOW_MEMORY ->
+          exit.importance <= android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+        else -> false
+      }
+    }.getOrNull()
   }
 
   /** This app's versionCode, for host-version gates (a library's BuildConfig has none). */
@@ -910,6 +1098,18 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
       override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")
     }
+    // WS6: crash rollback's ledger (run() set it before creating this app).
+    val crash = checkNotNull(this.crash)
+    // WS6: back to the bundle that proved healthy here, into this app: from Zipline's cache when it
+    // holds it, otherwise from its kept manifest (never the network); stop() then start(), as the
+    // fall-back does.
+    val rollBack = { kept: KeptBundle ->
+      freshnessSwitch.current = AcceptCachedBundle(floor, crash, servedBridges)
+      ziplineHttp.pinLocal(kept)
+      app.stop()
+      flow.value = kept.manifestUrl
+      app.start()
+    }
     app = factory.create(
       appScope = scope,
       spec = spec,
@@ -918,11 +1118,16 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       // Raise the rollback floor to the sequence that just ran: Zipline verified
       // this manifest's signature, and so its metadata, before loading it.
       eventListenerFactory = LoggingEventListenerFactory(
+        // WS6: a verified bundle's code begins to evaluate: a new bundle goes on trial, its marker written first.
+        onReady = { sequence -> crash.loadStarting(sequence) },
         onSuccess = { sequence, url ->
           crashed.value = null // new code: no longer the code that threw
           KeliverTiming.mark("code")
+          // WS6: kept (as it loaded from the network) to come back to once it proves healthy.
+          crash.loaded(sequence, url, url?.let(ziplineHttp::servedManifest))
           val first = !loaded.getAndSet(true)
           scope.launch {
+            resetCrashWindow(sequence)
             // url is null for a load from the cache. After one, Zipline takes no
             // further manifest; after a network load it does.
             mutableBundle.value = KeliverBundle(sequence, fromCache = url == null)
@@ -961,9 +1166,14 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         // the same way a start with a failed lookup uses it (the floor holds, and
         // Zipline verifies the cached manifest against the key again). Otherwise a
         // failed load would leave the screen blank; say so instead.
-        onFailed = { reason ->
+        // WS6: step is what the failure did to the bundle on trial (a load whose code failed counts;
+        // a download, the network, the signature or the floor does not: CodeLoadProgress).
+        onFailed = { reason, step ->
           scope.launch {
+            crashLog(step)
             if (loaded.get()) {
+              // The running bundle stays: it is what runs in place of one set aside now.
+              reportSetAside(step, crashGoingBackTo(mutableBundle.value?.sequence))
               // An update that did not load: the running bundle stays (Zipline only
               // swaps on success), and this URL is not tried again in this process.
               val p = pending ?: return@launch
@@ -975,24 +1185,53 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               report("update-failed", p.sequence, "network", reason)
               return@launch
             }
-            if (fallback != null && !fellBack) {
+            // WS6: set aside before anything ran: back to the bundle that proved healthy here.
+            val back = if (step is CrashStep.SetAside) crash.rollbackTo(floor()) else null
+            if (back != null) {
+              reportSetAside(step, crashGoingBackTo(back.sequence))
+              rollBack(back)
+            } else if (fallback != null && !fellBack) {
               fellBack = true
+              reportSetAside(step, crashGoingBackTo(null))
               mutableEvents.tryEmit(KeliverUpdateEvent.FellBack(reason))
               report("fell-back", detail = reason)
               Log.d(TAG, "the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
-              freshnessSwitch.current = AcceptCachedBundle(floor, servedBridges)
+              freshnessSwitch.current = AcceptCachedBundle(floor, crash, servedBridges)
               ziplineHttp.pin(fallback, null)
               // stop() then start(): after a failed first load the app is still
               // "starting", which restart() would leave alone.
               app.stop()
               flow.value = fallback
               app.start()
+            } else if (step is CrashStep.SetAside) {
+              session?.markNotLoaded(reason)
+              val detail = crashRollbackDetail(step, config.crashThreshold, CRASH_TO_APP_VIEW)
+              if (BuildConfig.DEBUG) Log.e(TAG, detail) else Log.w(TAG, detail)
+              unavailable(CRASH_ROLLBACK_OUTCOME, "Set aside", detail.take(300), detail = detail, sequence = step.sequence)
             } else {
               session?.markNotLoaded(reason)
               unavailable("not-loaded", "Bundle did not load", reason.take(300), detail = reason)
             }
           }
         },
+        // WS6: the running code threw (Treehouse stops it). Before it proved healthy, that counts;
+        // at the threshold the host goes back to the bundle that proved healthy here, or leaves the
+        // app's own view (every screen on show has called its onUnavailable: screen-failed).
+        onUncaught = { step ->
+          scope.launch {
+            crashLog(step)
+            resetCrashWindow(codeSequence, failed = true)
+            if (step !is CrashStep.SetAside) return@launch
+            val back = crash.rollbackTo(floor())
+            if (back != null) {
+              reportSetAside(step, crashGoingBackTo(back.sequence))
+              rollBack(back)
+            } else {
+              reportSetAside(step, CRASH_TO_APP_VIEW)
+            }
+          }
+        },
+        crash = crash,
         bridgeBinds = bridgeBinds,
       ),
     )
@@ -1039,7 +1278,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       pending = null
     }
     lastLookupAt = SystemClock.elapsedRealtime()
-    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges)
+    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges, setAside = crash?.setAside() ?: 0)
     val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
     pending?.let { return@withContext KeliverUpdateCheck.Available(it.sequence, applying = true) }
     if (latest == null) {
@@ -1083,7 +1322,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    */
   private suspend fun loadAgain(s: Session): KeliverUpdateCheck {
     lastLookupAt = SystemClock.elapsedRealtime()
-    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges)
+    val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges, setAside = crash?.setAside() ?: 0)
     val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
     // Another check may have started it while this one looked up.
     if (session !== s || !s.notLoaded) return KeliverUpdateCheck.Failed("the bundle is already loading again")
@@ -1130,16 +1369,20 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /** Set when the bundle server has no event stream (a static server): not asked again in this process. */
   private var liveUnsupported = false
 
-  /** A [KeliverScreen] started showing (its lifecycle reached STARTED). Main thread. */
+  /** A [KeliverScreen] started showing (its lifecycle reached STARTED); it also opens a new bundle's crash window (WS6). Main thread. */
   fun screenShown() {
     screensShown++
     syncLiveListener()
+    crash?.screens(true) // WS6: code still loading has its marker set only while a screen shows
+    syncCrashWindow()
   }
 
   /** A [KeliverScreen] stopped showing. Main thread. */
   fun screenHidden() {
     screensShown = (screensShown - 1).coerceAtLeast(0)
     syncLiveListener()
+    crash?.screens(screensShown > 0)
+    syncCrashWindow()
   }
 
   private fun liveUpdatesAllowed(): Boolean =
@@ -1281,13 +1524,19 @@ private class SwitchableFreshness(@Volatile var current: FreshnessChecker) : Fre
  * key before loading it. If the cache holds nothing (cleared, or a new key's
  * cache), Zipline goes on to the network, which fails and reports codeLoadFailed.
  */
-private class AcceptCachedBundle(private val floor: () -> Long, private val bridges: Map<String, HostBridge>) : FreshnessChecker {
+private class AcceptCachedBundle(
+  private val floor: () -> Long,
+  private val crash: CrashGuard?,
+  private val bridges: Map<String, HostBridge>,
+) : FreshnessChecker {
   // The rollback floor holds here too: Zipline hands over the pinned manifest
   // after verifying it. A refused cache is not used; Zipline then fetches the
-  // manifest from the network, through the same floor guard.
+  // manifest from the network, through the same floor guard. WS6: a set-aside
+  // sequence is refused too, and the bundle crash rollback goes back to may be
+  // below the floor (cachedBundleProblem).
   override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
     // So does B4's bridge check, on the verified metadata.
-    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor())
+    val problem = cachedBundleProblem(manifestSequence(manifest.metadata), floor(), crash)
       ?: manifestBridgeProblem(manifest.metadata[BRIDGES_METADATA_KEY], bridges)
       ?: return true
     Log.e(TAG, "cached bundle refused: $problem")
@@ -1296,32 +1545,71 @@ private class AcceptCachedBundle(private val floor: () -> Long, private val brid
 }
 
 private class LoggingEventListenerFactory(
+  private val onReady: (Long?) -> Unit,
   private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
   private val onSkipped: () -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
-  private val onFailed: (String) -> Unit,
+  private val onFailed: (String, CrashStep) -> Unit,
+  private val onUncaught: (CrashStep) -> Unit,
+  private val crash: CrashGuard,
   private val bridgeBinds: BridgeBindRecorder,
 ) : EventListener.Factory {
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
-    LoggingEventListener(manifestUrl, onSuccess, onSkipped, onLoaded, onSequence, onFailed, bridgeBinds)
+    LoggingEventListener(manifestUrl, onReady, onSuccess, onSkipped, onLoaded, onSequence, onFailed, onUncaught, crash, bridgeBinds)
   override fun close() {}
 }
 
+/** One per code load. WS6: it counts at most one failure for the bundle it loads (from Zipline's thread, before returning). */
 private class LoggingEventListener(
   private val manifestUrl: String?,
+  private val onReady: (Long?) -> Unit,
   private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
   private val onSkipped: () -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
-  private val onFailed: (String) -> Unit,
+  private val onFailed: (String, CrashStep) -> Unit,
+  private val onUncaught: (CrashStep) -> Unit,
+  private val crash: CrashGuard,
   private val bridgeBinds: BridgeBindRecorder,
 ) : EventListener() {
+  /** WS6: the verified sequence this load runs (null until its manifest is ready, or without one). */
+  @Volatile private var sequence: Long? = null
+  private val counted = AtomicBoolean(false)
+  /** WS6: how far this load got, to tell its code's failure from a download's (CodeLoadProgress). */
+  private val progress = CodeLoadProgress()
+
+  /** WS6: counts this load's failure once, against the verified sequence it loads. */
+  private fun count(kind: CrashKind): CrashStep =
+    if (counted.compareAndSet(false, true)) crash.failed(sequence, kind) else CrashStep.None
+
   // B5: Zipline reports every bind here, inside bind(): what an app's bridge binding bound.
   override fun bindService(name: String, service: ZiplineService) = bridgeBinds.bound(name)
 
+  // WS6: the manifest verified; its modules download next, and then evaluate.
+  override fun manifestReady(manifest: ZiplineManifest) {
+    sequence = manifestSequence(manifest.metadata)
+    progress.manifestReady(manifest.modules.size)
+  }
+
+  override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()
+
+  // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
+  override fun moduleLoadStart(moduleId: String): Any? {
+    if (progress.moduleLoadStart()) onReady(sequence)
+    return null
+  }
+
+  override fun moduleLoadEnd(moduleId: String, startValue: Any?) = progress.moduleLoadEnd()
+
+  override fun mainFunctionStart(applicationName: String): Any? {
+    progress.mainFunctionStart()
+    return null
+  }
+
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     val sequence = manifestSequence(manifest.metadata)
+    this.sequence = sequence
     // A load from the cache reports no manifest URL.
     Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"} source=${if (manifestUrl == null) "cache" else "network"}")
     onSuccess(sequence, manifestUrl)
@@ -1335,10 +1623,15 @@ private class LoggingEventListener(
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     Log.e(TAG, "codeLoadFailed: ${exception.message}", exception)
-    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error")
+    // Counted only when its code failed (CodeLoadProgress): a download, the network, the floor or
+    // the signature is not the bundle's.
+    val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }
+    val step = if (counted.compareAndSet(false, true)) crash.loadFailed(sequence, theBundles) else CrashStep.None
+    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", step)
   }
   override fun uncaughtException(exception: Throwable) {
     Log.e(TAG, "uncaughtException: ${exception.message}", exception)
+    onUncaught(count(CrashKind.EXCEPTION))
   }
   // The memory profile (M5): a runtime, before any code loaded.
   override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)

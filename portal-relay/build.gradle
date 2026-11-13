@@ -74,13 +74,16 @@ def keliverCheckStartScripts = tasks.register('keliverCheckStartScripts', Create
 }
 distributions { main { contents { from(keliverCheckStartScripts) { into 'bin' } } } }
 
-// The production hosts' index reader and bridge binding (scripts/templates/*/BundleIndex.kt
-// and Bridges.kt) are template source with a @@PACKAGE@@ placeholder. Compile the Android
-// copies into the tests, so BundleIndexTest and BridgeGateTest run the code the scaffolders
-// ship; BundleIndexTest also holds the iOS copies byte-identical to them.
+// The production hosts' index reader, bridge binding and crash rollback (scripts/templates/*/
+// BundleIndex.kt, Bridges.kt and CrashRollback.kt) are template source with a @@PACKAGE@@
+// placeholder. Compile the Android copies into the tests, so BundleIndexTest and BridgeGateTest
+// run the code the scaffolders ship, and so does the hosts' own CrashRollbackTest; BundleIndexTest
+// also holds the iOS copies byte-identical to them.
 def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/BundleIndex.kt'))
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/Bridges.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/main/kotlin/CrashRollback.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/test/kotlin/CrashRollbackTest.kt'))
   // ED3: the debug link's check (src/debug; both hosts' debug builds use it) and its vectors;
   // DeviceProxyTest holds the relay's links to what that check accepts.
   from(rootProject.file('scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt'))

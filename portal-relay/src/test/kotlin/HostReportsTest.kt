@@ -110,8 +110,13 @@ class HostReportsTest {
       "bridge refused: the bundle was built against another A@1 contract (shape a; this host's is b)",
       "bridge bind failed: A bound [] (it must bind A, once)",
       "manifest signature for key k did not verify", "lookup failed", "timeout", "something else",
+      // WS6: a set-aside manifest refused, and what runs in place of the set-aside bundle.
+      "set aside: sequence 5 failed 2 times on this install (crash rollback); only a newer one runs",
+      hosttemplate.crashRollbackDetail(crashStep, 2, hosttemplate.crashGoingBackTo(4)),
+      hosttemplate.crashRollbackDetail(crashStep, 2, hosttemplate.CRASH_TO_NEWER),
+      hosttemplate.crashRollbackDetail(crashStep, 2, hosttemplate.CRASH_TO_APP_VIEW),
     )
-    val outcomes = listOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed")
+    val outcomes = listOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed", "crash-rollback")
     val r = HostReports(dir())
     val produced = mutableSetOf<String>()
     for (outcome in outcomes) {
@@ -124,8 +129,13 @@ class HostReportsTest {
     }
     // Every category the hosts send was produced above, so each was checked.
     assertEquals(
-      setOf("", "sha256-mismatch", "below-floor", "bridge-missing", "bridge-shape", "bridge-bind", "signature", "lookup-failed", "network", "config", "exception", "other"),
+      setOf(
+        "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "signature", "lookup-failed",
+        "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "other",
+      ),
       produced,
     )
   }
+
+  private val crashStep = hosttemplate.CrashStep.SetAside(5, 2, hosttemplate.CrashKind.EXCEPTION)
 }
