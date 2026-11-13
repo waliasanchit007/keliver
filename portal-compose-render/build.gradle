@@ -6,7 +6,7 @@
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
-def samples = rootProject.file('keliver-compose-gatea-composeui/src/jvmTest/kotlin/dev/keliver/compose/gatea/composeui/samples')
+def samples = rootProject.file('keliver-compose-gatea-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/gatea/composeui/samples')
 
 kotlin {
   jvm()
