@@ -58,6 +58,14 @@ class Config(
   val typeMessages: Map<String, String>,
   val icons: List<String>,
   val extras: List<String>,
+  /**
+   * Gate B-e: declarations whose Float, Dp and Color parameters accept an animated reference
+   * (`animate*AsState`): the stub sends the target and an `ExtraAnimated` element, and the renderer
+   * wraps the argument in the real `animate*AsState`.
+   */
+  val animated: List<String> = emptyList(),
+  /** Hand-written modifiers of the group (`ExtraAnimated`), as [extras] are widgets. */
+  val extraModifiers: List<String> = emptyList(),
 ) {
   /** The Compose versions read (for the schema's header), or null. */
   var input: String? = null
@@ -83,7 +91,7 @@ fun dropMessage(config: Config, c: Classified): String {
 
 /** The main stub's signature without dropped parameters, to find overloads that would clash. */
 fun mainSignature(p: Plan.Generated): String =
-  p.decl.mirrorPkg + "/" + (p.decl.owner ?: "") + "#" + p.decl.name + "(" +
+  p.decl.mirrorPkg + "/" + (p.decl.owner ?: p.decl.widgetReceiver?.simpleName ?: "") + "#" + p.decl.name + "(" +
     p.params.filter { it.kind != ParamKind.DROP }.joinToString(",") { it.param.type.canonical() } + ")"
 
 /** Parameters that travel as properties, children or events (the modifier has its own channel). */

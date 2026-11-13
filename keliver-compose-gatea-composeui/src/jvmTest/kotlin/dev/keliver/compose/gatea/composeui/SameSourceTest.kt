@@ -16,6 +16,7 @@
 package dev.keliver.compose.gatea.composeui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -43,10 +45,14 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.keliver.compose.foundation.lazy.LazyListState as GuestLazyListState
+import dev.keliver.compose.gatea.composeui.samples.guest.AnimatedPanel as GuestAnimatedPanel
+import dev.keliver.compose.gatea.composeui.samples.guest.FrameClockPanel as GuestFrameClockPanel
 import dev.keliver.compose.gatea.composeui.samples.guest.ItemDetail as GuestItemDetail
 import dev.keliver.compose.gatea.composeui.samples.guest.LongList as GuestLongList
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleCard as GuestSampleCard
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleOrders as GuestSampleOrders
+import dev.keliver.compose.gatea.composeui.samples.native.AnimatedPanel as NativeAnimatedPanel
+import dev.keliver.compose.gatea.composeui.samples.native.FrameClockPanel as NativeFrameClockPanel
 import dev.keliver.compose.gatea.composeui.samples.native.ItemDetail as NativeItemDetail
 import dev.keliver.compose.gatea.composeui.samples.native.SampleCard as NativeSampleCard
 import dev.keliver.compose.gatea.composeui.samples.native.SampleOrders as NativeSampleOrders
@@ -93,7 +99,7 @@ class SameSourceTest {
     fun body(f: File) = f.readLines().filterNot {
       it.startsWith("import ") || it.startsWith("package ") || it.startsWith("//")
     }
-    for (sample in listOf("SampleCard.kt", "SampleOrders.kt", "ItemDetail.kt")) {
+    for (sample in listOf("SampleCard.kt", "SampleOrders.kt", "ItemDetail.kt", "AnimatedPanel.kt")) {
       assertEquals(body(File(dir, "native/$sample")), body(File(dir, "guest/$sample")), sample)
       val guestImports = File(dir, "guest/$sample").readLines().filter { it.startsWith("import ") }
       val nativeImports = File(dir, "native/$sample").readLines().filter { it.startsWith("import ") }
@@ -280,6 +286,108 @@ class SameSourceTest {
     assertEquals(1, opened, "the guest's clickable lambda ran")
   }
 
+  /**
+   * Gate B-e, host-side animation: `animate*AsState` as animated references, `AnimatedVisibility`
+   * (its ColumnScope overload) and `animateContentSize`. Native and guest render side by side on the
+   * test's clock, which the test drives frame by frame; each captured frame must be identical, and
+   * nothing may cross the bridge while the host animates.
+   */
+  @Test fun hostAnimationMatchesNativeFrameByFrame() = runComposeUiTest {
+    mainClock.autoAdvance = false
+    var nativeExpanded by mutableStateOf(false)
+    val guestExpanded = mutableStateOf(false)
+    val host = guestOnHost { GuestAnimatedPanel(guestExpanded.value) }
+    setContent {
+      Theme {
+        Row {
+          Box(Modifier.size(200.dp, 240.dp).testTag("native")) { NativeAnimatedPanel(nativeExpanded) }
+          Box(Modifier.size(200.dp, 240.dp).testTag("guest")) { host.root.Render(null) }
+        }
+      }
+    }
+    repeat(3) {
+      mainClock.advanceTimeByFrame()
+      host.pump()
+    }
+    val frames = mutableListOf<Pair<String, Int>>()
+    fun compare(label: String) {
+      val native = onNodeWithTag("native").captureToImage()
+      val guest = onNodeWithTag("guest").captureToImage()
+      File("build/gate-b-e").mkdirs()
+      javax.imageio.ImageIO.write(native.toAwtImage(), "png", File("build/gate-b-e/host-$label-native.png"))
+      javax.imageio.ImageIO.write(guest.toAwtImage(), "png", File("build/gate-b-e/host-$label-guest.png"))
+      frames += label to differingPixels(native, guest, "build/gate-b-e/host-$label-diff.png")
+    }
+    compare("start")
+
+    nativeExpanded = true
+    guestExpanded.value = true
+    Snapshot.sendApplyNotifications()
+    host.pump()
+    val wireAtStart = host.wire.size
+    // Frame by frame through the 400 ms tweens and the springs of AnimatedVisibility and animateContentSize.
+    var elapsed = 0L
+    for (at in listOf(16L, 96L, 192L, 304L, 400L)) {
+      mainClock.advanceTimeBy(at - elapsed)
+      elapsed = at
+      host.pump()
+      compare("${at}ms")
+    }
+    mainClock.advanceTimeBy(2_000)
+    host.pump()
+    compare("end")
+    File("build/gate-b-e/host-frames.txt").writeText(frames.joinToString("\n") { "${it.first}: ${it.second}" })
+    assertEquals(frames.map { it.first to 0 }, frames, "pixels that differ between native Compose and the guest, by frame")
+    assertEquals(wireAtStart, host.wire.size, "change batches that crossed the bridge while the host animated")
+    assertTrue(host.wire.any { "\"param\":\"alpha\"" in it }, "an animated reference travelled")
+  }
+
+  /**
+   * Gate B-e, guest-side animation: `Animatable.animateTo` in a `LaunchedEffect`, on the guest's
+   * frame clock (sent with the host's frame times). The end state must match native Compose; each
+   * frame of the animation sends one change batch, which the test counts.
+   */
+  @Test fun guestFrameClockAnimationReachesNativeEndState() = runComposeUiTest {
+    mainClock.autoAdvance = false
+    var nativeExpanded by mutableStateOf(false)
+    val guestExpanded = mutableStateOf(false)
+    val host = guestOnHost { GuestFrameClockPanel(guestExpanded.value) }
+    setContent {
+      Theme {
+        Row {
+          Box(Modifier.size(200.dp, 240.dp).testTag("native")) { NativeFrameClockPanel(nativeExpanded) }
+          Box(Modifier.size(200.dp, 240.dp).testTag("guest")) { host.root.Render(null) }
+        }
+      }
+    }
+    var now = 0L
+    fun frame() {
+      now += 16_000_000L
+      host.pump(now)
+      mainClock.advanceTimeByFrame()
+    }
+    repeat(3) { frame() }
+    val start = differingPixels(onNodeWithTag("native").captureToImage(), onNodeWithTag("guest").captureToImage())
+
+    nativeExpanded = true
+    guestExpanded.value = true
+    Snapshot.sendApplyNotifications()
+    val wireAtStart = host.wire.size
+    val mid = mutableListOf<Int>()
+    repeat(40) { i ->
+      frame()
+      if (i == 10 || i == 15) mid += differingPixels(onNodeWithTag("native").captureToImage(), onNodeWithTag("guest").captureToImage())
+    }
+    val batches = host.wire.size - wireAtStart
+    val end = differingPixels(onNodeWithTag("native").captureToImage(), onNodeWithTag("guest").captureToImage(), "build/gate-b-e/frameclock-end-diff.png")
+    File("build/gate-b-e").mkdirs()
+    File("build/gate-b-e/frameclock.txt").writeText("start: $start\nmid (frames 11, 16, one frame of lag): $mid\nend: $end\nchange batches over 40 frames: $batches\n")
+    assertEquals(0, start, "start state")
+    assertEquals(0, end, "end state")
+    // 400 ms at 16 ms a frame: about 25 frames of changes, one batch each.
+    assertTrue(batches in 20..30, "one change batch per frame while the guest animates: $batches")
+  }
+
   @Composable
   private fun Theme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF6750A4), secondaryContainer = Color(0xFFE8DEF8)), content = content)
@@ -324,8 +432,8 @@ internal class GuestOnHost(
   /** Widgets created on the host, by widget tag (offset tags for dependency schemas). */
   val created = mutableMapOf<Int, Int>()
 
-  fun pump() {
-    clock.sendFrame(0L)
+  fun pump(frameTimeNanos: Long = 0L) {
+    clock.sendFrame(frameTimeNanos)
     val changes = guestAdapter.takeChanges()
     if (changes.isEmpty()) return
     val text = json.encodeToString(ListSerializer(Change.serializer()), changes)

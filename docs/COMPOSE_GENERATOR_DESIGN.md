@@ -600,3 +600,42 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
   - *CMP 1.12.2 (from main's move to it).* The group is now read from CMP 1.12.2 and material3
     1.9.0; the regenerated schema differs only in the versions its header names, so no level 5 was
     needed and level 4 is the newest.
+
+## 21. Gate B, part e: animation
+
+Still prototype-only. Results and the timing comparison: [`GATE_B_RESULTS.md`](GATE_B_RESULTS.md).
+
+- **Animated references (§10's proposal), built.** `animateFloatAsState`, `animateDpAsState` and
+  `animateColorAsState` are hand-written in `keliver-compose-values` with Compose's signatures. They
+  do not animate in the guest: they return a `State` whose value is the target, *tagged* so the
+  stubs can recognise it. A `Float` or `Dp` cannot carry a reference (they are plain floats), so
+  the tag is the target's bits plus a small count, a few ULPs away from the target: a guest read
+  gets the target to within ~1e-6 relative, and arithmetic on it gives an untagged literal (the
+  rule §7 has for theme references). A `Color` uses packing bits no read uses, so a guest read is
+  exact. The guest keeps a table from tagged value to reference (id, spec, label); a call site's
+  entry leaves the table when it leaves the composition.
+- **Which parameters accept one** is generator config (`gatea.json`'s `animated`: `alpha`,
+  `size`, `width`, `height`, `padding(all)`, `background(color)`, `offset`, `rotate`, `scale`).
+  For those, the generated stub sends the exact target and, before the element, an
+  `ExtraAnimated(param, ref)` modifier (a hand-written extra, tag 500; at the end of a widget's own
+  chain it names the widget's parameter). The generated renderer wraps that argument in the real
+  `animate*AsState`, keyed by the reference's id, so the host animates on its own frame clock and
+  nothing crosses while it runs. A host that predates `ExtraAnimated` ignores it (an unknown
+  modifier) and renders the target without animation. Existing lock entries do not change.
+- **Specs, easings, transitions** are hand-written mirrors with codecs (§6): `tween`, `spring`,
+  `snap`, the four standard easings and `CubicBezierEasing`; `EnterTransition`/`ExitTransition`
+  (`fadeIn`, `scaleIn`, `expandIn`, `expandVertically`/`Horizontally`, `slideInVertically` and their
+  exits) travel as the parts they were built from and are combined again with the real `+`. A
+  generic Compose type (`FiniteAnimationSpec<IntSize>`) is a new mapping: the stub sends `.wire`
+  and the renderer rebuilds the real spec for the parameter's type arguments. Not mirrored:
+  `keyframes`, `repeatable`, `infiniteRepeatable`, custom `Easing` lambdas, transitions' lambda
+  parameters (`initialOffsetY = { … }`), `finishedListener` (an `ERROR` overload).
+- **Generated:** `AnimatedVisibility` (all three overloads: plain, `ColumnScope.` and `RowScope.`;
+  a spec may now name an extension receiver, `AnimatedVisibility@ColumnScope(…)`, and a scoped
+  overload's renderer calls the plain one with that overload's defaults, which is how Compose's
+  overloads differ), `Modifier.animateContentSize` (both overloads), `offset`, `rotate`, `scale`.
+  Lock level 5.
+- **The guest-side alternative**, hand-written: `Animatable` (Float, Dp, Color in Oklab, as
+  Compose's) with `animateTo`/`snapTo`/`stop`, driven by `withFrameNanos` on the guest's frame
+  clock. Tween, spring (Compose's closed form) and snap. Each frame's value is a new property or
+  modifier value: one change batch per frame.

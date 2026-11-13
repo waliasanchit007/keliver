@@ -54,8 +54,11 @@ fun guestType(t: TypeRef, scopeMirror: (TypeRef) -> String = { mirrorFq(it.fq) }
     t.fq + if (t.args.isNotEmpty()) t.args.joinToString(", ", "<", ">") { guestType(it, scopeMirror) } else ""
   } else if (t.fq == MODIFIER) {
     "dev.keliver.compose.ui.Modifier"
+  } else if (t.fq in TypeMap.generic) {
+    // A generic mirror (`FiniteAnimationSpec<IntSize>`, Gate B-e) keeps its arguments.
+    mirrorFq(t.fq) + t.args.joinToString(", ", "<", ">") { guestType(it, scopeMirror) }
   } else {
-    // A mirror is never generic; a generic Compose type here is a placeholder (`FiniteAnimationSpec`).
+    // Other mirrors are not generic; a generic Compose type here is a placeholder.
     mirrorFq(t.fq)
   }
   return if (t.nullable) (if (t.isFunction) "($base)?" else "$base?") else base
@@ -93,7 +96,8 @@ class Emitter(
   // The schema (docs/COMPOSE_GENERATOR_DESIGN.md §2)
 
   fun schema(): Pair<String, String> {
-    val members = widgets.map { it.entry.name } + config.extras.map { "Extra$it" } + modifiers.map { it.entry.name }
+    val members = widgets.map { it.entry.name } + config.extras.map { "Extra$it" } + modifiers.map { it.entry.name } +
+      config.extraModifiers.map { "Extra$it" }
     val body = buildString {
       append(HEADER)
       append("@file:Suppress(\"ktlint\")\n\npackage $schemaPkg\n\n")
@@ -292,9 +296,13 @@ class Emitter(
     currentDecl = d
     d.kdoc?.let { append("/** ${it.replace("*/", "* /")} */\n") }
     append(deprecatedWarning(d))
-    append("@androidx.compose.runtime.Composable\npublic fun ${d.name}(\n")
+    val receiver = d.widgetReceiver?.let { guestType(it) + "." } ?: ""
+    append("@androidx.compose.runtime.Composable\npublic fun $receiver${d.name}(\n")
     p.params.filter { it.kind != ParamKind.DROP }.forEach { append(paramDecl(it, imports, false)) }
     append(") {\n")
+    val animated = animatedParams(p)
+    append(animatedPrologue(animated))
+    genericWireImports(p, imports)
     val hasModifier = p.params.any { it.kind == ParamKind.MODIFIER }
     if (hasModifier) append("  val split = dev.keliver.compose.internal.splitModifierEvents(modifier)\n")
     p.params.filter { it.defaultCase == DefaultCase.EXPRESSION }.forEach {
@@ -323,17 +331,17 @@ class Emitter(
         ParamKind.VALUE -> when {
           c.param.type.fq == TypeMap.IMAGE_MODEL -> append("    $n = dev.keliver.compose.internal.imageModel($n),\n")
           c.explicitNull -> append("    $n = if ($n == default_$n) null else ($n ?: ${mirrorFq(c.param.type.fq)}.ExplicitNull),\n")
-          c.defaultCase == DefaultCase.EXPRESSION -> append("    $n = if ($n == default_$n) null else $n,\n")
+          c.defaultCase == DefaultCase.EXPRESSION -> append("    $n = if ($n == default_$n) null else ${TypeMap.sendExpr(c.param.type, n)},\n")
           c.param.type.fq in TypeMap.wireValue -> {
             append("    $n = $n.wire,\n")
             generatedApiPkgs += d.mirrorPkg
           }
-          else -> append("    $n = $n,\n")
+          else -> append("    $n = ${TypeMap.sendExpr(c.param.type, n)},\n")
         }
         else -> append("    $n = $n,\n")
       }
     }
-    if (hasModifier) append("    modifierEvent = split.events,\n    modifier = split.modifier,\n")
+    if (hasModifier) append("    modifierEvent = split.events,\n    modifier = split.modifier${animated.joinToString("") { ".then(animated_${it.param.name})" }},\n")
     append("  )\n}\n\n")
   }
 
@@ -345,16 +353,19 @@ class Emitter(
     append("@androidx.compose.runtime.Stable\npublic fun dev.keliver.compose.ui.Modifier.${d.name}(\n")
     p.params.filter { it.kind != ParamKind.DROP }.forEach { append(paramDecl(it, imports, false)) }
     append("): dev.keliver.compose.ui.Modifier {\n")
+    val animated = animatedParams(p)
+    append(animatedPrologue(animated))
+    genericWireImports(p, imports)
     val args = buildList {
       for (c in p.params) {
         val n = c.param.name
         when (c.kind) {
           ParamKind.VALUE -> if (c.defaultCase == DefaultCase.EXPRESSION) {
             append("  val default_$n = ${c.param.defaultText}\n")
-            add("$n = $n")
+            add("$n = ${TypeMap.sendExpr(c.param.type, n)}")
             add("${n}IsDefault = $n == default_$n")
           } else {
-            add("$n = $n")
+            add("$n = ${TypeMap.sendExpr(c.param.type, n)}")
           }
           ParamKind.EVENT -> add("$n = handle")
           else -> {}
@@ -364,10 +375,37 @@ class Emitter(
     val impl = "${sent(p)}Impl"
     val construct = if (args.isEmpty()) impl else "$impl(${args.joinToString(", ")})"
     val event = p.params.firstOrNull { it.kind == ParamKind.EVENT }
+    // An animated reference travels as an `ExtraAnimated` element just before the element it animates.
+    val before = animated.joinToString("") { "then(animated_${it.param.name})." }
     if (event != null) {
-      append("  return then(dev.keliver.compose.internal.ModifierEventElement(${event.param.name}) { handle -> $construct })\n}\n")
+      append("  return ${before}then(dev.keliver.compose.internal.ModifierEventElement(${event.param.name}) { handle -> $construct })\n}\n")
     } else {
-      append("  return then($construct)\n}\n")
+      append("  return ${before}then($construct)\n}\n")
+    }
+  }
+
+  /** The Float, Dp and Color parameters of a declaration configured as `animated` (Gate B-e). */
+  private fun animatedParams(p: Plan.Generated): List<Classified> =
+    if (p.decl.spec !in config.animated) {
+      emptyList()
+    } else {
+      p.params.filter { it.kind == ParamKind.VALUE && it.param.type.fq in TypeMap.animatable && !it.param.type.nullable }
+    }
+
+  /**
+   * A stub's first lines for its animated parameters: the `ExtraAnimated` element a tagged value
+   * carries (or an empty modifier), then the parameter shadowed by its exact target.
+   */
+  /** The `.wire` extension a generic wire type's stub calls (`FiniteAnimationSpec<…>.wire`). */
+  private fun genericWireImports(p: Plan.Generated, imports: MutableSet<String>) {
+    if (p.params.any { it.kind == ParamKind.VALUE && it.param.type.fq in TypeMap.generic }) imports += "dev.keliver.compose.animation.core.wire"
+  }
+
+  private fun animatedPrologue(animated: List<Classified>): String = buildString {
+    for (c in animated) {
+      val n = c.param.name
+      append("  val animated_$n = dev.keliver.compose.internal.animated(\"$n\", $n)\n")
+      append("  @Suppress(\"NAME_SHADOWING\") val $n = dev.keliver.compose.internal.untag($n)\n")
     }
   }
 
@@ -438,8 +476,15 @@ class Emitter(
       if (required.isNotEmpty()) body.append("    if (${required.joinToString(" && ") { "p_${it.param.name} !== Unset" }}) {\n") else body.append("    run {\n")
       // Locals in Compose's order, so a default that names an earlier parameter (`fallback = error`) reads it.
       // A hidden overload passes only what its visible successor takes; Compose defaults the rest.
+      val animated = animatedParams(w)
+      if (animated.isNotEmpty()) body.append("      val animatedRefs = modifier.trailingAnimated()\n")
       for (c in w.called) {
-        val line = hostLocal(c, d, imports) ?: continue
+        var line = hostLocal(c, d, imports) ?: continue
+        if (c in animated) {
+          // The guest's animated reference (`animate*AsState`): the real one runs here (Gate B-e).
+          val n = c.param.name
+          line = "val $n = (" + line.removePrefix("val $n = ") + ").animated(animatedRefs, \"$n\")"
+        }
         body.append("      $line\n")
       }
       body.append("      ${d.pkg}.${d.name}(\n")
@@ -473,17 +518,32 @@ class Emitter(
     for (mod in modifiers.filter { it.decl.kind == DeclKind.MODIFIER }) {
       body.append("  override fun ${mod.entry.name}(value: @Composable (Modifier) -> Unit, modifier: ${mod.entry.name}) {}\n")
     }
+    for (e in config.extraModifiers) {
+      imports += "$schemaPkg.modifier.Extra$e"
+      body.append("  override fun Extra$e(value: @Composable (Modifier) -> Unit, modifier: Extra$e) {}\n")
+    }
     body.append("}\n\n")
     // Modifiers.
+    val anyAnimated = config.animated.isNotEmpty()
     body.append("/** Applies a generated widget's own (unscoped) generated modifiers, in the guest's order. */\n")
     body.append("@Composable\ninternal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWidget?): Modifier {\n")
     body.append("  val elements = ArrayList<KeliverModifier.UnscopedElement>()\n  chain.forEachUnscoped { elements += it }\n  var m = this\n")
-    body.append("  for (e in elements) {\n    m = when (e) {\n")
+    if (anyAnimated) {
+      // Gate B-e: `ExtraAnimated` elements name parameters of the element that follows them.
+      body.append("  var pending: List<ExtraAnimated> = emptyList()\n")
+      body.append("  for (e in elements) {\n")
+      body.append("    if (e is ExtraAnimated) {\n      pending = pending + e\n      continue\n    }\n")
+      body.append("    m = when (e) {\n")
+    } else {
+      body.append("  for (e in elements) {\n    m = when (e) {\n")
+    }
     for (mod in modifiers.filter { it.decl.kind == DeclKind.MODIFIER }) {
       imports += "$schemaPkg.modifier.${mod.entry.name}"
       body.append("      is ${mod.entry.name} -> ${modifierCall(mod, "m", imports)}\n")
     }
-    body.append("      else -> m\n    }\n  }\n  return m\n}\n\n")
+    body.append("      else -> m\n    }\n")
+    if (anyAnimated) body.append("    pending = emptyList()\n")
+    body.append("  }\n  return m\n}\n\n")
     body.append("/** Applies a child's scoped modifiers with its parent's real scope as receiver (§9). */\n")
     body.append("@Composable\ninternal fun Modifier.applyScoped(chain: KeliverModifier, scope: Any?): Modifier {\n")
     body.append("  val elements = ArrayList<KeliverModifier.ScopedElement>()\n  chain.forEachScoped { elements += it }\n  var m = this\n")
@@ -539,21 +599,22 @@ class Emitter(
         val plain = t.fq == TypeMap.IMAGE_MODEL || TypeMap.isPrimitive(t)
         val default = c.param.defaultText
         if (default != null && c.defaultCase != DefaultCase.NONE) imports += expressionImports(default, d, mirror = false)
+        val conv = hostConversion(t)
         when {
           c.explicitNull ->
             // A factory-made value from a factory this host does not know is null: Compose's default.
-            "val $n = (p_$n as $wt).let { v -> if (v == null) $default else if (v.isExplicitNull()) null else v.toCompose()${if (t.fq in TypeMap.opaque) " ?: $default" else ""} }"
-          c.defaultCase == DefaultCase.EXPRESSION -> "val $n = (p_$n as $wt)${if (plain) "" else "?.toCompose()"} ?: $default"
+            "val $n = (p_$n as $wt).let { v -> if (v == null) $default else if (v.isExplicitNull()) null else v.$conv${if (t.fq in TypeMap.opaque) " ?: $default" else ""} }"
+          c.defaultCase == DefaultCase.EXPRESSION -> "val $n = (p_$n as $wt)${if (plain) "" else "?.$conv"} ?: $default"
           c.defaultCase == DefaultCase.LITERAL -> {
             val nwt = if (wt.endsWith("?")) wt else "$wt?"
-            "val $n = (p_$n as $nwt)${if (plain) "" else "?.toCompose()"}${if (default == "null") "" else " ?: $default"}"
+            "val $n = (p_$n as $nwt)${if (plain) "" else "?.$conv"}${if (default == "null") "" else " ?: $default"}"
           }
           else -> "val $n = (p_$n as $wt)${if (plain) {
             ""
           } else if (wt.endsWith("?")) {
-            "?.toCompose()"
+            "?.$conv"
           } else {
-            ".toCompose()"
+            ".$conv"
           }}"
         }
       }
@@ -563,21 +624,28 @@ class Emitter(
     }
   }
 
+  /** The host's conversion of a sent value: `toCompose()`, typed for a generic wire type (`toCompose<IntSize>()`). */
+  private fun hostConversion(t: TypeRef): String =
+    if (t.fq in TypeMap.generic) "toCompose<${t.args.joinToString(", ") { it.fq }}>()" else "toCompose()"
+
   private fun modifierCall(mod: Plan.Generated, receiver: String, imports: MutableSet<String>): String {
     val d = mod.decl
     val args = mutableListOf<String>()
     val locals = mutableListOf<String>()
+    val animated = animatedParams(mod)
     for (c in mod.called) {
       val n = c.param.name
       val t = c.param.type
       when (c.kind) {
         ParamKind.VALUE -> {
-          val conv = if (TypeMap.isPrimitive(t)) "" else ".toCompose()"
+          val conv = if (TypeMap.isPrimitive(t)) "" else "." + hostConversion(t)
+          // The guest's animated reference (`animate*AsState`) runs here, as the real one (Gate B-e).
+          val anim = if (c in animated) ".animated(pending, \"$n\")" else ""
           if (c.defaultCase == DefaultCase.EXPRESSION) {
             imports += expressionImports(c.param.defaultText!!, d, mirror = false)
-            locals += "val $n = if (e.${n}IsDefault) ${c.param.defaultText} else e.$n$conv"
+            locals += "val $n = (if (e.${n}IsDefault) ${c.param.defaultText} else e.$n$conv)$anim"
           } else {
-            locals += "val $n = e.$n$conv"
+            locals += "val $n = e.$n$conv$anim"
           }
           args += "$n = $n"
         }
@@ -894,7 +962,8 @@ class Emitter(
     val default = c.param.defaultText
     // A host-state handle that travels as its wire value (`LazyListState`) is never a document
     // value: the canvas always takes the stub's default (a fresh state), as a new screen does.
-    if (t.fq in TypeMap.wireValue) {
+    // So is an animation spec (Gate B-e): the canvas draws the start state, with the stub's default.
+    if (t.fq in TypeMap.wireValue || t.fq in TypeMap.generic) {
       if (default == null) return missing
       imports += expressionImports(default, d, mirror = true)
       return "($default)"

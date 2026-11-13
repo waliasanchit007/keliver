@@ -124,7 +124,7 @@ class LockBuilder(private val old: Lock) {
       return updated
     }
     appended = true
-    val base = (decl.owner ?: "") + decl.name.replaceFirstChar { it.uppercase() }
+    val base = (decl.owner ?: decl.widgetReceiver?.simpleName ?: "") + decl.name.replaceFirstChar { it.uppercase() }
     val siblings = (widgets.values + modifiers.values).count { it.name.removePrefix("Gen").trimEnd { c -> c.isDigit() } == base }
     val name = "Gen$base${siblings + 1}"
     val params = decl.params.withIndex().associate { (i, p) -> p.name to i + 1 } +

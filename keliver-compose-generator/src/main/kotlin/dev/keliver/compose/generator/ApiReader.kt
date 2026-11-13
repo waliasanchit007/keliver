@@ -55,7 +55,11 @@ class ApiReader(jars: List<File>) {
 
   /** Finds the declaration a config spec names: `pkg.name(p1,p2)` or `pkg.Owner#name(p1,p2)`. */
   fun find(spec: String): DeclInfo {
-    val head = spec.substringBefore('(')
+    // `pkg.name@Receiver(…)` names an extension overload by its receiver's simple name
+    // (`AnimatedVisibility@ColumnScope`); without it, an overload with no receiver (or a modifier's
+    // `Modifier` receiver) is preferred.
+    val receiverName = spec.substringBefore('(').substringAfter('@', "").takeIf { it.isNotEmpty() }
+    val head = spec.substringBefore('(').substringBefore('@')
     // A parameter is `name` or `name:SimpleType` (to tell `size(size: Dp)` from `size(size: DpSize)`).
     val paramSpecs = spec.substringAfter('(').removeSuffix(")").split(',').map { it.trim() }.filter { it.isNotEmpty() }
     val paramNames = paramSpecs.map { it.substringBefore(':') }
@@ -82,8 +86,13 @@ class ApiReader(jars: List<File>) {
           paramSpecs.zip(f.valueParameters).all { (ps, vp) -> ':' !in ps || vp.type.toRef().simpleName == ps.substringAfter(':') }
       }
     }
-    val f = candidates.distinctBy { fn -> fn.valueParameters.joinToString { it.name + ":" + it.type.toRef().canonical() } }
-      .singleOrNull() ?: error("$spec: ${candidates.size} public declarations match (want exactly 1)")
+    val byReceiver = if (receiverName != null) {
+      candidates.filter { it.receiverParameterType?.toRef()?.simpleName == receiverName }
+    } else {
+      candidates.filter { f -> f.receiverParameterType?.toRef()?.fq.let { it == null || it == MODIFIER } }.ifEmpty { candidates }
+    }
+    val f = byReceiver.distinctBy { fn -> fn.valueParameters.joinToString { it.name + ":" + it.type.toRef().canonical() } }
+      .singleOrNull() ?: error("$spec: ${byReceiver.size} public declarations match (want exactly 1)")
     return DeclInfo(
       spec = spec,
       pkg = pkg,

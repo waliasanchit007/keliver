@@ -73,6 +73,8 @@ google-material = { module = "com.google.android.material:material", version = "
 # CMP 1.12 stopped publishing its collection-internal fork: AndroidX collection has JS/Wasm itself.
 # 1.5.0 is what androidx.compose.runtime 1.12.1 requires.
 jetbrains-compose-collection = { module = "androidx.collection:collection", version = "1.5.0" }
+# Gate B-e (prototype only): the generated group's animation renderers, and the generator's input.
+jetbrains-compose-animation = { module = "org.jetbrains.compose.animation:animation", version.ref = "jbCompose" }
 jetbrains-compose-gradlePlugin = { module = "org.jetbrains.compose:compose-gradle-plugin", version.ref = "jbCompose" }
 jetbrains-compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "jbCompose" }
 jetbrains-compose-material = { module = "org.jetbrains.compose.material:material", version.ref = "jbCompose" }

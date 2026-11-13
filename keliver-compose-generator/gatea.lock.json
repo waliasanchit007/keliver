@@ -1,9 +1,69 @@
 {
   "group": "gatea",
-  "level": 4,
-  "nextWidgetTag": 27,
-  "nextModifierTag": 32,
+  "level": 5,
+  "nextWidgetTag": 30,
+  "nextModifierTag": 37,
   "widgets": {
+    "androidx.compose.animation/AnimatedVisibility(visible:kotlin.Boolean,modifier:androidx.compose.ui.Modifier,enter:androidx.compose.animation.EnterTransition,exit:androidx.compose.animation.ExitTransition,label:kotlin.String,content:@Composable androidx.compose.animation.AnimatedVisibilityScope.()->kotlin.Unit)": {
+      "tag": 27,
+      "name": "GenAnimatedVisibility1",
+      "params": {
+        "visible": 1,
+        "modifier": 2,
+        "enter": 3,
+        "exit": 4,
+        "label": 5,
+        "content": 6
+      },
+      "since": 5,
+      "wire": {
+        "visible": 5,
+        "enter": 5,
+        "exit": 5,
+        "label": 5,
+        "content": 5
+      }
+    },
+    "androidx.compose.animation/ColumnScope.AnimatedVisibility(visible:kotlin.Boolean,modifier:androidx.compose.ui.Modifier,enter:androidx.compose.animation.EnterTransition,exit:androidx.compose.animation.ExitTransition,label:kotlin.String,content:@Composable androidx.compose.animation.AnimatedVisibilityScope.()->kotlin.Unit)": {
+      "tag": 28,
+      "name": "GenColumnScopeAnimatedVisibility1",
+      "params": {
+        "visible": 1,
+        "modifier": 2,
+        "enter": 3,
+        "exit": 4,
+        "label": 5,
+        "content": 6
+      },
+      "since": 5,
+      "wire": {
+        "visible": 5,
+        "enter": 5,
+        "exit": 5,
+        "label": 5,
+        "content": 5
+      }
+    },
+    "androidx.compose.animation/RowScope.AnimatedVisibility(visible:kotlin.Boolean,modifier:androidx.compose.ui.Modifier,enter:androidx.compose.animation.EnterTransition,exit:androidx.compose.animation.ExitTransition,label:kotlin.String,content:@Composable androidx.compose.animation.AnimatedVisibilityScope.()->kotlin.Unit)": {
+      "tag": 29,
+      "name": "GenRowScopeAnimatedVisibility1",
+      "params": {
+        "visible": 1,
+        "modifier": 2,
+        "enter": 3,
+        "exit": 4,
+        "label": 5,
+        "content": 6
+      },
+      "since": 5,
+      "wire": {
+        "visible": 5,
+        "enter": 5,
+        "exit": 5,
+        "label": 5,
+        "content": 5
+      }
+    },
     "androidx.compose.foundation.layout/Box(modifier:androidx.compose.ui.Modifier)": {
       "tag": 2,
       "name": "GenBox2",
@@ -616,6 +676,32 @@
     }
   },
   "modifiers": {
+    "androidx.compose.animation/animateContentSize(animationSpec:androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntSize>,alignment:androidx.compose.ui.Alignment,finishedListener:((androidx.compose.ui.unit.IntSize,androidx.compose.ui.unit.IntSize)->kotlin.Unit)?)": {
+      "tag": 36,
+      "name": "GenAnimateContentSize2",
+      "params": {
+        "animationSpec": 1,
+        "alignment": 2,
+        "finishedListener": 3
+      },
+      "since": 5,
+      "wire": {
+        "animationSpec": 5,
+        "alignment": 5
+      }
+    },
+    "androidx.compose.animation/animateContentSize(animationSpec:androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntSize>,finishedListener:((androidx.compose.ui.unit.IntSize,androidx.compose.ui.unit.IntSize)->kotlin.Unit)?)": {
+      "tag": 35,
+      "name": "GenAnimateContentSize1",
+      "params": {
+        "animationSpec": 1,
+        "finishedListener": 2
+      },
+      "since": 5,
+      "wire": {
+        "animationSpec": 5
+      }
+    },
     "androidx.compose.foundation.layout/BoxScope#align(alignment:androidx.compose.ui.Alignment)": {
       "tag": 16,
       "name": "GenBoxScopeAlign1",
@@ -724,6 +810,19 @@
       "since": 1,
       "wire": {
         "height": 1
+      }
+    },
+    "androidx.compose.foundation.layout/offset(x:androidx.compose.ui.unit.Dp,y:androidx.compose.ui.unit.Dp)": {
+      "tag": 32,
+      "name": "GenOffset1",
+      "params": {
+        "x": 1,
+        "y": 2
+      },
+      "since": 5,
+      "wire": {
+        "x": 5,
+        "y": 5
       }
     },
     "androidx.compose.foundation.layout/padding(all:androidx.compose.ui.unit.Dp)": {
@@ -981,6 +1080,28 @@
       "since": 1,
       "wire": {
         "shape": 1
+      }
+    },
+    "androidx.compose.ui.draw/rotate(degrees:kotlin.Float)": {
+      "tag": 33,
+      "name": "GenRotate1",
+      "params": {
+        "degrees": 1
+      },
+      "since": 5,
+      "wire": {
+        "degrees": 5
+      }
+    },
+    "androidx.compose.ui.draw/scale(scale:kotlin.Float)": {
+      "tag": 34,
+      "name": "GenScale1",
+      "params": {
+        "scale": 1
+      },
+      "since": 5,
+      "wire": {
+        "scale": 5
       }
     },
     "androidx.compose.ui.draw/shadow(elevation:androidx.compose.ui.unit.Dp,shape:androidx.compose.ui.graphics.Shape,clip:kotlin.Boolean,ambientColor:androidx.compose.ui.graphics.Color,spotColor:androidx.compose.ui.graphics.Color)": {

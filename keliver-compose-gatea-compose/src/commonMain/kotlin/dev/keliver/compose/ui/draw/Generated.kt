@@ -6,6 +6,8 @@ package dev.keliver.compose.ui.draw
 
 import dev.keliver.compose.gatea.compose.GenAlpha1Impl
 import dev.keliver.compose.gatea.compose.GenClip1Impl
+import dev.keliver.compose.gatea.compose.GenRotate1Impl
+import dev.keliver.compose.gatea.compose.GenScale1Impl
 import dev.keliver.compose.gatea.compose.GenShadow1Impl
 import dev.keliver.compose.ui.graphics.DefaultShadowColor
 import dev.keliver.compose.ui.graphics.RectangleShape
@@ -23,7 +25,9 @@ public fun dev.keliver.compose.ui.Modifier.clip(
 public fun dev.keliver.compose.ui.Modifier.alpha(
   alpha: kotlin.Float,
 ): dev.keliver.compose.ui.Modifier {
-  return then(GenAlpha1Impl(alpha = alpha))
+  val animated_alpha = dev.keliver.compose.internal.animated("alpha", alpha)
+  @Suppress("NAME_SHADOWING") val alpha = dev.keliver.compose.internal.untag(alpha)
+  return then(animated_alpha).then(GenAlpha1Impl(alpha = alpha))
 }
 /** Creates a [graphicsLayer] that draws a shadow. */
 @androidx.compose.runtime.Stable
@@ -38,4 +42,22 @@ public fun dev.keliver.compose.ui.Modifier.shadow(
   val default_ambientColor = DefaultShadowColor
   val default_spotColor = DefaultShadowColor
   return then(GenShadow1Impl(elevation = elevation, shape = shape, clip = clip, clipIsDefault = clip == default_clip, ambientColor = ambientColor, ambientColorIsDefault = ambientColor == default_ambientColor, spotColor = spotColor, spotColorIsDefault = spotColor == default_spotColor))
+}
+/** Sets the degrees the view is rotated around the center of the composable. */
+@androidx.compose.runtime.Stable
+public fun dev.keliver.compose.ui.Modifier.rotate(
+  degrees: kotlin.Float,
+): dev.keliver.compose.ui.Modifier {
+  val animated_degrees = dev.keliver.compose.internal.animated("degrees", degrees)
+  @Suppress("NAME_SHADOWING") val degrees = dev.keliver.compose.internal.untag(degrees)
+  return then(animated_degrees).then(GenRotate1Impl(degrees = degrees))
+}
+/** Scale the contents of both the horizontal and vertical axis uniformly by the same scale factor. */
+@androidx.compose.runtime.Stable
+public fun dev.keliver.compose.ui.Modifier.scale(
+  scale: kotlin.Float,
+): dev.keliver.compose.ui.Modifier {
+  val animated_scale = dev.keliver.compose.internal.animated("scale", scale)
+  @Suppress("NAME_SHADOWING") val scale = dev.keliver.compose.internal.untag(scale)
+  return then(animated_scale).then(GenScale1Impl(scale = scale))
 }
