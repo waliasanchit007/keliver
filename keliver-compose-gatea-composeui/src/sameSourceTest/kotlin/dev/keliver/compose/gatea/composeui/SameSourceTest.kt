@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -47,12 +48,14 @@ import androidx.compose.ui.unit.dp
 import dev.keliver.compose.foundation.lazy.LazyListState as GuestLazyListState
 import dev.keliver.compose.gatea.composeui.samples.guest.AnimatedPanel as GuestAnimatedPanel
 import dev.keliver.compose.gatea.composeui.samples.guest.FrameClockPanel as GuestFrameClockPanel
+import dev.keliver.compose.gatea.composeui.samples.guest.InsertedModifierPanel as GuestInsertedModifierPanel
 import dev.keliver.compose.gatea.composeui.samples.guest.ItemDetail as GuestItemDetail
 import dev.keliver.compose.gatea.composeui.samples.guest.LongList as GuestLongList
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleCard as GuestSampleCard
 import dev.keliver.compose.gatea.composeui.samples.guest.SampleOrders as GuestSampleOrders
 import dev.keliver.compose.gatea.composeui.samples.native.AnimatedPanel as NativeAnimatedPanel
 import dev.keliver.compose.gatea.composeui.samples.native.FrameClockPanel as NativeFrameClockPanel
+import dev.keliver.compose.gatea.composeui.samples.native.InsertedModifierPanel as NativeInsertedModifierPanel
 import dev.keliver.compose.gatea.composeui.samples.native.ItemDetail as NativeItemDetail
 import dev.keliver.compose.gatea.composeui.samples.native.SampleCard as NativeSampleCard
 import dev.keliver.compose.gatea.composeui.samples.native.SampleOrders as NativeSampleOrders
@@ -298,7 +301,7 @@ class SameSourceTest {
     }
     repeat(3) {
       mainClock.advanceTimeByFrame()
-      host.pump()
+      pumpAt(host)
     }
     val frames = mutableListOf<Pair<String, Int>>()
     fun compare(label: String) {
@@ -310,26 +313,110 @@ class SameSourceTest {
     }
     compare("start")
 
+    val crossed = animationSchedule(host, {
+      nativeExpanded = true
+      guestExpanded.value = true
+    }, ::compare)
+    writeArtifact("gate-b-e/host-frames.txt", frames.joinToString("\n") { "${it.first}: ${it.second}" }.encodeToByteArray())
+    assertEquals(frames.map { it.first to 0 }, frames, "pixels that differ between native Compose and the guest, by frame")
+    assertEquals(0, crossed, "change batches that crossed the bridge while the host animated")
+    assertTrue(host.wire.any { "\"param\":\"alpha\"" in it }, "an animated reference travelled")
+  }
+
+  /**
+   * The bridge assertion above can fail: the same schedule, with the same frame times, run on a
+   * guest-clock animation (Animatable) sends a change batch for each frame it pumps.
+   */
+  @Test fun theBridgeAssertionCatchesAGuestClockAnimation() = runComposeUiTest {
+    mainClock.autoAdvance = false
+    val guestExpanded = mutableStateOf(false)
+    val host = guestOnHost { GuestFrameClockPanel(guestExpanded.value) }
+    setContent { Theme { host.root.Render(null) } }
+    repeat(3) {
+      mainClock.advanceTimeByFrame()
+      pumpAt(host)
+    }
+    val crossed = animationSchedule(host, { guestExpanded.value = true }) {}
+    assertTrue(crossed >= 5, "a guest-clock animation sends a batch per pumped frame: $crossed")
+  }
+
+  /**
+   * A modifier inserted ahead of an animated one mid-animation: the host's animation state must
+   * survive the chain's new shape (native Compose's animate*AsState is not in the chain at all).
+   */
+  @Test fun aModifierInsertedAheadOfAnAnimatedOneKeepsItsAnimation() = runComposeUiTest {
+    mainClock.autoAdvance = false
+    var nativeExpanded by mutableStateOf(false)
+    var nativeInset by mutableStateOf(false)
+    val guestExpanded = mutableStateOf(false)
+    val guestInset = mutableStateOf(false)
+    val host = guestOnHost { GuestInsertedModifierPanel(guestExpanded.value, guestInset.value) }
+    setContent {
+      Theme {
+        Row {
+          Box(Modifier.size(200.dp, 240.dp).testTag("native")) { NativeInsertedModifierPanel(nativeExpanded, nativeInset) }
+          Box(Modifier.size(200.dp, 240.dp).testTag("guest")) { host.root.Render(null) }
+        }
+      }
+    }
+    repeat(3) {
+      mainClock.advanceTimeByFrame()
+      pumpAt(host)
+    }
+    val frames = mutableListOf<Pair<String, Int>>()
+    fun compare(label: String) {
+      frames += label to differingPixels(
+        onNodeWithTag("native").captureToImage(),
+        onNodeWithTag("guest").captureToImage(),
+        "gate-b-e/inserted-$label-diff.png",
+      )
+    }
     nativeExpanded = true
     guestExpanded.value = true
     Snapshot.sendApplyNotifications()
-    host.pump()
+    pumpAt(host)
+    mainClock.advanceTimeBy(160)
+    pumpAt(host)
+    compare("160ms")
+    // Mid-animation: padding goes in ahead of alpha.
+    nativeInset = true
+    guestInset.value = true
+    Snapshot.sendApplyNotifications()
+    pumpAt(host)
+    var elapsed = 160L
+    for (at in listOf(192L, 240L, 304L, 400L, 2_400L)) {
+      mainClock.advanceTimeBy(at - elapsed)
+      elapsed = at
+      pumpAt(host)
+      compare("${at}ms")
+    }
+    assertEquals(frames.map { it.first to 0 }, frames, "pixels that differ between native Compose and the guest, by frame")
+  }
+
+  /** Pumps the guest with the test clock's own frame time, so a guest-clock animation would advance. */
+  private fun ComposeUiTest.pumpAt(host: GuestOnHost) = host.pump(mainClock.currentTime * 1_000_000)
+
+  /**
+   * Flips the state, then steps frame by frame through 400 ms tweens and the springs of
+   * AnimatedVisibility and animateContentSize, calling [compare] at each step. Returns how many
+   * change batches crossed the bridge after the flip's own batch.
+   */
+  private fun ComposeUiTest.animationSchedule(host: GuestOnHost, flip: () -> Unit, compare: (String) -> Unit): Int {
+    flip()
+    Snapshot.sendApplyNotifications()
+    pumpAt(host)
     val wireAtStart = host.wire.size
-    // Frame by frame through the 400 ms tweens and the springs of AnimatedVisibility and animateContentSize.
     var elapsed = 0L
     for (at in listOf(16L, 96L, 192L, 304L, 400L)) {
       mainClock.advanceTimeBy(at - elapsed)
       elapsed = at
-      host.pump()
+      pumpAt(host)
       compare("${at}ms")
     }
     mainClock.advanceTimeBy(2_000)
-    host.pump()
+    pumpAt(host)
     compare("end")
-    writeArtifact("gate-b-e/host-frames.txt", frames.joinToString("\n") { "${it.first}: ${it.second}" }.encodeToByteArray())
-    assertEquals(frames.map { it.first to 0 }, frames, "pixels that differ between native Compose and the guest, by frame")
-    assertEquals(wireAtStart, host.wire.size, "change batches that crossed the bridge while the host animated")
-    assertTrue(host.wire.any { "\"param\":\"alpha\"" in it }, "an animated reference travelled")
+    return host.wire.size - wireAtStart
   }
 
   /**
@@ -372,6 +459,7 @@ class SameSourceTest {
     val end = differingPixels(onNodeWithTag("native").captureToImage(), onNodeWithTag("guest").captureToImage(), "gate-b-e/frameclock-end-diff.png")
     writeArtifact("gate-b-e/frameclock.txt", "start: $start\nmid (frames 11, 16, one frame of lag): $mid\nend: $end\nchange batches over 40 frames: $batches\n".encodeToByteArray())
     assertEquals(0, start, "start state")
+    assertEquals(listOf(0, 0), mid, "two mid frames (the guest's value lags one frame; frames 11 and 16 still match)")
     assertEquals(0, end, "end state")
     // 400 ms at 16 ms a frame: about 25 frames of changes, one batch each.
     assertTrue(batches in 20..30, "one change batch per frame while the guest animates: $batches")

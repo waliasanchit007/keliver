@@ -73,3 +73,13 @@ fun FrameClockPanel(expanded: Boolean) {
     Box(Modifier.size(size.value.dp).alpha(alpha.value).background(Color(0xFF6750A4), RoundedCornerShape(12.dp)))
   }
 }
+
+/** A modifier inserted ahead of an animated one while it animates. */
+@Suppress("ktlint:compose:modifier-missing-check")
+@Composable
+fun InsertedModifierPanel(expanded: Boolean, inset: Boolean) {
+  val alpha by animateFloatAsState(if (expanded) 1f else 0.2f, tween(durationMillis = 400, easing = LinearEasing), label = "alpha")
+  Column(Modifier.size(200.dp, 240.dp).padding(16.dp)) {
+    Box(Modifier.size(96.dp).then(if (inset) Modifier.padding(8.dp) else Modifier).alpha(alpha).background(Color(0xFF6750A4)))
+  }
+}

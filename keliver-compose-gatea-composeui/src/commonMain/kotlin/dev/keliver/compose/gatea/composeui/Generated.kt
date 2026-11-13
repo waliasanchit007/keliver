@@ -1291,42 +1291,48 @@ internal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWid
   val elements = ArrayList<KeliverModifier.UnscopedElement>()
   chain.forEachUnscoped { elements += it }
   var m = this
-  var pending: List<ExtraAnimated> = emptyList()
+  val paired = ArrayList<Pair<KeliverModifier.UnscopedElement, List<ExtraAnimated>>>()
+  var animatedRefs: List<ExtraAnimated> = emptyList()
   for (e in elements) {
     if (e is ExtraAnimated) {
-      pending = pending + e
-      continue
+      animatedRefs = animatedRefs + e
+    } else {
+      paired += e to animatedRefs
+      animatedRefs = emptyList()
     }
-    m = when (e) {
-      is GenPadding1 -> run { val all = e.all.toCompose().animated(pending, "all"); m.padding(all = all) }
-      is GenPadding2 -> run { val horizontal = e.horizontal.toCompose(); val vertical = e.vertical.toCompose(); m.padding(horizontal = horizontal, vertical = vertical) }
-      is GenPadding3 -> run { val start = e.start.toCompose(); val top = e.top.toCompose(); val end = e.end.toCompose(); val bottom = e.bottom.toCompose(); m.padding(start = start, top = top, end = end, bottom = bottom) }
-      is GenPadding4 -> run { val paddingValues = e.paddingValues.toCompose(); m.padding(paddingValues = paddingValues) }
-      is GenSize1 -> run { val size = e.size.toCompose().animated(pending, "size"); m.size(size = size) }
-      is GenSize2 -> run { val width = e.width.toCompose().animated(pending, "width"); val height = e.height.toCompose().animated(pending, "height"); m.size(width = width, height = height) }
-      is GenWidth1 -> run { val width = e.width.toCompose().animated(pending, "width"); m.width(width = width) }
-      is GenHeight1 -> run { val height = e.height.toCompose().animated(pending, "height"); m.height(height = height) }
-      is GenFillMaxWidth1 -> run { val fraction = e.fraction; m.fillMaxWidth(fraction = fraction) }
-      is GenFillMaxHeight1 -> run { val fraction = e.fraction; m.fillMaxHeight(fraction = fraction) }
-      is GenFillMaxSize1 -> run { val fraction = e.fraction; m.fillMaxSize(fraction = fraction) }
-      is GenBackground1 -> run { val color = e.color.toCompose().animated(pending, "color"); val shape = e.shape.toCompose(); m.background(color = color, shape = shape) }
-      is GenBorder1 -> run { val width = e.width.toCompose(); val color = e.color.toCompose(); val shape = e.shape.toCompose(); m.border(width = width, color = color, shape = shape) }
-      is GenBorder2 -> run { val border = e.border.toCompose(); val shape = e.shape.toCompose(); m.border(border = border, shape = shape) }
-      is GenClickable1 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
-      is GenClickable2 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
-      is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
-      is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
-      is GenClip1 -> run { val shape = e.shape.toCompose(); m.clip(shape = shape) }
-      is GenAlpha1 -> run { val alpha = e.alpha.animated(pending, "alpha"); m.alpha(alpha = alpha) }
-      is GenShadow1 -> run { val elevation = e.elevation.toCompose(); val shape = e.shape.toCompose(); val clip = (if (e.clipIsDefault) elevation > 0.dp else e.clip); val ambientColor = (if (e.ambientColorIsDefault) DefaultShadowColor else e.ambientColor.toCompose()); val spotColor = (if (e.spotColorIsDefault) DefaultShadowColor else e.spotColor.toCompose()); m.shadow(elevation = elevation, shape = shape, clip = clip, ambientColor = ambientColor, spotColor = spotColor) }
-      is GenOffset1 -> run { val x = e.x.toCompose().animated(pending, "x"); val y = e.y.toCompose().animated(pending, "y"); m.offset(x = x, y = y) }
-      is GenRotate1 -> run { val degrees = e.degrees.animated(pending, "degrees"); m.rotate(degrees = degrees) }
-      is GenScale1 -> run { val scale = e.scale.animated(pending, "scale"); m.scale(scale = scale) }
-      is GenAnimateContentSize1 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); m.animateContentSize(animationSpec = animationSpec) }
-      is GenAnimateContentSize2 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); val alignment = e.alignment.toCompose(); m.animateContentSize(animationSpec = animationSpec, alignment = alignment) }
-      else -> m
+  }
+  for ((e, pending) in paired) {
+    m = androidx.compose.runtime.key(pending.map { it.ref.id }) {
+      when (e) {
+        is GenPadding1 -> run { val all = e.all.toCompose().animated(pending, "all"); m.padding(all = all) }
+        is GenPadding2 -> run { val horizontal = e.horizontal.toCompose(); val vertical = e.vertical.toCompose(); m.padding(horizontal = horizontal, vertical = vertical) }
+        is GenPadding3 -> run { val start = e.start.toCompose(); val top = e.top.toCompose(); val end = e.end.toCompose(); val bottom = e.bottom.toCompose(); m.padding(start = start, top = top, end = end, bottom = bottom) }
+        is GenPadding4 -> run { val paddingValues = e.paddingValues.toCompose(); m.padding(paddingValues = paddingValues) }
+        is GenSize1 -> run { val size = e.size.toCompose().animated(pending, "size"); m.size(size = size) }
+        is GenSize2 -> run { val width = e.width.toCompose().animated(pending, "width"); val height = e.height.toCompose().animated(pending, "height"); m.size(width = width, height = height) }
+        is GenWidth1 -> run { val width = e.width.toCompose().animated(pending, "width"); m.width(width = width) }
+        is GenHeight1 -> run { val height = e.height.toCompose().animated(pending, "height"); m.height(height = height) }
+        is GenFillMaxWidth1 -> run { val fraction = e.fraction; m.fillMaxWidth(fraction = fraction) }
+        is GenFillMaxHeight1 -> run { val fraction = e.fraction; m.fillMaxHeight(fraction = fraction) }
+        is GenFillMaxSize1 -> run { val fraction = e.fraction; m.fillMaxSize(fraction = fraction) }
+        is GenBackground1 -> run { val color = e.color.toCompose().animated(pending, "color"); val shape = e.shape.toCompose(); m.background(color = color, shape = shape) }
+        is GenBorder1 -> run { val width = e.width.toCompose(); val color = e.color.toCompose(); val shape = e.shape.toCompose(); m.border(width = width, color = color, shape = shape) }
+        is GenBorder2 -> run { val border = e.border.toCompose(); val shape = e.shape.toCompose(); m.border(border = border, shape = shape) }
+        is GenClickable1 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
+        is GenClickable2 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
+        is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
+        is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
+        is GenClip1 -> run { val shape = e.shape.toCompose(); m.clip(shape = shape) }
+        is GenAlpha1 -> run { val alpha = e.alpha.animated(pending, "alpha"); m.alpha(alpha = alpha) }
+        is GenShadow1 -> run { val elevation = e.elevation.toCompose(); val shape = e.shape.toCompose(); val clip = (if (e.clipIsDefault) elevation > 0.dp else e.clip); val ambientColor = (if (e.ambientColorIsDefault) DefaultShadowColor else e.ambientColor.toCompose()); val spotColor = (if (e.spotColorIsDefault) DefaultShadowColor else e.spotColor.toCompose()); m.shadow(elevation = elevation, shape = shape, clip = clip, ambientColor = ambientColor, spotColor = spotColor) }
+        is GenOffset1 -> run { val x = e.x.toCompose().animated(pending, "x"); val y = e.y.toCompose().animated(pending, "y"); m.offset(x = x, y = y) }
+        is GenRotate1 -> run { val degrees = e.degrees.animated(pending, "degrees"); m.rotate(degrees = degrees) }
+        is GenScale1 -> run { val scale = e.scale.animated(pending, "scale"); m.scale(scale = scale) }
+        is GenAnimateContentSize1 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); m.animateContentSize(animationSpec = animationSpec) }
+        is GenAnimateContentSize2 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); val alignment = e.alignment.toCompose(); m.animateContentSize(animationSpec = animationSpec, alignment = alignment) }
+        else -> m
+      }
     }
-    pending = emptyList()
   }
   return m
 }

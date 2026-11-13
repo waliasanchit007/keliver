@@ -530,19 +530,27 @@ class Emitter(
     body.append("  val elements = ArrayList<KeliverModifier.UnscopedElement>()\n  chain.forEachUnscoped { elements += it }\n  var m = this\n")
     if (anyAnimated) {
       // Gate B-e: `ExtraAnimated` elements name parameters of the element that follows them.
-      body.append("  var pending: List<ExtraAnimated> = emptyList()\n")
+      // Paired first, outside composition: a branch or `continue` around the composable part puts
+      // each element in its own positional group, where its movable group cannot move.
+      body.append("  val paired = ArrayList<Pair<KeliverModifier.UnscopedElement, List<ExtraAnimated>>>()\n")
+      body.append("  var animatedRefs: List<ExtraAnimated> = emptyList()\n")
       body.append("  for (e in elements) {\n")
-      body.append("    if (e is ExtraAnimated) {\n      pending = pending + e\n      continue\n    }\n")
-      body.append("    m = when (e) {\n")
+      body.append("    if (e is ExtraAnimated) {\n      animatedRefs = animatedRefs + e\n    } else {\n")
+      body.append("      paired += e to animatedRefs\n      animatedRefs = emptyList()\n    }\n  }\n")
+      body.append("  for ((e, pending) in paired) {\n")
+      // A movable group per element, keyed by its references: the host's animation state follows
+      // the reference, not the element's position, so a modifier inserted ahead of an animated one
+      // mid-animation does not reset it (SameSourceTest.aModifierInsertedAheadOfAnAnimatedOne…).
+      body.append("    m = androidx.compose.runtime.key(pending.map { it.ref.id }) {\n      when (e) {\n")
     } else {
       body.append("  for (e in elements) {\n    m = when (e) {\n")
     }
+    val caseIndent = if (anyAnimated) "        " else "      "
     for (mod in modifiers.filter { it.decl.kind == DeclKind.MODIFIER }) {
       imports += "$schemaPkg.modifier.${mod.entry.name}"
-      body.append("      is ${mod.entry.name} -> ${modifierCall(mod, "m", imports)}\n")
+      body.append("${caseIndent}is ${mod.entry.name} -> ${modifierCall(mod, "m", imports)}\n")
     }
-    body.append("      else -> m\n    }\n")
-    if (anyAnimated) body.append("    pending = emptyList()\n")
+    if (anyAnimated) body.append("${caseIndent}else -> m\n      }\n    }\n") else body.append("      else -> m\n    }\n")
     body.append("  }\n  return m\n}\n\n")
     body.append("/** Applies a child's scoped modifiers with its parent's real scope as receiver (§9). */\n")
     body.append("@Composable\ninternal fun Modifier.applyScoped(chain: KeliverModifier, scope: Any?): Modifier {\n")
