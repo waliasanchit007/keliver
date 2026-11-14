@@ -391,7 +391,8 @@ grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside
 C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$V" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$V" \
-  && grep -A9 'if (progress.moduleLoadStart()) {' "$V" | grep -q 'LoadFence.Mode.LIVE -> onReady(s)' \
+  && grep -A3 'if (progress.moduleLoadStart()) {' "$V" | grep -q 'fence.codeStarts(mark = { onReady(s) }' \
+  && grep -A4 'fun codeStarts(mark: () -> Unit, unmark: () -> Unit) {' "$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt" | grep -q 'Mode.LIVE -> mark()' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$V" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }' "$V" \
   && grep -q 'count { crash.loadFailed(sequence, theBundles) }' "$V" \
@@ -426,7 +427,7 @@ SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
   && grep -q 'recordStartOverride(cacheName, body.utf8())' "$V" \
   && grep -q 'ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.show)' "$V" \
   && grep -q '        h.drop()' "$V" \
-  && grep -q 'val fence = LoadFence(held != null) { block -> appScope.launch { block() } }' "$V" \
+  && grep -q 'val fence = LoadFence(held != null, { block -> appScope.launch { block() } }, besideALiveApp = held != null && besideALiveApp)' "$V" \
   && grep -q 'fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }' "$V" \
   && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$V" \
   && grep -q 'for (app in listOfNotNull(back, front)) {' "$V" \
@@ -434,7 +435,8 @@ SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
   && grep -q '    old?.let { retire(it.app) }' "$V" && ! grep -q 'OLD_APP_CLOSE_DELAY' "$V" \
   && grep -q 'val http = shared.http?.let { if (held != null) GatedHostHttp(it, fence.calls) else it }' "$V" \
   && grep -q 'val bridgeContext = if (held != null) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main' "$V" \
-  && grep -q 'if (!fence.onDrop(undo)) undo()' "$V" \
+  && grep -q 'fence.codeStarts(mark = { onReady(s) }, unmark = { crash.loadFailed(s, theBundles = false) })' "$V" \
+  && grep -q 'besideALiveApp = held != null && besideALiveApp)' "$V" && [ "$(grep -c '        besideALiveApp = true,$' "$V")" = 1 ] \
   && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$V" \
   && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/CallGates.kt" | cmp -s - "$K/CallGates.kt" \
   && ok "start policy: the Android host's decision and tests, START_POLICY (network-first by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app" \

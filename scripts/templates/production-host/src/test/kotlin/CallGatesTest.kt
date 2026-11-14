@@ -36,7 +36,7 @@ class CallGatesTest {
     }
   }
 
-  private fun held() = LoadFence(held = true) { it() }
+  private fun held() = LoadFence(held = true, post = { it() })
 
   @Test
   fun aHeldAppsRequestGoesOnceItShows() = runBlocking {
@@ -72,7 +72,7 @@ class CallGatesTest {
   @Test
   fun aLiveAppIsNotHeld() = runBlocking {
     val network = Network()
-    val fence = LoadFence(held = false) { it() }
+    val fence = LoadFence(held = false, post = { it() })
     GatedHostHttp(network, fence.calls).execute(HttpRequest("GET", "orders"))
     fence.drop() // an update replaced it: its calls go on until it is closed
     GatedHostHttp(network, fence.calls).execute(HttpRequest("GET", "more"))

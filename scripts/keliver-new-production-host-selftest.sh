@@ -369,7 +369,8 @@ grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), fl
 C="${M%/*}/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$M" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$M" \
-  && grep -A9 'if (progress.moduleLoadStart()) {' "$M" | grep -q 'LoadFence.Mode.LIVE -> onReady(s)' \
+  && grep -A3 'if (progress.moduleLoadStart()) {' "$M" | grep -q 'fence.codeStarts(mark = { onReady(s) }' \
+  && grep -A4 'fun codeStarts(mark: () -> Unit, unmark: () -> Unit) {' "${M%/*}/StartPolicy.kt" | grep -q 'Mode.LIVE -> mark()' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$M" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }' "$M" \
   && grep -q 'crash.loadFailed(sequence, theBundles)' "$M" \
@@ -410,7 +411,7 @@ SP="${M%/*}/StartPolicy.kt"
   && grep -q 'Log.i(TAG, choice.logLine(policy))' "$M" \
   && [ "$(grep -c 'recordStartOverride(.*, it)' "$M")" -ge 3 ] \
   && grep -q '          held.drop()' "$M" \
-  && grep -q 'val fence = LoadFence(held) { block -> scope.launch { block() } }' "$M" \
+  && grep -q 'val fence = LoadFence(held, { block -> scope.launch { block() } }, besideALiveApp = held && besideALiveApp)' "$M" \
   && grep -q '    fence.run { onUncaught(count(CrashKind.EXCEPTION)) }' "$M" \
   && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$M" \
   && grep -q 'for (app in listOfNotNull(back, front)) {' "${M%/*}/KeliverScreen.kt" \
@@ -418,7 +419,8 @@ SP="${M%/*}/StartPolicy.kt"
   && grep -q '    old?.let { retire(it.app) }' "$M" && ! grep -q 'OLD_APP_CLOSE_DELAY' "$M" \
   && grep -q 'zipline.bind<HostHttpProvider>("HostHttp", if (held) GatedHostHttp(hostHttp, fence.calls) else hostHttp)' "$M" \
   && grep -q 'val main = if (held) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main' "$M" \
-  && grep -q 'if (!fence.onDrop(undo)) undo()' "$M" \
+  && grep -q 'fence.codeStarts(mark = { onReady(s) }, unmark = { crash.loadFailed(s, theBundles = false) })' "$M" \
+  && grep -q 'besideALiveApp = held && besideALiveApp)' "$M" && [ "$(grep -c '          besideALiveApp = true,$' "$M")" = 1 ] \
   && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$M" \
   && [ -f "${M%/*}/CallGates.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CallGatesTest.kt" ] \
   && grep -q 'fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String?' "${M%/*}/BundleIndex.kt" \
