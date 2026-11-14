@@ -32,8 +32,19 @@ class GatebStartupBenchmark {
 
   @Test fun nativeHost() = start("native-host")
 
-  private fun start(mode: String) {
-    GatebPhone.recordAndCheck("startup $mode")
+  /**
+   * Cold-start experiments on the guest route (docs/GATE_B_RESULTS.md, "Where the A12's cold
+   * start goes"): the code load started in the activity's onCreate rather than on its first
+   * composition, and the cached code treated as fresh (no manifest fetch before loading it).
+   */
+  @Test fun hostEarlyStart() = start("host", "earlyStart")
+
+  @Test fun hostFreshCache() = start("host", "freshCache")
+
+  @Test fun hostEarlyStartFreshCache() = start("host", "earlyStart", "freshCache")
+
+  private fun start(mode: String, vararg experiments: String) {
+    GatebPhone.recordAndCheck("startup $mode${experiments.joinToString("") { " +$it" }}")
     rule.measureRepeated(
       packageName = TARGET_PACKAGE,
       metrics = listOf(StartupTimingMetric()),
@@ -47,7 +58,8 @@ class GatebStartupBenchmark {
       startActivityAndWait(
         Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.gateb.GatebActivity")
           .putExtra("mode", mode)
-          .putExtra("overLockScreen", true),
+          .putExtra("overLockScreen", true)
+          .apply { experiments.forEach { putExtra(it, true) } },
       )
       val label = "mode: " + mode.removePrefix("native-")
       check(device.wait(Until.hasObject(By.text(label)), 20_000)) { "the $mode route did not draw '$label'" }

@@ -424,14 +424,17 @@ saving (`dumpsys battery` before the run read 83%, unplugged, 26.7 °C):
 | Form | Time to full display (first content): median | p90 | p99 | min | Time to initial display: median | p90 | p99 |
 |---|---|---|---|---|---|---|---|
 | native (`native-host`, the screen compiled in) | **919** | 1,018 | 1,043 | 903 | 919 | 1,018 | 1,043 |
-| guest (`host`, the bundle from the APK's assets) | **2,581** | 2,812 | 2,813 | 2,404 | 823 | 858 | 903 |
+| guest (`host`, the manifest from the APK's assets, the code from Zipline's cache) | **2,581** | 2,812 | 2,813 | 2,404 | 823 | 858 | 903 |
 | guest − native | **+1,662** | | | | −96 | | |
 
 The guest's initial display is most likely an empty surface (the activity's first frame; inferred
 from its timing, not captured), so it comes slightly
 earlier than native's, whose first frame already has the content. Its full display is the frame
-after the first change batch has been applied: loading the ~1.9 MB bundle (1,948 KB in assets, see the APK table above) into QuickJS from the
-APK's assets (no network) and the guest's first composition. Where the 1.66 s goes was not profiled.
+after the first change batch has been applied: reading the manifest from the APK's assets (no
+network), loading the ~1.9 MB bundle's modules (1,948 KB in assets, see the APK table above) into
+QuickJS from Zipline's cache, and the guest's first composition. The median is a warm-cache start:
+only each run's first iteration read the modules from the APK's assets (and wrote the cache). Where the 1.66 s goes: see
+[Where the A12's cold start goes](#where-the-a12s-cold-start-goes) below.
 The emulator has no cold-start number (#244 did not measure one). On the iPhone 13 the same gap
 from `main()` was +142 ms warm and about +820 ms with an empty cache (section above); the two are
 not the same measurement (Android's cold start includes the process and the activity, and this
@@ -461,13 +464,160 @@ Reading them together:
   is the guest's QuickJS thread competing for this phone's CPU while the host animates; the native
   forms' own spread between runs (151–218 frames) is of the same order.
 - **Cold start is the largest phone-side cost of the guest route**: 2.58 s to the guest's first
-  content against 0.92 s native (+1.66 s), from a bundle already in the APK. It is a cost of the guest route
+  content against 0.92 s native (+1.66 s), with the code already in Zipline's cache and no network
+  (the first start after an install or an update costs more: see the next section). It is a cost of the guest route
   (loading and starting the guest), not of the generated API: Gate A's "first frame no slower"
   compared the generated guest with today's guest, and this compares a guest with native.
 - The bridge counter's host frame rates (53 host references, 56 native `Animatable`) are higher
   than the benchmark's (47, 44 frames a second): different windows, and the counter ran without
   Macrobenchmark's compilation and process restarts per iteration. Its native `animate*AsState`
   reading came first after the install and is a warm-up figure.
+
+### Where the A12's cold start goes
+
+The question: on a low-end Android phone (Galaxy A12, Android 12) the guest reaches its first content
+1.66 s after native (#247). What is in those 1.66 s, and what would remove each part?
+
+**Method.** First the 20 Perfetto traces of #247's run, read with Perfetto's trace processor:
+thread states and slices between process start and the frame that ends time to full display. Then
+prototype-only trace sections in `GatebActivity` (prefix `kg:`; `src/gateb`, only in
+`-PkeliverComposePrototype` builds), written from Treehouse's `EventListener` hooks: the code load,
+each download, the manifest's verification, Zipline's creation, each module's load into QuickJS,
+the initializer, `main`, the first 40 bridge calls, and the moment the first change batch has been
+handed to the host. Then the same cold start (`GatebStartupBenchmark`, `StartupMode.COLD`, 10
+iterations per form, built and run as #247 did) twice on the phone, on battery, 26.7–27.0 °C,
+thermal status 0, 81% falling to 78%. Session 1 measured `host` and `native-host`; session 2 the
+same two plus three experiments. No slowdown from the markers is visible, though this compares
+sessions (there was no A/B run with the markers off): `host` 2,514 and 2,518 ms against #247's
+2,581, native 945 and 927 against 919, so the gap is +1,569 and +1,591.
+
+**What the existing traces already showed.**
+- The app is AOT-compiled with `speed-profile` (Compose's baseline profiles). Both forms get the
+  same compilation; JIT work during the guest's start is small (about 40 ms, mostly
+  kotlinx.serialization's JSON lexer and Zipline's Ed25519 arithmetic, so those are not in the
+  profile). No GC in the window. Class loading about 80 ms.
+- The Treehouse (QuickJS) thread runs for 1.35 s of CPU between 0.73 s and 2.4 s. Another
+  0.3 s runs on the Default dispatcher's threads. The main thread is idle for most of that time.
+- Only iteration 0 read the whole bundle from the APK's assets (52 files) and wrote Zipline's
+  cache. Iterations 1–9 read only the manifest from assets and the 51 modules from the cache, so
+  #247's median is a start with a warm code cache. Iteration 0, with an empty cache, was among the
+  slowest guest starts in every run: 2.78–3.25 s, +0.36 to +0.87 s over its form's median (+0.36
+  and +0.41 for `host`; +0.87 for `earlyStart`, which was session 2's first test after the
+  install). That is the start every user gets once after an install or an OTA update, measured here
+  from assets; over a network the download comes on top.
+
+**The breakdown** (session 2, medians of 10, ms; each phase is the difference of the medians of its
+two boundaries, and they add up to the median time to full display. Session 1's are within 15 ms
+of these):
+
+| Phase (guest, `host`) | Boundaries | ms | CPU on the QuickJS thread | Share of the +1,591 |
+|---|---|---|---|---|
+| Process, application, activity, until the first composition starts the code load | 0 → Treehouse thread's first run | 732 | | shared with native |
+| Loader start: cache database open, cached manifest read and verified, then rejected as not fresh | → manifest read from assets | 169 | 107 | 11% |
+| Manifest from assets, parsed, signature verified | → `manifestVerified` | 76 | 111 (with the next row) | 5% |
+| QuickJS created | → `ziplineCreated` | 47 | | 3% |
+| 51 modules from the cache into QuickJS | → last `moduleLoadEnd` | 502 | 366 (evaluation 300) | 32% |
+| `main`, the app service, lifecycle, `launchHost` | → `ZiplineTreehouseUi.start` | 131 | 85 | 8% |
+| **The guest's first composition, in QuickJS** | → first `sendChanges` | **606** | **593** | **38%** |
+| First change batch encoded, crossed, decoded | → `sendChanges` returns | 37 | 37 | 2% |
+| Host applies the changes, composes, lays out, draws | → time to full display | 218 | (main thread 98) | 14% |
+| **guest total** | | **2,518** | | |
+| native total − 732 (arithmetic, not a phase) | 927 − 732 | 195 | | −12% |
+
+The 732 ms is subtracted from both forms arithmetically; it is not a shared phase boundary. Native's
+first frame starts at 599 ms and takes 324 ms on the main thread, content included; the guest's
+first frame (empty) starts at 624 ms and takes 196 ms, so it spans the 732 ms point.
+
+**What dominates.** Two things of similar size, both CPU on one thread:
+- **QuickJS running guest code: up to about 0.9 s.** An upper bound: the first composition's
+  593 ms of CPU includes the host-side bridge calls it makes during that phase (ART code on the
+  same thread), which were not separated out. The guest's first composition (606 ms, 98% of it
+  running) and evaluating the 51 modules' top-level code (300 ms). The biggest modules are Compose
+  runtime 78 ms, the generated group's guest protocol 35, the Kotlin stdlib 34, the screen's own
+  module 23, kotlinx.serialization core and JSON 21 each, coroutines 14; the other 44 take under
+  12 ms each. The bundle is already QuickJS bytecode (Zipline compiles it at build time), so none
+  of this is parsing. Later guest frames of the same screen take 100–350 ms each in the trace, so
+  the first composition is not much of an outlier on this phone. On the iPhone 13 the whole guest
+  start to the first widget was 180 ms.
+- **The loader around it: about 0.5 s.** Loader start and the rejected cache attempt (169), the
+  manifest (76), QuickJS creation (47), about 200 ms of per-module overhead in the module phase
+  (51 cache lookups, file reads and hash checks, about 4 ms each, partly waiting on an IO thread),
+  and `main` through `launchHost` (131).
+- The host's own work after the first batch arrives (218 ms) is close to what native spends on its
+  first frame, so it is not where the gap is.
+
+**Experiments** (session 2, labelled; prototype-only route extras, each 10 iterations):
+
+| Form | Time to full display, median | vs `host` | What changed |
+|---|---|---|---|
+| `host` | 2,518 | | |
+| `host` + `earlyStart`: `app.start()` in `onCreate`, not on the first composition | 2,373 | −145 | the code load starts at 577 ms instead of 732 |
+| `host` + `freshCache`: a `FreshnessChecker` that accepts the cached code | 2,419 | −99 | no manifest fetch before loading from the cache; the manifest and QuickJS-creation phases' CPU 111 → 34 ms |
+| both | 2,289 | −229 | |
+| `native-host` | 927 | | |
+
+Both experiments only move or skip loader work. Neither touches the 0.9 s that QuickJS spends.
+
+**Options, ranked by what they could remove from the ~1.6 s** (estimates unless marked measured):
+
+1. **Make the guest's first composition cheaper (up to ~0.6 s; size unknown).** This is the
+   largest phase, and no loader change touches it. The next step is to profile it from inside the
+   guest: how much is one-time Compose and Kotlin/JS initialization, and how much is this screen
+   (12 boxes, each animating alpha, size and colour at once)? `KeliverTrace.composed()` already
+   marks where a composition ends. A first frame that starts the animations after it is drawn
+   would cut this screen's share. QuickJS has no JIT, and Zipline has no other engine, so a faster
+   engine is not an option. Cost: a guest-side profile (hours), then work that depends on what it
+   finds.
+2. **Fewer, smaller modules (~0.1–0.3 s).** One or a few `.zipline` files instead of 51 would remove
+   most of the ~200 ms of per-module overhead. Dead-code elimination, or lazily initialized
+   top-level properties, would cut the 300 ms of evaluation (not checked: what this production
+   build already does). Cost: a Kotlin/JS and Zipline build change. A bundle in fewer modules
+   loses per-module caching, so any change downloads it again. Not in Keliver today.
+   An alternative that keeps the modules: overlap the cache reads and hash checks with QuickJS
+   evaluating the previous module, rather than merging modules (inference: not checked in
+   Zipline's loader, which may already do part of this).
+3. **Start the code load earlier (measured −145 ms from `onCreate`; more from `Application`).**
+   Keliver's production-host template starts at process start (`HostApp.onCreate` calls
+   `KeliverHost.start()`), but its `run()` first looks up the bundle in the index over the network
+   (`lookupBundle`, bounded by `LOOKUP_BUDGET_MILLIS`, 10 s) and only then starts Treehouse with
+   `DefaultFreshnessCheckerNotFresh`, which fetches the manifest over the network too. So a
+   scaffolded host waits for two serial network round trips before any cached code loads, and on
+   a real network it is likely *slower* than this route (assets, no network), not faster (not
+   measured). The fix there is ordering: start the cached load in parallel with the lookup, and
+   switch to the looked-up bundle if it differs. Treehouse's `Content.preload()` does not help this
+   start: it starts the guest's content before the view is bound only if the code is already
+   loaded (`TreehouseAppContent.preload`), and here the view is bound at about 0.63–0.73 s while
+   the code is ready at about 1.5 s, so there is nothing to overlap. It helps only when the code is already
+   warm, for example a second screen.
+4. **Load from the cache without network round trips first (measured −99 ms here; −229 with 3).**
+   From assets the manifest is cheap. Over a phone network the saving also includes the manifest's
+   round trip and, in the production-host template, the index lookup's (option 3), which can be
+   removed or overlapped with a cache start. Zipline supports it through `FreshnessChecker`.
+   Normal starts in the production-host template use `DefaultFreshnessCheckerNotFresh` (network
+   first), and `AcceptCachedBundle` only for rollback and fall-back. Cost: a policy decision,
+   because a start would show the previous code until the next start picks up an update.
+5. **A baseline profile for the host's loader path (~50–150 ms, unmeasured).** About 330 ms of CPU
+   on the QuickJS thread is ART code, not QuickJS: the loader, sqlite, the manifest's
+   serialization and Ed25519 verification, the bridge. The JIT compiling parts of it during start
+   shows that they are not in the profile. Keliver ships no baseline profiles today. A library
+   profile in `keliver-treehouse-host` would reach every host. Cost: a profile generator (a
+   Macrobenchmark module) and keeping it current.
+6. **Host apply and draw (little to gain).** 218 ms, comparable to native's own first frame.
+
+Separately, **the first start after an install or an OTA update** is its own line item, outside
+this median: measured +0.36 to +0.87 s over the warm-cache start with the bundle read from assets
+(see above), and more over a network, where the modules are downloaded. Every user hits it once
+per update. Option 2's fewer modules would make it larger per change (the whole bundle again).
+
+None of the measured options goes below about 1.35 s over native (2,289 against 927). Most of the
+rest is QuickJS executing guest code on this phone's CPU.
+
+**Unverified.** The guest's first composition is not split further (no guest-side marks). The
+per-module overhead is inferred from the gaps between module loads (CPU and waiting were not
+attributed per module). Option 2's saving and option 5's are estimates. The experiments are
+single sessions of 10 iterations on one phone. Starting from `Application.onCreate` was not
+measured on this route, and neither was the production-host template's start over a network.
+The 0.9 s attributed to QuickJS is an upper bound (it includes host-side bridge calls).
 
 ### Caveats
 
