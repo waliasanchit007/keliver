@@ -7,5 +7,10 @@
         <activity
             android:name="dev.keliver.sample.host.gateb.GatebActivity"
             android:exported="true" />
+        <!-- The three-way benchmark (docs/THREE_WAY_BENCHMARK.md): the list and detail screens as
+             native Compose, a Keliver guest or a web page (`-e form native|guest|web`). -->
+        <activity
+            android:name="dev.keliver.sample.host.threeway.ThreewayActivity"
+            android:exported="true" />
     </application>
 </manifest>

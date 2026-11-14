@@ -4,6 +4,7 @@
 # generated adapters from the guest's side.
 -keep interface dev.keliver.sample.shared.** { *; }
 -keep interface dev.keliver.sample.gateb.** { *; }
+-keep interface dev.keliver.sample.threeway.** { *; }
 -dontwarn org.slf4j.**
 # For the size report: what R8 removed (whole classes start a line), beside the mapping (what it kept).
 -printusage build/outputs/gateb-r8-usage.txt

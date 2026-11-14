@@ -434,7 +434,9 @@ after the first change batch has been applied: reading the manifest from the APK
 network), loading the ~1.9 MB bundle's modules (1,948 KB in assets, see the APK table above) into
 QuickJS from Zipline's cache, and the guest's first composition. The median is a warm-cache start:
 only each run's first iteration read the modules from the APK's assets (and wrote the cache). Where the 1.66 s goes: see
-[Where the A12's cold start goes](#where-the-a12s-cold-start-goes) below.
+[Where the A12's cold start goes](#where-the-a12s-cold-start-goes) below. The same phone with a
+list screen that calls an API, as native, guest **and a web page**, plus navigation and API-call
+timings: [THREE_WAY_BENCHMARK.md](THREE_WAY_BENCHMARK.md).
 The emulator has no cold-start number (#244 did not measure one). On the iPhone 13 the same gap
 from `main()` was +142 ms warm and about +820 ms with an empty cache (section above); the two are
 not the same measurement (Android's cold start includes the process and the activity, and this

@@ -106,6 +106,23 @@ if (composePrototype) {
     }
   }
 
+  // The three-way benchmark (docs/THREE_WAY_BENCHMARK.md): its guest bundle as assets/threeway/*,
+  // and the native copy of its screens (the same file, imports rewritten), as Gate B-e's above.
+  val threeway = project(":threeway-guest")
+  val threewayAssets = tasks.register<Sync>("threewayBundleAssets") {
+    dependsOn(":threeway-guest:compileProductionExecutableKotlinJsZipline")
+    from(threeway.layout.buildDirectory.dir("zipline/Production"))
+    into(layout.buildDirectory.dir("generated/threewayAssets/threeway"))
+  }
+  val threewayNative = tasks.register<Sync>("threewayNativeScreen") {
+    from(threeway.file("src/jsMain/kotlin/dev/keliver/sample/threeway/ThreewayScreens.kt"))
+    into(layout.buildDirectory.dir("generated/threewayNative/kotlin/dev/keliver/sample/threeway/nativecopy"))
+    filter { line: String ->
+      line.replace("import dev.keliver.compose.", "import androidx.compose.")
+        .replace("package dev.keliver.sample.threeway", "package dev.keliver.sample.threeway.nativecopy")
+    }
+  }
+
   // The prototype stack's machines have JDK 17, not 11 (the bytecode target stays 11).
   extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
     jvmToolchain(17)
@@ -124,16 +141,24 @@ if (composePrototype) {
         kotlin.srcDir(layout.buildDirectory.dir("generated/gatebNative/kotlin"))
         manifest.srcFile("src/gateb/AndroidManifest.xml")
         assets.srcDir(layout.buildDirectory.dir("generated/gatebAssets"))
+        // The three-way benchmark's route, its web page, its bundle and its native screens.
+        kotlin.srcDir("src/threeway/kotlin")
+        kotlin.srcDir(layout.buildDirectory.dir("generated/threewayNative/kotlin"))
+        assets.srcDir("src/threeway/assets")
+        assets.srcDir(layout.buildDirectory.dir("generated/threewayAssets"))
       }
     }
   }
+  // A build type's source set has one manifest file: the three-way route's activity is declared in
+  // src/gateb/AndroidManifest.xml, beside Gate B-e's.
   tasks.configureEach {
-    if (name.startsWith("compile") && name.endsWith("Kotlin")) dependsOn(gatebNative)
-    if (name.startsWith("merge") && name.endsWith("Assets")) dependsOn(gatebAssets)
-    if (name.contains("lint", ignoreCase = true)) dependsOn(gatebAssets, gatebNative)
+    if (name.startsWith("compile") && name.endsWith("Kotlin")) dependsOn(gatebNative, threewayNative)
+    if (name.startsWith("merge") && name.endsWith("Assets")) dependsOn(gatebAssets, threewayAssets)
+    if (name.contains("lint", ignoreCase = true)) dependsOn(gatebAssets, gatebNative, threewayAssets, threewayNative)
   }
   dependencies {
     for (type in routeBuildTypes) {
+      add("${type}Implementation", project(":threeway-guest"))
       add("${type}Implementation", project(":gateb-guest"))
       add("${type}Implementation", "dev.keliver:keliver-compose-gatea-composeui:$keliverVersion")
       add("${type}Implementation", "dev.keliver:keliver-compose-gatea-protocol-host:$keliverVersion")

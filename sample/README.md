@@ -349,3 +349,8 @@ skip measurements below that battery level; each measurement's battery, temperat
 state go to `gateb-phone-state.txt` in the test's additional output.
 
 Results and method: [`docs/GATE_B_RESULTS.md`](../docs/GATE_B_RESULTS.md).
+
+The same prototype build also has `:threeway-guest` and `ThreewayActivity`: a list and a detail
+screen as native Compose, a guest and a web page (`-e form native|guest|web`), and
+`ThreewayStartupBenchmark`. Method, fixture API and results:
+[`docs/THREE_WAY_BENCHMARK.md`](../docs/THREE_WAY_BENCHMARK.md).
