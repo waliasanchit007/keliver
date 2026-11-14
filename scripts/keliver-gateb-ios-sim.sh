@@ -222,7 +222,7 @@ if [ "$CAPTURE" = 1 ]; then
     done
   done
   python3 -I "$ROOT/scripts/keliver-gateb-report.py" "$OUT/capture" "Gate B part c: the in-app capture on the simulator" \
-    "${DEVNAME//_/ }, ${RUNTIME##*.}" "$TYPE" "-" "$SAMPLES" "No timing: capture launches only." \
+    "${DEVNAME//_/ }, ${RUNTIME##*.}" "$TYPE" "$BUNDLE_BYTES" "$SAMPLES" "No timing: capture launches only." \
     || fail "the in-app captures differ (see $OUT/capture/results.md)"
 fi
 
