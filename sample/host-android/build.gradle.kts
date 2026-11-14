@@ -80,8 +80,9 @@ android {
 // Gate B-e (prototype only, docs/GATE_B_RESULTS.md). With -PkeliverComposePrototype the debug and
 // benchmark builds get GatebActivity (src/gateb), the generated group's renderers and the gateb
 // guest bundle in their assets. -PkeliverGatebInRelease also puts them in the release build (for
-// the app-size measurement); in prototype builds release is minified with R8. Without the
-// property this block does nothing.
+// the app-size measurement); in prototype builds release is minified with R8. Never ship such a
+// release: GatebActivity is exported and, with the `overLockScreen` extra, draws over the lock
+// screen (benchmark-only). Without the property this block does nothing.
 val composePrototype = providers.gradleProperty("keliverComposePrototype").isPresent
 if (composePrototype) {
   val gatebInRelease = providers.gradleProperty("keliverGatebInRelease").isPresent

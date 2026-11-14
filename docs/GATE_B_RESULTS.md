@@ -208,10 +208,12 @@ Android 12), 60 Hz display, on wireless adb, 2026-11-14.
 **Recommendation: unchanged, and stronger.** Host references for `animate*AsState`. On this phone
 the guest's frame clock delivered **about 3 new values a second** (emulator: about 29) while the host
 drew 32–53 frames a second, so a guest-clock animation visibly steps rather than moves. Host
-references sent the same ~19 changes a second as on the emulator (one batch per change of target)
-and their host frames cost about what native Compose's do. The escape hatch (`Animatable` on the
-guest's frame clock) should be flagged more strongly than a lint warning suggests: on low-end phones
-it is not an animation.
+references sent the same ~19 changes a second as on the emulator (one batch per change of target).
+Host references cost more per host frame than native on this phone (frame CPU p50 27 against
+19–20 ms, and the longest p99 tail); one run cannot say whether that is the renderers or QuickJS
+competing for the CPU. They still win on what the guest delivers. The escape hatch (`Animatable` on
+the guest's frame clock) should be flagged more strongly than the lint check the design proposed
+(not built yet): on low-end phones it is not an animation.
 
 ### Method
 
@@ -228,17 +230,18 @@ main to a scratch repository as `0.0.0-gateb`), with three prototype-only additi
 - `GatebStartupBenchmark` (cold start, `host` against `native-host`, 10 iterations) with
   `reportFullyDrawn` on the route's first content. **Not measured** (below).
 
-The phone was locked (secure lock screen) and left charging, so the route keeps the screen on and
-draws over the lock screen (`setShowWhenLocked`; it does not unlock the phone), and every
-measurement wakes the screen first. The lock screen behind the route is not drawn while the route
-covers it.
+The phone was locked (secure lock screen) and left charging, so every measurement wakes the screen
+first and opens the route with the `overLockScreen` extra: only then does the route keep the screen
+on and draw over the lock screen (`setShowWhenLocked`; it does not unlock the phone). This is
+benchmark-only; never in a real host: it would show guest content on a locked phone. The lock
+screen behind the route is not drawn while the route covers it.
 
 ### Results
 
 **Bridge traffic and the guest's rate** (15 s per form, once-a-second readings, medians with the
 range; phone at 75%, charging, 33.6–34.2 °C, thermal status 0, no power saving):
 
-| Form | Change batches / s (= new guest values / s) | Changes / s | Host frames / s (same window) | Emulator (#244): batches / s, changes / s |
+| Form | Change batches / s (guest frame clock: = new guest values / s) | Changes / s | Host frames / s (same window) | Emulator (#244): batches / s, changes / s |
 |---|---|---|---|---|
 | host references | 1.3 (1.3–1.4) | 18.8 (18.3–19.3) | 53.1 | 1.4, ~20 |
 | guest frame clock | **2.8 (2.3–3.1)** | 35.5 (29.3–38.7) | 32.1 | **28.5**, ~330 |
@@ -266,11 +269,13 @@ Reading them together:
 - **The guest's frame clock is the finding.** About 3 guest frames a second against 28.5 on the
   emulator, which suggests each guest frame (recomposition of 12 animated boxes in QuickJS,
   serialization, the bridge) takes roughly a third of a second on this phone (not profiled on the
-  QuickJS thread). The host is not what limits it: in the
-  same window the host drew 32 frames a second. FrameTimingMetric does not show this (the guest
-  form even draws the *fewest* host frames, 153 per 5 s, because there is less on the host to
-  animate), so the bridge counter is the measurement that matters for this form.
-- **Host references stay close to native.** Every form overruns the 16.7 ms frame budget at the
+  QuickJS thread). The host's UI thread is not what limits it: in the same window the host drew 32
+  frames a second (the bridge counter cannot see the guest's QuickJS thread, and why the host draws
+  32 frames a second while only 2.8 new values arrive was not investigated). FrameTimingMetric does
+  not show this (the guest form even draws the *fewest* host frames, 153 per 5 s, perhaps because
+  there is less on the host to animate; not measured), so the bridge counter is the measurement that
+  matters for this form.
+- **Host references cost more per host frame than native on this phone.** Every form overruns the 16.7 ms frame budget at the
   median on this phone, native Compose included, so the screen (12 boxes animating alpha, size and
   colour at once, plus `AnimatedVisibility` and `animateContentSize`) is heavy for the device. Host
   references drew the most frames (233 per 5 s) at a frame CPU p50 about 7 ms above native's (27.2
@@ -292,7 +297,8 @@ Reading them together:
   not the per-frame JSON (hence no janky-frame count) or the phone-state file. The phone then left
   adb entirely, so a second run and the cold-start comparison were not measured.
 - One bridge-counter pass (15 s per form).
-- The phone was charging throughout (75–79%) and warm (33–34 °C, thermal status up to "light").
+- The phone was charging throughout (75–79%; for the frame-timing run inferred from the readings
+  around it, since its state file was lost) and warm (33–34 °C, thermal status up to "light").
 - Wireless adb, a secure lock screen behind the route (not drawn while covered), a 60 Hz display.
   At 90/120 Hz the gap between the guest's rate and the display's would be larger.
 - The A12's numbers are for this phone class; the emulator's were relative only.

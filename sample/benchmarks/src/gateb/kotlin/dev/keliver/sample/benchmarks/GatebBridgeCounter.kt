@@ -50,7 +50,7 @@ class GatebBridgeCounter {
   private fun count(mode: String) {
     GatebPhone.recordAndCheck("bridge $mode")
     device.executeShellCommand("am force-stop $TARGET_PACKAGE")
-    device.executeShellCommand("am start -W -n $TARGET_PACKAGE/$ACTIVITY --es mode $mode")
+    device.executeShellCommand("am start -W -n $TARGET_PACKAGE/$ACTIVITY --es mode $mode --ez overLockScreen true")
     val label = "mode: " + mode.removePrefix("native-")
     check(device.wait(Until.hasObject(By.text(label)), 20_000)) { "the $mode route did not draw '$label'" }
     Thread.sleep(2_000)

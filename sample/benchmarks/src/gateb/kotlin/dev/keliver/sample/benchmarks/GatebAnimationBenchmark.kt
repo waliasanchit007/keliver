@@ -57,7 +57,8 @@ class GatebAnimationBenchmark {
       device.wakeUp()
       killProcess()
       startActivityAndWait(
-        Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.gateb.GatebActivity").putExtra("mode", mode),
+        Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.gateb.GatebActivity").putExtra("mode", mode)
+          .putExtra("overLockScreen", true),
       )
       val label = "mode: " + mode.removePrefix("native-")
       check(device.wait(Until.hasObject(By.text(label)), 20_000)) { "the $mode route did not draw '$label'" }

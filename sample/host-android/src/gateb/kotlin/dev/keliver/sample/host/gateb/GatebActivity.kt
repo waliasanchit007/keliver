@@ -64,14 +64,17 @@ class GatebActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     val mode = intent.getStringExtra("mode") ?: "host"
     Log.d(TAG, "mode=$mode")
-    // A benchmark route: keep the display on while it is open (a phone's screen timeout would
-    // otherwise stop the frames being measured).
-    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-    // A phone left locked for an unattended run: the route draws over the lock screen (it does not
-    // unlock it; nothing else on the phone becomes reachable). Measured that way on the phone.
-    if (Build.VERSION.SDK_INT >= 27) {
-      setShowWhenLocked(true)
-      setTurnScreenOn(true)
+    // WARNING: benchmark-only; never in a real host: it would show guest content on a locked phone.
+    // Only when the caller asks (`--ez overLockScreen true`; the phone benchmarks and the bridge
+    // counter pass it): keep the display on (a screen timeout would stop the frames being measured)
+    // and, for a phone left locked for an unattended run, draw over the lock screen (it does not
+    // unlock it; nothing else on the phone becomes reachable).
+    if (intent.getBooleanExtra(EXTRA_OVER_LOCK_SCREEN, false)) {
+      window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+      if (Build.VERSION.SDK_INT >= 27) {
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+      }
     }
     if (mode.startsWith("native-")) {
       setContent {
@@ -126,6 +129,7 @@ class GatebActivity : ComponentActivity() {
 
   private companion object {
     const val TAG = "KeliverGateB"
+    const val EXTRA_OVER_LOCK_SCREEN = "overLockScreen"
     const val MANIFEST_URL = "https://gateb.invalid/manifest.zipline.json"
     const val SAMPLE_SIGNING_PUBLIC_KEY = "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
   }
