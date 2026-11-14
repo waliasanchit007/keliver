@@ -953,6 +953,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         update = startTreehouse(
           prefs, factory, cacheName, floorNames, okhttp, http, apiBase, url, DefaultFreshnessCheckerNotFresh, lookup, fallback = null,
           held = true,
+          besideALiveApp = true,
           onKept = { loaded ->
             val u = checkNotNull(update)
             if (updateInNewApp === u) updateInNewApp = null
@@ -1274,6 +1275,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
      * ([AppLoad.drop]) (the [AppLoad] this returns; null when not held).
      */
     held: Boolean = false,
+    /** Held while another app is the host's (an update in a new app): it writes no crash record until shown ([LoadFence.codeStarts]). */
+    besideALiveApp: Boolean = false,
     /** A held load's outcome is in ([StartHold]): true when it loaded. Main thread. */
     onKept: ((loaded: Boolean) -> Unit)? = null,
     /** Start policy PARALLEL or CACHE_FIRST: how an update after a start from the cache loads ([Session.loadInNewApp]). */
@@ -1288,7 +1291,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // A held app's first outcome, kept (main thread); and its events, kept until it is shown,
     // never acted on once it is dropped (M2: a dropped app counts toward nothing).
     val hold = StartHold(held, onKept)
-    val fence = LoadFence(held) { block -> scope.launch { block() } }
+    val fence = LoadFence(held, { block -> scope.launch { block() } }, besideALiveApp = held && besideALiveApp)
     // B5: what each app binding bound, from this app's EventListener (one per app, so that two
     // apps loading at once never mix their binds).
     val bridgeBinds = BridgeBindRecorder()
@@ -1909,20 +1912,13 @@ private class LoggingEventListener(
   override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()
 
   // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
-  // A held app's too, at once: it is the release the host would show, so a process that dies while
-  // it evaluates counts against it; dropped, its marker is cleared (as a download's failure is).
+  // A held PARALLEL start's too, at once (it is the release the host would show; dropped, its
+  // marker is cleared, as a download's failure clears it); an update's only once it is swapped in
+  // (LoadFence.codeStarts: the running app keeps its trial).
   override fun moduleLoadStart(moduleId: String): Any? {
     if (progress.moduleLoadStart()) {
       val s = sequence
-      when (fence.mode) {
-        LoadFence.Mode.LIVE -> onReady(s)
-        LoadFence.Mode.HELD -> {
-          onReady(s)
-          val undo = { crash.loadFailed(s, theBundles = false); Unit }
-          if (!fence.onDrop(undo)) undo()
-        }
-        LoadFence.Mode.DROPPED -> Unit
-      }
+      fence.codeStarts(mark = { onReady(s) }, unmark = { crash.loadFailed(s, theBundles = false) })
     }
     return null
   }

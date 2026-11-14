@@ -31,6 +31,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -209,7 +211,10 @@ private fun AppContent(
       if (!failureWidgets.loadingShown) latestFirstChanges()
     }
   }
-  androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+  // Hidden: out of keyboard and D-pad reach too (focus does not move into it). Not out of reach of
+  // the back button: the guest's enabled root BackHandler registers with the activity at once, so
+  // a back press in the short swap window goes to the new app (docs/DEVICE_HOST.md).
+  androidx.compose.foundation.layout.Box(if (hidden) Modifier.fillMaxSize().unfocusable() else Modifier.fillMaxSize()) {
     TreehouseContent(
       treehouseApp = app,
       widgetSystem = widgetSystem,
@@ -221,6 +226,13 @@ private fun AppContent(
     if (hidden) Spacer(Modifier.matchParentSize().pointerInput(Unit) { blockTouches() })
   }
 }
+
+/** Nothing in it takes focus, and focus does not move into it (a hidden app's content). */
+private fun Modifier.unfocusable(): Modifier =
+  focusProperties {
+    canFocus = false
+    onEnter = { cancelFocusChange() }
+  }.focusGroup()
 
 /** Takes every touch, so that nothing beneath gets it. */
 private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.blockTouches() {

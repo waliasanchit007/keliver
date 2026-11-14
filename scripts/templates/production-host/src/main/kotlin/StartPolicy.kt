@@ -12,15 +12,17 @@
  *   NETWORK_FIRST would. Its guest code does start during the lookup, but its calls out (HostHttp,
  *   the app's bridges) wait until it shows, and fail without being sent when it is dropped
  *   ([CallGate]); nothing of it shows, and of crash rollback's records only its "not yet healthy"
- *   marker is written while it is held, cleared when it is dropped ([LoadFence]). HostSqlDriver is
- *   not held: a dropped release can have written to the app's local database.
+ *   marker is written while it is held (no other app runs yet), cleared when it is dropped
+ *   ([LoadFence]). HostSqlDriver is not held: a dropped release can have written to the app's
+ *   local database.
  * - CACHE_FIRST: the cached release shows at once; the lookup runs in the background, and a newer
  *   release it finds makes the NEXT start NETWORK_FIRST.
  *
  * After a start from the cache under either, an update (on resume, live, checkForUpdate) loads in a
  * new TreehouseApp and is swapped in once it has loaded (Zipline takes no further manifest into an
  * app whose first load came from its cache); the running one stays when it fails. One such update
- * at a time. Screens keep drawing the old app until the new app's content has its first changes,
+ * at a time. It writes no crash record until it is swapped in: the running app keeps its trial
+ * (and its failure count) when the update is dropped or fails. Screens keep drawing the old app until the new app's content has its first changes,
  * and the old app is closed once no screen draws it.
  *
  * None of them changes what may run: every cached start goes through the host's cached-bundle
@@ -181,8 +183,16 @@ internal fun afterParallelLookup(namedUrl: String?, namedSha256: String?, cached
  * [post] runs a block on the main thread, after what is already queued there. [run] and [onDrop]
  * are called on Zipline's thread or the main thread; [goLive] and [drop] on the main thread only.
  * [calls] holds the app's calls out while it is HELD ([CallGate]).
+ *
+ * [besideALiveApp]: HELD while another app is the host's (an update loading in a new app). Its code
+ * starting ([codeStarts]) then marks nothing until it shows: the ledger's trial is the running
+ * app's, and writing the update's would take that app's trial and failure count away.
  */
-internal class LoadFence(held: Boolean, private val post: (() -> Unit) -> Unit) {
+internal class LoadFence(
+  held: Boolean,
+  private val post: (() -> Unit) -> Unit,
+  private val besideALiveApp: Boolean = false,
+) {
   enum class Mode { LIVE, HELD, DROPPED }
 
   @Volatile var mode: Mode = if (held) Mode.HELD else Mode.LIVE
@@ -207,6 +217,26 @@ internal class LoadFence(held: Boolean, private val post: (() -> Unit) -> Unit) 
     while (true) {
       val hooks = dropHooks.load() ?: return false
       if (dropHooks.compareAndSet(hooks, hooks + undo)) return true
+    }
+  }
+
+  /**
+   * The app's first module evaluates: [mark] puts its bundle on trial (crash rollback's
+   * loadStarting), [unmark] clears that marker. LIVE: marked now. HELD with no other app running (a
+   * PARALLEL start's cached load): marked now too, as it is the release the host would show, so a
+   * process that dies while it evaluates counts against it; unmarked when it is dropped. HELD
+   * [besideALiveApp] (an update): marked only when it shows ([run]). DROPPED: nothing.
+   */
+  fun codeStarts(mark: () -> Unit, unmark: () -> Unit) {
+    when (mode) {
+      Mode.LIVE -> mark()
+      Mode.HELD -> if (besideALiveApp) {
+        run(mark)
+      } else {
+        mark()
+        if (!onDrop(unmark)) unmark()
+      }
+      Mode.DROPPED -> Unit
     }
   }
 

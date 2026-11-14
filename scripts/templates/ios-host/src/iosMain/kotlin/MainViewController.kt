@@ -90,6 +90,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -1296,7 +1298,18 @@ public object Keliver {
         if (!failureWidgets.loadingShown) latestFirstChanges()
       }
     }
-    Box {
+    // Hidden: out of hardware-keyboard reach too (focus does not move into it). (Back: Treehouse's
+    // iOS back dispatcher registers nothing, so a hidden guest's back handlers never run here.)
+    Box(
+      if (hidden) {
+        Modifier.focusProperties {
+          canFocus = false
+          onEnter = { cancelFocusChange() }
+        }.focusGroup()
+      } else {
+        Modifier
+      },
+    ) {
       TreehouseContent(
         treehouseApp = app,
         widgetSystem = widgetSystem,
@@ -1485,6 +1498,7 @@ private suspend fun startHost(): HostState {
       createApp(
         trust, url, sha256, lookup, DefaultFreshnessCheckerNotFresh, apiBase, fallback = null, parts = parts,
         held = { update = it; Keliver.updateInNewApp = it },
+        besideALiveApp = true,
         onKept = { loaded ->
           val u = checkNotNull(update)
           if (Keliver.updateInNewApp === u) Keliver.updateInNewApp = null
@@ -1697,6 +1711,8 @@ private fun createApp(
    * [AppLoad] handed here).
    */
   held: ((AppLoad) -> Unit)? = null,
+  /** Held while another app is the host's (an update in a new app): it writes no crash record until shown ([LoadFence.codeStarts]). */
+  besideALiveApp: Boolean = false,
   /** A held load's outcome is in ([StartHold]): true when it loaded. Main thread. */
   onKept: ((loaded: Boolean) -> Unit)? = null,
   /** Start policy PARALLEL or CACHE_FIRST: how an update after a start from the cache loads ([Session.loadInNewApp]). */
@@ -1718,7 +1734,7 @@ private fun createApp(
   // A held app's first outcome, kept (main thread); and its events, kept until it is shown, never
   // acted on once it is dropped (a dropped app counts toward nothing).
   val hold = StartHold(held != null, onKept)
-  val fence = LoadFence(held != null) { block -> appScope.launch { block() } }
+  val fence = LoadFence(held != null, { block -> appScope.launch { block() } }, besideALiveApp = held != null && besideALiveApp)
   // B5: what each app binding bound, from this app's EventListener (one per app, so that two apps
   // loading at once never mix their binds).
   val bridgeBinds = BridgeBindRecorder()
@@ -1999,20 +2015,13 @@ private class LoggingEventListener(
   override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()
 
   // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
-  // A held app's too, at once: it is the release the host would show, so a process that dies while
-  // it evaluates counts against it; dropped, its marker is cleared (as a download's failure is).
+  // A held PARALLEL start's too, at once (it is the release the host would show; dropped, its
+  // marker is cleared, as a download's failure clears it); an update's only once it is swapped in
+  // (LoadFence.codeStarts: the running app keeps its trial).
   override fun moduleLoadStart(moduleId: String): Any? {
     if (progress.moduleLoadStart()) {
       val s = sequence
-      when (fence.mode) {
-        LoadFence.Mode.LIVE -> onReady(s)
-        LoadFence.Mode.HELD -> {
-          onReady(s)
-          val undo = { crash.loadFailed(s, theBundles = false); Unit }
-          if (!fence.onDrop(undo)) undo()
-        }
-        LoadFence.Mode.DROPPED -> Unit
-      }
+      fence.codeStarts(mark = { onReady(s) }, unmark = { crash.loadFailed(s, theBundles = false) })
     }
     return null
   }

@@ -210,7 +210,11 @@ dropped; its exceptions, its load's outcome, the floor and the last good bundle 
 and are discarded when it is dropped. Not held: `HostSqlDriver` (a dropped release can have read or
 written the app's local database at start-up), and a bridge binding that runs the app's code on a
 context of its own rather than `scope.main`. The same holds for an update loading in a new app
-(below) until it is swapped in.
+(below) until it is swapped in, except the marker: an update loads while another app runs, and the
+ledger's trial is that app's, so the update writes no crash record until it is swapped in (the
+running app keeps its trial and its failure count when the update is dropped or fails). A held
+call's own timeout keeps counting while it waits: the bridge default (30 s) outlasts the lookup
+(10 s), but a shorter custom timeout can expire before the release shows.
 
 **Updates after a start from the cache.** Zipline takes no further manifest into an app whose first
 load came from its cache, so a `network-first` start from the cache (the lookup failed) applies a
@@ -219,7 +223,8 @@ confirmed `parallel` start, too) still takes updates (`keliver.updates=on-resume
 `checkForUpdate()`): the newer release loads in a new Treehouse app, from the network and through
 the same checks, held as above, and is swapped in once it has loaded (`Applied`); when it fails, the
 running app stays (`Failed`), as an update into the running app does. One such update loads at a
-time; one that has not reported back after two minutes is closed at the next update check. On each
+time; one that has not reported back after two minutes is closed at the next update check (which
+loads it again from the start: on a slow link it may never finish). On each
 screen the new app's content is composed beneath the old one, unseen, and the old one stays drawn
 until the new content has its first changes, so the swap shows no empty frame (at most 10 s, then
 the new content shows as it is). The old app is closed once no screen draws it (after 10 s at most:
@@ -227,6 +232,19 @@ a screen that does not recompose meanwhile, in a stopped activity say, goes idle
 it shows again). For those moments two apps run: two QuickJS heaps and two UI trees, the swap's
 peak memory. The guest's screen state starts again on the new app, as it does for an update that
 loads in place.
+
+What the swap does and does not promise:
+- "First changes" means Treehouse has bound the content (its Loading widget went away), not that
+  the screen is complete: lazy-list items that arrive in a later round trip, images, and the guest's
+  own loading state while its fetch runs can still fill in after the swap (as for an update that
+  loads in place). Content that never gets its first changes shows as it is after the 10 s cap,
+  blank or partly drawn. A route change during the hidden window rebinds the new content, which
+  then comes to the front before its first changes (rare).
+- The hidden content is out of reach: unseen, not hit by touches, hidden from screen readers, and
+  unfocusable (a hardware keyboard or D-pad does not move into it). On Android, though, the hidden
+  guest's back handlers register with the activity at once, and a later handler wins: a back press
+  during the swap window goes to the new app's enabled root `BackHandler`, if it has one. iOS
+  hands guest back handlers to no system dispatcher, so it has no such case.
 
 Set it with `keliver.startPolicy` in `gradle.properties` (Android; `KeliverConfig(startPolicy = …)`
 in code) or `START_POLICY` in `HostConfig.kt` (iOS), to `network-first`, `parallel` or

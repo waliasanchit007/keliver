@@ -279,17 +279,14 @@ class StartPolicyTest {
   }
 
   @Test fun aHeldAppsMarkerIsWrittenAtOnceAndClearedWhenDropped() {
-    // L3: the cached load (or an update in a new app) evaluates while held: it is the release the
-    // host would show, so its "not yet healthy" marker is written at once, as the host's app's is.
+    // L3: a PARALLEL start's cached load evaluates while held (no other app runs): it is the release
+    // the host would show, so its "not yet healthy" marker is written at once, as the host's app's is.
     val store = memoryStore()
     val g = CrashGuard(store, "keliver-production-abcd", DEFAULT_CRASH_THRESHOLD).apply { screens(true) }
     val main = Main()
     val fence = LoadFence(held = true, main.post)
-    fun evaluate(f: LoadFence, s: Long) { // as the listener's moduleLoadStart does, for a held app
-      g.loadStarting(s)
-      val undo = { g.loadFailed(s, theBundles = false); Unit }
-      if (!f.onDrop(undo)) undo()
-    }
+    fun evaluate(f: LoadFence, s: Long) = // as the listener's moduleLoadStart does
+      f.codeStarts(mark = { g.loadStarting(s) }, unmark = { g.loadFailed(s, theBundles = false) })
     evaluate(fence, 6)
     assertEquals(6, g.ledger().trial)
     assertTrue(g.ledger().running, "a process that dies now counts against 6")
@@ -308,6 +305,55 @@ class StartPolicyTest {
     shown.goLive()
     shown.drop()
     assertTrue(g.ledger().running)
+  }
+
+  @Test fun anUpdateBesideARunningAppLeavesItsTrialAlone() {
+    // Review round 3, M1: sequence 5 runs, on trial, and has failed once; a hotfix (6) loads in a
+    // new app beside it and is dropped (the 120 s limit) or fails. 5 keeps its trial and its count,
+    // so its next failure still counts toward setting it aside.
+    val store = memoryStore()
+    val g = CrashGuard(store, "keliver-production-abcd", DEFAULT_CRASH_THRESHOLD).apply { screens(true) }
+    val main = Main()
+    fun evaluate(f: LoadFence, s: Long) = // as the listener's moduleLoadStart does
+      f.codeStarts(mark = { g.loadStarting(s) }, unmark = { g.loadFailed(s, theBundles = false) })
+    val running = LoadFence(held = false, main.post)
+    evaluate(running, 5)
+    assertEquals(CrashStep.Counted(5, 1, CrashKind.EXCEPTION), g.failed(5, CrashKind.EXCEPTION))
+    g.loadStarting(5) // restarted in place after the failure, as the host does
+    val before = g.ledger()
+    assertEquals(5, before.trial)
+    assertEquals(1, before.failures)
+
+    // Dropped while it loads: nothing it did reached the ledger.
+    val dropped = LoadFence(held = true, main.post, besideALiveApp = true)
+    evaluate(dropped, 6)
+    main.drain()
+    assertEquals(before, g.ledger(), "the update writes nothing while it is held beside a running app")
+    dropped.drop()
+    main.drain()
+    assertEquals(before, g.ledger(), "dropped: 5 is still on trial with its failure count")
+
+    // Failed: its outcome settles, then it is dropped (goLive never ran, so neither did its marker).
+    val failed = LoadFence(held = true, main.post, besideALiveApp = true)
+    evaluate(failed, 6)
+    main.drain()
+    failed.drop()
+    main.drain()
+    assertEquals(before, g.ledger())
+    // 5 fails again: it is still the one on trial, so this is its second failure (the threshold).
+    assertTrue(g.failed(5, CrashKind.EXCEPTION) is CrashStep.SetAside, "5's second failure sets it aside")
+
+    // Swapped in: the update's marker is written then, and 6 goes on trial.
+    val g2 = CrashGuard(memoryStore(), "keliver-production-abcd", DEFAULT_CRASH_THRESHOLD).apply { screens(true) }
+    val live = LoadFence(held = false, main.post)
+    live.codeStarts(mark = { g2.loadStarting(5) }, unmark = {})
+    val shown = LoadFence(held = true, main.post, besideALiveApp = true)
+    shown.codeStarts(mark = { g2.loadStarting(6) }, unmark = { g2.loadFailed(6, theBundles = false) })
+    main.drain()
+    assertEquals(5, g2.ledger().trial, "held: not yet")
+    shown.goLive()
+    assertEquals(6, g2.ledger().trial)
+    assertTrue(g2.ledger().running)
   }
 
   private fun memoryStore() = object : CrashStore {
