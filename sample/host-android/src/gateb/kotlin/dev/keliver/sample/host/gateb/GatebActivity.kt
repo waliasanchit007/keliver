@@ -199,15 +199,20 @@ private object StartupTrace {
     Trace.endSection()
   }
 
-  /** Starts an async section (begin and end may be on different threads); returns its cookie. */
-  fun begin(name: String): Int {
+  /**
+   * Starts an async section (begin and end may be on different threads); returns its cookie, or
+   * null below API 29, where async sections do not exist (the sample's minSdk is 24).
+   */
+  fun begin(name: String): Int? {
+    if (Build.VERSION.SDK_INT < 29) return null
     val cookie = cookies.incrementAndGet()
     Trace.beginAsyncSection(name.take(MAX_NAME), cookie)
     return cookie
   }
 
+  /** Ends the async section [begin] returned [cookie] for; a no-op when that was null. */
   fun end(name: String, cookie: Any?) {
-    if (cookie is Int) Trace.endAsyncSection(name.take(MAX_NAME), cookie)
+    if (cookie is Int && Build.VERSION.SDK_INT >= 29) Trace.endAsyncSection(name.take(MAX_NAME), cookie)
   }
 
   private const val MAX_NAME = 120
@@ -288,7 +293,8 @@ private object CountingListener : EventListener.Factory {
     }
 
     override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
-      StartupTrace.end(callName(call), startValue)
+      // Only traced calls (the first MAX_TRACED_CALLS) carry a cookie; skip building the name otherwise.
+      if (startValue is Int) StartupTrace.end(callName(call), startValue)
       // After the call, the host has applied (or queued on the main thread) the first changes.
       if ("sendChanges" in call.function.signature) {
         onFirstChanges?.let { report ->
