@@ -24,8 +24,12 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.toKString
+import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSFileManager
 import platform.Foundation.NSProcessInfo
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSStringFromClass
+import platform.Foundation.NSUserDomainMask
 import platform.QuartzCore.CACurrentMediaTime
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDelegateProtocol
@@ -34,6 +38,7 @@ import platform.UIKit.UIApplicationMain
 import platform.UIKit.UIResponder
 import platform.UIKit.UIResponderMeta
 import platform.UIKit.UIScreen
+import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import platform.posix.fclose
 import platform.posix.fopen
@@ -45,7 +50,8 @@ internal var startedAt = 0.0
 
 /**
  * The launch arguments (`simctl launch <udid> dev.keliver.gateb <mode> <sample> [manifest URL]`):
- * mode `native` or `guest`, sample `orders`, `card` or `item`.
+ * mode `native` or `guest`, sample `orders`, `card` or `item`. Mode `clear-cache` only empties the
+ * guest's Zipline cache and shows an empty window.
  */
 internal class LaunchArguments(val mode: String, val sample: String, val manifestUrl: String?)
 
@@ -82,8 +88,17 @@ internal class AppDelegate @OverrideInit constructor() :
   override fun application(application: UIApplication, didFinishLaunchingWithOptions: Map<Any?, *>?): Boolean {
     val launch = launchArguments()
     log("launch mode=${launch.mode} sample=${launch.sample} manifest=${launch.manifestUrl}")
+    if (launch.mode == "clear-cache") {
+      // Empties the guest's Zipline cache (Library/Caches/gateb), so the next guest launch starts
+      // as a fresh install's would: the device script's empty-cache series.
+      val caches = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String
+      val dir = "$caches/gateb"
+      val existed = NSFileManager.defaultManager.fileExistsAtPath(dir)
+      val removed = !existed || NSFileManager.defaultManager.removeItemAtPath(dir, null)
+      log("cache cleared existed=$existed removed=$removed")
+    }
     appWindow = UIWindow(frame = UIScreen.mainScreen.bounds).apply {
-      rootViewController = sampleViewController(launch)
+      rootViewController = if (launch.mode == "clear-cache") UIViewController() else sampleViewController(launch)
       makeKeyAndVisible()
     }
     return true

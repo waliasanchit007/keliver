@@ -27,7 +27,8 @@
 #      download. The app logs main() to the second frame after its root was first composed;
 #   6. deletes the simulator and stops the server, whatever happened.
 # Results: DIR/results.md, DIR/*.png (native, guest, diff), DIR/logs/. A run first removes the
-# files an earlier run left there (only those names).
+# files an earlier run left there (only those names). The phone counterpart is
+# scripts/keliver-gateb-ios-device.sh; both report through scripts/keliver-gateb-report.py.
 #
 # Needs: macOS with Xcode (xcrun simctl, codesign), python3, JDK 17 for Gradle.
 set -euo pipefail
@@ -44,7 +45,7 @@ while [ $# -gt 0 ]; do
     --debug) TYPE=debug; shift ;;
     --with-tests) TESTS=1; shift ;;
     --compare-only) COMPARE_ONLY=1; shift ;;
-    -h|--help) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "$NAME: unknown argument $1 (see --help)" >&2; exit 2 ;;
   esac
 done
@@ -54,101 +55,12 @@ case "$PORT" in 8077|8096|8478) fail "port $PORT belongs to the owner's portal o
 command -v python3 >/dev/null || fail "python3 is needed."
 SAMPLES="orders card item"
 
-# The comparison and the report (a PNG reader in the standard library: 8-bit RGB/RGBA, as simctl
-# writes). Exits non-zero if any sample differs; the control must differ.
+# The comparison and the report (scripts/keliver-gateb-report.py, shared with the device script).
+# Exits non-zero if any sample differs; the control must differ.
 report() { # device runtime build bundle-bytes
-python3 -I - "$OUT" "$1" "$2" "$3" "$4" "$SAMPLES" <<'PY'
-import os, struct, sys, zlib, statistics
-out, device, runtime, build, bundle_bytes, samples = sys.argv[1:7]
-samples = samples.split()
-
-def read_png(path):
-    data = open(path, "rb").read()
-    assert data[:8] == b"\x89PNG\r\n\x1a\n", path
-    pos, idat, w = 8, b"", None
-    while pos < len(data):
-        n, kind = struct.unpack(">I4s", data[pos:pos + 8]); body = data[pos + 8:pos + 8 + n]; pos += 12 + n
-        if kind == b"IHDR":
-            w, h, depth, ctype, _, _, interlace = struct.unpack(">IIBBBBB", body)
-            assert depth == 8 and ctype in (2, 6) and interlace == 0, (path, depth, ctype, interlace)
-            bpp = 4 if ctype == 6 else 3
-        elif kind == b"IDAT":
-            idat += body
-    raw = zlib.decompress(idat); stride = w * bpp; rows = []; prev = bytearray(stride); i = 0
-    for _ in range(h):
-        f = raw[i]; line = bytearray(raw[i + 1:i + 1 + stride]); i += 1 + stride
-        for x in range(stride):
-            a = line[x - bpp] if x >= bpp else 0; b = prev[x]; c = prev[x - bpp] if x >= bpp else 0
-            if f == 1: line[x] = (line[x] + a) & 255
-            elif f == 2: line[x] = (line[x] + b) & 255
-            elif f == 3: line[x] = (line[x] + (a + b) // 2) & 255
-            elif f == 4:
-                p = a + b - c; pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
-                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
-        rows.append(bytes(line[j] for k in range(w) for j in range(k * bpp, k * bpp + 3))); prev = line
-    return w, h, rows
-
-def write_png(path, w, h, rows):
-    raw = b"".join(b"\x00" + r for r in rows)
-    chunk = lambda k, b: struct.pack(">I", len(b)) + k + b + struct.pack(">I", zlib.crc32(k + b) & 0xffffffff)
-    open(path, "wb").write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
-
-lines = ["# Gate B part c: the simulator run", "",
-         f"Device: {device}, {runtime.rsplit('.', 1)[-1]}; app build: {build}; guest bundle: {bundle_bytes} bytes of modules.", "",
-         "| Sample | Screenshot | Differing pixels (native vs guest) | Bounding box |", "|---|---|---|---|"]
-failures = []
-for sample in samples:
-    w, h, a = read_png(os.path.join(out, f"{sample}-native.png"))
-    w2, h2, b = read_png(os.path.join(out, f"{sample}-guest.png"))
-    if (w, h) != (w2, h2):
-        lines.append(f"| {sample} | sizes differ: {w}x{h} vs {w2}x{h2} | - | - |")
-        failures.append(f"{sample}: sizes differ ({w}x{h} vs {w2}x{h2})"); continue
-    n = 0; box = [w, h, -1, -1]; diff = []
-    for y in range(h):
-        ra, rb = a[y], b[y]; row = bytearray(b"\xff" * (w * 3))
-        if ra != rb:
-            for x in range(w):
-                if ra[3 * x:3 * x + 3] != rb[3 * x:3 * x + 3]:
-                    n += 1; row[3 * x:3 * x + 3] = b"\xff\x00\x00"
-                    box = [min(box[0], x), min(box[1], y), max(box[2], x), max(box[3], y)]
-        diff.append(bytes(row))
-    if n:
-        write_png(os.path.join(out, f"{sample}-diff.png"), w, h, diff)
-        failures.append(f"{sample}: {n} differing pixels, see {sample}-diff.png")
-    lines.append(f"| {sample} | {w}x{h} | {n} ({100.0 * n / (w * h):.3f}%) | {box if n else '-'} |")
-
-# The control: two different screens must differ, or the comparison proves nothing.
-_, _, ca = read_png(os.path.join(out, "orders-native.png"))
-_, _, cb = read_png(os.path.join(out, "card-native.png"))
-control = sum(1 for ra, rb in zip(ca, cb) for x in range(0, len(ra), 3) if ra[x:x + 3] != rb[x:x + 3])
-if control == 0: sys.exit("keliver-gateb-ios-sim: the control (orders vs card, native) shows no difference: the comparison is broken")
-lines.append(f"| control: orders vs card (native) | | {control} | must be > 0 |")
-
-t = {"native": [], "guest": []}
-timing = os.path.join(out, "timing.txt")
-for line in (open(timing) if os.path.exists(timing) else []):
-    mode, ms = line.split(); t[mode].append(int(ms))
-runs = len(t["guest"])
-lines += ["", "First frame (orders), ms from main() to the second frame after the root was first composed (both routes mark it with a SideEffect).",
-          "Process-cold launches (terminate, 1 s, launch), alternating; the page cache is warm and the guest's Zipline module cache was filled by the screenshot launches, so a guest launch is manifest verification over loopback plus modules from the local cache:", "",
-          "| Route | Runs | Median | Min | Max |", "|---|---|---|---|---|"]
-for mode in ("native", "guest"):
-    v = t[mode]
-    if v: lines.append(f"| {mode} | {len(v)} | {statistics.median(v):.0f} | {min(v)} | {max(v)} |")
-import re
-for label, pattern in (("guest: code loaded (codeLoadSuccess)", r"codeLoadSuccess at (\d+) ms"), ("guest: first widget created", r"first guest widget at (\d+) ms")):
-    v = []
-    for i in range(1, runs + 1):  # only this run's launches
-        path = os.path.join(out, "logs", f"time-guest-{i}.log")
-        m = re.search(pattern, open(path).read()) if os.path.exists(path) else None
-        if m: v.append(int(m.group(1)))
-    if v: lines.append(f"| {label} | {len(v)} | {statistics.median(v):.0f} | {min(v)} | {max(v)} |")
-lines += ["", "A simulator is not a phone: the Mac's CPU and GPU run it, so the times are for comparing the two routes here, not for absolute numbers.", ""]
-if failures: lines += ["**FAILED:** " + "; ".join(failures), ""]
-open(os.path.join(out, "results.md"), "w").write("\n".join(lines))
-print("\n".join(lines))
-if failures: sys.exit("keliver-gateb-ios-sim: native and guest differ: " + "; ".join(failures))
-PY
+  python3 -I "$ROOT/scripts/keliver-gateb-report.py" "$OUT" "Gate B part c: the simulator run" \
+    "$1, ${2##*.}" "$3" "$4" "$SAMPLES" \
+    "Process-cold launches (terminate, 1 s, launch), alternating; the page cache is warm and the guest's Zipline module cache was filled by the screenshot launches, so a guest launch is manifest verification over loopback plus modules from the local cache. A simulator is not a phone: the Mac's CPU and GPU run it, so the times are for comparing the two routes here, not for absolute numbers."
 }
 
 if [ "$COMPARE_ONLY" = 1 ]; then

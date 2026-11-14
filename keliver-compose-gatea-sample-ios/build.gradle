@@ -3,7 +3,8 @@
 // drawn by native Compose (its copy in samples/native) or loaded from the signed guest bundle of
 // keliver-compose-gatea-sample-guest through Treehouse into the generated host renderers.
 // scripts/keliver-gateb-ios-sim.sh builds it (assembleGateBApp), installs it on a simulator it
-// creates, screenshots both modes and compares them.
+// creates, screenshots both modes and compares them. scripts/keliver-gateb-ios-device.sh builds it
+// for a phone (-PgatebTarget=device: iosArm64), signs it with a development profile and runs it there.
 //
 // Prototype only: included only with -Pkeliver.gatebIos (settings.gradle), never published.
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
@@ -33,8 +34,8 @@ tasks.configureEach { t ->
 }
 
 kotlin {
-  iosSimulatorArm64 {
-    binaries.executable('GateB') {
+  [iosSimulatorArm64(), iosArm64()].each { target ->
+    target.binaries.executable('GateB') {
       entryPoint = 'dev.keliver.compose.gatea.sample.ios.main'
       binaryOption('bundleId', 'dev.keliver.gateb')
       linkerOpts.add('-lsqlite3') // Zipline's bundle cache
@@ -75,15 +76,20 @@ kotlin {
 // want an optimised binary, so this app's release link is turned back on.
 afterEvaluate {
   tasks.named('linkGateBReleaseExecutableIosSimulatorArm64').configure { enabled = true }
+  tasks.named('linkGateBReleaseExecutableIosArm64').configure { enabled = true }
 }
 
-// GateB.app: the linked executable and an Info.plist. Unsigned here; the script signs it ad hoc.
+// GateB.app: the linked executable and an Info.plist. Unsigned here: the simulator script signs it
+// ad hoc; the device script rewrites the plist's platform and bundle id, then signs it for the phone.
+// -PgatebTarget=device builds it for a phone (iosArm64) into build/gateb-device/<type>/.
 def buildType = providers.gradleProperty('gatebBuildType').orElse('debug')
+def forDevice = providers.gradleProperty('gatebTarget').orElse('simulator').get() == 'device'
 tasks.register('assembleGateBApp', Sync) {
   def type = buildType.get()
-  def binary = kotlin.iosSimulatorArm64().binaries.getExecutable('GateB', type)
+  def target = forDevice ? kotlin.iosArm64() : kotlin.iosSimulatorArm64()
+  def binary = target.binaries.getExecutable('GateB', type)
   dependsOn(binary.linkTaskProvider)
   from(binary.outputFile) { rename { 'GateB' } }
   from('src/app') { include 'Info.plist' }
-  into(layout.buildDirectory.dir("gateb/${type}/GateB.app"))
+  into(layout.buildDirectory.dir("${forDevice ? 'gateb-device' : 'gateb'}/${type}/GateB.app"))
 }
