@@ -20,6 +20,11 @@ The script checked every 5 minutes from 02:49 to 03:29 UTC (2026-11-14; nine che
 was installed, and the phone's apps were not touched. The comparison against 122/211 ms is still
 open, and so is the recommendation.
 
+On the way, the release iosArm64 app and the signed bundle were built. The simulator script, re-run
+on this branch through the now-shared report (`--runs 3`, iPhone Air simulator, iOS 26.4, release),
+still gives 0 differing pixels on orders, card and item (control 690027), and native 125 ms against
+guest 215 ms. #243 measured 122 against 211.
+
 **How to run it** (`scripts/keliver-gateb-ios-device.sh`, the device counterpart of
 `keliver-gateb-ios-sim.sh`; `--help` has the details):
 
