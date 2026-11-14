@@ -34,7 +34,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.window.ComposeUIViewController
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
@@ -68,10 +73,12 @@ import dev.keliver.treehouse.composeui.TreehouseContent
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.toKString
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -79,19 +86,33 @@ import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString
 import okio.ByteString.Companion.decodeHex
 import okio.ByteString.Companion.toByteString
+import okio.FileSystem
 import okio.IOException
+import okio.Path.Companion.toPath
+import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Image
 import platform.Foundation.NSData
+import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSError
 import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSMutableURLRequest
+import platform.Foundation.NSProcessInfo
+import platform.Foundation.NSProcessInfoThermalState
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLRequestReloadIgnoringLocalCacheData
 import platform.Foundation.NSURLResponse
 import platform.Foundation.NSURLSession
+import platform.Foundation.NSUserDomainMask
 import platform.Foundation.addValue
 import platform.Foundation.dataTaskWithRequest
+import platform.Foundation.lowPowerModeEnabled
+import platform.Foundation.thermalState
 import platform.QuartzCore.CACurrentMediaTime
+import platform.UIKit.UIDevice
+import platform.UIKit.UIDeviceBatteryState
 import platform.UIKit.UIViewController
+import platform.posix.getenv
 
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -99,13 +120,46 @@ private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 private var contentArrived by mutableStateOf(false)
 
 internal fun sampleViewController(launch: LaunchArguments): UIViewController = ComposeUIViewController {
+  // GATEB_CAPTURE=<file name>: record the window's content into a layer and, once it has settled,
+  // write it as a PNG into the app's Documents (a phone has no `simctl io screenshot`). Only the
+  // launches that capture pay for the recording.
+  val capture = remember { getenv("GATEB_CAPTURE")?.toKString() }
+  val layer = if (capture != null) rememberGraphicsLayer() else null
+  val recording = if (layer != null) {
+    Modifier.drawWithContent {
+      layer.record { this@drawWithContent.drawContent() }
+      drawLayer(layer)
+    }
+  } else {
+    Modifier
+  }
   // The same wrapping in both modes: the theme SameSourceTest uses, a white window, the safe area.
   MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF6750A4), secondaryContainer = Color(0xFFE8DEF8))) {
-    Box(Modifier.fillMaxSize().background(Color.White).safeDrawingPadding()) {
+    Box(Modifier.fillMaxSize().then(recording).background(Color.White).safeDrawingPadding()) {
       if (launch.mode == "guest") GuestSample(launch) else NativeSample(launch.sample)
     }
   }
   FirstFrameProbe(launch.mode)
+  if (capture != null && layer != null) CaptureAfterSettling(capture, layer)
+}
+
+/** Two seconds after the first frame (as the simulator script waits before its screenshot). */
+@Composable
+private fun CaptureAfterSettling(name: String, layer: GraphicsLayer) {
+  LaunchedEffect(Unit) {
+    snapshotFlow { contentArrived }.first { it }
+    delay(2_000)
+    withFrameNanos {}
+    val bitmap = layer.toImageBitmap()
+    val png = Image.makeFromBitmap(bitmap.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)?.bytes
+    if (png == null) {
+      log("capture failed: PNG encoding")
+      return@LaunchedEffect
+    }
+    val documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).first() as String
+    FileSystem.SYSTEM.write("$documents/$name".toPath()) { write(png) }
+    log("capture saved $name ${bitmap.width}x${bitmap.height}")
+  }
 }
 
 @Composable
@@ -179,6 +233,23 @@ private fun FirstFrameProbe(mode: String) {
     withFrameNanos {}
     withFrameNanos {}
     log("first-frame mode=$mode ms=${elapsedMs()}")
+    // The device's state for the record, after the measurement (a simulator reports level -1).
+    val device = UIDevice.currentDevice
+    device.batteryMonitoringEnabled = true
+    val state = when (device.batteryState) {
+      UIDeviceBatteryState.UIDeviceBatteryStateCharging -> "charging"
+      UIDeviceBatteryState.UIDeviceBatteryStateFull -> "full"
+      UIDeviceBatteryState.UIDeviceBatteryStateUnplugged -> "unplugged"
+      else -> "unknown"
+    }
+    val thermal = when (NSProcessInfo.processInfo.thermalState) {
+      NSProcessInfoThermalState.NSProcessInfoThermalStateNominal -> "nominal"
+      NSProcessInfoThermalState.NSProcessInfoThermalStateFair -> "fair"
+      NSProcessInfoThermalState.NSProcessInfoThermalStateSerious -> "serious"
+      NSProcessInfoThermalState.NSProcessInfoThermalStateCritical -> "critical"
+      else -> "unknown"
+    }
+    log("device battery=${(device.batteryLevel * 100).toInt()} state=$state thermal=$thermal lowPower=${NSProcessInfo.processInfo.lowPowerModeEnabled}")
   }
 }
 

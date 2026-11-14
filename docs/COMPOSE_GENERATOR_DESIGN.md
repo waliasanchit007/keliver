@@ -669,6 +669,10 @@ the same pixels as native Compose, in two ways.
     guest by about 20 ms, a little more than one frame, and the gap to native is about +89 ms, not
     +63. Fidelity, the gate's criterion, is unchanged. The phone checkpoint should time both routes
     with this probe.
+  - **On a phone:** `scripts/keliver-gateb-ios-device.sh` builds the same app for iosArm64, signs
+    it with a development profile, and captures each sample in the app, because devicectl has no
+    screenshot. It times both routes with this probe, plus an empty-cache guest series. Its method
+    and status: [`GATE_B_RESULTS.md`](GATE_B_RESULTS.md), "Phone checkpoint (iOS)".
 
 ## 22. Gate B, part e: animation
 

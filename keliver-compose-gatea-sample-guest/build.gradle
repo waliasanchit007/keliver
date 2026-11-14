@@ -13,6 +13,7 @@ def samples = rootProject.file('keliver-compose-gatea-composeui/src/sameSourceTe
 
 kotlin {
   iosSimulatorArm64() // the host takes the GateBSamples interface
+  iosArm64() // … on a phone too (scripts/keliver-gateb-ios-device.sh)
   js {
     outputModuleName = 'keliver-compose-gatea-sample-guest'
     browser()

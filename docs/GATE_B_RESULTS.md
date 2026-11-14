@@ -5,6 +5,86 @@ Gate B of [`PLAN_2026-11.md`](PLAN_2026-11.md) §8, part by part. The design is
 [`GATE_A_VERDICT.md`](GATE_A_VERDICT.md). Each part adds its own section; the verdict comes when the
 parts are in.
 
+## Phone checkpoint (iOS)
+
+Part c on an iPhone 13: the same comparison and first-frame timing as #243's simulator run
+(native 122 ms against generated guest 211 ms, median of 7 warm-cache launches; 0 differing pixels
+on orders, card and item), on a phone.
+
+**Status: not measured. The run stopped at signing, before anything was installed.** The phone was
+ready (iOS 26.6.2, Developer Mode on, paired, reached over the network). The development profile
+that the 2026-11-02 iPhone run (PR #212) used for this team and bundle id expired on 2026-11-05.
+Xcode on this Mac has no Apple account signed in, so it cannot fetch a new one ("No Accounts").
+The script checked every 5 minutes from 02:49 to 03:29 UTC (2026-11-14; nine checks over its
+45-minute wait), then stopped. No app
+was installed, and the phone's apps were not touched. The comparison against 122/211 ms is still
+open, and so is the recommendation.
+
+On the way, the release iosArm64 app and the signed bundle were built. The simulator script, re-run
+on this branch through the now-shared report (`--runs 3`, iPhone Air simulator, iOS 26.4, release),
+still gives 0 differing pixels on orders, card and item (control 690027), and native 125 ms against
+guest 215 ms. #243 measured 122 against 211.
+
+**How to run it** (`scripts/keliver-gateb-ios-device.sh`, the device counterpart of
+`keliver-gateb-ios-sim.sh`; `--help` has the details):
+
+```bash
+scripts/keliver-gateb-ios-device.sh --device <CoreDevice identifier> --bundle-id <an App ID on the team> \
+  --team-file <file setting DEVELOPMENT_TEAM> [--known-profile <an earlier build's embedded.mobileprovision>] \
+  --out <dir> [--runs 10]
+```
+
+Owner prerequisites, in the order the script meets them:
+- **(0)** Xcode → Settings → Accounts: the team's Apple account is signed in. A personal team's
+  development profile lasts 7 days, so this recurs.
+- **(1)** On the phone, the developer certificate is trusted (Settings → General → VPN & Device
+  Management).
+- **(2)** Local Network is allowed for the app when the phone asks.
+
+The script waits on each gate for up to `--gate-wait` minutes (default 45), re-checking every 5
+minutes. Once the install has begun, it uninstalls its app whatever happens, an install that
+failed partway included. It lists the phone's apps at the start and again just before installing,
+and refuses if the bundle id is already there. It stops only its own app's process: one whose
+executable is inside that bundle id's install location, else through `devicectl`'s
+`--terminate-existing` for the bundle id.
+
+Method, as built:
+- **Build.** Release-optimised Kotlin/Native (`linkGateBReleaseExecutableIosArm64`, the same
+  build type as the simulator number), unless `--debug`. The app is a plain Kotlin/Native app with
+  an ATS exception, not a Keliver Release host (whose `checkReleaseUrls` refuses http), so a release
+  binary can load the bundle over http from this Mac's Wi-Fi address.
+- **Signing.** A minimal wrapper Xcode project (generated in the run's directory) is built with
+  `-allowProvisioningUpdates` for the team and bundle id. That fetches the development profile and
+  gives the entitlements, and the app is signed with that profile's certificate. The script refuses
+  to start the fetch unless a profile for that team's App ID has existed, on this Mac or through
+  `--known-profile` (`--allow-new-app-id` to override). That is not proof the App ID still exists:
+  if it was removed since, the fetch registers it again. Automatic signing may also create an Apple
+  Development certificate on the team when none is in this Mac's keychain. Devices are never
+  registered: the script does not pass `-allowProvisioningDeviceRegistration`, so the phone must
+  already be on the team.
+- **Pixels.** `devicectl` has no screenshot, so with `GATEB_CAPTURE` the app records its window's
+  Compose content into a `GraphicsLayer` and writes it as a PNG into its Documents, 2 s after the
+  first frame. The script copies it out (`devicectl device copy from`) and compares native against
+  guest with the simulator's comparison (`scripts/keliver-gateb-report.py`, now shared): 0 differing
+  pixels expected, and the orders-vs-card control must differ. These are Skia renderings of the
+  Compose content, with no status bar. They are not composited screenshots.
+- **Timing.** The same probe as the simulator. There are two series of N process-cold launches
+  (terminate, 1 s, launch; default 10):
+  - native and guest alternating with a warm Zipline cache: the manifest over Wi-Fi, the modules
+    from the local cache;
+  - `guest-empty-cache`: each launch follows a `clear-cache` launch that deletes
+    `Library/Caches/gateb`, so the guest downloads every module as a fresh install does. #243 asked
+    for this series.
+- **Phone state.** After each first frame the app logs the battery level, the charging state, the
+  thermal state and Low Power Mode. The report lists them for the first and last launch of each
+  route: native, guest (warm) and guest-empty-cache.
+- **Network share.** The report's guest rows include when the manifest was fetched and verified.
+  On the phone the manifest comes over Wi-Fi (on the simulator, over loopback), so that row
+  separates the network's part of the guest−native gap from loading and rendering.
+- **Logs.** The script reads the app's lines from `devicectl --console`. The app also appends them
+  to `Documents/gateb-<tag>.log` (one file per launch, named by the launch's `GATEB_TAG`). If the
+  console carries none of them, the script copies that file out and reads it from then on.
+
 ## Gate B-e results: animation, timed, and app size with groups
 
 What it answers: the design's §10 animation rows (host-side `AnimatedVisibility` and

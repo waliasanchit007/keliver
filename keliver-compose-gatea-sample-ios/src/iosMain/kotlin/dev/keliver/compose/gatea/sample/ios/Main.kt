@@ -24,8 +24,13 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.toKString
+import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSFileManager
 import platform.Foundation.NSProcessInfo
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSStringFromClass
+import platform.Foundation.NSUserDomainMask
 import platform.QuartzCore.CACurrentMediaTime
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDelegateProtocol
@@ -34,6 +39,7 @@ import platform.UIKit.UIApplicationMain
 import platform.UIKit.UIResponder
 import platform.UIKit.UIResponderMeta
 import platform.UIKit.UIScreen
+import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import platform.posix.fclose
 import platform.posix.fopen
@@ -45,7 +51,8 @@ internal var startedAt = 0.0
 
 /**
  * The launch arguments (`simctl launch <udid> dev.keliver.gateb <mode> <sample> [manifest URL]`):
- * mode `native` or `guest`, sample `orders`, `card` or `item`.
+ * mode `native` or `guest`, sample `orders`, `card` or `item`. Mode `clear-cache` only empties the
+ * guest's Zipline cache and shows an empty window.
  */
 internal class LaunchArguments(val mode: String, val sample: String, val manifestUrl: String?)
 
@@ -82,8 +89,17 @@ internal class AppDelegate @OverrideInit constructor() :
   override fun application(application: UIApplication, didFinishLaunchingWithOptions: Map<Any?, *>?): Boolean {
     val launch = launchArguments()
     log("launch mode=${launch.mode} sample=${launch.sample} manifest=${launch.manifestUrl}")
+    if (launch.mode == "clear-cache") {
+      // Empties the guest's Zipline cache (Library/Caches/gateb), so the next guest launch starts
+      // as a fresh install's would: the device script's empty-cache series.
+      val caches = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String
+      val dir = "$caches/gateb"
+      val existed = NSFileManager.defaultManager.fileExistsAtPath(dir)
+      val removed = !existed || NSFileManager.defaultManager.removeItemAtPath(dir, null)
+      log("cache cleared existed=$existed removed=$removed")
+    }
     appWindow = UIWindow(frame = UIScreen.mainScreen.bounds).apply {
-      rootViewController = sampleViewController(launch)
+      rootViewController = if (launch.mode == "clear-cache") UIViewController() else sampleViewController(launch)
       makeKeyAndVisible()
     }
     return true
@@ -91,13 +107,24 @@ internal class AppDelegate @OverrideInit constructor() :
 }
 
 /**
- * One line on stdout and, when the launch names one (SIMCTL_CHILD_GATEB_LOG, which simctl passes as
- * GATEB_LOG), appended to that host file: the script reads it while the app runs.
+ * Where [log] appends its lines besides stdout: the host file a simulator launch names
+ * (SIMCTL_CHILD_GATEB_LOG, which simctl passes as GATEB_LOG), else, when a device launch names
+ * itself (GATEB_TAG), `Documents/gateb-<tag>.log` in the app's container, which the device script
+ * copies out if devicectl's console does not carry stdout. Null: stdout only.
  */
+private val logPath: String? by lazy {
+  getenv("GATEB_LOG")?.toKString()
+    ?: getenv("GATEB_TAG")?.toKString()?.takeIf { tag -> tag.all { it.isLetterOrDigit() || it == '-' } }?.let { tag ->
+      val documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).first() as String
+      "$documents/gateb-$tag.log"
+    }
+}
+
+/** One line on stdout and, when there is one, appended to [logPath]: the scripts read it while the app runs. */
 internal fun log(message: String) {
   val line = "GATEB $message"
   println(line)
-  val path = getenv("GATEB_LOG")?.toKString() ?: return
+  val path = logPath ?: return
   val file = fopen(path, "a") ?: return
   fputs("$line\n", file)
   fclose(file)
