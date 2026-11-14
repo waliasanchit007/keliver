@@ -52,6 +52,12 @@ public interface ThreewayApi {
  * host, `Date.now()` in the guest and the web page: all read the phone's one wall clock).
  */
 public interface ThreewayMarks {
+  /**
+   * Whether the screens also mark the start of the frame a click is handled in (`frame`): the
+   * benchmark's `split` experiment. Off in the as-shipped series.
+   */
+  public val frameMarks: Boolean get() = false
+
   public fun now(): Long
 
   /** Records that [name] happened for request or navigation [seq] at [atMillis]. */

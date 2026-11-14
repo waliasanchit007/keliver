@@ -10,7 +10,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import dev.keliver.compose.foundation.background
 import dev.keliver.compose.foundation.clickable
 import dev.keliver.compose.foundation.layout.Box
@@ -36,6 +38,8 @@ import dev.keliver.sample.threeway.data.Item
 import dev.keliver.sample.threeway.data.ItemsPage
 import dev.keliver.sample.threeway.data.ThreewayApi
 import dev.keliver.sample.threeway.data.ThreewayMarks
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 
 // The three-way benchmark's screens (docs/THREE_WAY_BENCHMARK.md), written once as plain Compose.
 // The guest compiles this file against the generated API; the Android host compiles a copy whose
@@ -73,6 +77,14 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks) {
   var size by remember { mutableStateOf("small") }
   var selected by remember { mutableStateOf<Item?>(null) }
   var nav by remember { mutableStateOf(0) }
+  val scope = rememberCoroutineScope()
+
+  // The `split` experiment only: marks the start of the frame that handles a click (`frame`). The
+  // frame callback is registered here, before the click's state writes reach the recomposer, so it
+  // runs first in that frame, before the recomposition.
+  fun frameMark(seq: Int) {
+    if (marks.frameMarks) scope.launch(start = CoroutineStart.UNDISPATCHED) { withFrameNanos { marks.mark(seq, "frame") } }
+  }
 
   LaunchedEffect(request) {
     val seq = request
@@ -82,6 +94,7 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks) {
 
   val load = { newSize: String ->
     marks.mark(request + 1, "click")
+    frameMark(request + 1)
     size = newSize
     request += 1
   }
@@ -96,6 +109,7 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks) {
         onLoad = load,
         onOpen = {
           marks.mark(NAV_BASE + nav + 1, "click")
+          frameMark(NAV_BASE + nav + 1)
           nav += 1
           selected = it
         },
@@ -107,6 +121,7 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks) {
         marks = marks,
         onBack = {
           marks.mark(NAV_BASE + nav + 1, "click")
+          frameMark(NAV_BASE + nav + 1)
           nav += 1
           selected = null
         },

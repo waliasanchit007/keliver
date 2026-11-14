@@ -31,4 +31,13 @@ public interface ThreewayAppService : AppService {
  */
 public interface ThreewayHost : ZiplineService {
   public fun composed(screen: String, seq: Int, marksJson: String)
+
+  /**
+   * The experiments this run asked for (the route's `x` extra, comma-separated; empty for the
+   * as-shipped series): `split` (frame and protocol-recording marks), `skipdefaults` (don't send a
+   * new widget's properties that equal their default), `jsonparse` / `dynamic` (parse with QuickJS's
+   * `JSON.parse`, then map by hand or with kotlinx.serialization's `decodeFromDynamic`).
+   * docs/THREE_WAY_BENCHMARK.md, "Experiments".
+   */
+  public fun experiments(): String
 }

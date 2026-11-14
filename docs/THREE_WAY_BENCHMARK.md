@@ -11,15 +11,21 @@ Prototype code only (`-PkeliverComposePrototype`), as Gate B's ([GATE_B_RESULTS.
 
 **In one paragraph.** On this phone a native screen opens in about 1.2 s from a cold start and every
 later step feels instant: a navigation is drawn about 15 ms after the tap, an API call the time of
-the network plus about 30 ms. The web page starts slower than native (about 2.0 s: the WebView itself
-costs about 0.7 s before the page's first frame) but is close to native on later steps: 40–50 ms for
-a navigation, network plus 50 ms for a small response; it slows down with a large list (about 0.45 s
-to lay out and paint 1,000 rows it does not virtualise). The Keliver guest is the slowest of the
-three at every step on this phone: about 2.9 s to its first content (warm code cache), **0.44 s to
-open a detail and 1.1 s to go back to the list**, network plus about 0.17 s for a small response and
-network plus about 1 s for a large one, nearly all of it parsing 224 KB of JSON with
-kotlinx.serialization inside QuickJS (0.8 s). The bridge itself is cheap (2–3 ms out, 10–20 ms back
-with the body). What costs is guest code running in QuickJS on a slow CPU: recomposition and parsing.
+the network plus about 45 ms (small) to 80 ms (large). The web page starts slower than native (about
+2.0 s: the WebView itself costs about 0.7 s before the page's first frame) but is close to native on
+later steps: 40–50 ms for a navigation, network plus 50 ms for a small response; the page as
+measured slows down with a large list (about 0.45 s to lay out and paint 1,000 rows, because it does
+not virtualise them; a one-line CSS fix for that is built but not yet measured, see Experiments). The
+Keliver guest is the slowest of the three at every step on this phone: about 2.9 s to its first
+content (warm code cache), **0.44 s to open a detail and 1.1 s to go back to the list**, network plus
+about 0.17 s for a small response and network plus about 1 s for a large one, nearly all of it
+parsing 224 KB of JSON with kotlinx.serialization inside QuickJS (0.8 s). The bridge itself is cheap
+(2–3 ms out, 10–20 ms back with the body). What costs is guest code running in QuickJS on a slow CPU:
+for navigation, **the guest's composition plus its protocol recording (encoding every property of
+every new widget), not yet split between the two**; for large responses, the parser. **These are the
+as-shipped costs, not shown to be inherent**: the experiments that would separate the fixable part
+(the encoding, the lazy list's first window of 16 rows, the parser) are built and listed below, and
+were not run because the phone was unreachable in the follow-up session.
 
 | Median (ms) on the A12 | native | guest | web |
 |---|---|---|---|
@@ -169,14 +175,26 @@ Earlier runs of the same benchmark (same day, same state, per-iteration values n
 | guest | **438** | 453 | 417–461 | **1,082** | 1,117 | 1,016–1,123 |
 | web | **37** | 48 | 31–86 | **50** | 51 | 47–54 |
 
+Navigation is a state switch in all three forms (the list or the detail replaces the other in the
+same window), with no transition or animation.
+
 Where the guest's time goes (medians): the click reaches the guest's `onClick` 8 ms after the tap;
 the guest's composition is applied 370 ms (open) or 951 ms (back) after the click; its change batch
-reaches the host 31 / 91 ms later; the host draws it 24 / 14 ms after applying it. Going back
-recomposes the whole list screen in the guest (its `LazyColumn` composes a window of rows, more than
-the 20 visible) and sends it again; opening composes a dozen texts. Native does the same
-recomposition in 9–12 ms on ART. The 370 ms was not split further (how much is waiting for the
-guest's next frame and how much is composing in QuickJS); Gate B measured guest frames of
-100–350 ms on this phone.
+reaches the host 31 / 91 ms later; the host draws it 24 / 14 ms after applying it. Going back builds
+the list screen again from nothing in the guest: the page has 20 items, about 9–10 of them visible,
+and the guest's `LazyColumn` composes a first window of **16 rows** (the lazy-layout loading
+strategy's default: the first visible row plus 15 preloaded; `ScrollOptimizedLoadingStrategy`),
+where native's `LazyColumn` composes the ~9–10 that fit. Every new widget's every property is then
+recorded for the host: each row is 8 widgets (a row, two columns, a box, four texts), each text sends
+its 14 serialised properties whether or not they are defaults (encoded with kotlinx.serialization's
+`encodeToDynamic` in `FastGuestProtocolAdapter`, treehouse-guest's JS adapter), so the back step
+records on the order of a thousand property and modifier changes. Opening composes a dozen texts.
+Native does the same recomposition in 9–12 ms on ART.
+
+**The 370 / 951 ms is composition plus protocol encoding, not yet split as measured.** How much is
+waiting for the guest's next frame, how much is Compose in QuickJS and how much is encoding was not
+measured; the split and the experiments that would remove parts of it are built (Experiments, below)
+and not yet run. Gate B measured guest frames of 100–350 ms on this phone.
 
 ### 3. Tap → API → rendered (12 per form and size, ms from the tap)
 
@@ -213,11 +231,17 @@ Reading them:
   this CPU, after Zipline has already decoded the response once to bring the body across (part of
   the 21 ms back). The web form parses in 6 ms (`JSON.parse` is native code) but spends 0.45 s laying
   out and painting 1,000 rows, because the page builds them all; a virtualised web list would not.
+  The page also pays at the tap: tap → click is 13 ms on the first large iteration, then 39–46 ms on
+  every later one, once the DOM holds 1,000 rows (the renderer's main thread handling the input
+  against the big document), so **the large web number overstates what a competent page costs**:
+  with `content-visibility: auto` on the rows (built, not yet measured) it should fall towards
+  native's.
 - **The bridge is not where the guest's time goes**: 2–3 ms out, 10 ms back with 4.5 KB, 21 ms back
-  with 224 KB (one 179 ms outlier).
-- One guest iteration's network took 957 ms (the large set's first); the native and web sets had no
-  such outlier, and the smoke run before had one of 1.7 s on the same step. The tunnel over wireless
-  adb is the likely cause (not checked against the fixture's log timestamps).
+  with 224 KB (one 179 ms outlier, in the same iteration as the network outlier below).
+- One guest iteration's network took 957 ms (the large set's second, with the 179 ms bridge-back
+  outlier); the native and web sets had no such outlier, and the smoke run before had one of 1.7 s
+  on the same step. The tunnel over wireless adb is the likely cause (not checked against the
+  fixture's log timestamps).
 
 Scrolling (optional item 4) was not measured.
 
@@ -267,25 +291,76 @@ second where it becomes a wait):
   native from cold, and makes the user wait about half a second extra for a long list unless the page
   virtualises it.
 - **The Keliver guest** starts about 1.7 s slower than native (about 0.9 s slower than the web page)
-  even with its code cached, and **every navigation inside the guest is noticeably slow on this
-  phone**: 0.44 s to open a simple detail and 1.1 s to go back to a list, against 15 ms native and
+  even with its code cached, and **as shipped, every navigation inside the guest is noticeably slow
+  on this phone** (how much of it is fixable is the open question the experiments answer): 0.44 s to open a simple detail and 1.1 s to go back to a list, against 15 ms native and
   40–50 ms web. A small API call costs about 0.13 s more than native, which a user would barely
   notice behind a network that is itself slower than this fixture's; a large JSON response costs
-  about 0.8 s more, all of it in parsing.
+  about 0.8 s more, all of it in parsing with kotlinx.serialization's string decoder.
 
 Where Keliver is **equal**: the network path (the host's own OkHttp client; the bridge adds 2–3 ms
 out and 10–20 ms back), and the host's own drawing once the changes arrive (10–20 ms, comparable to
-the web form's last step). Where it is **slower**: anything that runs guest code on a slow CPU
-(QuickJS has no JIT): recomposition (70 ms for a list update, 370 ms for opening a detail, 950 ms
-for re-entering a list) and parsing (224 KB: 33 ms on ART, 803 ms in QuickJS, about 24 times slower). It is
+the web form's last step). Where it is **slower**, as shipped: anything that runs guest code on a slow
+CPU (QuickJS has no JIT): composition plus protocol encoding (70 ms for a list update, 370 ms for
+opening a detail, 950 ms for re-entering a list; not yet split) and parsing with kotlinx.serialization's
+string decoder (224 KB: 33 ms on ART, 803 ms in QuickJS, about 24 times slower). It is
 **faster nowhere** on this phone. On the iPhone 13 Gate B measured the guest's whole start at
 180 ms, so a faster CPU should narrow all of this (not measured for these screens).
 
-What would close the gap (not built; estimates): parse large responses on the host (a host-side
-decoder that hands the guest typed data, or a `HostHttp` variant that returns the body already parsed
-into a structure Zipline can pass) would remove most of the 0.8 s; navigation cost is guest
-recomposition, which needs the guest-side profile Gate B already recommends ("Where the A12's cold
-start goes", option 1) before anything else.
+What could close the gap (estimates until the experiments below are run):
+- **Parsing.** Three options, cheapest first. (1) Parse in the guest with QuickJS's own
+  `JSON.parse` (C code) through Kotlin/JS `JSON.parse<dynamic>`, then map to the data classes by
+  hand or with kotlinx.serialization's `decodeFromDynamic`: no library or `HostHttp` change, and it
+  separates "kotlinx.serialization's string decoder in an interpreter is slow" from "QuickJS is
+  slow". (2) Decode on the host and hand the guest typed data. (3) A `HostHttp` variant returning the
+  body already parsed into a structure Zipline can pass. Option 1 is built (experiments `jsonparse`
+  and `dynamic`).
+- **Navigation.** At least three separable costs: (a) the guest composes 16 rows where 9–10 show (a
+  smaller first window is a one-line change in the prototype's `LazyWindow`, experiment `window10`);
+  (b) every property of every new widget is encoded and sent, defaults included (sending only
+  non-default properties needs the generator, which writes both sides, to emit each property's host
+  default; experiment `skipdefaults` approximates it for these screens); (c) Compose itself in
+  QuickJS, which only the guest-side profile Gate B already recommends ("Where the A12's cold start
+  goes", option 1) can attack. Skipping unchanged properties is already done: Compose's applier only
+  calls a widget's setter when the value changed, so the encoding cost is on new widgets.
+
+## Experiments (built; not yet measured on the phone)
+
+An independent fairness review of this benchmark asked for the measurements below before anyone
+decides on the numbers above. They are built into the same route, off unless the `x` extra
+(comma-separated) names them, so the as-shipped series above are unchanged. None changes published
+library behaviour: the guest-side ones live in the sample (`threeway-guest`), and the one that needs
+a library change (`window10`) is a patch applied only to a scratch copy of the prototype publish.
+
+| `x` | Form | What it does | What it answers | What the library would need |
+|---|---|---|---|---|
+| `webcv` | web | `.row { content-visibility: auto; contain-intrinsic-size: auto 72px; }`: the browser lays out and paints only rows near the viewport | the large-list cost of a competent page, and whether tap → click returns to ~13 ms | — |
+| `split` | guest (and native) | marks the start of the frame that handles a click (`frame`: a `withFrameNanos` callback registered in the `onClick`, before the click's state reaches the recomposer); wraps the guest's protocol adapter and times and counts every recording call (`n_props`, `n_propMs`, `n_mods`, `n_modMs`, `n_creates`, `n_struct`, `n_structMs`), click → composed | navigation split into: click → the guest's frame starts; frame → composed (Compose in QuickJS plus recording), of which the recording is `n_*Ms`; composed → batch at the host | — (measurement only) |
+| `window10` | guest | the lazy list's first window is 10 rows (preload 9) instead of 16 (preload 15) | what composing 6 rows fewer than the guest now does saves on "back" | a smaller default first window in the prototype's `LazyWindow` (`keliver-compose-gatea-compose`, `LazyDsl.kt`), or one sized from the host's viewport: `sample/threeway-guest/experiments/lazy-window-10.patch` |
+| `skipdefaults` | guest | a new widget's properties whose value is the "not set" value the host also falls back to (null, `Color.Unspecified`, `TextUnit.Unspecified`) and its empty modifier are not sent | what sending only non-default properties saves; a lower bound (other defaults, such as `maxLines = Int.MAX_VALUE`, are still sent) | the generator (`keliver-compose-generator`) to emit, per property, the host's initial value, and the guest's adapter to skip a first value equal to it; correct only where the host's initial value is the default (a few host properties, such as an icon's `contentDescription`, start "unset") |
+| `jsonparse` | guest | `JSON.parse<dynamic>` (QuickJS's C parser), then the objects mapped to `Item` by hand; marks `jsParsed` between | how much of the 803 ms is kotlinx.serialization's string decoder rather than QuickJS | — (adopter code; or a helper in `keliver-http`) |
+| `dynamic` | guest | `JSON.parse<dynamic>`, then kotlinx.serialization's `decodeFromDynamic` | the same with generated serializers instead of hand mapping | — |
+
+The split's timer reads `Date.now()` (1 ms resolution) around every call; each call is well under a
+millisecond, so the sum of the differences estimates the total (unbiased while calls are not
+phase-locked to the clock), and the wrapper's own calls add a little. Note for readers of the
+review: the guest on JS records through `FastGuestProtocolAdapter.encodeToDynamic`
+(`keliver-treehouse-guest`, `ProtocolBridgeJs.kt`), not `DefaultGuestProtocolAdapter`'s
+`encodeToJsonElement`, which is the JVM path.
+
+```
+# run (after the build and adb reverse in How to run it): as shipped, then each experiment
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.threeway.ThreewayActivity \
+  -e form guest -e bench nav,api-small,api-large --ei n 12 --ez overLockScreen true -e x split
+#   -e x split,skipdefaults   -e x jsonparse   -e x dynamic   -e form web -e x webcv
+#   window10: apply the patch, publish keliver-compose-gatea-compose to a copy of the scratch Maven
+#   repository, build the sample against that copy, then -e x split
+dumpsys webviewupdate     # (adb shell) record the WebView's version with the web series
+```
+
+**Status: not run.** In the follow-up session (2026-11-15, 04:16–05:30 IST) the phone stayed listed
+by mDNS (`_adb-tls-connect._tcp`) but adb could not reach it (macOS blocking the connection), so no
+series ran; the as-shipped APK and the experiments compile and are ready. The WebView's version was
+not recorded in the first session either; it goes with the next web series.
 
 ## For an iOS run (follow-up)
 
@@ -302,6 +377,32 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
 
 - **One phone, one session per series, on the charger** (see Phone state). The cold-start medians
   are single runs of 10; the earlier runs on the same day were within about 100 ms of them.
+- **"Drawn" is the host's UI-thread draw**, not light on the screen; the RenderThread and the
+  display add about a frame to every form. For the guest, the rule assumes the host's composition
+  picks up the applied batch in the next frame (`Snapshot.sendApplyNotifications()` is called first);
+  a frame missed there would make the guest look up to one frame faster than it is. For the web form,
+  `rAF` plus a task is the usual "painted" signal, not a guarantee from Chromium.
+- **The guest's 370 ms (open) and 951 ms (back)** are not yet split between waiting for the guest's
+  next frame, Compose in QuickJS and protocol encoding (Experiments, `split`). The guest's lazy
+  window composes 16 rows on "back" (from the code: the first visible row plus 15 preloaded), against
+  ~9–10 visible and composed by native.
+- **Synthetic taps** (dispatched to the window, not through the input system). The web form's
+  tap → click is 13 ms with a small DOM and 39–46 ms once the page holds 1,000 rows (every large
+  iteration after the first), so it grows with the page's own DOM, not only with Chromium's input
+  routing to the renderer; native's (3–4 ms) and the guest's (8 ms) do not have that hop.
+- **The network is a tunnel over wireless adb**, not a phone network: its own delay varies (one guest
+  iteration 957 ms). Each form's network column shows what it got; the guest and native share
+  the same client, the web form uses Chromium's stack.
+- **Not minified.** The benchmark build type does not run R8 (`isMinifyEnabled = false`, as in Gate
+  B's runs, although GATE_B_RESULTS.md describes that build as "R8"). With R8 native and the host
+  side of the guest would likely be a little faster; QuickJS code is unaffected.
+- **No app baseline profile** in any form; the libraries' profiles only. Not measured: a profile for
+  the host's loader and bridge (Gate B's option 5).
+- **The guest's code came from the APK's assets and its cache**, never a network: a production host
+  that checks for updates first adds that round trip (Gate B, option 3).
+- **The WebView's version** (system Chromium, as installed) was not recorded.
+- **Scrolling** the 1,000-item list was not measured.
+- **The iPhone** was not measured (see above for what a run needs).
 
 ## How to run it
 
@@ -319,26 +420,5 @@ adb shell am instrument -w -e class dev.keliver.sample.benchmarks.ThreewayStartu
 adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.threeway.ThreewayActivity \
   -e form guest -e bench nav,api-small,api-large --ei n 12 --ez overLockScreen true
 adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from the tap
+# experiments: add -e x <names> (see Experiments)
 ```
-- **"Drawn" is the host's UI-thread draw**, not light on the screen; the RenderThread and the
-  display add about a frame to every form. For the guest, the rule assumes the host's composition
-  picks up the applied batch in the next frame (`Snapshot.sendApplyNotifications()` is called first);
-  a frame missed there would make the guest look up to one frame faster than it is. For the web form,
-  `rAF` plus a task is the usual "painted" signal, not a guarantee from Chromium.
-- **The guest's 370 ms (open) and 951 ms (back)** are not split between waiting for the guest's next
-  frame and composing in QuickJS; how many rows the guest's lazy window composes was not counted.
-- **Synthetic taps** (dispatched to the window, not through the input system). The web form's
-  tap → click (13–43 ms) includes Chromium's own input routing to the renderer; native's (3–4 ms) and
-  the guest's (8 ms) do not have that hop.
-- **The network is a tunnel over wireless adb**, not a phone network: its own delay varies (one guest
-  iteration 957 ms). Each form's network column shows what it got; the guest and native share
-  the same client, the web form uses Chromium's stack.
-- **Not minified.** The benchmark build type does not run R8 (`isMinifyEnabled = false`, as in Gate
-  B's runs, although GATE_B_RESULTS.md describes that build as "R8"). With R8 native and the host
-  side of the guest would likely be a little faster; QuickJS code is unaffected.
-- **No app baseline profile** in any form; the libraries' profiles only. Not measured: a profile for
-  the host's loader and bridge (Gate B's option 5).
-- **The guest's code came from the APK's assets and its cache**, never a network: a production host
-  that checks for updates first adds that round trip (Gate B, option 3).
-- **Scrolling** the 1,000-item list was not measured.
-- **The iPhone** was not measured (see above for what a run needs).

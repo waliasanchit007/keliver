@@ -98,12 +98,20 @@ import org.json.JSONObject
 class ThreewayActivity : ComponentActivity() {
   private val main = Handler(Looper.getMainLooper())
   private lateinit var form: String
+
+  /**
+   * Benchmark experiments (the `x` extra, comma-separated; empty = as shipped). Guest: see
+   * ThreewayHost.experiments. Web: `webcv` (the rows get `content-visibility: auto`, so the page
+   * lays out and paints only rows near the viewport). docs/THREE_WAY_BENCHMARK.md, "Experiments".
+   */
+  private var experiments = ""
   private val recorder = Recorder()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     form = intent.getStringExtra("form") ?: "native"
-    Log.i(TAG, "form=$form")
+    experiments = intent.getStringExtra("x").orEmpty()
+    Log.i(TAG, "form=$form x=$experiments")
     // WARNING: benchmark-only (as GatebActivity): keep the screen on and draw over a locked phone's
     // lock screen (it does not unlock it), only when the caller asks with `--ez overLockScreen true`.
     if (intent.getBooleanExtra("overLockScreen", false)) {
@@ -125,6 +133,7 @@ class ThreewayActivity : ComponentActivity() {
 
   private fun startNative() {
     val marks = object : ThreewayMarks {
+      override val frameMarks = "split" in experiments.split(',')
       override fun now() = System.currentTimeMillis()
       override fun mark(seq: Int, name: String, atMillis: Long) = recorder.mark(seq, name, atMillis)
       override fun composed(screen: String, seq: Int) {
@@ -164,6 +173,8 @@ class ThreewayActivity : ComponentActivity() {
         recorder.addJson(marksJson)
         awaiting = screen to seq
       }
+
+      override fun experiments(): String = experiments
     }
     // The guest calls `composed` in its apply phase, then sends that frame's change batch: when the
     // host's sendChanges returns, the batch is queued on the main thread, and a message posted then
@@ -231,6 +242,10 @@ class ThreewayActivity : ComponentActivity() {
           recorder.addJson(paintedJson)
           main.post { onContentInTree(screen, seq) }
         }
+
+        /** The run's experiments (the `x` extra); the page reads it once, before its first render. */
+        @JavascriptInterface
+        fun experiments(): String = experiments
 
         @JavascriptInterface
         fun error(message: String) {
@@ -309,7 +324,7 @@ class ThreewayActivity : ComponentActivity() {
 
     for (bench in benches) {
       steps.addLast {
-        log("""{"form":"$form","bench":"$bench","state":${JSONObject.quote(phoneState())}}""")
+        log("""{"form":"$form","bench":"$bench","x":${JSONObject.quote(experiments)},"state":${JSONObject.quote(phoneState())}}""")
         next()
       }
       when (bench) {
@@ -357,7 +372,11 @@ class ThreewayActivity : ComponentActivity() {
   private fun result(bench: String, i: Int, tap: Long, seq: Int): String {
     val marks = recorder.take(seq)
     val o = JSONObject().put("form", form).put("bench", bench).put("i", i).put("seq", seq)
-    for ((name, at) in marks.entries.sortedBy { it.value }) o.put(name, at - tap)
+    if (experiments.isNotEmpty()) o.put("x", experiments)
+    // `n_*` are the guest's counters and summed durations (split experiment), not times.
+    val (values, times) = marks.entries.partition { it.key.startsWith("n_") }
+    for ((name, at) in times.sortedBy { it.value }) o.put(name, at - tap)
+    for ((name, value) in values) o.put(name, value)
     return o.toString()
   }
 

@@ -11,6 +11,7 @@ import dev.keliver.capabilities.HostHttpRequest
 import dev.keliver.compose.gatea.protocol.guest.KeliverComposeGateAProtocolWidgetSystemFactory
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.asHostHttp
+import dev.keliver.sample.threeway.data.Item
 import dev.keliver.sample.threeway.data.ItemsPage
 import dev.keliver.sample.threeway.data.ThreewayApi
 import dev.keliver.sample.threeway.data.ThreewayMarks
@@ -20,7 +21,9 @@ import dev.keliver.treehouse.TreehouseUi
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import dev.keliver.treehouse.asZiplineTreehouseUi
 import kotlin.js.Date
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromDynamic
 
 public fun main() {
   Zipline.get().bind<ThreewayAppService>("app", ThreewayAppServiceImpl())
@@ -28,7 +31,8 @@ public fun main() {
 
 private class ThreewayAppServiceImpl : ThreewayAppService {
   override val appLifecycle: StandardAppLifecycle = StandardAppLifecycle(
-    protocolWidgetSystemFactory = KeliverComposeGateAProtocolWidgetSystemFactory,
+    // As shipped unless the run asks for a protocol experiment (ProtocolExperiments.kt).
+    protocolWidgetSystemFactory = ExperimentWidgetSystemFactory(KeliverComposeGateAProtocolWidgetSystemFactory) { experiments },
     json = Json,
     widgetVersion = 1U,
   )
@@ -52,6 +56,11 @@ private val hostHttp: HostHttp by lazy { Zipline.get().take<HostHttpProvider>("H
 
 private val threewayHost: ThreewayHost by lazy { Zipline.get().take<ThreewayHost>("threewayHost") }
 
+/** The run's experiments (ThreewayHost.experiments); empty for the as-shipped series. */
+private val experiments: Set<String> by lazy {
+  threewayHost.experiments().split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+}
+
 private object GuestApi : ThreewayApi {
   override suspend fun items(size: String, seq: Int): ItemsPage {
     val response = hostHttp.execute(
@@ -59,24 +68,70 @@ private object GuestApi : ThreewayApi {
     )
     GuestMarks.mark(seq, "response")
     check(response.status == 200) { "HTTP ${response.status}" }
-    val page = parseItems(response.body)
+    val page = when {
+      "jsonparse" in experiments -> parseItemsWithJsonParse(response.body, seq)
+      "dynamic" in experiments -> parseItemsFromDynamic(response.body, seq)
+      else -> parseItems(response.body) // as shipped: kotlinx.serialization's string decoder
+    }
     GuestMarks.mark(seq, "parsed")
     return page
   }
+}
+
+/**
+ * Experiment `jsonparse`: QuickJS's own `JSON.parse` (C), then the objects mapped to [Item] by
+ * hand. Marks `jsParsed` between the two steps.
+ */
+private fun parseItemsWithJsonParse(body: String, seq: Int): ItemsPage {
+  val o: dynamic = JSON.parse<dynamic>(body)
+  GuestMarks.mark(seq, "jsParsed")
+  val array: Array<dynamic> = o.items.unsafeCast<Array<dynamic>>()
+  val items = ArrayList<Item>(array.size)
+  for (x in array) {
+    items += Item(
+      id = x.id.unsafeCast<Int>(),
+      title = x.title.unsafeCast<String>(),
+      subtitle = x.subtitle.unsafeCast<String>(),
+      amount = x.amount.unsafeCast<String>(),
+      status = x.status.unsafeCast<String>(),
+      address = (x.address ?: "").unsafeCast<String>(),
+      note = (x.note ?: "").unsafeCast<String>(),
+      reference = (x.reference ?: "").unsafeCast<String>(),
+    )
+  }
+  return ItemsPage(seq = o.seq.unsafeCast<Int>(), count = o.count.unsafeCast<Int>(), items = items)
+}
+
+private val dynamicJson = Json { ignoreUnknownKeys = true }
+
+/**
+ * Experiment `dynamic`: QuickJS's `JSON.parse`, then kotlinx.serialization's `decodeFromDynamic`
+ * (the generated serializers, reading JS objects instead of a string). Marks `jsParsed` between.
+ */
+@OptIn(ExperimentalSerializationApi::class)
+private fun parseItemsFromDynamic(body: String, seq: Int): ItemsPage {
+  val o: dynamic = JSON.parse<dynamic>(body)
+  GuestMarks.mark(seq, "jsParsed")
+  return dynamicJson.decodeFromDynamic(ItemsPage.serializer(), o)
 }
 
 /** Marks on the guest's clock, buffered and sent with the next `composed` report (one bridge call). */
 private object GuestMarks : ThreewayMarks {
   private val pending = LinkedHashMap<Int, LinkedHashMap<String, Long>>()
 
+  override val frameMarks: Boolean get() = "split" in experiments
+
   override fun now(): Long = Date.now().toLong()
 
   override fun mark(seq: Int, name: String, atMillis: Long) {
     pending.getOrPut(seq) { LinkedHashMap() }[name] = atMillis
+    // The protocol counters cover click → composed.
+    if (name == "click") ProtocolStats.reset()
   }
 
   override fun composed(screen: String, seq: Int) {
     mark(seq, "composed")
+    if ("split" in experiments) pending.getOrPut(seq) { LinkedHashMap() }.putAll(ProtocolStats.asMarks())
     val json = pending.entries.joinToString(",", "{", "}") { (s, marks) ->
       marks.entries.joinToString(",", "\"$s\":{", "}") { (name, at) -> "\"$name\":$at" }
     }

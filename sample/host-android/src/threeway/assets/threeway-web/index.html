@@ -35,6 +35,9 @@
   .detail .big { flex: 1; color: #1C1B1F; font-size: 28px; font-weight: 700; }
   .field { padding-top: 12px; } .field .l { color: #6B6B73; font-size: 12px; } .field .v { color: #1C1B1F; font-size: 15px; }
   .foot { padding-top: 16px; color: #6B6B73; font-size: 12px; }
+  /* Experiment `webcv` (body class "cv"): the browser's own virtualisation. Rows off screen skip
+     layout and paint and are sized from their last measured (or the intrinsic) height. */
+  .cv .row { content-visibility: auto; contain-intrinsic-size: auto 72px; }
 </style>
 </head>
 <body>
@@ -46,6 +49,8 @@ var NAV_BASE = 100000;
 var app = document.getElementById('app');
 var page = null, request = 1, size = 'small', selected = null, nav = 0;
 var pending = {};
+var experiments = window.Threeway && window.Threeway.experiments ? String(window.Threeway.experiments()).split(',') : [];
+if (experiments.indexOf('webcv') >= 0) document.body.classList.add('cv');
 
 function mark(seq, name, at) { (pending[seq] = pending[seq] || {})[name] = at === undefined ? Date.now() : at; }
 
