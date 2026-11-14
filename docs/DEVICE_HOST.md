@@ -198,23 +198,35 @@ cold start goes"). An app can choose how its host starts:
 | `parallel` | starts loading the cached release at once, in a Treehouse app of its own, while the lookup runs; shows it only once the lookup names that same manifest (or fails, or runs out its 10 s, exactly when `network-first` would show the cache too). When the lookup names another one, that app is closed (nothing of it shows) and the named one loads from the network in a new app, as `network-first` loads it | shows at this start |
 | `cache-first` | shows the cached release at once and looks up in the background | shows at the **next** start: a background lookup that found it makes that next start `network-first` (or earlier, as an update: below) |
 
-**Under `parallel`, the cached release's code starts during the lookup.** Its guest code is
-evaluated and its presenter is created while the lookup runs, with the app's bridges and `HostHttp`
-bound, even when the lookup then names another release and it is dropped. Nothing of it shows, and
-nothing it does counts toward crash rollback (its exceptions, its load's outcome and its trial
-marker are held until it shows, and discarded when it is dropped). But its side effects are real: a
-call it makes at start-up (analytics, a `HostHttp` request, a write through `HostSqlDriver`) can
-happen for a release the user never sees. If the app's guest code does such things at start-up,
-choose `network-first` or `cache-first`, or make those calls idempotent.
+**Under `parallel`, the cached release's code starts during the lookup**, held: its guest code is
+evaluated and its presenter is created while the lookup runs, but what it sends out waits. A
+`HostHttp` request, and the app's own code behind a bridge call (the context the host hands a
+binding as `scope.main`), wait until the release shows; when the lookup names another release and
+it is dropped, they fail without being sent (a bridge call's guest gets a failure, a fire-and-forget
+call is not run). For a release that shows, the gate is one read per call. Of crash rollback's
+records, only its "not yet healthy" marker is written while it is held (it is the release the host
+would show, so a process that dies while it evaluates counts against it), cleared when it is
+dropped; its exceptions, its load's outcome, the floor and the last good bundle wait until it shows
+and are discarded when it is dropped. Not held: `HostSqlDriver` (a dropped release can have read or
+written the app's local database at start-up), and a bridge binding that runs the app's code on a
+context of its own rather than `scope.main`. The same holds for an update loading in a new app
+(below) until it is swapped in.
 
 **Updates after a start from the cache.** Zipline takes no further manifest into an app whose first
 load came from its cache, so a `network-first` start from the cache (the lookup failed) applies a
 newer release at the next start. Under `parallel` and `cache-first`, a start from the cache (a
 confirmed `parallel` start, too) still takes updates (`keliver.updates=on-resume` or `live`,
 `checkForUpdate()`): the newer release loads in a new Treehouse app, from the network and through
-the same checks, and screens move to it once it has loaded (`Applied`); when it fails, the running
-app stays (`Failed`), as an update into the running app does. The screen's content is rebuilt on the
-new app, as it is for an update that loads in place.
+the same checks, held as above, and is swapped in once it has loaded (`Applied`); when it fails, the
+running app stays (`Failed`), as an update into the running app does. One such update loads at a
+time; one that has not reported back after two minutes is closed at the next update check. On each
+screen the new app's content is composed beneath the old one, unseen, and the old one stays drawn
+until the new content has its first changes, so the swap shows no empty frame (at most 10 s, then
+the new content shows as it is). The old app is closed once no screen draws it (after 10 s at most:
+a screen that does not recompose meanwhile, in a stopped activity say, goes idle and rebinds when
+it shows again). For those moments two apps run: two QuickJS heaps and two UI trees, the swap's
+peak memory. The guest's screen state starts again on the new app, as it does for an update that
+loads in place.
 
 Set it with `keliver.startPolicy` in `gradle.properties` (Android; `KeliverConfig(startPolicy = …)`
 in code) or `START_POLICY` in `HostConfig.kt` (iOS), to `network-first`, `parallel` or
@@ -232,7 +244,10 @@ already shows the cache. One tampered index read does persist, though: the kept 
 from the next start until an index read without it. An app that wants its own policy whatever the
 index says sets `keliver.startPolicyOverride=none` (Android; `KeliverConfig(startPolicyOverrideAllowed
 = false)` in code) or `START_POLICY_OVERRIDE = "none"` in `HostConfig.kt` (iOS); `any`, or empty,
-lets the override apply. The start's log line says when an override was refused.
+lets the override apply. The start's log line says when an override was refused. Should the default
+become `parallel`, an app that wants `network-first` whatever the index says sets both
+`keliver.startPolicy=network-first` and `keliver.startPolicyOverride=none` (iOS: `START_POLICY =
+"network-first"` and `START_POLICY_OVERRIDE = "none"`): an empty `startPolicy` follows the default.
 
 What each start does, whatever the policy, and why none weakens a check:
 - **First install, a new key, a moved bundle server** (nothing cached for this key and origin):

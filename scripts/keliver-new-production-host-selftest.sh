@@ -177,8 +177,8 @@ grep -q '  bridges: List<KeliverBridgeBinding> = emptyList(),' "$M" && grep -q '
   && [ "$(grep -c 'ManifestPinningHttpClient(' "$M")" = "$(grep -c 'ManifestPinningHttpClient(.*) { servedBridges }' "$M")" ] \
   && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, crash, servedBridges)' "$M")" ] \
   && ! grep -q 'ServedBridges' "$M" "$(dirname "$M")/BundleIndex.kt" \
-  && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
-  && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, ::bridgeDebugLog)' \
+  && grep -A10 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
+  && grep -A10 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, main, ::bridgeDebugLog)' \
   && [ "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
   && grep -A1 'override fun bindService(name: String, service: ZiplineService) {' "$M" | grep -q 'if (fence.live) bridgeBinds.bound(name)' \
   && grep -q '    val bridgeBinds = BridgeBindRecorder()' "$M" \
@@ -230,7 +230,7 @@ grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreeh
   && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "${M%/*}/GuestContract.kt" \
   && grep -q '^package dev.keliver.hostkit$' "${M%/*}/KeliverScreenHost.kt" \
   && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" && grep -q 'noRouteCode = code' "$M" \
-  && grep -q 'val contentSource = remember(route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
+  && grep -q 'val contentSource = remember(app, route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
   && grep -q 'onClose ?: { activity?.finish() }' "$S" && grep -q 'if (active.get()) latestOnClose()' "$S" \
   && grep -q 'override fun onNewIntent(intent: Intent)' "$H/src/main/kotlin/com/example/demo/host/MainActivity.kt" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
@@ -302,7 +302,7 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/d
   && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
   && ! grep -q 'KeliverTrace' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
   && grep -q "def timingBuildTypes = \['debug', 'benchmark'\]" "$H/build.gradle" && grep -q 'profileable true' "$H/build.gradle" \
-  && grep -q 'KeliverTiming.firstFrame(host.launch(app, s.app, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
+  && grep -q 'KeliverTiming.firstFrame(host.launch(app, treehouseApp, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
   && ok "M0: timing marks in debug and benchmark (src/timing), a no-op elsewhere (src/notiming); a benchmark build type" \
   || bad "M0: the timing marks or the benchmark build type are not wired"
 # M4: the guest frame profile, beside the marks: the listener's call hooks, the window, a no-op elsewhere.
@@ -369,7 +369,7 @@ grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), fl
 C="${M%/*}/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$M" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$M" \
-  && grep -A3 'if (progress.moduleLoadStart()) {' "$M" | grep -q 'fence.run { onReady(s) }' \
+  && grep -A9 'if (progress.moduleLoadStart()) {' "$M" | grep -q 'LoadFence.Mode.LIVE -> onReady(s)' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$M" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }' "$M" \
   && grep -q 'crash.loadFailed(sequence, theBundles)' "$M" \
@@ -413,7 +413,14 @@ SP="${M%/*}/StartPolicy.kt"
   && grep -q 'val fence = LoadFence(held) { block -> scope.launch { block() } }' "$M" \
   && grep -q '    fence.run { onUncaught(count(CrashKind.EXCEPTION)) }' "$M" \
   && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$M" \
-  && grep -q 'androidx.compose.runtime.key(s.app)' "${M%/*}/KeliverScreen.kt" \
+  && grep -q 'for (app in listOfNotNull(back, front)) {' "${M%/*}/KeliverScreen.kt" \
+  && grep -q 'val release = host.drawing(app)' "${M%/*}/KeliverScreen.kt" \
+  && grep -q '    old?.let { retire(it.app) }' "$M" && ! grep -q 'OLD_APP_CLOSE_DELAY' "$M" \
+  && grep -q 'zipline.bind<HostHttpProvider>("HostHttp", if (held) GatedHostHttp(hostHttp, fence.calls) else hostHttp)' "$M" \
+  && grep -q 'val main = if (held) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main' "$M" \
+  && grep -q 'if (!fence.onDrop(undo)) undo()' "$M" \
+  && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$M" \
+  && [ -f "${M%/*}/CallGates.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CallGatesTest.kt" ] \
   && grep -q 'fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String?' "${M%/*}/BundleIndex.kt" \
   && ok "start policy: keliver.startPolicy (network-first by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app" \
   || bad "start policy: not wired"
@@ -475,7 +482,7 @@ grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q
 grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$L/consumer-rules.pro" \
   && ok "M5: the library's consumer rules keep MemoryUsage (QuickJS builds it through JNI)" || bad "M5: the library's consumer rules do not keep MemoryUsage"
 [ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
-same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt CrashRollback.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
+same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt CrashRollback.kt StartPolicy.kt CallGates.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the library and the standalone host (one set of sources)"

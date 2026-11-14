@@ -237,6 +237,89 @@ class StartPolicyTest {
     assertEquals("running", ledger.last())
   }
 
+  /** What [gate] decides for a call made now: null while it waits. */
+  private fun call(gate: CallGate): () -> Boolean? {
+    var decided: Boolean? = null
+    gate.whenDecided { decided = it }
+    return { decided }
+  }
+
+  @Test fun aHeldAppsCallsWaitUntilItShows() {
+    val main = Main()
+    val fence = LoadFence(held = true, main.post)
+    assertFalse(fence.calls.isOpen)
+    val first = call(fence.calls)
+    val second = call(fence.calls)
+    assertNull(first(), "held: the call waits")
+    fence.goLive()
+    assertEquals(true, first(), "shown: the call goes")
+    assertEquals(true, second())
+    assertTrue(fence.calls.isOpen)
+    assertEquals(true, call(fence.calls)(), "the host's app: at once")
+    // An app that was never held: open from the start.
+    assertTrue(LoadFence(held = false, main.post).calls.isOpen)
+  }
+
+  @Test fun aDroppedAppsCallsFailUnsent() {
+    val main = Main()
+    val fence = LoadFence(held = true, main.post)
+    val waiting = call(fence.calls)
+    fence.drop()
+    assertEquals(false, waiting(), "dropped while held: the waiting call fails")
+    assertEquals(false, call(fence.calls)(), "and so does a later one")
+    fence.goLive()
+    assertFalse(fence.calls.isOpen, "a dropped app never becomes the host's")
+    // An app an update replaced (it was live): its calls go on until it is closed.
+    val replaced = LoadFence(held = false, main.post)
+    replaced.drop()
+    assertTrue(replaced.calls.isOpen)
+    var decided: Boolean? = null
+    CallGate(held = true).apply { shut(); open() }.whenDecided { decided = it }
+    assertEquals(false, decided, "a gate is decided once")
+  }
+
+  @Test fun aHeldAppsMarkerIsWrittenAtOnceAndClearedWhenDropped() {
+    // L3: the cached load (or an update in a new app) evaluates while held: it is the release the
+    // host would show, so its "not yet healthy" marker is written at once, as the host's app's is.
+    val store = memoryStore()
+    val g = CrashGuard(store, "keliver-production-abcd", DEFAULT_CRASH_THRESHOLD).apply { screens(true) }
+    val main = Main()
+    val fence = LoadFence(held = true, main.post)
+    fun evaluate(f: LoadFence, s: Long) { // as the listener's moduleLoadStart does, for a held app
+      g.loadStarting(s)
+      val undo = { g.loadFailed(s, theBundles = false); Unit }
+      if (!f.onDrop(undo)) undo()
+    }
+    evaluate(fence, 6)
+    assertEquals(6, g.ledger().trial)
+    assertTrue(g.ledger().running, "a process that dies now counts against 6")
+    assertEquals(CrashStep.Counted(6, 1, CrashKind.PROCESS), CrashGuard(store, "keliver-production-abcd").atStart())
+    g.loadStarting(6)
+    fence.drop()
+    assertFalse(g.ledger().running, "dropped: the marker is cleared, as a download's failure clears it")
+    assertEquals(CrashStep.None, CrashGuard(store, "keliver-production-abcd").atStart())
+    // Dropped before its marker was registered: the listener clears it itself.
+    val late = LoadFence(held = true, main.post).apply { drop() }
+    evaluate(late, 6)
+    assertFalse(g.ledger().running)
+    // Shown: the marker stays (it is the host's app), and a later drop (an update replaced it) leaves it.
+    val shown = LoadFence(held = true, main.post)
+    evaluate(shown, 6)
+    shown.goLive()
+    shown.drop()
+    assertTrue(g.ledger().running)
+  }
+
+  private fun memoryStore() = object : CrashStore {
+    val values = mutableMapOf<String, String>()
+    override fun read(key: String): String? = values[key]
+    override fun write(values: Map<String, String?>): Boolean {
+      values.forEach { (k, v) -> if (v == null) this.values.remove(k) else this.values[k] = v }
+      return true
+    }
+    override fun <T> locked(block: () -> T): T = block()
+  }
+
   @Test fun crashRollbackDecidesWhenABundleIsSetAside() {
     val store = object : CrashStore {
       val values = mutableMapOf<String, String>()

@@ -87,7 +87,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
@@ -166,8 +171,12 @@ import platform.darwin.dispatch_get_main_queue
 import platform.darwin.notify_register_dispatch
 
 private const val TAG = "KeliverHost"
-/** An app an update in a new app replaced is closed this long after the swap: screens have bound the new one by then. */
-private const val OLD_APP_CLOSE_DELAY_MILLIS = 2_000L
+/**
+ * An update in a new app: screens draw the app it replaced until the new app's content has its
+ * first changes, and that app is closed once no screen draws it; but neither waits longer than this
+ * (a screen that does not recompose, a content that never gets changes).
+ */
+private const val SWAP_LIMIT_MILLIS = 10_000L
 /** One Zipline cache per key, and one rollback floor and last-good URL per key with it. */
 private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
 /** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
@@ -749,17 +758,58 @@ public object Keliver {
 
   /**
    * An update loaded in a new app ([Session.loadInNewApp]) takes the running app's place: the
-   * running one's events stop counting now, and it is closed once screens have bound the new one
-   * (the screen keys its content on the app). Main thread.
+   * running one's events stop counting now, and it is closed once no screen draws it ([retire]).
+   * Main thread.
    */
   internal fun swapIn(next: AppLoad) {
     val old = session
     old?.fence?.drop()
     next.show()
-    if (old != null) appScope.launch {
-      delay(OLD_APP_CLOSE_DELAY_MILLIS.milliseconds)
-      old.app.close()
+    old?.let { retire(it.app) }
+  }
+
+  /** The update loading in a new app ([Session.loadInNewApp]), until it reports back: one at a time. Main thread. */
+  internal var updateInNewApp: AppLoad? = null
+
+  /** How many screens draw each app ([drawing]). Main thread. */
+  private val drawn = HashMap<TreehouseApp<PortalPresenter>, Int>()
+  /** Apps an update replaced, not closed yet. Main thread. */
+  private val retiring = HashSet<TreehouseApp<PortalPresenter>>()
+
+  /**
+   * A screen draws [app] (after an update swapped a new app in, the old one until the new one's
+   * content has its first changes); call what this returns when it no longer does. Main thread.
+   */
+  internal fun drawing(app: TreehouseApp<PortalPresenter>): () -> Unit {
+    drawn[app] = (drawn[app] ?: 0) + 1
+    var released = false
+    return {
+      if (!released) {
+        released = true
+        val left = (drawn[app] ?: 1) - 1
+        if (left > 0) drawn[app] = left else drawn.remove(app)
+        if (left <= 0 && app in retiring) appScope.launch { closeRetired(app, "no screen draws it now") }
+      }
     }
+  }
+
+  /** [app] was replaced: closed once no screen draws it, and after SWAP_LIMIT_MILLIS at most. Main thread. */
+  private fun retire(app: TreehouseApp<PortalPresenter>) {
+    retiring += app
+    if ((drawn[app] ?: 0) == 0) {
+      appScope.launch { closeRetired(app, "no screen draws it") }
+      return
+    }
+    appScope.launch {
+      delay(SWAP_LIMIT_MILLIS.milliseconds)
+      closeRetired(app, "a screen still drew it after $SWAP_LIMIT_MILLIS ms")
+    }
+  }
+
+  private fun closeRetired(app: TreehouseApp<PortalPresenter>, why: String) {
+    if (!retiring.remove(app)) return
+    log("the app an update replaced is closed: $why")
+    app.close()
   }
 
   /** Called on the main thread when the host falls back to the cached last good bundle. */
@@ -811,6 +861,13 @@ public object Keliver {
       if (it.at.elapsedNow() < 120.seconds) return KeliverUpdateCheck("available", it.sequence, true, "")
       log("update check: sequence ${it.sequence} was never reported back; looking again")
       pending = null
+      // An update loading in a new app that never reported back is closed (its calls out fail
+      // unsent), so that two never load at once.
+      updateInNewApp?.let { u ->
+        updateInNewApp = null
+        log("update check: closing the new app sequence ${it.sequence} was loading in")
+        u.drop()
+      }
     }
     lastLookup = TimeSource.Monotonic.markNow()
     val latest = lookupBundle(s.lookup.server, s.lookup.capabilities, HostFacts(installId(), hostVersion(), s.lookup.floor(), served, setAside = crash?.setAside() ?: 0), s.lookup.cacheName)
@@ -836,6 +893,7 @@ public object Keliver {
       log("update check: sequence $sequence is available (running ${running.sequence}); it applies at the next start")
       return KeliverUpdateCheck("available", sequence, false, "")
     }
+    if (inNewApp != null && updateInNewApp != null) return KeliverUpdateCheck("available", sequence, true, "")
     pending = Pending(sequence, latest.manifestUrl, TimeSource.Monotonic.markNow())
     if (inNewApp != null) {
       // Start policy PARALLEL or CACHE_FIRST, after a start from the cache: Zipline takes no further
@@ -1171,27 +1229,90 @@ public object Keliver {
         }
         UnavailableScreen(s, safeArea)
       }
-      // Keyed on the app: an update that loaded in a new app (start policy parallel or cache-first,
-      // after a start from the cache) binds this screen to that app.
-      is KeliverHostState.Running -> androidx.compose.runtime.key(s.app) {
-        val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(imageLoader) }
-        val contentSource = remember {
-          object : TreehouseContentSource<PortalPresenter> {
-            // first-frame, in Debug and Benchmark builds only (M0); the UI itself elsewhere.
-            override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, s.app, route, close))
+      // An update that loaded in a new app (start policy parallel or cache-first, after a start
+      // from the cache) binds this screen to that app. Until the new app's content has its first
+      // changes it is composed beneath, unseen, and the app it replaced stays drawn on top: never
+      // the empty frame of a content still loading (SWAP_LIMIT_MILLIS at most).
+      is KeliverHostState.Running -> {
+        var front by remember { mutableStateOf(s.app) }
+        val back = s.app.takeIf { it !== front }
+        val latestApp by rememberUpdatedState(s.app)
+        LaunchedEffect(back) {
+          if (back != null) {
+            delay(SWAP_LIMIT_MILLIS.milliseconds)
+            front = back
           }
         }
-        // K2's screen-failed: the code threw while this screen showed it. (onUnavailable and
-        // safeArea are this view controller's, fixed for its life.)
-        val failureWidgets = remember { ScreenFailedWidgets({ onUnavailable }, safeArea) }
         Box(modifier) {
-          TreehouseContent(
-            treehouseApp = s.app,
-            widgetSystem = widgetSystem,
-            contentSource = contentSource,
-            dynamicContentWidgetFactory = failureWidgets,
-          )
+          // Drawn in this order: the new app (when there is one) beneath, the front one on top.
+          for (app in listOfNotNull(back, front)) {
+            androidx.compose.runtime.key(app) {
+              AppContent(app, route, close, onUnavailable, safeArea, hidden = app === back) {
+                if (app === latestApp) front = app
+              }
+            }
+          }
         }
+      }
+    }
+  }
+
+  /**
+   * One app's content on a screen. [hidden]: composed beneath the app it replaces, unseen and out
+   * of reach, until its first changes arrive ([onFirstChanges]: Treehouse takes its Loading widget
+   * away for them). While composed it counts as a screen drawing [app] ([drawing]).
+   */
+  @Composable
+  private fun AppContent(
+    app: TreehouseApp<PortalPresenter>,
+    route: KeliverRoute?,
+    close: () -> Unit,
+    onUnavailable: ((KeliverHostState.Unavailable) -> Unit)?,
+    safeArea: Boolean,
+    hidden: Boolean,
+    onFirstChanges: () -> Unit,
+  ) {
+    DisposableEffect(app) {
+      val release = drawing(app)
+      onDispose { release() }
+    }
+    val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(imageLoader) }
+    val treehouseApp = app
+    val contentSource = remember(app) {
+      object : TreehouseContentSource<PortalPresenter> {
+        // first-frame, in Debug and Benchmark builds only (M0); the UI itself elsewhere.
+        override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, treehouseApp, route, close))
+      }
+    }
+    val latestFirstChanges by rememberUpdatedState(onFirstChanges)
+    // K2's screen-failed: the code threw while this screen showed it. (onUnavailable and
+    // safeArea are this view controller's, fixed for its life.)
+    val failureWidgets = remember { ScreenFailedWidgets({ onUnavailable }, safeArea) { latestFirstChanges() } }
+    if (hidden) {
+      // Treehouse shows its Loading widget a frame after binding, and takes it away for the first
+      // changes; content that had its changes before it bound never shows one.
+      LaunchedEffect(Unit) {
+        repeat(3) { withFrameNanos { } }
+        if (!failureWidgets.loadingShown) latestFirstChanges()
+      }
+    }
+    Box {
+      TreehouseContent(
+        treehouseApp = app,
+        widgetSystem = widgetSystem,
+        contentSource = contentSource,
+        modifier = if (hidden) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics { } else Modifier,
+        dynamicContentWidgetFactory = failureWidgets,
+      )
+      // Unseen, and out of reach: a touch that falls through the app on top stops here.
+      if (hidden) {
+        Box(
+          Modifier.matchParentSize().pointerInput(Unit) {
+            awaitPointerEventScope {
+              while (true) awaitPointerEvent().changes.forEach { it.consume() }
+            }
+          },
+        )
       }
     }
   }
@@ -1208,17 +1329,27 @@ private fun UnavailableScreen(s: KeliverHostState.Unavailable, safeArea: Boolean
  * What a screen shows in place of the guest's content while code loads, and once the code it showed
  * has thrown (K2's `screen-failed`, as Android's KeliverScreen): the host reports it (W6), the screen
  * calls its `onUnavailable` once per failure and shows [UnavailableScreen]. Treehouse replaces the
- * failed content when code loads again.
+ * failed content when code loads again. [firstChanges] is called when the Loading widget goes (the
+ * content has its first changes).
  */
 private class ScreenFailedWidgets(
   private val onUnavailable: () -> ((KeliverHostState.Unavailable) -> Unit)?,
   private val safeArea: Boolean,
+  private val firstChanges: () -> Unit,
 ) : DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> {
+  /** Whether a Loading widget was composed for this content. Main thread. */
+  var loadingShown = false
+    private set
+
   // Nothing while code loads, as before; but once the running code has thrown, it never will:
   // a screen opened then says so and calls its onUnavailable.
   override fun Loading(): Loading<@Composable (Modifier) -> Unit> = object : Loading<@Composable (Modifier) -> Unit> {
     override var modifier: RedwoodModifier = RedwoodModifier
     override val value: @Composable (Modifier) -> Unit = {
+      DisposableEffect(Unit) {
+        loadingShown = true
+        onDispose { firstChanges() }
+      }
       val failed by Keliver.crashed.collectAsState()
       failed?.let { f -> Failed(f) }
     }
@@ -1353,9 +1484,10 @@ private suspend fun startHost(): HostState {
       var update: AppLoad? = null
       createApp(
         trust, url, sha256, lookup, DefaultFreshnessCheckerNotFresh, apiBase, fallback = null, parts = parts,
-        held = { update = it },
+        held = { update = it; Keliver.updateInNewApp = it },
         onKept = { loaded ->
           val u = checkNotNull(update)
+          if (Keliver.updateInNewApp === u) Keliver.updateInNewApp = null
           if (loaded) {
             Keliver.swapIn(u)
           } else {
@@ -1593,7 +1725,9 @@ private fun createApp(
   lateinit var app: TreehouseApp<PortalPresenter>
   val factory = shared.factory
   val sql = shared.sql
-  val http = shared.http
+  // A held app's calls out wait until it shows, and fail unsent when it is dropped (CallGates.kt).
+  val http = shared.http?.let { if (held != null) GatedHostHttp(it, fence.calls) else it }
+  val bridgeContext = if (held != null) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main
   val bridges = Keliver.startedBridges // B5: as the host started with them
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "keliver-production"
@@ -1605,7 +1739,7 @@ private fun createApp(
       // B5: the app's own bridges first, each checked to bind exactly its declared name; then
       // the host's services, so that no binding can stand in for one of them.
       if (bridges.isNotEmpty()) {
-        val bridgeScope = KeliverBridgeScope(zipline, Dispatchers.Main, Keliver::bridgeDebugLog)
+        val bridgeScope = KeliverBridgeScope(zipline, bridgeContext, Keliver::bridgeDebugLog)
         val load = currentCoroutineContext()[Job]
         bindAppBridges(bridges, bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true }) { it.bind(bridgeScope) }
       }
@@ -1865,10 +1999,20 @@ private class LoggingEventListener(
   override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()
 
   // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
+  // A held app's too, at once: it is the release the host would show, so a process that dies while
+  // it evaluates counts against it; dropped, its marker is cleared (as a download's failure is).
   override fun moduleLoadStart(moduleId: String): Any? {
     if (progress.moduleLoadStart()) {
       val s = sequence
-      fence.run { onReady(s) }
+      when (fence.mode) {
+        LoadFence.Mode.LIVE -> onReady(s)
+        LoadFence.Mode.HELD -> {
+          onReady(s)
+          val undo = { crash.loadFailed(s, theBundles = false); Unit }
+          if (!fence.onDrop(undo)) undo()
+        }
+        LoadFence.Mode.DROPPED -> Unit
+      }
     }
     return null
   }
@@ -1889,8 +2033,12 @@ private class LoggingEventListener(
     // A dropped app's load changes nothing: not the floor, not the last good bundle.
     if (!fence.live) return
     onSuccess(sequence, manifestUrl)
-    manifestUrl?.let(onLoaded)
-    sequence?.let(onSequence)
+    // The host's app: before this returns. A held app's when it shows, on the main thread, where it
+    // is dropped: a dropped app raises no floor and names no last good bundle.
+    fence.run {
+      manifestUrl?.let(onLoaded)
+      sequence?.let(onSequence)
+    }
   }
   override fun codeLoadSkipped(startValue: Any?) {
     log("codeLoadSkipped: the manifest is unchanged")

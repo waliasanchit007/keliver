@@ -9,23 +9,30 @@
  *   lookup runs, and shows only once the lookup names that same manifest, or fails (when
  *   NETWORK_FIRST would show the cache too). When it names another, that app is closed and the named
  *   release loads from the network in a new one. So at start-up it never shows older code than
- *   NETWORK_FIRST would. Its guest code does start during the lookup (its side effects, a HostHttp
- *   call say, can happen even when it is then dropped); nothing of it shows, and nothing it does
- *   counts toward crash rollback ([LoadFence]).
+ *   NETWORK_FIRST would. Its guest code does start during the lookup, but its calls out (HostHttp,
+ *   the app's bridges) wait until it shows, and fail without being sent when it is dropped
+ *   ([CallGate]); nothing of it shows, and of crash rollback's records only its "not yet healthy"
+ *   marker is written while it is held, cleared when it is dropped ([LoadFence]). HostSqlDriver is
+ *   not held: a dropped release can have written to the app's local database.
  * - CACHE_FIRST: the cached release shows at once; the lookup runs in the background, and a newer
  *   release it finds makes the NEXT start NETWORK_FIRST.
  *
  * After a start from the cache under either, an update (on resume, live, checkForUpdate) loads in a
  * new TreehouseApp and is swapped in once it has loaded (Zipline takes no further manifest into an
- * app whose first load came from its cache); the running one stays when it fails.
+ * app whose first load came from its cache); the running one stays when it fails. One such update
+ * at a time. Screens keep drawing the old app until the new app's content has its first changes,
+ * and the old app is closed once no screen draws it.
  *
  * None of them changes what may run: every cached start goes through the host's cached-bundle
  * checker (the key, the rollback floor, set-aside sequences) and every network load through its
  * pinning client. A start that crash rollback has a say in is always NETWORK_FIRST.
  */
+@file:OptIn(kotlin.concurrent.atomics.ExperimentalAtomicApi::class)
+
 package @@PACKAGE@@
 
 import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicReference
 
 /** How a production host starts; [wireName] is how gradle.properties, HostConfig.kt and the index spell it. */
 enum class KeliverStartPolicy(val wireName: String) {
@@ -171,8 +178,9 @@ internal fun afterParallelLookup(namedUrl: String?, namedSha256: String?, cached
  *   load's outcome) are kept, in order, and act when it [goLive]s, or never, when it is [drop]ped.
  * - DROPPED: closed by the host; its events, late ones from Zipline's thread too, change nothing.
  *
- * [post] runs a block on the main thread, after what is already queued there. [run] is called on
- * Zipline's thread or the main thread; [goLive] and [drop] on the main thread only.
+ * [post] runs a block on the main thread, after what is already queued there. [run] and [onDrop]
+ * are called on Zipline's thread or the main thread; [goLive] and [drop] on the main thread only.
+ * [calls] holds the app's calls out while it is HELD ([CallGate]).
  */
 internal class LoadFence(held: Boolean, private val post: (() -> Unit) -> Unit) {
   enum class Mode { LIVE, HELD, DROPPED }
@@ -181,8 +189,26 @@ internal class LoadFence(held: Boolean, private val post: (() -> Unit) -> Unit) 
     private set
   private val kept = ArrayList<() -> Unit>() // main thread only
 
+  /** The app's calls out (HostHttp, the app's bridges): open once it is LIVE, shut when it is dropped while HELD. */
+  val calls: CallGate = CallGate(held)
+
+  /** What [drop] undoes ([onDrop]); null once dropped. */
+  private val dropHooks = AtomicReference<List<() -> Unit>?>(emptyList())
+
   /** Not dropped: the host's app, or one that may become it. */
   val live: Boolean get() = mode != Mode.DROPPED
+
+  /**
+   * [undo] runs (on the main thread) when this app is dropped: what a HELD app did at once, because
+   * it is what the host would show (crash rollback's "not yet healthy" marker), undone. False when
+   * it is already dropped: the caller undoes it itself.
+   */
+  fun onDrop(undo: () -> Unit): Boolean {
+    while (true) {
+      val hooks = dropHooks.load() ?: return false
+      if (dropHooks.compareAndSet(hooks, hooks + undo)) return true
+    }
+  }
 
   /** [block] now (LIVE), kept until [goLive] (HELD), or never (DROPPED). */
   fun run(block: () -> Unit) {
@@ -204,15 +230,66 @@ internal class LoadFence(held: Boolean, private val post: (() -> Unit) -> Unit) 
   fun goLive() {
     if (mode != Mode.HELD) return
     mode = Mode.LIVE
+    dropHooks.store(emptyList()) // nothing to undo: it is the host's app
     val blocks = kept.toList()
     kept.clear()
     blocks.forEach { it() }
+    calls.open()
   }
 
-  /** The app is closed: nothing it kept, and nothing it does from now on, acts. */
+  /**
+   * The app is closed, or replaced: nothing it kept, and nothing it does from now on, acts. A HELD
+   * app's calls out fail, unsent, and what it did at once is undone ([onDrop]); a LIVE one's calls
+   * go on until it is closed (an app an update replaced: screens still draw it for a moment).
+   */
   fun drop() {
+    val wasHeld = mode == Mode.HELD
     mode = Mode.DROPPED
     kept.clear()
+    val undo = dropHooks.exchange(null).orEmpty()
+    if (wasHeld) {
+      calls.shut()
+      undo.forEach { it() }
+    }
+  }
+}
+
+/**
+ * Whether one app's calls out (HostHttp, the app's bridges) may go: OPEN for the host's app; a
+ * HELD app's ([LoadFence]) wait until it goes live ([open]) and fail, unsent, when it is dropped
+ * ([shut]). For a live app [isOpen] is one read, so the gate costs it nothing. Any thread.
+ */
+internal class CallGate(held: Boolean) {
+  private sealed interface State
+  private object Open : State
+  private object Shut : State
+  private class Waiting(val waiters: List<(Boolean) -> Unit>) : State
+
+  private val state = AtomicReference<State>(if (held) Waiting(emptyList()) else Open)
+
+  val isOpen: Boolean get() = state.load() === Open
+
+  /** [then] with true once the gate is open, false once it is shut: now, when that is decided already. */
+  fun whenDecided(then: (open: Boolean) -> Unit) {
+    while (true) {
+      when (val s = state.load()) {
+        Open -> return then(true)
+        Shut -> return then(false)
+        is Waiting -> if (state.compareAndSet(s, Waiting(s.waiters + then))) return
+      }
+    }
+  }
+
+  fun open() = decide(Open)
+
+  fun shut() = decide(Shut)
+
+  /** Decided once: a gate opened stays open. */
+  private fun decide(to: State) {
+    while (true) {
+      val s = state.load() as? Waiting ?: return
+      if (state.compareAndSet(s, to)) return s.waiters.forEach { it(to === Open) }
+    }
   }
 }
 

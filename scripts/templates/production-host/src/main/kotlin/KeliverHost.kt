@@ -33,7 +33,8 @@
  *   - otherwise: a "No bundle" screen.
  *   That is the default start policy, network-first. KeliverConfig.startPolicy (keliver.startPolicy)
  *   can choose parallel (the cached bundle loads during the lookup, shown once the lookup confirms
- *   it) or cache-first (the cached bundle at once; a newer one at the next start), and a release
+ *   it) or cache-first (the cached bundle at once; a newer one the background lookup finds at the
+ *   next start, or as an update on resume or live), and a release
  *   owner can override it per channel in the index, from the next start, unless the app says
  *   keliver.startPolicyOverride=none (StartPolicy.kt; docs/DEVICE_HOST.md, "Start policy"). Under
  *   either, a start from the cache still takes updates: each loads in a new app, swapped in once it
@@ -156,8 +157,12 @@ import okio.ByteString.Companion.decodeHex
 
 internal const val TAG = "KeliverHost"
 private const val PREFS = "keliver-host"
-/** An app an update in a new app replaced is closed this long after the swap: screens have bound the new one by then. */
-private const val OLD_APP_CLOSE_DELAY_MILLIS = 2_000L
+/**
+ * An update in a new app: screens draw the app it replaced until the new app's content has its
+ * first changes, and that app is closed once no screen draws it; but neither waits longer than this
+ * (a screen that does not recompose, a content that never gets changes).
+ */
+internal const val SWAP_LIMIT_MILLIS = 10_000L
 
 /** DEBUG builds only: where a bundle server set on the device is read from, under filesDir (KeliverConfig.fromBuild). */
 const val DEBUG_BUNDLE_SERVER_FILE = "keliver/bundle-server"
@@ -796,6 +801,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /** The update handed to Zipline and not yet reported back: its index sequence, manifest URL, and when. */
   private class Pending(val sequence: Long, val url: String, val at: Long)
   private var pending: Pending? = null
+  /** The update loading in a new app ([Session.loadInNewApp]), until it reports back: one at a time. Main thread. */
+  private var updateInNewApp: AppLoad? = null
   /** Manifest URLs that failed to load as updates in this process: not tried again until the next start. */
   private val failedUpdates = mutableSetOf<String>()
   private var lastLookupAt = 0L
@@ -948,6 +955,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
           held = true,
           onKept = { loaded ->
             val u = checkNotNull(update)
+            if (updateInNewApp === u) updateInNewApp = null
             if (loaded) {
               swapIn(u)
             } else {
@@ -956,6 +964,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             }
           },
         )
+        updateInNewApp = update
       }
       if (choice.mode == KeliverStartPolicy.CACHE_FIRST) {
         startTreehouse(prefs, factory, cacheName, floorNames, okhttp, http, apiBase, lastGood, cached, lookup, fallback = null, loadInNewApp = loadInNewApp)
@@ -1194,17 +1203,56 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
   /**
    * An update loaded in a new app ([KeliverHost.Session.loadInNewApp]) takes the running app's
-   * place: the running one's events stop counting now, and it is closed once screens have bound
-   * the new one (KeliverScreen keys its content on the app). Main thread.
+   * place: the running one's events stop counting now, and it is closed once no screen draws it
+   * ([retire]). Main thread.
    */
   private fun swapIn(next: AppLoad) {
     val old = session
     old?.fence?.drop()
     next.show()
-    if (old != null) scope.launch {
-      delay(OLD_APP_CLOSE_DELAY_MILLIS)
-      old.app.close()
+    old?.let { retire(it.app) }
+  }
+
+  /** How many screens draw each app ([drawing]). Main thread. */
+  private val drawn = HashMap<TreehouseApp<PortalPresenter>, Int>()
+  /** Apps an update replaced, not closed yet. Main thread. */
+  private val retiring = HashSet<TreehouseApp<PortalPresenter>>()
+
+  /**
+   * A screen draws [app] ([KeliverScreen]: after an update swapped a new app in, the old one until
+   * the new one's content has its first changes); call what this returns when it no longer does.
+   * Main thread.
+   */
+  internal fun drawing(app: TreehouseApp<PortalPresenter>): () -> Unit {
+    drawn[app] = (drawn[app] ?: 0) + 1
+    var released = false
+    return {
+      if (!released) {
+        released = true
+        val left = (drawn[app] ?: 1) - 1
+        if (left > 0) drawn[app] = left else drawn.remove(app)
+        if (left <= 0 && app in retiring) scope.launch { closeRetired(app, "no screen draws it now") }
+      }
     }
+  }
+
+  /** [app] was replaced: closed once no screen draws it, and after SWAP_LIMIT_MILLIS at most. Main thread. */
+  private fun retire(app: TreehouseApp<PortalPresenter>) {
+    retiring += app
+    if ((drawn[app] ?: 0) == 0) {
+      scope.launch { closeRetired(app, "no screen draws it") }
+      return
+    }
+    scope.launch {
+      delay(SWAP_LIMIT_MILLIS)
+      closeRetired(app, "a screen still drew it after $SWAP_LIMIT_MILLIS ms")
+    }
+  }
+
+  private fun closeRetired(app: TreehouseApp<PortalPresenter>, why: String) {
+    if (!retiring.remove(app)) return
+    Log.d(TAG, "the app an update replaced is closed: $why")
+    app.close()
   }
 
   private fun startTreehouse(
@@ -1254,8 +1302,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         // B5: the app's own bridges first, each checked to bind exactly its declared name; then
         // the host's services, so that no binding can stand in for one of them.
+        // A held app's calls out wait until it shows, and fail unsent when it is dropped (CallGates.kt).
         if (config.bridges.isNotEmpty()) {
-          val bridgeScope = KeliverBridgeScope(zipline, Dispatchers.Main, ::bridgeDebugLog)
+          val main = if (held) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main
+          val bridgeScope = KeliverBridgeScope(zipline, main, ::bridgeDebugLog)
           val load = currentCoroutineContext()[Job]
           bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true }) { it.bind(bridgeScope) }
         }
@@ -1266,7 +1316,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
           val hostHttp = config.httpClient
             ?.let { OkHttpHostHttp(it, apiBase, config.requestPolicy, appOwnsCredentials = true) }
             ?: OkHttpHostHttp(okhttp, apiBase, config.requestPolicy)
-          zipline.bind<HostHttpProvider>("HostHttp", hostHttp)
+          zipline.bind<HostHttpProvider>("HostHttp", if (held) GatedHostHttp(hostHttp, fence.calls) else hostHttp)
         }
         KeliverTiming.bindServices(zipline) // KeliverTrace, in debug and benchmark builds only (M0)
       }
@@ -1507,6 +1557,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       if (SystemClock.elapsedRealtime() - it.at < 120_000) return@withContext KeliverUpdateCheck.Available(it.sequence, applying = true)
       Log.d(TAG, "update check: sequence ${it.sequence} was never reported back; looking again")
       pending = null
+      // An update loading in a new app that never reported back is closed (its calls out fail
+      // unsent), so that two never load at once.
+      updateInNewApp?.let { u ->
+        updateInNewApp = null
+        Log.d(TAG, "update check: closing the new app sequence ${it.sequence} was loading in")
+        u.drop()
+      }
     }
     lastLookupAt = SystemClock.elapsedRealtime()
     val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges, setAside = crash?.setAside() ?: 0)
@@ -1537,6 +1594,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       Log.d(TAG, "update check: sequence $sequence is available (running $current); it applies at the next start")
       return@withContext KeliverUpdateCheck.Available(sequence, applying = false)
     }
+    if (inNewApp != null && updateInNewApp != null) return@withContext KeliverUpdateCheck.Available(sequence, applying = true)
     pending = Pending(sequence, latest.manifestUrl, SystemClock.elapsedRealtime())
     if (inNewApp != null) {
       // Start policy PARALLEL or CACHE_FIRST, after a start from the cache: Zipline takes no further
@@ -1851,10 +1909,20 @@ private class LoggingEventListener(
   override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()
 
   // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
+  // A held app's too, at once: it is the release the host would show, so a process that dies while
+  // it evaluates counts against it; dropped, its marker is cleared (as a download's failure is).
   override fun moduleLoadStart(moduleId: String): Any? {
     if (progress.moduleLoadStart()) {
       val s = sequence
-      fence.run { onReady(s) }
+      when (fence.mode) {
+        LoadFence.Mode.LIVE -> onReady(s)
+        LoadFence.Mode.HELD -> {
+          onReady(s)
+          val undo = { crash.loadFailed(s, theBundles = false); Unit }
+          if (!fence.onDrop(undo)) undo()
+        }
+        LoadFence.Mode.DROPPED -> Unit
+      }
     }
     return null
   }
@@ -1875,8 +1943,12 @@ private class LoggingEventListener(
     if (!fence.live) return
     onSuccess(sequence, manifestUrl)
     KeliverTiming.memory("code", zipline) // the memory profile (M5), in debug and benchmark builds only
-    manifestUrl?.let(onLoaded)
-    sequence?.let(onSequence)
+    // The host's app: before this returns. A held app's when it shows, on the main thread, where it
+    // is dropped: a dropped app raises no floor and names no last good bundle.
+    fence.run {
+      manifestUrl?.let(onLoaded)
+      sequence?.let(onSequence)
+    }
   }
   override fun codeLoadSkipped(startValue: Any?) {
     Log.d(TAG, "codeLoadSkipped: the manifest is unchanged")

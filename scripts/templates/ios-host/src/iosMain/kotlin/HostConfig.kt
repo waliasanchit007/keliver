@@ -44,11 +44,13 @@ package @@PACKAGE@@
 // START_POLICY is how the host starts (docs/DEVICE_HOST.md, "Start policy"):
 // "network-first" (the lookup, then the bundle, before anything shows),
 // "parallel" (the cached bundle loads while the lookup runs, and shows once the
-// lookup confirms it; its code starts during the lookup even when it is then
-// dropped) or "cache-first" (the cached bundle shows at once; a newer one
-// applies at the next start). Empty: network-first. A release owner's override
-// in the index (keliver-publish --set-start-policy) takes its place from the
-// next start, unless START_POLICY_OVERRIDE is "none" ("any", or empty: allowed).
+// lookup confirms it; its calls out wait until then, and fail unsent when it is
+// dropped) or "cache-first" (the cached bundle shows at once; a newer one the
+// background lookup finds loads at the next start, or as an update with UPDATES
+// "on-resume" or "live"). Empty: network-first. A release owner's override in
+// the index (keliver-publish --set-start-policy) takes its place from the next
+// start, unless START_POLICY_OVERRIDE is "none" ("any", or empty: allowed): an
+// app that must start network-first whatever the index says sets both.
 internal const val CRASH_THRESHOLD: Int = 2
 internal const val CRASH_WINDOW_MILLIS: Long = 10_000L
 internal const val PORTAL_PUBLIC_KEY_HEX: String = "@@KEY_HEX@@"

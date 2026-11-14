@@ -172,7 +172,7 @@ grep -q '  public var bridges: List<KeliverBridgeBinding> = emptyList()' "$V" \
   && ! grep -q 'ServedBridges' "$V" "$K/BundleIndex.kt" \
   && grep -q 'val bridges = Keliver.startedBridges' "$V" \
   && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
-  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, Keliver::bridgeDebugLog)' \
+  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'KeliverBridgeScope(zipline, bridgeContext, Keliver::bridgeDebugLog)' \
   && [ "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
   && grep -A1 'override fun bindService(name: String, service: ZiplineService) {' "$V" | grep -q 'if (fence.live) bridgeBinds.bound(name)' \
   && grep -q '  val bridgeBinds = BridgeBindRecorder()' "$V" \
@@ -246,7 +246,7 @@ grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = em
   && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
   && grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "$K/GuestContract.kt" \
   && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$K/MainViewController.kt" \
-  && grep -q 'override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, s.app, route, close))' "$K/MainViewController.kt" \
+  && grep -q 'override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, treehouseApp, route, close))' "$K/MainViewController.kt" \
   && grep -q 'nav.popToViewController(stack\[i - 1\] as UIViewController, animated = true)' "$K/MainViewController.kt" \
   && grep -q 'runCatching(close).onFailure' "$K/MainViewController.kt" && grep -q 'noRouteCode = code' "$K/MainViewController.kt" \
   && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "$K/GuestContract.kt" \
@@ -391,7 +391,7 @@ grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside
 C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$V" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$V" \
-  && grep -A3 'if (progress.moduleLoadStart()) {' "$V" | grep -q 'fence.run { onReady(s) }' \
+  && grep -A9 'if (progress.moduleLoadStart()) {' "$V" | grep -q 'LoadFence.Mode.LIVE -> onReady(s)' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$V" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }' "$V" \
   && grep -q 'count { crash.loadFailed(sequence, theBundles) }' "$V" \
@@ -429,7 +429,14 @@ SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
   && grep -q 'val fence = LoadFence(held != null) { block -> appScope.launch { block() } }' "$V" \
   && grep -q 'fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }' "$V" \
   && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$V" \
-  && grep -q 'is KeliverHostState.Running -> androidx.compose.runtime.key(s.app) {' "$V" \
+  && grep -q 'for (app in listOfNotNull(back, front)) {' "$V" \
+  && grep -q 'val release = drawing(app)' "$V" \
+  && grep -q '    old?.let { retire(it.app) }' "$V" && ! grep -q 'OLD_APP_CLOSE_DELAY' "$V" \
+  && grep -q 'val http = shared.http?.let { if (held != null) GatedHostHttp(it, fence.calls) else it }' "$V" \
+  && grep -q 'val bridgeContext = if (held != null) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main' "$V" \
+  && grep -q 'if (!fence.onDrop(undo)) undo()' "$V" \
+  && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$V" \
+  && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/CallGates.kt" | cmp -s - "$K/CallGates.kt" \
   && ok "start policy: the Android host's decision and tests, START_POLICY (network-first by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app" \
   || bad "start policy: not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.

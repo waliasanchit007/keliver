@@ -443,6 +443,11 @@ class BundleIndexTest {
       File("../scripts/templates/production-host/src/test/kotlin/StartPolicyTest.kt").readText(),
       File("../scripts/templates/ios-host/src/jvmTest/kotlin/StartPolicyTest.kt").readText(),
     )
+    // A held app's calls out (HostHttp, the bridges' context), the same on both.
+    assertEquals(
+      File("../scripts/templates/production-host/src/main/kotlin/CallGates.kt").readText(),
+      File("../scripts/templates/ios-host/src/iosMain/kotlin/CallGates.kt").readText(),
+    )
   }
 
   @Test

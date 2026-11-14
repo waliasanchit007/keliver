@@ -31,6 +31,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -123,36 +126,34 @@ fun KeliverScreen(
             if (host.showsDeveloperText) MessageScreen("Updating", "Loading the newest version…") else loading()
           } else {
             SideEffect { shown = true } // once drawn, an update swaps in place
-            // Keyed on the app: an update that loaded in a new app (start policy parallel or
-            // cache-first, after a start from the cache) binds this screen to that app.
-            androidx.compose.runtime.key(s.app) {
-              val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
-              // K1's routes and close: a new route is a new content source, so the guest launches it
-              // (TreehouseContent rebinds). Without onClose, closing finishes the activity (not a back
-              // press: the guest's own back handlers, a NavHost's or a sheet's would take that).
-              val activity = androidx.compose.ui.platform.LocalContext.current.findActivity()
-              val latestOnClose by rememberUpdatedState(onClose ?: { activity?.finish() })
-              // A close asked for after this content went (a reply that came late) closes nothing.
-              val active = remember(route) { java.util.concurrent.atomic.AtomicBoolean(true) }
-              DisposableEffect(active) { onDispose { active.set(false) } }
-              val contentSource = remember(route) {
-                object : TreehouseContentSource<PortalPresenter> {
-                  // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
-                  override fun get(app: PortalPresenter) =
-                    KeliverTiming.firstFrame(host.launch(app, s.app, route) { if (active.get()) latestOnClose() })
+            // An update that loaded in a new app (start policy parallel or cache-first, after a start
+            // from the cache) binds this screen to that app. Until the new app's content has its
+            // first changes it is composed beneath, unseen, and the app it replaced stays drawn on
+            // top: never the empty frame of a content still loading (SWAP_LIMIT_MILLIS at most).
+            var front by remember { mutableStateOf(s.app) }
+            val back = s.app.takeIf { it !== front }
+            val latestApp by rememberUpdatedState(s.app)
+            LaunchedEffect(back) {
+              if (back != null) {
+                kotlinx.coroutines.delay(SWAP_LIMIT_MILLIS)
+                front = back
+              }
+            }
+            val activity = androidx.compose.ui.platform.LocalContext.current.findActivity()
+            val latestOnClose by rememberUpdatedState(onClose ?: { activity?.finish() })
+            val latestOnUnavailable by rememberUpdatedState(onUnavailable)
+            val latestUnavailable by rememberUpdatedState(unavailable)
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+              // Drawn in this order: the new app (when there is one) beneath, the front one on top.
+              for (app in listOfNotNull(back, front)) {
+                androidx.compose.runtime.key(app) {
+                  AppContent(
+                    host, app, route, hidden = app === back,
+                    onFirstChanges = { if (app === latestApp) front = app },
+                    onClose = { latestOnClose() }, onUnavailable = { latestOnUnavailable }, unavailable = { latestUnavailable },
+                  )
                 }
               }
-              // K1's screen-failed: the code threw while this screen showed it.
-              val latestOnUnavailable by rememberUpdatedState(onUnavailable)
-              val latestUnavailable by rememberUpdatedState(unavailable)
-              val failureWidgets = remember(host) { ScreenFailedWidgets(host, { latestOnUnavailable }, { latestUnavailable }) }
-              TreehouseContent(
-                treehouseApp = s.app,
-                widgetSystem = widgetSystem,
-                contentSource = contentSource,
-                modifier = Modifier.fillMaxSize(),
-                dynamicContentWidgetFactory = failureWidgets,
-              )
             }
           }
         }
@@ -162,21 +163,98 @@ fun KeliverScreen(
 }
 
 /**
+ * One app's content on a [KeliverScreen]. [hidden]: composed beneath the app it replaces, unseen and
+ * out of reach, until its first changes arrive ([onFirstChanges]: Treehouse takes its Loading
+ * widget away for them). While composed it counts as a screen drawing [app] ([KeliverHost.drawing]).
+ */
+@Composable
+private fun AppContent(
+  host: KeliverHost,
+  app: dev.keliver.treehouse.TreehouseApp<PortalPresenter>,
+  route: KeliverRoute?,
+  hidden: Boolean,
+  onFirstChanges: () -> Unit,
+  onClose: () -> Unit,
+  onUnavailable: () -> ((KeliverHostState.Unavailable) -> Unit)?,
+  unavailable: () -> @Composable (KeliverHostState.Unavailable) -> Unit,
+) {
+  DisposableEffect(app) {
+    val release = host.drawing(app)
+    onDispose { release() }
+  }
+  val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
+  // K1's routes and close: a new route is a new content source, so the guest launches it
+  // (TreehouseContent rebinds). Without onClose, closing finishes the activity (not a back
+  // press: the guest's own back handlers, a NavHost's or a sheet's would take that).
+  // A close asked for after this content went (a reply that came late) closes nothing.
+  val active = remember(route) { java.util.concurrent.atomic.AtomicBoolean(true) }
+  DisposableEffect(active) { onDispose { active.set(false) } }
+  val latestOnClose by rememberUpdatedState(onClose)
+  val treehouseApp = app
+  val contentSource = remember(app, route) {
+    object : TreehouseContentSource<PortalPresenter> {
+      // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
+      override fun get(app: PortalPresenter) =
+        KeliverTiming.firstFrame(host.launch(app, treehouseApp, route) { if (active.get()) latestOnClose() })
+    }
+  }
+  val latestFirstChanges by rememberUpdatedState(onFirstChanges)
+  // K1's screen-failed: the code threw while this screen showed it.
+  val failureWidgets = remember(host) { ScreenFailedWidgets(host, onUnavailable, unavailable) { latestFirstChanges() } }
+  if (hidden) {
+    // Treehouse shows its Loading widget a frame after binding, and takes it away for the first
+    // changes; content that had its changes before it bound never shows one.
+    LaunchedEffect(Unit) {
+      repeat(3) { androidx.compose.runtime.withFrameNanos { } }
+      if (!failureWidgets.loadingShown) latestFirstChanges()
+    }
+  }
+  androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+    TreehouseContent(
+      treehouseApp = app,
+      widgetSystem = widgetSystem,
+      contentSource = contentSource,
+      modifier = if (hidden) Modifier.fillMaxSize().graphicsLayer { alpha = 0f }.clearAndSetSemantics { } else Modifier.fillMaxSize(),
+      dynamicContentWidgetFactory = failureWidgets,
+    )
+    // Unseen, and out of reach: a touch that falls through the app on top stops here.
+    if (hidden) Spacer(Modifier.matchParentSize().pointerInput(Unit) { blockTouches() })
+  }
+}
+
+/** Takes every touch, so that nothing beneath gets it. */
+private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.blockTouches() {
+  awaitPointerEventScope {
+    while (true) awaitPointerEvent().changes.forEach { it.consume() }
+  }
+}
+
+/**
  * What [TreehouseContent] draws while a screen's code loads (nothing, as before) and when it throws
  * while the screen shows it (K1's `screen-failed`): the host reports it (W6), the screen calls its
  * `onUnavailable` once per failure, and draws its `unavailable` slot (the host's text only when
  * [KeliverHost.showsDeveloperText]). Treehouse replaces the failed content when code loads again.
+ * [firstChanges] is called when the Loading widget goes (the content has its first changes).
  */
 private class ScreenFailedWidgets(
   private val host: KeliverHost,
   private val onUnavailable: () -> ((KeliverHostState.Unavailable) -> Unit)?,
   private val unavailable: () -> @Composable (KeliverHostState.Unavailable) -> Unit,
+  private val firstChanges: () -> Unit,
 ) : DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> {
+  /** Whether a Loading widget was composed for this content. Main thread. */
+  var loadingShown = false
+    private set
+
   // Nothing while code loads, as before; but once the running code has thrown, it never will:
   // a screen opened then says so and calls its onUnavailable.
   override fun Loading(): Loading<@Composable (Modifier) -> Unit> = object : Loading<@Composable (Modifier) -> Unit> {
     override var modifier: RedwoodModifier = RedwoodModifier
     override val value: @Composable (Modifier) -> Unit = {
+      DisposableEffect(Unit) {
+        loadingShown = true
+        onDispose { firstChanges() }
+      }
       val failed by host.crashed.collectAsState()
       failed?.let { f ->
         LaunchedEffect(f) { onUnavailable()?.invoke(f) }
