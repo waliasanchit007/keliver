@@ -9,6 +9,7 @@ import hosttemplate.CrashStore
 import hosttemplate.HostFacts
 import hosttemplate.KeptBundle
 import hosttemplate.cachedBundleProblem
+import hosttemplate.indexStartPolicy
 import hosttemplate.crashGoingBackTo
 import hosttemplate.crashRollbackDetail
 import hosttemplate.MAX_INDEX_BYTES
@@ -433,5 +434,41 @@ class BundleIndexTest {
       File("../scripts/templates/production-host/src/test/kotlin/CrashRollbackTest.kt").readText(),
       File("../scripts/templates/ios-host/src/jvmTest/kotlin/CrashRollbackTest.kt").readText(),
     )
+    // The start policy, and its tests, the same on both.
+    assertEquals(
+      File("../scripts/templates/production-host/src/main/kotlin/StartPolicy.kt").readText(),
+      File("../scripts/templates/ios-host/src/commonMain/kotlin/StartPolicy.kt").readText(),
+    )
+    assertEquals(
+      File("../scripts/templates/production-host/src/test/kotlin/StartPolicyTest.kt").readText(),
+      File("../scripts/templates/ios-host/src/jvmTest/kotlin/StartPolicyTest.kt").readText(),
+    )
+  }
+
+  @Test
+  fun startPolicyOverrideIsReadPerChannelAndNeverChangesThePick() {
+    fun index(extra: String) = """{"format":1,$extra"entries":[{"sequence":3,"version":3,"widgetVersion":1,"capabilities":[],"manifest":"v3/manifest.zipline.json","manifestSha256":"$sha"}]}"""
+    // Absent: the app's own setting.
+    assertEquals(null, indexStartPolicy(index(""), "stable"))
+    assertEquals(null, indexStartPolicy(index(""), "beta"))
+    // Its own channel's value, else stable's.
+    val both = index(""""startPolicy":{"stable":"parallel","beta":"cache-first"},""")
+    assertEquals("parallel", indexStartPolicy(both, "stable"))
+    assertEquals("cache-first", indexStartPolicy(both, "beta"))
+    assertEquals("parallel", indexStartPolicy(both, "qa"))
+    assertEquals("parallel", indexStartPolicy(index(""""startPolicy":{"stable":"parallel"},"""), "beta"))
+    // Unknown values are handed back as written; the host keeps only one it knows.
+    assertEquals("warp-speed", indexStartPolicy(index(""""startPolicy":{"stable":"warp-speed"},"""), "stable"))
+    assertEquals(null, hosttemplate.KeliverStartPolicy.parse("warp-speed"))
+    // Malformed: none.
+    assertEquals(null, indexStartPolicy(index(""""startPolicy":"parallel","""), "stable"))
+    assertEquals(null, indexStartPolicy(index(""""startPolicy":{"stable":1},"""), "stable"))
+    assertEquals(null, indexStartPolicy(index(""""startPolicy":{"stable":null},"""), "stable"))
+    assertEquals(null, indexStartPolicy("not json", "stable"))
+    assertEquals(null, indexStartPolicy("[]", "stable"))
+    // The pick is the same with and without it (and hosts from before it read only format and entries).
+    val picked = pickFromIndex(index(""), caps).getOrThrow()
+    assertEquals(picked, pickFromIndex(both, caps).getOrThrow())
+    assertEquals(picked, pickFromIndex(index(""""startPolicy":"garbage","""), caps).getOrThrow())
   }
 }

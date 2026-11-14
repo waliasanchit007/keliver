@@ -609,6 +609,61 @@ internal fun setRolloutStatic(outDir: File, sequence: Long, rollout: Int, channe
 }
 
 /**
+ * The start policies hosts know (the host templates' StartPolicy.kt, KeliverStartPolicy; a test
+ * holds the two lists equal), by the names the index carries.
+ */
+internal val START_POLICIES = listOf("network-first", "parallel", "cache-first")
+
+/** The index's top-level key for the per-channel start policy override. */
+internal const val START_POLICY_KEY = "startPolicy"
+
+/** What `--set-start-policy` changed: on [channel], from [from] to [to] (null: none, the app's own setting). */
+internal data class StaticStartPolicy(val channel: String, val from: String?, val to: String?)
+
+/** The index's start policy overrides, by channel; refuses a malformed value (hosts would ignore it). */
+internal fun startPolicies(index: JsonObject): Map<String, String> {
+  val o = index[START_POLICY_KEY] ?: return emptyMap()
+  val byChannel = o as? JsonObject ?: throw PublishRefused("the index's $START_POLICY_KEY is not an object; it was left as it is")
+  return byChannel.mapValues { (c, v) ->
+    (v as? JsonPrimitive)?.takeIf { it.isString && CHANNEL_RE.matches(c) }?.content
+      ?: throw PublishRefused("the index's $START_POLICY_KEY has a malformed entry for '$c' ($v); it was left as it is")
+  }
+}
+
+/**
+ * Sets the release owner's start policy override for [channel] (docs/DEVICE_HOST.md, "Start
+ * policy"): [policy] is one of [START_POLICIES], or null to remove it (hosts then use their app's
+ * own setting). Hosts read it from the next index they read and apply it from their NEXT start; a
+ * host on another channel without its own value takes stable's. Only the index changes, under the
+ * publish lock: the top-level `startPolicy` object, never an entry, so it changes no pick. Nothing
+ * is built or signed, and no key is needed. The index is not signed (as for rollouts), so the
+ * override is not either: it can only choose among orders that all keep every check.
+ */
+internal fun setStartPolicyStatic(outDir: File, policy: String?, channel: String = DEFAULT_CHANNEL): StaticStartPolicy {
+  if (policy != null && policy !in START_POLICIES) {
+    throw PublishRefused("start policy '$policy' is not one of ${START_POLICIES.joinToString()} (or default, to remove it)")
+  }
+  if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
+  val bundlesDir = File(outDir, "bundles")
+  if (!File(bundlesDir, INDEX_FILE).exists()) {
+    throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to change: download the served bundles/ first")
+  }
+  startPolicies(readIndex(bundlesDir)) // before the lock: a refusal writes nothing
+  return withPublishLock(bundlesDir) {
+    val index = readIndex(bundlesDir)
+    val before = startPolicies(index)
+    val after = (if (policy == null) before - channel else before + (channel to policy)).toSortedMap()
+    val next = if (after.isEmpty()) {
+      JsonObject(index - START_POLICY_KEY)
+    } else {
+      JsonObject(index + (START_POLICY_KEY to JsonObject(after.mapValues { JsonPrimitive(it.value) })))
+    }
+    writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
+    StaticStartPolicy(channel, before[channel], policy)
+  }
+}
+
+/**
  * W4.3: a build (here, the app's `keliverResign` task) that exited non-zero.
  * Nothing was published.
  */

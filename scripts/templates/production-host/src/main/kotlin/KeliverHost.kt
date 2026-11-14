@@ -31,6 +31,11 @@
  *     verified again against the key before it runs. It stays in use until the
  *     next launch; the app does not move to a newer bundle while it runs.
  *   - otherwise: a "No bundle" screen.
+ *   That is the default start policy, network-first. KeliverConfig.startPolicy (keliver.startPolicy)
+ *   can choose parallel (the cached bundle loads during the lookup, shown once the lookup confirms
+ *   it) or cache-first (the cached bundle at once; a newer one at the next start), and a release
+ *   owner can override it per channel in the index, from the next start (StartPolicy.kt;
+ *   docs/DEVICE_HOST.md, "Start policy"). Each start logs a `start policy:` line.
  * - The manifest must come from the bundle server's own origin.
  *
  * Rollback protection (W4, BundleIndex.kt): the host keeps the highest signed
@@ -188,6 +193,14 @@ private fun SharedPreferences.raiseFloor(cacheNames: List<String>, sequence: Lon
   if (lower.isEmpty()) return
   edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()
 }
+/** Start policy (StartPolicy.kt): the index's override for this host's channel, kept from the last index read, per key. */
+private fun startOverrideKey(cacheName: String) = "startPolicyOverride-$cacheName"
+/** Start policy: the sequence the last recorded lookup named, and the channel it was for, per key. */
+private fun newestSeenKey(cacheName: String) = "newestSeenSequence-$cacheName"
+private fun checkedChannelKey(cacheName: String) = "checkedChannel-$cacheName"
+/** A stored value of the wrong type (only tampering writes one) reads as none. */
+private fun SharedPreferences.stringOrNull(key: String): String? = runCatching { getString(key, null) }.getOrNull()
+private fun SharedPreferences.longOrNull(key: String): Long? = runCatching { if (contains(key)) getLong(key, 0L) else null }.getOrNull()
 /** W6: the report URL's client: 10 s in all, nothing retried, no redirect followed. */
 internal fun reportHttpClient(): OkHttpClient =
   OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false)
@@ -272,6 +285,12 @@ class KeliverConfig(
   val crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,
   /** WS6: how long screens show a new bundle, with no failure, before it proves healthy. */
   val crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,
+  /**
+   * How this host starts (StartPolicy.kt; docs/DEVICE_HOST.md, "Start policy"): NETWORK_FIRST,
+   * PARALLEL or CACHE_FIRST; null is [DEFAULT_START_POLICY]. A release owner's override in the
+   * index (`keliver-publish --set-start-policy`) takes its place from the next start.
+   */
+  val startPolicy: KeliverStartPolicy? = null,
 ) {
   val bridges: List<KeliverBridgeBinding> = bridges.toList()
 
@@ -296,6 +315,8 @@ class KeliverConfig(
       bridges: List<KeliverBridgeBinding> = emptyList(),
       crashThreshold: Int = DEFAULT_CRASH_THRESHOLD,
       crashWindowMillis: Long = DEFAULT_CRASH_WINDOW_MILLIS,
+      /** keliver.startPolicy (gradle.properties) unless given here. */
+      startPolicy: KeliverStartPolicy? = KeliverStartPolicy.parse(BuildConfig.KELIVER_START_POLICY),
     ): KeliverConfig = KeliverConfig(
       bundleServer = debugBundleServer(context) ?: BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
@@ -313,6 +334,7 @@ class KeliverConfig(
       bridges = bridges,
       crashThreshold = crashThreshold,
       crashWindowMillis = crashWindowMillis,
+      startPolicy = startPolicy,
     )
   }
 }
@@ -734,7 +756,27 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val client: OkHttpClient,
     val prefs: SharedPreferences,
     val floor: () -> Long,
+    /** The key's cache name: the start policy's records are kept under it. */
+    val cacheName: String,
   )
+
+  /**
+   * Start policy: what one index read says about this channel's override ([indexJson]; null: the
+   * server serves no index), kept for the next start. Only a policy the host knows is kept; any
+   * other value, or none, means the app's own setting.
+   */
+  private fun recordStartOverride(prefs: SharedPreferences, cacheName: String, indexJson: String?) {
+    val override = indexJson?.let { indexStartPolicy(it, config.channel) }?.let(KeliverStartPolicy::parse)?.wireName
+    if (override == prefs.stringOrNull(startOverrideKey(cacheName))) return
+    prefs.edit().apply { if (override == null) remove(startOverrideKey(cacheName)) else putString(startOverrideKey(cacheName), override) }.apply()
+    Log.i(TAG, "start policy: the index's override for channel ${config.channel} is now ${override ?: "none (the app's own setting)"}; it applies from the next start")
+  }
+
+  /** Start policy: the sequence a lookup named (from the index; the relay's legacy lookup names none), for the next start. */
+  private fun recordSeen(prefs: SharedPreferences, cacheName: String, latest: Lookup?) {
+    val sequence = latest?.sequence ?: return
+    prefs.edit().putLong(newestSeenKey(cacheName), sequence).putString(checkedChannelKey(cacheName), config.channel).apply()
+  }
   private var session: Session? = null
   /** The update handed to Zipline and not yet reported back: its index sequence, manifest URL, and when. */
   private class Pending(val sequence: Long, val url: String, val at: Long)
@@ -855,9 +897,50 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       .build()
     // What the index's constraints are checked against (W4.5), and what is set aside (WS6).
     val facts = HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges, setAside = crash.setAside())
-    val lookup = LookupContext(server, capabilities, lookupClient, prefs, floor)
+    val lookup = LookupContext(server, capabilities, lookupClient, prefs, floor, cacheName)
     lastLookupAt = SystemClock.elapsedRealtime()
-    val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities, facts) }
+    val lookUp = suspend {
+      withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities, facts) { recordStartOverride(prefs, cacheName, it) } }
+        .also { recordSeen(prefs, cacheName, it) }
+    }
+    // Start policy (StartPolicy.kt): decided before the lookup, from what earlier lookups left.
+    val policy = effectiveStartPolicy(config.startPolicy, prefs.stringOrNull(startOverrideKey(cacheName)))
+    val choice = chooseStart(
+      StartFacts(
+        policy, cached = lastGood != null, crashRollback = crashRollbackDecides(crash, startStep, floor()), channel = config.channel,
+        checkedChannel = prefs.stringOrNull(checkedChannelKey(cacheName)), newestSeen = prefs.longOrNull(newestSeenKey(cacheName)), floor = floor(),
+      ),
+    )
+    Log.i(TAG, choice.logLine(policy))
+    if (lastGood != null && choice.mode != KeliverStartPolicy.NETWORK_FIRST) {
+      Log.d(TAG, "starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
+      // As the "lookup failed" start below: the cached bundle, held to the key, the floor and set-aside sequences.
+      val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor, crash) { servedBridges }
+      val cached = AcceptCachedBundle(floor, crash, servedBridges)
+      if (choice.mode == KeliverStartPolicy.CACHE_FIRST) {
+        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, cached, lookup, fallback = null)
+        // In the background: what it finds applies from the next start.
+        val latest = lookUp()
+        val newer = latest?.sequence?.takeIf { it > floor() }
+        Log.i(TAG, "start policy: cache-first: the background lookup " + if (newer != null) "found sequence $newer; it loads at the next start" else "found nothing newer")
+        return
+      }
+      // PARALLEL: loading now, shown once the lookup confirms it or fails; a W5 fall-back to it as network-first has.
+      val held = checkNotNull(startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, cached, lookup, fallback = lastGood, held = true))
+      val latest = lookUp()
+      val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood)
+      Log.i(TAG, "start policy: parallel: $why")
+      when (step) {
+        ParallelStep.SHOW_CACHED -> held.release()
+        ParallelStep.LOAD_NAMED -> {
+          val named = checkNotNull(latest)
+          Log.d(TAG, "loading ${named.manifestUrl} (${named.source}); rollback floor ${floor()}")
+          held.replace(named.manifestUrl, named.manifestSha256)
+        }
+      }
+      return
+    }
+    val latest = lookUp()
     // WS6: the floor's own bundle is set aside, so go back to the newest that proved healthy here.
     val back = crash.rollbackTo(floor())
     when {
@@ -953,13 +1036,21 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * requests share one deadline, LOOKUP_BUDGET_MILLIS from now, and neither
    * answer is read past MAX_INDEX_BYTES.
    */
-  private fun lookupBundle(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>, facts: HostFacts): Lookup? = runCatching {
+  private fun lookupBundle(
+    okhttp: OkHttpClient,
+    server: HttpUrl,
+    capabilities: List<String>,
+    facts: HostFacts,
+    /** The index's text, each time one is read (null: the server serves none), for the start policy's override. */
+    onIndex: (String?) -> Unit = {},
+  ): Lookup? = runCatching {
     val deadline = SystemClock.elapsedRealtime() + LOOKUP_BUDGET_MILLIS
     val indexUrl = server.newBuilder().addPathSegments("bundles/index.json").build()
     val request = Request.Builder().url(indexUrl).header("Cache-Control", "no-cache").build()
     okhttp.newCall(request).within(deadline).execute().use { response ->
       if (response.code == 404) {
         Log.d(TAG, "no bundles/index.json at $server; asking bundles/latest (a relay from tools 0.3.7 or earlier)")
+        onIndex(null)
         return@runCatching legacyLatest(okhttp, server, capabilities, deadline)
       }
       val body = response.boundedBody()
@@ -967,6 +1058,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         Log.e(TAG, "bundle index: HTTP ${response.code}")
         return@runCatching null
       }
+      onIndex(body)
       val pick = pickFromIndex(body, capabilities, channel = config.channel, facts = facts).getOrElse {
         Log.e(TAG, "bundle index: ${it.message}")
         return@runCatching null
@@ -1049,13 +1141,23 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     freshness: FreshnessChecker,
     lookup: LookupContext,
     fallback: String?,
-  ) {
+    /**
+     * Start policy PARALLEL: the code loads now, but nothing shows and the first load's outcome
+     * waits until the caller, its lookup done, releases it or replaces it (the [HeldStart] this
+     * returns; null when not held).
+     */
+    held: Boolean = false,
+  ): HeldStart? {
     val floor = lookup.floor
     val flow = MutableStateFlow(manifestUrl)
     // One checker for the app's life, switched for the fall-back (W5): Treehouse
     // reads the spec's checker each time it (re)starts its loader.
     val freshnessSwitch = SwitchableFreshness(freshness)
     var fellBack = false
+    // PARALLEL: the first load's outcome, held (main thread); and which load is the host's: a
+    // replaced load's late events are ignored.
+    val hold = StartHold(held)
+    val loadGeneration = LoadGeneration()
     lateinit var app: TreehouseApp<PortalPresenter>
     val factory = TreehouseAppFactory(
       context = context,
@@ -1110,6 +1212,69 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       flow.value = kept.manifestUrl
       app.start()
     }
+    // A code load succeeded (main thread; for a PARALLEL start's first load, once released).
+    fun codeLoaded(sequence: Long?, url: String?) {
+      val first = !loaded.getAndSet(true)
+      resetCrashWindow(sequence)
+      // url is null for a load from the cache. After one, Zipline takes no
+      // further manifest; after a network load it does.
+      mutableBundle.value = KeliverBundle(sequence, fromCache = url == null)
+      session?.fromCache = url == null
+      val p = pending
+      if (p != null && url == p.url) {
+        pending = null
+        Log.d(TAG, "update applied: sequence $sequence")
+        mutableResumeCheck.value = false
+        mutableEvents.tryEmit(KeliverUpdateEvent.Applied(sequence))
+        report("update-applied", sequence, "network")
+      } else if (first) {
+        report("loaded", sequence, if (url == null) "cache" else "network")
+      }
+    }
+    // A code load failed (main thread; for a PARALLEL start's first load, once released).
+    fun codeLoadFailed(reason: String, step: CrashStep) {
+      if (loaded.get()) {
+        // The running bundle stays: it is what runs in place of one set aside now.
+        reportSetAside(step, crashGoingBackTo(mutableBundle.value?.sequence))
+        // An update that did not load: the running bundle stays (Zipline only
+        // swaps on success), and this URL is not tried again in this process.
+        val p = pending ?: return
+        pending = null
+        failedUpdates += p.url
+        Log.d(TAG, "update failed: sequence ${p.sequence} did not load ($reason); the running bundle stays")
+        mutableResumeCheck.value = false
+        mutableEvents.tryEmit(KeliverUpdateEvent.Failed(p.sequence, reason))
+        report("update-failed", p.sequence, "network", reason)
+        return
+      }
+      // WS6: set aside before anything ran: back to the bundle that proved healthy here.
+      val back = if (step is CrashStep.SetAside) crash.rollbackTo(floor()) else null
+      if (back != null) {
+        reportSetAside(step, crashGoingBackTo(back.sequence))
+        rollBack(back)
+      } else if (fallback != null && !fellBack) {
+        fellBack = true
+        reportSetAside(step, crashGoingBackTo(null))
+        mutableEvents.tryEmit(KeliverUpdateEvent.FellBack(reason))
+        report("fell-back", detail = reason)
+        Log.d(TAG, "the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
+        freshnessSwitch.current = AcceptCachedBundle(floor, crash, servedBridges)
+        ziplineHttp.pin(fallback, null)
+        // stop() then start(): after a failed first load the app is still
+        // "starting", which restart() would leave alone.
+        app.stop()
+        flow.value = fallback
+        app.start()
+      } else if (step is CrashStep.SetAside) {
+        session?.markNotLoaded(reason)
+        val detail = crashRollbackDetail(step, config.crashThreshold, CRASH_TO_APP_VIEW)
+        if (BuildConfig.DEBUG) Log.e(TAG, detail) else Log.w(TAG, detail)
+        unavailable(CRASH_ROLLBACK_OUTCOME, "Set aside", detail.take(300), detail = detail, sequence = step.sequence)
+      } else {
+        session?.markNotLoaded(reason)
+        unavailable("not-loaded", "Bundle did not load", reason.take(300), detail = reason)
+      }
+    }
     app = factory.create(
       appScope = scope,
       spec = spec,
@@ -1120,28 +1285,15 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       eventListenerFactory = LoggingEventListenerFactory(
         // WS6: a verified bundle's code begins to evaluate: a new bundle goes on trial, its marker written first.
         onReady = { sequence -> crash.loadStarting(sequence) },
-        onSuccess = { sequence, url ->
+        onSuccess = { load, sequence, url ->
           crashed.value = null // new code: no longer the code that threw
           KeliverTiming.mark("code")
           // WS6: kept (as it loaded from the network) to come back to once it proves healthy.
           crash.loaded(sequence, url, url?.let(ziplineHttp::servedManifest))
-          val first = !loaded.getAndSet(true)
-          scope.launch {
-            resetCrashWindow(sequence)
-            // url is null for a load from the cache. After one, Zipline takes no
-            // further manifest; after a network load it does.
-            mutableBundle.value = KeliverBundle(sequence, fromCache = url == null)
-            session?.fromCache = url == null
-            val p = pending
-            if (p != null && url == p.url) {
-              pending = null
-              Log.d(TAG, "update applied: sequence $sequence")
-              mutableResumeCheck.value = false
-              mutableEvents.tryEmit(KeliverUpdateEvent.Applied(sequence))
-              report("update-applied", sequence, "network")
-            } else if (first) {
-              report("loaded", sequence, if (url == null) "cache" else "network")
-            }
+          // A load a PARALLEL start replaced is not the host's: it changes nothing here.
+          if (load == loadGeneration.current) scope.launch {
+            if (load != loadGeneration.current) return@launch
+            hold.onOutcome { codeLoaded(sequence, url) }
           }
         },
         // Zipline found the manifest unchanged: nothing to apply.
@@ -1168,50 +1320,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         // failed load would leave the screen blank; say so instead.
         // WS6: step is what the failure did to the bundle on trial (a load whose code failed counts;
         // a download, the network, the signature or the floor does not: CodeLoadProgress).
-        onFailed = { reason, step ->
+        onFailed = { load, reason, step ->
           scope.launch {
             crashLog(step)
-            if (loaded.get()) {
-              // The running bundle stays: it is what runs in place of one set aside now.
-              reportSetAside(step, crashGoingBackTo(mutableBundle.value?.sequence))
-              // An update that did not load: the running bundle stays (Zipline only
-              // swaps on success), and this URL is not tried again in this process.
-              val p = pending ?: return@launch
-              pending = null
-              failedUpdates += p.url
-              Log.d(TAG, "update failed: sequence ${p.sequence} did not load ($reason); the running bundle stays")
-              mutableResumeCheck.value = false
-              mutableEvents.tryEmit(KeliverUpdateEvent.Failed(p.sequence, reason))
-              report("update-failed", p.sequence, "network", reason)
-              return@launch
-            }
-            // WS6: set aside before anything ran: back to the bundle that proved healthy here.
-            val back = if (step is CrashStep.SetAside) crash.rollbackTo(floor()) else null
-            if (back != null) {
-              reportSetAside(step, crashGoingBackTo(back.sequence))
-              rollBack(back)
-            } else if (fallback != null && !fellBack) {
-              fellBack = true
-              reportSetAside(step, crashGoingBackTo(null))
-              mutableEvents.tryEmit(KeliverUpdateEvent.FellBack(reason))
-              report("fell-back", detail = reason)
-              Log.d(TAG, "the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
-              freshnessSwitch.current = AcceptCachedBundle(floor, crash, servedBridges)
-              ziplineHttp.pin(fallback, null)
-              // stop() then start(): after a failed first load the app is still
-              // "starting", which restart() would leave alone.
-              app.stop()
-              flow.value = fallback
-              app.start()
-            } else if (step is CrashStep.SetAside) {
-              session?.markNotLoaded(reason)
-              val detail = crashRollbackDetail(step, config.crashThreshold, CRASH_TO_APP_VIEW)
-              if (BuildConfig.DEBUG) Log.e(TAG, detail) else Log.w(TAG, detail)
-              unavailable(CRASH_ROLLBACK_OUTCOME, "Set aside", detail.take(300), detail = detail, sequence = step.sequence)
-            } else {
-              session?.markNotLoaded(reason)
-              unavailable("not-loaded", "Bundle did not load", reason.take(300), detail = reason)
-            }
+            if (load != loadGeneration.current) return@launch // a load a PARALLEL start replaced
+            hold.onOutcome { codeLoadFailed(reason, step) }
           }
         },
         // WS6: the running code threw (Treehouse stops it). Before it proved healthy, that counts;
@@ -1233,6 +1346,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         },
         crash = crash,
         bridgeBinds = bridgeBinds,
+        generation = { loadGeneration.current },
       ),
     )
     // After a first load that failed (loadAgain): from the network this time, into the same app,
@@ -1246,10 +1360,32 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     }
     session = Session(app, ziplineHttp, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload)
     KeliverTiming.watch(this, app) // the memory profile (M5), in debug and benchmark builds only
-    mutableState.value = KeliverHostState.Running(app)
+    if (!held) mutableState.value = KeliverHostState.Running(app)
     // M3: the code load starts now, not when the first screen's createContent would start it.
     app.start()
+    if (!held) return null
+    return HeldStart(
+      // The lookup confirmed the cached bundle, or failed: as network-first's start from the cache,
+      // with no fall-back left (that start has none either).
+      release = {
+        fellBack = true
+        mutableState.value = KeliverHostState.Running(app)
+        hold.release()
+      },
+      // The lookup named another bundle: the cached load is dropped, unseen, and this one loads
+      // from the network, with the W5 fall-back to the cached bundle, as network-first loads it.
+      replace = { url, sha256 ->
+        hold.drop()
+        loadGeneration.next()
+        session?.fromCache = false
+        mutableState.value = KeliverHostState.Running(app)
+        reload(url, sha256)
+      },
+    )
   }
+
+  /** A PARALLEL start's held first load (startTreehouse): show it, or load the named bundle in its place. Main thread. */
+  private class HeldStart(val release: () -> Unit, val replace: (url: String, sha256: String?) -> Unit)
 
   /**
    * Looks up the newest bundle now (W5), with the same index, channel,
@@ -1279,7 +1415,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     }
     lastLookupAt = SystemClock.elapsedRealtime()
     val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges, setAside = crash?.setAside() ?: 0)
-    val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
+    val latest = withContext(Dispatchers.IO) {
+      lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) { recordStartOverride(s.lookup.prefs, s.lookup.cacheName, it) }
+    }
+    recordSeen(s.lookup.prefs, s.lookup.cacheName, latest)
     pending?.let { return@withContext KeliverUpdateCheck.Available(it.sequence, applying = true) }
     if (latest == null) {
       Log.d(TAG, "update check: the lookup failed")
@@ -1323,7 +1462,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private suspend fun loadAgain(s: Session): KeliverUpdateCheck {
     lastLookupAt = SystemClock.elapsedRealtime()
     val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor(), servedBridges, setAside = crash?.setAside() ?: 0)
-    val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
+    val latest = withContext(Dispatchers.IO) {
+      lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) { recordStartOverride(s.lookup.prefs, s.lookup.cacheName, it) }
+    }
+    recordSeen(s.lookup.prefs, s.lookup.cacheName, latest)
     // Another check may have started it while this one looked up.
     if (session !== s || !s.notLoaded) return KeliverUpdateCheck.Failed("the bundle is already loading again")
     if (latest == null) {
@@ -1546,17 +1688,24 @@ private class AcceptCachedBundle(
 
 private class LoggingEventListenerFactory(
   private val onReady: (Long?) -> Unit,
-  private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
+  /** [load]: the host's load generation when this load began (a PARALLEL start's replaced load is behind). */
+  private val onSuccess: (load: Int, sequence: Long?, manifestUrl: String?) -> Unit,
   private val onSkipped: () -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
-  private val onFailed: (String, CrashStep) -> Unit,
+  private val onFailed: (load: Int, reason: String, step: CrashStep) -> Unit,
   private val onUncaught: (CrashStep) -> Unit,
   private val crash: CrashGuard,
   private val bridgeBinds: BridgeBindRecorder,
+  private val generation: () -> Int,
 ) : EventListener.Factory {
-  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
-    LoggingEventListener(manifestUrl, onReady, onSuccess, onSkipped, onLoaded, onSequence, onFailed, onUncaught, crash, bridgeBinds)
+  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener {
+    val load = generation()
+    return LoggingEventListener(
+      manifestUrl, onReady, { s, u -> onSuccess(load, s, u) }, onSkipped, onLoaded, onSequence, { r, s -> onFailed(load, r, s) },
+      onUncaught, crash, bridgeBinds,
+    )
+  }
   override fun close() {}
 }
 

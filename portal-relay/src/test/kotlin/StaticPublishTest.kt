@@ -782,6 +782,79 @@ class StaticPublishTest {
     assertEquals(JsonObject(mapOf("rollout" to JsonPrimitive(100), "maxHostVersion" to JsonPrimitive(7))), entries().last()["constraints"])
   }
 
+  // --- The start policy override (docs/DEVICE_HOST.md, "Start policy") ---
+
+  @Test
+  fun theStartPolicyOverrideIsWrittenPerChannelAndHostsReadIt() {
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    val signed = File(bundles, "v1").listFiles()!!.associate { it.name to sha256Hex(it.readBytes()) }
+    val entriesBefore = entries()
+    val r = setStartPolicyStatic(site, "parallel")
+    assertEquals(StaticStartPolicy("stable", null, "parallel"), r)
+    assertEquals(JsonObject(mapOf("stable" to JsonPrimitive("parallel"))), index()[START_POLICY_KEY])
+    setStartPolicyStatic(site, "cache-first", channel = "beta")
+    // The hosts' own reader: each channel its own, else stable's; the pick is unchanged.
+    val text = File(bundles, INDEX_FILE).readText()
+    assertEquals("parallel", hosttemplate.indexStartPolicy(text, "stable"))
+    assertEquals("cache-first", hosttemplate.indexStartPolicy(text, "beta"))
+    assertEquals("parallel", hosttemplate.indexStartPolicy(text, "qa"))
+    assertEquals(1, pickFromIndex(text, listOf("host-sql@1")).getOrThrow().sequence)
+    // Only the top-level object changed: no entry, no signed file.
+    assertEquals(entriesBefore, entries())
+    assertEquals(signed, File(bundles, "v1").listFiles()!!.associate { it.name to sha256Hex(it.readBytes()) })
+    // Later publishes keep it (they rewrite the index from what they read).
+    publishStatic(output("two", seq = 2), site, app.publicHex)
+    promoteStatic(site, 2, "beta", app.publicHex)
+    assertEquals(
+      JsonObject(mapOf("beta" to JsonPrimitive("cache-first"), "stable" to JsonPrimitive("parallel"))),
+      index()[START_POLICY_KEY],
+    )
+    // Changed, then removed: back to the app's own setting.
+    assertEquals(StaticStartPolicy("stable", "parallel", "network-first"), setStartPolicyStatic(site, "network-first"))
+    assertEquals(StaticStartPolicy("beta", "cache-first", null), setStartPolicyStatic(site, null, channel = "beta"))
+    setStartPolicyStatic(site, null)
+    assertNull(index()[START_POLICY_KEY], "an empty override is no key at all")
+    assertEquals(null, hosttemplate.indexStartPolicy(File(bundles, INDEX_FILE).readText(), "stable"))
+  }
+
+  @Test
+  fun theStartPolicyOverrideRefusesWhatHostsCouldNotRead() {
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    assertRefusedAndNothingWritten("not one of") { setStartPolicyStatic(site, "warp-speed") }
+    assertRefusedAndNothingWritten("must match") { setStartPolicyStatic(site, "parallel", channel = "Beta!") }
+    File(bundles, INDEX_FILE).writeText(File(bundles, INDEX_FILE).readText().replaceFirst("{", """{"startPolicy":"parallel","""))
+    assertRefusedAndNothingWritten("not an object") { setStartPolicyStatic(site, "parallel") }
+    assertRefusedAndNothingWritten("no ") { setStartPolicyStatic(File(tmp, "empty-site"), "parallel") }
+  }
+
+  @Test
+  fun thePublisherKnowsExactlyTheHostsPolicies() {
+    assertEquals(hosttemplate.KeliverStartPolicy.entries.map { it.wireName }, START_POLICIES)
+    assertEquals(hosttemplate.START_POLICY_INDEX_KEY, START_POLICY_KEY)
+  }
+
+  @Test
+  fun theCliSetsTheStartPolicy() {
+    val appDir = File(tmp, "spapp").apply { mkdirs() }
+    File(appDir, "keliver.portal.json").writeText(
+      """{"screensDir":"src/jsMain/kotlin/screens","publishTask":":compileDevelopmentExecutableKotlinJsZipline","publishOutput":"build/zipline/Development"}""",
+    )
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    fun run(vararg a: String) = KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, null,
+      { _, _, _ -> error("re-signed") }, { _, _, _ -> error("built") })
+    for (bad in listOf(listOf("--set-start-policy"), listOf("--set-start-policy", "fast"), listOf("--set-start-policy", "parallel", "--rollout", "5"),
+      listOf("--set-start-policy", "parallel", "--init"), listOf("--set-start-policy", "parallel", "--republish", "1"))) {
+      assertEquals(2, run(*bad.toTypedArray()), bad.toString())
+    }
+    // No key needed.
+    assertEquals(0, run("--set-start-policy", "cache-first"))
+    assertEquals(0, run("--set-start-policy", "parallel", "--channel", "beta"))
+    assertEquals(JsonObject(mapOf("beta" to JsonPrimitive("parallel"), "stable" to JsonPrimitive("cache-first"))), index()[START_POLICY_KEY])
+    assertEquals(0, run("--set-start-policy", "default"))
+    assertEquals(JsonObject(mapOf("beta" to JsonPrimitive("parallel"))), index()[START_POLICY_KEY])
+    assertEquals(4, run("--set-start-policy", "parallel", "--channel", "BAD"))
+  }
+
   // --- B4: bridges, from the signed manifest into the entry's constraints ---
 
   private fun bridgesOf(e: JsonObject) = e["constraints"]?.jsonObject?.get("bridges")

@@ -187,6 +187,61 @@ Upload `v<N>/` before `index.json`, and never overwrite a `v<N>/` (the adopter
 guide's "Publish from CI to a static server"): the fall-back keeps hosts that
 ran a bundle before on it, but a new install has nothing to fall back to.
 
+**Start policy** (both hosts, from the templates after tools 0.3.18). The table above is
+`network-first`, the default: nothing shows until the lookup, and then the manifest, have come
+back. That costs a cold start the network's round trips (docs/GATE_B_RESULTS.md, "Where the A12's
+cold start goes"). An app can choose how its host starts:
+
+| policy | what a start does | a newer release, published since the last start |
+|---|---|---|
+| `network-first` (default) | the table above | shows at this start |
+| `parallel` | starts loading the cached release at once, while the lookup runs; shows it only once the lookup names that same manifest (or fails, or runs out its 10 s, exactly when `network-first` would show the cache too). When the lookup names another one, the cached load is dropped, unseen, and the named one loads from the network, as `network-first` loads it | shows at this start |
+| `cache-first` | shows the cached release at once and looks up in the background; the lookup changes nothing in this process | shows at the **next** start: a background lookup that found it makes that next start `network-first` |
+
+Set it with `keliver.startPolicy` in `gradle.properties` (Android; `KeliverConfig(startPolicy = …)`
+in code) or `START_POLICY` in `HostConfig.kt` (iOS), to `network-first`, `parallel` or
+`cache-first`; empty is `network-first` (`DEFAULT_START_POLICY` in `StartPolicy.kt`, one line).
+
+A release owner can override it per channel: `keliver-publish --out <dir> --set-start-policy
+<policy> [--channel <name>]` writes `"startPolicy": {"<channel>": "<policy>"}` at the top of
+`bundles/index.json` (`default` removes it). A host reads its own channel's value, else stable's,
+from every index it reads, keeps it, and applies it from the **next** start (it cannot know it
+before its lookup). A missing or unknown value means the app's own setting. Hosts from before this
+read only `format` and `entries`, so they ignore it; an index without it works as before. The index
+is not signed (see "Rollback protection"), so neither is the override: it can only pick one of
+these three orders, and an attacker who can rewrite the index can already make a lookup fail, which
+already shows the cache.
+
+What each start does, whatever the policy, and why none weakens a check:
+- **First install, a new key, a moved bundle server** (nothing cached for this key and origin):
+  `network-first`.
+- **Offline:** all three show the cached release; `network-first` and `parallel` after the lookup
+  gives up (10 s), `cache-first` at once.
+- **Crash rollback** (a bundle set aside, at this start or before, and not yet passed by a newer
+  sequence): `network-first`, which decides between a newer release, the kept healthy bundle and
+  the app's own view exactly as before.
+- **A newer release seen but not yet loaded** (a background or update lookup found a sequence above
+  the floor): `network-first`, so `parallel` does not load code it knows is old, and `cache-first`
+  applies what it found.
+- **No lookup recorded for this channel** (the first start after this host version, or after the
+  channel changed): `cache-first` starts `network-first`, so it never shows another channel's
+  cached code without a lookup. `parallel` needs no record: its lookup decides.
+- **Signatures, the floor and set-aside sequences:** every cached start goes through the same
+  checker as the second row above (`AcceptCachedBundle`: Zipline verifies the cached manifest
+  against the key again; the floor and the set-aside list refuse it, and Zipline then fetches the
+  manifest through the same guards). Every network load goes through the same pinning client
+  (index sha256, floor, set-aside, bridges). A key the app no longer trusts has no cache (one cache
+  per key), so it starts `network-first`; keys do not expire.
+- **A kill switch:** the index has none that stops cached code (`rollout: 0` halts a release for
+  hosts that have not run it; a failed lookup shows the cache under every policy). Under
+  `cache-first`, a halted release that was already cached shows again until a newer sequence is
+  published.
+
+Each start logs one `start policy:` line (logcat tag `KeliverHost`; the iOS console) with the
+policy, where it came from (the app's setting or the index's override) and what this start does and
+why. The decision is one pure function, `chooseStart` (`StartPolicy.kt`, the same file in both
+hosts), with its tests in `StartPolicyTest.kt`.
+
 **Lifecycle.** The host looks up and loads once per process, and every screen
 shares that load: a rotation, a second screen or a screen opened again doesn't
 load anything. So, by default, a bundle published while the app runs is picked
@@ -847,6 +902,10 @@ It behaves like the Android host in §2:
   and shows "Bundle did not load" only without one; see §2. There is one
   Zipline cache per key, and manifest URLs are followed only on the bundle
   server's origin. (Zipline's downloads follow HTTP redirects, as on Android.)
+  That is the default start policy; `START_POLICY` in `HostConfig.kt` chooses
+  another, with the same names and behaviour as Android's (§2, "Start policy").
+  A host scaffolded by tools 0.3.18 or earlier has no `START_POLICY` line: its
+  build says so; add `internal const val START_POLICY: String = ""`.
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
   set. Paths can't climb out of it; a method that isn't a plain token, or a
   header holding CR or LF, is refused; hop-by-hop headers are dropped; and

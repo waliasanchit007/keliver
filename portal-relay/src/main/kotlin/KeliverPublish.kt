@@ -40,6 +40,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * <sequence> --rollout <percent>` changes an entry's rollout afterwards: raise
  * it, or 0 to halt (hosts that ran it keep it). It needs no key.
  *
+ * `--set-start-policy <network-first|parallel|cache-first|default> [--channel <name>]` sets the
+ * release owner's override of how hosts on that channel (default stable) start, from their next
+ * start (docs/DEVICE_HOST.md, "Start policy"); `default` removes it. Only the index changes; no key.
+ *
  * Exit status:
  * - 0 published;
  * - 2 usage;
@@ -63,7 +67,8 @@ object KeliverPublish {
     "usage: keliver-publish [app-dir] --out <dir> (--public-key-file <file> | KELIVER_PUBLIC_KEY_HEX) " +
       "[--channel stable] [--skip-build] [--init] [--republish <version> | --promote <sequence> --channel <name>] " +
       "[--rollout <percent>] [--min-host-version <n>] [--max-host-version <n>] [--accept-key-change] | " +
-      "--set-rollout <sequence> --rollout <percent> | --new-signing-key <dir>"
+      "--set-rollout <sequence> --rollout <percent> | --set-start-policy <network-first|parallel|cache-first|default> [--channel <name>] | " +
+      "--new-signing-key <dir>"
 
   @JvmStatic
   fun main(args: Array<String>) {
@@ -83,6 +88,7 @@ object KeliverPublish {
     var republish: Int? = null
     var promote: Long? = null
     var setRollout: Long? = null
+    var setStartPolicy: String? = null
     var rollout: Int? = null
     var minHostVersion: Long? = null
     var maxHostVersion: Long? = null
@@ -108,6 +114,8 @@ object KeliverPublish {
           ?: return usage("--min-host-version needs a non-negative integer (the host build's version)")
         "--max-host-version" -> maxHostVersion = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[0-9]{1,15}")) }?.toLong()
           ?: return usage("--max-host-version needs a non-negative integer (the host build's version)")
+        "--set-start-policy" -> setStartPolicy = it.nextOrNull()?.takeIf { p -> p in START_POLICIES || p == "default" }
+          ?: return usage("--set-start-policy needs ${START_POLICIES.joinToString(", ")} or default")
         "--skip-build" -> skipBuild = true
         "--accept-key-change" -> acceptKeyChange = true
         "--new-signing-key" -> newSigningKey = it.nextOrNull()?.takeIf { d -> d.isNotBlank() } ?: return usage("--new-signing-key needs a directory")
@@ -141,6 +149,12 @@ object KeliverPublish {
         return usage("--set-rollout <sequence> needs --rollout <percent> (and --channel when the sequence is on several), and nothing else")
       }
       return runSetRollout(File(out), setRollout, rollout, channel)
+    }
+    if (setStartPolicy != null) {
+      if (rollout != null || init || skipBuild || republish != null || promote != null || minHostVersion != null || maxHostVersion != null) {
+        return usage("--set-start-policy <policy> takes --channel <name> (default stable), and nothing else")
+      }
+      return runSetStartPolicy(File(out), setStartPolicy.takeUnless { p -> p == "default" }, channel ?: DEFAULT_CHANNEL)
     }
     val publicKeyHex = when {
       keyFile != null -> runCatching { File(keyFile).readText().trim() }.getOrElse {
@@ -267,6 +281,23 @@ object KeliverPublish {
     println(
       "keliver-publish: promoted sequence ${result.sequence} (v${result.version}) from ${result.from} to $channel: " +
         "a second index entry for the same signed bundle; nothing was built or signed",
+    )
+    println("keliver-publish: index ${File(File(out, "bundles"), INDEX_FILE)}")
+    return 0
+  }
+
+  private fun runSetStartPolicy(out: File, policy: String?, channel: String): Int {
+    val result = try {
+      setStartPolicyStatic(out, policy, channel)
+    } catch (e: PublishRefused) {
+      return refuse(e.message.orEmpty())
+    } catch (e: java.io.IOException) {
+      System.err.println("keliver-publish FAILED writing $out: $e. index.json is either unchanged or complete, never half-written.")
+      return 5
+    }
+    println(
+      "keliver-publish: start policy on ${result.channel}: ${result.from ?: "the app's own"} -> ${result.to ?: "the app's own"}" +
+        " (hosts apply it from their next start after they read this index)",
     )
     println("keliver-publish: index ${File(File(out, "bundles"), INDEX_FILE)}")
     return 0

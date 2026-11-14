@@ -331,6 +331,21 @@ private fun indexBridges(element: Any?): Map<String, NeededBridge>? {
   }
 }
 
+/**
+ * The release owner's start policy override for [channel] in [indexJson] (StartPolicy.kt;
+ * docs/DEVICE_HOST.md, "Start policy"): the top-level `startPolicy` object's value for [channel],
+ * else for [DEFAULT_CHANNEL], as written; null when there is none, or the index or the value is
+ * malformed. The host keeps only a value it knows (KeliverStartPolicy.parse); anything else means
+ * the app's own setting. It never affects which entry [pickFromIndex] picks.
+ */
+internal fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String? = runCatching {
+  if (indexJson.length > MAX_INDEX_BYTES) return@runCatching null
+  val root = Json.parseToJsonElement(indexJson) as? JsonObject ?: return@runCatching null
+  val byChannel = root[START_POLICY_INDEX_KEY] as? JsonObject ?: return@runCatching null
+  fun valueFor(c: String) = (byChannel[c] as? JsonPrimitive)?.takeIf { it.isString }?.content
+  valueFor(channel) ?: valueFor(DEFAULT_CHANNEL)
+}.getOrNull()
+
 /** A relative path under bundles/: no scheme, no leading '/', no '.' or '..' segment. */
 internal fun manifestPathOk(path: String): Boolean =
   path.split('/').all { SEGMENT.matches(it) && it != "." && it != ".." }

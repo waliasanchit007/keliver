@@ -68,6 +68,14 @@ def checkHostConfig = tasks.register('checkHostConfig') {
     if (!(updates in ['', 'next-launch', 'on-resume', 'live'])) {
       throw new GradleException("HostConfig.kt: UPDATES must be next-launch, on-resume, live or empty (got '$updates').")
     }
+    def startPolicy = configValue('START_POLICY')
+    if (startPolicy == null) {
+      throw new GradleException("HostConfig.kt has no START_POLICY line (a host scaffolded by tools 0.3.18 or earlier): add " +
+        "`internal const val START_POLICY: String = \"\"` (network-first; docs/DEVICE_HOST.md, \"Start policy\").")
+    }
+    if (!(startPolicy in ['', 'network-first', 'parallel', 'cache-first'])) {
+      throw new GradleException("HostConfig.kt: START_POLICY must be network-first, parallel, cache-first or empty (got '$startPolicy').")
+    }
   }
 }
 // A release framework refuses http://, and refuses an Info.plist that still

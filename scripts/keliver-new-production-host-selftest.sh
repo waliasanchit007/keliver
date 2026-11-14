@@ -141,7 +141,8 @@ grep -q 'android:name=".HostApp"' "$H/src/main/AndroidManifest.xml" \
   && ok "W2: the Application owns one KeliverHost (its own scope, started once); MainActivity only shows KeliverScreen" \
   || bad "W2: the host is not owned by the Application"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
-grep -A2 '^    mutableState.value = KeliverHostState.Running(app)$' "$M" | grep -q '^    app.start()$' \
+# (A PARALLEL start's state waits for its lookup; its code load starts there all the same.)
+grep -A2 '^    if (!held) mutableState.value = KeliverHostState.Running(app)$' "$M" | grep -q '^    app.start()$' \
   && ok "M3: the code load starts when the host starts, not when the first screen asks" \
   || bad "M3: the host does not start the code load at host start"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
@@ -389,6 +390,23 @@ C="${M%/*}/CrashRollback.kt"
   && ! grep -q 'rollbackProblem(manifestSequence(manifest.metadata), floor())' "$M" \
   && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
   || bad "WS6: crash rollback is not wired"
+# Start policy (docs/DEVICE_HOST.md, "Start policy"): the decision (StartPolicy.kt, the iOS host's
+# file too) and its JVM tests are scaffolded; the app sets keliver.startPolicy (network-first by
+# default); crash rollback decides as network-first; each start logs its policy and why; every
+# index read keeps the override for the next start; a PARALLEL start's replaced load changes nothing.
+SP="${M%/*}/StartPolicy.kt"
+[ -f "$SP" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/StartPolicyTest.kt" ] \
+  && grep -q '^val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.NETWORK_FIRST$' "$SP" \
+  && grep -q '^keliver.startPolicy=$' "$H/gradle.properties" \
+  && grep -q "buildConfigField 'String', 'KELIVER_START_POLICY'" "$H/build.gradle" \
+  && grep -q 'startPolicy: KeliverStartPolicy? = KeliverStartPolicy.parse(BuildConfig.KELIVER_START_POLICY),' "$M" \
+  && grep -q 'crashRollback = crashRollbackDecides(crash, startStep, floor())' "$M" \
+  && grep -q 'Log.i(TAG, choice.logLine(policy))' "$M" \
+  && [ "$(grep -c 'recordStartOverride(.*, it)' "$M")" -ge 3 ] \
+  && grep -q 'if (load != loadGeneration.current) return@launch' "$M" \
+  && grep -q 'fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String?' "${M%/*}/BundleIndex.kt" \
+  && ok "start policy: keliver.startPolicy (network-first by default), the index's override from the next start, logged at each start" \
+  || bad "start policy: not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 # W4.4: --channel beta, over a removed host-android (the build below then builds a beta host).
@@ -491,6 +509,9 @@ if [ "$BUILD" = 1 ]; then
     cr="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
     [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
       && ok "WS6: crash rollback's tests ran: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
+    spt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.StartPolicyTest.xml"
+    [ -f "$spt" ] && grep -q 'failures="0" errors="0"' "$spt" && ! grep -q 'tests="0"' "$spt" \
+      && ok "start policy: its decision's tests ran: $(grep -o 'tests="[0-9]*"' "$spt" | head -1)" || bad "start policy: its tests did not run, or failed"
     rs="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.ReportSendTest.xml"
     [ -f "$rs" ] && grep -q 'failures="0" errors="0"' "$rs" && ! grep -q 'tests="0"' "$rs" \
       && ok "W6: the report sender's tests ran (a collector that closes loses no report): $(grep -o 'tests="[0-9]*"' "$rs" | head -1)" || bad "W6: the report sender's tests did not run, or failed"

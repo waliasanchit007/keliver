@@ -406,6 +406,23 @@ C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
   && ! grep -q 'rollbackProblem(manifestSequence(manifest.metadata), floor())' "$V" \
   && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
   || bad "WS6: crash rollback is not wired"
+# Start policy, as on Android: the decision (src/commonMain/StartPolicy.kt, the Android host's file)
+# and its JVM tests; HostConfig's START_POLICY (network-first when empty); crash rollback decides
+# as network-first; each start logs its policy; every index read keeps the override for the next
+# start; a PARALLEL start's held load is released only once the state says Running.
+SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
+[ -f "$SP" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/StartPolicy.kt" | cmp -s - "$SP" \
+  && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/test/kotlin/StartPolicyTest.kt" | cmp -s - "$H/src/jvmTest/kotlin/com/example/demo/host/StartPolicyTest.kt" \
+  && grep -q '^internal const val START_POLICY: String = ""$' "$K/HostConfig.kt" \
+  && grep -q "configValue('START_POLICY')" "$H/build.gradle" \
+  && grep -q 'effectiveStartPolicy(KeliverStartPolicy.parse(START_POLICY), ' "$V" \
+  && grep -q 'crashRollback = crashRollbackDecides(crash, startStep, floor())' "$V" \
+  && grep -q '  log(choice.logLine(policy))' "$V" \
+  && grep -q 'recordStartOverride(cacheName, body.utf8())' "$V" \
+  && grep -q 'ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.release)' "$V" \
+  && grep -q 'if (load == loadGeneration.current) hold.onOutcome { codeLoadFailed(reason, step) }' "$V" \
+  && ok "start policy: the Android host's decision and tests, START_POLICY (network-first by default), the index's override from the next start, logged at each start" \
+  || bad "start policy: not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
 grep -A2 '^  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))$' "$K/MainViewController.kt" \
   | grep -q '^  app.start()$' \
@@ -528,6 +545,9 @@ if [ "$BUILD" = 1 ]; then
     cr="$H/build/test-results/jvmTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
     [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
       && ok "WS6: crash rollback's tests ran on the JVM target: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
+    spt="$H/build/test-results/jvmTest/TEST-com.example.demo.host.StartPolicyTest.xml"
+    [ -f "$spt" ] && grep -q 'failures="0" errors="0"' "$spt" && ! grep -q 'tests="0"' "$spt" \
+      && ok "start policy: its decision's tests ran on the JVM target: $(grep -o 'tests="[0-9]*"' "$spt" | head -1)" || bad "start policy: its tests did not run, or failed"
     dlt="$H/build/test-results/jvmTest/TEST-com.example.demo.host.DebugBundleLinkTest.xml"
     [ -f "$dlt" ] && grep -q 'failures="0" errors="0"' "$dlt" && ! grep -q 'tests="0"' "$dlt" \
       && ok "ED3: the debug link's vectors ran on the JVM: $(grep -o 'tests="[0-9]*"' "$dlt" | head -1)" || bad "ED3: the debug link's tests did not run, or failed"

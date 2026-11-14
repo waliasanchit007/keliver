@@ -40,6 +40,14 @@ package @@PACKAGE@@
 // that proved healthy here, or to the app's own view. 0 turns crash rollback
 // off: do that while you stop and restart a new bundle in Xcode. CRASH_WINDOW_MILLIS:
 // how long screens show a new bundle, with no failure, before it proves healthy.
+//
+// START_POLICY is how the host starts (docs/DEVICE_HOST.md, "Start policy"):
+// "network-first" (the lookup, then the bundle, before anything shows),
+// "parallel" (the cached bundle loads while the lookup runs, and shows once the
+// lookup confirms it) or "cache-first" (the cached bundle shows at once; a newer
+// one applies at the next start). Empty: network-first. A release owner's
+// override in the index (keliver-publish --set-start-policy) takes its place
+// from the next start.
 internal const val CRASH_THRESHOLD: Int = 2
 internal const val CRASH_WINDOW_MILLIS: Long = 10_000L
 internal const val PORTAL_PUBLIC_KEY_HEX: String = "@@KEY_HEX@@"
@@ -49,3 +57,4 @@ internal const val API_BASE_URL: String = "@@API_BASE_URL@@"
 internal const val CHANNEL: String = "@@CHANNEL@@"
 internal const val UPDATES: String = ""
 internal const val REPORT_URL: String = ""
+internal const val START_POLICY: String = ""
