@@ -202,7 +202,9 @@ if [ "$PSTATE" != valid ]; then
   # TEAM and BID: that fetches (or renews) the development profile and gives the entitlements. It
   # may create a development certificate on the team (when none is in this keychain) or register
   # the App ID again if it was removed since its last profile. Never with
-  # -allowProvisioningDeviceRegistration: this script does not add the phone to the team.
+  # -allowProvisioningDeviceRegistration: this script does not add the phone to the team. The
+  # project enables no clang modules, so `#import <UIKit/UIKit.h>` does not auto-link UIKit:
+  # OTHER_LDFLAGS links it, or UIApplicationMain is an undefined symbol.
   W="$OUT/wrapper"; rm -rf "$W"; mkdir -p "$W/Wrapper.xcodeproj"
   printf '#import <UIKit/UIKit.h>\nint main(int argc, char *argv[]) { return UIApplicationMain(argc, argv, nil, nil); }\n' > "$W/main.m"
   cat > "$W/Wrapper.xcodeproj/project.pbxproj" <<'PBX'
@@ -223,7 +225,7 @@ if [ "$PSTATE" != valid ]; then
 		0A0000000000000000000008 = {isa = PBXProject; attributes = {LastUpgradeCheck = 1600; TargetAttributes = {0A0000000000000000000007 = {CreatedOnToolsVersion = 16.0; }; }; }; buildConfigurationList = 0A000000000000000000000A; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base, ); mainGroup = 0A0000000000000000000004; productRefGroup = 0A0000000000000000000005; projectDirPath = ""; projectRoot = ""; targets = (0A0000000000000000000007, ); };
 		0A0000000000000000000009 = {isa = XCConfigurationList; buildConfigurations = (0A000000000000000000000B, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
 		0A000000000000000000000A = {isa = XCConfigurationList; buildConfigurations = (0A000000000000000000000C, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
-		0A000000000000000000000B = {isa = XCBuildConfiguration; buildSettings = {GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; PRODUCT_NAME = Wrapper; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
+		0A000000000000000000000B = {isa = XCBuildConfiguration; buildSettings = {GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; OTHER_LDFLAGS = ("-framework", UIKit, ); PRODUCT_NAME = Wrapper; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
 		0A000000000000000000000C = {isa = XCBuildConfiguration; buildSettings = {IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; }; name = Debug; };
 	};
 	rootObject = 0A0000000000000000000008;
