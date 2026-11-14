@@ -80,7 +80,8 @@ Earlier on 2026-11-14 (PR #246) the run had stopped at signing: the 2026-11-02 r
 profile had expired on 2026-11-05 and Xcode had no Apple account signed in ("No Accounts"); the
 script waited 45 minutes and installed nothing. On that branch the simulator script, re-run
 through the now-shared report (`--runs 3`, iPhone Air simulator, iOS 26.4, release), still gave 0
-differing pixels on orders, card and item (control 690027), and native 125 ms against guest 215 ms.
+differing pixels on orders, card and item (control 690027), and native 125 ms against guest 215 ms;
+the fix round's final `--capture` run gave native 122 ms against guest 200 ms.
 
 **How to run it** (`scripts/keliver-gateb-ios-device.sh`, the device counterpart of
 `keliver-gateb-ios-sim.sh`; `--help` has the details):
@@ -426,9 +427,10 @@ saving (`dumpsys battery` before the run read 83%, unplugged, 26.7 °C):
 | guest (`host`, the bundle from the APK's assets) | **2,581** | 2,812 | 2,813 | 2,404 | 823 | 858 | 903 |
 | guest − native | **+1,662** | | | | −96 | | |
 
-The guest's initial display is an empty surface (the activity's first frame), so it comes slightly
+The guest's initial display is most likely an empty surface (the activity's first frame; inferred
+from its timing, not captured), so it comes slightly
 earlier than native's, whose first frame already has the content. Its full display is the frame
-after the first change batch has been applied: loading the ~1.9 MB bundle into QuickJS from the
+after the first change batch has been applied: loading the ~1.9 MB bundle (1,948 KB in assets, see the APK table above) into QuickJS from the
 APK's assets (no network) and the guest's first composition. Where the 1.66 s goes was not profiled.
 The emulator has no cold-start number (#244 did not measure one). On the iPhone 13 the same gap
 from `main()` was +142 ms warm and about +820 ms with an empty cache (section above); the two are
@@ -454,7 +456,7 @@ Reading them together:
   most frames in both runs (233 and 274 per 5 s). Their frame CPU p50 was about 7 ms above native's
   in run 1 (27.2 against 19–20 ms) and 1.7 ms above in run 2 (20.6 against 18.9 ms); run 1's phone
   was warm and charging, run 2's cooler and on battery, so the size of the gap depends on the
-  phone's state. Their overrun p99 tail was the longest in both runs (136 and 88 ms, against 73–97
+  phone's state. Their overrun p99 tail was the longest in both runs (136 and 88 ms, against 72–97
   for native). Two runs still do not say how much of that is the generated renderers and how much
   is the guest's QuickJS thread competing for this phone's CPU while the host animates; the native
   forms' own spread between runs (151–218 frames) is of the same order.
