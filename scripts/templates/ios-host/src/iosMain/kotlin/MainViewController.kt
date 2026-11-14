@@ -166,6 +166,8 @@ import platform.darwin.dispatch_get_main_queue
 import platform.darwin.notify_register_dispatch
 
 private const val TAG = "KeliverHost"
+/** An app an update in a new app replaced is closed this long after the swap: screens have bound the new one by then. */
+private const val OLD_APP_CLOSE_DELAY_MILLIS = 2_000L
 /** One Zipline cache per key, and one rollback floor and last-good URL per key with it. */
 private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
 /** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
@@ -349,6 +351,14 @@ internal class Session(
   var fromCache: Boolean,
   /** Loads a manifest URL (and its index sha256) into [app] again, from the network: `loadAgain`. */
   val reload: (String, String?) -> Unit,
+  /**
+   * Start policy PARALLEL or CACHE_FIRST, after a start from the cache: loads an update (its
+   * manifest URL and sha256) in a new app, swapped in for this one once it has loaded (Zipline
+   * takes no further manifest into [app]). Null: updates go to [manifestUrls].
+   */
+  val loadInNewApp: ((String, String?) -> Unit)?,
+  /** [app]'s events: dropped when another app takes its place. */
+  val fence: LoadFence,
 ) {
   /** The first load failed, and nothing runs: the next update check loads again. */
   var notLoaded = false
@@ -490,9 +500,6 @@ public object Keliver {
     private set
   internal var startedBridges: List<KeliverBridgeBinding> = emptyList()
     private set
-
-  /** B5: what each app binding bound, from the code load's EventListener. */
-  internal val bridgeBinds = BridgeBindRecorder()
 
   /** B5: a bridge's log (the guard's failures, a binding that threw), in a DEBUG binary only. */
   @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
@@ -734,6 +741,27 @@ public object Keliver {
   /** Called on the main thread when the running app's session is created. */
   internal fun attach(session: Session) { this.session = session }
 
+  /** A held app ([AppLoad]) becomes the host's: its session, and the state screens show. Main thread. */
+  internal fun show(session: Session) {
+    attach(session)
+    setState(KeliverHostState.Running(session.app))
+  }
+
+  /**
+   * An update loaded in a new app ([Session.loadInNewApp]) takes the running app's place: the
+   * running one's events stop counting now, and it is closed once screens have bound the new one
+   * (the screen keys its content on the app). Main thread.
+   */
+  internal fun swapIn(next: AppLoad) {
+    val old = session
+    old?.fence?.drop()
+    next.show()
+    if (old != null) appScope.launch {
+      delay(OLD_APP_CLOSE_DELAY_MILLIS.milliseconds)
+      old.app.close()
+    }
+  }
+
   /** Called on the main thread when the host falls back to the cached last good bundle. */
   internal fun fellBack(reason: String) {
     emit(KeliverUpdateEvent("fell-back", -1, reason))
@@ -758,7 +786,9 @@ public object Keliver {
    * started from the network, a newer one loads in place: Zipline loads it while
    * the running code goes on, swaps it in on success and keeps the old one on
    * failure ([onUpdateEvent]). After a start from the cache, a newer bundle
-   * applies at the next process start. When the first load failed ("Bundle did
+   * applies at the next process start; except under start policy PARALLEL or
+   * CACHE_FIRST, where it loads in a new app, swapped in on success, the running
+   * one kept on failure. When the first load failed ("Bundle did
    * not load"), it looks up and loads again instead, whatever [apply] says; then
    * [onUpdateEvent] gets nothing, and the state and the reports say how it went.
    * From any thread: it runs on the main one.
@@ -801,12 +831,20 @@ public object Keliver {
       log("update check: sequence $sequence did not load earlier in this process; it applies at the next start")
       return KeliverUpdateCheck("available", sequence, false, "")
     }
-    if (!apply || s.fromCache) {
+    val inNewApp = s.loadInNewApp?.takeIf { s.fromCache }
+    if (!apply || (s.fromCache && inNewApp == null)) {
       log("update check: sequence $sequence is available (running ${running.sequence}); it applies at the next start")
       return KeliverUpdateCheck("available", sequence, false, "")
     }
-    log("update check: sequence $sequence is available (running ${running.sequence}); applying ${latest.manifestUrl}")
     pending = Pending(sequence, latest.manifestUrl, TimeSource.Monotonic.markNow())
+    if (inNewApp != null) {
+      // Start policy PARALLEL or CACHE_FIRST, after a start from the cache: Zipline takes no further
+      // manifest into the running app, so the update loads in a new one, swapped in once it has loaded.
+      log("update check: sequence $sequence is available (running ${running.sequence}, from the cache); applying ${latest.manifestUrl} in a new app")
+      inNewApp(latest.manifestUrl, latest.manifestSha256)
+      return KeliverUpdateCheck("available", sequence, true, "")
+    }
+    log("update check: sequence $sequence is available (running ${running.sequence}); applying ${latest.manifestUrl}")
     s.pinning.pin(latest.manifestUrl, latest.manifestSha256)
     s.manifestUrls.value = latest.manifestUrl
     return KeliverUpdateCheck("available", sequence, true, "")
@@ -1133,7 +1171,9 @@ public object Keliver {
         }
         UnavailableScreen(s, safeArea)
       }
-      is KeliverHostState.Running -> {
+      // Keyed on the app: an update that loaded in a new app (start policy parallel or cache-first,
+      // after a start from the cache) binds this screen to that app.
+      is KeliverHostState.Running -> androidx.compose.runtime.key(s.app) {
         val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(imageLoader) }
         val contentSource = remember {
           object : TreehouseContentSource<PortalPresenter> {
@@ -1286,12 +1326,16 @@ private suspend fun startHost(): HostState {
   val facts = HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside = crash.setAside())
   val lookup = LookupContext(server, capabilities, floor, cacheName(trust))
   // Start policy (StartPolicy.kt): decided before the lookup, from what earlier lookups left.
-  val policy = effectiveStartPolicy(KeliverStartPolicy.parse(START_POLICY), NSUserDefaults.standardUserDefaults.stringForKey(startOverrideKey(cacheName(trust))))
+  val policy = effectiveStartPolicy(
+    KeliverStartPolicy.parse(START_POLICY), NSUserDefaults.standardUserDefaults.stringForKey(startOverrideKey(cacheName(trust))),
+    overrideAllowed = parseStartPolicyOverride(START_POLICY_OVERRIDE) ?: true,
+  )
   val (checkedChannel, newestSeen) = recordedLookup(cacheName(trust))
+  val rollbackWhy = crashRollbackReason(crash, startStep, floor())
   val choice = chooseStart(
     StartFacts(
-      policy, cached = lastGood != null, crashRollback = crashRollbackDecides(crash, startStep, floor()), channel = CHANNEL,
-      checkedChannel = checkedChannel, newestSeen = newestSeen, floor = floor(),
+      policy, cached = lastGood != null, crashRollback = rollbackWhy != null, channel = CHANNEL,
+      checkedChannel = checkedChannel, newestSeen = newestSeen, floor = floor(), crashRollbackWhy = rollbackWhy,
     ),
   )
   log(choice.logLine(policy))
@@ -1299,10 +1343,33 @@ private suspend fun startHost(): HostState {
     log("starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
     // As the "lookup failed" start below: the cached bundle, held to the key, the floor and set-aside sequences.
     val cached = AcceptCachedBundle(floor, crash, Keliver.served)
+    // One factory (so one Zipline cache) and one pinning client for this start's apps: the cached
+    // one, and each one a newer release loads in (the one a PARALLEL lookup names, or an update).
+    val parts = AppParts(trust, lastGood, null, floor, crash, apiBase)
+    // After a start from the cache, Zipline takes no further manifest into that app: an update (on
+    // resume, live, checkForUpdate) loads in a new app, swapped in once it has loaded; when it
+    // fails, the running one stays (checkForUpdate).
+    val loadInNewApp = { url: String, sha256: String? ->
+      var update: AppLoad? = null
+      createApp(
+        trust, url, sha256, lookup, DefaultFreshnessCheckerNotFresh, apiBase, fallback = null, parts = parts,
+        held = { update = it },
+        onKept = { loaded ->
+          val u = checkNotNull(update)
+          if (loaded) {
+            Keliver.swapIn(u)
+          } else {
+            u.settle() // the update's failure, as checkForUpdate reports one
+            u.drop()
+          }
+        },
+      )
+      Unit
+    }
     if (choice.mode == KeliverStartPolicy.CACHE_FIRST) {
-      val app = createApp(trust, lastGood, null, lookup, cached, apiBase, fallback = null)
+      val app = createApp(trust, lastGood, null, lookup, cached, apiBase, fallback = null, parts = parts, loadInNewApp = loadInNewApp)
       return HostState.Running(app) {
-        // In the background: what it finds applies from the next start.
+        // In the background: what it finds applies from the next start (or as an update, on resume or live).
         appScope.launch {
           val latest = lookupBundle(server, capabilities, facts, cacheName(trust))
           val newer = latest?.sequence?.takeIf { it > floor() }
@@ -1310,20 +1377,23 @@ private suspend fun startHost(): HostState {
         }
       }
     }
-    // PARALLEL: loading now, shown once the lookup confirms it or fails; a W5 fall-back to it as network-first has.
-    var held: HeldStart? = null
-    val app = createApp(trust, lastGood, null, lookup, cached, apiBase, fallback = lastGood, held = { held = it })
+    // PARALLEL: the cached release loads now, in an app of its own, shown once the lookup confirms
+    // it or fails (with no fall-back, as network-first's start from the cache has none).
+    var held: AppLoad? = null
+    val app = createApp(trust, lastGood, null, lookup, cached, apiBase, fallback = null, parts = parts, held = { held = it }, loadInNewApp = loadInNewApp)
     val latest = lookupBundle(server, capabilities, facts, cacheName(trust))
     val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood)
     log("start policy: parallel: $why")
     val h = checkNotNull(held)
     return when (step) {
-      ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.release)
+      ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.show)
       ParallelStep.LOAD_NAMED -> {
+        // Closed: nothing of it shows, and nothing it did counts (LoadFence). The named release
+        // loads in a new app, as network-first loads it, with the W5 fall-back to the cached bundle.
+        h.drop()
         val named = checkNotNull(latest)
         log("loading ${named.manifestUrl} (${named.source}); rollback floor ${floor()}")
-        h.replace(named.manifestUrl, named.manifestSha256)
-        HostState.Running(app)
+        HostState.Running(createApp(trust, named.manifestUrl, named.manifestSha256, lookup, DefaultFreshnessCheckerNotFresh, apiBase, fallback = lastGood, parts = parts))
       }
     }
   }
@@ -1435,48 +1505,30 @@ private suspend fun legacyLatest(server: BundleServer, capabilities: List<String
   return Lookup(url, null, "relay bundles/latest")
 }
 
-private fun createApp(
+/**
+ * What a start's apps share (createApp): the pinning client, the factory (so one Zipline cache), and
+ * the host's services bound into each code load.
+ */
+private class AppParts(
   trust: ProductionTrust.Verified,
   manifestUrl: String,
   manifestSha256: String?,
-  lookup: LookupContext,
-  freshness: FreshnessChecker,
+  floor: () -> Long,
+  crash: CrashGuard,
   apiBase: String?,
-  fallback: String?,
-  kept: KeptBundle? = null,
-  /**
-   * Start policy PARALLEL: the code loads now, but the first load's outcome waits until the
-   * caller, its lookup done, releases it or replaces it (the [HeldStart] handed here).
-   */
-  held: ((HeldStart) -> Unit)? = null,
-): TreehouseApp<PortalPresenter> {
-  val floor = lookup.floor
-  // WS6: crash rollback's ledger (startHost set it before creating this app).
-  val crash = checkNotNull(Keliver.crash)
-  // Each key under its own name, and the first under portal-ed25519 too (W8,
-  // BundleIndex.kt: trustedSignatures).
-  val verifier = ManifestVerifier.Builder().apply {
-    trustedSignatures(trust.publicKeysHex).forEach { (name, key) -> addEd25519(name, key.decodeHex()) }
-  }.build()
+) {
+  // B5: the bridges as the host started.
+  val served = Keliver.served
   // The manifest held to the index's sha256 (when there is one), to the rollback floor, and not
   // set aside (WS6).
-  val served = Keliver.served // B5: as the host started
   val pinning = ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor, crash) { served }
-  // WS6: a start that goes back to the bundle that proved healthy here serves its kept manifest.
-  kept?.let(pinning::pinLocal)
-  val flow = MutableStateFlow(manifestUrl)
-  // One checker for the app's life, switched for the fall-back (W5): Treehouse
-  // reads the spec's checker each time it (re)starts its loader.
-  val freshnessSwitch = SwitchableFreshness(freshness)
-  var fellBack = false
-  // PARALLEL: the first load's outcome, held (main thread); and which load is the host's: a
-  // replaced load's late events are ignored.
-  val hold = StartHold(held != null)
-  val loadGeneration = LoadGeneration()
-  lateinit var app: TreehouseApp<PortalPresenter>
   val factory = TreehouseAppFactory(
     httpClient = pinning,
-    manifestVerifier = verifier,
+    // Each key under its own name, and the first under portal-ed25519 too (W8,
+    // BundleIndex.kt: trustedSignatures).
+    manifestVerifier = ManifestVerifier.Builder().apply {
+      trustedSignatures(trust.publicKeysHex).forEach { (name, key) -> addEd25519(name, key.decodeHex()) }
+    }.build(),
     embeddedFileSystem = null,
     embeddedDir = null,
     // One cache per key: Zipline verifies the pinned manifest before the
@@ -1493,6 +1545,55 @@ private fun createApp(
   // holds a connection or a session).
   val sql = IosSqlHost()
   val http = apiBase?.let { NSURLSessionHostHttp(it, Keliver.requestPolicy, Keliver.requestHeaders) }
+}
+
+private fun createApp(
+  trust: ProductionTrust.Verified,
+  manifestUrl: String,
+  manifestSha256: String?,
+  lookup: LookupContext,
+  freshness: FreshnessChecker,
+  apiBase: String?,
+  fallback: String?,
+  kept: KeptBundle? = null,
+  /** Shared with this start's other apps (start policy PARALLEL or CACHE_FIRST); null: its own. */
+  parts: AppParts? = null,
+  /**
+   * Not the host's app yet: a PARALLEL start's cached load, until its lookup is done, or an update
+   * loading in a new app, until it has loaded. Its code loads now, but its outcome and crash
+   * records wait until the caller shows it ([AppLoad.show]) or drops it ([AppLoad.drop]) (the
+   * [AppLoad] handed here).
+   */
+  held: ((AppLoad) -> Unit)? = null,
+  /** A held load's outcome is in ([StartHold]): true when it loaded. Main thread. */
+  onKept: ((loaded: Boolean) -> Unit)? = null,
+  /** Start policy PARALLEL or CACHE_FIRST: how an update after a start from the cache loads ([Session.loadInNewApp]). */
+  loadInNewApp: ((String, String?) -> Unit)? = null,
+): TreehouseApp<PortalPresenter> {
+  val floor = lookup.floor
+  // WS6: crash rollback's ledger (startHost set it before creating this app).
+  val crash = checkNotNull(Keliver.crash)
+  val shared = parts?.also { it.pinning.pin(manifestUrl, manifestSha256) } ?: AppParts(trust, manifestUrl, manifestSha256, floor, crash, apiBase)
+  val served = shared.served
+  val pinning = shared.pinning
+  // WS6: a start that goes back to the bundle that proved healthy here serves its kept manifest.
+  kept?.let(pinning::pinLocal)
+  val flow = MutableStateFlow(manifestUrl)
+  // One checker for the app's life, switched for the fall-back (W5): Treehouse
+  // reads the spec's checker each time it (re)starts its loader.
+  val freshnessSwitch = SwitchableFreshness(freshness)
+  var fellBack = false
+  // A held app's first outcome, kept (main thread); and its events, kept until it is shown, never
+  // acted on once it is dropped (a dropped app counts toward nothing).
+  val hold = StartHold(held != null, onKept)
+  val fence = LoadFence(held != null) { block -> appScope.launch { block() } }
+  // B5: what each app binding bound, from this app's EventListener (one per app, so that two apps
+  // loading at once never mix their binds).
+  val bridgeBinds = BridgeBindRecorder()
+  lateinit var app: TreehouseApp<PortalPresenter>
+  val factory = shared.factory
+  val sql = shared.sql
+  val http = shared.http
   val bridges = Keliver.startedBridges // B5: as the host started with them
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "keliver-production"
@@ -1506,7 +1607,7 @@ private fun createApp(
       if (bridges.isNotEmpty()) {
         val bridgeScope = KeliverBridgeScope(zipline, Dispatchers.Main, Keliver::bridgeDebugLog)
         val load = currentCoroutineContext()[Job]
-        bindAppBridges(bridges, Keliver.bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true }) { it.bind(bridgeScope) }
+        bindAppBridges(bridges, bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true }) { it.bind(bridgeScope) }
       }
       zipline.bind<HostSqlDriver>("HostSqlDriver", sql)
       KeliverTiming.bindServices(zipline) // KeliverTrace, in Debug and Benchmark builds only (M0)
@@ -1559,36 +1660,44 @@ private fun createApp(
     // manifest's signature, and so its metadata, before loading it.
     eventListenerFactory = LoggingEventListenerFactory(
       // WS6: a verified bundle's code begins to evaluate: a new bundle goes on trial, its marker written first.
+      // (The listener runs this through the fence: a held app's waits until it shows.)
       onReady = { sequence -> crash.loadStarting(sequence) },
-      onSuccess = { load, sequence, url ->
-        KeliverTiming.mark("code")
-        // WS6: kept (as it loaded from the network) to come back to once it proves healthy.
-        crash.loaded(sequence, url, url?.let(pinning::servedManifest))
-        // A load a PARALLEL start replaced is not the host's: it changes nothing here.
-        if (load == loadGeneration.current) {
-          appScope.launch {
-            if (load == loadGeneration.current) hold.onOutcome { Keliver.codeLoaded(sequence, url) }
-          }
+      onSuccess = { sequence, url ->
+        fence.run {
+          KeliverTiming.mark("code")
+          // WS6: kept (as it loaded from the network) to come back to once it proves healthy.
+          crash.loaded(sequence, url, url?.let(pinning::servedManifest))
+        }
+        // A held app's outcome waits until it shows; a dropped app's changes nothing.
+        appScope.launch {
+          if (fence.live) hold.onOutcome(loaded = true) { Keliver.codeLoaded(sequence, url) }
         }
       },
-      onSkipped = { appScope.launch { Keliver.codeSkipped() } },
+      onSkipped = { appScope.launch { if (fence.live) Keliver.codeSkipped() } },
       // Before any code ran: fall back to the cached last good bundle once (W5),
       // as a start with a failed lookup does (the floor holds; Zipline verifies
       // the cached manifest again). Otherwise the host says the load failed.
       // WS6: step is what the failure did to the bundle on trial (a load whose code failed counts;
       // a download, the network, the signature or the floor does not: CodeLoadProgress).
-      onFailed = { load, reason, step ->
+      // [count] counts it (once): at once for the host's app, when it shows for a held one, never
+      // for a dropped one.
+      onFailed = { reason, count ->
         appScope.launch {
-          Keliver.crashLog(step)
-          // A load a PARALLEL start replaced is not the host's; a held first load waits for its lookup.
-          if (load == loadGeneration.current) hold.onOutcome { codeLoadFailed(reason, step) }
+          if (!fence.live) return@launch
+          hold.onOutcome(loaded = false) {
+            val step = count()
+            Keliver.crashLog(step)
+            codeLoadFailed(reason, step)
+          }
         }
       },
       // WS6: the running code threw (Treehouse stops it). Before it proved healthy, that counts;
       // at the threshold the host goes back to the bundle that proved healthy here, or leaves the
       // app's own view (every screen on show has called its onUnavailable: screen-failed).
+      // (The listener runs this through the fence: a held app's waits until it shows.)
       onUncaught = { step ->
         appScope.launch {
+          if (!fence.live) return@launch
           Keliver.crashLog(step)
           Keliver.resetCrashWindow(Keliver.loadedSequence(), failed = true)
           if (step !is CrashStep.SetAside) return@launch
@@ -1610,10 +1719,10 @@ private fun createApp(
           log("rollback floor raised: $current -> $sequence")
         }
       },
-      generation = { loadGeneration.current },
+      bridgeBinds = bridgeBinds,
+      fence = fence,
     ),
   )
-  KeliverTiming.watch(app) // the memory profile reads its QuickJS heap (M5); Debug and Benchmark builds only
   // After a first load that failed (Keliver.loadAgain): from the network this time, into the same
   // app, stop() then start() as the fall-back does.
   val reload = { url: String, sha256: String? ->
@@ -1623,23 +1732,33 @@ private fun createApp(
     flow.value = url
     app.start()
   }
-  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))
+  val thisSession = Session(
+    app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload, loadInNewApp = loadInNewApp, fence = fence,
+  )
+  if (held == null) {
+    KeliverTiming.watch(app) // the memory profile reads its QuickJS heap (M5); Debug and Benchmark builds only
+    Keliver.attach(thisSession)
+  }
   // M3: the code load starts now, not when the first screen's createContent would start it.
   app.start()
   held?.invoke(
-    HeldStart(
-      // The lookup confirmed the cached bundle, or failed: as network-first's start from the cache,
-      // with no fall-back left (that start has none either). Run once the state says Running.
-      release = {
-        fellBack = true
+    AppLoad(
+      // The host's app now (its session, the state): what it kept acts, its crash records, then its outcome.
+      show = {
+        KeliverTiming.watch(app)
+        Keliver.show(thisSession)
+        fence.goLive()
         hold.release()
       },
-      // The lookup named another bundle: the cached load is dropped, unseen, and this one loads
-      // from the network, with the W5 fall-back to the cached bundle, as network-first loads it.
-      replace = { url, sha256 ->
+      settle = {
+        fence.goLive()
+        hold.release()
+      },
+      // Closed; nothing of it shows, and nothing it did or does counts (LoadFence).
+      drop = {
+        fence.drop()
         hold.drop()
-        loadGeneration.next()
-        reload(url, sha256)
+        app.close()
       },
     ),
   )
@@ -1674,42 +1793,50 @@ private class AcceptCachedBundle(
   }
 }
 
-/** A PARALLEL start's held first load (createApp): show it, or load the named bundle in its place. Main thread. */
-private class HeldStart(val release: () -> Unit, val replace: (url: String, sha256: String?) -> Unit)
+/**
+ * A held app (createApp): [show] makes it the host's (its session, the state) and acts on what it
+ * kept; [settle] acts on what it kept without showing it (an update that failed: the running app
+ * stays, and the failure is reported as an update's); [drop] closes it. Main thread.
+ */
+internal class AppLoad(val show: () -> Unit, val settle: () -> Unit, val drop: () -> Unit)
 
+/**
+ * One app's code loads' listener. [fence] says whether the app is the host's: what touches crash
+ * rollback's ledger (onReady, a failure's count, onUncaught) goes through it, so a held app's waits
+ * until it shows and a dropped app's never happens; a dropped app's other events are ignored.
+ */
 private class LoggingEventListenerFactory(
   private val onReady: (Long?) -> Unit,
-  /** [load]: the host's load generation when this load began (a PARALLEL start's replaced load is behind). */
-  private val onSuccess: (load: Int, sequence: Long?, manifestUrl: String?) -> Unit,
+  private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
   private val onSkipped: () -> Unit,
-  private val onFailed: (load: Int, reason: String, step: CrashStep) -> Unit,
+  /** [count] counts the failure (once) and says what that did; call it when the app is the host's. */
+  private val onFailed: (reason: String, count: () -> CrashStep) -> Unit,
   private val onUncaught: (CrashStep) -> Unit,
   private val crash: CrashGuard,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
-  private val generation: () -> Int,
+  private val bridgeBinds: BridgeBindRecorder,
+  private val fence: LoadFence,
 ) : EventListener.Factory {
-  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener {
-    val load = generation()
-    return LoggingEventListener(
-      manifestUrl, onReady, { s, u -> onSuccess(load, s, u) }, onSkipped, { r, s -> onFailed(load, r, s) }, onUncaught, crash,
-      onLoaded, onSequence,
-    )
-  }
+  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = LoggingEventListener(
+    manifestUrl, onReady, onSuccess, onSkipped, onFailed, onUncaught, crash, onLoaded, onSequence, bridgeBinds, fence,
+  )
   override fun close() {}
 }
 
-/** One per code load. WS6: it counts at most one failure for the bundle it loads (from Zipline's thread, before returning). */
+/** One per code load. WS6: it counts at most one failure for the bundle it loads (from Zipline's thread, before returning, for the host's app). */
 private class LoggingEventListener(
   private val manifestUrl: String?,
   private val onReady: (Long?) -> Unit,
   private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
   private val onSkipped: () -> Unit,
-  private val onFailed: (String, CrashStep) -> Unit,
+  private val onFailed: (String, () -> CrashStep) -> Unit,
   private val onUncaught: (CrashStep) -> Unit,
   private val crash: CrashGuard,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
+  private val bridgeBinds: BridgeBindRecorder,
+  private val fence: LoadFence,
 ) : EventListener() {
   /** WS6: the verified sequence this load runs (null until its manifest is ready, or without one). */
   @Volatile private var sequence: Long? = null
@@ -1725,7 +1852,9 @@ private class LoggingEventListener(
   }
 
   // B5: Zipline reports every bind here, inside bind(): what an app's bridge binding bound.
-  override fun bindService(name: String, service: ZiplineService) = Keliver.bridgeBinds.bound(name)
+  override fun bindService(name: String, service: ZiplineService) {
+    if (fence.live) bridgeBinds.bound(name)
+  }
 
   // WS6: the manifest verified; its modules download next, and then evaluate.
   override fun manifestReady(manifest: ZiplineManifest) {
@@ -1737,7 +1866,10 @@ private class LoggingEventListener(
 
   // WS6: the first module evaluates: the bundle's code begins to run, and from here it is on trial.
   override fun moduleLoadStart(moduleId: String): Any? {
-    if (progress.moduleLoadStart()) onReady(sequence)
+    if (progress.moduleLoadStart()) {
+      val s = sequence
+      fence.run { onReady(s) }
+    }
     return null
   }
 
@@ -1754,24 +1886,31 @@ private class LoggingEventListener(
     this.sequence = sequence
     // A load from the cache reports no manifest URL.
     log("codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"} source=${if (manifestUrl == null) "cache" else "network"}")
+    // A dropped app's load changes nothing: not the floor, not the last good bundle.
+    if (!fence.live) return
     onSuccess(sequence, manifestUrl)
     manifestUrl?.let(onLoaded)
     sequence?.let(onSequence)
   }
   override fun codeLoadSkipped(startValue: Any?) {
     log("codeLoadSkipped: the manifest is unchanged")
-    onSkipped()
+    if (fence.live) onSkipped()
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     log("codeLoadFailed: ${exception.message}")
     // Counted only when its code failed (CodeLoadProgress): a download, the network, the floor or
     // the signature is not the bundle's.
     val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }
-    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count { crash.loadFailed(sequence, theBundles) })
+    val sequence = sequence
+    var step: CrashStep? = null
+    val countOnce = { step ?: count { crash.loadFailed(sequence, theBundles) }.also { step = it } }
+    // The host's app counts it here, before returning; a held app's when it shows; a dropped one's never.
+    if (fence.mode == LoadFence.Mode.LIVE) countOnce()
+    if (fence.live) onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", countOnce)
   }
   override fun uncaughtException(exception: Throwable) {
     log("uncaughtException: ${exception.message}")
-    onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) })
+    fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }
   }
   // The memory profile (M5): QuickJS before any code loads. Debug and Benchmark builds only.
   override fun ziplineCreated(zipline: Zipline) = KeliverTiming.memory("runtime", zipline)

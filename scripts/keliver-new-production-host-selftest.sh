@@ -142,7 +142,7 @@ grep -q 'android:name=".HostApp"' "$H/src/main/AndroidManifest.xml" \
   || bad "W2: the host is not owned by the Application"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
 # (A PARALLEL start's state waits for its lookup; its code load starts there all the same.)
-grep -A2 '^    if (!held) mutableState.value = KeliverHostState.Running(app)$' "$M" | grep -q '^    app.start()$' \
+grep -A2 '^    if (!held) makeTheHosts()$' "$M" | grep -q '^    app.start()$' \
   && ok "M3: the code load starts when the host starts, not when the first screen asks" \
   || bad "M3: the host does not start the code load at host start"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
@@ -180,7 +180,8 @@ grep -q '  bridges: List<KeliverBridgeBinding> = emptyList(),' "$M" && grep -q '
   && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
   && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, ::bridgeDebugLog)' \
   && [ "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
-  && grep -q 'override fun bindService(name: String, service: ZiplineService) = bridgeBinds.bound(name)' "$M" \
+  && grep -A1 'override fun bindService(name: String, service: ZiplineService) {' "$M" | grep -q 'if (fence.live) bridgeBinds.bound(name)' \
+  && grep -q '    val bridgeBinds = BridgeBindRecorder()' "$M" \
   && grep -q 'if (BuildConfig.DEBUG) Log.w(TAG, "bridge: $message")' "$M" \
   && [ -f "$(dirname "$M")/Bridges.kt" ] && grep -q 'internal fun bindAppBridges(' "$(dirname "$M")/Bridges.kt" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverBridgesTest.kt" ] \
@@ -368,11 +369,11 @@ grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), fl
 C="${M%/*}/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$M" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$M" \
-  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$M" \
+  && grep -A3 'if (progress.moduleLoadStart()) {' "$M" | grep -q 'fence.run { onReady(s) }' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$M" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }' "$M" \
   && grep -q 'crash.loadFailed(sequence, theBundles)' "$M" \
-  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$M" && grep -q 'val startStep = crash.atStart(::lastExitCrashed)' "$M" \
+  && grep -q 'fence.run { onUncaught(count(CrashKind.EXCEPTION)) }' "$M" && grep -q 'val startStep = crash.atStart(::lastExitCrashed)' "$M" \
   && grep -q 'crash?.screens(true)' "$M" && grep -q 'crash?.screens(screensShown > 0)' "$M" \
   && grep -q 'android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,' "$M" \
   && grep -q '.firstOrNull { it.pid == pid && it.processName == me && it.timestamp >= markedAt }' "$M" \
@@ -393,19 +394,28 @@ C="${M%/*}/CrashRollback.kt"
 # Start policy (docs/DEVICE_HOST.md, "Start policy"): the decision (StartPolicy.kt, the iOS host's
 # file too) and its JVM tests are scaffolded; the app sets keliver.startPolicy (network-first by
 # default); crash rollback decides as network-first; each start logs its policy and why; every
-# index read keeps the override for the next start; a PARALLEL start's replaced load changes nothing.
+# index read keeps the override for the next start, unless keliver.startPolicyOverride=none; a
+# PARALLEL start's cached load is in an app of its own, closed when dropped, its crash records fenced;
+# after a start from the cache an update loads in a new app; screens key their content on the app.
 SP="${M%/*}/StartPolicy.kt"
 [ -f "$SP" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/StartPolicyTest.kt" ] \
   && grep -q '^val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.NETWORK_FIRST$' "$SP" \
   && grep -q '^keliver.startPolicy=$' "$H/gradle.properties" \
+  && grep -q '^keliver.startPolicyOverride=$' "$H/gradle.properties" \
   && grep -q "buildConfigField 'String', 'KELIVER_START_POLICY'" "$H/build.gradle" \
+  && grep -q "buildConfigField 'String', 'KELIVER_START_POLICY_OVERRIDE'" "$H/build.gradle" \
   && grep -q 'startPolicy: KeliverStartPolicy? = KeliverStartPolicy.parse(BuildConfig.KELIVER_START_POLICY),' "$M" \
-  && grep -q 'crashRollback = crashRollbackDecides(crash, startStep, floor())' "$M" \
+  && grep -q 'config.startPolicyOverrideAllowed)' "$M" \
+  && grep -q 'val rollbackWhy = crashRollbackReason(crash, startStep, floor())' "$M" \
   && grep -q 'Log.i(TAG, choice.logLine(policy))' "$M" \
   && [ "$(grep -c 'recordStartOverride(.*, it)' "$M")" -ge 3 ] \
-  && grep -q 'if (load != loadGeneration.current) return@launch' "$M" \
+  && grep -q '          held.drop()' "$M" \
+  && grep -q 'val fence = LoadFence(held) { block -> scope.launch { block() } }' "$M" \
+  && grep -q '    fence.run { onUncaught(count(CrashKind.EXCEPTION)) }' "$M" \
+  && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$M" \
+  && grep -q 'androidx.compose.runtime.key(s.app)' "${M%/*}/KeliverScreen.kt" \
   && grep -q 'fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String?' "${M%/*}/BundleIndex.kt" \
-  && ok "start policy: keliver.startPolicy (network-first by default), the index's override from the next start, logged at each start" \
+  && ok "start policy: keliver.startPolicy (network-first by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app" \
   || bad "start policy: not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"

@@ -123,33 +123,37 @@ fun KeliverScreen(
             if (host.showsDeveloperText) MessageScreen("Updating", "Loading the newest version…") else loading()
           } else {
             SideEffect { shown = true } // once drawn, an update swaps in place
-            val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
-            // K1's routes and close: a new route is a new content source, so the guest launches it
-            // (TreehouseContent rebinds). Without onClose, closing finishes the activity (not a back
-            // press: the guest's own back handlers, a NavHost's or a sheet's would take that).
-            val activity = androidx.compose.ui.platform.LocalContext.current.findActivity()
-            val latestOnClose by rememberUpdatedState(onClose ?: { activity?.finish() })
-            // A close asked for after this content went (a reply that came late) closes nothing.
-            val active = remember(route) { java.util.concurrent.atomic.AtomicBoolean(true) }
-            DisposableEffect(active) { onDispose { active.set(false) } }
-            val contentSource = remember(route) {
-              object : TreehouseContentSource<PortalPresenter> {
-                // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
-                override fun get(app: PortalPresenter) =
-                  KeliverTiming.firstFrame(host.launch(app, s.app, route) { if (active.get()) latestOnClose() })
+            // Keyed on the app: an update that loaded in a new app (start policy parallel or
+            // cache-first, after a start from the cache) binds this screen to that app.
+            androidx.compose.runtime.key(s.app) {
+              val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
+              // K1's routes and close: a new route is a new content source, so the guest launches it
+              // (TreehouseContent rebinds). Without onClose, closing finishes the activity (not a back
+              // press: the guest's own back handlers, a NavHost's or a sheet's would take that).
+              val activity = androidx.compose.ui.platform.LocalContext.current.findActivity()
+              val latestOnClose by rememberUpdatedState(onClose ?: { activity?.finish() })
+              // A close asked for after this content went (a reply that came late) closes nothing.
+              val active = remember(route) { java.util.concurrent.atomic.AtomicBoolean(true) }
+              DisposableEffect(active) { onDispose { active.set(false) } }
+              val contentSource = remember(route) {
+                object : TreehouseContentSource<PortalPresenter> {
+                  // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
+                  override fun get(app: PortalPresenter) =
+                    KeliverTiming.firstFrame(host.launch(app, s.app, route) { if (active.get()) latestOnClose() })
+                }
               }
+              // K1's screen-failed: the code threw while this screen showed it.
+              val latestOnUnavailable by rememberUpdatedState(onUnavailable)
+              val latestUnavailable by rememberUpdatedState(unavailable)
+              val failureWidgets = remember(host) { ScreenFailedWidgets(host, { latestOnUnavailable }, { latestUnavailable }) }
+              TreehouseContent(
+                treehouseApp = s.app,
+                widgetSystem = widgetSystem,
+                contentSource = contentSource,
+                modifier = Modifier.fillMaxSize(),
+                dynamicContentWidgetFactory = failureWidgets,
+              )
             }
-            // K1's screen-failed: the code threw while this screen showed it.
-            val latestOnUnavailable by rememberUpdatedState(onUnavailable)
-            val latestUnavailable by rememberUpdatedState(unavailable)
-            val failureWidgets = remember(host) { ScreenFailedWidgets(host, { latestOnUnavailable }, { latestUnavailable }) }
-            TreehouseContent(
-              treehouseApp = s.app,
-              widgetSystem = widgetSystem,
-              contentSource = contentSource,
-              modifier = Modifier.fillMaxSize(),
-              dynamicContentWidgetFactory = failureWidgets,
-            )
           }
         }
       }

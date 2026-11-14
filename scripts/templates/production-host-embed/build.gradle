@@ -32,6 +32,7 @@ def reportUrl = setting('keliver.reportUrl', '')
 def channel = setting('keliver.channel', 'stable')
 def updates = setting('keliver.updates', '')
 def startPolicy = setting('keliver.startPolicy', '')
+def startPolicyOverride = setting('keliver.startPolicyOverride', '')
 // ASCII URL characters only; the bundle server takes no query or fragment,
 // because the host appends its own path to it.
 def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]!$&()*+,;=%-]+/
@@ -63,6 +64,9 @@ if (updates && !(updates in ['next-launch', 'on-resume', 'live'])) {
 if (startPolicy && !(startPolicy in ['network-first', 'parallel', 'cache-first'])) {
   throw new GradleException("keliver.startPolicy must be network-first, parallel, cache-first or empty (got '$startPolicy').")
 }
+if (startPolicyOverride && !(startPolicyOverride in ['any', 'none'])) {
+  throw new GradleException("keliver.startPolicyOverride must be any, none or empty (got '$startPolicyOverride').")
+}
 // live is for development: a debug build listens for publishes while a screen
 // shows. Every other build type takes it as on-resume (the host checks again).
 def updatesOutsideDebug = updates == 'live' ? 'on-resume' : updates
@@ -91,6 +95,7 @@ android {
     buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
     buildConfigField 'String', 'KELIVER_UPDATES', "\"${updatesOutsideDebug ?: 'next-launch'}\""
     buildConfigField 'String', 'KELIVER_START_POLICY', "\"${startPolicy}\""
+    buildConfigField 'String', 'KELIVER_START_POLICY_OVERRIDE', "\"${startPolicyOverride}\""
     buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeysOk ? portalKeyLines[0] : ''}\""
     buildConfigField 'String', 'KELIVER_NEXT_PUBLIC_KEY_HEX', "\"${portalKeysOk && portalKeyLines.size() == 2 ? portalKeyLines[1] : ''}\""
   }

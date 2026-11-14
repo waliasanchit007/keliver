@@ -45,6 +45,21 @@ class StartPolicyTest {
     assertEquals(EffectiveStartPolicy(DEFAULT_START_POLICY, "the default"), effectiveStartPolicy(null, "warp-speed"))
   }
 
+  @Test fun theAppCanRefuseTheOverride() {
+    // keliver.startPolicyOverride / START_POLICY_OVERRIDE: any (the default) or none.
+    assertEquals(true, parseStartPolicyOverride(null))
+    assertEquals(true, parseStartPolicyOverride(""))
+    assertEquals(true, parseStartPolicyOverride("any"))
+    assertEquals(false, parseStartPolicyOverride(" none "))
+    assertNull(parseStartPolicyOverride("some"))
+    val refused = effectiveStartPolicy(nf, "cache-first", overrideAllowed = false)
+    assertEquals(nf, refused.policy)
+    assertTrue("cache-first is not allowed" in refused.source, refused.source)
+    assertEquals(DEFAULT_START_POLICY, effectiveStartPolicy(null, "parallel", overrideAllowed = false).policy)
+    assertEquals(EffectiveStartPolicy(parallel, "the app's setting"), effectiveStartPolicy(parallel, null, overrideAllowed = false))
+    assertEquals(cacheFirst, effectiveStartPolicy(nf, "cache-first", overrideAllowed = true).policy)
+  }
+
   @Test fun networkFirstIsAlwaysNetworkFirst() {
     for (f in allFacts().filter { it.policy.policy == nf }) assertEquals(nf, chooseStart(f).mode, "$f")
   }
@@ -118,39 +133,108 @@ class StartPolicyTest {
     val done = mutableListOf<String>()
     // Released: the last outcome runs, once.
     val hold = StartHold(active = true)
-    hold.onOutcome { done += "failed" }
-    hold.onOutcome { done += "loaded" }
+    hold.onOutcome(loaded = false) { done += "failed" }
+    hold.onOutcome(loaded = true) { done += "loaded" }
     assertEquals(emptyList(), done)
     assertTrue(hold.release())
     assertEquals(listOf("loaded"), done)
     assertFalse(hold.active)
     assertFalse(hold.release())
     // After release, outcomes run at once (an update, a fall-back).
-    hold.onOutcome { done += "update" }
+    hold.onOutcome(loaded = true) { done += "update" }
     assertEquals(listOf("loaded", "update"), done)
-    // Dropped: the held outcome never runs, and later ones do.
+    // Dropped: the held outcome never runs.
     val dropped = StartHold(active = true)
-    dropped.onOutcome { done += "cached" }
+    dropped.onOutcome(loaded = true) { done += "cached" }
     dropped.drop()
     assertFalse(dropped.release())
-    dropped.onOutcome { done += "network" }
-    assertEquals(listOf("loaded", "update", "network"), done)
+    assertEquals(listOf("loaded", "update"), done)
     // Not held: at once.
-    StartHold(active = false).onOutcome { done += "now" }
+    StartHold(active = false).onOutcome(loaded = true) { done += "now" }
     assertEquals("now", done.last())
     // Released with nothing yet: the outcome, when it comes, runs at once.
     val early = StartHold(active = true)
     assertFalse(early.release())
-    early.onOutcome { done += "later" }
+    early.onOutcome(loaded = true) { done += "later" }
     assertEquals("later", done.last())
   }
 
-  @Test fun aReplacedLoadIsBehindTheGeneration() {
-    val g = LoadGeneration()
-    val cachedLoad = g.current
-    g.next()
-    assertTrue(cachedLoad != g.current, "the cached load's late events are not the host's")
-    assertEquals(1, g.current)
+  @Test fun anUpdateInANewAppIsToldOfItsOutcome() {
+    // checkForUpdate's update after a start from the cache: the hold says what it kept, so the host
+    // shows the new app on a success and reports the failure (the running app stays) on a failure.
+    val told = mutableListOf<Boolean>()
+    val done = mutableListOf<String>()
+    val update = StartHold(active = true) { told += it }
+    update.onOutcome(loaded = true) { done += "applied" }
+    assertEquals(listOf(true), told)
+    assertEquals(emptyList(), done, "nothing acts until the host shows it")
+    assertTrue(update.release())
+    assertEquals(listOf("applied"), done)
+    val failed = StartHold(active = true) { told += it }
+    failed.onOutcome(loaded = false) { done += "update-failed" }
+    assertEquals(listOf(true, false), told)
+    assertTrue(failed.release())
+    assertEquals(listOf("applied", "update-failed"), done)
+  }
+
+  /** A main thread for [LoadFence]: posted blocks run when [drain]ed, in order. */
+  private class Main {
+    val queue = ArrayDeque<() -> Unit>()
+    val post: (() -> Unit) -> Unit = { queue.addLast(it) }
+    fun drain() {
+      while (queue.isNotEmpty()) queue.removeFirst()()
+    }
+  }
+
+  @Test fun aDroppedLoadCountsTowardNothing() {
+    // M2: the cached load's code started, threw and loaded while the lookup ran; the lookup named
+    // another release, so the host dropped it: none of that reaches crash rollback's ledger.
+    val main = Main()
+    val ledger = mutableListOf<String>()
+    val fence = LoadFence(held = true, main.post)
+    fence.run { ledger += "loadStarting 5" } // from Zipline's thread
+    fence.run { ledger += "uncaught 5" }
+    main.drain()
+    assertEquals(emptyList(), ledger, "held: kept, not acted on")
+    fence.drop()
+    assertFalse(fence.live)
+    fence.run { ledger += "loaded 5" } // a late event, after the drop
+    main.drain()
+    fence.goLive() // too late: a dropped app never becomes the host's
+    main.drain()
+    assertEquals(emptyList(), ledger)
+    // Posted while held, arriving after the drop: nothing either.
+    val late = LoadFence(held = true, main.post)
+    late.run { ledger += "late" }
+    late.drop()
+    main.drain()
+    assertEquals(emptyList(), ledger)
+  }
+
+  @Test fun aShownLoadActsOnWhatItKeptInOrder() {
+    val main = Main()
+    val ledger = mutableListOf<String>()
+    val fence = LoadFence(held = true, main.post)
+    fence.run { ledger += "loadStarting 5" }
+    main.drain()
+    fence.run { ledger += "loaded 5" }
+    // Shown before the second event reached the main thread: both act, in order.
+    fence.goLive()
+    assertEquals(listOf("loadStarting 5"), ledger)
+    main.drain()
+    assertEquals(listOf("loadStarting 5", "loaded 5"), ledger)
+    // The host's app now: at once, on the caller's thread.
+    fence.run { ledger += "uncaught 5" }
+    assertEquals("uncaught 5", ledger.last())
+    assertTrue(main.queue.isEmpty())
+    // An app that was never held acts at once; dropped (an update replaced it), it stops.
+    val running = LoadFence(held = false, main.post)
+    running.run { ledger += "running" }
+    assertEquals("running", ledger.last())
+    running.drop()
+    running.run { ledger += "after the swap" }
+    main.drain()
+    assertEquals("running", ledger.last())
   }
 
   @Test fun crashRollbackDecidesWhenABundleIsSetAside() {
@@ -178,8 +262,14 @@ class StartPolicyTest {
     assertTrue(step is CrashStep.SetAside)
     assertTrue(crashRollbackDecides(g, CrashStep.None, 5))
     assertTrue(crashRollbackDecides(g, step, 5))
-    val f = StartFacts(EffectiveStartPolicy(cacheFirst, "test"), true, crashRollbackDecides(g, CrashStep.None, 5), "stable", "stable", 5, 5)
+    val why = crashRollbackReason(g, CrashStep.None, 5)
+    val f = StartFacts(EffectiveStartPolicy(cacheFirst, "test"), true, crashRollbackDecides(g, CrashStep.None, 5), "stable", "stable", 5, 5, why)
     assertEquals(nf, chooseStart(f).mode)
+    // The log line names the cause (L5): here the floor's own release is set aside.
+    assertEquals("the floor's own release (sequence 5) is set aside by crash rollback", chooseStart(f).reason)
+    assertEquals("crash rollback set sequence 5 aside at this start", crashRollbackReason(g, step, 5))
+    // Floor 0 (no floor recorded): only the rollback target speaks.
+    assertEquals("crash rollback has a healthy release to go back to (sequence 5 is set aside)", crashRollbackReason(g, CrashStep.None, 0))
     // A newer sequence ran (the floor rose past it): the policy applies again.
     assertFalse(crashRollbackDecides(g, CrashStep.None, 6))
     // Crash rollback off (threshold 0): it never decides.

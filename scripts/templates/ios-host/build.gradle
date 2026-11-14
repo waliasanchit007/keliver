@@ -76,6 +76,14 @@ def checkHostConfig = tasks.register('checkHostConfig') {
     if (!(startPolicy in ['', 'network-first', 'parallel', 'cache-first'])) {
       throw new GradleException("HostConfig.kt: START_POLICY must be network-first, parallel, cache-first or empty (got '$startPolicy').")
     }
+    def startPolicyOverride = configValue('START_POLICY_OVERRIDE')
+    if (startPolicyOverride == null) {
+      throw new GradleException("HostConfig.kt has no START_POLICY_OVERRIDE line (a host scaffolded by tools 0.3.18 or earlier): add " +
+        "`internal const val START_POLICY_OVERRIDE: String = \"\"` (the index's override allowed; docs/DEVICE_HOST.md, \"Start policy\").")
+    }
+    if (!(startPolicyOverride in ['', 'any', 'none'])) {
+      throw new GradleException("HostConfig.kt: START_POLICY_OVERRIDE must be any, none or empty (got '$startPolicyOverride').")
+    }
   }
 }
 // A release framework refuses http://, and refuses an Info.plist that still

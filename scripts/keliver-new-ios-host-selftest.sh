@@ -171,10 +171,11 @@ grep -q '  public var bridges: List<KeliverBridgeBinding> = emptyList()' "$V" \
   && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, crash, (Keliver\.)?served\)' "$V")" ] \
   && ! grep -q 'ServedBridges' "$V" "$K/BundleIndex.kt" \
   && grep -q 'val bridges = Keliver.startedBridges' "$V" \
-  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, Keliver.bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
+  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
   && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, Keliver::bridgeDebugLog)' \
   && [ "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
-  && grep -q 'override fun bindService(name: String, service: ZiplineService) = Keliver.bridgeBinds.bound(name)' "$V" \
+  && grep -A1 'override fun bindService(name: String, service: ZiplineService) {' "$V" | grep -q 'if (fence.live) bridgeBinds.bound(name)' \
+  && grep -q '  val bridgeBinds = BridgeBindRecorder()' "$V" \
   && grep -q 'if (kotlin.native.Platform.isDebugBinary) log("bridge: $message")' "$V" \
   && [ -f "$K/Bridges.kt" ] && grep -q 'internal fun bindAppBridges(' "$K/Bridges.kt" \
   && ok "B5: the app's bridges are checked when set on Keliver, gated on from the start's copy, bound before the host's services and checked as bound" \
@@ -390,11 +391,11 @@ grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside
 C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$V" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$V" \
-  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$V" \
+  && grep -A3 'if (progress.moduleLoadStart()) {' "$V" | grep -q 'fence.run { onReady(s) }' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$V" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }' "$V" \
   && grep -q 'count { crash.loadFailed(sequence, theBundles) }' "$V" \
-  && grep -q 'onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) })' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
+  && grep -q 'fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
   && grep -q 'crash?.screens(true)' "$V" && grep -q 'crash?.screens(screensShown > 0)' "$V" \
   && grep -q 'report = setAsideNow != null)' "$V" \
   && grep -q 'CrashGuard(DefaultsCrashStore(), cacheName(trust), CRASH_THRESHOLD)' "$V" && grep -q 'return defaults.synchronize()' "$V" \
@@ -409,22 +410,30 @@ C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
 # Start policy, as on Android: the decision (src/commonMain/StartPolicy.kt, the Android host's file)
 # and its JVM tests; HostConfig's START_POLICY (network-first when empty); crash rollback decides
 # as network-first; each start logs its policy; every index read keeps the override for the next
-# start; a PARALLEL start's held load is released only once the state says Running.
+# start, unless START_POLICY_OVERRIDE is none; a PARALLEL start's held load, in an app of its own,
+# is shown only once the state says Running, or closed (its crash records fenced); after a start
+# from the cache an update loads in a new app; the screen keys its content on the app.
 SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
 [ -f "$SP" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/StartPolicy.kt" | cmp -s - "$SP" \
   && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/test/kotlin/StartPolicyTest.kt" | cmp -s - "$H/src/jvmTest/kotlin/com/example/demo/host/StartPolicyTest.kt" \
   && grep -q '^internal const val START_POLICY: String = ""$' "$K/HostConfig.kt" \
+  && grep -q '^internal const val START_POLICY_OVERRIDE: String = ""$' "$K/HostConfig.kt" \
   && grep -q "configValue('START_POLICY')" "$H/build.gradle" \
-  && grep -q 'effectiveStartPolicy(KeliverStartPolicy.parse(START_POLICY), ' "$V" \
-  && grep -q 'crashRollback = crashRollbackDecides(crash, startStep, floor())' "$V" \
+  && grep -q "configValue('START_POLICY_OVERRIDE')" "$H/build.gradle" \
+  && grep -q 'overrideAllowed = parseStartPolicyOverride(START_POLICY_OVERRIDE) ?: true,' "$V" \
+  && grep -q 'val rollbackWhy = crashRollbackReason(crash, startStep, floor())' "$V" \
   && grep -q '  log(choice.logLine(policy))' "$V" \
   && grep -q 'recordStartOverride(cacheName, body.utf8())' "$V" \
-  && grep -q 'ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.release)' "$V" \
-  && grep -q 'if (load == loadGeneration.current) hold.onOutcome { codeLoadFailed(reason, step) }' "$V" \
-  && ok "start policy: the Android host's decision and tests, START_POLICY (network-first by default), the index's override from the next start, logged at each start" \
+  && grep -q 'ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.show)' "$V" \
+  && grep -q '        h.drop()' "$V" \
+  && grep -q 'val fence = LoadFence(held != null) { block -> appScope.launch { block() } }' "$V" \
+  && grep -q 'fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }' "$V" \
+  && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$V" \
+  && grep -q 'is KeliverHostState.Running -> androidx.compose.runtime.key(s.app) {' "$V" \
+  && ok "start policy: the Android host's decision and tests, START_POLICY (network-first by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app" \
   || bad "start policy: not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
-grep -A2 '^  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))$' "$K/MainViewController.kt" \
+grep -A5 '^  if (held == null) {$' "$K/MainViewController.kt" \
   | grep -q '^  app.start()$' \
   && ok "M3: the code load starts when the host starts, not when the first screen asks" \
   || bad "M3: the host does not start the code load at host start"
