@@ -2,7 +2,7 @@
 #
 # keliver-gateb-ios-sim — Gate B part c on a real iOS simulator app (docs/COMPOSE_GENERATOR_DESIGN.md §21).
 #
-#   scripts/keliver-gateb-ios-sim.sh [--out DIR] [--port PORT] [--runs N] [--debug] [--with-tests]
+#   scripts/keliver-gateb-ios-sim.sh [--out DIR] [--port PORT] [--runs N] [--debug] [--with-tests] [--capture]
 #   scripts/keliver-gateb-ios-sim.sh --compare-only --out DIR   (re-runs only the comparison and the report on DIR)
 #
 # Exits non-zero if a guest launch did not verify the manifest with the scratch key, load its code,
@@ -21,6 +21,9 @@
 #   4. for each sample (orders, card, item: Gate B-d's ItemDetail) launches the app twice — the screen drawn by native
 #      Compose, and the same file loaded from the signed bundle through the real protocol into the
 #      generated renderers — screenshots each (xcrun simctl io screenshot) and compares the pixels;
+#      With --capture, also the device script's pixel route here: each sample and mode launched
+#      with GATEB_CAPTURE (the app records its Compose content into a PNG in its Documents), the
+#      PNGs compared into DIR/capture/results.md (0 differing pixels; the control must differ);
 #   5. times first frames: N process-cold launches per route (terminate, 1 s, launch), alternating.
 #      The page cache is warm and the guest's Zipline module cache was filled by step 4, so a guest
 #      launch is manifest verification over loopback plus modules from the local cache, not a first
@@ -36,7 +39,7 @@ NAME=keliver-gateb-ios-sim
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 fail() { echo "$NAME: $*" >&2; exit 1; }
 
-OUT="$ROOT/build/$NAME"; PORT=8494; RUNS=5; TYPE=release; TESTS=0; COMPARE_ONLY=0
+OUT="$ROOT/build/$NAME"; PORT=8494; RUNS=5; TYPE=release; TESTS=0; COMPARE_ONLY=0; CAPTURE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --out) OUT="${2:?--out needs a directory}"; shift 2 ;;
@@ -45,7 +48,8 @@ while [ $# -gt 0 ]; do
     --debug) TYPE=debug; shift ;;
     --with-tests) TESTS=1; shift ;;
     --compare-only) COMPARE_ONLY=1; shift ;;
-    -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --capture) CAPTURE=1; shift ;;
+    -h|--help) sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "$NAME: unknown argument $1 (see --help)" >&2; exit 2 ;;
   esac
 done
@@ -77,7 +81,7 @@ OUT="$(cd "$OUT" && pwd -P)"
 for sample in $SAMPLES; do rm -f "$OUT/$sample-native.png" "$OUT/$sample-guest.png" "$OUT/$sample-diff.png"; done
 rm -f "$OUT/timing.txt" "$OUT/results.md" "$OUT"/logs/shot-*.log "$OUT"/logs/time-*.log \
   "$OUT/logs/gradle.log" "$OUT/logs/server.log" "$OUT/logs/ios-test.log"
-rm -rf "$OUT/ios-test-captures"
+rm -rf "$OUT/ios-test-captures" "$OUT/capture"
 
 UDID=""; SERVER_PID=""
 cleanup() {
@@ -153,13 +157,18 @@ xcrun simctl install "$UDID" "$APP"
 
 # Launches the app process-cold (terminate, 1 s, launch) and waits for its first-frame line in the
 # launched mode; prints the milliseconds.
-launch() { # mode sample tag
+launch() { # mode sample tag [capture file name]
   local log="$OUT/logs/$3.log"
   xcrun simctl terminate "$UDID" dev.keliver.gateb >/dev/null 2>&1 || true
   sleep 1
   : > "$log"
-  # The app appends its log lines to the file simctl hands it as GATEB_LOG.
-  SIMCTL_CHILD_GATEB_LOG="$log" xcrun simctl launch "$UDID" dev.keliver.gateb "$1" "$2" "$MANIFEST" >/dev/null
+  # The app appends its log lines to the file simctl hands it as GATEB_LOG; GATEB_CAPTURE (only on
+  # --capture's launches) makes it write the device script's in-app capture.
+  if [ -n "${4:-}" ]; then
+    SIMCTL_CHILD_GATEB_LOG="$log" SIMCTL_CHILD_GATEB_CAPTURE="$4" xcrun simctl launch "$UDID" dev.keliver.gateb "$1" "$2" "$MANIFEST" >/dev/null
+  else
+    SIMCTL_CHILD_GATEB_LOG="$log" xcrun simctl launch "$UDID" dev.keliver.gateb "$1" "$2" "$MANIFEST" >/dev/null
+  fi
   local line ms
   for _ in $(seq 1 300); do
     # One read of the first-frame line, then judge that same line (it must be in the launched mode).
@@ -194,6 +203,28 @@ for sample in $SAMPLES; do
     echo "$NAME: $sample/$mode drawn (first frame $ms ms), $OUT/$sample-$mode.png"
   done
 done
+
+# 4b. With --capture: the device script's pixel route on this simulator. The app records its Compose
+# content and writes a PNG into its Documents; compared like the screenshots, into DIR/capture/.
+if [ "$CAPTURE" = 1 ]; then
+  mkdir -p "$OUT/capture"
+  DATA="$(xcrun simctl get_app_container "$UDID" dev.keliver.gateb data)" || fail "no data container for the app"
+  for sample in $SAMPLES; do
+    for mode in native guest; do
+      tag="capture-$sample-$mode"
+      rm -f "$DATA/Documents/$tag.png"
+      launch "$mode" "$sample" "$tag" "$tag.png" >/dev/null || fail "the $mode $sample capture launch did not draw"
+      for _ in $(seq 1 75); do grep -q "GATEB capture" "$OUT/logs/$tag.log" && break; sleep 0.2; done
+      grep -q "GATEB capture saved $tag.png" "$OUT/logs/$tag.log" || { cat "$OUT/logs/$tag.log" >&2; fail "$tag: no capture saved"; }
+      if [ "$mode" = guest ]; then check_guest_log "$tag"; fi
+      cp "$DATA/Documents/$tag.png" "$OUT/capture/$sample-$mode.png"
+      echo "$NAME: $sample/$mode $(grep -o 'capture saved.*' "$OUT/logs/$tag.log")"
+    done
+  done
+  python3 -I "$ROOT/scripts/keliver-gateb-report.py" "$OUT/capture" "Gate B part c: the in-app capture on the simulator" \
+    "${DEVNAME//_/ }, ${RUNTIME##*.}" "$TYPE" "-" "$SAMPLES" "No timing: capture launches only." \
+    || fail "the in-app captures differ (see $OUT/capture/results.md)"
+fi
 
 # 5. First-frame timing: alternating process-cold launches (see the header for what is warm).
 : > "$OUT/timing.txt"

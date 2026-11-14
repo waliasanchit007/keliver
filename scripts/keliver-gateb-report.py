@@ -96,7 +96,11 @@ for mode, v in t.items():
 for mode, v in t.items():
     if not mode.startswith("guest"):
         continue
-    for label, pattern in (("code loaded (codeLoadSuccess)", r"codeLoadSuccess at (\d+) ms"), ("first widget created", r"first guest widget at (\d+) ms")):
+    # The manifest's arrival and verification first: on a phone it comes over the network, so the
+    # guest-native gap is network time up to here and loading and rendering after it.
+    for label, pattern in (("manifest fetched and verified", r"manifestVerified key=\S+ at (\d+) ms"),
+                           ("code loaded (codeLoadSuccess)", r"codeLoadSuccess at (\d+) ms"),
+                           ("first widget created", r"first guest widget at (\d+) ms")):
         found = []
         for i in range(1, len(v) + 1):  # only this run's launches
             path = os.path.join(out, "logs", f"time-{mode}-{i}.log")

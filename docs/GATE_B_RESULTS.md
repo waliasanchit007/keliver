@@ -42,7 +42,11 @@ Owner prerequisites, in the order the script meets them:
 - **(2)** Local Network is allowed for the app when the phone asks.
 
 The script waits on each gate for up to `--gate-wait` minutes (default 45), re-checking every 5
-minutes, and uninstalls its app whatever happens.
+minutes. Once the install has begun, it uninstalls its app whatever happens, an install that
+failed partway included. It lists the phone's apps at the start and again just before installing,
+and refuses if the bundle id is already there. It stops only its own app's process: one whose
+executable is inside that bundle id's install location, else through `devicectl`'s
+`--terminate-existing` for the bundle id.
 
 Method, as built:
 - **Build.** Release-optimised Kotlin/Native (`linkGateBReleaseExecutableIosArm64`, the same
@@ -52,9 +56,12 @@ Method, as built:
 - **Signing.** A minimal wrapper Xcode project (generated in the run's directory) is built with
   `-allowProvisioningUpdates` for the team and bundle id. That fetches the development profile and
   gives the entitlements, and the app is signed with that profile's certificate. The script refuses
-  to start the fetch unless a profile for that team and bundle id is already known, on this Mac or
-  through `--known-profile`, so it cannot register a new App ID by accident (`--allow-new-app-id`
-  to override).
+  to start the fetch unless a profile for that team's App ID has existed, on this Mac or through
+  `--known-profile` (`--allow-new-app-id` to override). That is not proof the App ID still exists:
+  if it was removed since, the fetch registers it again. Automatic signing may also create an Apple
+  Development certificate on the team when none is in this Mac's keychain. Devices are never
+  registered: the script does not pass `-allowProvisioningDeviceRegistration`, so the phone must
+  already be on the team.
 - **Pixels.** `devicectl` has no screenshot, so with `GATEB_CAPTURE` the app records its window's
   Compose content into a `GraphicsLayer` and writes it as a PNG into its Documents, 2 s after the
   first frame. The script copies it out (`devicectl device copy from`) and compares native against
@@ -70,7 +77,13 @@ Method, as built:
     for this series.
 - **Phone state.** After each first frame the app logs the battery level, the charging state, the
   thermal state and Low Power Mode. The report lists them for the first and last launch of each
-  series.
+  route: native, guest (warm) and guest-empty-cache.
+- **Network share.** The report's guest rows include when the manifest was fetched and verified.
+  On the phone the manifest comes over Wi-Fi (on the simulator, over loopback), so that row
+  separates the network's part of the guest−native gap from loading and rendering.
+- **Logs.** The script reads the app's lines from `devicectl --console`. The app also appends them
+  to `Documents/gateb-<tag>.log` (one file per launch, named by the launch's `GATEB_TAG`). If the
+  console carries none of them, the script copies that file out and reads it from then on.
 
 ## Gate B-e results: animation, timed, and app size with groups
 

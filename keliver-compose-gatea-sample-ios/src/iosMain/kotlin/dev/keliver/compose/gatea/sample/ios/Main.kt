@@ -25,6 +25,7 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.toKString
 import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
@@ -106,13 +107,24 @@ internal class AppDelegate @OverrideInit constructor() :
 }
 
 /**
- * One line on stdout and, when the launch names one (SIMCTL_CHILD_GATEB_LOG, which simctl passes as
- * GATEB_LOG), appended to that host file: the script reads it while the app runs.
+ * Where [log] appends its lines besides stdout: the host file a simulator launch names
+ * (SIMCTL_CHILD_GATEB_LOG, which simctl passes as GATEB_LOG), else, when a device launch names
+ * itself (GATEB_TAG), `Documents/gateb-<tag>.log` in the app's container, which the device script
+ * copies out if devicectl's console does not carry stdout. Null: stdout only.
  */
+private val logPath: String? by lazy {
+  getenv("GATEB_LOG")?.toKString()
+    ?: getenv("GATEB_TAG")?.toKString()?.takeIf { tag -> tag.all { it.isLetterOrDigit() || it == '-' } }?.let { tag ->
+      val documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).first() as String
+      "$documents/gateb-$tag.log"
+    }
+}
+
+/** One line on stdout and, when there is one, appended to [logPath]: the scripts read it while the app runs. */
 internal fun log(message: String) {
   val line = "GATEB $message"
   println(line)
-  val path = getenv("GATEB_LOG")?.toKString() ?: return
+  val path = logPath ?: return
   val file = fopen(path, "a") ?: return
   fputs("$line\n", file)
   fclose(file)
