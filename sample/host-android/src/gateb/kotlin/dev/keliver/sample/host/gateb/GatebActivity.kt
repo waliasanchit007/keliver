@@ -9,6 +9,7 @@ package dev.keliver.sample.host.gateb
 import android.content.res.AssetManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Trace
 import android.util.Log
 import android.view.Choreographer
 import android.view.WindowManager
@@ -24,6 +25,8 @@ import androidx.lifecycle.lifecycleScope
 import app.cash.zipline.Call
 import app.cash.zipline.CallResult
 import app.cash.zipline.Zipline
+import app.cash.zipline.ZiplineManifest
+import app.cash.zipline.loader.FreshnessChecker
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
@@ -39,6 +42,7 @@ import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,8 +123,16 @@ class GatebActivity : ComponentActivity() {
       override val serializersModule = EmptySerializersModule()
       override suspend fun bindServices(treehouseApp: TreehouseApp<GatebAppService>, zipline: Zipline) {}
       override fun create(zipline: Zipline): GatebAppService = zipline.take("app")
+
+      // Cold-start experiment (`--ez freshCache true`): treat the cached code as fresh, so a start
+      // with a cache loads from it without fetching and verifying the manifest first.
+      override val freshnessChecker: FreshnessChecker =
+        if (intent.getBooleanExtra(EXTRA_FRESH_CACHE, false)) AlwaysFresh else super.freshnessChecker
     }
     val app = factory.create(appScope = lifecycleScope, spec = spec, eventListenerFactory = CountingListener)
+    // Cold-start experiment (`--ez earlyStart true`): start the code load here, in onCreate, rather
+    // than when TreehouseContent first composes (the activity's first frame).
+    if (intent.getBooleanExtra(EXTRA_EARLY_START, false)) app.start()
 
     setContent {
       MaterialTheme {
@@ -142,34 +154,124 @@ class GatebActivity : ComponentActivity() {
   private companion object {
     const val TAG = "KeliverGateB"
     const val EXTRA_OVER_LOCK_SCREEN = "overLockScreen"
+    const val EXTRA_EARLY_START = "earlyStart"
+    const val EXTRA_FRESH_CACHE = "freshCache"
     const val MANIFEST_URL = "https://gateb.invalid/manifest.zipline.json"
     const val SAMPLE_SIGNING_PUBLIC_KEY = "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
   }
 }
 
+/** The cold-start experiment's checker: any cached code is fresh. */
+private object AlwaysFresh : FreshnessChecker {
+  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long) = true
+}
+
 /** Serves the bundle from the APK's `assets/gateb/` by file name. */
 private class AssetsHttpClient(private val assets: AssetManager) : ZiplineHttpClient() {
   override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString = withContext(Dispatchers.IO) {
-    assets.open("gateb/" + url.substringAfterLast('/')).use { it.readBytes().toByteString() }
+    val name = url.substringAfterLast('/')
+    StartupTrace.section("kg:asset $name") {
+      assets.open("gateb/$name").use { it.readBytes().toByteString() }
+    }
   }
 }
 
 /**
+ * The guest route's startup phases as system-trace sections (prefix `kg:`), for the cold-start
+ * profile (docs/GATE_B_RESULTS.md, "Where the A12's cold start goes"). They cost nothing unless a
+ * system trace is recording this app (Macrobenchmark's traces do).
+ */
+private object StartupTrace {
+  private val cookies = AtomicInteger()
+
+  inline fun <T> section(name: String, block: () -> T): T {
+    Trace.beginSection(name.take(MAX_NAME))
+    try {
+      return block()
+    } finally {
+      Trace.endSection()
+    }
+  }
+
+  /** A zero-length section: marks a moment. */
+  fun instant(name: String) {
+    Trace.beginSection(name.take(MAX_NAME))
+    Trace.endSection()
+  }
+
+  /**
+   * Starts an async section (begin and end may be on different threads); returns its cookie, or
+   * null below API 29, where async sections do not exist (the sample's minSdk is 24).
+   */
+  fun begin(name: String): Int? {
+    if (Build.VERSION.SDK_INT < 29) return null
+    val cookie = cookies.incrementAndGet()
+    Trace.beginAsyncSection(name.take(MAX_NAME), cookie)
+    return cookie
+  }
+
+  /** Ends the async section [begin] returned [cookie] for; a no-op when that was null. */
+  fun end(name: String, cookie: Any?) {
+    if (cookie is Int && Build.VERSION.SDK_INT >= 29) Trace.endAsyncSection(name.take(MAX_NAME), cookie)
+  }
+
+  private const val MAX_NAME = 120
+}
+
+/**
  * Counts the guest's change batches (`sendChanges` calls into the host) and the changes in them,
- * and logs both once a second: the "protocol messages per second" of Gate B-e.
+ * and logs both once a second: the "protocol messages per second" of Gate B-e. It also writes the
+ * guest's startup phases as [StartupTrace] sections: the code load, each download (the manifest,
+ * and the modules when the cache has none), the manifest's verification, each module's load into
+ * QuickJS, the initializer, `main`, and the first [MAX_TRACED_CALLS] bridge calls.
  */
 private object CountingListener : EventListener.Factory {
   private val batches = AtomicLong()
   private val changes = AtomicLong()
   private var windowStart = System.nanoTime()
+  private val tracedCalls = AtomicInteger()
+  private const val MAX_TRACED_CALLS = 40
 
   /** Called once, after the guest's first `sendChanges` (its first content). */
   @Volatile var onFirstChanges: (() -> Unit)? = null
 
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = object : EventListener() {
+    override fun codeLoadStart(): Any? = StartupTrace.begin("kg:codeLoad")
+
+    override fun ziplineCreated(zipline: Zipline) = StartupTrace.instant("kg:ziplineCreated")
+
+    override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
+      StartupTrace.end("kg:codeLoad", startValue)
+    }
+
+    override fun codeLoadSkipped(startValue: Any?) = StartupTrace.end("kg:codeLoad", startValue)
+
+    override fun codeLoadSkippedNotFresh(startValue: Any?) = StartupTrace.end("kg:codeLoad", startValue)
+
     override fun codeLoadFailed(exception: Exception, startValue: Any?) {
+      StartupTrace.end("kg:codeLoad", startValue)
       Log.e("KeliverGateB", "codeLoadFailed", exception)
     }
+
+    override fun downloadStart(url: String): Any? = StartupTrace.begin("kg:download " + url.substringAfterLast('/'))
+
+    override fun downloadSuccess(url: String, startValue: Any?) = StartupTrace.end("kg:download " + url.substringAfterLast('/'), startValue)
+
+    override fun manifestVerified(manifest: ZiplineManifest, verifiedKey: String) = StartupTrace.instant("kg:manifestVerified")
+
+    override fun manifestReady(manifest: ZiplineManifest) = StartupTrace.instant("kg:manifestReady modules=${manifest.modules.size}")
+
+    override fun moduleLoadStart(moduleId: String): Any? = StartupTrace.begin("kg:module $moduleId")
+
+    override fun moduleLoadEnd(moduleId: String, startValue: Any?) = StartupTrace.end("kg:module $moduleId", startValue)
+
+    override fun initializerStart(applicationName: String): Any? = StartupTrace.begin("kg:initializer")
+
+    override fun initializerEnd(applicationName: String, startValue: Any?) = StartupTrace.end("kg:initializer", startValue)
+
+    override fun mainFunctionStart(applicationName: String): Any? = StartupTrace.begin("kg:main")
+
+    override fun mainFunctionEnd(applicationName: String, startValue: Any?) = StartupTrace.end("kg:main", startValue)
 
     override fun uncaughtException(exception: Throwable) {
       Log.e("KeliverGateB", "uncaughtException", exception)
@@ -186,19 +288,25 @@ private object CountingListener : EventListener.Factory {
           windowStart = now
         }
       }
-      return null
+      if (tracedCalls.incrementAndGet() > MAX_TRACED_CALLS) return null
+      return StartupTrace.begin(callName(call))
     }
 
     override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
+      // Only traced calls (the first MAX_TRACED_CALLS) carry a cookie; skip building the name otherwise.
+      if (startValue is Int) StartupTrace.end(callName(call), startValue)
       // After the call, the host has applied (or queued on the main thread) the first changes.
       if ("sendChanges" in call.function.signature) {
         onFirstChanges?.let { report ->
           onFirstChanges = null
+          StartupTrace.instant("kg:firstChangesApplied")
           report()
         }
       }
     }
   }
+
+  private fun callName(call: Call) = "kg:call " + call.serviceName + "." + call.function.signature.substringBefore('(').substringAfterLast(' ')
 
   override fun close() {}
 }

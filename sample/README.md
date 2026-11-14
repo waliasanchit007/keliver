@@ -343,7 +343,8 @@ adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.gateb.GatebActi
 
 The same run with `class=dev.keliver.sample.benchmarks.GatebBridgeCounter` reads the bridge counter
 and the host's frames per form, and `GatebStartupBenchmark` times cold start (`host` against
-`native-host`). On a phone, add `-Pandroid.testInstrumentationRunnerArguments.gatebMinBattery=50` to
+`native-host`, plus three loading experiments on `host`; its traces carry `kg:` sections for the
+guest's startup phases). On a phone, add `-Pandroid.testInstrumentationRunnerArguments.gatebMinBattery=50` to
 skip measurements below that battery level; each measurement's battery, temperature and charging
 state go to `gateb-phone-state.txt` in the test's additional output.
 
