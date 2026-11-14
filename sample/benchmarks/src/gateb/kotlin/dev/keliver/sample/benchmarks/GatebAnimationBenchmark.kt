@@ -42,16 +42,23 @@ class GatebAnimationBenchmark {
 
   @Test fun nativeGuest() = run("native-guest")
 
+  private fun run(mode: String) {
+    GatebPhone.recordAndCheck("animation $mode")
+    measure(mode)
+  }
+
   @OptIn(ExperimentalMetricApi::class)
-  private fun run(mode: String) = rule.measureRepeated(
+  private fun measure(mode: String) = rule.measureRepeated(
     packageName = TARGET_PACKAGE,
     metrics = listOf(FrameTimingMetric()),
     iterations = ITERATIONS,
     startupMode = null,
     setupBlock = {
+      device.wakeUp()
       killProcess()
       startActivityAndWait(
-        Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.gateb.GatebActivity").putExtra("mode", mode),
+        Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.gateb.GatebActivity").putExtra("mode", mode)
+          .putExtra("overLockScreen", true),
       )
       val label = "mode: " + mode.removePrefix("native-")
       check(device.wait(Until.hasObject(By.text(label)), 20_000)) { "the $mode route did not draw '$label'" }

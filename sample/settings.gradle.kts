@@ -79,7 +79,12 @@ if (composePrototype) {
   // and Gradle 9.0 (AGP 9 needs a newer Gradle), so prototype builds skip that AAR-metadata check.
   gradle.beforeProject {
     tasks.configureEach {
-      if (name.startsWith("check") && name.endsWith("AarMetadata")) enabled = false
+      if (name.startsWith("check") && name.endsWith("AarMetadata")) {
+        // Not `enabled = false`: release-shaped builds (benchmark) bundle lint AARs that take the
+        // check's output directory as an input, so the replacement still creates it, empty.
+        actions.clear()
+        doLast { outputs.files.forEach { it.mkdirs() } }
+      }
     }
   }
 }

@@ -7,13 +7,16 @@
 package dev.keliver.sample.host.gateb
 
 import android.content.res.AssetManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
@@ -61,14 +64,31 @@ class GatebActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     val mode = intent.getStringExtra("mode") ?: "host"
     Log.d(TAG, "mode=$mode")
+    // WARNING: benchmark-only; never in a real host: it would show guest content on a locked phone.
+    // Only when the caller asks (`--ez overLockScreen true`; the phone benchmarks and the bridge
+    // counter pass it): keep the display on (a screen timeout would stop the frames being measured)
+    // and, for a phone left locked for an unattended run, draw over the lock screen (it does not
+    // unlock it; nothing else on the phone becomes reachable).
+    if (intent.getBooleanExtra(EXTRA_OVER_LOCK_SCREEN, false)) {
+      window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+      if (Build.VERSION.SDK_INT >= 27) {
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+      }
+    }
     if (mode.startsWith("native-")) {
       setContent {
         MaterialTheme {
           Surface(Modifier.fillMaxSize()) { NativeAnimationBench(mode.removePrefix("native-")) }
         }
+        // First frame with the screen's content: the startup benchmark's timeToFullDisplay.
+        SideEffect { reportFullyDrawn() }
       }
       return
     }
+    // The guest's first content arrives in its first change batch; report fully drawn once it has
+    // been applied (posted behind it on the main thread), for the startup benchmark.
+    CountingListener.onFirstChanges = { window.decorView.post { reportFullyDrawn() } }
 
     val factory = TreehouseAppFactory(
       context = applicationContext,
@@ -109,6 +129,7 @@ class GatebActivity : ComponentActivity() {
 
   private companion object {
     const val TAG = "KeliverGateB"
+    const val EXTRA_OVER_LOCK_SCREEN = "overLockScreen"
     const val MANIFEST_URL = "https://gateb.invalid/manifest.zipline.json"
     const val SAMPLE_SIGNING_PUBLIC_KEY = "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
   }
@@ -129,6 +150,9 @@ private object CountingListener : EventListener.Factory {
   private val batches = AtomicLong()
   private val changes = AtomicLong()
   private var windowStart = System.nanoTime()
+
+  /** Called once, after the guest's first `sendChanges` (its first content). */
+  @Volatile var onFirstChanges: (() -> Unit)? = null
 
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = object : EventListener() {
     override fun codeLoadFailed(exception: Exception, startValue: Any?) {
@@ -153,7 +177,15 @@ private object CountingListener : EventListener.Factory {
       return null
     }
 
-    override fun callEnd(call: Call, result: CallResult, startValue: Any?) {}
+    override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
+      // After the call, the host has applied (or queued on the main thread) the first changes.
+      if ("sendChanges" in call.function.signature) {
+        onFirstChanges?.let { report ->
+          onFirstChanges = null
+          report()
+        }
+      }
+    }
   }
 
   override fun close() {}
