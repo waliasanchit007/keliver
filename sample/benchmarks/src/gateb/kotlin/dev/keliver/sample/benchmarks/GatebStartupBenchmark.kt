@@ -51,6 +51,10 @@ class GatebStartupBenchmark {
       )
       val label = "mode: " + mode.removePrefix("native-")
       check(device.wait(Until.hasObject(By.text(label)), 20_000)) { "the $mode route did not draw '$label'" }
+      // Keep tracing past the report: the guest reports fully drawn just before its label shows,
+      // and without this the trace can stop before the RenderThread draw that ends
+      // timeToFullDisplay ("No RT frame slice …", seen on a low-end phone). Not part of the metric.
+      Thread.sleep(1_000)
     }
   }
 

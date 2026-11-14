@@ -10,6 +10,7 @@ import android.content.res.AssetManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.Choreographer
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -87,8 +88,19 @@ class GatebActivity : ComponentActivity() {
       return
     }
     // The guest's first content arrives in its first change batch; report fully drawn once it has
-    // been applied (posted behind it on the main thread), for the startup benchmark.
-    CountingListener.onFirstChanges = { window.decorView.post { reportFullyDrawn() } }
+    // been applied (posted behind it on the main thread), for the startup benchmark. The
+    // report is made inside a frame callback, followed by an invalidate, so the frame it is made in
+    // draws: StartupTimingMetric ends timeToFullDisplay at the RenderThread draw of the first frame
+    // that ends after the report, and fails ("No RT frame slice …") when that frame does not draw,
+    // which happened on a low-end phone when the report was posted between frames.
+    CountingListener.onFirstChanges = {
+      window.decorView.post {
+        Choreographer.getInstance().postFrameCallback {
+          reportFullyDrawn()
+          window.decorView.invalidate()
+        }
+      }
+    }
 
     val factory = TreehouseAppFactory(
       context = applicationContext,

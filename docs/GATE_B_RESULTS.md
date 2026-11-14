@@ -11,19 +11,76 @@ Part c on an iPhone 13: the same comparison and first-frame timing as #243's sim
 (native 122 ms against generated guest 211 ms, median of 7 warm-cache launches; 0 differing pixels
 on orders, card and item), on a phone.
 
-**Status: not measured. The run stopped at signing, before anything was installed.** The phone was
-ready (iOS 26.6.2, Developer Mode on, paired, reached over the network). The development profile
-that the 2026-11-02 iPhone run (PR #212) used for this team and bundle id expired on 2026-11-05.
-Xcode on this Mac has no Apple account signed in, so it cannot fetch a new one ("No Accounts").
-The script checked every 5 minutes from 02:49 to 03:29 UTC (2026-11-14; nine checks over its
-45-minute wait), then stopped. No app
-was installed, and the phone's apps were not touched. The comparison against 122/211 ms is still
-open, and so is the recommendation.
+**Status: measured, 2026-11-14 (evening).** `scripts/keliver-gateb-ios-device.sh --runs 10` on an
+iPhone 13 (iOS 26.6.2), release-optimised Kotlin/Native (`linkGateBReleaseExecutableIosArm64`, the
+simulator number's build type too), the guest bundle (2,042,101 bytes of modules) served over the
+Wi-Fi network from this Mac.
 
-On the way, the release iosArm64 app and the signed bundle were built. The simulator script, re-run
-on this branch through the now-shared report (`--runs 3`, iPhone Air simulator, iOS 26.4, release),
-still gives 0 differing pixels on orders, card and item (control 690027), and native 125 ms against
-guest 215 ms. #243 measured 122 against 211.
+**Pixels: 0 differing pixels** between native and the generated guest on orders, card and item
+(1170 × 2532 each, the app's in-app capture of its Compose content, not a composited screenshot);
+the control (orders against card, native) differs by 671,090 pixels, so the comparison sees a real
+difference. The simulator (#243): 0 / 0 / 0, control 690,027.
+
+**First frame** (ms from `main()` to the second frame after the root was first composed; 10
+process-cold launches per route; native and guest alternating):
+
+| Route | iPhone 13: median | min | max | Simulator (#243, median of 7) |
+|---|---|---|---|---|
+| native | **84** | 79 | 90 | 122 |
+| guest, warm Zipline cache (manifest over Wi-Fi, modules from the cache) | **226** | 213 | 253 | 211 |
+| guest − native | **+142** | | | +89 |
+| guest, empty cache (every module downloaded over Wi-Fi, as a fresh install does) | **905** | 854 | 1,288 | not measured |
+
+Where the warm guest's time goes (medians, ms from `main()`): the manifest is fetched and verified at
+53 (48–56), the code is loaded (`codeLoadSuccess`) at 131 (127–172), the first widget is created at
+180 (175–220), the first frame at 226. With an empty cache: manifest 97, code loaded 810, first
+widget 868, first frame 905: downloading the ~2 MB of modules is about 700 ms of it on this
+network.
+
+Reading them:
+
+- **The phone is faster than the simulator for native (84 against 122 ms) and not for the guest
+  (226 against 211 ms), so the gap widens from +89 to +142 ms.** The network is a small part of the
+  warm gap: the manifest is verified 53 ms after `main()` over Wi-Fi (62 ms over loopback in #246's
+  simulator run). Most of it is loading the cached modules into QuickJS (about 80 ms between the
+  manifest and `codeLoadSuccess`) and the guest's first composition and first change batch (about
+  50 ms to the first widget). That split is inferred from the milestones, not profiled.
+- **An empty cache costs about 0.9 s to the first frame** on this network: the first launch after an
+  install or an update whose modules are not yet cached. A bundle shipped in the app (as the Android
+  benchmark's) or fetched ahead of the screen would avoid it; not measured here.
+- Pixel identity holds on a phone, as on the simulator and the JVM.
+
+**Recommendation: unchanged.** The generated group renders identically on the phone, so part c's
+pixel bar is met there too. The first-frame gap is the cost of the guest route (QuickJS loading and a
+first guest composition), not of the generated API; it is what the owner decides is acceptable. On
+this phone it is +142 ms warm and about +820 ms with an empty cache, against +89 ms on the
+simulator. (Gate A's "first frame no slower" compared the generated guest against today's guest,
+not against native, and is not re-measured here.)
+
+**Phone state:** 50% battery, unplugged, thermal state nominal, Low Power Mode off, at the first and
+the last launch of each route (native, guest, guest with an empty cache).
+
+**Owner gates:** both met and cleared during the run. Gate 1 (the developer certificate not yet
+trusted on the phone) at the first native launch, passed on the second check 5 minutes later; gate 2
+(Local Network not yet allowed for the app) at the first guest launch, passed on the second check
+5 minutes later. Gate 0 (an Apple account in Xcode) was met before the run: the profile it fetched
+lasts 7 days (until 2026-11-21). The script uninstalled its app at the end, and the phone's apps were
+as before the run.
+
+**The first attempt that day failed at step 3** (signing): the generated wrapper Xcode project's
+`main.m` calls `UIApplicationMain`, but the target did not link UIKit (the project enables no clang
+modules, so `#import <UIKit/UIKit.h>` does not auto-link it), and the wrapper's link failed with
+"Undefined symbols … `_UIApplicationMain`". Xcode had already fetched a valid profile for the bundle
+id by then, so the second attempt found it, skipped the wrapper and ran to the end. The wrapper now
+links UIKit (`OTHER_LDFLAGS = -framework UIKit`); proved by building the generated project for the
+simulator without signing (it failed with the same undefined symbol before the fix and links UIKit
+after). The device signing path with the fix has not been run.
+
+Earlier on 2026-11-14 (PR #246) the run had stopped at signing: the 2026-11-02 run's (PR #212)
+profile had expired on 2026-11-05 and Xcode had no Apple account signed in ("No Accounts"); the
+script waited 45 minutes and installed nothing. On that branch the simulator script, re-run
+through the now-shared report (`--runs 3`, iPhone Air simulator, iOS 26.4, release), still gave 0
+differing pixels on orders, card and item (control 690027), and native 125 ms against guest 215 ms.
 
 **How to run it** (`scripts/keliver-gateb-ios-device.sh`, the device counterpart of
 `keliver-gateb-ios-sim.sh`; `--help` has the details):
@@ -283,15 +340,18 @@ natural optional group.
 
 What it answers: whether #244's emulator reading of the animation forms holds on a real low-end
 phone, and what the guest's frame clock delivers there. Phone: a low-end Android phone (Galaxy A12,
-Android 12), 60 Hz display, on wireless adb, 2026-11-14.
+Android 12), 60 Hz display, on wireless adb, 2026-11-14 (run 1 and the bridge counter in #245; run
+2 and the cold start that evening).
 
 **Recommendation: unchanged, and stronger.** Host references for `animate*AsState`. On this phone
 the guest's frame clock delivered **about 3 new values a second** (emulator: about 29) while the host
 drew 32–53 frames a second, so a guest-clock animation visibly steps rather than moves. Host
 references sent the same ~19 changes a second as on the emulator (one batch per change of target).
-Host references cost more per host frame than native on this phone (frame CPU p50 27 against
-19–20 ms, and the longest p99 tail); one run cannot say whether that is the renderers or QuickJS
-competing for the CPU. They still win on what the guest delivers. The escape hatch (`Animatable` on
+Host references cost somewhat more per host frame than native on this phone: frame CPU p50 27.2
+against 19–20 ms in the first run (phone warm and charging) but 20.6 against 18.9 ms in the second
+(cooler, on battery), and the longest overrun p99 tail in both runs. They still win on what the guest
+delivers. A cold start to the guest's first content takes **2.58 s against 0.92 s** for the same
+screen compiled in (median of 10 each; below). The escape hatch (`Animatable` on
 the guest's frame clock) should be flagged more strongly than the lint check the design proposed
 (not built yet): on low-end phones it is not an animation.
 
@@ -302,15 +362,19 @@ main to a scratch repository as `0.0.0-gateb`), with three prototype-only additi
 
 - `GatebPhone` records the phone's battery level, charging state, temperature, power-saving mode,
   thermal status and refresh rate next to each measurement, and skips a measurement below a battery
-  level (`gatebMinBattery`, 50% here).
+  level (`gatebMinBattery`: 50% for run 1, 30% for run 2 and the cold start).
 - `GatebBridgeCounter` is #244's bridge counter as an instrumented test: per form it opens the
   route, waits 2 s, then for 15 s reads the route's once-a-second bridge log and the host's frames
   over the same window (`dumpsys gfxinfo`, reset at the start of the window). It runs without
   Macrobenchmark's compilation step, so its code ran as installed (JIT).
-- `GatebStartupBenchmark` (cold start, `host` against `native-host`, 10 iterations) with
-  `reportFullyDrawn` on the route's first content. **Not measured** (below).
+- `GatebStartupBenchmark` (StartupTimingMetric, `StartupMode.COLD`, `host` against `native-host`,
+  10 iterations each) with `reportFullyDrawn` on the route's first content. The guest route reports
+  inside a frame callback once its first change batch has been applied, and the benchmark keeps
+  tracing 1 s past the label: without both, Macrobenchmark failed on this phone with "No RT frame
+  slice associated with UI thread frame slice ends after reportFullyDrawn" (on the first iteration
+  as #245 left it; after 4 with a report followed by an invalidate).
 
-The phone was locked (secure lock screen) and left charging, so every measurement wakes the screen
+The phone was locked (secure lock screen), left charging in run 1 and on battery in run 2, so every measurement wakes the screen
 first and opens the route with the `overLockScreen` extra: only then does the route keep the screen
 on and draw over the lock screen (`setShowWhenLocked`; it does not unlock the phone). This is
 benchmark-only; never in a real host: it would show guest content on a locked phone. The lock
@@ -329,20 +393,47 @@ range; phone at 75%, charging, 33.6–34.2 °C, thermal status 0, no power savin
 | native, `Animatable` | — | — | 55.5 | — |
 
 **Frame timing** (FrameTimingMetric, 5 iterations × 5 s per form; median frame count over the
-iterations, percentiles over all frames of the 5 iterations, as Macrobenchmark reports them).
-One complete run; its emulator counterpart is #244's run 1 (run 2 was within a few tenths of a
-millisecond of it):
+iterations, percentiles over all frames of the 5 iterations, as Macrobenchmark reports them). Two
+complete runs: run 1 in #245, run 2 in a later session (2026-11-14, evening). The emulator
+counterpart is #244's run 1 (run 2 was within a few tenths of a millisecond of it). Janky frames
+(a positive `frameOverrunMs`) are counted from the per-frame JSON, which exists for run 2 only; the
+frames whose CPU time alone exceeds 16.7 ms are beside them:
 
-| Form | Frames / 5 s | Frame CPU p50 | p90 | p99 | Overrun p50 | p90 | p99 | Emulator: frames, CPU p50 / p90 / p99, overrun p50 |
-|---|---|---|---|---|---|---|---|---|
-| host references (guest) | 233 | 27.2 ms | 36.4 ms | 82.6 ms | 12.6 ms | 35.4 ms | 136.3 ms | 273, 3.7 / 4.1 / 4.8 ms, −9.8 ms |
-| guest frame clock (guest) | 153 | 21.2 ms | 28.9 ms | 66.0 ms | 7.8 ms | 20.6 ms | 60.3 ms | 285, 3.7 / 4.4 / 5.6 ms, −10.1 ms |
-| native, `animate*AsState` | 190 | 20.4 ms | 37.4 ms | 64.9 ms | 5.3 ms | 42.9 ms | 96.6 ms | 272, 3.7 / 4.2 / 5.1 ms, −9.7 ms |
-| native, `Animatable` | 218 | 19.0 ms | 36.3 ms | 59.3 ms | 4.1 ms | 37.2 ms | 81.7 ms | 273, 3.8 / 4.2 / 4.9 ms, −9.7 ms |
+| Form | Run | Frames / 5 s | Frame CPU p50 | p90 | p99 | Overrun p50 | p90 | p99 | Janky frames (overrun > 0) | CPU > 16.7 ms | Emulator: frames, CPU p50 / p90 / p99, overrun p50 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| host references (guest) | 1 | 233 | 27.2 ms | 36.4 ms | 82.6 ms | 12.6 ms | 35.4 ms | 136.3 ms | not saved | not saved | 273, 3.7 / 4.1 / 4.8 ms, −9.8 ms |
+| | 2 | 274 | 20.6 ms | 31.6 ms | 59.7 ms | 5.4 ms | 26.8 ms | 88.4 ms | 1,165 of 1,209 (96%) | 1,080 (89%) | |
+| guest frame clock (guest) | 1 | 153 | 21.2 ms | 28.9 ms | 66.0 ms | 7.8 ms | 20.6 ms | 60.3 ms | not saved | not saved | 285, 3.7 / 4.4 / 5.6 ms, −10.1 ms |
+| | 2 | 159 | 16.8 ms | 27.4 ms | 46.4 ms | 3.6 ms | 20.0 ms | 41.7 ms | 759 of 796 (95%) | 400 (50%) | |
+| native, `animate*AsState` | 1 | 190 | 20.4 ms | 37.4 ms | 64.9 ms | 5.3 ms | 42.9 ms | 96.6 ms | not saved | not saved | 272, 3.7 / 4.2 / 5.1 ms, −9.7 ms |
+| | 2 | 162 | 18.9 ms | 34.9 ms | 52.8 ms | 4.2 ms | 38.1 ms | 73.8 ms | 767 of 797 (96%) | 707 (89%) | |
+| native, `Animatable` | 1 | 218 | 19.0 ms | 36.3 ms | 59.3 ms | 4.1 ms | 37.2 ms | 81.7 ms | not saved | not saved | 273, 3.8 / 4.2 / 4.9 ms, −9.7 ms |
+| | 2 | 151 | 18.9 ms | 33.4 ms | 50.0 ms | 4.1 ms | 33.3 ms | 71.6 ms | 786 of 813 (97%) | 672 (83%) | |
 
-Phone state for this run: the state file was not retrieved (below); the readings about 10 minutes
-before, in an earlier pass whose results were lost, were 77–79%, charging, 33.1–33.3 °C, thermal
-status 0 rising to 1 ("light"), no power saving.
+Phone state. Run 1: the state file was not retrieved (below); the readings about 10 minutes before,
+in an earlier pass whose results were lost, were 77–79%, charging, 33.1–33.3 °C, thermal status 0
+rising to 1 ("light"), no power saving. Run 2: 87% → 86%, on battery (not charging), 26.3 °C,
+thermal status 0, no power saving, 60 Hz, at each form's start (the first form's line was not kept
+by the state file; `dumpsys battery` just before the run read 87%, unplugged, 26.3 °C).
+
+**Cold start** (StartupTimingMetric, `StartupMode.COLD`, 10 iterations per form; ms; with 10
+samples p99 is effectively the maximum). Phone: 83%, on battery, 26.7 °C, thermal status 0, no power
+saving (`dumpsys battery` before the run read 83%, unplugged, 26.7 °C):
+
+| Form | Time to full display (first content): median | p90 | p99 | min | Time to initial display: median | p90 | p99 |
+|---|---|---|---|---|---|---|---|
+| native (`native-host`, the screen compiled in) | **919** | 1,018 | 1,043 | 903 | 919 | 1,018 | 1,043 |
+| guest (`host`, the bundle from the APK's assets) | **2,581** | 2,812 | 2,813 | 2,404 | 823 | 858 | 903 |
+| guest − native | **+1,662** | | | | −96 | | |
+
+The guest's initial display is an empty surface (the activity's first frame), so it comes slightly
+earlier than native's, whose first frame already has the content. Its full display is the frame
+after the first change batch has been applied: loading the ~1.9 MB bundle into QuickJS from the
+APK's assets (no network) and the guest's first composition. Where the 1.66 s goes was not profiled.
+The emulator has no cold-start number (#244 did not measure one). On the iPhone 13 the same gap
+from `main()` was +142 ms warm and about +820 ms with an empty cache (section above); the two are
+not the same measurement (Android's cold start includes the process and the activity, and this
+bundle is a different screen), so compare their sizes only roughly.
 
 Reading them together:
 
@@ -355,14 +446,22 @@ Reading them together:
   not show this (the guest form even draws the *fewest* host frames, 153 per 5 s, perhaps because
   there is less on the host to animate; not measured), so the bridge counter is the measurement that
   matters for this form.
-- **Host references cost more per host frame than native on this phone.** Every form overruns the 16.7 ms frame budget at the
-  median on this phone, native Compose included, so the screen (12 boxes animating alpha, size and
-  colour at once, plus `AnimatedVisibility` and `animateContentSize`) is heavy for the device. Host
-  references drew the most frames (233 per 5 s) at a frame CPU p50 about 7 ms above native's (27.2
-  against 19–20 ms) and a longer p99 tail (82.6 against 59–65 ms). One run is not enough to say how
-  much of that is the generated renderers' cost and how much is the guest's QuickJS thread
-  competing for this phone's CPU while the host animates; the native forms' own spread (190 and
-  218 frames, p90 36–37 ms) is of the same order.
+- **Host references cost somewhat more per host frame than native on this phone.** Every form
+  overruns the 16.7 ms frame budget at the median on this phone, native Compose included: 95–97% of
+  frames have a positive overrun in every form in run 2, so the janky-frame count does not separate
+  the forms here. The screen (12 boxes animating alpha, size and colour at once, plus
+  `AnimatedVisibility` and `animateContentSize`) is heavy for the device. Host references drew the
+  most frames in both runs (233 and 274 per 5 s). Their frame CPU p50 was about 7 ms above native's
+  in run 1 (27.2 against 19–20 ms) and 1.7 ms above in run 2 (20.6 against 18.9 ms); run 1's phone
+  was warm and charging, run 2's cooler and on battery, so the size of the gap depends on the
+  phone's state. Their overrun p99 tail was the longest in both runs (136 and 88 ms, against 73–97
+  for native). Two runs still do not say how much of that is the generated renderers and how much
+  is the guest's QuickJS thread competing for this phone's CPU while the host animates; the native
+  forms' own spread between runs (151–218 frames) is of the same order.
+- **Cold start is the largest phone-side cost of the guest route**: 2.58 s to the guest's first
+  content against 0.92 s native (+1.66 s), from a bundle already in the APK. It is a cost of the guest route
+  (loading and starting the guest), not of the generated API: Gate A's "first frame no slower"
+  compared the generated guest with today's guest, and this compares a guest with native.
 - The bridge counter's host frame rates (53 host references, 56 native `Animatable`) are higher
   than the benchmark's (47, 44 frames a second): different windows, and the counter ran without
   Macrobenchmark's compilation and process restarts per iteration. Its native `animate*AsState`
@@ -370,15 +469,18 @@ Reading them together:
 
 ### Caveats
 
-- **One complete frame-timing run, not two.** A first full pass completed on the phone but its
+- **Run 1's per-frame data is lost.** In #245 a first full pass completed on the phone but its
   outputs were overwritten by the next pass before they were saved; the second pass completed but
   the wireless adb connection dropped while its outputs were being pulled, so only Macrobenchmark's
   per-test summaries (frame count min/median/max; CPU and overrun P50/P90/P95/P99) were retrieved,
-  not the per-frame JSON (hence no janky-frame count) or the phone-state file. The phone then left
-  adb entirely, so a second run and the cold-start comparison were not measured.
-- One bridge-counter pass (15 s per form).
-- The phone was charging throughout (75–79%; for the frame-timing run inferred from the readings
-  around it, since its state file was lost) and warm (33–34 °C, thermal status up to "light").
+  not the per-frame JSON (hence no janky-frame count for run 1) or the phone-state file. Run 2 and
+  the cold start were measured in a later session, with every output saved.
+- The two runs were made in different phone states: run 1 charging (75–79%; inferred from the
+  readings around it, since its state file was lost) and warm (33–34 °C, thermal status up to
+  "light"); run 2 and the cold start on battery (87–83%) and cool (26.3–26.7 °C, thermal status 0).
+- One bridge-counter pass (15 s per form), in run 1's session.
+- The cold start is the benchmark build (R8, release-shaped) under Macrobenchmark's default
+  compilation, with the bundle in the APK's assets: no network, unlike the iPhone's.
 - Wireless adb, a secure lock screen behind the route (not drawn while covered), a 60 Hz display.
   At 90/120 Hz the gap between the guest's rate and the display's would be larger.
 - The A12's numbers are for this phone class; the emulator's were relative only.
