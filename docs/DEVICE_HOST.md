@@ -297,6 +297,10 @@ policy, where it came from (the app's setting or the index's override, and an ov
 refused) and what this start does and why (for crash rollback, which of its conditions holds). The decision is one pure function, `chooseStart` (`StartPolicy.kt`, the same file in both
 hosts), with its tests in `StartPolicyTest.kt`.
 
+Measured on a low-end Android phone (`network-first` against `parallel`: cold start from a warm
+cache, the first start after a publish with the dropped release's calls, the on-resume swap, a back
+press, a covered screen and the crash ledger): [START_POLICY_PHONE_RUN.md](START_POLICY_PHONE_RUN.md).
+
 **Lifecycle.** The host looks up and loads once per process, and every screen
 shares that load: a rotation, a second screen or a screen opened again doesn't
 load anything. So, by default, a bundle published while the app runs is picked
