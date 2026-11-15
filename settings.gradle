@@ -79,6 +79,11 @@ if (providers.gradleProperty('keliver.gatebIos').present) {
   include ':keliver-compose-gatea-sample-guest'
   include ':keliver-compose-gatea-sample-ios'
 }
+// The guest profile (docs/GUEST_PROFILE.md): the three-way benchmark's screens composed headlessly,
+// in Node and in Zipline's QuickJS on the JVM. Only with -Pkeliver.guestProfile; never published.
+if (providers.gradleProperty('keliver.guestProfile').present) {
+  include ':keliver-compose-gatea-profile'
+}
 include ':keliver-composeui'
 include ':keliver-gradle-plugin'
 

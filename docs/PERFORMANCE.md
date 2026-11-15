@@ -22,6 +22,8 @@
 > Keliver guest and a web page in a WebView, on a low-end Android phone: cold start, navigation, and
 > tap → API → rendered with the steps split, including the guest's bridge crossings:
 > [`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md). Prototype code, not re-run per release.
+> Where the guest's navigation time goes (an interpreter profile, QuickJS GC, the encoder and
+> engine options), measured headlessly: [`GUEST_PROFILE.md`](GUEST_PROFILE.md).
 
 All baseline numbers below come from the `sample/` reference app
 (`Box { Text("Hello, Keliver!") }`) built against

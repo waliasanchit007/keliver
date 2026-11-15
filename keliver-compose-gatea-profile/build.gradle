@@ -1,0 +1,106 @@
+// The guest profile (docs/GUEST_PROFILE.md): the three-way benchmark's screens
+// (sample/threeway-guest, copied in unchanged) composed headlessly against the real guest Compose
+// runtime, the real generated Gate A widgets and a copy of the guest's protocol recorder, driven by a
+// manual frame clock. One Kotlin/JS executable runs
+//  - in Node (`:keliver-compose-gatea-profile:jsNodeProductionRun`, optionally --jitless --cpu-prof), and
+//  - in Zipline's own QuickJS on the JVM (`profileQuickJs`: the .zipline bytecode the Zipline plugin
+//    compiles, loaded by a small JVM harness that also sets the QuickJS GC threshold).
+//
+// Prototype only: included in the build only with -Pkeliver.guestProfile (settings.gradle), never
+// published, not part of CI's graph.
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsExec
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+// The benchmark's screens and data, unchanged (only the package line of the data file is the same
+// too): copied, not a srcDir, because sample/threeway-guest's source sets hold more than these two.
+def threeway = rootProject.file('sample/threeway-guest/src')
+def threewayCopy = tasks.register('copyThreewayScreens', Sync) {
+  from(new File(threeway, 'jsMain/kotlin/dev/keliver/sample/threeway/ThreewayScreens.kt'))
+  from(new File(threeway, 'commonMain/kotlin/dev/keliver/sample/threeway/data/ThreewayData.kt'))
+  into(layout.buildDirectory.dir('threeway/kotlin'))
+}
+
+kotlin {
+  jvm()
+  js {
+    outputModuleName = 'guest-profile'
+    nodejs()
+    binaries.executable()
+    // Experiment (docs/GUEST_PROFILE.md): Kotlin's Long as a JS BigInt instead of the emulated
+    // {low, high} object. The final link generates JS for every library, so it applies to all of them.
+    if (providers.gradleProperty('profileBigInt').present) {
+      compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')
+    }
+  }
+
+  sourceSets {
+    jsMain {
+      kotlin.srcDir(threewayCopy)
+      dependencies {
+        implementation projects.keliverProtocolGuest
+        implementation projects.keliverCompose
+        implementation projects.keliverComposeGateaCompose
+        implementation projects.keliverComposeGateaProtocolGuest
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.kotlinx.serialization.json
+        implementation libs.kotlinx.coroutines.core
+      }
+    }
+    jsTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+    jvmMain {
+      dependencies {
+        implementation libs.zipline
+        implementation libs.zipline.loader
+        implementation libs.jetbrains.compose.runtime // only because the Compose compiler plugin requires it
+        implementation libs.kotlinx.serialization.json
+        implementation libs.kotlinx.coroutines.core
+      }
+    }
+  }
+}
+
+zipline {
+  apiTracking = false
+}
+
+// What a run does: -PprofileArgs="mode=as-is,iterations=30,..." (GuestProfileMain.kt, `parseArgs`).
+def profileArgs = providers.gradleProperty('profileArgs').getOrElse('')
+def outDir = providers.gradleProperty('profileOut').getOrElse(layout.buildDirectory.dir('profile').get().asFile.path)
+
+// Node: the production executable. -PprofileJitless adds --jitless; -PprofileCpu adds --cpu-prof
+// (written to <profileOut>/cpu).
+tasks.named('jsNodeProductionRun', NodeJsExec).configure {
+  def flags = []
+  if (providers.gradleProperty('profileJitless').present) flags += '--jitless'
+  if (providers.gradleProperty('profileCpu').present) {
+    flags += ['--cpu-prof', "--cpu-prof-dir=${outDir}/cpu", '--cpu-prof-interval=100']
+  }
+  nodeArgs.addAll(flags)
+  args("host=node,${profileArgs}")
+  doFirst { new File(outDir, 'cpu').mkdirs() }
+}
+
+// Zipline's QuickJS on the JVM: load the production .zipline bundle and run the same steps.
+def ziplineCompile = tasks.named('compileProductionExecutableKotlinJsZipline')
+tasks.register('profileQuickJs', JavaExec) {
+  dependsOn(ziplineCompile)
+  classpath = kotlin.jvm().compilations.main.runtimeDependencyFiles + kotlin.jvm().compilations.main.output.allOutputs
+  mainClass = 'dev.keliver.compose.gatea.profile.QuickJsProfileKt'
+  def bundle = ziplineCompile.flatMap { it.outputDir }
+  argumentProviders.add({ [bundle.get().asFile.path, outDir, profileArgs] } as CommandLineArgumentProvider)
+}
+
+// Summarise a Node .cpuprofile into shares by module and by function group.
+tasks.register('profileSummary', JavaExec) {
+  classpath = kotlin.jvm().compilations.main.runtimeDependencyFiles + kotlin.jvm().compilations.main.output.allOutputs
+  mainClass = 'dev.keliver.compose.gatea.profile.CpuProfileSummaryKt'
+  args(providers.gradleProperty('cpuProfile').getOrElse(''))
+}
