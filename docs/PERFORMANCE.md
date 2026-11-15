@@ -18,6 +18,11 @@
 > [`ADOPTION_RETRO_2026-10.md`](ADOPTION_RETRO_2026-10.md#measurements). They
 > are not from `sample/` and not yet re-run per release.
 
+> **Native vs guest vs web (2026-11).** The same list and detail screens as native Compose, a
+> Keliver guest and a web page in a WebView, on a low-end Android phone: cold start, navigation, and
+> tap → API → rendered with the steps split, including the guest's bridge crossings:
+> [`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md). Prototype code, not re-run per release.
+
 All baseline numbers below come from the `sample/` reference app
 (`Box { Text("Hello, Keliver!") }`) built against
 `1.0.0-caliclan.4-SNAPSHOT`. Re-running every measurement is a
