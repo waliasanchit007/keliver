@@ -218,6 +218,32 @@ class BundleIndexTest {
   }
 
   @Test
+  fun aStartFromTheCacheShowsOnlyTheRecordedManifestWhenZiplineRefetchesIt() = runBlocking {
+    // A PARALLEL (or cache-first) start pins the cached release's URL to the sha256 recorded when it
+    // last loaded. Zipline's cache is gone (cleared app data), so Zipline fetches that URL from the
+    // network, where the server now serves other bytes, validly signed and above the floor.
+    val url = "https://cdn.example/bundles/v5/manifest.zipline.json"
+    val recorded = """{"modules":{},"metadata":{"keliver.sequence":"5"}}""".encodeUtf8()
+    val swapped = """{"modules":{},"metadata":{"keliver.sequence":"5","beta":"1"}}""".encodeUtf8()
+    val recordedSha = recorded.sha256().hex()
+    val cached = ManifestPinningHttpClient(Fake(mapOf(url to swapped)), url, recordedSha, floor = { 5 })
+    val e = assertFailsWith<IOException> { cached.download(url, emptyList()) }
+    assertTrue("manifest sha256 mismatch" in e.message!!, e.message)
+    // Nothing served, so nothing is recorded for it (onLoaded records servedSha256).
+    assertEquals(null, cached.servedSha256(url))
+    // The W5 fall-back and a retry pin that URL again without a hash: the recorded one stays.
+    cached.pin(url, null)
+    assertEquals(recordedSha, cached.pinnedSha256(url))
+    assertFailsWith<IOException> { cached.download(url, emptyList()) }
+    // The same bytes as recorded load, and are what is recorded again.
+    val same = ManifestPinningHttpClient(Fake(mapOf(url to recorded)), url, recordedSha, floor = { 5 })
+    assertEquals(recorded, same.download(url, emptyList()))
+    assertEquals(recordedSha, same.servedSha256(url))
+    // No sha256 recorded (an install from before it was): the floor only, as before.
+    assertEquals(swapped, ManifestPinningHttpClient(Fake(mapOf(url to swapped)), url, null, floor = { 5 }).download(url, emptyList()))
+  }
+
+  @Test
   fun theRollbackFloorRefusesOlderOrUnsequencedManifests() {
     assertEquals(null, rollbackProblem(null, 0)) // a host that has never run a sequenced bundle
     assertEquals(null, rollbackProblem(3, 0))

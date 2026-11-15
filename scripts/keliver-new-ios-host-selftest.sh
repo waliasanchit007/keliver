@@ -425,7 +425,11 @@ SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
   && grep -q 'val rollbackWhy = crashRollbackReason(crash, startStep, floor())' "$V" \
   && grep -q '  log(choice.logLine(policy))' "$V" \
   && grep -q 'recordStartOverride(cacheName, body.utf8())' "$V" \
-  && grep -q 'ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.show)' "$V" \
+  && grep -A4 'ParallelStep.SHOW_CACHED -> {' "$V" | grep -q 'HostState.Running(app, then = h.show)' \
+  && grep -q '    val parts = AppParts(trust, lastGood, recordedSha256, floor, crash, apiBase)' "$V" \
+  && [ "$(grep -c 'createApp(trust, lastGood, recordedSha256, lookup, cached, apiBase' "$V")" = 2 ] \
+  && grep -B1 'HostState.Running(app, then = h.show)' "$V" | grep -q 'h.retryFromNetwork(retryAfterShownCache(step, latest?.manifestUrl, latest?.manifestSha256))' \
+  && grep -q '    } else if (retryFromNetwork != null && step !is CrashStep.SetAside) {' "$V" \
   && grep -q '        h.drop()' "$V" \
   && grep -q 'val fence = LoadFence(held != null, { block -> appScope.launch { block() } }, besideALiveApp = held != null && besideALiveApp)' "$V" \
   && grep -q 'fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }' "$V" \

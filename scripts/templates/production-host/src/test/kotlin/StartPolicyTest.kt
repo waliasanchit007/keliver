@@ -145,6 +145,23 @@ class StartPolicyTest {
     assertTrue("no sha256 is recorded" in unknownWhy, unknownWhy)
   }
 
+  @Test fun aConfirmedCachedLoadThatFailsLoadsTheNamedReleaseFromTheNetworkOnce() {
+    val cached = "https://b.example/bundles/v5/manifest.zipline.json"
+    val sha = "ab".repeat(32)
+    // Confirmed, then the shown load failed (say its refetch was refused on the recorded sha256):
+    // the release the index named, from the network, held to the index's sha256, as network-first.
+    val (step, _) = afterParallelLookup(cached, sha, cached, sha)
+    assertEquals(cached to sha, retryAfterShownCache(step, cached, sha))
+    // The lookup failed: network-first's start from the cache has no fall-back, so neither has this.
+    val (failed, _) = afterParallelLookup(null, null, cached, sha)
+    assertEquals(null, retryAfterShownCache(failed, null, null))
+    // The named release already loads from the network, in a new app: nothing to retry.
+    val other = "https://b.example/bundles/v6/manifest.zipline.json"
+    val (named, _) = afterParallelLookup(other, sha, cached, sha)
+    assertEquals(null, retryAfterShownCache(named, other, sha))
+    assertEquals(null, retryAfterShownCache(ParallelStep.LOAD_NAMED, cached, sha))
+  }
+
   @Test fun aHeldOutcomeWaitsForTheLookup() {
     val done = mutableListOf<String>()
     // Released: the last outcome runs, once.

@@ -168,6 +168,11 @@ internal enum class ParallelStep {
  * as network-first loads it, held to the index's sha256, and a mismatch falls back to the cache
  * (W5), as it does under network-first. The relay's legacy lookup gives no sha256, so it confirms
  * nothing.
+ *
+ * What the cached load shows is held to [cachedSha256] too: the host builds its client with the
+ * cached release's URL pinned to it, so when Zipline's cache misses or refuses the bundle and
+ * Zipline fetches that manifest from the network, bytes other than the recorded ones are refused
+ * (`manifest sha256 mismatch`) and nothing unchecked shows ([retryAfterShownCache] says what loads then).
  */
 internal fun afterParallelLookup(namedUrl: String?, namedSha256: String?, cachedUrl: String, cachedSha256: String?): Pair<ParallelStep, String> = when {
   namedUrl == null -> ParallelStep.SHOW_CACHED to "the lookup failed: the cached release, as network-first would show"
@@ -179,6 +184,18 @@ internal fun afterParallelLookup(namedUrl: String?, namedSha256: String?, cached
   namedUrl == cachedUrl -> ParallelStep.SHOW_CACHED to "the lookup confirms the cached release"
   else -> ParallelStep.LOAD_NAMED to "the lookup names $namedUrl: loading it from the network; the cached load is dropped (not shown)"
 }
+
+/**
+ * A PARALLEL start whose lookup confirmed the cached release ([step] SHOW_CACHED with a named
+ * manifest): when that shown load then fails before any code ran (its manifest refused, its
+ * download failed), the manifest it loads from the network instead, once, held to the index's
+ * sha256, as network-first loads the release the index names. Null: nothing more loads (the lookup
+ * failed, so the failure stands, as under network-first's start from the cache; or the start
+ * loaded the named release in a new app). A failure that sets the bundle aside is crash rollback's,
+ * not this.
+ */
+internal fun retryAfterShownCache(step: ParallelStep, namedUrl: String?, namedSha256: String?): Pair<String, String>? =
+  if (step == ParallelStep.SHOW_CACHED && namedUrl != null && namedSha256 != null) namedUrl to namedSha256 else null
 
 /**
  * One TreehouseApp's code loads, as the host sees them (a PARALLEL start's cached load, and an

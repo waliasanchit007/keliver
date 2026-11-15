@@ -1491,7 +1491,12 @@ private suspend fun startHost(): HostState {
     val cached = AcceptCachedBundle(floor, crash, Keliver.served)
     // One factory (so one Zipline cache) and one pinning client for this start's apps: the cached
     // one, and each one a newer release loads in (the one a PARALLEL lookup names, or an update).
-    val parts = AppParts(trust, lastGood, null, floor, crash, apiBase)
+    // When Zipline's cache misses or refuses the cached bundle and Zipline fetches its manifest from
+    // the network, it is held to the sha256 recorded when it last loaded (null: not recorded, the
+    // floor only). A PARALLEL start confirms the cache against that same sha256, so what it shows is
+    // what it compared with the index; a cache-first start shows nothing other than the recorded bytes either.
+    val recordedSha256 = NSUserDefaults.standardUserDefaults.stringForKey(lastGoodShaKey(trust))
+    val parts = AppParts(trust, lastGood, recordedSha256, floor, crash, apiBase)
     // After a start from the cache, Zipline takes no further manifest into that app: an update (on
     // resume, live, checkForUpdate) loads in a new app, swapped in once it has loaded; when it
     // fails, the running one stays (checkForUpdate).
@@ -1515,7 +1520,7 @@ private suspend fun startHost(): HostState {
       Unit
     }
     if (choice.mode == KeliverStartPolicy.CACHE_FIRST) {
-      val app = createApp(trust, lastGood, null, lookup, cached, apiBase, fallback = null, parts = parts, loadInNewApp = loadInNewApp)
+      val app = createApp(trust, lastGood, recordedSha256, lookup, cached, apiBase, fallback = null, parts = parts, loadInNewApp = loadInNewApp)
       return HostState.Running(app) {
         // In the background: what it finds applies from the next start (or as an update, on resume or live).
         appScope.launch {
@@ -1528,16 +1533,21 @@ private suspend fun startHost(): HostState {
     // PARALLEL: the cached release loads now, in an app of its own, shown once the lookup confirms
     // it or fails (with no fall-back, as network-first's start from the cache has none).
     var held: AppLoad? = null
-    val app = createApp(trust, lastGood, null, lookup, cached, apiBase, fallback = null, parts = parts, held = { held = it }, loadInNewApp = loadInNewApp)
+    val app = createApp(trust, lastGood, recordedSha256, lookup, cached, apiBase, fallback = null, parts = parts, held = { held = it }, loadInNewApp = loadInNewApp)
     val latest = lookupBundle(server, capabilities, facts, cacheName(trust))
-    val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, NSUserDefaults.standardUserDefaults.stringForKey(lastGoodShaKey(trust)))
+    val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, recordedSha256)
     // What the lookup named and why it may run here (index sequence, channel, host version), as
     // network-first's "loading" line says it: a confirmed cache loads nothing more to say it.
     val named = if (step == ParallelStep.SHOW_CACHED && latest != null) ": ${latest.manifestUrl} (${latest.source})" else ""
     log("start policy: parallel: $why$named")
     val h = checkNotNull(held)
     return when (step) {
-      ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.show)
+      ParallelStep.SHOW_CACHED -> {
+        // If the shown load fails before any code ran (its refetched manifest refused on the
+        // recorded sha256, say), the named release loads from the network, as network-first's would.
+        h.retryFromNetwork(retryAfterShownCache(step, latest?.manifestUrl, latest?.manifestSha256))
+        HostState.Running(app, then = h.show)
+      }
       ParallelStep.LOAD_NAMED -> {
         // Closed: nothing of it shows, and nothing it did counts (LoadFence). The named release
         // loads in a new app, as network-first loads it, with the W5 fall-back to the cached bundle.
@@ -1736,6 +1746,8 @@ private fun createApp(
   // reads the spec's checker each time it (re)starts its loader.
   val freshnessSwitch = SwitchableFreshness(freshness)
   var fellBack = false
+  // A PARALLEL start's confirmed cached load: what loads from the network if it fails (AppLoad.retryFromNetwork).
+  var retryFromNetwork: Pair<String, String>? = null
   // A held app's first outcome, kept (main thread); and its events, kept until it is shown, never
   // acted on once it is dropped (a dropped app counts toward nothing).
   val hold = StartHold(held != null, onKept)
@@ -1790,6 +1802,17 @@ private fun createApp(
     } else if (back != null) {
       Keliver.reportSetAside(step, crashGoingBackTo(back.sequence))
       rollBack(back)
+    } else if (retryFromNetwork != null && step !is CrashStep.SetAside) {
+      // A PARALLEL start's confirmed cached release did not load: the release the index named, from
+      // the network, held to the index's sha256, as network-first loads it (once).
+      val (url, sha256) = checkNotNull(retryFromNetwork)
+      retryFromNetwork = null
+      log("start policy: parallel: the cached release did not load ($reason); loading $url from the network, as network-first would")
+      freshnessSwitch.current = DefaultFreshnessCheckerNotFresh
+      pinning.pin(url, sha256)
+      app.stop()
+      flow.value = url
+      app.start()
     } else if (fallback != null && !fellBack) {
       fellBack = true
       Keliver.reportSetAside(step, crashGoingBackTo(null))
@@ -1868,10 +1891,13 @@ private fun createApp(
       crash = crash,
       onLoaded = { url ->
         val defaults = NSUserDefaults.standardUserDefaults
-        defaults.setObject(url, forKey = lastGoodKey(trust))
         // With the sha256 of the very manifest bytes Zipline verified and loaded (none served: none kept).
         val sha256 = pinning.servedSha256(url)
-        if (sha256 != null) defaults.setObject(sha256, forKey = lastGoodShaKey(trust)) else defaults.removeObjectForKey(lastGoodShaKey(trust))
+        // The old sha256 goes first: a process killed between these writes leaves a URL with none
+        // (the floor only, as before one was recorded), never a URL with another release's.
+        defaults.removeObjectForKey(lastGoodShaKey(trust))
+        defaults.setObject(url, forKey = lastGoodKey(trust))
+        if (sha256 != null) defaults.setObject(sha256, forKey = lastGoodShaKey(trust))
       },
       onSequence = { sequence ->
         val current = floorOf(trust)
@@ -1921,6 +1947,7 @@ private fun createApp(
         hold.drop()
         app.close()
       },
+      retryFromNetwork = { retryFromNetwork = it },
     ),
   )
   return app
@@ -1959,7 +1986,13 @@ private class AcceptCachedBundle(
  * kept; [settle] acts on what it kept without showing it (an update that failed: the running app
  * stays, and the failure is reported as an update's); [drop] closes it. Main thread.
  */
-internal class AppLoad(val show: () -> Unit, val settle: () -> Unit, val drop: () -> Unit)
+internal class AppLoad(
+  val show: () -> Unit,
+  val settle: () -> Unit,
+  val drop: () -> Unit,
+  /** Before [show]: what loads from the network, once, if its first load fails (retryAfterShownCache); null: nothing. */
+  val retryFromNetwork: (Pair<String, String>?) -> Unit,
+)
 
 /**
  * One app's code loads' listener. [fence] says whether the app is the host's: what touches crash

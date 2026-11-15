@@ -413,6 +413,10 @@ SP="${M%/*}/StartPolicy.kt"
   && grep -q 'Log.i(TAG, choice.logLine(policy))' "$M" \
   && [ "$(grep -c 'recordStartOverride(.*, it)' "$M")" -ge 3 ] \
   && grep -q '          held.drop()' "$M" \
+  && grep -q 'val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, recordedSha256, floor, crash) { servedBridges }' "$M" \
+  && grep -q 'afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, recordedSha256)' "$M" \
+  && grep -A1 'held.retryFromNetwork(retryAfterShownCache(step, latest?.manifestUrl, latest?.manifestSha256))' "$M" | grep -q '          held.show()' \
+  && grep -q '      } else if (retryFromNetwork != null && step !is CrashStep.SetAside) {' "$M" \
   && grep -q 'val fence = LoadFence(held, { block -> scope.launch { block() } }, besideALiveApp = held && besideALiveApp)' "$M" \
   && grep -q '    fence.run { onUncaught(count(CrashKind.EXCEPTION)) }' "$M" \
   && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$M" \

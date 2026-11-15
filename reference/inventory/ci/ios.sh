@@ -316,7 +316,7 @@ if [ -n "$TAP_BUILT" ]; then
   # shown once the lookup confirms that same v1, or load it again (network-first).
   { took_release "$EV/P3.console.txt" "http://localhost:$RELAY_PORT/bundles/v1/manifest.zipline.json" 1 \
       || { grep -q "KeliverHost: loading http://localhost:$RELAY_PORT/bundles/v1/manifest.zipline.json" "$EV/P3.console.txt" \
-        && grep -q "codeLoadSuccess" "$EV/P3.console.txt"; }; } \
+        && grep -q "codeLoadSuccess .* source=network" "$EV/P3.console.txt"; }; } \
     && ok "P3: the presenter runs from the signed v1 (codeLoadSuccess)" || bad "P3: v1 did not load in P3's launch"
   [ "$P3_RC" = 0 ] && ok "P3: Add 1 three times on Espresso beans: 13, 14, 15, each observed ($(tap_steps P3) steps, P3-tap.log)" \
     || bad "P3: Add 1 three times on Espresso beans: $(tap_why P3)"

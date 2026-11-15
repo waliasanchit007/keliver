@@ -302,6 +302,19 @@ What each start does, whatever the policy, and why none weakens a check:
   network as `network-first` does: a mismatch is refused (`manifest sha256 mismatch`) and the host
   falls back to the cached bundle, verified again. An install whose last load predates this record
   has nothing to confirm with, so its first `parallel` start with a cache loads from the network once.
+  What a confirmed start shows is held to that same recorded sha256: under `parallel` and
+  `cache-first`, the cached release's manifest URL is pinned to it, so when Zipline's cache is empty
+  or refuses the bundle (cleared app data or caches) and Zipline fetches that manifest from the
+  network, other bytes at that URL, however validly signed, are refused (`manifest sha256 mismatch`)
+  rather than shown. A confirmed `parallel` start whose shown load then fails before any code ran
+  loads the release the index named from the network once more, held to the index's sha256, as
+  `network-first` would (logged `start policy: parallel: the cached release did not load (…)`);
+  when that fails too, the host says the bundle did not load, and the next update check loads
+  again. A `cache-first` start has no lookup to fall back on: its refused refetch says the bundle
+  did not load, where before it showed bytes this install never checked. With no sha256 recorded
+  (an upgraded install), the cached release's URL is held to the floor, the set-aside list and the
+  bridges only, as before. `network-first`'s start after a failed lookup is unchanged (the floor
+  only).
 - **A kill switch:** the index has none that stops cached code, under any policy. `rollout: 0`
   halts a release for hosts that have not run it; a host that already ran it has it as its floor,
   so its lookup finds nothing newer (or names that same release), and it shows the cached release

@@ -25,6 +25,33 @@ took_release "$T/nf" "$U5" 5 && case_bad "network-first: v5 was not named" || ca
 took_release_floor "$T/nf" "$U4" 4 4 && case_ok || case_bad "network-first floor 4"
 took_release_floor "$T/nf" "$U4" 4 5 && case_bad "network-first: the floor was not 5" || case_ok
 [ "$(lookups_in "$T/nf")" = 1 ] && case_ok || case_bad "network-first: one lookup"
+# The named release did not load; only a cached load did (a parallel start's dropped held load,
+# or the W5 fall-back): not taken.
+{ echo "11-15 03:22:12.000 1 1 D KeliverHost: loading $U4 $SRC4; rollback floor 4"
+  echo "11-15 03:22:12.137 1 2 D KeliverHost: codeLoadSuccess modules=42 sequence=4 source=cache"
+  echo "11-15 03:22:12.300 1 2 E KeliverHost: codeLoadFailed: manifest sha256 mismatch"; } > "$T/nf-cache"
+took_release "$T/nf-cache" "$U4" 4 && case_bad "network-first: only a cached load succeeded" || case_ok
+took_release_floor "$T/nf-cache" "$U4" 4 4 && case_bad "network-first floor: only a cached load succeeded" || case_ok
+# Numbers are whole: floor 4 is not 40, sequence 1 is not 10.
+sed 's/rollback floor 4$/rollback floor 40/' "$T/nf" > "$T/nf-40"
+took_release_floor "$T/nf-40" "$U4" 4 4 && case_bad "network-first: floor 40 is not floor 4" || case_ok
+took_release_floor "$T/nf-40" "$U4" 4 40 && case_ok || case_bad "network-first: floor 40"
+U1=https://10.0.2.2:8443/bundles/v1/manifest.zipline.json
+{ echo "KeliverHost: loading $U1 (index sequence 10, channel stable (host: stable), host version 1, manifest sha256 0123456789ab…); rollback floor 9"
+  echo "KeliverHost: codeLoadSuccess modules=42 sequence=10 source=network"; } > "$T/nf-10"
+took_release "$T/nf-10" "$U1" 1 && case_bad "network-first: index sequence 10 is not 1" || case_ok
+took_release "$T/nf-10" "$U1" 10 && case_ok || case_bad "network-first: index sequence 10"
+{ echo "KeliverHost: loading $U1 (index sequence 1, channel stable (host: stable), host version 1, manifest sha256 0123456789ab…); rollback floor 1"
+  echo "KeliverHost: codeLoadSuccess modules=42 sequence=10 source=network"; } > "$T/nf-1-10"
+took_release "$T/nf-1-10" "$U1" 1 && case_bad "network-first: codeLoadSuccess sequence 10 is not 1" || case_ok
+# A reason line that quotes the URL after "loading" (an upgraded install's first parallel start,
+# the legacy lookup) is not a second lookup.
+{ echo "KeliverHost: start policy: parallel: no sha256 is recorded for the cached manifest, so the lookup cannot confirm it: loading $U4 from the network; the cached load is dropped (not shown)"
+  cat "$T/nf"; } > "$T/nf-reason"
+[ "$(lookups_in "$T/nf-reason")" = 1 ] && case_ok || case_bad "a reason line is not a second lookup"
+{ echo "KeliverHost: start policy: parallel: the relay's legacy lookup cannot confirm the cached release: loading $U4"
+  cat "$T/nf"; } > "$T/nf-legacy"
+[ "$(lookups_in "$T/nf-legacy")" = 1 ] && case_ok || case_bad "the legacy lookup's reason line is not a second lookup"
 
 # Parallel, the lookup confirming the cached release.
 cat > "$T/par" <<EOF
@@ -39,6 +66,8 @@ took_release "$T/par" "$U4" 4 ", channel beta" && case_bad "parallel: not beta" 
 took_release "$T/par" "$U5" 5 && case_bad "parallel: v5 was not named" || case_ok
 took_release_floor "$T/par" "$U4" 4 4 && case_ok || case_bad "parallel floor 4"
 took_release_floor "$T/par" "$U4" 4 9 && case_bad "parallel: the floor was not 9" || case_ok
+sed 's/rollback floor 4$/rollback floor 40/' "$T/par" > "$T/par-40"
+took_release_floor "$T/par-40" "$U4" 4 4 && case_bad "parallel: floor 40 is not floor 4" || case_ok
 [ "$(lookups_in "$T/par")" = 1 ] && case_ok || case_bad "parallel: one lookup"
 # Something else loaded too, or the cache held another sequence than the one named: not taken.
 { cat "$T/par"; echo "11-15 03:22:13.000 1 2 D KeliverHost: codeLoadSuccess modules=42 sequence=5 source=network"; } > "$T/par-more"

@@ -940,8 +940,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     Log.i(TAG, choice.logLine(policy))
     if (lastGood != null && choice.mode != KeliverStartPolicy.NETWORK_FIRST) {
       Log.d(TAG, "starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
-      // As the "lookup failed" start below: the cached bundle, held to the key, the floor and set-aside sequences.
-      val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor, crash) { servedBridges }
+      // As the "lookup failed" start below: the cached bundle, held to the key, the floor and set-aside
+      // sequences; and, when Zipline's cache misses or refuses it and Zipline fetches its manifest from
+      // the network, to the sha256 recorded when it last loaded (null: not recorded, the floor only).
+      // A PARALLEL start confirms the cache against that same sha256, so what it shows is what it
+      // compared with the index; a cache-first start shows nothing other than the recorded bytes either.
+      val recordedSha256 = prefs.stringOrNull(lastGoodShaKey(cacheName))
+      val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, recordedSha256, floor, crash) { servedBridges }
       // One factory (so one Zipline cache) for this start's apps: the cached one, and each one a
       // newer release loads in (the one a PARALLEL lookup names, or an update).
       val factory = appFactory(verifier, cacheName, http)
@@ -983,13 +988,18 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         startTreehouse(prefs, factory, cacheName, floorNames, okhttp, http, apiBase, lastGood, cached, lookup, fallback = null, held = true, loadInNewApp = loadInNewApp),
       )
       val latest = lookUp()
-      val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, prefs.stringOrNull(lastGoodShaKey(cacheName)))
+      val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, recordedSha256)
       // What the lookup named and why it may run here (index sequence, channel, host version), as
       // network-first's "loading" line says it: a confirmed cache loads nothing more to say it.
       val named = if (step == ParallelStep.SHOW_CACHED && latest != null) ": ${latest.manifestUrl} (${latest.source})" else ""
       Log.i(TAG, "start policy: parallel: $why$named")
       when (step) {
-        ParallelStep.SHOW_CACHED -> held.show()
+        ParallelStep.SHOW_CACHED -> {
+          // If the shown load fails before any code ran (its refetched manifest refused on the
+          // recorded sha256, say), the named release loads from the network, as network-first's would.
+          held.retryFromNetwork(retryAfterShownCache(step, latest?.manifestUrl, latest?.manifestSha256))
+          held.show()
+        }
         ParallelStep.LOAD_NAMED -> {
           // Closed: nothing of it shows, and nothing it did counts (LoadFence). The named release
           // loads in a new app, as network-first loads it, with the W5 fall-back to the cached bundle.
@@ -1293,6 +1303,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // reads the spec's checker each time it (re)starts its loader.
     val freshnessSwitch = SwitchableFreshness(freshness)
     var fellBack = false
+    // A PARALLEL start's confirmed cached load: what loads from the network if it fails (AppLoad.retryFromNetwork).
+    var retryFromNetwork: Pair<String, String>? = null
     // A held app's first outcome, kept (main thread); and its events, kept until it is shown,
     // never acted on once it is dropped (M2: a dropped app counts toward nothing).
     val hold = StartHold(held, onKept)
@@ -1383,6 +1395,17 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       if (back != null) {
         reportSetAside(step, crashGoingBackTo(back.sequence))
         rollBack(back)
+      } else if (retryFromNetwork != null && step !is CrashStep.SetAside) {
+        // A PARALLEL start's confirmed cached release did not load: the release the index named, from
+        // the network, held to the index's sha256, as network-first loads it (once).
+        val (url, sha256) = checkNotNull(retryFromNetwork)
+        retryFromNetwork = null
+        Log.w(TAG, "start policy: parallel: the cached release did not load ($reason); loading $url from the network, as network-first would")
+        freshnessSwitch.current = DefaultFreshnessCheckerNotFresh
+        ziplineHttp.pin(url, sha256)
+        app.stop()
+        flow.value = url
+        app.start()
       } else if (fallback != null && !fellBack) {
         fellBack = true
         reportSetAside(step, crashGoingBackTo(null))
@@ -1534,6 +1557,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         hold.drop()
         app.close()
       },
+      retryFromNetwork = { retryFromNetwork = it },
     )
   }
 
@@ -1542,7 +1566,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * what it kept; [settle] acts on what it kept without showing it (an update that failed: the
    * running app stays, and the failure is reported as an update's); [drop] closes it. Main thread.
    */
-  private class AppLoad(val show: () -> Unit, val settle: () -> Unit, val drop: () -> Unit)
+  private class AppLoad(
+    val show: () -> Unit,
+    val settle: () -> Unit,
+    val drop: () -> Unit,
+    /** Before [show]: what loads from the network, once, if its first load fails (retryAfterShownCache); null: nothing. */
+    val retryFromNetwork: (Pair<String, String>?) -> Unit,
+  )
 
   /**
    * Looks up the newest bundle now (W5), with the same index, channel,
