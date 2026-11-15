@@ -119,14 +119,30 @@ class StartPolicyTest {
   @Test fun aParallelStartShowsTheCacheOnlyWhenNetworkFirstWouldShowTheSameRelease() {
     val cached = "https://b.example/bundles/v5/manifest.zipline.json"
     val sha = "ab".repeat(32)
-    // Confirmed: the index names the cached manifest.
-    assertEquals(ParallelStep.SHOW_CACHED, afterParallelLookup(cached, sha, cached).first)
+    // Confirmed: the index names the cached manifest, at the sha256 it was loaded at.
+    assertEquals(ParallelStep.SHOW_CACHED, afterParallelLookup(cached, sha, cached, sha).first)
+    assertEquals(ParallelStep.SHOW_CACHED, afterParallelLookup(cached, sha, cached, sha.uppercase()).first)
     // Failed, timed out, nothing compatible: network-first shows the cache too.
-    assertEquals(ParallelStep.SHOW_CACHED, afterParallelLookup(null, null, cached).first)
+    assertEquals(ParallelStep.SHOW_CACHED, afterParallelLookup(null, null, cached, sha).first)
+    assertEquals(ParallelStep.SHOW_CACHED, afterParallelLookup(null, null, cached, null).first)
     // A newer one (or any other): load it, as network-first does.
-    assertEquals(ParallelStep.LOAD_NAMED, afterParallelLookup("https://b.example/bundles/v6/manifest.zipline.json", sha, cached).first)
+    assertEquals(ParallelStep.LOAD_NAMED, afterParallelLookup("https://b.example/bundles/v6/manifest.zipline.json", sha, cached, sha).first)
     // The relay's legacy lookup has no sha256: it confirms nothing.
-    assertEquals(ParallelStep.LOAD_NAMED, afterParallelLookup(cached, null, cached).first)
+    assertEquals(ParallelStep.LOAD_NAMED, afterParallelLookup(cached, null, cached, sha).first)
+  }
+
+  @Test fun aParallelStartConfirmsTheCacheOnlyAtTheIndexsSha256() {
+    // S6 (reference app): the index holds the cached URL to a sha256 that is not the cached
+    // manifest's. Network-first fetches it, refuses it on its sha256 and falls back to the cache;
+    // a parallel start must not skip that by matching the URL alone.
+    val cached = "https://b.example/bundles/v2/manifest.zipline.json"
+    val (step, why) = afterParallelLookup(cached, "0".repeat(64), cached, "ab".repeat(32))
+    assertEquals(ParallelStep.LOAD_NAMED, step)
+    assertTrue("not the cached manifest's" in why, why)
+    // No sha256 recorded for the cached manifest (a host from before it was): nothing to confirm with.
+    val (unknown, unknownWhy) = afterParallelLookup(cached, "ab".repeat(32), cached, null)
+    assertEquals(ParallelStep.LOAD_NAMED, unknown)
+    assertTrue("no sha256 is recorded" in unknownWhy, unknownWhy)
   }
 
   @Test fun aHeldOutcomeWaitsForTheLookup() {

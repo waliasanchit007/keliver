@@ -183,6 +183,8 @@ private const val SWAP_LIMIT_MILLIS = 10_000L
 private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
 /** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
 private fun lastGoodKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestUrl-${cacheName(trust)}"
+/** The sha256 of the manifest bytes that last good bundle loaded from: a PARALLEL start confirms its cache only at it (StartPolicy.kt). */
+private fun lastGoodShaKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestSha256-${cacheName(trust)}"
 /** The highest signed sequence this host has run, per key (the rollback floor); [publicKeyHex]: any trusted key. */
 private fun floorKey(publicKeyHex: String) = "keliver.highestSequence-keliver-production-${publicKeyHex.lowercase().take(16)}"
 /** W8: the floor across every trusted key's own floor, so a rotation never lowers it. */
@@ -1528,8 +1530,11 @@ private suspend fun startHost(): HostState {
     var held: AppLoad? = null
     val app = createApp(trust, lastGood, null, lookup, cached, apiBase, fallback = null, parts = parts, held = { held = it }, loadInNewApp = loadInNewApp)
     val latest = lookupBundle(server, capabilities, facts, cacheName(trust))
-    val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood)
-    log("start policy: parallel: $why")
+    val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, NSUserDefaults.standardUserDefaults.stringForKey(lastGoodShaKey(trust)))
+    // What the lookup named and why it may run here (index sequence, channel, host version), as
+    // network-first's "loading" line says it: a confirmed cache loads nothing more to say it.
+    val named = if (step == ParallelStep.SHOW_CACHED && latest != null) ": ${latest.manifestUrl} (${latest.source})" else ""
+    log("start policy: parallel: $why$named")
     val h = checkNotNull(held)
     return when (step) {
       ParallelStep.SHOW_CACHED -> HostState.Running(app, then = h.show)
@@ -1861,7 +1866,13 @@ private fun createApp(
         }
       },
       crash = crash,
-      onLoaded = { url -> NSUserDefaults.standardUserDefaults.setObject(url, forKey = lastGoodKey(trust)) },
+      onLoaded = { url ->
+        val defaults = NSUserDefaults.standardUserDefaults
+        defaults.setObject(url, forKey = lastGoodKey(trust))
+        // With the sha256 of the very manifest bytes Zipline verified and loaded (none served: none kept).
+        val sha256 = pinning.servedSha256(url)
+        if (sha256 != null) defaults.setObject(sha256, forKey = lastGoodShaKey(trust)) else defaults.removeObjectForKey(lastGoodShaKey(trust))
+      },
       onSequence = { sequence ->
         val current = floorOf(trust)
         if (sequence > current) {

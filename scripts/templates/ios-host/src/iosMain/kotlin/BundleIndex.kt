@@ -404,6 +404,13 @@ internal class ManifestPinningHttpClient(
   fun servedManifest(manifestUrl: String): String? = served[manifestUrl]?.utf8()
 
   /**
+   * The sha256 (hex) of the manifest bytes [manifestUrl] last served (pinned URLs only), after its
+   * checks; null when none did. Recorded with the last good bundle: a PARALLEL start confirms its
+   * cached release only when the index holds the same URL to this same sha256 (StartPolicy.kt).
+   */
+  fun servedSha256(manifestUrl: String): String? = served[manifestUrl]?.sha256()?.hex()
+
+  /**
    * Hold [manifestUrl] to [sha256] and to the floor. A null [sha256] (no index
    * hash: the last good bundle's URL) keeps a hash the URL is already held to.
    */

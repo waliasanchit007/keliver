@@ -182,6 +182,8 @@ const val DEBUG_BUNDLE_SERVER_FILE = "keliver/bundle-server"
 const val DEBUG_CHECK_FOR_UPDATE = "dev.keliver.debug.CHECK_FOR_UPDATE"
 /** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
 private fun lastGoodKey(cacheName: String) = "lastGoodManifestUrl-$cacheName"
+/** The sha256 of the manifest bytes that last good bundle loaded from: a PARALLEL start confirms its cache only at it (StartPolicy.kt). */
+private fun lastGoodShaKey(cacheName: String) = "lastGoodManifestSha256-$cacheName"
 /** One Zipline cache per key, and one rollback floor and last-good URL with it. */
 private fun cacheNameFor(publicKeyHex: String) = "keliver-production-${publicKeyHex.lowercase().take(16)}"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
@@ -981,8 +983,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         startTreehouse(prefs, factory, cacheName, floorNames, okhttp, http, apiBase, lastGood, cached, lookup, fallback = null, held = true, loadInNewApp = loadInNewApp),
       )
       val latest = lookUp()
-      val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood)
-      Log.i(TAG, "start policy: parallel: $why")
+      val (step, why) = afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, prefs.stringOrNull(lastGoodShaKey(cacheName)))
+      // What the lookup named and why it may run here (index sequence, channel, host version), as
+      // network-first's "loading" line says it: a confirmed cache loads nothing more to say it.
+      val named = if (step == ParallelStep.SHOW_CACHED && latest != null) ": ${latest.manifestUrl} (${latest.source})" else ""
+      Log.i(TAG, "start policy: parallel: $why$named")
       when (step) {
         ParallelStep.SHOW_CACHED -> held.show()
         ParallelStep.LOAD_NAMED -> {
@@ -1433,7 +1438,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             Log.d(TAG, "update skipped: ${p.url} is the running manifest")
           }
         },
-        onLoaded = { url -> prefs.edit().putString(lastGoodKey(cacheName), url).apply() },
+        onLoaded = { url ->
+          // With the sha256 of the very manifest bytes Zipline verified and loaded (none served: none kept).
+          val sha256 = ziplineHttp.servedSha256(url)
+          prefs.edit().putString(lastGoodKey(cacheName), url)
+            .apply { if (sha256 != null) putString(lastGoodShaKey(cacheName), sha256) else remove(lastGoodShaKey(cacheName)) }
+            .apply()
+        },
         onSequence = { sequence ->
           val floor = prefs.floor(floorNames)
           if (sequence > floor) {

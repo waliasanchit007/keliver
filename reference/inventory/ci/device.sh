@@ -59,7 +59,10 @@ bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); echo "FAIL $1" >> "$EV/devi
 # Not run on this kind of device, and why; never counted as a pass.
 skip(){ printf '  SKIP  %s\n' "$1"; echo "SKIP $1" >> "$EV/device.results"; }
 sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+# shellcheck source=start-lines.sh
+. "$HERE/start-lines.sh"  # took_release, cache_start_after_failed_lookup, lookups_in: either start policy
 : > "$EV/device.results"
+out="$(bash "$HERE/start-lines-test.sh" 2>&1)" && ok "harness: $out" || bad "harness: $out"
 drive(){ python3 "$HERE/drive.py" "$SERIAL" "$EV" "$@"; }
 # drive.py's exit status is its failure count; fold its checks into ours.
 fold(){ local label="$1" rc="$2"; [ "$rc" -eq 0 ] && ok "$label" || bad "$label ($rc failed checks)"; }
@@ -356,7 +359,7 @@ portal_down "$APP"
 # only before the network, and only when the checker accepts it.)
 curl -sf -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate && bad "P7: a relay is still answering" || ok "P7: no bundle server is answering"
 launch prod "$EV/logcat-prod-offline.txt"
-grep -q "$HOST_TAG: lookup failed; starting from the cached bundle" "$EV/logcat-prod-offline.txt" \
+cache_start_after_failed_lookup "$EV/logcat-prod-offline.txt" \
   && ok "P7: the lookup failed and the host started from its cache" || bad "P7: it did not start from the cache"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-offline.txt" \
   && grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-prod-offline.txt" \

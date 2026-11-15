@@ -160,14 +160,22 @@ internal enum class ParallelStep {
 
 /**
  * A PARALLEL start, after the lookup: [namedUrl] and [namedSha256] are the manifest it named
- * (null: it failed, timed out or found nothing compatible), [cachedUrl] the cached release's.
- * Every published sequence has its own manifest URL (keliver-publish writes each to `v<N>/`), so
- * the same URL from the index (with its sha256) is the same release. The relay's legacy lookup
- * gives no sha256, so it confirms nothing.
+ * (null: it failed, timed out or found nothing compatible), [cachedUrl] the cached release's and
+ * [cachedSha256] the sha256 of the manifest bytes that release last loaded from (null: not
+ * recorded, as by a host from before it was). The same URL with the same sha256 is the same
+ * release: only then is it confirmed. The same URL held by the index to another sha256 is not
+ * (the server's manifest is not the one cached, or the index is wrong): it loads from the network
+ * as network-first loads it, held to the index's sha256, and a mismatch falls back to the cache
+ * (W5), as it does under network-first. The relay's legacy lookup gives no sha256, so it confirms
+ * nothing.
  */
-internal fun afterParallelLookup(namedUrl: String?, namedSha256: String?, cachedUrl: String): Pair<ParallelStep, String> = when {
+internal fun afterParallelLookup(namedUrl: String?, namedSha256: String?, cachedUrl: String, cachedSha256: String?): Pair<ParallelStep, String> = when {
   namedUrl == null -> ParallelStep.SHOW_CACHED to "the lookup failed: the cached release, as network-first would show"
   namedSha256 == null -> ParallelStep.LOAD_NAMED to "the relay's legacy lookup cannot confirm the cached release: loading $namedUrl"
+  namedUrl == cachedUrl && cachedSha256 == null ->
+    ParallelStep.LOAD_NAMED to "no sha256 is recorded for the cached manifest, so the lookup cannot confirm it: loading $namedUrl from the network; the cached load is dropped (not shown)"
+  namedUrl == cachedUrl && !namedSha256.equals(cachedSha256, ignoreCase = true) ->
+    ParallelStep.LOAD_NAMED to "the index holds $namedUrl to sha256 ${namedSha256.take(12)}…, not the cached manifest's ${cachedSha256.orEmpty().take(12)}…: loading it from the network; the cached load is dropped (not shown)"
   namedUrl == cachedUrl -> ParallelStep.SHOW_CACHED to "the lookup confirms the cached release"
   else -> ParallelStep.LOAD_NAMED to "the lookup names $namedUrl: loading it from the network; the cached load is dropped (not shown)"
 }

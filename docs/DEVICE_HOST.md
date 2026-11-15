@@ -295,6 +295,13 @@ What each start does, whatever the policy, and why none weakens a check:
   manifest through the same guards). Every network load goes through the same pinning client
   (index sha256, floor, set-aside, bridges). A key the app no longer trusts has no cache (one cache
   per key), so it starts `network-first`; keys do not expire.
+- **The index's sha256:** `parallel` confirms the cached release only when the lookup names its
+  manifest URL **and** holds it to the sha256 of the manifest bytes that release last loaded from
+  (recorded with the last good bundle). When the index holds that URL to another sha256 (the
+  server's manifest is not the cached one, or the index is wrong), the start loads it from the
+  network as `network-first` does: a mismatch is refused (`manifest sha256 mismatch`) and the host
+  falls back to the cached bundle, verified again. An install whose last load predates this record
+  has nothing to confirm with, so its first `parallel` start with a cache loads from the network once.
 - **A kill switch:** the index has none that stops cached code, under any policy. `rollout: 0`
   halts a release for hosts that have not run it; a host that already ran it has it as its floor,
   so its lookup finds nothing newer (or names that same release), and it shows the cached release
@@ -302,7 +309,11 @@ What each start does, whatever the policy, and why none weakens a check:
 
 Each start logs one `start policy:` line (logcat tag `KeliverHost`; the iOS console) with the
 policy, where it came from (the app's setting or the index's override, and an override the app
-refused) and what this start does and why (for crash rollback, which of its conditions holds). The decision is one pure function, `chooseStart` (`StartPolicy.kt`, the same file in both
+refused) and what this start does and why (for crash rollback, which of its conditions holds). A
+`parallel` start logs a second `start policy: parallel:` line once its lookup is done: what it
+decided, and, when it confirms the cache, what the lookup named, as `network-first`'s `loading`
+line says it (`the lookup confirms the cached release: <manifest URL> (index sequence N, channel …,
+host version …, manifest sha256 …)`). The decision is one pure function, `chooseStart` (`StartPolicy.kt`, the same file in both
 hosts), with its tests in `StartPolicyTest.kt`.
 
 Measured on a low-end Android phone (`network-first` against `parallel`: cold start from a warm

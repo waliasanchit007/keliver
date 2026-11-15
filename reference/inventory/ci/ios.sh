@@ -59,7 +59,10 @@ pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); echo "PASS $1" >> "$EV/ios.results"; }
 bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); echo "FAIL $1" >> "$EV/ios.results"; }
 sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+# shellcheck source=start-lines.sh
+. "$HERE/start-lines.sh"  # took_release, cache_start_after_failed_lookup, lookups_in: either start policy
 : > "$EV/ios.results"
+out="$(bash "$HERE/start-lines-test.sh" 2>&1)" && ok "harness: $out" || bad "harness: $out"
 
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
@@ -309,8 +312,11 @@ if [ -n "$TAP_BUILT" ]; then
   kill "$P3_PID" 2>/dev/null; wait "$P3_PID" 2>/dev/null
   swift "$HERE/ocr.swift" "$EV/P3.png" > "$EV/P3.ocr.txt" 2>"$EV/P3.ocr.err"
   printf '    P3: %s\n' "$(grep 'On hand' "$EV/P3.ocr.txt" | head -1)"
-  grep -q "KeliverHost: loading http://localhost:$RELAY_PORT/bundles/v1/manifest.zipline.json" "$EV/P3.console.txt" \
-    && grep -q "codeLoadSuccess" "$EV/P3.console.txt" \
+  # P2 ran v1 from the network; this launch may start it from the cache (start policy parallel),
+  # shown once the lookup confirms that same v1, or load it again (network-first).
+  { took_release "$EV/P3.console.txt" "http://localhost:$RELAY_PORT/bundles/v1/manifest.zipline.json" 1 \
+      || { grep -q "KeliverHost: loading http://localhost:$RELAY_PORT/bundles/v1/manifest.zipline.json" "$EV/P3.console.txt" \
+        && grep -q "codeLoadSuccess" "$EV/P3.console.txt"; }; } \
     && ok "P3: the presenter runs from the signed v1 (codeLoadSuccess)" || bad "P3: v1 did not load in P3's launch"
   [ "$P3_RC" = 0 ] && ok "P3: Add 1 three times on Espresso beans: 13, 14, 15, each observed ($(tap_steps P3) steps, P3-tap.log)" \
     || bad "P3: Add 1 three times on Espresso beans: $(tap_why P3)"
@@ -392,7 +398,7 @@ portal_down "$APP"
 curl -sf -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate && bad "P7: a relay is still answering" || ok "P7: no bundle server is answering"
 launch P7-offline
 C="$EV/P7-offline.console.txt"
-grep -q "lookup failed; starting from the cached bundle" "$C" && ok "P7: the lookup failed and the host started from its cache" \
+cache_start_after_failed_lookup "$C" && ok "P7: the lookup failed and the host started from its cache" \
   || bad "P7: it did not start from the cache"
 grep -q "codeLoadSuccess" "$C" && ok "P7: code loaded offline (codeLoadSuccess), verified with this app's key" || bad "P7: no load offline"
 reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || bad "P7: 'Stockroom' is not on the screen"
