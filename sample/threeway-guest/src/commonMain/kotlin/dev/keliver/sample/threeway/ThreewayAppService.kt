@@ -41,3 +41,13 @@ public interface ThreewayHost : ZiplineService {
    */
   public fun experiments(): String
 }
+
+/**
+ * Benchmark-only guest service (the scrolling series, `x=scroll`): the guest's protocol counters
+ * since the last call, read by the host after a fling has settled, so the read costs the fling
+ * nothing. A JSON object: `{"creates":…,"props":…,"mods":…,"struct":…}` (widgets created, property
+ * and modifier changes, structural changes).
+ */
+public interface ThreewayGuestStats : ZiplineService {
+  public fun takeStats(): String
+}

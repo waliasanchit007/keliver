@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import app.cash.zipline.Call
 import app.cash.zipline.CallResult
+import app.cash.zipline.EngineApi
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier
@@ -50,6 +51,7 @@ import dev.keliver.http.HttpResponse
 import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.sample.threeway.ThreewayAppService
+import dev.keliver.sample.threeway.ThreewayGuestStats
 import dev.keliver.sample.threeway.ThreewayHost
 import dev.keliver.sample.threeway.data.ItemsPage
 import dev.keliver.sample.threeway.data.ThreewayApi
@@ -64,9 +66,11 @@ import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.modules.EmptySerializersModule
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -105,13 +109,42 @@ class ThreewayActivity : ComponentActivity() {
    * lays out and paints only rows near the viewport). docs/THREE_WAY_BENCHMARK.md, "Experiments".
    */
   private var experiments = ""
+  private val experimentSet: Set<String> get() = experiments.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
   private val recorder = Recorder()
+
+  /** The guest form's app (for reading QuickJS's memory on its thread); null in the other forms. */
+  private var guestApp: TreehouseApp<ThreewayAppService>? = null
+
+  /**
+   * Guest only: QuickJS's memory is read before each tap and after each drawn result, and at the
+   * end of each series (`mem`, or any GC threshold experiment). The reads run on the Zipline thread
+   * outside the measured intervals.
+   */
+  private val memoryReads: Boolean get() = form == "guest" && ("mem" in experimentSet || gcThresholdMiB() != null)
+
+  /** The `gc<MiB>` experiment (`gc4`, `gc16`, `gc64`): QuickJS's GC threshold set when Zipline is created. */
+  private fun gcThresholdMiB(): Long? = experimentSet.firstNotNullOfOrNull { Regex("gc(\\d+)").matchEntire(it)?.groupValues?.get(1)?.toLong() }
+
+  private var scroll: ScrollTracker? = null
+
+  /** Each step's results in the running series (for its summary), and the scrolling series' flings. */
+  private val stepResults = LinkedHashMap<String, MutableList<JSONObject>>()
+  private val flings = ArrayList<JSONObject>()
+  private var webView: WebView? = null
+
+  override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+    scroll?.onTouch(ev)
+    return super.dispatchTouchEvent(ev)
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     form = intent.getStringExtra("form") ?: "native"
     experiments = intent.getStringExtra("x").orEmpty()
     Log.i(TAG, "form=$form x=$experiments")
+    ThreewayListener.gcThresholdBytes = gcThresholdMiB()?.let { it * 1024 * 1024 }
+    // The fixture API served by this app instead of the Mac (LocalFixture), before any form starts.
+    if (intent.getBooleanExtra("localApi", false)) LocalFixture.start()
     // WARNING: benchmark-only (as GatebActivity): keep the screen on and draw over a locked phone's
     // lock screen (it does not unlock it), only when the caller asks with `--ez overLockScreen true`.
     if (intent.getBooleanExtra("overLockScreen", false)) {
@@ -133,7 +166,8 @@ class ThreewayActivity : ComponentActivity() {
 
   private fun startNative() {
     val marks = object : ThreewayMarks {
-      override val frameMarks = "split" in experiments.split(',')
+      override val frameMarks = "split" in experimentSet
+      override val heavyDetail = "heavy" in experimentSet
       override fun now() = System.currentTimeMillis()
       override fun mark(seq: Int, name: String, atMillis: Long) = recorder.mark(seq, name, atMillis)
       override fun composed(screen: String, seq: Int) {
@@ -213,6 +247,7 @@ class ThreewayActivity : ComponentActivity() {
       override fun create(zipline: Zipline): ThreewayAppService = zipline.take("app")
     }
     val app = factory.create(appScope = lifecycleScope, spec = spec, eventListenerFactory = ThreewayListener)
+    guestApp = app
     setContent {
       MaterialTheme {
         Surface(Modifier.fillMaxSize()) {
@@ -254,6 +289,9 @@ class ThreewayActivity : ComponentActivity() {
       },
       "Threeway",
     )
+    // Scrolling series: no scrollbar (the Compose lists have none; its fade-out would add frames).
+    if (intent.getStringExtra("bench").orEmpty().contains("scroll")) webView.isVerticalScrollBarEnabled = false
+    this.webView = webView
     setContentView(webView)
     webView.loadUrl("file:///android_asset/threeway-web/index.html")
   }
@@ -302,7 +340,7 @@ class ThreewayActivity : ComponentActivity() {
     fun next() = steps.removeFirstOrNull()?.invoke() ?: log("""{"form":"$form","done":true}""")
 
     fun iteration(bench: String, i: Int, xDp: Float, yDp: Float, accept: (String, Int) -> Boolean, pause: Long) {
-      steps.addLast {
+      fun run(before: LongArray?) {
         val timeout = Runnable {
           waiter = null
           log("""{"form":"$form","bench":"$bench","i":$i,"timeout":true}""")
@@ -314,11 +352,47 @@ class ThreewayActivity : ComponentActivity() {
             waiter = null
             main.removeCallbacks(timeout)
             if (screen == "data") lastData = seq
-            log(result(bench, i, tap, seq))
-            main.postDelayed({ next() }, pause)
+            if (before == null) {
+              log(result(bench, i, tap, seq))
+              main.postDelayed({ next() }, pause)
+            } else {
+              val marks = recorder.take(seq)
+              readQuickJsMemory { after ->
+                log(result(bench, i, tap, seq, marks, memory(before, after)))
+                main.postDelayed({ next() }, pause)
+              }
+            }
           }
         }
         main.postDelayed(timeout, 20_000)
+      }
+      steps.addLast {
+        if (memoryReads) readQuickJsMemory { run(it ?: LongArray(3) { -1 }) } else run(null)
+      }
+    }
+
+    fun endOfSeries(bench: String) {
+      // The series' summary per step (the first `warmup` iterations dropped).
+      val labels = when (bench) {
+        "nav" -> listOf("open", "back")
+        "scroll" -> emptyList()
+        else -> listOf(bench)
+      }
+      steps.addLast {
+        val warmup = intent.getIntExtra("warmup", 0)
+        for (label in labels) {
+          val results = stepResults[label].orEmpty().drop(warmup)
+          log(summarizeSteps(label, results).put("form", form).put("x", experiments).put("warmup", warmup).toString())
+          stepResults.remove(label)
+        }
+        next()
+      }
+      if (!memoryReads) return
+      steps.addLast {
+        readQuickJsMemory { m ->
+          log("""{"form":"$form","bench":"$bench","x":${JSONObject.quote(experiments)},"memEnd":true,"qjsUsed":${m?.get(0)},"qjsObjects":${m?.get(1)},"gcThreshold":${m?.get(2)}}""")
+          next()
+        }
       }
     }
 
@@ -336,11 +410,104 @@ class ThreewayActivity : ComponentActivity() {
           val x = if (bench == "api-small") widthDp() / 4 else widthDp() * 3 / 4
           iteration(bench, i, x, 80f, { s, seq -> s == "data" && seq > lastData }, if (bench == "api-large") 1_500 else 800)
         }
+        "scroll" -> {
+          // Load the 1,000 items, then wait for flings from outside (adb shell input swipe).
+          iteration("load-large", 1, widthDp() * 3 / 4, 80f, { s, seq -> s == "data" && seq > lastData }, 1_500)
+          steps.addLast { startScroll() }
+        }
         else -> log("""{"form":"$form","error":"unknown bench $bench"}""")
       }
+      endOfSeries(bench)
     }
     next()
   }
+
+  private fun startScroll() {
+    if (Build.VERSION.SDK_INT < 26) return log("""{"form":"$form","error":"scroll needs API 26"}""")
+    val web = webView
+    val tracker = ScrollTracker(
+      window = window,
+      density = resources.displayMetrics.density,
+      guest = form == "guest",
+      blank = "blank" in experimentSet,
+      webScrollY = web?.let { w -> { w.scrollY } },
+    ) { line ->
+      line.put("form", form).put("bench", "scroll")
+      if (experiments.isNotEmpty()) line.put("x", experiments)
+      val app = guestApp
+      val zipline = ThreewayListener.zipline
+      if (app == null || zipline == null) {
+        flingDone(line)
+      } else {
+        // The guest's counters since the last fling, read after this one settled.
+        lifecycleScope.launch {
+          val stats = runCatching { takeGuestStats(app, zipline) }.getOrElse { """{"error":${JSONObject.quote(it.toString())}}""" }
+          flingDone(line.put("guest", JSONObject(stats)))
+        }
+      }
+    }
+    scroll = tracker
+    tracker.start()
+    // Zero the guest's counters (the load's composition), then accept flings.
+    val app = guestApp
+    val zipline = ThreewayListener.zipline
+    lifecycleScope.launch {
+      if (app != null && zipline != null) {
+        runCatching { takeGuestStats(app, zipline) }
+      }
+      tracker.ready = true
+      log("""{"form":"$form","scroll":"ready","x":${JSONObject.quote(experiments)},"state":${JSONObject.quote(phoneState())}}""")
+    }
+  }
+
+  /** Logs a settled fling; after every `group` flings (default 10: one direction), their summary. */
+  private fun flingDone(line: JSONObject) {
+    log(line.toString())
+    flings += line
+    val group = intent.getIntExtra("group", 10)
+    if (flings.size % group == 0) {
+      val last = flings.takeLast(group)
+      val label = "flings ${flings.size - group + 1}-${flings.size}"
+      log(summarizeFlings(label, last).put("form", form).put("x", experiments).toString())
+    }
+  }
+
+  /** The guest's protocol counters since the last read (ThreewayGuestStats), on the Zipline thread. */
+  private suspend fun takeGuestStats(app: TreehouseApp<*>, zipline: Zipline): String = withContext(app.dispatchers.zipline) {
+    // Taken once: closing a taken service closes the guest's binding.
+    val service = guestStats ?: zipline.take<ThreewayGuestStats>("threewayStats").also { guestStats = it }
+    service.takeStats()
+  }
+
+  /** The guest's stats service, taken on the Zipline thread and kept for the process's life. */
+  private var guestStats: ThreewayGuestStats? = null
+
+  /** QuickJS's heap in use (bytes), its object count and its current GC threshold (bytes), read on the Zipline thread; null without a guest. */
+  @OptIn(EngineApi::class)
+  private fun readQuickJsMemory(then: (LongArray?) -> Unit) {
+    val app = guestApp
+    val zipline = ThreewayListener.zipline
+    if (app == null || zipline == null) return then(null)
+    lifecycleScope.launch {
+      val m = runCatching {
+        withContext(app.dispatchers.zipline) {
+          val quickJs = zipline.quickJs
+          val usage = quickJs.memoryUsage
+          longArrayOf(usage.memoryUsedSize, usage.objectsCount, quickJs.gcThreshold)
+        }
+      }.getOrNull()
+      then(m)
+    }
+  }
+
+  private fun memory(before: LongArray, after: LongArray?): Map<String, Long> = linkedMapOf(
+    "n_qjsUsedBefore" to before[0],
+    "n_qjsUsedAfter" to (after?.get(0) ?: -1),
+    "n_qjsObjectsBefore" to before[1],
+    "n_qjsObjectsAfter" to (after?.get(1) ?: -1),
+    "n_gcThresholdBefore" to before[2],
+    "n_gcThresholdAfter" to (after?.get(2) ?: -1),
+  )
 
   private fun widthDp(): Float {
     val content = findViewById<View>(android.R.id.content)
@@ -369,14 +536,23 @@ class ThreewayActivity : ComponentActivity() {
     event.recycle()
   }
 
-  private fun result(bench: String, i: Int, tap: Long, seq: Int): String {
-    val marks = recorder.take(seq)
+  private fun result(
+    bench: String,
+    i: Int,
+    tap: Long,
+    seq: Int,
+    marks: Map<String, Long> = recorder.take(seq),
+    extra: Map<String, Long> = emptyMap(),
+  ): String {
     val o = JSONObject().put("form", form).put("bench", bench).put("i", i).put("seq", seq)
     if (experiments.isNotEmpty()) o.put("x", experiments)
-    // `n_*` are the guest's counters and summed durations (split experiment), not times.
+    // `n_*` are the guest's counters and summed durations (split experiment), not times; [extra]
+    // holds values too (QuickJS's memory around the step).
     val (values, times) = marks.entries.partition { it.key.startsWith("n_") }
     for ((name, at) in times.sortedBy { it.value }) o.put(name, at - tap)
     for ((name, value) in values) o.put(name, value)
+    for ((name, value) in extra) o.put(name, value)
+    stepResults.getOrPut(bench) { mutableListOf() } += o
     return o.toString()
   }
 
@@ -469,13 +645,47 @@ private class AssetsHttpClient(private val assets: AssetManager) : ZiplineHttpCl
 }
 
 /** The guest's code load and bridge: reports `sendChanges` returning, and logs failures. */
-private object ThreewayListener : EventListener.Factory {
+internal object ThreewayListener : EventListener.Factory {
   @Volatile var onSendChangesEnd: (() -> Unit)? = null
 
   /** Whether this process's code load read the modules from assets (an empty cache) or the cache. */
   @Volatile var modulesFromAssets = 0
 
+  /** The `gc<MiB>` experiment: QuickJS's GC threshold, set when the Zipline is created; null = QuickJS's default. */
+  @Volatile var gcThresholdBytes: Long? = null
+
+  /** The guest's Zipline (for memory reads and the scrolling series' counters), on its thread only. */
+  @Volatile var zipline: Zipline? = null
+
+  /**
+   * The scrolling series: the guest's frames while [recordGuestFrames], each `[start ns, duration
+   * ns, 1 if the frame sent a change batch]`. `AppLifecycle.sendFrame` is synchronous: the guest
+   * composes and sends its batch inside it.
+   */
+  @Volatile var recordGuestFrames = false
+  val guestFrames = CopyOnWriteArrayList<LongArray>()
+  private var frameChanges = false
+
+  /** While recording: the start of the guest frame in progress (0 = none), and the end of the last one (System.nanoTime). */
+  @Volatile var guestFrameStartNs = 0L
+  @Volatile var lastGuestFrameEndNs = 0L
+
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = object : EventListener() {
+    @OptIn(EngineApi::class)
+    override fun ziplineCreated(zipline: Zipline) {
+      ThreewayListener.zipline = zipline
+      val quickJs = zipline.quickJs
+      val default = quickJs.gcThreshold
+      gcThresholdBytes?.let { quickJs.gcThreshold = it }
+      Log.i("Threeway", "ziplineCreated gcThreshold default=$default now=${quickJs.gcThreshold} memoryLimit=${quickJs.memoryLimit}")
+    }
+
+    override fun callStart(call: Call): Any? {
+      if (!recordGuestFrames || !call.function.signature.startsWith("fun sendFrame(")) return null
+      frameChanges = false
+      return System.nanoTime().also { guestFrameStartNs = it }
+    }
+
     override fun downloadStart(url: String): Any? {
       if (!url.endsWith("manifest.zipline.json")) modulesFromAssets++
       return null
@@ -494,7 +704,16 @@ private object ThreewayListener : EventListener.Factory {
     }
 
     override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
-      if ("sendChanges" in call.function.signature) onSendChangesEnd?.invoke()
+      if ("sendChanges" in call.function.signature) {
+        frameChanges = true
+        onSendChangesEnd?.invoke()
+      }
+      if (startValue is Long) {
+        val end = System.nanoTime()
+        guestFrames += longArrayOf(startValue, end - startValue, if (frameChanges) 1L else 0L)
+        lastGuestFrameEndNs = end
+        guestFrameStartNs = 0L
+      }
     }
   }
 

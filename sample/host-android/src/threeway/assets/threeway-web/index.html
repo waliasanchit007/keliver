@@ -35,6 +35,15 @@
   .detail .big { flex: 1; color: #1C1B1F; font-size: 28px; font-weight: 700; }
   .field { padding-top: 12px; } .field .l { color: #6B6B73; font-size: 12px; } .field .v { color: #1C1B1F; font-size: 15px; }
   .foot { padding-top: 16px; color: #6B6B73; font-size: 12px; }
+  .heavy { padding: 8px 16px; }
+  .heavy .top { height: 40px; display: flex; align-items: center; }
+  .heavy .chips { height: 28px; display: flex; align-items: flex-start; }
+  .heavy .sec { padding-top: 8px; color: #3F51B5; font-size: 14px; font-weight: 500; }
+  .heavy .kv { height: 20px; display: flex; align-items: center; font-size: 13px; }
+  .heavy .k { width: 112px; flex: none; color: #6B6B73; }
+  .heavy .v { color: #1C1B1F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .heavy .actions { padding-top: 8px; }
+  .heavy .foot { padding-top: 8px; }
   /* Experiment `webcv` (body class "cv"): the browser's own virtualisation. Rows off screen skip
      layout and paint and are sized from their last measured (or the intrinsic) height. */
   .cv .row { content-visibility: auto; contain-intrinsic-size: auto 72px; }
@@ -97,6 +106,36 @@ function renderDetail(it) {
     field('Note', it.note) + '<div class="foot">Order id ' + it.id + ' · opened ' + (Math.floor(nav / 2) + 1) + '×</div></div>';
 }
 
+// Experiment `heavy`: the heavy detail variant (ThreewayScreens.kt, HeavyDetailScreen): the same
+// layout and strings, about 100 elements.
+var HEAVY = experiments.indexOf('heavy') >= 0;
+var TIERS = ['Gold', 'Silver', 'Bronze'], METHODS = ['Standard', 'Express', 'Pickup'];
+var CARRIERS = ['Northline', 'Bluebird', 'Courier 9'], PAYMENTS = ['Card', 'UPI', 'Wallet', 'Bank'];
+function heavySections(it) {
+  var id = it.id, n = function (x) { return String(x); };
+  return [
+    ['Order', [['Order id', '#' + id], ['Title', it.title], ['Status', it.status], ['Amount', it.amount],
+      ['Reference', it.reference], ['Placed', 'Day ' + (id % 28 + 1)]]],
+    ['Customer', [['Name', it.subtitle], ['Account', 'AC-' + (id * 7 % 100000)], ['Tier', TIERS[id % 3]],
+      ['Since', '20' + (10 + id % 15)], ['Orders', n(id % 40 + 1)], ['Note', it.note]]],
+    ['Shipping', [['Address', it.address], ['Method', METHODS[id % 3]], ['Carrier', CARRIERS[id % 3]],
+      ['Tracking', 'TRK' + (id * 31)], ['Weight', (id % 9 + 1) + '.' + (id % 10) + ' kg'], ['Packages', n(id % 4 + 1)]]],
+    ['Payment', [['Method', PAYMENTS[id % 4]], ['Subtotal', it.amount], ['Tax', (id % 50) + '.00'],
+      ['Discount', '0.00'], ['Total', it.amount], ['Invoice', 'INV-' + (id + 10000)]]]
+  ];
+}
+function renderHeavyDetail(it) {
+  var h = header(it.title, true) + '<div class="heavy"><div class="top"><div class="big">' + esc(it.amount) + '</div>' +
+    chip(it.status) + '</div><div class="chips">' + ['Paid', 'Shipped', 'Refunded', 'Pending'].map(chip).join('') + '</div>';
+  heavySections(it).forEach(function (s) {
+    h += '<div class="sec">' + esc(s[0]) + '</div>';
+    s[1].forEach(function (f) { h += '<div class="kv"><div class="k">' + esc(f[0]) + '</div><div class="v">' + esc(f[1]) + '</div></div>'; });
+  });
+  h += '<div class="actions">' + ['Call', 'Email', 'Cancel'].map(function (l) { return '<div class="action">' + l + '</div>'; }).join('') +
+    '</div><div class="foot">Order id ' + it.id + ' · opened ' + (Math.floor(nav / 2) + 1) + '×</div></div>';
+  app.innerHTML = h;
+}
+
 function load(seq) {
   mark(seq, 'request');
   fetch(API + '/items?size=' + size + '&seq=' + seq)
@@ -120,7 +159,9 @@ app.addEventListener('click', function (e) {
   } else if (t.dataset.size) {
     mark(request + 1, 'click'); size = t.dataset.size; request += 1; load(request);
   } else {
-    mark(NAV_BASE + nav + 1, 'click'); nav += 1; selected = page.items[+t.dataset.i]; renderDetail(selected); composed('detail', NAV_BASE + nav);
+    mark(NAV_BASE + nav + 1, 'click'); nav += 1; selected = page.items[+t.dataset.i];
+    if (HEAVY) renderHeavyDetail(selected); else renderDetail(selected);
+    composed('detail', NAV_BASE + nav);
   }
 });
 

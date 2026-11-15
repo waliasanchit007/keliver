@@ -114,6 +114,18 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks) {
           selected = it
         },
       )
+    } else if (marks.heavyDetail) {
+      HeavyDetailScreen(
+        item = item,
+        nav = nav,
+        marks = marks,
+        onBack = {
+          marks.mark(NAV_BASE + nav + 1, "click")
+          frameMark(NAV_BASE + nav + 1)
+          nav += 1
+          selected = null
+        },
+      )
     } else {
       DetailScreen(
         item = item,
@@ -206,6 +218,74 @@ private fun DetailScreen(item: Item, nav: Int, marks: ThreewayMarks, onBack: () 
     Field("Note", item.note)
     Text("Order id ${item.id} · opened ${nav / 2 + 1}×", Modifier.padding(top = 16.dp), color = Muted, fontSize = 12.sp)
   }
+}
+
+/**
+ * The heavy detail variant (the `heavy` experiment): a first visit that builds about 100 widgets at
+ * once, text only. Header (4), the amount and status (4), a row of four chips (9), four sections of
+ * a title and six label/value rows (4 × 19), a row of three buttons (7), the footer (1), in one
+ * column (1): 102 widgets. index.html draws the same layout and the same strings.
+ */
+@Composable
+private fun HeavyDetailScreen(item: Item, nav: Int, marks: ThreewayMarks, onBack: () -> Unit) {
+  DisposableEffect(item.id, nav) {
+    marks.composed("detail", NAV_BASE + nav)
+    onDispose {}
+  }
+  Header(item.title, onBack = onBack)
+  Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Row(Modifier.height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+      Text(item.amount, Modifier.weight(1f), color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+      StatusChip(item.status)
+    }
+    Row(Modifier.height(28.dp)) {
+      for (chip in HeavyChips) StatusChip(chip)
+    }
+    for ((section, fields) in heavySections(item)) {
+      Text(section, Modifier.padding(top = 8.dp), color = Indigo, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+      for ((label, value) in fields) {
+        Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {
+          Text(label, Modifier.width(112.dp), color = Muted, fontSize = 13.sp)
+          Text(value, color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+      }
+    }
+    Row(Modifier.fillMaxWidth().height(48.dp).padding(top = 8.dp)) {
+      for (label in listOf("Call", "Email", "Cancel")) Action(label, Modifier.weight(1f)) {}
+    }
+    Text("Order id ${item.id} · opened ${nav / 2 + 1}×", Modifier.padding(top = 8.dp), color = Muted, fontSize = 12.sp)
+  }
+}
+
+private val Tiers = listOf("Gold", "Silver", "Bronze")
+private val Methods = listOf("Standard", "Express", "Pickup")
+private val Carriers = listOf("Northline", "Bluebird", "Courier 9")
+private val Payments = listOf("Card", "UPI", "Wallet", "Bank")
+
+/** The heavy detail's row of chips (fixed; styled as the statuses). */
+private val HeavyChips = listOf("Paid", "Shipped", "Refunded", "Pending")
+
+/** The heavy detail's four sections of six label/value rows, derived from the item (index.html: the same). */
+private fun heavySections(item: Item): List<Pair<String, List<Pair<String, String>>>> {
+  val id = item.id
+  return listOf(
+    "Order" to listOf(
+      "Order id" to "#$id", "Title" to item.title, "Status" to item.status,
+      "Amount" to item.amount, "Reference" to item.reference, "Placed" to "Day ${id % 28 + 1}",
+    ),
+    "Customer" to listOf(
+      "Name" to item.subtitle, "Account" to "AC-${id * 7 % 100000}", "Tier" to Tiers[id % 3],
+      "Since" to "20${10 + id % 15}", "Orders" to "${id % 40 + 1}", "Note" to item.note,
+    ),
+    "Shipping" to listOf(
+      "Address" to item.address, "Method" to Methods[id % 3], "Carrier" to Carriers[id % 3],
+      "Tracking" to "TRK${id * 31}", "Weight" to "${id % 9 + 1}.${id % 10} kg", "Packages" to "${id % 4 + 1}",
+    ),
+    "Payment" to listOf(
+      "Method" to Payments[id % 4], "Subtotal" to item.amount, "Tax" to "${id % 50}.00",
+      "Discount" to "0.00", "Total" to item.amount, "Invoice" to "INV-${id + 10000}",
+    ),
+  )
 }
 
 @Composable

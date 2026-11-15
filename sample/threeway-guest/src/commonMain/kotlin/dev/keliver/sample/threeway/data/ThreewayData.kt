@@ -58,6 +58,12 @@ public interface ThreewayMarks {
    */
   public val frameMarks: Boolean get() = false
 
+  /**
+   * Whether a row opens the heavy detail variant (about 100 widgets of label/value text, chips and
+   * buttons) instead of the simple one: the benchmark's `heavy` experiment. Off as shipped.
+   */
+  public val heavyDetail: Boolean get() = false
+
   public fun now(): Long
 
   /** Records that [name] happened for request or navigation [seq] at [atMillis]. */
