@@ -1,0 +1,23 @@
+Three-way benchmark experiment `window10` (docs/THREE_WAY_BENCHMARK.md, "Experiments"): NOT a
+library change. Applied to a scratch copy of the prototype publish only: the guest's lazy window
+starts with 10 rows (preload 9 past the first visible row) instead of 16 (preload 15), about what
+the A12 shows (9-10 rows of 72 dp under the 128 dp of header, actions and status line).
+
+  git apply sample/threeway-guest/experiments/lazy-window-10.patch
+  ./gradlew :keliver-compose-gatea-compose:publishToMavenLocal -Dmaven.repo.local=<copy of the m2> \
+    -PkeliverVersion=0.0.0-gateb -PkeliverComposePrototype -DRELEASE_SIGNING_ENABLED=false
+  git checkout -- keliver-compose-gatea-compose
+
+diff --git a/keliver-compose-gatea-compose/src/commonMain/kotlin/dev/keliver/compose/foundation/lazy/LazyDsl.kt b/keliver-compose-gatea-compose/src/commonMain/kotlin/dev/keliver/compose/foundation/lazy/LazyDsl.kt
+index f5c565e47..46073ac57 100644
+--- a/keliver-compose-gatea-compose/src/commonMain/kotlin/dev/keliver/compose/foundation/lazy/LazyDsl.kt
++++ b/keliver-compose-gatea-compose/src/commonMain/kotlin/dev/keliver/compose/foundation/lazy/LazyDsl.kt
+@@ -147,7 +147,7 @@ private class Intervals : LazyListScope {
+  * use it; screens do not.
+  */
+ public class LazyWindow internal constructor(private val state: LazyListState) {
+-  private val window = WindowState().apply {
++  private val window = WindowState(dev.keliver.lazylayout.compose.ScrollOptimizedLoadingStrategy(defaultPreloadItemCount = 9)).apply {
+     if (state.firstVisibleItemIndex > 0) programmaticScroll(state.firstVisibleItemIndex, animated = false, clobberUserScroll = false)
+   }
+   private var count = 0

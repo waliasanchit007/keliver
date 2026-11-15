@@ -1,0 +1,131 @@
+<!doctype html>
+<!--
+  Three-way benchmark (prototype builds only; docs/THREE_WAY_BENCHMARK.md): the web form of the
+  list and detail screens, plain HTML, CSS and JavaScript (no framework), loaded from the APK's
+  assets into a WebView. Same layout as ThreewayScreens.kt: header 56 px, action row 48 px, status
+  line 24 px, rows 72 px (CSS px = dp at initial-scale 1). Fetches the same API with fetch() and
+  JSON.parse, and reports each rendered screen to the host after the next paint.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; font-family: Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+  .header { height: 56px; background: #3F51B5; color: #fff; display: flex; align-items: center; font-size: 20px; font-weight: 500; }
+  .header .back { width: 72px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 400; }
+  .header .gap { width: 16px; }
+  .header .title { white-space: nowrap; overflow: hidden; }
+  .actions { height: 48px; display: flex; }
+  .action { flex: 1; margin: 4px; background: #E8EAF6; border-radius: 8px; color: #3F51B5; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; }
+  .status { height: 24px; padding: 0 16px; color: #6B6B73; font-size: 13px; line-height: 24px; }
+  .loading { padding: 16px; color: #6B6B73; font-size: 14px; }
+  .row { height: 72px; padding: 0 16px; display: flex; align-items: center; box-sizing: border-box; }
+  .row .main { flex: 1; min-width: 0; }
+  .row .t { color: #1C1B1F; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .s { color: #6B6B73; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .side { display: flex; flex-direction: column; align-items: flex-end; }
+  .row .amt { color: #1C1B1F; font-size: 15px; font-weight: 500; }
+  .chip { margin-top: 4px; border-radius: 10px; padding: 2px 8px; font-size: 12px; font-weight: 500; }
+  .Paid { background: #DFF5E1; color: #1B5E20; } .Pending { background: #FFF3CD; color: #7A5B00; }
+  .Shipped { background: #DCEBFF; color: #0D47A1; } .Refunded { background: #EDE7F6; color: #4527A0; }
+  .Failed { background: #FDE2E1; color: #B71C1C; }
+  .detail { padding: 16px; }
+  .detail .top { display: flex; align-items: center; }
+  .detail .big { flex: 1; color: #1C1B1F; font-size: 28px; font-weight: 700; }
+  .field { padding-top: 12px; } .field .l { color: #6B6B73; font-size: 12px; } .field .v { color: #1C1B1F; font-size: 15px; }
+  .foot { padding-top: 16px; color: #6B6B73; font-size: 12px; }
+  /* Experiment `webcv` (body class "cv"): the browser's own virtualisation. Rows off screen skip
+     layout and paint and are sized from their last measured (or the intrinsic) height. */
+  .cv .row { content-visibility: auto; contain-intrinsic-size: auto 72px; }
+</style>
+</head>
+<body>
+<div id="app"><div class="header"><div class="gap"></div><div class="title">Orders</div></div></div>
+<script>
+'use strict';
+var API = 'http://localhost:8491';
+var NAV_BASE = 100000;
+var app = document.getElementById('app');
+var page = null, request = 1, size = 'small', selected = null, nav = 0;
+var pending = {};
+var experiments = window.Threeway && window.Threeway.experiments ? String(window.Threeway.experiments()).split(',') : [];
+if (experiments.indexOf('webcv') >= 0) document.body.classList.add('cv');
+
+function mark(seq, name, at) { (pending[seq] = pending[seq] || {})[name] = at === undefined ? Date.now() : at; }
+
+// The content is in the DOM: report after the next paint (a frame callback, then a task after it).
+function composed(screen, seq) {
+  mark(seq, 'composed');
+  var marks = JSON.stringify(pending);
+  pending = {};
+  requestAnimationFrame(function () {
+    setTimeout(function () {
+      var m = {}; m[seq] = { painted: Date.now() };
+      if (window.Threeway) window.Threeway.composed(screen, seq, marks, JSON.stringify(m));
+    }, 0);
+  });
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+function header(title, back) {
+  return '<div class="header">' + (back ? '<div class="back" id="back">Back</div>' : '<div class="gap"></div>') +
+    '<div class="title">' + esc(title) + '</div></div>';
+}
+
+function chip(status) { return '<span class="chip ' + esc(status) + '">' + esc(status) + '</span>'; }
+
+function renderList() {
+  var h = header('Orders', false) +
+    '<div class="actions"><div class="action" data-size="small">Load 20</div><div class="action" data-size="large">Load 1,000</div></div>';
+  if (!page) { app.innerHTML = h + '<div class="loading">Loading…</div>'; return; }
+  var rows = [];
+  for (var i = 0; i < page.items.length; i++) {
+    var it = page.items[i];
+    rows.push('<div class="row" data-i="' + i + '"><div class="main"><div class="t">' + esc(it.title) + '</div><div class="s">' +
+      esc(it.subtitle) + '</div></div><div class="side"><div class="amt">' + esc(it.amount) + '</div>' + chip(it.status) + '</div></div>');
+  }
+  app.innerHTML = h + '<div class="status">' + page.count + ' items · request ' + page.seq + '</div>' + rows.join('');
+}
+
+function field(l, v) { return '<div class="field"><div class="l">' + esc(l) + '</div><div class="v">' + esc(v) + '</div></div>'; }
+
+function renderDetail(it) {
+  app.innerHTML = header(it.title, true) + '<div class="detail"><div class="top"><div class="big">' + esc(it.amount) + '</div>' +
+    chip(it.status) + '</div>' + field('Customer', it.subtitle) + field('Ship to', it.address) + field('Reference', it.reference) +
+    field('Note', it.note) + '<div class="foot">Order id ' + it.id + ' · opened ' + (Math.floor(nav / 2) + 1) + '×</div></div>';
+}
+
+function load(seq) {
+  mark(seq, 'request');
+  fetch(API + '/items?size=' + size + '&seq=' + seq)
+    .then(function (r) { if (r.status !== 200) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function (body) {
+      mark(seq, 'response');
+      var parsed = JSON.parse(body);
+      mark(seq, 'parsed');
+      page = parsed;
+      if (selected === null) { renderList(); composed('data', page.seq); }
+    })
+    .catch(function (e) { if (window.Threeway) window.Threeway.error(String(e)); });
+}
+
+app.addEventListener('click', function (e) {
+  var t = e.target;
+  while (t && t !== app && !(t.dataset && (t.dataset.size || t.dataset.i !== undefined)) && t.id !== 'back') t = t.parentNode;
+  if (!t || t === app) return;
+  if (t.id === 'back') {
+    mark(NAV_BASE + nav + 1, 'click'); nav += 1; selected = null; renderList(); composed('list', NAV_BASE + nav);
+  } else if (t.dataset.size) {
+    mark(request + 1, 'click'); size = t.dataset.size; request += 1; load(request);
+  } else {
+    mark(NAV_BASE + nav + 1, 'click'); nav += 1; selected = page.items[+t.dataset.i]; renderDetail(selected); composed('detail', NAV_BASE + nav);
+  }
+});
+
+renderList();
+load(request);
+</script>
+</body>
+</html>
