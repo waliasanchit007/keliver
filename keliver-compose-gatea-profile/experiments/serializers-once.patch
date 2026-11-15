@@ -1,0 +1,34 @@
+diff --git a/keliver-tooling-codegen/src/main/kotlin/dev/keliver/tooling/codegen/protocolGuestGeneration.kt b/keliver-tooling-codegen/src/main/kotlin/dev/keliver/tooling/codegen/protocolGuestGeneration.kt
+index 4aacd4a3b..55d0cb137 100644
+--- a/keliver-tooling-codegen/src/main/kotlin/dev/keliver/tooling/codegen/protocolGuestGeneration.kt
++++ b/keliver-tooling-codegen/src/main/kotlin/dev/keliver/tooling/codegen/protocolGuestGeneration.kt
+@@ -410,16 +410,20 @@ internal fun generateProtocolWidget(
+               .build(),
+           )
+ 
+-          for ((typeName, id) in serializerIds) {
+-            addProperty(
+-              PropertySpec.builder(
+-                "serializer_$id",
+-                KotlinxSerialization.KSerializer.parameterizedBy(typeName),
++          // Guest-profile experiment: looked up once per class (a companion), not per instance.
++          if (serializerIds.isNotEmpty()) {
++            val companion = TypeSpec.companionObjectBuilder().addModifiers(PRIVATE)
++            for ((typeName, id) in serializerIds) {
++              companion.addProperty(
++                PropertySpec.builder(
++                  "serializer_$id",
++                  KotlinxSerialization.KSerializer.parameterizedBy(typeName),
++                )
++                  .initializer("%M()", MemberName("kotlinx.serialization", "serializer"))
++                  .build(),
+               )
+-                .addModifiers(PRIVATE)
+-                .initializer("guestAdapter.json.serializersModule.%M()", KotlinxSerialization.serializer)
+-                .build(),
+-            )
++            }
++            addType(companion.build())
+           }
+         }
+         .addProperty(

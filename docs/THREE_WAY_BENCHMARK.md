@@ -338,6 +338,8 @@ whole start at 180 ms, so a faster CPU should narrow all of this (not measured f
 
 ### Inherent vs fixable (measured, guest)
 
+Inside the "Compose itself" and recording numbers below (a profile, the GC experiment, the suspects measured, engine options): [GUEST_PROFILE.md](GUEST_PROFILE.md).
+
 | Cost (median, ms) | as shipped | after the fix measured | What it is | Fix, and what it needs in the library |
 |---|---|---|---|---|
 | Parsing 224 KB | 806 | **38** (`jsonparse`); 257 (`dynamic`) | kotlinx.serialization's string decoder in an interpreter; QuickJS's own C `JSON.parse` takes 25 ms of the 38 | **Fixable, no library change**: adopter code (`JSON.parse<dynamic>` plus a hand mapping). A helper in `keliver-http` would make it the default path; `decodeFromDynamic` keeps generated serializers but costs 232 ms |
