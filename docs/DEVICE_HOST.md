@@ -187,6 +187,152 @@ Upload `v<N>/` before `index.json`, and never overwrite a `v<N>/` (the adopter
 guide's "Publish from CI to a static server"): the fall-back keeps hosts that
 ran a bundle before on it, but a new install has nothing to fall back to.
 
+**Start policy** (both hosts, from the templates after tools 0.3.18). The table above is
+`network-first`: nothing shows until the lookup, and then the manifest, have come back. That costs
+a cold start the network's round trips (docs/GATE_B_RESULTS.md, "Where the A12's cold start
+goes"). The default is `parallel`, since the measured run on a low-end Android phone
+([START_POLICY_PHONE_RUN.md](START_POLICY_PHONE_RUN.md): 714 against 1,304 ms to the first frame
+from a warm cache, every check clean); hosts scaffolded by tools 0.3.18 and before start
+`network-first`. An app can choose how its host starts:
+
+| policy | what a start does | a newer release, published since the last start |
+|---|---|---|
+| `network-first` | the table above | shows at this start |
+| `parallel` (default) | starts loading the cached release at once, in a Treehouse app of its own, while the lookup runs; shows it only once the lookup names that same manifest (or fails, or runs out its 10 s, exactly when `network-first` would show the cache too). When the lookup names another one, that app is closed (nothing of it shows) and the named one loads from the network in a new app, as `network-first` loads it | shows at this start |
+| `cache-first` | shows the cached release at once and looks up in the background | shows at the **next** start: a background lookup that found it makes that next start `network-first` (or earlier, as an update: below) |
+
+**Under `parallel`, the cached release's code starts during the lookup**, held: its guest code is
+evaluated and its presenter is created while the lookup runs, but what it sends out waits. A
+`HostHttp` request, and the app's own code behind a bridge call (the context the host hands a
+binding as `scope.main`), wait until the release shows; when the lookup names another release and
+it is dropped, they fail without being sent (a bridge call's guest gets a failure, a fire-and-forget
+call is not run). For a release that shows, the gate is one read per call. Of crash rollback's
+records, only its "not yet healthy" marker is written while it is held (it is the release the host
+would show, so a process that dies while it evaluates counts against it), cleared when it is
+dropped; its exceptions, its load's outcome, the floor and the last good bundle wait until it shows
+and are discarded when it is dropped. Not held: `HostSqlDriver` (a dropped release can have read or
+written the app's local database at start-up), and a bridge binding that runs the app's code on a
+context of its own rather than `scope.main`. The same holds for an update loading in a new app
+(below) until it is swapped in, except the marker: an update loads while another app runs, and the
+ledger's trial is that app's, so the update writes no crash record until it is swapped in (the
+running app keeps its trial and its failure count when the update is dropped or fails). A held
+call's own timeout keeps counting while it waits: the bridge default (30 s) outlasts the lookup
+(10 s), but a shorter custom timeout can expire before the release shows.
+
+**Updates after a start from the cache.** Zipline takes no further manifest into an app whose first
+load came from its cache, so a `network-first` start from the cache (the lookup failed) applies a
+newer release at the next start. Under `parallel` and `cache-first`, a start from the cache (a
+confirmed `parallel` start, too) still takes updates (`keliver.updates=on-resume` or `live`,
+`checkForUpdate()`): the newer release loads in a new Treehouse app, from the network and through
+the same checks, held as above, and is swapped in once it has loaded (`Applied`); when it fails, the
+running app stays (`Failed`), as an update into the running app does. One such update loads at a
+time; one that has not reported back after two minutes is closed at the next update check (which
+loads it again from the start: on a slow link it may never finish). On each
+screen the new app's content is composed beneath the old one, unseen, and the old one stays drawn
+until the new content has its first changes, so the swap shows no empty frame (at most 10 s, then
+the new content shows as it is). The old app is closed once no screen draws it (after 10 s at most:
+a screen that does not recompose meanwhile, in a stopped activity say, goes idle and rebinds when
+it shows again). Its AppLifecycle close can arrive after its Zipline has closed; for an app the
+host has let go of (replaced, or a dropped held load) that one `IllegalStateException: Zipline
+closed` is logged as a debug line (`a replaced app's late close is ignored`), not as uncaught, and
+never touches the crash ledger; anything else such an app throws is still logged as uncaught
+(`LoadFence.isLateClose`). For those moments two apps run: two QuickJS heaps and two UI trees, the swap's
+peak memory. The guest's screen state starts again on the new app, as it does for an update that
+loads in place.
+
+What the swap does and does not promise:
+- "First changes" means Treehouse has bound the content (its Loading widget went away), not that
+  the screen is complete: lazy-list items that arrive in a later round trip, images, and the guest's
+  own loading state while its fetch runs can still fill in after the swap (as for an update that
+  loads in place). Content that never gets its first changes shows as it is after the 10 s cap,
+  blank or partly drawn. A route change during the hidden window rebinds the new content, which
+  then comes to the front before its first changes (rare).
+- The hidden content is out of reach: unseen, not hit by touches, hidden from screen readers, and
+  unfocusable (a hardware keyboard or D-pad does not move into it). On Android, though, the hidden
+  guest's back handlers register with the activity at once, and a later handler wins: a back press
+  during the swap window goes to the new app's enabled root `BackHandler`, if it has one. iOS
+  hands guest back handlers to no system dispatcher, so it has no such case.
+
+Set it with `keliver.startPolicy` in `gradle.properties` (Android; `KeliverConfig(startPolicy = …)`
+in code) or `START_POLICY` in `HostConfig.kt` (iOS), to `network-first`, `parallel` or
+`cache-first`; empty is `parallel`, the default (`DEFAULT_START_POLICY` in `StartPolicy.kt`, one
+line). **To keep `network-first`**, whatever the index says, set both `keliver.startPolicy=network-first`
+and `keliver.startPolicyOverride=none` (iOS: `START_POLICY = "network-first"` and
+`START_POLICY_OVERRIDE = "none"`): an empty `startPolicy` follows the default, and without `none`
+a release owner's override in the index can still choose another policy.
+
+A release owner can override it per channel: `keliver-publish --out <dir> --set-start-policy
+<policy> [--channel <name>]` writes `"startPolicy": {"<channel>": "<policy>"}` at the top of
+`bundles/index.json` (`default` removes it). A host reads its own channel's value, else stable's,
+from every index it reads, keeps it, and applies it from the **next** start (it cannot know it
+before its lookup). A missing or unknown value means the app's own setting. Hosts from before this
+read only `format` and `entries`, so they ignore it; an index without it works as before. The index
+is not signed (see "Rollback protection"), so neither is the override: it can only pick one of
+these three orders, and an attacker who can rewrite the index can already make a lookup fail, which
+already shows the cache. One tampered index read does persist, though: the kept override applies
+from the next start until an index read without it. An app that wants its own policy whatever the
+index says sets `keliver.startPolicyOverride=none` (Android; `KeliverConfig(startPolicyOverrideAllowed
+= false)` in code) or `START_POLICY_OVERRIDE = "none"` in `HostConfig.kt` (iOS); `any`, or empty,
+lets the override apply. The start's log line says when an override was refused.
+
+What each start does, whatever the policy, and why none weakens a check:
+- **First install, a new key, a moved bundle server** (nothing cached for this key and origin):
+  `network-first`.
+- **Offline:** all three show the cached release; `network-first` and `parallel` after the lookup
+  gives up (10 s), `cache-first` at once.
+- **Crash rollback** (a bundle set aside, at this start or before, and not yet passed by a newer
+  sequence): `network-first`, which decides between a newer release, the kept healthy bundle and
+  the app's own view exactly as before.
+- **A newer release seen but not yet loaded** (a background or update lookup found a sequence above
+  the floor): `network-first`, so `parallel` does not load code it knows is old, and `cache-first`
+  applies what it found.
+- **No lookup recorded for this channel** (the first start after this host version, or after the
+  channel changed): `cache-first` starts `network-first`, so it never shows another channel's
+  cached code without a lookup. `parallel` needs no record: its lookup decides.
+- **Signatures, the floor and set-aside sequences:** every cached start goes through the same
+  checker as the second row above (`AcceptCachedBundle`: Zipline verifies the cached manifest
+  against the key again; the floor and the set-aside list refuse it, and Zipline then fetches the
+  manifest through the same guards). Every network load goes through the same pinning client
+  (index sha256, floor, set-aside, bridges). A key the app no longer trusts has no cache (one cache
+  per key), so it starts `network-first`; keys do not expire.
+- **The index's sha256:** `parallel` confirms the cached release only when the lookup names its
+  manifest URL **and** holds it to the sha256 of the manifest bytes that release last loaded from
+  (recorded with the last good bundle). When the index holds that URL to another sha256 (the
+  server's manifest is not the cached one, or the index is wrong), the start loads it from the
+  network as `network-first` does: a mismatch is refused (`manifest sha256 mismatch`) and the host
+  falls back to the cached bundle, verified again. An install whose last load predates this record
+  has nothing to confirm with, so its first `parallel` start with a cache loads from the network once.
+  What a confirmed start shows is held to that same recorded sha256: under `parallel` and
+  `cache-first`, the cached release's manifest URL is pinned to it, so when Zipline's cache is empty
+  or refuses the bundle (cleared app data or caches) and Zipline fetches that manifest from the
+  network, other bytes at that URL, however validly signed, are refused (`manifest sha256 mismatch`)
+  rather than shown. A confirmed `parallel` start whose shown load then fails before any code ran
+  loads the release the index named from the network once more, held to the index's sha256, as
+  `network-first` would (logged `start policy: parallel: the cached release did not load (…)`);
+  when that fails too, the host says the bundle did not load, and the next update check loads
+  again. A `cache-first` start has no lookup to fall back on: its refused refetch says the bundle
+  did not load, where before it showed bytes this install never checked. With no sha256 recorded
+  (an upgraded install), the cached release's URL is held to the floor, the set-aside list and the
+  bridges only, as before. `network-first`'s start after a failed lookup is unchanged (the floor
+  only).
+- **A kill switch:** the index has none that stops cached code, under any policy. `rollout: 0`
+  halts a release for hosts that have not run it; a host that already ran it has it as its floor,
+  so its lookup finds nothing newer (or names that same release), and it shows the cached release
+  under `network-first` too. Only a newer sequence replaces it.
+
+Each start logs one `start policy:` line (logcat tag `KeliverHost`; the iOS console) with the
+policy, where it came from (the app's setting or the index's override, and an override the app
+refused) and what this start does and why (for crash rollback, which of its conditions holds). A
+`parallel` start logs a second `start policy: parallel:` line once its lookup is done: what it
+decided, and, when it confirms the cache, what the lookup named, as `network-first`'s `loading`
+line says it (`the lookup confirms the cached release: <manifest URL> (index sequence N, channel …,
+host version …, manifest sha256 …)`). The decision is one pure function, `chooseStart` (`StartPolicy.kt`, the same file in both
+hosts), with its tests in `StartPolicyTest.kt`.
+
+Measured on a low-end Android phone (`network-first` against `parallel`: cold start from a warm
+cache, the first start after a publish with the dropped release's calls, the on-resume swap, a back
+press, a covered screen and the crash ledger): [START_POLICY_PHONE_RUN.md](START_POLICY_PHONE_RUN.md).
+
 **Lifecycle.** The host looks up and loads once per process, and every screen
 shares that load: a rotation, a second screen or a screen opened again doesn't
 load anything. So, by default, a bundle published while the app runs is picked
@@ -248,7 +394,8 @@ that opens.
   reports it as available for the next start. A newer one is applied as usual.
 - A process that started from the cache (offline, or after a fall-back) takes
   no further manifest from Zipline: a newer bundle is reported as available
-  and applies at the next start.
+  and applies at the next start. Under start policy `parallel` or `cache-first`
+  it loads in a new app instead, swapped in once it has loaded ("Start policy").
 - The same rules as a start hold: the index, the channel, the constraints, the
   floor, the manifest's sha256 and signature. The fall-back to the last good
   bundle loads from the cache; only if the cache misses does it fetch that
@@ -847,6 +994,11 @@ It behaves like the Android host in §2:
   and shows "Bundle did not load" only without one; see §2. There is one
   Zipline cache per key, and manifest URLs are followed only on the bundle
   server's origin. (Zipline's downloads follow HTTP redirects, as on Android.)
+  That is the `network-first` start policy; the default is `parallel`, as on
+  Android, and `START_POLICY` in `HostConfig.kt` chooses another, with the same
+  names and behaviour as Android's (§2, "Start policy").
+  A host scaffolded by tools 0.3.18 or earlier has no `START_POLICY` line: its
+  build says so; add `internal const val START_POLICY: String = ""`.
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
   set. Paths can't climb out of it; a method that isn't a plain token, or a
   header holding CR or LF, is refused; hop-by-hop headers are dropped; and

@@ -9,6 +9,7 @@ import hosttemplate.CrashStore
 import hosttemplate.HostFacts
 import hosttemplate.KeptBundle
 import hosttemplate.cachedBundleProblem
+import hosttemplate.indexStartPolicy
 import hosttemplate.crashGoingBackTo
 import hosttemplate.crashRollbackDetail
 import hosttemplate.MAX_INDEX_BYTES
@@ -214,6 +215,32 @@ class BundleIndexTest {
     assertEquals("code".encodeUtf8(), ManifestPinningHttpClient(fake, url, sha).download(module, emptyList()))
     val e = assertFailsWith<IOException> { ManifestPinningHttpClient(fake, url, sha).download(url, emptyList()) }
     assertTrue("manifest sha256 mismatch" in e.message!!, e.message)
+  }
+
+  @Test
+  fun aStartFromTheCacheShowsOnlyTheRecordedManifestWhenZiplineRefetchesIt() = runBlocking {
+    // A PARALLEL (or cache-first) start pins the cached release's URL to the sha256 recorded when it
+    // last loaded. Zipline's cache is gone (cleared app data), so Zipline fetches that URL from the
+    // network, where the server now serves other bytes, validly signed and above the floor.
+    val url = "https://cdn.example/bundles/v5/manifest.zipline.json"
+    val recorded = """{"modules":{},"metadata":{"keliver.sequence":"5"}}""".encodeUtf8()
+    val swapped = """{"modules":{},"metadata":{"keliver.sequence":"5","beta":"1"}}""".encodeUtf8()
+    val recordedSha = recorded.sha256().hex()
+    val cached = ManifestPinningHttpClient(Fake(mapOf(url to swapped)), url, recordedSha, floor = { 5 })
+    val e = assertFailsWith<IOException> { cached.download(url, emptyList()) }
+    assertTrue("manifest sha256 mismatch" in e.message!!, e.message)
+    // Nothing served, so nothing is recorded for it (onLoaded records servedSha256).
+    assertEquals(null, cached.servedSha256(url))
+    // The W5 fall-back and a retry pin that URL again without a hash: the recorded one stays.
+    cached.pin(url, null)
+    assertEquals(recordedSha, cached.pinnedSha256(url))
+    assertFailsWith<IOException> { cached.download(url, emptyList()) }
+    // The same bytes as recorded load, and are what is recorded again.
+    val same = ManifestPinningHttpClient(Fake(mapOf(url to recorded)), url, recordedSha, floor = { 5 })
+    assertEquals(recorded, same.download(url, emptyList()))
+    assertEquals(recordedSha, same.servedSha256(url))
+    // No sha256 recorded (an install from before it was): the floor only, as before.
+    assertEquals(swapped, ManifestPinningHttpClient(Fake(mapOf(url to swapped)), url, null, floor = { 5 }).download(url, emptyList()))
   }
 
   @Test
@@ -433,5 +460,46 @@ class BundleIndexTest {
       File("../scripts/templates/production-host/src/test/kotlin/CrashRollbackTest.kt").readText(),
       File("../scripts/templates/ios-host/src/jvmTest/kotlin/CrashRollbackTest.kt").readText(),
     )
+    // The start policy, and its tests, the same on both.
+    assertEquals(
+      File("../scripts/templates/production-host/src/main/kotlin/StartPolicy.kt").readText(),
+      File("../scripts/templates/ios-host/src/commonMain/kotlin/StartPolicy.kt").readText(),
+    )
+    assertEquals(
+      File("../scripts/templates/production-host/src/test/kotlin/StartPolicyTest.kt").readText(),
+      File("../scripts/templates/ios-host/src/jvmTest/kotlin/StartPolicyTest.kt").readText(),
+    )
+    // A held app's calls out (HostHttp, the bridges' context), the same on both.
+    assertEquals(
+      File("../scripts/templates/production-host/src/main/kotlin/CallGates.kt").readText(),
+      File("../scripts/templates/ios-host/src/iosMain/kotlin/CallGates.kt").readText(),
+    )
+  }
+
+  @Test
+  fun startPolicyOverrideIsReadPerChannelAndNeverChangesThePick() {
+    fun index(extra: String) = """{"format":1,$extra"entries":[{"sequence":3,"version":3,"widgetVersion":1,"capabilities":[],"manifest":"v3/manifest.zipline.json","manifestSha256":"$sha"}]}"""
+    // Absent: the app's own setting.
+    assertEquals(null, indexStartPolicy(index(""), "stable"))
+    assertEquals(null, indexStartPolicy(index(""), "beta"))
+    // Its own channel's value, else stable's.
+    val both = index(""""startPolicy":{"stable":"parallel","beta":"cache-first"},""")
+    assertEquals("parallel", indexStartPolicy(both, "stable"))
+    assertEquals("cache-first", indexStartPolicy(both, "beta"))
+    assertEquals("parallel", indexStartPolicy(both, "qa"))
+    assertEquals("parallel", indexStartPolicy(index(""""startPolicy":{"stable":"parallel"},"""), "beta"))
+    // Unknown values are handed back as written; the host keeps only one it knows.
+    assertEquals("warp-speed", indexStartPolicy(index(""""startPolicy":{"stable":"warp-speed"},"""), "stable"))
+    assertEquals(null, hosttemplate.KeliverStartPolicy.parse("warp-speed"))
+    // Malformed: none.
+    assertEquals(null, indexStartPolicy(index(""""startPolicy":"parallel","""), "stable"))
+    assertEquals(null, indexStartPolicy(index(""""startPolicy":{"stable":1},"""), "stable"))
+    assertEquals(null, indexStartPolicy(index(""""startPolicy":{"stable":null},"""), "stable"))
+    assertEquals(null, indexStartPolicy("not json", "stable"))
+    assertEquals(null, indexStartPolicy("[]", "stable"))
+    // The pick is the same with and without it (and hosts from before it read only format and entries).
+    val picked = pickFromIndex(index(""), caps).getOrThrow()
+    assertEquals(picked, pickFromIndex(both, caps).getOrThrow())
+    assertEquals(picked, pickFromIndex(index(""""startPolicy":"garbage","""), caps).getOrThrow())
   }
 }

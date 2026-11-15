@@ -171,10 +171,11 @@ grep -q '  public var bridges: List<KeliverBridgeBinding> = emptyList()' "$V" \
   && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, crash, (Keliver\.)?served\)' "$V")" ] \
   && ! grep -q 'ServedBridges' "$V" "$K/BundleIndex.kt" \
   && grep -q 'val bridges = Keliver.startedBridges' "$V" \
-  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, Keliver.bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
-  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, Keliver::bridgeDebugLog)' \
+  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
+  && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'KeliverBridgeScope(zipline, bridgeContext, Keliver::bridgeDebugLog)' \
   && [ "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$V" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
-  && grep -q 'override fun bindService(name: String, service: ZiplineService) = Keliver.bridgeBinds.bound(name)' "$V" \
+  && grep -A1 'override fun bindService(name: String, service: ZiplineService) {' "$V" | grep -q 'if (fence.live) bridgeBinds.bound(name)' \
+  && grep -q '  val bridgeBinds = BridgeBindRecorder()' "$V" \
   && grep -q 'if (kotlin.native.Platform.isDebugBinary) log("bridge: $message")' "$V" \
   && [ -f "$K/Bridges.kt" ] && grep -q 'internal fun bindAppBridges(' "$K/Bridges.kt" \
   && ok "B5: the app's bridges are checked when set on Keliver, gated on from the start's copy, bound before the host's services and checked as bound" \
@@ -245,7 +246,7 @@ grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = em
   && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
   && grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreehouseUi' "$K/GuestContract.kt" \
   && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$K/MainViewController.kt" \
-  && grep -q 'override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, s.app, route, close))' "$K/MainViewController.kt" \
+  && grep -q 'override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(launch(app, treehouseApp, route, close))' "$K/MainViewController.kt" \
   && grep -q 'nav.popToViewController(stack\[i - 1\] as UIViewController, animated = true)' "$K/MainViewController.kt" \
   && grep -q 'runCatching(close).onFailure' "$K/MainViewController.kt" && grep -q 'noRouteCode = code' "$K/MainViewController.kt" \
   && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "$K/GuestContract.kt" \
@@ -390,11 +391,12 @@ grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside
 C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$V" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$V" \
-  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$V" \
+  && grep -A3 'if (progress.moduleLoadStart()) {' "$V" | grep -q 'fence.codeStarts(mark = { onReady(s) }' \
+  && grep -A4 'fun codeStarts(mark: () -> Unit, unmark: () -> Unit) {' "$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt" | grep -q 'Mode.LIVE -> mark()' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$V" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is okio.IOException }' "$V" \
   && grep -q 'count { crash.loadFailed(sequence, theBundles) }' "$V" \
-  && grep -q 'onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) })' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
+  && grep -q 'fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }' "$V" && grep -q 'val startStep = crash.atStart()' "$V" \
   && grep -q 'crash?.screens(true)' "$V" && grep -q 'crash?.screens(screensShown > 0)' "$V" \
   && grep -q 'report = setAsideNow != null)' "$V" \
   && grep -q 'CrashGuard(DefaultsCrashStore(), cacheName(trust), CRASH_THRESHOLD)' "$V" && grep -q 'return defaults.synchronize()' "$V" \
@@ -406,8 +408,47 @@ C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
   && ! grep -q 'rollbackProblem(manifestSequence(manifest.metadata), floor())' "$V" \
   && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
   || bad "WS6: crash rollback is not wired"
+# Start policy, as on Android: the decision (src/commonMain/StartPolicy.kt, the Android host's file)
+# and its JVM tests; HostConfig's START_POLICY (parallel when empty); crash rollback decides
+# as network-first; each start logs its policy; every index read keeps the override for the next
+# start, unless START_POLICY_OVERRIDE is none; a PARALLEL start's held load, in an app of its own,
+# is shown only once the state says Running, or closed (its crash records fenced); after a start
+# from the cache an update loads in a new app; the screen keys its content on the app.
+SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
+[ -f "$SP" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/StartPolicy.kt" | cmp -s - "$SP" \
+  && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/test/kotlin/StartPolicyTest.kt" | cmp -s - "$H/src/jvmTest/kotlin/com/example/demo/host/StartPolicyTest.kt" \
+  && grep -q '^internal const val START_POLICY: String = ""$' "$K/HostConfig.kt" \
+  && grep -q '^internal const val START_POLICY_OVERRIDE: String = ""$' "$K/HostConfig.kt" \
+  && grep -q "configValue('START_POLICY')" "$H/build.gradle" \
+  && grep -q "configValue('START_POLICY_OVERRIDE')" "$H/build.gradle" \
+  && grep -q 'overrideAllowed = parseStartPolicyOverride(START_POLICY_OVERRIDE) ?: true,' "$V" \
+  && grep -q 'val rollbackWhy = crashRollbackReason(crash, startStep, floor())' "$V" \
+  && grep -q '  log(choice.logLine(policy))' "$V" \
+  && grep -q 'recordStartOverride(cacheName, body.utf8())' "$V" \
+  && grep -A4 'ParallelStep.SHOW_CACHED -> {' "$V" | grep -q 'HostState.Running(app, then = h.show)' \
+  && grep -q '    val parts = AppParts(trust, lastGood, recordedSha256, floor, crash, apiBase)' "$V" \
+  && [ "$(grep -c 'createApp(trust, lastGood, recordedSha256, lookup, cached, apiBase' "$V")" = 2 ] \
+  && grep -B1 'HostState.Running(app, then = h.show)' "$V" | grep -q 'h.retryFromNetwork(retryAfterShownCache(step, latest?.manifestUrl, latest?.manifestSha256))' \
+  && grep -q '    } else if (retryFromNetwork != null && step !is CrashStep.SetAside) {' "$V" \
+  && grep -q '        h.drop()' "$V" \
+  && grep -q 'val fence = LoadFence(held != null, { block -> appScope.launch { block() } }, besideALiveApp = held != null && besideALiveApp)' "$V" \
+  && grep -q 'fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }' "$V" \
+  && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$V" \
+  && grep -q 'for (app in listOfNotNull(back, front)) {' "$V" \
+  && grep -q 'val release = drawing(app)' "$V" \
+  && grep -q '    old?.let { retire(it.app) }' "$V" && ! grep -q 'OLD_APP_CLOSE_DELAY' "$V" \
+  && grep -q 'val http = shared.http?.let { if (held != null) GatedHostHttp(it, fence.calls) else it }' "$V" \
+  && grep -q 'val bridgeContext = if (held != null) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main' "$V" \
+  && grep -q 'fence.codeStarts(mark = { onReady(s) }, unmark = { crash.loadFailed(s, theBundles = false) })' "$V" \
+  && grep -q 'besideALiveApp = held != null && besideALiveApp)' "$V" && [ "$(grep -c '        besideALiveApp = true,$' "$V")" = 1 ] \
+  && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$V" \
+  && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/CallGates.kt" | cmp -s - "$K/CallGates.kt" \
+  && grep -q '^val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.PARALLEL$' "$SP" \
+  && grep -A2 'override fun uncaughtException(exception: Throwable) {' "$V" | grep -q '    if (fence.isLateClose(exception)) {' \
+  && ok "start policy: the Android host's decision and tests, START_POLICY (parallel by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app; a replaced app's late close is not reported as uncaught" \
+  || bad "start policy: not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
-grep -A2 '^  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle, reload = reload))$' "$K/MainViewController.kt" \
+grep -A5 '^  if (held == null) {$' "$K/MainViewController.kt" \
   | grep -q '^  app.start()$' \
   && ok "M3: the code load starts when the host starts, not when the first screen asks" \
   || bad "M3: the host does not start the code load at host start"
@@ -528,6 +569,9 @@ if [ "$BUILD" = 1 ]; then
     cr="$H/build/test-results/jvmTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
     [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
       && ok "WS6: crash rollback's tests ran on the JVM target: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
+    spt="$H/build/test-results/jvmTest/TEST-com.example.demo.host.StartPolicyTest.xml"
+    [ -f "$spt" ] && grep -q 'failures="0" errors="0"' "$spt" && ! grep -q 'tests="0"' "$spt" \
+      && ok "start policy: its decision's tests ran on the JVM target: $(grep -o 'tests="[0-9]*"' "$spt" | head -1)" || bad "start policy: its tests did not run, or failed"
     dlt="$H/build/test-results/jvmTest/TEST-com.example.demo.host.DebugBundleLinkTest.xml"
     [ -f "$dlt" ] && grep -q 'failures="0" errors="0"' "$dlt" && ! grep -q 'tests="0"' "$dlt" \
       && ok "ED3: the debug link's vectors ran on the JVM: $(grep -o 'tests="[0-9]*"' "$dlt" | head -1)" || bad "ED3: the debug link's tests did not run, or failed"

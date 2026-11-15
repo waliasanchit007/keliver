@@ -141,7 +141,8 @@ grep -q 'android:name=".HostApp"' "$H/src/main/AndroidManifest.xml" \
   && ok "W2: the Application owns one KeliverHost (its own scope, started once); MainActivity only shows KeliverScreen" \
   || bad "W2: the host is not owned by the Application"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
-grep -A2 '^    mutableState.value = KeliverHostState.Running(app)$' "$M" | grep -q '^    app.start()$' \
+# (A PARALLEL start's state waits for its lookup; its code load starts there all the same.)
+grep -A2 '^    if (!held) makeTheHosts()$' "$M" | grep -q '^    app.start()$' \
   && ok "M3: the code load starts when the host starts, not when the first screen asks" \
   || bad "M3: the host does not start the code load at host start"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
@@ -176,10 +177,11 @@ grep -q '  bridges: List<KeliverBridgeBinding> = emptyList(),' "$M" && grep -q '
   && [ "$(grep -c 'ManifestPinningHttpClient(' "$M")" = "$(grep -c 'ManifestPinningHttpClient(.*) { servedBridges }' "$M")" ] \
   && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, crash, servedBridges)' "$M")" ] \
   && ! grep -q 'ServedBridges' "$M" "$(dirname "$M")/BundleIndex.kt" \
-  && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
-  && grep -A8 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, Dispatchers.Main, ::bridgeDebugLog)' \
+  && grep -A10 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
+  && grep -A10 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, main, ::bridgeDebugLog)' \
   && [ "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'bindAppBridges' | cut -d: -f1)" -lt "$(grep -A12 'override suspend fun bindServices' "$M" | grep -n 'zipline.bind<HostSqlDriver>' | cut -d: -f1)" ] \
-  && grep -q 'override fun bindService(name: String, service: ZiplineService) = bridgeBinds.bound(name)' "$M" \
+  && grep -A1 'override fun bindService(name: String, service: ZiplineService) {' "$M" | grep -q 'if (fence.live) bridgeBinds.bound(name)' \
+  && grep -q '    val bridgeBinds = BridgeBindRecorder()' "$M" \
   && grep -q 'if (BuildConfig.DEBUG) Log.w(TAG, "bridge: $message")' "$M" \
   && [ -f "$(dirname "$M")/Bridges.kt" ] && grep -q 'internal fun bindAppBridges(' "$(dirname "$M")/Bridges.kt" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverBridgesTest.kt" ] \
@@ -228,7 +230,7 @@ grep -q 'fun launchRoute(route: String, screen: KeliverScreenHost): ZiplineTreeh
   && grep -q '^import dev.keliver.hostkit.KeliverScreenHost$' "${M%/*}/GuestContract.kt" \
   && grep -q '^package dev.keliver.hostkit$' "${M%/*}/KeliverScreenHost.kt" \
   && grep -q 'catch (e: app.cash.zipline.ZiplineApiMismatchException)' "$M" && grep -q 'noRouteCode = code' "$M" \
-  && grep -q 'val contentSource = remember(route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
+  && grep -q 'val contentSource = remember(app, route) {' "$S" && grep -q 'route: KeliverRoute? = null,' "$S" \
   && grep -q 'onClose ?: { activity?.finish() }' "$S" && grep -q 'if (active.get()) latestOnClose()' "$S" \
   && grep -q 'override fun onNewIntent(intent: Intent)' "$H/src/main/kotlin/com/example/demo/host/MainActivity.kt" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
@@ -300,7 +302,7 @@ grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/d
   && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
   && ! grep -q 'KeliverTrace' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
   && grep -q "def timingBuildTypes = \['debug', 'benchmark'\]" "$H/build.gradle" && grep -q 'profileable true' "$H/build.gradle" \
-  && grep -q 'KeliverTiming.firstFrame(host.launch(app, s.app, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
+  && grep -q 'KeliverTiming.firstFrame(host.launch(app, treehouseApp, route)' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
   && ok "M0: timing marks in debug and benchmark (src/timing), a no-op elsewhere (src/notiming); a benchmark build type" \
   || bad "M0: the timing marks or the benchmark build type are not wired"
 # M4: the guest frame profile, beside the marks: the listener's call hooks, the window, a no-op elsewhere.
@@ -367,11 +369,12 @@ grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), fl
 C="${M%/*}/CrashRollback.kt"
 [ -f "$C" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CrashRollbackTest.kt" ] \
   && grep -q 'override fun manifestReady(manifest: ZiplineManifest)' "$M" && grep -q 'onReady = { sequence -> crash.loadStarting(sequence) }' "$M" \
-  && grep -q 'if (progress.moduleLoadStart()) onReady(sequence)' "$M" \
+  && grep -A3 'if (progress.moduleLoadStart()) {' "$M" | grep -q 'fence.codeStarts(mark = { onReady(s) }' \
+  && grep -A4 'fun codeStarts(mark: () -> Unit, unmark: () -> Unit) {' "${M%/*}/StartPolicy.kt" | grep -q 'Mode.LIVE -> mark()' \
   && grep -q 'override fun downloadFailed(url: String, exception: Exception, startValue: Any?) = progress.downloadFailed()' "$M" \
   && grep -q 'val theBundles = progress.failureIsTheBundles(exception) { it is java.io.IOException }' "$M" \
   && grep -q 'crash.loadFailed(sequence, theBundles)' "$M" \
-  && grep -q 'onUncaught(count(CrashKind.EXCEPTION))' "$M" && grep -q 'val startStep = crash.atStart(::lastExitCrashed)' "$M" \
+  && grep -q 'fence.run { onUncaught(count(CrashKind.EXCEPTION)) }' "$M" && grep -q 'val startStep = crash.atStart(::lastExitCrashed)' "$M" \
   && grep -q 'crash?.screens(true)' "$M" && grep -q 'crash?.screens(screensShown > 0)' "$M" \
   && grep -q 'android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,' "$M" \
   && grep -q '.firstOrNull { it.pid == pid && it.processName == me && it.timestamp >= markedAt }' "$M" \
@@ -389,6 +392,46 @@ C="${M%/*}/CrashRollback.kt"
   && ! grep -q 'rollbackProblem(manifestSequence(manifest.metadata), floor())' "$M" \
   && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
   || bad "WS6: crash rollback is not wired"
+# Start policy (docs/DEVICE_HOST.md, "Start policy"): the decision (StartPolicy.kt, the iOS host's
+# file too) and its JVM tests are scaffolded; the app sets keliver.startPolicy (parallel by
+# default); crash rollback decides as network-first; each start logs its policy and why; every
+# index read keeps the override for the next start, unless keliver.startPolicyOverride=none; a
+# PARALLEL start's cached load is in an app of its own, closed when dropped, its crash records fenced;
+# after a start from the cache an update loads in a new app; screens key their content on the app.
+SP="${M%/*}/StartPolicy.kt"
+[ -f "$SP" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/StartPolicyTest.kt" ] \
+  && grep -q '^val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.PARALLEL$' "$SP" \
+  && grep -q 'mode == Mode.DROPPED && exception is IllegalStateException && exception.message == ZIPLINE_CLOSED' "$SP" \
+  && grep -A2 'override fun uncaughtException(exception: Throwable) {' "$M" | grep -q '    if (fence.isLateClose(exception)) {' \
+  && grep -q '^keliver.startPolicy=$' "$H/gradle.properties" \
+  && grep -q '^keliver.startPolicyOverride=$' "$H/gradle.properties" \
+  && grep -q "buildConfigField 'String', 'KELIVER_START_POLICY'" "$H/build.gradle" \
+  && grep -q "buildConfigField 'String', 'KELIVER_START_POLICY_OVERRIDE'" "$H/build.gradle" \
+  && grep -q 'startPolicy: KeliverStartPolicy? = KeliverStartPolicy.parse(BuildConfig.KELIVER_START_POLICY),' "$M" \
+  && grep -q 'config.startPolicyOverrideAllowed)' "$M" \
+  && grep -q 'val rollbackWhy = crashRollbackReason(crash, startStep, floor())' "$M" \
+  && grep -q 'Log.i(TAG, choice.logLine(policy))' "$M" \
+  && [ "$(grep -c 'recordStartOverride(.*, it)' "$M")" -ge 3 ] \
+  && grep -q '          held.drop()' "$M" \
+  && grep -q 'val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, recordedSha256, floor, crash) { servedBridges }' "$M" \
+  && grep -q 'afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, recordedSha256)' "$M" \
+  && grep -A1 'held.retryFromNetwork(retryAfterShownCache(step, latest?.manifestUrl, latest?.manifestSha256))' "$M" | grep -q '          held.show()' \
+  && grep -q '      } else if (retryFromNetwork != null && step !is CrashStep.SetAside) {' "$M" \
+  && grep -q 'val fence = LoadFence(held, { block -> scope.launch { block() } }, besideALiveApp = held && besideALiveApp)' "$M" \
+  && grep -q '    fence.run { onUncaught(count(CrashKind.EXCEPTION)) }' "$M" \
+  && grep -q 'inNewApp(latest.manifestUrl, latest.manifestSha256)' "$M" \
+  && grep -q 'for (app in listOfNotNull(back, front)) {' "${M%/*}/KeliverScreen.kt" \
+  && grep -q 'val release = host.drawing(app)' "${M%/*}/KeliverScreen.kt" \
+  && grep -q '    old?.let { retire(it.app) }' "$M" && ! grep -q 'OLD_APP_CLOSE_DELAY' "$M" \
+  && grep -q 'zipline.bind<HostHttpProvider>("HostHttp", if (held) GatedHostHttp(hostHttp, fence.calls) else hostHttp)' "$M" \
+  && grep -q 'val main = if (held) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main' "$M" \
+  && grep -q 'fence.codeStarts(mark = { onReady(s) }, unmark = { crash.loadFailed(s, theBundles = false) })' "$M" \
+  && grep -q 'besideALiveApp = held && besideALiveApp)' "$M" && [ "$(grep -c '          besideALiveApp = true,$' "$M")" = 1 ] \
+  && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$M" \
+  && [ -f "${M%/*}/CallGates.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CallGatesTest.kt" ] \
+  && grep -q 'fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String?' "${M%/*}/BundleIndex.kt" \
+  && ok "start policy: keliver.startPolicy (parallel by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app; a replaced app's late close is not reported as uncaught" \
+  || bad "start policy: not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 # W4.4: --channel beta, over a removed host-android (the build below then builds a beta host).
@@ -447,7 +490,7 @@ grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q
 grep -qx -- '-keep class app.cash.zipline.MemoryUsage { \*; }' "$L/consumer-rules.pro" \
   && ok "M5: the library's consumer rules keep MemoryUsage (QuickJS builds it through JNI)" || bad "M5: the library's consumer rules do not keep MemoryUsage"
 [ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
-same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt CrashRollback.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
+same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt Bridges.kt CrashRollback.kt StartPolicy.kt CallGates.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the library and the standalone host (one set of sources)"
@@ -491,6 +534,9 @@ if [ "$BUILD" = 1 ]; then
     cr="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.CrashRollbackTest.xml"
     [ -f "$cr" ] && grep -q 'failures="0" errors="0"' "$cr" && ! grep -q 'tests="0"' "$cr" \
       && ok "WS6: crash rollback's tests ran: $(grep -o 'tests="[0-9]*"' "$cr" | head -1)" || bad "WS6: crash rollback's tests did not run, or failed"
+    spt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.StartPolicyTest.xml"
+    [ -f "$spt" ] && grep -q 'failures="0" errors="0"' "$spt" && ! grep -q 'tests="0"' "$spt" \
+      && ok "start policy: its decision's tests ran: $(grep -o 'tests="[0-9]*"' "$spt" | head -1)" || bad "start policy: its tests did not run, or failed"
     rs="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.ReportSendTest.xml"
     [ -f "$rs" ] && grep -q 'failures="0" errors="0"' "$rs" && ! grep -q 'tests="0"' "$rs" \
       && ok "W6: the report sender's tests ran (a collector that closes loses no report): $(grep -o 'tests="[0-9]*"' "$rs" | head -1)" || bad "W6: the report sender's tests did not run, or failed"

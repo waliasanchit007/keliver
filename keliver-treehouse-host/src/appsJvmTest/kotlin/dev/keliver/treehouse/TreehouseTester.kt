@@ -23,6 +23,7 @@ import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
 import com.example.redwood.testapp.treehouse.HostApi
 import com.example.redwood.testapp.treehouse.TestAppPresenter
 import dev.keliver.leaks.LeakDetector
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,8 @@ import okio.Path.Companion.toPath
  */
 internal class TreehouseTester(
   private val testScope: TestScope,
+  /** The apps' UI dispatcher; null: the test's own (as Zipline's is). */
+  private val uiDispatcher: CoroutineDispatcher? = null,
 ) {
   val eventLog = EventLog()
 
@@ -79,7 +82,7 @@ internal class TreehouseTester(
     override fun newDispatchers(
       applicationName: String,
     ): FakeDispatchers {
-      return FakeDispatchers(testScope)
+      return FakeDispatchers(ui = uiDispatcher ?: testScope.dispatcher(), zipline = testScope.dispatcher())
         .also { returnedTreehouseDispatchers += it }
     }
   }

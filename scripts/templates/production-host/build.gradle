@@ -20,6 +20,8 @@ def apiBaseUrl = providers.gradleProperty('keliver.apiBaseUrl').getOrElse('').tr
 def reportUrl = providers.gradleProperty('keliver.reportUrl').getOrElse('').trim()
 def channel = providers.gradleProperty('keliver.channel').getOrElse('stable').trim()
 def updates = providers.gradleProperty('keliver.updates').getOrElse('').trim()
+def startPolicy = providers.gradleProperty('keliver.startPolicy').getOrElse('').trim()
+def startPolicyOverride = providers.gradleProperty('keliver.startPolicyOverride').getOrElse('').trim()
 // ASCII URL characters only; the bundle server takes no query or fragment,
 // because the host appends its own path to it.
 def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]!$&()*+,;=%-]+/
@@ -46,6 +48,14 @@ if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
 // applies to every build type, except that live is on-resume outside debug.
 if (updates && !(updates in ['next-launch', 'on-resume', 'live'])) {
   throw new GradleException("keliver.updates must be next-launch, on-resume, live or empty (got '$updates').")
+}
+// How the host starts (docs/DEVICE_HOST.md, "Start policy"); empty is parallel, the default.
+if (startPolicy && !(startPolicy in ['network-first', 'parallel', 'cache-first'])) {
+  throw new GradleException("keliver.startPolicy must be network-first, parallel, cache-first or empty (got '$startPolicy').")
+}
+// Whether the index's override may change it: any (empty) or none.
+if (startPolicyOverride && !(startPolicyOverride in ['any', 'none'])) {
+  throw new GradleException("keliver.startPolicyOverride must be any, none or empty (got '$startPolicyOverride').")
 }
 // live is for development: a debug build listens for publishes while a screen
 // shows. Every other build type takes it as on-resume (the host checks again).
@@ -81,6 +91,8 @@ android {
     buildConfigField 'String', 'KELIVER_REPORT_URL', "\"${reportUrl}\""
     buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
     buildConfigField 'String', 'KELIVER_UPDATES', "\"${updatesOutsideDebug ?: 'next-launch'}\""
+    buildConfigField 'String', 'KELIVER_START_POLICY', "\"${startPolicy}\""
+    buildConfigField 'String', 'KELIVER_START_POLICY_OVERRIDE', "\"${startPolicyOverride}\""
     buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeysOk ? portalKeyLines[0] : ''}\""
     buildConfigField 'String', 'KELIVER_NEXT_PUBLIC_KEY_HEX', "\"${portalKeysOk && portalKeyLines.size() == 2 ? portalKeyLines[1] : ''}\""
   }

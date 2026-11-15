@@ -331,6 +331,21 @@ private fun indexBridges(element: Any?): Map<String, NeededBridge>? {
   }
 }
 
+/**
+ * The release owner's start policy override for [channel] in [indexJson] (StartPolicy.kt;
+ * docs/DEVICE_HOST.md, "Start policy"): the top-level `startPolicy` object's value for [channel],
+ * else for [DEFAULT_CHANNEL], as written; null when there is none, or the index or the value is
+ * malformed. The host keeps only a value it knows (KeliverStartPolicy.parse); anything else means
+ * the app's own setting. It never affects which entry [pickFromIndex] picks.
+ */
+internal fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String? = runCatching {
+  if (indexJson.length > MAX_INDEX_BYTES) return@runCatching null
+  val root = Json.parseToJsonElement(indexJson) as? JsonObject ?: return@runCatching null
+  val byChannel = root[START_POLICY_INDEX_KEY] as? JsonObject ?: return@runCatching null
+  fun valueFor(c: String) = (byChannel[c] as? JsonPrimitive)?.takeIf { it.isString }?.content
+  valueFor(channel) ?: valueFor(DEFAULT_CHANNEL)
+}.getOrNull()
+
 /** A relative path under bundles/: no scheme, no leading '/', no '.' or '..' segment. */
 internal fun manifestPathOk(path: String): Boolean =
   path.split('/').all { SEGMENT.matches(it) && it != "." && it != ".." }
@@ -387,6 +402,13 @@ internal class ManifestPinningHttpClient(
 
   /** The manifest [manifestUrl] last served (pinned URLs only), as text; null when none did. */
   fun servedManifest(manifestUrl: String): String? = served[manifestUrl]?.utf8()
+
+  /**
+   * The sha256 (hex) of the manifest bytes [manifestUrl] last served (pinned URLs only), after its
+   * checks; null when none did. Recorded with the last good bundle: a PARALLEL start confirms its
+   * cached release only when the index holds the same URL to this same sha256 (StartPolicy.kt).
+   */
+  fun servedSha256(manifestUrl: String): String? = served[manifestUrl]?.sha256()?.hex()
 
   /**
    * Hold [manifestUrl] to [sha256] and to the floor. A null [sha256] (no index

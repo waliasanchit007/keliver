@@ -85,8 +85,7 @@ adb -s "$SERIAL" install -r "$W8_BOTH_APK" > "$EV/install-w8-both.log" 2>&1 \
   && ok "K4: upgraded in place to the host trusting both keys" || bad "K4: the two-key host did not install"
 launch prod "$EV/logcat-w8-both-v10.txt"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}… and the next key ${NEXT_PUB:0:8}…; updates" "$EV/logcat-w8-both-v10.txt" \
-  && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v10/manifest.zipline.json (.*); rollback floor 10" "$EV/logcat-w8-both-v10.txt" \
-  && grep -q "$HOST_TAG: codeLoadSuccess modules=[0-9]* sequence=10" "$EV/logcat-w8-both-v10.txt" \
+  && took_release_floor "$EV/logcat-w8-both-v10.txt" "https://$HOST_ADDR:8443/bundles/v10/manifest.zipline.json" 10 10 \
   && ok "K4: the two-key host verifies with both keys and loaded v10 (floor 10)" \
   || bad "K4: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-w8-both-v10.txt" | head -4 | tr '\n' ' ')"
 f_old="$(w8_floor "$PUB")"; f_next="$(w8_floor "$NEXT_PUB")"

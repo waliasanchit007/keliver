@@ -127,8 +127,7 @@ grep -q "PORTAL_NEXT_PUBLIC_KEY_HEX: String = \"$NEXT_PUB\"" "$CFG" && w8_build 
 launch K4-both
 C="$EV/K4-both.console.txt"
 grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}… and the next key ${NEXT_PUB:0:8}…; updates" "$C" \
-  && grep -q "loading https://localhost:8443/bundles/v10/manifest.zipline.json (.*); rollback floor 10" "$C" \
-  && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$C" \
+  && took_release_floor "$C" "https://localhost:8443/bundles/v10/manifest.zipline.json" 10 10 \
   && ok "K4: the two-key host verifies with both keys and loaded v10 (floor 10)" \
   || bad "K4: $(grep -E 'KeliverHost|codeLoad' "$C" | head -4 | tr '\n' ' ')"
 f_old="$(w8_floor "$PUB")"; f_next="$(w8_floor "$NEXT_PUB")"

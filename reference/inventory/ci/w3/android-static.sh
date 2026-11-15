@@ -221,7 +221,7 @@ w3_title Warehouse Backroom && w3_publish v4-beta --channel beta && grep -q "pub
   && ok "S11: keliver-publish wrote v4 at sequence 4 on channel beta" || { bad "S11: publish v4 to beta"; tail -20 "$EV/w3-publish-v4-beta.log"; }
 launch prod "$EV/logcat-static-beta.txt"
 C="$EV/logcat-static-beta.txt"
-grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v3/manifest.zipline.json (index sequence 3, channel stable" "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+took_release "$C" "https://$HOST_ADDR:8443/bundles/v3/manifest.zipline.json" 3 ", channel stable" \
   && ! grep -q "bundles/v4/" "$C" && ok "S11: the stable host passed over beta's v4 and loaded v3" \
   || bad "S11: $(grep -E 'loading|codeLoad' "$C" | head -3 | tr '\n' ' ')"
 drive title Depot S11static; fold "S11: the stable host still reads Depot" $?
@@ -247,7 +247,7 @@ w3_title Backroom Loft && w3_publish v5-rollout0 --rollout 0 && grep -q "publish
   && ok "S13: keliver-publish wrote v5 at sequence 5 with constraints.rollout 0" || { bad "S13: publish v5 at rollout 0"; tail -20 "$EV/w3-publish-v5-rollout0.log"; }
 launch prod "$EV/logcat-static-rollout0.txt"
 C="$EV/logcat-static-rollout0.txt"
-grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v4/manifest.zipline.json (index sequence 4," "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+took_release "$C" "https://$HOST_ADDR:8443/bundles/v4/manifest.zipline.json" 4 \
   && ok "S13: at rollout 0 the host passed over v5 and loaded v4" || bad "S13: at rollout 0 the host passed over v5 and loaded v4: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "bundles/v5/" "$C" && bad "S13: the host asked for v5" || ok "S13: the host never asked for v5"
 drive title Backroom S13static; fold "S13: the screen still reads Backroom" $?
@@ -270,7 +270,7 @@ drive title Loft S14static; fold "S14: the screen reads Loft" $?
   || { bad "S14b: halt the rollout"; tail -10 "$EV/w3-rollout-halt.log"; }
 launch prod "$EV/logcat-static-rollout-halted.txt"
 C="$EV/logcat-static-rollout-halted.txt"
-grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+took_release "$C" "https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json" 5 \
   && ok "S14b: halted, the host that ran v5 still loads it" || bad "S14b: halted, the host that ran v5 still loads it: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "refused" "$C" && bad "S14b: something was refused" || ok "S14b: nothing was refused"
 drive title Loft S14bstatic; fold "S14b: the screen still reads Loft" $?
@@ -283,7 +283,7 @@ w3_title Loft Attic && w3_publish v6-gated --min-host-version 999 && grep -q "pu
 cp "$W3/site/bundles/index.json" "$EV/w3-index-w45.json" 2>/dev/null
 launch prod "$EV/logcat-static-gated.txt"
 C="$EV/logcat-static-gated.txt"
-grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+took_release "$C" "https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json" 5 \
   && ok "S15: the host (version 1) skipped v6 and loaded v5" || bad "S15: the host (version 1) skipped v6 and loaded v5: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "host version 1," "$C" && ok "S15: the host checked the entries against its version, 1" || bad "S15: the lookup did not name host version 1"
 grep -q "bundles/v6/" "$C" && bad "S15: the host asked for v6" || ok "S15: the host never asked for v6"
@@ -303,7 +303,7 @@ w3_caps HostCamera@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-s16-missi
   && ok "S16: v6's entry now requires HostCamera@1 and nothing else gates it" || bad "S16: could not edit the index"
 launch prod "$EV/logcat-static-caps-missing.txt"
 C="$EV/logcat-static-caps-missing.txt"
-grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+took_release "$C" "https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json" 5 \
   && ok "S16: v6 needs a capability this host lacks: skipped, v5 loaded" || bad "S16: v6 needs a capability this host lacks: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "bundles/v6/" "$C" && bad "S16: the host asked for v6" || ok "S16: the host never asked for v6"
 drive title Loft S16static; fold "S16: the screen still reads Loft" $?
@@ -349,7 +349,7 @@ w3_v7_bridged(){  # $1 $2 the scenarios' names; $3 v7's keliver.bridges (one bri
     n0="$(wc -l < "$EV/w3-server.log")"
     launch prod "$EV/logcat-static-bridge-skipped-$skipped.txt"
     C="$EV/logcat-static-bridge-skipped-$skipped.txt"
-    grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v6/manifest.zipline.json (index sequence 6," "$C" && grep -q "$HOST_TAG: codeLoadSuccess" "$C" \
+    took_release "$C" "https://$HOST_ADDR:8443/bundles/v6/manifest.zipline.json" 6 \
       && ok "$skipped: v7 needs $what: skipped, v6 loaded" || bad "$skipped: v7 needs $what: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
     req="$(w3_v7_requests "$n0")"
     { [ -z "$req" ] && ! grep -q "bundles/v7/" "$C"; } && ok "$skipped: nothing under bundles/v7/ was asked for (the server's log and the host's)" || bad "$skipped: v7 was asked for: $(echo "$req" | head -2 | tr '\n' ' ')"
@@ -425,7 +425,7 @@ python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS
 SERVE_PID=$!
 for _ in $(seq 1 30); do curl -s --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/v$LAST_V/manifest.zipline.json && break; sleep 1; done
 launch prod "$EV/logcat-static-fallback-floor.txt"
-grep -q "$HOST_TAG: lookup failed; starting from the cached bundle" "$EV/logcat-static-fallback-floor.txt" \
+cache_start_after_failed_lookup "$EV/logcat-static-fallback-floor.txt" "https://$HOST_ADDR:8443/bundles/v$LAST_V/" \
   && grep -q "rollback refused: sequence $LAST_V is below 9" "$EV/logcat-static-fallback-floor.txt" \
   && ok "S9b: lookup failed with the server up; the cache and then the network fetch of v$LAST_V were both held to the floor" \
   || bad "S9b: no refusal on the network fallback: $(grep -E "$HOST_TAG" "$EV/logcat-static-fallback-floor.txt" | head -4 | tr '\n' ' ')"
