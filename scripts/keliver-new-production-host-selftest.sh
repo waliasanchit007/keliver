@@ -393,14 +393,16 @@ C="${M%/*}/CrashRollback.kt"
   && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
   || bad "WS6: crash rollback is not wired"
 # Start policy (docs/DEVICE_HOST.md, "Start policy"): the decision (StartPolicy.kt, the iOS host's
-# file too) and its JVM tests are scaffolded; the app sets keliver.startPolicy (network-first by
+# file too) and its JVM tests are scaffolded; the app sets keliver.startPolicy (parallel by
 # default); crash rollback decides as network-first; each start logs its policy and why; every
 # index read keeps the override for the next start, unless keliver.startPolicyOverride=none; a
 # PARALLEL start's cached load is in an app of its own, closed when dropped, its crash records fenced;
 # after a start from the cache an update loads in a new app; screens key their content on the app.
 SP="${M%/*}/StartPolicy.kt"
 [ -f "$SP" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/StartPolicyTest.kt" ] \
-  && grep -q '^val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.NETWORK_FIRST$' "$SP" \
+  && grep -q '^val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.PARALLEL$' "$SP" \
+  && grep -q 'mode == Mode.DROPPED && exception is IllegalStateException && exception.message == ZIPLINE_CLOSED' "$SP" \
+  && grep -A2 'override fun uncaughtException(exception: Throwable) {' "$M" | grep -q '    if (fence.isLateClose(exception)) {' \
   && grep -q '^keliver.startPolicy=$' "$H/gradle.properties" \
   && grep -q '^keliver.startPolicyOverride=$' "$H/gradle.properties" \
   && grep -q "buildConfigField 'String', 'KELIVER_START_POLICY'" "$H/build.gradle" \
@@ -424,7 +426,7 @@ SP="${M%/*}/StartPolicy.kt"
   && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$M" \
   && [ -f "${M%/*}/CallGates.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/CallGatesTest.kt" ] \
   && grep -q 'fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String?' "${M%/*}/BundleIndex.kt" \
-  && ok "start policy: keliver.startPolicy (network-first by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app" \
+  && ok "start policy: keliver.startPolicy (parallel by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app; a replaced app's late close is not reported as uncaught" \
   || bad "start policy: not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"

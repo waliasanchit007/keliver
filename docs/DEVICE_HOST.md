@@ -188,14 +188,17 @@ guide's "Publish from CI to a static server"): the fall-back keeps hosts that
 ran a bundle before on it, but a new install has nothing to fall back to.
 
 **Start policy** (both hosts, from the templates after tools 0.3.18). The table above is
-`network-first`, the default: nothing shows until the lookup, and then the manifest, have come
-back. That costs a cold start the network's round trips (docs/GATE_B_RESULTS.md, "Where the A12's
-cold start goes"). An app can choose how its host starts:
+`network-first`: nothing shows until the lookup, and then the manifest, have come back. That costs
+a cold start the network's round trips (docs/GATE_B_RESULTS.md, "Where the A12's cold start
+goes"). The default is `parallel`, since the measured run on a low-end Android phone
+([START_POLICY_PHONE_RUN.md](START_POLICY_PHONE_RUN.md): 714 against 1,304 ms to the first frame
+from a warm cache, every check clean); hosts scaffolded by tools 0.3.18 and before start
+`network-first`. An app can choose how its host starts:
 
 | policy | what a start does | a newer release, published since the last start |
 |---|---|---|
-| `network-first` (default) | the table above | shows at this start |
-| `parallel` | starts loading the cached release at once, in a Treehouse app of its own, while the lookup runs; shows it only once the lookup names that same manifest (or fails, or runs out its 10 s, exactly when `network-first` would show the cache too). When the lookup names another one, that app is closed (nothing of it shows) and the named one loads from the network in a new app, as `network-first` loads it | shows at this start |
+| `network-first` | the table above | shows at this start |
+| `parallel` (default) | starts loading the cached release at once, in a Treehouse app of its own, while the lookup runs; shows it only once the lookup names that same manifest (or fails, or runs out its 10 s, exactly when `network-first` would show the cache too). When the lookup names another one, that app is closed (nothing of it shows) and the named one loads from the network in a new app, as `network-first` loads it | shows at this start |
 | `cache-first` | shows the cached release at once and looks up in the background | shows at the **next** start: a background lookup that found it makes that next start `network-first` (or earlier, as an update: below) |
 
 **Under `parallel`, the cached release's code starts during the lookup**, held: its guest code is
@@ -229,7 +232,11 @@ screen the new app's content is composed beneath the old one, unseen, and the ol
 until the new content has its first changes, so the swap shows no empty frame (at most 10 s, then
 the new content shows as it is). The old app is closed once no screen draws it (after 10 s at most:
 a screen that does not recompose meanwhile, in a stopped activity say, goes idle and rebinds when
-it shows again). For those moments two apps run: two QuickJS heaps and two UI trees, the swap's
+it shows again). Its AppLifecycle close can arrive after its Zipline has closed; for an app the
+host has let go of (replaced, or a dropped held load) that one `IllegalStateException: Zipline
+closed` is logged as a debug line (`a replaced app's late close is ignored`), not as uncaught, and
+never touches the crash ledger; anything else such an app throws is still logged as uncaught
+(`LoadFence.isLateClose`). For those moments two apps run: two QuickJS heaps and two UI trees, the swap's
 peak memory. The guest's screen state starts again on the new app, as it does for an update that
 loads in place.
 
@@ -248,7 +255,11 @@ What the swap does and does not promise:
 
 Set it with `keliver.startPolicy` in `gradle.properties` (Android; `KeliverConfig(startPolicy = …)`
 in code) or `START_POLICY` in `HostConfig.kt` (iOS), to `network-first`, `parallel` or
-`cache-first`; empty is `network-first` (`DEFAULT_START_POLICY` in `StartPolicy.kt`, one line).
+`cache-first`; empty is `parallel`, the default (`DEFAULT_START_POLICY` in `StartPolicy.kt`, one
+line). **To keep `network-first`**, whatever the index says, set both `keliver.startPolicy=network-first`
+and `keliver.startPolicyOverride=none` (iOS: `START_POLICY = "network-first"` and
+`START_POLICY_OVERRIDE = "none"`): an empty `startPolicy` follows the default, and without `none`
+a release owner's override in the index can still choose another policy.
 
 A release owner can override it per channel: `keliver-publish --out <dir> --set-start-policy
 <policy> [--channel <name>]` writes `"startPolicy": {"<channel>": "<policy>"}` at the top of
@@ -262,10 +273,7 @@ already shows the cache. One tampered index read does persist, though: the kept 
 from the next start until an index read without it. An app that wants its own policy whatever the
 index says sets `keliver.startPolicyOverride=none` (Android; `KeliverConfig(startPolicyOverrideAllowed
 = false)` in code) or `START_POLICY_OVERRIDE = "none"` in `HostConfig.kt` (iOS); `any`, or empty,
-lets the override apply. The start's log line says when an override was refused. Should the default
-become `parallel`, an app that wants `network-first` whatever the index says sets both
-`keliver.startPolicy=network-first` and `keliver.startPolicyOverride=none` (iOS: `START_POLICY =
-"network-first"` and `START_POLICY_OVERRIDE = "none"`): an empty `startPolicy` follows the default.
+lets the override apply. The start's log line says when an override was refused.
 
 What each start does, whatever the policy, and why none weakens a check:
 - **First install, a new key, a moved bundle server** (nothing cached for this key and origin):
@@ -962,8 +970,9 @@ It behaves like the Android host in §2:
   and shows "Bundle did not load" only without one; see §2. There is one
   Zipline cache per key, and manifest URLs are followed only on the bundle
   server's origin. (Zipline's downloads follow HTTP redirects, as on Android.)
-  That is the default start policy; `START_POLICY` in `HostConfig.kt` chooses
-  another, with the same names and behaviour as Android's (§2, "Start policy").
+  That is the `network-first` start policy; the default is `parallel`, as on
+  Android, and `START_POLICY` in `HostConfig.kt` chooses another, with the same
+  names and behaviour as Android's (§2, "Start policy").
   A host scaffolded by tools 0.3.18 or earlier has no `START_POLICY` line: its
   build says so; add `internal const val START_POLICY: String = ""`.
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is

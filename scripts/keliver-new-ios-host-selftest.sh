@@ -409,7 +409,7 @@ C="$H/src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt"
   && ok "WS6: crash rollback counts verified failures (load, exception, process end), sets aside at the threshold, keeps the floor's one exception, reports it" \
   || bad "WS6: crash rollback is not wired"
 # Start policy, as on Android: the decision (src/commonMain/StartPolicy.kt, the Android host's file)
-# and its JVM tests; HostConfig's START_POLICY (network-first when empty); crash rollback decides
+# and its JVM tests; HostConfig's START_POLICY (parallel when empty); crash rollback decides
 # as network-first; each start logs its policy; every index read keeps the override for the next
 # start, unless START_POLICY_OVERRIDE is none; a PARALLEL start's held load, in an app of its own,
 # is shown only once the state says Running, or closed (its crash records fenced); after a start
@@ -439,7 +439,9 @@ SP="$H/src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt"
   && grep -q 'besideALiveApp = held != null && besideALiveApp)' "$V" && [ "$(grep -c '        besideALiveApp = true,$' "$V")" = 1 ] \
   && grep -q 'if (inNewApp != null && updateInNewApp != null)' "$V" \
   && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/CallGates.kt" | cmp -s - "$K/CallGates.kt" \
-  && ok "start policy: the Android host's decision and tests, START_POLICY (network-first by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app" \
+  && grep -q '^val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.PARALLEL$' "$SP" \
+  && grep -A2 'override fun uncaughtException(exception: Throwable) {' "$V" | grep -q '    if (fence.isLateClose(exception)) {' \
+  && ok "start policy: the Android host's decision and tests, START_POLICY (parallel by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app; a replaced app's late close is not reported as uncaught" \
   || bad "start policy: not wired"
 # M3: the code load starts at host start (right after the lookup), not at the first screen.
 grep -A5 '^  if (held == null) {$' "$K/MainViewController.kt" \

@@ -49,7 +49,7 @@ if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
 if (updates && !(updates in ['next-launch', 'on-resume', 'live'])) {
   throw new GradleException("keliver.updates must be next-launch, on-resume, live or empty (got '$updates').")
 }
-// How the host starts (docs/DEVICE_HOST.md, "Start policy"); empty is network-first.
+// How the host starts (docs/DEVICE_HOST.md, "Start policy"); empty is parallel, the default.
 if (startPolicy && !(startPolicy in ['network-first', 'parallel', 'cache-first'])) {
   throw new GradleException("keliver.startPolicy must be network-first, parallel, cache-first or empty (got '$startPolicy').")
 }

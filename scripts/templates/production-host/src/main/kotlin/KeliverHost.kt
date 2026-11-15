@@ -31,9 +31,9 @@
  *     verified again against the key before it runs. It stays in use until the
  *     next launch; the app does not move to a newer bundle while it runs.
  *   - otherwise: a "No bundle" screen.
- *   That is the default start policy, network-first. KeliverConfig.startPolicy (keliver.startPolicy)
- *   can choose parallel (the cached bundle loads during the lookup, shown once the lookup confirms
- *   it) or cache-first (the cached bundle at once; a newer one the background lookup finds at the
+ *   That is the network-first start policy. The default is parallel (the cached bundle loads
+ *   during the lookup, shown once the lookup confirms it); KeliverConfig.startPolicy
+ *   (keliver.startPolicy) can choose network-first or cache-first (the cached bundle at once; a newer one the background lookup finds at the
  *   next start, or as an update on resume or live), and a release
  *   owner can override it per channel in the index, from the next start, unless the app says
  *   keliver.startPolicyOverride=none (StartPolicy.kt; docs/DEVICE_HOST.md, "Start policy"). Under
@@ -1965,6 +1965,11 @@ private class LoggingEventListener(
     if (fence.live) onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", count)
   }
   override fun uncaughtException(exception: Throwable) {
+    // A replaced app's close, sent after its Zipline closed: noise, not a crash (LoadFence.isLateClose).
+    if (fence.isLateClose(exception)) {
+      Log.d(TAG, "a replaced app's late close is ignored: ${exception.message}")
+      return
+    }
     Log.e(TAG, "uncaughtException: ${exception.message}", exception)
     fence.run { onUncaught(count(CrashKind.EXCEPTION)) }
   }

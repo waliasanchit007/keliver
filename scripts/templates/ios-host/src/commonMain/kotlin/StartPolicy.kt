@@ -50,7 +50,7 @@ enum class KeliverStartPolicy(val wireName: String) {
 }
 
 /** The policy when the app sets none: switch the default here, in one line. */
-val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.NETWORK_FIRST
+val DEFAULT_START_POLICY: KeliverStartPolicy = KeliverStartPolicy.PARALLEL
 
 /** The index's key for the per-channel override: `"startPolicy": {"<channel>": "<policy>"}`. */
 internal const val START_POLICY_INDEX_KEY = "startPolicy"
@@ -282,7 +282,19 @@ internal class LoadFence(
       undo.forEach { it() }
     }
   }
+
+  /**
+   * [exception], reported as uncaught by this app's code, is only its close arriving late: the app
+   * is DROPPED (an update replaced it, or a held load was dropped), and Treehouse's close of its
+   * AppLifecycle went out after its Zipline had closed. That one is noise, logged as such; it is
+   * not a crash of anything the user sees. Anything else, from any app, is still reported.
+   */
+  fun isLateClose(exception: Throwable): Boolean =
+    mode == Mode.DROPPED && exception is IllegalStateException && exception.message == ZIPLINE_CLOSED
 }
+
+/** What Zipline throws for a call out after the Zipline closed ([LoadFence.isLateClose]). */
+internal const val ZIPLINE_CLOSED = "Zipline closed"
 
 /**
  * Whether one app's calls out (HostHttp, the app's bridges) may go: OPEN for the host's app; a

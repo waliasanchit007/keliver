@@ -195,7 +195,12 @@ r12 had already proved healthy, so that attempt says nothing about the ledger.
   Zipline thread. It did not touch the crash ledger: the new release proved healthy every time, and
   the old one is no longer live. It is noise in an adopter's logs and crash reporting. A fix would be
   to close the retired app a frame after the count reaches 0, or to drop exceptions from a retired
-  app's dispatcher. Not fixed here.
+  app's dispatcher. **Fixed in PR #249** (after this run, on both hosts): for an app the host has
+  let go of (`LoadFence` DROPPED: replaced, or a dropped held load) this one exception is logged as
+  a debug line, `a replaced app's late close is ignored`, instead of `uncaughtException`
+  (`LoadFence.isLateClose`, tested in `StartPolicyTest`); anything else such an app throws is still
+  logged as uncaught. Not re-run on the phone: a swap's log should now show that debug line where
+  this run showed the stack.
 - **Harness note, not a start-policy issue:** `am force-stop` within the 10 s crash window counts as
   a failure (`the app ended while it loaded or showed`), so a measuring harness that kills the app
   early can walk a release towards being set aside. The cold series was unaffected: every start ran

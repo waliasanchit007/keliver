@@ -47,7 +47,7 @@ package @@PACKAGE@@
 // lookup confirms it; its calls out wait until then, and fail unsent when it is
 // dropped) or "cache-first" (the cached bundle shows at once; a newer one the
 // background lookup finds loads at the next start, or as an update with UPDATES
-// "on-resume" or "live"). Empty: network-first. A release owner's override in
+// "on-resume" or "live"). Empty: parallel, the default. A release owner's override in
 // the index (keliver-publish --set-start-policy) takes its place from the next
 // start, unless START_POLICY_OVERRIDE is "none" ("any", or empty: allowed): an
 // app that must start network-first whatever the index says sets both.

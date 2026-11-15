@@ -30,7 +30,7 @@ class StartPolicyTest {
     KeliverStartPolicy.entries.forEach { assertEquals(it, KeliverStartPolicy.parse(it.wireName)) }
     assertEquals(parallel, KeliverStartPolicy.parse(" parallel "))
     listOf(null, "", "PARALLEL", "network_first", "cache", "default").forEach { assertNull(KeliverStartPolicy.parse(it), "$it") }
-    assertEquals(nf, DEFAULT_START_POLICY, "today's behaviour stays the default until the owner decides")
+    assertEquals(parallel, DEFAULT_START_POLICY, "the owner's decision, after the phone run (docs/START_POLICY_PHONE_RUN.md)")
   }
 
   @Test fun theOverrideWinsOnlyWhenItNamesAPolicy() {
@@ -276,6 +276,23 @@ class StartPolicyTest {
     var decided: Boolean? = null
     CallGate(held = true).apply { shut(); open() }.whenDecided { decided = it }
     assertEquals(false, decided, "a gate is decided once")
+  }
+
+  @Test fun aReplacedAppsLateCloseIsNotACrash() {
+    // The phone run (docs/START_POLICY_PHONE_RUN.md, Findings): every swap reported the replaced
+    // app's AppLifecycle close, sent after its Zipline closed, as uncaught.
+    val main = Main()
+    val late = IllegalStateException(ZIPLINE_CLOSED)
+    val replaced = LoadFence(held = false, main.post)
+    assertFalse(replaced.isLateClose(late), "the host's app: anything uncaught is reported")
+    replaced.drop()
+    assertTrue(replaced.isLateClose(late), "replaced (dropped): its late close is noise")
+    assertTrue(LoadFence(held = true, main.post).apply { drop() }.isLateClose(late), "and a dropped held load's")
+    assertFalse(LoadFence(held = true, main.post).isLateClose(late), "held, not dropped: reported (kept until it shows)")
+    // Only that exception: a real failure of a replaced app is still reported.
+    assertFalse(replaced.isLateClose(IllegalStateException("boom")))
+    assertFalse(replaced.isLateClose(RuntimeException(ZIPLINE_CLOSED)))
+    assertFalse(replaced.isLateClose(IllegalStateException(null as String?)))
   }
 
   @Test fun aHeldAppsMarkerIsWrittenAtOnceAndClearedWhenDropped() {

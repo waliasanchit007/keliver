@@ -2066,6 +2066,11 @@ private class LoggingEventListener(
     if (fence.live) onFailed(exception.message ?: exception::class.simpleName ?: "unknown error", countOnce)
   }
   override fun uncaughtException(exception: Throwable) {
+    // A replaced app's close, sent after its Zipline closed: noise, not a crash (LoadFence.isLateClose).
+    if (fence.isLateClose(exception)) {
+      log("a replaced app's late close is ignored: ${exception.message}")
+      return
+    }
     log("uncaughtException: ${exception.message}")
     fence.run { onUncaught(count { crash.failed(sequence, CrashKind.EXCEPTION) }) }
   }
