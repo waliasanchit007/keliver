@@ -18,6 +18,8 @@ package dev.keliver.compose.gatea.profile
 
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.gatea.modifier.GenClickable1
+import dev.keliver.compose.gatea.modifier.GenClickable2
 import dev.keliver.compose.wire.JsonCodec
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
@@ -54,7 +56,9 @@ internal enum class Encoding {
    * Suspect 2 (docs/GUEST_PROFILE.md): String, Int, Float and Double are pushed as they are; a mirror
    * type's [JsonCodec] builds its JsonElement once, and a hand-written walk turns that into JS values
    * (no second generic pass through `encodeToDynamic`). Everything else (modifier elements, enums,
-   * nullable wrappers) as shipped. Must produce the same batches as [KOTLINX]: the driver checks.
+   * nullable wrappers) as shipped. Must produce the same batches as [KOTLINX]: ProfileRunTest checks
+   * the first steps, and the QuickJS harness (QuickJsProfile.kt) compares every step's batch hash and
+   * byte count across the modes of one run and fails if any differs.
    */
   DIRECT,
 
@@ -206,7 +210,10 @@ internal class ProfileAdapter(
     value.forEach { element ->
       stats.modifierElements++
       val (tag, serializer) = widgetSystemFactory.modifierTagAndSerializationStrategy(element)
-      if (element::class.simpleName?.contains("lickable") == true) clickable = true
+      // Not in the real recorder: two interface checks per element, so the driver can click. It
+      // replaced a class-name check (`element::class.simpleName`); the tables moved by no more than
+      // run-to-run noise when it did (docs/GUEST_PROFILE.md).
+      if (element is GenClickable1 || element is GenClickable2) clickable = true
       when {
         encoding == Encoding.NONE -> Unit
         serializer != null && encoding == Encoding.DIRECT_MODCACHE -> {

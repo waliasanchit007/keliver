@@ -2,7 +2,7 @@
 // (sample/threeway-guest, copied in unchanged) composed headlessly against the real guest Compose
 // runtime, the real generated Gate A widgets and a copy of the guest's protocol recorder, driven by a
 // manual frame clock. One Kotlin/JS executable runs
-//  - in Node (`:keliver-compose-gatea-profile:profileNode`, optionally --jitless --cpu-prof), and
+//  - in Node (`:keliver-compose-gatea-profile:jsNodeProductionRun`, optionally --jitless --cpu-prof), and
 //  - in Zipline's own QuickJS on the JVM (`profileQuickJs`: the .zipline bytecode the Zipline plugin
 //    compiles, loaded by a small JVM harness that also sets the QuickJS GC threshold).
 //

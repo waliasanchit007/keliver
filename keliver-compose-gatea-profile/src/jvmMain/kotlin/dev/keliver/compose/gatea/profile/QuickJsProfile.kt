@@ -41,13 +41,30 @@ fun main(args: Array<String>) {
   val executor = Executors.newSingleThreadExecutor()
   val dispatcher = executor.asCoroutineDispatcher()
   val lines = ArrayList<String>()
+  // Every step's batch (hash and byte count), per run: the encodings that record values must send
+  // the same batches step for step. `none` records structure only, so it is not compared.
+  var reference: Pair<String, List<String>>? = null
+  var compared = 0
   try {
     runBlocking(dispatcher) {
       for (mode in modes) {
         for (gc in gcs) {
-          val line = runOne(bundle, manifest, dispatcher, mode, gc, warmup, iterations, items)
+          val (line, batches) = runOne(bundle, manifest, dispatcher, mode, gc, warmup, iterations, items)
           println("QUICKJS_PROFILE $line")
           lines += line
+          if (mode == "none") continue
+          val ref = reference
+          if (ref == null) {
+            reference = "$mode/gc=$gc" to batches
+          } else {
+            check(ref.second.size == batches.size) { "$mode/gc=$gc ran ${batches.size} steps, ${ref.first} ${ref.second.size}" }
+            for (i in batches.indices) {
+              check(batches[i] == ref.second[i]) {
+                "$mode/gc=$gc step $i sent a different batch than ${ref.first}: ${batches[i]} vs ${ref.second[i]}"
+              }
+            }
+            compared++
+          }
         }
       }
     }
@@ -55,7 +72,17 @@ fun main(args: Array<String>) {
     dispatcher.close()
     executor.shutdown()
   }
+  val ref = reference
+  println(
+    if (ref == null || compared == 0) "QJS batches: nothing to compare"
+    else "QJS batches: ${compared + 1} runs sent identical batches at all ${ref.second.size} steps (hash and bytes, against ${ref.first})",
+  )
   File(out, "$label.jsonl").writeText(lines.joinToString("\n", postfix = "\n"))
+}
+
+private fun batchOf(stepJson: String): String {
+  fun field(name: String) = Regex("\"$name\":\"?(-?[0-9a-z]+)").find(stepJson)!!.groupValues[1]
+  return "${field("kind")}:${field("hash")}:${field("bytes")}"
 }
 
 private fun runOne(
@@ -67,8 +94,9 @@ private fun runOne(
   warmup: Int,
   iterations: Int,
   items: Int,
-): String {
+): Pair<String, List<String>> {
   val zipline = Zipline.create(dispatcher)
+  val batches = ArrayList<String>()
   try {
     val quickJs = zipline.quickJs
     val defaultThreshold = quickJs.gcThreshold
@@ -94,6 +122,7 @@ private fun runOne(
     val firstStart = System.nanoTime()
     val first = cmd("first")
     val firstMs = (System.nanoTime() - firstStart) / 1e6
+    batches += batchOf(first)
 
     val open = ArrayList<Double>()
     val back = ArrayList<Double>()
@@ -116,10 +145,13 @@ private fun runOne(
       lastBack = cmd("back")
       val b = (System.nanoTime() - t) / 1e6
       val m1 = quickJs.memoryUsage
+      batches += batchOf(lastOpen)
+      batches += batchOf(lastBack)
       if (withReload) {
         t = System.nanoTime()
         lastReload = cmd("reload")
         val r = (System.nanoTime() - t) / 1e6
+        batches += batchOf(lastReload)
         if (i >= warmup) reload += r
       }
       if (i >= warmup) {
@@ -146,7 +178,8 @@ private fun runOne(
         "threshold=${quickJs.gcThreshold / 1024}K explicitGc=${gcMs.r()} hash=${Regex("\"hash\":(-?[0-9]+)").find(lastBack)!!.groupValues[1]}",
     )
     return buildString {
-      append("""{"mode":"$mode","gc":"$gc","defaultThreshold":$defaultThreshold,"threshold":${quickJs.gcThreshold},""")
+      append("""{"steps":${batches.size},""")
+      append(""""mode":"$mode","gc":"$gc","defaultThreshold":$defaultThreshold,"threshold":${quickJs.gcThreshold},""")
       append(""""loadMs":${loadMs.r()},"firstMs":${firstMs.r()},""")
       append(""""openMedianMs":${median(open).r()},"openMinMs":${open.min().r()},"openGuestMedianMs":${median(openGuest).r()},""")
       append(""""backMedianMs":${median(back).r()},"backMinMs":${back.min().r()},"backGuestMedianMs":${median(backGuest).r()},""")
@@ -155,7 +188,7 @@ private fun runOne(
       append(""""explicitGcMs":${gcMs.r()},"heapAfterGc":${afterGc.memoryUsedSize},"objectsAfterGc":${afterGc.objectsCount},""")
       if (reload.isNotEmpty()) append(""""reloadMedianMs":${median(reload).r()},"lastReload":$lastReload,""")
       append(""""first":$first,"lastOpen":$lastOpen,"lastBack":$lastBack}""")
-    }
+    } to batches
   } finally {
     zipline.close()
   }
