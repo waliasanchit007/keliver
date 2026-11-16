@@ -18,11 +18,14 @@
 package dev.keliver.compose.foundation.lazy
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.currentCompositeKeyHash
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import dev.keliver.compose.gatea.compose.ExtraLazyItem
 import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.lazylayout.compose.LazyListState as WindowState
+import dev.keliver.lazylayout.compose.LoadingStrategy
+import dev.keliver.lazylayout.compose.ScrollOptimizedLoadingStrategy
 
 /*
  * The guest's `LazyListScope` (docs/COMPOSE_GENERATOR_DESIGN.md §16), written by hand: Compose's
@@ -146,8 +149,17 @@ private class Intervals : LazyListScope {
  * The window of a lazy list's items that the guest composes. Generated `LazyColumn`/`LazyRow` stubs
  * use it; screens do not.
  */
-public class LazyWindow internal constructor(private val state: LazyListState) {
-  private val window = WindowState().apply {
+public class LazyWindow internal constructor(
+  private val state: LazyListState,
+  /** Where this list is in the composition (its compound key hash): the key of its measured viewport. */
+  private val site: Int = 0,
+  private val viewports: MeasuredViewports = MeasuredViewports.Shared,
+) {
+  private val strategy = ViewportSizedStrategy(
+    ScrollOptimizedLoadingStrategy(),
+    if (LazyWindowSizing.viewportSized) viewports.rows(site) else null,
+  )
+  private val window = WindowState(strategy).apply {
     if (state.firstVisibleItemIndex > 0) programmaticScroll(state.firstVisibleItemIndex, animated = false, clobberUserScroll = false)
   }
   private var count = 0
@@ -185,7 +197,80 @@ public class LazyWindow internal constructor(private val state: LazyListState) {
   /** The host's viewport changed: move the window and update the state's mirrored fields. */
   public fun onViewport(firstIndex: Int, lastIndex: Int, firstOffset: Int) {
     state.onHostViewport(firstIndex, lastIndex, firstOffset)
+    if (count > 0 && lastIndex >= firstIndex) {
+      // The viewport is full when items follow its last visible one: then it holds exactly this
+      // many rows. A list shorter than its viewport only shows that it holds at least as many.
+      viewports.measured(site, rows = lastIndex - firstIndex + 1, full = lastIndex < count - 1)
+    }
+    strategy.hostReported = true
     window.onUserScroll(firstIndex, lastIndex)
+  }
+}
+
+/**
+ * The switch for NF3's viewport-sized first window ([ViewportSizedStrategy]), on by default. Off, a
+ * list's first window is the fixed preload again; the guest profile's baseline uses it.
+ */
+@KeliverGeneratedApi
+public object LazyWindowSizing {
+  public var viewportSized: Boolean = true
+
+  /** Forgets every list's measured viewport, as a new guest starts (the guest profile's runs). */
+  public fun forgetMeasuredViewports() {
+    MeasuredViewports.Shared.clear()
+  }
+}
+
+/** Items composed past the measured viewport on a list's first composition: a partly shown row. */
+internal const val VIEWPORT_MARGIN_ROWS = 1
+
+/**
+ * NF3's viewport-sized first window: until the host first reports the list's viewport, the window is
+ * the rows the host last measured for a list at the same place in the composition, plus
+ * [VIEWPORT_MARGIN_ROWS], instead of [ScrollOptimizedLoadingStrategy]'s fixed preload. With nothing
+ * measured yet (the first time a list is shown) the fixed preload applies, as before. Once the host
+ * has reported, [delegate] alone decides, so scrolling is unchanged.
+ */
+internal class ViewportSizedStrategy(
+  private val delegate: LoadingStrategy,
+  private val measuredRows: Int?,
+) : LoadingStrategy by delegate {
+  var hostReported = false
+
+  override fun loadRange(itemCount: Int): IntRange {
+    // The delegate always runs, so its scroll history is the same as without the cap.
+    val range = delegate.loadRange(itemCount)
+    if (hostReported || measuredRows == null || range.isEmpty()) return range
+    val last = minOf(range.last, range.first + measuredRows + VIEWPORT_MARGIN_ROWS - 1)
+    return range.first..last
+  }
+}
+
+/**
+ * Rows per viewport as the host measured them (its viewport's height over its rows' heights, seen
+ * in the indices it reports), by a list's place in the composition. A list that leaves the
+ * composition and comes back at the same place (back to a screen that was not retained, a tab shown
+ * again) starts with a window the size of what the host showed last time. A hint only: a wrong one
+ * (the place now holds another list, the screen rotated) costs placeholders or extra rows until the
+ * host's first report, which corrects the window.
+ */
+internal class MeasuredViewports(private val capacity: Int = 64) {
+  private val rows = LinkedHashMap<Int, Int>()
+
+  fun rows(site: Int): Int? = rows[site]
+
+  fun clear() = rows.clear()
+
+  fun measured(site: Int, rows: Int, full: Boolean) {
+    val known = this.rows.remove(site)
+    // A short list never lowers what a full one measured at the same place.
+    this.rows[site] = if (full || known == null) rows else maxOf(known, rows)
+    if (this.rows.size > capacity) this.rows.remove(this.rows.keys.first())
+  }
+
+  companion object {
+    /** One per guest: a Zipline instance is one JS realm on one thread. */
+    val Shared = MeasuredViewports()
   }
 }
 
@@ -230,7 +315,8 @@ internal fun checkWireKey(sent: MutableMap<String, Any>, wire: String, key: Any)
 
 @Composable
 public fun rememberLazyWindow(state: LazyListState, content: LazyListScope.() -> Unit): LazyWindow {
-  val window = remember(state) { LazyWindow(state) }
+  val site = currentCompositeKeyHash
+  val window = remember(state) { LazyWindow(state, site) }
   window.update(content)
   return window
 }
