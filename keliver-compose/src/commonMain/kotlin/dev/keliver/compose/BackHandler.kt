@@ -17,12 +17,16 @@ package dev.keliver.compose
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
@@ -37,6 +41,20 @@ public val OnBackPressedDispatcher.Companion.current: OnBackPressedDispatcher
   @ReadOnlyComposable
   get() = LocalOnBackPressedDispatcher.current
 
+private val BackHandlersAlwaysEnabled: State<Boolean> = mutableStateOf(true)
+
+/**
+ * Whether the [BackHandler]s in this part of the composition may handle back presses. A
+ * [BackHandler] is enabled only while both its own `enabled` and this are `true`.
+ *
+ * Navigation that keeps screens composed while they are not shown (keliver-nav's retained back
+ * stack) provides `false` for a hidden screen, so its handlers do not take back presses meant for
+ * the screen on top. A change of the value does not recompose the [BackHandler]s that read it.
+ * Defaults to always `true`.
+ */
+public val LocalBackHandlersEnabled: ProvidableCompositionLocal<State<Boolean>> =
+  staticCompositionLocalOf { BackHandlersAlwaysEnabled }
+
 /**
  * An effect for handling presses of the system back button.
  *
@@ -47,7 +65,8 @@ public val OnBackPressedDispatcher.Companion.current: OnBackPressedDispatcher
  * the call to system back and invoke its lambda. The call will continue to propagate up until it
  * finds an enabled BackHandler.
  *
- * The [onBack] lambda is never invoked on platforms that don't have a system back button.
+ * The [onBack] lambda is never invoked on platforms that don't have a system back button, nor
+ * while [LocalBackHandlersEnabled] is `false`.
  *
  * @param enabled if this BackHandler should be enabled
  * @param onBack the action invoked by pressing the system back
@@ -67,9 +86,20 @@ public fun BackHandler(enabled: Boolean = true, onBack: () -> Unit) {
       }
     }
   }
+  val handlersEnabled = LocalBackHandlersEnabled.current
   // On every successful composition, update the callback with the `enabled` value.
   SideEffect {
-    backCallback.isEnabled = enabled
+    backCallback.isEnabled = enabled && handlersEnabled.value
+  }
+  if (handlersEnabled !== BackHandlersAlwaysEnabled) {
+    // Follow the enclosing gate without recomposing: showing or hiding a retained screen must not
+    // compose anything in it.
+    val currentEnabled by rememberUpdatedState(enabled)
+    LaunchedEffect(backCallback, handlersEnabled) {
+      snapshotFlow { handlersEnabled.value }.collect {
+        backCallback.isEnabled = currentEnabled && it
+      }
+    }
   }
   val backDispatcher = OnBackPressedDispatcher.current
   DisposableEffect(backDispatcher) {

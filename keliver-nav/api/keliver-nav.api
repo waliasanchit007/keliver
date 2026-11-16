@@ -1,3 +1,6 @@
+public abstract interface annotation class dev/keliver/nav/ExperimentalKeliverNavRetentionApi : java/lang/annotation/Annotation {
+}
+
 public final class dev/keliver/nav/KeliverNavController {
 	public static final field $stable I
 	public final fun getBackstack ()Ljava/util/List;

@@ -6,6 +6,10 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-nav>
+open annotation class dev.keliver.nav/ExperimentalKeliverNavRetentionApi : kotlin/Annotation { // dev.keliver.nav/ExperimentalKeliverNavRetentionApi|null[0]
+    constructor <init>() // dev.keliver.nav/ExperimentalKeliverNavRetentionApi.<init>|<init>(){}[0]
+}
+
 open annotation class dev.keliver.nav/ScreenState : kotlin/Annotation { // dev.keliver.nav/ScreenState|null[0]
     constructor <init>(kotlin/String) // dev.keliver.nav/ScreenState.<init>|<init>(kotlin.String){}[0]
 

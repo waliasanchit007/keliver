@@ -1,7 +1,20 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+@file:OptIn(ExperimentalKeliverNavRetentionApi::class)
+
 package dev.keliver.sample.threeway
 
 import androidx.compose.runtime.Composable
@@ -11,6 +24,7 @@ import dev.keliver.compose.foundation.layout.offset
 import dev.keliver.compose.ui.Modifier
 import dev.keliver.compose.ui.draw.alpha
 import dev.keliver.compose.ui.unit.dp
+import dev.keliver.nav.ExperimentalKeliverNavRetentionApi
 import dev.keliver.nav.KeliverNavFrame
 import dev.keliver.nav.KeliverNavRetention
 import dev.keliver.nav.KeliverRetainedStack
@@ -23,6 +37,8 @@ import dev.keliver.nav.KeliverRetainedStack
  * Entries overlap in a full-size box; a hidden entry keeps its size (so the list's viewport does not
  * change and nothing is re-laid out by the guest), is moved far outside the screen (so it gets no
  * input) and is fully transparent. Only the entry box's modifier changes when it is shown or hidden.
+ * A prototype's stand-in: it does not take focus or the keyboard from a hidden entry, nor hide it
+ * from accessibility on every host (see KeliverNavFrame).
  */
 internal object GateAFrame : KeliverNavFrame {
   private val Shown = Modifier.fillMaxSize()

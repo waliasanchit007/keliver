@@ -23,6 +23,7 @@ public final class dev/keliver/compose/AndroidUiFrameClock : androidx/compose/ru
 public final class dev/keliver/compose/BackHandlerKt {
 	public static final fun BackHandler (ZLkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
 	public static final fun getCurrent (Ldev/keliver/ui/OnBackPressedDispatcher$Companion;Landroidx/compose/runtime/Composer;I)Ldev/keliver/ui/OnBackPressedDispatcher;
+	public static final fun getLocalBackHandlersEnabled ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 	public static final fun getLocalOnBackPressedDispatcher ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
 

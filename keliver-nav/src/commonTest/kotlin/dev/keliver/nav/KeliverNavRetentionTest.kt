@@ -20,6 +20,7 @@ import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ComposeNode
 import androidx.compose.runtime.Composition
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Recomposer
@@ -28,6 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
+import dev.keliver.compose.BackHandler
+import dev.keliver.compose.LocalOnBackPressedDispatcher
+import dev.keliver.ui.Cancellable
+import dev.keliver.ui.OnBackPressedCallback
+import dev.keliver.ui.OnBackPressedDispatcher
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -38,6 +44,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
 class KeliverNavRetentionTest {
   private sealed interface Route {
     data object Home : Route
@@ -390,6 +397,225 @@ class KeliverNavRetentionTest {
   private fun Screen(name: String, counts: Counts) {
     counts.compositions[name] = (counts.compositions[name] ?: 0) + 1
     Leaf(name)
+  }
+
+  /** A dispatcher like the host's: the most recently added enabled callback takes the press. */
+  private class TestBackDispatcher : OnBackPressedDispatcher {
+    val callbacks = mutableListOf<OnBackPressedCallback>()
+
+    override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable {
+      callbacks += onBackPressedCallback
+      return object : Cancellable {
+        override fun cancel() {
+          callbacks -= onBackPressedCallback
+        }
+      }
+    }
+
+    fun press(): Boolean {
+      val callback = callbacks.lastOrNull { it.isEnabled } ?: return false
+      callback.handleOnBackPressed()
+      return true
+    }
+  }
+
+  @Test
+  fun hiddenEntryBackHandlerDoesNotTakeBackPresses() = runTest {
+    val presses = mutableListOf<String>()
+    val dispatcher = TestBackDispatcher()
+    val counts = Counts()
+    val harness = Harness(this, counts)
+    val nav = KeliverNavController<Route>(Route.Home)
+    val retention = KeliverNavRetention(TestFrame(counts))
+    harness.setContent {
+      CompositionLocalProvider(LocalOnBackPressedDispatcher provides dispatcher) {
+        // The app's own back: added first, so any enabled screen handler is preferred to it.
+        BackHandler {
+          presses += "root"
+          nav.pop()
+        }
+        KeliverNavHost(nav, retention) { route ->
+          when (route) {
+            // Home's handler is always enabled (an open search, a "discard changes?" form).
+            Route.Home -> BackHandler { presses += "home" }
+            is Route.Detail -> if (route.id == 1) {
+              BackHandler {
+                presses += "detail1"
+                nav.pop()
+              }
+            }
+          }
+          Leaf(nameOf(route))
+        }
+      }
+    }
+    dispatcher.press()
+    assertEquals(listOf("home"), presses, "the visible Home's handler takes the press")
+
+    presses.clear()
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    assertEquals(
+      "root[stack[entry(hidden)[home],entry(hidden)[detail1],entry[detail2]]]",
+      harness.root.dump(),
+    )
+    // detail2 has no handler: the press reaches the root's, not hidden Home's or hidden detail1's.
+    dispatcher.press()
+    harness.settle()
+    assertEquals(listOf("root"), presses)
+    // detail1 is shown again: its handler is enabled again (without composing it).
+    counts.reset()
+    dispatcher.press()
+    harness.settle()
+    assertEquals(listOf("root", "detail1"), presses)
+    assertEquals(emptyMap(), counts.compositions)
+    // Home is shown again: its handler works again.
+    dispatcher.press()
+    assertEquals(listOf("root", "detail1", "home"), presses)
+    harness.close()
+  }
+
+  @Test
+  fun completedLaunchedWhileVisibleRunsAgainEachTimeTheEntryIsShown() = runTest {
+    var runs = 0
+    val (harness, nav, _) = navHost(
+      { KeliverNavRetention(TestFrame(it)) },
+      screen = { route, _ ->
+        if (route == Route.Home) LaunchedWhileVisible { runs++ }
+        Leaf(nameOf(route))
+      },
+    )
+    assertEquals(1, runs)
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    assertEquals(1, runs)
+    nav.pop()
+    harness.settle()
+    // The contract (as repeatOnLifecycle): a block that completed is started again on show. A
+    // one-shot load belongs in LaunchedEffect.
+    assertEquals(2, runs)
+    harness.close()
+  }
+
+  @Test
+  fun popUntilAcrossSeveralRetainedEntriesComposesNothing() = runTest {
+    val (harness, nav, counts) = navHost({ KeliverNavRetention(TestFrame(it), depth = 3) })
+    for (i in 1..3) {
+      nav.navigate(Route.Detail(i))
+      harness.settle()
+    }
+    counts.reset()
+    nav.popUntil { it == Route.Home }
+    harness.settle()
+    assertEquals("root[stack[entry[home]]]", harness.root.dump())
+    assertEquals(emptyMap(), counts.compositions)
+    assertEquals(0, counts.inserts)
+    assertEquals(3, counts.removes, "the three popped entries' frames")
+    assertEquals(1, counts.visibilityUpdates)
+    harness.close()
+  }
+
+  @Test
+  fun popThenPushKeepsTheRetainedEntry() = runTest {
+    val (harness, nav, counts) = navHost({ KeliverNavRetention(TestFrame(it)) })
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.pop()
+    harness.settle()
+
+    counts.reset()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    assertEquals("root[stack[entry(hidden)[home],entry[detail2]]]", harness.root.dump())
+    assertEquals(mapOf("detail2" to 1), counts.compositions, "home is not composed again")
+    assertEquals(2, counts.inserts, "only detail2's frame and leaf are created")
+    assertEquals(0, counts.removes)
+    harness.close()
+  }
+
+  @Test
+  fun evictedEntryWorkDoesNotComeBack() = runTest {
+    var starts = 0
+    var running = 0
+    val (harness, nav, _) = navHost(
+      { KeliverNavRetention(TestFrame(it), depth = 1) },
+      screen = { route, _ ->
+        if (route == Route.Home) {
+          LaunchedWhileVisible {
+            starts++
+            running++
+            try {
+              awaitCancellation()
+            } finally {
+              running--
+            }
+          }
+        }
+        Leaf(nameOf(route))
+      },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    // Home was evicted (depth 1); back to detail1 must not wake it.
+    nav.pop()
+    harness.settle()
+    assertEquals(1, starts)
+    assertEquals(0, running)
+    // Home composed again: its work starts once (the evicted composition's collector is gone).
+    nav.pop()
+    harness.settle()
+    assertEquals(2, starts)
+    assertEquals(1, running)
+    harness.close()
+    runCurrent()
+    assertEquals(0, running, "disposing the host cancels it")
+  }
+
+  /**
+   * Pins a cost (KDoc on KeliverNavRetention): a caller whose content lambda captures a value that
+   * changes on navigation makes back re-run the retained entry's content. Its nodes are kept.
+   */
+  @Test
+  fun changedContentLambdaReRunsTheRetainedEntry() = runTest {
+    val counts = Counts()
+    val harness = Harness(this, counts)
+    var keys by mutableStateOf(listOf("list"))
+    val retention = KeliverNavRetention(TestFrame(counts))
+    val labels = mutableMapOf<String, Int>()
+    harness.setContent {
+      val depth = keys.size
+      KeliverRetainedStack(keys, retention) { key ->
+        counts.compositions[key] = (counts.compositions[key] ?: 0) + 1
+        labels[key] = depth
+        Leaf(key)
+      }
+    }
+    keys = listOf("list", "detail")
+    harness.settle()
+
+    counts.reset()
+    keys = listOf("list")
+    harness.settle()
+    assertEquals("root[stack[entry[list]]]", harness.root.dump())
+    assertEquals(mapOf("list" to 1), counts.compositions, "the retained entry's content ran again")
+    assertEquals(0, counts.inserts, "but nothing is created")
+    assertEquals(1, labels["list"])
+    harness.close()
+  }
+
+  @Test
+  fun duplicateKeysAreRefused() = runTest {
+    val harness = Harness(this, Counts())
+    val retention = KeliverNavRetention(TestFrame(Counts()))
+    val e = assertFailsWith<IllegalArgumentException> {
+      harness.setContent { KeliverRetainedStack(listOf("a", "b", "a"), retention) { Leaf(it) } }
+    }
+    assertTrue("unique" in e.message.orEmpty(), e.message)
+    runCatching { harness.close() }
   }
 
   @Test

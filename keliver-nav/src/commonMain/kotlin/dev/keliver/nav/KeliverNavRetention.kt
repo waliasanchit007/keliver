@@ -22,11 +22,13 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import dev.keliver.compose.LocalBackHandlersEnabled
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
@@ -38,8 +40,18 @@ import kotlinx.coroutines.flow.collectLatest
  * that its schema does not already need (D2).
  *
  * A frame must keep a hidden entry's widgets in the tree (so its native state, such as a list's
- * scroll position, survives) while the host neither draws it nor delivers input to it.
+ * scroll position, survives) while, on every host, a hidden entry is:
+ * - not drawn;
+ * - given no input (touch, pointer, keys);
+ * - not holding focus or the keyboard (IME), and not reachable by focus traversal;
+ * - not exposed to accessibility services (TalkBack, VoiceOver, a screen reader on the web).
+ *
+ * keliver-nav itself only keeps a hidden entry's `BackHandler`s from taking back presses. A frame
+ * built from plain layout modifiers (moved off screen, alpha 0, as the three-way prototype's is) is
+ * a stand-in that does not guarantee the focus and accessibility points; a schema-level container
+ * that hides an entry is the open decision that retention by default depends on.
  */
+@ExperimentalKeliverNavRetentionApi
 @Stable
 public interface KeliverNavFrame {
   /** The container every composed entry is emitted into; entries must overlap (bottom first). */
@@ -62,7 +74,17 @@ public interface KeliverNavFrame {
  *
  * [depth] 0 turns retention off. Each retained entry costs its guest composition and its host
  * widgets in memory, so keep it small on low-RAM phones.
+ *
+ * What retention does not change:
+ * - A hidden entry is not idle: it still recomposes, and sends the host its changes, when state it
+ *   reads changes (a shared reload, a ticking clock). Stop such work with [LaunchedWhileVisible].
+ * - Back composes nothing only while the content lambda given to [KeliverNavHost] or
+ *   [KeliverRetainedStack] keeps its identity. If the caller recomposes on navigation and that
+ *   lambda captures a value that changed, Compose re-runs every retained entry's content.
+ * - Switching between retention and none, or changing [depth] or [frame], at run time recreates
+ *   every entry's composition (their `rememberSaveable` state survives under [KeliverNavHost]).
  */
+@ExperimentalKeliverNavRetentionApi
 public class KeliverNavRetention(
   public val frame: KeliverNavFrame,
   public val depth: Int = DEFAULT_DEPTH,
@@ -85,16 +107,19 @@ public class KeliverNavRetention(
 }
 
 /** Whether a navigation entry is the one on screen. */
+@ExperimentalKeliverNavRetentionApi
 public enum class KeliverNavEntryLifecycle {
   /** The top of the stack (and any content outside a retained stack). */
   Visible,
 
-  /** Retained below the top: composed, not shown. It should not start work (requests, polling). */
+  /** Retained below the top: composed, not shown. It should not start work (polling, timers). */
   Hidden,
 }
 
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
 private val AlwaysVisible: State<KeliverNavEntryLifecycle> = mutableStateOf(KeliverNavEntryLifecycle.Visible)
 
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
 internal val LocalKeliverNavEntryLifecycle = staticCompositionLocalOf { AlwaysVisible }
 
 /**
@@ -103,15 +128,22 @@ internal val LocalKeliverNavEntryLifecycle = staticCompositionLocalOf { AlwaysVi
  * `snapshotFlow`) does not, which keeps going back free of guest composition.
  * Outside a retained stack it is always [KeliverNavEntryLifecycle.Visible].
  */
+@ExperimentalKeliverNavRetentionApi
 @Composable
 public fun keliverNavEntryLifecycle(): State<KeliverNavEntryLifecycle> = LocalKeliverNavEntryLifecycle.current
 
 /**
  * Like `LaunchedEffect`, but [block] runs only while the enclosing navigation entry is visible: it
- * is cancelled when the entry is hidden (another screen opened over it) and started again when the
- * entry is shown. Use it for work a hidden screen must not do: requests, polling, timers.
- * Showing and hiding an entry does not recompose the caller.
+ * is cancelled when the entry is hidden (another screen opened over it) and started again, from
+ * the beginning, each time the entry is shown, even if it had completed (as Android's
+ * `repeatOnLifecycle` does). Showing and hiding an entry does not recompose the caller.
+ *
+ * Use it for work that runs for as long as a screen is on screen: polling, subscriptions, timers.
+ * Do not use it for a one-shot load: going back would run the load again (a request, and a
+ * recomposition of the screen with the new data, on the path that otherwise composes nothing).
+ * Load once with `LaunchedEffect`; a hidden entry keeps what it loaded.
  */
+@ExperimentalKeliverNavRetentionApi
 @Composable
 public fun LaunchedWhileVisible(vararg keys: Any?, block: suspend CoroutineScope.() -> Unit) {
   val lifecycle = LocalKeliverNavEntryLifecycle.current
@@ -124,9 +156,11 @@ public fun LaunchedWhileVisible(vararg keys: Any?, block: suspend CoroutineScope
 
 /**
  * The retained stack without a controller, for an app that keeps its own navigation state: [keys]
- * bottom-to-top (unique; the last one is shown), each composed by [content]. With [retention] null
- * or of depth 0 only the top is composed, as a plain conditional would.
+ * bottom-to-top (unique, which is checked; the last one is shown), each composed by [content]. With
+ * [retention] null or of depth 0 only the top is composed, as a plain conditional would.
+ * See [KeliverNavRetention] for what retention costs and does not change.
  */
+@ExperimentalKeliverNavRetentionApi
 @Composable
 public fun <K : Any> KeliverRetainedStack(
   keys: List<K>,
@@ -134,6 +168,8 @@ public fun <K : Any> KeliverRetainedStack(
   content: @Composable (K) -> Unit,
 ) {
   require(keys.isNotEmpty()) { "keys must not be empty" }
+  // Two entries with one key would share a key() group by position and could swap their state.
+  require(keys.size == 1 || keys.toSet().size == keys.size) { "keys must be unique: $keys" }
   RetainedEntries(keys, { it }, retention, content)
 }
 
@@ -141,6 +177,7 @@ public fun <K : Any> KeliverRetainedStack(
  * Composes the top of [items] and, with [retention], up to its depth below it, each in a group keyed
  * by [keyOf] so an entry's composition survives entries added above it and removed from below it.
  */
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
 @Composable
 internal fun <T : Any> RetainedEntries(
   items: List<T>,
@@ -166,14 +203,20 @@ internal fun <T : Any> RetainedEntries(
     composedKeys.clear()
     window.mapTo(composedKeys, keyOf)
   }
+  val parentBackHandlers = LocalBackHandlersEnabled.current
   retention.frame.Stack {
     for ((index, item) in window.withIndex()) {
       key(keyOf(item)) {
         val visible = index == window.lastIndex
-        val lifecycle = remember { EntryLifecycle(visible) }
+        val lifecycle = remember(parentBackHandlers) { EntryLifecycle(visible, parentBackHandlers) }
         SideEffect { lifecycle.update(visible) }
         retention.frame.Entry(visible) {
-          CompositionLocalProvider(LocalKeliverNavEntryLifecycle provides lifecycle.state) {
+          CompositionLocalProvider(
+            LocalKeliverNavEntryLifecycle provides lifecycle.state,
+            // A hidden entry's BackHandlers stay registered (it is not disposed) but must not take
+            // back presses meant for the entry on top.
+            LocalBackHandlersEnabled provides lifecycle.backHandlersEnabled,
+          ) {
             EntryContent(item, content)
           }
         }
@@ -188,8 +231,14 @@ private fun <T> EntryContent(item: T, content: @Composable (T) -> Unit) {
   content(item)
 }
 
-private class EntryLifecycle(visible: Boolean) {
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
+private class EntryLifecycle(visible: Boolean, parentBackHandlers: State<Boolean>) {
   val state: MutableState<KeliverNavEntryLifecycle> = mutableStateOf(of(visible))
+
+  /** Visible, inside an enclosing entry (or none) whose handlers are enabled. */
+  val backHandlersEnabled: State<Boolean> = derivedStateOf {
+    state.value == KeliverNavEntryLifecycle.Visible && parentBackHandlers.value
+  }
 
   fun update(visible: Boolean) {
     val value = of(visible)

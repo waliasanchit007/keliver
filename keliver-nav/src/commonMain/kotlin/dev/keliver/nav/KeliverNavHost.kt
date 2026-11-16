@@ -42,6 +42,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * }
  * ```
  */
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
 @Composable
 public fun <R : Any> KeliverNavHost(
   controller: KeliverNavController<R>,
@@ -55,9 +56,15 @@ public fun <R : Any> KeliverNavHost(
  * the top stay composed and hidden by its [KeliverNavFrame], so [KeliverNavController.pop] to one of
  * them composes nothing in the guest and creates nothing on the host: the frame shows the native
  * tree the host already has. Hidden entries see [KeliverNavEntryLifecycle.Hidden] through
- * [keliverNavEntryLifecycle] and [LaunchedWhileVisible]. With [retention] null (or depth 0) this is
- * the plain [KeliverNavHost]: only the top entry is composed.
+ * [keliverNavEntryLifecycle] and [LaunchedWhileVisible], and their `BackHandler`s are disabled.
+ * With [retention] null (or depth 0) this is the plain [KeliverNavHost]: only the top entry is
+ * composed. See [KeliverNavRetention] for what retention costs and does not change.
+ *
+ * Retention does not add saving: a controller from [rememberKeliverNavController] is remembered,
+ * not saved, so a recreated guest composition starts again from its start route, with or without
+ * retention.
  */
+@ExperimentalKeliverNavRetentionApi
 @Composable
 public fun <R : Any> KeliverNavHost(
   controller: KeliverNavController<R>,

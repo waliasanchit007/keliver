@@ -15,11 +15,13 @@
  */
 package dev.keliver.compose
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.contains
@@ -39,7 +41,9 @@ import dev.keliver.ui.basic.testing.RedwoodUiBasicTester
 import dev.keliver.ui.basic.testing.TextValue
 import kotlin.test.Test
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 
 private val throwingOnBack = { error("Only the innermost enabled back handler should be invoked.") }
 
@@ -183,6 +187,58 @@ class BackHandlerTest {
       assertThat(awaitSnapshot()).contains(TextValue(text = "0"))
       assertThat(onBackPressedDispatcher.onBackPressedCallbacks).extracting { it.isEnabled }.containsExactly(false, false)
       assertNoSnapshot()
+    }
+  }
+
+  @Test
+  fun localBackHandlersEnabledGatesWithoutRecomposing() = runTest {
+    val onBackPressedDispatcher = FakeOnBackPressedDispatcher()
+    val handlersEnabled = mutableStateOf(true)
+    var compositions = 0
+    RedwoodUiBasicTester(onBackPressedDispatcher) {
+      var enabled by mutableStateOf(true)
+      setContent {
+        CompositionLocalProvider(LocalBackHandlersEnabled provides handlersEnabled) {
+          compositions++
+          BackHandler(enabled, throwingOnBack)
+          Text("screen")
+        }
+      }
+      assertThat(awaitSnapshot()).single().isEqualTo(TextValue(text = "screen"))
+      val callback = onBackPressedDispatcher.onBackPressedCallbacks.single()
+      assertThat(callback.isEnabled).isEqualTo(true)
+
+      // Hidden (as keliver-nav's retained stack does): disabled, and nothing recomposes.
+      handlersEnabled.value = false
+      awaitEnabled(callback, false)
+      assertNoSnapshot()
+      assertThat(compositions).isEqualTo(1)
+
+      // Shown again: enabled again.
+      handlersEnabled.value = true
+      awaitEnabled(callback, true)
+
+      // Both must be true: its own `enabled` still counts.
+      enabled = false
+      awaitSnapshot()
+      assertThat(callback.isEnabled).isEqualTo(false)
+      handlersEnabled.value = false
+      awaitEnabled(callback, false)
+      handlersEnabled.value = true
+      repeat(20) {
+        Snapshot.sendApplyNotifications()
+        delay(1)
+      }
+      assertThat(callback.isEnabled).isEqualTo(false)
+    }
+  }
+}
+
+private suspend fun awaitEnabled(callback: OnBackPressedCallback, expected: Boolean) {
+  withTimeout(5_000) {
+    while (callback.isEnabled != expected) {
+      Snapshot.sendApplyNotifications()
+      delay(1)
     }
   }
 }
