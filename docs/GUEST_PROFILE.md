@@ -545,6 +545,9 @@ What the phone adds to the Mac's result:
 ./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:jsNodeProductionRun -PprofileJitless \
   "-PprofileArgs=modes=kotlinx,iterations=200,warmup=3" -PprofileCpu -PprofileOut=<scratch>/out/cpu
 ./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileSummary -PcpuProfile=<file.cpuprofile>
+# NF1's retained back stack (the guest's `retain`): add retain=1 to profileArgs (QuickJS or Node)
+#   (2026-11-17, Mac, 30 iterations: back 81.05 -> 2.44 ms median, 145 -> 0 creates, 94,817 -> 104 bytes;
+#    open 24.41 -> 15.28 ms, since the list is no longer disposed)
 # variants that need a library patch (apply, run, then `git checkout` the library):
 #   10-row window:        sample/threeway-guest/experiments/lazy-window-10.patch
 #   serializers once:     keliver-compose-gatea-profile/experiments/serializers-once.patch (codegen)
