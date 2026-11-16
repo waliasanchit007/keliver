@@ -559,7 +559,12 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
   `content.after`) and the host's viewport (`content.viewport`, an event) are synthetic
   properties. The host calls the real `LazyColumn` with the whole count, renders each item's
   children inside the real `LazyItemScope` (so `fillParentMaxWidth` and `animateItem` are
-  Compose's), and shows a 48 dp placeholder outside the window. `LazyListState` is host-owned
+  Compose's), and shows a placeholder outside the window: a drawn block (never blank) of the
+  guest rows' measured mean size (48 dp until a row has been measured). The host reports its
+  viewport only when its first or last visible item changes; during a fling it reports, once, the
+  window the fling will come to rest at (the fling's own decay, from its starting velocity), not
+  the windows it passes, so the guest never composes rows the list has already left (NF1,
+  `LazyRuntime.kt`; host-only, no protocol change). `LazyListState` is host-owned
   (§10): `scrollToItem` and `animateScrollToItem` are commands in the `state` property;
   `firstVisibleItemIndex` and its offset follow the viewport event. The guest's
   `rememberLazyListState` saves the position with a `Saver`, as Compose's does, and the host saves
