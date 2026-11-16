@@ -1,6 +1,6 @@
 // Runs the guest-profile workload (docs/GUEST_PROFILE.md) in a plain qjs, mirroring
 // QuickJsProfile.kt: init, first, then (warmup + iterations) x [open:i%5, back].
-// Usage: qjs --std driver/run.js <workload dir> <mode> <warmup> <iterations> <label>
+// Usage: qjs --std engine/run.js <workload dir> <mode> <warmup> <iterations> <label>
 import * as std from 'std';
 const [, dir, mode = 'kotlinx', warmupS = '3', itersS = '30', label = '?'] = scriptArgs;
 const warmup = +warmupS, iterations = +itersS;
@@ -37,7 +37,8 @@ for (let i = 0; i < warmup + iterations; i++) {
 }
 const loopMs = Date.now() - loopStart;
 cmd('close');
-const med = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+// The JVM harness's rule (QuickJsProfile.kt): the middle value, or the mean of the two middle values.
+const med = (a) => { const s = a.slice().sort((x, y) => x - y), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
 const out = {
   label, mode, loadMs, firstMs,
   openMedianMs: med(open), backMedianMs: med(back),

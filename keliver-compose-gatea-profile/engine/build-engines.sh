@@ -8,8 +8,15 @@ set -euo pipefail
 work="${1:?usage: build-engines.sh <work dir>}"
 here="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$work/dl" "$work/src" "$work/build"
+sha256_of() { case "$1" in
+  2021-03-27) echo a45bface4c3379538dea8533878d694e289330488ea7028b105f72572fe7fe1a ;;
+  2026-06-04) echo b376e839b322978313d929fd20663b11ba58b75df5a46c126dd19ea2fa70ad2a ;;
+esac; }
 for v in 2021-03-27 2026-06-04; do
   [ -f "$work/dl/quickjs-$v.tar.xz" ] || curl -fsS -m 300 -o "$work/dl/quickjs-$v.tar.xz" "https://bellard.org/quickjs/quickjs-$v.tar.xz"
+  # The tarballs measured in docs/GUEST_PROFILE.md; refuse anything else.
+  got="$(shasum -a 256 "$work/dl/quickjs-$v.tar.xz" | awk '{print $1}')"
+  [ "$got" = "$(sha256_of "$v")" ] || { echo "quickjs-$v.tar.xz: unexpected SHA-256 $got" >&2; exit 1; }
   rm -rf "${work:?}/src/quickjs-$v"
   tar -xJf "$work/dl/quickjs-$v.tar.xz" -C "$work/src"
 done
