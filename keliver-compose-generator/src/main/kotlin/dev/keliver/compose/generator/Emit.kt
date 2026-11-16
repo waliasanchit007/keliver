@@ -487,21 +487,33 @@ class Emitter(
         }
         body.append("      $line\n")
       }
+      // A lazy list's host state (LazyRuntime.kt): its fling predicts where the list comes to rest,
+      // so the guest is asked only for that window (NF1). Compose's own fling, unless the guest sets one.
+      val lazyParams = w.called.filter { it.kind == ParamKind.LAZY }
+      val lazyFling = lazyParams.isNotEmpty() &&
+        d.params.any { it.name == "flingBehavior" } &&
+        w.called.none { it.param.name == "flingBehavior" && it.kind != ParamKind.DROP }
+      // The orientation is known here, so placeholders are sized right from the first frame: a
+      // horizontal list (it takes a horizontalArrangement, not a verticalArrangement) says so.
+      val horizontal = d.params.any { it.name == "horizontalArrangement" } && d.params.none { it.name == "verticalArrangement" }
+      val orientation = if (horizontal) ", vertical = false" else ""
+      for (c in lazyParams) body.append("      val lazyHost_${c.param.name} = rememberLazyHost(${w.lazyState!!.param.name}$orientation)\n")
       body.append("      ${d.pkg}.${d.name}(\n")
       for (c in w.called) {
         val n = c.param.name
         when (c.kind) {
           ParamKind.MODIFIER -> body.append("        $n = incoming.applyGenerated(modifier, this@$cls),\n")
           ParamKind.SLOT -> body.append("        $n = { this@$cls.$n.Render(${if (c.param.type.receiver != null) "this" else "null"}) },\n")
-          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, p_${n}Before as Int, p_${n}After as Int) },\n")
+          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, p_${n}Before as Int, p_${n}After as Int, lazyHost_$n) },\n")
           ParamKind.VALUE, ParamKind.EVENT -> body.append("        $n = $n,\n")
           else -> {}
         }
       }
+      if (lazyFling) body.append("        flingBehavior = lazyHost_${lazyParams.first().param.name}.fling,\n")
       body.append("      )\n")
-      for (c in w.called.filter { it.kind == ParamKind.LAZY }) {
+      for (c in lazyParams) {
         val n = c.param.name
-        body.append("      ReportLazyViewport(${w.lazyState!!.param.name}) { first, last, offset -> p_${n}Viewport?.invoke(first, last, offset) }\n")
+        body.append("      ReportLazyViewport(${w.lazyState!!.param.name}, lazyHost_$n) { first, last, offset -> p_${n}Viewport?.invoke(first, last, offset) }\n")
       }
       body.append("    }\n  }\n}\n\n")
     }

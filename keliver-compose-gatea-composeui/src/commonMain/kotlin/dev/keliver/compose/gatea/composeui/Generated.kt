@@ -665,6 +665,7 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
       val verticalArrangement = (p_verticalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Vertical?)?.toCompose() ?: if (!reverseLayout) Arrangement.Top else Arrangement.Bottom
       val horizontalAlignment = (p_horizontalAlignment as dev.keliver.compose.ui.Alignment.Horizontal?)?.toCompose() ?: Alignment.Start
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
+      val lazyHost_content = rememberLazyHost(state)
       androidx.compose.foundation.lazy.LazyColumn(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyColumn1),
         state = state,
@@ -673,9 +674,10 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
         verticalArrangement = verticalArrangement,
         horizontalAlignment = horizontalAlignment,
         userScrollEnabled = userScrollEnabled,
-        content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, p_contentBefore as Int, p_contentAfter as Int) },
+        content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, p_contentBefore as Int, p_contentAfter as Int, lazyHost_content) },
+        flingBehavior = lazyHost_content.fling,
       )
-      ReportLazyViewport(state) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }
+      ReportLazyViewport(state, lazyHost_content) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }
     }
   }
 }
@@ -712,6 +714,7 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
       val horizontalArrangement = (p_horizontalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Horizontal?)?.toCompose() ?: if (!reverseLayout) Arrangement.Start else Arrangement.End
       val verticalAlignment = (p_verticalAlignment as dev.keliver.compose.ui.Alignment.Vertical?)?.toCompose() ?: Alignment.Top
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
+      val lazyHost_content = rememberLazyHost(state, vertical = false)
       androidx.compose.foundation.lazy.LazyRow(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyRow1),
         state = state,
@@ -720,9 +723,10 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
         horizontalArrangement = horizontalArrangement,
         verticalAlignment = verticalAlignment,
         userScrollEnabled = userScrollEnabled,
-        content = { lazyWindow(this@ComposeUiGenLazyRow1.content, p_contentBefore as Int, p_contentAfter as Int) },
+        content = { lazyWindow(this@ComposeUiGenLazyRow1.content, p_contentBefore as Int, p_contentAfter as Int, lazyHost_content) },
+        flingBehavior = lazyHost_content.fling,
       )
-      ReportLazyViewport(state) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }
+      ReportLazyViewport(state, lazyHost_content) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }
     }
   }
 }

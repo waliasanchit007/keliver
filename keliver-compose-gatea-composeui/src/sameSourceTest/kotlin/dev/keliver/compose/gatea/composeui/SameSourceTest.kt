@@ -550,7 +550,31 @@ internal class GuestOnHost(
   }
 }
 
-internal fun guestOnHost(content: @Composable () -> Unit): GuestOnHost {
+/**
+ * The host's events on their way to the guest: every one is recorded in [sent]; while [hold] is
+ * set they wait in a queue, as they wait on the guest's thread while it composes, until [release].
+ */
+internal class EventTap {
+  val sent = mutableListOf<dev.keliver.protocol.Event>()
+  var hold = false
+  private val held = mutableListOf<dev.keliver.protocol.Event>()
+  internal var deliver: (dev.keliver.protocol.Event) -> Unit = {}
+
+  internal fun send(event: dev.keliver.protocol.Event) {
+    sent += event
+    if (hold) held += event else deliver(event)
+  }
+
+  /** Delivers the queued events, in order, and stops holding. */
+  fun release() {
+    hold = false
+    val queued = held.toList()
+    held.clear()
+    queued.forEach(deliver)
+  }
+}
+
+internal fun guestOnHost(tap: EventTap? = null, content: @Composable () -> Unit): GuestOnHost {
   val guestAdapter = DefaultGuestProtocolAdapter(hostVersion = hostRedwoodVersion, widgetSystemFactory = KeliverComposeGateAProtocolWidgetSystemFactory)
   val clock = BroadcastFrameClock()
   val composition = ProtocolRedwoodComposition(
@@ -577,9 +601,10 @@ internal fun guestOnHost(content: @Composable () -> Unit): GuestOnHost {
     container = root,
     protocol = protocol,
     widgetSystem = keliverComposeGateAWidgetSystem(material),
-    eventSink = { guestAdapter.sendEvent(it.toProtocol()) },
+    eventSink = { event -> tap?.send(event.toProtocol()) ?: guestAdapter.sendEvent(event.toProtocol()) },
     leakDetector = LeakDetector.none(),
   )
+  tap?.deliver = guestAdapter::sendEvent
   composition.setContent(content)
   return GuestOnHost(guestAdapter, hostAdapter, protocol, root, clock).also { it.pump() }
 }

@@ -111,6 +111,38 @@ class LazyListTest {
     }
   }
 
+  /**
+   * NF1 (docs/PLAN_2026-11.md WS7): reports that queued while the guest was busy (a fling's every
+   * window) are composed as one window, the latest. No window the list has left is composed.
+   */
+  @Test
+  fun aBurstOfViewportsComposesOnlyTheLatestWindow() = runTest {
+    RedwoodUiBasicTester {
+      val composed = mutableListOf<Int>()
+      setContent {
+        LazyColumn(placeholder = { Text("Placeholder") }) {
+          items(1_000) {
+            composed += it
+            Text(it.toString())
+          }
+        }
+      }
+
+      val lazyList = awaitSnapshot().filterIsInstance<LazyListValue>().single()
+      composed.clear()
+      for (first in 30..900 step 10) {
+        lazyList.onViewportChanged(first, first + 10)
+      }
+      with(awaitSnapshot()) {
+        val list = single() as LazyListValue
+        assertThat(list.itemsBefore).isEqualTo(900 - 5)
+        assertThat(list.items.first()).isEqualTo(TextValue(Modifier, "895"))
+      }
+      assertThat(composed.filter { it < 895 }).isEmpty()
+      assertThat(composed.distinct().size).isEqualTo(composed.size)
+    }
+  }
+
   @Test
   fun scrollDoesNotTriggerRecompose() = runTest {
     RedwoodUiBasicTester {
