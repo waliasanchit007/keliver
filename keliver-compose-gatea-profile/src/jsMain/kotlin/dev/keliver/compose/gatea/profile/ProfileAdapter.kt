@@ -118,6 +118,11 @@ internal class ProfileAdapter(
 
   fun isLive(id: Int): Boolean = widgets.has(id)
 
+  /** The recorder's own retained state, for the memory-growth readings (docs/GUEST_PROFILE.md). */
+  fun counts(): String =
+    """{"widgets":${widgets.size},"removed":${removed.size},"clickables":${clickables.size},""" +
+      """"liveClickables":${clickables.count { isLive(it) }},"modifierCache":${modifierCache.size},"nextId":$nextValue}"""
+
   override fun sendEvent(event: Event) {
     val node = widgets[event.id.value]
     if (node != null) {
@@ -384,6 +389,7 @@ internal fun <E> JsArray<E>.clear() {
 
 @JsName("Map")
 internal external class JsMap<K, V> {
+  val size: Int
   operator fun get(key: K): V?
   fun set(key: K, value: V)
   fun has(key: K): Boolean
@@ -392,6 +398,7 @@ internal external class JsMap<K, V> {
 
 @JsName("Set")
 internal external class JsSet<E> {
+  val size: Int
   fun add(element: E)
   fun delete(element: E)
   fun clear()
