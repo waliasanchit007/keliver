@@ -39,13 +39,18 @@ part of that is fixable and part is not.
   work in an interpreter (about 0.2–0.4 s) and the encoding, which only a cheaper encoder or a
   faster CPU would shrink.
 
-- **Scrolling (guest, measured 2026-11-16; [Scrolling](#scrolling)).** A normal fling looks native:
-  the host's list scrolls by itself and the guest's window keeps ahead (no placeholders, stopped
-  0.7 s after the finger lifts). A **fast fling shows a blank list**: from its first frames until
-  4.9–6.7 s after the finger lifts (median), every row on screen is an empty placeholder while the
-  guest composes, at about 0.1 s per row, the windows the list flew past. Native and web scrolling,
-  a heavy screen's first visit and the GC threshold are built into the route but were not measured
-  (the phone left adb).
+- **Scrolling (guest, measured 2026-11-16; [Scrolling](#scrolling)).** A **gentle** fling (about
+  1,400 dp/s at release) looks native: the host's list scrolls by itself and the guest's window
+  keeps ahead (no visible placeholder; one fling of ten showed a sub-row gap; stopped 0.7 s after
+  the finger lifts). A **fast fling (about 6,000–7,000 dp/s) shows a blank list**: from its first
+  frames, every row on screen is an empty placeholder while the guest composes, at about 0.1 s per
+  row, the windows the list flew past. The rows come back **at least** 4.9 s (down) and 6.7 s (up)
+  after the finger lifts (median) and at most about 6.5 and 7.4 s, when the guest's last frame
+  ended: the method recorded the last blank frame, a lower bound. Ordinary flicks between the two
+  speeds were not measured, so the speed at which blanks start is not known yet. Native and web
+  scrolling, the heavy screen and the GC threshold are built into the route but were not measured
+  (the phone left adb). The method's faults found in review are fixed in the route for the rerun
+  (built, not yet run on a device; [Review round 1](#review-round-1-what-the-rerun-records)).
 
 | Median (ms) on the A12 | native | guest | web | guest, experiment: 10-row window + `JSON.parse` | web, experiment: `content-visibility` |
 |---|---|---|---|---|---|
@@ -457,16 +462,16 @@ whether a cheaper encoder (not built) would remove most of the recording time, a
 The run's raw logcat output, battery readings and fixture logs are kept in the benchmark's scratch
 directory, not in the repository.
 
-## The second session: scrolling, a heavy first visit, the GC threshold
+## The second session: scrolling, a heavy screen, the GC threshold
 
-A third session, 2026-11-16 from 03:20 IST, same A12, measured what the first two did not: scrolling
-the 1,000-item list, the first visit to a heavy screen, and QuickJS's garbage-collection threshold.
+A third session, 2026-11-16 from 03:20 IST, same A12, set out to measure what the first two did not:
+scrolling the 1,000-item list, opening a heavy screen, and QuickJS's garbage-collection threshold.
 Everything is built into the same route, off unless asked for (`bench=scroll`, `x=heavy`,
-`x=gc<MiB>`, `x=mem`), prototype builds only.
+`x=gc<MiB>`, `x=gcoff`, `x=mem`), prototype builds only.
 
-**Phone state.** On battery throughout (not on the charger, unlike the first two sessions), 89% at
-the start, wireless adb, thermal status 0, no power saving; per series below (baseline: 87%,
-unplugged, 27.5 °C). WebView
+**Phone state.** On battery throughout (not on the charger, unlike the first two sessions): 87% and
+27.5 °C at the baseline, 84% at the last series, 27.4–27.6 °C in every state line; wireless adb,
+thermal status 0, no power saving. WebView
 `com.google.android.webview` 157.0.8103.38 (as before). The APK was compiled as in the experiments
 session (the libraries' profiles through profileinstaller, then `speed-profile`). The Mac was busy
 with another build session; it served nothing to the phone in this session (below).
@@ -476,8 +481,8 @@ serves the same API itself (`--ez localApi true`, `LocalFixture.kt`): `GET /item
 127.0.0.1:8491, the same bytes (checked: 4,473 and 224,145 B), the same fixed 100 ms delay, HTTP/1.1
 keep-alive. Every form still goes through its own network stack (OkHttp for native and the guest,
 Chromium for the page); the adb tunnel and the Mac are left out, so the network part of an API call
-is shorter and steadier than in the first sessions (about 125–130 ms for the large response, from
-about 180–230). Navigation, scrolling and the heavy screen make no request after the first load.
+is shorter and steadier than in the first sessions (119–125 ms from request received to body read
+for the large response across the 7 load-large calls, from about 180–230). Navigation, scrolling and the heavy screen make no request after the first load.
 
 **Same-day baseline (as shipped, navigation).** 14 opens and backs per form, the first 2 dropped
 (the experiments session's warm-up), ms from the tap, median / p90 / min–max:
@@ -494,17 +499,23 @@ Within a few ms of the first session's 16 / 13, 438 / 1,082 and 37 / 50 (web ope
 **The phone left adb at about 03:58 IST** (wireless adb, as in the first session) and had not come
 back 45 minutes later, so this session measured the guest's scrolling and the baseline only. The
 native and web scrolling series, the heavy screen's series and the GC threshold series are built and
-were checked on the phone (one smoke run each, below) but **not measured**; they are one command each
-in [How to run it](#how-to-run-it).
+were checked on the phone (one check run each, below; their output was not kept) but **not
+measured**; they are one command each in [How to run it](#how-to-run-it).
 
 ### Scrolling
 
 **How.** The route loads the 1,000 items (tap "Load 1,000"), then the flings come from outside the
 app, through the input system as a finger's would: `adb shell input swipe`, 10 down the list, then
-10 back up, per run, each run in a fresh process. **Normal:** 800 px in 300 ms (about 2,700 px/s at
-release, 1,400 dp/s); the list travels about 11 rows per fling. **Fast:** 1,000 px in 80 ms (about
-12,500 px/s); about 106 rows per fling, so the tenth reaches the end of the list. 7 s (normal) or
-8 s (fast) between flings, longer than the guest needed to settle. Per fling the route logs:
+10 back up, per run, each run in a fresh process. **"Normal" is a gentle fling:** 800 px in 300 ms
+(about 2,700 px/s at release, about 1,400–1,500 dp/s); the guest's list travels about 11 rows per
+fling. **Fast:** 1,000 px in 80 ms (about 12,500 px/s, about 6,000–7,000 dp/s); about 106 of the
+guest's rows per fling, so the tenth reaches the end of the list (row counts are the guest's
+only: its undelivered rows are 48 dp placeholders, its real rows 72 dp, so the same swipe passes
+about 1.5 times more items than in native). 7 s (normal) or 8 s (fast) between flings. **8 s was
+too short for fast flings:** in several fast-up flings the guest was busy until 7.75–7.96 s after
+the UP, so they were closed by the next touch, not by settling, and part of the fast-up vs fast-down
+difference may be work carried over. The rerun uses 14 s and drops flings closed by a touch.
+Per fling the route logged:
 
 - **Frame times** from the window's FrameMetrics (`TOTAL_DURATION`, from the frame's intended vsync
   to the RenderThread's completion): the same numbers `dumpsys gfxinfo <package> framestats`
@@ -512,9 +523,14 @@ release, 1,400 dp/s); the list travels about 11 rows per fling. **Fast:** 1,000 
   been drawn for 1 s and, for the guest, no guest frame has run for 1 s). Comparable across the
   three forms because all three draw through this one window (the WebView through its draw
   functor); what it cannot see is Chromium's own renderer falling behind (checkerboarding), so for
-  the web form it is a lower bound.
+  the web form it is a lower bound. **It is not a jank measure:** `TOTAL_DURATION` depends on where
+  a frame starts against vsync and on frames queued behind earlier ones, not only on the frame's
+  work (fast fling 2 has about 60 frames at 20.0 ± 0.3 ms, then 11–14, then 8–9 ms, with no change
+  in workload). The rerun counts missed vsyncs instead (below).
 - **Settled:** the last drawn frame at which the list was still moving or still showed a
-  placeholder, from the fling's UP. This needs the semantics tree read in every frame (the list's
+  placeholder, from the fling's UP. **A lower bound:** while the list sits still waiting for the
+  guest nothing is drawn, so the rows appear in the *next* frame, which can come a whole guest frame
+  later (0.4–3.3 s). The rerun records that first frame with content. This needs the semantics tree read in every frame (the list's
   scroll position and which rows have content), so it comes from a second, instrumented pass
   (`x=scroll,blank`); its frame times are not the ones reported.
 - **Guest only:** its frames (`AppLifecycle.sendFrame` calls, which compose and send the batch
@@ -526,9 +542,18 @@ release, 1,400 dp/s); the list travels about 11 rows per fling. **Fast:** 1,000 
   instrumented pass counts the viewport height no row with content covers, in placeholders.
 
 **Guest, measured** (2026-11-16 03:47–03:57 IST; on battery, 85% → 84%, 27.5–27.6 °C, thermal 0).
-Frame times in ms over all frames of 10 flings; the other columns are medians per fling.
+Frame times in ms over all frames of 10 flings (frame timing, not jank: see above); the other
+columns are medians per fling. "Content settled" is the last blank frame: **at least** this, and
+at most the guest's busy end in the last column. The fast pools include flings that are not normal
+flings: fast fling 10 down hit the end of the list (stopped 284 ms after the UP, 48 frames), fast
+fling 20 hit the top (31 frames), and in the clean fast pass fling 1 moved only 3,012 position
+units (about 6 rows, 8 frames) against about 52,500 for the others. That fling's travel is the
+swipe's own 1,000 px: the list followed the finger and **no fling started**. Its first frames took
+37–60 ms during an 80 ms swipe (the process's first drag); fling 1 in the other two fast runs
+travelled normally, so it is a one-off whose cause is not known. The rerun logs the release
+velocity (the touch events' and the velocity the list's fling started with), which will show it.
 
-| Guest, 10 flings each | Frames | p50 | p90 | p99 | max | > 16.7 ms | > 33 ms | > 100 ms | List stops (after UP) | Content settled (after UP) | Flings with placeholders | Guest busy after UP |
+| Guest, 10 flings each | Frames | p50 | p90 | p99 | max | > 16.7 ms | > 33 ms | > 100 ms | List stops (after UP) | Content settled (after UP; at least) | Flings with placeholders | Guest busy after UP |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | normal, down | 646 | 14.1 | 20.5 | 21.8 | 25 | 43% | 0% | 0% | 711 ms | **711 ms** | 0 of 10 | 2,897 ms |
 | normal, up | 646 | 20.2 | 20.8 | 39.7 | 64 | 63% | 2.5% | 0% | 700 ms | **700 ms** | 1 of 10 (under half a row) | 2,129 ms |
@@ -554,34 +579,43 @@ fling 2,937 / 2,118 / 5,773 / 6,656 ms; the same widget counts within 10%).
   and stops when Compose's fling ends (0.7 s for a normal fling, 2.2 s for a fast one). The guest
   learns the new viewport, composes the rows the new window needs and sends them; each guest frame
   takes 0.4–3.3 s on this phone.
-- **Normal flings: no visible cost.** The guest's window (the first row plus 15 preloaded, and the
+- **Gentle flings: no visible cost.** The one normal-up fling counted "with placeholders" had a gap
+  of 4–24 px that started 857 ms after the touch, after the list had stopped: a sub-row gap, not a
+  visible placeholder (the rerun counts placeholders from half a row and gaps apart). The guest's window (the first row plus 15 preloaded, and the
   loading strategy's look-ahead) covers about 11 rows of travel, so every row the user sees has
   content; the guest keeps composing for 2–3 s after the list stops, off screen.
 - **Fast flings: a blank list.** The list outruns the window within the first frames of the fling,
   and from then on **every frame shows only placeholders** (14 of them: the whole viewport) until
-  the guest catches up: 4.9–6.7 s after the finger lifts (median), 2.6–4.5 s after the list has
-  stopped. The guest composes the windows it passes through (about 50–70 rows per fling, 0.1 s each)
+  the guest catches up: **at least** 4.9–6.7 s after the finger lifts (median), 2.6–4.5 s after the
+  list has stopped, and at most about 6.5–7.4 s (4.2–5.2 s after the stop), when the guest's last
+  frame ended. The guest composes the windows it passes through (about 50–70 rows per fling, 0.1 s each)
   before the one where the list came to rest.
 - **Frame times.** The host draws frames of either about 10 ms or about 20 ms, so the medians land
   on one or the other (14.1–20.2 for the same normal flings in different runs; the instrumented
   pass 18.7 / 12.9); the shares over 16.7 ms swing with it (43–63%). Frames over 33 ms are rare in
   normal flings (0–2.5%) and 3–9% in fast ones, where the host recomposes placeholders into rows;
-  the p99 of 85–97 ms and the 150–169 ms maxima are those. Whether the 20 ms frames come from the
-  guest's work competing for the CPU or from the host's list itself needs the native series (not
-  measured).
+  the p99 of 85–97 ms and the 150–169 ms maxima are those. The flat runs of 10, 20 or 37 ms frames
+  are mostly frame timing (where each frame starts against vsync), not work, so the ~10 / ~20 ms
+  flip and the "% over 16.7 ms" are not jank measures; and about 119 of about 125 frames of a fast
+  fling come after the UP, many of them the host applying guest batches after the list stopped
+  (the native form has none of those). The rerun reports missed vsyncs while the list moves and the
+  frames after the stop apart.
 
-**What a user would feel.** A normal flick through the guest's list looks like a native list: it
+**What a user would feel.** A gentle flick through the guest's list looks like a native list: it
 moves with the finger, stops on rows that are there. A fast flick shows an empty list: the rows
-vanish as soon as it gets going and the screen stays blank, the list already still, for two and a
-half to four and a half seconds more before the rows appear. On this phone that is the guest's
+vanish as soon as it gets going and the screen stays blank, the list already still, for at least
+two and a half to four and a half seconds more (perhaps up to five) before the rows appear. Where
+between the two speeds that starts is not measured yet. On this phone that is the guest's
 biggest visible defect so far; a user would think the list broke. The cost is the guest composing
 every window it passes (0.1 s per row in QuickJS), not the bridge or the host.
 
 **The first, discarded attempt.** A first pass (03:35–03:45) closed a fling after 1 s without a host
 frame, but a guest frame can run longer than that with the host idle: its work spilled into the next
-fling's counts. The route now waits for the guest too; only the later runs are reported.
+fling's counts. The route now waits for the guest too; only the later runs are reported. One case
+still leaked in the reported runs: a guest frame still running at the next touch is counted in
+neither fling. The rerun marks such flings (`guestBusyAtDown`) and drops them.
 
-### A heavy first visit
+### A heavy screen: opening (warm)
 
 **Built, not measured on the phone** (the phone left adb first). `-e x heavy` makes a row open a
 second detail variant in all three forms: a header, the amount and status, a row of four chips, four
@@ -590,7 +624,15 @@ sections of a title and six label/value rows, a row of three buttons and a foote
 in the page (`index.html`). The series is the navigation series with that flag (`-e bench nav
 --ei n 14 --ei warmup 2 -e x heavy`, each form), plus the guest with `split` for its breakdown.
 
-One smoke run on the phone (guest, `split` on, 2 iterations, not a measurement): opening took
+**What it measures: opening (warm).** With the warm-up dropped, each open is a fresh composition of
+all 102 widgets, but in a warm process: host code already compiled, text-layout caches warm, and
+the rows opened cycle through only 5 items. The summary line is labelled `open (warm)`. A cold
+first open is logged apart, once per process, as `open (cold, i=1)` (the series' first iteration,
+when `nav` is the process's first series): launch each form with `am start -S` and repeat the
+launch for several cold samples.
+
+One check run on the phone, **output not kept** (guest, `split` on, 2 iterations, not a
+measurement; no raw file backs these numbers): opening took
 1,314 and 1,210 ms to drawn (the simple detail: about 430), of which the click reached the guest's
 frame after about 35 ms, the guest composed and recorded until 947–973 ms (recording 1,036
 properties and 102 modifiers: about 300 ms of it), its batch reached the host 106–120 ms later and
@@ -601,13 +643,34 @@ expected tens of ms native and web (not measured).
 ### The GC threshold
 
 **Built, not measured on the phone.** `-e x gc4`, `gc16` or `gc64` sets `zipline.quickJs.gcThreshold`
-to that many MiB in the route's `ziplineCreated`, before any guest code loads; with it (or `-e x
-mem`) the route reads QuickJS's `memoryUsage` (heap in use, object count) and `gcThreshold` before
-each tap and after each drawn result, and at the end of each series (off the measured interval, on
-the Zipline thread). The series to run: navigation and `api-large`, 14 iterations, the default twice
-(for the run-to-run noise), then each threshold.
+to that many MiB in the route's `ziplineCreated`, before any guest code loads (on the Zipline
+thread, on the only Zipline instance); `-e x gcoff` sets −1 (QuickJS never collects on
+allocation; reference counting still frees acyclic objects). With any of them, or `-e x mem`, the
+route reads QuickJS's `memoryUsage` (heap in use, object count) and `gcThreshold` before each tap
+and after each drawn result, and at the end of each series, on the Zipline thread. Each read walks
+the whole heap (about 25,000–30,000 objects), so the tap waits 300 ms after it: the walk is
+neither in the measured interval nor queued ahead of the guest's work. **The default arm runs as
+`-e x mem`**, so it pays the same reads as the others; without it, the default and a threshold
+would differ by the reads too. The series to run: navigation and `api-large`, 14 iterations,
+warm-up 2, the default (`x=mem`) twice for the run-to-run noise, then `gc4`, `gc64` and `gcoff`.
 
-What the smoke runs showed, which matters for reading the series:
+**Decision rule, written before any result.** Zipline's getter echoes the value set, so the only
+evidence of collections is the per-iteration heap in use and object count.
+- *Collections ran under the default* if its object count drops between iterations by more than
+  the drops `gc64` shows, and the heap in use grows steadily under `gc64` (and `gcoff`) but not
+  under the default. Without both, the reads cannot tell a collection from reference counting.
+- *GC matters for navigation* only if, with collections shown to run under the default, `gc64` or
+  `gcoff` is faster than **both** default runs by more than the two default runs differ from each
+  other, in the median of open or back (12 iterations each). Otherwise: "GC does not measurably
+  matter", and that holds only for 14 iterations of navigation and the large API call, not for a
+  long session.
+- `gc16` and `gc64` should behave alike (the heap peaked near 10 MB in the check run, so neither
+  is reached), and `gc4` like the default; `gc16` is therefore not run. Timing one forced
+  collection on the ~8 MB heap would be direct evidence; the route does not do it, and whether
+  Zipline 1.28's `QuickJs` exposes such a call was not checked in this round.
+
+What the check runs showed (one check run each, **output not kept**: only the `ziplineCreated`
+line below is in a raw file), which matters for reading the series:
 - **The default threshold is QuickJS's 256 KiB** (`gcThreshold` reads 262,144; `memoryLimit` −1).
   The guest's heap is far above it: 7.4–8.4 MB in use and 24,000–30,000 objects during navigation,
   9.7 MB after two large API calls.
@@ -623,6 +686,31 @@ What the smoke runs showed, which matters for reading the series:
   postpone collections only until the heap first reaches 16 or 64 MB. The series would show
   whether that postponement changes navigation; re-applying the threshold before every tap would
   test a pinned threshold (not built).
+
+### Review round 1: what the rerun records
+
+A review of this session's method found faults that would bias a rerun. The route is changed as
+below. **The new instrumentation is built (the sample's prototype build passes) but has not yet run
+on a device**; the numbers above come from the old route.
+
+| Finding | What the route does now (per fling line, `bench=scroll`) |
+|---|---|
+| Settled was the last blank frame | `bContentAfterUpMs`: the first frame with content after the last blank frame; `bSettledAfterUpMs` = the later of that and the list's stop (falls back to the last blank frame, then null in `bContentAfterUpMs`, if no such frame came before the fling closed) |
+| Frame time is not jank | `missedVsyncs`: vsyncs skipped between consecutive moving frames' intended-vsync timestamps; `vsyncPeriodMs` used; per-component medians and p90 (`movingMedianMs`, `movingP90Ms`: late start, unknown delay, input, animation, layout, draw, sync, command issue, swap; GPU and deadline on API 31+); every frame's components in the results file only (`frameDetail` lines); the state line gives `refreshHz` and `density` |
+| 8 s gap too short | `closedBy`: `settled` or `touch`; `guestBusyAtDown`; summaries drop both and count them (`excludedTouch`, `excludedGuestBusyAtDown`) |
+| Only two speeds | `upVelocityPxS` / `upVelocityDpS` from the touch events (Android's `VelocityTracker`, all forms); `flingVelocityPxS`, the velocity the list's fling started with (Compose forms); the rerun adds 800 px in 200, 150 and 120 ms |
+| Edge hits pooled | `edge`: the list left scroll unconsumed (Compose) or cannot scroll further that way; summaries drop it (`excludedEdge`); fast runs use 7 flings per direction (about 740 rows of 1,000) |
+| Distance not comparable | `travelPx`: the list's own consumed scroll in px, from a nested-scroll connection around the content (Compose) or the WebView's scroll listener; `from`/`to` stay, labelled as the lazy list's semantics estimate |
+| Frames after the stop pooled | `stopAfterUpMs` (the last frame in which the list scrolled); `movingFrames` and `afterStopFrames`; summary percentiles are over moving frames, `afterStopFrames`/`afterStopP90`/`afterStopMax` apart |
+| GC design | `x=mem` for the default; 300 ms between a memory read and its tap; `gcoff`; the decision rule above |
+| Heavy screen "first visit" | `open (warm)`; `open (cold, i=1)` once per process |
+| One normal fling "with placeholders" | a placeholder counts from half a row; smaller gaps are `bFramesWithGap`, `flingsWithSubRowGapsOnly` |
+| Fixture delay | the body is built once at start; the 100 ms delay is counted from the request line |
+| Mixed API routes | `api` (`app` or `mac`) in every state, summary and fling line |
+
+`x=scroll` (the guest's widget counters) wraps the guest's protocol adapter, a cost only the guest
+pays; the clean pass for the guest/native comparison is run once without it, and the counters come
+from the `x=scroll` run.
 
 ## For an iOS run (follow-up)
 
@@ -674,7 +762,7 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
   threshold series were built and smoke-checked but not measured: the phone left wireless adb at
   about 03:58 IST on 2026-11-16 and had not come back 45 minutes later. Without the native series,
   the guest's ~20 ms host frames cannot yet be attributed to the guest or to the list itself.
-- **The second session ran on battery** (89% → 84%, 27.4–27.7 °C), the first two on the charger,
+- **The second session ran on battery** (87% → 84%, 27.4–27.6 °C), the first two on the charger,
   and served the fixture API from inside the app (no tunnel); its baseline navigation matched the
   first session's within a few ms. Its API numbers are not comparable with the first sessions'
   network columns (none were reported).
@@ -685,6 +773,17 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
 - **Guest ms per new row** is the guest's whole frame time divided by the rows it created: it also
   pays for disposing the rows that left the window and for recomposing the list; it is not a
   per-row profile.
+- **The scrolling frame times are frame timing, not jank** (second session): `TOTAL_DURATION`
+  depends on where a frame starts against vsync; its p50 and "% over 16.7 ms" flip between runs
+  with no change in work. Missed vsyncs and frame components replace them in the rerun.
+- **"Normal" is a gentle fling** (about 1,400–1,500 dp/s at release). Ordinary flicks are faster;
+  the speed at which the guest starts showing placeholders is not known until the intermediate
+  speeds are run.
+- **"Content settled" is a lower bound** (second session): it is the last blank frame; the rows
+  appear in the next frame, up to one guest frame (0.4–3.3 s) later.
+- **The heavy-screen and memory figures come from one check run each whose output was not kept**;
+  they are indications only, until the series are run.
+- **The review-round-1 instrumentation is built, not yet run on a device.**
 - **QuickJS's GC**: Zipline's `gcThreshold` getter returns the value set, not QuickJS's current
   threshold, so a run cannot see whether a collection happened from it.
 - **The iPhone** was not measured (see above for what a run needs).
@@ -712,13 +811,48 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #   --ei warmup 2            the series' summary line ("summary") drops the first 2 iterations
 #   -e x heavy               the heavy detail variant (about 100 widgets), all three forms
 #   -e x mem                 guest: QuickJS's heap and object count before each tap and after each drawn
-#   -e x gc4|gc16|gc64       guest: QuickJS's GC threshold (MiB) set when Zipline is created (implies mem)
-# scrolling: load 1,000 items, then fling from outside, 10 down and 10 up per run; one line per fling
-# and a summary per 10 (frame percentiles, shares over 16.7/33/100 ms; guest frames and widgets)
-adb shell 'am start -n dev.keliver.sample/dev.keliver.sample.host.threeway.ThreewayActivity \
-  -e form guest -e bench scroll --ez overLockScreen true --ez localApi true -e x scroll; sleep 14; \
-  for i in 1 2 3 4 5 6 7 8 9 10; do input swipe 360 1300 360 500 300; sleep 7; done; \
-  for i in 1 2 3 4 5 6 7 8 9 10; do input swipe 360 500 360 1300 300; sleep 7; done'
-#   fast: input swipe 360 1400 360 400 80 (and back), sleep 8 for the guest
-#   -e x scroll,blank        the instrumented pass: placeholders and settle times from the semantics tree
+#                            (300 ms pause between a read and its tap)
+#   -e x gc4|gc16|gc64|gcoff guest: QuickJS's GC threshold (MiB; gcoff = -1) set when Zipline is created (implies mem)
+# Every state/summary/fling line carries "api":"app"|"mac"; the state line also refreshHz and density.
+# The results file also has the per-frame "frameDetail" lines, which logcat does not get:
+adb pull /sdcard/Android/data/dev.keliver.sample/files/threeway-results.txt
+```
+
+**The rerun, series by series** (review round 1; `A` is the activity launch, run from the Mac):
+
+```
+A='am start -S -n dev.keliver.sample/dev.keliver.sample.host.threeway.ThreewayActivity --ez overLockScreen true --ez localApi true'
+
+# 1. Navigation baseline and heavy screen, each form (native, guest, web); -S = a fresh process,
+#    so "open (cold, i=1)" is the process's first open. Repeat the heavy launch 3 times for 3 cold opens.
+adb shell "$A -e form native -e bench nav --ei n 14 --ei warmup 2"
+adb shell "$A -e form native -e bench nav --ei n 14 --ei warmup 2 -e x heavy"
+adb shell "$A -e form guest  -e bench nav --ei n 14 --ei warmup 2 -e x heavy,split"   # guest breakdown
+
+# 2. GC (guest only; the default arm with x=mem; wait for {"done":true} between launches)
+adb shell "$A -e form guest -e bench nav,api-large --ei n 14 --ei warmup 2 -e x mem"   # default, run 1
+adb shell "$A -e form guest -e bench nav,api-large --ei n 14 --ei warmup 2 -e x mem"   # default, run 2
+adb shell "$A -e form guest -e bench nav,api-large --ei n 14 --ei warmup 2 -e x gc4"
+adb shell "$A -e form guest -e bench nav,api-large --ei n 14 --ei warmup 2 -e x gc64"
+adb shell "$A -e form guest -e bench nav,api-large --ei n 14 --ei warmup 2 -e x gcoff"
+
+# 3. Scrolling, per form F (native, guest, web) and per speed; each a fresh process.
+#    The 14 s sleep before the first swipe covers the start and the 1,000-item load.
+#    Coordinates are for a 720x1600 screen; scale them for another.
+#    gentle (800 px in 300 ms), 10 each way, 8 s apart:
+adb shell "$A -e form F -e bench scroll; sleep 14; \
+  for i in \$(seq 10); do input swipe 360 1300 360 500 300; sleep 8; done; \
+  for i in \$(seq 10); do input swipe 360 500 360 1300 300; sleep 8; done"
+#    intermediate: the same with 200, then 150, then 120 ms per swipe, and sleep 12
+#    fast (1,000 px in 80 ms), 7 each way so the list does not reach an end, 14 s apart:
+adb shell "$A -e form F -e bench scroll --ei group 7; sleep 14; \
+  for i in \$(seq 7); do input swipe 360 1400 360 400 80; sleep 14; done; \
+  for i in \$(seq 7); do input swipe 360 400 360 1400 80; sleep 14; done"
+#    guest only, per speed, two more passes: -e x scroll (the guest's widget counters; a cost only
+#    the guest pays, so the guest/native comparison uses the pass without it) and -e x scroll,blank
+#    (placeholders, first content frame and settle times from the semantics tree; its frame times
+#    are not the ones reported). The web form reports when the list stops, but no placeholder or
+#    blank measure (Chromium's own renderer is not visible to the route).
+# Each summary drops flings closed by a touch, busy at DOWN or at an edge, and counts them: if
+# excludedTouch is not 0, lengthen the gap and rerun that speed.
 ```
