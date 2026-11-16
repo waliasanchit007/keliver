@@ -30,7 +30,8 @@ BUILDS="q21-Os q26fix-Os q26fix-O2"
 serial="${ANDROID_SERIAL:-}"
 if [ "${1:-}" = -s ]; then serial="${2:?-s needs a serial}"; shift 2; fi
 cmd="${1:?usage: run-device.sh [-s SERIAL] devices|push|start|status|wait|pull|check|stop|cleanup}"; shift
-adb_bin="adb"
+# A full path: the adb() function below would otherwise call itself.
+adb_bin="$(command -v adb || echo adb)"
 [ -n "${ANDROID_HOME:-}" ] && [ -x "$ANDROID_HOME/platform-tools/adb" ] && adb_bin="$ANDROID_HOME/platform-tools/adb"
 if [ "$cmd" = devices ]; then exec "$adb_bin" devices -l; fi
 if [ "$cmd" = emulator-start ]; then # <avd>: a headless, read-only emulator for a rehearsal
