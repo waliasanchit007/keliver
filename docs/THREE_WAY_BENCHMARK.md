@@ -526,9 +526,47 @@ rather than ending the run. Every new field was then logged and plausible in all
 Within 1–3% of the first run's baseline above (16 / 13, 436 / 1,082, 44 / 49), so run 2's other
 numbers compare with every earlier session's.
 
-### Scrolling
+### Scrolling, run 2
 
-**How.** The route loads the 1,000 items (tap "Load 1,000"), then the flings come from outside the
+**How.** As in [How to run it](#how-to-run-it): `adb shell input swipe` through the input system,
+each speed a fresh process, 10 flings down the list then 10 back up (fast: 7 each way), the
+review-round-1 route (release speed from the touch events, missed vsyncs, frames split at the list's
+stop, flings closed by a touch, busy at DOWN or at an edge dropped from the summaries). Speeds (the
+release speed is the touch events' own, the same in every fling of a speed): gentle 800 px in
+300 ms = **1,422 dp/s**; 800 px in 200 ms = **2,133 dp/s**; in 150 ms = **2,844 dp/s**; in 120 ms =
+**3,556 dp/s**; fast, 1,000 px in 80 ms = **6,667 dp/s**. Gaps 8 s (gentle), 12 s (intermediate),
+14 s (fast): **no fling in any series was closed by a touch or busy at its DOWN**. The last fling
+up reaches the top in every series (it travels what the flings down did), so the "up" groups
+have one edge fling dropped (fast: two).
+
+**Guest, clean pass** (no counters; 2026-11-16 11:56–12:16 IST, 58% → 55%, 25.0–25.6 °C, thermal 0).
+Per fling: missed vsyncs while the list moves (median, min–max, total over the group), the moving
+frames' `TOTAL_DURATION` p50 / p90 (frame timing, for comparison only), when the list stopped, and
+when the guest's last frame ended (both from the UP):
+
+| Guest | Flings | Missed vsyncs (median, range; total) | Moving frames p50 / p90 | List stops | Guest busy until (median, range) |
+|---|---|---|---|---|---|
+| 1,422 dp/s, down | 10 | 1 (0–1; 7) | 20.3 / 20.8 ms | 743 ms | 2,874 ms (1,508–3,004) |
+| 1,422 dp/s, up | 9 | 1 (0–2; 10) | 20.2 / 20.7 | 743 | 2,167 (1,286–2,321) |
+| 2,133 dp/s, down | 10 | 1 (0–2; 7) | 20.2 / 20.7 | 992 | 3,662 |
+| 2,133 dp/s, up | 9 | 1 (0–2; 8) | 20.2 / 36.9 | 992 | 2,640 |
+| 2,844 dp/s, down | 10 | 1.5 (0–5; 18) | 20.2 / 20.8 | 1,210 | 4,152 |
+| 2,844 dp/s, up | 9 | 1 (0–1; 8) | 20.2 / 20.6 | 1,209 | 2,867 |
+| 3,556 dp/s, down | 10 | **8 (7–11; 87)** | 10.4 / 20.6 | 1,419 | 4,932 (4,771–5,866) |
+| 3,556 dp/s, up | 9 | 1 (0–3; 8) | 20.3 / 21.0 | 1,425 | 3,852 (3,421–5,551) |
+| 6,667 dp/s, down | 7 | **15 (3–20; 97)** | 20.0 / 36.6 | 2,248 | 6,617 (1,242–7,232) |
+| 6,667 dp/s, up | 5 | 3 (2–6; 19) | 20.1 / 36.9 | 2,247 | 7,555 (5,357–7,909) |
+
+**The process's first fast swipe started no fling, again.** In the fast series, fling 1 (the
+process's first drag) travelled 848 px, the finger's own distance: the touch events' velocity was
+12,500 px/s like every other, but the list's fling started at 0 (`flingVelocityPxS` 0), and the
+swipe took 140 ms to deliver against 80 asked. The first run saw the same in one of its three fast
+runs (each a fresh process, so also on the first drag); with this one, two of four. The release
+velocity now shows where it is lost: Android's tracker saw a fling, Compose's did not, on a drag
+whose frames ran late (the process's first). The cause is not established. It is kept in the
+"down" group above (its 3 missed vsyncs and 1.2 s are the low ends of the ranges); the other six
+moved 10,466–10,766 px.
+ the 1,000 items (tap "Load 1,000"), then the flings come from outside the
 app, through the input system as a finger's would: `adb shell input swipe`, 10 down the list, then
 10 back up, per run, each run in a fresh process. **"Normal" is a gentle fling:** 800 px in 300 ms
 (about 2,700 px/s at release, about 1,400–1,500 dp/s); the guest's list travels about 11 rows per
