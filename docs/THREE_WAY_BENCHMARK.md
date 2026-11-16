@@ -647,11 +647,14 @@ moved 10,466–10,766 px.
 - **The guest keeps working long after the list stops.** Its last frame ends 2.2–2.9 s after the
   finger lifts at the gentle speed, 3.9–4.9 s at 3,556 dp/s and 6.6–7.6 s at 6,667 dp/s (the list
   stops at 0.7, 1.4 and 2.2 s). Whether that work shows as placeholders is what the instrumented
-  pass measures; **run 2 did not get it** (the phone left during that pass). In the first run's
-  instrumented pass (old route) gentle flings showed none and fast flings a blank list until at
-  least 4.9–6.7 s after the lift; the first speed with placeholders is **not yet measured**.
+  pass measures; run 2 did not get it (the phone left during that pass); **run 3 did** (above):
+  the first placeholders come at 2,133 dp/s, and from 2,844 dp/s most of the screen is blank for
+  seconds after the list stops.
 
-**What a user would feel (from run 2's guest pass and the first run's placeholders).** Gentle and
+**What a user would feel (from run 2's guest pass alone; run 3 corrects it, see "Scrolling, run 3").**
+Run 2 read "up to about 2,800 dp/s feels like a native list" from missed vsyncs only; run 3's
+placeholder pass shows that at 2,844 dp/s the list itself moves smoothly but stops on a mostly blank
+screen. Run 2's reading, as written then: gentle and
 moderate flicks (up to about 2,800 dp/s, a relaxed thumb flick) feel like a native list. A brisk
 flick down the list (3,500 dp/s and faster) likely shows a stutter while it moves: 7–11 skipped
 frames per fling at 3,556 dp/s and 3–20 at 6,667 dp/s, where native's one smoke fling at
@@ -960,8 +963,8 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
   depends on where a frame starts against vsync; its p50 and "% over 16.7 ms" flip between runs
   with no change in work. Missed vsyncs and frame components replace them in the rerun.
 - **"Normal" is a gentle fling** (about 1,400–1,500 dp/s at release). Ordinary flicks are faster;
-  the speed at which the guest starts showing placeholders is not known until the intermediate
-  speeds are run.
+  run 3 places the guest's first placeholders at 2,133 dp/s, between the gentle speed and 2,844,
+  with five fixed speeds: the threshold lies somewhere above 1,422 and at or below 2,133 dp/s.
 - **"Content settled" is a lower bound** (second session): it is the last blank frame; the rows
   appear in the next frame, up to one guest frame (0.4–3.3 s) later.
 - **The heavy-screen and memory figures come from one check run each whose output was not kept**;
