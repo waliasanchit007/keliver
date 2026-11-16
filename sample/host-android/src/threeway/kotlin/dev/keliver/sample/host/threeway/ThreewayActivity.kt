@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Process
 import android.os.SystemClock
 import android.os.Trace
 import android.util.Log
@@ -173,6 +174,7 @@ class ThreewayActivity : ComponentActivity() {
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    ColdStart.mark("activityCreate")
     super.onCreate(savedInstanceState)
     form = intent.getStringExtra("form") ?: "native"
     experiments = intent.getStringExtra("x").orEmpty()
@@ -208,6 +210,16 @@ class ThreewayActivity : ComponentActivity() {
       "guest" -> startGuest()
       else -> startNative()
     }
+    ColdStart.mark("contentSet")
+    // The activity's first frame (Macrobenchmark's time to initial display ends at it).
+    val decor = window.decorView
+    decor.viewTreeObserver.addOnDrawListener(
+      object : ViewTreeObserver.OnDrawListener {
+        override fun onDraw() {
+          if (ColdStart.mark("firstDraw")) main.post { decor.viewTreeObserver.removeOnDrawListener(this) }
+        }
+      },
+    )
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -372,6 +384,8 @@ class ThreewayActivity : ComponentActivity() {
           firstContent = false
           // Inside this frame's draw: the startup benchmark's timeToFullDisplay ends at this frame.
           reportFullyDrawn()
+          ColdStart.mark("dataDrawn")
+          log(ColdStart.line(form, recorder.peek(seq)))
           decor.postInvalidate()
           main.postDelayed(::runBench, SETTLE_MILLIS)
         }
@@ -699,6 +713,47 @@ private class Recorder {
   }
 
   fun take(seq: Int): Map<String, Long> = marks.remove(seq) ?: emptyMap()
+
+  fun peek(seq: Int): Map<String, Long> = marks[seq]?.toMap() ?: emptyMap()
+}
+
+/**
+ * NF0's cold-start split (docs/THREE_WAY_BENCHMARK.md, "Cold start (NF0)"): when each point of the
+ * process's start was first reached (epoch ms), logged once as a `"cold"` line when the list's data
+ * is first drawn, in ms from the process start. Always on (a few map writes per process). Guest
+ * only: the code load's steps (from the EventListener) and its module loads, summed.
+ */
+internal object ColdStart {
+  private val marks = ConcurrentHashMap<String, Long>()
+
+  /** Module loads (QuickJS loading each module's bytecode): count, summed ms and the slowest. */
+  @Volatile var modules = 0
+  @Volatile var moduleLoadNanos = 0L
+  @Volatile var slowestModule = ""
+  @Volatile var slowestModuleNanos = 0L
+
+  /** Records [name] once; returns true the first time. */
+  fun mark(name: String): Boolean = marks.putIfAbsent(name, System.currentTimeMillis()) == null
+
+  /** Records [name], replacing an earlier value (the last occurrence). */
+  fun markLast(name: String) {
+    marks[name] = System.currentTimeMillis()
+  }
+
+  fun line(form: String, requestMarks: Map<String, Long>): String {
+    // The process start on the epoch clock: uptime and epoch advance together while the phone is awake.
+    val processStart = System.currentTimeMillis() - (SystemClock.uptimeMillis() - Process.getStartUptimeMillis())
+    val o = JSONObject().put("cold", form)
+    val all = HashMap(marks)
+    for ((name, at) in requestMarks) all.putIfAbsent(name, at)
+    for ((name, at) in all.entries.sortedBy { it.value }) o.put(name, at - processStart)
+    if (modules > 0) {
+      o.put("n_modules", modules).put("n_moduleLoadMs", moduleLoadNanos / 1_000_000)
+        .put("slowestModule", slowestModule).put("n_slowestModuleMs", slowestModuleNanos / 1_000_000)
+        .put("n_modulesFromAssets", ThreewayListener.modulesFromAssets)
+    }
+    return o.toString()
+  }
 }
 
 /**
@@ -767,8 +822,43 @@ internal object ThreewayListener : EventListener.Factory {
   @Volatile var lastGuestFrameEndNs = 0L
 
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = object : EventListener() {
+    override fun codeLoadStart(): Any? {
+      ColdStart.mark("codeLoadStart")
+      return null
+    }
+
+    override fun manifestReady(manifest: ZiplineManifest) {
+      ColdStart.mark("manifestReady")
+    }
+
+    override fun moduleLoadStart(moduleId: String): Any? {
+      ColdStart.mark("firstModuleLoadStart")
+      return System.nanoTime()
+    }
+
+    override fun moduleLoadEnd(moduleId: String, startValue: Any?) {
+      ColdStart.markLast("lastModuleLoadEnd")
+      val took = System.nanoTime() - (startValue as? Long ?: return)
+      ColdStart.modules++
+      ColdStart.moduleLoadNanos += took
+      if (took > ColdStart.slowestModuleNanos) {
+        ColdStart.slowestModuleNanos = took
+        ColdStart.slowestModule = moduleId
+      }
+    }
+
+    override fun mainFunctionStart(applicationName: String): Any? {
+      ColdStart.mark("mainStart")
+      return null
+    }
+
+    override fun mainFunctionEnd(applicationName: String, startValue: Any?) {
+      ColdStart.mark("mainEnd")
+    }
+
     @OptIn(EngineApi::class)
     override fun ziplineCreated(zipline: Zipline) {
+      ColdStart.mark("ziplineCreated")
       ThreewayListener.zipline = zipline
       val quickJs = zipline.quickJs
       val default = quickJs.gcThreshold
@@ -793,6 +883,7 @@ internal object ThreewayListener : EventListener.Factory {
     }
 
     override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
+      ColdStart.mark("codeLoadSuccess")
       Log.i("Threeway", "codeLoadSuccess modules=${manifest.modules.size} modulesFromAssets=$modulesFromAssets")
     }
 
@@ -807,6 +898,7 @@ internal object ThreewayListener : EventListener.Factory {
     override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
       if (traceCalls && !call.function.signature.startsWith("suspend ")) Trace.endSection()
       if ("sendChanges" in call.function.signature) {
+        ColdStart.mark("firstBatchSent")
         frameChanges = true
         onSendChangesEnd?.invoke()
       }
