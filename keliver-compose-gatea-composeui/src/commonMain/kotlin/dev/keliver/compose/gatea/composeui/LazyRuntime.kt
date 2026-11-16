@@ -152,9 +152,12 @@ internal class LazyHost(private val state: LazyListState) {
   val fling: FlingBehavior = object : FlingBehavior {
     override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
       val distance = decay?.calculateTargetValue(0f, initialVelocity)
-      predicted = distance?.let {
-        predictRestingWindow(state.layoutInfo, state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset, it)
-      }
+      val info = state.layoutInfo
+      val here = info.visibleItemsInfo.let { (it.firstOrNull()?.index ?: 0) to (it.lastOrNull()?.index ?: 0) }
+      // A fling that stays in this window (a short one) changes nothing: no prediction, no report.
+      predicted = distance
+        ?.let { predictRestingWindow(info, state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset, it) }
+        ?.takeIf { it != here }
       try {
         val fling = delegate ?: return initialVelocity
         return with(fling) { performFling(initialVelocity) }
