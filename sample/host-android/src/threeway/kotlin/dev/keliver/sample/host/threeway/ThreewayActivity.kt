@@ -384,8 +384,8 @@ class ThreewayActivity : ComponentActivity() {
           firstContent = false
           // Inside this frame's draw: the startup benchmark's timeToFullDisplay ends at this frame.
           reportFullyDrawn()
-          ColdStart.mark("dataDrawn")
-          log(ColdStart.line(form, recorder.peek(seq)))
+          // Once per process: a recreated activity (rotation) must not log a second "cold" line.
+          if (ColdStart.mark("dataDrawn")) log(ColdStart.line(form, recorder.peek(seq)))
           decor.postInvalidate()
           main.postDelayed(::runBench, SETTLE_MILLIS)
         }
@@ -719,8 +719,9 @@ private class Recorder {
 
 /**
  * NF0's cold-start split (docs/THREE_WAY_BENCHMARK.md, "Cold start (NF0)"): when each point of the
- * process's start was first reached (epoch ms), logged once as a `"cold"` line when the list's data
- * is first drawn, in ms from the process start. Always on (a few map writes per process). Guest
+ * process's start was first reached (epoch ms), logged once per process as a `"cold"` line when the
+ * list's data is first drawn, in ms from the app's start (`Process.getStartUptimeMillis`, set at
+ * bindApplication on Android 12, about 50 ms after the fork). Always on (a few map writes per process). Guest
  * only: the code load's steps (from the EventListener) and its module loads, summed.
  */
 internal object ColdStart {

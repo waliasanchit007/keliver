@@ -917,9 +917,10 @@ thermal status 0 before every series. The NF4 target is the guest within 0.4 s o
 - **Series.** Macrobenchmark `StartupMode.COLD`, 10 iterations per form, one form at a time. The
   per-iteration values come from the benchmark's JSON. p90 is the nearest rank (the 9th of 10).
 - **Split.** The guest's split comes from the app's marks. Each process logs one `"cold"` line when
-  the list's data is first drawn, giving every mark in ms from the process start
-  (`Process.getStartUptimeMillis`; Macrobenchmark's clock starts about 270 ms earlier, at the
-  launch). The marks are:
+  the list's data is first drawn, giving every mark in ms from the app's start
+  (`Process.getStartUptimeMillis`, which Android sets at `bindApplication`; in trace 2 that is
+  about 56 ms after the fork. Macrobenchmark's clock starts about 270 ms earlier, at the launch).
+  The marks are:
   - `activityCreate`, `contentSet` (the form's content set) and `firstDraw` (the activity's first
     frame);
   - from the Treehouse `EventListener`, the code load's steps: `codeLoadStart`, `manifestReady`,
@@ -946,51 +947,60 @@ thermal status 0 before every series. The NF4 target is the guest within 0.4 s o
 | web − native | +651 | | | +558 | | |
 
 - **The gap to the target is about 1.2 s:** +1,591 ms against +400 ms. The previous run (#250, the
-  Mac's API through the tunnel) measured 1,235 / 2,910 / 2,040, which is within 3–5% of this one in
-  every form.
+  Mac's API through the tunnel) measured 1,235 / 2,910 / 2,040, which is within 5% of this one in
+  every form (native +4%, guest −1%, web −5%).
 - **The guest's iterations 0 and 1 are as before.** Iteration 0 started with an empty code cache
   (4,424 ms; Macrobenchmark clears the app's data). Iteration 1 was the same outlier as in #250
   (8,519 ms, initial display 4,361), which was already slow before the app's code ran (its
   `activityCreate` came 1.7 s after the process start against 0.35 s). Without both, the guest's
   median is 2,857.
 
-**The guest's split** (median of iterations 2–9's `"cold"` lines, ms; the steps' medians do not add
-up exactly). Native's same marks are given for comparison:
+**The guest's split** (median of each step over iterations 2–9's `"cold"` lines, ms). The third
+column is the running sum of the step medians, not the median of each mark (the request's own
+median mark is 1,386, not 1,364); only the last row's 2,608 is a median of the mark itself.
+Native's same marks are given for comparison:
 
-| Step (guest) | ms | From process start | Native |
+| Step (guest) | ms | Running sum of step medians | Native |
 |---|---|---|---|
 | Process start → `Activity.onCreate` | 359 | 359 | 382 |
 | `onCreate` → content set (the factory, the fixture) | 96 | 455 | 106 |
 | Content set → first frame (the guest's empty host surface) | 103 | 557 | 210 (header drawn) |
 | First frame → code load starts | 18 | 575 | — |
-| Manifest read (cache) | 10 | | — |
+| Manifest read (cache) | 9 | | — |
 | Zipline and QuickJS created | 23 | 608 | — |
 | **53 modules loaded** (QuickJS's bytecode loads alone, summed: 298; slowest `androidx-compose-runtime`, 82–89) | **469** | 1,077 | — |
 | `main()` and the code load's end | 38 | 1,115 | — |
-| **First composition: the loading state** (110 changes; trace: `zl:start` 246–252 ms) | **244** | 1,358 | — |
+| **First composition: the loading state** (110 changes; trace 2: `zl:start` 252 ms; 246–252 across the three traces per the session's notes) | **244** | 1,358 | — |
 | First batch sent → request (the `LaunchedEffect`) | 6 | 1,364 | native requests at 799 |
 | Request → parsed (100 ms fixture, bridge, parse) | 154 | 1,518 | 191 |
-| **Parsed → list composed** (trace: one `zl:sendFrame` of 1,132–1,168 ms emitting `sendChanges n=1593`) | **995** | 2,512 | 33 |
-| Composed → batch sent (encoding; trace: `sendChanges` 49–64 ms) | 65 | 2,577 | — |
+| **Parsed → list composed** (trace 2: one `zl:sendFrame` of 1,132 ms emitting `sendChanges n=1593`; 1,132–1,168 across the three per the notes) | **995** | 2,512 | 33 |
+| Composed → batch sent (encoding; trace 2: `sendChanges` 49 ms; 49–64 across the three per the notes) | 65 | 2,577 | — |
 | Batch sent → data drawn | 23 | **2,608** | **1,028** |
 
 - **Before the guest's code, the two forms cost the same.** Process start, `onCreate` and content
-  set are within 25 ms of native. The guest's first frame comes about 100 ms earlier, because it is
-  an empty surface.
+  set are within 25 ms of native. The guest's first frame comes about 130 ms earlier (median 565
+  against 698), because it is an empty surface.
 - **The guest-only critical path is about 1,800 ms:** the code load (about 540 ms), the first
   composition (244), the list's composition (995) and its batch (65). The request goes out at
   1,364 ms against native's 799 (about 100 ms after native's first frame). So the guest is 565 ms
-  behind before the network starts, and 1,580 ms behind when the data is drawn. Almost all of the
-  second gap (about 960 ms) is the list's composition.
-- **The Zipline thread is CPU-bound, not waiting.** In the traces it ran for 2,565–2,600 ms and was
-  runnable but not running for only 5–8 ms. Its I/O wait was under 1 ms.
+  behind before the network starts (running sums; about 587 with the request mark's own median),
+  and 1,580 ms behind when the data is drawn. The gap grows by about 1,015 ms after the request;
+  about 960 of that is the list's composition.
+- **The Zipline thread is CPU-bound, not waiting.** In trace 2 it ran for 2,565 ms and was runnable but
+  not running for only 7.7 ms; its I/O wait was 0.2 ms. The session's notes give 2,565–2,600 ms and
+  5–8 ms across all three traces (traces 1 and 3: raw lines not retained).
 - **First launch after install or update: +445 ms** (median data drawn 3,110 against 2,665; three
-  each, `am start`). The QuickJS loads cost the same (271–280 ms summed), but the 53 modules'
-  span is 740–830 ms instead of about 370: reading the assets, checking and writing the cache.
+  each, `am start`; raw lines not retained, figures from the session's notes). In these six runs
+  the QuickJS loads cost the same either way (271–280 ms summed), but the 53 modules' span is
+  740–830 ms on a first launch against about 370 in the three ordinary `am start` runs (461 in the
+  Macrobenchmark runs above): reading the assets, checking and writing the cache. The retained
+  Macrobenchmark iteration 0 (empty cache, all 53 modules from the assets) agrees: its span is
+  981 ms.
   Macrobenchmark's iteration 0 (4,424) also includes the app's own first-run costs after
   Macrobenchmark resets its compilation (its first frame came 200 ms later), so it is not the
   guest-only figure.
-- **Not reconciled:** the `x=trace` traces show a 137–143 ms main-thread frame right after the big
+- **Not reconciled:** the `x=trace` traces show a 137–143 ms main-thread frame (138 in trace 2; the
+  range is from the session's notes) right after the big
   batch. The marks give 23 ms from batch sent to drawn in the clean runs, and 50 ms in the traced
   runs. The frame may follow the drawn one, and `x=trace`'s message logging adds to every message.
   It is not on the guest's ranked list below.
@@ -999,8 +1009,9 @@ up exactly). Native's same marks are given for comparison:
 1. **The list's first composition in a fresh QuickJS: 995 ms (measured).** In a warm process, the
    same list recomposed after a reload costs about 67 ms (section 3, small). So about 0.9 s is
    first-run cost: code paths running for the first time in an interpreter (class and object
-   initialisation of the rows' code and the runtime's first slot-table growth), plus creating and
-   encoding 1,593 changes for 20 rows (about 80 per row). This breakdown is inferred and was not
+   initialisation of the rows' code and the runtime's first slot-table growth), plus creating
+   1,593 changes for 20 rows (about 80 per row; their encoding is the separate 65 ms step, and the
+   warm 67 ms also creates changes). This breakdown is inferred and was not
    profiled inside QuickJS. Candidates:
    - **Run the row code before the data arrives.** Placeholder rows built from the real row
      composables, during the loading state, would move the first-run cost into the network wait.
@@ -1021,7 +1032,7 @@ up exactly). Native's same marks are given for comparison:
      core (the main and Zipline threads do not compete: the Zipline thread was runnable but not
      running for under 10 ms).
    - **Fewer, larger modules, or a smaller first bundle** (53 modules; the Compose runtime alone is
-     80 ms). Estimated: part of the 170 ms per-module overhead and of the 298 ms load.
+     about 85 ms). Estimated: part of the 170 ms per-module overhead and of the 298 ms load.
 3. **The loading state's first composition: 244 ms (measured), and the request waits for it.**
    Candidate: **start the screen's request without waiting for the first composition** (from
    `main()`, or a host-side prefetch named by the screen), so the network overlaps the composition.
@@ -1033,8 +1044,9 @@ up exactly). Native's same marks are given for comparison:
 5. **The big batch: 65 ms encoding plus the host's apply (measured, 23 ms to drawn).** Item 1's
    smaller window and fewer changes reduce it. Estimated: tens of ms.
 
-Items 1–3 together are estimated at roughly 0.8–1.3 s of the 1.2 s that needs to go. Only a
-measured NF4 run can say whether the 0.4 s target is reached without the engine.
+Items 1–3 are estimated at roughly 0.8–1.3 s of the 1.2 s that needs to go including NF2's engine
+(about 0.5 s of it, not measured), and about 0.3–0.8 s without it. Item 1's placeholder rows and
+item 3 both use the same network wait, so their savings do not add. Only a measured NF4 run can say whether the 0.4 s target is reached without the engine.
 
 ### Scrolling, run 2
 
