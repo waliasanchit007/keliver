@@ -56,3 +56,37 @@ public data class ExtraAnimated(
   val param: String,
   val ref: dev.keliver.compose.animation.core.AnimatedRef,
 )
+
+/**
+ * A retained back stack whose back the host shows (NF1; keliver-nav's `KeliverNavHostFrame`).
+ * [entries] are [ExtraRetainedEntry]s, bottom first, and the host shows the last one. The others
+ * stay in the host's tree, so their native state (a list's scroll position) survives, but they are
+ * not measured, placed or drawn, take no input, hold no focus and expose no semantics.
+ *
+ * On a system back press, when the shown entry is not the first and its
+ * [ExtraRetainedEntry.hostBack] is set, the host shows the entry below at once, in the frame of the
+ * press, and sends [onBack] with that entry's key. It keeps showing that entry until [backHandled]
+ * reaches the number of [onBack] calls it has sent; from then on it shows the guest's last entry
+ * again, so the guest's state always wins. Structure only; screens never name it.
+ */
+@Widget(502)
+public data class ExtraRetained(
+  /** How many [onBack] calls the guest has handled (confirmed or refused). */
+  @Property(1) val backHandled: Int,
+  /** The host went back on its own and now shows the entry with this key. */
+  @Property(2) val onBack: (String) -> Unit,
+  @Children(1) val entries: () -> Unit,
+)
+
+/** One entry of an [ExtraRetained] stack. Structure only; screens never name it. */
+@Widget(503)
+public data class ExtraRetainedEntry(
+  /** The guest's key for this entry, unique in its stack. */
+  @Property(1) val key: String,
+  /**
+   * Whether the host may go back from this entry on its own: the guest can pop it, and no
+   * `BackHandler` in it was enabled when it was last shown.
+   */
+  @Property(2) val hostBack: Boolean,
+  @Children(1) val content: GenBoxScope.() -> Unit,
+)

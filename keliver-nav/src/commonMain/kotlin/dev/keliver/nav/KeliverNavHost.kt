@@ -60,6 +60,12 @@ public fun <R : Any> KeliverNavHost(
  * With [retention] null (or depth 0) this is the plain [KeliverNavHost]: only the top entry is
  * composed. See [KeliverNavRetention] for what retention costs and does not change.
  *
+ * With a [KeliverNavHostFrame], a system back press over an entry with no enabled `BackHandler` is
+ * shown by the host in the frame of the press, and the controller is then popped to the entry the
+ * host shows (see [KeliverNavHostFrame] for the protocol and its conflict rules). The app's own
+ * `BackHandler(enabled = nav.canPop) { nav.pop() }` stays as it is: it takes the presses the host
+ * does not (a host without a back dispatcher for the container, the bottom of the retained window).
+ *
  * Retention does not add saving: a controller from [rememberKeliverNavController] is remembered,
  * not saved, so a recreated guest composition starts again from its start route, with or without
  * retention.
@@ -91,11 +97,18 @@ public fun <R : Any> KeliverNavHost(
         content(top.route)
       }
     } else {
-      RetainedEntries(controller.entries.toList(), { it.id }, retention) { entry ->
-        stateHolder.SaveableStateProvider(entry.id) {
-          content(entry.route)
-        }
-      }
+      RetainedEntries(
+        items = controller.entries.toList(),
+        keyOf = { it.id },
+        retention = retention,
+        content = { entry ->
+          stateHolder.SaveableStateProvider(entry.id) {
+            content(entry.route)
+          }
+        },
+        idOf = { it.id.toString() },
+        onHostBack = { controller.popToEntry(it.id) },
+      )
     }
   }
 }

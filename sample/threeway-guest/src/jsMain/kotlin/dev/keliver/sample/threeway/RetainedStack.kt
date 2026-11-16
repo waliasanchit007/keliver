@@ -18,20 +18,25 @@
 package dev.keliver.sample.threeway
 
 import androidx.compose.runtime.Composable
+import dev.keliver.compose.BackHandler
 import dev.keliver.compose.foundation.layout.Box
 import dev.keliver.compose.foundation.layout.fillMaxSize
 import dev.keliver.compose.foundation.layout.offset
+import dev.keliver.compose.gatea.compose.ExtraRetained
+import dev.keliver.compose.gatea.compose.ExtraRetainedEntry
 import dev.keliver.compose.ui.Modifier
 import dev.keliver.compose.ui.draw.alpha
 import dev.keliver.compose.ui.unit.dp
 import dev.keliver.nav.ExperimentalKeliverNavRetentionApi
 import dev.keliver.nav.KeliverNavFrame
+import dev.keliver.nav.KeliverNavHostFrame
 import dev.keliver.nav.KeliverNavRetention
 import dev.keliver.nav.KeliverRetainedStack
 
 // The guest's `retain` experiment (NF1, docs/PLAN_2026-11.md WS7): keliver-nav's retained stack with
-// a frame built from the generated API's own widgets. Guest only: the native copy of
-// ThreewayScreens.kt never sees this file.
+// a frame built from the generated API's own widgets. `retainhost`: the same stack in the host's
+// retained container (gate A's ExtraRetained), whose system back the host shows in the frame of the
+// press. Guest only: the native copy of ThreewayScreens.kt never sees this file.
 
 /**
  * Entries overlap in a full-size box; a hidden entry keeps its size (so the list's viewport does not
@@ -60,7 +65,48 @@ internal object RetainedThreewayStack : ThreewayStack {
   private val retention = KeliverNavRetention(GateAFrame, depth = 1)
 
   @Composable
-  override fun Show(keys: List<Any>, content: @Composable (Any) -> Unit) {
+  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+    // System back through the guest (the round trip host back removes).
+    BackHandler(enabled = keys.size > 1) { onBack() }
     KeliverRetainedStack(keys, retention, content)
+  }
+}
+
+/**
+ * The host's retained container (gate A's `ExtraRetained`): the host shows the last entry, hides
+ * the others (not laid out or drawn, no input, focus or semantics), and goes back on its own.
+ */
+internal object GateAHostFrame : KeliverNavHostFrame {
+  private val Fill = Modifier.fillMaxSize()
+
+  @Composable
+  override fun HostStack(backHandled: Int, onBack: (entryId: String) -> Unit, content: @Composable () -> Unit) {
+    ExtraRetained(backHandled = backHandled, onBack = onBack, modifier = Fill) { content() }
+  }
+
+  @Composable
+  override fun HostEntry(entryId: String, hostBack: Boolean, content: @Composable () -> Unit) {
+    ExtraRetainedEntry(key = entryId, hostBack = hostBack, modifier = Fill) { content() }
+  }
+
+  @Composable
+  override fun Stack(content: @Composable () -> Unit) = HostStack(0, {}, content)
+
+  @Composable
+  override fun Entry(visible: Boolean, content: @Composable () -> Unit) = HostEntry("", false, content)
+}
+
+/**
+ * `retainhost`: the retained stack in the host's container. A system back press over the detail is
+ * shown by the host at once; the guest then goes back ([onBack], from `onHostBack`). The guest's own
+ * BackHandler stays as the fallback for presses the host does not take.
+ */
+internal object RetainedHostThreewayStack : ThreewayStack {
+  private val retention = KeliverNavRetention(GateAHostFrame, depth = 1)
+
+  @Composable
+  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+    BackHandler(enabled = keys.size > 1) { onBack() }
+    KeliverRetainedStack(keys, retention, onHostBack = { onBack() }, content = content)
   }
 }

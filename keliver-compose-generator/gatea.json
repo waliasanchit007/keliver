@@ -117,5 +117,5 @@
     "AutoMirrored.Filled.ArrowBack", "AutoMirrored.Filled.TrendingUp", "Filled.ChevronRight", "Filled.Close",
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
-  "extras": ["Shimmer", "LazyItem"]
+  "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry"]
 }

@@ -33,6 +33,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
+import dev.keliver.compose.gatea.composeui.LocalHostBackDispatcher
 import dev.keliver.compose.gatea.composeui.keliverComposeGateAWidgetSystem
 import dev.keliver.compose.gatea.protocol.host.KeliverComposeGateAHostProtocol
 import dev.keliver.http.HostHttpProvider
@@ -320,7 +322,12 @@ class ThreewayActivity : ComponentActivity() {
               override fun get(app: ThreewayAppService) = app.launch()
             }
           }
-          TreehouseContent(treehouseApp = app, widgetSystem = widgetSystem, contentSource = contentSource, modifier = Modifier.fillMaxSize())
+          // NF1 `retainhost`: the guest's retained container goes back on the host, through the
+          // activity's dispatcher (where the guest's BackHandlers are too). Unused by other forms.
+          val hostBack = remember { AndroidHostBackDispatcher(onBackPressedDispatcher) }
+          CompositionLocalProvider(LocalHostBackDispatcher provides hostBack) {
+            TreehouseContent(treehouseApp = app, widgetSystem = widgetSystem, contentSource = contentSource, modifier = Modifier.fillMaxSize())
+          }
         }
       }
     }
@@ -407,26 +414,38 @@ class ThreewayActivity : ComponentActivity() {
     var lastData = 1
     fun next() = steps.removeFirstOrNull()?.invoke() ?: log("""{"form":"$form","done":true}""")
 
-    fun iteration(bench: String, i: Int, xDp: Float, yDp: Float, accept: (String, Int) -> Boolean, pause: Long) {
+    fun iteration(
+      bench: String,
+      i: Int,
+      xDp: Float,
+      yDp: Float,
+      accept: (String, Int) -> Boolean,
+      pause: Long,
+      press: (() -> Long)? = null,
+    ) {
       fun run(before: LongArray?) {
         val timeout = Runnable {
           waiter = null
           log("""{"form":"$form","bench":"$bench","i":$i,"timeout":true}""")
           main.postDelayed({ next() }, pause)
         }
-        val tap = tap(xDp, yDp)
+        val tap = press?.invoke() ?: tap(xDp, yDp)
+        // A system back (`sysback`): also the press's first draw, which shows the list when the host
+        // goes back on its own (`retainhost`) and is the guest's frame otherwise.
+        fun pressExtra(): Map<String, Long> =
+          if (press != null && firstDrawAfterPress > 0) mapOf("firstDraw" to firstDrawAfterPress - tap) else emptyMap()
         waiter = { screen, seq ->
           if (accept(screen, seq)) {
             waiter = null
             main.removeCallbacks(timeout)
             if (screen == "data") lastData = seq
             if (before == null) {
-              log(result(bench, i, tap, seq))
+              log(result(bench, i, tap, seq, extra = pressExtra()))
               main.postDelayed({ next() }, pause)
             } else {
               val marks = recorder.take(seq)
               readQuickJsMemory { after ->
-                log(result(bench, i, tap, seq, marks, memory(before, after)))
+                log(result(bench, i, tap, seq, marks, memory(before, after) + pressExtra()))
                 main.postDelayed({ next() }, pause)
               }
             }
@@ -448,7 +467,7 @@ class ThreewayActivity : ComponentActivity() {
     fun endOfSeries(bench: String) {
       // The series' summary per step (the first `warmup` iterations dropped).
       val labels = when (bench) {
-        "nav" -> listOf("open", "back")
+        "nav", "sysback" -> listOf("open", "back")
         "scroll" -> emptyList()
         else -> listOf(bench)
       }
@@ -488,6 +507,12 @@ class ThreewayActivity : ComponentActivity() {
           iteration("open", i, widthDp() / 2, ROWS_TOP_DP + ROW_DP * ((i - 1) % 5) + ROW_DP / 2, { s, _ -> s == "detail" }, 700)
           iteration("back", i, 36f, 28f, { s, _ -> s == "list" }, 700)
         }
+        // Back by a system back press instead of the header's button (guest `retain` or `retainhost`
+        // only: as shipped, the guest has no BackHandler and the press would finish the activity).
+        "sysback" -> for (i in 1..n) {
+          iteration("open", i, widthDp() / 2, ROWS_TOP_DP + ROW_DP * ((i - 1) % 5) + ROW_DP / 2, { s, _ -> s == "detail" }, 700)
+          iteration("back", i, 0f, 0f, { s, _ -> s == "list" }, 700, press = ::systemBack)
+        }
         "api-small", "api-large" -> for (i in 1..n) {
           val x = if (bench == "api-small") widthDp() / 4 else widthDp() * 3 / 4
           iteration(bench, i, x, 80f, { s, seq -> s == "data" && seq > lastData }, if (bench == "api-large") 1_500 else 800)
@@ -502,6 +527,27 @@ class ThreewayActivity : ComponentActivity() {
       endOfSeries(bench)
     }
     next()
+  }
+
+  private var firstDrawAfterPress = 0L
+
+  /** A system back press, as the platform delivers it, and the first draw of the window after it. */
+  private fun systemBack(): Long {
+    val decor = window.decorView
+    firstDrawAfterPress = 0L
+    val listener = object : ViewTreeObserver.OnDrawListener {
+      var fired = false
+      override fun onDraw() {
+        if (fired) return
+        fired = true
+        firstDrawAfterPress = System.currentTimeMillis()
+        main.post { decor.viewTreeObserver.removeOnDrawListener(this) }
+      }
+    }
+    decor.viewTreeObserver.addOnDrawListener(listener)
+    val at = System.currentTimeMillis()
+    onBackPressedDispatcher.onBackPressed()
+    return at
   }
 
   private fun startScroll() {

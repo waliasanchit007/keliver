@@ -114,6 +114,8 @@ import dev.keliver.compose.gatea.modifier.GenSize2
 import dev.keliver.compose.gatea.modifier.GenVerticalScroll1
 import dev.keliver.compose.gatea.modifier.GenWidth1
 import dev.keliver.compose.gatea.widget.ExtraLazyItem
+import dev.keliver.compose.gatea.widget.ExtraRetained
+import dev.keliver.compose.gatea.widget.ExtraRetainedEntry
 import dev.keliver.compose.gatea.widget.ExtraShimmer
 import dev.keliver.compose.gatea.widget.GenAnimatedVisibility1
 import dev.keliver.compose.gatea.widget.GenAsyncImage1
@@ -1260,6 +1262,8 @@ public class ComposeUiKeliverComposeGateAWidgetFactory : KeliverComposeGateAWidg
   override fun GenRowScopeAnimatedVisibility1(): GenRowScopeAnimatedVisibility1<@Composable (Modifier) -> Unit> = ComposeUiGenRowScopeAnimatedVisibility1()
   override fun ExtraShimmer(): ExtraShimmer<@Composable (Modifier) -> Unit> = ComposeUiExtraShimmer()
   override fun ExtraLazyItem(): ExtraLazyItem<@Composable (Modifier) -> Unit> = ComposeUiExtraLazyItem()
+  override fun ExtraRetained(): ExtraRetained<@Composable (Modifier) -> Unit> = ComposeUiExtraRetained()
+  override fun ExtraRetainedEntry(): ExtraRetainedEntry<@Composable (Modifier) -> Unit> = ComposeUiExtraRetainedEntry()
   override fun GenPadding1(value: @Composable (Modifier) -> Unit, modifier: GenPadding1) {}
   override fun GenPadding2(value: @Composable (Modifier) -> Unit, modifier: GenPadding2) {}
   override fun GenPadding3(value: @Composable (Modifier) -> Unit, modifier: GenPadding3) {}
