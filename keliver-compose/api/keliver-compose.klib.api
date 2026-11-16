@@ -7,11 +7,17 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-compose>
+open annotation class dev.keliver.compose/ExperimentalKeliverBackApi : kotlin/Annotation { // dev.keliver.compose/ExperimentalKeliverBackApi|null[0]
+    constructor <init>() // dev.keliver.compose/ExperimentalKeliverBackApi.<init>|<init>(){}[0]
+}
+
 abstract interface dev.keliver.compose/RedwoodComposition { // dev.keliver.compose/RedwoodComposition|null[0]
     abstract fun cancel() // dev.keliver.compose/RedwoodComposition.cancel|cancel(){}[0]
     abstract fun setContent(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>) // dev.keliver.compose/RedwoodComposition.setContent|setContent(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>){}[0]
 }
 
+final val dev.keliver.compose/LocalBackHandlersEnabled // dev.keliver.compose/LocalBackHandlersEnabled|{}LocalBackHandlersEnabled[0]
+    final fun <get-LocalBackHandlersEnabled>(): androidx.compose.runtime/ProvidableCompositionLocal<androidx.compose.runtime/State<kotlin/Boolean>> // dev.keliver.compose/LocalBackHandlersEnabled.<get-LocalBackHandlersEnabled>|<get-LocalBackHandlersEnabled>(){}[0]
 final val dev.keliver.compose/LocalOnBackPressedDispatcher // dev.keliver.compose/LocalOnBackPressedDispatcher|{}LocalOnBackPressedDispatcher[0]
     final fun <get-LocalOnBackPressedDispatcher>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.keliver.ui/OnBackPressedDispatcher> // dev.keliver.compose/LocalOnBackPressedDispatcher.<get-LocalOnBackPressedDispatcher>|<get-LocalOnBackPressedDispatcher>(){}[0]
 final val dev.keliver.compose/LocalUiConfiguration // dev.keliver.compose/LocalUiConfiguration|{}LocalUiConfiguration[0]

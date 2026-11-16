@@ -42,9 +42,33 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * }
  * ```
  */
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
 @Composable
 public fun <R : Any> KeliverNavHost(
   controller: KeliverNavController<R>,
+  content: @Composable (R) -> Unit,
+) {
+  KeliverNavHost(controller, retention = null, content)
+}
+
+/**
+ * [KeliverNavHost] with a retained back stack: with [retention], up to its depth of entries below
+ * the top stay composed and hidden by its [KeliverNavFrame], so [KeliverNavController.pop] to one of
+ * them composes nothing in the guest and creates nothing on the host: the frame shows the native
+ * tree the host already has. Hidden entries see [KeliverNavEntryLifecycle.Hidden] through
+ * [keliverNavEntryLifecycle] and [LaunchedWhileVisible], and their `BackHandler`s are disabled.
+ * With [retention] null (or depth 0) this is the plain [KeliverNavHost]: only the top entry is
+ * composed. See [KeliverNavRetention] for what retention costs and does not change.
+ *
+ * Retention does not add saving: a controller from [rememberKeliverNavController] is remembered,
+ * not saved, so a recreated guest composition starts again from its start route, with or without
+ * retention.
+ */
+@ExperimentalKeliverNavRetentionApi
+@Composable
+public fun <R : Any> KeliverNavHost(
+  controller: KeliverNavController<R>,
+  retention: KeliverNavRetention?,
   content: @Composable (R) -> Unit,
 ) {
   val stateHolder = rememberSaveableStateHolder()
@@ -60,10 +84,18 @@ public fun <R : Any> KeliverNavHost(
     onDispose { /* SaveableStateHolder cleans itself up when the host leaves the tree. */ }
   }
 
-  val top = controller.entries.last()
   CompositionLocalProvider(LocalKeliverNavController provides controller) {
-    stateHolder.SaveableStateProvider(top.id) {
-      content(top.route)
+    if (retention == null || retention.depth == 0) {
+      val top = controller.entries.last()
+      stateHolder.SaveableStateProvider(top.id) {
+        content(top.route)
+      }
+    } else {
+      RetainedEntries(controller.entries.toList(), { it.id }, retention) { entry ->
+        stateHolder.SaveableStateProvider(entry.id) {
+          content(entry.route)
+        }
+      }
     }
   }
 }

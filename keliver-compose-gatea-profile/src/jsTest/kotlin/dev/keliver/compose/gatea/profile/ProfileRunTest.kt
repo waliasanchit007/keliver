@@ -45,6 +45,27 @@ class ProfileRunTest {
     }
   }
 
+  /** NF1: with the retained stack, back composes nothing new: no widget is created. */
+  @Test fun retainedBackCreatesNothing() {
+    val run = ProfileRun(Encoding.KOTLINX, timeCalls = false, items = 20, retain = true)
+    try {
+      run.first()
+      repeat(3) { i ->
+        val open = run.open(i)
+        val back = run.back()
+        // Opening composes the detail as before (22 widgets) inside its entry's box and column.
+        assertEquals(24, open.creates, "open $i")
+        assertEquals(0, back.creates, "back $i: ${back.toJson()}")
+        // Back sends: the detail's removal and the list frame's modifier, nothing else.
+        assertEquals(1, back.structural, "back $i structural")
+        assertEquals(1, back.modifiers, "back $i modifiers")
+        assertEquals(0, back.properties, "back $i properties")
+      }
+    } finally {
+      run.close()
+    }
+  }
+
   @Test fun noneRecordsStructureOnly() {
     val s = steps(Encoding.NONE)
     assertEquals(145, s.back.creates)
