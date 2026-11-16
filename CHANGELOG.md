@@ -81,16 +81,6 @@ New:
   and never makes an outbound call. Add it with `debugImplementation` (Android) or a
   Debug-only dependency (iOS). Wiring and the release-build self-test:
   `docs/DEBUG_HTTP_REPLAY.md` (#232).
-
-Changed:
-
-- `keliver-leak-detector` on wasmJs: `LeakDetector.timeBasedIn` now returns a working
-  detector instead of the no-op one, as js already did; it uses JS `WeakRef`, and the
-  engine's `gc()` when exposed. Without an exposed `gc()` it relies on the engine's own
-  collection, so a short `leakThreshold` can report objects the browser has not
-  collected yet (#231).
-- Generated Compose API (prototype, `keliver-compose-gatea-composeui`): during a fling a lazy list reports to the guest only the window it will come to rest at, predicted from the platform's own default fling, so the guest no longer composes windows the list has left (NF1) (#258).
-- Generated Compose API (prototype): rows the guest has not composed yet are drawn as placeholders (never blank, hidden from screen readers) at the measured size of the guest's rows, instead of empty 48 dp spacers (#258).
 - keliver-nav: an experimental retained back stack (opt in with `@ExperimentalKeliverNavRetentionApi`).
   `KeliverNavHost(controller, retention, content)` and `KeliverRetainedStack(keys, retention, content)`
   keep up to `KeliverNavRetention.depth` (default 2) entries below the top composed and hidden by a
@@ -101,6 +91,16 @@ Changed:
   `KeliverNavHost(controller, content)` is unchanged (#259).
 - keliver-compose: an experimental `LocalBackHandlersEnabled` (opt in with `@ExperimentalKeliverBackApi`).
   A `BackHandler` is enabled only while both its own `enabled` and this composition local are true (#259).
+
+Changed:
+
+- `keliver-leak-detector` on wasmJs: `LeakDetector.timeBasedIn` now returns a working
+  detector instead of the no-op one, as js already did; it uses JS `WeakRef`, and the
+  engine's `gc()` when exposed. Without an exposed `gc()` it relies on the engine's own
+  collection, so a short `leakThreshold` can report objects the browser has not
+  collected yet (#231).
+- Generated Compose API (prototype, `keliver-compose-gatea-composeui`): during a fling a lazy list reports to the guest only the window it will come to rest at, predicted from the platform's own default fling, so the guest no longer composes windows the list has left (NF1) (#258).
+- Generated Compose API (prototype): rows the guest has not composed yet are drawn as placeholders (never blank, hidden from screen readers) at the measured size of the guest's rows, instead of empty 48 dp spacers (#258).
 
 Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 
