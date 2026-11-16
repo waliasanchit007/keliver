@@ -121,6 +121,17 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
     entries.clear()
     entries.add(NavEntry(nextId++, route))
   }
+
+  /**
+   * Pops entries above the entry with [id], if it is in the stack (a host went back to it on its
+   * own); otherwise changes nothing.
+   */
+  internal fun popToEntry(id: Long) {
+    if (entries.none { it.id == id }) return
+    while (entries.last().id != id) {
+      entries.removeAt(entries.lastIndex)
+    }
+  }
 }
 
 /** Internal record paired with each route to key the SaveableStateHolder. */

@@ -574,14 +574,18 @@ internal class EventTap {
   }
 }
 
-internal fun guestOnHost(tap: EventTap? = null, content: @Composable () -> Unit): GuestOnHost {
+internal fun guestOnHost(
+  tap: EventTap? = null,
+  backDispatcher: OnBackPressedDispatcher? = null,
+  content: @Composable () -> Unit,
+): GuestOnHost {
   val guestAdapter = DefaultGuestProtocolAdapter(hostVersion = hostRedwoodVersion, widgetSystemFactory = KeliverComposeGateAProtocolWidgetSystemFactory)
   val clock = BroadcastFrameClock()
   val composition = ProtocolRedwoodComposition(
     scope = CoroutineScope(Dispatchers.Unconfined + clock),
     guestAdapter = guestAdapter,
     widgetVersion = UInt.MAX_VALUE,
-    onBackPressedDispatcher = object : OnBackPressedDispatcher {
+    onBackPressedDispatcher = backDispatcher ?: object : OnBackPressedDispatcher {
       override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable = object : Cancellable {
         override fun cancel() = Unit
       }

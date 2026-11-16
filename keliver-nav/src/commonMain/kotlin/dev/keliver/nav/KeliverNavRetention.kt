@@ -173,15 +173,39 @@ public fun <K : Any> KeliverRetainedStack(
   retention: KeliverNavRetention?,
   content: @Composable (K) -> Unit,
 ) {
+  KeliverRetainedStack(keys, retention, onHostBack = null, content)
+}
+
+/**
+ * [KeliverRetainedStack] that lets a host go back on its own when [retention]'s frame is a
+ * [KeliverNavHostFrame]: on a system back press the host shows the entry below the top in the frame
+ * of the press, and then [onHostBack] is called, in the guest, with that entry's key; it must make
+ * that key the top (drop the keys above it), as the app's own back would. The host keeps showing the
+ * entry until the guest has handled the press, so nothing jumps. A `BackHandler` enabled in the top
+ * entry takes the press instead, as without host back. With [onHostBack] null, or a frame that is
+ * not a [KeliverNavHostFrame], every back goes through the guest.
+ */
+@ExperimentalKeliverNavRetentionApi
+@Composable
+public fun <K : Any> KeliverRetainedStack(
+  keys: List<K>,
+  retention: KeliverNavRetention?,
+  onHostBack: ((K) -> Unit)?,
+  content: @Composable (K) -> Unit,
+) {
   require(keys.isNotEmpty()) { "keys must not be empty" }
   // Two entries with one key would share a key() group by position and could swap their state.
   require(keys.size == 1 || keys.toSet().size == keys.size) { "keys must be unique: $keys" }
-  RetainedEntries(keys, { it }, retention, content)
+  val ids = remember { KeyIds() }
+  SideEffect { ids.retain(keys) }
+  RetainedEntries(keys, { it }, retention, content, { ids.idOf(it) }, onHostBack)
 }
 
 /**
  * Composes the top of [items] and, with [retention], up to its depth below it, each in a group keyed
  * by [keyOf] so an entry's composition survives entries added above it and removed from below it.
+ * On a [KeliverNavHostFrame], [idOf] names an entry to the host, [onHostBack] makes an entry the
+ * top after the host went back to it, and [liveItems] (if given) reads the stack as it is now.
  */
 @OptIn(ExperimentalKeliverNavRetentionApi::class, ExperimentalKeliverBackApi::class)
 @Composable
@@ -190,6 +214,9 @@ internal fun <T : Any> RetainedEntries(
   keyOf: (T) -> Any,
   retention: KeliverNavRetention?,
   content: @Composable (T) -> Unit,
+  idOf: (T) -> String = { keyOf(it).toString() },
+  onHostBack: ((T) -> Unit)? = null,
+  liveItems: (() -> List<T>)? = null,
 ) {
   val depth = retention?.depth ?: 0
   if (retention == null || depth == 0) {
@@ -208,6 +235,11 @@ internal fun <T : Any> RetainedEntries(
   SideEffect {
     composedKeys.clear()
     window.mapTo(composedKeys, keyOf)
+  }
+  val frame = retention.frame
+  if (frame is KeliverNavHostFrame) {
+    HostRetainedEntries(items, window, keyOf, idOf, frame, onHostBack, content, liveItems)
+    return
   }
   // An entry is shown only while the entry enclosing this stack (if any) is shown too.
   val parentLifecycle = LocalKeliverNavEntryLifecycle.current
@@ -237,12 +269,12 @@ internal fun <T : Any> RetainedEntries(
 
 /** A skippable boundary: showing or hiding an entry re-runs the frame, never the entry's content. */
 @Composable
-private fun <T> EntryContent(item: T, content: @Composable (T) -> Unit) {
+internal fun <T> EntryContent(item: T, content: @Composable (T) -> Unit) {
   content(item)
 }
 
 @OptIn(ExperimentalKeliverNavRetentionApi::class)
-private class EntryLifecycle(
+internal class EntryLifecycle(
   visible: Boolean,
   parentLifecycle: State<KeliverNavEntryLifecycle>,
   parentBackHandlers: State<Boolean>,

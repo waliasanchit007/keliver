@@ -29,6 +29,11 @@ public abstract interface class dev/keliver/nav/KeliverNavFrame {
 	public abstract fun Stack (Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
 }
 
+public abstract interface class dev/keliver/nav/KeliverNavHostFrame : dev/keliver/nav/KeliverNavFrame {
+	public abstract fun HostEntry (Ljava/lang/String;ZLkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public abstract fun HostStack (ILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+}
+
 public final class dev/keliver/nav/KeliverNavHostKt {
 	public static final fun KeliverNavHost (Ldev/keliver/nav/KeliverNavController;Ldev/keliver/nav/KeliverNavRetention;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
 	public static final fun KeliverNavHost (Ldev/keliver/nav/KeliverNavController;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
@@ -52,6 +57,7 @@ public final class dev/keliver/nav/KeliverNavRetention$Companion {
 }
 
 public final class dev/keliver/nav/KeliverNavRetentionKt {
+	public static final fun KeliverRetainedStack (Ljava/util/List;Ldev/keliver/nav/KeliverNavRetention;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
 	public static final fun KeliverRetainedStack (Ljava/util/List;Ldev/keliver/nav/KeliverNavRetention;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
 	public static final fun LaunchedWhileVisible ([Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
 	public static final fun keliverNavEntryLifecycle (Landroidx/compose/runtime/Composer;I)Landroidx/compose/runtime/State;

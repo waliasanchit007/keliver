@@ -46,6 +46,8 @@ import dev.keliver.schema.Widget
     GenRowScopeAnimatedVisibility1::class,
     ExtraShimmer::class,
     ExtraLazyItem::class,
+    ExtraRetained::class,
+    ExtraRetainedEntry::class,
     GenPadding1::class,
     GenPadding2::class,
     GenPadding3::class,
