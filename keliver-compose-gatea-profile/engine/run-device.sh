@@ -31,8 +31,10 @@ serial="${ANDROID_SERIAL:-}"
 if [ "${1:-}" = -s ]; then serial="${2:?-s needs a serial}"; shift 2; fi
 cmd="${1:?usage: run-device.sh [-s SERIAL] devices|push|start|status|wait|pull|check|stop|cleanup}"; shift
 # A full path: the adb() function below would otherwise call itself.
-adb_bin="$(command -v adb || echo adb)"
+adb_bin="$(command -v adb || true)"
 [ -n "${ANDROID_HOME:-}" ] && [ -x "$ANDROID_HOME/platform-tools/adb" ] && adb_bin="$ANDROID_HOME/platform-tools/adb"
+[ -n "$adb_bin" ] || adb_bin="$HOME/Library/Android/sdk/platform-tools/adb"
+[ -x "$adb_bin" ] || { echo "adb not found: put platform-tools on PATH or set ANDROID_HOME" >&2; exit 2; }
 if [ "$cmd" = devices ]; then exec "$adb_bin" devices -l; fi
 if [ "$cmd" = emulator-start ]; then # <avd>: a headless, read-only emulator for a rehearsal
   avd="${1:?emulator-start <avd>}"
@@ -65,6 +67,11 @@ sh_dev() { adb shell "$1" | tr -d '\r'; }
 driver_alive() { # prints the pid when the driver runs
   sh_dev "p=\$(cat $D/driver.pid 2>/dev/null) && [ -n \"\$p\" ] && grep -q driver.sh /proc/\$p/cmdline 2>/dev/null && echo \$p" || true
 }
+unrestored() { # refuses while an earlier --stay-awake run left its saved setting behind
+  if sh_dev "[ -f $D/results/stay_on.old ] && echo y" | grep -q y; then
+    echo "a stay-awake setting on $serial was never restored; run: cleanup (it restores it) first" >&2; exit 1
+  fi
+}
 
 case "$cmd" in
 push)
@@ -73,6 +80,7 @@ push)
   abi="$(sh_dev 'getprop ro.product.cpu.abi')"
   [ "$abi" = arm64-v8a ] || { echo "$serial is $abi; these binaries are arm64-v8a" >&2; exit 1; }
   [ -z "$(driver_alive)" ] || { echo "a driver is running on $serial; run: stop or cleanup" >&2; exit 1; }
+  unrestored
   for b in $BUILDS; do [ -f "$engines/$b/qjs" ] || { echo "missing $engines/$b/qjs" >&2; exit 1; }; done
   for w in "$ws" "$wb"; do [ -f "$w/guest-profile.js" ] || { echo "$w has no guest-profile.js" >&2; exit 1; }; done
   stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
@@ -100,7 +108,12 @@ start)
     --rounds) rounds="$2"; shift 2;; --warmup) warmup="$2"; shift 2;; --iterations) iterations="$2"; shift 2;;
     --modes) modes="$2"; shift 2;; --cooldown) cooldown="$2"; shift 2;; --stay-awake) stay=1; shift;;
     *) echo "unknown option $1" >&2; exit 2;; esac; done
+  for v in "$rounds" "$warmup" "$iterations" "$cooldown"; do
+    case "$v" in ''|*[!0-9]*) echo "not a whole number: $v" >&2; exit 2;; esac
+  done
+  for m in $modes; do case "$m" in kotlinx|direct|modcache|none) ;; *) echo "unknown mode $m" >&2; exit 2;; esac; done
   [ -z "$(driver_alive)" ] || { echo "a driver is already running on $serial" >&2; exit 1; }
+  unrestored
   sh_dev "[ -x $D/device-driver.sh ] && [ -x $D/bin/q21-Os/qjs ]" || { echo "nothing pushed to $serial; run push first" >&2; exit 1; }
   # setsid + nohup + no adb stdio: the driver survives a dropped (wireless) adb connection.
   # (Only the driver is backgrounded, with every fd redirected; otherwise adb shell waits for it.)
@@ -142,7 +155,8 @@ stop|cleanup)
   if [ -n "$pid" ]; then sh_dev "pkill -P $pid; kill $pid"; echo "stopped driver $pid"; fi
   if [ "$cmd" = cleanup ]; then
     old="$(sh_dev "cat $D/results/stay_on.old 2>/dev/null" || true)"
-    if [ -n "$old" ]; then sh_dev "settings put global stay_on_while_plugged_in $old"; echo "restored stay_on_while_plugged_in=$old"; fi
+    if [ "$old" = null ]; then sh_dev "settings delete global stay_on_while_plugged_in"; echo "restored stay_on_while_plugged_in (unset)"
+    elif [ -n "$old" ]; then sh_dev "settings put global stay_on_while_plugged_in $old"; echo "restored stay_on_while_plugged_in=$old"; fi
     sh_dev "rm -rf $D"
     echo "removed $serial:$D"
   fi

@@ -22,13 +22,14 @@ log() { echo "$(date +%H:%M:%S) $*" >> $R/progress.log; }
 restore() {
   if [ -f $R/stay_on.old ]; then
     old=$(cat $R/stay_on.old)
-    settings put global stay_on_while_plugged_in "$old" && rm -f $R/stay_on.old
+    if [ "$old" = null ]; then settings delete global stay_on_while_plugged_in && rm -f $R/stay_on.old
+    else settings put global stay_on_while_plugged_in "$old" && rm -f $R/stay_on.old; fi
     log "restored stay_on_while_plugged_in=$old (now $(settings get global stay_on_while_plugged_in))"
   fi
 }
 trap 'restore; log "driver killed"; exit 1' TERM INT HUP
 if [ "$stay" = 1 ]; then
-  settings get global stay_on_while_plugged_in > $R/stay_on.old
+  [ -f $R/stay_on.old ] || settings get global stay_on_while_plugged_in > $R/stay_on.old
   settings put global stay_on_while_plugged_in 7   # AC, USB and wireless
 fi
 

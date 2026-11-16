@@ -460,8 +460,10 @@ recording modes; 3 rounds, round 2 reversed; 3 + 30 iterations; the same median 
   release build (`-g0 -Os -fomit-frame-pointer -DNDEBUG -fvisibility=hidden -fstrict-aliasing` on
   the NDK's CMake defaults), the 2026 builds keep the Makefile's `-fwrapv`, and the `-O2` build
   swaps only the optimisation level. It links dynamically against the device's Bionic (libc, libm,
-  libdl) only, as Zipline's `libquickjs.so` does, so the allocator is the system's. The exact
-  command lines go to `FLAGS.txt` next to the binaries.
+  libdl) only, as Zipline's `libquickjs.so` does, so the allocator is the system's. Two differences
+  remain: `qjs` is a PIE executable where Zipline builds a `-fPIC` shared library, and the NDK's
+  link-only warning flags (`--no-undefined-version`, `--fatal-warnings`) are left out; neither
+  changes the generated code. The exact command lines go to `FLAGS.txt` next to the binaries.
 - **Run:** `engine/run-device.sh` (or `scripts/engine-android.sh device`) copies the engines,
   `run.js` and both bundles to `/data/local/tmp/keliver-engine`. Its driver runs on the device
   under `setsid nohup`, so a dropped wireless adb connection does not stop it. Before and after
@@ -490,10 +492,10 @@ activity in the foreground instead (`--ez overLockScreen true` sets the keep-scr
 
 **On the phone: the Galaxy A12, 2026-11-16, 18:49–19:18.** The phone has eight Cortex-A53 cores
 and runs Android 12. All 60 runs completed, and every run's first, last open and last back batch
-matched the Mac's. The phone was on its charger, at 71% → 85%. Between rounds its temperature fell
-from 37.0 to 30.9 °C, and the thermal status was 0 throughout. Rounds were 30 s apart, and the
-screen was awake in every round. Milliseconds are the mean of the three rounds' medians; round to
-round, "back" varied by at most 36 ms.
+matched the Mac's. The phone was on its charger, at 71% → 85%. Its battery temperature was 37.0 °C
+at the start and 30.9 °C at the end, and the thermal status was 0 throughout. Rounds were 30 s
+apart, and the screen was awake in every round. Milliseconds are the mean of the three rounds'
+medians; round to round, "back" varied by at most 42 ms.
 
 | Engine build | Bundle | Recording | Back | Open | Back vs today | Open vs today |
 |---|---|---|---|---|---|---|
@@ -511,22 +513,23 @@ round, "back" varied by at most 36 ms.
 
 What the phone adds to the Mac's result:
 - **It holds on the phone.** With Zipline's own Android flags (`-Os`), the newer engine plus BigInt
-  takes "back" from 1,012 to 506 ms (2.0×) and "open" from 310 to 130 ms (2.4×). On the Mac it was
-  2.1× and 2.5×.
+  takes "back" from 1,012 to 506 ms (2.0×) and "open" from 310 to 130 ms (2.4×). On the Mac the same
+  two `qjs` builds give 2.0× and 2.4× (2.1× and 2.5× against Zipline's engine, at `-O2`).
 - **The Mac-to-phone ratio stays the same for the new engine.** "Back" is 12.6× the Mac's on the
-  2021 engine and 12.5× on the 2026 BigInt build; "open" is 12.7× and 13.0×. The Mac harness can
-  keep standing in for the phone in ratio for this engine.
+  2021 engine and 12.5× on the 2026 BigInt build; "open" is 12.7× and 13.0×. For "back" the Mac
+  harness can keep standing in for the phone in ratio. For "open" the Mac's 10 ms median is good to
+  about ±5%, and "open" has not tracked the phone before (Unverified).
 - **Compiler flags still matter little.** `-O2` beats `-Os` by 2–5% on the phone, against a binary
   about 200 KB larger. Only the 2021 engine's `-Os` was built for the phone, so its other flag levels
   are still Mac-only.
 - **BigInt shrinks both halves on the phone too.** Compose itself (recording off) goes from 528 to
   346 ms, and recording (kotlinx minus off) from 484 to 160 ms. On top of BigInt, the direct encoders
-  and the modifier cache save 49 ms (−10%), more than on the Mac (−8%, 3 ms).
+  and the modifier cache save 49 ms (−10%), about the same share as on the Mac (−12% at `-Os`, −8% at `-O2`).
 - **Still not native.** 506 ms for "back" is the guest's own work alone, with no host and no bridge.
   NF1's retained back stack, which removes "back"'s composition entirely, remains necessary for the
-  50 ms target. An "open" of 130 ms is close to the ~100 ms target before NF3's pre-composition and
-  window size.
-- `qjs` parses source where Zipline loads bytecode, so the load column (1.0–1.2 s on the phone) is
+  50 ms target. The guest's own "open" work alone is 130 ms, already over the ~100 ms end-to-end
+  target before host and bridge time, so NF3's pre-composition and window size are needed.
+- `qjs` parses source where Zipline loads bytecode, so the load column (1.0–1.3 s on the phone) is
   not Zipline's start-up time. Cold start is NF0's separate measurement.
 
 ## How to rerun it

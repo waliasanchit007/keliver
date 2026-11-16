@@ -63,7 +63,9 @@ def main(results_dir, mac_file):
         print(f"{k[0]:<10} {k[1]:<11} {k[2]:<9} {mean('backMedianMs'):6.1f} {mean('openMedianMs'):6.1f} "
               f"{mean('firstMs'):6.1f} {mean('loadMs'):6.0f}   [{per_round}]")
     state = os.path.join(results_dir, "state.jsonl")
-    if os.path.exists(state):
+    if not os.path.exists(state):
+        problems.append("no state.jsonl: the device's state (awake, battery, thermal) was not recorded")
+    else:
         print("device state (battery level, temp 0.1 C, status, AC/USB, thermal status, wakefulness):")
         with open(state) as f:
             for line in f:
@@ -71,7 +73,7 @@ def main(results_dir, mac_file):
                 print(f"  r{s['round']} {s['when']:<6} {s['time']} {s['batteryLevel']}% {s['batteryTempDeciC']} "
                       f"status={s['batteryStatus']} ac={s['acPowered']} usb={s['usbPowered']} "
                       f"thermal={s['thermalStatus']} {s['wakefulness']}")
-                if s["wakefulness"] not in ("Awake", ""):
+                if s["wakefulness"] != "Awake":
                     problems.append(f"round {s['round']} {s['when']}: device was {s['wakefulness']} (timings may include sleep)")
     if problems:
         print("PROBLEMS:")
