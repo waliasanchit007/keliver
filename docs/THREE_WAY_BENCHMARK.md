@@ -39,7 +39,13 @@ part of that is fixable and part is not.
   work in an interpreter (about 0.2–0.4 s) and the encoding, which only a cheaper encoder or a
   faster CPU would shrink.
 
-- **Scrolling (guest, measured 2026-11-16; [Scrolling](#scrolling)).** A **gentle** fling (about
+- **Scrolling (guest, run 2 of 2026-11-16; [Scrolling, run 2](#scrolling-run-2)).** Up to about
+  2,800 dp/s at release the guest's list misses a median of 1 vsync per fling, as smooth as this
+  phone draws a list; at 3,556 dp/s down the list it misses 7–11 in every fling, at 6,667 dp/s
+  3–20, and the guest keeps composing 2–7.6 s after the finger lifts. Run 2 lost the phone before
+  its placeholder pass, native and web scrolling, the heavy screen and the GC series, so the first
+  speed with placeholders is still not measured. The first run (old route, superseded):
+  A **gentle** fling (about
   1,400 dp/s at release) looks native: the host's list scrolls by itself and the guest's window
   keeps ahead (no visible placeholder; one fling of ten showed a sub-row gap; stopped 0.7 s after
   the finger lifts). A **fast fling (about 6,000–7,000 dp/s) shows a blank list**: from its first
@@ -49,8 +55,8 @@ part of that is fixable and part is not.
   ended: the method recorded the last blank frame, a lower bound. Ordinary flicks between the two
   speeds were not measured, so the speed at which blanks start is not known yet. Native and web
   scrolling, the heavy screen and the GC threshold are built into the route but were not measured
-  (the phone left adb). The method's faults found in review are fixed in the route for the rerun
-  (built, not yet run on a device; [Review round 1](#review-round-1-what-the-rerun-records)).
+  (the phone left adb in both runs). The method's faults found in review are fixed in the route
+  ([Review round 1](#review-round-1-what-the-rerun-records)); run 2 used it.
 
 | Median (ms) on the A12 | native | guest | web | guest, experiment: 10-row window + `JSON.parse` | web, experiment: `content-visibility` |
 |---|---|---|---|---|---|
@@ -274,7 +280,7 @@ Reading them:
   on the same step. The tunnel over wireless adb is the likely cause (not checked against the
   fixture's log timestamps).
 
-Scrolling was measured in a later session: see [Scrolling](#scrolling).
+Scrolling was measured in a later session: see [Scrolling, run 2](#scrolling-run-2).
 
 ## The guest's API call, step by step (as measured)
 
@@ -514,6 +520,16 @@ such frames). Empty statistics are now logged as `null` (they were rounded to 0 
 made a group with no placeholder report `contentAfterUpMsMedian: 0`), and a failing summary is logged
 rather than ending the run. Every new field was then logged and plausible in all three forms.
 
+**Run 2 also lost the phone.** The Mac's adb server stopped at about 12:41 IST, during the guest's
+instrumented (`x=scroll,blank`) pass, and the phone was not found again in the next 33 minutes
+(a restarted adb server on this Mac may need macOS's Local Network permission to see a wireless
+device; that was not checked). Run 2 therefore measured the same-day baseline and the **guest's
+clean scrolling pass at five speeds** only. Not measured in run 2: the guest's instrumented pass
+(placeholders and content times; its output may be on the phone, not pulled), the `x=scroll`
+pass, native and web scrolling, the heavy screen and the GC threshold series. The smoke runs (one
+gentle and one fast fling per form, one heavy guest open with `x=mem`) are in the scratch raw files
+and are quoted below only where marked as smoke.
+
 **Same-day baseline, run 2** (as shipped, navigation, 14 opens and backs, first 2 dropped; 58%,
 25.4 °C; median / p90 / min–max, ms from the tap; the process's first open apart):
 
@@ -566,6 +582,34 @@ velocity now shows where it is lost: Android's tracker saw a fling, Compose's di
 whose frames ran late (the process's first). The cause is not established. It is kept in the
 "down" group above (its 3 missed vsyncs and 1.2 s are the low ends of the ranges); the other six
 moved 10,466–10,766 px.
+
+**Reading them.**
+- **Up to 2,844 dp/s the list moves as smoothly as it can on this phone:** a median of 1 missed
+  vsync per fling (0–5) over 60–85 moving frames. From **3,556 dp/s down the list it starts to
+  stutter**: 7–11 missed vsyncs in every one of the 10 flings, and 3–20 at 6,667 dp/s. Flinging
+  back up at the same speeds stays at 0–6. The guest is composing rows for the windows the list
+  enters while it moves; why only the "down" direction pays was not analysed (the per-frame
+  components are in the raw `frameDetail` lines).
+- **The ~20 ms frames are not the guest's.** The moving frames' median `TOTAL_DURATION` is about
+  20 ms at most speeds, with the GPU component 11–15 ms of it. The native smoke flings (one gentle,
+  one fast; **smoke, not a series**) show the same: median 20.6 / 20.7 ms with an 11–12 ms GPU
+  component, 0 and 3 missed vsyncs; the web's 13 ms (gentle, GPU 3.6 ms) and 20.1 ms (fast, GPU
+  11 ms), 0 missed. The native list costs about the same per frame as the guest's host list, so
+  missed vsyncs, not frame time, are where the guest differs.
+- **The guest keeps working long after the list stops.** Its last frame ends 2.2–2.9 s after the
+  finger lifts at the gentle speed, 3.9–4.9 s at 3,556 dp/s and 6.6–7.6 s at 6,667 dp/s (the list
+  stops at 0.7, 1.4 and 2.2 s). Whether that work shows as placeholders is what the instrumented
+  pass measures; **run 2 did not get it** (the phone left during that pass). In the first run's
+  instrumented pass (old route) gentle flings showed none and fast flings a blank list until at
+  least 4.9–6.7 s after the lift; the first speed with placeholders is **not yet measured**.
+
+**What a user would feel (from run 2's guest pass and the first run's placeholders).** Gentle and
+moderate flicks (up to about 2,800 dp/s, a relaxed thumb flick) feel like a native list. A brisk
+flick down the list (3,500 dp/s and faster) likely shows a stutter while it moves: 7–11 skipped
+frames per fling at 3,556 dp/s and 3–20 at 6,667 dp/s, where native's one smoke fling at
+6,667 dp/s skipped 3 (native's series was not run, so that comparison is one fling). And after a fast
+flick the guest is still filling the list for several seconds after it stops; the first run saw
+that as a blank list, which run 2 could not re-measure.
 
 ### Scrolling, first run (guest only; superseded by run 2)
 
@@ -687,6 +731,13 @@ neither fling. The rerun marks such flings (`guestBusyAtDown`) and drops them.
 
 ### A heavy screen: opening (warm)
 
+**Run 2, smoke only (raw kept; not a series).** One guest launch, `-e x heavy,mem`, 3 iterations
+(58–59%, 28.9 °C): the process's first open 1,189 ms to drawn (composed at 997), the next two
+1,181 and 1,120; backs 1,191, 1,150, 1,109. This reproduces the first run's unkept check
+(1,210–1,314 open, 1,186–1,213 back) and confirms the order of magnitude: about 1.1–1.2 s to open
+a 102-widget screen in the guest on this phone, against about 0.44 s for the simple detail. The
+series (14 per form, 3 cold opens, native and web) was not run: the phone left first.
+
 **Built, not measured on the phone** (the phone left adb first). `-e x heavy` makes a row open a
 second detail variant in all three forms: a header, the amount and status, a row of four chips, four
 sections of a title and six label/value rows, a row of three buttons and a footer, text only:
@@ -711,6 +762,14 @@ confirms it, a 100-widget screen costs the guest about 1.2 s to open on this pho
 expected tens of ms native and web (not measured).
 
 ### The GC threshold
+
+**Run 2: not measured; one smoke read kept.** The heavy smoke run above had `x=mem` (the default
+arm's reads): `gcThreshold` read 262,144 before and after every step, the heap in use 7.5–8.7 MB
+and 24,500–32,000 objects. Each open dropped the heap by about 0.43 MB and 3,000 objects (the
+list's rows freed), each back added about 0.38 MB and 2,550 objects, and the heap grew by about
+0.3 MB between a step's "after" and the next step's "before" (the 300 ms pause, the memory read
+itself, the next tap): 7.94 MB before the first open, 8.71 MB at the end of 3 iterations. Three
+iterations cannot apply the decision rule below; **no GC conclusion from run 2**.
 
 **Built, not measured on the phone.** `-e x gc4`, `gc16` or `gc64` sets `zipline.quickJs.gcThreshold`
 to that many MiB in the route's `ziplineCreated`, before any guest code loads (on the Zipline
@@ -760,8 +819,8 @@ line below is in a raw file), which matters for reading the series:
 ### Review round 1: what the rerun records
 
 A review of this session's method found faults that would bias a rerun. The route is changed as
-below. **The new instrumentation is built (the sample's prototype build passes) but has not yet run
-on a device**; the numbers above come from the old route.
+below. **Run 2 ran it on the A12** (one bug found and fixed: see Phone run 2); the first run's
+numbers come from the old route.
 
 | Finding | What the route does now (per fling line, `bench=scroll`) |
 |---|---|
@@ -828,10 +887,16 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
 - **The WebView's version** (system Chromium, as installed) was not recorded in the first session;
   in the experiments session it was 157.0.8103.38. Whether the first session had the same version
   is not known; the two sessions' as-shipped web series agree within 5%.
-- **Scrolling: the guest only.** Native and web scrolling, the heavy screen's series and the GC
-  threshold series were built and smoke-checked but not measured: the phone left wireless adb at
-  about 03:58 IST on 2026-11-16 and had not come back 45 minutes later. Without the native series,
-  the guest's ~20 ms host frames cannot yet be attributed to the guest or to the list itself.
+- **Scrolling: the guest only, again.** Native and web scrolling, the heavy screen's series and the
+  GC threshold series were built and smoke-checked but not measured: the phone left wireless adb at
+  about 03:58 IST on 2026-11-16 (first run) and at about 12:41 IST (run 2; not back 33 minutes
+  later). Run 2's guest series is the clean pass only: **no placeholder or content-time numbers
+  from the new route**, so the first speed with placeholders is not known. The guest/native
+  comparison of missed vsyncs rests on one native smoke fling per speed (gentle, fast).
+- **The process's first fast swipe** started no fling in two of four fresh-process fast runs
+  (Compose's fling velocity 0 although the touch events' was 12,500 px/s); cause not established.
+- **Run 2's 14 s and 12 s gaps were long enough** (no fling closed by a touch or busy at DOWN);
+  the guest's last frame ended up to 7.9 s after a fast fling's lift.
 - **The second session ran on battery** (87% → 84%, 27.4–27.6 °C), the first two on the charger,
   and served the fixture API from inside the app (no tunnel); its baseline navigation matched the
   first session's within a few ms. Its API numbers are not comparable with the first sessions'
@@ -853,7 +918,9 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
   appear in the next frame, up to one guest frame (0.4–3.3 s) later.
 - **The heavy-screen and memory figures come from one check run each whose output was not kept**;
   they are indications only, until the series are run.
-- **The review-round-1 instrumentation is built, not yet run on a device.**
+- **The review-round-1 instrumentation ran on a device in run 2** for the guest's clean scrolling
+  pass and smoke runs of every form; its placeholder (`x=blank`), heavy-screen and GC paths ran
+  only in smoke runs (all fields logged, values plausible).
 - **QuickJS's GC**: Zipline's `gcThreshold` getter returns the value set, not QuickJS's current
   threshold, so a run cannot see whether a collection happened from it.
 - **The iPhone** was not measured (see above for what a run needs).
