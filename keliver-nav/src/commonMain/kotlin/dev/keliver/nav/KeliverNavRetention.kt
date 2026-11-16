@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import dev.keliver.compose.ExperimentalKeliverBackApi
 import dev.keliver.compose.LocalBackHandlersEnabled
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
@@ -46,7 +47,9 @@ import kotlinx.coroutines.flow.collectLatest
  * - not holding focus or the keyboard (IME), and not reachable by focus traversal;
  * - not exposed to accessibility services (TalkBack, VoiceOver, a screen reader on the web).
  *
- * keliver-nav itself only keeps a hidden entry's `BackHandler`s from taking back presses. A frame
+ * keliver-nav itself only keeps a hidden entry's `BackHandler`s from taking back presses. Callbacks
+ * the guest adds to the `OnBackPressedDispatcher` directly, and back presses a host widget handles
+ * itself (a host dialog or sheet), are not gated, so keep them out of hidden entries. A frame
  * built from plain layout modifiers (moved off screen, alpha 0, as the three-way prototype's is) is
  * a stand-in that does not guarantee the focus and accessibility points; a schema-level container
  * that hides an entry is the open decision that retention by default depends on.
@@ -112,7 +115,10 @@ public enum class KeliverNavEntryLifecycle {
   /** The top of the stack (and any content outside a retained stack). */
   Visible,
 
-  /** Retained below the top: composed, not shown. It should not start work (polling, timers). */
+  /**
+   * Composed, not shown: retained below the top, or inside an enclosing entry that is hidden. It
+   * should not start work (polling, timers).
+   */
   Hidden,
 }
 
@@ -177,7 +183,7 @@ public fun <K : Any> KeliverRetainedStack(
  * Composes the top of [items] and, with [retention], up to its depth below it, each in a group keyed
  * by [keyOf] so an entry's composition survives entries added above it and removed from below it.
  */
-@OptIn(ExperimentalKeliverNavRetentionApi::class)
+@OptIn(ExperimentalKeliverNavRetentionApi::class, ExperimentalKeliverBackApi::class)
 @Composable
 internal fun <T : Any> RetainedEntries(
   items: List<T>,
@@ -203,12 +209,16 @@ internal fun <T : Any> RetainedEntries(
     composedKeys.clear()
     window.mapTo(composedKeys, keyOf)
   }
+  // An entry is shown only while the entry enclosing this stack (if any) is shown too.
+  val parentLifecycle = LocalKeliverNavEntryLifecycle.current
   val parentBackHandlers = LocalBackHandlersEnabled.current
   retention.frame.Stack {
     for ((index, item) in window.withIndex()) {
       key(keyOf(item)) {
         val visible = index == window.lastIndex
-        val lifecycle = remember(parentBackHandlers) { EntryLifecycle(visible, parentBackHandlers) }
+        val lifecycle = remember(parentLifecycle, parentBackHandlers) {
+          EntryLifecycle(visible, parentLifecycle, parentBackHandlers)
+        }
         SideEffect { lifecycle.update(visible) }
         retention.frame.Entry(visible) {
           CompositionLocalProvider(
@@ -232,8 +242,22 @@ private fun <T> EntryContent(item: T, content: @Composable (T) -> Unit) {
 }
 
 @OptIn(ExperimentalKeliverNavRetentionApi::class)
-private class EntryLifecycle(visible: Boolean, parentBackHandlers: State<Boolean>) {
-  val state: MutableState<KeliverNavEntryLifecycle> = mutableStateOf(of(visible))
+private class EntryLifecycle(
+  visible: Boolean,
+  parentLifecycle: State<KeliverNavEntryLifecycle>,
+  parentBackHandlers: State<Boolean>,
+) {
+  /** The top of this stack; not enough on its own when this stack is inside a hidden entry. */
+  private val topOfStack: MutableState<Boolean> = mutableStateOf(visible)
+
+  /** Visible: the top of this stack, inside an enclosing entry (or none) that is visible. */
+  val state: State<KeliverNavEntryLifecycle> = derivedStateOf {
+    if (topOfStack.value && parentLifecycle.value == KeliverNavEntryLifecycle.Visible) {
+      KeliverNavEntryLifecycle.Visible
+    } else {
+      KeliverNavEntryLifecycle.Hidden
+    }
+  }
 
   /** Visible, inside an enclosing entry (or none) whose handlers are enabled. */
   val backHandlersEnabled: State<Boolean> = derivedStateOf {
@@ -241,10 +265,6 @@ private class EntryLifecycle(visible: Boolean, parentBackHandlers: State<Boolean
   }
 
   fun update(visible: Boolean) {
-    val value = of(visible)
-    if (state.value != value) state.value = value
+    if (topOfStack.value != visible) topOfStack.value = visible
   }
-
-  private fun of(visible: Boolean) =
-    if (visible) KeliverNavEntryLifecycle.Visible else KeliverNavEntryLifecycle.Hidden
 }

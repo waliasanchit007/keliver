@@ -190,6 +190,7 @@ class BackHandlerTest {
     }
   }
 
+  @OptIn(ExperimentalKeliverBackApi::class)
   @Test
   fun localBackHandlersEnabledGatesWithoutRecomposing() = runTest {
     val onBackPressedDispatcher = FakeOnBackPressedDispatcher()

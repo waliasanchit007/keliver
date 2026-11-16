@@ -477,6 +477,99 @@ class KeliverNavRetentionTest {
     harness.close()
   }
 
+  /** What the inner stack's top entry saw: its lifecycle, its work, its back presses. */
+  private class InnerTop {
+    var lifecycle: KeliverNavEntryLifecycle? = null
+    var running = 0
+    var starts = 0
+    val presses = mutableListOf<String>()
+  }
+
+  /** Home holds its own retained stack (as a tab would); the outer stack opens Detail over Home. */
+  @Composable
+  private fun Nested(outerKeys: List<String>, retention: KeliverNavRetention, counts: Counts, top: InnerTop) {
+    KeliverRetainedStack(outerKeys, retention) { outer ->
+      if (outer == "home") {
+        KeliverRetainedStack(listOf("tab", "tabTop"), retention) { inner ->
+          InnerEntry(inner, counts, top)
+        }
+      } else {
+        Screen(outer, counts)
+      }
+    }
+  }
+
+  @Composable
+  private fun InnerEntry(name: String, counts: Counts, top: InnerTop) {
+    counts.compositions[name] = (counts.compositions[name] ?: 0) + 1
+    if (name == "tabTop") {
+      val lifecycle = keliverNavEntryLifecycle()
+      LaunchedEffect(lifecycle) {
+        androidx.compose.runtime.snapshotFlow { lifecycle.value }.collect { top.lifecycle = it }
+      }
+      LaunchedWhileVisible {
+        top.starts++
+        top.running++
+        try {
+          awaitCancellation()
+        } finally {
+          top.running--
+        }
+      }
+      BackHandler { top.presses += "tabTop" }
+    }
+    Leaf(name)
+  }
+
+  @Test
+  fun nestedStackInsideAHiddenEntryIsHiddenToo() = runTest {
+    val dispatcher = TestBackDispatcher()
+    val counts = Counts()
+    val harness = Harness(this, counts)
+    val retention = KeliverNavRetention(TestFrame(counts))
+    val top = InnerTop()
+    var outerKeys by mutableStateOf(listOf("home"))
+    harness.setContent {
+      CompositionLocalProvider(LocalOnBackPressedDispatcher provides dispatcher) {
+        // The app's own back: added first, so any enabled screen handler is preferred to it.
+        BackHandler { top.presses += "root" }
+        Nested(outerKeys, retention, counts, top)
+      }
+    }
+    assertEquals(KeliverNavEntryLifecycle.Visible, top.lifecycle)
+    assertEquals(1, top.running)
+    dispatcher.press()
+    assertEquals(listOf("tabTop"), top.presses)
+
+    top.presses.clear()
+    outerKeys = listOf("home", "detail")
+    harness.settle()
+    // The inner "tab" was never shown, so it was never composed; only the inner top is retained.
+    assertEquals(
+      "root[stack[entry(hidden)[stack[entry[tabTop]]],entry[detail]]]",
+      harness.root.dump(),
+    )
+    // The inner top is still the top of its own stack, but its enclosing entry is hidden.
+    assertEquals(KeliverNavEntryLifecycle.Hidden, top.lifecycle)
+    assertEquals(0, top.running, "the inner top's work is cancelled")
+    assertEquals(1, top.starts)
+    dispatcher.press()
+    assertEquals(listOf("root"), top.presses, "the inner top's handler does not take the press")
+
+    top.presses.clear()
+    counts.reset()
+    outerKeys = listOf("home")
+    harness.settle()
+    assertEquals(KeliverNavEntryLifecycle.Visible, top.lifecycle)
+    assertEquals(1, top.running, "shown again, its work runs again")
+    assertEquals(2, top.starts)
+    dispatcher.press()
+    assertEquals(listOf("tabTop"), top.presses, "and its handler takes the press again")
+    assertEquals(emptyMap(), counts.compositions, "no inner entry recomposes")
+    assertEquals(0, counts.inserts)
+    harness.close()
+  }
+
   @Test
   fun completedLaunchedWhileVisibleRunsAgainEachTimeTheEntryIsShown() = runTest {
     var runs = 0

@@ -49,9 +49,11 @@ private val BackHandlersAlwaysEnabled: State<Boolean> = mutableStateOf(true)
  *
  * Navigation that keeps screens composed while they are not shown (keliver-nav's retained back
  * stack) provides `false` for a hidden screen, so its handlers do not take back presses meant for
- * the screen on top. A change of the value does not recompose the [BackHandler]s that read it.
- * Defaults to always `true`.
+ * the screen on top. A change of the value does not recompose the [BackHandler]s that read it; it
+ * reaches their callbacks one dispatch after the snapshot that changed it is applied, so a handler
+ * stays enabled briefly after its screen is hidden. Defaults to always `true`.
  */
+@ExperimentalKeliverBackApi
 public val LocalBackHandlersEnabled: ProvidableCompositionLocal<State<Boolean>> =
   staticCompositionLocalOf { BackHandlersAlwaysEnabled }
 
@@ -73,6 +75,7 @@ public val LocalBackHandlersEnabled: ProvidableCompositionLocal<State<Boolean>> 
  */
 // Multiplatform variant of
 // https://github.com/androidx/androidx/blob/94ae1a9fb3ce778295e8cc724ae29f1231436bcb/activity/activity-compose/src/main/java/androidx/activity/compose/BackHandler.kt#L82
+@OptIn(ExperimentalKeliverBackApi::class)
 @Composable
 public fun BackHandler(enabled: Boolean = true, onBack: () -> Unit) {
   // Safely update the current `onBack` lambda when a new one is provided.
