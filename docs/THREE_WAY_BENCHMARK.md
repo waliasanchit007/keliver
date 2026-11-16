@@ -1069,7 +1069,9 @@ same swipes and gaps. Memory: 10 open/back cycles in a fresh process (no warm-up
 **Phone state.** On battery throughout (79% → 72%), thermal status 0 in every series, 60 Hz,
 density 1.875, sdk 31, no power saving. Battery 24.2 °C at the start, 27.3 °C after the memory
 series, 27.4–28.5 °C while scrolling (the script's `dumpsys battery` line around every series).
-The phone was busier than in earlier sessions: 290–430 MB free, 1.6–1.7 GB of swap used. The
+The phone looked busier than in earlier sessions, by ad hoc `adb` reads of `/proc/meminfo` during the
+session that were not kept with the record (`MemFree` 290–430 MB, `SwapTotal − SwapFree` 1.6–1.7 GB;
+`MemAvailable` was higher, about 2.7 GB, since it counts reclaimable cache). The
 native form was slower than in every earlier session, in navigation and in scrolling (below), so
 every comparison here is within this session.
 
@@ -1091,8 +1093,9 @@ first open apart):
 - **Opening also gets faster with retention** (472 → 323.5 ms; heavy 1,099 → 971.5): the list is
   no longer disposed when the detail opens.
 - **Native was slower than in every earlier session** (open 43 against 16–16.5, back 32 against
-  13), while the web (48 / 48 against 44 / 48–49) and the guest as shipped (1,116 against
-  1,054.5–1,082) were within 3–6% of runs 1–3. The cause is not established: the phone's memory
+  13). The backs of the others were within 0–6% of runs 1–3 (web 48 against 48–50, guest as
+  shipped 1,116 against 1,054.5–1,082); their opens were 7–9% slower than runs 2–3 (web 48 against
+  44, run 1's 37; guest as shipped 472 against 436–440.5). The cause is not established: the phone's memory
   pressure and the stack change since run 3 (none in the prototype's native screens) are candidates.
 
 **Where retained back's 104.5 ms goes** (`x=retain,split`, medians, ms from the tap; the as-shipped
@@ -1110,8 +1113,8 @@ first open apart):
 
 - The batch is now one modifier change (the list's entry shown) and one removal (the detail).
 - What is left: about 11 ms to reach the guest's `onClick`, about 21 ms waiting for the guest's next
-  frame, **about 30 ms of composition in QuickJS** (disposing the detail screen's dozen texts and
-  showing the list's entry), about 12 ms to encode and send, about 26 ms until the host's tree has
+  frame, **about 30 ms of composition in QuickJS** (disposing the detail screen and showing the
+  list's entry), about 12 ms to encode and send, about 26 ms until the host's tree has
   it, and 4 ms to draw. The 50 ms target needs most of that gone: a host-side back that shows the
   retained entry itself (NF1's host transitions) and lets the guest's frame follow.
 
@@ -1124,42 +1127,59 @@ for native; KiB from `dumpsys meminfo`; QuickJS from `x=mem`):
 | guest, as shipped | 68,762 / 68,872 | 6,836 / 6,820 | 19,988 / 20,084 | 13,560 / 13,578 | 10.12 MB / 39,612 (both runs) |
 | guest, `x=retain` | 68,386 / 68,231 | 9,036 / 9,064 | 18,116 / 17,928 | 13,545 / 13,543 | 8.53 MB / 30,580 (both runs) |
 
-- **With the list shown, retention costs nothing measurable** in total PSS (68.3 against 68.8 MB):
-  the Java heap is 2.2 MB higher and the native heap (QuickJS lives there) 1.9–2.2 MB lower. With
-  retention, back makes less garbage (no list rebuilt), so QuickJS ends 1.6 MB smaller.
-- **While the detail is open (the list retained under it)**, QuickJS holds 8.37 MB / 29,777
-  objects against 8.11 MB / 27,141 as shipped (medians after each open): **the retained list
-  costs about 0.26 MB and 2,600 objects in QuickJS**. The host's side of a retained screen while
+- **After 10 cycles, with the list shown, retention costs nothing measurable** in total PSS
+  (68,231–68,386 against 68,762–68,872 KiB): the Java heap is about 2,200 KiB higher and the native
+  heap (QuickJS lives there) 1,870–2,160 KiB lower, and QuickJS ends 1.6 MB smaller (QuickJS
+  figures are bytes / 10⁶). That end state depends on the number of cycles: retain starts about
+  1 MB higher in QuickJS (next point) and only ends lower because the as-shipped form keeps more
+  after each cycle. Measured after each back (the list shown), the as-shipped form passes retain
+  at the 3rd cycle; after each open (the detail shown), at the 8th.
+- **While the detail is open, the retained list holds about 1.0 MB and 6,800 objects in
+  QuickJS**: 8.12 MB / 28,307 objects with retain against 7.13 MB / 21,518 as shipped, at the
+  first open, before anything builds up (as shipped, that first open *frees* 0.81 MB and 5,591
+  objects: the list is disposed). **Per cycle, QuickJS's used memory grows and is not reclaimed**
+  (`gcThreshold` stays at 262,144): as shipped about 218 KB and 1,250 objects per open/back cycle
+  (7.13 → 9.09 MB after each open, over 10 cycles), with retain about 55 KB and 330 (8.12 →
+  8.62 MB). Whether that growth is garbage a later collection would reclaim or a leak is not
+  established. Medians over the 10 cycles mix these two trends, so they are not used here. The
+  host's side of a retained screen while
   hidden (its views) was not measured: `dumpsys meminfo` was read only at the end, on the list.
 - **Depth.** The prototype has two screens, so the retained stack never holds more than the one
   list under the detail: depth 1 and depth 2 behave the same here, and these numbers are the cost
   of one retained screen. Depth 2's cost on a deeper app is about twice that per hidden screen (by
   inference, not measured).
 
-**Scrolling: not measured, because the scripted flings did not fling.** The guest's
-placeholder pass (`x=scroll,blank`, five speeds, 02:04–02:24, 78% → 75%, 27.4–28.5 °C) and a
-clean guest pass at 2,133 dp/s ran in full. Then the native reference at 2,133 and 6,667 dp/s ran
-(02:25–02:33, 75% → 73%, 28.1–28.5 °C). The guest's `x=scroll` pass was stopped and not run: its
+**Scrolling: not measured, because most scripted swipes started no fling.** The guest's
+placeholder pass (`x=scroll,blank`, five speeds, 02:04–02:24, 78% → 75%, 27.4–28.5 °C) ran in
+full. Then the native reference at 2,133 and 6,667 dp/s (02:25–02:33, 75% → 73%, 27.8–28.5 °C),
+then a clean guest pass at 2,133 dp/s (02:33–02:38, 73% → 72%, 28.4–28.5 °C). The guest's `x=scroll` pass was stopped and not run: its
 counters were already in the placeholder pass. In every series, **in native as in the guest, most
 swipes started no fling**:
 
-| Series | Swipes | Flings that started (nested-scroll velocity > 0) | Of them, not at an end of the list | Moving frames p50 / p90 (ms) | Swipe's release speed as delivered |
+| Series | Swipes | Flings that started (nested-scroll velocity > 0) | Of them, not at an end of the list | Moving frames p50 / p90 (ms) | Android's release velocity (`upVelocityDpS`) |
 |---|---|---|---|---|---|
-| guest, 5 speeds, `scroll,blank` | 94 | 10 | 3 | 33–129 / 56–221 | often 0 or below the speed asked |
-| guest, 2,133 dp/s, clean | 20 | 1 | 0 | 62 / 117 (down) | 2,133 down, 0 up (median) |
-| native, 2,133 dp/s | 20 | 5 | 2 | 59 / 100 (down) | 1,067 (median) |
+| guest, 5 speeds, `scroll,blank` | 94 | 10 | 3 | 33–129 / 56–221 | the speed asked, or 0 |
+| guest, 2,133 dp/s, clean | 20 | 1 | 0 | 62 / 117 (down) | 2,133 or 0 (2,133 down, 0 up, median) |
+| native, 2,133 dp/s | 20 | 5 | 2 | 59 / 100 (down) | 2,133 or 0 (1,066.5 median) |
 | native, 6,667 dp/s | 14 | 6 | 0 | 82 / 184 (down) | 6,667 |
 
-- A swipe that started no fling moved the list by the finger's own 500–770 px and stopped at the UP
-  (`stopAfterUpMs` −8 to −19 ms). Runs 2–3 flung every swipe but the process's first fast one, and
+- Android's `VelocityTracker` velocity at the UP is always either exactly the speed asked or 0,
+  and several swipes that started no fling had the full speed there (the guest's 6,667 dp/s
+  series: all 14 delivered ±6,667, none flung). So the velocity that was 0 was the one Compose
+  hands to its fling, not the touch's.
+- A swipe that started no fling moved the list by the finger's own travel, mostly about 480–780 px
+  (a few 350–480), and stopped at the UP (`stopAfterUpMs` about −3 to −25 ms; two guest swipes
+  −50 and −84). Runs 2–3 flung every swipe but the process's first fast one, and
   the list stopped 743–2,248 ms after the UP. Without a fling there is nothing to predict and no
   window to jump to. A drag only reaches the next few rows, so the placeholder pass found **no
   placeholders in any drag**, and that result does not test #258.
-- **The cause is the phone's state today, not the guest:** native's own list lost its flings the
-  same way, with drag frames of 59–82 ms median, against about 20 ms in run 3. Compose's velocity
-  tracker gave 0 at the UP, the symptom run 2 saw on a process's first fast swipe only. During the
-  series the app ran in the `top-app` cpuset, with thermal status 0, the big cores at their top
-  clock (2.3 GHz) and 2.7 GB available, but 1.6–1.7 GB in swap. The keyguard was showing under the
+- **The cause is not the guest alone:** native's own list lost most flings too (5 of 20 and 6 of 14
+  started, against 1 of 20 and 0 of 14 in the guest at the same speeds), with drag frames of
+  59–82 ms median, against about 20 ms in run 3. A phone-wide cause is likely but not established.
+  Compose's fling velocity was 0 at the UP, the symptom run 2 saw on a process's first fast swipe
+  only. Ad hoc `adb` reads during the series, not kept with the record, showed the app in the
+  `top-app` cpuset, the big cores at their top clock (2.3 GHz), `MemAvailable` about 2.7 GB and
+  1.6–1.7 GB in swap; thermal status was 0 (recorded). The keyguard was showing under the
   app (`overLockScreen`, as in every run). The slow navigation of native, above, is likely the same
   slowdown. Why the frames were slow is not established.
 - **The three guest flings that did fling** (one sample each, so indicative only):
@@ -1178,7 +1198,7 @@ swipes started no fling**:
 | Target | Verdict | Evidence |
 |---|---|---|
 | Back under 50 ms | **Not met** (measured) | Retained back 104.5 ms median (p90 110), heavy 126.5. As shipped: 1,116. The guest's own composition after the tap is about 30 ms of it. The rest is frame wait, encoding and the host's apply |
-| No blank rows at an ordinary fling | **Not measured** | Today's scripted swipes did not fling, in native either. One fling at 2,844 dp/s showed 13 placeholders, with content at the list's stop |
+| No blank rows at an ordinary fling | **Not measured** | Most scripted swipes started no fling, in native too (native 11 of 34, 2 away from an end of the list; guest 11 of 114, 3 away from an end). One fling at 2,844 dp/s showed 13 placeholders, with content at the list's stop |
 | Frames over 25 ms under 2% (by hand) | **Not measured** | Nothing was flung by hand. Today's scripted frames were slow in native too (above) |
 | Tap response within one frame | **Not measured** | The host's pressed state is not built yet |
 
