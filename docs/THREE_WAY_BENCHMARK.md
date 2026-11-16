@@ -690,126 +690,186 @@ brisk one it also stutters while it moves.
 
 ### Where a scrolling frame's time goes (NF0 trace)
 
-**Status: recorded, not analysed.** 2026-11-16 from 17:25 IST, the same A12 and the same installed
-APK as runs 2–3 (`dev.keliver.sample`, the run-3 build). Four system traces were recorded on the
-phone; the phone then left adb (at about 17:33 IST, during the fourth) and had not come back
-30 minutes later (checked every 5 minutes), so **no trace was pulled or queried, and this section
-has no per-phase numbers yet.** The questions are answered below only where the code answers them,
-and each such answer is marked as code reading. The next phone session finishes it with the commands
-in "Finishing it".
+2026-11-16, the same A12. Four clean traces (native and guest, gentle and fast) were recorded from
+17:25 IST with the run-3 build of `dev.keliver.sample`. Two more guest traces were recorded at
+18:22 with the `x=trace` build, which has the same app plus trace sections. All six were read on
+the phone that evening. **Phone state:** the four clean traces ran on battery, 35%, 30.5–30.6 °C,
+thermal status 0. The two `x=trace` traces ran on the charger, 56–57%, 36.2–36.3 °C, thermal
+status 0. Comparisons below are made within one condition: clean against clean, and `x=trace`
+only for question 3.
 
 **Method.** Perfetto on the phone (`perfetto --txt -c -`, its text config through stdin, written
-into `/data/misc/perfetto-traces/`): ftrace `sched_switch`/`sched_waking`/`sched_wakeup`,
-`cpu_frequency`, `gpu_frequency`; atrace `gfx view input am wm dalvik power` and the app's own
-sections (`atrace_apps: dev.keliver.sample`, which turns on Compose's built-in sections such as
-`Recomposer:recompose` and the lazy list's prefetch); SurfaceFlinger's frame timeline; process
-names. One trace per series, each series one fresh process, run by a script on the phone (`nohup
-sh`, so a dropped adb link cannot stop it), the doc's scroll commands: gentle (800 px in 300 ms,
-1,422 dp/s) 8 s apart and fast (1,000 px in 80 ms, 6,667 dp/s) 14 s apart, **10 flings down each,
-native and guest** (no up group). Recorded: native-gentle and guest-gentle (35%, 30.5–30.6 °C, on
-battery), native-fast (35%, 30.5 °C), guest-fast (started 17:32 IST; its battery file and trace
-end are on the phone). Perfetto's `trace_processor_shell` could not be downloaded to the Mac (the
-session's shell may not fetch from the internet); a v45 `trace_processor_shell` already in the
-phone's `/data/local/tmp` runs there and read a smoke trace, so the analysis runs on the phone
-after the series (`dump.sh` queries slices, thread states, frequencies and the frame timeline into
-small CSVs; `analyse.py` splits each moving frame on the Mac).
+into `/data/misc/perfetto-traces/`) recorded:
+- ftrace `sched_switch`/`sched_waking`/`sched_wakeup`, `cpu_frequency`, `gpu_frequency`;
+- atrace `gfx view input am wm dalvik power` and the app's own sections (`atrace_apps:
+  dev.keliver.sample`, which turns on Compose's built-in sections such as `Recomposer:recompose`
+  and the lazy list's prefetch);
+- SurfaceFlinger's frame timeline, and process names.
 
-**Prototype-only instrumentation, built, not yet on the phone.** The threeway app's `x=trace`
-experiment (this change) adds trace sections for every call into or out of the guest on the
-Zipline thread (`zl:sendFrame`, `zl:sendEvent`, `zl:sendChanges n=<changes>`, through the app's
-Treehouse `EventListener.callStart`/`callEnd`) and for every main-thread message (`msg <callback>`,
-from `Looper.setMessageLogging`), so a trace shows when each guest frame ran, how big its batch
-was and how long the main thread spent applying it. Without it the guest's work is visible only as
-the Zipline thread's scheduling and unlabelled main-thread time between frames. The clean traces
-above are the ones for the per-phase table (no message logging cost); the `x=trace` traces are for
-question 3.
+Each trace is one series in one fresh process, started by a script on the phone (`nohup sh`, so a
+dropped adb link cannot stop it), using the doc's scroll commands:
+- gentle: 800 px in 300 ms (1,422 dp/s), flings 8 s apart;
+- fast: 1,000 px in 80 ms (6,667 dp/s), flings 14 s apart;
+- **10 flings down per trace**, native and guest.
 
-**Answers so far.**
+The analysis is Perfetto SQL, run on the phone with a `trace_processor_shell` that was already there
+(the Mac's shell could neither download one nor run Python). Each query file adds to a common
+prelude, and only small CSV results come back.
 
-1. **Main-thread and RenderThread split, guest against native: not established** (the traces were
-   not read).
-2. **What the host does extra when the guest did no work: not established.** What the trace should
-   separate (from the code): the guest's rows go through Redwood's protocol widgets
-   (`ComposeUiLazyList` hosting `ComposeWidgetChildren` per row) inside a Compose `LazyColumn`, so
-   each row the list brings in is composed by the host as a Redwood widget subtree rather than the
-   native row's composable; and a `LaunchedEffect(lastVisibleItemIndex)` in `ComposeUiLazyList`
-   runs once per row the list passes (below), on the main thread, during the frame.
-3. **The guest's work during and after a fling (code reading, not measured):**
-   - QuickJS runs on one thread, `Treehouse <app>` (`AndroidTreehouseDispatchers`, a single-thread
-     executor). Every call into the guest (`sendFrame`, `sendEvent`) and its `sendChanges` back run
-     there.
-   - The guest's frames are paced by the host: the guest asks for a frame, the host posts a
-     Choreographer callback, and the callback queues `sendFrame` onto the Zipline thread
-     (`AndroidChoreographerFrameClock`). A guest frame is therefore at least one vsync after it is
-     asked for, and while one guest frame runs (up to 3.0 s by hand) no other can start.
-   - A guest frame's changes are mapped on the Zipline thread and then **applied on the main thread
-     in one message**, all at once (`TreehouseAppContent.sendChanges` → `launch(Dispatchers.Main)`
-     → `HostProtocolAdapter.sendChanges`, no splitting or time budget). A big batch therefore
-     blocks the main thread for as long as it takes to apply (this is what the `x=trace` sections
-     measure); the host composes the new widgets in the next frame, so a big batch also makes the
-     next frame long. Whether these explain the multi-second gaps by hand is not measured.
-   - **What makes the guest compose rows the list has already passed:** the host reports every
-     change of the last visible row (`LaunchedEffect(lastVisibleItemIndex)` →
-     `onViewportChanged`), and each report becomes its own task on the Zipline thread
-     (`EventBridge.sendEvent` launches one coroutine per event; nothing conflates them). A fast
-     fling passes about 79 rows (run 2), so about 79 viewport reports queue behind whatever guest
-     frame is running. The guest's `ScrollOptimizedLoadingStrategy` recomputes its window from
-     each report it reaches (5 rows behind, 20 ahead while scrolling), and each guest frame
-     composes the window of the latest report processed before it. With guest frames of 100 ms to
-     3 s, the queue is worked through long after the list has moved on: windows for positions the
-     list has left are composed, sent and applied, and the window where the list comes to rest is
-     built last. That fits the measured "guest busy 6.6–7.6 s after the UP at 6,667 dp/s" and
-     "0.1–0.18 s per row created" (runs 2–3); the number of queued reports per fling and each one's
-     cost are what the `x=trace` traces count.
-4. **Why scripted `input swipe` flings give about 20 ms frames in all forms: not established.**
-   Two candidates the traces can decide (they record the CPU and GPU frequencies and the input
-   events): (a) injected events do not trigger the touch boost a real touchscreen does (on this
-   phone the boost may be driven by the touchscreen driver, which `input swipe` bypasses), so the
-   CPUs and GPU stay at lower frequencies through a scripted fling; (b) the injection pattern
-   (`input swipe` sends moves as fast as it can for the swipe's duration, then one UP) differs from
-   a finger's, which matters only while the finger is down, not during the fling that follows. (a)
-   is the likelier, since the 20 ms frames continue after the UP; it is a hypothesis.
+The prelude finds the app's process by its main thread, because a process forked after the trace
+started keeps the name `zygote64` in the process table. It also finds the flings: the main thread's
+`deliverInputEvent` slices, with a new fling after a gap of more than 1 s. **Moving frames** are
+the main thread's `Choreographer#doFrame` slices from the DOWN until the list stops: 743 ms
+(gentle) or 2,240 ms (fast) after the last input event, the stop times from run 2. Every trace
+yielded 10 flings of 20–21 (gentle) or 6–8 (fast) input events.
 
-**What NF1's scroll fix should change (ranked; every saving is an estimate until the traces are
-read).**
+The `x=trace` build (prototype only, off unless the run asks for it) adds trace sections:
+- for every call into or out of the guest on the Zipline thread (`zl:sendFrame`, `zl:sendEvent`,
+  `zl:sendChanges n=<changes>`, through the app's Treehouse `EventListener.callStart`/`callEnd`);
+- for every main-thread message (`msg <callback>`, from `Looper.setMessageLogging`).
 
-1. **Guest: conflate the viewport reports.** Deliver only the latest viewport to the guest (drop a
-   queued report when a newer one arrives, host side in `EventBridge` or in the lazy list's
-   `onViewportChanged`), so the guest never composes a window the list has left. Estimated saving:
-   most of the 2–7 s of guest work after a fling (it composes about the windows of where the list
-   rests instead of every window it passed); the blank rows after an ordinary fling should mostly
-   go. Matches the plan's "the list window jumps to where the list will come to rest".
-2. **Host: tell the guest where the fling will stop.** At the fling's start the host knows the
-   target offset (the decay animation's target); report that window first. Estimated: content where
-   the list stops arrives one guest frame (0.1–1 s) after the UP rather than after the passage.
-3. **Host: apply big change batches without stalling moving frames.** Split a batch across frames
-   with a per-frame budget (for example 4 ms), or defer applying while the list moves except for
-   rows entering the viewport. Estimated: removes the long main-thread messages during flings
-   (by-hand frames peaked at 231 ms); size to be measured with `x=trace`.
-4. **Host: the frames with no guest work** (13.7 ms median by hand against native's 11.2): the
-   remaining 2.5 ms per frame is the host composing and laying out Redwood's widget tree for the
-   rows; candidates are a flatter row (fewer protocol nodes and layout passes per row) and stable
-   keys/content types so `LazyColumn` reuses row nodes. Estimated 1–3 ms a frame; to be split by
-   the clean traces.
-5. **Guest: placeholders with the row's height and look**, never blank (already NF1). No time
+The scripts and queries are kept in the session's scratch directory, not in the repository.
+
+**Per moving frame, guest against native** (clean traces. Main-thread times are means per moving
+frame. "Outside doFrame" is the lazy list's prefetch and Compose's out-of-frame work, which run as
+their own main-thread messages):
+
+| | Native, gentle | Guest, gentle | Native, fast | Guest, fast |
+|---|---|---|---|---|
+| Moving frames (10 flings) | 628 | 631 | 1,401 | 1,311 |
+| Main `doFrame`, mean / median | 4.27 / 3.77 ms | 3.82 / 3.16 | 6.51 / 5.34 | 4.84 / 3.87 |
+| — input | 0.54 | 0.44 | 0.07 | 0.07 |
+| — animation (the fling, `Recomposer:animation`, the list's measure) | 2.20 | 2.07 | 4.46 | 3.61 |
+| — of which `Recomposer:recompose` (**guest only**) | < 0.05 | **0.46** | 0.06 | **0.61** |
+| — traversal (draw: `Record View#draw()`) | 1.48 | 1.26 | 1.93 | 1.12 |
+| Outside doFrame: prefetch (compose, measure, apply, urgent) | 1.30 | 1.20 | 2.56 | 0.90 |
+| Main thread running while moving | 38% | 34% | 57% | 36% |
+| RenderThread `DrawFrame`, mean / median | 6.44 / 6.67 | 4.73 / 4.58 | 6.84 / 6.06 | 4.09 / 3.51 |
+| Zipline thread running while moving | — | **95%** | — | **98%** |
+| Faster CPU cluster while moving: mean (time at its 2.3 GHz max) | 1.71 GHz (4%) | 2.26 (92%) | 1.92 (16%) | 2.29 (97%) |
+| Frame timeline: median actual duration; "Buffer Stuffing" | 20.0 ms; 52% | 20.0; 55% | 20.7; 95% | 19.9; 52% |
+| Presents more than 20 ms apart (missed vsyncs), 10 flings | 30 | 16 | 61 | **152** |
+| Main thread asleep > 20 ms while moving | 0 | not queried | 0 | **16 times, 1.50 s** |
+| After the list stops: main / Zipline running, 10 flings | 0.13 s / — | 0.76 / **20.8 s** | 0.19 / — | 1.57 / **36.4 s** |
+
+**Answers.**
+
+1. **Main-thread and RenderThread time, guest against native (measured).** The host's work per
+   moving frame is *not* larger in the guest form. Main-thread `doFrame` time is 3.8 ms against
+   4.3 ms (gentle) and 4.8 ms against 6.5 ms (fast). RenderThread time is 4.7 ms against 6.4 ms and
+   4.1 ms against 6.8 ms. The guest's rows draw more cheaply than the native rows, and at the fast
+   speed most of the guest's rows are blank placeholders (run 3). Native also prefetches and
+   composes real rows: 2.6 ms of prefetch per frame against the guest's 0.9.
+
+   Two costs exist only in the guest form:
+   - **`Recomposer:recompose` inside the frame, 0.46–0.61 ms per moving frame** (native under
+     0.06). This is the host recomposing Redwood's protocol nodes as the guest's changes and the
+     lazy list's placeholders update.
+   - **The Zipline thread runs through 95–98% of the moving time**, holding the faster CPU cluster
+     at its maximum (92–97% of the time, against 4–16% in native).
+
+   What separates the guest's fast flings from native's is missed vsyncs: 152 presents more than
+   20 ms apart against 61, and 1,311 frames drawn against 1,401 in the same 23.4 s. These missed
+   vsyncs are not long frames. Main-thread frames over 16.7 ms number 32 against 25, and
+   RenderThread frames over 16.7 ms 28 against 54. Waiting for a CPU is not the cause either: in
+   the fast traces the main thread was runnable but not running for 0.2 s in both forms. Instead,
+   **the guest's main thread slept for more than 20 ms 16 times while the list was moving (1.5 s
+   in total; native never did)**. In those intervals no frame was produced. Why the list stops
+   asking for frames is not established per fling. One candidate is run 2's "first fast swipe
+   starts no fling": if the first fling never starts, its window is idle.
+2. **What the host does extra in frames with no guest work: the class hardly exists in scripted
+   flings (measured).** The Zipline thread was idle from 20 ms before a moving frame to its end in
+   only 24 of 631 (gentle) and 10 of 1,311 (fast) moving frames. All of them came at a fling's
+   start, so the by-hand class (13.7 ms median) cannot be rebuilt from these traces. The host's
+   only guest-specific per-frame work is the `Recomposer:recompose` above, 0.5–0.6 ms. Everything
+   else costs the same or less than native. **The by-hand 13.7 ms against 11.2 ms is therefore not
+   host work on the main thread or the RenderThread.** It is frame timing (below), or CPU
+   contention from the Zipline thread, which these scripted traces do not show as runnable time.
+3. **The guest's work during and after a fling (measured with `x=trace`; on the charger at
+   36 °C).**
+   - **The guest's thread.** QuickJS runs on one thread, `Treehouse <app>`. Every `sendFrame` and
+     `sendEvent`, and the guest's `sendChanges` back into the host, run there. The host paces the
+     guest's frames (from the code): a Choreographer callback queues `sendFrame` onto that thread
+     (`AndroidChoreographerFrameClock`), so while one guest frame runs no other can start. Each
+     report of the last visible row (`LaunchedEffect(lastVisibleItemIndex)` →
+     `onViewportChanged`) becomes its own task there (`EventBridge.sendEvent`).
+   - **The viewport reports queue, and nothing coalesces them (confirmed).** A fast fling produced
+     97–103 `sendEvent` calls, and every one of them reached the guest. A fling that hit the end
+     of the list produced 22. The last of them was handled **4.9–8.2 s after the UP** (median
+     5.8 s), while the list stopped at 2.2 s. At the gentle speed each fling produced 21 reports,
+     and **19–20 of them were handled after the list had stopped** (at 0.9–1.3 s after the UP).
+   - **The reports themselves are cheap: 0.6–0.7 s per fast fling** (0.12 s gentle). They are
+     late because they wait behind the guest's frames.
+   - **What the guest composes.** The guest ran 6 frames per fast fling, the longest 2.8–3.4 s,
+     4.7–7.7 s in total. Each frame composes the window of the latest report handled before it.
+     Each fling sent 5 batches with about 730–940, **4,100**, 200–3,600, 520 and 6 changes. The
+     second, 4,100-change batch comes from a frame that started while the list was still moving,
+     so it is most likely a window the list was passing through. Which batch holds the resting
+     window was not traced; this is an inference from timing. The guest's last call ended
+     **6.4–9.5 s after the UP** (median 7.7 s). Gentle flings: 5 frames, the longest 0.7–1.3 s,
+     the last call ending 2.6–4.0 s after the UP. So the code reading's mechanism is confirmed,
+     with one correction: the guest does not compose every window the list passed (about 6 frames,
+     not 79). It does compose windows the list has left, and builds the resting window last.
+   - **Applying a batch on the main thread is short.** It is one message
+     (`ViewContentCodeBinding.sendChanges`): 48 over 10 fast flings, 216 ms in total, **at most
+     21 ms**, and 10 of them came while the list moved (22 ms). The longest frame message in those
+     flings took **101 ms**; whether it was the frame composing a big batch's widgets was not
+     matched. The multi-second gaps are the guest's own frames on the Zipline thread, not the main
+     thread. (These are `x=trace` numbers: message logging adds a little to every main-thread
+     message.)
+4. **Why scripted `input swipe` flings give about 20 ms frames for native too (measured, in part).**
+   - **The ~20 ms is frame latency, not work.** SurfaceFlinger's frame timeline classes 52–95% of
+     the moving frames as **"Buffer Stuffing"**, mean 20.5–22.7 ms: the app queues its next buffer
+     while the previous one still waits to be latched, so each frame is presented one vsync later.
+     The frame's own work is 4–7 ms on the main thread plus 4–7 ms on the RenderThread, and native
+     misses few vsyncs (30 and 61 presents more than 20 ms apart over 10 flings). FrameMetrics'
+     `TOTAL_DURATION` and the frame timeline's actual duration both include that queueing.
+   - **CPU frequency does not explain it.** Scripted native flings ran the faster cluster at a mean
+     of 1.7–1.9 GHz (at its 2.3 GHz maximum 4–16% of the time; 0.95 GHz in the second before each
+     DOWN). The guest traces, whose Zipline thread pins that cluster at the maximum 92–97% of the
+     time, show the same 20 ms. So a missing touch boost for injected events is not the cause.
+   - **Not established:** why hand flings stay out of the stuffed state (11.2 ms native median). No
+     hand trace was recorded. The injected events come every 15 ms (20 in 300 ms) and are not
+     aligned to vsync.
+
+**What NF1's scroll fix should change (ranked; each item says whether its basis is measured or
+estimated).**
+
+1. **Guest: compose only the window the list will show, and drop windows it has left. The cost is
+   measured; the saving is estimated.**
+   - What it costs today: after a fast fling the guest keeps working 3.6 s per fling once the list
+     has stopped (36.4 s over 10), and its last call ends 6.4–9.5 s after the UP. At least the
+     4,100-change batch is, by its timing, a window the list was passing through (inferred, not
+     traced).
+   - Conflating the viewport reports (`EventBridge`, or the lazy list's `onViewportChanged`) on its
+     own saves only their 0.6–0.7 s of handling per fling, plus the queueing, as measured.
+   - Most of the saving needs the guest not to start, or to abandon, a frame for a window that is
+     no longer current. Estimate: most of the 3.6 s after the stop, and the resting rows one guest
+     frame after the stop instead of 4–6 s after it.
+2. **Host: report where the fling will stop as soon as it starts (estimated).** The decay
+   animation's target is known at the UP. Reporting that window first makes the resting window the
+   first one composed. Estimate: content where the list stops arrives 0.1–1 s after the UP, one
+   guest frame, instead of 4.9–8.2 s.
+3. **Find the main thread's sleeps during guest fast flings (measured, cause unknown).** 16 sleeps
+   of more than 20 ms, 1.5 s in total, account for about 90 frames not drawn and about 91 extra
+   missed vsyncs against native. They are not long frames and not CPU waits. The first step is a
+   per-fling look at those sleeps, including run 2's first-swipe-starts-no-fling. Saving if fixed:
+   the guest's missed vsyncs fall towards native's (152 down to about 61 over 10 fast flings).
+4. **The Zipline thread's CPU use while the list moves (measured, effect not separated).** The
+   guest runs 95–98% of the moving time and holds the faster cluster at its maximum. The scripted
+   traces show no runnable delay for the main or Render threads (0.2–0.3 s in both forms). Fewer
+   stale compositions (item 1) reduce it. Lowering the Zipline thread's priority while a fling runs
+   is a candidate if hand traces show contention. Estimated: no per-frame saving in scripted flings.
+5. **Host: spread the work after a big batch across frames (measured: small).** Applying a batch is
+   at most 21 ms on the main thread. The longest frame message in the same flings was 101 ms; it
+   was not matched to a batch. At most that is one visible hitch per big batch, and most batches
+   are applied after the list has stopped (38 of 48). A per-frame budget, or deferring off-screen
+   rows, would remove it. Estimated saving: at most one long frame per batch.
+6. **Host: per-frame host cost (measured: small).** The only guest-specific per-frame work is
+   `Recomposer:recompose`, 0.5–0.6 ms. Flatter rows or skipping recomposition of unchanged
+   protocol nodes save at most that.
+7. **Guest: placeholders with the row's height and look, never blank** (already NF1). No time
    saving; it changes what a user sees during the work above.
-
-**Finishing it (next phone session).** On the phone, in `/data/local/tmp/nf0/`: `series.sh`,
-`cfg.txt`, `dump.sh`, and the traces `/data/misc/perfetto-traces/nf0-*.pftrace` (each
-20–30 MB). Then, from the Mac:
-
-```
-P=/data/local/tmp/nf0
-adb shell cat $P/status                       # "all done" when guest-fast finished
-adb shell "cd $P && for n in native-gentle guest-gentle native-fast guest-fast; do sh dump.sh \$n; done"
-adb pull $P ./nf0                             # CSVs, marks, battery files, results files
-python3 -I analyse.py nf0/out-guest-fast nf0/guest-fast.marks 80 2240 6000   # swipe ms, stop ms, after ms
-# install the x=trace build, compile it (cmd package compile -f -m speed-profile dev.keliver.sample),
-# then the x=trace series (guest-gentle-tr, guest-fast-tr, native-fast-tr) the same way:
-adb shell "cd $P && nohup sh series.sh guest-gentle-tr guest-fast-tr native-fast-tr > series.log 2>&1 &"
-```
-
-The scripts are kept in the session's scratch directory; they are not in the repository.
 
 ### Scrolling, run 2
 
