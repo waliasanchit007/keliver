@@ -524,7 +524,9 @@ class ThreewayActivity : ComponentActivity() {
     if (flings.size % group == 0) {
       val last = flings.takeLast(group)
       val label = "flings ${flings.size - group + 1}-${flings.size}"
-      log(summarizeFlings(label, last).put("form", form).put("x", experiments).put("api", apiRoute).toString())
+      // A summary that fails must not end the run (the fling lines above are the raw data).
+      val summary = runCatching { summarizeFlings(label, last).put("form", form).put("x", experiments).put("api", apiRoute).toString() }
+      log(summary.getOrElse { """{"summary":${JSONObject.quote(label)},"form":"$form","error":${JSONObject.quote(it.toString())}}""" })
     }
   }
 

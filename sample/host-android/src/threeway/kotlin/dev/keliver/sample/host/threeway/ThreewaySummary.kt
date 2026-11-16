@@ -26,7 +26,11 @@ internal fun nearestRank(values: List<Double>, p: Double): Double {
   return s[(ceil(p * s.size).toInt() - 1).coerceIn(0, s.size - 1)]
 }
 
-private fun round1(x: Double): Double = Math.round(x * 10) / 10.0
+/** Rounded to 0.1; NaN (no values) stays NaN, so [orNull] logs it as null, not 0. */
+private fun round1(x: Double): Double = if (x.isNaN()) x else Math.round(x * 10) / 10.0
+
+/** org.json refuses NaN (it threw on a group with no frames after the stop): no values = null. */
+private fun orNull(x: Double?): Any = if (x == null || x.isNaN()) JSONObject.NULL else x
 
 private fun JSONObject.numbers(): Map<String, Double> {
   val out = LinkedHashMap<String, Double>()
@@ -45,12 +49,12 @@ internal fun summarizeSteps(label: String, results: List<JSONObject>): JSONObjec
   val medians = JSONObject()
   for (key in keys) {
     if (key == "i" || key == "seq") continue
-    medians.put(key, round1(median(results.mapNotNull { it.numbers()[key] })))
+    medians.put(key, orNull(round1(median(results.mapNotNull { it.numbers()[key] }))))
   }
   return JSONObject()
     .put("summary", label)
     .put("n", results.size)
-    .put("drawn", JSONObject().put("median", round1(median(drawn))).put("p90", nearestRank(drawn, 0.9)).put("min", drawn.minOrNull()).put("max", drawn.maxOrNull()))
+    .put("drawn", JSONObject().put("median", orNull(round1(median(drawn)))).put("p90", orNull(nearestRank(drawn, 0.9))).put("min", orNull(drawn.minOrNull())).put("max", orNull(drawn.maxOrNull())))
     .put("medians", medians)
 }
 
@@ -68,9 +72,10 @@ internal fun summarizeFlings(label: String, all: List<JSONObject>): JSONObject {
   fun arr(f: JSONObject, key: String) = f.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getDouble(it) } } ?: emptyList()
   val frames = flings.flatMap { arr(it, "movingFrames") }
   val afterStop = flings.flatMap { arr(it, "afterStopFrames") }
-  fun share(limit: Double) = if (frames.isEmpty()) Double.NaN else round1(100.0 * frames.count { it > limit } / frames.size)
-  fun med(key: String) = round1(median(flings.mapNotNull { f -> f.opt(key).let { if (it is Number) it.toDouble() else null } }))
-  fun p90(key: String) = nearestRank(flings.mapNotNull { (it.opt(key) as? Number)?.toDouble() }, 0.9)
+  fun share(limit: Double) = orNull(if (frames.isEmpty()) Double.NaN else round1(100.0 * frames.count { it > limit } / frames.size))
+  fun med(key: String) = orNull(round1(median(flings.mapNotNull { f -> f.opt(key).let { if (it is Number) it.toDouble() else null } })))
+  fun p90(key: String) = orNull(nearestRank(flings.mapNotNull { (it.opt(key) as? Number)?.toDouble() }, 0.9))
+  fun rank(values: List<Double>, p: Double) = orNull(nearestRank(values, p))
   fun sum(key: String) = flings.sumOf { it.optDouble(key, 0.0) }
   val o = JSONObject()
     .put("summary", label)
@@ -84,10 +89,10 @@ internal fun summarizeFlings(label: String, all: List<JSONObject>): JSONObject {
     .put("missedVsyncsMedian", med("missedVsyncs"))
     .put("missedVsyncsTotal", sum("missedVsyncs"))
     .put("movingFrames", frames.size)
-    .put("p50", nearestRank(frames, 0.5)).put("p90", nearestRank(frames, 0.9)).put("p99", nearestRank(frames, 0.99)).put("max", frames.maxOrNull())
+    .put("p50", rank(frames, 0.5)).put("p90", rank(frames, 0.9)).put("p99", rank(frames, 0.99)).put("max", orNull(frames.maxOrNull()))
     .put("over16_7pct", share(16.7)).put("over33_3pct", share(33.3)).put("over100pct", share(100.0))
     .put("afterStopFrames", afterStop.size)
-    .put("afterStopP90", nearestRank(afterStop, 0.9)).put("afterStopMax", afterStop.maxOrNull())
+    .put("afterStopP90", rank(afterStop, 0.9)).put("afterStopMax", orNull(afterStop.maxOrNull()))
     .put("tailMsMedian", med("tailMs"))
     .put("framesPerFlingMedian", med("framesCount"))
   if (flings.any { it.has("bFrames") }) {
