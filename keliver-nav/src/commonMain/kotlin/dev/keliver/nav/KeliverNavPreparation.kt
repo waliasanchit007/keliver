@@ -131,7 +131,9 @@ public fun <K : Any> KeliverPreparedStack(
   // arrive in the same frame are handled too.
   val lastKeys = remember { LastKeys<K>() }
   val stackChanged = lastKeys.keys.let { it != null && it != keys }
-  SideEffect { lastKeys.keys = keys }
+  // A copy: a caller may pass a state list it changes in place (the controller's own entries are
+  // one), and a stored reference to it would always equal the current stack.
+  SideEffect { lastKeys.keys = keys.toList() }
   val requested = preparation.prepared
   val prepared = requested?.takeUnless { stackChanged && it !in keys }
   if (requested != null && prepared == null) {

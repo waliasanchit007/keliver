@@ -22,6 +22,7 @@ import androidx.compose.runtime.ComposeNode
 import androidx.compose.runtime.Composition
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
@@ -329,6 +330,45 @@ class KeliverNavPreparationTest {
     harness.settle()
     assertEquals("root[stack[entry[home],entry(hidden)[detail]]]", harness.root.dump())
     assertEquals("detail", app.preparation.prepared)
+  }
+
+  @Test
+  fun aStateListChangedInPlaceStillDropsAStalePreparation() = runTest {
+    // The caller passes one list and changes it in place (as KeliverNavController.entries is).
+    val counts = Counts()
+    val harness = Harness(this, counts)
+    val keys = mutableStateListOf("home", "list")
+    val preparation = KeliverNavPreparation<String>()
+    val content: @Composable (String) -> Unit = { key ->
+      DisposableEffect(key) { onDispose { counts.disposed += key } }
+      ComposeNode<Node, TestApplier>(factory = { Node(key) }, update = {})
+    }
+    try {
+      harness.setContent { KeliverPreparedStack(keys, preparation, TestFrame, 0, content) }
+      preparation.prepare("detail")
+      harness.settle()
+      assertEquals("root[stack[entry[list],entry(hidden)[detail]]]", harness.root.dump())
+
+      // A pop while the finger is down, in place.
+      counts.reset()
+      keys.removeAt(keys.lastIndex)
+      harness.settle()
+      assertEquals("root[stack[entry[home]]]", harness.root.dump())
+      assertEquals(listOf("detail", "list").sorted(), counts.disposed.sorted())
+      assertNull(preparation.prepared)
+
+      // A press then a push of that key, in place: adopted, not composed again.
+      preparation.prepare("detail")
+      harness.settle()
+      counts.reset()
+      keys.add("detail")
+      harness.settle()
+      assertEquals("root[stack[entry[detail]]]", harness.root.dump())
+      assertEquals(listOf("home"), counts.disposed)
+      assertNull(preparation.prepared)
+    } finally {
+      harness.close()
+    }
   }
 
   @Test

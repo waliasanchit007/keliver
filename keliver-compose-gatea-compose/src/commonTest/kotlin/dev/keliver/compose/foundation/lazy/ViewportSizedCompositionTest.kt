@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.compose.wire.KeliverGeneratedApi
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -44,6 +45,13 @@ import kotlinx.coroutines.test.runTest
 class ViewportSizedCompositionTest {
   @BeforeTest
   fun forget() {
+    LazyWindowSizing.viewportSized = true
+    LazyWindowSizing.forgetMeasuredViewports()
+  }
+
+  /** The switch and the shared store are process-wide: leave them as the next test expects. */
+  @AfterTest
+  fun restore() {
     LazyWindowSizing.viewportSized = true
     LazyWindowSizing.forgetMeasuredViewports()
   }

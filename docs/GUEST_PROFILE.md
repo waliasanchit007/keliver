@@ -584,10 +584,14 @@ step, after the frame it follows.
   work, including building the hidden native tree, is not counted). From touch-down to the click's
   guest work done:
 
-  | | Press | Click | Done after touch-down | Without NF3 |
+  | | Press | Click | Done after touch-down | Without NF3¹ |
   |---|---|---|---|---|
-  | Depth 1 (list retained) | 14.73 → 175–220 | 6.88 → 85–105 | ≈ 260–325 | 15.93 → 190–240, done ≈ 290–340 |
+  | Depth 1 (list retained) | 14.73 → 175–220 | 6.88 → 83–103 | ≈ 260–325 | 15.93 → 190–240, done ≈ 290–340 |
   | Depth 0 | 15.03 → 180–225 | 21.97 → 265–330 | ≈ 445–555 | shipped 28.06 → 335–420, done ≈ 435–520 |
+
+  ¹ The two rows compare against different baselines: depth 1 against the prepared stack at depth 1
+  without a press (15.93; the list stays retained, as with `retain=1`'s 15.51), depth 0 against what ships today
+  (28.06). "Done" in this column is the click's guest work after the finger's ~100 ms.
 
   Depth 1 gains about 15–30 ms (more at 12×, less at 15×), not the click step's 100+. Depth 0 is
   slower than shipping without NF3, by about 5–35 ms. Pre-composition pays on the A12 only with a

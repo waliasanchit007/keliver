@@ -208,8 +208,11 @@ public class LazyWindow internal constructor(
       val full = lastIndex < count - 1
       // The largest full report since this list was created, not the last one: rows differ in
       // height, and the list starts again where it started (usually the top), not where the user
-      // left it (a stretch of tall rows would store 4 where the top shows 12). A larger hint costs
-      // extra rows; a smaller one costs placeholders on screen until the host's first report.
+      // left it (a stretch of tall rows would store 4 where the top shows 12). A list that comes back
+      // at a saved scroll position instead may show a stretch other than the one the largest report
+      // came from; that is bounded too: the hint only ever shortens the first window, so a hint that
+      // is too large costs at most the fixed preload (what ships without NF3), and one too small
+      // costs placeholders on screen until the host's first report, which corrects it.
       if (full) largestFullReport = maxOf(largestFullReport, rows)
       viewports.measured(site, rows = if (full) largestFullReport else rows, full = full)
     }
