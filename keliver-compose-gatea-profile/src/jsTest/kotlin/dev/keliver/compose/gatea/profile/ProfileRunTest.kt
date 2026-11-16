@@ -66,6 +66,36 @@ class ProfileRunTest {
     }
   }
 
+  /**
+   * Memory growth per navigation (docs/GUEST_PROFILE.md): the recorder's and the driver's own state
+   * is the same after 20 open/back cycles as after one, so what the QuickJS readings show growing
+   * is not held here. The driver's clickable list grew by every row ever recorded until it pruned
+   * removed widgets.
+   */
+  @Test fun navigationDoesNotGrowTheRecordersState() {
+    for (retain in listOf(false, true)) {
+      val run = ProfileRun(Encoding.KOTLINX, timeCalls = false, items = 20, retain = retain)
+      try {
+        run.first()
+        run.open(0)
+        run.back()
+        val afterOne = JSON.parse<dynamic>(run.adapter.counts())
+        repeat(20) { i ->
+          run.open(i % 5)
+          run.back()
+        }
+        val afterMany = JSON.parse<dynamic>(run.adapter.counts())
+        for (key in listOf("widgets", "removed", "liveClickables")) {
+          assertEquals(afterOne[key] as Int, afterMany[key] as Int, "retain=$retain $key")
+        }
+        // Each step's click prunes; the back's removals are pruned by the next click.
+        assertTrue((afterMany["clickables"] as Int) <= (afterOne["clickables"] as Int) + 1, "retain=$retain: ${run.adapter.counts()}")
+      } finally {
+        run.close()
+      }
+    }
+  }
+
   @Test fun noneRecordsStructureOnly() {
     val s = steps(Encoding.NONE)
     assertEquals(145, s.back.creates)

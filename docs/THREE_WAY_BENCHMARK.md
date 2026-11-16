@@ -1141,7 +1141,9 @@ for native; KiB from `dumpsys meminfo`; QuickJS from `x=mem`):
   (`gcThreshold` stays at 262,144): as shipped about 218 KB and 1,250 objects per open/back cycle
   (7.13 → 9.09 MB after each open, over 10 cycles), with retain about 55 KB and 330 (8.12 →
   8.62 MB). Whether that growth is garbage a later collection would reclaim or a leak is not
-  established. Medians over the 10 cycles mix these two trends, so they are not used here. The
+  established on the phone. In the Mac harness it is garbage: a full collection reclaims all of it,
+  and QuickJS's own collector does every 35–40 cycles. A 10-cycle run stops before that point
+  (GUEST_PROFILE.md, "Memory growth per navigation"). Medians over the 10 cycles mix these two trends, so they are not used here. The
   host's side of a retained screen while
   hidden (its views) was not measured: `dumpsys meminfo` was read only at the end, on the list.
 - **Depth.** The prototype has two screens, so the retained stack never holds more than the one

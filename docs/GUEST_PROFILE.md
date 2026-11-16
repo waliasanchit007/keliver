@@ -19,6 +19,10 @@ those two numbers. This document does.
 - **GC is not the problem.** Raising QuickJS's GC threshold from 256 KiB to 4, 16, 64 MiB or 1 GiB
   changed nothing (79.2 → 79.1–79.7 ms). One full GC of this heap costs 1.2–3.1 ms. This is a null
   result for this harness's heap; the phone's live heap was not measured.
+- **The memory that grows per open/back cycle is garbage, not a leak** (2026-11-17, "Memory growth
+  per navigation"). 98.4 KB per cycle as shipped, 29.6 KB with retain. A forced collection
+  reclaims all of it after 100 cycles, and QuickJS's own collector does every 35–40 cycles. The
+  A12's 10-cycle run stopped before its collection point.
 - **Recording is 45–47% of "back"** in QuickJS (the phone's timers said 41%).
 - **Emulated `Long` is the biggest single cost we found: about 38% of the guest's work in V8's
   interpreter (`--jitless`; not measured in QuickJS).** It has two sources:
@@ -532,6 +536,72 @@ What the phone adds to the Mac's result:
 - `qjs` parses source where Zipline loads bytecode, so the load column (1.0–1.3 s on the phone) is
   not Zipline's start-up time. Cold start is NF0's separate measurement.
 
+## Memory growth per navigation
+
+Measured 2026-11-17 on the Mac, Zipline's QuickJS (`profileQuickJs`, `cycles=…`), no device.
+
+**The question.** On the A12 (THREE_WAY_BENCHMARK.md, "NF1 gate, part 1"), QuickJS's used memory
+grew after every open/back cycle, about 218 KB and 1,250 objects as shipped and about 55 KB and 330
+with retain, over 10 cycles, and was never seen to come back. Garbage or a leak?
+
+**Method.** `cycles=N` loads the bundle, shows the list, then runs N open/back cycles. After each
+open and each back it reads QuickJS's whole `memoryUsage` (every field of `JS_ComputeMemoryUsage`)
+and the recorder's own counters (`counts`: live widgets, pending removals, the driver's clickable
+list). `gcEvery=K` forces a full collection (`quickJs.gc()`, QuickJS's `JS_RunGC`) every K cycles
+and reads again; `gcEvery=0` leaves collection to QuickJS. `probeEvals=K` adds K empty
+`evaluate` calls per cycle, a control for the harness's own calls. One JSON line per reading.
+
+**Numbers** (used memory and objects; "open" and "back" readings are after that step):
+
+| Run | Growth per cycle, no collection | After a forced collection | Automatic collection |
+|---|---|---|---|
+| As shipped, 200 cycles, `gcEvery=0` | 98.4 KB, 628 objects ("open" readings, cycles 10→45) | — | every 35–40 cycles, at about 9.2 MB; back to 5.6–6.0 MB |
+| As shipped, 100 cycles, `gcEvery=10` | same | 6,138,836 B and 19,462 objects at cycles 20–100 (±104 B, ±1 object) | — |
+| retain=1, 200 cycles, `gcEvery=0` | 29.6 KB, 201 objects ("back" readings, cycles 40→140) | — | between cycles 30–40 and 140–150, at about 9.5 MB |
+| retain=1, 100 cycles, `gcEvery=10` | same | 6,255,780 B and 19,650 objects at cycles 20–100, unchanged | — |
+
+**Verdict: garbage, not a leak** (in this harness). All of the per-cycle growth is reclaimed by a
+full collection, to the byte, after 100 cycles in both modes, and QuickJS's own collector reclaims it
+too, in a saw-tooth. It is cyclic garbage: reference counting frees the disposed screen's acyclic
+objects at once (each open drops the heap by about 0.6 MB as the list goes), and what is left over
+is reference cycles, which only the cycle collector frees. QuickJS runs that collector on
+allocation once the heap exceeds a threshold, and after each collection sets the next threshold to
+1.5× the heap. Here that is several MB of headroom, 35–40 cycles of growth.
+
+Why the A12 never saw it come back: its run had 10 cycles. 10 × 218 KB is 2.2 MB, under the headroom
+a 7–8 MB heap gets (about half of it, 3.5–4 MB). By the same rule the phone would collect after about
+16–20 cycles. That is a prediction; the phone run that would show it has not been made. The
+`gcThreshold` reading of 262,144 does not contradict it: Zipline's getter returns the value that was
+set, not QuickJS's live threshold. On the Mac the getter also read 262,144 throughout, while QuickJS
+collected at about 9 MB.
+
+**Two things that did grow, both in the harness, neither in the guest:**
+- **The driver's clickable list** (`ProfileAdapter.clickables`) kept every clickable widget ever
+  recorded, 18 per cycle. After 100 cycles that was about 289 B per cycle left after a collection:
+  +26 KB, 1,620 array elements, object count flat. **Fixed**: `click` drops removed widgets first.
+  Test: `ProfileRunTest.navigationDoesNotGrowTheRecordersState` (20 cycles, both modes; the
+  recorder's widgets, pending removals and clickables are the same as after one cycle). The
+  "after a forced collection" numbers above are with the fix.
+- **`binaryObjectsCount`** rises by exactly one per `evaluate` call (4.1 per cycle; 14.1 with
+  `probeEvals=10`), and `binaryObjectsSize` by about 80 B each, while used memory stays flat. It
+  counts something of the harness's own `evaluate` calls, not live guest memory. A host calls the
+  guest through Zipline's bridge, not `evaluate`.
+
+**What the harness does not cover.** The phone's growth is about 2× the harness's (218 vs 98.4 KB;
+55 vs 29.6 KB with retain). The difference is the code the harness stubs: Zipline's bridge and
+service calls, treehouse's guest runtime, the real frame clock and the data request. Those could
+hold something the harness cannot see. The phone's own growth is not settled until a phone run goes
+past the collection point.
+
+**Follow-up.** No leak to fix. Two things are worth a phone run:
+- **Run 30+ cycles with `x=mem`** and see the drop. If the heap still only grows past 20 cycles, the
+  phone has something the harness does not.
+- **Measure what a collection costs on the phone.** A full collection costs 1.2–3.1 ms here, so
+  roughly 15–40 ms on the A12 at the usual 12–13×. QuickJS runs it inside whatever allocation
+  crosses the threshold, so every 16–40 navigations one of them pays it. If that lands in a
+  navigation's frame budget, the host could force a collection when idle (`quickJs.gc()` on the
+  Zipline thread) instead. That is a design choice, not measured here.
+
 ## How to rerun it
 
 ```
@@ -550,6 +620,10 @@ What the phone adds to the Mac's result:
 #    back 81.05 -> 2.44 ms median, 145 -> 0 creates, 94,817 -> 104 bytes. The host's work for a back
 #    (applying the batch, showing the list again) is not measured. Open 24.41 -> 15.28 ms is a side
 #    effect of the list no longer being disposed, not an improvement to opening.)
+# memory growth per navigation ("Memory growth per navigation"): one JSON line per reading in
+#   <label>-<mode>.jsonl, a "QJS_MEM" line each on stdout; gcEvery=0 leaves collection to QuickJS
+./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \
+  "-PprofileArgs=cycles=100,gcEvery=10,label=growth" -PprofileOut=<scratch>/out   # add retain=1, probeEvals=10
 # variants that need a library patch (apply, run, then `git checkout` the library):
 #   10-row window:        sample/threeway-guest/experiments/lazy-window-10.patch
 #   serializers once:     keliver-compose-gatea-profile/experiments/serializers-once.patch (codegen)
@@ -614,3 +688,6 @@ python3 -I keliver-compose-gatea-profile/engine/api-compare.py <zipline/native a
   not observed.
 - **The API comparison** reads declarations; nothing was compiled against the 2026 header.
 - **Cold start's GC share** was not measured.
+- **Memory growth per navigation** was settled in this harness only (garbage, reclaimed). The
+  phone's growth is about 2× the harness's and was never followed past its collection point. A
+  collection's cost on the phone is an estimate (Mac × 12–13).
