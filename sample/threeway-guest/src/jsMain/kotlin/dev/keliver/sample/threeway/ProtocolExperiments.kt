@@ -34,7 +34,7 @@ import kotlinx.serialization.json.Json
  * BENCHMARK-ONLY and off unless the route's `x` extra asks for them. Nothing here changes the
  * library: the guest's widget system is created through a factory that wraps the library's protocol
  * adapter (treehouse-guest's FastGuestProtocolAdapter on JS) in [ExperimentAdapter], which forwards
- * every call to it and
+ * every call to it, counts the calls (`scroll` wraps it only for these counts), and
  *  - `split`: times every recording call (Date.now() before and after; each call is well under a
  *    millisecond, so the sum of the differences estimates the total, unbiased when the calls are
  *    not phase-locked to the clock's ticks) and counts them, per kind;
@@ -89,8 +89,10 @@ internal class ExperimentWidgetSystemFactory(
     val x = experiments()
     val time = "split" in x
     val skip = "skipdefaults" in x
+    // `scroll`: wrapped only to count (creates and changes are counted whether or not timed).
+    val count = "scroll" in x
     // As shipped: the library's adapter, unwrapped.
-    if (!time && !skip) return delegate.create(guestAdapter, mismatchHandler)
+    if (!time && !skip && !count) return delegate.create(guestAdapter, mismatchHandler)
     return delegate.create(ExperimentAdapter(guestAdapter, time, skip), mismatchHandler)
   }
 
@@ -117,11 +119,11 @@ private class ExperimentAdapter(
   override fun nextId(): Id = delegate.nextId()
 
   private inline fun structural(block: () -> Unit) {
+    ProtocolStats.structural++
     if (!time) return block()
     val start = Date.now()
     block()
     ProtocolStats.structuralMs += (Date.now() - start).toLong()
-    ProtocolStats.structural++
   }
 
   override fun appendCreate(id: Id, tag: WidgetTag) = structural {
@@ -140,11 +142,11 @@ private class ExperimentAdapter(
         sent += key
       }
     }
+    ProtocolStats.propertyChanges++
     if (!time) return delegate.appendPropertyChange(id, widgetTag, propertyTag, serializer, value)
     val start = Date.now()
     delegate.appendPropertyChange(id, widgetTag, propertyTag, serializer, value)
     ProtocolStats.propertyMs += (Date.now() - start).toLong()
-    ProtocolStats.propertyChanges++
   }
 
   override fun appendPropertyChange(id: Id, widgetTag: WidgetTag, propertyTag: PropertyTag, value: Boolean) =
@@ -163,13 +165,13 @@ private class ExperimentAdapter(
       }
       modifierSent += id.value
     }
+    ProtocolStats.modifierChanges++
     if (!time) return delegate.appendModifierChange(id, value)
     var elements = 0
     value.forEach { elements++ }
     val start = Date.now()
     delegate.appendModifierChange(id, value)
     ProtocolStats.modifierMs += (Date.now() - start).toLong()
-    ProtocolStats.modifierChanges++
     ProtocolStats.modifierElements += elements
   }
 

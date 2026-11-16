@@ -36,8 +36,19 @@ public interface ThreewayHost : ZiplineService {
    * The experiments this run asked for (the route's `x` extra, comma-separated; empty for the
    * as-shipped series): `split` (frame and protocol-recording marks), `skipdefaults` (don't send a
    * new widget's properties that equal their default), `jsonparse` / `dynamic` (parse with QuickJS's
-   * `JSON.parse`, then map by hand or with kotlinx.serialization's `decodeFromDynamic`).
+   * `JSON.parse`, then map by hand or with kotlinx.serialization's `decodeFromDynamic`), `heavy`
+   * (the heavy detail variant), `scroll` (count the protocol calls for ThreewayGuestStats).
    * docs/THREE_WAY_BENCHMARK.md, "Experiments".
    */
   public fun experiments(): String
+}
+
+/**
+ * Benchmark-only guest service (the scrolling series, `x=scroll`): the guest's protocol counters
+ * since the last call, read by the host after a fling has settled, so the read costs the fling
+ * nothing. A JSON object: `{"creates":…,"props":…,"mods":…,"struct":…}` (widgets created, property
+ * and modifier changes, structural changes).
+ */
+public interface ThreewayGuestStats : ZiplineService {
+  public fun takeStats(): String
 }

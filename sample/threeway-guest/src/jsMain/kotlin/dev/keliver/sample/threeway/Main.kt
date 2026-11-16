@@ -27,6 +27,17 @@ import kotlinx.serialization.json.decodeFromDynamic
 
 public fun main() {
   Zipline.get().bind<ThreewayAppService>("app", ThreewayAppServiceImpl())
+  Zipline.get().bind<ThreewayGuestStats>("threewayStats", GuestStats)
+}
+
+/** The scrolling series' counters (ThreewayGuestStats); counted only when the adapter is wrapped. */
+private object GuestStats : ThreewayGuestStats {
+  override fun takeStats(): String {
+    val s = ProtocolStats
+    val json = "{\"creates\":${s.creates},\"props\":${s.propertyChanges},\"mods\":${s.modifierChanges},\"struct\":${s.structural}}"
+    s.reset()
+    return json
+  }
 }
 
 private class ThreewayAppServiceImpl : ThreewayAppService {
@@ -120,6 +131,8 @@ private object GuestMarks : ThreewayMarks {
   private val pending = LinkedHashMap<Int, LinkedHashMap<String, Long>>()
 
   override val frameMarks: Boolean get() = "split" in experiments
+
+  override val heavyDetail: Boolean get() = "heavy" in experiments
 
   override fun now(): Long = Date.now().toLong()
 
