@@ -555,6 +555,14 @@ re-running it that way: `input` and `am` fail with "Failed transaction" when the
 on shared storage (the system server cannot use that descriptor), so the script gives them
 `/dev/null`. Each series' battery level and temperature are given with it.
 
+**Run 3 lost the phone too**, at about 14:09 IST (wireless adb, as in both earlier runs), during
+native's scrolling series, and it had not come back by 14:40. The script on the phone was not
+affected by that, so the remaining series (native and web scrolling, the guest's `x=scroll` pass,
+the heavy screen in all three forms with 3 cold opens each, the five GC arms) should have run to
+the end on the phone by about 15:30, unless the battery guard (it stops below 30% on battery)
+stopped them. **Their output is on the phone, in the app's `files/r3/`, not pulled**, and is not
+reported here. Uninstalling the app deletes that folder: pull it first.
+
 ### Scrolling, run 3: the first speed with placeholders (guest)
 
 **The guest's instrumented pass** (`x=scroll,blank`, five speeds, each a fresh process; 13:45–14:05
@@ -589,6 +597,17 @@ screen is blank and content comes back after 4.3 s (2.9 s after the stop); at 6,
 the way down and the guest's window still holds some), except the first fling up after the
 direction changes. The process's first fast swipe again started no fling (`flingVelocityPxS` 0,
 travel the finger's own): now three of five fresh-process fast runs.
+
+**What a user would feel (run 3, with run 2's clean pass).** A slow, deliberate scroll (about
+1,400 dp/s) looks native: the list follows the finger and stops on rows that are there. A relaxed
+ordinary flick (about 2,100 dp/s) mostly looks fine, but the bottom one or two rows flash blank for
+a fraction of a second as the list comes to rest. A normal brisk flick (2,800 dp/s and up) moves
+smoothly at 2,800 dp/s but stops on a mostly empty screen: 8 of 14 rows or more are blank, and the
+content comes back about 2.3 s after the list has stopped. At 3,500 dp/s and faster the list also
+stutters while it moves (run 2: 7–20 skipped frames per fling down) and the whole screen stays empty
+for 3–5 s after it stops. A user flicking through a long list at a normal pace would see a list that
+keeps going blank; on this phone that is the guest's biggest visible defect. How native and web
+compare at the same speeds is in run 3's unread output (see Phone run 3).
 
 ### Scrolling, run 2
 
@@ -939,12 +958,13 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
   in the experiments session it was 157.0.8103.38. Whether the first session had the same version
   is not known; the two sessions' as-shipped web series agree within 5%.
 - **Scrolling: the guest only, again.** Native and web scrolling, the heavy screen's series and the
-  GC threshold series were built and smoke-checked but not measured: the phone left wireless adb at
-  about 03:58 IST on 2026-11-16 (first run) and at about 12:41 IST (run 2; not back 33 minutes
-  later). Run 2's guest series is the clean pass only: **no placeholder or content-time numbers
-  from the new route**, so the first speed with placeholders is not known. The guest/native
-  comparison of missed vsyncs rests on one native smoke fling per speed (gentle, fast).
-- **The process's first fast swipe** started no fling in two of four fresh-process fast runs
+  GC threshold series were built and smoke-checked but not reported: the phone left wireless adb at
+  about 03:58 IST on 2026-11-16 (first run), at about 12:41 IST (run 2) and at about 14:09 IST
+  (run 3; not back 31 minutes later). Run 3's script kept running on the phone, so those series'
+  output is likely in the app's `files/r3/` on the phone, unread. What is reported for the guest:
+  run 2's clean pass and run 3's placeholder pass at five speeds. The guest/native comparison of
+  missed vsyncs rests on one native smoke fling per speed (gentle, fast).
+- **The process's first fast swipe** started no fling in three of five fresh-process fast runs
   (Compose's fling velocity 0 although the touch events' was 12,500 px/s); cause not established.
 - **Run 2's 14 s and 12 s gaps were long enough** (no fling closed by a touch or busy at DOWN);
   the guest's last frame ended up to 7.9 s after a fast fling's lift.
@@ -965,8 +985,11 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
 - **"Normal" is a gentle fling** (about 1,400–1,500 dp/s at release). Ordinary flicks are faster;
   run 3 places the guest's first placeholders at 2,133 dp/s, between the gentle speed and 2,844,
   with five fixed speeds: the threshold lies somewhere above 1,422 and at or below 2,133 dp/s.
-- **"Content settled" is a lower bound** (second session): it is the last blank frame; the rows
-  appear in the next frame, up to one guest frame (0.4–3.3 s) later.
+- **"Content settled" is a lower bound** in the first run's table (the last blank frame; the rows
+  appear in the next frame, up to one guest frame, 0.4–3.3 s, later). Run 3's placeholder table
+  gives the first frame with content instead.
+- **Run 3's placeholder pass is one run per speed** (10 flings each way, 7 at the fast speed), at
+  five fixed straight-line speeds, from `input swipe`.
 - **The heavy-screen and memory figures come from one check run each whose output was not kept**;
   they are indications only, until the series are run.
 - **The review-round-1 instrumentation ran on a device in run 2** for the guest's clean scrolling
