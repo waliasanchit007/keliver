@@ -502,6 +502,30 @@ native and web scrolling series, the heavy screen's series and the GC threshold 
 were checked on the phone (one check run each, below; their output was not kept) but **not
 measured**; they are one command each in [How to run it](#how-to-run-it).
 
+**Phone run 2 (the rerun with the review-round-1 route), 2026-11-16 from 11:40 IST.** Same phone,
+on battery throughout (60% at the start), wireless adb, thermal status 0, no power saving, 60 Hz,
+density 1.875 (300 dpi, 720×1600); WebView 157.0.8103.38 as before; the fixture API inside the app
+(`--ez localApi true`, `api=app` in every line) for every series. The APK was installed and compiled
+as before (profileinstaller, then `cmd package compile -f -m speed-profile`). Each series' battery
+level and temperature are given with it. **A smoke run found one harness bug** before any series:
+native's first fling group had no frames after the list stopped, the summary's percentile came out
+NaN, `org.json` refused it and the process died (the guest's and the web's groups happened to have
+such frames). Empty statistics are now logged as `null` (they were rounded to 0 before, which also
+made a group with no placeholder report `contentAfterUpMsMedian: 0`), and a failing summary is logged
+rather than ending the run. Every new field was then logged and plausible in all three forms.
+
+**Same-day baseline, run 2** (as shipped, navigation, 14 opens and backs, first 2 dropped; 58%,
+25.4 °C; median / p90 / min–max, ms from the tap; the process's first open apart):
+
+| Form | Open (warm) | Back | Open (cold, i=1) |
+|---|---|---|---|
+| native | **16.5** / 17 / 14–18 | **13** / 14 / 12–18 | 27 |
+| guest | **440.5** / 450 / 420–452 | **1,054.5** / 1,122 / 1,021–1,167 | 454 |
+| web | **44** / 49 / 32–49 | **48** / 52 / 47–57 | 52 |
+
+Within 1–3% of the first run's baseline above (16 / 13, 436 / 1,082, 44 / 49), so run 2's other
+numbers compare with every earlier session's.
+
 ### Scrolling
 
 **How.** The route loads the 1,000 items (tap "Load 1,000"), then the flings come from outside the
