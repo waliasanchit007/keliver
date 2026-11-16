@@ -1142,7 +1142,9 @@ for native; KiB from `dumpsys meminfo`; QuickJS from `x=mem`):
   (7.13 → 9.09 MB after each open, over 10 cycles), with retain about 55 KB and 330 (8.12 →
   8.62 MB). Whether that growth is garbage a later collection would reclaim or a leak is not
   established on the phone. In the Mac harness it is garbage: a full collection reclaims all of it,
-  and QuickJS's own collector does every 35–40 cycles. A 10-cycle run stops before that point
+  and QuickJS's own collector does every 38 cycles as shipped and every 116 with retain. By the
+  same rule the phone would collect at cycle 11–20 as shipped and after about 70 with retain
+  (a prediction), so a 10-cycle run stops before that point
   (GUEST_PROFILE.md, "Memory growth per navigation"). Medians over the 10 cycles mix these two trends, so they are not used here. The
   host's side of a retained screen while
   hidden (its views) was not measured: `dumpsys meminfo` was read only at the end, on the list.
