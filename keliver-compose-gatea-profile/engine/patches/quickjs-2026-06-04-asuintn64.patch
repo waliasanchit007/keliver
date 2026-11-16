@@ -1,0 +1,15 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -56075,7 +56075,11 @@
+     } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
+         /* fast case */
+         if (bits >= JS_SHORT_BIG_INT_BITS) {
+-            res = a;
++            /* local fix (measurement only): asUintN(64, negative) must wrap to 2^64 + a */
++            if (!asIntN && bits == 64 && JS_VALUE_GET_SHORT_BIG_INT(a) < 0)
++                res = JS_NewBigUint64(ctx, (uint64_t)JS_VALUE_GET_SHORT_BIG_INT(a));
++            else
++                res = a;
+         } else {
+             uint64_t v;
+             int shift;

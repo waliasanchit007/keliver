@@ -35,14 +35,19 @@ those two numbers. This document does.
     78.2 → 50.2 ms), with the same two caveats (the modifier part is the cache stand-in; separate
     build). The earlier sum of separate measurements estimated −35%;
   - a 10-row window instead of 16 rows saves 35% (the phone measured 34%, frame → composed).
-- **The engine itself:**
-  - Zipline 1.28 runs **QuickJS 2021-03-27**.
-  - Android builds it at `-Os` with no LTO. The JVM build measured here is `ReleaseSmall`, so it is
-    comparable.
-  - Its bundle compiler rejects BigInt, so Kotlin's `Long`-as-BigInt cannot be used today. That
-    option cut "back" by 33% in jitless V8 (not measurable in QuickJS).
-  - A newer QuickJS is claimed to be 1.3–1.5× faster, but it changes the bytecode format and needs a
-    Zipline fork.
+- **The engine itself** (measured on this Mac; see "The engine, measured"):
+  - Zipline 1.28 runs **QuickJS 2021-03-27**, built at `-Os` on Android.
+  - **Compiler flags do nothing here.** The same 2021 engine at `-O2`, `-O3` and `-O3` with LTO ran
+    "back" in 77–82 ms, the same as `-Os` (78 ms) and Zipline's own build (77.8 ms). A Cortex-A53
+    may respond differently; not measured.
+  - **The newest QuickJS (2026-06-04) is 1.14–1.20× faster** on the same bundle.
+  - **With Kotlin's `Long` as a real BigInt on that engine, "back" is 2.1× faster and "open" 2.6×
+    faster** (78 → 37 ms and 24 → 9 ms), with identical batches. Recording then costs almost
+    nothing: the direct encoders add only 1–3 ms more. This needs a one-line fix to that QuickJS
+    release (`BigInt.asUintN(64, negative)` returns the negative value; without the fix the first
+    composition never ends).
+  - Zipline cannot load bytecode from another engine version (2021 is version 2, 2026 version 5),
+    so adopting it means a Zipline fork and serving bundles by engine version.
 
 ## What was built
 
@@ -246,8 +251,9 @@ Can anything be done in the engine itself? Sources are below. "Verified" means r
 
 **What runs today (verified):**
 - **Version.** Zipline 1.28.0 vendors **Bellard's QuickJS 2021-03-27** (`zipline/native/quickjs/VERSION`
-  at the tag), with local patches (no-eval context, FinalizationRegistry, global GC, a PR #196
-  fix). It is not QuickJS-NG. Zipline's main branch after 1.28.0 was not checked for a newer
+  at the tag). The engine source carries one patch (a PR #196 fix); the no-eval context,
+  FinalizationRegistry and global GC are in Zipline's own native layer ("The engine, measured").
+  It is not QuickJS-NG. Zipline's main branch after 1.28.0 was not checked for a newer
   engine.
 - **Android.** Release build: `-Os -g0 -fomit-frame-pointer -DNDEBUG -fvisibility=hidden`,
   `CMAKE_BUILD_TYPE=MinSizeRel`, `-fstrict-aliasing`. No LTO, no PGO
@@ -285,12 +291,12 @@ Every cost is an estimate.
 | 1 | **Code shape, not engine**: direct property and modifier encoders from the generator; serializers once per class; window from the viewport | "back" −36% at 10 and 16 rows with the three fixes run together, the modifier encoder stood in for by a cache; −35% more from 16→10 rows | **measured** in QuickJS (combined run against a different build's baseline; the modifier part is a stand-in, not a design) | 2–4 | Low. The wire format can stay byte-identical (hash-checked here) | Yes |
 | 2 | **Remove emulated `Long` from the hot paths**: no `JsonPrimitive` numbers on the encode path (part of 1); a JS-friendly hash map under Compose's runtime, either a patched androidx.collection or one with Int metadata on JS | up to about 12–13% of guest work in V8's interpreter (androidx.collection's part, with or without Compose runtime's own `Long`) on top of 1 | **estimate** from V8's profile; not measured in QuickJS | 2–6 (patching androidx.collection means carrying a fork of it) | Medium | Yes |
 | 3 | **GC threshold, idle GC** | **none** for navigation (< 4%). Cold start unmeasured | **measured** (this harness's heap only) | < 0.5 | Low | Yes (API exists) |
-| 4 | **Rebuild Zipline's QuickJS for Android at `-O2`/`-O3` + LTO**, optionally with Bellard's newer small-block allocator | 5–25% from flags; about +10% from the allocator | flags: **estimate** (no published QuickJS flag numbers); allocator: **sourced** (Bellard: 11% on bench-v8) | 1–3 (fork Zipline's native module and AAR; same bytecode) | Low–medium: we maintain a fork | Android (iOS is built with cklib's default `-O3`, but the cklib version Zipline pins was not checked; the allocator helps both) |
-| 5 | **Newer QuickJS (Bellard 2026-06)**, which also brings BigInt so `Long` can be a BigInt | 1.3–1.5× on bench-v8. BigInt: −33% in jitless V8, unknown in QuickJS | **sourced** published scores, combined by us (2021 vs 2025 never measured side by side); BigInt **measured** in V8 only | 4–8 (fork Zipline, port `zipline-bytecode`, re-apply patches, serve bundles by engine version, re-sign) | Medium | Yes |
+| 4 | **Rebuild Zipline's QuickJS for Android at `-O2`/`-O3` + LTO** | **none on this Mac**: 77–82 ms vs 78 ms at `-Os` ("The engine, measured") | **measured** on an Apple M4 Pro; an in-order Cortex-A53 may differ (not measured) | 1–3 (fork Zipline's native module and AAR; same bytecode) | Low–medium: we maintain a fork | Android (iOS is built with cklib's default `-O3`, but the cklib version Zipline pins was not checked) |
+| 5 | **Newer QuickJS (Bellard 2026-06-04)**, which also brings BigInt so `Long` can be a BigInt | engine alone 1.14–1.20×; **with `Long` as BigInt: "back" 2.1×, "open" 2.6×** (78 → 37 ms, 24 → 9 ms) | **measured** on this Mac, same bundle, identical batches; needs a one-line engine fix (`asUintN`) | 4–8 (fork Zipline's native module and its bytecode compiler, re-apply patches, fix `asUintN`, serve bundles by engine version, re-sign) | Medium: a fork, and two bytecode versions in the field during a transition | Yes |
 | 6 | **Hermes** (bytecode interpreter; a JSI port of Zipline's bridge) | about 1.0–1.5× against today's QuickJS, about equal to option 5 | **sourced**, mixed (2026: +16% on Linux, −30% on macOS arm64) | 8–16 | High: bytecode tied to engine version, C++ interop from Kotlin/Native, binary size, leaving Zipline upstream | Yes |
 | 7 | **Kotlin/Wasm (WasmGC) on an interpreter** (wasmtime's Pulley supports GC and exception handling; WAMR's GC is incomplete and fails Kotlin's output) | unknown; maybe 2–5× | **estimate**, unproven for GC-heavy code | 20–40+ (Compose publishes no wasm-wasi runtime; new bridge; Pulley host on both platforms) | Very high. Apple 4.7 names only HTML5/JS mini apps, so downloaded Wasm is greyer than JS | In principle |
 
-Ranked by gain per week: 1, then 2 and 4, then 5. Options 6 and 7 do not pay for this workload
+Ranked by gain per week, after the measurements in "The engine, measured": 5 is now the largest single gain and makes most of 1 and 2 unnecessary (with BigInt, recording costs only 1–3 ms more than no recording); 4 gives nothing on this Mac. Options 6 and 7 do not pay for this workload
 given 5.
 
 **Store rules (verified):**
@@ -316,7 +322,96 @@ and [#3599](https://github.com/bytecodealliance/wasm-micro-runtime/issues/3599).
 [App Store guidelines](https://developer.apple.com/app-store/review/guidelines/).
 [Play policy](https://support.google.com/googleplay/android-developer/answer/16559646).
 
-## How to rerun it
+## The engine, measured
+
+Measured 2026-11-16 on the same Mac (Apple M4 Pro, Apple clang 21), single-threaded, while a phone
+benchmark session ran on the same machine (load average 2.3–2.6). Same workload as the rest of this
+document: the as-shipped bundle (16-row window), 3 warm-up iterations, then 30 of open and back;
+medians of two interleaved rounds. In every run the first, the last open and the last back batch
+hashed the same as in every other run of the same recording mode, and the same as the JVM
+harness's (32-bit hash and byte count, compared by hand).
+
+**How.** Bellard's QuickJS 2021-03-27 (the version Zipline vendors) and 2026-06-04 (the newest
+release), each built from source as the command-line `qjs`, run the Kotlin/JS production
+executable (the same 46 modules Node runs) through a small CommonJS loader
+(`keliver-compose-gatea-profile/engine/run.js`). The engine is the same as Zipline's; the
+differences are that `qjs` parses JavaScript source where Zipline loads precompiled bytecode (so
+load times are not comparable), and that the engine is built with `make`'s flags rather than
+Zipline's build. To check the route: the 2021 build at `-Os` ran "back" in 78 ms and "open" in
+24 ms, and a same-day run of Zipline's own QuickJS through the JVM harness gave 77.8 and 23.6 ms.
+Timing is `Date.now()` around each step (the 2021 `qjs` has no finer clock), so medians are good
+to about 1 ms; run-to-run differences were 0–5 ms.
+
+**Compiler flags and engine version** (as shipped, kotlinx recording; ms):
+
+| Engine build | Back | Open | Back, recording off | vs Zipline's engine (back) |
+|---|---|---|---|---|
+| Zipline 1.28 QuickJS, JVM harness (reference) | 77.8 | 23.6 | 41.4 | 1.00× |
+| 2021-03-27 `-Os` | 78 / 78 | 24 / 24 | 42 / 41 | 1.00× |
+| 2021-03-27 `-O2` | 78 / 79 | 24 / 24 | 41 / 42 | 0.99× |
+| 2021-03-27 `-O3` | 78 / 79 | 24 / 24 | 41 / 42 | 0.99× |
+| 2021-03-27 `-O3` + LTO | 77 / 82 | 24 / 25 | 41 / 42 | 0.98× |
+| 2026-06-04 `-Os` | 67 / 69 | 20 / 21 | 36 / 37 | 1.14× |
+| 2026-06-04 `-O2` | 63 / 67 | 19 / 20 | 35 / 36 | 1.20× |
+| 2026-06-04 `-O3` | 64 / 66 | 19 / 20 | 35 / 36 | 1.20× |
+| 2026-06-04 `-O3` + LTO | 66 / 70 | 20 / 20 | 36 / 37 | 1.14× |
+
+- Flags change nothing for the 2021 engine on this CPU.
+- The 2026 engine is 1.14–1.20× faster, on Compose (recording off) and on recording alike.
+
+**`Long` as a real BigInt.** The 2026 engine has BigInt, so the bundle can be compiled with
+Kotlin's `-Xes-long-as-bigint` (`-PprofileBigInt`). On the unmodified 2026-06-04 release the first
+composition never finishes. The cause is an engine bug: `BigInt.asUintN(64, x)` returns `x`
+unchanged when `x` is negative (it must return 2^64 + x), and Kotlin compiles `Long.ushr` to that
+call, so a hash probe in Compose's collections never ends. A check of 19 64-bit operations against
+Node found three differences, all from this one call. The local one-line fix in
+`engine/patches/quickjs-2026-06-04-asuintn64.patch` makes all 19 match Node and the workload run
+(the same build runs unmodified in Node, with and without its JIT, with the same batches).
+
+| Engine and bundle | Recording | Back | Open | Back vs today |
+|---|---|---|---|---|
+| 2021 `-Os`, as shipped (today) | kotlinx | 78 / 79 | 24 / 24 | — |
+| | direct properties | 66 / 67 | 22 / 21 | −15% |
+| | direct + modifier cache | 54 / 55 | 20 / 20 | −31% |
+| | off | 41 / 42 | 18 / 18 | −47% |
+| 2026 (fixed) `-O2`, as shipped | kotlinx | 64 / 64 | 19 / 19 | −18% |
+| | direct + modifier cache | 45 / 44 | 15 / 16 | −43% |
+| | off | 35 / 35 | 14 / 14 | −55% |
+| **2026 (fixed) `-O2`, `Long` as BigInt** | **kotlinx** | **37 / 37** | **9 / 9** | **−53%** |
+| | direct properties | 36 / 35 | 9 / 9 | −55% |
+| | direct + modifier cache | 34 / 34 | 9 / 9 | −57% |
+| | off | 27 / 28 | 8 / 8 | −65% |
+| 2026 (fixed) `-Os`, `Long` as BigInt | kotlinx | 39 / 41 | 10 / 10 | −49% |
+
+What this says:
+- **The engine plus BigInt halves "back" and cuts "open" by 60%, with no change to Keliver's code**
+  beyond a compiler flag.
+- **It makes most of the code-shape fixes unnecessary.** With BigInt, as-shipped recording is
+  only 1–3 ms slower than the direct encoders: the encoders' gain was mostly emulated `Long`.
+- **Compose itself also gets a third faster** (recording off: 41 → 27 ms), which no code-shape fix
+  reached.
+- On the phone, if the 12–13× ratio held for this engine (not measured): "back" about
+  960 → 460 ms and "open" about 350 → 130 ms, before the 10-row window, a retained back stack or
+  pre-composition.
+
+**What adopting it would take** (read in Zipline's public repository, 2026-11-16):
+- Zipline vendors the engine in `zipline/native/quickjs`. Of its 13 files, 12 are byte-identical to
+  upstream 2021-03-27, and `quickjs.c` carries one 6-line patch (a double-to-int64 bound, upstream
+  PR #196), which the 2026-06-04 release already contains. `quickjs.c` was last changed in 2023-11.
+- Zipline's own additions (a no-eval context, `globalThis.gc`, FinalizationRegistry) live in its
+  native layer (`zipline/native/common`, `Context.cpp`, the JNI files) and use only the public
+  `quickjs.h`. All 85 QuickJS names that layer uses exist in the 2026 header with the same
+  declarations (compared line by line; not compiled).
+- **The bytecode format changed** (version 2 → 5), and Zipline compiles bundles to bytecode at build
+  time. A host on the old engine cannot load new bytecode. Zipline's maintainers: "We plan to
+  update, but it's not so simple as the bytecode is incompatible which means you need a mechanism
+  in place to compile to the new and old version, as well as a way to deliver the new version only
+  to new clients" (zipline #1715, closed, maintainer reply 2025-10-29; #1192 "Evaluate new QuickJS release", open since
+  2023-12).
+- So: a fork of Zipline's native module and bytecode compiler (or an upstream contribution), the
+  `asUintN` fix (to be reported upstream), bundles compiled for both engines during a transition,
+  and the index naming which engine a host has. Estimate 4–8 engineer-weeks, as in the table.
+
 
 ```
 # from the repository root, JDK 17 (as every Gradle command here)
@@ -332,7 +427,15 @@ and [#3599](https://github.com/bytecodealliance/wasm-micro-runtime/issues/3599).
 # variants that need a library patch (apply, run, then `git checkout` the library):
 #   10-row window:        sample/threeway-guest/experiments/lazy-window-10.patch
 #   serializers once:     keliver-compose-gatea-profile/experiments/serializers-once.patch (codegen)
-#   Long as BigInt:       -PprofileBigInt (Node only; Zipline's compiler rejects it)
+#   Long as BigInt:       -PprofileBigInt (Node, or the 2026 qjs below; Zipline's compiler rejects it)
+# (c) other QuickJS builds ("The engine, measured"): build the engines, then run the bundle's JS in each
+keliver-compose-gatea-profile/engine/build-engines.sh <scratch>/engines        # downloads, patches, builds
+./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:compileProductionExecutableKotlinJs
+#   (add -PprofileBigInt for the BigInt bundle) and copy
+#   keliver-compose-gatea-profile/build/compileSync/js/main/productionExecutable/kotlin/*.js to <bundle dir>
+<scratch>/engines/build/q26fix-O2/qjs --std keliver-compose-gatea-profile/engine/run.js \
+  <bundle dir> kotlinx 3 30 <label>                                            # modes: kotlinx, direct, modcache, none
+<scratch>/engines/build/q26fix-O2/qjs keliver-compose-gatea-profile/engine/bigint-ops.js   # compare with: node bigint-ops.js
 ```
 
 ## Unverified
@@ -366,8 +469,13 @@ and [#3599](https://github.com/bytecodealliance/wasm-micro-runtime/issues/3599).
 - **Reload.** In the harness, a reload with equal data re-creates every row. The phone's split for
   the same step recorded one property. Unexplained; a harness difference (the request does not
   suspend here) is the likely cause.
-- **The engine options' gains** are not measured here: compiler flags, a newer QuickJS, Hermes,
-  Wasm. They come from published benchmarks unlike this workload, and the network/shell here could
-  not run other engines (part 2c skipped).
-- **BigInt** on a newer QuickJS: its speed for 64-bit values is unknown.
+- **The engine measurements are from a Mac** (Apple M4 Pro, Apple clang). The phone runs an
+  in-order Cortex-A53 with the NDK's clang: compiler flags and the newer engine may behave
+  differently there, and the 12–13× ratio was measured for the 2021 engine only. Hermes and Wasm
+  are still not measured (their rows are published numbers).
+- **`qjs` is not Zipline.** It parses source where Zipline loads bytecode (load times not
+  comparable), and it is built with `make`'s flags. Its 2021 `-Os` numbers match Zipline's engine
+  in the JVM harness within 1 ms.
+- **The `asUintN` fix is local and minimal** (64-bit, short BigInts only). Wider values, the
+  multi-limb path and `asUintN` with other widths were not checked; upstream has not been told yet.
 - **Cold start's GC share** was not measured.
