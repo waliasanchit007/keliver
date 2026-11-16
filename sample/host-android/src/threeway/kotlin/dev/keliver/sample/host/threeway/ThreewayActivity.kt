@@ -18,6 +18,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.os.Trace
 import android.util.Log
 import android.view.InputDevice
 import android.view.MotionEvent
@@ -177,6 +178,20 @@ class ThreewayActivity : ComponentActivity() {
     experiments = intent.getStringExtra("x").orEmpty()
     Log.i(TAG, "form=$form x=$experiments")
     ThreewayListener.gcThresholdBytes = gcThresholdBytes()
+    // `x=trace` (NF0's system trace): trace sections for the guest's calls on the Zipline thread and
+    // for every main-thread message, so a Perfetto trace shows when the guest's changes are applied.
+    ThreewayListener.traceCalls = "trace" in experimentSet
+    if ("trace" in experimentSet) {
+      Looper.getMainLooper().setMessageLogging { line ->
+        if (line.startsWith(">>>>> ")) {
+          // ">>>>> Dispatching to Handler (h) {id} callback: what" -> "msg callback"
+          val callback = line.substringAfter("} ", "").substringBefore('@').substringBefore(": ")
+          Trace.beginSection("msg " + callback.takeLast(100))
+        } else if (line.startsWith("<<<<< ")) {
+          Trace.endSection()
+        }
+      }
+    }
     // The fixture API served by this app instead of the Mac (LocalFixture), before any form starts.
     if (intent.getBooleanExtra("localApi", false)) LocalFixture.start()
     // WARNING: benchmark-only (as GatebActivity): keep the screen on and draw over a locked phone's
@@ -737,6 +752,13 @@ internal object ThreewayListener : EventListener.Factory {
    * composes and sends its batch inside it.
    */
   @Volatile var recordGuestFrames = false
+
+  /**
+   * `x=trace`: a trace section around every non-suspending call into or out of the guest (set before
+   * Zipline starts). Suspending calls are skipped: they can overlap or end on another thread, which
+   * would mis-nest synchronous sections.
+   */
+  @Volatile var traceCalls = false
   val guestFrames = CopyOnWriteArrayList<LongArray>()
   private var frameChanges = false
 
@@ -755,6 +777,11 @@ internal object ThreewayListener : EventListener.Factory {
     }
 
     override fun callStart(call: Call): Any? {
+      if (traceCalls && !call.function.signature.startsWith("suspend ")) {
+        val name = call.function.signature.substringAfter("fun ").substringBefore('(')
+        val size = (call.args.firstOrNull() as? List<*>)?.size
+        Trace.beginSection(if (size != null) "zl:$name n=$size" else "zl:$name")
+      }
       if (!recordGuestFrames || !call.function.signature.startsWith("fun sendFrame(")) return null
       frameChanges = false
       return System.nanoTime().also { guestFrameStartNs = it }
@@ -778,6 +805,7 @@ internal object ThreewayListener : EventListener.Factory {
     }
 
     override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
+      if (traceCalls && !call.function.signature.startsWith("suspend ")) Trace.endSection()
       if ("sendChanges" in call.function.signature) {
         frameChanges = true
         onSendChangesEnd?.invoke()
