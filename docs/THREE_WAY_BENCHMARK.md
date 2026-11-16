@@ -851,6 +851,32 @@ neither fling. The rerun marks such flings (`guestBusyAtDown`) and drops them.
 
 ### A heavy screen: opening (warm)
 
+**Run 3, measured** (15:04–15:08 IST, 45%, 29.8–30.4 °C, thermal 0). `-e x heavy`, 14 opens and
+backs per form, the first 2 dropped; ms from the tap to drawn, median / p90 / min–max; cold = the
+process's first open (`am start -S`), three processes per form:
+
+| Form | Open (warm) | Back | Open (cold, 3 processes) |
+|---|---|---|---|
+| native | **22** / 23 / 19–24 | **14** / 16 / 13–19 | 32, 37, 35 |
+| guest | **1,042** / 1,068 / 998–1,299 | **1,085.5** / 1,103 / 1,068–1,227 | 1,094, 1,109, 1,113 |
+| web | **48** / 51 / 41–54 | **48.5** / 51 / 34–55 | 64, 67, 58 |
+
+Against the simple detail (run 2's baseline: native 16.5, guest 440.5, web 44 ms to open), the
+102-widget screen adds about 6 ms in native, 4 ms in web and **600 ms in the guest**. Back to the
+list costs the same in native and web and about 30 ms more in the guest (1,085.5 against
+1,054.5).
+
+**The guest's split** (`x=heavy,split`, same series; its timers add about 40 ms): open 1,083.5 ms
+median. The click reaches the guest's frame at 32.5 ms; the guest composes and records until
+963 ms (recording 1,036 properties in 200.5 ms and 102 modifiers in 102 ms: about 300 ms of the
+930 ms frame; the rest is Compose itself); its batch reaches the host 71.5 ms later (1,034.5),
+is applied 9 ms later and drawn 40 ms after that. **About 85% of the guest's open is its own
+frame in QuickJS** (930 of 1,083.5 ms); host and bridge are about 120 ms.
+
+**What a user would feel.** In native and web a 100-widget screen opens as fast as a small one,
+within a frame or two of the tap. In the guest it takes a full second on this phone: a visible
+pause after every tap into such a screen, and another second back.
+
 **Run 2, smoke only (raw kept; not a series).** One guest launch, `-e x heavy,mem`, 3 iterations
 (58–59%, 28.9 °C): the process's first open 1,189 ms to drawn (composed at 997), the next two
 1,181 and 1,120; backs 1,191, 1,150, 1,109. This reproduces the first run's unkept check
