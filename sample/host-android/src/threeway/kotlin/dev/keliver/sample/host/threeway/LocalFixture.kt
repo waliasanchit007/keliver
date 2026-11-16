@@ -72,9 +72,12 @@ internal object LocalFixture {
     val sizes = bodies.mapValues { (_, b) -> b.first.size + 1 + b.second.size }
     Log.i("Threeway", "localApi on 127.0.0.1:$PORT, delay $DELAY_MILLIS ms, sizes $sizes")
     // Bound off the main thread (no socket work there), and before any form makes its first request.
-    var bound: ServerSocket? = null
-    thread { bound = ServerSocket(PORT, 16, InetAddress.getByName("127.0.0.1")) }.join()
-    val server = checkNotNull(bound) { "localApi: could not bind 127.0.0.1:$PORT" }
+    // A bind failure is caught there and rethrown here, so it fails this call, not the helper thread.
+    var bound: Result<ServerSocket>? = null
+    thread { bound = runCatching { ServerSocket(PORT, 16, InetAddress.getByName("127.0.0.1")) } }.join()
+    val server = checkNotNull(bound).getOrElse {
+      throw IllegalStateException("localApi: could not bind 127.0.0.1:$PORT", it)
+    }
     thread(name = "threeway-fixture", isDaemon = true) {
       while (true) {
         val socket = server.accept()

@@ -39,24 +39,24 @@ part of that is fixable and part is not.
   work in an interpreter (about 0.2–0.4 s) and the encoding, which only a cheaper encoder or a
   faster CPU would shrink.
 
-- **Scrolling (guest, run 2 of 2026-11-16; [Scrolling, run 2](#scrolling-run-2)).** Up to about
-  2,800 dp/s at release the guest's list misses a median of 1 vsync per fling, as smooth as this
-  phone draws a list; at 3,556 dp/s down the list it misses 7–11 in every fling, at 6,667 dp/s
-  3–20, and the guest keeps composing 2–7.6 s after the finger lifts. Run 2 lost the phone before
-  its placeholder pass, native and web scrolling, the heavy screen and the GC series, so the first
-  speed with placeholders is still not measured. The first run (old route, superseded):
-  A **gentle** fling (about
-  1,400 dp/s at release) looks native: the host's list scrolls by itself and the guest's window
-  keeps ahead (no visible placeholder; one fling of ten showed a sub-row gap; stopped 0.7 s after
-  the finger lifts). A **fast fling (about 6,000–7,000 dp/s) shows a blank list**: from its first
-  frames, every row on screen is an empty placeholder while the guest composes, at about 0.1 s per
-  row, the windows the list flew past. The rows come back **at least** 4.9 s (down) and 6.7 s (up)
-  after the finger lifts (median) and at most about 6.5 and 7.4 s, when the guest's last frame
-  ended: the method recorded the last blank frame, a lower bound. Ordinary flicks between the two
-  speeds were not measured, so the speed at which blanks start is not known yet. Native and web
-  scrolling, the heavy screen and the GC threshold are built into the route but were not measured
-  (the phone left adb in both runs). The method's faults found in review are fixed in the route
-  ([Review round 1](#review-round-1-what-the-rerun-records)); run 2 used it.
+- **Scrolling (runs 2 and 3 of 2026-11-16; [Scrolling, run 3](#scrolling-run-3-the-first-speed-with-placeholders-guest),
+  [native and web](#scrolling-run-3-native-and-web-against-the-guest), [run 2](#scrolling-run-2)).**
+  The guest's list shows **placeholders from 2,133 dp/s** at release (one or two rows at the
+  leading edge, filled 35–120 ms after the list stops); **from 2,844 dp/s 8–12 of the 14 visible
+  rows are blank** flinging down, and content comes back 2.3–2.9 s after the list stops (4.8 s
+after a 6,667 dp/s fling up). At 1,422 dp/s there
+  are none. While it moves, the guest misses a median of 1 vsync per fling up to 2,844 dp/s, like
+  native (0–1); flinging down at 3,556 dp/s it misses 8 (native 1) and at 6,667 dp/s 15 (native
+  4). Web missed none (counted on the app window's frames; Chromium's own renderer is not seen).
+  Native has no placeholders by construction; the web form's blank areas are not visible to the
+  route. The first run (old route, superseded) found the same blank list at 6,000–7,000 dp/s.
+- **A heavy screen (102 widgets; [A heavy screen](#a-heavy-screen-opening-warm)).** Warm open,
+  median: native **22 ms**, guest **1,042 ms**, web **48 ms**; about 85% of the guest's open is its
+  own frame in QuickJS.
+- **GC threshold ([The GC threshold](#the-gc-threshold)).** Raising or disabling QuickJS's
+  collection threshold has no measurable effect on the median navigation or API time; each
+  collection under the default adds about 100–130 ms to the one iteration it lands in (inferred,
+  not timed).
 
 | Median (ms) on the A12 | native | guest | web | guest, experiment: 10-row window + `JSON.parse` | web, experiment: `content-visibility` |
 |---|---|---|---|---|---|
@@ -506,7 +506,7 @@ Within a few ms of the first session's 16 / 13, 438 / 1,082 and 37 / 50 (web ope
 back 45 minutes later, so this session measured the guest's scrolling and the baseline only. The
 native and web scrolling series, the heavy screen's series and the GC threshold series are built and
 were checked on the phone (one check run each, below; their output was not kept) but **not
-measured**; they are one command each in [How to run it](#how-to-run-it).
+measured** in this session (measured in run 3, below); they are one command each in [How to run it](#how-to-run-it).
 
 **Phone run 2 (the rerun with the review-round-1 route), 2026-11-16 from 11:40 IST.** Same phone,
 on battery throughout (60% at the start), wireless adb, thermal status 0, no power saving, 60 Hz,
@@ -546,7 +546,9 @@ numbers compare with every earlier session's.
 run 2 (installed 11:51 with the null-not-NaN fix; nothing in the app changed since, so run 3's
 numbers compare with run 2's directly and run 2's baseline above is run 3's), on battery (50% at
 the start), wireless adb, thermal status 0, no power saving, 60 Hz, the fixture inside the app for
-every series. **The lost placeholder pass was not on the phone:** the app's `files/s/` held run 2's
+every series. Run 3's temperatures are the battery's, from the `dumpsys battery` file saved after
+each series; the app's own state line (read at the series' start) can differ by up to about 1 °C
+(native 26.7 °C at every speed; web 26.7–32.5). **The lost placeholder pass was not on the phone:** the app's `files/s/` held run 2's
 five clean guest files and a results file identical to the fast one, so that pass had not started
 when the phone left. **Every series in run 3 ran from one script on the phone itself**
 (`nohup sh r3.sh`, launched over adb, the same `am start -S` and `input swipe` commands as before),
@@ -597,7 +599,8 @@ screen is blank and content comes back after 4.3 s (2.9 s after the stop); at 6,
 (4.9 and 6.7 s). Flinging back up costs less at 2,133–3,556 dp/s (the rows above were composed on
 the way down and the guest's window still holds some), except the first fling up after the
 direction changes. The process's first fast swipe again started no fling (`flingVelocityPxS` 0,
-travel the finger's own): now three of five fresh-process fast runs.
+travel the finger's own): now three of five fresh-process fast runs (four of six with the
+`x=scroll` run, below).
 
 **What a user would feel (run 3, with run 2's clean pass).** A slow, deliberate scroll (about
 1,400 dp/s) looks native: the list follows the finger and stops on rows that are there. A relaxed
@@ -605,10 +608,12 @@ ordinary flick (about 2,100 dp/s) mostly looks fine, but the bottom one or two r
 a fraction of a second as the list comes to rest. A normal brisk flick (2,800 dp/s and up) moves
 smoothly at 2,800 dp/s but stops on a mostly empty screen: 8 of 14 rows or more are blank, and the
 content comes back about 2.3 s after the list has stopped. At 3,500 dp/s and faster the list also
-stutters while it moves (run 2: 7–20 skipped frames per fling down) and the whole screen stays empty
-for 3–5 s after it stops. A user flicking through a long list at a normal pace would see a list that
-keeps going blank; on this phone that is the guest's biggest visible defect. Native and web, at the
-same speeds, never show a blank row (below).
+stutters while it moves (run 2: 7–11 missed vsyncs per fling down at 3,556 dp/s, 3–20 at 6,667)
+and the whole screen stays empty for about 2.5–5 s after it stops (2.9 s at 3,556 dp/s down; 2.6
+and 4.8 s at 6,667). A user flicking through a long list at a normal pace would see a list that
+keeps going blank; on this phone that is the guest's biggest visible defect. Native has no
+placeholders by construction (not measured); the web form's blank areas (Chromium checkerboarding)
+are not visible to the route (below).
 
 ### Scrolling, run 3: native and web against the guest
 
@@ -625,24 +630,26 @@ Missed vsyncs per fling while the list moves, median (min–max), down / up:
 | 3,556 dp/s | 1 (0–2) / 0 (0–1) | 0 / 0 | **8 (7–11)** / 1 (0–3) | 1,423 / 1,363 / 1,419 |
 | 6,667 dp/s | 4 (2–10) / 1 (0–2) | 0 / 0 | **15 (3–20)** / 3 (2–6) | 2,241 / 2,210 / 2,248 |
 
-- **Web never missed a vsync** in 93 flings: Chromium scrolls on its compositor thread, and its
+- **Web never missed a vsync** in 93 flings (the app window's frames; Chromium's own renderer is
+  not seen): Chromium scrolls on its compositor thread, and its
   list is plain DOM rows that are already laid out.
 - **Native misses 0–2 per fling up to 3,556 dp/s**, and 2–10 (median 4) flinging fast down the list,
   where each fling passes about 79 of its 72 dp rows (its moving frames' p90 37 ms there, 21–24 ms at
   the other speeds).
 - **The guest matches native up to 2,844 dp/s and falls behind from 3,556 dp/s down the list**:
   8 against 1 at 3,556 dp/s, 15 against 4 at 6,667. Flinging up it stays close to native.
-- **Moving frames take about 20 ms in all three forms** (median 20.1–20.7 ms at every speed), so
+- **Moving frames take about 20 ms in all three forms** (median 20.0–20.7 ms in every group but
+  the guest's 3,556 dp/s down, 10.4 ms), so
   that is this phone's 60 Hz pipeline with the list, not a guest cost.
 - **Native's first fast swipe started its fling** (velocity 12,500 px/s, 10,591 px travelled); the
   guest's did not in 4 of 6 fresh-process fast runs (run 3's `x=scroll` run is the sixth). That
   points at the guest form's first drag, not at the input route; why is not established.
 
 **The guest's `x=scroll` pass** (its widget counters; 14:44–15:04, 46%, 31.3–33.6 °C). Missed vsyncs
-match the clean pass (down: 1.5, 1, 3, 8 at the four slower speeds; the clean pass 1, 1, 1.5, 8).
+are within 1.5 of the clean pass's (down: 1.5, 1, 3, 8 at the four slower speeds; the clean pass 1, 1, 1.5, 8).
 The guest's work per fling, down / up:
 
-| Release speed | Guest time per fling (median) | Rows created, 10 flings | Guest ms per new row | Guest busy after UP (median) |
+| Release speed | Guest time per fling (median) | Rows created per group (10 down / 9 up) | Guest ms per new row | Guest busy after UP (median) |
 |---|---|---|---|---|
 | 1,422 dp/s | 2,942 / 2,175 ms | 156 / 175 | 181 / 106 | 2,932 / 2,185 ms |
 | 2,133 dp/s | 3,392 / 2,457 | 223 / 210 | 152 / 98 | 3,533 / 2,587 |
@@ -656,7 +663,8 @@ more rows the faster the fling: it composes the windows the list passes through.
 **What a user would feel, native and web against the guest.** Native and web feel the same at every
 speed: the list moves, slows and stops on rows that are there; native drops a few frames on a very
 fast flick down a long list, web drops none. The guest feels the same as them only on slow
-scrolls. From an ordinary flick it shows blank rows that native and web never show, and from a
+scrolls. From an ordinary flick it shows blank rows (native has no placeholders; web's
+checkerboarding is not measured), and from a
 brisk one it also stutters while it moves.
 
 ### Scrolling, run 2
@@ -851,7 +859,8 @@ neither fling. The rerun marks such flings (`guestBusyAtDown`) and drops them.
 
 ### A heavy screen: opening (warm)
 
-**Run 3, measured** (15:04–15:08 IST, 45%, 29.8–30.4 °C, thermal 0). `-e x heavy`, 14 opens and
+**Run 3, measured** (15:04–15:08 IST, 45%, 29.8–30.4 °C, thermal 0). `-e x heavy` (the screen is
+described below, under "What was built"), 14 opens and
 backs per form, the first 2 dropped; ms from the tap to drawn, median / p90 / min–max; cold = the
 process's first open (`am start -S`), three processes per form:
 
@@ -871,7 +880,8 @@ median. The click reaches the guest's frame at 32.5 ms; the guest composes and r
 963 ms (recording 1,036 properties in 200.5 ms and 102 modifiers in 102 ms: about 300 ms of the
 930 ms frame; the rest is Compose itself); its batch reaches the host 71.5 ms later (1,034.5),
 is applied 9 ms later and drawn 40 ms after that. **About 85% of the guest's open is its own
-frame in QuickJS** (930 of 1,083.5 ms); host and bridge are about 120 ms.
+frame in QuickJS** (930 of 1,083.5 ms); the other ~150 ms are 32.5 ms before the guest's frame,
+then ~120 ms of bridge, apply and draw.
 
 **What a user would feel.** In native and web a 100-widget screen opens as fast as a small one,
 within a frame or two of the tap. In the guest it takes a full second on this phone: a visible
@@ -911,7 +921,7 @@ expected tens of ms native and web (not measured).
 
 **Run 3, measured** (15:08–15:17 IST, 45% → 44%, 29.3–29.8 °C, thermal 0). Guest only, each arm one
 fresh process: navigation (14 opens and backs) then `api-large` (14 calls), the first 2 dropped,
-QuickJS's memory read before each tap and after each drawn result (the decision rule above was
+QuickJS's memory read before each tap and after each drawn result (the decision rule below, after "What was built", was
 written before any of this). Median / p90 / min–max, ms:
 
 | Arm | Open (warm) | Back | api-large | Heap before open: i=1 → 7 → 14 | Heap before api-large: i=1 → 7 → 14 |
@@ -922,30 +932,33 @@ written before any of this). Median / p90 / min–max, ms:
 | `gc64` | 441 / 444 / 425–447 | 1,068 / 1,095 / 1,038–1,098 | 1,110.5 / 1,122 / 1,090–1,128 | 8.04 → 9.35 → 10.88 | 11.09 → 13.50 → 15.47 |
 | `gcoff` | 433 / 442 / 419–446 | 1,064 / 1,081 / 1,048–1,107 | 1,108.5 / 1,118 / 1,083–1,138 | 8.04 → 9.35 → 10.88 | 11.09 → 13.50 → 15.47 |
 
-**Applying the decision rule.**
+**Applying the decision rule** (the rule itself is below, after "What was built").
 - *Collections ran under the default: yes, both conditions hold.* Under the default the heap and
   object count fall where no rows were freed: at back i=6 the heap went 8.22 → 7.55 MB and the
   objects 28,159 → 25,018 (every other back adds about 0.73 MB and 4,900 objects), and during
-  api-large i=7 the heap went 12.00 → 8.68 MB. Under `gc64` and `gcoff` it never falls: it grows
+  api-large i=7 the heap went 12.00 → 8.68 MB. Under `gc64` and `gcoff` it never falls beyond what each open frees (about 0.81 MB): it grows
   steadily, 8.04 → 10.88 MB over navigation and to 15.47 MB (51,900 objects) by the last API call.
   `gc4`'s heap follows the default's to within a few hundred bytes, collections at the same
   iterations (its 4 MiB is passed during start-up, as predicted), and `gc64`'s follows `gcoff`'s the
   same way (the heap never reached 64 MB).
 - *GC matters for navigation: no, within the rule's own resolution.* The default runs differ by
-  4 ms in open, 0 in back and 3 in api-large. `gc64` is not faster than both in any of the three.
+  4 ms in open, 0 in back and 3 in api-large. `gc64` is faster than both only in api-large, by 1 ms (under the
+  3 ms the defaults differ).
   `gcoff` is faster than both by 2 ms in open (under 4) and by 3 ms in api-large (not more than 3),
   and by **4 ms in back**, where the two default runs happen to tie. That last one passes the rule
   as written. It is 0.4% of 1,068 ms, inside every arm's range, and the rule's noise estimate there
   (0 ms) comes from two medians that coincide, not from a measured spread; it is not a real
   difference. **Conclusion: GC does not measurably change the median navigation or API time.**
 - *Where GC does show: in the slowest iteration.* Each collection lands in one iteration and adds
-  about 100–125 ms to it: back i=6 took 1,169, 1,192 and 1,193 ms under the default and `gc4`
+  about 100–130 ms to it (inferred from the slow iteration's excess over the median, not timed):
+  back i=6 took 1,169, 1,192 and 1,193 ms under the default and `gc4`
   (the other backs 1,019–1,160), and api-large i=7 took 1,242, 1,226 and 1,230 ms (`parsed`
   1,120–1,134 against 1,000–1,010 for the same call under `gc64`/`gcoff`, which took 1,108). That is
   what the default's higher p90 and max are; under `gc64`/`gcoff` those collections did not happen.
 
-**What it means.** On this phone one QuickJS collection of an 8–12 MB heap costs about 0.1 s,
-about once every dozen navigations or API calls, and lands on whatever the user did then. Raising
+**What it means.** On this phone the reads show one QuickJS collection of an 8–12 MB heap in each
+14-iteration series (about 28 navigation taps; 14 large API calls); its cost, inferred from the slow
+iteration's excess over the median, is about 100–130 ms, and it lands on whatever the user did then. Raising
 the threshold removes them only for as long as the heap stays under it: `gcoff` grows about
 0.2 MB per open-and-back and 0.3 MB per large API call, so `gc64` would postpone the first
 collection by a few hundred interactions, and that collection would walk a heap several times
@@ -1043,7 +1056,8 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
 
 ## Unverified, and caveats
 
-- **One phone, one session per series, on the charger** (see Phone state). The cold-start medians
+- **One phone, one session per series; the first sessions on the charger** (see Phone state), the
+  second session and runs 2 and 3 on battery. The cold-start medians
   are single runs of 10; the earlier runs on the same day were within about 100 ms of them.
 - **"Drawn" is the host's UI-thread draw**, not light on the screen; the RenderThread and the
   display add about a frame to every form. For the guest, the rule assumes the host's composition
@@ -1079,7 +1093,7 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
 - **The scrolling comparison mixes runs and temperatures.** The guest's clean pass is run 2's
   (25.0–25.6 °C), native's and web's are run 3's (27.0–33.1 °C), the same APK on the same day; the
   phone was warmer for web than for the others. Each form and speed is one run. The guest's
-  `x=scroll` pass reproduced the clean pass's missed vsyncs at 31–34 °C.
+  `x=scroll` pass's missed vsyncs were within 1.5 of the clean pass's at 31–34 °C.
 - **The guest's fast `x=scroll` run is incomplete:** it logged 2 flings and then stopped logging,
   with no crash in the crash buffer; the logcat for it was not kept (the phone was off adb), so the
   cause is not established. The guest's work per fling at 6,667 dp/s is therefore not measured in
@@ -1097,9 +1111,10 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
   first session's within a few ms. Its API numbers are not comparable with the first sessions'
   network columns (none were reported).
 - **Scroll flings came from `input swipe`**: real input events, but fixed straight-line gestures
-  (two speeds, 10 each way, one run each). The fast flings' "settled" values (4.9 and 6.7 s) come
-  from the instrumented pass, which reads the semantics tree in every frame; the guest's own times
-  in that pass were within about 5% of the clean pass's.
+  (runs 2 and 3: five speeds, 10 down and 10 up, fast 7 each way, one run per form and speed; the
+  first run: two speeds). The placeholder timings come from the instrumented pass, which reads the
+  semantics tree in every frame (in the first run, the fast flings' "settled" 4.9 and 6.7 s; the
+  guest's own times in that pass were within about 5% of the clean pass's).
 - **Guest ms per new row** is the guest's whole frame time divided by the rows it created: it also
   pays for disposing the rows that left the window and for recomposing the list; it is not a
   per-row profile.
