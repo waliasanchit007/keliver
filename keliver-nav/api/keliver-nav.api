@@ -13,9 +13,45 @@ public final class dev/keliver/nav/KeliverNavControllerKt {
 	public static final fun rememberKeliverNavController (Ljava/lang/Object;Landroidx/compose/runtime/Composer;I)Ldev/keliver/nav/KeliverNavController;
 }
 
+public final class dev/keliver/nav/KeliverNavEntryLifecycle : java/lang/Enum {
+	public static final field Hidden Ldev/keliver/nav/KeliverNavEntryLifecycle;
+	public static final field Visible Ldev/keliver/nav/KeliverNavEntryLifecycle;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/nav/KeliverNavEntryLifecycle;
+	public static fun values ()[Ldev/keliver/nav/KeliverNavEntryLifecycle;
+}
+
+public abstract interface class dev/keliver/nav/KeliverNavFrame {
+	public abstract fun Entry (ZLkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public abstract fun Stack (Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+}
+
 public final class dev/keliver/nav/KeliverNavHostKt {
+	public static final fun KeliverNavHost (Ldev/keliver/nav/KeliverNavController;Ldev/keliver/nav/KeliverNavRetention;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
 	public static final fun KeliverNavHost (Ldev/keliver/nav/KeliverNavController;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
 	public static final fun getLocalKeliverNavController ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class dev/keliver/nav/KeliverNavRetention {
+	public static final field $stable I
+	public static final field Companion Ldev/keliver/nav/KeliverNavRetention$Companion;
+	public static final field DEFAULT_DEPTH I
+	public fun <init> (Ldev/keliver/nav/KeliverNavFrame;I)V
+	public synthetic fun <init> (Ldev/keliver/nav/KeliverNavFrame;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDepth ()I
+	public final fun getFrame ()Ldev/keliver/nav/KeliverNavFrame;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/nav/KeliverNavRetention$Companion {
+}
+
+public final class dev/keliver/nav/KeliverNavRetentionKt {
+	public static final fun KeliverRetainedStack (Ljava/util/List;Ldev/keliver/nav/KeliverNavRetention;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
+	public static final fun LaunchedWhileVisible ([Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public static final fun keliverNavEntryLifecycle (Landroidx/compose/runtime/Composer;I)Landroidx/compose/runtime/State;
 }
 
 public final class dev/keliver/nav/NamedState {

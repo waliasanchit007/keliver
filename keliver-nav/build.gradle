@@ -18,11 +18,13 @@ kotlin {
       dependencies {
         api libs.jetbrains.compose.runtime
         api libs.jetbrains.compose.runtime.saveable
+        api libs.kotlinx.coroutines.core
       }
     }
     commonTest {
       dependencies {
         implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
       }
     }
   }
