@@ -54,30 +54,53 @@ internal fun summarizeSteps(label: String, results: List<JSONObject>): JSONObjec
     .put("medians", medians)
 }
 
-/** A group of flings (one direction, one speed): frame percentiles and shares over all their frames, and per-fling medians. */
-internal fun summarizeFlings(label: String, flings: List<JSONObject>): JSONObject {
-  val frames = flings.flatMap { f -> f.optJSONArray("frames")?.let { a -> (0 until a.length()).map { a.getDouble(it) } } ?: emptyList() }
+/**
+ * A group of flings (one direction, one speed). Flings that are not a clean fling are counted and
+ * left out: closed by the next touch (`closedBy` = `touch`: their guest work may run into the next
+ * fling), with a guest frame still running at their DOWN, or that hit an end of the list (`edge`).
+ * Over the rest: missed vsyncs (the jank measure), frame percentiles and shares over the frames
+ * while the list moved (`movingFrames`; `TOTAL_DURATION` depends on where a frame starts against
+ * vsync, so these are kept for comparison with the first session, not as jank), the frames after
+ * it stopped apart, and per-fling medians. Compare forms on times and px, not on row counts.
+ */
+internal fun summarizeFlings(label: String, all: List<JSONObject>): JSONObject {
+  val flings = all.filterNot { it.optString("closedBy") == "touch" || it.optBoolean("guestBusyAtDown") || it.optBoolean("edge") }
+  fun arr(f: JSONObject, key: String) = f.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getDouble(it) } } ?: emptyList()
+  val frames = flings.flatMap { arr(it, "movingFrames") }
+  val afterStop = flings.flatMap { arr(it, "afterStopFrames") }
   fun share(limit: Double) = if (frames.isEmpty()) Double.NaN else round1(100.0 * frames.count { it > limit } / frames.size)
   fun med(key: String) = round1(median(flings.mapNotNull { f -> f.opt(key).let { if (it is Number) it.toDouble() else null } }))
+  fun p90(key: String) = nearestRank(flings.mapNotNull { (it.opt(key) as? Number)?.toDouble() }, 0.9)
   fun sum(key: String) = flings.sumOf { it.optDouble(key, 0.0) }
   val o = JSONObject()
     .put("summary", label)
     .put("flings", flings.size)
-    .put("frames", frames.size)
+    .put("excludedTouch", all.count { it.optString("closedBy") == "touch" })
+    .put("excludedGuestBusyAtDown", all.count { it.optBoolean("guestBusyAtDown") })
+    .put("excludedEdge", all.count { it.optBoolean("edge") })
+    .put("upVelocityDpSMedian", med("upVelocityDpS"))
+    .put("travelPxMedian", med("travelPx"))
+    .put("stopAfterUpMsMedian", med("stopAfterUpMs"))
+    .put("missedVsyncsMedian", med("missedVsyncs"))
+    .put("missedVsyncsTotal", sum("missedVsyncs"))
+    .put("movingFrames", frames.size)
     .put("p50", nearestRank(frames, 0.5)).put("p90", nearestRank(frames, 0.9)).put("p99", nearestRank(frames, 0.99)).put("max", frames.maxOrNull())
     .put("over16_7pct", share(16.7)).put("over33_3pct", share(33.3)).put("over100pct", share(100.0))
+    .put("afterStopFrames", afterStop.size)
+    .put("afterStopP90", nearestRank(afterStop, 0.9)).put("afterStopMax", afterStop.maxOrNull())
     .put("tailMsMedian", med("tailMs"))
     .put("framesPerFlingMedian", med("framesCount"))
-    .put("distanceMedian", round1(median(flings.mapNotNull { f -> if (f.has("from") && f.has("to")) Math.abs(f.getDouble("to") - f.getDouble("from")) else null })))
   if (flings.any { it.has("bFrames") }) {
     o.put("settledAfterUpMsMedian", med("bSettledAfterUpMs"))
-      .put("settledAfterUpMsP90", nearestRank(flings.mapNotNull { it.opt("bSettledAfterUpMs") as? Number }.map { it.toDouble() }, 0.9))
+      .put("settledAfterUpMsP90", p90("bSettledAfterUpMs"))
+      .put("contentAfterUpMsMedian", med("bContentAfterUpMs"))
+      .put("lastPlaceholderAfterUpMsMedian", med("bLastBlankAfterUpMs"))
       .put("lastMoveAfterUpMsMedian", med("bLastMoveAfterUpMs"))
       .put("flingsWithPlaceholders", flings.count { it.optInt("bFramesWithBlank") > 0 })
+      .put("flingsWithSubRowGapsOnly", flings.count { it.optInt("bFramesWithBlank") == 0 && it.optInt("bFramesWithGap") > 0 })
       .put("framesWithPlaceholders", sum("bFramesWithBlank"))
       .put("placeholderRowFrames", sum("bPlaceholderFrames"))
       .put("maxPlaceholdersOnScreen", flings.maxOfOrNull { it.optInt("bMaxPlaceholders") })
-      .put("lastPlaceholderAfterUpMsMedian", med("bLastBlankAfterUpMs"))
   }
   if (flings.any { it.has("gFrames") }) {
     val gMs = sum("gMs")

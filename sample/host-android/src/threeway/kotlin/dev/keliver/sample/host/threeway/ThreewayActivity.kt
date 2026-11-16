@@ -34,6 +34,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.lifecycle.lifecycleScope
 import app.cash.zipline.Call
 import app.cash.zipline.CallResult
@@ -120,12 +125,41 @@ class ThreewayActivity : ComponentActivity() {
    * end of each series (`mem`, or any GC threshold experiment). The reads run on the Zipline thread
    * outside the measured intervals.
    */
-  private val memoryReads: Boolean get() = form == "guest" && ("mem" in experimentSet || gcThresholdMiB() != null)
+  private val memoryReads: Boolean get() = form == "guest" && ("mem" in experimentSet || gcThresholdBytes() != null)
 
-  /** The `gc<MiB>` experiment (`gc4`, `gc16`, `gc64`): QuickJS's GC threshold set when Zipline is created. */
-  private fun gcThresholdMiB(): Long? = experimentSet.firstNotNullOfOrNull { Regex("gc(\\d+)").matchEntire(it)?.groupValues?.get(1)?.toLong() }
+  /**
+   * The GC threshold experiment, set when Zipline is created: `gc<MiB>` (`gc4`, `gc16`, `gc64`) or
+   * `gcoff` (threshold -1, QuickJS's "never collect on allocation"; its reference counting still
+   * frees acyclic objects). Bytes; null = QuickJS's default (run that arm as `x=mem`, so it pays the
+   * same memory reads as the others).
+   */
+  private fun gcThresholdBytes(): Long? = experimentSet.firstNotNullOfOrNull {
+    if (it == "gcoff") -1L else Regex("gc(\\d+)").matchEntire(it)?.groupValues?.get(1)?.toLong()?.let { mib -> mib * 1024 * 1024 }
+  }
 
   private var scroll: ScrollTracker? = null
+
+  /**
+   * The scrolling series, Compose forms: a nested-scroll connection around the content, so the list
+   * reports every scroll it consumed (drag and fling alike) and what it left (nonzero at an end), and
+   * the velocity its fling starts with. Consumes nothing. Added only in the scrolling series, so the
+   * other series' trees are unchanged.
+   */
+  private val scrollProbe = object : NestedScrollConnection {
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+      scroll?.onScrolled(consumed.y, available.y)
+      return Offset.Zero
+    }
+
+    override suspend fun onPreFling(available: Velocity): Velocity {
+      scroll?.onFlingStart(available.y)
+      return Velocity.Zero
+    }
+  }
+
+  private val scrollSeries: Boolean get() = intent.getStringExtra("bench").orEmpty().contains("scroll")
+
+  private fun Modifier.scrollProbe(): Modifier = if (scrollSeries) nestedScroll(scrollProbe) else this
 
   /** Each step's results in the running series (for its summary), and the scrolling series' flings. */
   private val stepResults = LinkedHashMap<String, MutableList<JSONObject>>()
@@ -142,7 +176,7 @@ class ThreewayActivity : ComponentActivity() {
     form = intent.getStringExtra("form") ?: "native"
     experiments = intent.getStringExtra("x").orEmpty()
     Log.i(TAG, "form=$form x=$experiments")
-    ThreewayListener.gcThresholdBytes = gcThresholdMiB()?.let { it * 1024 * 1024 }
+    ThreewayListener.gcThresholdBytes = gcThresholdBytes()
     // The fixture API served by this app instead of the Mac (LocalFixture), before any form starts.
     if (intent.getBooleanExtra("localApi", false)) LocalFixture.start()
     // WARNING: benchmark-only (as GatebActivity): keep the screen on and draw over a locked phone's
@@ -194,7 +228,7 @@ class ThreewayActivity : ComponentActivity() {
     }
     setContent {
       MaterialTheme {
-        Surface(Modifier.fillMaxSize()) { NativeThreewayApp(api, marks) }
+        Surface(Modifier.fillMaxSize().scrollProbe()) { NativeThreewayApp(api, marks) }
       }
     }
   }
@@ -250,7 +284,7 @@ class ThreewayActivity : ComponentActivity() {
     guestApp = app
     setContent {
       MaterialTheme {
-        Surface(Modifier.fillMaxSize()) {
+        Surface(Modifier.fillMaxSize().scrollProbe()) {
           val widgetSystem = remember {
             keliverComposeGateAWidgetSystem(ComposeUiKeliverMaterialWidgetSystem(ImageLoader.Builder(applicationContext).build()))
           }
@@ -290,7 +324,12 @@ class ThreewayActivity : ComponentActivity() {
       "Threeway",
     )
     // Scrolling series: no scrollbar (the Compose lists have none; its fade-out would add frames).
-    if (intent.getStringExtra("bench").orEmpty().contains("scroll")) webView.isVerticalScrollBarEnabled = false
+    // The probe as the Compose forms' nestedScroll: the page's scroll in px per change (the WebView
+    // scrolls the document itself; no leftover, the ends come from canScrollVertically).
+    if (scrollSeries) {
+      webView.isVerticalScrollBarEnabled = false
+      webView.setOnScrollChangeListener { _, _, y, _, oldY -> scroll?.onScrolled((y - oldY).toFloat(), 0f) }
+    }
     this.webView = webView
     setContentView(webView)
     webView.loadUrl("file:///android_asset/threeway-web/index.html")
@@ -367,7 +406,13 @@ class ThreewayActivity : ComponentActivity() {
         main.postDelayed(timeout, 20_000)
       }
       steps.addLast {
-        if (memoryReads) readQuickJsMemory { run(it ?: LongArray(3) { -1 }) } else run(null)
+        // The read walks QuickJS's whole heap on the Zipline thread: the tap waits MEMORY_PAUSE_MILLIS
+        // after it, so the walk is not in the measured interval nor queued ahead of the guest's work.
+        if (memoryReads) {
+          readQuickJsMemory { m -> main.postDelayed({ run(m ?: LongArray(3) { -1 }) }, MEMORY_PAUSE_MILLIS) }
+        } else {
+          run(null)
+        }
       }
     }
 
@@ -381,8 +426,16 @@ class ThreewayActivity : ComponentActivity() {
       steps.addLast {
         val warmup = intent.getIntExtra("warmup", 0)
         for (label in labels) {
-          val results = stepResults[label].orEmpty().drop(warmup)
-          log(summarizeSteps(label, results).put("form", form).put("x", experiments).put("warmup", warmup).toString())
+          val all = stepResults[label].orEmpty()
+          // The navigation series' opens after the warm-up are repeat visits in a warm process (host
+          // code compiled, text caches warm): "open (warm)". Its first open is the screen's first
+          // composition in this process, logged apart as "open (cold, i=1)" when the series is the
+          // process's first (launch with `am start -S` per series).
+          val name = if (label == "open") "open (warm)" else label
+          if (label == "open" && warmup > 0 && all.isNotEmpty() && bench == benches.first()) {
+            log(summarizeSteps("open (cold, i=1)", all.take(1)).put("form", form).put("x", experiments).put("api", apiRoute).toString())
+          }
+          log(summarizeSteps(name, all.drop(warmup)).put("form", form).put("x", experiments).put("warmup", warmup).put("api", apiRoute).toString())
           stepResults.remove(label)
         }
         next()
@@ -390,7 +443,7 @@ class ThreewayActivity : ComponentActivity() {
       if (!memoryReads) return
       steps.addLast {
         readQuickJsMemory { m ->
-          log("""{"form":"$form","bench":"$bench","x":${JSONObject.quote(experiments)},"memEnd":true,"qjsUsed":${m?.get(0)},"qjsObjects":${m?.get(1)},"gcThreshold":${m?.get(2)}}""")
+          log("""{"form":"$form","bench":"$bench","x":${JSONObject.quote(experiments)},"api":"$apiRoute","memEnd":true,"qjsUsed":${m?.get(0)},"qjsObjects":${m?.get(1)},"gcThreshold":${m?.get(2)}}""")
           next()
         }
       }
@@ -428,11 +481,14 @@ class ThreewayActivity : ComponentActivity() {
     val tracker = ScrollTracker(
       window = window,
       density = resources.displayMetrics.density,
+      vsyncPeriodNs = { Math.round(1e9 / refreshHz()) },
       guest = form == "guest",
       blank = "blank" in experimentSet,
       webScrollY = web?.let { w -> { w.scrollY } },
+      webAtEnd = web?.let { w -> { direction -> !w.canScrollVertically(direction) } },
+      onFrameDetail = { detail -> logFileOnly(detail.put("form", form).put("x", experiments).toString()) },
     ) { line ->
-      line.put("form", form).put("bench", "scroll")
+      line.put("form", form).put("bench", "scroll").put("api", apiRoute)
       if (experiments.isNotEmpty()) line.put("x", experiments)
       val app = guestApp
       val zipline = ThreewayListener.zipline
@@ -468,7 +524,7 @@ class ThreewayActivity : ComponentActivity() {
     if (flings.size % group == 0) {
       val last = flings.takeLast(group)
       val label = "flings ${flings.size - group + 1}-${flings.size}"
-      log(summarizeFlings(label, last).put("form", form).put("x", experiments).toString())
+      log(summarizeFlings(label, last).put("form", form).put("x", experiments).put("api", apiRoute).toString())
     }
   }
 
@@ -558,8 +614,19 @@ class ThreewayActivity : ComponentActivity() {
 
   private fun log(line: String) {
     Log.i(TAG, line)
+    logFileOnly(line)
+  }
+
+  /** The results file only (lines too long for logcat: the scrolling series' per-frame detail). */
+  private fun logFileOnly(line: String) {
     runCatching { File(getExternalFilesDir(null), "threeway-results.txt").appendText("${System.currentTimeMillis()} $line\n") }
   }
+
+  /** Which fixture API this process uses: `app` (LocalFixture, `--ez localApi true`) or `mac` (through adb reverse). */
+  private val apiRoute: String get() = if (intent.getBooleanExtra("localApi", false)) "app" else "mac"
+
+  @Suppress("DEPRECATION")
+  private fun refreshHz(): Float = (if (Build.VERSION.SDK_INT >= 30) display else null)?.refreshRate ?: windowManager.defaultDisplay.refreshRate
 
   private fun phoneState(): String {
     val battery = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -568,7 +635,9 @@ class ThreewayActivity : ComponentActivity() {
     val temperature = (battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0
     val power = getSystemService(Context.POWER_SERVICE) as PowerManager
     val thermal = if (Build.VERSION.SDK_INT >= 29) power.currentThermalStatus else -1
-    return "battery=$level% plugged=$plugged temperature=${temperature}C powerSave=${power.isPowerSaveMode} thermal=$thermal"
+    val metrics = resources.displayMetrics
+    return "battery=$level% plugged=$plugged temperature=${temperature}C powerSave=${power.isPowerSaveMode} thermal=$thermal" +
+      " refreshHz=${refreshHz()} density=${metrics.density} api=$apiRoute sdk=${Build.VERSION.SDK_INT}"
   }
 
   private companion object {
@@ -584,6 +653,9 @@ class ThreewayActivity : ComponentActivity() {
     const val ROW_DP = 72f
     const val TAP_HOLD_MILLIS = 40L
     const val SETTLE_MILLIS = 2_000L
+
+    /** Between a QuickJS memory read and the tap it precedes (memory reads only). */
+    const val MEMORY_PAUSE_MILLIS = 300L
 
     /** The app's one HTTP client, used by the native form directly and by the guest's HostHttp. */
     val okHttp: OkHttpClient by lazy {
