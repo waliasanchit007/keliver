@@ -223,7 +223,10 @@ internal class ProfileRun(
 
   /** Clicks the [index]th live clickable (in recording order), then runs frames until idle. */
   private fun click(index: Int) {
-    val live = adapter.clickables.filter { adapter.isLive(it) }
+    // Forget removed widgets, so the driver's own list does not grow with every navigation (it
+    // would show up in the memory-growth readings, docs/GUEST_PROFILE.md). Order is kept.
+    adapter.clickables.retainAll { adapter.isLive(it) }
+    val live = adapter.clickables
     val id = live[index]
     adapter.sendEvent(Event(Id(id), EventTag(1000), listOf(JsonPrimitive(0))))
   }
@@ -346,6 +349,7 @@ private fun command(c: String): String {
     "open" -> current!!.open(arg.toInt()).toJson()
     "back" -> current!!.back().toJson()
     "reload" -> current!!.reload().toJson()
+    "counts" -> current?.adapter?.counts() ?: "{}"
     "close" -> {
       current?.close()
       current = null

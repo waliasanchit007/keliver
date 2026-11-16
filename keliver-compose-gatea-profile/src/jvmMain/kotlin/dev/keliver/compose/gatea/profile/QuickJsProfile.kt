@@ -23,6 +23,7 @@ import kotlinx.coroutines.runBlocking
  * Args: <bundle dir> <out dir> <comma args>. Args: `gc=default+4+16+64` (MiB; `default` leaves
  * QuickJS's threshold as Zipline sets it), `modes=kotlinx+direct+none`, `warmup=3`, `iterations=30`,
  * `items=20`, `label=<text>` (names the output file), `retain=1` (NF1's retained back stack).
+ * `cycles=N` instead runs the memory-growth readings (`memoryCycles`; with `gcEvery`, `probeEvals`).
  */
 fun main(args: Array<String>) {
   val bundle = File(args[0])
@@ -41,6 +42,21 @@ fun main(args: Array<String>) {
   val manifest = ZiplineManifest.decodeJson(File(bundle, "manifest.zipline.json").readText())
   val executor = Executors.newSingleThreadExecutor()
   val dispatcher = executor.asCoroutineDispatcher()
+  val cycles = a["cycles"]?.toInt()
+  if (cycles != null) {
+    // Memory growth per navigation (docs/GUEST_PROFILE.md): one line per open/back cycle.
+    try {
+      runBlocking(dispatcher) {
+        for (mode in modes) {
+          memoryCycles(bundle, manifest, mode, items, cycles, (a["gcEvery"] ?: "0").toInt(), (a["probeEvals"] ?: "0").toInt(), File(out, "$label-$mode.jsonl"), dispatcher)
+        }
+      }
+    } finally {
+      dispatcher.close()
+      executor.shutdown()
+    }
+    return
+  }
   val lines = ArrayList<String>()
   // Every step's batch (hash and byte count), per run: the encodings that record values must send
   // the same batches step for step. `none` records structure only, so it is not compared.
@@ -190,6 +206,78 @@ private fun runOne(
       if (reload.isNotEmpty()) append(""""reloadMedianMs":${median(reload).r()},"lastReload":$lastReload,""")
       append(""""first":$first,"lastOpen":$lastOpen,"lastBack":$lastBack}""")
     } to batches
+  } finally {
+    zipline.close()
+  }
+}
+
+/** Every numeric field of QuickJS's `JS_ComputeMemoryUsage` (Zipline's MemoryUsage), by name. */
+private fun usage(m: app.cash.zipline.MemoryUsage): Map<String, Long> =
+  m.javaClass.declaredFields
+    .filter { it.type == java.lang.Long.TYPE || it.type == Integer.TYPE }
+    .associate { f -> f.isAccessible = true; f.name to (f.get(m) as Number).toLong() }
+
+private fun Map<String, Long>.json(): String =
+  entries.joinToString(",", "{", "}") { (k, v) -> "\"$k\":$v" }
+
+/**
+ * `cycles=N` (with `gcEvery=K`, `retain=1`): memory growth per navigation. Loads the bundle, shows
+ * the list, then runs N open/back cycles. After each open and each back it records QuickJS's whole
+ * memory usage and the guest's own counters (`counts`); every K cycles (K > 0) it forces a full
+ * collection (`JS_RunGC` through `quickJs.gc()`) and records again, so a reclaimed growth shows as
+ * a drop at the GC. One JSON line per reading, in `<label>-<mode>.jsonl`.
+ */
+private fun memoryCycles(
+  bundle: File,
+  manifest: ZiplineManifest,
+  mode: String,
+  items: Int,
+  cycles: Int,
+  gcEvery: Int,
+  probeEvals: Int,
+  file: File,
+  dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+) {
+  val zipline = Zipline.create(dispatcher)
+  try {
+    val quickJs = zipline.quickJs
+    for ((id, module) in manifest.modules) {
+      val ziplineFile = ZiplineFile.read(Buffer().write(File(bundle, module.url).readBytes()))
+      zipline.loadJsModule(ziplineFile.quickjsBytecode.toByteArray(), id)
+    }
+    if (quickJs.evaluate("typeof globalThis.guestProfile") != "function") {
+      quickJs.evaluate("require('${manifest.mainModuleId}').${manifest.mainFunction}()", "QuickJsProfile.kt")
+    }
+    fun cmd(c: String): String = quickJs.evaluate("globalThis.guestProfile('$c')", "QuickJsProfile.kt") as String
+    val lines = ArrayList<String>()
+    fun read(cycle: Int, at: String) {
+      val u = usage(quickJs.memoryUsage)
+      lines += """{"mode":"$mode","retain":$retain,"cycle":$cycle,"at":"$at","threshold":${quickJs.gcThreshold},"qjs":${u.json()},"guest":${cmd("counts")}}"""
+      println("QJS_MEM $mode retain=$retain cycle=$cycle at=$at used=${u["memoryUsedSize"]} objects=${u["objectsCount"]} " +
+        "binary=${u["binaryObjectsCount"]}/${u["binaryObjectsSize"]} arrayElements=${u["fastArraysElementsCount"]}")
+    }
+    cmd("init:mode=$mode,items=$items,retain=${if (retain) 1 else 0}")
+    cmd("first")
+    read(0, "first")
+    quickJs.gc()
+    read(0, "gc")
+    for (c in 1..cycles) {
+      cmd("open:${(c - 1) % 5}")
+      read(c, "open")
+      cmd("back")
+      // `probeEvals=K`: K extra empty evaluations per cycle, a control for what the harness's own
+      // `evaluate` calls leave behind (docs/GUEST_PROFILE.md, "Memory growth per navigation").
+      repeat(probeEvals) { quickJs.evaluate("0", "QuickJsProfile.kt") }
+      read(c, "back")
+      if (gcEvery > 0 && c % gcEvery == 0) {
+        quickJs.gc()
+        read(c, "gc")
+      }
+    }
+    cmd("close")
+    quickJs.gc()
+    read(cycles, "closed+gc")
+    file.writeText(lines.joinToString("\n", postfix = "\n"))
   } finally {
     zipline.close()
   }
