@@ -566,7 +566,15 @@ velocity now shows where it is lost: Android's tracker saw a fling, Compose's di
 whose frames ran late (the process's first). The cause is not established. It is kept in the
 "down" group above (its 3 missed vsyncs and 1.2 s are the low ends of the ranges); the other six
 moved 10,466–10,766 px.
- the 1,000 items (tap "Load 1,000"), then the flings come from outside the
+
+### Scrolling, first run (guest only; superseded by run 2)
+
+**Superseded.** The first session's guest-only numbers below came from the old route (last blank
+frame as "settled", frame times as the only frame measure, 8 s gaps, two speeds, edge flings
+pooled); run 2 above replaces them. They are kept for the record and for what they said about the
+method; where they and run 2 differ, run 2's are the numbers.
+
+**How (first run).** The route loads the 1,000 items (tap "Load 1,000"), then the flings come from outside the
 app, through the input system as a finger's would: `adb shell input swipe`, 10 down the list, then
 10 back up, per run, each run in a fresh process. **"Normal" is a gentle fling:** 800 px in 300 ms
 (about 2,700 px/s at release, about 1,400–1,500 dp/s); the guest's list travels about 11 rows per
