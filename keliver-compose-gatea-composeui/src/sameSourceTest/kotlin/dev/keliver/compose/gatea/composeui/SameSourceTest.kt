@@ -46,6 +46,8 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.keliver.compose.foundation.lazy.LazyListState as GuestLazyListState
+import dev.keliver.compose.foundation.lazy.LazyWindowSizing
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.compose.gatea.composeui.samples.guest.AnimatedPanel as GuestAnimatedPanel
 import dev.keliver.compose.gatea.composeui.samples.guest.FrameClockPanel as GuestFrameClockPanel
 import dev.keliver.compose.gatea.composeui.samples.guest.InsertedModifierPanel as GuestInsertedModifierPanel
@@ -574,11 +576,15 @@ internal class EventTap {
   }
 }
 
+@OptIn(KeliverGeneratedApi::class)
 internal fun guestOnHost(
   tap: EventTap? = null,
   backDispatcher: OnBackPressedDispatcher? = null,
   content: @Composable () -> Unit,
 ): GuestOnHost {
+  // Each guest starts with no measured viewports, as a new Zipline guest does: in one JVM every
+  // test's lists would otherwise share them, and a list's first window would depend on test order.
+  LazyWindowSizing.forgetMeasuredViewports()
   val guestAdapter = DefaultGuestProtocolAdapter(hostVersion = hostRedwoodVersion, widgetSystemFactory = KeliverComposeGateAProtocolWidgetSystemFactory)
   val clock = BroadcastFrameClock()
   val composition = ProtocolRedwoodComposition(

@@ -48,6 +48,10 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.encodeToDynamic
 
 /** How [ProfileAdapter] encodes property and modifier values. */
+/** `@Widget(14) GenLazyColumn1` in keliver-compose-gatea-schema; its viewport event is `@Property(13)`. */
+internal const val LAZY_COLUMN_TAG = 14
+internal const val LAZY_VIEWPORT_TAG = 13
+
 internal enum class Encoding {
   /** As shipped: `json.encodeToDynamic(serializer, value)` for every value (treehouse-guest's FastGuestProtocolAdapter). */
   KOTLINX,
@@ -103,6 +107,9 @@ internal class ProfileAdapter(
   /** Widgets whose modifier chain had a clickable element, in the order they were recorded. */
   val clickables = ArrayList<Int>()
 
+  /** Generated `LazyColumn` widgets (GenLazyColumn1), in the order they were created (NF3's viewport report). */
+  val lazyColumns = ArrayList<Int>()
+
   override val widgetSystem: WidgetSystem<Unit> =
     widgetSystemFactory.create(this, mismatchHandler)
 
@@ -138,6 +145,7 @@ internal class ProfileAdapter(
     tag: WidgetTag,
   ) {
     stats.creates++
+    if (tag.value == LAZY_COLUMN_TAG) lazyColumns += id.value
     val id = id
     val tag = tag
     changes.push(js("""["create",{"id":id,"tag":tag}]"""))

@@ -23,6 +23,10 @@ import kotlinx.coroutines.runBlocking
  * Args: <bundle dir> <out dir> <comma args>. Args: `gc=default+4+16+64` (MiB; `default` leaves
  * QuickJS's threshold as Zipline sets it), `modes=kotlinx+direct+none`, `warmup=3`, `iterations=30`,
  * `items=20`, `label=<text>` (names the output file), `retain=1` (NF1's retained back stack).
+ * NF3: `prepared=0|1` (the prepared stack, at that depth), `press=1` (a timed touch-down step before
+ * each open, and a series of 10 cancelled presses at the end), `viewport=<rows>` (the host's
+ * viewport report after a list is created, timed as its own step), `sized=0` (no viewport-sized
+ * first window).
  * `cycles=N` instead runs the memory-growth readings (`memoryCycles`; with `gcEvery`, `probeEvals`).
  */
 fun main(args: Array<String>) {
@@ -38,6 +42,8 @@ fun main(args: Array<String>) {
   val label = a["label"] ?: "quickjs"
   withReload = a["reload"] == "1"
   retain = a["retain"] == "1"
+  nf3Args = listOf("prepared", "press", "viewport", "sized").mapNotNull { k -> a[k]?.let { "$k=$it" } }.joinToString("") { ",$it" }
+  press = a["press"] == "1"
 
   val manifest = ZiplineManifest.decodeJson(File(bundle, "manifest.zipline.json").readText())
   val executor = Executors.newSingleThreadExecutor()
@@ -135,11 +141,26 @@ private fun runOne(
 
     fun cmd(c: String): String = quickJs.evaluate("globalThis.guestProfile('$c')", "QuickJsProfile.kt") as String
 
-    cmd("init:mode=$mode,items=$items,retain=${if (retain) 1 else 0}")
+    cmd("init:mode=$mode,items=$items,retain=${if (retain) 1 else 0}$nf3Args")
     val firstStart = System.nanoTime()
     val first = cmd("first")
     val firstMs = (System.nanoTime() - firstStart) / 1e6
     batches += batchOf(first)
+
+    // NF3: the host's viewport report (a separate step, after the frame it follows), and the press.
+    val pressMs = ArrayList<Double>()
+    val pressGuest = ArrayList<Double>()
+    val viewportGuest = ArrayList<Double>()
+    var lastPress = ""
+    var lastViewport = ""
+    fun viewport(measured: Boolean) {
+      val v = cmd("viewport")
+      if (v == "{}") return
+      batches += batchOf(v)
+      lastViewport = v
+      if (measured) viewportGuest += guestMs(v)
+    }
+    viewport(measured = false)
 
     val open = ArrayList<Double>()
     val back = ArrayList<Double>()
@@ -154,7 +175,18 @@ private fun runOne(
     var objsBeforeBack = 0L
     var objsAfterBack = 0L
     repeat(warmup + iterations) { i ->
-      var t = System.nanoTime()
+      var t: Long
+      if (press) {
+        t = System.nanoTime()
+        lastPress = cmd("press:${i % 5}")
+        val p = (System.nanoTime() - t) / 1e6
+        batches += batchOf(lastPress)
+        if (i >= warmup) {
+          pressMs += p
+          pressGuest += guestMs(lastPress)
+        }
+      }
+      t = System.nanoTime()
       lastOpen = cmd("open:${i % 5}")
       val o = (System.nanoTime() - t) / 1e6
       val m0 = quickJs.memoryUsage
@@ -164,6 +196,7 @@ private fun runOne(
       val m1 = quickJs.memoryUsage
       batches += batchOf(lastOpen)
       batches += batchOf(lastBack)
+      viewport(measured = i >= warmup)
       if (withReload) {
         t = System.nanoTime()
         lastReload = cmd("reload")
@@ -182,6 +215,19 @@ private fun runOne(
         objsAfterBack = m1.objectsCount
       }
     }
+    // NF3: presses that are cancelled (the finger moved): what a wasted preparation costs, and its drop.
+    val cancelledPressGuest = ArrayList<Double>()
+    val cancelGuest = ArrayList<Double>()
+    if (press) {
+      repeat(10) { i ->
+        val p = cmd("press:${i % 5}")
+        val c = cmd("cancel:${i % 5}")
+        batches += batchOf(p)
+        batches += batchOf(c)
+        cancelledPressGuest += guestMs(p)
+        cancelGuest += guestMs(c)
+      }
+    }
     cmd("close")
     // One explicit full GC on this heap, timed: what one cycle collection costs here.
     val gcStart = System.nanoTime()
@@ -194,6 +240,16 @@ private fun runOne(
         "first=${firstMs.r()} load=${loadMs.r()} heapBack=${memBeforeBack / 1024}K->${memAfterBack / 1024}K " +
         "threshold=${quickJs.gcThreshold / 1024}K explicitGc=${gcMs.r()} hash=${Regex("\"hash\":(-?[0-9]+)").find(lastBack)!!.groupValues[1]}",
     )
+    if (nf3Args.isNotEmpty()) {
+      println(
+        "QJS NF3$nf3Args openGuest=${median(openGuest).r()} backGuest=${median(backGuest).r()} " +
+          "press=${if (pressMs.isEmpty()) "-" else median(pressMs).r()} pressGuest=${if (pressGuest.isEmpty()) "-" else median(pressGuest).r()} " +
+          "viewportGuest=${if (viewportGuest.isEmpty()) "-" else median(viewportGuest).r()} " +
+          "cancelledPressGuest=${if (cancelledPressGuest.isEmpty()) "-" else median(cancelledPressGuest).r()} " +
+          "cancelGuest=${if (cancelGuest.isEmpty()) "-" else median(cancelGuest).r()} " +
+          "creates(open/back)=${createsOf(lastOpen)}/${createsOf(lastBack)}",
+      )
+    }
     return buildString {
       append("""{"steps":${batches.size},""")
       append(""""mode":"$mode","retain":$retain,"gc":"$gc","defaultThreshold":$defaultThreshold,"threshold":${quickJs.gcThreshold},""")
@@ -204,6 +260,12 @@ private fun runOne(
       append(""""heapBeforeBack":$memBeforeBack,"heapAfterBack":$memAfterBack,"objectsBeforeBack":$objsBeforeBack,"objectsAfterBack":$objsAfterBack,""")
       append(""""explicitGcMs":${gcMs.r()},"heapAfterGc":${afterGc.memoryUsedSize},"objectsAfterGc":${afterGc.objectsCount},""")
       if (reload.isNotEmpty()) append(""""reloadMedianMs":${median(reload).r()},"lastReload":$lastReload,""")
+      if (nf3Args.isNotEmpty()) append(""""nf3":"${nf3Args.removePrefix(",")}",""")
+      if (pressGuest.isNotEmpty()) {
+        append(""""pressMedianMs":${median(pressMs).r()},"pressGuestMedianMs":${median(pressGuest).r()},"lastPress":$lastPress,""")
+        append(""""cancelledPressGuestMedianMs":${median(cancelledPressGuest).r()},"cancelGuestMedianMs":${median(cancelGuest).r()},""")
+      }
+      if (viewportGuest.isNotEmpty()) append(""""viewportGuestMedianMs":${median(viewportGuest).r()},"lastViewport":$lastViewport,""")
       append(""""first":$first,"lastOpen":$lastOpen,"lastBack":$lastBack}""")
     } to batches
   } finally {
@@ -288,6 +350,15 @@ private var withReload = false
 
 /** `retain=1`: NF1's retained stack, the list kept composed under the detail (the guest's `retain`). */
 private var retain = false
+
+/** NF3's options, passed on to the guest's `init` (",prepared=1,press=1,…"). */
+private var nf3Args = ""
+
+/** `press=1`: a `press` step before each `open`. */
+private var press = false
+
+private fun createsOf(json: String): String =
+  Regex("\"creates\":([0-9]+)").find(json)?.groupValues?.get(1) ?: "-"
 
 private fun guestMs(json: String): Double =
   Regex("\"ms\":([0-9.]+)").find(json)!!.groupValues[1].toDouble()

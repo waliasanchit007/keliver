@@ -537,6 +537,68 @@ What the phone adds to the Mac's result:
 - `qjs` parses source where Zipline loads bytecode, so the load column (1.0–1.3 s on the phone) is
   not Zipline's start-up time. Cold start is NF0's separate measurement.
 
+## NF3: the open path, measured (Mac)
+
+2026-11-17, Zipline's QuickJS on the Mac (`profileQuickJs`), kotlinx encoding, 3 warm-up and 30
+measured pairs, medians of the JVM's wall time per step, in ms. One run per row, so differences under
+about 1 ms are noise. The host's viewport report is now part of the harness (`viewport=10`: a host
+reports rows 0–9 after laying out a new list, as the A12 shows about 10 rows); it is timed as its own
+step, after the frame it follows.
+
+| Configuration | Press | Open (click) | Back | After back: the host's report |
+|---|---|---|---|---|
+| As shipped, no report (the earlier harness) | – | 23.81 | 79.16 | – |
+| As shipped, with the report, fixed first window (`sized=0`) | – | 28.84 | 83.04 | 32.5 |
+| As shipped, viewport-sized first window | – | 28.06 | **62.68** | 50.5 |
+| Prepared stack, depth 0, no press | – | 30.98 | 64.45 | 50.5 |
+| Prepared stack, depth 0, press | 15.03 | **21.97** | 64.07 | 50.0 |
+| Retained (`retain=1`) | – | 15.51 | 2.56 | – |
+| Prepared stack, depth 1, no press | – | 15.93 | 2.75 | – |
+| Prepared stack, depth 1, press | 14.73 | **6.88** | 2.57 | – |
+
+- **The viewport-sized first window cuts "back" by 25%** (83.0 → 62.7 ms; 145 → 109 widgets
+  created: 11 rows instead of 15). It moves work rather than removing it: the rows it leaves out
+  are composed after the host's first report (32.5 → 50.5 ms), when the list is already on screen.
+  Back plus that report is about level: 115.5 → 113.2 ms. What improves is the step that blocks
+  the frame showing the list. The harness's rows all have one height and it reports exactly 10, so
+  −25% is the best case. Under `KeliverNavHost` the hint is per back-stack entry (the entry id is
+  part of the list's place in the composition), so going back to an entry benefits and a new push
+  of the same screen does not (from the code; not run).
+  With the report, "open" is 28–29 ms in both, because the list it disposes has grown to 24 rows
+  either way (the report's own preload, unchanged).
+- **A press moves the detail's whole composition before the click.** With the list retained under
+  the detail (depth 1), the click's step drops from 15.9 to 6.9 ms (−57%); 68% of the open's guest
+  work runs between touch-down and the click. The click then sends 154 bytes (two frame modifiers)
+  instead of 17.6 KB and creates nothing. What is left is recomposition that sends nothing (the
+  app's navigation counter changes at the click, so its content lambda and effects run again).
+- Without retention (depth 0) the click still disposes the list: 22.0 ms remain of 31.0 (−29%
+  against the prepared stack without a press; −22% against the shipped 28.06). The press adds
+  15.0 ms, so the open's total guest work rises 32% (37.0 against 28.06).
+- **Without a press the prepared stack costs 10% more than shipped** (open 30.98 against 28.06):
+  its frame's wrappers run even at depth 0. A host that never sends press composes what it does
+  today, a little slower.
+- A cancelled press costs its composition (14 ms) and 2 ms to drop it.
+- **The click's step alone overstates the gain on the phone.** On the A12 the press's composition
+  outlasts the finger, which stays down about 100 ms, and the click is queued behind it. An
+  estimate, scaling the Mac by 12–15× ("open" has not tracked the phone before; the host's own
+  work, including building the hidden native tree, is not counted). From touch-down to the click's
+  guest work done:
+
+  | | Press | Click | Done after touch-down | Without NF3¹ |
+  |---|---|---|---|---|
+  | Depth 1 (list retained) | 14.73 → 175–220 | 6.88 → 83–103 | ≈ 260–325 | 15.93 → 190–240, done ≈ 290–340 |
+  | Depth 0 | 15.03 → 180–225 | 21.97 → 265–330 | ≈ 445–555 | shipped 28.06 → 335–420, done ≈ 435–520 |
+
+  ¹ The two rows compare against different baselines: depth 1 against the prepared stack at depth 1
+  without a press (15.93; the list stays retained, as with `retain=1`'s 15.51), depth 0 against what ships today
+  (28.06). "Done" in this column is the click's guest work after the finger's ~100 ms.
+
+  Depth 1 gains about 15–30 ms (more at 12×, less at 15×), not the click step's 100+. Depth 0 is
+  slower than shipping without NF3, by about 5–35 ms. Pre-composition pays on the A12 only with a
+  faster engine (NF2), so the press finishes while the finger is still down, or with less work left
+  at the click: at depth 1 that is the app's navigation counter, which re-runs the content lambda
+  and effects at the click. Not measured on a device: the host has no touch-down event yet.
+
 ## Memory growth per navigation
 
 Measured 2026-11-17 on the Mac, Zipline's QuickJS (`profileQuickJs`, `cycles=…`), no device.
@@ -635,6 +697,12 @@ past the collection point.
 #    back 81.05 -> 2.44 ms median, 145 -> 0 creates, 94,817 -> 104 bytes. The host's work for a back
 #    (applying the batch, showing the list again) is not measured. Open 24.41 -> 15.28 ms is a side
 #    effect of the list no longer being disposed, not an improvement to opening.)
+# NF3 ("NF3: the open path, measured"): add to profileArgs (QuickJS; Node takes the same)
+#   viewport=10              the host's viewport report (rows 0-9) after each new list, its own step
+#   sized=0                  the fixed first window (before NF3); the viewport-sized one is the default
+#   prepared=0|1             the three-way app on keliver-nav's KeliverPreparedStack at that depth
+#   press=1                  (with prepared) a touch-down step before each open, and 10 cancelled presses
+#   one QJS NF3 line per run: openGuest, backGuest, press, viewportGuest, cancelledPressGuest, cancelGuest
 # memory growth per navigation ("Memory growth per navigation"): one JSON line per reading in
 #   <label>-<mode>.jsonl, a "QJS_MEM" line each on stdout; gcEvery=0 leaves collection to QuickJS
 ./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \

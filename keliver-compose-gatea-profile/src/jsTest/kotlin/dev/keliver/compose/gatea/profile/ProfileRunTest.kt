@@ -2,8 +2,12 @@
  * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
+@file:OptIn(KeliverGeneratedApi::class)
+
 package dev.keliver.compose.gatea.profile
 
+import dev.keliver.compose.foundation.lazy.LazyWindowSizing
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -66,6 +70,26 @@ class ProfileRunTest {
     }
   }
 
+  /** NF3: the press composes the detail; the click that follows only shows it. */
+  @Test fun aPreparedOpenCreatesNothingAtTheClick() {
+    for (depth in 0..1) {
+      val run = ProfileRun(Encoding.KOTLINX, timeCalls = false, items = 20, prepared = depth, press = true)
+      try {
+        run.first()
+        repeat(3) { i ->
+          val press = run.press(i)
+          val open = run.open(i)
+          // The detail (22 widgets) inside its entry's box and column, all at the press.
+          assertEquals(24, press.creates, "depth $depth press $i")
+          assertEquals(0, open.creates, "depth $depth open $i: ${open.toJson()}")
+          run.back()
+        }
+      } finally {
+        run.close()
+      }
+    }
+  }
+
   /**
    * Memory growth per navigation (docs/GUEST_PROFILE.md): the recorder's and the driver's own state
    * is the same after 20 open/back cycles as after one, so what the QuickJS readings show growing
@@ -94,6 +118,46 @@ class ProfileRunTest {
         run.close()
       }
     }
+  }
+
+  /** NF3: a cancelled press disposes what it composed; the next click composes as without a press. */
+  @Test fun aCancelledPressIsDropped() {
+    val run = ProfileRun(Encoding.KOTLINX, timeCalls = false, items = 20, prepared = 0, press = true)
+    try {
+      run.first()
+      assertEquals(24, run.press(1).creates)
+      val cancel = run.cancel(1)
+      assertEquals(0, cancel.creates)
+      assertEquals(1, cancel.structural, "the hidden entry's removal")
+      assertEquals(24, run.open(1).creates)
+    } finally {
+      run.close()
+    }
+  }
+
+  /**
+   * NF3: with the host's viewport report (10 rows), the list composed again on back starts with
+   * 11 rows (the viewport and one), not the fixed 15: 4 rows of 9 widgets fewer.
+   */
+  @Test fun backStartsWithAViewportSizedWindow() {
+    fun backCreates(sized: Boolean): Int {
+      LazyWindowSizing.viewportSized = sized
+      val run = ProfileRun(Encoding.KOTLINX, timeCalls = false, items = 20, viewportRows = 10)
+      try {
+        run.first()
+        checkNotNull(run.viewport()) { "the first list was reported" }
+        run.open(1)
+        val back = run.back()
+        // The host reports the new list; the window then grows to the strategy's (as without NF3).
+        checkNotNull(run.viewport())
+        return back.creates
+      } finally {
+        run.close()
+        LazyWindowSizing.viewportSized = true
+      }
+    }
+    assertEquals(145, backCreates(sized = false))
+    assertEquals(145 - 4 * 9, backCreates(sized = true))
   }
 
   @Test fun noneRecordsStructureOnly() {

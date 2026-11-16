@@ -40,6 +40,19 @@ public final class dev/keliver/nav/KeliverNavHostKt {
 	public static final fun getLocalKeliverNavController ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
 
+public final class dev/keliver/nav/KeliverNavPreparation {
+	public static final field $stable I
+	public fun <init> ()V
+	public final fun cancel ()V
+	public final fun cancel (Ljava/lang/Object;)V
+	public final fun getPrepared ()Ljava/lang/Object;
+	public final fun prepare (Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/nav/KeliverNavPreparationKt {
+	public static final fun KeliverPreparedStack (Ljava/util/List;Ldev/keliver/nav/KeliverNavPreparation;Ldev/keliver/nav/KeliverNavFrame;ILkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/nav/KeliverNavRetention {
 	public static final field $stable I
 	public static final field Companion Ldev/keliver/nav/KeliverNavRetention$Companion;
