@@ -274,6 +274,16 @@
     <property tag="1" name="key" type="kotlin.String?" />
     <children tag="1" name="content" />
   </widget>
+  <widget tag="502" type="dev.keliver.compose.gatea.ExtraRetained">
+    <property tag="1" name="backHandled" type="kotlin.Int" />
+    <event tag="2" name="onBack" params="kotlin.String" />
+    <children tag="1" name="entries" />
+  </widget>
+  <widget tag="503" type="dev.keliver.compose.gatea.ExtraRetainedEntry">
+    <property tag="1" name="key" type="kotlin.String" />
+    <property tag="2" name="hostBack" type="kotlin.Boolean" />
+    <children tag="1" name="content" />
+  </widget>
   <modifier tag="1" type="dev.keliver.compose.gatea.GenPadding1">
     <property name="all" type="dev.keliver.compose.ui.unit.Dp" />
   </modifier>

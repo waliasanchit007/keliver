@@ -577,7 +577,11 @@ internal class EventTap {
 }
 
 @OptIn(KeliverGeneratedApi::class)
-internal fun guestOnHost(tap: EventTap? = null, content: @Composable () -> Unit): GuestOnHost {
+internal fun guestOnHost(
+  tap: EventTap? = null,
+  backDispatcher: OnBackPressedDispatcher? = null,
+  content: @Composable () -> Unit,
+): GuestOnHost {
   // Each guest starts with no measured viewports, as a new Zipline guest does: in one JVM every
   // test's lists would otherwise share them, and a list's first window would depend on test order.
   LazyWindowSizing.forgetMeasuredViewports()
@@ -587,7 +591,7 @@ internal fun guestOnHost(tap: EventTap? = null, content: @Composable () -> Unit)
     scope = CoroutineScope(Dispatchers.Unconfined + clock),
     guestAdapter = guestAdapter,
     widgetVersion = UInt.MAX_VALUE,
-    onBackPressedDispatcher = object : OnBackPressedDispatcher {
+    onBackPressedDispatcher = backDispatcher ?: object : OnBackPressedDispatcher {
       override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable = object : Cancellable {
         override fun cancel() = Unit
       }

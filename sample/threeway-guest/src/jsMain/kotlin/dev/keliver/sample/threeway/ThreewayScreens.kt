@@ -65,10 +65,13 @@ private fun chipColors(status: String): Pair<Color, Color> = when (status) {
   else -> Color(0xFFFDE2E1) to Color(0xFFB71C1C)
 }
 
-/** How the app stacks its screens: [keys] bottom to top, the last one shown, each composed by [content]. */
+/**
+ * How the app stacks its screens: [keys] bottom to top, the last one shown, each composed by
+ * [content]. [onBack] goes back one screen (the stack calls it for a system back press).
+ */
 interface ThreewayStack {
   @Composable
-  fun Show(keys: List<Any>, content: @Composable (Any) -> Unit)
+  fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit)
 }
 
 /** The list's key in a [ThreewayStack] (a detail's key is its [Item]). */
@@ -136,7 +139,7 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks, stack: ThreewayStack? = 
       if (nav > 0 && item == null) marks.composed("list", NAV_BASE + nav)
       onDispose {}
     }
-    stack.Show(if (item == null) listOf(ListKey) else listOf(ListKey, item)) { key ->
+    stack.Show(if (item == null) listOf(ListKey) else listOf(ListKey, item), back) { key ->
       Column(Modifier.fillMaxSize().background(Color.White)) {
         if (key == ListKey) {
           ListScreen(page = page, nav = 0, marks = marks, onLoad = load, onOpen = open)

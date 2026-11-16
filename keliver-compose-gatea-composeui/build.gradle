@@ -73,6 +73,8 @@ kotlin {
         implementation projects.keliverLeakDetector
         implementation projects.keliverLayoutComposeui
         implementation projects.keliverLazylayoutComposeui
+        // RetainedHostBackTest: keliver-nav's retained stack on the host container (jvm and js only).
+        implementation projects.keliverNav
       }
     }
   }

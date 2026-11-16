@@ -20,14 +20,17 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,18 +81,33 @@ internal class ComposeUiExtraShimmer :
   }
 
   override val value: @Composable (Modifier) -> Unit = { incoming ->
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val x by transition.animateFloat(
-      initialValue = -400f,
-      targetValue = 800f,
-      animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Restart),
-      label = "x",
+    // In a hidden entry of a retained stack (LocalRetainedHidden) nothing animates: no transition
+    // runs, so the hidden skeleton asks for no frames. Shown, the position is read only in draw, so
+    // the animation redraws and never recomposes.
+    val x: State<Float> = if (LocalRetainedHidden.current) {
+      remember { mutableFloatStateOf(SHIMMER_START) }
+    } else {
+      rememberInfiniteTransition(label = "shimmer").animateFloat(
+        initialValue = SHIMMER_START,
+        targetValue = 800f,
+        animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Restart),
+        label = "x",
+      )
+    }
+    Box(
+      incoming.applyGenerated(modifier, this).clip(shape.toCompose()).drawBehind {
+        val start = x.value
+        drawRect(
+          Brush.linearGradient(
+            colors = SHIMMER_COLORS,
+            start = Offset(start, 0f),
+            end = Offset(start + 400f, 0f),
+          ),
+        )
+      },
     )
-    val brush = Brush.linearGradient(
-      colors = listOf(Color(0xFFE7E9EC), Color(0xFFF3F5F7), Color(0xFFE7E9EC)),
-      start = Offset(x, 0f),
-      end = Offset(x + 400f, 0f),
-    )
-    Box(incoming.applyGenerated(modifier, this).clip(shape.toCompose()).background(brush))
   }
 }
+
+private const val SHIMMER_START = -400f
+private val SHIMMER_COLORS = listOf(Color(0xFFE7E9EC), Color(0xFFF3F5F7), Color(0xFFE7E9EC))
