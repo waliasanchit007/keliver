@@ -15,12 +15,8 @@
  */
 package dev.keliver.compose.gatea.composeui
 
-import androidx.compose.animation.core.DecayAnimationSpec
-import androidx.compose.animation.core.calculateTargetValue
-import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.FlingBehavior
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Box
@@ -34,6 +30,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MonotonicFrameClock
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -45,10 +43,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withContext
 
 /*
  * The host half of a generated lazy list (docs/COMPOSE_GENERATOR_DESIGN.md §16), written by hand
@@ -57,9 +58,9 @@ import kotlin.math.floor
  *
  * Scrolling (NF1, docs/PLAN_2026-11.md WS7): the guest composes on one thread, and a window it has
  * started composing cannot be cancelled. So the host tells it only where the list IS, or, during a
- * fling, where the list WILL COME TO REST ([LazyHost.fling] predicts that from the fling's velocity
- * as it starts). The windows a fling passes through are never reported, so the guest never
- * composes them; their rows are drawn as placeholders of the rows' measured size.
+ * fling, where the list WILL COME TO REST ([LazyHost.fling] predicts that as the fling starts,
+ * from the platform fling itself). The windows a fling passes through are never reported, so the
+ * guest never composes them; their rows are drawn as placeholders of the rows' measured size.
  */
 
 /** The content types of a guest item and of a placeholder, so Compose reuses each only as its own kind. */
@@ -93,27 +94,32 @@ private val PlaceholderColor = Color(0x1F808080)
  * An item the guest has not composed yet: shown while a scroll outruns the window, or while a
  * fling passes rows the guest was not asked for. It takes the measured mean size of the guest's
  * rows ([LazyHost.itemExtentPx]), so the list does not jump when the rows arrive and a fling
- * travels as far as it would over real rows; and it is drawn (a rounded block), never blank.
+ * travels as far as it would over real rows; and it is drawn (a rounded block), never blank. In a
+ * horizontal list it takes the list's measured height ([LazyHost.crossExtentPx]), so a row of
+ * cards keeps its height while it shows placeholders. It is not content: screen readers skip it.
  */
 @Composable
 private fun LazyPlaceholder(host: LazyHost?) {
-  val extentPx = host?.itemExtentPx ?: 0f
-  val extent: Dp = if (extentPx > 0f) with(LocalDensity.current) { extentPx.toDp() } else DefaultPlaceholderExtent
-  val modifier = if (host?.vertical != false) {
+  val density = LocalDensity.current
+  fun Float.orDefault(): Dp = if (this > 0f) with(density) { toDp() } else DefaultPlaceholderExtent
+  val extent = (host?.itemExtentPx ?: 0f).orDefault()
+  val modifier = if (host == null || host.vertical) {
     Modifier.fillMaxWidth().height(extent).padding(horizontal = 16.dp, vertical = 4.dp)
   } else {
-    Modifier.width(extent).height(DefaultPlaceholderExtent).padding(horizontal = 4.dp, vertical = 8.dp)
+    Modifier.width(extent).height(host.crossExtentPx.orDefault()).padding(horizontal = 4.dp, vertical = 8.dp)
   }
-  Box(modifier.background(PlaceholderColor, RoundedCornerShape(6.dp)))
+  Box(modifier.clearAndSetSemantics {}.background(PlaceholderColor, RoundedCornerShape(6.dp)))
 }
 
 /**
  * What the host keeps for one generated lazy list: its fling, which predicts where the list will
- * come to rest; and the measured size of the guest's rows, which placeholders take.
+ * come to rest; and the measured size of the guest's rows, which placeholders take. [vertical] is
+ * the list's orientation, which the generator knows (a `LazyRow` passes false), so placeholders
+ * are sized right from the first frame.
  */
-internal class LazyHost(private val state: LazyListState) {
+internal class LazyHost(private val state: LazyListState, internal val vertical: Boolean = true) {
+  /** The platform's default fling ([ScrollableDefaults.flingBehavior]), which [fling] runs unchanged. */
   internal var delegate: FlingBehavior? = null
-  internal var decay: DecayAnimationSpec<Float>? = null
 
   /** The (first, last) window a running fling will come to rest at; null when no fling runs. */
   internal var predicted: Pair<Int, Int>? by mutableStateOf(null)
@@ -123,7 +129,12 @@ internal class LazyHost(private val state: LazyListState) {
   internal var itemExtentPx: Float by mutableFloatStateOf(0f)
     private set
 
-  internal var vertical: Boolean by mutableStateOf(true)
+  /**
+   * A horizontal list's height (its viewport's cross size) when it last showed only guest rows,
+   * in px; 0 until it has. Only such frames count: placeholders take this size, so a frame that
+   * shows placeholders would measure their own size back.
+   */
+  internal var crossExtentPx: Float by mutableFloatStateOf(0f)
     private set
 
   private val measured = HashSet<Any>()
@@ -131,11 +142,14 @@ internal class LazyHost(private val state: LazyListState) {
 
   /** Folds the visible guest rows into [itemExtentPx]: a running mean over distinct rows, so it settles. */
   internal fun measure(info: LazyListLayoutInfo) {
-    val isVertical = info.orientation == Orientation.Vertical
-    if (vertical != isVertical) vertical = isVertical
+    val visible = info.visibleItemsInfo
+    if (!vertical && visible.isNotEmpty() && visible.all { it.contentType === GuestItem }) {
+      val cross = info.viewportSize.height.toFloat()
+      if (cross > 0f && cross != crossExtentPx) crossExtentPx = cross
+    }
     if (measured.size >= MAX_MEASURED_ROWS) return
     var changed = false
-    for (item in info.visibleItemsInfo) {
+    for (item in visible) {
       if (item.contentType !== GuestItem || item.size <= 0) continue
       if (measured.add(item.key)) {
         measuredSum += item.size
@@ -148,18 +162,20 @@ internal class LazyHost(private val state: LazyListState) {
     if (abs(mean - itemExtentPx) >= 2f) itemExtentPx = floor(mean)
   }
 
-  /** The list's own fling, unchanged, recording where it will come to rest before it runs. */
+  /**
+   * The list's own fling, unchanged, recording where it will come to rest before it runs. How far
+   * it goes is the platform fling's own answer ([flingDistance] runs that same fling against a
+   * clock that never waits), so each platform's default decay predicts itself: the spline on
+   * Android and desktop, Compose Multiplatform's UIScrollView-like decay on iOS.
+   */
   val fling: FlingBehavior = object : FlingBehavior {
     override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-      val distance = decay?.calculateTargetValue(0f, initialVelocity)
+      val fling = delegate ?: return initialVelocity
       val info = state.layoutInfo
       val here = info.visibleItemsInfo.let { (it.firstOrNull()?.index ?: 0) to (it.lastOrNull()?.index ?: 0) }
       // A fling that stays in this window (a short one) changes nothing: no prediction, no report.
-      predicted = distance
-        ?.let { predictRestingWindow(info, state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset, it) }
-        ?.takeIf { it != here }
+      predicted = info.geometry()?.restingWindow(fling.flingDistance(initialVelocity))?.takeIf { it != here }
       try {
-        val fling = delegate ?: return initialVelocity
         return with(fling) { performFling(initialVelocity) }
       } finally {
         predicted = null
@@ -173,42 +189,124 @@ internal class LazyHost(private val state: LazyListState) {
   }
 }
 
-/** The [LazyHost] of a generated lazy list with [state]. */
+/** The [LazyHost] of a generated lazy list with [state]; [vertical] is false for a `LazyRow`. */
 @Composable
-internal fun rememberLazyHost(state: LazyListState): LazyHost {
-  val decay = rememberSplineBasedDecay<Float>()
+internal fun rememberLazyHost(state: LazyListState, vertical: Boolean = true): LazyHost {
   val delegate = ScrollableDefaults.flingBehavior()
-  return remember(state) { LazyHost(state) }.apply {
-    this.decay = decay
-    this.delegate = delegate
+  val host = remember(state, vertical) { LazyHost(state, vertical).also { it.delegate = delegate } }
+  SideEffect { host.delegate = delegate }
+  return host
+}
+
+/** About 33 s of frames at 60 Hz: past it a probed fling is cut off (no platform fling runs that long). */
+private const val MAX_PROBE_FRAMES = 2_000
+private const val PROBE_FRAME_NANOS = 16_666_667L
+
+private class ProbeLimit : CancellationException("fling probe cut off")
+
+/**
+ * How far this fling travels from [velocity] (px/s, scroll units) when nothing stops it: it runs
+ * to its end against a scroll that consumes everything and a frame clock that never waits, so it
+ * returns at once. The real fling covers the same distance, up to its frame timing.
+ */
+internal suspend fun FlingBehavior.flingDistance(velocity: Float): Float {
+  var travelled = 0f
+  val probe = object : ScrollScope {
+    override fun scrollBy(pixels: Float): Float {
+      travelled += pixels
+      return pixels
+    }
   }
+  val clock = object : MonotonicFrameClock {
+    var frames = 0
+    override suspend fun <R> withFrameNanos(onFrame: (frameTimeNanos: Long) -> R): R {
+      if (++frames > MAX_PROBE_FRAMES) throw ProbeLimit()
+      return onFrame(frames * PROBE_FRAME_NANOS)
+    }
+  }
+  val fling = this
+  try {
+    withContext(clock) { with(fling) { probe.performFling(velocity) } }
+  } catch (_: ProbeLimit) {
+  }
+  return travelled
+}
+
+/** One laid-out item: its [index], its main-axis [offset] from the content start, and its [size]. */
+internal class LaidItem(val index: Int, val offset: Int, val size: Int)
+
+/**
+ * What a fling prediction needs of a lazy list's layout ([LazyListLayoutInfo]): the laid-out
+ * [items] (consecutive indexes, ascending), the viewport's start and end offsets (the start is
+ * negative by the leading content padding), the trailing content padding, the spacing and the
+ * item count.
+ */
+internal class ListGeometry(
+  val items: List<LaidItem>,
+  val viewportStart: Int,
+  val viewportEnd: Int,
+  val afterPadding: Int = 0,
+  val spacing: Int = 0,
+  val totalItems: Int,
+)
+
+internal fun LazyListLayoutInfo.geometry(): ListGeometry? {
+  if (visibleItemsInfo.isEmpty() || totalItemsCount <= 0) return null
+  return ListGeometry(
+    items = visibleItemsInfo.map { LaidItem(it.index, it.offset, it.size) },
+    viewportStart = viewportStartOffset,
+    viewportEnd = viewportEndOffset,
+    afterPadding = afterContentPadding,
+    spacing = mainAxisItemSpacing,
+    totalItems = totalItemsCount,
+  )
 }
 
 /**
- * Where a fling of [distance] px (scroll units: positive scrolls toward higher indexes) from
- * ([firstIndex], [firstOffset]) comes to rest, as a (first, last) visible window, moving by the
- * mean extent of the items laid out now (with the spacing). Null when nothing is laid out.
+ * The (first, last) window the list shows after scrolling [distance] px (scroll units: positive
+ * toward higher indexes), or null when the list moves less than its viewport, or to the window it
+ * shows now. The laid-out items count
+ * with their real offsets and sizes; items beyond them with the laid-out items' mean size. The
+ * distance stops at the list's ends, as the list does.
  */
-internal fun predictRestingWindow(info: LazyListLayoutInfo, firstIndex: Int, firstOffset: Int, distance: Float): Pair<Int, Int>? {
-  val visible = info.visibleItemsInfo
-  if (visible.isEmpty() || info.totalItemsCount <= 0) return null
-  val extent = visible.sumOf { it.size }.toFloat() / visible.size + info.mainAxisItemSpacing
-  return predictRestingWindow(firstIndex, firstOffset, visible.size, extent, distance, info.totalItemsCount)
+internal fun ListGeometry.restingWindow(distance: Float): Pair<Int, Int>? {
+  if (items.isEmpty() || totalItems <= 0) return null
+  val firstLaid = items.first()
+  val lastLaid = items.last()
+  val mean = items.sumOf { it.size }.toFloat() / items.size
+  val step = mean + spacing
+  fun laid(j: Int): LaidItem? = items.getOrNull(j - firstLaid.index)?.takeIf { it.index == j }
+  fun start(j: Int): Float = laid(j)?.offset?.toFloat() ?: when {
+    j < firstLaid.index -> firstLaid.offset - (firstLaid.index - j) * step
+    else -> lastLaid.offset + lastLaid.size + spacing + (j - lastLaid.index - 1) * step
+  }
+  fun end(j: Int): Float = start(j) + (laid(j)?.size?.toFloat() ?: mean)
+
+  // The list stops with its first item at the content start, or its last at the content end.
+  val minDistance = minOf(0f, start(0))
+  val maxDistance = maxOf(0f, end(totalItems - 1) + afterPadding - viewportEnd)
+  fun window(d: Float): Pair<Int, Int> {
+    // The lowest index whose end is past the viewport's start; the highest whose start is before its end.
+    val first = lowest(0, totalItems - 1) { end(it) - d > viewportStart } ?: (totalItems - 1)
+    val afterLast = lowest(first, totalItems - 1) { start(it) - d >= viewportEnd } ?: totalItems
+    return first to maxOf(first, afterLast - 1)
+  }
+  val travel = distance.coerceIn(minDistance, maxDistance)
+  // A fling shorter than the viewport stays among the rows on screen: nothing to predict, and the
+  // list's own reports follow it (a release at rest sends nothing).
+  if (abs(travel) < viewportEnd - viewportStart) return null
+  return window(travel).takeIf { it != window(0f) }
 }
 
-internal fun predictRestingWindow(
-  firstIndex: Int,
-  firstOffset: Int,
-  visibleCount: Int,
-  extentPx: Float,
-  distance: Float,
-  totalItems: Int,
-): Pair<Int, Int> {
-  if (totalItems <= 0) return 0 to 0
-  val moved = if (extentPx > 0f) floor((firstOffset + distance) / extentPx).toInt() else 0
-  val count = visibleCount.coerceIn(1, totalItems)
-  val first = (firstIndex + moved).coerceIn(0, totalItems - count)
-  return first to (first + count - 1)
+/** The lowest index in [from]..[to] for which the monotonic [test] holds; null if none does. */
+private inline fun lowest(from: Int, to: Int, test: (Int) -> Boolean): Int? {
+  var lo = from
+  var hi = to + 1
+  while (lo < hi) {
+    val mid = (lo + hi) ushr 1
+    if (test(mid)) hi = mid else lo = mid + 1
+  }
+  return lo.takeIf { it <= to }
 }
 
 /**

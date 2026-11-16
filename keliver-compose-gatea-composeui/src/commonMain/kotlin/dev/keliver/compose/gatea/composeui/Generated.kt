@@ -714,7 +714,7 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
       val horizontalArrangement = (p_horizontalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Horizontal?)?.toCompose() ?: if (!reverseLayout) Arrangement.Start else Arrangement.End
       val verticalAlignment = (p_verticalAlignment as dev.keliver.compose.ui.Alignment.Vertical?)?.toCompose() ?: Alignment.Top
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
-      val lazyHost_content = rememberLazyHost(state)
+      val lazyHost_content = rememberLazyHost(state, vertical = false)
       androidx.compose.foundation.lazy.LazyRow(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyRow1),
         state = state,

@@ -493,7 +493,11 @@ class Emitter(
       val lazyFling = lazyParams.isNotEmpty() &&
         d.params.any { it.name == "flingBehavior" } &&
         w.called.none { it.param.name == "flingBehavior" && it.kind != ParamKind.DROP }
-      for (c in lazyParams) body.append("      val lazyHost_${c.param.name} = rememberLazyHost(${w.lazyState!!.param.name})\n")
+      // The orientation is known here, so placeholders are sized right from the first frame: a
+      // horizontal list (it takes a horizontalArrangement, not a verticalArrangement) says so.
+      val horizontal = d.params.any { it.name == "horizontalArrangement" } && d.params.none { it.name == "verticalArrangement" }
+      val orientation = if (horizontal) ", vertical = false" else ""
+      for (c in lazyParams) body.append("      val lazyHost_${c.param.name} = rememberLazyHost(${w.lazyState!!.param.name}$orientation)\n")
       body.append("      ${d.pkg}.${d.name}(\n")
       for (c in w.called) {
         val n = c.param.name

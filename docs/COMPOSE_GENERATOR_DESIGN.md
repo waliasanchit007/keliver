@@ -560,18 +560,37 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
   properties. The host calls the real `LazyColumn` with the whole count, renders each item's
   children inside the real `LazyItemScope` (so `fillParentMaxWidth` and `animateItem` are
   Compose's), and shows a placeholder outside the window: a drawn block (never blank) of the
-  guest rows' measured mean size (48 dp until a row has been measured). The host reports its
-  viewport only when its first or last visible item changes; during a fling it reports, once, the
-  window the fling will come to rest at (the fling's own decay, from its starting velocity), not
+  guest rows' measured mean size (48 dp until a row has been measured), as tall as the list in a
+  `LazyRow` (its height when it last showed only guest rows), with no semantics (screen readers
+  skip it). The generator passes the orientation, so placeholders are right from the first frame.
+  The host reports its viewport only when its first or last visible item changes; during a fling
+  that travels at least a viewport it reports, once, the window the fling will come to rest at, not
   the windows it passes, so the guest never composes rows the list has already left (NF1,
-  `LazyRuntime.kt`; host-only, no protocol change). `LazyListState` is host-owned
+  `LazyRuntime.kt`; host-only, no protocol change). The distance is the platform's own default
+  fling (`ScrollableDefaults.flingBehavior()`, run to its end against a frame clock that never
+  waits: the spline on Android and desktop, Compose Multiplatform's own decay on iOS), walked over
+  the laid-out items' real offsets and sizes from the item at the viewport's start (content padding
+  counts), and over the mean size beyond them. `LazyListState` is host-owned
   (§10): `scrollToItem` and `animateScrollToItem` are commands in the `state` property;
   `firstVisibleItemIndex` and its offset follow the viewport event. The guest's
   `rememberLazyListState` saves the position with a `Saver`, as Compose's does, and the host saves
   the id of the last command it ran beside its state, so a restored subtree does not run the
   guest's last command again. A guest state that was not restored (an Android process death keeps
   the host's saved state, not the guest's) numbers its commands from a random start, so its first
-  command is not taken for one the host already ran.
+  command is not taken for one the host already ran. Known limits of NF1, each a follow-up:
+  - **The guest's state sees the predicted position during a fling.** The predicted window travels
+    as the viewport event, so the guest's `firstVisibleItemIndex` is the resting index (offset 0)
+    until the fling ends, and a process death mid-fling saves that. Separating a "window hint" from
+    the position needs a protocol change (D2).
+  - **One mean size per list.** Placeholders and the prediction beyond the laid-out items use one
+    mean of up to 500 measured rows; a list that mixes headers and rows, or images and text, is
+    off by the difference and gets a correcting report at rest. A size per `contentType` (or the
+    last measured size per index) is the follow-up.
+  - **The placeholder's look** (a grey rounded block, 16 dp side insets in a column) applies to
+    every list, edge-to-edge ones included; a guest-set placeholder is a later option.
+  - In a `LazyRow` with no fixed height and vertical content padding, a row showing only
+    placeholders is taller by that padding (placeholders take the viewport's height, which
+    includes it).
 - **A newer guest on an older host.** A `*Defaults` factory the host does not know (appended at a
   later level) gives Compose's own default for that parameter where it renders, and an icon
   outside the host's groups a placeholder; each is reported once (`GeneratedMismatches`), never a
