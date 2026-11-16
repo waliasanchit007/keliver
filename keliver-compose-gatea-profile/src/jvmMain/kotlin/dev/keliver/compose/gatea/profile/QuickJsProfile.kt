@@ -22,7 +22,7 @@ import kotlinx.coroutines.runBlocking
  *
  * Args: <bundle dir> <out dir> <comma args>. Args: `gc=default+4+16+64` (MiB; `default` leaves
  * QuickJS's threshold as Zipline sets it), `modes=kotlinx+direct+none`, `warmup=3`, `iterations=30`,
- * `items=20`, `label=<text>` (names the output file).
+ * `items=20`, `label=<text>` (names the output file), `retain=1` (NF1's retained back stack).
  */
 fun main(args: Array<String>) {
   val bundle = File(args[0])
@@ -36,6 +36,7 @@ fun main(args: Array<String>) {
   val items = (a["items"] ?: "20").toInt()
   val label = a["label"] ?: "quickjs"
   withReload = a["reload"] == "1"
+  retain = a["retain"] == "1"
 
   val manifest = ZiplineManifest.decodeJson(File(bundle, "manifest.zipline.json").readText())
   val executor = Executors.newSingleThreadExecutor()
@@ -118,7 +119,7 @@ private fun runOne(
 
     fun cmd(c: String): String = quickJs.evaluate("globalThis.guestProfile('$c')", "QuickJsProfile.kt") as String
 
-    cmd("init:mode=$mode,items=$items")
+    cmd("init:mode=$mode,items=$items,retain=${if (retain) 1 else 0}")
     val firstStart = System.nanoTime()
     val first = cmd("first")
     val firstMs = (System.nanoTime() - firstStart) / 1e6
@@ -179,7 +180,7 @@ private fun runOne(
     )
     return buildString {
       append("""{"steps":${batches.size},""")
-      append(""""mode":"$mode","gc":"$gc","defaultThreshold":$defaultThreshold,"threshold":${quickJs.gcThreshold},""")
+      append(""""mode":"$mode","retain":$retain,"gc":"$gc","defaultThreshold":$defaultThreshold,"threshold":${quickJs.gcThreshold},""")
       append(""""loadMs":${loadMs.r()},"firstMs":${firstMs.r()},""")
       append(""""openMedianMs":${median(open).r()},"openMinMs":${open.min().r()},"openGuestMedianMs":${median(openGuest).r()},""")
       append(""""backMedianMs":${median(back).r()},"backMinMs":${back.min().r()},"backGuestMedianMs":${median(backGuest).r()},""")
@@ -196,6 +197,9 @@ private fun runOne(
 
 /** `reload=1`: also time the reload step (off by default; see GuestProfileMain.kt's `reload`). */
 private var withReload = false
+
+/** `retain=1`: NF1's retained stack, the list kept composed under the detail (the guest's `retain`). */
+private var retain = false
 
 private fun guestMs(json: String): Double =
   Regex("\"ms\":([0-9.]+)").find(json)!!.groupValues[1].toDouble()

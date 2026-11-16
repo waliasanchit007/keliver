@@ -20,6 +20,7 @@ apply plugin: 'app.cash.zipline'
 def threeway = rootProject.file('sample/threeway-guest/src')
 def threewayCopy = tasks.register('copyThreewayScreens', Sync) {
   from(new File(threeway, 'jsMain/kotlin/dev/keliver/sample/threeway/ThreewayScreens.kt'))
+  from(new File(threeway, 'jsMain/kotlin/dev/keliver/sample/threeway/RetainedStack.kt'))
   from(new File(threeway, 'commonMain/kotlin/dev/keliver/sample/threeway/data/ThreewayData.kt'))
   into(layout.buildDirectory.dir('threeway/kotlin'))
 }
@@ -45,6 +46,7 @@ kotlin {
         implementation projects.keliverCompose
         implementation projects.keliverComposeGateaCompose
         implementation projects.keliverComposeGateaProtocolGuest
+        implementation projects.keliverNav
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.serialization.json
         implementation libs.kotlinx.coroutines.core

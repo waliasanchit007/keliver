@@ -52,7 +52,8 @@ private class ThreewayAppServiceImpl : ThreewayAppService {
     val ui = object : TreehouseUi {
       @Composable
       override fun Show() {
-        ThreewayApp(GuestApi, GuestMarks)
+        // `retain` (NF1): the list stays composed under the detail (RetainedStack.kt).
+        ThreewayApp(GuestApi, GuestMarks, if ("retain" in experiments) RetainedThreewayStack else null)
       }
     }
     return ui.asZiplineTreehouseUi(appLifecycle)

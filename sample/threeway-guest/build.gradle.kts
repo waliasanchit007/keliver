@@ -52,6 +52,8 @@ kotlin {
         implementation(libs.keliver.treehouse.guest)
         implementation("dev.keliver:keliver-compose-gatea-compose:${libs.versions.keliver.get()}")
         implementation("dev.keliver:keliver-compose-gatea-protocol-guest:${libs.versions.keliver.get()}")
+        // The `retain` experiment's retained stack (RetainedStack.kt).
+        implementation("dev.keliver:keliver-nav:${libs.versions.keliver.get()}")
       }
     }
   }

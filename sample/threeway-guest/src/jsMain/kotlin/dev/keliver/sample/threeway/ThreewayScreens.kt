@@ -65,13 +65,26 @@ private fun chipColors(status: String): Pair<Color, Color> = when (status) {
   else -> Color(0xFFFDE2E1) to Color(0xFFB71C1C)
 }
 
+/** How the app stacks its screens: [keys] bottom to top, the last one shown, each composed by [content]. */
+interface ThreewayStack {
+  @Composable
+  fun Show(keys: List<Any>, content: @Composable (Any) -> Unit)
+}
+
+/** The list's key in a [ThreewayStack] (a detail's key is its [Item]). */
+private object ListKey
+
 /**
  * The app: the list (loads 20 items at start), the two reload actions (20 or 1,000 items, each a
  * new request), and the detail opened by tapping a row (from the data already loaded: navigation
  * only, no request).
+ *
+ * [stack] null is the app as shipped: only the shown screen is composed. The guest's `retain`
+ * experiment passes a retained stack (keliver-nav's KeliverRetainedStack, RetainedStack.kt), which
+ * keeps the list composed, hidden, under the detail.
  */
 @Composable
-fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks) {
+fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks, stack: ThreewayStack? = null) {
   var page by remember { mutableStateOf<ItemsPage?>(null) }
   var request by remember { mutableStateOf(1) }
   var size by remember { mutableStateOf("small") }
@@ -97,6 +110,44 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks) {
     frameMark(request + 1)
     size = newSize
     request += 1
+  }
+
+  if (stack != null) {
+    // The `retain` experiment (NF1): the list stays composed under the detail, so back shows it
+    // without composing it, and its "composed" mark for a back is made here instead of in ListScreen.
+    val item = selected
+    val open: (Item) -> Unit = remember {
+      { opened ->
+        marks.mark(NAV_BASE + nav + 1, "click")
+        frameMark(NAV_BASE + nav + 1)
+        nav += 1
+        selected = opened
+      }
+    }
+    val back: () -> Unit = remember {
+      {
+        marks.mark(NAV_BASE + nav + 1, "click")
+        frameMark(NAV_BASE + nav + 1)
+        nav += 1
+        selected = null
+      }
+    }
+    DisposableEffect(nav) {
+      if (nav > 0 && item == null) marks.composed("list", NAV_BASE + nav)
+      onDispose {}
+    }
+    stack.Show(if (item == null) listOf(ListKey) else listOf(ListKey, item)) { key ->
+      Column(Modifier.fillMaxSize().background(Color.White)) {
+        if (key == ListKey) {
+          ListScreen(page = page, nav = 0, marks = marks, onLoad = load, onOpen = open)
+        } else if (marks.heavyDetail) {
+          HeavyDetailScreen(item = key as Item, nav = nav, marks = marks, onBack = back)
+        } else {
+          DetailScreen(item = key as Item, nav = nav, marks = marks, onBack = back)
+        }
+      }
+    }
+    return
   }
 
   Column(Modifier.fillMaxSize().background(Color.White)) {

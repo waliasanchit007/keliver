@@ -15,6 +15,7 @@ import dev.keliver.protocol.EventTag
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.guest.ProtocolRedwoodComposition
 import dev.keliver.protocol.guest.guestRedwoodVersion
+import dev.keliver.sample.threeway.RetainedThreewayStack
 import dev.keliver.sample.threeway.ThreewayApp
 import dev.keliver.sample.threeway.data.Item
 import dev.keliver.sample.threeway.data.ItemsPage
@@ -114,6 +115,8 @@ internal class ProfileRun(
   private val encoding: Encoding,
   private val timeCalls: Boolean,
   items: Int,
+  /** NF1's retained stack (the guest's `retain` experiment): the list stays composed under the detail. */
+  private val retain: Boolean = false,
 ) {
   private val dispatcher = ManualDispatcher()
   private val clock = BroadcastFrameClock()
@@ -212,7 +215,8 @@ internal class ProfileRun(
   fun first(): StepResult {
     reset()
     val start = now()
-    composition.setContent { ThreewayApp(api, NoMarks) }
+    val stack = if (retain) RetainedThreewayStack else null
+    composition.setContent { ThreewayApp(api, NoMarks, stack) }
     settle()
     return result("first", start)
   }
@@ -235,12 +239,15 @@ internal class ProfileRun(
     return result("open", start)
   }
 
-  /** Back: the detail's only clickable is its header's Back. */
+  /**
+   * Back: the detail's only clickable is its header's Back, the last live one recorded (with
+   * [retain], the hidden list's clickables stay live before it).
+   */
   fun back(): StepResult {
     check(screen == "detail")
     reset()
     val start = now()
-    click(0)
+    click(adapter.clickables.count { adapter.isLive(it) } - 1)
     settle()
     screen = "list"
     return result("back", start)
@@ -293,8 +300,8 @@ private fun median(xs: List<Double>): Double {
 }
 
 /** Runs [iterations] open/back pairs after [warmup] pairs; one JSON summary. */
-internal fun runMode(mode: String, items: Int, warmup: Int, iterations: Int, timeCalls: Boolean, withReload: Boolean = false): String {
-  val run = ProfileRun(encodingOf(mode), timeCalls, items)
+internal fun runMode(mode: String, items: Int, warmup: Int, iterations: Int, timeCalls: Boolean, withReload: Boolean = false, retain: Boolean = false): String {
+  val run = ProfileRun(encodingOf(mode), timeCalls, items, retain)
   val first = run.first()
   val steps = ArrayList<StepResult>()
   repeat(warmup + iterations) { i ->
@@ -317,7 +324,7 @@ internal fun runMode(mode: String, items: Int, warmup: Int, iterations: Int, tim
       """"medianPropertyMs":${median(xs.map { it.propertyMs }).r()},"medianModifierMs":${median(xs.map { it.modifierMs }).r()},""" +
       """"hashes":${xs.map { it.hash }.distinct().size},"last":${last.toJson()}}"""
   }
-  return """{"mode":"$mode","items":$items,"warmup":$warmup,"iterations":$iterations,"timeCalls":$timeCalls,""" +
+  return """{"mode":"$mode","items":$items,"retain":$retain,"warmup":$warmup,"iterations":$iterations,"timeCalls":$timeCalls,""" +
     """"first":${first.toJson()},${summary("open")},${summary("back")}""" +
     (if (withReload) ",${summary("reload")}}" else "}")
 }
@@ -332,7 +339,7 @@ private fun command(c: String): String {
     "init" -> {
       val a = parseArgs(arg)
       current?.close()
-      current = ProfileRun(encodingOf(a["mode"] ?: "kotlinx"), a["timeCalls"] == "1", (a["items"] ?: "20").toInt())
+      current = ProfileRun(encodingOf(a["mode"] ?: "kotlinx"), a["timeCalls"] == "1", (a["items"] ?: "20").toInt(), a["retain"] == "1")
       "{}"
     }
     "first" -> current!!.first().toJson()
@@ -346,7 +353,7 @@ private fun command(c: String): String {
     }
     "run" -> {
       val a = parseArgs(arg)
-      runMode(a["mode"] ?: "kotlinx", (a["items"] ?: "20").toInt(), (a["warmup"] ?: "3").toInt(), (a["iterations"] ?: "30").toInt(), a["timeCalls"] == "1")
+      runMode(a["mode"] ?: "kotlinx", (a["items"] ?: "20").toInt(), (a["warmup"] ?: "3").toInt(), (a["iterations"] ?: "30").toInt(), a["timeCalls"] == "1", retain = a["retain"] == "1")
     }
     else -> error("unknown command $c")
   }
@@ -364,6 +371,6 @@ fun main() {
   val warmup = (a["warmup"] ?: "3").toInt()
   val iterations = (a["iterations"] ?: "30").toInt()
   for (mode in modes) {
-    println("GUEST_PROFILE " + runMode(mode, items, warmup, iterations, a["timeCalls"] == "1", a["reload"] == "1"))
+    println("GUEST_PROFILE " + runMode(mode, items, warmup, iterations, a["timeCalls"] == "1", a["reload"] == "1", a["retain"] == "1"))
   }
 }
