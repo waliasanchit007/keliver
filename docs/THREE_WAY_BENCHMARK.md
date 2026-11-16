@@ -1049,6 +1049,149 @@ Items 1–3 are estimated at roughly 0.8–1.3 s of the 1.2 s that needs to go i
 (about 0.5 s of it, not measured), and about 0.3–0.8 s without it. Item 1's placeholder rows and
 item 3 both use the same network wait, so their savings do not add. Only a measured NF4 run can say whether the 0.4 s target is reached without the engine.
 
+### NF1 gate, part 1 (back and scrolling, A12)
+
+2026-11-17 from 01:53 IST, the same A12. A **partial** gate run: NF1's two merged parts are
+measured, the retained back stack (#259, the guest's `x=retain`) and the windowed lazy list with
+drawn placeholders (#258, in every guest run, since it is in the generated list). The host's
+pressed state and screen transitions are not built yet, so the tap target is not measured here,
+and nothing was flung by hand.
+
+**Method.** A fresh prototype build from main at `eadb91fd8` (the prototype published to a scratch
+Maven repository, then the sample's `host-android` benchmark APK), installed over the old copy and
+compiled with `speed-profile`, as before. Every series ran from one script on the phone (`nohup sh`,
+the commands of [How to run it](#how-to-run-it), each series a fresh process with `am start -S`,
+the fixture inside the app, `input`/`am` output to `/dev/null`); the Mac only pulled the files.
+Navigation: 14 opens and backs, the first 2 dropped. Scrolling: the five speeds of runs 2–3, the
+same swipes and gaps. Memory: 10 open/back cycles in a fresh process (no warm-up), then
+`dumpsys meminfo` with the list shown.
+
+**Phone state.** On battery throughout (79% → 72%), thermal status 0 in every series, 60 Hz,
+density 1.875, sdk 31, no power saving. Battery 24.2 °C at the start, 27.3 °C after the memory
+series, 27.4–28.5 °C while scrolling (the script's `dumpsys battery` line around every series).
+The phone was busier than in earlier sessions: 290–430 MB free, 1.6–1.7 GB of swap used. The
+native form was slower than in every earlier session, in navigation and in scrolling (below), so
+every comparison here is within this session.
+
+**Navigation, same day** (ms from the tap, median / p90 / min–max; open is warm; the process's
+first open apart):
+
+| Form | Open (warm) | Back | Open (cold, i=1) |
+|---|---|---|---|
+| native | **43** / 51 / 36–60 | **32** / 36 / 30–43 | 70 |
+| web | **48** / 49 / 30–50 | **48** / 50 / 46–62 | 83 |
+| guest, as shipped | **472** / 521 / 455–577 | **1,116** / 1,518 / 1,068–1,613 | 520 |
+| guest, `x=retain` | **323.5** / 338 / 302–347 | **104.5** / 110 / 95–114 | 353 |
+| heavy detail: native | 61 / 77 / 42–100 | **34** / 47 / 28–52 | 141 |
+| heavy detail: guest, as shipped | 1,099 / 1,122 / 1,065–1,173 | **1,123** / 1,142 / 1,085–1,171 | 1,349 |
+| heavy detail: guest, `x=retain` | 971.5 / 1,022 / 931–1,067 | **126.5** / 132 / 120–136 | 1,126 |
+
+- **Retention takes back from 1,116 to 104.5 ms** (−91%), and the heavy screen's back from 1,123
+  to 126.5. It is not yet under 50 ms. Native's back today is 32 ms and the web's 48.
+- **Opening also gets faster with retention** (472 → 323.5 ms; heavy 1,099 → 971.5): the list is
+  no longer disposed when the detail opens.
+- **Native was slower than in every earlier session** (open 43 against 16–16.5, back 32 against
+  13), while the web (48 / 48 against 44 / 48–49) and the guest as shipped (1,116 against
+  1,054.5–1,082) were within 3–6% of runs 1–3. The cause is not established: the phone's memory
+  pressure and the stack change since run 3 (none in the prototype's native screens) are candidates.
+
+**Where retained back's 104.5 ms goes** (`x=retain,split`, medians, ms from the tap; the as-shipped
+`x=split` for comparison):
+
+| Mark | `retain,split` back | `split` back (as shipped) |
+|---|---|---|
+| guest's `onClick` | 11 | 10 |
+| guest's frame starts | 32.5 | 38 |
+| composed (applied) | 63 | 995.5 |
+| batch sent | 74.5 | 1,081 |
+| in the host's tree | 101 | 1,099.5 |
+| drawn | **105** | **1,135** |
+| changes in the batch | 1 structural, 1 modifier, 0 properties, 0 created | 423 structural, 145 modifiers, 1,111 properties, 145 created |
+
+- The batch is now one modifier change (the list's entry shown) and one removal (the detail).
+- What is left: about 11 ms to reach the guest's `onClick`, about 21 ms waiting for the guest's next
+  frame, **about 30 ms of composition in QuickJS** (disposing the detail screen's dozen texts and
+  showing the list's entry), about 12 ms to encode and send, about 26 ms until the host's tree has
+  it, and 4 ms to draw. The 50 ms target needs most of that gone: a host-side back that shows the
+  retained entry itself (NF1's host transitions) and lets the guest's frame follow.
+
+**Memory after 10 open/back cycles** (the list shown; two fresh processes each for the guest, one
+for native; KiB from `dumpsys meminfo`; QuickJS from `x=mem`):
+
+| Form | Total PSS | Java heap | Native heap | Graphics | QuickJS used / objects (end) |
+|---|---|---|---|---|---|
+| native | 55,227 | 8,816 | 8,504 | 13,898 | — |
+| guest, as shipped | 68,762 / 68,872 | 6,836 / 6,820 | 19,988 / 20,084 | 13,560 / 13,578 | 10.12 MB / 39,612 (both runs) |
+| guest, `x=retain` | 68,386 / 68,231 | 9,036 / 9,064 | 18,116 / 17,928 | 13,545 / 13,543 | 8.53 MB / 30,580 (both runs) |
+
+- **With the list shown, retention costs nothing measurable** in total PSS (68.3 against 68.8 MB):
+  the Java heap is 2.2 MB higher and the native heap (QuickJS lives there) 1.9–2.2 MB lower. With
+  retention, back makes less garbage (no list rebuilt), so QuickJS ends 1.6 MB smaller.
+- **While the detail is open (the list retained under it)**, QuickJS holds 8.37 MB / 29,777
+  objects against 8.11 MB / 27,141 as shipped (medians after each open): **the retained list
+  costs about 0.26 MB and 2,600 objects in QuickJS**. The host's side of a retained screen while
+  hidden (its views) was not measured: `dumpsys meminfo` was read only at the end, on the list.
+- **Depth.** The prototype has two screens, so the retained stack never holds more than the one
+  list under the detail: depth 1 and depth 2 behave the same here, and these numbers are the cost
+  of one retained screen. Depth 2's cost on a deeper app is about twice that per hidden screen (by
+  inference, not measured).
+
+**Scrolling: not measured, because the scripted flings did not fling.** The guest's
+placeholder pass (`x=scroll,blank`, five speeds, 02:04–02:24, 78% → 75%, 27.4–28.5 °C) and a
+clean guest pass at 2,133 dp/s ran in full. Then the native reference at 2,133 and 6,667 dp/s ran
+(02:25–02:33, 75% → 73%, 28.1–28.5 °C). The guest's `x=scroll` pass was stopped and not run: its
+counters were already in the placeholder pass. In every series, **in native as in the guest, most
+swipes started no fling**:
+
+| Series | Swipes | Flings that started (nested-scroll velocity > 0) | Of them, not at an end of the list | Moving frames p50 / p90 (ms) | Swipe's release speed as delivered |
+|---|---|---|---|---|---|
+| guest, 5 speeds, `scroll,blank` | 94 | 10 | 3 | 33–129 / 56–221 | often 0 or below the speed asked |
+| guest, 2,133 dp/s, clean | 20 | 1 | 0 | 62 / 117 (down) | 2,133 down, 0 up (median) |
+| native, 2,133 dp/s | 20 | 5 | 2 | 59 / 100 (down) | 1,067 (median) |
+| native, 6,667 dp/s | 14 | 6 | 0 | 82 / 184 (down) | 6,667 |
+
+- A swipe that started no fling moved the list by the finger's own 500–770 px and stopped at the UP
+  (`stopAfterUpMs` −8 to −19 ms). Runs 2–3 flung every swipe but the process's first fast one, and
+  the list stopped 743–2,248 ms after the UP. Without a fling there is nothing to predict and no
+  window to jump to. A drag only reaches the next few rows, so the placeholder pass found **no
+  placeholders in any drag**, and that result does not test #258.
+- **The cause is the phone's state today, not the guest:** native's own list lost its flings the
+  same way, with drag frames of 59–82 ms median, against about 20 ms in run 3. Compose's velocity
+  tracker gave 0 at the UP, the symptom run 2 saw on a process's first fast swipe only. During the
+  series the app ran in the `top-app` cpuset, with thermal status 0, the big cores at their top
+  clock (2.3 GHz) and 2.7 GB available, but 1.6–1.7 GB in swap. The keyguard was showing under the
+  app (`overLockScreen`, as in every run). The slow navigation of native, above, is likely the same
+  slowdown. Why the frames were slow is not established.
+- **The three guest flings that did fling** (one sample each, so indicative only):
+  - 2,844 dp/s, the first fling up: 13 placeholder rows on screen at most. **Content was there
+    1,245 ms after the UP, 2 ms after the list stopped.** In run 3 the median was 1,602 ms, and
+    986–3,164 ms, after the list had stopped. The guest's last call came 3,673 ms after the UP.
+  - 1,422 dp/s, two flings up: no placeholders. The list stopped at 730–738 ms (run 3: 743). The
+    guest's last call came at 1,432 and 2,203 ms (run 2: 2,167 median), and each fling missed 12–14
+    vsyncs (run 2: 0–2).
+- **Guest work after the finger lifts, drags only** (median per group, with 3–5 change batches per
+  drag in every group): 1,100–2,610 ms for a drag of about 9 rows. The drags are not the flings of
+  runs 2–3, so this is not compared with them.
+
+**Gate verdict (part 1):**
+
+| Target | Verdict | Evidence |
+|---|---|---|
+| Back under 50 ms | **Not met** (measured) | Retained back 104.5 ms median (p90 110), heavy 126.5. As shipped: 1,116. The guest's own composition after the tap is about 30 ms of it. The rest is frame wait, encoding and the host's apply |
+| No blank rows at an ordinary fling | **Not measured** | Today's scripted swipes did not fling, in native either. One fling at 2,844 dp/s showed 13 placeholders, with content at the list's stop |
+| Frames over 25 ms under 2% (by hand) | **Not measured** | Nothing was flung by hand. Today's scripted frames were slow in native too (above) |
+| Tap response within one frame | **Not measured** | The host's pressed state is not built yet |
+
+**What remains for NF1's gate:**
+- The host's pressed state and transitions (not built). With them:
+  - the tap target;
+  - a back that the host shows from the retained entry, which is the route to under 50 ms.
+- **The scrolling series again**, on a phone whose native list flings as it did in runs 2–3. Before
+  the series, check one native fling (velocity > 0, the list stopping about 1 s after the UP). If
+  it does not fling, reboot the phone or unlock it before the run.
+- The owner's hand check (frames over 25 ms).
+- The host's memory while a retained screen is hidden. A deeper app for depth 2.
+
 ### Scrolling, run 2
 
 **How.** As in [How to run it](#how-to-run-it): `adb shell input swipe` through the input system,
