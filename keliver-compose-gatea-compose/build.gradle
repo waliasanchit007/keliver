@@ -28,6 +28,8 @@ kotlin {
     commonTest {
       dependencies {
         implementation libs.kotlin.test
+        // ViewportSizedCompositionTest: rememberLazyWindow in a real composition.
+        implementation libs.kotlinx.coroutines.test
       }
     }
   }

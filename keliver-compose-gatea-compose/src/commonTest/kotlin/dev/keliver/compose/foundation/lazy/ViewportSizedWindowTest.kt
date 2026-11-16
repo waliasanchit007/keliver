@@ -112,6 +112,19 @@ class ViewportSizedWindowTest {
   }
 
   @Test
+  fun theLargestReportSinceCreationIsStored() {
+    val viewports = MeasuredViewports()
+    val window = LazyWindow(LazyListState(), site = 11, viewports = viewports).show(100)
+    window.onViewport(0, 11, 0) // short rows at the top: 12 shown
+    window.onViewport(40, 43, 0) // the user left it among tall rows: 4 shown
+    assertEquals(12, viewports.rows(11))
+
+    // A new list at the same place starts from what the earlier list reported, not above it.
+    LazyWindow(LazyListState(), site = 11, viewports = viewports).show(100).onViewport(0, 7, 0)
+    assertEquals(8, viewports.rows(11))
+  }
+
+  @Test
   fun switchedOffTheFixedPreloadApplies() {
     val viewports = MeasuredViewports().apply { measured(6, rows = 10, full = true) }
     LazyWindowSizing.viewportSized = false

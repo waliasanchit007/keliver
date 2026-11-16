@@ -554,6 +554,11 @@ step, after the frame it follows.
 - **The viewport-sized first window cuts "back" by 25%** (83.0 → 62.7 ms; 145 → 109 widgets
   created: 11 rows instead of 15). It moves work rather than removing it: the rows it leaves out
   are composed after the host's first report (32.5 → 50.5 ms), when the list is already on screen.
+  Back plus that report is about level: 115.5 → 113.2 ms. What improves is the step that blocks
+  the frame showing the list. The harness's rows all have one height and it reports exactly 10, so
+  −25% is the best case. Under `KeliverNavHost` the hint is per back-stack entry (the entry id is
+  part of the list's place in the composition), so going back to an entry benefits and a new push
+  of the same screen does not (from the code; not run).
   With the report, "open" is 28–29 ms in both, because the list it disposes has grown to 24 rows
   either way (the report's own preload, unchanged).
 - **A press moves the detail's whole composition before the click.** With the list retained under
@@ -561,11 +566,29 @@ step, after the frame it follows.
   work runs between touch-down and the click. The click then sends 154 bytes (two frame modifiers)
   instead of 17.6 KB and creates nothing. What is left is recomposition that sends nothing (the
   app's navigation counter changes at the click, so its content lambda and effects run again).
-- Without retention (depth 0) the click still disposes the list: 22.0 ms remain of 31.0 (−29%).
+- Without retention (depth 0) the click still disposes the list: 22.0 ms remain of 31.0 (−29%
+  against the prepared stack without a press; −22% against the shipped 28.06). The press adds
+  15.0 ms, so the open's total guest work rises 32% (37.0 against 28.06).
+- **Without a press the prepared stack costs 10% more than shipped** (open 30.98 against 28.06):
+  its frame's wrappers run even at depth 0. A host that never sends press composes what it does
+  today, a little slower.
 - A cancelled press costs its composition (14 ms) and 2 ms to drop it.
-- Read on the phone's scale (12–15× for "open", which has not tracked the phone before): the
-  click's guest work with retention and a press would be roughly 90–105 ms on the A12, against
-  about 200–230 without the press. Not measured on a device: the host has no touch-down event yet.
+- **The click's step alone overstates the gain on the phone.** On the A12 the press's composition
+  outlasts the finger, which stays down about 100 ms, and the click is queued behind it. An
+  estimate, scaling the Mac by 12–15× ("open" has not tracked the phone before; the host's own
+  work, including building the hidden native tree, is not counted). From touch-down to the click's
+  guest work done:
+
+  | | Press | Click | Done after touch-down | Without NF3 |
+  |---|---|---|---|---|
+  | Depth 1 (list retained) | 14.73 → 175–220 | 6.88 → 85–105 | ≈ 260–325 | 15.93 → 190–240, done ≈ 290–340 |
+  | Depth 0 | 15.03 → 180–225 | 21.97 → 265–330 | ≈ 445–555 | shipped 28.06 → 335–420, done ≈ 435–520 |
+
+  Depth 1 gains about 15–30 ms (more at 12×, less at 15×), not the click step's 100+. Depth 0 is
+  slower than shipping without NF3, by about 5–35 ms. Pre-composition pays on the A12 only with a
+  faster engine (NF2), so the press finishes while the finger is still down, or with less work left
+  at the click: at depth 1 that is the app's navigation counter, which re-runs the content lambda
+  and effects at the click. Not measured on a device: the host has no touch-down event yet.
 
 ## How to rerun it
 

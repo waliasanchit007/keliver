@@ -19,8 +19,11 @@ package dev.keliver.compose.foundation.lazy
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.currentCompositeKeyHash
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import dev.keliver.compose.gatea.compose.ExtraLazyItem
 import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.lazylayout.compose.LazyListState as WindowState
@@ -165,6 +168,7 @@ public class LazyWindow internal constructor(
   private var count = 0
   private var range: IntRange = IntRange.EMPTY
   private var lastCommand = 0
+  private var largestFullReport = 0
 
   /**
    * The window's items, as the list's children: one `ExtraLazyItem` per item in the window, in
@@ -198,9 +202,16 @@ public class LazyWindow internal constructor(
   public fun onViewport(firstIndex: Int, lastIndex: Int, firstOffset: Int) {
     state.onHostViewport(firstIndex, lastIndex, firstOffset)
     if (count > 0 && lastIndex >= firstIndex) {
-      // The viewport is full when items follow its last visible one: then it holds exactly this
-      // many rows. A list shorter than its viewport only shows that it holds at least as many.
-      viewports.measured(site, rows = lastIndex - firstIndex + 1, full = lastIndex < count - 1)
+      // The viewport is full when items follow its last visible one: then it holds this many rows
+      // here. A list shorter than its viewport only shows that it holds at least as many.
+      val rows = lastIndex - firstIndex + 1
+      val full = lastIndex < count - 1
+      // The largest full report since this list was created, not the last one: rows differ in
+      // height, and the list starts again where it started (usually the top), not where the user
+      // left it (a stretch of tall rows would store 4 where the top shows 12). A larger hint costs
+      // extra rows; a smaller one costs placeholders on screen until the host's first report.
+      if (full) largestFullReport = maxOf(largestFullReport, rows)
+      viewports.measured(site, rows = if (full) largestFullReport else rows, full = full)
     }
     strategy.hostReported = true
     window.onUserScroll(firstIndex, lastIndex)
@@ -221,7 +232,11 @@ public object LazyWindowSizing {
   }
 }
 
-/** Items composed past the measured viewport on a list's first composition: a partly shown row. */
+/**
+ * Items composed past the measured viewport on a list's first composition: a partly shown row. One
+ * row, not a share of the viewport, because the hint is already the largest viewport the list
+ * showed (see [LazyWindow.onViewport]), and every row of margin is composed on every return.
+ */
 internal const val VIEWPORT_MARGIN_ROWS = 1
 
 /**
@@ -235,12 +250,18 @@ internal class ViewportSizedStrategy(
   private val delegate: LoadingStrategy,
   private val measuredRows: Int?,
 ) : LoadingStrategy by delegate {
-  var hostReported = false
+  /**
+   * Snapshot state, read by [loadRange]: the host's first report must recompose the list even when
+   * it leaves the delegate's own state as it was (a first report of exactly the delegate's first
+   * window), or the rows past the hint would stay placeholders until the next scroll.
+   */
+  var hostReported by mutableStateOf(false)
 
   override fun loadRange(itemCount: Int): IntRange {
     // The delegate always runs, so its scroll history is the same as without the cap.
     val range = delegate.loadRange(itemCount)
-    if (hostReported || measuredRows == null || range.isEmpty()) return range
+    // Read only while the cap applies: a list without a hint does not recompose for the report.
+    if (measuredRows == null || range.isEmpty() || hostReported) return range
     val last = minOf(range.last, range.first + measuredRows + VIEWPORT_MARGIN_ROWS - 1)
     return range.first..last
   }
@@ -249,10 +270,19 @@ internal class ViewportSizedStrategy(
 /**
  * Rows per viewport as the host measured them (its viewport's height over its rows' heights, seen
  * in the indices it reports), by a list's place in the composition. A list that leaves the
- * composition and comes back at the same place (back to a screen that was not retained, a tab shown
- * again) starts with a window the size of what the host showed last time. A hint only: a wrong one
- * (the place now holds another list, the screen rotated) costs placeholders or extra rows until the
- * host's first report, which corrects the window.
+ * composition and comes back at the same place (back to a screen that was not retained) starts with
+ * a window the size of what the host showed last time. A hint only: a wrong one (the place now holds
+ * another list, the screen rotated) costs placeholders or extra rows until the host's first report,
+ * which corrects the window.
+ *
+ * The place includes every `key(...)` above the list. `KeliverNavHost` composes each back-stack entry
+ * under its entry id (`SaveableStateProvider(entry.id)`), so the hint is per entry: going back to an
+ * entry that was disposed finds its own measurement, but a new push of the same screen is a new
+ * entry, a new place, and starts with the fixed preload. (Expected from the code; not run under
+ * `KeliverNavHost`.) The guest profile's back step is the case that benefits.
+ *
+ * In-process JVM guests (tests, the editor's JVM renderers) share [Shared] across every list in the
+ * process; tests clear it with [LazyWindowSizing.forgetMeasuredViewports].
  */
 internal class MeasuredViewports(private val capacity: Int = 64) {
   private val rows = LinkedHashMap<Int, Int>()
@@ -269,7 +299,10 @@ internal class MeasuredViewports(private val capacity: Int = 64) {
   }
 
   companion object {
-    /** One per guest: a Zipline instance is one JS realm on one thread. */
+    /**
+     * One per guest under Zipline (one JS realm on one thread). Not synchronized: on the JVM it is
+     * one per process, for single-threaded composition only.
+     */
     val Shared = MeasuredViewports()
   }
 }

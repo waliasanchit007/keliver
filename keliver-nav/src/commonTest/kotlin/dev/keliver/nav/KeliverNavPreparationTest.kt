@@ -265,6 +265,73 @@ class KeliverNavPreparationTest {
   }
 
   @Test
+  fun aTapThatOpensAnotherScreenDropsThePreparation() = stack { harness, app, counts ->
+    // A conditional click (`if (loggedIn) detail else login`): the press prepared detail, the tap
+    // pushed login.
+    app.preparation.prepare("detail")
+    harness.settle()
+    assertEquals(setOf("home"), counts.running)
+
+    counts.reset()
+    app.keys = listOf("home", "login")
+    harness.settle()
+    assertEquals("root[stack[entry[login]]]", harness.root.dump())
+    assertEquals(listOf("detail", "home").sorted(), counts.disposed.sorted())
+    assertNull(app.preparation.prepared)
+    assertEquals(setOf("login"), counts.running)
+  }
+
+  @Test
+  fun aPopDuringThePressDropsThePreparation() = stack { harness, app, counts ->
+    app.keys = listOf("home", "list")
+    harness.settle()
+    app.preparation.prepare("detail")
+    harness.settle()
+    assertEquals("root[stack[entry[list],entry(hidden)[detail]]]", harness.root.dump())
+
+    // The host's back arrives while the finger is still down.
+    counts.reset()
+    app.keys = listOf("home")
+    harness.settle()
+    assertEquals("root[stack[entry[home]]]", harness.root.dump())
+    assertEquals(listOf("detail", "list").sorted(), counts.disposed.sorted())
+    assertNull(app.preparation.prepared)
+  }
+
+  @Test
+  fun aPressAndAClickInTheSameFrameComposeTheScreenOnce() = stack { harness, app, counts ->
+    counts.reset()
+    app.preparation.prepare("detail")
+    app.keys = listOf("home", "detail")
+    harness.settle()
+    assertEquals("root[stack[entry[detail]]]", harness.root.dump())
+    assertEquals(mapOf("detail" to 1), counts.compositions)
+    assertNull(app.preparation.prepared)
+  }
+
+  @Test
+  fun aPressAndAClickElsewhereInTheSameFrameNeverShowThePreparedScreen() = stack { harness, app, counts ->
+    counts.reset()
+    app.preparation.prepare("detail")
+    app.keys = listOf("home", "login")
+    harness.settle()
+    assertEquals("root[stack[entry[login]]]", harness.root.dump())
+    assertEquals(null, counts.compositions["detail"])
+    assertNull(app.preparation.prepared)
+  }
+
+  @Test
+  fun aStackThatDoesNotChangeKeepsThePreparation() = stack { harness, app, _ ->
+    app.preparation.prepare("detail")
+    harness.settle()
+    // An unrelated recomposition with an equal stack: still prepared.
+    app.keys = listOf("home")
+    harness.settle()
+    assertEquals("root[stack[entry[home],entry(hidden)[detail]]]", harness.root.dump())
+    assertEquals("detail", app.preparation.prepared)
+  }
+
+  @Test
   fun keysAreChecked() = runTest {
     val counts = Counts()
     val harness = Harness(this, counts)

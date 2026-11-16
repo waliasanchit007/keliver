@@ -84,16 +84,28 @@ public class KeliverNavPreparation<K : Any> {
  * A back stack ([keys] bottom to top, unique; the last one shown) that also composes
  * [preparation]'s key, hidden by [frame], while it is not in [keys]. When it is pushed (it becomes
  * `keys.last()`), its composition is the one already made: the tap shows it without composing it.
- * A cancelled preparation is disposed (its work is lost; its effects are cancelled).
+ * A cancelled preparation is disposed (its work is lost; its effects are cancelled). So is one the
+ * stack moved past: when [keys] change without containing the prepared key (the tap opened another
+ * screen, or a back press popped the stack during the press), the preparation is dropped as a
+ * cancel would drop it.
  *
  * [depth] keeps that many entries below the top composed and hidden, as [KeliverNavRetention] does
  * (0: only the top, as a plain conditional).
  *
  * A prepared entry is [KeliverNavEntryLifecycle.Hidden] until it is shown and its `BackHandler`s are
  * off, so a screen that loads data with `LaunchedEffect` starts loading on touch-down (wanted: the
- * request starts 100 ms earlier) and one that uses [LaunchedWhileVisible] waits for the tap. A
- * cancelled press therefore can cost a request; screens whose loads must not run on a press that is
- * cancelled use [LaunchedWhileVisible].
+ * request starts 100 ms earlier) and one that uses [LaunchedWhileVisible] waits for the tap.
+ *
+ * Side effects run on press. Every `LaunchedEffect` and `DisposableEffect` of a prepared screen runs
+ * on touch-down, and again on every press that is then cancelled (the finger moved away, a scroll
+ * started on the row): a screen that records analytics ("screen viewed"), marks something as read,
+ * or creates something (an order, a session) in such an effect does so for screens the user never
+ * opened. Put those effects in [LaunchedWhileVisible], which waits for the tap. A prepared screen
+ * cannot otherwise tell "about to be shown" from "shown before and now below the top": both are
+ * [KeliverNavEntryLifecycle.Hidden].
+ *
+ * Without a press this stack composes what a plain stack would, but its frame's wrappers still run:
+ * the guest profile measured open at 30.98 ms against 28.06 ms for the shipped stack (+10%, Mac).
  *
  * Caveat: what [content] reads must not change at the tap, or the prepared entry recomposes then
  * (for example a counter of opens that the click increments and the screen shows).
@@ -111,8 +123,20 @@ public fun <K : Any> KeliverPreparedStack(
   require(keys.isNotEmpty()) { "keys must not be empty" }
   require(keys.size == 1 || keys.toSet().size == keys.size) { "keys must be unique: $keys" }
   require(depth >= 0) { "depth must not be negative: $depth" }
-  val prepared = preparation.prepared
   val top = keys.last()
+  // The stack changed since the last composition without the prepared key (the tap opened something
+  // else; a back press or a pop arrived during the press): the preparation is stale. Drop it now, or
+  // it would stay composed, hidden, with its effects running, until the next press. Compared with
+  // the last composition, not with the stack when the press started, so a press and a click that
+  // arrive in the same frame are handled too.
+  val lastKeys = remember { LastKeys<K>() }
+  val stackChanged = lastKeys.keys.let { it != null && it != keys }
+  SideEffect { lastKeys.keys = keys }
+  val requested = preparation.prepared
+  val prepared = requested?.takeUnless { stackChanged && it !in keys }
+  if (requested != null && prepared == null) {
+    SideEffect { preparation.cancel(requested) }
+  }
   if (prepared != null && prepared in keys) {
     SideEffect { preparation.adopted(prepared) }
   }
@@ -149,6 +173,11 @@ public fun <K : Any> KeliverPreparedStack(
       }
     }
   }
+}
+
+/** The keys of the last composition that was applied. */
+private class LastKeys<K> {
+  var keys: List<K>? = null
 }
 
 /** A skippable boundary: showing a prepared entry re-runs the frame, never the entry's content. */
