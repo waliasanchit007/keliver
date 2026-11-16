@@ -41,9 +41,9 @@ those two numbers. This document does.
     "back" in 78–79 ms, like `-Os`. A Cortex-A53 may respond differently; not measured.
   - **The newest QuickJS (2026-06-04) is 1.14–1.20× faster** on the same bundle.
   - **With Kotlin's `Long` as a real BigInt on that engine, "back" is about 2.1× faster and "open"
-    about 2.5× faster** (77 → 37 ms and 23 → 9 ms), with identical batches. BigInt shrinks both
-    halves: Compose itself (recording off) drops from 41 to 27 ms, and recording from about 36 to
-    10 ms. This needs a fix to that QuickJS release: its `BigInt.asUintN(64, negative)` returns the
+    about 2.5× faster** (77 → 37 ms and 23 → 9 ms, against Zipline's engine), with identical
+    batches. BigInt shrinks both halves: Compose itself (recording off) drops from 41 to 27 ms, and
+    recording from about 36 to 10 ms. This needs a fix to that QuickJS release: its `BigInt.asUintN(64, negative)` returns the
     negative value, and without the fix the first composition never returns.
   - Zipline cannot load bytecode from another engine version (version 1 as Zipline builds it, 5 in
     2026), so adopting it means a Zipline fork and serving bundles by engine version.
@@ -329,8 +329,8 @@ and [#3599](https://github.com/bytecodealliance/wasm-micro-runtime/issues/3599).
 
 Measured 2026-11-16 on the same Mac (Apple M4 Pro, Apple clang 21). Same workload as the rest of
 this document: the as-shipped bundle (16-row window), 3 warm-up iterations, then 30 of open and
-back. Each figure is the mean of three rounds' medians; the build order was reversed in round 2, so
-drift cannot favour one engine. A phone benchmark session ran on the same machine (load average
+back. Each figure is the mean of three rounds' medians; the build order was reversed in round 2,
+which limits drift between engines. A phone benchmark session ran on the same machine (load average
 2.1–3.1); round-to-round differences were 0–3 ms.
 
 **How.** Bellard's QuickJS 2021-03-27 (the version Zipline vendors) and 2026-06-04 (the newest
@@ -349,7 +349,7 @@ Differences from Zipline:
 
 To check the route: Zipline's own engine, through the JVM harness in two separate runs (not
 overlapping the `qjs` runs), gave "back" 76.8 and 76.9 ms and "open" 23.4 and 23.2 ms; the 2021
-`-Os` build under `qjs` gave 78.7 and 23.7 ms, 2–3% slower. In every run the first, last open and
+`-Os` build under `qjs` gave 78.7 and 23.7 ms, 2% slower. In every run the first, last open and
 last back batch had the same hash and byte count as the JVM harness's runs of the same recording
 mode (which checks all 67 steps against each other).
 
@@ -369,7 +369,7 @@ engine: back 76.9, open 23.3, recording off 41.1):
 
 - Flags change nothing for the 2021 engine on this CPU.
 - The 2026 engine is 1.14–1.20× faster as shipped and 1.14–1.19× with recording off. The
-  differences between its flag levels are within about 2 ms.
+  differences between its flag levels are within about 3 ms.
 
 **`Long` as a real BigInt.** The 2026 engine has BigInt, so the bundle can be compiled with
 Kotlin's `-Xes-long-as-bigint` (`-PprofileBigInt`). On the unmodified 2026-06-04 release the first
@@ -426,15 +426,16 @@ texts and the file history were fetched 2026-11-16):
   PR #196), which the 2026-06-04 release already contains. `quickjs.c` was last changed in 2023-11.
 - Zipline's own additions (a no-eval context, `globalThis.gc`, FinalizationRegistry) live in its
   native layer (`zipline/native`, `zipline/native/common`) and use only the public `quickjs.h`. It
-  uses 83 QuickJS names (`engine/api-compare.py`). In the 2026 header 71 are declared identically.
-  The 12 that changed are all compatible with code that uses the names and ignores the results, as
-  Zipline's does:
+  uses 86 QuickJS names: `engine/api-compare.py` reads 83 of them, and the three `JS_Throw*Error`
+  declarations it cannot parse were compared by hand (identical in both). In the 2026 header 74 are
+  declared identically. The 12 that changed are all compatible with code that uses the names and
+  ignores the results, as Zipline's does:
   - nine `JS_AddIntrinsic*` functions and `JS_SetPropertyFunctionList` now return `int` instead of
     `void` (a fork should check the results);
   - `JS_NewString` is now `static inline`;
   - the value of `JS_TAG_FLOAT64` changed (7 → 8; Zipline uses the name, never the number).
 
-  The three `JS_Throw*Error` functions it uses exist in both. Nothing was compiled.
+  Nothing was compiled.
 - **The bytecode format changed**: version 1 as Zipline builds the 2021 engine (without
   `CONFIG_BIGNUM`), 5 in 2026-06-04. Zipline compiles bundles to bytecode at build time, and a host
   on the old engine cannot load new bytecode. A Zipline collaborator wrote on 2025-10-29: "We plan
@@ -445,7 +446,8 @@ texts and the file history were fetched 2026-11-16):
 - So: a fork of Zipline's native module and bytecode compiler (or an upstream contribution), a
   general `asUintN` fix (to be reported upstream), `-fwrapv` kept, Zipline's compiler accepting
   BigInt, bundles compiled for both engines during a transition, and the index naming which engine
-  a host has. Estimate 4–8 engineer-weeks, as in the table.
+  a host has. Not checked: Zipline's conversion of JS values to host objects has no BigInt case, so
+  any `Long` that crosses the bridge as a BigInt needs a look. Estimate 4–8 engineer-weeks, as in the table.
 
 ## How to rerun it
 
