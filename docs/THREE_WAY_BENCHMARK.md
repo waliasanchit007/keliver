@@ -719,13 +719,25 @@ prelude, and only small CSV results come back.
 The prelude finds the app's process by its main thread, because a process forked after the trace
 started keeps the name `zygote64` in the process table. It also finds the flings: the main thread's
 `deliverInputEvent` slices, with a new fling after a gap of more than 1 s. **Moving frames** are
-the main thread's `Choreographer#doFrame` slices from the DOWN until the list stops: 743 ms
-(gentle) or 2,240 ms (fast) after the last input event, the stop times from run 2. Every trace
-yielded 10 flings of 20–21 (gentle) or 6–8 (fast) input events.
+the main thread's `Choreographer#doFrame` slices from the DOWN to a **fixed** stop: 743 ms
+(gentle) or 2,240 ms (fast) after the last input event, run 2's median stop times, the same for
+every fling. The traces do not mark where each fling really stopped. Every trace yielded 10 flings
+of 20–21 (gentle) or 6–8 (fast) input events. **The guest's fast fling 10 reached the end of the
+list** (its 48 dp placeholders let a fling pass about 1.5 times native's rows; the first run saw
+that fling stop 284 ms after the UP): it produced 22 viewport reports and 3 batches against 97–103
+and 5, and the Zipline thread's last running moment was 3.9 s after its UP against 6.7–8.3 s. So
+the guest's fast "moving" window includes most of 2 s of a list at rest. Native's fast flings, at
+72 dp rows, did not reach the end.
+
+**The traces were deleted after these queries.** Only the CSV results are kept, so no number here
+can be re-queried or split per fling.
 
 The `x=trace` build (prototype only, off unless the run asks for it) adds trace sections:
 - for every call into or out of the guest on the Zipline thread (`zl:sendFrame`, `zl:sendEvent`,
-  `zl:sendChanges n=<changes>`, through the app's Treehouse `EventListener.callStart`/`callEnd`);
+  `zl:sendChanges n=<changes>`, through the app's Treehouse `EventListener.callStart`/`callEnd`).
+  These are synchronous sections, so suspending calls are skipped (they can overlap or end on
+  another thread). `sendFrame`, `sendEvent` and `sendChanges` are not suspending, so the numbers
+  below are unaffected; the skip was added after the traces were recorded;
 - for every main-thread message (`msg <callback>`, from `Looper.setMessageLogging`).
 
 The scripts and queries are kept in the session's scratch directory, not in the repository.
@@ -742,14 +754,14 @@ their own main-thread messages):
 | — animation (the fling, `Recomposer:animation`, the list's measure) | 2.20 | 2.07 | 4.46 | 3.61 |
 | — of which `Recomposer:recompose` (**guest only**) | < 0.05 | **0.46** | 0.06 | **0.61** |
 | — traversal (draw: `Record View#draw()`) | 1.48 | 1.26 | 1.93 | 1.12 |
-| Outside doFrame: prefetch (compose, measure, apply, urgent) | 1.30 | 1.20 | 2.56 | 0.90 |
+| Outside doFrame: prefetch (compose, measure, apply, urgent) | 1.33 | 1.22 | 2.56 | 0.90 |
 | Main thread running while moving | 38% | 34% | 57% | 36% |
 | RenderThread `DrawFrame`, mean / median | 6.44 / 6.67 | 4.73 / 4.58 | 6.84 / 6.06 | 4.09 / 3.51 |
 | Zipline thread running while moving | — | **95%** | — | **98%** |
 | Faster CPU cluster while moving: mean (time at its 2.3 GHz max) | 1.71 GHz (4%) | 2.26 (92%) | 1.92 (16%) | 2.29 (97%) |
 | Frame timeline: median actual duration; "Buffer Stuffing" | 20.0 ms; 52% | 20.0; 55% | 20.7; 95% | 19.9; 52% |
-| Presents more than 20 ms apart (missed vsyncs), 10 flings | 30 | 16 | 61 | **152** |
-| Main thread asleep > 20 ms while moving | 0 | not queried | 0 | **16 times, 1.50 s** |
+| Presents 20 ms – 1 s apart, 10 flings (fast guest: includes fling 10's list at rest) | 30 | 16 | 61 | **152** |
+| Main thread asleep > 20 ms in the window (fast guest: includes fling 10's list at rest) | not queried | not queried | 0 | **16 times, 1.50 s** |
 | After the list stops: main / Zipline running, 10 flings | 0.13 s / — | 0.76 / **20.8 s** | 0.19 / — | 1.57 / **36.4 s** |
 
 **Answers.**
@@ -768,48 +780,62 @@ their own main-thread messages):
    - **The Zipline thread runs through 95–98% of the moving time**, holding the faster CPU cluster
      at its maximum (92–97% of the time, against 4–16% in native).
 
-   What separates the guest's fast flings from native's is missed vsyncs: 152 presents more than
-   20 ms apart against 61, and 1,311 frames drawn against 1,401 in the same 23.4 s. These missed
-   vsyncs are not long frames. Main-thread frames over 16.7 ms number 32 against 25, and
-   RenderThread frames over 16.7 ms 28 against 54. Waiting for a CPU is not the cause either: in
-   the fast traces the main thread was runnable but not running for 0.2 s in both forms. Instead,
-   **the guest's main thread slept for more than 20 ms 16 times while the list was moving (1.5 s
-   in total; native never did)**. In those intervals no frame was produced. Why the list stops
-   asking for frames is not established per fling. One candidate is run 2's "first fast swipe
-   starts no fling": if the first fling never starts, its window is idle.
+   In the fast traces the guest has 152 presents 20 ms – 1 s apart against native's 61, and 1,311
+   frames drawn against 1,401 in the same 23.4 s of windows. **Much of that difference is probably
+   one fling's list at rest, not a moving list.** These are not long frames: main-thread frames over 16.7 ms number 32
+   against 25, and RenderThread frames over 16.7 ms 28 against 54. Waiting for a CPU is not the
+   cause either: the main thread was runnable but not running for 0.2 s in both forms. Instead,
+   **the guest's main thread slept for more than 20 ms 16 times inside the fixed 2,240 ms windows
+   (1.5 s in total; native never did)**, and no frame was produced in those intervals. 1.5 s is
+   about the 90 missing frames at 60 Hz. The guest's fast fling 10 reached the end of the list and
+   stopped early (see the method), so its window holds a list at rest, where frames come only when
+   a batch lands; that tail alone can account for the sleeps, the missing frames and many of the
+   wide present gaps. The traces cannot be split per fling (they were deleted), so this is likely,
+   not shown. Run 2's "first fast swipe starts no fling" is a second candidate for an idle window.
 2. **What the host does extra in frames with no guest work: the class hardly exists in scripted
    flings (measured).** The Zipline thread was idle from 20 ms before a moving frame to its end in
    only 24 of 631 (gentle) and 10 of 1,311 (fast) moving frames. All of them came at a fling's
    start, so the by-hand class (13.7 ms median) cannot be rebuilt from these traces. The host's
    only guest-specific per-frame work is the `Recomposer:recompose` above, 0.5–0.6 ms. Everything
-   else costs the same or less than native. **The by-hand 13.7 ms against 11.2 ms is therefore not
-   host work on the main thread or the RenderThread.** It is frame timing (below), or CPU
-   contention from the Zipline thread, which these scripted traces do not show as runnable time.
+   else costs the same or less than native. **In scripted flings the host does not do more per
+   moving frame**; this is cleanest at the gentle speed, where the guest's rows are real (at the
+   fast speed most are blank placeholders, so its lower host cost there is not like for like).
+   **The by-hand 13.7 ms class was not traced; its cause is open.**
 3. **The guest's work during and after a fling (measured with `x=trace`; on the charger at
    36 °C).**
    - **The guest's thread.** QuickJS runs on one thread, `Treehouse <app>`. Every `sendFrame` and
      `sendEvent`, and the guest's `sendChanges` back into the host, run there. The host paces the
      guest's frames (from the code): a Choreographer callback queues `sendFrame` onto that thread
-     (`AndroidChoreographerFrameClock`), so while one guest frame runs no other can start. Each
-     report of the last visible row (`LaunchedEffect(lastVisibleItemIndex)` →
-     `onViewportChanged`) becomes its own task there (`EventBridge.sendEvent`).
-   - **The viewport reports queue, and nothing coalesces them (confirmed).** A fast fling produced
-     97–103 `sendEvent` calls, and every one of them reached the guest. A fling that hit the end
-     of the list produced 22. The last of them was handled **4.9–8.2 s after the UP** (median
-     5.8 s), while the list stopped at 2.2 s. At the gentle speed each fling produced 21 reports,
-     and **19–20 of them were handled after the list had stopped** (at 0.9–1.3 s after the UP).
+     (`AndroidChoreographerFrameClock`), so while one guest frame runs no other can start. The
+     threeway guest uses the generated `dev.keliver.compose.foundation.lazy.LazyColumn`. Its host
+     half, `ReportLazyViewport` (`keliver-compose-gatea-composeui`, `LazyRuntime.kt`), runs
+     `LaunchedEffect(state, viewport)` on the (first, last) visible pair and calls
+     `contentViewport`, which reaches the guest's `onViewport` (`LazyDsl.kt`). Each such report
+     becomes its own task on the Zipline thread (`EventBridge.sendEvent`).
+   - **Every report is delivered; the guest's composition reads only the latest (confirmed).** A
+     fast fling produced 97–103 `sendEvent` calls, and every one of them reached the guest
+     (fling 10, which hit the end of the list, produced 22). `onViewport` writes state, and the
+     guest's next frame composes from whatever was written last, which is why there are about 6
+     guest frames per fling rather than about 100. The last report was handled **4.9–8.2 s after
+     the UP** (median 5.8 s, flings 1–9), while the list stopped at about 2.2 s. At the gentle
+     speed each fling produced 21–22 reports, and in 8 of 10 flings **19–20 of them were handled
+     after the list had stopped** (fling 1: 1, fling 10: 12; the last at 0.9–1.3 s after the UP).
    - **The reports themselves are cheap: 0.6–0.7 s per fast fling** (0.12 s gentle). They are
      late because they wait behind the guest's frames.
-   - **What the guest composes.** The guest ran 6 frames per fast fling, the longest 2.8–3.4 s,
-     4.7–7.7 s in total. Each frame composes the window of the latest report handled before it.
-     Each fling sent 5 batches with about 730–940, **4,100**, 200–3,600, 520 and 6 changes. The
+   - **What the guest composes.** The guest ran 6 frames per fast fling (flings 1–9), the longest
+     2.8–3.4 s, 4.7–7.7 s in total. Each frame composes the window of the latest report handled
+     before it. Each fling sent 5 batches with about 630–940, **4,100**, 200–3,600, 520 (6–7 in two
+     flings) and 6–11 changes; fling 10, at the end of the list, ran 5 frames and sent 3 batches
+     (841, 1,277, 521). The
      second, 4,100-change batch comes from a frame that started while the list was still moving,
      so it is most likely a window the list was passing through. Which batch holds the resting
      window was not traced; this is an inference from timing. The guest's last call ended
-     **6.4–9.5 s after the UP** (median 7.7 s). Gentle flings: 5 frames, the longest 0.7–1.3 s,
+     **6.4–9.5 s after the UP** (median 7.7 s, flings 1–9; fling 10 4.4 s). Gentle flings: 5 frames, the longest 0.7–1.3 s,
      the last call ending 2.6–4.0 s after the UP. So the code reading's mechanism is confirmed,
-     with one correction: the guest does not compose every window the list passed (about 6 frames,
-     not 79). It does compose windows the list has left, and builds the resting window last.
+     with one correction: the guest does not compose every window the list passed (6 frames and 5
+     batches, not one per row: the guest's list passes about 106 rows per fast fling). By timing
+     (inferred, not traced) it does compose windows the list has left, and builds the resting
+     window last.
    - **Applying a batch on the main thread is short.** It is one message
      (`ViewContentCodeBinding.sendChanges`): 48 over 10 fast flings, 216 ms in total, **at most
      21 ms**, and 10 of them came while the list moved (22 ms). The longest frame message in those
@@ -838,10 +864,10 @@ estimated).**
 1. **Guest: compose only the window the list will show, and drop windows it has left. The cost is
    measured; the saving is estimated.**
    - What it costs today: after a fast fling the guest keeps working 3.6 s per fling once the list
-     has stopped (36.4 s over 10), and its last call ends 6.4–9.5 s after the UP. At least the
-     4,100-change batch is, by its timing, a window the list was passing through (inferred, not
-     traced).
-   - Conflating the viewport reports (`EventBridge`, or the lazy list's `onViewportChanged`) on its
+     has stopped (36.4 s over 10, after the fixed 2,240 ms window), and its last call ends 6.4–9.5 s
+     after the UP (flings 1–9). At least the 4,100-change batch is, by its timing, a window the
+     list was passing through (inferred, not traced).
+   - Conflating the viewport reports (`EventBridge`, or `ReportLazyViewport` / `onViewport`) on its
      own saves only their 0.6–0.7 s of handling per fling, plus the queueing, as measured.
    - Most of the saving needs the guest not to start, or to abandon, a frame for a window that is
      no longer current. Estimate: most of the 3.6 s after the stop, and the resting rows one guest
@@ -850,24 +876,25 @@ estimated).**
    animation's target is known at the UP. Reporting that window first makes the resting window the
    first one composed. Estimate: content where the list stops arrives 0.1–1 s after the UP, one
    guest frame, instead of 4.9–8.2 s.
-3. **Find the main thread's sleeps during guest fast flings (measured, cause unknown).** 16 sleeps
-   of more than 20 ms, 1.5 s in total, account for about 90 frames not drawn and about 91 extra
-   missed vsyncs against native. They are not long frames and not CPU waits. The first step is a
-   per-fling look at those sleeps, including run 2's first-swipe-starts-no-fling. Saving if fixed:
-   the guest's missed vsyncs fall towards native's (152 down to about 61 over 10 fast flings).
-4. **The Zipline thread's CPU use while the list moves (measured, effect not separated).** The
+3. **The Zipline thread's CPU use while the list moves (measured, effect not separated).** The
    guest runs 95–98% of the moving time and holds the faster cluster at its maximum. The scripted
    traces show no runnable delay for the main or Render threads (0.2–0.3 s in both forms). Fewer
    stale compositions (item 1) reduce it. Lowering the Zipline thread's priority while a fling runs
    is a candidate if hand traces show contention. Estimated: no per-frame saving in scripted flings.
-5. **Host: spread the work after a big batch across frames (measured: small).** Applying a batch is
+4. **Host: spread the work after a big batch across frames (measured: small).** Applying a batch is
    at most 21 ms on the main thread. The longest frame message in the same flings was 101 ms; it
    was not matched to a batch. At most that is one visible hitch per big batch, and most batches
    are applied after the list has stopped (38 of 48). A per-frame budget, or deferring off-screen
    rows, would remove it. Estimated saving: at most one long frame per batch.
-6. **Host: per-frame host cost (measured: small).** The only guest-specific per-frame work is
+5. **Host: per-frame host cost (measured: small).** The only guest-specific per-frame work is
    `Recomposer:recompose`, 0.5–0.6 ms. Flatter rows or skipping recomposition of unchanged
    protocol nodes save at most that.
+6. **First check whether the guest's fast-trace sleeps are fling 10's tail (a check, not a fix).**
+   The 16 main-thread sleeps over 20 ms (1.5 s) and the 152 against 61 presents 20 ms – 1 s apart
+   fall inside the fixed 2,240 ms windows, and the guest's fling 10 reached the end of the list and
+   stopped early, so they most likely include a list at rest. The deleted traces cannot say. The
+   check is one fast guest trace with each fling's real stop marked and no fling reaching the end,
+   plus run 2's first-swipe-starts-no-fling. No saving is estimated until then.
 7. **Guest: placeholders with the row's height and look, never blank** (already NF1). No time
    saving; it changes what a user sees during the work above.
 

@@ -180,8 +180,8 @@ class ThreewayActivity : ComponentActivity() {
     ThreewayListener.gcThresholdBytes = gcThresholdBytes()
     // `x=trace` (NF0's system trace): trace sections for the guest's calls on the Zipline thread and
     // for every main-thread message, so a Perfetto trace shows when the guest's changes are applied.
+    ThreewayListener.traceCalls = "trace" in experimentSet
     if ("trace" in experimentSet) {
-      ThreewayListener.traceCalls = true
       Looper.getMainLooper().setMessageLogging { line ->
         if (line.startsWith(">>>>> ")) {
           // ">>>>> Dispatching to Handler (h) {id} callback: what" -> "msg callback"
@@ -753,7 +753,11 @@ internal object ThreewayListener : EventListener.Factory {
    */
   @Volatile var recordGuestFrames = false
 
-  /** `x=trace`: a trace section around every call into or out of the guest (set before Zipline starts). */
+  /**
+   * `x=trace`: a trace section around every non-suspending call into or out of the guest (set before
+   * Zipline starts). Suspending calls are skipped: they can overlap or end on another thread, which
+   * would mis-nest synchronous sections.
+   */
   @Volatile var traceCalls = false
   val guestFrames = CopyOnWriteArrayList<LongArray>()
   private var frameChanges = false
@@ -773,7 +777,7 @@ internal object ThreewayListener : EventListener.Factory {
     }
 
     override fun callStart(call: Call): Any? {
-      if (traceCalls) {
+      if (traceCalls && !call.function.signature.startsWith("suspend ")) {
         val name = call.function.signature.substringAfter("fun ").substringBefore('(')
         val size = (call.args.firstOrNull() as? List<*>)?.size
         Trace.beginSection(if (size != null) "zl:$name n=$size" else "zl:$name")
@@ -801,7 +805,7 @@ internal object ThreewayListener : EventListener.Factory {
     }
 
     override fun callEnd(call: Call, result: CallResult, startValue: Any?) {
-      if (traceCalls) Trace.endSection()
+      if (traceCalls && !call.function.signature.startsWith("suspend ")) Trace.endSection()
       if ("sendChanges" in call.function.signature) {
         frameChanges = true
         onSendChangesEnd?.invoke()
