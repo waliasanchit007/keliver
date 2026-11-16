@@ -542,6 +542,54 @@ and are quoted below only where marked as smoke.
 Within 1–3% of the first run's baseline above (16 / 13, 436 / 1,082, 44 / 49), so run 2's other
 numbers compare with every earlier session's.
 
+**Phone run 3 (finishing run 2), 2026-11-16 from 13:42 IST.** Same phone, the same installed APK as
+run 2 (installed 11:51 with the null-not-NaN fix; nothing in the app changed since, so run 3's
+numbers compare with run 2's directly and run 2's baseline above is run 3's), on battery (50% at
+the start), wireless adb, thermal status 0, no power saving, 60 Hz, the fixture inside the app for
+every series. **The lost placeholder pass was not on the phone:** the app's `files/s/` held run 2's
+five clean guest files and a results file identical to the fast one, so that pass had not started
+when the phone left. **Every series in run 3 ran from one script on the phone itself**
+(`nohup sh r3.sh`, launched over adb, the same `am start -S` and `input swipe` commands as before),
+so a dropped adb link could not stop a series; the Mac only pulled the files. One thing to know when
+re-running it that way: `input` and `am` fail with "Failed transaction" when their output is a file
+on shared storage (the system server cannot use that descriptor), so the script gives them
+`/dev/null`. Each series' battery level and temperature are given with it.
+
+### Scrolling, run 3: the first speed with placeholders (guest)
+
+**The guest's instrumented pass** (`x=scroll,blank`, five speeds, each a fresh process; 13:45–14:05
+IST, 50% → 47%, 25.7–26.8 °C, thermal 0). No fling was closed by a touch or busy at its DOWN; edge
+flings dropped as in run 2. A placeholder counts from half a row (the host's 48 dp spacer for a row
+the guest has not delivered); "content" is the first frame after the last frame with one, from the
+UP. Missed vsyncs in this pass match the clean pass's (8 at 3,556 dp/s down, 15 at 6,667), so the
+semantics reads did not change what the list does.
+
+| Guest, release speed | Flings with placeholders | Most on screen (of 14) | First frame with content, from UP: median (min–max) | List stops (median) |
+|---|---|---|---|---|
+| 1,422 dp/s, down | 0 of 10 | 0 | none | 741 ms |
+| 1,422 dp/s, up | 0 of 9 (one sub-row gap) | 0 | none | 743 |
+| **2,133 dp/s, down** | **9 of 10** | **1–2** | **1,075 ms (1,027–1,113)** | 992 |
+| 2,133 dp/s, up | 1 of 9 (the first up: 7 rows) | 7 | 1,046 | 992 |
+| 2,844 dp/s, down | 10 of 10 | 8–12 | **3,516 (1,230–3,641)** | 1,208 |
+| 2,844 dp/s, up | 4 of 9 (14 on the first up, then 1 row) | 1–14 | 1,602 (986–3,164) | 1,208 |
+| 3,556 dp/s, down | 10 of 10 | 14 (the whole list) | **4,318 (1,508–4,726)** | 1,420 |
+| 3,556 dp/s, up | 9 of 9 | 9–14 | 2,183 (1,896–4,291) | 1,425 |
+| 6,667 dp/s, down | 6 of 7 (fling 1 started no fling) | 14 | **4,802 (4,719–5,078)** | 2,237 |
+| 6,667 dp/s, up | 5 of 5 | 14 | 7,016 (4,819–7,133) | 2,238 |
+
+**The first speed with placeholders is 2,133 dp/s** (800 px in 200 ms), flinging down the list: in 9
+of 10 flings one or two rows at the leading edge are blank for 14–44 frames (about 0.25–0.7 s)
+near the end of the fling, and are filled 35–120 ms after the list stops (first frame with content
+1,027–1,113 ms after the UP, the list stopping at 989–993). At 1,422 dp/s there are none. **From
+2,844 dp/s the list goes mostly blank:** 8–12 of the 14 visible rows are placeholders and content
+comes back a median 3.5 s after the UP, 2.3 s after the list has stopped; at 3,556 dp/s the whole
+screen is blank and content comes back after 4.3 s (2.9 s after the stop); at 6,667 dp/s after
+4.8 s down and 7.0 s up (2.6 and 4.8 s after the stop), as the first run's old-route pass found
+(4.9 and 6.7 s). Flinging back up costs less at 2,133–3,556 dp/s (the rows above were composed on
+the way down and the guest's window still holds some), except the first fling up after the
+direction changes. The process's first fast swipe again started no fling (`flingVelocityPxS` 0,
+travel the finger's own): now three of five fresh-process fast runs.
+
 ### Scrolling, run 2
 
 **How.** As in [How to run it](#how-to-run-it): `adb shell input swipe` through the input system,
