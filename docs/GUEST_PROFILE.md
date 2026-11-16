@@ -38,13 +38,16 @@ those two numbers. This document does.
 - **The engine itself** (measured on this Mac; see "The engine, measured"):
   - Zipline 1.28 runs **QuickJS 2021-03-27**, built at `-Os` on Android.
   - **Compiler flags do nothing here.** The same 2021 engine at `-O2`, `-O3` and `-O3` with LTO ran
-    "back" in 78–79 ms, like `-Os`. A Cortex-A53 may respond differently; not measured.
+    "back" in 78–79 ms, like `-Os`. On the A12 only the 2026 engine's `-O2` was compared with
+    `-Os`: 2–5% faster.
   - **The newest QuickJS (2026-06-04) is 1.14–1.20× faster** on the same bundle.
   - **With Kotlin's `Long` as a real BigInt on that engine, "back" is about 2.1× faster and "open"
     about 2.5× faster** (77 → 37 ms and 23 → 9 ms, against Zipline's engine), with identical
     batches. BigInt shrinks both halves: Compose itself (recording off) drops from 41 to 27 ms, and
     recording from about 36 to 10 ms. This needs a fix to that QuickJS release: its `BigInt.asUintN(64, negative)` returns the
     negative value, and without the fix the first composition never returns.
+  - **On the A12 the same holds** (2026-11-16, Zipline's `-Os` flags): "back" 1,012 → 506 ms
+    (2.0×) and "open" 310 → 130 ms (2.4×), with every batch matching the Mac's.
   - Zipline cannot load bytecode from another engine version (version 1 as Zipline builds it, 5 in
     2026), so adopting it means a Zipline fork and serving bundles by engine version.
 
@@ -416,8 +419,8 @@ What this says:
 - **On top of BigInt, the direct encoders save only 1–3 ms** (37 → 34–36 ms): most of what they
   saved on today's engine was emulated `Long`. The 10-row window is a different kind of saving (less
   Compose work) and was not combined with BigInt here.
-- On the phone, if the 12–13× ratio held for this engine (not measured): "back" about 960 → 460 ms
-  and "open" about 350 → 135 ms, before the 10-row window, a retained back stack or pre-composition.
+- On the phone (measured 2026-11-16, below, "On the phone"): "back" 1,012 → 506 ms and "open" 310 →
+  130 ms at Zipline's `-Os`, before the 10-row window, a retained back stack or pre-composition.
 
 **What adopting it would take** (read in Zipline's public repository at the 1.28.0 tag; the issue
 texts and the file history were fetched 2026-11-16):
@@ -481,6 +484,51 @@ bash scripts/engine-android.sh device cleanup                      # removes /da
 # rehearsal first, if wanted: device emulator-start <arm64 AVD> ... device emulator-stop <pid>
 ```
 
+`--stay-awake` changes a phone setting (stay awake while charging) and restores it at `cleanup`.
+The A12 run below did not use it. It kept the screen on by leaving the threeway prototype's
+activity in the foreground instead (`--ez overLockScreen true` sets the keep-screen-on flag).
+
+**On the phone: the Galaxy A12, 2026-11-16, 18:49–19:18.** The phone has eight Cortex-A53 cores
+and runs Android 12. All 60 runs completed, and every run's first, last open and last back batch
+matched the Mac's. The phone was on its charger, at 71% → 85%. Between rounds its temperature fell
+from 37.0 to 30.9 °C, and the thermal status was 0 throughout. Rounds were 30 s apart, and the
+screen was awake in every round. Milliseconds are the mean of the three rounds' medians; round to
+round, "back" varied by at most 36 ms.
+
+| Engine build | Bundle | Recording | Back | Open | Back vs today | Open vs today |
+|---|---|---|---|---|---|---|
+| 2021 `-Os` (today's engine) | as shipped | kotlinx | 1,011.5 | 309.7 | — | — |
+| | | direct properties | 858.0 | 279.3 | −15% | −10% |
+| | | direct + modifier cache | 708.3 | 257.7 | −30% | −17% |
+| | | off | 527.8 | 229.7 | −48% | −26% |
+| 2026 (fixed) `-Os` | as shipped | kotlinx | 844.8 | 256.5 | −16% | −17% |
+| 2026 (fixed) `-O2` | as shipped | kotlinx | 818.3 | 245.7 | −19% | −21% |
+| **2026 (fixed) `-Os`** | **`Long` as BigInt** | **kotlinx** | **505.8** | **129.7** | **−50%** | **−58%** |
+| | | direct properties | 493.3 | 126.5 | −51% | −59% |
+| | | direct + modifier cache | 456.7 | 119.7 | −55% | −61% |
+| | | off | 346.2 | 101.3 | −66% | −67% |
+| 2026 (fixed) `-O2` | `Long` as BigInt | kotlinx | 494.0 | 123.0 | −51% | −60% |
+
+What the phone adds to the Mac's result:
+- **It holds on the phone.** With Zipline's own Android flags (`-Os`), the newer engine plus BigInt
+  takes "back" from 1,012 to 506 ms (2.0×) and "open" from 310 to 130 ms (2.4×). On the Mac it was
+  2.1× and 2.5×.
+- **The Mac-to-phone ratio stays the same for the new engine.** "Back" is 12.6× the Mac's on the
+  2021 engine and 12.5× on the 2026 BigInt build; "open" is 12.7× and 13.0×. The Mac harness can
+  keep standing in for the phone in ratio for this engine.
+- **Compiler flags still matter little.** `-O2` beats `-Os` by 2–5% on the phone, against a binary
+  about 200 KB larger. Only the 2021 engine's `-Os` was built for the phone, so its other flag levels
+  are still Mac-only.
+- **BigInt shrinks both halves on the phone too.** Compose itself (recording off) goes from 528 to
+  346 ms, and recording (kotlinx minus off) from 484 to 160 ms. On top of BigInt, the direct encoders
+  and the modifier cache save 49 ms (−10%), more than on the Mac (−8%, 3 ms).
+- **Still not native.** 506 ms for "back" is the guest's own work alone, with no host and no bridge.
+  NF1's retained back stack, which removes "back"'s composition entirely, remains necessary for the
+  50 ms target. An "open" of 130 ms is close to the ~100 ms target before NF3's pre-composition and
+  window size.
+- `qjs` parses source where Zipline loads bytecode, so the load column (1.0–1.2 s on the phone) is
+  not Zipline's start-up time. Cold start is NF0's separate measurement.
+
 ## How to rerun it
 
 ```
@@ -518,7 +566,9 @@ python3 -I keliver-compose-gatea-profile/engine/api-compare.py <zipline/native a
 - **"Open" does not track the phone.** The 16→10-row window cut the phone's "open" (frame →
   composed) by 28%, but this harness's by 17% (first round: 14%). "Back" matches (−34% and −35%).
   Not explained, so nothing about "open" should be scaled to the phone.
-- **No phone run of any variant.** The phone estimates are QuickJS-on-Mac numbers × 12–13.
+- **Phone runs: the engines only.** The engine matrix ran on the A12 under `qjs` ("On the
+  phone"). The other variants (the 10-row window, serializers once, GC thresholds) were not run
+  there; their phone estimates are QuickJS-on-Mac numbers × 12–13.
 - **Interpreter shares.** The shares come from V8's interpreter (Ignition, `--jitless`), not
   QuickJS, and no QuickJS sampling profiler was used. **The `Long` shares (38%, 24%, 12–13%) were
   not reproduced in QuickJS.** The direct-encoder savings are consistent with them, but they don't
@@ -542,10 +592,10 @@ python3 -I keliver-compose-gatea-profile/engine/api-compare.py <zipline/native a
 - **Reload.** In the harness, a reload with equal data re-creates every row. The phone's split for
   the same step recorded one property. Unexplained; a harness difference (the request does not
   suspend here) is the likely cause.
-- **The engine measurements are from a Mac** (Apple M4 Pro, Apple clang). The phone runs an
-  in-order Cortex-A53 with the NDK's clang: compiler flags and the newer engine may behave
-  differently there, and the 12–13× ratio was measured for the 2021 engine only. Hermes and Wasm
-  are still not measured (their rows are published numbers).
+- **The engine measurements are from a Mac and the A12.** The A12 run (an in-order Cortex-A53, the
+  NDK's clang) confirms the newer engine's gain and the 12–13× ratio. It has one round set, on the
+  charger. The 2021 engine's `-O2`/`-O3`/LTO builds were not run on the phone. Hermes and Wasm are
+  still not measured (their rows are published numbers).
 - **`qjs` is not Zipline.** It parses source where Zipline loads bytecode (load times not
   comparable), and it is built with the Makefiles' flags (`-g`, assertions on). Its 2021 `-Os`
   numbers are 2–3% slower than Zipline's engine in the JVM harness. The route checks the 2021
