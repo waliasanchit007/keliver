@@ -26,6 +26,8 @@ patch -d "$work/src/quickjs-2021-03-27" -p1 < "$here/patches/quickjs-2021-03-27-
 rm -rf "${work:?}/src/quickjs-2026-06-04-fix"
 cp -R "$work/src/quickjs-2026-06-04" "$work/src/quickjs-2026-06-04-fix"
 patch -d "$work/src/quickjs-2026-06-04-fix" -p1 < "$here/patches/quickjs-2026-06-04-asuintn64.patch"
+# build-engines-android.sh stops here: it needs the verified, patched sources and cross-compiles them itself.
+[ "${KELIVER_ENGINE_SOURCES_ONLY:-}" = 1 ] && { echo "sources ready in $work/src"; exit 0; }
 build() { # <name> <source dir suffix> <CONFIG_LTO: y or empty> <optimisation flags>
   rm -rf "${work:?}/build/$1"
   cp -R "$work/src/quickjs-$2" "$work/build/$1"

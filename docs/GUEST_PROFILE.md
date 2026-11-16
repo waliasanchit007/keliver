@@ -449,6 +449,38 @@ texts and the file history were fetched 2026-11-16):
   a host has. Not checked: Zipline's conversion of JS values to host objects has no BigInt case, so
   any `Long` that crosses the bridge as a BigInt needs a look. Estimate 4–8 engineer-weeks, as in the table.
 
+**How to run it on a phone** (NF0; arm64-v8a, Android 8+). The same three builds and matrix as
+the Mac (2021 `-Os` as shipped; 2026 fixed `-Os` and `-O2`, as shipped and `Long` as BigInt; four
+recording modes; 3 rounds, round 2 reversed; 3 + 30 iterations; the same median rule), 60 runs.
+- **Build:** `engine/build-engines-android.sh` cross-compiles `qjs` with the NDK (default
+  28.0.12674087, API 26) from the same pinned tarballs and patches. The flags are Zipline's Android
+  release build (`-g0 -Os -fomit-frame-pointer -DNDEBUG -fvisibility=hidden -fstrict-aliasing` on
+  the NDK's CMake defaults), the 2026 builds keep the Makefile's `-fwrapv`, and the `-O2` build
+  swaps only the optimisation level. It links dynamically against the device's Bionic (libc, libm,
+  libdl) only, as Zipline's `libquickjs.so` does, so the allocator is the system's. The exact
+  command lines go to `FLAGS.txt` next to the binaries.
+- **Run:** `engine/run-device.sh` (or `scripts/engine-android.sh device`) copies the engines,
+  `run.js` and both bundles to `/data/local/tmp/keliver-engine`. Its driver runs on the device
+  under `setsid nohup`, so a dropped wireless adb connection does not stop it. Before and after
+  each round it records battery level, temperature and charging state, the thermal status and
+  whether the screen was awake. `check` fails if any run's first, last open or last back batch
+  differs from the Mac's `combine.jsonl`, if a run is missing, or if the device was not awake.
+- On the arm64 emulator, all 60 runs matched the Mac's batches in two runs (about 50 s a round).
+  Expect about 10 minutes a round on the A12.
+
+```
+bash scripts/engine-android.sh build <work dir> <engines dir>     # downloads, verifies, cross-compiles
+bash scripts/engine-android.sh device devices                      # find the phone's serial
+export ANDROID_SERIAL=<serial>                               # or pass -s <serial> to every command
+bash scripts/engine-android.sh device push <engines dir> <as-shipped bundle dir> <BigInt bundle dir>
+bash scripts/engine-android.sh device start --stay-awake           # screen stays on while plugged in
+bash scripts/engine-android.sh device wait                         # or: status, now and then
+bash scripts/engine-android.sh device pull <new local dir>
+bash scripts/engine-android.sh device check <local dir> <Mac combine.jsonl>
+bash scripts/engine-android.sh device cleanup                      # removes /data/local/tmp/keliver-engine
+# rehearsal first, if wanted: device emulator-start <arm64 AVD> ... device emulator-stop <pid>
+```
+
 ## How to rerun it
 
 ```
