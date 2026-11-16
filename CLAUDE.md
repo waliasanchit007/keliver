@@ -6,8 +6,10 @@ compiled signed Zipline bundles, render natively on Android/iOS/web, and edit
 them visually in a web portal that round-trips to the .kt files in git.
 
 **Read before working:**
-- `docs/PLAN_2026-11.md` — **the plan of record for product direction** (from 2026-11-09): what Keliver is
-  for, the bar, the milestones and gates. Start here; `docs/DELIVERY_PLAN.md` keeps the delivery record.
+- `docs/PLAN_2026-11.md` — **the plan of record for product direction** and the only direction document
+  (from 2026-11-09, revised 2026-11-16: one over-the-air lane that must feel native, on Android and iOS;
+  WS7's native-feel steps NF0–NF4 come first): what Keliver is for, the bar, the milestones and gates.
+  Start here; `docs/DELIVERY_PLAN.md` keeps the delivery record.
   `docs/DECISIONS.md` still binds: the plan names (its section 4) the decisions it proposes to amend.
 - `docs/DELIVERY_PLAN.md` — **the plan of record for delivery work** (iOS host, publishing, distribution,
   rollout controls). Read it first in any session touching hosts, publishing or releases; update its Status

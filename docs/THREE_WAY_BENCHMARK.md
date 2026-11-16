@@ -638,9 +638,29 @@ Missed vsyncs per fling while the list moves, median (min–max), down / up:
   the other speeds).
 - **The guest matches native up to 2,844 dp/s and falls behind from 3,556 dp/s down the list**:
   8 against 1 at 3,556 dp/s, 15 against 4 at 6,667. Flinging up it stays close to native.
-- **Moving frames take about 20 ms in all three forms** (median 20.0–20.7 ms in every group but
-  the guest's 3,556 dp/s down, 10.4 ms), so
-  that is this phone's 60 Hz pipeline with the list, not a guest cost.
+- **In these scripted flings, moving frames take about 20 ms in all three forms** (median
+  20.0–20.7 ms in every group but the guest's 3,556 dp/s down, 10.4 ms). Flings by hand do not
+  show that, so it is not the phone's pipeline alone (next paragraph). Why the scripted flings
+  differ is not established.
+
+**By hand (2026-11-16, 16:49–16:56).** The owner flung the same 1,000-item list in each form on
+the A12 (60 Hz, on battery, 38–39%, 25.9–27.6 °C), using the same build and the in-app fixture.
+Their verdict: "guest scrolling definitely feels laggy". The app's frame lines, all flings of each
+session:
+
+| Form | Flings | Frames | Median frame | Over 25 ms | Over 50 ms | Worst |
+|---|---|---|---|---|---|---|
+| native | 14 | 468 | 11.2 ms | 1 (0%) | 0 | 32 ms |
+| web | 31 | 618 | 10.1 ms | 1 (0%) | 0 | 27 ms |
+| guest | 44 | 1,782 | 20.2 ms | 297 (17%) | 118 | 231 ms |
+
+- **In 13 of the guest's flings it did no work while the list moved.** Its frames still had a
+  13.7 ms median, and 40% were over 16.7 ms: part of the lag is the host drawing the guest's tree.
+- **In the other 31 flings** the median was 20.3 ms, with 70% over 16.7 ms.
+- **On the five longest flings**, the guest was still composing rows 1.0–7.2 s after the finger
+  lifted. Its single frames took up to 3 s.
+- One session per form, unscripted, so the flings differ in speed and number. This is a check of
+  what a user sees, not a controlled series.
 - **Native's first fast swipe started its fling** (velocity 12,500 px/s, 10,591 px travelled); the
   guest's did not in 4 of 6 fresh-process fast runs (run 3's `x=scroll` run is the sixth). That
   points at the guest form's first drag, not at the input route; why is not established.
