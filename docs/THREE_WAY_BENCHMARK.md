@@ -525,7 +525,7 @@ instrumented (`x=scroll,blank`) pass, and the phone was not found again in the n
 (a restarted adb server on this Mac may need macOS's Local Network permission to see a wireless
 device; that was not checked). Run 2 therefore measured the same-day baseline and the **guest's
 clean scrolling pass at five speeds** only. Not measured in run 2: the guest's instrumented pass
-(placeholders and content times; its output may be on the phone, not pulled), the `x=scroll`
+(placeholders and content times; run 3 found it had never started), the `x=scroll`
 pass, native and web scrolling, the heavy screen and the GC threshold series. The smoke runs (one
 gentle and one fast fling per form, one heavy guest open with `x=mem`) are in the scratch raw files
 and are quoted below only where marked as smoke.
@@ -884,7 +884,7 @@ pause after every tap into such a screen, and another second back.
 a 102-widget screen in the guest on this phone, against about 0.44 s for the simple detail. The
 series (14 per form, 3 cold opens, native and web) was not run: the phone left first.
 
-**Built, not measured on the phone** (the phone left adb first). `-e x heavy` makes a row open a
+**What was built** (written in the first run, when it was not yet measured). `-e x heavy` makes a row open a
 second detail variant in all three forms: a header, the amount and status, a row of four chips, four
 sections of a title and six label/value rows, a row of three buttons and a footer, text only:
 **102 widgets** in the guest (counted: `n_creates` = 102 on every open), the same layout and strings
@@ -960,7 +960,7 @@ list's rows freed), each back added about 0.38 MB and 2,550 objects, and the hea
 itself, the next tap): 7.94 MB before the first open, 8.71 MB at the end of 3 iterations. Three
 iterations cannot apply the decision rule below; **no GC conclusion from run 2**.
 
-**Built, not measured on the phone.** `-e x gc4`, `gc16` or `gc64` sets `zipline.quickJs.gcThreshold`
+**What was built** (written in the first run, before any measurement). `-e x gc4`, `gc16` or `gc64` sets `zipline.quickJs.gcThreshold`
 to that many MiB in the route's `ziplineCreated`, before any guest code loads (on the Zipline
 thread, on the only Zipline instance); `-e x gcoff` sets −1 (QuickJS never collects on
 allocation; reference counting still frees acyclic objects). With any of them, or `-e x mem`, the
@@ -1076,15 +1076,20 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
 - **The WebView's version** (system Chromium, as installed) was not recorded in the first session;
   in the experiments session it was 157.0.8103.38. Whether the first session had the same version
   is not known; the two sessions' as-shipped web series agree within 5%.
-- **Scrolling: the guest only, again.** Native and web scrolling, the heavy screen's series and the
-  GC threshold series were built and smoke-checked but not reported: the phone left wireless adb at
-  about 03:58 IST on 2026-11-16 (first run), at about 12:41 IST (run 2) and at about 14:09 IST
-  (run 3; not back 31 minutes later). Run 3's script kept running on the phone, so those series'
-  output is likely in the app's `files/r3/` on the phone, unread. What is reported for the guest:
-  run 2's clean pass and run 3's placeholder pass at five speeds. The guest/native comparison of
-  missed vsyncs rests on one native smoke fling per speed (gentle, fast).
-- **The process's first fast swipe** started no fling in three of five fresh-process fast runs
-  (Compose's fling velocity 0 although the touch events' was 12,500 px/s); cause not established.
+- **The scrolling comparison mixes runs and temperatures.** The guest's clean pass is run 2's
+  (25.0–25.6 °C), native's and web's are run 3's (27.0–33.1 °C), the same APK on the same day; the
+  phone was warmer for web than for the others. Each form and speed is one run. The guest's
+  `x=scroll` pass reproduced the clean pass's missed vsyncs at 31–34 °C.
+- **The guest's fast `x=scroll` run is incomplete:** it logged 2 flings and then stopped logging,
+  with no crash in the crash buffer; the logcat for it was not kept (the phone was off adb), so the
+  cause is not established. The guest's work per fling at 6,667 dp/s is therefore not measured in
+  run 3 (the first run's old-route numbers stand for it).
+- **The process's first fast swipe** started no fling in four of six fresh-process guest fast runs
+  (Compose's fling velocity 0 although the touch events' was 12,500 px/s); native's one fast run
+  started its fling. Cause not established.
+- **The GC result is one run per arm** (two for the default), 14 iterations of navigation and one
+  API call in a fresh process. Collections are inferred from heap and object counts falling; no
+  collection was timed directly.
 - **Run 2's 14 s and 12 s gaps were long enough** (no fling closed by a touch or busy at DOWN);
   the guest's last frame ended up to 7.9 s after a fast fling's lift.
 - **The second session ran on battery** (87% → 84%, 27.4–27.6 °C), the first two on the charger,
@@ -1109,11 +1114,10 @@ need iOS equivalents (XCUITest taps; `CADisplayLink` after the change is committ
   gives the first frame with content instead.
 - **Run 3's placeholder pass is one run per speed** (10 flings each way, 7 at the fast speed), at
   five fixed straight-line speeds, from `input swipe`.
-- **The heavy-screen and memory figures come from one check run each whose output was not kept**;
-  they are indications only, until the series are run.
-- **The review-round-1 instrumentation ran on a device in run 2** for the guest's clean scrolling
-  pass and smoke runs of every form; its placeholder (`x=blank`), heavy-screen and GC paths ran
-  only in smoke runs (all fields logged, values plausible).
+- **The heavy screen is one series per form** (12 warm opens and backs after 2 dropped) and three
+  cold opens per form; its earlier check-run figures (output not kept) are superseded by run 3.
+- **The review-round-1 instrumentation ran on a device in runs 2 and 3**: every path (clean and
+  instrumented scrolling in all forms, heavy screen, GC arms).
 - **QuickJS's GC**: Zipline's `gcThreshold` getter returns the value set, not QuickJS's current
   threshold, so a run cannot see whether a collection happened from it.
 - **The iPhone** was not measured (see above for what a run needs).
