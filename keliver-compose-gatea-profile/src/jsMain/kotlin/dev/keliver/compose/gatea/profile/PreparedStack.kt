@@ -7,6 +7,7 @@
 package dev.keliver.compose.gatea.profile
 
 import androidx.compose.runtime.Composable
+import dev.keliver.compose.BackHandler
 import dev.keliver.nav.ExperimentalKeliverNavRetentionApi
 import dev.keliver.nav.KeliverNavPreparation
 import dev.keliver.nav.KeliverPreparedStack
@@ -24,7 +25,9 @@ internal class PreparedThreewayStack(private val depth: Int) : ThreewayStack {
   val preparation = KeliverNavPreparation<Any>()
 
   @Composable
-  override fun Show(keys: List<Any>, content: @Composable (Any) -> Unit) {
+  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+    // System back through the guest, as RetainedThreewayStack does, so the two stacks compare alike.
+    BackHandler(enabled = keys.size > 1) { onBack() }
     KeliverPreparedStack(keys, preparation, GateAFrame, depth, content)
   }
 }
