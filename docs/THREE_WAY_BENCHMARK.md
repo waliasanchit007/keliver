@@ -909,6 +909,49 @@ expected tens of ms native and web (not measured).
 
 ### The GC threshold
 
+**Run 3, measured** (15:08–15:17 IST, 45% → 44%, 29.3–29.8 °C, thermal 0). Guest only, each arm one
+fresh process: navigation (14 opens and backs) then `api-large` (14 calls), the first 2 dropped,
+QuickJS's memory read before each tap and after each drawn result (the decision rule above was
+written before any of this). Median / p90 / min–max, ms:
+
+| Arm | Open (warm) | Back | api-large | Heap before open: i=1 → 7 → 14 | Heap before api-large: i=1 → 7 → 14 |
+|---|---|---|---|---|---|
+| default (`x=mem`), run 1 | 435 / 443 / 424–443 | 1,068 / 1,143 / 1,019–1,169 | 1,114.5 / 1,138 / 1,088–1,242 | 7.94 → 7.85 → 9.38 MB | 9.59 → 12.00 → 10.39 MB |
+| default (`x=mem`), run 2 | 439 / 444 / 413–448 | 1,068 / 1,095 / 1,037–1,192 | 1,111.5 / 1,150 / 1,088–1,226 | 7.94 → 7.85 → 9.38 | 9.60 → 12.00 → 10.39 |
+| `gc4` | 450 / 455 / 428–458 | 1,088.5 / 1,160 / 1,070–1,193 | 1,129.5 / 1,139 / 1,096–1,230 | 7.94 → 7.85 → 9.38 | 9.59 → 12.00 → 10.39 |
+| `gc64` | 441 / 444 / 425–447 | 1,068 / 1,095 / 1,038–1,098 | 1,110.5 / 1,122 / 1,090–1,128 | 8.04 → 9.35 → 10.88 | 11.09 → 13.50 → 15.47 |
+| `gcoff` | 433 / 442 / 419–446 | 1,064 / 1,081 / 1,048–1,107 | 1,108.5 / 1,118 / 1,083–1,138 | 8.04 → 9.35 → 10.88 | 11.09 → 13.50 → 15.47 |
+
+**Applying the decision rule.**
+- *Collections ran under the default: yes, both conditions hold.* Under the default the heap and
+  object count fall where no rows were freed: at back i=6 the heap went 8.22 → 7.55 MB and the
+  objects 28,159 → 25,018 (every other back adds about 0.73 MB and 4,900 objects), and during
+  api-large i=7 the heap went 12.00 → 8.68 MB. Under `gc64` and `gcoff` it never falls: it grows
+  steadily, 8.04 → 10.88 MB over navigation and to 15.47 MB (51,900 objects) by the last API call.
+  `gc4`'s heap follows the default's to within a few hundred bytes, collections at the same
+  iterations (its 4 MiB is passed during start-up, as predicted), and `gc64`'s follows `gcoff`'s the
+  same way (the heap never reached 64 MB).
+- *GC matters for navigation: no, within the rule's own resolution.* The default runs differ by
+  4 ms in open, 0 in back and 3 in api-large. `gc64` is not faster than both in any of the three.
+  `gcoff` is faster than both by 2 ms in open (under 4) and by 3 ms in api-large (not more than 3),
+  and by **4 ms in back**, where the two default runs happen to tie. That last one passes the rule
+  as written. It is 0.4% of 1,068 ms, inside every arm's range, and the rule's noise estimate there
+  (0 ms) comes from two medians that coincide, not from a measured spread; it is not a real
+  difference. **Conclusion: GC does not measurably change the median navigation or API time.**
+- *Where GC does show: in the slowest iteration.* Each collection lands in one iteration and adds
+  about 100–125 ms to it: back i=6 took 1,169, 1,192 and 1,193 ms under the default and `gc4`
+  (the other backs 1,019–1,160), and api-large i=7 took 1,242, 1,226 and 1,230 ms (`parsed`
+  1,120–1,134 against 1,000–1,010 for the same call under `gc64`/`gcoff`, which took 1,108). That is
+  what the default's higher p90 and max are; under `gc64`/`gcoff` those collections did not happen.
+
+**What it means.** On this phone one QuickJS collection of an 8–12 MB heap costs about 0.1 s,
+about once every dozen navigations or API calls, and lands on whatever the user did then. Raising
+the threshold removes them only for as long as the heap stays under it: `gcoff` grows about
+0.2 MB per open-and-back and 0.3 MB per large API call, so `gc64` would postpone the first
+collection by a few hundred interactions, and that collection would walk a heap several times
+larger. **Scope:** 14 iterations each of navigation and one API call in a fresh process, one run
+per arm (two for the default); not a long session, not scrolling, not memory pressure.
+
 **Run 2: not measured; one smoke read kept.** The heavy smoke run above had `x=mem` (the default
 arm's reads): `gcThreshold` read 262,144 before and after every step, the heap in use 7.5–8.7 MB
 and 24,500–32,000 objects. Each open dropped the heap by about 0.43 MB and 3,000 objects (the
