@@ -6,16 +6,18 @@ package dev.keliver.sample.host.threeway
 
 import androidx.activity.OnBackPressedCallback as AndroidOnBackPressedCallback
 import androidx.activity.OnBackPressedDispatcher as AndroidOnBackPressedDispatcher
+import dev.keliver.compose.gatea.composeui.HostBackDispatcher
 import dev.keliver.ui.Cancellable
 import dev.keliver.ui.OnBackPressedCallback
-import dev.keliver.ui.OnBackPressedDispatcher
 
 /**
  * The activity's back dispatcher for gate A's retained container (LocalHostBackDispatcher): the
  * same one the guest's BackHandlers reach through TreehouseContent, so the container's callback,
  * added when it becomes enabled, is the newest and takes the press first.
  */
-internal class AndroidHostBackDispatcher(private val delegate: AndroidOnBackPressedDispatcher) : OnBackPressedDispatcher {
+internal class AndroidHostBackDispatcher(private val delegate: AndroidOnBackPressedDispatcher) : HostBackDispatcher {
+  override fun onBackPressed() = delegate.onBackPressed()
+
   override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable {
     val android = object : AndroidOnBackPressedCallback(onBackPressedCallback.isEnabled) {
       override fun handleOnBackPressed() = onBackPressedCallback.handleOnBackPressed()

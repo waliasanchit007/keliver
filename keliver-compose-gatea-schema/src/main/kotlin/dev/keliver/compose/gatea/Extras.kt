@@ -68,6 +68,13 @@ public data class ExtraAnimated(
  * press, and sends [onBack] with that entry's key. It keeps showing that entry until [backHandled]
  * reaches the number of [onBack] calls it has sent; from then on it shows the guest's last entry
  * again, so the guest's state always wins. Structure only; screens never name it.
+ *
+ * D2: a host without tags 502/503 THROWS while applying the batch that creates them (the parent's
+ * children change names a node it skipped), which takes down the whole content. Extras are outside
+ * the lock and nothing gates them yet; gate A is prototype-only and unpublished, so no shipped host
+ * meets such a bundle. Before it leaves the prototype, extras must be in the versioned surface, the
+ * index's widgetVersion gate must read that number, and a test must show an older host refusing the
+ * bundle at selection.
  */
 @Widget(502)
 public data class ExtraRetained(

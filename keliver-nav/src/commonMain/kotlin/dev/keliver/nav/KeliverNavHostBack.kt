@@ -51,10 +51,27 @@ import dev.keliver.ui.OnBackPressedDispatcher
  * - When the shown entry's `hostBack` is true and it is not the first, a back press shows the entry
  *   below and calls `onBack` with that entry's id. The host keeps showing that entry until
  *   `backHandled` reaches the number of `onBack` calls it has made, then shows the last entry again.
- * - keliver-nav handles `onBack`: if the guest's top entry has an enabled `BackHandler` (one enabled
- *   after the host last heard otherwise), that handler takes the press and nothing is popped (the
- *   host shows the top again); otherwise the stack is popped to the entry the host shows, even if
- *   the guest pushed entries meanwhile. Either way `backHandled` grows by one in the same batch.
+ * - keliver-nav handles `onBack` against the stack as it is then (two presses handled in one guest
+ *   tick see the first one's pop): if the guest's top entry has an enabled `BackHandler` (one
+ *   enabled after the host last heard otherwise), that handler takes the press and nothing is
+ *   popped (the host shows the top again); the same if the top entry last told the host it may not
+ *   go back from it. Otherwise the stack is popped to the entry the host shows, even if the guest
+ *   pushed entries meanwhile. Either way `backHandled` grows by one in the same batch.
+ * - An entry never shown (below the top of a deep link) tells the host it may not go back from it,
+ *   since nothing is known of its handlers yet.
+ *
+ * Compatibility (D2): the container is two widgets of gate A's schema (tags 502 and 503) added as
+ * extras, outside the schema lock. A host that does not have them THROWS while applying the batch
+ * that creates them (the parent's children change names a widget it never created), which takes
+ * down the whole content, not just the stack. Gate A is unpublished and prototype-only, so no
+ * shipped host can meet such a bundle today. Before it leaves the prototype: extras must be in the
+ * versioned surface (a level or widget-version bump with each new tag), the D2 bundle gate (the
+ * index's widgetVersion) must read that number, and a test must show an older host refusing such a
+ * bundle at selection rather than crashing.
+ *
+ * Known gaps (follow-ups, see the host's `LocalHostBackDispatcher`): host back is ahead of an
+ * enabled guest `BackHandler` outside the stack (overlays that take back must live inside an
+ * entry); no predictive back; no host-back trigger on iOS yet.
  */
 @ExperimentalKeliverNavRetentionApi
 @Stable
@@ -92,27 +109,41 @@ internal fun <T : Any> HostRetainedEntries(
   frame: KeliverNavHostFrame,
   onHostBack: ((T) -> Unit)?,
   content: @Composable (T) -> Unit,
+  liveItems: (() -> List<T>)? = null,
 ) {
   val parentLifecycle = LocalKeliverNavEntryLifecycle.current
   val parentBackHandlers = LocalBackHandlersEnabled.current
   val dispatcher = LocalOnBackPressedDispatcher.current
   val handled = remember { mutableIntStateOf(0) }
   val trackers = remember { HashMap<Any, BackHandlerTracker>() }
-  val currentItems by rememberUpdatedState(items)
+  // What each entry last told the host (hostBack): an entry told "not free" is never left on the
+  // host's word, whatever its handlers say now (hidden, they are disabled by the gate).
+  val told = remember { HashMap<Any, Boolean>() }
+  // The stack as it is now, not as last composed: two presses handled in one guest tick must see
+  // the first one's pop. [liveItems] reads the owner's state; otherwise the pop is applied here.
+  val live = remember { LiveStack(items) }
+  SideEffect { live.items = items }
+  val currentLiveItems by rememberUpdatedState(liveItems)
   val currentKeyOf by rememberUpdatedState(keyOf)
   val currentIdOf by rememberUpdatedState(idOf)
   val currentOnHostBack by rememberUpdatedState(onHostBack)
   val onBack: (String) -> Unit = remember {
     { id ->
       handled.intValue++
-      val stack = currentItems
+      val stack = currentLiveItems?.invoke() ?: live.items
       val top = stack.last()
+      val topKey = currentKeyOf(top)
       // A handler enabled in the top after the host last heard of it: the press was its, as it would
-      // have been on the guest path. Nothing is popped; the host shows the top again.
-      val refused = trackers[currentKeyOf(top)]?.dispatchToNewestEnabled() == true
+      // have been on the guest path. Nothing is popped; the host shows the top again. The same if the
+      // top told the host it may not leave it (an entry never shown, or one that had a handler
+      // enabled when last shown): the host's view was stale.
+      val refused = trackers[topKey]?.dispatchToNewestEnabled() == true || told[topKey] == false
       if (!refused) {
-        val target = stack.lastOrNull { currentIdOf(it) == id }
-        if (target != null && target !== top) currentOnHostBack?.invoke(target)
+        val index = stack.indexOfLast { currentIdOf(it) == id }
+        if (index >= 0 && index != stack.lastIndex) {
+          currentOnHostBack?.invoke(stack[index])
+          live.items = stack.subList(0, index + 1).toList()
+        }
       }
     }
   }
@@ -130,7 +161,10 @@ internal fun <T : Any> HostRetainedEntries(
           trackers[itemKey] = tracker
           onDispose { if (trackers[itemKey] === tracker) trackers.remove(itemKey) }
         }
-        HostEntryFrame(frame, idOf(item), onHostBack != null, lifecycle.state, tracker) {
+        DisposableEffect(itemKey) {
+          onDispose { told.remove(itemKey) }
+        }
+        HostEntryFrame(frame, idOf(item), onHostBack != null, lifecycle.state, tracker, { told[itemKey] = it }) {
           CompositionLocalProvider(
             LocalKeliverNavEntryLifecycle provides lifecycle.state,
             LocalBackHandlersEnabled provides lifecycle.backHandlersEnabled,
@@ -147,7 +181,10 @@ internal fun <T : Any> HostRetainedEntries(
 /**
  * The frame's entry, with `hostBack` read here so a handler enabled or disabled recomposes this and
  * not the stack. While hidden, an entry keeps the value it had when last shown: its handlers are
- * disabled by the gate then, which says nothing about whether they are enabled once it is shown.
+ * disabled by the gate then, which says nothing about whether they are enabled once it is shown. An
+ * entry never shown (one below the top of a deep link) is not free: nothing is known of its handlers
+ * until it is shown, so the press that would leave it goes through the guest. [onTold] hears each
+ * value sent.
  */
 @OptIn(ExperimentalKeliverNavRetentionApi::class)
 @Composable
@@ -157,14 +194,21 @@ private fun HostEntryFrame(
   canPop: Boolean,
   lifecycle: State<KeliverNavEntryLifecycle>,
   tracker: BackHandlerTracker,
+  onTold: (Boolean) -> Unit,
   content: @Composable () -> Unit,
 ) {
-  val lastShown = remember { BooleanBox(true) }
+  val lastShown = remember { BooleanBox(false) }
   val visible = lifecycle.value == KeliverNavEntryLifecycle.Visible
   val free = if (visible) !tracker.anyEnabled.value else lastShown.value
-  SideEffect { if (visible) lastShown.value = free }
-  frame.HostEntry(entryId, canPop && free, content)
+  val hostBack = canPop && free
+  SideEffect {
+    if (visible) lastShown.value = free
+    onTold(hostBack)
+  }
+  frame.HostEntry(entryId, hostBack, content)
 }
+
+private class LiveStack<T>(var items: List<T>)
 
 private class BooleanBox(var value: Boolean)
 

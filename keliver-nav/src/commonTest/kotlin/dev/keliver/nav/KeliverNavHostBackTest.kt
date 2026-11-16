@@ -27,6 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.compose.BackHandler
+import dev.keliver.compose.ExperimentalKeliverBackApi
+import dev.keliver.compose.LocalBackHandlersEnabled
 import dev.keliver.compose.LocalOnBackPressedDispatcher
 import dev.keliver.ui.Cancellable
 import dev.keliver.ui.OnBackPressedCallback
@@ -39,7 +41,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 
 /** The guest's side of host back (KeliverNavHostFrame): what it tells the host, and how it catches up. */
-@OptIn(ExperimentalKeliverNavRetentionApi::class)
+@OptIn(ExperimentalKeliverNavRetentionApi::class, ExperimentalKeliverBackApi::class)
 class KeliverNavHostBackTest {
   private sealed interface Route {
     data object Home : Route
@@ -327,6 +329,99 @@ class KeliverNavHostBackTest {
     harness.settle()
     assertEquals(listOf<Route>(Route.Detail(9)), nav.backstack)
     assertEquals(1, harness.stack.backHandled)
+    harness.close()
+  }
+
+  @Test
+  fun aNeverShownEntryIsNotFreeAndADoubleBackStopsAtItsHandler() = runTest {
+    val harness = Harness(this)
+    // A deep link opened in a stack nested in a hidden entry (a single navigate of several routes
+    // composes only the top, so it is the enclosing entry being hidden that composes entries no one
+    // has seen): home, a form with a "discard changes?" handler, a confirm screen.
+    val parent = mutableStateOf(KeliverNavEntryLifecycle.Hidden)
+    val parentHandlers = mutableStateOf(false)
+    val nav = KeliverNavController<Route>(Route.Home)
+    var formHandled = 0
+    harness.setContent {
+      CompositionLocalProvider(
+        LocalKeliverNavEntryLifecycle provides parent,
+        LocalBackHandlersEnabled provides parentHandlers,
+      ) {
+        KeliverNavHost(nav, KeliverNavRetention(RecordingHostFrame, 2)) { route ->
+          if (route == Route.Detail(1)) BackHandler(enabled = true) { formHandled++ }
+          Leaf(nameOf(route))
+        }
+      }
+    }
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    parent.value = KeliverNavEntryLifecycle.Visible
+    parentHandlers.value = true
+    harness.settle()
+    // Entries never shown tell the host it may not go back from them on its own.
+    assertEquals(
+      "root[stack(handled=0)[entry(0)[home],entry(1)[detail1],entry(2,hostBack)[detail2]]]",
+      harness.root.dump(),
+    )
+
+    // A host that went back twice anyway, both presses handled in one guest tick: the second is
+    // checked against the live stack (top: the form), and the form never said "free".
+    val onBack = harness.stack.onBack
+    onBack("1")
+    onBack("0")
+    harness.settle()
+    assertEquals(listOf(Route.Home, Route.Detail(1)), nav.backstack, "the double back stops at the form")
+    assertEquals(2, harness.stack.backHandled, "both presses are acknowledged")
+    assertEquals(
+      "root[stack(handled=2)[entry(0)[home],entry(1)[detail1]]]",
+      harness.root.dump(),
+      "the form, shown, has its handler enabled: host back stays off",
+    )
+
+    // The next press goes through the guest, where the form's handler takes it.
+    harness.dispatcher.callbacks.last { it.isEnabled }.handleOnBackPressed()
+    harness.settle()
+    assertEquals(1, formHandled)
+    assertEquals(listOf(Route.Home, Route.Detail(1)), nav.backstack)
+    harness.close()
+  }
+
+  @Test
+  fun twoBacksInOneTickSeeTheFirstPopOnARetainedStack() = runTest {
+    val harness = Harness(this)
+    var keys by mutableStateOf(listOf("a"))
+    val calls = mutableListOf<String>()
+    harness.setContent {
+      KeliverRetainedStack(
+        keys,
+        KeliverNavRetention(RecordingHostFrame),
+        onHostBack = { key ->
+          calls += key
+          keys = keys.subList(0, keys.indexOf(key) + 1)
+        },
+      ) { key ->
+        if (key == "b") BackHandler(enabled = true) {}
+        Leaf(key)
+      }
+    }
+    keys = listOf("a", "b")
+    harness.settle()
+    keys = listOf("a", "b", "c")
+    harness.settle()
+    assertEquals(
+      "root[stack(handled=0)[entry(0,hostBack)[a],entry(1)[b],entry(2,hostBack)[c]]]",
+      harness.root.dump(),
+    )
+    // Both in one tick: the second leaves b (popped to by the first), which had a handler enabled.
+    val onBack = harness.stack.onBack
+    onBack("1")
+    onBack("0")
+    harness.settle()
+    assertEquals(listOf("b"), calls)
+    assertEquals(listOf("a", "b"), keys)
+    assertEquals(2, harness.stack.backHandled)
     harness.close()
   }
 

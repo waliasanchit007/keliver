@@ -18,9 +18,11 @@ package dev.keliver.compose.gatea.composeui
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,16 +44,51 @@ import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 
 /**
+ * A host's back dispatcher for retained stacks ([ExtraRetained]): the platform dispatcher the guest's
+ * `BackHandler`s reach, which can also dispatch a press again ([onBackPressed]).
+ */
+public interface HostBackDispatcher : OnBackPressedDispatcher {
+  /**
+   * Dispatches a back press to the newest enabled callback, as the platform does for a real press.
+   * A stack whose callback took a press it can no longer handle (a second press in the frame of the
+   * first) disables that callback and passes the press on through this, so it is never swallowed.
+   */
+  public fun onBackPressed()
+}
+
+/**
  * The host's back dispatcher for retained stacks ([ExtraRetained]): a stack whose shown entry allows
  * it adds a callback here, and goes back on the host, in the frame of the press, with no guest round
  * trip. Null (the default) turns host back off: every back goes to the guest, as without the
  * container. A host provides it around its guest content, over the same platform dispatcher the
  * guest's `BackHandler`s reach. A stack adds its callback each time it becomes enabled, so on a
  * dispatcher where the newest enabled callback wins (Android's) it is ahead of callbacks added
- * before, such as an app's root `BackHandler` that pops the same stack in the guest.
+ * before, such as an app's root `BackHandler` that pops the same stack in the guest. A hidden entry
+ * of a stack sees null here, so a stack nested in it never takes a press.
+ *
+ * Prototype only. Known gaps, to close before gate A leaves the prototype:
+ * - Host back is ahead of an enabled guest `BackHandler` registered earlier OUTSIDE the stack (a
+ *   root-level sheet's, say): the guest refuses a press only for a handler in the entry it leaves.
+ *   Until that is fixed, overlays that take back must live inside an entry.
+ * - No predictive back: [OnBackPressedCallback] has no started/progressed/cancelled hooks, so on
+ *   Android 14+ the switch happens on commit, with no swipe preview. iOS has no host-back trigger
+ *   yet (TreehouseContent's iOS dispatcher is a no-op and nothing provides this), so iOS stays on
+ *   the guest round trip.
+ * - Registration order at start-up: the guest's root `BackHandler` registers asynchronously; if it
+ *   lands after the stack's callback it is newer and takes presses (safe, but host back is off)
+ *   until the stack's callback is added again.
+ * - Every host wires this by hand, and forgetting it silently turns host back off.
+ *   `TreehouseContent` should provide it from the dispatcher it already builds, and it should be
+ *   marked experimental.
  */
-public val LocalHostBackDispatcher: ProvidableCompositionLocal<OnBackPressedDispatcher?> =
+public val LocalHostBackDispatcher: ProvidableCompositionLocal<HostBackDispatcher?> =
   staticCompositionLocalOf { null }
+
+/**
+ * Whether the content is in a hidden entry of a retained stack ([ExtraRetained]). Host renderers
+ * that animate on their own (the shimmer) stop while it is true, so a hidden entry costs no frames.
+ */
+public val LocalRetainedHidden: ProvidableCompositionLocal<Boolean> = compositionLocalOf { false }
 
 /**
  * A retained stack (NF1). Shows the guest's last entry, or, after a back it handled itself, the
@@ -126,7 +163,12 @@ internal class ComposeUiExtraRetained :
         dispatcher.addCallback(
           object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-              goBack()
+              // A second press in the frame of the first can find this stack unable to go back
+              // before recomposition removes the callback: pass it on rather than swallow it.
+              if (!goBack()) {
+                isEnabled = false
+                dispatcher.onBackPressed()
+              }
             }
           },
         )
@@ -158,7 +200,11 @@ internal class ComposeUiExtraRetained :
   }
 }
 
-/** One entry's slot: semantics cleared, focus refused and dropped while [hidden]. */
+/**
+ * One entry's slot: semantics cleared, focus refused and dropped while [hidden]. A hidden entry also
+ * sees no [LocalHostBackDispatcher] (a stack nested in it never takes a press) and
+ * [LocalRetainedHidden] true (host animations in it stop).
+ */
 @Composable
 private fun RetainedSlot(hidden: Boolean, content: @Composable () -> Unit) {
   val focus = remember { FocusHolder() }
@@ -176,7 +222,11 @@ private fun RetainedSlot(hidden: Boolean, content: @Composable () -> Unit) {
       .focusGroup(),
     propagateMinConstraints = true,
   ) {
-    content()
+    CompositionLocalProvider(
+      LocalHostBackDispatcher provides if (hidden) null else LocalHostBackDispatcher.current,
+      LocalRetainedHidden provides hidden,
+      content = content,
+    )
   }
 }
 

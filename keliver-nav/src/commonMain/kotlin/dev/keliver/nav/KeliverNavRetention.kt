@@ -204,8 +204,8 @@ public fun <K : Any> KeliverRetainedStack(
 /**
  * Composes the top of [items] and, with [retention], up to its depth below it, each in a group keyed
  * by [keyOf] so an entry's composition survives entries added above it and removed from below it.
- * On a [KeliverNavHostFrame], [idOf] names an entry to the host and [onHostBack] makes an entry the
- * top after the host went back to it.
+ * On a [KeliverNavHostFrame], [idOf] names an entry to the host, [onHostBack] makes an entry the
+ * top after the host went back to it, and [liveItems] (if given) reads the stack as it is now.
  */
 @OptIn(ExperimentalKeliverNavRetentionApi::class, ExperimentalKeliverBackApi::class)
 @Composable
@@ -216,6 +216,7 @@ internal fun <T : Any> RetainedEntries(
   content: @Composable (T) -> Unit,
   idOf: (T) -> String = { keyOf(it).toString() },
   onHostBack: ((T) -> Unit)? = null,
+  liveItems: (() -> List<T>)? = null,
 ) {
   val depth = retention?.depth ?: 0
   if (retention == null || depth == 0) {
@@ -237,7 +238,7 @@ internal fun <T : Any> RetainedEntries(
   }
   val frame = retention.frame
   if (frame is KeliverNavHostFrame) {
-    HostRetainedEntries(items, window, keyOf, idOf, frame, onHostBack, content)
+    HostRetainedEntries(items, window, keyOf, idOf, frame, onHostBack, content, liveItems)
     return
   }
   // An entry is shown only while the entry enclosing this stack (if any) is shown too.

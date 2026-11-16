@@ -108,6 +108,7 @@ public fun <R : Any> KeliverNavHost(
         },
         idOf = { it.id.toString() },
         onHostBack = { controller.popToEntry(it.id) },
+        liveItems = { controller.entries.toList() },
       )
     }
   }

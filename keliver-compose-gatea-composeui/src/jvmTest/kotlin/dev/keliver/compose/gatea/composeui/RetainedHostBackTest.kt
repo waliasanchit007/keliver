@@ -84,8 +84,12 @@ class RetainedHostBackTest {
     override fun Entry(visible: Boolean, content: @Composable () -> Unit) = HostEntry("", false, content)
   }
 
-  private class BackDispatcher : OnBackPressedDispatcher {
+  private class BackDispatcher : HostBackDispatcher {
     val callbacks = mutableListOf<OnBackPressedCallback>()
+
+    override fun onBackPressed() {
+      press()
+    }
 
     override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable {
       callbacks += onBackPressedCallback
@@ -267,16 +271,107 @@ class RetainedHostBackTest {
     }
   }
 
+  private fun entry(
+    key: String,
+    child: dev.keliver.widget.Widget<@Composable (Modifier) -> Unit>?,
+    hostBack: Boolean = true,
+  ) = ComposeUiExtraRetainedEntry().apply {
+    key(key)
+    hostBack(hostBack)
+    if (child != null) content.insert(0, child)
+  }
+
+  /** A host-side widget that records what its slot provides. */
+  private class Probe : dev.keliver.widget.Widget<@Composable (Modifier) -> Unit> {
+    var hidden: Boolean? = null
+    var dispatcher: HostBackDispatcher? = null
+    override var modifier: dev.keliver.Modifier = dev.keliver.Modifier
+    override val value: @Composable (Modifier) -> Unit = {
+      hidden = LocalRetainedHidden.current
+      dispatcher = LocalHostBackDispatcher.current
+    }
+  }
+
+  @Test
+  fun aStackNestedInAHiddenEntryNeverTakesAPress() = runComposeUiTest {
+    val innerSent = mutableListOf<String>()
+    val inner = ComposeUiExtraRetained().apply { onBack { innerSent += it } }
+    inner.entries.insert(0, entry("x", null))
+    inner.entries.insert(1, entry("y", null))
+    val outer = ComposeUiExtraRetained().apply { onBack {} }
+    outer.entries.insert(0, entry("a", inner))
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { outer.value(Modifier) }
+    }
+    waitForIdle()
+    assertEquals(1, back.callbacks.size, "shown, the nested stack can go back")
+
+    // b covers a, and the outer stack may not go back from b: no callback may take a press.
+    runOnIdle { outer.entries.insert(1, entry("b", null, hostBack = false)) }
+    waitForIdle()
+    assertEquals(0, back.callbacks.size, "the hidden entry's nested stack removed its callback")
+    // The nested stack changes while hidden (its callback would be added again, as the newest).
+    runOnIdle { inner.entries.insert(2, entry("z", null)) }
+    waitForIdle()
+    runOnIdle { assertEquals(false, back.press(), "nothing takes the press") }
+    assertEquals(emptyList(), innerSent)
+
+    // Shown again, the nested stack takes presses.
+    runOnIdle { outer.entries.remove(1, 1) }
+    waitForIdle()
+    runOnIdle { assertTrue(back.press()) }
+    assertEquals(listOf("y"), innerSent)
+  }
+
+  @Test
+  fun aSecondPressInTheFrameOfTheFirstIsPassedOn() = runComposeUiTest {
+    var passedOn = 0
+    // Registered first: an app's root handler, which the stack's callback is ahead of.
+    back.addCallback(
+      object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+          passedOn++
+        }
+      },
+    )
+    val sent = mutableListOf<String>()
+    val stack = ComposeUiExtraRetained().apply { onBack { sent += it } }
+    stack.entries.insert(0, entry("a", null))
+    stack.entries.insert(1, entry("b", null))
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { stack.value(Modifier) }
+    }
+    waitForIdle()
+    runOnIdle {
+      // Both before the stack recomposes: the second finds it at its bottom entry.
+      assertTrue(back.press())
+      assertTrue(back.press())
+    }
+    assertEquals(listOf("a"), sent, "the first press went back on the host")
+    assertEquals(1, passedOn, "the second was passed on, not swallowed")
+  }
+
+  @Test
+  fun aHiddenEntryStopsHostAnimationsAndSeesNoDispatcher() = runComposeUiTest {
+    val stack = ComposeUiExtraRetained().apply { onBack {} }
+    val probe = Probe()
+    stack.entries.insert(0, entry("a", probe))
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { stack.value(Modifier) }
+    }
+    waitForIdle()
+    assertEquals(false, probe.hidden)
+    assertTrue(probe.dispatcher === back)
+    runOnIdle { stack.entries.insert(1, entry("b", null)) }
+    waitForIdle()
+    assertEquals(true, probe.hidden, "the shimmer reads this and stops its transition")
+    assertEquals(null, probe.dispatcher)
+  }
+
   @Test
   fun hidingAnEntryDropsItsFocus() = runComposeUiTest {
     val stack = ComposeUiExtraRetained().apply { onBack {} }
     val field = Focusable()
-    fun entry(key: String, child: dev.keliver.widget.Widget<@Composable (Modifier) -> Unit>?) =
-      ComposeUiExtraRetainedEntry().apply {
-        key(key)
-        hostBack(true)
-        if (child != null) content.insert(0, child)
-      }
     stack.entries.insert(0, entry("a", field))
     setContent { stack.value(Modifier) }
     runOnIdle { field.requester.requestFocus() }
