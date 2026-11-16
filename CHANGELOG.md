@@ -89,6 +89,18 @@ Changed:
   engine's `gc()` when exposed. Without an exposed `gc()` it relies on the engine's own
   collection, so a short `leakThreshold` can report objects the browser has not
   collected yet (#231).
+- Generated Compose API (prototype, `keliver-compose-gatea-composeui`): during a fling a lazy list reports to the guest only the window it will come to rest at, predicted from the platform's own default fling, so the guest no longer composes windows the list has left (NF1) (#258).
+- Generated Compose API (prototype): rows the guest has not composed yet are drawn as placeholders (never blank, hidden from screen readers) at the measured size of the guest's rows, instead of empty 48 dp spacers (#258).
+- keliver-nav: an experimental retained back stack (opt in with `@ExperimentalKeliverNavRetentionApi`).
+  `KeliverNavHost(controller, retention, content)` and `KeliverRetainedStack(keys, retention, content)`
+  keep up to `KeliverNavRetention.depth` (default 2) entries below the top composed and hidden by a
+  `KeliverNavFrame`, so going back composes nothing in the guest and creates nothing on the host.
+  Hidden entries see `KeliverNavEntryLifecycle.Hidden` (`keliverNavEntryLifecycle()`), their
+  `BackHandler`s are disabled, and `LaunchedWhileVisible` runs polling, subscriptions and timers only
+  while the screen is shown; a retained stack inside a hidden entry is hidden too. The existing
+  `KeliverNavHost(controller, content)` is unchanged (#259).
+- keliver-compose: an experimental `LocalBackHandlersEnabled` (opt in with `@ExperimentalKeliverBackApi`).
+  A `BackHandler` is enabled only while both its own `enabled` and this composition local are true (#259).
 
 Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 
@@ -141,6 +153,11 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   `set-aside` reports as well as `crash-rollback` ones, and a release owner on one never hears
   that a bundle was set aside: upgrade the relay that collects reports along with the hosts.
   Android hosts send each report with `Connection: close` (#242).
+- Production hosts (templates): a start policy, **`parallel` by default** (the cached bundle loads during the lookup, in its own app, and shows once the lookup confirms it), `network-first` (the behaviour of hosts from tools 0.3.18 and before) or `cache-first` (the cached bundle shows at once; a newer one applies at the next start, or as an update). Set `keliver.startPolicy` (Android) or `START_POLICY` in `HostConfig.kt` (iOS); every start logs a `start policy:` line. Hosts scaffolded before need the new setting lines (iOS `START_POLICY`, `START_POLICY_OVERRIDE`; Android's build.gradle fields) (#249).
+- **Default changed to `parallel`:** starts from a warm cache are faster (714 vs 1,304 ms to the first frame on a low-end Android phone). A cached release the lookup does not confirm is dropped: its start-up `HostHttp` requests and bridge calls (through `scope.main`) are held and never sent, and its crash records are discarded; `HostSqlDriver` is **not** held, so a dropped release may have touched the local database at start-up. **To opt out:** `keliver.startPolicy=network-first` and `keliver.startPolicyOverride=none` (iOS `START_POLICY = "network-first"`, `START_POLICY_OVERRIDE = "none"`) (#249).
+- `parallel` shows the cached release only when the index names the same manifest URL at the sha256 of the manifest bytes it was loaded from (recorded with the last good bundle); otherwise the start loads from the network as `network-first` does. An install from before this record makes one network load at its first `parallel` start. Under `parallel` and `cache-first`, when Zipline's cache is gone and it refetches the cached release's manifest, only the recorded bytes are accepted (`manifest sha256 mismatch` otherwise); a confirmed `parallel` start whose cached load fails then loads the named release from the network once (#249).
+- Under `parallel` and `cache-first`, a start from the cache still takes updates (on resume, live, `checkForUpdate`): each loads in a new app, swapped in once loaded with no blank frame. A replaced app's late close (`Zipline closed`) is logged at debug, not as an uncaught exception (#249).
+- `keliver-publish --set-start-policy <policy|default> [--channel <name>]`: a release owner's per-channel override in `bundles/index.json` (`startPolicy`), applied by hosts from their next start; older hosts ignore it. An app refuses it with `keliver.startPolicyOverride=none` (iOS `START_POLICY_OVERRIDE = "none"`) (#249).
 
 ## Keliver 0.4.1 - 2026-10-27
 
