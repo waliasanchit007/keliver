@@ -555,13 +555,14 @@ re-running it that way: `input` and `am` fail with "Failed transaction" when the
 on shared storage (the system server cannot use that descriptor), so the script gives them
 `/dev/null`. Each series' battery level and temperature are given with it.
 
-**Run 3 lost the phone too**, at about 14:09 IST (wireless adb, as in both earlier runs), during
-native's scrolling series, and it had not come back by 14:40. The script on the phone was not
-affected by that, so the remaining series (native and web scrolling, the guest's `x=scroll` pass,
-the heavy screen in all three forms with 3 cold opens each, the five GC arms) should have run to
-the end on the phone by about 15:30, unless the battery guard (it stops below 30% on battery)
-stopped them. **Their output is on the phone, in the app's `files/r3/`, not pulled**, and is not
-reported here. Uninstalling the app deletes that folder: pull it first.
+**Run 3 lost the phone's adb link too**, from about 14:09 to 15:25 IST (wireless adb, as in both
+earlier runs). The script on the phone was not affected: every series ran, in order, from 13:45 to
+15:17 (battery 50% → 44%, on battery throughout, thermal status 0 in every series), and the files
+were pulled when the phone came back. The phone warmed during the scrolling series: 25.7–26.8 °C
+for the guest's placeholder pass, 27.0–27.7 °C for native, 27.6–33.1 °C for web, 31.3–33.6 °C for
+the guest's `x=scroll` pass, then 29.8–30.4 °C for the heavy screen and 29.3–29.8 °C for the
+GC arms. One series is incomplete: the guest's fast `x=scroll` run logged 2 flings and then stopped
+logging (no crash in the crash buffer; cause not established).
 
 ### Scrolling, run 3: the first speed with placeholders (guest)
 
@@ -606,8 +607,57 @@ smoothly at 2,800 dp/s but stops on a mostly empty screen: 8 of 14 rows or more 
 content comes back about 2.3 s after the list has stopped. At 3,500 dp/s and faster the list also
 stutters while it moves (run 2: 7–20 skipped frames per fling down) and the whole screen stays empty
 for 3–5 s after it stops. A user flicking through a long list at a normal pace would see a list that
-keeps going blank; on this phone that is the guest's biggest visible defect. How native and web
-compare at the same speeds is in run 3's unread output (see Phone run 3).
+keeps going blank; on this phone that is the guest's biggest visible defect. Native and web, at the
+same speeds, never show a blank row (below).
+
+### Scrolling, run 3: native and web against the guest
+
+**Native and web, clean passes, five speeds** (native 14:05–14:25 IST, 47%, 27.0–27.7 °C; web
+14:25–14:44, 47% → 46%, 27.6–33.1 °C; thermal 0). The same swipes and gaps as the guest's; no fling
+closed by a touch. The guest's column is run 2's clean pass (same APK, 58% → 55%, 25.0–25.6 °C).
+Missed vsyncs per fling while the list moves, median (min–max), down / up:
+
+| Release speed | Native | Web | Guest (run 2) | List stops: native / web / guest |
+|---|---|---|---|---|
+| 1,422 dp/s | 1 (0–2) / 1 (0–2) | 0 / 0 | 1 (0–1) / 1 (0–2) | 743 / 671 / 743 ms |
+| 2,133 dp/s | 0 (0–1) / 0 (0–2) | 0 / 0 | 1 (0–2) / 1 (0–2) | 992 / 921 / 992 |
+| 2,844 dp/s | 1 (0–2) / 0 (0–1) | 0 / 0 | 1.5 (0–5) / 1 (0–1) | 1,211 / 1,162 / 1,210 |
+| 3,556 dp/s | 1 (0–2) / 0 (0–1) | 0 / 0 | **8 (7–11)** / 1 (0–3) | 1,423 / 1,363 / 1,419 |
+| 6,667 dp/s | 4 (2–10) / 1 (0–2) | 0 / 0 | **15 (3–20)** / 3 (2–6) | 2,241 / 2,210 / 2,248 |
+
+- **Web never missed a vsync** in 93 flings: Chromium scrolls on its compositor thread, and its
+  list is plain DOM rows that are already laid out.
+- **Native misses 0–2 per fling up to 3,556 dp/s**, and 2–10 (median 4) flinging fast down the list,
+  where each fling passes about 79 of its 72 dp rows (its moving frames' p90 37 ms there, 21–24 ms at
+  the other speeds).
+- **The guest matches native up to 2,844 dp/s and falls behind from 3,556 dp/s down the list**:
+  8 against 1 at 3,556 dp/s, 15 against 4 at 6,667. Flinging up it stays close to native.
+- **Moving frames take about 20 ms in all three forms** (median 20.1–20.7 ms at every speed), so
+  that is this phone's 60 Hz pipeline with the list, not a guest cost.
+- **Native's first fast swipe started its fling** (velocity 12,500 px/s, 10,591 px travelled); the
+  guest's did not in 4 of 6 fresh-process fast runs (run 3's `x=scroll` run is the sixth). That
+  points at the guest form's first drag, not at the input route; why is not established.
+
+**The guest's `x=scroll` pass** (its widget counters; 14:44–15:04, 46%, 31.3–33.6 °C). Missed vsyncs
+match the clean pass (down: 1.5, 1, 3, 8 at the four slower speeds; the clean pass 1, 1, 1.5, 8).
+The guest's work per fling, down / up:
+
+| Release speed | Guest time per fling (median) | Rows created, 10 flings | Guest ms per new row | Guest busy after UP (median) |
+|---|---|---|---|---|
+| 1,422 dp/s | 2,942 / 2,175 ms | 156 / 175 | 181 / 106 | 2,932 / 2,185 ms |
+| 2,133 dp/s | 3,392 / 2,457 | 223 / 210 | 152 / 98 | 3,533 / 2,587 |
+| 2,844 dp/s | 3,812 / 2,642 | 339 / 267 | 112 / 96 | 4,079 / 2,921 |
+| 3,556 dp/s | 4,600 / 3,650 | 472 / 375 | 101 / 87 | 5,019 / 3,986 |
+| 6,667 dp/s | not measured (the run stopped logging after 2 flings) | | | |
+
+(Rows are widgets created / 9.) The guest spends about 0.1–0.18 s per row it creates, and creates
+more rows the faster the fling: it composes the windows the list passes through.
+
+**What a user would feel, native and web against the guest.** Native and web feel the same at every
+speed: the list moves, slows and stops on rows that are there; native drops a few frames on a very
+fast flick down a long list, web drops none. The guest feels the same as them only on slow
+scrolls. From an ordinary flick it shows blank rows that native and web never show, and from a
+brisk one it also stutters while it moves.
 
 ### Scrolling, run 2
 
