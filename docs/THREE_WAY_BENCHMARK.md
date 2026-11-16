@@ -657,8 +657,9 @@ session:
 - **In 13 of the guest's flings it did no work while the list moved.** Its frames still had a
   13.7 ms median, and 40% were over 16.7 ms: part of the lag is the host drawing the guest's tree.
 - **In the other 31 flings** the median was 20.3 ms, with 70% over 16.7 ms.
-- **On the five longest flings**, the guest was still composing rows 1.0–7.2 s after the finger
-  lifted. Its single frames took up to 3 s.
+- **On the five longest flings by distance**, the guest was still composing rows 1.0–7.2 s after
+  the finger lifted. Single guest compositions (`gMaxMs`) took up to 3.0 s; the host frames in the
+  table peaked at 231 ms.
 - One session per form, unscripted, so the flings differ in speed and number. This is a check of
   what a user sees, not a controlled series.
 - **Native's first fast swipe started its fling** (velocity 12,500 px/s, 10,591 px travelled); the
