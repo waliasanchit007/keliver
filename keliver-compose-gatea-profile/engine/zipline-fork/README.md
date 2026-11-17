@@ -23,6 +23,12 @@ and "NF2: the Zipline fork, step 1". Nothing here is published; no repository is
     64-bit range; a wider one is unsupported, like any other unconvertible value.
   - `zipline/src/nativeMain`, `nativeInterop` (iOS): the same string and BigInt cases. **Not
     compiled in step 1.**
+  - `QuickJsException` (JNI): QuickJS 2026 writes `file.js:8:3` (line and column) in stack
+    frames; the parser keeps file and line, so Java stack traces read as before. `Utf8Test`'s iOS
+    expectation gains the column, which iOS passes through.
+  - Not ported: `zipline-bytecode` (Zipline's compiler uses it to apply source maps and strip line
+    numbers) reads and writes bytecode version 1 only; 2026 writes 5. `use-fork.init.gradle` turns
+    the production link's source maps off until it is ported.
   - Build files: `dtoa.c` (new in QuickJS 2025-04) in `build.zig`; `-fwrapv` in `build.zig`, the
     Android `CMakeLists.txt` and cklib's flags (QuickJS 2026's Makefile builds with it).
   - `QuickJs2026Test` (host tests, JVM and iOS): the version, the compiler accepting BigInt, the
@@ -31,7 +37,8 @@ and "NF2: the Zipline fork, step 1". Nothing here is published; no repository is
 
 ## Rebuilding it
 
-`scripts/zipline-fork.sh <command> <work dir>` (from the repository root, JDK 17):
+`bash scripts/zipline-fork.sh <command> <work dir>` (from the repository root, JDK 17; needs git,
+curl, clang, make and Node):
 
 | Command | What it does |
 |---|---|

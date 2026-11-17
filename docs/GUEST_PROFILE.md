@@ -809,9 +809,9 @@ past the collection point.
 #   serializers once:     keliver-compose-gatea-profile/experiments/serializers-once.patch (codegen)
 #   Long as BigInt:       -PprofileBigInt (Node, the 2026 qjs below, or profileQuickJs on NF2's fork)
 # (b2) NF2's Zipline fork ("NF2: the Zipline fork, step 1"): build it, publish it to a scratch repo, run
-scripts/zipline-fork.sh all <work>          # clone the tag, verify, patch, JNI library, qjs, asUintN check
-scripts/zipline-fork.sh test <work> :zipline:jvmTest
-scripts/zipline-fork.sh publish <work> <work>/m2
+bash scripts/zipline-fork.sh all <work>     # clone the tag, verify, patch, JNI library, qjs, asUintN check
+bash scripts/zipline-fork.sh test <work> :zipline:jvmTest
+bash scripts/zipline-fork.sh publish <work> <work>/m2
 ./gradlew --no-daemon -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
   -PziplineForkRepo=<work>/m2 -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \
   "-PprofileArgs=modes=kotlinx+none,iterations=30,warmup=3,label=fork" -PprofileOut=<scratch>/out [-PprofileBigInt]
