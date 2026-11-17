@@ -4,6 +4,7 @@
  */
 package dev.keliver.compose.gatea.profile
 
+import app.cash.zipline.QuickJs
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ZiplineFile
@@ -32,6 +33,8 @@ import kotlinx.coroutines.runBlocking
 fun main(args: Array<String>) {
   val bundle = File(args[0])
   val out = File(args[1]).apply { mkdirs() }
+  // Which engine this run loaded: 2021-03-27 as shipped, 2026-06-04 on NF2's fork (engine/zipline-fork).
+  println("QJS engine: QuickJS ${QuickJs.version}")
   val a = args.getOrElse(2) { "" }.split(',').map { it.trim() }.filter { '=' in it }
     .associate { it.substringBefore('=') to it.substringAfter('=') }
   val gcs = (a["gc"] ?: "default").split('+')

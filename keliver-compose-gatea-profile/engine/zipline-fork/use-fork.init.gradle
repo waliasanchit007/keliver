@@ -1,0 +1,56 @@
+// NF2 step 1: points a Keliver build at the forked Zipline JVM artifact (README.md here), without
+// changing the build. Only `app.cash.zipline:zipline-jvm` is replaced: the JNI engine the
+// bytecode compiler (the Zipline Gradle plugin, in the build's classpath) and the JVM hosts load.
+// Every other Zipline module stays 1.28.0 from Maven Central.
+//
+//   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
+//     -PziplineForkRepo=<the scratch Maven repo `apply.sh publish` wrote> --no-daemon <tasks>
+//
+// --no-daemon: the plugin loads the engine's native library into the Gradle process, so a daemon
+// that already loaded 1.28.0's must not be reused.
+// Included builds (build-support) run this script too; only the root build needs the fork.
+if (gradle.parent != null) return
+def forkRepo = startParameter.projectProperties['ziplineForkRepo']
+if (forkRepo == null) throw new GradleException('use-fork.init.gradle: pass -PziplineForkRepo=<maven repo dir>')
+def forkVersion = '1.28.0-q20260604'
+def upstreamVersion = '1.28.0'
+
+def addRepo = { RepositoryHandler repos ->
+  repos.maven {
+    name = 'ziplineFork'
+    url = new File(forkRepo).toURI()
+    content { includeVersion('app.cash.zipline', 'zipline-jvm', forkVersion) }
+  }
+}
+def substitute = { ConfigurationContainer configurations ->
+  configurations.configureEach { c ->
+    c.resolutionStrategy.eachDependency { d ->
+      if (d.requested.group != 'app.cash.zipline') return
+      if (d.requested.name == 'zipline-jvm') {
+        d.useVersion(forkVersion)
+        d.because('NF2: Zipline on QuickJS 2026-06-04')
+      } else if (d.requested.version == forkVersion) {
+        // The fork's own module metadata names its siblings at the fork version.
+        d.useVersion(upstreamVersion)
+      }
+    }
+  }
+}
+
+settingsEvaluated { settings ->
+  addRepo(settings.dependencyResolutionManagement.repositories)
+}
+allprojects { p ->
+  addRepo(p.buildscript.repositories)
+  substitute(p.buildscript.configurations)
+  substitute(p.configurations)
+  // Zipline's compiler rewrites the bytecode itself when a .js.map is present (source lines into
+  // the bytecode) or line numbers are stripped, through zipline-bytecode, which reads and writes
+  // QuickJS 2021's bytecode format only (version 1; 2026 writes 5). Until the fork ports it, the
+  // production link writes no source maps here. Debug information only: the code is the same.
+  p.tasks.configureEach { t ->
+    if (t.name.startsWith('compileProductionExecutableKotlinJs') && t.hasProperty('compilerOptions')) {
+      t.compilerOptions.sourceMap.set(false)
+    }
+  }
+}

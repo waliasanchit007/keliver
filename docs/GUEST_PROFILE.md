@@ -396,7 +396,8 @@ first batch).
   a negative short BigInt at width 64, which covers Kotlin's `ushr` on a 64-bit build. With it, all
   19 operations match Node and the workload runs with identical batches. It does **not** fix other
   widths, the multi-limb path, or 32-bit builds (where a 64-bit value is two limbs, as on an
-  `armeabi-v7a` host): a fork must fix `asUintN` in general. Upstream has not been told yet.
+  `armeabi-v7a` host): a fork must fix `asUintN` in general. Upstream has not been told yet. (The
+  fork's general fix, checked on both limb sizes: "NF2: the Zipline fork, step 1".)
 
 | Engine and bundle | Recording | Back | Open | Back vs today |
 |---|---|---|---|---|
@@ -454,8 +455,8 @@ texts and the file history were fetched 2026-11-16):
 - So: a fork of Zipline's native module and bytecode compiler (or an upstream contribution), a
   general `asUintN` fix (to be reported upstream), `-fwrapv` kept, Zipline's compiler accepting
   BigInt, bundles compiled for both engines during a transition, and the index naming which engine
-  a host has. Not checked: Zipline's conversion of JS values to host objects has no BigInt case, so
-  any `Long` that crosses the bridge as a BigInt needs a look. Estimate 4–8 engineer-weeks, as in the table.
+  a host has. Zipline's conversion of JS values to host objects has no BigInt case (checked and
+  added in "NF2: the Zipline fork, step 1"; the bridge itself carries JSON strings). Estimate 4–8 engineer-weeks, as in the table.
 
 **How to run it on a phone** (NF0; arm64-v8a, Android 8+). The same three builds and matrix as
 the Mac (2021 `-Os` as shipped; 2026 fixed `-Os` and `-O2`, as shipped and `Long` as BigInt; four
@@ -536,6 +537,102 @@ What the phone adds to the Mac's result:
   target before host and bridge time, so NF3's pre-composition and window size are needed.
 - `qjs` parses source where Zipline loads bytecode, so the load column (1.0–1.3 s on the phone) is
   not Zipline's start-up time. Cold start is NF0's separate measurement.
+
+## NF2: the Zipline fork, step 1
+
+The owner decided on 2026-11-17 to fork Zipline for NF2 (`docs/PLAN_2026-11.md` section 10). Step 1,
+done on the Mac without a device: Zipline 1.28.0 on QuickJS 2026-06-04, with the JVM engine, its
+tests and the bytecode compiler working, kept in this repository as a patch set
+(`keliver-compose-gatea-profile/engine/zipline-fork/`, its README, `scripts/zipline-fork.sh`). No
+repository was created and nothing was published.
+
+**What the fork changes** (two patches on the tag, applied by `apply.sh engine` after it checks the
+commit and the tarball's SHA-256):
+- **The engine.** `zipline/native/quickjs` is QuickJS 2026-06-04: Zipline's own list of files plus
+  `dtoa.c`/`dtoa.h`, new in 2025-04. `-fwrapv` is added to every build (zig for the JVM, the NDK's
+  CMake, cklib for iOS), as QuickJS's Makefile builds it.
+- **A general `asUintN`.** The release has two faults, not one: it returns a negative argument
+  unchanged when the value has no more limbs than the width (`BigInt.asUintN(64, -1n)` is `-1n`),
+  and it drops the sign limb when the width is a multiple of the limb size, so a positive result
+  reads as negative (`BigInt.asUintN(64, 2n**64n + 2n**63n)` is `-(2n**63n)`). The fix builds the
+  result from the two's-complement limbs for every width, short and multi-limb values, and 32- and
+  64-bit limbs. `asIntN` was already right.
+- **Zipline's native layer**, for the 12 names that changed and one that "The engine, measured"
+  did not see:
+  - the nine `JS_AddIntrinsic*` and `JS_SetPropertyFunctionList` return `int` now, and their
+    results are checked (`JS_NewString` being inline and `JS_TAG_FLOAT64`'s new value need nothing);
+  - **strings may be ropes.** 2026 adds `JS_TAG_STRING_ROPE`: a long concatenation stays a rope
+    until something flattens it. Zipline tests the tag for `JS_TAG_STRING` in three places. As
+    shipped on the new engine, `evaluate` would return `null` for such a string and, worse, an
+    inbound call whose JavaScript returns one would hand the JVM an uninitialised value (the
+    `assert` that guards it is compiled out in release builds). Fixed on JNI and on iOS;
+  - **BigInt to the host.** Zipline's JS-to-host conversion had no BigInt case, so a BigInt result
+    was `null`. A BigInt in the signed 64-bit range now becomes a `Long`; a wider one stays
+    unsupported, as any other value the conversion cannot represent, with no truncation. This only
+    concerns values `evaluate` and `execute` return: Zipline's bridge carries JSON strings, and
+    kotlinx.serialization writes a BigInt `Long` as digits, as before.
+- **The compiler.** Zipline compiles bundles by running QuickJS on the JVM
+  (`QuickJs.compile` in the Gradle plugin), so "the compiler rejects BigInt" was the 2021 parser
+  rejecting `1n`. Nothing in Zipline's Kotlin checks for BigInt; on the new engine it compiles.
+- Zipline keeps its own `FinalizationRegistry` and its no-eval context; the 2026 engine has a
+  native `FinalizationRegistry` (`JS_AddIntrinsicWeakRef`), which the fork does not install, so the
+  guest sees what it saw before.
+
+**Checked:**
+- **`asUintN` against Node.** `engine/bigint-ops.js` now also runs `asUintN` and `asIntN` at every
+  width from 1 to 128 and at 129, 160, 192, 255–257 and 1000, over 40 values (short and multi-limb
+  on both limb sizes, positive and negative, at and around 2^31, 2^32, 2^53, 2^63, 2^64, 2^127,
+  2^128): 289 lines, about 10,800 results. `apply.sh qjs` builds the patched engine twice, with
+  64-bit limbs and with 32-bit limbs (`-U__SIZEOF_INT128__`, the limb size of a 32-bit host such as
+  `armeabi-v7a`; the build prints which it got), and the unpatched release both ways as the
+  control. **Both patched builds match Node on all 289 lines. The unpatched release differs on 75
+  lines with 64-bit limbs and on 107 with 32-bit limbs**, all of them `asUintN` (and the three of
+  the original 19 lines that use it); `asIntN` matches everywhere.
+- **Zipline's JVM tests** on the new engine (`:zipline:jvmTest`, 48 classes: the engine,
+  compiling, the call channels, services, flows, finalization, interrupts, UTF-8): **264 run, 262 pass, 2 skipped** (skipped upstream too),
+  including the fork's 7 (`QuickJs2026Test`). The first run had 5 failures, all one change: QuickJS
+  2026 writes a column into every stack frame (`file.js:8:3`), and Zipline's JNI frame parser took
+  `file.js:8:3` as the file name. The fork parses file, line and column and keeps file and line, so
+  Java stack traces read as before; on iOS, where Zipline passes the engine's text through, the
+  host test now expects the column. Not run: `zipline-loader`, the Gradle plugin's and
+  `zipline-cli`'s tests, Android and iOS.
+- **A second thing in Zipline reads bytecode: `zipline-bytecode`.** Zipline's compiler rewrites the
+  bytecode itself when a module has a source map (Kotlin's source lines into the bytecode) or when
+  line numbers are stripped, and `zipline-bytecode` reads and writes only the 2021 format
+  (`BC_VERSION = 1`). On the new engine both paths fail ("unexpected version"). Porting it to
+  version 5 is a step of its own (below). For the measurement, `use-fork.init.gradle` turns off
+  the production link's source maps, which only removes debug information.
+- **The guest profile harness on the fork**, the same session, same Mac (M4 Pro), one run each,
+  3 warm-up and 30 measured pairs, medians in ms; `use-fork.init.gradle` swaps only `zipline-jvm`,
+  so the Zipline Gradle plugin compiles the bundle with the forked engine and the harness runs it:
+
+  | Engine (through Zipline) | Bundle | Back | Open | Back, recording off | Back vs 1.28.0 | Open vs 1.28.0 |
+  |---|---|---|---|---|---|---|
+  | 1.28.0, QuickJS 2021-03-27 | as shipped | 82.30 | 24.86 | 42.48 | — | — |
+  | fork, QuickJS 2026-06-04 | as shipped | 71.12 | 21.03 | 38.44 | 1.16× | 1.18× |
+  | **fork, QuickJS 2026-06-04** | **`Long` as BigInt** | **41.42** | **10.19** | 29.40 | **1.99×** | **2.44×** |
+
+  Every run's batch hash is the same (637745288 as shipped, 394047653 with recording off), and the
+  harness prints which engine it loaded. This is the measurement "The engine, measured" made with
+  `qjs` (2.0× and 2.4× at `-Os` on the Mac; 2.1× and 2.5× at `-O2`), now through Zipline's own
+  bytecode, compiler and JNI host: the gain survives the real path. The fork's JVM library is built
+  at `-Os` like Zipline's (zig's `ReleaseSmall`). The machine was shared (today's 1.28.0 "back" is
+  82.3 ms against 76.9 on 2026-11-16), so read the ratios, not the absolute times.
+
+**The remaining steps** (estimates in engineer-weeks). They add up to about 6–9.5 weeks after
+step 1, above option 5's 4–8: `zipline-bytecode` was not in that estimate.
+
+| Step | What | Estimate |
+|---|---|---|
+| 1b. `zipline-bytecode` | Port Zipline's bytecode reader and writer to version 5 (new tags, BigInt constants, the column table), so source maps and line stripping work again; its round-trip tests on the new engine's output | 1–1.5 |
+| 2. Android | Build the AAR (`zipline-android-ndk`, the NDK's CMake; the patch already adds `-fwrapv`) for the four ABIs, run Zipline's device tests on the emulator, then the A12 matrix through Zipline itself, not `qjs` | 0.5–1 |
+| 3. iOS | cklib and Kotlin/Native: compile the patched `nativeMain` and `quickjs.def` (not compiled in step 1; `JS_NewString` is now `static inline`, which cinterop must wrap), run the host tests on a simulator, then the iPhone once its signing exists | 0.5–1.5 |
+| 4. Publishing the fork | Our own coordinates (not `app.cash.zipline`) from this patch set: JVM, Android, iOS, and the JS library unchanged; a CI job that runs `apply.sh all` and the tests | 0.5–1 |
+| 5. Dual bytecode | The Gradle plugin compiles each bundle twice, once per engine (bytecode version 1 and 5), from the same JS; the BigInt build (`-Xes-long-as-bigint`) only for the new engine, since the old one cannot parse it | 1–1.5 |
+| 6. Manifest and index | The signed manifest names the engine (QuickJS version and bytecode version) for every module, so a bundle cannot be loaded on the wrong engine even if served by mistake; publishing writes one manifest per engine | 0.5–1 |
+| 7. Host advertisement and selection | A host sends its engine version when it fetches the index, and the server returns the manifest for that engine only; a host refuses a manifest for another engine before downloading code. The engine becomes one more thing D2's compat gate checks, beside the widget version and capabilities, so a host never receives bytecode it cannot load. Old hosts, which send nothing, get the old engine's bundle | 1 |
+| 8. Transition | Both bundles published for every release while old hosts are in the field; a dashboard count of hosts per engine; retiring the old bundle when that count reaches the floor the owner sets | 0.5, then upkeep |
+| 9. Upstream | Offer the `asUintN` fix to Bellard (a public post: open item 4 in section 10 of the plan), and the engine update, rope and BigInt cases to Zipline (#1192, #1715), so the fork can shrink back to a version pin | 0.5, then their timeline |
 
 ## NF3: the open path, measured (Mac)
 
@@ -710,7 +807,14 @@ past the collection point.
 # variants that need a library patch (apply, run, then `git checkout` the library):
 #   10-row window:        sample/threeway-guest/experiments/lazy-window-10.patch
 #   serializers once:     keliver-compose-gatea-profile/experiments/serializers-once.patch (codegen)
-#   Long as BigInt:       -PprofileBigInt (Node, or the 2026 qjs below; Zipline's compiler rejects it)
+#   Long as BigInt:       -PprofileBigInt (Node, the 2026 qjs below, or profileQuickJs on NF2's fork)
+# (b2) NF2's Zipline fork ("NF2: the Zipline fork, step 1"): build it, publish it to a scratch repo, run
+scripts/zipline-fork.sh all <work>          # clone the tag, verify, patch, JNI library, qjs, asUintN check
+scripts/zipline-fork.sh test <work> :zipline:jvmTest
+scripts/zipline-fork.sh publish <work> <work>/m2
+./gradlew --no-daemon -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
+  -PziplineForkRepo=<work>/m2 -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \
+  "-PprofileArgs=modes=kotlinx+none,iterations=30,warmup=3,label=fork" -PprofileOut=<scratch>/out [-PprofileBigInt]
 # (c) other QuickJS builds ("The engine, measured"): build the engines, then run the bundle's JS in each
 keliver-compose-gatea-profile/engine/build-engines.sh <scratch>/engines        # downloads, patches, builds
 ./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:compileProductionExecutableKotlinJs

@@ -1,0 +1,10 @@
+// Used by `apply.sh test` and `apply.sh publish` for Zipline's own build (not Keliver's).
+// Android's Gradle plugin installs its default NDK while configuring :zipline-android-ndk, even
+// for JVM-only tasks. With -PziplineForkNdkVersion=<an installed NDK> the build uses that one
+// instead of downloading another into the shared SDK.
+def ndk = startParameter.projectProperties['ziplineForkNdkVersion']
+if (ndk) {
+  allprojects { p ->
+    p.plugins.withId('com.android.library') { p.android.ndkVersion = ndk }
+  }
+}
