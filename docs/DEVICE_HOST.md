@@ -1186,6 +1186,21 @@ for byte):
   through your client even when the policy allows them: a `TRACE` would echo
   your interceptor's headers back to the guest. Your client is used only for
   HostHttp.
+- **`KeliverPrefetch`** (NF4, cold start; unreleased, tools after 0.3.18): the
+  GETs your first screen makes as soon as it shows, sent by the host at
+  `KeliverHost.start()` (from the Application), while the bundle loads:
+  `KeliverConfig.fromBuild(this, requestPolicy, prefetch = listOf(KeliverPrefetch("/items", mapOf("page" to "1"))))`.
+  The screen's own request takes the response instead of waiting for the
+  network, only when it is the SAME request (GET, the same path and query, no
+  body, no header of its own besides the ones the host drops), once, within
+  30 s, and only a 2xx; otherwise it goes out as usual. The prefetch goes
+  through the same client and the same `RequestPolicy` as a guest's request
+  (a declared request the policy refuses sends nothing). Nothing changes for
+  the guest, so any bundle works with it. Declare only a request whose answer
+  does not depend on what the app does in its first seconds (a sign-in). On
+  the emulator, with the three-way benchmark's 100 ms fixture, it took the
+  guest's request to the host's response from about 108 ms to 1–3 ms
+  ([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md), "NF4, step 1").
 - **`ExternalLinkPolicy.open(context, url)`**: call it from whatever your app
   exposes to screens for opening a link. `https` opens in a Custom Tab, on any
   host. `intent:` is handled as a browser handles it, and stricter: a VIEW

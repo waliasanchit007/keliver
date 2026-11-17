@@ -41,8 +41,15 @@ class ThreewayStartupBenchmark {
   private val localApi: Boolean =
     InstrumentationRegistry.getArguments().getString("localApi").toBoolean()
 
+  /**
+   * Instrumentation argument `x`: the activity's experiments (comma-separated; empty = as shipped),
+   * e.g. NF4's `prestart,prefetch`. `prestart` acts from the second iteration: the first launch
+   * records it for the next process (ThreewayPrestart.kt).
+   */
+  private val experiments: String = InstrumentationRegistry.getArguments().getString("x").orEmpty()
+
   private fun start(form: String) {
-    GatebPhone.recordAndCheck("threeway startup $form localApi=$localApi")
+    GatebPhone.recordAndCheck("threeway startup $form localApi=$localApi x=$experiments")
     rule.measureRepeated(
       packageName = TARGET_PACKAGE,
       metrics = listOf(StartupTimingMetric()),
@@ -57,7 +64,8 @@ class ThreewayStartupBenchmark {
         Intent().setClassName(TARGET_PACKAGE, "dev.keliver.sample.host.threeway.ThreewayActivity")
           .putExtra("form", form)
           .putExtra("overLockScreen", true)
-          .putExtra("localApi", localApi),
+          .putExtra("localApi", localApi)
+          .putExtra("x", experiments),
       )
       // The list's first row (the WebView's text is visible to UiAutomator through accessibility).
       // Not part of the metric: if it is not found, the trace still has the report.

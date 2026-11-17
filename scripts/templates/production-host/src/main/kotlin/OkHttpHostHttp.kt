@@ -4,6 +4,7 @@ import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -44,6 +45,10 @@ import okhttp3.Response
  *   allows them: a `TRACE` would echo your interceptor's headers back to the
  *   guest.
  *
+ * NF4: requests the app declares in `KeliverConfig.prefetch` are sent at process
+ * start through these same checks ([startPrefetch]), and a guest's identical GET
+ * takes the response once (HostPrefetch.kt).
+ *
  * Authentication, retries or certificate pinning: pass your app's OkHttpClient
  * as `KeliverConfig.httpClient` (it then needs a [RequestPolicy]), or edit this
  * code — it is yours.
@@ -55,6 +60,8 @@ class OkHttpHostHttp(
   private val base: HttpUrl,
   private val policy: RequestPolicy? = null,
   private val appOwnsCredentials: Boolean = false,
+  /** NF4: the app's declared first requests (HostPrefetch.kt); null = none. */
+  private val prefetched: PrefetchedRequests? = null,
 ) : HostHttpProvider {
   private val client = client.newBuilder().followRedirects(false).followSslRedirects(false)
     // Last of the app's interceptors (before its cache can answer), and last on the
@@ -80,6 +87,24 @@ class OkHttpHostHttp(
   private val baseRefusal: String? = policy?.baseRefusal(base)?.also { Log.e(TAG, "HostHttp: $it; every request is refused") }
 
   override suspend fun execute(request: HttpRequest): HttpResponse = withContext(Dispatchers.IO) {
+    val checked = check(request)
+    // NF4: the app declared this request and the host already sent it (HostPrefetch.kt).
+    prefetched?.take(request, checked.headers)?.let { pending -> usablePrefetch(pending)?.let { return@withContext it } }
+    send(checked, request.body)
+  }
+
+  /**
+   * NF4: sends the requests the app declared (KeliverConfig.prefetch) now, in [scope], exactly as
+   * a guest's would go (every check above); a guest's identical request takes the response.
+   */
+  fun startPrefetch(scope: CoroutineScope) {
+    prefetched?.start(scope) { request -> withContext(Dispatchers.IO) { send(check(request), null) } }
+  }
+
+  private class Checked(val url: HttpUrl, val method: String, val headers: Map<String, String>)
+
+  /** Refuses what may not be sent (nothing is sent then); otherwise what goes out. */
+  private fun check(request: HttpRequest): Checked {
     val segments = request.path.split('/').filter { it.isNotEmpty() }
     require(segments.none { it == "." || it == ".." || '\\' in it }) {
       "HostHttp: '${request.path}' is not a plain relative path under the API base"
@@ -105,14 +130,22 @@ class OkHttpHostHttp(
       val name = it.lowercase()
       name !in DROPPED_HEADERS && !(appOwnsCredentials && name in CREDENTIAL_HEADERS)
     }
+    return Checked(url, method, headers)
+  }
+
+  /** Blocking: sends what [check] allowed. */
+  private fun send(checked: Checked, requestBody: String?): HttpResponse {
+    val url = checked.url
+    val method = checked.method
+    val headers = checked.headers
     val contentType = headers.entries.firstOrNull { it.key.equals("Content-Type", true) }?.value
     // OkHttp refuses POST/PUT/PATCH without a body; send an empty one.
-    val body = request.body?.toRequestBody(contentType?.toMediaTypeOrNull())
+    val body = requestBody?.toRequestBody(contentType?.toMediaTypeOrNull())
       ?: if (method in setOf("POST", "PUT", "PATCH")) ByteArray(0).toRequestBody() else null
     val call = Request.Builder().url(url).method(method, body).tag(CheckedUrl::class.java, CheckedUrl(url)).apply {
       headers.forEach { (k, v) -> header(k, v) }
     }.build()
-    client.newCall(call).execute().use { response ->
+    return client.newCall(call).execute().use { response ->
       HttpResponse(
         status = response.code,
         body = response.body?.string().orEmpty(),

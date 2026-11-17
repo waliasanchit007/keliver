@@ -187,6 +187,14 @@ grep -q '  bridges: List<KeliverBridgeBinding> = emptyList(),' "$M" && grep -q '
   && [ -f "$H/src/test/kotlin/com/example/demo/host/KeliverBridgesTest.kt" ] \
   && ok "B5: the app's bridges are checked in KeliverConfig, gated on per host, bound before the host's services and checked as bound" \
   || bad "B5: the app's bridges are not wired"
+# NF4: the app's declared first requests go out from run() (the Application's start), through the
+# one HostHttp every app binds.
+grep -q 'if (apiBase != null) hostHttp(okhttp, apiBase).startPrefetch(scope)' "$M" \
+  && grep -A16 'override suspend fun bindServices' "$M" | grep -q 'val hostHttp = hostHttp(okhttp, apiBase)' \
+  && grep -q 'prefetch: List<KeliverPrefetch> = emptyList(),' "$M" \
+  && [ -f "$(dirname "$M")/HostPrefetch.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/HostPrefetchTest.kt" ] \
+  && ok "NF4: KeliverConfig.prefetch is sent at start and taken by the guests' one HostHttp" \
+  || bad "NF4: the first request's prefetch is not wired"
 # W4.4: the host takes one channel besides stable, stable by default.
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
   && grep -q 'channel = BuildConfig.KELIVER_CHANNEL' "$M" && grep -q 'pickFromIndex(body, capabilities, channel = config.channel' "$M" \
@@ -280,7 +288,7 @@ dbg_gates="$(python3 "$DISP/debug-gates.py" "$M")"
 # calls), checked in OkHttpHostHttp before anything is sent; its JVM tests come with the host.
 grep -q 'class RequestPolicy(' "${M%/*}/RequestPolicy.kt" && grep -q '(baseRefusal ?: policy.refusal(method, request.path))' "${M%/*}/OkHttpHostHttp.kt" \
   && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "${M%/*}/OkHttpHostHttp.kt" \
-  && grep -q 'OkHttpHostHttp(okhttp, apiBase, config.requestPolicy)' "$M" && grep -q 'val requestPolicy: RequestPolicy? = null' "$M" \
+  && grep -q 'OkHttpHostHttp(okhttp, apiBase, config.requestPolicy, prefetched = prefetched)' "$M" && grep -q 'val requestPolicy: RequestPolicy? = null' "$M" \
   && [ -f "$H/src/test/kotlin/com/example/demo/host/RequestPolicyTest.kt" ] \
   && grep -q "testImplementation 'com.squareup.okhttp3:mockwebserver3:" "$H/build.gradle" \
   && grep -q 'if (appOwnsCredentials && method in ECHOING_METHODS) {' "${M%/*}/OkHttpHostHttp.kt" \
@@ -543,6 +551,9 @@ if [ "$BUILD" = 1 ]; then
     dlt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.DebugBundleLinkTest.xml"
     [ -f "$dlt" ] && grep -q 'failures="0" errors="0"' "$dlt" && ! grep -q 'tests="0"' "$dlt" \
       && ok "ED3: the debug link's tests ran: $(grep -o 'tests="[0-9]*"' "$dlt" | head -1)" || bad "ED3: the debug link's tests did not run, or failed"
+    hpt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.HostPrefetchTest.xml"
+    [ -f "$hpt" ] && grep -q 'failures="0" errors="0"' "$hpt" && ! grep -q 'tests="0"' "$hpt" \
+      && ok "NF4: the first request's prefetch tests ran: $(grep -o 'tests="[0-9]*"' "$hpt" | head -1)" || bad "NF4: the prefetch tests did not run, or failed"
     # A release build with an http:// server is refused.
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease > "$DISP/assemble-release.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \

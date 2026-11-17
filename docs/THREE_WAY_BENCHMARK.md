@@ -1271,6 +1271,63 @@ with placeholders: indicative only; a hand check is next); tap within one frame
 **not measured** (no host pressed-state instrumentation). Raw output:
 `keliver-scratch/nf1-gate2/out` (not in this repository).
 
+### NF4, step 1: the code load at process start, and the first request sent by the host (emulator)
+
+2026-11-18, **the emulator only** (AVD `keliver_a12_api35`, arm64, Android 15, on the Mac), so
+these numbers are **relative only**: the emulator's process start → `Activity.onCreate` is about
+100 ms against the A12's 359, and its list composition is many times faster than the A12's. The
+A12 run is still to come. Items 2 and 3 of "Where NF4 can take the time" (above), as two guest
+experiments, so one build measures every arm:
+
+- **`x=prestart`**: the guest's code load starts in `bindApplication`, from a ContentProvider
+  (`ThreewayPrestartProvider`), instead of after the activity's first frame. The provider cannot
+  see the launching intent, so it acts on what the previous launch asked for (a preference the
+  activity writes): the first launch of a series does not prestart. Production hosts already
+  start in `Application.onCreate` (M3, `HostApp.kt`); this is the prototype's equivalent.
+- **`x=prefetch`**: the list's first request (`GET /items?size=small&seq=1`) is sent by the host as
+  it starts the guest (at process start with `prestart`, otherwise in `onCreate`), and the
+  guest's identical request takes the response. The guest is unchanged. Production hosts get the
+  same thing as `KeliverConfig.prefetch` (`HostPrefetch.kt`; [`DEVICE_HOST.md`](DEVICE_HOST.md)).
+
+**Method.** The prototype at this PR's commit (published to a scratch Maven repository as in "How
+to run it"), `ThreewayStartupBenchmark#guest` with `-e localApi true` and the new `-e x <experiments>`
+argument, 10 iterations per arm (StartupMode.COLD), and the baseline twice. The emulator shared
+the Mac with other builds, so the baseline has outliers. Each process's `"cold"` line was grouped
+by what actually ran in it (a prestart mark, and the request answered within 10 ms). Processes
+whose prestart was not used are left out: a series' first launch inherits the previous
+series' preference. The table gives the medians of those lines (ms from the process start).
+
+| Arm | Processes | List's data drawn: median (min–max) | Code load starts | First frame | Guest's request → host's answer |
+|---|---|---|---|---|---|
+| as shipped | 20 | **938** (793–2,887) | 237 | 206 | 108 |
+| `prefetch` | 10 | **802** (726–1,126) | 214 | 185 | 1 |
+| `prestart` | 9 | **773** (738–905) | 145 | 168 | 107 |
+| `prestart,prefetch` | 9 | **666** (642–702) | 128 | 148 | 1 |
+| native (reference) | 10 | 325 (305–412) | — | 153 | — |
+
+Macrobenchmark's own `timeToFullDisplayMs` medians agree: as shipped 931.5 and 990.1 (two
+series), `prefetch` 805.9, `prestart` 818.8, both 702.1, native 365.2. Its `timeToInitialDisplayMs`
+did not grow (as shipped 263.5 / 256.7, `prestart` 237.6, both 210.6).
+
+- **The first frame does not wait for the prestart.** The code load now starts before the first
+  frame (145 against 168), and the first frame comes no later than without it. The prestart's
+  main-thread work (creating the factory and the app, `start()`; the benchmark's fixture server
+  is measured apart) is 2.3 ms median (1.8–6.2; 2.9 with the prefetch, at most 8.2), against
+  1.0 ms for the same `create` in `onCreate` as shipped.
+- **The prefetch removes the whole network wait from the guest's path**: the fixture's 100 ms
+  plus the hop, 108 → 1 ms. The response is there before the loading state's first composition
+  ends.
+- **Together, −272 ms (−29%) on the emulator** (`prefetch` alone −136, `prestart` alone −165). On the A12 the prestart should gain more: there
+  the code load can move earlier by up to the 575 ms between the process start and the first
+  frame. Here it moved about 90 ms earlier (237 → 145), and the arm still gained 165 ms, more than
+  that, by a margin within the baseline's noise. NF0's estimate for the A12 is −200 to −300 ms. The prefetch saves the
+  network time (about 150 ms against NF0's fixture; more against a slower API, up to the time
+  from the process start to the guest's request). Neither is measured on the A12 yet.
+- **Not built:** item 4 (unpacking the bundle into the cache in the background after an install
+  or an update): a production host has no embedded bundle, so its first launch loads from the
+  network. That item applies only to the prototype and to apps that embed a bundle. Not built
+  either: an iOS host prefetch.
+
 ### Scrolling, run 2
 
 **How.** As in [How to run it](#how-to-run-it): `adb shell input swipe` through the input system,
@@ -1767,6 +1824,10 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #                            (300 ms pause between a read and its tap)
 #   -e x gc4|gc16|gc64|gcoff guest: QuickJS's GC threshold (MiB; gcoff = -1) set when Zipline is created (implies mem)
 #   am instrument ... -e localApi true   the startup benchmark with the app's own fixture (NF0's cold start)
+#   am instrument ... -e x prestart,prefetch   the startup benchmark with the activity's experiments
+#                            (NF4 step 1; `prestart` acts from the second launch: see that section)
+#   -e x prestart            guest: the code load starts in bindApplication (the NEXT process's start)
+#   -e x prefetch            guest: the host sends the list's first request as it starts the guest
 # Every process logs one {"cold":"<form>",...} line when the list's data is first drawn: its marks in ms
 # from the process start (see "Cold start (NF0)").
 # Every state/summary/fling line carries "api":"app"|"mac"; the state line also refreshHz and density.
