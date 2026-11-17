@@ -1216,6 +1216,52 @@ swipes started no fling**:
 - The owner's hand check (frames over 25 ms).
 - The host's memory while a retained screen is hidden. A deeper app for depth 2.
 
+### NF1 gate, part 2 (back on the host, A12)
+
+2026-11-17, 18:03–18:49 IST, the same A12, restarted at 17:38 (up 24 minutes at the start, swap
+nearly empty), on battery 36% → 29%, 29.3–31.5 °C, thermal status 0 in every series. A fresh
+prototype build from main at `229e876cf` (#258, #259, #262 and #265 merged). Every series ran from a
+script on the phone, each in a fresh process with the in-app fixture; the run stopped itself at 30%
+after the counter pass at 1,422–2,844 dp/s (the two fastest counter speeds did not run).
+
+**Back** (median / p90 / min–max in ms; 14 iterations, the first 2 dropped). `drawn` is from the
+tap or the press to the guest's tree drawn; `firstDraw` (system back only, `bench=sysback`) is from
+the press to the window's first draw after it, which with `retainhost` is the host showing the
+retained screen without waiting for the guest:
+
+| Form | Back, drawn | Back, first draw after the press | Open (warm), drawn |
+|---|---|---|---|
+| native | 31 / 34 / 28–36 | — | 41 / 53 / 36–54 |
+| web | 48.5 / 51 / 45–62 | — | 44.5 / 47 / 33–49 |
+| guest, as shipped | 873.5 / 887 / 837–898 | — | 467.5 / 491 / 448–493 |
+| guest, `x=retain`, header back | 102.5 / 110 / 94–112 | — | 307 / 313 / 285–322 |
+| guest, `x=retain`, system back | 97 / 107 / 85–118 | 96.5 / 107 / 85–118 | 315 / 322 / 304–325 |
+| **guest, `x=retainhost`, system back** | 201.5 / 219 / 144–237 | **37.5 / 48 / 27–51** | 313.5 / 330 / 302–441 |
+| guest, `x=retainhost`, heavy screen | 231.5 / 259 / 189–263 | 56.5 / 74 / 38–74 | 918 / 979 / 902–1,034 |
+
+- **With back on the host (#262) the retained screen is on screen 37.5 ms after the press**
+  (p90 48, max 51): under the 50 ms target at the median and p90, close to native's 31 and below
+  the web page's 48.5. The guest confirms later (`drawn` 201.5 ms; `composed` 172.5 in the split
+  run), and the screen does not change when it does.
+- The heavy screen (about 100 widgets) shows its retained list at 56.5 ms (max 74): over the
+  target. Not investigated (likely the host laying out the larger retained tree).
+- Guest-side retention alone (#259) stays at about 100 ms, as in part 1; as shipped the guest's
+  back is 873.5 ms (part 1: 1,116, a phone in worse state).
+- Open is unchanged by these parts (about 310 ms); it is NF2's and NF3's.
+
+**Scrolling: still not measurable with scripted swipes.** The phone had been restarted, yet the
+swipes again mostly ended without a fling, in native too: the list's median stop came about 4–18 ms
+*before* the finger lifted (`stopAfterUp` −3.9 to −17.6), and no guest run recorded a placeholder or
+a fling with content arriving later. So the earlier "phone's state" explanation is unlikely; why
+`input swipe` no longer starts flings on this phone is not established. NF1's scrolling targets are
+judged by hand (the owner), as the gate says ("by hand").
+
+**Gate verdicts, part 2:** back under 50 ms **met** for the simple screen with back on the host
+(37.5 / p90 48; heavy screen 56.5, not met); no blank rows at an ordinary fling and frames over
+25 ms **not measured** (scripted flings did not start; a hand check is next); tap within one frame
+**not measured** (no host pressed-state instrumentation). Raw output:
+`keliver-scratch/nf1-gate2/out` (not in this repository).
+
 ### Scrolling, run 2
 
 **How.** As in [How to run it](#how-to-run-it): `adb shell input swipe` through the input system,
