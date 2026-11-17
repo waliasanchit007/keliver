@@ -5,19 +5,21 @@
 #   apply.sh clone   <work>   clone Zipline at tag 1.28.0 into <work>/zipline (checks the commit)
 #   apply.sh engine  <work>   download and verify QuickJS 2026-06-04, replace zipline/native/quickjs,
 #                             apply patches/quickjs-*.patch to the engine and patches/zipline-*.patch
-#   apply.sh jni     <work>   build the JVM JNI library for this Mac with clang (Zipline's CI uses zig;
-#                             the flags follow zipline/build.zig) into zipline/src/jvmMain/resources/jni
+#   apply.sh jni     <work> [--warnings]   build the JVM JNI library for this Mac with clang (Zipline's
+#                             CI uses zig; the flags follow zipline/build.zig) into
+#                             zipline/src/jvmMain/resources/jni; --warnings builds with -Wall, not -w
 #   apply.sh qjs     <work>   build the patched engine's command-line qjs twice: 64-bit BigInt limbs and
 #                             32-bit limbs (as on a 32-bit host such as armeabi-v7a), for check-bigint
 #   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and both qjs builds; fail on any difference
 #   apply.sh test    <work> [gradle args]   Zipline's JVM tests that exercise the engine and the bridge
 #   apply.sh publish <work> <maven repo dir>   publish the forked JVM artifact as 1.28.0-q20260604 to a
 #                             scratch Maven repository (never ~/.m2)
+#   apply.sh diff    <work>   maintainers: regenerate patches/ from an edited checkout
 #   apply.sh all     <work>   clone, engine, jni, qjs, check-bigint
 set -euo pipefail
 shopt -s nullglob
 here="$(cd "$(dirname "$0")" && pwd)"
-cmd="${1:?usage: apply.sh clone|engine|jni|qjs|check-bigint|test|publish|all <work dir> [...]}"
+cmd="${1:?usage: apply.sh clone|engine|jni|qjs|check-bigint|test|publish|diff|all <work dir> [...]}"
 work="${2:?work dir}"
 mkdir -p "$work"
 work="$(cd "$work" && pwd)"
@@ -46,7 +48,8 @@ engine_sources() { # leaves the verified, extracted tarball in $work/src/quickjs
   local tb="$work/dl/quickjs-$QJS_VERSION.tar.xz"
   [ -f "$tb" ] || curl -fsS -m 300 -o "$tb" "https://bellard.org/quickjs/quickjs-$QJS_VERSION.tar.xz"
   got="$(shasum -a 256 "$tb" | awk '{print $1}')"
-  [ "$got" = "$QJS_SHA256" ] || { echo "quickjs-$QJS_VERSION.tar.xz: unexpected SHA-256 $got" >&2; exit 1; }
+  # A tarball that fails the check is deleted, so the next run downloads it again.
+  [ "$got" = "$QJS_SHA256" ] || { rm -f "$tb"; echo "quickjs-$QJS_VERSION.tar.xz: unexpected SHA-256 $got (deleted)" >&2; exit 1; }
   rm -rf "${work:?}/src/quickjs-$QJS_VERSION"
   tar -xJf "$tb" -C "$work/src"
 }
@@ -65,6 +68,7 @@ do_engine() {
 }
 
 do_jni() {
+  local warn="${3:-}"
   local n="$zl/zipline/native" arch out
   arch="$(uname -m)"; [ "$arch" = arm64 ] && arch=aarch64
   out="$zl/zipline/src/jvmMain/resources/jni/$arch"
@@ -75,7 +79,10 @@ do_jni() {
   # zipline/build.zig: ReleaseSmall, -std=gnu99 / -std=c++11, CONFIG_VERSION, the bundled JNI headers.
   # QuickJS 2026's Makefile adds -fwrapv (signed overflow wraps) and -D_GNU_SOURCE; keep both.
   local cflags=(-Os -fPIC -fwrapv -D_GNU_SOURCE -DNDEBUG "-DCONFIG_VERSION=\"$v\""
-    -I"$n/include/share" -I"$n/include/unix" -w)
+    -I"$n/include/share" -I"$n/include/unix")
+  # -w by default; --warnings shows -Wall's (QuickJS's Makefile level), for a review after changing
+  # the engine or the JNI layer. Reviewed for step 1: docs/GUEST_PROFILE.md, "NF2".
+  if [ "$warn" = --warnings ]; then cflags+=(-Wall); else cflags+=(-w); fi
   local c
   for c in common/context-no-eval.c common/finalization-registry.c common/global-gc.c \
       quickjs/cutils.c quickjs/dtoa.c quickjs/libregexp.c quickjs/libunicode.c quickjs/quickjs.c; do
@@ -171,7 +178,7 @@ case "$cmd" in
   clone) do_clone ;;
   diff) do_diff ;;
   engine) do_engine ;;
-  jni) do_jni ;;
+  jni) do_jni "$@" ;;
   qjs) do_qjs ;;
   check-bigint) do_check_bigint ;;
   test) do_test "$@" ;;

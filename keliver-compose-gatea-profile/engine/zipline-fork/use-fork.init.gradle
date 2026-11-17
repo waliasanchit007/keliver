@@ -6,12 +6,16 @@
 //   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
 //     -PziplineForkRepo=<the scratch Maven repo `apply.sh publish` wrote> --no-daemon <tasks>
 //
+// -PziplineForkRepo=none keeps Zipline 1.28.0 and only turns the source maps off (below): the
+// like-for-like baseline for a measurement of the fork.
+//
 // --no-daemon: the plugin loads the engine's native library into the Gradle process, so a daemon
 // that already loaded 1.28.0's must not be reused.
 // Included builds (build-support) run this script too; only the root build needs the fork.
 if (gradle.parent != null) return
 def forkRepo = startParameter.projectProperties['ziplineForkRepo']
-if (forkRepo == null) throw new GradleException('use-fork.init.gradle: pass -PziplineForkRepo=<maven repo dir>')
+if (forkRepo == null) throw new GradleException('use-fork.init.gradle: pass -PziplineForkRepo=<maven repo dir> (or none)')
+def useFork = forkRepo != 'none'
 def forkVersion = '1.28.0-q20260604'
 def upstreamVersion = '1.28.0'
 
@@ -37,17 +41,22 @@ def substitute = { ConfigurationContainer configurations ->
   }
 }
 
-settingsEvaluated { settings ->
-  addRepo(settings.dependencyResolutionManagement.repositories)
+if (useFork) {
+  settingsEvaluated { settings ->
+    addRepo(settings.dependencyResolutionManagement.repositories)
+  }
 }
 allprojects { p ->
-  addRepo(p.buildscript.repositories)
-  substitute(p.buildscript.configurations)
-  substitute(p.configurations)
+  if (useFork) {
+    addRepo(p.buildscript.repositories)
+    substitute(p.buildscript.configurations)
+    substitute(p.configurations)
+  }
   // Zipline's compiler rewrites the bytecode itself when a .js.map is present (source lines into
   // the bytecode) or line numbers are stripped, through zipline-bytecode, which reads and writes
   // QuickJS 2021's bytecode format only (version 1; 2026 writes 5). Until the fork ports it, the
   // production link writes no source maps here. Debug information only: the code is the same.
+  // Also with `none`, so the baseline's bundle is built the same way.
   p.tasks.configureEach { t ->
     if (t.name.startsWith('compileProductionExecutableKotlinJs') && t.hasProperty('compilerOptions')) {
       t.compilerOptions.sourceMap.set(false)

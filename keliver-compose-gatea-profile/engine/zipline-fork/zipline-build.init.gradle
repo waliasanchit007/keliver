@@ -8,3 +8,19 @@ if (ndk) {
     p.plugins.withId('com.android.library') { p.android.ndkVersion = ndk }
   }
 }
+
+// -PziplineForkLongAsBigInt: link the JavaScript the host tests load (zipline-testing, with Zipline's
+// own JS and kotlinx.serialization in it) with Kotlin's Long as a JS BigInt, so the tests that send
+// a Long across the bridge (EncodingTest: ±2^53 and around it, Long.MIN_VALUE, Long.MAX_VALUE) run
+// on the representation the fork exists for. The link generates JS for every library, so the flag
+// on the link task covers all of them.
+if (startParameter.projectProperties.containsKey('ziplineForkLongAsBigInt')) {
+  allprojects { p ->
+    if (p.path != ':zipline-testing') return
+    p.tasks.configureEach { t ->
+      if (t.name == 'compileDevelopmentLibraryKotlinJs') {
+        t.compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')
+      }
+    }
+  }
+}
