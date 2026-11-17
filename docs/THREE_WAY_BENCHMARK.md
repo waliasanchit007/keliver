@@ -1218,11 +1218,11 @@ swipes started no fling**:
 
 ### NF1 gate, part 2 (back on the host, A12)
 
-2026-11-17, 18:03–18:49 IST, the same A12, restarted at 17:38 (up 24 minutes at the start, swap
-nearly empty), on battery 36% → 29%, 29.3–31.5 °C, thermal status 0 in every series. A fresh
+2026-11-17, 18:03–18:49 IST, the same A12, restarted about 25 minutes before (uptime and swap were
+ad hoc `adb` reads, not kept with the record), on battery 36% → 29%, 29.3–31.5 °C, thermal status 0 in every series. A fresh
 prototype build from main at `229e876cf` (#258, #259, #262 and #265 merged). Every series ran from a
-script on the phone, each in a fresh process with the in-app fixture; the run stopped itself at 30%
-after the counter pass at 1,422–2,844 dp/s (the two fastest counter speeds did not run).
+script on the phone, each in a fresh process with the in-app fixture; the run stopped itself when the battery fell below 30%
+(29% at 18:49) after the counter pass at 1,422–2,844 dp/s (the two fastest counter speeds did not run).
 
 **Back** (median / p90 / min–max in ms; 14 iterations, the first 2 dropped). `drawn` is from the
 tap or the press to the guest's tree drawn; `firstDraw` (system back only, `bench=sysback`) is from
@@ -1241,24 +1241,33 @@ retained screen without waiting for the guest:
 
 - **With back on the host (#262) the retained screen is on screen 37.5 ms after the press**
   (p90 48, max 51): under the 50 ms target at the median and p90, close to native's 31 and below
-  the web page's 48.5. The guest confirms later (`drawn` 201.5 ms; `composed` 172.5 in the split
-  run), and the screen does not change when it does.
+  the web page's 48.5 (native and web: header back, `drawn`; not the same start event; 6.5 ms behind
+  native at the median, 14 ms at p90, 48 against 34). The guest confirms later (`drawn` 201.5 ms; `composed` 172.5 in the split
+  run), The confirming batch carries one structural and one property change; whether the screen visibly
+  changes when it lands was not recorded.
 - The heavy screen (about 100 widgets) shows its retained list at 56.5 ms (max 74): over the
-  target. Not investigated (likely the host laying out the larger retained tree).
+  target. Not investigated; one candidate is the host laying out the larger retained tree.
 - Guest-side retention alone (#259) stays at about 100 ms, as in part 1; as shipped the guest's
   back is 873.5 ms (part 1: 1,116, a phone in worse state).
-- Open is unchanged by these parts (about 310 ms); it is NF2's and NF3's.
+- Open is unchanged (about 310 ms). #265 is in the build, but its touch-down pre-composition is not
+  exercised: the host has no press signal yet, so this bench's tap opens as before. Open is NF2's
+  and NF3's.
 
-**Scrolling: still not measurable with scripted swipes.** The phone had been restarted, yet the
-swipes again mostly ended without a fling, in native too: the list's median stop came about 4–18 ms
-*before* the finger lifted (`stopAfterUp` −3.9 to −17.6), and no guest run recorded a placeholder or
-a fling with content arriving later. So the earlier "phone's state" explanation is unlikely; why
-`input swipe` no longer starts flings on this phone is not established. NF1's scrolling targets are
-judged by hand (the owner), as the gate says ("by hand").
+**Scrolling: still not measurable with scripted swipes.** The phone had been restarted, yet in 18
+of 20 groups the list's median stop came 3.9–17.6 ms *before* the finger lifted (`stopAfterUp` −3.9
+to −17.6): no fling. The exception was the guest's second 300 ms group (1,422 dp/s, upward), which
+flung in both passes (`stopAfterUp` +357.7 and +363.1, 6 flings each, 4 more excluded at the end of
+the list). Native never flung (its 80 ms second group: all 7 excluded at the end). No `blank` run
+recorded a placeholder (including its 6 flings at 1,422 dp/s), nor content arriving after the stop
+(`contentAfterUpMsMedian` null); the counter (`scroll`) pass has no placeholder fields. A restart did
+not bring the flings back, so accumulated state (swap, processes) is not the cause; whether the
+phone was unlocked was not recorded, and why `input swipe` no longer starts flings is not
+established. NF1's scrolling targets are judged by hand (the owner), as the gate says ("by hand").
 
 **Gate verdicts, part 2:** back under 50 ms **met** for the simple screen with back on the host
 (37.5 / p90 48; heavy screen 56.5, not met); no blank rows at an ordinary fling and frames over
-25 ms **not measured** (scripted flings did not start; a hand check is next); tap within one frame
+25 ms **not measured** (scripted flings mostly did not start; 12 guest flings at 1,422 dp/s, none
+with placeholders: indicative only; a hand check is next); tap within one frame
 **not measured** (no host pressed-state instrumentation). Raw output:
 `keliver-scratch/nf1-gate2/out` (not in this repository).
 
