@@ -45,6 +45,13 @@ public interface AppLifecycle : ZiplineService {
      */
     public val hostProtocolVersion: RedwoodVersion
 
+    /**
+     * The optional features this host has, by name (its `TreehouseApp.Spec.hostFeatures`). Added in
+     * 0.5.0: a guest asking an older host gets a `ZiplineApiMismatchException`, which it must read as
+     * "no features".
+     */
+    public val hostFeatures: List<String>
+
     public fun requestFrame()
 
     /** Notify the host that an event was unrecognized and will be ignored. */

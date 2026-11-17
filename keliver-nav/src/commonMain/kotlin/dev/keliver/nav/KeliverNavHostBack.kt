@@ -64,10 +64,20 @@ import dev.keliver.ui.OnBackPressedDispatcher
  * extras, outside the schema lock. A host that does not have them THROWS while applying the batch
  * that creates them (the parent's children change names a widget it never created), which takes
  * down the whole content, not just the stack. Gate A is unpublished and prototype-only, so no
- * shipped host can meet such a bundle today. Before it leaves the prototype: extras must be in the
- * versioned surface (a level or widget-version bump with each new tag), the D2 bundle gate (the
- * index's widgetVersion) must read that number, and a test must show an older host refusing such a
- * bundle at selection rather than crashing.
+ * shipped host can meet such a bundle today.
+ *
+ * Two gates keep such a bundle off a host without the container:
+ * - At run time (0.5.0): [KeliverNavDefaults] uses a host frame only when the host declares
+ *   [KeliverNavDefaults.RETAINED_CONTAINER_FEATURE] (`TreehouseApp.Spec.hostFeatures`, read by the
+ *   guest as `dev.keliver.compose.LocalHostFeatures`). A host older than 0.5.0 declares nothing, so
+ *   the guest falls back to its plain [KeliverNavFrame] and never emits tags 502/503 there. The
+ *   declaration is typed by hand: a host that declares the feature without rendering the container
+ *   still crashes as above, so declare it only together with the widgets and the back dispatcher.
+ * - At selection (still to do before gate A leaves the prototype): extras must be in the versioned
+ *   surface (a level or widget-version bump with each new tag), the D2 bundle gate (the index's
+ *   widgetVersion) must read that number, and a test must show an older host refusing such a
+ *   bundle at selection rather than crashing. That covers code passing a host frame explicitly,
+ *   which the run-time gate does not see.
  *
  * Known gaps (follow-ups, see the host's `LocalHostBackDispatcher`): host back is ahead of an
  * enabled guest `BackHandler` outside the stack (overlays that take back must live inside an
@@ -147,15 +157,23 @@ internal fun <T : Any> HostRetainedEntries(
       }
     }
   }
+  val stackIndex = HashMap<Any, Int>(items.size)
+  items.forEachIndexed { i, it -> stackIndex[keyOf(it)] = i }
   frame.HostStack(handled.intValue, onBack) {
     for ((index, item) in window.withIndex()) {
       val itemKey = keyOf(item)
+      // The host goes back to the entry it shows below this one, so it may only when that is the
+      // entry below in the stack: not when the one between was not kept (a route that opted out of
+      // retention), or the host would skip a screen.
+      val below = (stackIndex[itemKey] ?: 0) - 1
+      val nextBelowIsShown = index == 0 || (below >= 0 && keyOf(items[below]) == keyOf(window[index - 1]))
       key(itemKey) {
         val top = index == window.lastIndex
         val lifecycle = remember(parentLifecycle, parentBackHandlers) {
           EntryLifecycle(top, parentLifecycle, parentBackHandlers)
         }
         SideEffect { lifecycle.update(top) }
+        CountShows(lifecycle)
         val tracker = remember(dispatcher) { BackHandlerTracker(dispatcher) }
         DisposableEffect(itemKey, tracker) {
           trackers[itemKey] = tracker
@@ -164,9 +182,10 @@ internal fun <T : Any> HostRetainedEntries(
         DisposableEffect(itemKey) {
           onDispose { told.remove(itemKey) }
         }
-        HostEntryFrame(frame, idOf(item), onHostBack != null, lifecycle.state, tracker, { told[itemKey] = it }) {
+        HostEntryFrame(frame, idOf(item), onHostBack != null && nextBelowIsShown, lifecycle.state, tracker, { told[itemKey] = it }) {
           CompositionLocalProvider(
             LocalKeliverNavEntryLifecycle provides lifecycle.state,
+            LocalKeliverNavEntryShows provides lifecycle.shows,
             LocalBackHandlersEnabled provides lifecycle.backHandlersEnabled,
             LocalOnBackPressedDispatcher provides tracker,
           ) {

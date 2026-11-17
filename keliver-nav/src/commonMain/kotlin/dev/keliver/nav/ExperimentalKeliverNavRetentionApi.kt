@@ -20,6 +20,10 @@ package dev.keliver.nav
  * [LaunchedWhileVisible], [keliverNavEntryLifecycle]). Its shape depends on decisions still open in
  * docs/PLAN_2026-11.md (NF1): a schema-level container that hides an entry, whether retention
  * becomes the default, and its depth; members may be added, changed or removed in any release.
+ *
+ * Results passed back ([KeliverNavResultKey], [KeliverNavController.popWithResult],
+ * [LaunchedOnResult]) carry it too: they are not saved today, and restoring the stack after the
+ * guest is recreated would need serializable values, which would change the key's shape.
  */
 @RequiresOptIn("Keliver's retained back stack is experimental and may change in any release.")
 @Retention(AnnotationRetention.BINARY)

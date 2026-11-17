@@ -20,6 +20,7 @@ public final class dev/keliver/treehouse/AppLifecycle$Companion$Adapter : app/ca
 
 public abstract interface class dev/keliver/treehouse/AppLifecycle$Host : app/cash/zipline/ZiplineService {
 	public static final field Companion Ldev/keliver/treehouse/AppLifecycle$Host$Companion;
+	public abstract fun getHostFeatures ()Ljava/util/List;
 	public abstract fun getHostProtocolVersion-NUkljko ()Ljava/lang/String;
 	public abstract fun handleUncaughtException (Ljava/lang/Throwable;)V
 	public abstract fun onUnknownEvent-prRJ51g (II)V

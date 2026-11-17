@@ -130,6 +130,7 @@ public abstract class dev/keliver/treehouse/TreehouseApp$Spec {
 	public static synthetic fun bindWithTimeout$default (Ldev/keliver/treehouse/TreehouseApp$Spec;JLkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun create (Lapp/cash/zipline/Zipline;)Ldev/keliver/treehouse/AppService;
 	public fun getFreshnessChecker ()Lapp/cash/zipline/loader/FreshnessChecker;
+	public fun getHostFeatures ()Ljava/util/Set;
 	public fun getLoadCodeFromNetworkOnly ()Z
 	public abstract fun getManifestUrl ()Lkotlinx/coroutines/flow/Flow;
 	public abstract fun getName ()Ljava/lang/String;

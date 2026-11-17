@@ -19,7 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.staticCompositionLocalOf
 
@@ -41,6 +44,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
  *     }
  * }
  * ```
+ *
+ * Retained by default where it can be: when the app provides [LocalKeliverNavDefaults] (frames from
+ * code that knows its schema), screens below the top stay composed and hidden, with the frame this
+ * host supports ([defaultKeliverNavRetention]); without them only the top is composed, as before.
+ * Pass `retention = null` to the other overload to turn retention off for one host. A host nested
+ * in a screen of another (tabs, a flow) does not inherit the defaults: it retains only if that
+ * screen provides [LocalKeliverNavDefaults] again or passes a retention. See [KeliverNavDefaults]
+ * for what retention changes for a screen's effects.
  */
 @OptIn(ExperimentalKeliverNavRetentionApi::class)
 @Composable
@@ -48,7 +59,7 @@ public fun <R : Any> KeliverNavHost(
   controller: KeliverNavController<R>,
   content: @Composable (R) -> Unit,
 ) {
-  KeliverNavHost(controller, retention = null, content)
+  KeliverNavHost(controller, defaultKeliverNavRetention(), content)
 }
 
 /**
@@ -77,12 +88,56 @@ public fun <R : Any> KeliverNavHost(
   retention: KeliverNavRetention?,
   content: @Composable (R) -> Unit,
 ) {
+  KeliverNavHost(controller, retention, entryRetention = { KeliverNavEntryRetention.Retain }, content)
+}
+
+/**
+ * [KeliverNavHost] with a per-route choice of how a covered screen is kept ([entryRetention]):
+ * [KeliverNavEntryRetention.Retain] (the default: kept composed within
+ * the depth), [KeliverNavEntryRetention.Dispose] (left as without retention, its saved state kept)
+ * or [KeliverNavEntryRetention.Discard] (left, and its saved state dropped: back shows it new).
+ * [KeliverNavEntryRetention.Discard] applies with [retention] null too.
+ *
+ * [entryRetention] is called at every composition of the host, not once when a screen is covered,
+ * so make it a pure function of the route: an answer that changes with state applies at once, and a
+ * hidden screen it no longer retains is disposed (or discarded) at that composition.
+ *
+ * ```
+ * KeliverNavHost(nav, defaultKeliverNavRetention(), entryRetention = { route ->
+ *   when (route) {
+ *     is Route.EnterPin -> KeliverNavEntryRetention.Discard
+ *     is Route.Map -> KeliverNavEntryRetention.Dispose
+ *     else -> KeliverNavEntryRetention.Retain
+ *   }
+ * }) { route -> … }
+ * ```
+ */
+@ExperimentalKeliverNavRetentionApi
+@Composable
+public fun <R : Any> KeliverNavHost(
+  controller: KeliverNavController<R>,
+  retention: KeliverNavRetention?,
+  entryRetention: (R) -> KeliverNavEntryRetention,
+  content: @Composable (R) -> Unit,
+) {
   val stateHolder = rememberSaveableStateHolder()
+  val currentEntryRetention by rememberUpdatedState(entryRetention)
+
+  // Discard: a covered entry's saved state goes too. Runs after the composition that removed the
+  // entry's composition (which saved its state on the way out), so that state is dropped.
+  val entries = controller.entries.toList()
+  SideEffect {
+    for (i in 0 until entries.lastIndex) {
+      if (currentEntryRetention(entries[i].route) == KeliverNavEntryRetention.Discard) {
+        stateHolder.removeState(entries[i].id)
+      }
+    }
+  }
 
   // Track which entry ids the host has provided state slots for; when
   // an id leaves the stack (popped / replaced), reclaim its slot.
   val seenIds = remember { mutableSetOf<Long>() }
-  val currentIds = controller.entries.map { it.id }.toSet()
+  val currentIds = entries.map { it.id }.toSet()
   DisposableEffect(currentIds) {
     (seenIds - currentIds).forEach { stateHolder.removeState(it) }
     seenIds.clear()
@@ -92,23 +147,29 @@ public fun <R : Any> KeliverNavHost(
 
   CompositionLocalProvider(LocalKeliverNavController provides controller) {
     if (retention == null || retention.depth == 0) {
-      val top = controller.entries.last()
+      val top = entries.last()
       stateHolder.SaveableStateProvider(top.id) {
-        content(top.route)
+        // A nested host retains only if its screen provides defaults again (see KeliverNavDefaults).
+        CompositionLocalProvider(LocalKeliverNavEntry provides top, LocalKeliverNavDefaults provides null) {
+          content(top.route)
+        }
       }
     } else {
       RetainedEntries(
-        items = controller.entries.toList(),
+        items = entries,
         keyOf = { it.id },
         retention = retention,
         content = { entry ->
           stateHolder.SaveableStateProvider(entry.id) {
-            content(entry.route)
+            CompositionLocalProvider(LocalKeliverNavEntry provides entry, LocalKeliverNavDefaults provides null) {
+              content(entry.route)
+            }
           }
         },
         idOf = { it.id.toString() },
         onHostBack = { controller.popToEntry(it.id) },
         liveItems = { controller.entries.toList() },
+        retainable = { currentEntryRetention(it.route) == KeliverNavEntryRetention.Retain },
       )
     }
   }
