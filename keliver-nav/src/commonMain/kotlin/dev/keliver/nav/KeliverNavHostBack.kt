@@ -147,9 +147,16 @@ internal fun <T : Any> HostRetainedEntries(
       }
     }
   }
+  val stackIndex = HashMap<Any, Int>(items.size)
+  items.forEachIndexed { i, it -> stackIndex[keyOf(it)] = i }
   frame.HostStack(handled.intValue, onBack) {
     for ((index, item) in window.withIndex()) {
       val itemKey = keyOf(item)
+      // The host goes back to the entry it shows below this one, so it may only when that is the
+      // entry below in the stack: not when the one between was not kept (a route that opted out of
+      // retention), or the host would skip a screen.
+      val below = (stackIndex[itemKey] ?: 0) - 1
+      val nextBelowIsShown = index == 0 || (below >= 0 && keyOf(items[below]) == keyOf(window[index - 1]))
       key(itemKey) {
         val top = index == window.lastIndex
         val lifecycle = remember(parentLifecycle, parentBackHandlers) {
@@ -165,7 +172,7 @@ internal fun <T : Any> HostRetainedEntries(
         DisposableEffect(itemKey) {
           onDispose { told.remove(itemKey) }
         }
-        HostEntryFrame(frame, idOf(item), onHostBack != null, lifecycle.state, tracker, { told[itemKey] = it }) {
+        HostEntryFrame(frame, idOf(item), onHostBack != null && nextBelowIsShown, lifecycle.state, tracker, { told[itemKey] = it }) {
           CompositionLocalProvider(
             LocalKeliverNavEntryLifecycle provides lifecycle.state,
             LocalKeliverNavEntryShows provides lifecycle.shows,

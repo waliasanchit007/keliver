@@ -120,7 +120,11 @@ class KeliverNavDefaultRetentionTest {
 
     @Composable
     override fun HostEntry(entryId: String, hostBack: Boolean, content: @Composable () -> Unit) {
-      ComposeNode<Node, TestApplier>(factory = { Node("slot") }, update = {}, content = content)
+      ComposeNode<Node, TestApplier>(
+        factory = { Node("slot") },
+        update = { set(hostBack) { label = if (it) "hostBack" else "" } },
+        content = content,
+      )
     }
 
     @Composable
@@ -256,7 +260,7 @@ class KeliverNavDefaultRetentionTest {
     )
     nav.navigate(Route.Detail(1))
     harness.settle()
-    assertEquals("root[container[slot[home],slot[detail1]]]", harness.root.dump())
+    assertEquals("root[container[slot:hostBack[home],slot:hostBack[detail1]]]", harness.root.dump())
     compositions.clear()
     nav.pop()
     harness.settle()
@@ -570,6 +574,27 @@ class KeliverNavDefaultRetentionTest {
     nav.pop()
     harness.settle()
     assertEquals(emptyMap(), compositions, "home was kept within the depth of 1")
+    harness.close()
+  }
+
+  @Test
+  fun theHostDoesNotGoBackOverAnOptedOutScreen() = runTest {
+    // [home, detail1 (Dispose), detail2]: the container holds home and detail2 only, so a host back
+    // from detail2 would skip detail1. That press must go through the guest.
+    val (harness, nav) = navHost(
+      defaults = KeliverNavDefaults(hostFrame = ContainerFrame, frame = GuestFrame),
+      features = setOf(KeliverNavDefaults.RETAINED_CONTAINER_FEATURE),
+      entryRetention = { if (it == Route.Detail(1)) KeliverNavEntryRetention.Dispose else KeliverNavEntryRetention.Retain },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    assertEquals("root[container[slot:hostBack[home],slot[detail2]]]", harness.root.dump())
+
+    nav.pop()
+    harness.settle()
+    assertEquals("root[container[slot:hostBack[home],slot:hostBack[detail1]]]", harness.root.dump())
     harness.close()
   }
 
