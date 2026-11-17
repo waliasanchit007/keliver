@@ -25,8 +25,11 @@ internal class RealAppLifecycleHost(
   private val frameClock: FrameClock,
   private val eventPublisher: EventPublisher,
   private val codeSession: CodeSession<*>,
+  private val features: Set<String> = emptySet(),
 ) : AppLifecycle.Host {
   override val hostProtocolVersion get() = hostRedwoodVersion
+
+  override val hostFeatures: List<String> get() = features.toList()
 
   override fun requestFrame() {
     frameClock.requestFrame(appLifecycle)

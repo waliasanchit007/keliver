@@ -1,0 +1,74 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.nav
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.filterNotNull
+
+/**
+ * Names a result a screen hands back to the screen below it, with its type:
+ *
+ * ```
+ * val PickedColor = KeliverNavResultKey<String>("pickedColor")
+ *
+ * // In the picker:
+ * nav.popWithResult(PickedColor, "teal")
+ *
+ * // In the screen that opened it:
+ * LaunchedOnResult(PickedColor) { color -> viewModel.setColor(color) }
+ * ```
+ *
+ * Two keys with one [name] are the same key; give each result its own name.
+ */
+public class KeliverNavResultKey<T>(public val name: String) {
+  override fun equals(other: Any?): Boolean = other is KeliverNavResultKey<*> && name == other.name
+
+  override fun hashCode(): Int = name.hashCode()
+
+  override fun toString(): String = "KeliverNavResultKey($name)"
+}
+
+/** The [KeliverNavHost] entry being composed, or null outside one. */
+internal val LocalKeliverNavEntry = staticCompositionLocalOf<NavEntry<*>?> { null }
+
+/**
+ * Calls [onResult] with each result handed to this screen for [key] by
+ * [KeliverNavController.popWithResult], once per result, and removes it.
+ *
+ * A retained screen below the top receives the result as the pop shows it, without being composed
+ * again. A screen that was disposed (not retained) receives it when it is composed again on the way
+ * back. Results are not saved: one not yet received when the guest is recreated is lost.
+ * Outside a [KeliverNavHost] (a preview, a test of the screen alone) nothing is delivered.
+ */
+@Composable
+public fun <T> LaunchedOnResult(key: KeliverNavResultKey<T>, onResult: suspend CoroutineScope.(T) -> Unit) {
+  val entry = LocalKeliverNavEntry.current ?: return
+  val currentOnResult by rememberUpdatedState(onResult)
+  LaunchedEffect(entry, key.name) {
+    snapshotFlow { entry.results[key.name] }.filterNotNull().collect { result ->
+      // Removed before delivery, so a result is received once even if onResult suspends or fails.
+      if (entry.results[key.name] === result) entry.results.remove(key.name)
+      @Suppress("UNCHECKED_CAST")
+      currentOnResult(result.value as T)
+    }
+  }
+}

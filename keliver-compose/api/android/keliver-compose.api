@@ -30,6 +30,13 @@ public final class dev/keliver/compose/BackHandlerKt {
 public abstract interface annotation class dev/keliver/compose/ExperimentalKeliverBackApi : java/lang/annotation/Annotation {
 }
 
+public abstract interface annotation class dev/keliver/compose/ExperimentalKeliverHostFeaturesApi : java/lang/annotation/Annotation {
+}
+
+public final class dev/keliver/compose/HostFeaturesKt {
+	public static final fun getLocalHostFeatures ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
 public abstract interface class dev/keliver/compose/RedwoodComposition {
 	public abstract fun cancel ()V
 	public abstract fun setContent (Lkotlin/jvm/functions/Function2;)V

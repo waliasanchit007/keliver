@@ -1,5 +1,6 @@
 public final class dev/keliver/treehouse/CompositionKt {
 	public static final fun bind (Ldev/keliver/compose/RedwoodComposition;Ldev/keliver/treehouse/TreehouseUi;)V
+	public static final fun bind (Ldev/keliver/compose/RedwoodComposition;Ldev/keliver/treehouse/TreehouseUi;Ljava/util/Set;)V
 }
 
 public abstract interface class dev/keliver/treehouse/TreehouseUi {

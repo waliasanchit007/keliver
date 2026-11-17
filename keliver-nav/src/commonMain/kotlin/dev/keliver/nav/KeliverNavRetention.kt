@@ -18,12 +18,14 @@ package dev.keliver.nav
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
@@ -33,6 +35,8 @@ import dev.keliver.compose.LocalBackHandlersEnabled
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 
 /**
  * How the entries of a retained back stack are laid out, shown and hidden. Supplied by code that
@@ -160,6 +164,68 @@ public fun LaunchedWhileVisible(vararg keys: Any?, block: suspend CoroutineScope
   }
 }
 
+/** How many times the enclosing entry has become visible (1 outside a retained stack). */
+internal val LocalKeliverNavEntryShows = staticCompositionLocalOf<State<Int>> { ShownOnce }
+
+private val ShownOnce: State<Int> = mutableIntStateOf(1)
+
+/**
+ * Like `LaunchedEffect`, but [block] waits until the enclosing navigation entry has been shown: at
+ * once for a screen pushed on top, at the tap for a screen composed ahead of it (NF3's prepared
+ * screens), and never for a prepared screen whose press was cancelled. It runs once per
+ * composition of the effect (and again if [keys] change), not on each show; hiding the entry does
+ * not cancel it.
+ *
+ * Use it for what must happen only for a screen the user saw: "screen viewed" analytics, marking
+ * something read, creating something (an order, a session). Loads stay in `LaunchedEffect`, so a
+ * prepared screen starts loading on touch-down.
+ */
+@ExperimentalKeliverNavRetentionApi
+@Composable
+public fun LaunchedOnceShown(vararg keys: Any?, block: suspend CoroutineScope.() -> Unit) {
+  val shows = LocalKeliverNavEntryShows.current
+  LaunchedEffect(shows, *keys) {
+    snapshotFlow { shows.value }.first { it >= 1 }
+    block()
+  }
+}
+
+/**
+ * Runs [block] each time the enclosing navigation entry is shown again after it was hidden: back to
+ * a retained screen, or its enclosing screen shown again. Not on the first show (load that with
+ * `LaunchedEffect`), so the two together are "load, and refresh on return". A run still going when
+ * the entry is shown again is cancelled and started again; hiding the entry does not cancel it, so
+ * a refresh that finishes after the user left still updates the (hidden) screen.
+ *
+ * A screen that is not retained is composed again on return, so its `LaunchedEffect` load runs
+ * again instead and this does not run: the two cover both cases without the screen knowing which
+ * one it is in. A refresh here recomposes the screen on the back path, which retention otherwise
+ * keeps free of guest work, so keep it to what changed (a "since" query, a cache check).
+ */
+@ExperimentalKeliverNavRetentionApi
+@Composable
+public fun LaunchedOnReturn(vararg keys: Any?, block: suspend CoroutineScope.() -> Unit) {
+  val shows = LocalKeliverNavEntryShows.current
+  LaunchedEffect(shows, *keys) {
+    // A return is a show after the first, and after this effect started.
+    val start = shows.value
+    snapshotFlow { shows.value }
+      .filter { it >= 2 && it > start }
+      .collectLatest { coroutineScope { block() } }
+  }
+}
+
+/** Counts [lifecycle]'s shows, for [LaunchedOnceShown] and [LaunchedOnReturn]. */
+@OptIn(ExperimentalKeliverNavRetentionApi::class)
+@Composable
+internal fun CountShows(lifecycle: EntryLifecycle) {
+  LaunchedEffect(lifecycle) {
+    snapshotFlow { lifecycle.state.value }.collect {
+      if (it == KeliverNavEntryLifecycle.Visible) lifecycle.shows.intValue++
+    }
+  }
+}
+
 /**
  * The retained stack without a controller, for an app that keeps its own navigation state: [keys]
  * bottom-to-top (unique, which is checked; the last one is shown), each composed by [content]. With
@@ -217,6 +283,7 @@ internal fun <T : Any> RetainedEntries(
   idOf: (T) -> String = { keyOf(it).toString() },
   onHostBack: ((T) -> Unit)? = null,
   liveItems: (() -> List<T>)? = null,
+  retainable: (T) -> Boolean = { true },
 ) {
   val depth = retention?.depth ?: 0
   if (retention == null || depth == 0) {
@@ -226,13 +293,26 @@ internal fun <T : Any> RetainedEntries(
     }
     return
   }
+  // Memory pressure (trimKeliverNavRetention): this composition keeps only the top.
+  val trims = retentionTrims.intValue
+  val lastTrims = remember { IntBox(trims) }
+  val trimmed = trims != lastTrims.value
   // Only entries composed in the last composition are kept: an entry that left the window (evicted
-  // by depth) is not composed again, hidden, when an entry above it is popped. That would put its
-  // whole composition on the back path; it is composed when it becomes the top, as without retention.
+  // by depth, opted out, trimmed) is not composed again, hidden, when an entry above it is popped.
+  // That would put its whole composition on the back path; it is composed when it becomes the top,
+  // as without retention. Entries that opted out do not take a place in the depth.
   val composedKeys = remember { HashSet<Any>() }
-  val candidates = items.takeLast(depth + 1)
-  val window = candidates.filterIndexed { i, it -> i == candidates.lastIndex || keyOf(it) in composedKeys }
+  val top = items.last()
+  val below = if (trimmed) {
+    emptyList()
+  } else {
+    items.subList(0, items.lastIndex)
+      .filter { keyOf(it) in composedKeys && retainable(it) }
+      .takeLast(depth)
+  }
+  val window = below + top
   SideEffect {
+    lastTrims.value = trims
     composedKeys.clear()
     window.mapTo(composedKeys, keyOf)
   }
@@ -252,9 +332,11 @@ internal fun <T : Any> RetainedEntries(
           EntryLifecycle(visible, parentLifecycle, parentBackHandlers)
         }
         SideEffect { lifecycle.update(visible) }
+        CountShows(lifecycle)
         retention.frame.Entry(visible) {
           CompositionLocalProvider(
             LocalKeliverNavEntryLifecycle provides lifecycle.state,
+            LocalKeliverNavEntryShows provides lifecycle.shows,
             // A hidden entry's BackHandlers stay registered (it is not disposed) but must not take
             // back presses meant for the entry on top.
             LocalBackHandlersEnabled provides lifecycle.backHandlersEnabled,
@@ -266,6 +348,8 @@ internal fun <T : Any> RetainedEntries(
     }
   }
 }
+
+internal class IntBox(var value: Int)
 
 /** A skippable boundary: showing or hiding an entry re-runs the frame, never the entry's content. */
 @Composable
@@ -295,6 +379,9 @@ internal class EntryLifecycle(
   val backHandlersEnabled: State<Boolean> = derivedStateOf {
     state.value == KeliverNavEntryLifecycle.Visible && parentBackHandlers.value
   }
+
+  /** How many times [state] has become visible (counted by [CountShows]). */
+  val shows: MutableIntState = mutableIntStateOf(0)
 
   fun update(visible: Boolean) {
     if (topOfStack.value != visible) topOfStack.value = visible

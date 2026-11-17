@@ -156,6 +156,7 @@ internal fun <T : Any> HostRetainedEntries(
           EntryLifecycle(top, parentLifecycle, parentBackHandlers)
         }
         SideEffect { lifecycle.update(top) }
+        CountShows(lifecycle)
         val tracker = remember(dispatcher) { BackHandlerTracker(dispatcher) }
         DisposableEffect(itemKey, tracker) {
           trackers[itemKey] = tracker
@@ -167,6 +168,7 @@ internal fun <T : Any> HostRetainedEntries(
         HostEntryFrame(frame, idOf(item), onHostBack != null, lifecycle.state, tracker, { told[itemKey] = it }) {
           CompositionLocalProvider(
             LocalKeliverNavEntryLifecycle provides lifecycle.state,
+            LocalKeliverNavEntryShows provides lifecycle.shows,
             LocalBackHandlersEnabled provides lifecycle.backHandlersEnabled,
             LocalOnBackPressedDispatcher provides tracker,
           ) {

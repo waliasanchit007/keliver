@@ -18,6 +18,8 @@ abstract interface dev.keliver.treehouse/AppLifecycle : app.cash.zipline/Zipline
     abstract fun start(dev.keliver.treehouse/AppLifecycle.Host) // dev.keliver.treehouse/AppLifecycle.start|start(dev.keliver.treehouse.AppLifecycle.Host){}[0]
 
     abstract interface Host : app.cash.zipline/ZiplineService { // dev.keliver.treehouse/AppLifecycle.Host|null[0]
+        abstract val hostFeatures // dev.keliver.treehouse/AppLifecycle.Host.hostFeatures|{}hostFeatures[0]
+            abstract fun <get-hostFeatures>(): kotlin.collections/List<kotlin/String> // dev.keliver.treehouse/AppLifecycle.Host.hostFeatures.<get-hostFeatures>|<get-hostFeatures>(){}[0]
         abstract val hostProtocolVersion // dev.keliver.treehouse/AppLifecycle.Host.hostProtocolVersion|{}hostProtocolVersion[0]
             abstract fun <get-hostProtocolVersion>(): dev.keliver.protocol/RedwoodVersion // dev.keliver.treehouse/AppLifecycle.Host.hostProtocolVersion.<get-hostProtocolVersion>|<get-hostProtocolVersion>(){}[0]
 

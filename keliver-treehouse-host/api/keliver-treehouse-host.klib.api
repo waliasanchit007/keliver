@@ -128,6 +128,8 @@ abstract class <#A: dev.keliver.treehouse/AppService> dev.keliver.treehouse/Tree
             final fun <get-retainedServices>(): kotlin.collections/List<kotlin/Any> // dev.keliver.treehouse/TreehouseApp.Spec.retainedServices.<get-retainedServices>|<get-retainedServices>(){}[0]
         open val freshnessChecker // dev.keliver.treehouse/TreehouseApp.Spec.freshnessChecker|{}freshnessChecker[0]
             open fun <get-freshnessChecker>(): app.cash.zipline.loader/FreshnessChecker // dev.keliver.treehouse/TreehouseApp.Spec.freshnessChecker.<get-freshnessChecker>|<get-freshnessChecker>(){}[0]
+        open val hostFeatures // dev.keliver.treehouse/TreehouseApp.Spec.hostFeatures|{}hostFeatures[0]
+            open fun <get-hostFeatures>(): kotlin.collections/Set<kotlin/String> // dev.keliver.treehouse/TreehouseApp.Spec.hostFeatures.<get-hostFeatures>|<get-hostFeatures>(){}[0]
         open val loadCodeFromNetworkOnly // dev.keliver.treehouse/TreehouseApp.Spec.loadCodeFromNetworkOnly|{}loadCodeFromNetworkOnly[0]
             open fun <get-loadCodeFromNetworkOnly>(): kotlin/Boolean // dev.keliver.treehouse/TreehouseApp.Spec.loadCodeFromNetworkOnly.<get-loadCodeFromNetworkOnly>|<get-loadCodeFromNetworkOnly>(){}[0]
         open val serializersModule // dev.keliver.treehouse/TreehouseApp.Spec.serializersModule|{}serializersModule[0]

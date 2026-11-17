@@ -220,8 +220,12 @@ class FrameTraceTest {
   }
 }
 
-private class FakeHost : AppLifecycle.Host {
+internal class FakeHost(
+  private val features: () -> List<String> = { emptyList() },
+) : AppLifecycle.Host {
   override val hostProtocolVersion: RedwoodVersion get() = RedwoodVersion.Unknown
+
+  override val hostFeatures: List<String> get() = features()
 
   override fun requestFrame() {
   }
@@ -234,7 +238,7 @@ private class FakeHost : AppLifecycle.Host {
 }
 
 @OptIn(RedwoodCodegenApi::class)
-private object UnusedWidgetSystemFactory : ProtocolWidgetSystemFactory {
+internal object UnusedWidgetSystemFactory : ProtocolWidgetSystemFactory {
   override fun create(
     guestAdapter: GuestProtocolAdapter,
     mismatchHandler: ProtocolMismatchHandler,

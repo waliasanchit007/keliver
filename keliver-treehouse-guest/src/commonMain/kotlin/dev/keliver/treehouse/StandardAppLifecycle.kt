@@ -51,7 +51,19 @@ public class StandardAppLifecycle(
     }
   }
 
-  private val broadcastFrameClock = BroadcastFrameClock {
+  /**
+   * The host's optional features ([Host.hostFeatures]), asked once. A host older than 0.5.0 has no
+   * such property: Zipline fails the call, and that host has no optional features.
+   */
+  internal val hostFeatures: Set<String> by lazy {
+    try {
+      host.hostFeatures.toSet()
+    } catch (_: ZiplineApiMismatchException) {
+      emptySet()
+    }
+  }
+
+  private val broadcastFrameClock =BroadcastFrameClock {
     if (started) {
       host.requestFrame()
     }

@@ -18,7 +18,9 @@ package dev.keliver.nav
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 
 /**
  * Guest-side typed navigation controller. Owns a back stack of routes
@@ -123,6 +125,30 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
   }
 
   /**
+   * Replaces the entire stack with [routes], bottom first (a deep link: `[Home, List, Detail(7)]`).
+   * As with [replaceAll], every previous entry is disposed, retained or not, and its saved state is
+   * dropped. Only the new top is composed; the entries below it are composed when back reaches them
+   * (a retained stack keeps only entries it has composed, so a deep link costs one screen).
+   */
+  public fun replaceStack(routes: List<R>) {
+    require(routes.isNotEmpty()) { "routes must not be empty" }
+    entries.clear()
+    for (route in routes) entries.add(NavEntry(nextId++, route))
+  }
+
+  /**
+   * Pops the top entry and hands [value] to the entry below, which receives it in
+   * [LaunchedOnResult] for [key] (once). Returns `false`, and delivers nothing, at the root.
+   * Results are not saved: a result not yet received when the guest is recreated is lost.
+   */
+  public fun <T> popWithResult(key: KeliverNavResultKey<T>, value: T): Boolean {
+    if (entries.size <= 1) return false
+    entries.removeAt(entries.lastIndex)
+    entries.last().results[key.name] = NavResult(value)
+    return true
+  }
+
+  /**
    * Pops entries above the entry with [id], if it is in the stack (a host went back to it on its
    * own); otherwise changes nothing.
    */
@@ -135,7 +161,13 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
 }
 
 /** Internal record paired with each route to key the SaveableStateHolder. */
-internal data class NavEntry<R>(val id: Long, val route: R)
+internal data class NavEntry<R>(val id: Long, val route: R) {
+  /** Results handed to this entry by [KeliverNavController.popWithResult], by key name, not yet received. */
+  val results: SnapshotStateMap<String, NavResult> = mutableStateMapOf()
+}
+
+/** A result value, boxed so a null result is told apart from none. */
+internal class NavResult(val value: Any?)
 
 /**
  * Compose factory — remembers a [KeliverNavController] across

@@ -169,6 +169,7 @@ internal class RealTreehouseApp<A : AppService> private constructor(
       appScope = appScope,
       leakDetector = leakDetector,
       hostProtocol = hostProtocol,
+      hostFeatures = spec.hostFeatures,
     )
   }
 
