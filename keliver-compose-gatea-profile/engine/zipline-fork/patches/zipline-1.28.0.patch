@@ -1,0 +1,533 @@
+diff --git a/zipline-android-ndk/src/main/CMakeLists.txt b/zipline-android-ndk/src/main/CMakeLists.txt
+index f3ffcb7..aa02e1c 100644
+--- a/zipline-android-ndk/src/main/CMakeLists.txt
++++ b/zipline-android-ndk/src/main/CMakeLists.txt
+@@ -1,3 +1,4 @@
++# Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (-fwrapv).
+ cmake_minimum_required(VERSION 3.4.1)
+ 
+ set(CMAKE_C_STANDARD 99)
+@@ -9,4 +10,7 @@ add_library(quickjs SHARED ${sources})
+ 
+ target_link_libraries(quickjs)
+ 
++# QuickJS 2026 relies on signed overflow wrapping (its Makefile builds with -fwrapv).
++target_compile_options(quickjs PRIVATE -fwrapv)
++
+ target_link_options(quickjs PRIVATE "-Wl,-z,max-page-size=16384")
+diff --git a/zipline/build.gradle.kts b/zipline/build.gradle.kts
+index 0f029ed..3a7c4bf 100644
+--- a/zipline/build.gradle.kts
++++ b/zipline/build.gradle.kts
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (-fwrapv for cklib).
+ import co.touchlab.cklib.gradle.CompileToBitcode
+ import co.touchlab.cklib.gradle.CompileToBitcode.Language.C
+ import com.vanniktech.maven.publish.JavadocJar
+@@ -232,6 +233,7 @@ cklib {
+       listOf(
+         //"-DDUMP_LEAKS=1", // For local testing ONLY!
+         "-DKONAN_MI_MALLOC=1",
++        "-fwrapv", // QuickJS 2026 relies on signed overflow wrapping (its Makefile's flag).
+         "-DCONFIG_VERSION=\"${quickJsVersion()}\"",
+         "-Wno-unknown-pragmas",
+         "-ftls-model=initial-exec",
+diff --git a/zipline/build.zig b/zipline/build.zig
+index 1cf1c56..8711292 100644
+--- a/zipline/build.zig
++++ b/zipline/build.zig
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (dtoa.c, -fwrapv).
+ const std = @import("std");
+ 
+ pub fn build(b: *std.Build) !void {
+@@ -47,12 +48,15 @@ fn setupTarget(b: *std.Build, tag: std.Target.Os.Tag, arch: std.Target.Cpu.Arch,
+       "native/common/finalization-registry.c",
+       "native/common/global-gc.c",
+       "native/quickjs/cutils.c",
++      "native/quickjs/dtoa.c",
+       "native/quickjs/libregexp.c",
+       "native/quickjs/libunicode.c",
+       "native/quickjs/quickjs.c",
+     },
+     .flags = &.{
+       "-std=gnu99",
++      // QuickJS 2026 relies on signed overflow wrapping (its Makefile builds with -fwrapv).
++      "-fwrapv",
+     },
+   });
+ 
+diff --git a/zipline/native/Context.cpp b/zipline/native/Context.cpp
+index 4c82811..257333f 100644
+--- a/zipline/native/Context.cpp
++++ b/zipline/native/Context.cpp
+@@ -12,6 +12,8 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt).
+  */
+ #include "Context.h"
+ #include <cstring>
+@@ -347,11 +349,48 @@ Context::toJavaObject(JNIEnv* env, const JSValueConst& value, bool throwOnUnsupp
+       break;
+     }
+ 
+-    case JS_TAG_STRING: {
++    case JS_TAG_STRING:
++    case JS_TAG_STRING_ROPE: { // QuickJS 2026: a concatenation may be a rope until flattened.
+       result = toJavaString(env, value);
+       break;
+     }
+ 
++    case JS_TAG_SHORT_BIG_INT:
++    case JS_TAG_BIG_INT: { // QuickJS 2026: BigInt, as Kotlin/JS emits for Long with -Xes-long-as-bigint.
++      // A BigInt in the 64-bit signed range becomes a java.lang.Long; anything wider is unsupported,
++      // like any other value this function cannot convert (no silent truncation).
++      // JS_ToBigInt64 wraps modulo 2^64, so the value is in range when it reads back unchanged.
++      int64_t v = 0;
++      bool inRange = false;
++      bool failed = JS_ToBigInt64(jsContext, &v, value) != 0;
++      if (!failed) {
++        auto back = JS_NewBigInt64(jsContext, v);
++        failed = JS_IsException(back);
++        inRange = !failed && JS_StrictEq(jsContext, back, value);
++        JS_FreeValue(jsContext, back);
++      }
++      if (failed) {
++        // Out of memory: drop the engine's pending exception; the value is unsupported, as below.
++        JS_FreeValue(jsContext, JS_GetException(jsContext));
++      }
++      if (inRange) {
++        auto longClass = env->FindClass("java/lang/Long");
++        auto longValueOf = env->GetStaticMethodID(longClass, "valueOf", "(J)Ljava/lang/Long;");
++        jvalue jv;
++        jv.j = static_cast<jlong>(v);
++        result = env->CallStaticObjectMethodA(longClass, longValueOf, &jv);
++        env->DeleteLocalRef(longClass);
++      } else {
++        if (throwOnUnsupportedType) {
++          auto str = JS_ToCString(jsContext, value);
++          throwJsExceptionFmt(env, this, "Cannot marshal value %s to Java", str);
++          JS_FreeCString(jsContext, str);
++        }
++        result = nullptr;
++      }
++      break;
++    }
++
+     case JS_TAG_BOOL: {
+       jvalue v;
+       v.z = static_cast<jboolean>(JS_VALUE_GET_BOOL(value));
+diff --git a/zipline/native/InboundCallChannel.cpp b/zipline/native/InboundCallChannel.cpp
+index 1c28f0e..c38be62 100644
+--- a/zipline/native/InboundCallChannel.cpp
++++ b/zipline/native/InboundCallChannel.cpp
+@@ -12,6 +12,9 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes; no
++ * uninitialised result when an assert is compiled out).
+  */
+ #include <assert.h>
+ #include "InboundCallChannel.h"
+@@ -42,10 +45,11 @@ jstring InboundCallChannel::call(Context *context, JNIEnv* env,
+   if (tag == JS_TAG_EXCEPTION) {
+     context->throwJsException(env, jsResult);
+     javaResult = nullptr;
+-  } else if (tag == JS_TAG_STRING) {
++  } else if (JS_IsString(jsResult)) { // QuickJS 2026 also has JS_TAG_STRING_ROPE
+     javaResult = context->toJavaString(env, jsResult);
+   } else {
+     assert(false); // Unexpected tag.
++    javaResult = nullptr; // Release builds compile the assert out; never return an uninitialised value.
+   }
+ 
+   JS_FreeValue(jsContext, arguments[0]);
+@@ -73,6 +77,7 @@ jboolean InboundCallChannel::disconnect(Context *context, JNIEnv* env, jstring i
+     javaResult = static_cast<jboolean>(JS_VALUE_GET_BOOL(jsResult));
+   } else {
+     assert(false); // Unexpected tag.
++    javaResult = JNI_FALSE; // Release builds compile the assert out; never return an uninitialised value.
+   }
+ 
+   JS_FreeValue(jsContext, arguments[0]);
+diff --git a/zipline/native/OutboundCallChannel.cpp b/zipline/native/OutboundCallChannel.cpp
+index 28e06d4..9383735 100644
+--- a/zipline/native/OutboundCallChannel.cpp
++++ b/zipline/native/OutboundCallChannel.cpp
+@@ -12,6 +12,8 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (a result now checked).
+  */
+ #include <assert.h>
+ #include "OutboundCallChannel.h"
+@@ -29,7 +31,10 @@ OutboundCallChannel::OutboundCallChannel(Context* c, JNIEnv* env, const char* na
+   functions.push_back(JS_CFUNC_DEF("call", 1, OutboundCallChannel::call));
+   functions.push_back(JS_CFUNC_DEF("disconnect", 1, OutboundCallChannel::disconnect));
+   if (!env->ExceptionCheck()) {
+-    JS_SetPropertyFunctionList(context->jsContext, jsOutboundCallChannel, functions.data(), functions.size());
++    // QuickJS 2026 returns -1 here on failure (it was void in 2021).
++    if (JS_SetPropertyFunctionList(context->jsContext, jsOutboundCallChannel, functions.data(), functions.size()) < 0) {
++      context->throwJsException(env, JS_EXCEPTION);
++    }
+   }
+ }
+ 
+diff --git a/zipline/native/common/context-no-eval.c b/zipline/native/common/context-no-eval.c
+index ba1d5b9..9205e67 100644
+--- a/zipline/native/common/context-no-eval.c
++++ b/zipline/native/common/context-no-eval.c
+@@ -12,6 +12,8 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (results now checked).
+  */
+ #include "../quickjs/quickjs.h"
+ #include "context-no-eval.h"
+@@ -28,15 +30,20 @@ JSContext *JS_NewContextNoEval(JSRuntime *jsRuntime) {
+     return NULL;
+   }
+ 
+-  JS_AddIntrinsicBaseObjects(jsContext);
+-  JS_AddIntrinsicDate(jsContext);
+-  // Eval intrinsic NOT installed here.
+-  JS_AddIntrinsicStringNormalize(jsContext);
+-  JS_AddIntrinsicRegExp(jsContext);
+-  JS_AddIntrinsicJSON(jsContext);
+-  JS_AddIntrinsicProxy(jsContext);
+-  JS_AddIntrinsicMapSet(jsContext);
+-  JS_AddIntrinsicTypedArrays(jsContext);
+-  JS_AddIntrinsicPromise(jsContext);
++  // QuickJS 2026 returns -1 from these on failure (they were void in 2021). BigInt is part of the
++  // base objects since QuickJS 2025-04.
++  if (JS_AddIntrinsicBaseObjects(jsContext)
++      || JS_AddIntrinsicDate(jsContext)
++      // Eval intrinsic NOT installed here.
++      || JS_AddIntrinsicStringNormalize(jsContext)
++      || JS_AddIntrinsicRegExp(jsContext)
++      || JS_AddIntrinsicJSON(jsContext)
++      || JS_AddIntrinsicProxy(jsContext)
++      || JS_AddIntrinsicMapSet(jsContext)
++      || JS_AddIntrinsicTypedArrays(jsContext)
++      || JS_AddIntrinsicPromise(jsContext)) {
++    JS_FreeContext(jsContext);
++    return NULL;
++  }
+   return jsContext;
+ }
+diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
+new file mode 100644
+index 0000000..82d1b2d
+--- /dev/null
++++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
+@@ -0,0 +1,126 @@
++/*
++ * Copyright (C) 2026 Keliver contributors
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package app.cash.zipline
++
++import app.cash.zipline.internal.bridge.INBOUND_CHANNEL_NAME
++import kotlin.test.AfterTest
++import kotlin.test.Test
++import kotlin.test.assertContentEquals
++import kotlin.test.assertEquals
++import kotlin.test.assertNotEquals
++import kotlin.test.assertNull
++
++/**
++ * Keliver's fork (NF2): what QuickJS 2026-06-04 changes for Zipline. BigInt is in the engine, so
++ * Kotlin/JS output with `Long` as BigInt compiles and runs; BigInts cross to the host as `Long`;
++ * long concatenations may be ropes (`JS_TAG_STRING_ROPE`), which must still read as strings.
++ */
++class QuickJs2026Test {
++  private var quickJs = QuickJs.create()
++
++  @AfterTest fun tearDown() {
++    quickJs.close()
++  }
++
++  @Test fun version() {
++    assertEquals("2026-06-04", QuickJs.version)
++  }
++
++  @Test fun compilerAcceptsBigInt() {
++    // The shape of Kotlin's -Xes-long-as-bigint output for `Long.ushr`.
++    val code = quickJs.compile(
++      """
++      function ushr(a, n) { return BigInt.asIntN(64, BigInt.asUintN(64, a) >> BigInt(n)); }
++      String(ushr(-1n, 1)) + ' ' + String(BigInt.asUintN(64, -1n)) + ' ' + typeof 1n;
++      """.trimIndent(),
++      "bigint.js",
++    )
++    assertNotEquals(0, code.size)
++
++    quickJs.close()
++    quickJs = QuickJs.create()
++    assertEquals("9223372036854775807 18446744073709551615 bigint", quickJs.execute(code))
++  }
++
++  @Test fun asUintNIsGeneral() {
++    // Each was wrong in the unpatched 2026-06-04 release (docs/GUEST_PROFILE.md, NF2).
++    assertEquals("18446744073709551615", quickJs.evaluate("String(BigInt.asUintN(64, -1n))"))
++    assertEquals("36893488147419103231", quickJs.evaluate("String(BigInt.asUintN(65, -1n))"))
++    assertEquals("9223372036854775808", quickJs.evaluate("String(BigInt.asUintN(64, 2n**64n + 2n**63n))"))
++    assertEquals(
++      "340282366920938463463374607431768211455",
++      quickJs.evaluate("String(BigInt.asUintN(128, -1n))"),
++    )
++    assertEquals("-1", quickJs.evaluate("String(BigInt.asIntN(64, -1n))"))
++    assertEquals("127", quickJs.evaluate("String(BigInt.asUintN(7, -1n))"))
++  }
++
++  @Test fun asUintNAtTheSizeLimit() {
++    // QuickJS caps a BigInt at 2^20 bits (Node at 2^30, so bigint-ops.js cannot compare this). A
++    // negative value at a width of 2^20 or more needs one bit more than that: a RangeError, not a
++    // crash or a truncated result. One bit narrower fits; a non-negative value is returned as is.
++    assertEquals(1_048_575, quickJs.evaluate("BigInt.asUintN(2 ** 20 - 1, -1n).toString(2).length"))
++    for (width in listOf("2 ** 20", "2 ** 30", "2 ** 53 - 1")) {
++      assertEquals(
++        "RangeError",
++        quickJs.evaluate(
++          "try { BigInt.asUintN($width, -1n); 'none' } catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
++        ),
++      )
++      assertEquals("12345", quickJs.evaluate("String(BigInt.asUintN($width, 12345n))"))
++      assertEquals("-1", quickJs.evaluate("String(BigInt.asIntN($width, -1n))"))
++    }
++  }
++
++  @Test fun bigIntsReturnAsLong() {
++    assertEquals(1L, quickJs.evaluate("1n"))
++    assertEquals(-1L, quickJs.evaluate("-1n"))
++    assertEquals(Long.MAX_VALUE, quickJs.evaluate("2n**63n - 1n"))
++    assertEquals(Long.MIN_VALUE, quickJs.evaluate("-(2n**63n)"))
++    assertEquals(4_294_967_296L, quickJs.evaluate("2n**32n"))
++    assertContentEquals(
++      arrayOf<Any?>(1L, "x", 1),
++      quickJs.evaluate("[1n, 'x', 1]") as Array<Any?>,
++    )
++  }
++
++  @Test fun bigIntsOutsideLongAreUnsupported() {
++    // Like any other value the host cannot convert: no silent truncation.
++    assertNull(quickJs.evaluate("2n**63n"))
++    assertNull(quickJs.evaluate("-(2n**63n) - 1n"))
++    assertNull(quickJs.evaluate("2n**64n"))
++  }
++
++  @Test fun ropeStringsReturnAsStrings() {
++    val result = quickJs.evaluate("'a'.repeat(10000) + 'b'.repeat(10000)") as String
++    assertEquals(20_000, result.length)
++    assertEquals('b', result.last())
++  }
++
++  @Test fun inboundCallMayReturnARope() {
++    quickJs.evaluate(
++      """
++      globalThis.$INBOUND_CHANNEL_NAME = {
++        call: function(callJson) { return callJson + '|' + 'r'.repeat(10000) + 's'.repeat(10000); },
++        disconnect: function(instanceName) { return true; },
++      };
++      """.trimIndent(),
++    )
++    val result = quickJs.getInboundChannel().call("first")
++    assertEquals(6 + 20_000, result.length)
++    assertEquals("first|", result.substring(0, 6))
++  }
++}
+diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/Utf8Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/Utf8Test.kt
+index 001900a..ab19eb0 100644
+--- a/zipline/src/hostTest/kotlin/app/cash/zipline/Utf8Test.kt
++++ b/zipline/src/hostTest/kotlin/app/cash/zipline/Utf8Test.kt
+@@ -12,6 +12,8 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (stack frames with a column).
+  */
+ package app.cash.zipline
+ 
+@@ -75,7 +77,7 @@ class Utf8Test {
+     }
+     val expectedSubstring = when {
+       isJni -> "JavaScript.f1(a\uD83D\uDC1Dcdefg.js:4)"
+-      else -> "at f1 (a\uD83D\uDC1Dcdefg.js:4)"
++      else -> "at f1 (a\uD83D\uDC1Dcdefg.js:4:3)" // QuickJS 2026 adds the column.
+     }
+     assertThat(t.stackTraceToString()).contains(expectedSubstring)
+   }
+diff --git a/zipline/src/jniMain/kotlin/app/cash/zipline/QuickJsException.kt b/zipline/src/jniMain/kotlin/app/cash/zipline/QuickJsException.kt
+index 3dc6fff..d7fdfdd 100644
+--- a/zipline/src/jniMain/kotlin/app/cash/zipline/QuickJsException.kt
++++ b/zipline/src/jniMain/kotlin/app/cash/zipline/QuickJsException.kt
+@@ -12,6 +12,8 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (stack frames with a column).
+  */
+ package app.cash.zipline
+ 
+@@ -35,8 +37,11 @@ actual class QuickJsException @JvmOverloads constructor(
+      * "func" is optional, but we'll omit frames without a function, since it means the frame is in
+      * native code.
+      */
++    // QuickJS 2026 writes `at f (file.js:8:3)` (line and column) where 2021 wrote `file.js:8`.
++    // The file and line become the StackTraceElement's; the column is dropped, so Java stack
++    // traces read as before.
+     private val STACK_TRACE_PATTERN =
+-      Pattern.compile("\\s*at ([^\\s]+) \\(([^\\s]+(?<!cpp))[:(\\d+)]?\\).*$")
++      Pattern.compile("\\s*at ([^\\s]+) \\(([^\\s]+?)(?::(\\d+))?(?::\\d+)?\\).*$")
+ 
+     /** Java StackTraceElements require a class name.  We don't have one in JS, so use this.  */
+     private const val STACK_TRACE_CLASS_NAME = "JavaScript"
+@@ -80,14 +85,14 @@ actual class QuickJsException @JvmOverloads constructor(
+ 
+     private fun toStackTraceElement(s: String): StackTraceElement? {
+       val m = STACK_TRACE_PATTERN.matcher(s)
+-      return if (!m.matches()) {
++      return if (!m.matches() || m.group(2)!!.endsWith("cpp")) {
+         null // Nothing interesting on this line.
+       } else {
+         StackTraceElement(
+           STACK_TRACE_CLASS_NAME,
+           m.group(1),
+           m.group(2),
+-            if (m.groupCount() > 3) m.group(3)!!.toInt() else -1,
++          m.group(3)?.toInt() ?: -1,
+         )
+       }
+     }
+diff --git a/zipline/src/nativeInterop/cinterop/quickjs.def b/zipline/src/nativeInterop/cinterop/quickjs.def
+index 441f653..7e6991d 100644
+--- a/zipline/src/nativeInterop/cinterop/quickjs.def
++++ b/zipline/src/nativeInterop/cinterop/quickjs.def
+@@ -5,6 +5,8 @@ noStringConversion = \
+ 
+ ---
+ 
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (JsBigIntToInt64InRange).
++
+ // Avoid types ending up in cnames.structs.* https://youtrack.jetbrains.com/issue/KT-49034
+ 
+ typedef struct JSContext {} JSContext;
+@@ -55,3 +57,22 @@ static inline JSCFunctionListEntry JsDisconnectFunction(void *func) {
+ static inline JSValue JsValueArrayToInstanceRef(JSValue* v, int i) {
+   return v[i];
+ }
++
++// Keliver fork (NF2): a BigInt in the signed 64-bit range, as Kotlin/JS emits for Long with
++// -Xes-long-as-bigint. Returns 1 and stores the value when it fits, otherwise 0. JS_ToBigInt64
++// wraps modulo 2^64, so the value is in range when it reads back unchanged. Out of memory drops
++// the engine's pending exception and returns 0 (unsupported), as on JNI (Context.cpp).
++static inline int JsBigIntToInt64InRange(JSContext* ctx, JSValue v, int64_t* out) {
++  if (JS_ToBigInt64(ctx, out, v) != 0) {
++    JS_FreeValue(ctx, JS_GetException(ctx));
++    return 0;
++  }
++  JSValue back = JS_NewBigInt64(ctx, *out);
++  if (JS_IsException(back)) {
++    JS_FreeValue(ctx, JS_GetException(ctx));
++    return 0;
++  }
++  int inRange = JS_StrictEq(ctx, back, v) ? 1 : 0;
++  JS_FreeValue(ctx, back);
++  return inRange;
++}
+diff --git a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt b/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
+index 026bb0c..f598a07 100644
+--- a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
++++ b/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
+@@ -12,6 +12,9 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt, a
++ * result now checked).
+  */
+ @file:OptIn(ExperimentalNativeApi::class, ExperimentalForeignApi::class)
+ 
+@@ -74,12 +77,16 @@ import app.cash.zipline.quickjs.JS_TAG_FLOAT64
+ import app.cash.zipline.quickjs.JS_TAG_INT
+ import app.cash.zipline.quickjs.JS_TAG_NULL
+ import app.cash.zipline.quickjs.JS_TAG_OBJECT
++import app.cash.zipline.quickjs.JS_TAG_BIG_INT
++import app.cash.zipline.quickjs.JS_TAG_SHORT_BIG_INT
+ import app.cash.zipline.quickjs.JS_TAG_STRING
++import app.cash.zipline.quickjs.JS_TAG_STRING_ROPE
+ import app.cash.zipline.quickjs.JS_TAG_UNDEFINED
+ import app.cash.zipline.quickjs.JS_ToCString
+ import app.cash.zipline.quickjs.JS_WRITE_OBJ_BYTECODE
+ import app.cash.zipline.quickjs.JS_WRITE_OBJ_REFERENCE
+ import app.cash.zipline.quickjs.JS_WriteObject
++import app.cash.zipline.quickjs.JsBigIntToInt64InRange
+ import app.cash.zipline.quickjs.JsCallFunction
+ import app.cash.zipline.quickjs.JsDisconnectFunction
+ import app.cash.zipline.quickjs.JsFalse
+@@ -98,6 +105,7 @@ import kotlinx.cinterop.CPointer
+ import kotlinx.cinterop.CValue
+ import kotlinx.cinterop.CValuesRef
+ import kotlinx.cinterop.ExperimentalForeignApi
++import kotlinx.cinterop.LongVar
+ import kotlinx.cinterop.StableRef
+ import kotlinx.cinterop.UByteVar
+ import kotlinx.cinterop.alloc
+@@ -358,7 +366,10 @@ actual class QuickJs private constructor(
+         JsCallFunction(staticCFunction(::outboundCall)),
+         JsDisconnectFunction(staticCFunction(::outboundDisconnect)),
+       )
+-      JS_SetPropertyFunctionList(context, jsOutboundCallChannel, functionList, 2)
++      // QuickJS 2026 returns -1 here on failure (it was void in 2021).
++      if (JS_SetPropertyFunctionList(context, jsOutboundCallChannel, functionList, 2) < 0) {
++        throwJsException()
++      }
+     } finally {
+       JS_FreeAtom(context, propertyName)
+       JS_FreeValue(context, globalThis)
+@@ -439,13 +450,21 @@ actual class QuickJs private constructor(
+     return when (JsValueGetNormTag(this)) {
+       JS_TAG_EXCEPTION -> throwJsException()
+ 
+-      JS_TAG_STRING -> {
++      // QuickJS 2026: a concatenation may be a rope until flattened.
++      JS_TAG_STRING, JS_TAG_STRING_ROPE -> {
+         val cString = JS_ToCString(context, this)!!
+         val string = cString.toKStringFromUtf8()
+         JS_FreeCString(context, cString)
+         string
+       }
+ 
++      // QuickJS 2026: BigInt in the signed 64-bit range becomes a Long; anything wider is
++      // unsupported, like any other value this function cannot convert.
++      JS_TAG_SHORT_BIG_INT, JS_TAG_BIG_INT -> memScoped {
++        val out = alloc<LongVar>()
++        if (JsBigIntToInt64InRange(context, this@toKotlinInstanceOrNull, out.ptr) != 0) out.value else null
++      }
++
+       JS_TAG_BOOL -> JsValueGetBool(this) != 0
+ 
+       JS_TAG_INT -> JsValueGetInt(this)
