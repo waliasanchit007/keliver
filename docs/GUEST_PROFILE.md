@@ -659,7 +659,7 @@ step 1, above option 5's 4–8: `zipline-bytecode` was not in that estimate.
 
 | Step | What | Estimate |
 |---|---|---|
-| 1b. `zipline-bytecode` | Port Zipline's bytecode reader and writer to version 5 (new tags, BigInt constants, the column table), so source maps and line stripping work again; its round-trip tests on the new engine's output | 1–1.5 |
+| 1b. `zipline-bytecode` | Port Zipline's bytecode reader and writer to version 5 (new tags, BigInt constants, the column table), so source maps and line stripping work again; its round-trip tests on the new engine's output. **Done 2026-11-18** (next section) | 1–1.5 |
 | 2. Android | Build the AAR (`zipline-android-ndk`, the NDK's CMake; the patch already adds `-fwrapv`) for the four ABIs, run Zipline's device tests on the emulator, then the A12 matrix through Zipline itself, not `qjs` | 0.5–1 |
 | 3. iOS | cklib and Kotlin/Native: compile the patched `nativeMain` and `quickjs.def` (not compiled in step 1; `JS_NewString` is now `static inline`, which cinterop must wrap), run the host tests on a simulator, then the iPhone once its signing exists | 0.5–1.5 |
 | 4. Publishing the fork | Our own coordinates (not `app.cash.zipline`) from this patch set: JVM, Android, iOS, and the JS library unchanged; a CI job that runs `apply.sh all` and the tests | 0.5–1 |
@@ -668,6 +668,73 @@ step 1, above option 5's 4–8: `zipline-bytecode` was not in that estimate.
 | 7. Host advertisement and selection | A host sends its engine version when it fetches the index, and the server returns the manifest for that engine only; a host refuses a manifest for another engine before downloading code. The engine becomes one more thing D2's compat gate checks, beside the widget version and capabilities, so a host never receives bytecode it cannot load. Old hosts, which send nothing, get the old engine's bundle | 1 |
 | 8. Transition | Both bundles published for every release while old hosts are in the field; a dashboard count of hosts per engine; retiring the old bundle when that count reaches the floor the owner sets | 0.5, then upkeep |
 | 9. Upstream | Offer the `asUintN` fix to Bellard (a public post: open item 4 in section 10 of the plan), and the engine update, rope and BigInt cases to Zipline (#1192, #1715), so the fork can shrink back to a version pin | 0.5, then their timeline |
+
+## NF2 step 1b: `zipline-bytecode` on QuickJS 2026's bytecode
+
+2026-11-18, Mac and JVM only, in the same patch set (`apply.sh`, README). Zipline's compiler
+(`zipline-cli`, which the Gradle plugin runs) reads the bytecode QuickJS wrote, rewrites its debug
+information and writes it back in two cases: a module with a `.js.map` gets Kotlin's files and
+lines, and production builds may strip line numbers. `zipline-bytecode` now reads and writes
+version 5 only (2021's version 1 is not kept: the fork's engine never writes it, and step 5 compiles
+the old engine's bundles with upstream 1.28.0).
+
+**What changed in the format** (from `JS_WriteObject`/`JS_ReadObject` in quickjs.c): the tags after
+`BC_TAG_ARRAY` moved (BigInt is 10, functions 12, object references 19); BigInt constants
+(`BC_TAG_BIG_INT`: the shortest two's-complement form, little-endian, so the bytes are the same on
+32- and 64-bit limbs); the function record gained `var_ref_count`, the variable record `var_ref_idx`
+and `has_scope`, the closure record a 3-bit `closure_type` in place of two flags; the debug record
+lost its separate line number and gained the function's source text; and the line table now starts
+with the function's line and column and has a column delta in every entry. The 243 built-in atoms
+are 2026's (a test compares them with `quickjs-atom.h`). Source maps map each entry by its
+JavaScript line, as 1.28.0 did (the line's first segment gives the Kotlin file, line and column).
+Two 1.28.0 bugs went on the way: 8-bit strings are Latin-1, not UTF-8, and the function flags read
+inverted.
+
+**The source text.** QuickJS 2026 writes every function's source text into its bytecode (for
+`Function.prototype.toString`); 2021 did not. Each nested function keeps its own copy, so in the
+three-way guest it was **10.3 MB of 12.5 MB of bytecode (83%)**. Step 1's bundles carried it. The
+fork's `compile` (JNI and iOS) now sets `JS_STRIP_SOURCE` while it compiles, as 2021 behaved: a
+loaded function's `toString()` reads `[native code]`, lines and columns stay.
+
+**Checked:**
+- **Zipline's tests on the fork**, from a fresh `apply.sh all`: `:zipline:jvmTest` 266 run, 264
+  pass, 2 skipped (as upstream; one new: compiled bytecode has no source text);
+  `:zipline-bytecode:test` 42, all pass (Zipline's, adapted to version 5: the line table's golden
+  bytes, the stack traces; and new: BigInt constants and their encoding, template objects, classes
+  with private fields and methods, closures, generators and async functions run after a round trip,
+  the atom table, a module with BigInts through a source map, and `RealBundleTest` below);
+  `:zipline-cli:test` 12, all pass. Two expectations changed with the engine, both
+  improvements: the frame that throws keeps its Kotlin line (`goBoom1(throwException.kt:12)`; 1.28.0
+  lost it), and the evaluated script has a line (`<eval>(?:1)`).
+- **Real bundles** (`RealBundleTest`, `-PziplineBytecodeCorpus`): the three-way guest's 47 production
+  modules with their source maps, as Keliver builds them: 9,573 functions, every one read and written
+  back byte for byte; with the source maps applied, 9,026 functions get a Kotlin file and every
+  instruction with a line entry was checked against the source map (the line `find_line_num` gives
+  at that pc is the source map's line for the JavaScript line); stripped, no function keeps a line
+  table; then the bundle loads in dependency order as compiled, with source maps and stripped, every
+  module without error. Again with `Long` as BigInt: the same 47 modules, 9,575 functions, 471
+  BigInt constants, all byte for byte, 9,027 functions mapped and checked, every module loaded.
+- **The guest profile with source maps on** (step 1 had to turn them off), one run each, back to
+  back, 3 warm-up and 30 measured pairs, medians in ms, the same Mac. `use-fork.init.gradle` now swaps
+  `zipline-bytecode` too:
+
+  | Engine (through Zipline), source maps on | Bundle | Back | Open | Back, recording off | Load | Heap after load | `.zipline` files |
+  |---|---|---|---|---|---|---|---|
+  | 1.28.0, QuickJS 2021-03-27 | as shipped | 78.21 | 23.53 | 41.49 | 25.02 | 5.11 MB | 1,767 KB |
+  | step 1's fork (source text in the bytecode; source maps off) | as shipped | 66.71 | 19.54 | 36.13 | 21.57 | 11.13 MB | 12,215 KB |
+  | fork, step 1b | as shipped | 66.57 | 19.55 | 36.04 | 17.39 | 4.90 MB | 1,881 KB |
+  | **fork, step 1b** | **`Long` as BigInt** | **39.21** | **9.58** | 28.29 | 17.69 | 4.87 MB | 1,857 KB |
+
+  Against 1.28.0: 1.17× on "back" and 1.20× on "open" as shipped; **1.99× and 2.46× with `Long` as
+  BigInt**, the ratios step 1 measured with source maps off. Leaving out the source text took the
+  bundle from 6.9× 1.28.0's size to 1.06× (the 47 files with the manifest, apparent size) and the
+  heap after loading from 2.2× to 0.96×; loading is not slower than on 1.28.0 (one run each).
+  Every run's batch hash is the same (637745288 as shipped, 394047653 with recording off). The
+  BigInt bundle is 1% smaller than the plain one; it has 471 BigInt constants.
+
+**Not checked:** Android and iOS (steps 2 and 3; the iOS `compile` change is not compiled); a stack
+trace from a real Kotlin crash in the three-way guest on a device; whether any guest code calls
+`Function.prototype.toString` (Kotlin/JS does not; 1.28.0 gave the same `[native code]`).
 
 ## NF3: the open path, measured (Mac)
 
@@ -847,8 +914,12 @@ past the collection point.
 bash scripts/zipline-fork.sh all <work>     # clone the tag, verify, patch, JNI library, qjs, asUintN check
 bash scripts/zipline-fork.sh test <work> :zipline:jvmTest [-PziplineForkLongAsBigInt]   # the second: Long as BigInt
 bash scripts/zipline-fork.sh jni <work> --warnings          # the -Wall review build
-bash scripts/zipline-fork.sh publish <work> <work>/m2
-# the baseline (-PziplineForkRepo=none: 1.28.0, source maps off), then the fork; [-PprofileBigInt] on the fork
+# step 1b: the bytecode module's tests; RealBundleTest on a real bundle (after the production link below)
+bash scripts/zipline-fork.sh test <work> :zipline-bytecode:test :zipline-cli:test \
+  -PziplineBytecodeCorpus=$PWD/keliver-compose-gatea-profile/build/compileSync/js/main/productionExecutable/kotlin
+bash scripts/zipline-fork.sh publish <work> <work>/m2   # zipline-jvm and zipline-bytecode
+# the baseline (-PziplineForkRepo=none: 1.28.0), then the fork; [-PprofileBigInt] on the fork. Source maps
+# are on since step 1b (-PziplineForkNoSourceMaps turns them off, as step 1 measured)
 ./gradlew --no-daemon -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
   -PziplineForkRepo=<work>/m2 -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \
   "-PprofileArgs=modes=kotlinx+none,iterations=30,warmup=3,label=fork" -PprofileOut=<scratch>/out [-PprofileBigInt]

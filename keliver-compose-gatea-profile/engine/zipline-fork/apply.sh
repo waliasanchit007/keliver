@@ -12,8 +12,8 @@
 #                             32-bit limbs (as on a 32-bit host such as armeabi-v7a), for check-bigint
 #   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and both qjs builds; fail on any difference
 #   apply.sh test    <work> [gradle args]   Zipline's JVM tests that exercise the engine and the bridge
-#   apply.sh publish <work> <maven repo dir>   publish the forked JVM artifact as 1.28.0-q20260604 to a
-#                             scratch Maven repository (never ~/.m2)
+#   apply.sh publish <work> <maven repo dir>   publish the forked JVM artifacts (zipline-jvm and
+#                             zipline-bytecode) as 1.28.0-q20260604 to a scratch Maven repository (never ~/.m2)
 #   apply.sh diff    <work>   maintainers: regenerate patches/ from an edited checkout
 #   apply.sh all     <work>   clone, engine, jni, qjs, check-bigint
 set -euo pipefail
@@ -151,8 +151,10 @@ do_publish() {
   local repo="${3:?maven repo dir}"
   mkdir -p "$repo"; repo="$(cd "$repo" && pwd)"
   case "$repo" in "$HOME/.m2"*) echo "refusing ~/.m2" >&2; exit 2 ;; esac
+  # zipline-jvm (the engine) and zipline-bytecode (step 1b: the compiler's source maps and line
+  # stripping read and write version 5); use-fork.init.gradle substitutes both.
   zipline_gradle -PVERSION_NAME="$FORK_VERSION" "-Dmaven.repo.local=$repo" -PRELEASE_SIGNING_ENABLED=false \
-    :zipline:publishJvmPublicationToMavenLocal
+    :zipline:publishJvmPublicationToMavenLocal :zipline-bytecode:publishMavenPublicationToMavenLocal
   find "$repo/app/cash/zipline" -name "*.jar" | sort
 }
 
