@@ -63,7 +63,7 @@ public class StandardAppLifecycle(
     }
   }
 
-  private val broadcastFrameClock =BroadcastFrameClock {
+  private val broadcastFrameClock = BroadcastFrameClock {
     if (started) {
       host.requestFrame()
     }
