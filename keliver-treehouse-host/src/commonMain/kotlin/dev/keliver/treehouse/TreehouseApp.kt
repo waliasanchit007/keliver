@@ -18,6 +18,7 @@ package dev.keliver.treehouse
 import app.cash.zipline.Zipline
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
 import app.cash.zipline.loader.FreshnessChecker
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import kotlin.native.ObjCName
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
@@ -266,7 +267,10 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
      * feature only when this host renders it: for example `"keliver.nav.retainedContainer@1"` when
      * the host's widget system has the retained container and wires its back dispatcher, which turns
      * on keliver-nav's host-backed retained back stack by default. Empty by default.
+     *
+     * Experimental, as `LocalHostFeatures` and the feature names it carries are.
      */
+    @ExperimentalKeliverHostFeaturesApi
     public open val hostFeatures: Set<String>
       get() = emptySet()
 

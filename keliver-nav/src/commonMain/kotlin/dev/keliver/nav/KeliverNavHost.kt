@@ -48,7 +48,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * Retained by default where it can be: when the app provides [LocalKeliverNavDefaults] (frames from
  * code that knows its schema), screens below the top stay composed and hidden, with the frame this
  * host supports ([defaultKeliverNavRetention]); without them only the top is composed, as before.
- * Pass `retention = null` to the other overload to turn retention off for one host.
+ * Pass `retention = null` to the other overload to turn retention off for one host. A host nested
+ * in a screen of another (tabs, a flow) does not inherit the defaults: it retains only if that
+ * screen provides [LocalKeliverNavDefaults] again or passes a retention. See [KeliverNavDefaults]
+ * for what retention changes for a screen's effects.
  */
 @OptIn(ExperimentalKeliverNavRetentionApi::class)
 @Composable
@@ -89,11 +92,15 @@ public fun <R : Any> KeliverNavHost(
 }
 
 /**
- * [KeliverNavHost] with a per-route choice of how a covered screen is kept ([entryRetention], read
- * when the screen is covered): [KeliverNavEntryRetention.Retain] (the default: kept composed within
+ * [KeliverNavHost] with a per-route choice of how a covered screen is kept ([entryRetention]):
+ * [KeliverNavEntryRetention.Retain] (the default: kept composed within
  * the depth), [KeliverNavEntryRetention.Dispose] (left as without retention, its saved state kept)
  * or [KeliverNavEntryRetention.Discard] (left, and its saved state dropped: back shows it new).
  * [KeliverNavEntryRetention.Discard] applies with [retention] null too.
+ *
+ * [entryRetention] is called at every composition of the host, not once when a screen is covered,
+ * so make it a pure function of the route: an answer that changes with state applies at once, and a
+ * hidden screen it no longer retains is disposed (or discarded) at that composition.
  *
  * ```
  * KeliverNavHost(nav, defaultKeliverNavRetention(), entryRetention = { route ->
@@ -142,7 +149,8 @@ public fun <R : Any> KeliverNavHost(
     if (retention == null || retention.depth == 0) {
       val top = entries.last()
       stateHolder.SaveableStateProvider(top.id) {
-        CompositionLocalProvider(LocalKeliverNavEntry provides top) {
+        // A nested host retains only if its screen provides defaults again (see KeliverNavDefaults).
+        CompositionLocalProvider(LocalKeliverNavEntry provides top, LocalKeliverNavDefaults provides null) {
           content(top.route)
         }
       }
@@ -153,7 +161,7 @@ public fun <R : Any> KeliverNavHost(
         retention = retention,
         content = { entry ->
           stateHolder.SaveableStateProvider(entry.id) {
-            CompositionLocalProvider(LocalKeliverNavEntry provides entry) {
+            CompositionLocalProvider(LocalKeliverNavEntry provides entry, LocalKeliverNavDefaults provides null) {
               content(entry.route)
             }
           }

@@ -176,6 +176,11 @@ private val ShownOnce: State<Int> = mutableIntStateOf(1)
  * composition of the effect (and again if [keys] change), not on each show; hiding the entry does
  * not cancel it.
  *
+ * "Once" is per tracking of the entry, not per screen forever: if what encloses the stack changes
+ * the entry's lifecycle source (its parent entry's lifecycle or back-handler gate is provided anew),
+ * the count of shows starts again and [block] runs again once the entry is shown. Make [block] safe
+ * to repeat (idempotent, or guarded by state the screen keeps) where a duplicate would matter.
+ *
  * Use it for what must happen only for a screen the user saw: "screen viewed" analytics, marking
  * something read, creating something (an order, a session). Loads stay in `LaunchedEffect`, so a
  * prepared screen starts loading on touch-down.

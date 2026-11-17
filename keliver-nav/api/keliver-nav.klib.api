@@ -96,8 +96,6 @@ final class <#A: kotlin/Any?> dev.keliver.nav/KeliverNavResultKey { // dev.keliv
     final val name // dev.keliver.nav/KeliverNavResultKey.name|{}name[0]
         final fun <get-name>(): kotlin/String // dev.keliver.nav/KeliverNavResultKey.name.<get-name>|<get-name>(){}[0]
 
-    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.nav/KeliverNavResultKey.equals|equals(kotlin.Any?){}[0]
-    final fun hashCode(): kotlin/Int // dev.keliver.nav/KeliverNavResultKey.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.nav/KeliverNavResultKey.toString|toString(){}[0]
 }
 

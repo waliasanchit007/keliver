@@ -94,9 +94,7 @@ public final class dev/keliver/nav/KeliverNavPreparationKt {
 public final class dev/keliver/nav/KeliverNavResultKey {
 	public static final field $stable I
 	public fun <init> (Ljava/lang/String;)V
-	public fun equals (Ljava/lang/Object;)Z
 	public final fun getName ()Ljava/lang/String;
-	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 

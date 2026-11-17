@@ -37,13 +37,12 @@ import kotlinx.coroutines.flow.filterNotNull
  * LaunchedOnResult(PickedColor) { color -> viewModel.setColor(color) }
  * ```
  *
- * Two keys with one [name] are the same key; give each result its own name.
+ * Keys are compared by identity, not by [name] (which is for logs): declare each key once, as a
+ * top-level `val`, and use that one value on both sides. Two keys with one name and different types
+ * are then different keys, so a result never reaches a listener that expects another type.
  */
+@ExperimentalKeliverNavRetentionApi
 public class KeliverNavResultKey<T>(public val name: String) {
-  override fun equals(other: Any?): Boolean = other is KeliverNavResultKey<*> && name == other.name
-
-  override fun hashCode(): Int = name.hashCode()
-
   override fun toString(): String = "KeliverNavResultKey($name)"
 }
 
@@ -56,17 +55,20 @@ internal val LocalKeliverNavEntry = staticCompositionLocalOf<NavEntry<*>?> { nul
  *
  * A retained screen below the top receives the result as the pop shows it, without being composed
  * again. A screen that was disposed (not retained) receives it when it is composed again on the way
- * back. Results are not saved: one not yet received when the guest is recreated is lost.
+ * back. A result is for the visit it was passed to: one nobody has received by the time the screen
+ * is covered again (no [LaunchedOnResult] for its key was composed) is dropped, never delivered late.
+ * Results are not saved: one not yet received when the guest is recreated is lost.
  * Outside a [KeliverNavHost] (a preview, a test of the screen alone) nothing is delivered.
  */
+@ExperimentalKeliverNavRetentionApi
 @Composable
 public fun <T> LaunchedOnResult(key: KeliverNavResultKey<T>, onResult: suspend CoroutineScope.(T) -> Unit) {
   val entry = LocalKeliverNavEntry.current ?: return
   val currentOnResult by rememberUpdatedState(onResult)
-  LaunchedEffect(entry, key.name) {
-    snapshotFlow { entry.results[key.name] }.filterNotNull().collect { result ->
+  LaunchedEffect(entry, key) {
+    snapshotFlow { entry.results[key] }.filterNotNull().collect { result ->
       // Removed before delivery, so a result is received once even if onResult suspends or fails.
-      if (entry.results[key.name] === result) entry.results.remove(key.name)
+      if (entry.results[key] === result) entry.results.remove(key)
       @Suppress("UNCHECKED_CAST")
       currentOnResult(result.value as T)
     }

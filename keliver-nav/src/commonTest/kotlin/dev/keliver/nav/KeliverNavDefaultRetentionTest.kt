@@ -43,6 +43,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -670,6 +671,271 @@ class KeliverNavDefaultRetentionTest {
     nav.popUntil { it == Route.Home }
     harness.settle()
     assertEquals("root[stack[entry[home:1]]]", harness.root.dump(), "composed again with its saved state")
+    harness.close()
+  }
+
+  /** [ContainerFrame] that keeps the container's `onBack`, so a test can press back on the host. */
+  private class PressableContainerFrame : KeliverNavHostFrame {
+    var hostBack: (entryId: String) -> Unit = { error("no container composed") }
+
+    @Composable
+    override fun HostStack(backHandled: Int, onBack: (entryId: String) -> Unit, content: @Composable () -> Unit) {
+      hostBack = onBack
+      ContainerFrame.HostStack(backHandled, onBack, content)
+    }
+
+    @Composable
+    override fun HostEntry(entryId: String, hostBack: Boolean, content: @Composable () -> Unit) =
+      ContainerFrame.HostEntry(entryId, hostBack, content)
+
+    @Composable
+    override fun Stack(content: @Composable () -> Unit) = ContainerFrame.Stack(content)
+
+    @Composable
+    override fun Entry(visible: Boolean, content: @Composable () -> Unit) = ContainerFrame.Entry(visible, content)
+  }
+
+  // Review of #266 (M5): paths the first round left untested.
+
+  @Test
+  fun launchedOnReturnRunsAfterAHostBackInTheContainer() = runTest {
+    // The host shows the entry below on its own and tells the guest (onBack → popToEntry): the
+    // show counter in HostRetainedEntries must see that return.
+    val frame = PressableContainerFrame()
+    var refreshes = 0
+    val (harness, nav) = navHost(
+      defaults = KeliverNavDefaults(hostFrame = frame, frame = GuestFrame),
+      features = setOf(KeliverNavDefaults.RETAINED_CONTAINER_FEATURE),
+      screen = { route ->
+        if (route == Route.Home) LaunchedOnReturn { refreshes++ }
+        Leaf(nameOf(route))
+      },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    assertEquals(0, refreshes)
+
+    compositions.clear()
+    frame.hostBack("0") // Home's entry id.
+    harness.settle()
+    assertEquals(Route.Home, nav.current, "the guest caught up with the host")
+    assertEquals(1, refreshes, "a host back is a return")
+    assertEquals(emptyMap(), compositions)
+    harness.close()
+  }
+
+  @Test
+  fun trimDisposesHiddenScreensInTheHostContainerToo() = runTest {
+    var bump: () -> Unit = {}
+    val disposed = mutableListOf<String>()
+    val (harness, nav) = navHost(
+      defaults = KeliverNavDefaults(hostFrame = ContainerFrame, frame = GuestFrame),
+      features = setOf(KeliverNavDefaults.RETAINED_CONTAINER_FEATURE),
+      screen = { route ->
+        val name = nameOf(route)
+        DisposableEffect(name) { onDispose { disposed += name } }
+        if (route == Route.Home) {
+          var n by rememberSaveable { mutableStateOf(0) }
+          bump = { n++ }
+          Leaf("home", "$n")
+        } else {
+          Leaf(name)
+        }
+      },
+    )
+    bump()
+    harness.settle()
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    assertEquals(3, harness.root.dump().split("slot").size - 1, "three slots before the trim")
+
+    trimKeliverNavRetention()
+    harness.settle()
+    assertEquals(setOf("home", "detail1"), disposed.toSet())
+    val dump = harness.root.dump()
+    assertTrue(dump.startsWith("root[container[slot") && "home" !in dump && "detail1" !in dump && "detail2" in dump, dump)
+
+    nav.popUntil { it == Route.Home }
+    harness.settle()
+    assertTrue("home:1" in harness.root.dump(), "composed again with its saved state: ${harness.root.dump()}")
+    harness.close()
+  }
+
+  @Test
+  fun popWithResultReachesAnEntryTheDepthHadEvicted() = runTest {
+    val received = mutableListOf<Int>()
+    val count = KeliverNavResultKey<Int>("count")
+    val (harness, nav) = navHost(
+      defaults = KeliverNavDefaults(frame = GuestFrame, depth = 1),
+      screen = { route ->
+        if (route == Route.Home) LaunchedOnResult(count) { received += it }
+        Leaf(nameOf(route))
+      },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    assertEquals("root[stack[entry(hidden)[detail1],entry[detail2]]]", harness.root.dump(), "home evicted")
+    nav.pop()
+    harness.settle()
+
+    compositions.clear()
+    nav.popWithResult(count, 7)
+    harness.settle()
+    assertEquals(listOf(7), received, "received when composed again")
+    assertEquals(mapOf("home" to 1), compositions)
+    harness.close()
+  }
+
+  @Test
+  fun launchedOnReturnRestartsWhenShownAgainAndIsNotCancelledOnHide() = runTest {
+    val runs = mutableListOf<CompletableDeferred<Unit>>()
+    var finished = 0
+    var cancelled = 0
+    val (harness, nav) = navHost(
+      screen = { route ->
+        if (route == Route.Home) {
+          LaunchedOnReturn {
+            val gate = CompletableDeferred<Unit>()
+            runs += gate
+            try {
+              gate.await()
+              finished++
+            } catch (e: CancellationException) {
+              cancelled++
+              throw e
+            }
+          }
+        }
+        Leaf(nameOf(route))
+      },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.pop()
+    harness.settle()
+    assertEquals(1, runs.size, "the first return started a refresh")
+
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    assertEquals(0, cancelled, "hiding does not cancel it")
+
+    nav.pop()
+    harness.settle()
+    assertEquals(1, cancelled, "shown again mid-run: the old run is cancelled")
+    assertEquals(2, runs.size, "and a new one started")
+
+    nav.navigate(Route.Detail(3))
+    harness.settle()
+    runs[1].complete(Unit)
+    harness.settle()
+    assertEquals(1, finished, "a refresh that finishes while hidden completes")
+    assertEquals(1, cancelled)
+    harness.close()
+  }
+
+  @Test
+  fun aNestedHostDoesNotInheritTheDefaults() = runTest {
+    // M4: the defaults turn retention on for the host they are provided around, not for a host
+    // nested in one of its screens (tabs, a flow), which would multiply what is kept.
+    val inner = KeliverNavController("innerA")
+    val (harness, _) = navHost(
+      screen = { route ->
+        if (route == Route.Home) KeliverNavHost(inner) { Leaf(it) } else Leaf(nameOf(route))
+      },
+    )
+    inner.navigate("innerB")
+    harness.settle()
+    assertEquals("root[stack[entry[innerB]]]", harness.root.dump(), "the nested host retains nothing")
+    harness.close()
+  }
+
+  @Test
+  fun aNestedHostRetainsWhereItsScreenProvidesTheDefaultsAgain() = runTest {
+    val defaults = KeliverNavDefaults(frame = GuestFrame)
+    val inner = KeliverNavController("innerA")
+    val (harness, _) = navHost(
+      defaults = defaults,
+      screen = { route ->
+        if (route == Route.Home) {
+          CompositionLocalProvider(LocalKeliverNavDefaults provides defaults) {
+            KeliverNavHost(inner) { Leaf(it) }
+          }
+        } else {
+          Leaf(nameOf(route))
+        }
+      },
+    )
+    inner.navigate("innerB")
+    harness.settle()
+    assertEquals("root[stack[entry[stack[entry(hidden)[innerA],entry[innerB]]]]]", harness.root.dump())
+    harness.close()
+  }
+
+  // Review of #266 (L1): result keys and results nobody received.
+
+  @Test
+  fun resultKeysAreComparedByIdentityNotByName() = runTest {
+    val received = mutableListOf<Any?>()
+    val asString = KeliverNavResultKey<String>("x")
+    val asInt = KeliverNavResultKey<Int>("x")
+    val (harness, nav) = navHost(
+      screen = { route ->
+        if (route == Route.Home) LaunchedOnResult(asString) { received += it }
+        Leaf(nameOf(route))
+      },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.popWithResult(asInt, 1)
+    harness.settle()
+    assertEquals(emptyList(), received, "another key of the same name: no ClassCastException, no delivery")
+
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    nav.popWithResult(asString, "s")
+    harness.settle()
+    assertEquals(listOf<Any?>("s"), received)
+    harness.close()
+  }
+
+  @Test
+  fun aResultNobodyReceivedIsDroppedWhenTheScreenIsCoveredAgain() = runTest {
+    val received = mutableListOf<Int>()
+    val count = KeliverNavResultKey<Int>("count")
+    var listening by mutableStateOf(false)
+    val (harness, nav) = navHost(
+      screen = { route ->
+        if (route == Route.Home && listening) LaunchedOnResult(count) { received += it }
+        Leaf(nameOf(route))
+      },
+    )
+    // A listener composed later in the same visit (behind a load) still receives it.
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.popWithResult(count, 1)
+    harness.settle()
+    listening = true
+    harness.settle()
+    assertEquals(listOf(1), received)
+
+    // Not received before the screen is covered again: dropped, never delivered late.
+    listening = false
+    harness.settle()
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    nav.popWithResult(count, 2)
+    harness.settle()
+    nav.navigate(Route.Detail(3))
+    harness.settle()
+    nav.pop()
+    harness.settle()
+    listening = true
+    harness.settle()
+    assertEquals(listOf(1), received)
     harness.close()
   }
 }

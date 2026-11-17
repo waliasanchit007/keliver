@@ -77,7 +77,10 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
   public val canPop: Boolean get() = entries.size > 1
 
   /** Push [route] onto the back stack. */
+  @OptIn(ExperimentalKeliverNavRetentionApi::class)
   public fun navigate(route: R) {
+    // A result is for the visit it was passed to: one the covered entry has not received is dropped.
+    entries.last().results.clear()
     entries.add(NavEntry(nextId++, route))
   }
 
@@ -139,12 +142,14 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
   /**
    * Pops the top entry and hands [value] to the entry below, which receives it in
    * [LaunchedOnResult] for [key] (once). Returns `false`, and delivers nothing, at the root.
-   * Results are not saved: a result not yet received when the guest is recreated is lost.
+   * A result that entry has not received when it is covered again is dropped. Results are not
+   * saved: a result not yet received when the guest is recreated is lost.
    */
+  @ExperimentalKeliverNavRetentionApi
   public fun <T> popWithResult(key: KeliverNavResultKey<T>, value: T): Boolean {
     if (entries.size <= 1) return false
     entries.removeAt(entries.lastIndex)
-    entries.last().results[key.name] = NavResult(value)
+    entries.last().results[key] = NavResult(value)
     return true
   }
 
@@ -162,8 +167,12 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
 
 /** Internal record paired with each route to key the SaveableStateHolder. */
 internal data class NavEntry<R>(val id: Long, val route: R) {
-  /** Results handed to this entry by [KeliverNavController.popWithResult], by key name, not yet received. */
-  val results: SnapshotStateMap<String, NavResult> = mutableStateMapOf()
+  /**
+   * Results handed to this entry by [KeliverNavController.popWithResult], by key (compared by
+   * identity), not yet received. Cleared when the entry is covered again.
+   */
+  @OptIn(ExperimentalKeliverNavRetentionApi::class)
+  val results: SnapshotStateMap<KeliverNavResultKey<*>, NavResult> = mutableStateMapOf()
 }
 
 /** A result value, boxed so a null result is told apart from none. */

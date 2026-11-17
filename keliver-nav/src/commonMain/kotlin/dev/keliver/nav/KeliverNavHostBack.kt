@@ -64,10 +64,20 @@ import dev.keliver.ui.OnBackPressedDispatcher
  * extras, outside the schema lock. A host that does not have them THROWS while applying the batch
  * that creates them (the parent's children change names a widget it never created), which takes
  * down the whole content, not just the stack. Gate A is unpublished and prototype-only, so no
- * shipped host can meet such a bundle today. Before it leaves the prototype: extras must be in the
- * versioned surface (a level or widget-version bump with each new tag), the D2 bundle gate (the
- * index's widgetVersion) must read that number, and a test must show an older host refusing such a
- * bundle at selection rather than crashing.
+ * shipped host can meet such a bundle today.
+ *
+ * Two gates keep such a bundle off a host without the container:
+ * - At run time (0.5.0): [KeliverNavDefaults] uses a host frame only when the host declares
+ *   [KeliverNavDefaults.RETAINED_CONTAINER_FEATURE] (`TreehouseApp.Spec.hostFeatures`, read by the
+ *   guest as `dev.keliver.compose.LocalHostFeatures`). A host older than 0.5.0 declares nothing, so
+ *   the guest falls back to its plain [KeliverNavFrame] and never emits tags 502/503 there. The
+ *   declaration is typed by hand: a host that declares the feature without rendering the container
+ *   still crashes as above, so declare it only together with the widgets and the back dispatcher.
+ * - At selection (still to do before gate A leaves the prototype): extras must be in the versioned
+ *   surface (a level or widget-version bump with each new tag), the D2 bundle gate (the index's
+ *   widgetVersion) must read that number, and a test must show an older host refusing such a
+ *   bundle at selection rather than crashing. That covers code passing a host frame explicitly,
+ *   which the run-time gate does not see.
  *
  * Known gaps (follow-ups, see the host's `LocalHostBackDispatcher`): host back is ahead of an
  * enabled guest `BackHandler` outside the stack (overlays that take back must live inside an

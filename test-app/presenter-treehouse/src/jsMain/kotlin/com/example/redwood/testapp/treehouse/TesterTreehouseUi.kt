@@ -21,6 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.LocalHostFeatures
 import dev.keliver.treehouse.TreehouseUi
 import com.example.redwood.testapp.compose.Button
 import com.example.redwood.testapp.compose.TextInput
@@ -83,6 +85,22 @@ class TesterTreehouseUi(
       ) {
         Button(
           text = "This is TreehouseTesterTestHappyPathStep2",
+          onClick = {
+          },
+        )
+      }
+    },
+
+    /** Reports the host's optional features as the guest sees them ([LocalHostFeatures]). */
+    HostFeaturesTestReport {
+      @OptIn(ExperimentalKeliverHostFeaturesApi::class)
+      @Composable
+      override fun Show(
+        changeContent: (Content) -> Unit,
+        log: (String) -> Unit,
+      ) {
+        Button(
+          text = "features: " + LocalHostFeatures.current.sorted().joinToString(","),
           onClick = {
           },
         )

@@ -16,11 +16,15 @@
 package dev.keliver.treehouse
 
 import app.cash.zipline.ZiplineApiMismatchException
+import app.cash.zipline.ZiplineException
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import kotlin.test.Test
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 
 /** D2: the guest reads the host's optional features at run time; an older host has none. */
@@ -52,5 +56,24 @@ class HostFeaturesTest {
     lifecycle.start(FakeHost { throw ZiplineApiMismatchException("no such method (incompatible API versions?)") })
 
     assertThat(lifecycle.hostFeatures).isEmpty()
+  }
+
+  @Test fun anyOtherFailureOfTheProbeAlsoMeansNoFeatures() {
+    // The mismatch may arrive as a plain ZiplineException carrying the host's text, or as anything
+    // else: the probe is optional, so none of them may stop a screen from starting.
+    val plain = lifecycle()
+    plain.start(FakeHost { throw ZiplineException("no such method (incompatible API versions?)") })
+    assertThat(plain.hostFeatures).isEmpty()
+
+    val other = lifecycle()
+    other.start(FakeHost { throw IllegalStateException("boom") })
+    assertThat(other.hostFeatures).isEmpty()
+  }
+
+  @Test fun cancellationIsPassedOn() {
+    val lifecycle = lifecycle()
+    lifecycle.start(FakeHost { throw CancellationException("cancelled") })
+
+    assertFailure { lifecycle.hostFeatures }.isInstanceOf<CancellationException>()
   }
 }

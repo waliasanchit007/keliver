@@ -36,6 +36,20 @@ import dev.keliver.compose.LocalHostFeatures
  *    the guest but composes nothing;
  * 3. otherwise no retention, as before. A host that does not declare features (any host older than
  *    0.5.0) never receives [hostFrame]'s widgets, so it cannot fail on them.
+ *
+ * Providing them changes every top-level `KeliverNavHost(controller)` under them, app-wide:
+ * - A covered screen stays composed. Code that assumed a screen is composed again when shown no
+ *   longer runs on back: a `DisposableEffect` or `LaunchedEffect` that sets a title or a status-bar
+ *   style, subscribes to something on the host, or logs "screen viewed" ran once, when the screen
+ *   was first shown, and the screen that was popped may have left its own value in place. Move such
+ *   work to `LaunchedWhileVisible` (runs on every show, cancelled on hide) or `LaunchedOnReturn`
+ *   (each return, not the first show), or opt the route out with `entryRetention`.
+ * - Memory: up to [depth] hidden screens per host are kept (and, with [hostFrame], their native
+ *   views on the host).
+ * - A host nested in a screen (tabs, a flow) does not inherit them: each entry of a host sees
+ *   [LocalKeliverNavDefaults] as null, so a nested host retains only where a screen provides
+ *   defaults again (keep a reference where you provide them) or passes a retention itself. Nested
+ *   retention multiplies: depth 2 at two levels can keep 3 × 3 = 9 screens composed.
  */
 @ExperimentalKeliverNavRetentionApi
 public class KeliverNavDefaults(
