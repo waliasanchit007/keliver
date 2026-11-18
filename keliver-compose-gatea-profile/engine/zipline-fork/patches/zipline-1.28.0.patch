@@ -58,19 +58,34 @@ index 1cf1c56..8711292 100644
    });
  
 diff --git a/zipline/native/Context.cpp b/zipline/native/Context.cpp
-index 4c82811..257333f 100644
+index 4c82811..14a8c91 100644
 --- a/zipline/native/Context.cpp
 +++ b/zipline/native/Context.cpp
-@@ -12,6 +12,8 @@
+@@ -12,6 +12,9 @@
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
 + *
-+ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt).
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt,
++ * compiled bytecode without function source text).
   */
  #include "Context.h"
  #include <cstring>
-@@ -347,11 +349,48 @@ Context::toJavaObject(JNIEnv* env, const JSValueConst& value, bool throwOnUnsupp
+@@ -165,7 +168,13 @@ jbyteArray Context::compile(JNIEnv* env, jstring source, jstring file) {
+   const auto sourceCode = env->GetStringUTFChars(source, 0);
+   const auto fileName = env->GetStringUTFChars(file, 0);
+ 
++  // QuickJS 2026 keeps every function's source text and writes it into the bytecode unless told
++  // not to; QuickJS 2021's bytecode never carried it. Without this a bundle grows about 8x, and so
++  // does what the device loads. File names and line numbers (stack traces) are kept.
++  const auto stripInfo = JS_GetStripInfo(jsRuntime);
++  JS_SetStripInfo(jsRuntime, stripInfo | JS_STRIP_SOURCE);
+   auto compiled = JS_Eval(jsContextForCompiling, sourceCode, strlen(sourceCode), fileName, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_FLAG_STRICT);
++  JS_SetStripInfo(jsRuntime, stripInfo);
+ 
+   env->ReleaseStringUTFChars(file, fileName);
+   env->ReleaseStringUTFChars(source, sourceCode);
+@@ -347,11 +356,48 @@ Context::toJavaObject(JNIEnv* env, const JSValueConst& value, bool throwOnUnsupp
        break;
      }
  
@@ -121,20 +136,23 @@ index 4c82811..257333f 100644
        jvalue v;
        v.z = static_cast<jboolean>(JS_VALUE_GET_BOOL(value));
 diff --git a/zipline/native/InboundCallChannel.cpp b/zipline/native/InboundCallChannel.cpp
-index 1c28f0e..c38be62 100644
+index 1c28f0e..5452b09 100644
 --- a/zipline/native/InboundCallChannel.cpp
 +++ b/zipline/native/InboundCallChannel.cpp
-@@ -12,6 +12,9 @@
+@@ -12,8 +12,11 @@
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
 + *
-+ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes; no
-+ * uninitialised result when an assert is compiled out).
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes; an
++ * unexpected result throws a Java exception instead of returning an uninitialised value;
++ * disconnect frees its result).
   */
- #include <assert.h>
+-#include <assert.h>
  #include "InboundCallChannel.h"
-@@ -42,10 +45,11 @@ jstring InboundCallChannel::call(Context *context, JNIEnv* env,
+ #include "quickjs/quickjs.h"
+ #include "Context.h"
+@@ -42,10 +45,15 @@ jstring InboundCallChannel::call(Context *context, JNIEnv* env,
    if (tag == JS_TAG_EXCEPTION) {
      context->throwJsException(env, jsResult);
      javaResult = nullptr;
@@ -142,19 +160,33 @@ index 1c28f0e..c38be62 100644
 +  } else if (JS_IsString(jsResult)) { // QuickJS 2026 also has JS_TAG_STRING_ROPE
      javaResult = context->toJavaString(env, jsResult);
    } else {
-     assert(false); // Unexpected tag.
-+    javaResult = nullptr; // Release builds compile the assert out; never return an uninitialised value.
+-    assert(false); // Unexpected tag.
++    // Not a string: the guest's bridge is broken. The Kotlin side declares a non-null String, and
++    // an assert would be compiled out of release builds, so throw.
++    throwJavaException(env, "java/lang/IllegalStateException",
++                       "Unexpected result from the inbound call: JS tag %d, expected a string",
++                       static_cast<int>(tag));
++    javaResult = nullptr;
    }
  
    JS_FreeValue(jsContext, arguments[0]);
-@@ -73,6 +77,7 @@ jboolean InboundCallChannel::disconnect(Context *context, JNIEnv* env, jstring i
+@@ -72,10 +80,15 @@ jboolean InboundCallChannel::disconnect(Context *context, JNIEnv* env, jstring i
+   } else if (tag == JS_TAG_BOOL) {
      javaResult = static_cast<jboolean>(JS_VALUE_GET_BOOL(jsResult));
    } else {
-     assert(false); // Unexpected tag.
-+    javaResult = JNI_FALSE; // Release builds compile the assert out; never return an uninitialised value.
+-    assert(false); // Unexpected tag.
++    // Not a boolean: the guest's bridge is broken. An assert would be compiled out; throw.
++    throwJavaException(env, "java/lang/IllegalStateException",
++                       "Unexpected result from the inbound disconnect: JS tag %d, expected a boolean",
++                       static_cast<int>(tag));
++    javaResult = JNI_FALSE;
    }
  
    JS_FreeValue(jsContext, arguments[0]);
++  JS_FreeValue(jsContext, jsResult); // Upstream never freed it: an object result leaked.
+   JS_FreeValue(jsContext, thisPointer);
+   JS_FreeValue(jsContext, global);
+ 
 diff --git a/zipline/native/OutboundCallChannel.cpp b/zipline/native/OutboundCallChannel.cpp
 index 28e06d4..9383735 100644
 --- a/zipline/native/OutboundCallChannel.cpp
@@ -226,10 +258,10 @@ index ba1d5b9..9205e67 100644
  }
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..82d1b2d
+index 0000000..eb40ce0
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,126 @@
+@@ -0,0 +1,150 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -285,6 +317,30 @@ index 0000000..82d1b2d
 +    quickJs.close()
 +    quickJs = QuickJs.create()
 +    assertEquals("9223372036854775807 18446744073709551615 bigint", quickJs.execute(code))
++  }
++
++  @Test fun compiledBytecodeHasNoSourceText() {
++    // QuickJS 2026 writes each function's source into the bytecode unless it is stripped; 2021's
++    // bytecode never had it, and with it a bundle is about 8x larger. A comment is only in the source.
++    val marker = "keliver-source-marker-" + "x".repeat(200)
++    val code = quickJs.compile(
++      """
++      function f() {
++        /* $marker */
++        throw new Error('boom');
++      }
++      try { f(); 'no' } catch (e) { e.stack.indexOf('source.js:3') >= 0 ? 'line kept' : e.stack }
++      """.trimIndent(),
++      "source.js",
++    )
++    assertEquals(-1, code.decodeToString().indexOf(marker))
++    assertEquals("line kept", quickJs.execute(code))
++
++    // `evaluate` compiles to bytecode too, so a function's text is not there, as on 1.28.0.
++    assertEquals(
++      "function g() {\n    [native code]\n}",
++      quickJs.evaluate("(function g() { return 42; }).toString()"),
++    )
 +  }
 +
 +  @Test fun asUintNIsGeneral() {
@@ -421,6 +477,103 @@ index 3dc6fff..d7fdfdd 100644
          )
        }
      }
+diff --git a/zipline/src/jniTest/kotlin/app/cash/zipline/QuickJs2026JniTest.kt b/zipline/src/jniTest/kotlin/app/cash/zipline/QuickJs2026JniTest.kt
+new file mode 100644
+index 0000000..9a299de
+--- /dev/null
++++ b/zipline/src/jniTest/kotlin/app/cash/zipline/QuickJs2026JniTest.kt
+@@ -0,0 +1,91 @@
++/*
++ * Copyright (C) 2026 Keliver contributors
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package app.cash.zipline
++
++import app.cash.zipline.internal.bridge.INBOUND_CHANNEL_NAME
++import kotlin.test.assertEquals
++import kotlin.test.assertFailsWith
++import kotlin.test.assertTrue
++import org.junit.After
++import org.junit.Test
++
++/**
++ * Keliver's fork (NF2), the JNI layer only (JVM and Android): an inbound call or disconnect whose
++ * JavaScript returns the wrong type throws a Java exception (upstream left the result unset, behind
++ * an assert that release builds compile out), and disconnect frees its result.
++ */
++class QuickJs2026JniTest {
++  private val quickJs = QuickJs.create()
++
++  @After fun tearDown() {
++    quickJs.close()
++  }
++
++  private fun inboundReturns(callResult: String, disconnectResult: String) {
++    quickJs.evaluate(
++      """
++      globalThis.$INBOUND_CHANNEL_NAME = {
++        call: function(callJson) { return $callResult; },
++        disconnect: function(instanceName) { return $disconnectResult; },
++      };
++      """.trimIndent(),
++    )
++  }
++
++  @Test fun inboundCallWithANonStringResultThrows() {
++    inboundReturns(callResult = "42", disconnectResult = "true")
++    val t = assertFailsWith<IllegalStateException> {
++      quickJs.getInboundChannel().call("first")
++    }
++    assertTrue(t.message!!.startsWith("Unexpected result from the inbound call"), t.message)
++
++    // The context is still usable.
++    inboundReturns(callResult = "'ok'", disconnectResult = "true")
++    assertEquals("ok", quickJs.getInboundChannel().call("second"))
++  }
++
++  @Test fun inboundCallWithAnUndefinedResultThrows() {
++    inboundReturns(callResult = "undefined", disconnectResult = "true")
++    assertFailsWith<IllegalStateException> {
++      quickJs.getInboundChannel().call("first")
++    }
++  }
++
++  @Test fun inboundDisconnectWithANonBooleanResultThrows() {
++    inboundReturns(callResult = "'ok'", disconnectResult = "'yes'")
++    val t = assertFailsWith<IllegalStateException> {
++      quickJs.getInboundChannel().disconnect("one")
++    }
++    assertTrue(t.message!!.startsWith("Unexpected result from the inbound disconnect"), t.message)
++  }
++
++  @Test fun inboundDisconnectFreesItsResult() {
++    // An object result was never freed: its reference count stayed at one, so not even a GC
++    // could collect it. 1,000 disconnects must not leave 1,000 objects behind.
++    inboundReturns(callResult = "'ok'", disconnectResult = "{ leaked: [1, 2, 3] }")
++    val channel = quickJs.getInboundChannel()
++    // The first call may allocate shapes and atoms; measure after it.
++    assertFailsWith<IllegalStateException> { channel.disconnect("warm-up") }
++    quickJs.gc()
++    val before = quickJs.memoryUsage.objectsCount
++    repeat(1_000) {
++      assertFailsWith<IllegalStateException> { channel.disconnect("instance $it") }
++    }
++    quickJs.gc()
++    val after = quickJs.memoryUsage.objectsCount
++    assertTrue(after - before < 10, "objects before $before, after $after")
++  }
++}
 diff --git a/zipline/src/nativeInterop/cinterop/quickjs.def b/zipline/src/nativeInterop/cinterop/quickjs.def
 index 441f653..7e6991d 100644
 --- a/zipline/src/nativeInterop/cinterop/quickjs.def
@@ -458,7 +611,7 @@ index 441f653..7e6991d 100644
 +  return inRange;
 +}
 diff --git a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt b/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
-index 026bb0c..f598a07 100644
+index 026bb0c..d42b03d 100644
 --- a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
 +++ b/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
 @@ -12,6 +12,9 @@
@@ -467,11 +620,34 @@ index 026bb0c..f598a07 100644
   * limitations under the License.
 + *
 + * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt, a
-+ * result now checked).
++ * result now checked, compiled bytecode without function source text).
   */
  @file:OptIn(ExperimentalNativeApi::class, ExperimentalForeignApi::class)
  
-@@ -74,12 +77,16 @@ import app.cash.zipline.quickjs.JS_TAG_FLOAT64
+@@ -44,6 +47,7 @@ import app.cash.zipline.quickjs.JS_GetPropertyStr
+ import app.cash.zipline.quickjs.JS_GetPropertyUint32
+ import app.cash.zipline.quickjs.JS_GetRuntime
+ import app.cash.zipline.quickjs.JS_GetRuntimeOpaque
++import app.cash.zipline.quickjs.JS_GetStripInfo
+ import app.cash.zipline.quickjs.JS_HasProperty
+ import app.cash.zipline.quickjs.JS_IsArray
+ import app.cash.zipline.quickjs.JS_IsException
+@@ -61,6 +65,7 @@ import app.cash.zipline.quickjs.JS_READ_OBJ_REFERENCE
+ import app.cash.zipline.quickjs.JS_ReadObject
+ import app.cash.zipline.quickjs.JS_ResolveModule
+ import app.cash.zipline.quickjs.JS_RunGC
++import app.cash.zipline.quickjs.JS_STRIP_SOURCE
+ import app.cash.zipline.quickjs.JS_SetGCThreshold
+ import app.cash.zipline.quickjs.JS_SetInterruptHandler
+ import app.cash.zipline.quickjs.JS_SetMaxStackSize
+@@ -68,18 +73,23 @@ import app.cash.zipline.quickjs.JS_SetMemoryLimit
+ import app.cash.zipline.quickjs.JS_SetProperty
+ import app.cash.zipline.quickjs.JS_SetPropertyFunctionList
+ import app.cash.zipline.quickjs.JS_SetRuntimeOpaque
++import app.cash.zipline.quickjs.JS_SetStripInfo
+ import app.cash.zipline.quickjs.JS_TAG_BOOL
+ import app.cash.zipline.quickjs.JS_TAG_EXCEPTION
+ import app.cash.zipline.quickjs.JS_TAG_FLOAT64
  import app.cash.zipline.quickjs.JS_TAG_INT
  import app.cash.zipline.quickjs.JS_TAG_NULL
  import app.cash.zipline.quickjs.JS_TAG_OBJECT
@@ -488,7 +664,7 @@ index 026bb0c..f598a07 100644
  import app.cash.zipline.quickjs.JsCallFunction
  import app.cash.zipline.quickjs.JsDisconnectFunction
  import app.cash.zipline.quickjs.JsFalse
-@@ -98,6 +105,7 @@ import kotlinx.cinterop.CPointer
+@@ -98,6 +108,7 @@ import kotlinx.cinterop.CPointer
  import kotlinx.cinterop.CValue
  import kotlinx.cinterop.CValuesRef
  import kotlinx.cinterop.ExperimentalForeignApi
@@ -496,7 +672,26 @@ index 026bb0c..f598a07 100644
  import kotlinx.cinterop.StableRef
  import kotlinx.cinterop.UByteVar
  import kotlinx.cinterop.alloc
-@@ -358,7 +366,10 @@ actual class QuickJs private constructor(
+@@ -264,6 +275,10 @@ actual class QuickJs private constructor(
+     checkNotClosed()
+ 
+     val sourceCodeUtf8 = sourceCode.utf8
++    // QuickJS 2026 writes every function's source text into the bytecode unless told not to; 2021
++    // never did. Strip it (about 8x smaller bundles); file names and line numbers are kept.
++    val stripInfo = JS_GetStripInfo(runtime)
++    JS_SetStripInfo(runtime, stripInfo or JS_STRIP_SOURCE)
+     val compiled = JS_Eval(
+       contextForCompiling,
+       sourceCodeUtf8,
+@@ -272,6 +287,7 @@ actual class QuickJs private constructor(
+       fileName.utf8,
+       JS_EVAL_FLAG_COMPILE_ONLY or JS_EVAL_FLAG_STRICT,
+     )
++    JS_SetStripInfo(runtime, stripInfo)
+     if (JS_IsException(compiled) != 0) {
+       throwJsException()
+     }
+@@ -358,7 +374,10 @@ actual class QuickJs private constructor(
          JsCallFunction(staticCFunction(::outboundCall)),
          JsDisconnectFunction(staticCFunction(::outboundDisconnect)),
        )
@@ -508,7 +703,7 @@ index 026bb0c..f598a07 100644
      } finally {
        JS_FreeAtom(context, propertyName)
        JS_FreeValue(context, globalThis)
-@@ -439,13 +450,21 @@ actual class QuickJs private constructor(
+@@ -439,13 +458,21 @@ actual class QuickJs private constructor(
      return when (JsValueGetNormTag(this)) {
        JS_TAG_EXCEPTION -> throwJsException()
  

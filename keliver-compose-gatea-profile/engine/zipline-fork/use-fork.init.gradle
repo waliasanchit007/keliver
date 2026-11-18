@@ -1,13 +1,18 @@
-// NF2 step 1: points a Keliver build at the forked Zipline JVM artifact (README.md here), without
-// changing the build. Only `app.cash.zipline:zipline-jvm` is replaced: the JNI engine the
-// bytecode compiler (the Zipline Gradle plugin, in the build's classpath) and the JVM hosts load.
-// Every other Zipline module stays 1.28.0 from Maven Central.
+// NF2: points a Keliver build at the forked Zipline (README.md here), without changing the build.
+// Replaced are the modules with the engine in them: `zipline-jvm` (the JNI engine the bytecode
+// compiler, the Zipline Gradle plugin in the build's classpath, and JVM hosts load; step 1) and, for
+// Android hosts, `zipline-android` (its JNI classes) and `zipline-android-ndk` (the AAR with
+// libquickjs.so; step 2). Every other Zipline module stays 1.28.0 from Maven Central.
 //
 //   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
 //     -PziplineForkRepo=<the scratch Maven repo `apply.sh publish` wrote> --no-daemon <tasks>
 //
 // -PziplineForkRepo=none keeps Zipline 1.28.0 and only turns the source maps off (below): the
 // like-for-like baseline for a measurement of the fork.
+//
+// -PziplineForkLongAsBigInt links every Kotlin/JS executable (a guest bundle) with `Long` as a JS
+// BigInt (-Xes-long-as-bigint; the link generates JS for every library, so it covers all of them).
+// Only with the fork: QuickJS 2021 cannot parse BigInt.
 //
 // --no-daemon: the plugin loads the engine's native library into the Gradle process, so a daemon
 // that already loaded 1.28.0's must not be reused.
@@ -18,19 +23,22 @@ if (forkRepo == null) throw new GradleException('use-fork.init.gradle: pass -Pzi
 def useFork = forkRepo != 'none'
 def forkVersion = '1.28.0-q20260604'
 def upstreamVersion = '1.28.0'
+def forkedModules = ['zipline-jvm', 'zipline-android', 'zipline-android-ndk']
+def longAsBigInt = startParameter.projectProperties.containsKey('ziplineForkLongAsBigInt')
+if (longAsBigInt && !useFork) throw new GradleException('use-fork.init.gradle: -PziplineForkLongAsBigInt needs the fork')
 
 def addRepo = { RepositoryHandler repos ->
   repos.maven {
     name = 'ziplineFork'
     url = new File(forkRepo).toURI()
-    content { includeVersion('app.cash.zipline', 'zipline-jvm', forkVersion) }
+    content { forkedModules.each { m -> includeVersion('app.cash.zipline', m, forkVersion) } }
   }
 }
 def substitute = { ConfigurationContainer configurations ->
   configurations.configureEach { c ->
     c.resolutionStrategy.eachDependency { d ->
       if (d.requested.group != 'app.cash.zipline') return
-      if (d.requested.name == 'zipline-jvm') {
+      if (d.requested.name in forkedModules) {
         d.useVersion(forkVersion)
         d.because('NF2: Zipline on QuickJS 2026-06-04')
       } else if (d.requested.version == forkVersion) {
@@ -60,6 +68,9 @@ allprojects { p ->
   p.tasks.configureEach { t ->
     if (t.name.startsWith('compileProductionExecutableKotlinJs') && t.hasProperty('compilerOptions')) {
       t.compilerOptions.sourceMap.set(false)
+    }
+    if (longAsBigInt && t.name in ['compileProductionExecutableKotlinJs', 'compileDevelopmentExecutableKotlinJs']) {
+      t.compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')
     }
   }
 }

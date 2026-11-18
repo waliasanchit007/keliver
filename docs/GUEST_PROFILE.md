@@ -669,6 +669,53 @@ step 1, above option 5's 4–8: `zipline-bytecode` was not in that estimate.
 | 8. Transition | Both bundles published for every release while old hosts are in the field; a dashboard count of hosts per engine; retiring the old bundle when that count reaches the floor the owner sets | 0.5, then upkeep |
 | 9. Upstream | Offer the `asUintN` fix to Bellard (a public post: open item 4 in section 10 of the plan), and the engine update, rope and BigInt cases to Zipline (#1192, #1715), so the fork can shrink back to a version pin | 0.5, then their timeline |
 
+## NF2 step 2 (Android)
+
+2026-11-18, on the Mac and the arm64 emulator (API 35); no phone. The same patch set, extended
+(`keliver-compose-gatea-profile/engine/zipline-fork/`, its README): `apply.sh android`,
+`qjs-android`, `check-bigint-device`, Android in `publish`, Android in `use-fork.init.gradle`.
+Nothing was published outside a scratch Maven repository.
+
+**The AAR.** `apply.sh android` builds `zipline-android-ndk` with Zipline's own CMake and release
+flags (`-Os -fomit-frame-pointer -DNDEBUG -fvisibility=hidden -fstrict-aliasing`, `MinSizeRel`,
+16 KB pages) and the patch's `-fwrapv`, NDK 28.0.12674087, for the four ABIs Zipline ships
+(`arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`), and checks from each ABI's compile commands that
+`quickjs.c` got those flags. `libquickjs.so` (Zipline keeps its symbols in the AAR): arm64-v8a
+2,618,504 bytes, armeabi-v7a 1,903,660, x86_64 2,464,600, x86 2,096,756, **about 7.6% above
+1.28.0's** (2,432,744, 1,766,772, 2,284,096, 1,916,408; the same build of the sample, both).
+`dtoa.c` comes in through the CMake glob.
+
+**Three fixes in the native layer**, with tests (`QuickJs2026JniTest`, JNI: JVM and Android;
+`QuickJs2026Test`, host: JVM, Android and iOS):
+- **Bytecode without the source text (new; it was not in step 1).** QuickJS 2026 keeps each
+  function's source and **writes it into the bytecode** unless the runtime's strip flags say
+  otherwise (`JS_SetStripInfo`, new in 2024); QuickJS 2021's bytecode never carried it. Step 1's
+  bundles were therefore much larger than 1.28.0's: the threeway guest's Compose runtime module
+  5,006,505 bytes against 601,409. Zipline's `compile` now sets `JS_STRIP_SOURCE` while it compiles
+  (and restores the flags), so bytecode holds what 1.28.0's held: file names and line numbers
+  (stack traces unchanged), no source. `Function.prototype.toString` of compiled code reads
+  `[native code]`, as on 1.28.0, where `evaluate` compiles to bytecode too. iOS gets the same
+  change (not compiled; step 3). After it, the whole threeway bundle is 2,552 KB on disk against
+  1.28.0's 2,140 KB (+19%; the Compose runtime 732,917 bytes, +22%; the rest is QuickJS 2026's
+  column table and the BigInt output, not separated), and the sample APK 26.2 MB against 25.2 MB
+  (29.2 MB before the fix). The test checks a comment's text is absent from compiled bytecode and
+  the error line still reads `source.js:3`; on the library without the fix it fails (the marker at
+  byte 256). **The step 1 measurement used bundles with the source in them** (the JVM loads them
+  from disk; it would not change the guest's per-navigation work, but it was not rerun).
+- **An unexpected inbound result throws** (review Low). Inbound `call` (not a string) and
+  `disconnect` (not a boolean) throw `IllegalStateException` naming the tag, instead of returning
+  `null` and `false`, which the Kotlin side (a non-null `String`) would have trusted.
+- **`disconnect` frees its result** (review Low). Upstream never freed it, so an object result
+  leaked. 1,000 disconnects returning an object leave fewer than 10 objects after a GC; without the
+  fix, 2,000 (the object and its array, each time).
+
+**Checked:**
+- **Zipline's JVM tests** from a fresh `apply.sh all` (clone, engine, JNI library, `qjs`, and
+  `check-bigint`: both patched `qjs` builds match Node on all 292 lines, the unpatched ones differ on
+  76 and 108): 49 classes, **269 run, 267 pass, 2 skipped** (upstream's), plain and with
+  `-PziplineForkLongAsBigInt`; after the source-text fix, **270, 268, 2** (the work checkout).
+DEVICE_RESULTS_PLACEHOLDER
+
 ## NF3: the open path, measured (Mac)
 
 2026-11-17, Zipline's QuickJS on the Mac (`profileQuickJs`), kotlinx encoding, 3 warm-up and 30
@@ -847,7 +894,16 @@ past the collection point.
 bash scripts/zipline-fork.sh all <work>     # clone the tag, verify, patch, JNI library, qjs, asUintN check
 bash scripts/zipline-fork.sh test <work> :zipline:jvmTest [-PziplineForkLongAsBigInt]   # the second: Long as BigInt
 bash scripts/zipline-fork.sh jni <work> --warnings          # the -Wall review build
-bash scripts/zipline-fork.sh publish <work> <work>/m2
+bash scripts/zipline-fork.sh publish <work> <work>/m2      # JVM and (step 2) Android: needs the NDK
+# step 2 ("NF2 step 2 (Android)"): the AAR, the device tests and the BigInt check on a device
+bash scripts/zipline-fork.sh android <work>                 # four ABIs, flags checked
+ANDROID_SERIAL=<serial> bash scripts/zipline-fork.sh test <work> :zipline:connectedAndroidDeviceTest [-PziplineForkLongAsBigInt]
+bash scripts/zipline-fork.sh qjs-android <work>
+bash scripts/zipline-fork.sh check-bigint-device <work> <serial>   # every ABI the device runs; 32-bit = NaN boxing
+# the threeway sample on the fork (from sample/, after the prototype publish in docs/THREE_WAY_BENCHMARK.md)
+./gradlew --no-daemon -I ../keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
+  -PziplineForkRepo=<work>/m2 -PziplineForkLongAsBigInt -Dmaven.repo.local=<prototype m2> \
+  -PkeliverComposePrototype :host-android:assembleBenchmark       # -PziplineForkRepo=none: the baseline
 # the baseline (-PziplineForkRepo=none: 1.28.0, source maps off), then the fork; [-PprofileBigInt] on the fork
 ./gradlew --no-daemon -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
   -PziplineForkRepo=<work>/m2 -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \
