@@ -4,7 +4,9 @@
 // (step 1b) `app.cash.zipline:zipline-bytecode`, through which the compiler applies source maps
 // and strips line numbers, now in QuickJS 2026's bytecode (version 5); and (step 2), for Android
 // hosts, `zipline-android` (its JNI classes) and `zipline-android-ndk` (the AAR with
-// libquickjs.so). Every other Zipline module stays 1.28.0 from Maven Central.
+// libquickjs.so); and (step 3), for iOS hosts, `zipline-iosarm64` and `zipline-iossimulatorarm64`
+// (the klibs, with the engine's bitcode in them; an iosX64 build keeps 1.28.0's engine). Every other
+// Zipline module stays 1.28.0 from Maven Central.
 //
 //   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
 //     -PziplineForkRepo=<the scratch Maven repo `apply.sh publish` wrote> --no-daemon <tasks>
@@ -28,7 +30,8 @@ def useFork = forkRepo != 'none'
 def noSourceMaps = startParameter.projectProperties.containsKey('ziplineForkNoSourceMaps')
 def forkVersion = '1.28.0-q20260604'
 def upstreamVersion = '1.28.0'
-def forkedModules = ['zipline-jvm', 'zipline-bytecode', 'zipline-android', 'zipline-android-ndk']
+def forkedModules = ['zipline-jvm', 'zipline-bytecode', 'zipline-android', 'zipline-android-ndk',
+                     'zipline-iosarm64', 'zipline-iossimulatorarm64']
 def longAsBigInt = startParameter.projectProperties.containsKey('ziplineForkLongAsBigInt')
 if (longAsBigInt && !useFork) throw new GradleException('use-fork.init.gradle: -PziplineForkLongAsBigInt needs the fork')
 def bigIntLinks = Collections.synchronizedSet(new HashSet<String>())

@@ -661,7 +661,7 @@ step 1, above option 5's 4–8: `zipline-bytecode` was not in that estimate.
 |---|---|---|
 | 1b. `zipline-bytecode` | Port Zipline's bytecode reader and writer to version 5 (new tags, BigInt constants, the column table), so source maps and line stripping work again; its round-trip tests on the new engine's output. **Done 2026-11-18** (next section) | 1–1.5 |
 | 2. Android | Build the AAR (`zipline-android-ndk`, the NDK's CMake; the patch already adds `-fwrapv`) for the four ABIs, run Zipline's device tests on the emulator, then the A12 matrix through Zipline itself, not `qjs`. **Done on the emulator 2026-11-18** ("NF2 step 2 (Android)"); 32-bit and the A12 remain | 0.5–1 |
-| 3. iOS | cklib and Kotlin/Native: compile the patched `nativeMain` and `quickjs.def` (not compiled in step 1; `JS_NewString` is now `static inline`, which cinterop must wrap), run the host tests on a simulator, then the iPhone once its signing exists | 0.5–1.5 |
+| 3. iOS | cklib and Kotlin/Native: compile the patched `nativeMain` and `quickjs.def` (not compiled in step 1; `JS_NewString` is now `static inline`, which cinterop must wrap), run the host tests on a simulator, then the iPhone once its signing exists. **Done on the simulator 2026-11-18** ("NF2 step 3 (iOS)"); the iPhone remains | 0.5–1.5 |
 | 4. Publishing the fork | Our own coordinates (not `app.cash.zipline`) from this patch set: JVM, Android, iOS, and the JS library unchanged; a CI job that runs `apply.sh all` and the tests | 0.5–1 |
 | 5. Dual bytecode | The Gradle plugin compiles each bundle twice, once per engine (bytecode version 1 and 5), from the same JS; the BigInt build (`-Xes-long-as-bigint`) only for the new engine, since the old one cannot parse it | 1–1.5 |
 | 6. Manifest and index | The signed manifest names the engine (QuickJS version and bytecode version) for every module, so a bundle cannot be loaded on the wrong engine even if served by mistake; publishing writes one manifest per engine | 0.5–1 |
@@ -732,7 +732,7 @@ loaded function's `toString()` reads `[native code]`, lines and columns stay.
   Every run's batch hash is the same (637745288 as shipped, 394047653 with recording off). The
   BigInt bundle is 1% smaller than the plain one; it has 471 BigInt constants.
 
-**Not checked:** Android and iOS (steps 2 and 3; the iOS `compile` change is not compiled); a stack
+**Not checked:** Android and iOS (steps 2 and 3, since done: the iOS `compile` change compiles and its test passes on the simulator); a stack
 trace from a real Kotlin crash in the three-way guest on a device; whether any guest code calls
 `Function.prototype.toString` (Kotlin/JS does not; 1.28.0 gave the same `[native code]`).
 
@@ -833,6 +833,85 @@ patch carries 1b's version.)
   which has no NaN boxing.
 - The A12 matrix through Zipline (the plan's step 2 says "then the A12 matrix"): a phone run at the
   next batched checkpoint. Absolute timings: none here.
+
+## NF2 step 3 (iOS)
+
+2026-11-18, on the Mac and the iOS simulator (the one the Kotlin plugin's simulator test tasks start
+in their standalone mode; no `simctl` command was run by hand); no iPhone. The same patch set,
+extended (`keliver-compose-gatea-profile/engine/zipline-fork/`, its README): `apply.sh ios`,
+`check-bigint-zipline` and `results`, iOS in `publish` and `use-fork.init.gradle`, and two fixes in
+`zipline-build.init.gradle`. Every result below is from one fresh `apply.sh all` of the regenerated
+patch set. Nothing was published outside a scratch Maven repository.
+
+**The build.** Zipline builds QuickJS for Kotlin/Native with cklib 0.3.5: one clang call per target
+compiles the engine to LLVM bitcode, which goes into the klib (`default/targets/<target>/native/quickjs.bc`)
+and is linked into the app. `apply.sh ios` builds `iosArm64` and `iosSimulatorArm64` and checks each
+compile line: `-target arm64-apple-ios15.0` and `arm64-apple-ios15.0-simulator`, Zipline's cklib
+flags (`-DKONAN_MI_MALLOC=1`, `-ftls-model=initial-exec`, `-D_Float16=short`, the version) with the
+patch's `-fwrapv`, and `dtoa.c` (new in 2025-04; cklib takes every file in the engine directory).
+cklib adds `-O3 -Wall -Wextra -Werror` on its own (upstream's iOS build is `-O3`, not the `-Os` of the
+JVM and Android libraries): QuickJS 2026 compiles under `-Werror` with Zipline's `-Wno-` list, no
+warnings. The patched `nativeMain` and `quickjs.def`, never compiled before this step, **compiled as
+written**: the 12 renamed or retyped names, `JS_NewString` now `static inline` (cinterop wraps it),
+the rope and BigInt cases, the checked `JS_SetPropertyFunctionList`, `JS_STRIP_SOURCE` in `compile`.
+The phone's test executable links too (arm64 Mach-O); it was not run.
+
+**Two build fixes** (`zipline-build.init.gradle`, Zipline's own build only):
+- cklib reads the Kotlin/Native distribution from `~/.konan/kotlin-native-prebuilt-<os>-<arch>-<kotlin>`
+  whatever `KONAN_DATA_DIR` says, and fails with a `NullPointerException` in
+  `AppleConfigurablesImpl` when it is not there. With `KONAN_DATA_DIR` set, the init script points
+  cklib at the distribution the Kotlin plugin installed there. (cklib's clang, `apple-llvm-20200714`,
+  stays in `~/.cklib`, where cklib downloads it once, as upstream.)
+- Zipline's Kotlin/Native test tasks read the testing JavaScript at run time and do not declare it,
+  so a run with `-PziplineForkLongAsBigInt` after a plain one was UP-TO-DATE and reported the plain
+  results (the first BigInt run here did exactly that). The JS and the flag are now inputs of those
+  tasks. (The JVM's test task already sees the JS as a resource; Android's device tests always run.)
+
+**Function source text: no difference between the hosts** (the step 1b review's Low 5). The review
+read the JVM's `evaluate` as keeping the source text while iOS's left it out. In 1.28.0 both
+`evaluate`s are `compile` then `execute` (there is no separate eval on JNI), so both leave it out;
+`QuickJs2026Test.evaluateLeavesOutFunctionSource` (host tests: the JVM, Android and iOS) now pins it:
+an evaluated function's `toString()` reads `[native code]`, as one loaded from a bundle does.
+
+**Checked:**
+- **Zipline's host tests on the simulator** (`apply.sh test <work> :zipline:iosSimulatorArm64Test
+  :zipline:iosSimulatorArm64ReleaseTest`; `apply.sh results`, the JUnit XML): 31 classes, **173 run,
+  173 pass**, 0 skipped, 0 failed, in the debug build and in the optimised release build Zipline also
+  tests (where `-fwrapv` matters most); among them `QuickJs2026Test` (10: the version, BigInt in the
+  compiler, `asUintN` and its size limit, BigInt → `Long` and its range, ropes through `evaluate` and
+  an inbound call, no source text from `compile` and from `evaluate`), `EncodingTest`, `Utf8Test`
+  (the column iOS passes through) and the call channels. **Again with `Long` as BigInt**
+  (`-PziplineForkLongAsBigInt`: the testing JavaScript's `kotlin-kotlin-stdlib.js` has
+  `BigInt.asIntN(64`): 173 of 173, debug and release.
+- **`bigint-ops.js` through Zipline's own engine** (`apply.sh check-bigint-zipline`, new
+  `BigIntOpsTest`): the script that checks `asUintN`/`asIntN` at every width and the 64-bit
+  operations Kotlin's BigInt `Long` uses, run inside Zipline's `QuickJs` on the JVM and on the iOS
+  simulator, **matches Node on all 292 lines on both**. Before this, only the command-line `qjs` and
+  Android's `run-js` had run it; iOS uses 64-bit limbs and no NaN boxing, like the Mac. (The
+  unpatched release is the control in `check-bigint`, where it differs on 76 lines; there is no
+  unpatched iOS build.)
+- **Zipline's JVM tests** on the same checkout: `:zipline:jvmTest` 50 classes, **272 run, 270 pass,
+  2 skipped** (upstream's), 0 failed, plain and with `Long` as BigInt; the two new tests are the
+  `evaluate` one and `BigIntOpsTest` (which compares only when `check-bigint-zipline` has put its
+  files in place, and does nothing otherwise). `apply.sh all`: both patched `qjs` builds match Node
+  on 292 lines, the unpatched ones differ on 76 and 108.
+- **Published and consumed.** `apply.sh publish` now adds `zipline-iosarm64` and
+  `zipline-iossimulatorarm64` (each klib checked to carry `quickjs.bc`). With `use-fork.init.gradle`
+  the repository's iOS host prototype (Gate B, `keliver-compose-gatea-sample-ios`) resolves
+  `zipline-iossimulatorarm64:1.28.0 -> 1.28.0-q20260604` (`dependencyInsight`; the rule follows the
+  `available-at` of Zipline's root module), and its app links for the simulator and the phone with
+  the fork's klibs (the link lines name them), its guest bundle compiled by the fork's compiler
+  (`compileProductionExecutableKotlinJsZipline`). Not installed or run.
+
+**Not checked:**
+- **The iPhone.** No run on a phone (its signing is an owner gate). The phone's test executable and
+  the Gate B app link for `iosArm64`; nothing has executed the fork's engine on an A-series device.
+- **The Gate B app on the simulator with the fork**: linked, not launched; no first-frame or
+  open/back timing on iOS through the fork.
+- `iosX64` (Intel simulators): not built; an `iosX64` build keeps 1.28.0's engine under
+  `use-fork.init.gradle`. The other Kotlin/Native targets Zipline has (macOS, tvOS, Linux) were not
+  built.
+- Sizes: the klibs and the linked apps were not compared with 1.28.0's.
 
 ## NF3: the open path, measured (Mac)
 
@@ -1015,12 +1094,20 @@ bash scripts/zipline-fork.sh jni <work> --warnings          # the -Wall review b
 # step 1b: the bytecode module's tests; RealBundleTest on a real bundle (after the production link below)
 bash scripts/zipline-fork.sh test <work> :zipline-bytecode:test :zipline-cli:test \
   -PziplineBytecodeCorpus=$PWD/keliver-compose-gatea-profile/build/compileSync/js/main/productionExecutable/kotlin
-bash scripts/zipline-fork.sh publish <work> <work>/m2   # zipline-jvm, zipline-bytecode and (step 2) Android: needs the NDK
+bash scripts/zipline-fork.sh publish <work> <work>/m2   # zipline-jvm, zipline-bytecode, (step 2) Android: needs the NDK, (step 3) iOS on a Mac
 # step 2 ("NF2 step 2 (Android)"): the AAR, the device tests and the BigInt check on a device
 bash scripts/zipline-fork.sh android <work>                 # four ABIs, flags checked
 ANDROID_SERIAL=<serial> bash scripts/zipline-fork.sh test <work> :zipline:connectedAndroidDeviceTest [-PziplineForkLongAsBigInt]
 bash scripts/zipline-fork.sh qjs-android <work>
 bash scripts/zipline-fork.sh check-bigint-device <work> <serial>   # every ABI the device runs; 32-bit = NaN boxing
+# step 3 ("NF2 step 3 (iOS)"): the iOS targets, the host tests on a simulator, the BigInt check through Zipline
+bash scripts/zipline-fork.sh ios <work>                     # iosArm64 + iosSimulatorArm64, cklib flags checked
+bash scripts/zipline-fork.sh test <work> :zipline:iosSimulatorArm64Test :zipline:iosSimulatorArm64ReleaseTest [-PziplineForkLongAsBigInt]
+bash scripts/zipline-fork.sh results <work> iosSimulatorArm64Test iosSimulatorArm64ReleaseTest   # the JUnit XML, summed
+bash scripts/zipline-fork.sh check-bigint-zipline <work>    # bigint-ops.js through Zipline on the JVM and the simulator
+# the iOS host prototype (Gate B) against the fork (after publish, which adds the iOS klibs on a Mac)
+./gradlew --no-daemon -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
+  -PziplineForkRepo=<work>/m2 -Pkeliver.gatebIos :keliver-compose-gatea-sample-ios:linkGateBDebugExecutableIosSimulatorArm64
 # the threeway sample on the fork (from sample/, after the prototype publish in docs/THREE_WAY_BENCHMARK.md)
 ./gradlew --no-daemon -I ../keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
   -PziplineForkRepo=<work>/m2 -PziplineForkLongAsBigInt -Dmaven.repo.local=<prototype m2> \

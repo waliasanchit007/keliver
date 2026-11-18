@@ -1985,12 +1985,91 @@ index ba1d5b9..9205e67 100644
 +  }
    return jsContext;
  }
+diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/BigIntOpsTest.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/BigIntOpsTest.kt
+new file mode 100644
+index 0000000..385c03e
+--- /dev/null
++++ b/zipline/src/hostTest/kotlin/app/cash/zipline/BigIntOpsTest.kt
+@@ -0,0 +1,73 @@
++/*
++ * Copyright (C) 2026 Keliver contributors
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package app.cash.zipline
++
++import app.cash.zipline.testing.isJni
++import app.cash.zipline.testing.systemFileSystem
++import app.cash.zipline.testing.ziplineRootOrNull
++import kotlin.test.AfterTest
++import kotlin.test.Test
++import kotlin.test.fail
++import okio.Path
++
++/**
++ * Keliver's fork (NF2 step 3): Keliver's `bigint-ops.js` (the 64-bit operations Kotlin's Long as
++ * BigInt relies on, and `asUintN`/`asIntN` at every width) through Zipline's own engine on this host,
++ * against Node's output. `apply.sh check-bigint-zipline` puts the script and Node's output in
++ * `build/keliver-bigint/` and runs this test; it writes what the engine printed next to them
++ * (`zipline-jni.txt` on the JVM, `zipline-native.txt` on iOS), which the script compares with Node's
++ * again. Without those files (any other run of Zipline's tests, or Android, which has no checkout)
++ * there is nothing to compare and it does nothing.
++ */
++class BigIntOpsTest {
++  private val quickJs = QuickJs.create()
++
++  @AfterTest fun tearDown() {
++    quickJs.close()
++  }
++
++  @Test fun bigIntOpsMatchNode() {
++    val dir = ziplineRootOrNull?.div("build/keliver-bigint") ?: return
++    val script = dir / "bigint-ops.js"
++    val expected = dir / "node.txt"
++    if (!systemFileSystem.exists(script) || !systemFileSystem.exists(expected)) {
++      println("BigIntOpsTest: no $script or $expected; not run (apply.sh check-bigint-zipline)")
++      return
++    }
++
++    // bigint-ops.js prints with print() when there is one (qjs), else console.log (Node).
++    quickJs.evaluate("globalThis.__printed = []; globalThis.print = function (s) { __printed.push(String(s)); };")
++    quickJs.evaluate(read(script), "bigint-ops.js")
++    val actual = quickJs.evaluate("__printed.join('\\n') + '\\n'") as String
++
++    val out = dir / (if (isJni) "zipline-jni.txt" else "zipline-native.txt")
++    systemFileSystem.write(out) { writeUtf8(actual) }
++
++    val want = read(expected).lines()
++    val got = actual.lines()
++    val differing = want.indices.count { it >= got.size || got[it] != want[it] } + maxOf(0, got.size - want.size)
++    if (differing != 0) {
++      val first = want.indices.firstOrNull { it >= got.size || got[it] != want[it] } ?: want.size
++      fail(
++        "$differing of ${want.size} lines differ from Node ($out); first at line ${first + 1}: " +
++          "expected <${want.getOrNull(first)}> but was <${got.getOrNull(first)}>",
++      )
++    }
++    println("BigIntOpsTest: all ${want.size - 1} lines match Node ($out)")
++  }
++
++  private fun read(path: Path): String = systemFileSystem.read(path) { readUtf8() }
++}
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..7a60b17
+index 0000000..fc1a2f2
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,156 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -2063,6 +2142,19 @@ index 0000000..7a60b17
 +    assertEquals(2, quickJs.evaluate("sourceTextOfF(1)"))
 +    // What 1.28.0 (QuickJS 2021) gave for any function loaded from bytecode.
 +    assertEquals("function sourceTextOfF() {\n    [native code]\n}", quickJs.evaluate("sourceTextOfF.toString()"))
++  }
++
++  /**
++   * `evaluate` compiles through `compile` on every host (JNI and Kotlin/Native alike; 1.28.0 has no
++   * separate eval), so an evaluated function has no source text either: JVM, Android and iOS agree
++   * (step 3).
++   */
++  @Test fun evaluateLeavesOutFunctionSource() {
++    assertEquals(
++      "function evaluatedF() {\n    [native code]\n}",
++      quickJs.evaluate("function evaluatedF(a) { return a + 1; }; evaluatedF.toString()"),
++    )
++    assertEquals(3, quickJs.evaluate("evaluatedF(2)"))
 +  }
 +
 +  @Test fun asUintNIsGeneral() {

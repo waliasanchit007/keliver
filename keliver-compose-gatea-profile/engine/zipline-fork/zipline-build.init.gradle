@@ -9,6 +9,30 @@ if (ndk) {
   }
 }
 
+// iOS (step 3): cklib 0.3.5, which compiles QuickJS to bitcode for Kotlin/Native, reads the
+// Kotlin/Native distribution from ~/.konan/kotlin-native-prebuilt-<os>-<arch>-<kotlin> whatever
+// KONAN_DATA_DIR says, and fails with a NullPointerException in AppleConfigurablesImpl when it is not
+// there. With KONAN_DATA_DIR set, point cklib at the distribution the Kotlin Gradle plugin installed
+// there (the same version), so a build with its own Konan directory never needs ~/.konan.
+def konanDataDir = System.getenv('KONAN_DATA_DIR')
+if (konanDataDir) {
+  allprojects { p ->
+    p.plugins.withId('co.touchlab.cklib') {
+      p.afterEvaluate {
+        def config = p.extensions.getByName('cklib').config
+        def os = System.getProperty('os.name').startsWith('Mac') ? 'macos' : 'linux'
+        def home = new File(konanDataDir, "kotlin-native-prebuilt-$os-${config.arch}-${config.kotlinVersion}")
+        config.konanHome = home.absolutePath
+        // The distribution is installed by the Kotlin Gradle plugin's download task; cklib's tasks
+        // run after the cinterop and compile tasks that need it.
+        p.tasks.matching { it.class.name.startsWith('co.touchlab.cklib.gradle.CompileToBitcode') }.configureEach { t ->
+          t.dependsOn(p.tasks.matching { it.name == 'downloadKotlinNativeDistribution' })
+        }
+      }
+    }
+  }
+}
+
 // Zipline's device tests (:zipline:connectedAndroidDeviceTest, step 2) load the same testing JS as
 // its JVM tests. 1.28.0 adds it to the Android resources only through an androidComponents hook for
 // the `release` build type, which the Kotlin Multiplatform Android library's device-test variant
@@ -19,6 +43,21 @@ allprojects { p ->
   p.afterEvaluate {
     def deviceTest = p.kotlin.sourceSets.findByName('androidDeviceTest')
     if (deviceTest != null) deviceTest.resources.srcDir(p.tasks.named('copyTestingJs'))
+  }
+}
+
+// Zipline's Kotlin/Native tests (iOS, step 3) read the testing JS from zipline-testing's build
+// directory at run time (ZIPLINE_ROOT), which the test tasks do not declare, so a run after the JS
+// changed (-PziplineForkLongAsBigInt on or off) was UP-TO-DATE and reported the previous results.
+// Declare the JS, and the flag, as inputs of every Kotlin/Native test task in :zipline.
+def longAsBigIntInput = startParameter.projectProperties.containsKey('ziplineForkLongAsBigInt')
+allprojects { p ->
+  if (p.path != ':zipline') return
+  def testingJs = p.rootProject.file('zipline-testing/build/compileSync/js/main/developmentLibrary/kotlin')
+  p.tasks.matching { it.class.name.startsWith('org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNative') && it.name.endsWith('Test') }.configureEach { t ->
+    t.inputs.property('ziplineForkLongAsBigInt', longAsBigIntInput)
+    t.inputs.files(p.provider { p.fileTree(testingJs) }).withPropertyName('ziplineTestingJs')
+      .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
   }
 }
 
