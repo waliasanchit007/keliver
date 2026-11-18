@@ -591,6 +591,15 @@ Still the prototype modules, still unpublished (`-PkeliverComposePrototype` only
   - In a `LazyRow` with no fixed height and vertical content padding, a row showing only
     placeholders is taller by that padding (placeholders take the viewport's height, which
     includes it).
+  - **Nested scroll is not in the prediction.** The real fling's every `scrollBy` passes through
+    nested scrolling, so a parent (a collapsing top app bar) can consume part of the distance; the
+    probe counts all of it. The predicted window then lands about (consumed px ÷ row size) rows too
+    far, and the list sends one correcting report at rest.
+  - **A guest-set `flingBehavior` turns the prediction off.** The generator passes the host's
+    predicting fling only when the guest sends none. Today a `FlingBehavior` cannot reach a guest
+    (the parameter is left out, `ERROR`), so every list predicts; if a later group lets one travel,
+    a list given one (even `ScrollableDefaults.flingBehavior()` passed explicitly) falls back to
+    reporting each window it passes, unless that fling is wrapped the same way.
 - **A newer guest on an older host.** A `*Defaults` factory the host does not know (appended at a
   later level) gives Compose's own default for that parameter where it renders, and an icon
   outside the host's groups a placeholder; each is reported once (`GeneratedMismatches`), never a

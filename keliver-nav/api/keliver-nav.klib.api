@@ -92,10 +92,13 @@ final class <#A: kotlin/Any> dev.keliver.nav/NamedState { // dev.keliver.nav/Nam
 
 final class <#A: kotlin/Any?> dev.keliver.nav/KeliverNavResultKey { // dev.keliver.nav/KeliverNavResultKey|null[0]
     constructor <init>(kotlin/String) // dev.keliver.nav/KeliverNavResultKey.<init>|<init>(kotlin.String){}[0]
+    constructor <init>(kotlin/String, kotlin.reflect/KType?) // dev.keliver.nav/KeliverNavResultKey.<init>|<init>(kotlin.String;kotlin.reflect.KType?){}[0]
 
     final val name // dev.keliver.nav/KeliverNavResultKey.name|{}name[0]
         final fun <get-name>(): kotlin/String // dev.keliver.nav/KeliverNavResultKey.name.<get-name>|<get-name>(){}[0]
 
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.nav/KeliverNavResultKey.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.nav/KeliverNavResultKey.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.nav/KeliverNavResultKey.toString|toString(){}[0]
 }
 
@@ -172,3 +175,4 @@ final fun dev.keliver.nav/dev_keliver_nav_NamedState$stableprop_getter(): kotlin
 final fun dev.keliver.nav/keliverNavEntryLifecycle(androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.runtime/State<dev.keliver.nav/KeliverNavEntryLifecycle> // dev.keliver.nav/keliverNavEntryLifecycle|keliverNavEntryLifecycle(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.nav/trimKeliverNavRetention() // dev.keliver.nav/trimKeliverNavRetention|trimKeliverNavRetention(){}[0]
 final inline fun <#A: reified kotlin/Any> dev.keliver.nav/currentKeliverNavController(androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.nav/KeliverNavController<#A> // dev.keliver.nav/currentKeliverNavController|currentKeliverNavController(androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]
+final inline fun <#A: reified kotlin/Any?> dev.keliver.nav/keliverNavResultKey(kotlin/String): dev.keliver.nav/KeliverNavResultKey<#A> // dev.keliver.nav/keliverNavResultKey|keliverNavResultKey(kotlin.String){0§<kotlin.Any?>}[0]
