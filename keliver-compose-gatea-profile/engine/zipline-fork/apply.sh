@@ -1,6 +1,6 @@
 #!/bin/bash
 # NF2: Zipline 1.28.0 on Bellard's QuickJS 2026-06-04 with BigInt, kept as a patch set (step 1: the
-# JVM; step 2: Android). See README.md next to this script. Nothing here pushes anything; `publish`
+# JVM; step 2: Android; step 3: iOS). See README.md next to this script. Nothing here pushes anything; `publish`
 # writes only to the scratch Maven repository it is given.
 #
 #   apply.sh clone   <work>   clone Zipline at tag 1.28.0 into <work>/zipline (checks the commit)
@@ -23,17 +23,28 @@
 #                             (serial, else ANDROID_SERIAL) for every ABI it supports; on a 32-bit ABI
 #                             this exercises NaN-boxed values (JS_NAN_BOXING) and 32-bit limbs; both
 #                             builds must start, and the fork's must exit 0
-#   apply.sh test    <work> [gradle args]   Zipline's own build, e.g. :zipline:jvmTest, or
-#                             :zipline:connectedAndroidDeviceTest (its device tests, on ANDROID_SERIAL)
+#   apply.sh ios     <work>   step 3: build the iOS targets (iosArm64, iosSimulatorArm64) with Zipline's own
+#                             build: cklib's QuickJS bitcode (checks each compile line has Zipline's flags
+#                             and -fwrapv), the patched nativeMain and quickjs.def, and the test executables
+#   apply.sh check-bigint-zipline <work> [gradle args]   run ../bigint-ops.js through Zipline's own engine
+#                             (BigIntOpsTest; default :zipline:jvmTest and :zipline:iosSimulatorArm64Test)
+#                             and fail on any difference from Node
+#   apply.sh test    <work> [gradle args]   Zipline's own build, e.g. :zipline:jvmTest,
+#                             :zipline:connectedAndroidDeviceTest (its device tests, on ANDROID_SERIAL) or
+#                             :zipline:iosSimulatorArm64Test (on a simulator the Kotlin plugin boots)
+#   apply.sh results <work> [test task...]   sum the JUnit XML a test run left in zipline/build/test-results
+#                             (e.g. iosSimulatorArm64Test; default jvmTest); fails if any test failed
 #   apply.sh publish <work> <maven repo dir>   publish the forked artifacts (zipline-jvm, zipline-bytecode,
-#                             zipline-android, zipline-android-ndk) as 1.28.0-q20260604 to a scratch
-#                             Maven repository (never ~/.m2)
+#                             zipline-android, zipline-android-ndk and, on a Mac with Xcode, the iOS
+#                             klibs zipline-iosarm64 and zipline-iossimulatorarm64, each checked to
+#                             carry the engine's bitcode) as 1.28.0-q20260604 to a scratch Maven
+#                             repository (never ~/.m2)
 #   apply.sh diff    <work>   maintainers: regenerate patches/ from an edited checkout
 #   apply.sh all     <work>   clone, engine, jni, qjs, check-bigint (no Android SDK needed)
 set -euo pipefail
 shopt -s nullglob
 here="$(cd "$(dirname "$0")" && pwd)"
-cmd="${1:?usage: apply.sh clone|engine|jni|qjs|check-bigint|android|qjs-android|check-bigint-device|test|publish|diff|all <work dir> [...]}"
+cmd="${1:?usage: apply.sh clone|engine|jni|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|publish|diff|all <work dir> [...]}"
 work="${2:?work dir}"
 mkdir -p "$work"
 work="$(cd "$work" && pwd)"
@@ -334,9 +345,109 @@ do_check_bigint_device() {
   return $fail
 }
 
+IOS_TARGETS="IosArm64 IosSimulatorArm64"
+
+do_ios() { # step 3: the iOS targets, from Zipline's own build (cklib and Kotlin/Native)
+  [ -f "$zl/zipline/native/quickjs/dtoa.c" ] || { echo "run engine first" >&2; exit 1; }
+  local log="$work/build/ios.log" t lc fail=0 tasks=() flag n
+  mkdir -p "$work/build"
+  # cklib's QuickJS bitcode (rerun, so the compile lines are in the log), the patched nativeMain and
+  # quickjs.def through cinterop, and the test executables linked for the phone and the simulator.
+  for t in $IOS_TARGETS; do
+    lc="$(tr '[:upper:]' '[:lower:]' <<<"${t:0:1}")${t:1}"
+    tasks+=(":zipline:${lc}Quickjs" --rerun ":zipline:compileKotlin$t" ":zipline:linkDebugTest$t")
+  done
+  zipline_gradle --info "${tasks[@]}" > "$log" 2>&1 || { grep -E '^e: |error:|What went wrong' -A3 "$log" | head -40 >&2; echo "ios: build failed ($log)" >&2; exit 1; }
+  # cklib compiles the engine in one clang call per target (-target arm64-apple-ios<min> for the
+  # phone, ...-simulator for the simulator): Zipline's flags (its cklib compilerArgs) and -fwrapv.
+  local line target
+  for t in device simulator; do
+    case "$t" in
+      device) target='-target arm64-apple-ios[0-9.]+ ' ;;
+      simulator) target='-target arm64-apple-ios[0-9.]+-simulator ' ;;
+    esac
+    line="$(grep -E "Command: .*/clang -c .*native/quickjs/quickjs\.c" "$log" | grep -E -- "$target" | head -1)" || true
+    [ -n "$line" ] || { echo "ios: $t: no compile line for quickjs.c in $log" >&2; fail=1; continue; }
+    for flag in -fwrapv -DKONAN_MI_MALLOC=1 "-DCONFIG_VERSION=\"$QJS_VERSION\"" -ftls-model=initial-exec -D_Float16=short \
+        native/quickjs/dtoa.c; do
+      grep -qF -- "$flag" <<<"$line" || { echo "ios: $t: quickjs.c not built with $flag" >&2; fail=1; }
+    done
+    echo "ios: $t ($(grep -oE -- "$target" <<<"$line" | cut -d' ' -f2)): QuickJS built with Zipline's cklib flags and -fwrapv, $(grep -oE -- ' -O[0-9sz]? ' <<<"$line" | tr -d ' ' | sort -u | tr '\n' ' ')(dtoa.c included)"
+  done
+  for t in $IOS_TARGETS; do
+    lc="$(tr '[:upper:]' '[:lower:]' <<<"${t:0:1}")${t:1}"
+    local kexe="$zl/zipline/build/bin/$lc/debugTest/test.kexe"
+    [ -f "$kexe" ] || { echo "ios: no $kexe" >&2; fail=1; continue; }
+    echo "ios: $lc: test executable $(wc -c < "$kexe" | tr -d ' ') bytes ($(file -b "$kexe" | cut -d, -f1))"
+  done
+  [ $fail = 0 ] && echo "ios: the fork's iOS targets build ($log)"
+  return $fail
+}
+
+do_check_bigint_zipline() { # ../bigint-ops.js through Zipline's own engine (BigIntOpsTest), per host
+  shift 2 || true
+  local dir="$zl/build/keliver-bigint" lines fail=0 name ran=0
+  rm -rf "$dir"; mkdir -p "$dir"
+  cp "$here/../bigint-ops.js" "$dir/bigint-ops.js"
+  node "$here/../bigint-ops.js" > "$dir/node.txt"
+  lines="$(wc -l < "$dir/node.txt" | tr -d ' ')"
+  # Default: the JVM and the iOS simulator. Give other test tasks (and -PziplineForkLongAsBigInt) after.
+  [ $# -gt 0 ] || set -- :zipline:jvmTest :zipline:iosSimulatorArm64Test
+  # Each test task reruns (the script and Node's output are read at run time, not task inputs).
+  local args=() a
+  for a in "$@"; do
+    args+=("$a")
+    case "$a" in :*Test) args+=(--tests app.cash.zipline.BigIntOpsTest --rerun) ;; esac
+  done
+  zipline_gradle "${args[@]}" || fail=1
+  for name in zipline-jni zipline-native; do
+    [ -f "$dir/$name.txt" ] || continue
+    ran=$((ran + 1))
+    if diff -u "$dir/node.txt" "$dir/$name.txt" > "$dir/$name.diff"; then
+      echo "check-bigint-zipline: $name matches Node on all $lines lines"
+    else
+      echo "check-bigint-zipline: $name differs from Node on $(grep -c '^-[^-]' "$dir/$name.diff") of $lines lines ($dir/$name.diff)" >&2
+      fail=1
+    fi
+  done
+  [ $ran -gt 0 ] || { echo "check-bigint-zipline: BigIntOpsTest wrote no output (did it run?)" >&2; fail=1; }
+  return $fail
+}
+
 do_test() {
   shift 2 || true
   zipline_gradle "$@"
+}
+
+do_results() { # <test task>...: the JUnit XML a test run left, summed (the count of record)
+  shift 2 || true
+  [ $# -gt 0 ] || set -- jvmTest
+  local t fail=0
+  for t in "$@"; do
+    python3 -I -c '
+import glob, sys, xml.etree.ElementTree as ET
+d = sys.argv[1]
+files = sorted(glob.glob(d + "/*.xml"))
+if not files:
+    sys.exit("results: no JUnit XML in " + d)
+n = t = s = f = e = 0
+bad = []
+for p in files:
+    su = ET.parse(p).getroot()
+    n += 1
+    t += int(su.get("tests", 0)); s += int(su.get("skipped", 0))
+    f += int(su.get("failures", 0)); e += int(su.get("errors", 0))
+    for tc in su.iter("testcase"):
+        for k in ("failure", "error"):
+            if tc.find(k) is not None:
+                bad.append("%s.%s" % (tc.get("classname"), tc.get("name")))
+print("results: %s: %d classes, %d run, %d passed, %d skipped, %d failed" % (d.split("/")[-1], n, t, t - s - f - e, s, f + e))
+for b in bad:
+    print("results:   failed: " + b)
+sys.exit(1 if f + e else 0)
+' "$zl/zipline/build/test-results/$t" || fail=1
+  done
+  return $fail
 }
 
 do_publish() {
@@ -346,11 +457,29 @@ do_publish() {
   # zipline-jvm (the engine the Gradle plugin compiles bundles with), zipline-bytecode (step 1b: the
   # compiler's source maps and line stripping read and write version 5) and, for Android hosts (step
   # 2), zipline-android (its JNI classes) and zipline-android-ndk (the AAR with libquickjs.so). Every
-  # other Zipline module stays 1.28.0; use-fork.init.gradle substitutes these four.
+  # other Zipline module stays 1.28.0; use-fork.init.gradle substitutes these four. On a Mac with
+  # Xcode (step 3), also zipline-iosarm64 and zipline-iossimulatorarm64: the klibs, which carry the
+  # engine's bitcode from cklib.
+  local ios=()
+  if [ "$(uname -s)" = Darwin ] && xcrun --sdk iphoneos --show-sdk-path > /dev/null 2>&1; then
+    ios=(:zipline:publishIosArm64PublicationToMavenLocal :zipline:publishIosSimulatorArm64PublicationToMavenLocal)
+  else
+    echo "publish: NOTE no Xcode iOS SDK here; the iOS klibs are not published"
+  fi
   zipline_gradle -PVERSION_NAME="$FORK_VERSION" "-Dmaven.repo.local=$repo" -PRELEASE_SIGNING_ENABLED=false \
     :zipline:publishJvmPublicationToMavenLocal :zipline-bytecode:publishMavenPublicationToMavenLocal \
-    :zipline:publishAndroidPublicationToMavenLocal :zipline-android-ndk:publishMavenPublicationToMavenLocal
-  find "$repo/app/cash/zipline" \( -name "*.jar" -o -name "*.aar" \) | sort
+    :zipline:publishAndroidPublicationToMavenLocal :zipline-android-ndk:publishMavenPublicationToMavenLocal \
+    ${ios[@]+"${ios[@]}"}
+  find "$repo/app/cash/zipline" \( -name "*.jar" -o -name "*.aar" -o -name "*.klib" \) | sort
+  # A klib without the engine's bitcode would link against nothing: check each one carries it.
+  # The listing is captured first: `unzip | grep -q` under pipefail fails when grep exits on the
+  # first match and unzip gets SIGPIPE.
+  local k bitcode
+  for k in $(find "$repo/app/cash/zipline" -name "zipline-ios*-$FORK_VERSION.klib" | sort); do
+    bitcode="$(unzip -Z1 "$k" | grep -E 'native/.*quickjs.*\.bc$' || true)"
+    [ -n "$bitcode" ] || { echo "publish: $(basename "$k") has no QuickJS bitcode" >&2; return 1; }
+    echo "publish: $(basename "$k"): $(tr '\n' ' ' <<<"$bitcode")"
+  done
 }
 
 do_diff() { # maintainers: regenerate patches/ from an edited clone (after `engine` and editing)
@@ -381,7 +510,10 @@ case "$cmd" in
   android) do_android ;;
   qjs-android) do_qjs_android ;;
   check-bigint-device) do_check_bigint_device "$@" ;;
+  ios) do_ios ;;
+  check-bigint-zipline) do_check_bigint_zipline "$@" ;;
   test) do_test "$@" ;;
+  results) do_results "$@" ;;
   publish) do_publish "$@" ;;
   all) do_clone; do_engine; do_jni; do_qjs; do_check_bigint ;;
   *) echo "unknown: $cmd" >&2; exit 2 ;;
