@@ -711,8 +711,11 @@ per engine, and each host only ever receives the one its engine loads (D2):
 - **Signing.** The signing block (from the tools after 0.3.18; run
   `keliver-new-publish-target.sh` again to upgrade) reads the bytecode version of
   every module before it signs: version 5 adds `"keliver.engine": "quickjs-2026"`
-  to the signed metadata, version 1 adds nothing. Mixed versions, an unknown
-  version, or a `keliver.engine` the bytecode does not bear out fail the build.
+  to the signed metadata, version 1 adds nothing. A `keliver.engine` already in
+  the manifest (a re-sign, or a build that sets one, `quickjs-2021` included) is
+  kept when the bytecode bears it out. Mixed versions, an unknown version, or a
+  `keliver.engine` the bytecode does not bear out fail the build; the publisher
+  and the hosts apply the same rule.
 - **Publishing.** `engineTargets` in `keliver.portal.json`
   (`[{"publishTask": …, "publishOutput": …}]`) names the extra builds, for example
   a second guest module that applies the fork's Zipline Gradle plugin.
@@ -732,6 +735,20 @@ per engine, and each host only ever receives the one its engine loads (D2):
   rollback's kept copy, and a bundle for another engine is refused
   (`engine refused: …`, reported as `engine`). A host updated to another engine
   therefore never runs what its old engine cached.
+- **After an app update to another engine.** A host records the engine with its
+  last good bundle (none recorded, as by every host from before NF2, means
+  `quickjs-2021`). A last good bundle for another engine counts as nothing
+  cached, so the start is network-first under every start policy, and the W5
+  fall-back and the "lookup failed" start do not use it; crash rollback likewise
+  goes back only to a kept bundle whose signed manifest is for the host's engine.
+- **Older tools and relays** (0.3.18 and earlier). Their `keliver-publish`
+  refuses an index with two entries at one sequence on a channel, so it cannot
+  publish, promote or set a rollout on a multi-engine index (safe: it writes
+  nothing; use these tools or later). An older relay drops a host report whose
+  reason is `engine`. And an older `keliver-publish` does not check bytecode
+  against the signed engine, so it would publish a fork build as an
+  unconstrained default-engine entry that reaches every host and fails at load:
+  **publish fork builds only with these tools or later**.
 
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,

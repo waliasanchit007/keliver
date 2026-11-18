@@ -33,6 +33,8 @@ import okio.ByteString.Companion.toByteString
 import okio.IOException
 import hosttemplate.DEFAULT_ENGINE as HOST_DEFAULT_ENGINE
 import hosttemplate.ENGINE_METADATA_KEY as HOST_ENGINE_METADATA_KEY
+import hostlegacy0318.HostFacts as LegacyHostFacts
+import hostlegacy0318.pickFromIndex as legacyPickFromIndex
 
 /**
  * NF2 steps 5–7 (docs/DEVICE_HOST.md, "Engines"): one bundle per engine for one release, each
@@ -53,18 +55,32 @@ class EngineGateTest {
   // (hosttemplate.EngineGateTest, compiled in here too); this holds the publisher to them.
 
   /**
-   * A host from before NF2 (tools 0.3.18 and earlier) skips an entry with a constraint key it does
-   * not know (W4.5); the keys it knows are these. So it never takes a bundle for another engine,
-   * while the default engine's entry names no engine and reaches it as before.
+   * A host from before NF2 (tools 0.3.8 to 0.3.18) skips an entry with a constraint key it does not
+   * know (W4.5). So it never takes a bundle for another engine, while the default engine's entry
+   * names no engine and reaches it as before. Run on the index reader tools 0.3.18 shipped
+   * (src/test/legacy, compiled as hostlegacy0318), held here to its released bytes.
    */
   @Test
   fun aHostFromBeforeEnginesOnlyEverTakesTheDefaultEnginesBundle() {
-    val knownBeforeNf2 = setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")
+    val legacy = File(System.getProperty("user.dir")).resolve("src/test/legacy/BundleIndex-0.3.18.kt.txt").readBytes()
+    val blobId = java.security.MessageDigest.getInstance("SHA-1").run {
+      update("blob ${legacy.size}\u0000".encodeToByteArray())
+      digest(legacy).toByteString().hex()
+    }
+    assertEquals("45cc6d82d70359da92cc289db96e46e20a0a0c51", blobId, "the fixture is 878311ae:scripts/templates/production-host/src/main/kotlin/BundleIndex.kt (tools 0.3.18)")
+    fun olderHostPick() = legacyPickFromIndex(indexText(), emptyList(), facts = LegacyHostFacts("", null, 0)).getOrThrow()
+      .let { it.sequence to it.manifestPath }
     publishBoth()
-    val entries = entries()
-    val takenByOlderHosts = entries.filter { e -> ((e["constraints"] as? JsonObject)?.keys.orEmpty() - knownBeforeNf2).isEmpty() }
-    assertEquals(listOf(1), takenByOlderHosts.map { it["version"]!!.jsonPrimitive.content.toInt() })
-    assertEquals(null, entries[0]["constraints"], "the default engine's entry carries no engine (or any) constraint")
+    assertEquals(null, entries()[0]["constraints"], "the default engine's entry carries no engine (or any) constraint")
+    assertEquals(1L to "v1/manifest.zipline.json", olderHostPick())
+    // A release for QuickJS 2026 only: older hosts keep release 1, as a default-engine host does.
+    publishStatic(out2026("c", 2), site, app.publicHex)
+    assertEquals(1L to "v1/manifest.zipline.json", olderHostPick())
+    assertEquals(1L to "v1/manifest.zipline.json", hostPick(DEFAULT_ENGINE))
+    assertEquals(2L to "v3/manifest.zipline.json", hostPick(q2026))
+    // Its next release for both engines: older hosts take its default-engine bundle.
+    publishBoth(seq = 3, init = false)
+    assertEquals(3L to "v4/manifest.zipline.json", olderHostPick())
   }
 
   // ---- the hosts' load ---------------------------------------------------------------------
@@ -229,6 +245,42 @@ class EngineGateTest {
       publishStaticVariants(listOf(PublishVariant(out2021("c")), PublishVariant(out2026("d", seq = 2))), site, app.publicHex, init = true)
     }
     assertFalse(bundles.exists())
+  }
+
+  /**
+   * L1 (review of PR #275): under the lock, variant 1 passes its checks and variant 2 then fails
+   * (its output changed since the pre-check). Nothing becomes a v<N>/: variant 1 is not moved in
+   * before variant 2 is checked. Before, v1/ was left with no index entry.
+   */
+  @Test
+  fun aVariantThatFailsUnderTheLockLeavesNoVersionDirectory() {
+    publishBoth() // v1, v2 at sequence 1
+    val a = out2021("a2", 2)
+    val b = out2026("b2", 2)
+    val indexBefore = indexText()
+    assertRefusedAndNothingWritten("is signed for sequence 3") {
+      publishStaticVariants(
+        listOf(PublishVariant(a), PublishVariant(b)), site, app.publicHex,
+        // Variant 2's output, rebuilt for another sequence after the pre-check.
+        beforeLock = { output("b2", 5, "\"$q2026\"", seq = 3) },
+      )
+    }
+    assertEquals(indexBefore, indexText())
+    assertEquals(listOf("v1", "v2"), bundles.listFiles()!!.filter { it.isDirectory }.map { it.name }.sorted(), "no v3/, and no staging left")
+    // The same, when moving them in fails after the first move: the one moved is removed again.
+    var moves = 0
+    val e = assertFailsWith<java.io.IOException> {
+      publishStaticVariants(
+        listOf(PublishVariant(out2021("a3", 2)), PublishVariant(out2026("b3", 2))), site, app.publicHex,
+        moveIn = { from, to -> if (++moves == 2) throw java.io.IOException("disk full") else Files.move(from, to) },
+      )
+    }
+    assertEquals("disk full", e.message)
+    assertEquals(2, moves)
+    assertEquals(indexBefore, indexText())
+    assertEquals(listOf("v1", "v2"), bundles.listFiles()!!.filter { it.isDirectory }.map { it.name }.sorted(), "v3/ removed again")
+    // And with both checks passing, the release goes out as v3/ and v4/.
+    assertEquals(listOf(3, 4), publishStaticVariants(listOf(PublishVariant(a), PublishVariant(out2026("b4", 2))), site, app.publicHex).map { it.version })
   }
 
   @Test

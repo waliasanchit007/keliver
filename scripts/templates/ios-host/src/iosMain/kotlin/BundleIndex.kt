@@ -107,6 +107,32 @@ internal fun engineOfQuickJsVersion(quickJsVersion: String): String =
   ENGINES_BY_QUICKJS_VERSION[quickJsVersion] ?: "quickjs-${quickJsVersion.lowercase()}"
 
 /**
+ * NF2: the last good manifest URL a start may treat as cached ([lastGood]), given the engine
+ * recorded with it ([recordedEngine]; null: none recorded, as by every host before NF2, so
+ * [DEFAULT_ENGINE]), or null. A host updated to another engine keeps its old cache, whose bundle
+ * it would refuse; counting it as cached would pick a cache-first or parallel start (StartPolicy.kt)
+ * that can load nothing, again at every start until a newer release, and would make it the W5
+ * fall-back and the "lookup failed" start. So it is nothing cached: the start is network-first.
+ */
+internal fun lastGoodForEngine(lastGood: String?, recordedEngine: String?, hostEngine: String, log: (String) -> Unit = {}): String? {
+  if (lastGood == null) return null
+  val problem = engineProblem(recordedEngine, hostEngine) ?: return lastGood
+  log("the cached bundle (last loaded from $lastGood) is not used: $problem; nothing is cached for this engine")
+  return null
+}
+
+/**
+ * NF2: the release crash rollback goes back to ([kept]), when its kept manifest is for [hostEngine];
+ * null otherwise (a kept bundle from before an update to another engine), as when none is kept.
+ */
+internal fun keptForEngine(kept: KeptBundle?, hostEngine: String, log: (String) -> Unit = {}): KeptBundle? {
+  if (kept == null) return null
+  val problem = engineProblem(manifestEngine(kept.manifest), hostEngine) ?: return kept
+  log("crash rollback: the kept bundle of sequence ${kept.sequence} is not used: $problem")
+  return null
+}
+
+/**
  * Why a bundle for [bundleEngine] (a manifest's "keliver.engine"; null: none, so
  * [DEFAULT_ENGINE]) must not run on a host whose engine is [hostEngine], or null when it may.
  */

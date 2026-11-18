@@ -509,6 +509,7 @@ internal fun publishStaticVariants(
   constraints: Constraints = Constraints(),
   acceptKeyChange: Boolean = false,
   beforeLock: () -> Unit = {},
+  moveIn: (java.nio.file.Path, java.nio.file.Path) -> Unit = { from, to -> Files.move(from, to, StandardCopyOption.ATOMIC_MOVE) },
 ): List<StaticPublish> {
   require(variants.isNotEmpty()) { "nothing to publish" }
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
@@ -551,11 +552,15 @@ internal fun publishStaticVariants(
     if (highest > MAX_VERSION - variants.size) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
     val sequence = nextSequence(index, bundlesDir)
 
-    val published = variants.mapIndexed { i, (output, extraFields) ->
-      val version = highest + 1 + i
-      val dest = File(bundlesDir, "v$version")
-      val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")
-      try {
+    // Every variant is copied and checked before any becomes a v<N>/, and a failure while moving
+    // them in removes those already moved: a refusal under the lock writes nothing either (one
+    // engine's bundle in a v<N>/ with no index entry would be skipped by every later sequence).
+    val stagings = ArrayList<File>()
+    val moved = ArrayList<File>()
+    try {
+      for ((output, _) in variants) {
+        val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")
+        stagings += staging
         output.copyRecursively(staging, overwrite = false)
         // What was copied must still be what was verified.
         staticOutputProblem(staging, publicKeyHex)?.let {
@@ -568,28 +573,43 @@ internal fun publishStaticVariants(
         signedBridges(copied).problem?.let { throw PublishRefused(it) }
         engineBytecodeProblem(staging, copied)?.let { throw PublishRefused(it) }
         if (!acceptKeyChange) keyChangeProblem(bundlesDir, index, copied, publicKeyHex)?.let { throw PublishRefused(it) }
-        Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
-      } finally {
-        if (staging.exists()) staging.deleteRecursively()
+      }
+      // The copies' engines, checked again: each once (the outputs may have changed since the pre-check).
+      val engines = stagings.map { signedEngine(File(it, "manifest.zipline.json").readText()).engine }
+      if (engines.distinct().size != engines.size) throw PublishRefused("two of the outputs are for one engine: one release has one bundle per engine")
+      stagings.forEachIndexed { i, staging ->
+        val dest = File(bundlesDir, "v${highest + 1 + i}")
+        moveIn(staging.toPath(), dest.toPath())
+        moved += dest
       }
 
-      val manifestText = File(dest, "manifest.zipline.json").readText()
-      val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
-      // B4: what the signed manifest says it needs, over any copied (republish) bridges; NF2: and
-      // the engine it names.
-      val entryConstraints = withSignedEngine(
-        withSignedBridges(constraints.over(extraFields["constraints"]), signedBridges(manifestText)),
-        signedEngine(manifestText),
-      )
-      val entry = JsonObject(
-        entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields - "constraints" +
-          listOfNotNull(entryConstraints?.let { "constraints" to it }),
-      )
-      StaticPublish(version, sequence, dest, entry)
+      val published = variants.mapIndexed { i, (_, extraFields) ->
+        val version = highest + 1 + i
+        val dest = File(bundlesDir, "v$version")
+        val manifestText = File(dest, "manifest.zipline.json").readText()
+        val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
+        // B4: what the signed manifest says it needs, over any copied (republish) bridges; NF2: and
+        // the engine it names.
+        val entryConstraints = withSignedEngine(
+          withSignedBridges(constraints.over(extraFields["constraints"]), signedBridges(manifestText)),
+          signedEngine(manifestText),
+        )
+        val entry = JsonObject(
+          entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields - "constraints" +
+            listOfNotNull(entryConstraints?.let { "constraints" to it }),
+        )
+        StaticPublish(version, sequence, dest, entry)
+      }
+      val next = JsonObject(index + ("entries" to JsonArray(entries + published.map { it.entry })))
+      writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
+      published
+    } catch (e: Throwable) {
+      // Nothing is published until the index names it: no v<N>/ is left without its entry.
+      moved.forEach { it.deleteRecursively() }
+      throw e
+    } finally {
+      stagings.forEach { if (it.exists()) it.deleteRecursively() }
     }
-    val next = JsonObject(index + ("entries" to JsonArray(entries + published.map { it.entry })))
-    writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
-    published
   }
 }
 

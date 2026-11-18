@@ -63,9 +63,12 @@
 // version of every module the manifest names: version 1 (Zipline 1.28.0's
 // QuickJS 2021) adds nothing, as every bundle before NF2; version 5 (QuickJS
 // 2026, the NF2 fork) adds "keliver.engine": "quickjs-2026" to the signed
-// metadata, so hosts on another engine refuse it. Modules of two versions, a
-// version no engine here names, or a keliver.engine that says otherwise fail
-// the build. keliver-publish checks the same again.
+// metadata, so hosts on another engine refuse it. A compile writes no
+// keliver.engine of its own; one already there (a re-sign, or a build that sets
+// it, "quickjs-2021" included) is kept when it names the engine the bytecode is
+// for. Modules of two versions, a version no engine here names, or a
+// keliver.engine that says otherwise fail the build. keliver-publish checks the
+// same again.
 //
 // Not configuration-cache compatible: the store is resolved by running a
 // process (keliver-init leaves the cache off).
@@ -106,8 +109,10 @@ def keliverSigningKeyFile = { ->
 }.memoize()
 def keliverPublishSequence = providers.gradleProperty('keliver.sequence')
   .orElse(providers.environmentVariable('KELIVER_PUBLISH_SEQUENCE'))
-// NF2: the engine each QuickJS bytecode version is for (null: the default engine, named by no key).
-def keliverEngines = [1: null, 5: 'quickjs-2026']
+// NF2: the engine each QuickJS bytecode version is for. The default one (quickjs-2021) is written
+// by no key: a manifest that names no engine is for it.
+def keliverEngines = [1: 'quickjs-2021', 5: 'quickjs-2026']
+def keliverDefaultEngine = keliverEngines[1]
 // The QuickJS bytecode version in a .zipline file (its 8-byte magic, a format version, then
 // sections of a 4-byte id and a 4-byte length; section 1 is bytecode, whose first byte is
 // QuickJS's BC_VERSION), or null when the file is not one.
@@ -124,7 +129,9 @@ def keliverBytecodeVersion = { byte[] b ->
   }
   return null
 }
-// The engine the manifest's modules (in dir) were compiled for: null for the default engine.
+// The engine the manifest's modules (in dir) were compiled for, to write into its metadata: null for
+// the default engine. A fresh compile names no engine; a manifest that already names one (a re-sign,
+// or a build that sets it) must name the one its bytecode is for: the publisher's rule.
 def keliverEngineOf = { File dir, manifest ->
   def versions = manifest.modules.values().collect { m ->
     def f = new File(dir, m.url)
@@ -136,8 +143,11 @@ def keliverEngineOf = { File dir, manifest ->
   if (!keliverEngines.containsKey(v)) throw new GradleException("keliver: the modules in ${dir} hold QuickJS bytecode version ${v}, which no engine these tools publish for compiles")
   def engine = keliverEngines[v]
   def named = manifest.metadata['keliver.engine']
-  if (named != engine) throw new GradleException("keliver: the manifest's keliver.engine is '${named}', but its modules were compiled for ${engine ?: 'the default engine (named by none)'}")
-  return engine
+  if (named != null && named != engine) {
+    throw new GradleException("keliver: the manifest's keliver.engine is '${named}', but its modules were compiled for " +
+      (engine == keliverDefaultEngine ? "the default engine (${engine})" : engine))
+  }
+  return engine == keliverDefaultEngine ? null : engine
 }
 // Signs manifestFile in place, after writing the publish sequence (if any) into its metadata.
 def keliverSign = { File manifestFile, boolean keyRequired, String missing ->

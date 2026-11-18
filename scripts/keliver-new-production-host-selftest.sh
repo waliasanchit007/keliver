@@ -386,10 +386,19 @@ grep -q 'engineOfQuickJsVersion(app.cash.zipline.QuickJs.version)' "$M" \
   && ! grep -q 'AcceptCachedBundle(floor, crash, servedBridges)' "$M" \
   && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, crash, servedBridges, hostEngine)' "$M")" ] \
   && grep -A16 '^private class AcceptCachedBundle' "$M" | grep -q 'engineProblem(manifest.metadata\[ENGINE_METADATA_KEY\], engine)' \
-  && [ "$(grep -c 'engineProblem(manifestEngine(' "$B")" = 2 ] \
+  && [ "$(grep -c 'engineProblem(manifestEngine(' "$B")" = 3 ] \
   && grep -q '"engine refused:" in reason' "$M" \
   && ok "NF2: the host's engine gates every lookup, and the network load, the kept copy and the cache start refuse another engine's bundle" \
   || bad "NF2: the engine gate is not wired"
+# NF2 (M1): a cache another engine left (an app update that switched engine) is nothing cached, so the
+# start policy cannot pick a cache-first or parallel start from it; nor does crash rollback go back
+# to a kept bundle for another engine. lastGood is recorded with the engine that loaded it.
+grep -A4 'val lastGood = lastGoodForEngine(' "$M" | grep -q 'prefs.stringOrNull(lastGoodEngineKey(cacheName))' \
+  && [ "$(grep -c 'getString(lastGoodKey(cacheName)' "$M")" = 1 ] \
+  && grep -q 'putString(lastGoodKey(cacheName), url).putString(lastGoodEngineKey(cacheName), hostEngine)' "$M" \
+  && [ "$(grep -c 'crash.rollbackTo(' "$M")" = "$(grep -c 'keptForEngine(crash.rollbackTo(floor()), hostEngine)' "$M")" ] \
+  && ok "NF2: a last good or kept bundle for another engine is nothing cached (network-first), and lastGood records its engine" \
+  || bad "NF2: the start still counts another engine's cache"
 # WS6: crash rollback. The ledger (CrashRollback.kt) and its JVM tests are scaffolded; the trial
 # starts once the bundle's code begins to evaluate (the first moduleLoadStart), a load failure
 # counts only when it came from that code (CodeLoadProgress: not a download), the "not yet

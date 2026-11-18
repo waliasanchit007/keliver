@@ -387,10 +387,17 @@ grep -q 'engineOfQuickJsVersion(app.cash.zipline.QuickJs.version)' "$K/MainViewC
   && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor, crash, hostEngine)' "$K/MainViewController.kt" \
   && ! grep -q 'AcceptCachedBundle(floor, crash, [A-Za-z.]*served)' "$K/MainViewController.kt" \
   && grep -A16 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'engineProblem(manifest.metadata\[ENGINE_METADATA_KEY\], engine)' \
-  && [ "$(grep -c 'engineProblem(manifestEngine(' "$K/BundleIndex.kt")" = 2 ] \
+  && [ "$(grep -c 'engineProblem(manifestEngine(' "$K/BundleIndex.kt")" = 3 ] \
   && grep -q '"engine refused:" in reason' "$K/MainViewController.kt" \
   && ok "NF2: the host's engine gates every lookup, and the network load, the kept copy and the cache start refuse another engine's bundle" \
   || bad "NF2: the engine gate is not wired"
+# NF2 (M1): as on Android, another engine's last good or kept bundle is nothing cached.
+grep -A4 'val lastGood = lastGoodForEngine(' "$K/MainViewController.kt" | grep -q 'stringForKey(lastGoodEngineKey(trust))' \
+  && [ "$(grep -c 'stringForKey(lastGoodKey(trust))' "$K/MainViewController.kt")" = 1 ] \
+  && grep -q 'defaults.setObject(hostEngine, forKey = lastGoodEngineKey(trust))' "$K/MainViewController.kt" \
+  && [ "$(grep -c 'crash.rollbackTo(' "$K/MainViewController.kt")" = "$(grep -c 'keptForEngine(crash.rollbackTo(floor()), hostEngine)' "$K/MainViewController.kt")" ] \
+  && ok "NF2: a last good or kept bundle for another engine is nothing cached (network-first), and lastGood records its engine" \
+  || bad "NF2: the start still counts another engine's cache"
 # WS6: crash rollback, as on Android. The ledger (src/commonMain/CrashRollback.kt, the Android
 # host's file) and its JVM tests are scaffolded; the trial starts once the bundle's code begins
 # to evaluate, a load failure counts only when it came from that code (not a download), the

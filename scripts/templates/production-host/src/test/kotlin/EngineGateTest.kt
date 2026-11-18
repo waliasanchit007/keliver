@@ -81,6 +81,54 @@ class EngineGateTest {
     assertEquals("engine", reportReason("not-loaded", engineProblem(q2026, DEFAULT_ENGINE)!!))
   }
 
+  /**
+   * M1 (review of PR #275): the app ran sequence 10's QuickJS 2021 bundle (floor 10, last good v19/,
+   * recorded by a host from before NF2, so with no engine); release 10 also has a QuickJS 2026 entry
+   * (v20/). An app update links the fork, with CACHE_FIRST. Counting v19/ as cached would start
+   * cache-first from a bundle this host refuses, and its background lookup finds "nothing newer"
+   * (10), at every start. It is nothing cached, so the start is network-first, and loads v20/.
+   */
+  @Test
+  fun aHostUpdatedToAnotherEngineCountsItsOldCacheAsNothingCached() {
+    val v19 = "https://bundles.example/bundles/v19/manifest.zipline.json"
+    fun start(lastGood: String?, policy: KeliverStartPolicy) = chooseStart(
+      StartFacts(
+        EffectiveStartPolicy(policy, "the app's setting"), cached = lastGood != null, crashRollback = false,
+        channel = "production", checkedChannel = "production", newestSeen = 10, floor = 10,
+      ),
+    ).mode
+    val logged = mutableListOf<String>()
+    val forFork = lastGoodForEngine(v19, recordedEngine = null, hostEngine = q2026) { logged += it }
+    assertNull(forFork)
+    assertTrue(logged.single().contains("compiled for quickjs-2021; this host runs $q2026"), logged.toString())
+    for (policy in KeliverStartPolicy.entries) assertEquals(KeliverStartPolicy.NETWORK_FIRST, start(forFork, policy), policy.wireName)
+    // The same host's own cache, recorded with its engine, is cached as before.
+    assertEquals(v19, lastGoodForEngine(v19, q2026, q2026))
+    assertEquals(KeliverStartPolicy.CACHE_FIRST, start(lastGoodForEngine(v19, q2026, q2026), KeliverStartPolicy.CACHE_FIRST))
+    // A host that stays on QuickJS 2021 keeps a cache recorded with no engine (every host before NF2).
+    assertEquals(v19, lastGoodForEngine(v19, null, DEFAULT_ENGINE))
+    assertEquals(v19, lastGoodForEngine(v19, DEFAULT_ENGINE, DEFAULT_ENGINE))
+    // And one that goes back from the fork to QuickJS 2021 counts the fork's cache as nothing.
+    assertNull(lastGoodForEngine(v19, q2026, DEFAULT_ENGINE))
+    // A recorded engine that is not an engine id: nothing cached, never "the default".
+    assertNull(lastGoodForEngine(v19, "Quick JS", DEFAULT_ENGINE))
+    assertNull(lastGoodForEngine(null, q2026, q2026))
+  }
+
+  @Test
+  fun crashRollbackGoesBackOnlyToAKeptBundleForTheHostsEngine() {
+    val url = "https://bundles.example/bundles/v19/manifest.zipline.json"
+    val kept2021 = KeptBundle(9, url, """{"modules":{},"metadata":{"keliver.sequence":"9"}}""")
+    val kept2026 = KeptBundle(9, url, """{"modules":{},"metadata":{"keliver.sequence":"9","$ENGINE_METADATA_KEY":"$q2026"}}""")
+    val logged = mutableListOf<String>()
+    assertNull(keptForEngine(kept2021, q2026) { logged += it })
+    assertTrue(logged.single().startsWith("crash rollback: the kept bundle of sequence 9 is not used: engine refused"), logged.toString())
+    assertNull(keptForEngine(kept2026, DEFAULT_ENGINE))
+    assertEquals(kept2021, keptForEngine(kept2021, DEFAULT_ENGINE))
+    assertEquals(kept2026, keptForEngine(kept2026, q2026))
+    assertNull(keptForEngine(null, q2026))
+  }
+
   @Test
   fun aHostNamesItsEngineByTheQuickJsItLinks() {
     assertEquals(DEFAULT_ENGINE, engineOfQuickJsVersion("2021-03-27"))

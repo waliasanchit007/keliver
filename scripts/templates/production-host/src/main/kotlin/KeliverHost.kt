@@ -185,6 +185,8 @@ const val DEBUG_CHECK_FOR_UPDATE = "dev.keliver.debug.CHECK_FOR_UPDATE"
 private fun lastGoodKey(cacheName: String) = "lastGoodManifestUrl-$cacheName"
 /** The sha256 of the manifest bytes that last good bundle loaded from: a PARALLEL start confirms its cache only at it (StartPolicy.kt). */
 private fun lastGoodShaKey(cacheName: String) = "lastGoodManifestSha256-$cacheName"
+/** NF2: the engine of the host that loaded that last good bundle (absent: quickjs-2021, every host before NF2). */
+private fun lastGoodEngineKey(cacheName: String) = "lastGoodEngine-$cacheName"
 /** One Zipline cache per key, and one rollback floor and last-good URL with it. */
 private fun cacheNameFor(publicKeyHex: String) = "keliver-production-${publicKeyHex.lowercase().take(16)}"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
@@ -928,7 +930,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // Set once a bundle has loaded from the network, so it says Zipline's cache
     // holds one. Only a saved URL on the CURRENT bundle server's origin counts;
     // after an update that moved the server, the old one is ignored.
-    val lastGood = prefs.getString(lastGoodKey(cacheName), null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
+    // NF2: and only one this host's engine loaded (an app update to another engine keeps the old
+    // cache, which it would refuse): otherwise nothing is cached, and the start is network-first.
+    val lastGood = lastGoodForEngine(
+      prefs.getString(lastGoodKey(cacheName), null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) },
+      prefs.stringOrNull(lastGoodEngineKey(cacheName)),
+      hostEngine,
+    ) { Log.i(TAG, it) }
     // Read when each manifest arrives, not once here: a restart after a crash
     // must see a floor raised since this host started.
     val floor = { prefs.floor(floorNames) }
@@ -1042,7 +1050,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     }
     val latest = lookUp()
     // WS6: the floor's own bundle is set aside, so go back to the newest that proved healthy here.
-    val back = crash.rollbackTo(floor())
+    val back = keptForEngine(crash.rollbackTo(floor()), hostEngine) { Log.w(TAG, it) }
     when {
       latest != null -> {
         Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
@@ -1486,7 +1494,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         return
       }
       // WS6: set aside before anything ran: back to the bundle that proved healthy here.
-      val back = if (step is CrashStep.SetAside) crash.rollbackTo(floor()) else null
+      val back = if (step is CrashStep.SetAside) keptForEngine(crash.rollbackTo(floor()), hostEngine) { Log.w(TAG, it) } else null
       if (back != null) {
         reportSetAside(step, crashGoingBackTo(back.sequence))
         rollBack(back)
@@ -1559,7 +1567,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         onLoaded = { url ->
           // With the sha256 of the very manifest bytes Zipline verified and loaded (none served: none kept).
           val sha256 = ziplineHttp.servedSha256(url)
-          prefs.edit().putString(lastGoodKey(cacheName), url)
+          // NF2: with the engine that loaded it (one edit, so written together).
+          prefs.edit().putString(lastGoodKey(cacheName), url).putString(lastGoodEngineKey(cacheName), hostEngine)
             .apply { if (sha256 != null) putString(lastGoodShaKey(cacheName), sha256) else remove(lastGoodShaKey(cacheName)) }
             .apply()
         },
@@ -1600,7 +1609,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             crashLog(step)
             resetCrashWindow(codeSequence, failed = true)
             if (step !is CrashStep.SetAside) return@launch
-            val back = crash.rollbackTo(floor())
+            val back = keptForEngine(crash.rollbackTo(floor()), hostEngine) { Log.w(TAG, it) }
             if (back != null) {
               reportSetAside(step, crashGoingBackTo(back.sequence))
               rollBack(back)

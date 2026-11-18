@@ -185,6 +185,8 @@ private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${t
 private fun lastGoodKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestUrl-${cacheName(trust)}"
 /** The sha256 of the manifest bytes that last good bundle loaded from: a PARALLEL start confirms its cache only at it (StartPolicy.kt). */
 private fun lastGoodShaKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestSha256-${cacheName(trust)}"
+/** NF2: the engine of the host that loaded that last good bundle (absent: quickjs-2021, every host before NF2). */
+private fun lastGoodEngineKey(trust: ProductionTrust.Verified) = "keliver.lastGoodEngine-${cacheName(trust)}"
 /** The highest signed sequence this host has run, per key (the rollback floor); [publicKeyHex]: any trusted key. */
 private fun floorKey(publicKeyHex: String) = "keliver.highestSequence-keliver-production-${publicKeyHex.lowercase().take(16)}"
 /** W8: the floor across every trusted key's own floor, so a rotation never lowers it. */
@@ -1454,7 +1456,13 @@ private suspend fun startHost(): HostState {
     if (apiBase != null) add(dev.keliver.capabilities.HOST_HTTP_CAPABILITY)
   }
   // Set once a bundle has loaded from the network; only on the CURRENT server's origin.
-  val lastGood = NSUserDefaults.standardUserDefaults.stringForKey(lastGoodKey(trust))?.takeIf { server.owns(it) }
+  // NF2: and only one this host's engine loaded (an app update to another engine keeps the old
+  // cache, which it would refuse): otherwise nothing is cached, and the start is network-first.
+  val lastGood = lastGoodForEngine(
+    NSUserDefaults.standardUserDefaults.stringForKey(lastGoodKey(trust))?.takeIf { server.owns(it) },
+    NSUserDefaults.standardUserDefaults.stringForKey(lastGoodEngineKey(trust)),
+    hostEngine,
+  ) { log(it) }
   // Read when each manifest arrives, not once here: a restart after a crash must
   // see a floor raised since the host started.
   // Kept under every trusted key and read as the highest (W8): a host that trusts
@@ -1560,7 +1568,7 @@ private suspend fun startHost(): HostState {
   }
   val latest = lookupBundle(server, capabilities, facts, cacheName(trust))
   // WS6: the floor's own bundle is set aside, so go back to the newest that proved healthy here.
-  val back = crash.rollbackTo(floor())
+  val back = keptForEngine(crash.rollbackTo(floor()), hostEngine) { log(it) }
   return when {
     latest != null -> {
       log("loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
@@ -1796,7 +1804,7 @@ private fun createApp(
   // A code load failed (main thread; for a PARALLEL start's first load, once released).
   fun codeLoadFailed(reason: String, step: CrashStep) {
     // WS6: set aside before anything ran: back to the bundle that proved healthy here.
-    val back = if (step is CrashStep.SetAside && !Keliver.hasLoaded()) crash.rollbackTo(floor()) else null
+    val back = if (step is CrashStep.SetAside && !Keliver.hasLoaded()) keptForEngine(crash.rollbackTo(floor()), hostEngine) { log(it) } else null
     if (Keliver.hasLoaded()) {
       Keliver.updateFailed(reason, step) // the running bundle stays: Zipline only swaps on success
     } else if (back != null) {
@@ -1879,7 +1887,7 @@ private fun createApp(
           Keliver.crashLog(step)
           Keliver.resetCrashWindow(Keliver.loadedSequence(), failed = true)
           if (step !is CrashStep.SetAside) return@launch
-          val back = crash.rollbackTo(floor())
+          val back = keptForEngine(crash.rollbackTo(floor()), hostEngine) { log(it) }
           if (back != null) {
             Keliver.reportSetAside(step, crashGoingBackTo(back.sequence))
             rollBack(back)
@@ -1895,9 +1903,13 @@ private fun createApp(
         val sha256 = pinning.servedSha256(url)
         // The old sha256 goes first: a process killed between these writes leaves a URL with none
         // (the floor only, as before one was recorded), never a URL with another release's.
+        // NF2: the engine likewise: a kill between writes leaves it absent (quickjs-2021), so a host on
+        // another engine counts nothing cached; never this URL named with another host's engine.
         defaults.removeObjectForKey(lastGoodShaKey(trust))
+        defaults.removeObjectForKey(lastGoodEngineKey(trust))
         defaults.setObject(url, forKey = lastGoodKey(trust))
         if (sha256 != null) defaults.setObject(sha256, forKey = lastGoodShaKey(trust))
+        defaults.setObject(hostEngine, forKey = lastGoodEngineKey(trust))
       },
       onSequence = { sequence ->
         val current = floorOf(trust)

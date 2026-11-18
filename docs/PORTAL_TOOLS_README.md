@@ -339,6 +339,16 @@ PERCENT` changes a rollout later: raise it, or set 0 to halt it. Hosts that ran
 it keep it. It needs no key. Hosts from before these constraints skip any entry
 that has them.
 
+Engines (NF2; [`DEVICE_HOST.md`](DEVICE_HOST.md), "Engines"): with
+`engineTargets` in `keliver.portal.json`, one release is built and published
+once per QuickJS engine at one sequence, each entry naming its engine, and
+`--promote`, `--republish` and `--set-rollout` act on every engine's entry.
+Publish a build compiled by the Zipline fork (QuickJS 2026) only with these
+tools or later: older ones do not check bytecode against the signed engine and
+would publish it as a default-engine entry every host takes and fails to load.
+Tools 0.3.18 and earlier refuse a multi-engine index (they write nothing), and
+an older relay drops host reports whose reason is `engine`.
+
 ### bin/keliver-new-publish-target.sh
 
 ```bash
