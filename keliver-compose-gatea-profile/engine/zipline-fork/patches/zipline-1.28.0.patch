@@ -1851,7 +1851,7 @@ index 4c82811..eb68600 100644
        jvalue v;
        v.z = static_cast<jboolean>(JS_VALUE_GET_BOOL(value));
 diff --git a/zipline/native/InboundCallChannel.cpp b/zipline/native/InboundCallChannel.cpp
-index 1c28f0e..5452b09 100644
+index 1c28f0e..cb3cd00 100644
 --- a/zipline/native/InboundCallChannel.cpp
 +++ b/zipline/native/InboundCallChannel.cpp
 @@ -12,8 +12,11 @@
@@ -1860,14 +1860,14 @@ index 1c28f0e..5452b09 100644
   * limitations under the License.
 + *
 + * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes; an
-+ * unexpected result throws a Java exception instead of returning an uninitialised value;
-+ * disconnect frees its result).
++ * unexpected result throws a Java exception instead of returning an uninitialised value, after
++ * freeing that result; disconnect frees its result).
   */
 -#include <assert.h>
  #include "InboundCallChannel.h"
  #include "quickjs/quickjs.h"
  #include "Context.h"
-@@ -42,10 +45,15 @@ jstring InboundCallChannel::call(Context *context, JNIEnv* env,
+@@ -42,12 +45,25 @@ jstring InboundCallChannel::call(Context *context, JNIEnv* env,
    if (tag == JS_TAG_EXCEPTION) {
      context->throwJsException(env, jsResult);
      javaResult = nullptr;
@@ -1878,19 +1878,32 @@ index 1c28f0e..5452b09 100644
 -    assert(false); // Unexpected tag.
 +    // Not a string: the guest's bridge is broken. The Kotlin side declares a non-null String, and
 +    // an assert would be compiled out of release builds, so throw.
++    // Free the result first: freeing an object runs finalizers synchronously, and a
++    // FinalizationRegistry callback (finalization-registry.c) runs guest JS that may call the host
++    // through an outbound channel, a JNI call that must not run with an exception pending.
++    JS_FreeValue(jsContext, jsResult);
++    jsResult = JS_UNDEFINED;
 +    throwJavaException(env, "java/lang/IllegalStateException",
 +                       "Unexpected result from the inbound call: JS tag %d, expected a string",
 +                       static_cast<int>(tag));
 +    javaResult = nullptr;
    }
  
++  // A Java exception may be pending from here on. What is left to free are a string, the receiver
++  // and the global object: none of these frees the last reference to an object with a finalizer.
++  // (The exception branch's jsResult is JS_EXCEPTION, which holds nothing.)
    JS_FreeValue(jsContext, arguments[0]);
-@@ -72,10 +80,15 @@ jboolean InboundCallChannel::disconnect(Context *context, JNIEnv* env, jstring i
+   JS_FreeValue(jsContext, jsResult);
+   JS_FreeValue(jsContext, thisPointer);
+@@ -72,10 +88,19 @@ jboolean InboundCallChannel::disconnect(Context *context, JNIEnv* env, jstring i
    } else if (tag == JS_TAG_BOOL) {
      javaResult = static_cast<jboolean>(JS_VALUE_GET_BOOL(jsResult));
    } else {
 -    assert(false); // Unexpected tag.
-+    // Not a boolean: the guest's bridge is broken. An assert would be compiled out; throw.
++    // Not a boolean: the guest's bridge is broken. An assert would be compiled out; throw, after
++    // freeing the result, as in call() (finalizers can call the host).
++    JS_FreeValue(jsContext, jsResult);
++    jsResult = JS_UNDEFINED;
 +    throwJavaException(env, "java/lang/IllegalStateException",
 +                       "Unexpected result from the inbound disconnect: JS tag %d, expected a boolean",
 +                       static_cast<int>(tag));
@@ -1898,7 +1911,8 @@ index 1c28f0e..5452b09 100644
    }
  
    JS_FreeValue(jsContext, arguments[0]);
-+  JS_FreeValue(jsContext, jsResult); // Upstream never freed it: an object result leaked.
++  // Upstream never freed it: an object result leaked. (Already freed on the unexpected path.)
++  JS_FreeValue(jsContext, jsResult);
    JS_FreeValue(jsContext, thisPointer);
    JS_FreeValue(jsContext, global);
  

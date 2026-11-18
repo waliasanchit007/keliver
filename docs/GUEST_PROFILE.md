@@ -749,16 +749,22 @@ was published outside a scratch Maven repository.
 flags (`-Os -fomit-frame-pointer -DNDEBUG -fvisibility=hidden -fstrict-aliasing`, `MinSizeRel`,
 16 KB pages) plus the patch's `-fwrapv`, NDK 28.0.12674087, for the four ABIs Zipline ships
 (`arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`), and checks in each ABI's compile commands that
-`quickjs.c` got those flags. `dtoa.c` comes in through the CMake glob. `libquickjs.so` (Zipline
-keeps its symbols in the AAR): arm64-v8a 2,618,504 bytes, armeabi-v7a 1,903,660, x86_64 2,464,600,
-x86 2,096,756, **7.6–9.4% above 1.28.0's** (2,432,744, 1,766,772, 2,284,096, 1,916,408).
+`quickjs.c` got those flags (all of them, `-fomit-frame-pointer` and `-g0` included), and with the
+NDK's `llvm-readelf -lW` that every LOAD segment of each ABI's `libquickjs.so` in the AAR is aligned
+for 16 KB pages: 0x4000 on all four ABIs (required of the 64-bit ones). `dtoa.c` comes in through
+the CMake glob. `libquickjs.so` (Zipline keeps its symbols in the AAR): arm64-v8a 2,618,752 bytes,
+armeabi-v7a 1,903,772, x86_64 2,464,728, x86 2,096,868, **7.6–9.4% above 1.28.0's** (2,432,744,
+1,766,772, 2,284,096, 1,916,408: Maven Central's `zipline-android-ndk-1.28.0.aar`, checked against
+its `.sha1`, which `apply.sh android` downloads and compares with).
 
 **Two native fixes** (the step 1 review's Lows), with `QuickJs2026JniTest` (JNI tests: JVM and
 Android, 4 tests):
 - **An unexpected inbound result throws.** Inbound `call` (not a string) and `disconnect` (not a
   boolean) throw `IllegalStateException` naming the JS tag. Upstream had an `assert`, compiled out
   of release builds; step 1 returned `null` and `false`, which the Kotlin side (a non-null
-  `String`) would have trusted.
+  `String`) would have trusted. The unexpected result is freed before the exception is thrown:
+  freeing an object runs finalizers at once, and a `FinalizationRegistry` callback runs guest code
+  that may call the host over JNI, which must not happen with a Java exception pending.
 - **`disconnect` frees its result.** Upstream never freed it, so an object result leaked: 1,000
   disconnects returning an object leave fewer than 10 objects after a GC; without the fix, 2,000
   (the object and its array, each time; measured by the earlier session on its checkout).
@@ -768,18 +774,33 @@ patch carries 1b's version.)
 
 **Checked:**
 - **Zipline's device tests** (`apply.sh test <work> :zipline:connectedAndroidDeviceTest`, on the
-  emulator): 47 classes, **268 run, 266 pass, 2 skipped** (upstream's), 0 failed, among them
+  emulator): 47 classes, **266 run, 264 pass, 2 skipped** (upstream's), 0 failed, among them
   `QuickJs2026Test` (9) and `QuickJs2026JniTest` (4); again with `-PziplineForkLongAsBigInt` (the
-  device test's `kotlin-kotlin-stdlib.js` has `BigInt.asIntN(64`): 268, 0 failed, 2 skipped. Without
+  device test's `kotlin-kotlin-stdlib.js` has `BigInt.asIntN(64`): 266 run, 264 pass, 2 skipped, 0
+  failed. Both runs' JUnit XML: `<testsuites tests="266" failures="0" errors="0" skipped="2">`
+  (Gradle's console says "Starting 266 tests" and then "Finished 268": it counts the 2 skipped
+  twice; the XML is the count of record). Without
   the `zipline-build.init.gradle` wiring, 1.28.0's build gives the device tests no testing JS
-  (it is added only for a `release` build type) and most fail with "file not found".
+  (it is added only for a `release` build type) and most fail with "file not found". These runs
+  predate the review's fixes (below): the device has not run the reordered inbound-result path.
 - **Zipline's JVM tests** on the same checkout: `:zipline:jvmTest` 49 classes, **270 run, 268 pass,
   2 skipped**, plain and with `Long` as BigInt; `:zipline-bytecode:test` 42 (1 skipped:
   `RealBundleTest` without a corpus); `:zipline-cli:test` 12. `check-bigint` (Mac): both patched
   `qjs` builds match Node on all 292 lines, the unpatched ones differ on 76 and 108.
 - **BigInt on the device** (`qjs-android`, `check-bigint-device`): `android/run-js.c` on the fork's
-  engine, built with the NDK and the AAR's flags, matches Node on all 292 lines of `bigint-ops.js` on
-  arm64-v8a (it reports `JS_NAN_BOXING no`, 64-bit limbs); the unpatched release differs on 76.
+  engine, built with the NDK, matches Node on all 292 lines of `bigint-ops.js` on arm64-v8a (it
+  reports `JS_NAN_BOXING no`, 64-bit limbs); the unpatched release differs on 76. That run used
+  Zipline's release flags plus `-fwrapv`; `qjs-android` now takes the AAR's whole compile line for
+  `quickjs.c` (its target, `-mthumb` on armeabi-v7a, `-fstack-protector-strong`,
+  `-D_FORTIFY_SOURCE=2`, `-ffunction-sections` and the rest), and those builds have not yet run on
+  a device.
+- **After the review** (2026-11-18, a fresh `apply.sh all` of the regenerated patch set, no
+  device): `check-bigint` as above; `apply.sh android` with every flag present and every LOAD
+  segment at 0x4000 on all four ABIs; `qjs-android` with the AAR's compile line; `:zipline:jvmTest`
+  49 classes, 270 run, 268 pass, 2 skipped, 0 failed, among them `QuickJs2026JniTest` (4), which
+  covers both unexpected-result paths. `check-bigint-device` now requires the runner's header from
+  both builds (the control proves nothing if it never ran), fails the fork's build on a non-zero
+  exit, and deletes its device directory on any exit.
 - **The three-way guest on the fork** (sample, `-PkeliverComposePrototype`, the benchmark build,
   installed under its own application id): built with `use-fork.init.gradle` (source maps on, as
   Keliver builds since 1b) against the scratch repository, the APK carries the fork's
@@ -796,7 +817,9 @@ patch carries 1b's version.)
 
   The guest's part is about 1.8× faster on "open" and 2.0× on "back" with `Long` as BigInt, in line
   with the Mac (2.46× and 1.99×). APK: 25,245,655 bytes on 1.28.0, 26,023,851 on the fork (+3.1%),
-  26,007,687 with BigInt; the `.zipline` files 3,918,636, 4,168,065 and 4,121,237 bytes.
+  26,007,687 with BigInt (the three APKs, kept in the step's scratch directory); the `.zipline`
+  files 3,918,636, 4,168,065 and 4,121,237 bytes (reported by the session that built them; not in
+  its logs, and not re-measured since: treat them as unverified).
 
 **Not checked:**
 - **32-bit (`JS_NAN_BOXING`).** The only image on this Mac is arm64 API 35, whose ABI list is

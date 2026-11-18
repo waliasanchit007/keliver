@@ -1,10 +1,24 @@
 /*
+ * Copyright (C) 2026 Keliver contributors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/*
  * NF2 step 2: a minimal script runner on the fork's engine, built with the NDK for each Android ABI
  * (`apply.sh qjs-android`) and run on a device or emulator over adb (`apply.sh check-bigint-device`).
  * It runs one script file with a global print(), and reports on stderr how the engine was built
  * for this ABI: NaN-boxed values (JS_NAN_BOXING, 32-bit ABIs) and the BigInt limb size.
- *
- * Copyright (C) 2026 Keliver contributors. Apache License 2.0, as the rest of the patch set.
+ * Exit status: 0 when the script ran, 1 when it threw, 2 when it could not start.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,11 +41,11 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc, JSValue
 static char *read_file(const char *path, size_t *len) {
   FILE *f = fopen(path, "rb");
   if (!f) return NULL;
-  fseek(f, 0, SEEK_END);
+  if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
   long n = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  char *buf = malloc(n + 1);
-  if (!buf || fread(buf, 1, n, f) != (size_t) n) { fclose(f); free(buf); return NULL; }
+  if (n < 0 || fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
+  char *buf = malloc((size_t) n + 1);
+  if (!buf || fread(buf, 1, (size_t) n, f) != (size_t) n) { fclose(f); free(buf); return NULL; }
   buf[n] = '\0';
   fclose(f);
   *len = (size_t) n;
@@ -53,7 +67,9 @@ int main(int argc, char **argv) {
   if (!src) { fprintf(stderr, "run-js: cannot read %s\n", argv[1]); return 2; }
 
   JSRuntime *rt = JS_NewRuntime();
+  if (!rt) { fprintf(stderr, "run-js: JS_NewRuntime failed\n"); free(src); return 2; }
   JSContext *ctx = JS_NewContext(rt);
+  if (!ctx) { fprintf(stderr, "run-js: JS_NewContext failed\n"); JS_FreeRuntime(rt); free(src); return 2; }
   JSValue global = JS_GetGlobalObject(ctx);
   JS_SetPropertyStr(ctx, global, "print", JS_NewCFunction(ctx, js_print, "print", 1));
   JS_FreeValue(ctx, global);

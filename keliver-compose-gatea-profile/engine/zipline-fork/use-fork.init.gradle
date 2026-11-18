@@ -15,7 +15,8 @@
 //
 // -PziplineForkLongAsBigInt links every Kotlin/JS executable (a guest bundle) with `Long` as a JS
 // BigInt (-Xes-long-as-bigint; the link generates JS for every library, so it covers all of them).
-// Only with the fork: QuickJS 2021 cannot parse BigInt.
+// Only with the fork: QuickJS 2021 cannot parse BigInt. It names the links it changed, and warns
+// when the build runs none.
 //
 // --no-daemon: the plugin loads the engine's native library into the Gradle process, so a daemon
 // that already loaded 1.28.0's must not be reused.
@@ -30,6 +31,7 @@ def upstreamVersion = '1.28.0'
 def forkedModules = ['zipline-jvm', 'zipline-bytecode', 'zipline-android', 'zipline-android-ndk']
 def longAsBigInt = startParameter.projectProperties.containsKey('ziplineForkLongAsBigInt')
 if (longAsBigInt && !useFork) throw new GradleException('use-fork.init.gradle: -PziplineForkLongAsBigInt needs the fork')
+def bigIntLinks = Collections.synchronizedSet(new HashSet<String>())
 
 def addRepo = { RepositoryHandler repos ->
   repos.maven {
@@ -78,10 +80,31 @@ allprojects { p ->
     }
   }
   if (longAsBigInt) {
-    p.tasks.configureEach { t ->
-      if (t.name in ['compileProductionExecutableKotlinJs', 'compileDevelopmentExecutableKotlinJs']) {
-        t.compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')
+    // By the model, not by task name: every JavaScript target (js(), or a named one such as
+    // js("guest"), whose link is ...ExecutableKotlinGuest), not wasm; its main compilation's
+    // executables, production and development.
+    p.plugins.withId('org.jetbrains.kotlin.multiplatform') {
+      p.kotlin.targets.matching { it.platformType.name() == 'js' }.all { target ->
+        target.binaries.matching { it.compilation.name == 'main' }.all { b ->
+          if (b.linkTask.name.contains('Executable')) {
+            bigIntLinks << "${p.path == ':' ? '' : p.path}:${b.linkTask.name}".toString()
+            b.linkTask.configure { it.compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint') }
+          }
+        }
       }
+    }
+  }
+}
+if (longAsBigInt) {
+  // Say which links got the flag, and warn when the build runs none of them: a flag that silently
+  // did nothing would measure the fork without BigInt.
+  gradle.taskGraph.whenReady { graph ->
+    def hit = graph.allTasks.collect { it.path }.findAll { it in bigIntLinks }
+    def log = org.gradle.api.logging.Logging.getLogger('use-fork.init.gradle')
+    if (hit.isEmpty()) {
+      log.warn("use-fork.init.gradle: WARNING -PziplineForkLongAsBigInt: none of the tasks to run links a Kotlin/JS executable; Long stays a Kotlin/JS Long")
+    } else {
+      log.lifecycle("use-fork.init.gradle: Long as BigInt (-Xes-long-as-bigint) on ${hit.join(', ')}")
     }
   }
 }

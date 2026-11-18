@@ -14,12 +14,15 @@
 #   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and both qjs builds; fail on any difference
 #   apply.sh android <work>   build the Android AAR (zipline-android-ndk: Zipline's CMake and release
 #                             flags, -fwrapv) for arm64-v8a, armeabi-v7a, x86_64 and x86 with the NDK, and
-#                             check each ABI's libquickjs.so is in it, built with those flags
-#   apply.sh qjs-android <work>   build android/run-js.c on the fork's engine and on the unpatched
-#                             release with the NDK, per ABI, with the AAR's flags (for check-bigint-device)
+#                             check each ABI's libquickjs.so is in it, built with those flags, and (64-bit
+#                             ABIs) every LOAD segment aligned for 16 KB pages (llvm-readelf from the NDK)
+#   apply.sh qjs-android <work>   after android: build android/run-js.c on the fork's engine and on the
+#                             unpatched release with the NDK, per ABI, with the AAR's compile line for
+#                             quickjs.c (its target and every flag; for check-bigint-device)
 #   apply.sh check-bigint-device <work> [serial]   run ../bigint-ops.js on a device or emulator over adb
 #                             (serial, else ANDROID_SERIAL) for every ABI it supports; on a 32-bit ABI
-#                             this exercises NaN-boxed values (JS_NAN_BOXING) and 32-bit limbs
+#                             this exercises NaN-boxed values (JS_NAN_BOXING) and 32-bit limbs; both
+#                             builds must start, and the fork's must exit 0
 #   apply.sh test    <work> [gradle args]   Zipline's own build, e.g. :zipline:jvmTest, or
 #                             :zipline:connectedAndroidDeviceTest (its device tests, on ANDROID_SERIAL)
 #   apply.sh publish <work> <maven repo dir>   publish the forked artifacts (zipline-jvm, zipline-bytecode,
@@ -42,10 +45,10 @@ QJS_VERSION=2026-06-04
 QJS_SHA256=b376e839b322978313d929fd20663b11ba58b75df5a46c126dd19ea2fa70ad2a
 FORK_VERSION=1.28.0-q20260604
 # Android: an installed NDK (AGP would otherwise download its default into the shared SDK), and the
-# ABIs zipline-android-ndk builds (its abiFilters). minSdk is Zipline's.
+# ABIs zipline-android-ndk builds (its abiFilters). qjs-android takes the target (and Zipline's
+# minSdk) from the AAR's own compile line.
 NDK_VERSION="${KELIVER_NDK_VERSION:-28.0.12674087}"
 ANDROID_ABIS="arm64-v8a armeabi-v7a x86_64 x86"
-ANDROID_MIN_SDK=23
 # The engine files Zipline vendors (its update_quickjs.sh), plus dtoa.[ch], new in QuickJS 2025-04.
 QJS_FILES="cutils.c cutils.h dtoa.c dtoa.h libregexp-opcode.h libregexp.c libregexp.h libunicode-table.h
 libunicode.c libunicode.h list.h quickjs-atom.h quickjs-opcode.h quickjs.c quickjs.h VERSION"
@@ -169,33 +172,72 @@ ndk_bin() { # the NDK's LLVM toolchain for this host
   echo "$d/toolchains/llvm/prebuilt/$host/bin"
 }
 
-abi_target() {
-  case "$1" in
-    arm64-v8a) echo "aarch64-linux-android$ANDROID_MIN_SDK" ;;
-    armeabi-v7a) echo "armv7a-linux-androideabi$ANDROID_MIN_SDK" ;;
-    x86_64) echo "x86_64-linux-android$ANDROID_MIN_SDK" ;;
-    x86) echo "i686-linux-android$ANDROID_MIN_SDK" ;;
-  esac
+aar_compile_line() { # <abi>: the AAR's compile line for quickjs.c, one argument per NUL-terminated field
+  local cc
+  cc="$(find "$zl/zipline-android-ndk/.cxx" -path "*/release/$1/compile_commands.json" | head -1)"
+  [ -n "$cc" ] || { echo "$1: no release compile_commands.json under $zl/zipline-android-ndk/.cxx (run android first)" >&2; return 1; }
+  python3 -I -c '
+import json, shlex, sys
+for e in json.load(open(sys.argv[1])):
+    if e["file"].endswith("native/quickjs/quickjs.c"):
+        sys.stdout.write("".join(a + "\0" for a in shlex.split(e["command"])))
+        sys.exit(0)
+sys.exit(sys.argv[1] + ": no compile line for quickjs.c")
+' "$cc"
 }
 
 do_android() { # the AAR, from Zipline's own build (zipline-android-ndk's CMake and release flags)
   zipline_gradle :zipline-android-ndk:assembleRelease
   local aar="$zl/zipline-android-ndk/build/outputs/aar/zipline-android-ndk-release.aar"
-  local listing abi size cc line flag fail=0
+  local bin; bin="$(ndk_bin)"
+  local listing abi size line flag fail=0 so aligns a min tmp base base_listing base_size
   listing="$(unzip -l "$aar")"
+  # The baseline for the sizes: 1.28.0's AAR from Maven Central, checked against its .sha1.
+  local central="https://repo1.maven.org/maven2/app/cash/zipline/zipline-android-ndk/$ZIPLINE_TAG"
+  base="$work/dl/zipline-android-ndk-$ZIPLINE_TAG.aar"
+  mkdir -p "$work/dl"
+  if [ ! -f "$base" ]; then
+    curl -fsS -m 300 -o "$base.tmp" "$central/zipline-android-ndk-$ZIPLINE_TAG.aar" \
+      && [ "$(curl -fsS -m 60 "$central/zipline-android-ndk-$ZIPLINE_TAG.aar.sha1" | awk '{print $1}')" \
+           = "$(shasum -a 1 "$base.tmp" | awk '{print $1}')" ] \
+      && mv "$base.tmp" "$base" || { rm -f "$base.tmp"; echo "android: NOTE 1.28.0's AAR not downloaded or failed its .sha1; no size comparison"; }
+  fi
+  base_listing=""; [ -f "$base" ] && base_listing="$(unzip -l "$base")"
+  tmp="$(mktemp -d)"
+  unzip -q -o "$aar" 'jni/*/libquickjs.so' -d "$tmp"
   for abi in $ANDROID_ABIS; do
     size="$(awk -v f="jni/$abi/libquickjs.so" '$4 == f {print $1}' <<<"$listing")"
     [ -n "$size" ] || { echo "android: $aar has no jni/$abi/libquickjs.so" >&2; fail=1; continue; }
     # The engine's own compile line for this ABI: Zipline's release flags, and -fwrapv (QuickJS 2026's
     # Makefile builds with it; the patch adds it to the CMakeLists).
-    cc="$(find "$zl/zipline-android-ndk/.cxx" -path "*/release/$abi/compile_commands.json" | head -1)"
-    line="$(grep '"command"' "$cc" | grep 'native/quickjs/quickjs\.c' || true)"
-    [ -n "$line" ] || { echo "android: $abi: no compile line for quickjs.c in $cc" >&2; fail=1; continue; }
-    for flag in -fwrapv -Os -DNDEBUG -fvisibility=hidden -fstrict-aliasing "$QJS_VERSION"; do
-      grep -qF -- "$flag" <<<"$line" || { echo "android: $abi: quickjs.c not built with $flag" >&2; fail=1; }
+    line="$(aar_compile_line "$abi" | tr '\0' ' ')" || true
+    [ -n "$line" ] || { echo "android: $abi: no compile line for quickjs.c" >&2; fail=1; continue; }
+    for flag in -fwrapv -Os -DNDEBUG -fvisibility=hidden -fstrict-aliasing -fomit-frame-pointer -g0 \
+        "-DCONFIG_VERSION=\"$QJS_VERSION\""; do
+      grep -qF -- " $flag " <<<" $line " || { echo "android: $abi: quickjs.c not built with $flag" >&2; fail=1; }
     done
-    echo "android: $abi libquickjs.so $size bytes (quickjs.c: -Os -DNDEBUG -fwrapv)"
+    # 16 KB pages (Android 15+ devices with 16 KB pages, and Play, require it of 64-bit libraries):
+    # every LOAD segment of the library in the AAR aligned to at least 0x4000. Zipline's
+    # CMakeLists links with -Wl,-z,max-page-size=16384; this checks the result, not the flag.
+    so="$tmp/jni/$abi/libquickjs.so"
+    aligns="$("$bin/llvm-readelf" -lW "$so" | awk '$1 == "LOAD" {print $NF}' | sort -u | tr '\n' ' ')"
+    min=""
+    for a in $aligns; do
+      if [ -z "$min" ] || [ $((a)) -lt $((min)) ]; then min="$a"; fi
+    done
+    if [ -z "$min" ]; then
+      echo "android: $abi: no LOAD segments in libquickjs.so" >&2; fail=1
+    elif [ $((min)) -lt $((0x4000)) ]; then
+      case "$abi" in
+        arm64-v8a|x86_64) echo "android: $abi: libquickjs.so LOAD alignment $aligns, below 16 KB (0x4000)" >&2; fail=1 ;;
+        *) echo "android: $abi: NOTE libquickjs.so LOAD alignment $aligns, below 16 KB (no 32-bit device has 16 KB pages)" ;;
+      esac
+    fi
+    base_size="$(awk -v f="jni/$abi/libquickjs.so" '$4 == f {print $1}' <<<"$base_listing")"
+    [ -n "$base_size" ] && base_size=", $ZIPLINE_TAG's $base_size ($(awk -v a="$size" -v b="$base_size" 'BEGIN {printf "%+.1f%%", (a - b) * 100 / b}'))"
+    echo "android: $abi libquickjs.so $size bytes$base_size, LOAD align ${aligns% } (quickjs.c: -Os -DNDEBUG -fwrapv)"
   done
+  rm -rf "$tmp"
   [ $fail = 0 ] && echo "android: $aar"
   return $fail
 }
@@ -205,59 +247,88 @@ do_qjs_android() { # android/run-js.c on the fork's engine (as in the AAR) and o
   engine_sources # a fresh, unpatched $work/src/quickjs-$QJS_VERSION: the control
   local patched="$zl/zipline/native/quickjs" unpatched="$work/src/quickjs-$QJS_VERSION"
   [ -f "$patched/dtoa.c" ] || { echo "run engine first" >&2; exit 1; }
-  local v; v="$(tr -d '\r\n' < "$patched/VERSION")"
-  # zipline-android-ndk's release flags (its build.gradle.kts and CMakeLists.txt), as an executable.
-  local flags=(-std=gnu99 -fstrict-aliasing -g0 -Os -fomit-frame-pointer -DNDEBUG -fwrapv -fPIE -pie -w
-    "-DCONFIG_VERSION=\"$v\"")
-  local abi src name out
+  local abi src name out a skip
   for abi in $ANDROID_ABIS; do
+    # The AAR's own compile line for quickjs.c on this ABI (run `android` first): its target, sysroot
+    # and every flag (Zipline's release flags, the NDK's defaults such as -mthumb on armeabi-v7a and
+    # -fstack-protector-strong, and -fwrapv), as an executable: without the compiler, the source,
+    # -o/-c, -fPIC and the shared library's -Dquickjs_EXPORTS; with -fPIE -pie, and -w.
+    local flags=() line=()
+    while IFS= read -r -d '' a; do line+=("$a"); done < <(aar_compile_line "$abi")
+    [ ${#line[@]} -gt 0 ] || { echo "qjs-android: $abi: no AAR compile line (run android first)" >&2; exit 1; }
+    skip=1 # the compiler
+    for a in "${line[@]}"; do
+      if [ $skip = 1 ]; then skip=0; continue; fi
+      case "$a" in
+        -o|-c) skip=1 ;;
+        -fPIC|-Dquickjs_EXPORTS) ;;
+        *) flags+=("$a") ;;
+      esac
+    done
     for name in run-js run-js-unpatched; do
       case "$name" in *unpatched) src="$unpatched" ;; *) src="$patched" ;; esac
       out="$work/build/android/$abi/$name"
       mkdir -p "$(dirname "$out")"
-      "$bin/clang" --target="$(abi_target "$abi")" "${flags[@]}" -I"$src" "$here/android/run-js.c" \
+      "$bin/clang" "${flags[@]}" -fPIE -pie -w -I"$src" "$here/android/run-js.c" \
         "$src/cutils.c" "$src/dtoa.c" "$src/libregexp.c" "$src/libunicode.c" "$src/quickjs.c" -lm -o "$out"
     done
-    echo "qjs-android: $abi: $work/build/android/$abi/{run-js,run-js-unpatched}"
+    echo "qjs-android: $abi: $work/build/android/$abi/{run-js,run-js-unpatched} (${flags[*]})"
   done
 }
+
+# check-bigint-device's device and directory, global for the EXIT trap that deletes the directory.
+dev_adb=()
+dev_dir=/data/local/tmp/keliver-nf2-bigint
+dev_cleanup() { [ ${#dev_adb[@]} -gt 0 ] && "${dev_adb[@]}" shell "rm -rf $dev_dir" >/dev/null 2>&1 || true; }
 
 do_check_bigint_device() {
   local serial="${3:-${ANDROID_SERIAL:-}}"
   [ -n "$serial" ] || { echo "check-bigint-device: give a serial (or set ANDROID_SERIAL)" >&2; exit 2; }
   local adb_bin; adb_bin="$(sdk_dir)/platform-tools/adb"; [ -x "$adb_bin" ] || adb_bin=adb
-  local adb=("$adb_bin" -s "$serial") dir=/data/local/tmp/keliver-nf2-bigint
+  dev_adb=("$adb_bin" -s "$serial")
+  local adb=("${dev_adb[@]}") dir="$dev_dir"
   local ops="$here/../bigint-ops.js" out="$work/bigint-check/device-$serial"
   mkdir -p "$out"
   node "$ops" > "$out/node.txt"
-  local lines abis abi name fail=0 ran=0 ran32=0 header
+  local lines abis abi name fail=0 ran=0 ran32=0 header rc
   lines="$(wc -l < "$out/node.txt" | tr -d ' ')"
   abis="$("${adb[@]}" shell getprop ro.product.cpu.abilist | tr -d '\r')"
   echo "check-bigint-device: $serial supports $abis"
+  trap dev_cleanup EXIT
   "${adb[@]}" shell "rm -rf $dir && mkdir -p $dir" >/dev/null
-  "${adb[@]}" push "$ops" "$dir/bigint-ops.js" >/dev/null 2>&1
+  "${adb[@]}" push "$ops" "$dir/bigint-ops.js" >/dev/null # a failed push stops the script
   for abi in $ANDROID_ABIS; do
     case ",$abis," in *",$abi,"*) ;; *) echo "check-bigint-device: $abi: not supported by $serial, not run"; continue ;; esac
     for name in run-js run-js-unpatched; do
       [ -f "$work/build/android/$abi/$name" ] || { echo "run qjs-android first" >&2; exit 1; }
-      "${adb[@]}" push "$work/build/android/$abi/$name" "$dir/$abi-$name" >/dev/null 2>&1
-      # The unpatched release may loop on some lines (as on the Mac): bound each run.
-      "${adb[@]}" shell "cd $dir && chmod 755 $abi-$name && timeout 120 ./$abi-$name bigint-ops.js 2> $abi-$name.err" \
+      "${adb[@]}" push "$work/build/android/$abi/$name" "$dir/$abi-$name" >/dev/null
+      # The unpatched release may loop on some lines (as on the Mac): bound each run. The exit status
+      # goes to a file (an adb without the shell protocol does not return it).
+      "${adb[@]}" shell "cd $dir && chmod 755 $abi-$name && timeout 120 ./$abi-$name bigint-ops.js 2> $abi-$name.err; echo \$? > $abi-$name.rc" \
         > "$out/$abi-$name.txt" || true
-      header="$("${adb[@]}" shell cat "$dir/$abi-$name.err" | tr -d '\r' | head -1)"
+      header="$("${adb[@]}" shell cat "$dir/$abi-$name.err" 2>/dev/null | tr -d '\r' | head -1)" || true
+      rc="$("${adb[@]}" shell cat "$dir/$abi-$name.rc" 2>/dev/null | tr -d '\r\n')" || true
       tr -d '\r' < "$out/$abi-$name.txt" > "$out/$abi-$name.tmp" && mv "$out/$abi-$name.tmp" "$out/$abi-$name.txt"
+      # Both builds must have started (the header run-js.c prints first), or the control proves nothing.
+      case "$header" in
+        run-js:*) ;;
+        *) echo "check-bigint-device: $abi $name did not start (exit ${rc:-?}: ${header:-no output})" >&2; fail=1; continue ;;
+      esac
       if diff -u "$out/node.txt" "$out/$abi-$name.txt" > "$out/$abi-$name.diff"; then
-        echo "check-bigint-device: $abi $name matches Node on all $lines lines ($header)"
+        echo "check-bigint-device: $abi $name matches Node on all $lines lines, exit $rc ($header)"
         case "$name" in *unpatched) echo "check-bigint-device: the control did not fail; the check is too weak" >&2; fail=1 ;; esac
       else
-        echo "check-bigint-device: $abi $name differs from Node on $(grep -c '^-[^-]' "$out/$abi-$name.diff") of $lines lines ($header)"
+        echo "check-bigint-device: $abi $name differs from Node on $(grep -c '^-[^-]' "$out/$abi-$name.diff") of $lines lines, exit $rc ($header)"
         case "$name" in *unpatched) ;; *) fail=1 ;; esac
       fi
+      # The fork's build must also exit cleanly (an exception after the last line would not show in the diff).
+      case "$name" in *unpatched) ;; *) [ "$rc" = 0 ] || { echo "check-bigint-device: $abi $name exited ${rc:-?}" >&2; fail=1; } ;; esac
     done
     ran=$((ran + 1))
     case "$abi" in armeabi-v7a|x86) ran32=$((ran32 + 1)) ;; esac
   done
-  "${adb[@]}" shell "rm -rf $dir" >/dev/null
+  dev_cleanup
+  trap - EXIT
   [ $ran -gt 0 ] || { echo "check-bigint-device: no ABI ran" >&2; fail=1; }
   [ $ran32 -gt 0 ] || echo "check-bigint-device: NOTE no 32-bit ABI on $serial: JS_NAN_BOXING not exercised (needs an armeabi-v7a or x86 image or device)"
   return $fail
