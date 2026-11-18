@@ -21,6 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -28,7 +30,7 @@ import kotlinx.coroutines.flow.filterNotNull
  * Names a result a screen hands back to the screen below it, with its type:
  *
  * ```
- * val PickedColor = KeliverNavResultKey<String>("pickedColor")
+ * val PickedColor = keliverNavResultKey<String>("pickedColor")
  *
  * // In the picker:
  * nav.popWithResult(PickedColor, "teal")
@@ -37,14 +39,46 @@ import kotlinx.coroutines.flow.filterNotNull
  * LaunchedOnResult(PickedColor) { color -> viewModel.setColor(color) }
  * ```
  *
- * Keys are compared by identity, not by [name] (which is for logs): declare each key once, as a
- * top-level `val`, and use that one value on both sides. Two keys with one name and different types
- * are then different keys, so a result never reaches a listener that expects another type.
+ * A key made by [keliverNavResultKey] equals every other such key with the same [name] and the same
+ * type, so a key written again where it is used (even one made anew on each recomposition) still
+ * matches, and two keys with one name and different types never do: a result never reaches a
+ * listener that expects another type.
+ *
+ * Write the type argument explicitly where a key is made inline
+ * (`keliverNavResultKey<Item>("item")`), or declare the key once as a `val`: an inferred type comes
+ * from each call site (the value passed to [popWithResult], or the listener's parameter), and the
+ * match is exact (no subtypes; nullability counts), so `Book` sent to an `Item` listener is never
+ * delivered, without an error.
+ *
+ * A key made with the constructor has no type to compare, so it is compared by identity: declare it
+ * once, as a top-level `val`, and use that one value on both sides. It never equals a key made by
+ * [keliverNavResultKey].
  */
 @ExperimentalKeliverNavRetentionApi
-public class KeliverNavResultKey<T>(public val name: String) {
-  override fun toString(): String = "KeliverNavResultKey($name)"
+public class KeliverNavResultKey<T> @PublishedApi internal constructor(
+  public val name: String,
+  private val type: KType?,
+) {
+  /** A key compared by identity. Prefer [keliverNavResultKey], which compares name and type. */
+  public constructor(name: String) : this(name, null)
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (type == null || other !is KeliverNavResultKey<*> || other.type == null) return false
+    return name == other.name && type == other.type
+  }
+
+  override fun hashCode(): Int = if (type == null) super.hashCode() else 31 * name.hashCode() + type.hashCode()
+
+  override fun toString(): String = if (type == null) "KeliverNavResultKey($name)" else "KeliverNavResultKey($name: $type)"
 }
+
+/**
+ * A result key named [name] for results of type [T], equal to every other key made here with the
+ * same name and type (see [KeliverNavResultKey]).
+ */
+@ExperimentalKeliverNavRetentionApi
+public inline fun <reified T> keliverNavResultKey(name: String): KeliverNavResultKey<T> = KeliverNavResultKey(name, typeOf<T>())
 
 /** The [KeliverNavHost] entry being composed, or null outside one. */
 internal val LocalKeliverNavEntry = staticCompositionLocalOf<NavEntry<*>?> { null }
@@ -56,7 +90,8 @@ internal val LocalKeliverNavEntry = staticCompositionLocalOf<NavEntry<*>?> { nul
  * A retained screen below the top receives the result as the pop shows it, without being composed
  * again. A screen that was disposed (not retained) receives it when it is composed again on the way
  * back. A result is for the visit it was passed to: one nobody has received by the time the screen
- * is covered again (no [LaunchedOnResult] for its key was composed) is dropped, never delivered late.
+ * is covered again (no [LaunchedOnResult] for its key was composed) is dropped, never delivered late;
+ * so is one followed by a [KeliverNavController.navigate] in the same frame.
  * Results are not saved: one not yet received when the guest is recreated is lost.
  * Outside a [KeliverNavHost] (a preview, a test of the screen alone) nothing is delivered.
  */

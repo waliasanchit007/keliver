@@ -134,19 +134,27 @@ internal class ComposeUiExtraRetained :
       return widgets.lastIndex
     }
 
-  /** Whether a back press now would be handled here, on the host. */
+  /**
+   * Whether a back press now would be handled here, on the host. Every condition [goBack] needs is
+   * here, so [goBack] fails only when this is false: a callback that passes a press on (and disables
+   * itself) is then removed and added again as this changes. (If this goes false and true again within
+   * one frame, a callback that disabled itself on the failed press stays off until it next changes.)
+   */
   internal val canGoBack: Boolean
-    get() {
-      val index = shownIndex
-      if (index <= 0 || onBack == null) return false
-      return (entries.widgets[index] as? ComposeUiExtraRetainedEntry)?.hostBack == true
-    }
+    get() = keyBelowShown() != null
+
+  /** The key of the entry below the shown one, if the host may go back to it; else null. */
+  private fun keyBelowShown(): String? {
+    val index = shownIndex
+    if (index <= 0 || onBack == null) return null
+    val widgets = entries.widgets
+    if ((widgets[index] as? ComposeUiExtraRetainedEntry)?.hostBack != true) return null
+    return (widgets[index - 1] as? ComposeUiExtraRetainedEntry)?.key
+  }
 
   /** Shows the entry below the shown one and tells the guest; false if this stack cannot go back. */
   internal fun goBack(): Boolean {
-    if (!canGoBack) return false
-    val below = entries.widgets[shownIndex - 1] as? ComposeUiExtraRetainedEntry ?: return false
-    val key = below.key ?: return false
+    val key = keyBelowShown() ?: return false
     hostShown = key
     sent++
     onBack?.invoke(key)

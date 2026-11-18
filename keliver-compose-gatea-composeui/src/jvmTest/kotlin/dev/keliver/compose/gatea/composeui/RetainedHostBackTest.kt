@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,7 +30,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
@@ -40,6 +40,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.unit.dp
 import dev.keliver.compose.BackHandler
 import dev.keliver.compose.foundation.clickable as guestClickable
 import dev.keliver.compose.foundation.layout.fillMaxSize
@@ -53,7 +54,6 @@ import dev.keliver.nav.KeliverNavRetention
 import dev.keliver.nav.KeliverRetainedStack
 import dev.keliver.ui.Cancellable
 import dev.keliver.ui.OnBackPressedCallback
-import dev.keliver.ui.OnBackPressedDispatcher
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -352,6 +352,29 @@ class RetainedHostBackTest {
   }
 
   @Test
+  fun aStackTakesPressesOnlyWhenItCanShowTheEntryBelow() = runComposeUiTest {
+    // goBack() fails only when canGoBack is false: an entry below with no key yet is not a place to
+    // go back to, so no callback is added (before, one was, and it switched itself off for good).
+    val sent = mutableListOf<String>()
+    val stack = ComposeUiExtraRetained().apply { onBack { sent += it } }
+    val below = ComposeUiExtraRetainedEntry().apply { hostBack(true) }
+    stack.entries.insert(0, below)
+    stack.entries.insert(1, entry("b", null))
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { stack.value(Modifier) }
+    }
+    waitForIdle()
+    assertEquals(false, stack.canGoBack)
+    assertEquals(0, back.callbacks.size, "nothing to go back to: no callback")
+
+    runOnIdle { below.key("a") }
+    waitForIdle()
+    assertEquals(1, back.callbacks.size, "the entry below has a key: the stack takes presses")
+    runOnIdle { assertTrue(back.press()) }
+    assertEquals(listOf("a"), sent)
+  }
+
+  @Test
   fun aHiddenEntryStopsHostAnimationsAndSeesNoDispatcher() = runComposeUiTest {
     val stack = ComposeUiExtraRetained().apply { onBack {} }
     val probe = Probe()
@@ -366,6 +389,27 @@ class RetainedHostBackTest {
     waitForIdle()
     assertEquals(true, probe.hidden, "the shimmer reads this and stops its transition")
     assertEquals(null, probe.dispatcher)
+  }
+
+  /** Whether anything in the composition waits for a frame (a running animation always does). */
+  private fun framesAsked(): Boolean = Recomposer.runningRecomposers.value.any { it.hasPendingWork }
+
+  @Test
+  fun aHiddenShimmerAsksForNoFramesAndAnimatesAgainWhenShown() = runComposeUiTest {
+    mainClock.autoAdvance = false
+    val stack = ComposeUiExtraRetained().apply { onBack {} }
+    stack.entries.insert(0, entry("a", ComposeUiExtraShimmer()))
+    setContent { stack.value(Modifier) }
+    mainClock.advanceTimeBy(500)
+    assertTrue(framesAsked(), "shown, the shimmer animates")
+
+    runOnUiThread { stack.entries.insert(1, entry("b", null)) }
+    mainClock.advanceTimeBy(500)
+    assertEquals(false, framesAsked(), "hidden, the shimmer asks for no frames")
+
+    runOnUiThread { stack.entries.remove(1, 1) }
+    mainClock.advanceTimeBy(500)
+    assertTrue(framesAsked(), "shown again, it animates")
   }
 
   @Test
