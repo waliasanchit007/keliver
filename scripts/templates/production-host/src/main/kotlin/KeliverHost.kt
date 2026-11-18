@@ -1227,8 +1227,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
   /**
    * NF4: drops every prefetched response not taken yet (KeliverConfig.prefetch; HostPrefetch.kt).
-   * Call it when the user signs out or changes, so a screen of the next user never gets the
-   * previous one's answer. (A request other than a GET through HostHttp does the same by itself.)
+   * Call it when the user signs in, signs out or changes, so a screen never gets an answer fetched
+   * for another session. (A request other than a GET through HostHttp does the same by itself.)
    * From any thread.
    */
   fun discardPrefetched() {
@@ -1244,7 +1244,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * That costs the prefetch the time between the Application's onCreate and the first activity's
    * (less than the 359 ms from the process start to Activity.onCreate on the A12, NF0); the guest
    * asks about 1 s after that, so the answer is normally there first. A start() called after
-   * the first activity was created prefetches at the next activity's creation.
+   * the first activity was created (or a process restored straight into a deep screen) prefetches
+   * at the next activity's creation, which can cost one unused GET.
    */
   private fun watchForUiStart() {
     val prefetched = prefetched ?: return

@@ -1194,13 +1194,16 @@ for byte):
     first activity's creation (`onActivityPreCreated`; the host watches for it
     from `KeliverHost.start()`). A process started for a push, a job, a boot or
     a broadcast that shows nothing sends nothing. Call `start()` from
-    `Application.onCreate` (as `HostApp` does); a later `start()` prefetches at
-    the next activity's creation.
+    `Application.onCreate` (as `HostApp` does); a later `start()`, or a process
+    restored straight into a deep screen, prefetches at the next activity's
+    creation, which can cost one unused GET.
   - **Who it is for:** it goes out through your `httpClient`, with your
     credentials as they are then. **Restore your session before
     `keliver.start()`**, and call **`keliver.discardPrefetched()`** when the
-    user signs out or changes, so the next user's screen never gets the
-    previous one's answer.
+    user signs in, signs out or changes, so a screen never gets an answer
+    fetched for another session. **If your first activity establishes the
+    session** (a PIN, biometric or login screen), **don't declare a prefetch**:
+    it would go out before the session exists.
   - **When the screen takes it:** only when its request is the SAME request
     (GET, the same path and query, no body, no header of its own besides the
     ones the host drops), once, within 5 s of the answer's arrival, and only a
