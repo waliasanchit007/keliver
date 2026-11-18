@@ -1985,12 +1985,257 @@ index ba1d5b9..9205e67 100644
 +  }
    return jsContext;
  }
+diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/BigIntOpsTest.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/BigIntOpsTest.kt
+new file mode 100644
+index 0000000..385c03e
+--- /dev/null
++++ b/zipline/src/hostTest/kotlin/app/cash/zipline/BigIntOpsTest.kt
+@@ -0,0 +1,73 @@
++/*
++ * Copyright (C) 2026 Keliver contributors
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package app.cash.zipline
++
++import app.cash.zipline.testing.isJni
++import app.cash.zipline.testing.systemFileSystem
++import app.cash.zipline.testing.ziplineRootOrNull
++import kotlin.test.AfterTest
++import kotlin.test.Test
++import kotlin.test.fail
++import okio.Path
++
++/**
++ * Keliver's fork (NF2 step 3): Keliver's `bigint-ops.js` (the 64-bit operations Kotlin's Long as
++ * BigInt relies on, and `asUintN`/`asIntN` at every width) through Zipline's own engine on this host,
++ * against Node's output. `apply.sh check-bigint-zipline` puts the script and Node's output in
++ * `build/keliver-bigint/` and runs this test; it writes what the engine printed next to them
++ * (`zipline-jni.txt` on the JVM, `zipline-native.txt` on iOS), which the script compares with Node's
++ * again. Without those files (any other run of Zipline's tests, or Android, which has no checkout)
++ * there is nothing to compare and it does nothing.
++ */
++class BigIntOpsTest {
++  private val quickJs = QuickJs.create()
++
++  @AfterTest fun tearDown() {
++    quickJs.close()
++  }
++
++  @Test fun bigIntOpsMatchNode() {
++    val dir = ziplineRootOrNull?.div("build/keliver-bigint") ?: return
++    val script = dir / "bigint-ops.js"
++    val expected = dir / "node.txt"
++    if (!systemFileSystem.exists(script) || !systemFileSystem.exists(expected)) {
++      println("BigIntOpsTest: no $script or $expected; not run (apply.sh check-bigint-zipline)")
++      return
++    }
++
++    // bigint-ops.js prints with print() when there is one (qjs), else console.log (Node).
++    quickJs.evaluate("globalThis.__printed = []; globalThis.print = function (s) { __printed.push(String(s)); };")
++    quickJs.evaluate(read(script), "bigint-ops.js")
++    val actual = quickJs.evaluate("__printed.join('\\n') + '\\n'") as String
++
++    val out = dir / (if (isJni) "zipline-jni.txt" else "zipline-native.txt")
++    systemFileSystem.write(out) { writeUtf8(actual) }
++
++    val want = read(expected).lines()
++    val got = actual.lines()
++    val differing = want.indices.count { it >= got.size || got[it] != want[it] } + maxOf(0, got.size - want.size)
++    if (differing != 0) {
++      val first = want.indices.firstOrNull { it >= got.size || got[it] != want[it] } ?: want.size
++      fail(
++        "$differing of ${want.size} lines differ from Node ($out); first at line ${first + 1}: " +
++          "expected <${want.getOrNull(first)}> but was <${got.getOrNull(first)}>",
++      )
++    }
++    println("BigIntOpsTest: all ${want.size - 1} lines match Node ($out)")
++  }
++
++  private fun read(path: Path): String = systemFileSystem.read(path) { readUtf8() }
++}
+diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026InboundChannelTest.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026InboundChannelTest.kt
+new file mode 100644
+index 0000000..82bcab6
+--- /dev/null
++++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026InboundChannelTest.kt
+@@ -0,0 +1,160 @@
++/*
++ * Copyright (C) 2026 Keliver contributors
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package app.cash.zipline
++
++import app.cash.zipline.internal.bridge.INBOUND_CHANNEL_NAME
++import kotlin.test.AfterTest
++import kotlin.test.Test
++import kotlin.test.assertEquals
++import kotlin.test.assertFailsWith
++import kotlin.test.assertTrue
++
++/**
++ * Keliver's fork (NF2), on every host (JNI on the JVM and Android, Kotlin/Native on iOS): an inbound
++ * call or disconnect whose JavaScript returns the wrong type throws [IllegalStateException]
++ * (upstream's JNI layer left the result unset behind an assert that release builds compile out;
++ * its iOS layer threw a cast exception before freeing anything), and every value is freed on every
++ * path: a wrong type, a JavaScript exception, and disconnect's argument and result.
++ *
++ * [tearDown] closes the engine, so a leaked object fails these tests on iOS too: QuickJS is built
++ * there with its asserts, and JS_FreeRuntime asserts that no object is left.
++ */
++class QuickJs2026InboundChannelTest {
++  private val quickJs = QuickJs.create()
++
++  @AfterTest fun tearDown() {
++    quickJs.close()
++  }
++
++  private fun inboundReturns(callResult: String, disconnectResult: String) {
++    quickJs.evaluate(
++      """
++      globalThis.$INBOUND_CHANNEL_NAME = {
++        call: function(callJson) { return $callResult; },
++        disconnect: function(instanceName) { return $disconnectResult; },
++      };
++      """.trimIndent(),
++    )
++  }
++
++  @Test fun inboundCallWithANonStringResultThrows() {
++    inboundReturns(callResult = "42", disconnectResult = "true")
++    val t = assertFailsWith<IllegalStateException> {
++      quickJs.getInboundChannel().call("first")
++    }
++    assertTrue(t.message!!.startsWith("Unexpected result from the inbound call"), t.message)
++
++    // The context is still usable.
++    inboundReturns(callResult = "'ok'", disconnectResult = "true")
++    assertEquals("ok", quickJs.getInboundChannel().call("second"))
++  }
++
++  @Test fun inboundCallWithAnUndefinedResultThrows() {
++    inboundReturns(callResult = "undefined", disconnectResult = "true")
++    assertFailsWith<IllegalStateException> {
++      quickJs.getInboundChannel().call("first")
++    }
++  }
++
++  @Test fun inboundDisconnectWithANonBooleanResultThrows() {
++    inboundReturns(callResult = "'ok'", disconnectResult = "'yes'")
++    val t = assertFailsWith<IllegalStateException> {
++      quickJs.getInboundChannel().disconnect("one")
++    }
++    assertTrue(t.message!!.startsWith("Unexpected result from the inbound disconnect"), t.message)
++  }
++
++  @Test fun inboundCallWithAnObjectResultFreesIt() {
++    inboundReturns(callResult = "{ leaked: [1, 2, 3] }", disconnectResult = "true")
++    val channel = quickJs.getInboundChannel()
++    // The first call may allocate shapes and atoms; measure after it.
++    assertFailsWith<IllegalStateException> { channel.call("warm-up") }
++    quickJs.gc()
++    val before = quickJs.memoryUsage.objectsCount
++    repeat(1_000) {
++      assertFailsWith<IllegalStateException> { channel.call("call $it") }
++    }
++    quickJs.gc()
++    val after = quickJs.memoryUsage.objectsCount
++    assertTrue(after - before < 10, "objects before $before, after $after")
++  }
++
++  @Test fun inboundDisconnectFreesItsResult() {
++    // An object result was never freed: its reference count stayed at one, so not even a GC
++    // could collect it. 1,000 disconnects must not leave 1,000 objects behind.
++    inboundReturns(callResult = "'ok'", disconnectResult = "{ leaked: [1, 2, 3] }")
++    val channel = quickJs.getInboundChannel()
++    // The first call may allocate shapes and atoms; measure after it.
++    assertFailsWith<IllegalStateException> { channel.disconnect("warm-up") }
++    quickJs.gc()
++    val before = quickJs.memoryUsage.objectsCount
++    repeat(1_000) {
++      assertFailsWith<IllegalStateException> { channel.disconnect("instance $it") }
++    }
++    quickJs.gc()
++    val after = quickJs.memoryUsage.objectsCount
++    assertTrue(after - before < 10, "objects before $before, after $after")
++  }
++
++  @Test fun inboundDisconnectFreesItsArgument() {
++    // Upstream's iOS layer never freed the instance name: one string per disconnect.
++    inboundReturns(callResult = "'ok'", disconnectResult = "true")
++    val channel = quickJs.getInboundChannel()
++    assertTrue(channel.disconnect("warm-up"))
++    quickJs.gc()
++    val before = quickJs.memoryUsage.stringsCount
++    repeat(1_000) {
++      assertTrue(channel.disconnect("instance $it"))
++    }
++    quickJs.gc()
++    val after = quickJs.memoryUsage.stringsCount
++    assertTrue(after - before < 10, "strings before $before, after $after")
++  }
++
++  @Test fun inboundCallThatThrowsFreesEverything() {
++    // A JavaScript exception: upstream's iOS layer threw it before freeing the result's receiver,
++    // the global object, the atom and the argument; closing the engine then failed QuickJS's
++    // assert that no object is left.
++    quickJs.evaluate(
++      """
++      globalThis.$INBOUND_CHANNEL_NAME = {
++        call: function(callJson) { throw new Error('boom: ' + callJson); },
++        disconnect: function(instanceName) { throw new Error('bang: ' + instanceName); },
++      };
++      """.trimIndent(),
++    )
++    val channel = quickJs.getInboundChannel()
++    quickJs.gc()
++    val objectsBefore = quickJs.memoryUsage.objectsCount
++    val stringsBefore = quickJs.memoryUsage.stringsCount
++    repeat(100) {
++      // The first line: on iOS the message goes on with the JavaScript stack.
++      val call = assertFailsWith<QuickJsException> { channel.call("call $it") }
++      assertEquals("boom: call $it", call.message!!.lineSequence().first())
++      val disconnect = assertFailsWith<QuickJsException> { channel.disconnect("instance $it") }
++      assertEquals("bang: instance $it", disconnect.message!!.lineSequence().first())
++    }
++    quickJs.gc()
++    val objectsAfter = quickJs.memoryUsage.objectsCount
++    val stringsAfter = quickJs.memoryUsage.stringsCount
++    assertTrue(objectsAfter - objectsBefore < 10, "objects before $objectsBefore, after $objectsAfter")
++    assertTrue(stringsAfter - stringsBefore < 10, "strings before $stringsBefore, after $stringsAfter")
++
++    // The context is still usable.
++    inboundReturns(callResult = "'ok'", disconnectResult = "true")
++    assertEquals("ok", quickJs.getInboundChannel().call("after"))
++  }
++}
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..7a60b17
+index 0000000..25d8f57
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,156 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -2063,6 +2308,19 @@ index 0000000..7a60b17
 +    assertEquals(2, quickJs.evaluate("sourceTextOfF(1)"))
 +    // What 1.28.0 (QuickJS 2021) gave for any function loaded from bytecode.
 +    assertEquals("function sourceTextOfF() {\n    [native code]\n}", quickJs.evaluate("sourceTextOfF.toString()"))
++  }
++
++  /**
++   * `evaluate` compiles through `compile` on every host (JNI and Kotlin/Native alike; 1.28.0 has no
++   * separate eval), so an evaluated function has no source text either (step 3). Run on the JVM and
++   * the iOS simulator; it is in Android's device tests too, which step 3 did not run.
++   */
++  @Test fun evaluateLeavesOutFunctionSource() {
++    assertEquals(
++      "function evaluatedF() {\n    [native code]\n}",
++      quickJs.evaluate("function evaluatedF(a) { return a + 1; }; evaluatedF.toString()"),
++    )
++    assertEquals(3, quickJs.evaluate("evaluatedF(2)"))
 +  }
 +
 +  @Test fun asUintNIsGeneral() {
@@ -2199,103 +2457,6 @@ index 3dc6fff..d7fdfdd 100644
          )
        }
      }
-diff --git a/zipline/src/jniTest/kotlin/app/cash/zipline/QuickJs2026JniTest.kt b/zipline/src/jniTest/kotlin/app/cash/zipline/QuickJs2026JniTest.kt
-new file mode 100644
-index 0000000..9a299de
---- /dev/null
-+++ b/zipline/src/jniTest/kotlin/app/cash/zipline/QuickJs2026JniTest.kt
-@@ -0,0 +1,91 @@
-+/*
-+ * Copyright (C) 2026 Keliver contributors
-+ *
-+ * Licensed under the Apache License, Version 2.0 (the "License");
-+ * you may not use this file except in compliance with the License.
-+ * You may obtain a copy of the License at
-+ *
-+ *      http://www.apache.org/licenses/LICENSE-2.0
-+ *
-+ * Unless required by applicable law or agreed to in writing, software
-+ * distributed under the License is distributed on an "AS IS" BASIS,
-+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+ * See the License for the specific language governing permissions and
-+ * limitations under the License.
-+ */
-+package app.cash.zipline
-+
-+import app.cash.zipline.internal.bridge.INBOUND_CHANNEL_NAME
-+import kotlin.test.assertEquals
-+import kotlin.test.assertFailsWith
-+import kotlin.test.assertTrue
-+import org.junit.After
-+import org.junit.Test
-+
-+/**
-+ * Keliver's fork (NF2), the JNI layer only (JVM and Android): an inbound call or disconnect whose
-+ * JavaScript returns the wrong type throws a Java exception (upstream left the result unset, behind
-+ * an assert that release builds compile out), and disconnect frees its result.
-+ */
-+class QuickJs2026JniTest {
-+  private val quickJs = QuickJs.create()
-+
-+  @After fun tearDown() {
-+    quickJs.close()
-+  }
-+
-+  private fun inboundReturns(callResult: String, disconnectResult: String) {
-+    quickJs.evaluate(
-+      """
-+      globalThis.$INBOUND_CHANNEL_NAME = {
-+        call: function(callJson) { return $callResult; },
-+        disconnect: function(instanceName) { return $disconnectResult; },
-+      };
-+      """.trimIndent(),
-+    )
-+  }
-+
-+  @Test fun inboundCallWithANonStringResultThrows() {
-+    inboundReturns(callResult = "42", disconnectResult = "true")
-+    val t = assertFailsWith<IllegalStateException> {
-+      quickJs.getInboundChannel().call("first")
-+    }
-+    assertTrue(t.message!!.startsWith("Unexpected result from the inbound call"), t.message)
-+
-+    // The context is still usable.
-+    inboundReturns(callResult = "'ok'", disconnectResult = "true")
-+    assertEquals("ok", quickJs.getInboundChannel().call("second"))
-+  }
-+
-+  @Test fun inboundCallWithAnUndefinedResultThrows() {
-+    inboundReturns(callResult = "undefined", disconnectResult = "true")
-+    assertFailsWith<IllegalStateException> {
-+      quickJs.getInboundChannel().call("first")
-+    }
-+  }
-+
-+  @Test fun inboundDisconnectWithANonBooleanResultThrows() {
-+    inboundReturns(callResult = "'ok'", disconnectResult = "'yes'")
-+    val t = assertFailsWith<IllegalStateException> {
-+      quickJs.getInboundChannel().disconnect("one")
-+    }
-+    assertTrue(t.message!!.startsWith("Unexpected result from the inbound disconnect"), t.message)
-+  }
-+
-+  @Test fun inboundDisconnectFreesItsResult() {
-+    // An object result was never freed: its reference count stayed at one, so not even a GC
-+    // could collect it. 1,000 disconnects must not leave 1,000 objects behind.
-+    inboundReturns(callResult = "'ok'", disconnectResult = "{ leaked: [1, 2, 3] }")
-+    val channel = quickJs.getInboundChannel()
-+    // The first call may allocate shapes and atoms; measure after it.
-+    assertFailsWith<IllegalStateException> { channel.disconnect("warm-up") }
-+    quickJs.gc()
-+    val before = quickJs.memoryUsage.objectsCount
-+    repeat(1_000) {
-+      assertFailsWith<IllegalStateException> { channel.disconnect("instance $it") }
-+    }
-+    quickJs.gc()
-+    val after = quickJs.memoryUsage.objectsCount
-+    assertTrue(after - before < 10, "objects before $before, after $after")
-+  }
-+}
 diff --git a/zipline/src/nativeInterop/cinterop/quickjs.def b/zipline/src/nativeInterop/cinterop/quickjs.def
 index 441f653..7e6991d 100644
 --- a/zipline/src/nativeInterop/cinterop/quickjs.def
@@ -2332,6 +2493,144 @@ index 441f653..7e6991d 100644
 +  JS_FreeValue(ctx, back);
 +  return inRange;
 +}
+diff --git a/zipline/src/nativeMain/kotlin/app/cash/zipline/InboundCallChannel.kt b/zipline/src/nativeMain/kotlin/app/cash/zipline/InboundCallChannel.kt
+index 0d924e9..83395f2 100644
+--- a/zipline/src/nativeMain/kotlin/app/cash/zipline/InboundCallChannel.kt
++++ b/zipline/src/nativeMain/kotlin/app/cash/zipline/InboundCallChannel.kt
+@@ -12,6 +12,11 @@
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
++ *
++ * Modified by the Keliver fork of Zipline, 2026: as the JNI layer (InboundCallChannel.cpp), the
++ * result's tag is checked and a wrong type throws IllegalStateException; every value is freed on
++ * every path, a JavaScript exception included (upstream threw before freeing, and QuickJS's
++ * JS_FreeRuntime asserts that no object is left); disconnect frees its argument.
+  */
+ @file:OptIn(ExperimentalForeignApi::class)
+ 
+@@ -19,6 +24,7 @@ package app.cash.zipline
+ 
+ import app.cash.zipline.internal.bridge.CallChannel
+ import app.cash.zipline.internal.bridge.INBOUND_CHANNEL_NAME
++import app.cash.zipline.quickjs.JSValue
+ import app.cash.zipline.quickjs.JS_FreeAtom
+ import app.cash.zipline.quickjs.JS_FreeValue
+ import app.cash.zipline.quickjs.JS_GetGlobalObject
+@@ -26,6 +32,13 @@ import app.cash.zipline.quickjs.JS_GetPropertyStr
+ import app.cash.zipline.quickjs.JS_Invoke
+ import app.cash.zipline.quickjs.JS_NewAtom
+ import app.cash.zipline.quickjs.JS_NewString
++import app.cash.zipline.quickjs.JS_TAG_BOOL
++import app.cash.zipline.quickjs.JS_TAG_EXCEPTION
++import app.cash.zipline.quickjs.JS_TAG_STRING
++import app.cash.zipline.quickjs.JS_TAG_STRING_ROPE
++import app.cash.zipline.quickjs.JsValueGetBool
++import app.cash.zipline.quickjs.JsValueGetNormTag
++import kotlinx.cinterop.CValue
+ import kotlinx.cinterop.ExperimentalForeignApi
+ import kotlinx.cinterop.memScoped
+ import kotlinx.cinterop.utf8
+@@ -36,47 +49,68 @@ internal class InboundCallChannel(
+   private val context = quickJs.context
+ 
+   override fun call(callJson: String): String {
+-    quickJs.checkNotClosed()
++    return invokeInbound("call", callJson) { jsResult ->
++      when (val tag = JsValueGetNormTag(jsResult)) {
++        // QuickJS 2026 also has JS_TAG_STRING_ROPE. An exception: toKotlinInstanceOrNull throws it.
++        JS_TAG_STRING, JS_TAG_STRING_ROPE, JS_TAG_EXCEPTION ->
++          with(quickJs) { jsResult.toKotlinInstanceOrNull() } as String
+ 
+-    val globalThis = JS_GetGlobalObject(context)
+-    val inboundChannel = JS_GetPropertyStr(context, globalThis, INBOUND_CHANNEL_NAME)
+-    val property = JS_NewAtom(context, "call")
+-    val arg0 = JS_NewString(context, callJson.utf8)
+-
+-    val jsResult = memScoped {
+-      val args = allocArrayOf(arg0)
+-      JS_Invoke(context, inboundChannel, property, 1, args)
++        // Not a string: the guest's bridge is broken. (Upstream's cast threw a ClassCastException,
++        // or a NullPointerException for undefined, before freeing anything.)
++        else -> throw IllegalStateException(
++          "Unexpected result from the inbound call: JS tag $tag, expected a string",
++        )
++      }
+     }
+-    val kotlinResult = with(quickJs) { jsResult.toKotlinInstanceOrNull() } as String
++  }
+ 
+-    JS_FreeValue(context, jsResult)
+-    JS_FreeValue(context, arg0)
+-    JS_FreeAtom(context, property)
+-    JS_FreeValue(context, inboundChannel)
+-    JS_FreeValue(context, globalThis)
++  override fun disconnect(instanceName: String): Boolean {
++    return invokeInbound("disconnect", instanceName) { jsResult ->
++      when (val tag = JsValueGetNormTag(jsResult)) {
++        JS_TAG_BOOL -> JsValueGetBool(jsResult) != 0
+ 
+-    return kotlinResult
++        JS_TAG_EXCEPTION -> with(quickJs) { jsResult.toKotlinInstanceOrNull() } as Boolean
++
++        else -> throw IllegalStateException(
++          "Unexpected result from the inbound disconnect: JS tag $tag, expected a boolean",
++        )
++      }
++    }
+   }
+ 
+-  override fun disconnect(instanceName: String): Boolean {
++  /**
++   * Calls `globalThis[INBOUND_CHANNEL_NAME][function](argument)` and converts its result with
++   * [convert]. Whatever [convert] returns or throws, every value is freed before this returns: the
++   * result first (as on JNI; freeing an object may run finalizers, which run guest JavaScript),
++   * then the argument, the atom, the receiver and the global object.
++   */
++  private inline fun <T> invokeInbound(
++    function: String,
++    argument: String,
++    convert: (CValue<JSValue>) -> T,
++  ): T {
+     quickJs.checkNotClosed()
+ 
+     val globalThis = JS_GetGlobalObject(context)
+     val inboundChannel = JS_GetPropertyStr(context, globalThis, INBOUND_CHANNEL_NAME)
+-    val property = JS_NewAtom(context, "disconnect")
+-    val arg0 = JS_NewString(context, instanceName.utf8)
+-
+-    val jsResult = memScoped {
+-      val args = allocArrayOf(arg0)
+-      JS_Invoke(context, inboundChannel, property, 1, args)
++    val property = JS_NewAtom(context, function)
++    val arg0 = JS_NewString(context, argument.utf8)
++    try {
++      val jsResult = memScoped {
++        val args = allocArrayOf(arg0)
++        JS_Invoke(context, inboundChannel, property, 1, args)
++      }
++      try {
++        return convert(jsResult)
++      } finally {
++        // JS_EXCEPTION holds nothing; freeing it does nothing.
++        JS_FreeValue(context, jsResult)
++      }
++    } finally {
++      JS_FreeValue(context, arg0)
++      JS_FreeAtom(context, property)
++      JS_FreeValue(context, inboundChannel)
++      JS_FreeValue(context, globalThis)
+     }
+-    val kotlinResult = with(quickJs) { jsResult.toKotlinInstanceOrNull() } as Boolean
+-
+-    JS_FreeValue(context, jsResult)
+-    JS_FreeAtom(context, property)
+-    JS_FreeValue(context, inboundChannel)
+-    JS_FreeValue(context, globalThis)
+-
+-    return kotlinResult
+   }
+ }
 diff --git a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt b/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
 index 026bb0c..041df8b 100644
 --- a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
