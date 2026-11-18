@@ -37,7 +37,13 @@ Anything published from this patch set (step 4) carries both licences.
     concatenation. A BigInt crosses to the host as `java.lang.Long` when it is in the signed
     64-bit range; a wider one is unsupported, like any other unconvertible value.
   - `zipline/src/nativeMain`, `nativeInterop` (iOS): the same string and BigInt cases. Compiled and
-    tested on the iOS simulator in step 3 (unchanged from step 1: they compiled as written).
+    tested on the iOS simulator in step 3 (unchanged from step 1: they compiled as written). Step 3's
+    review fix: the inbound channel (`InboundCallChannel.kt`) matches the JNI layer. It checks the
+    result's tag, throws `IllegalStateException` for a wrong type, frees the result, the argument,
+    the atom, the receiver and the global object on every path (upstream threw a JavaScript
+    exception or a cast failure before freeing any of them, and QuickJS, built on iOS with its
+    asserts, aborts in `JS_FreeRuntime` when an object is left), and `disconnect` frees its argument
+    (upstream leaked one string per call).
   - `QuickJsException` (JNI): QuickJS 2026 writes `file.js:8:3` (line and column) in stack
     frames; the parser keeps file and line, so Java stack traces read as before. `Utf8Test`'s iOS
     expectation gains the column, which iOS passes through.
@@ -61,8 +67,9 @@ Anything published from this patch set (step 4) carries both licences.
     three-way guest's bytecode (10.3 of 12.5 MB). It sets `JS_STRIP_SOURCE` only while compiling;
     `Function.prototype.toString` of a loaded function reads `[native code]`, as on 1.28.0.
     `evaluate` compiles through `compile` on every host (1.28.0 has no separate eval on JNI either),
-    so an evaluated function reads `[native code]` too, on the JVM, Android and iOS alike
-    (`QuickJs2026Test.evaluateLeavesOutFunctionSource`, step 3).
+    so an evaluated function reads `[native code]` too
+    (`QuickJs2026Test.evaluateLeavesOutFunctionSource`, step 3: run on the JVM and the iOS
+    simulator; it is in Android's device tests too, which step 3 did not run).
   - Build files: `dtoa.c` (new in QuickJS 2025-04) in `build.zig`; `-fwrapv` in `build.zig`, the
     Android `CMakeLists.txt` and cklib's flags (QuickJS 2026's Makefile builds with it).
   - `QuickJs2026Test` (host tests, JVM and iOS): the version, the compiler accepting BigInt, the
@@ -72,10 +79,13 @@ Anything published from this patch set (step 4) carries both licences.
     engine, compared with Node's output line by line, when `apply.sh check-bigint-zipline` has put
     the script and Node's output in the checkout's `build/keliver-bigint/` (otherwise it does
     nothing, as on Android, which has no checkout to read).
-  - `QuickJs2026JniTest` (step 2; JNI tests, JVM and Android): an inbound `call` or `disconnect`
-    with the wrong result type throws, and 1,000 `disconnect`s returning an object leave no objects
-    behind. (The wrong result is freed before the exception is thrown: freeing an object runs
-    finalizers, and a `FinalizationRegistry` callback can call the host over JNI.)
+  - `QuickJs2026InboundChannelTest` (host tests, JVM, Android and iOS; step 2's
+    `QuickJs2026JniTest`, moved in step 3's review fix so iOS runs it too): an inbound `call` or
+    `disconnect` with the wrong result type throws `IllegalStateException`; 1,000 `call`s or
+    `disconnect`s returning an object leave no objects behind, and 1,000 `disconnect`s no strings;
+    100 of each that throw in JavaScript leave neither, and the engine closes cleanly. (The wrong
+    result is freed before the exception reaches the caller: freeing an object runs finalizers, and a
+    `FinalizationRegistry` callback can call the host.)
   - "Modified by the Keliver fork of Zipline, 2026" in every file it changes.
 
 ## Rebuilding it
@@ -116,7 +126,9 @@ modules the fork changes are replaced, `zipline-jvm` and `zipline-bytecode` (in 
 too, so the Zipline Gradle plugin compiles bundles with the new engine and rewrites their bytecode
 with the ported module), for an Android host, `zipline-android` and `zipline-android-ndk`, and, for
 an iOS host, `zipline-iosarm64` and `zipline-iossimulatorarm64` (reached through the `available-at`
-of Zipline's root module, which the rule follows; an `iosX64` build keeps 1.28.0's engine):
+of Zipline's root module, which the rule follows). An `iosX64` (Intel simulator) build would keep
+1.28.0's engine, which cannot load the bundles the fork's compiler writes, so the script fails the
+build when `zipline-iosx64` resolves with the fork in use:
 
 ```
 ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \

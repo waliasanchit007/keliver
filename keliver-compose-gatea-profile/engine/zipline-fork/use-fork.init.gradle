@@ -5,8 +5,11 @@
 // and strips line numbers, now in QuickJS 2026's bytecode (version 5); and (step 2), for Android
 // hosts, `zipline-android` (its JNI classes) and `zipline-android-ndk` (the AAR with
 // libquickjs.so); and (step 3), for iOS hosts, `zipline-iosarm64` and `zipline-iossimulatorarm64`
-// (the klibs, with the engine's bitcode in them; an iosX64 build keeps 1.28.0's engine). Every other
-// Zipline module stays 1.28.0 from Maven Central.
+// (the klibs, with the engine's bitcode in them). Every other Zipline module stays 1.28.0 from Maven
+// Central. The fork publishes no `zipline-iosx64` (Intel simulators): an iosX64 build would get
+// 1.28.0's engine, which cannot load the bundles the fork's compiler writes. With the fork in use,
+// resolving `zipline-iosx64` warns, and a build that would link an iosX64 binary fails
+// (-PziplineForkAllowIosX64 lets it through, for a build that loads no bundle).
 //
 //   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
 //     -PziplineForkRepo=<the scratch Maven repo `apply.sh publish` wrote> --no-daemon <tasks>
@@ -35,6 +38,9 @@ def forkedModules = ['zipline-jvm', 'zipline-bytecode', 'zipline-android', 'zipl
 def longAsBigInt = startParameter.projectProperties.containsKey('ziplineForkLongAsBigInt')
 if (longAsBigInt && !useFork) throw new GradleException('use-fork.init.gradle: -PziplineForkLongAsBigInt needs the fork')
 def bigIntLinks = Collections.synchronizedSet(new HashSet<String>())
+def allowIosX64 = startParameter.projectProperties.containsKey('ziplineForkAllowIosX64')
+def iosX64Warned = Collections.synchronizedSet(new HashSet<String>())
+def forkLog = org.gradle.api.logging.Logging.getLogger('use-fork.init.gradle')
 
 def addRepo = { RepositoryHandler repos ->
   repos.maven {
@@ -45,10 +51,15 @@ def addRepo = { RepositoryHandler repos ->
     }
   }
 }
-def substitute = { ConfigurationContainer configurations ->
+def substitute = { String owner, ConfigurationContainer configurations ->
   configurations.configureEach { c ->
     c.resolutionStrategy.eachDependency { d ->
       if (d.requested.group != 'app.cash.zipline') return
+      if (d.requested.name == 'zipline-iosx64' && iosX64Warned.add("$owner $c.name".toString())) {
+        forkLog.warn("use-fork.init.gradle: WARNING $owner, configuration $c.name: zipline-iosx64 " +
+          "(Intel simulators) is not forked and stays $upstreamVersion, whose engine (QuickJS 2021) " +
+          "cannot load bundles compiled by the fork; an iosX64 link fails unless -PziplineForkAllowIosX64")
+      }
       if (d.requested.name in forkedModules) {
         d.useVersion(forkVersion)
         d.because('NF2: Zipline on QuickJS 2026-06-04')
@@ -68,8 +79,8 @@ if (useFork) {
 allprojects { p ->
   if (useFork) {
     addRepo(p.buildscript.repositories)
-    substitute(p.buildscript.configurations)
-    substitute(p.configurations)
+    substitute("${p.path} (buildscript)".toString(), p.buildscript.configurations)
+    substitute(p.path, p.configurations)
   }
   // Zipline's compiler rewrites the bytecode itself when a .js.map is present (source lines into
   // the bytecode) or line numbers are stripped, through zipline-bytecode, which the fork has ported
@@ -93,6 +104,23 @@ allprojects { p ->
             bigIntLinks << "${p.path == ':' ? '' : p.path}:${b.linkTask.name}".toString()
             b.linkTask.configure { it.compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint') }
           }
+        }
+      }
+    }
+  }
+}
+if (useFork && !allowIosX64) {
+  // An iosX64 binary (an app, a framework or a test executable) would link 1.28.0's engine, and
+  // the bundles the fork's compiler writes would not load in it. Only binaries of projects that
+  // resolve Zipline are refused, checked when the link runs (its libraries are resolved by then).
+  allprojects { p ->
+    p.tasks.matching { it.name.startsWith('link') && it.name.endsWith('IosX64') }.configureEach { t ->
+      t.doFirst {
+        def hits = iosX64Warned.findAll { it.startsWith("${p.path} ") }
+        if (!hits.isEmpty()) {
+          throw new GradleException("use-fork.init.gradle: ${t.path} links zipline-iosx64 $upstreamVersion " +
+            "(the fork publishes no iosX64 engine; QuickJS 2021 cannot load bundles compiled by the fork). " +
+            "Build an Apple-silicon simulator (iosSimulatorArm64) instead, or pass -PziplineForkAllowIosX64.")
         }
       }
     }

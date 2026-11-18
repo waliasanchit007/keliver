@@ -758,7 +758,8 @@ armeabi-v7a 1,903,772, x86_64 2,464,728, x86 2,096,868, **7.6–9.4% above 1.28.
 its `.sha1`, which `apply.sh android` downloads and compares with).
 
 **Two native fixes** (the step 1 review's Lows), with `QuickJs2026JniTest` (JNI tests: JVM and
-Android, 4 tests):
+Android, 4 tests; moved to the host tests as `QuickJs2026InboundChannelTest` in step 3, so iOS runs
+them too):
 - **An unexpected inbound result throws.** Inbound `call` (not a string) and `disconnect` (not a
   boolean) throw `IllegalStateException` naming the JS tag. Upstream had an `assert`, compiled out
   of release builds; step 1 returned `null` and `false`, which the Kotlin side (a non-null
@@ -870,15 +871,41 @@ The phone's test executable links too (arm64 Mach-O); it was not run.
 **Function source text: no difference between the hosts** (the step 1b review's Low 5). The review
 read the JVM's `evaluate` as keeping the source text while iOS's left it out. In 1.28.0 both
 `evaluate`s are `compile` then `execute` (there is no separate eval on JNI), so both leave it out;
-`QuickJs2026Test.evaluateLeavesOutFunctionSource` (host tests: the JVM, Android and iOS) now pins it:
-an evaluated function's `toString()` reads `[native code]`, as one loaded from a bundle does.
+`QuickJs2026Test.evaluateLeavesOutFunctionSource` (a host test: it ran on the JVM and the iOS
+simulator; it is in Android's device tests too, which step 3 did not run) checks it: an evaluated
+function's `toString()` reads `[native code]`, as one loaded from a bundle does.
+
+**The inbound channel on iOS** (the step 3 review's Medium; upstream code, not a regression). Step 2
+fixed the JNI layer's inbound `call` and `disconnect`; the Kotlin/Native one
+(`nativeMain/InboundCallChannel.kt`) still converted the result before freeing anything. A JavaScript
+exception (a throw, an interrupt, out of memory) or a wrong result type threw with the result, the
+argument, the atom, the receiver and the global object still held, and `disconnect` never freed its
+argument. iOS builds QuickJS with its asserts (cklib passes no `-DNDEBUG`), so the engine's next
+`close()` aborted the app in `JS_FreeRuntime` (`assert(list_empty(&rt->gc_obj_list))`). The fix
+mirrors the JNI layer: the tag is checked, a wrong type throws `IllegalStateException`, and every
+value is freed in a `finally`, the result first. Step 2's `QuickJs2026JniTest` moved to the host
+tests as `QuickJs2026InboundChannelTest` (7 tests: its 4, plus 1,000 `call`s returning an object,
+1,000 `disconnect`s counted by strings, and 100 `call`s and `disconnect`s that throw in JavaScript),
+so the JVM and iOS run it (and Android's device tests, not run here). Against upstream's iOS
+channel the first of them killed the simulator test process: `Assertion failed:
+(list_empty(&rt->gc_obj_list)), function JS_FreeRuntime, file quickjs.c, line 2464`, signal 6.
 
 **Checked:**
+- **After the review fix** (2026-11-18, the same checkout, then a fresh `apply.sh all` of the
+  regenerated patch set): `:zipline:iosSimulatorArm64Test` and `:zipline:iosSimulatorArm64ReleaseTest`
+  32 classes, **180 run, 180 pass**, 0 skipped, 0 failed each; `:zipline:jvmTest` 50 classes, **275
+  run, 273 pass, 2 skipped**, 0 failed; again with `Long` as BigInt (the testing JavaScript's
+  stdlib has `BigInt.asIntN(64`; all three test tasks ran, none UP-TO-DATE): the same, 180 of 180 on
+  the simulator in debug and release, 275 run, 273 pass, 2 skipped on the JVM. The fresh
+  checkout (`apply.sh all`: both patched `qjs` builds match Node on 292 lines, the unpatched ones
+  differ on 76 and 108): `:zipline:iosSimulatorArm64Test` 180 of 180, `:zipline:jvmTest` 275 run,
+  273 pass, 2 skipped. The counts below are from before the fix.
 - **Zipline's host tests on the simulator** (`apply.sh test <work> :zipline:iosSimulatorArm64Test
   :zipline:iosSimulatorArm64ReleaseTest`; `apply.sh results`, the JUnit XML): 31 classes, **173 run,
   173 pass**, 0 skipped, 0 failed, in the debug build and in the optimised release build Zipline also
-  tests (where `-fwrapv` matters most); among them `QuickJs2026Test` (10: the version, BigInt in the
-  compiler, `asUintN` and its size limit, BigInt → `Long` and its range, ropes through `evaluate` and
+  tests (cklib compiles QuickJS at `-O3` for both, so the engine's code is the same in both; the
+  release build differs in the Kotlin code and the final link); among them `QuickJs2026Test` (10:
+  the version, BigInt in the compiler, `asUintN` and its size limit, BigInt → `Long` and its range, ropes through `evaluate` and
   an inbound call, no source text from `compile` and from `evaluate`), `EncodingTest`, `Utf8Test`
   (the column iOS passes through) and the call channels. **Again with `Long` as BigInt**
   (`-PziplineForkLongAsBigInt`: the testing JavaScript's `kotlin-kotlin-stdlib.js` has
@@ -908,8 +935,9 @@ an evaluated function's `toString()` reads `[native code]`, as one loaded from a
   the Gate B app link for `iosArm64`; nothing has executed the fork's engine on an A-series device.
 - **The Gate B app on the simulator with the fork**: linked, not launched; no first-frame or
   open/back timing on iOS through the fork.
-- `iosX64` (Intel simulators): not built; an `iosX64` build keeps 1.28.0's engine under
-  `use-fork.init.gradle`. The other Kotlin/Native targets Zipline has (macOS, tvOS, Linux) were not
+- `iosX64` (Intel simulators): not built; an `iosX64` build would keep 1.28.0's engine, so
+  `use-fork.init.gradle` warns when `zipline-iosx64` resolves and fails an `iosX64` link
+  (`-PziplineForkAllowIosX64` lets it through). The other Kotlin/Native targets Zipline has (macOS, tvOS, Linux) were not
   built.
 - Sizes: the klibs and the linked apps were not compared with 1.28.0's.
 

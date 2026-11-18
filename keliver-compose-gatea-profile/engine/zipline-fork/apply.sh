@@ -35,8 +35,10 @@
 #   apply.sh results <work> [test task...]   sum the JUnit XML a test run left in zipline/build/test-results
 #                             (e.g. iosSimulatorArm64Test; default jvmTest); fails if any test failed
 #   apply.sh publish <work> <maven repo dir>   publish the forked artifacts (zipline-jvm, zipline-bytecode,
-#                             zipline-android, zipline-android-ndk) as 1.28.0-q20260604 to a scratch
-#                             Maven repository (never ~/.m2)
+#                             zipline-android, zipline-android-ndk and, on a Mac with Xcode, the iOS
+#                             klibs zipline-iosarm64 and zipline-iossimulatorarm64, each checked to
+#                             carry the engine's bitcode) as 1.28.0-q20260604 to a scratch Maven
+#                             repository (never ~/.m2)
 #   apply.sh diff    <work>   maintainers: regenerate patches/ from an edited checkout
 #   apply.sh all     <work>   clone, engine, jni, qjs, check-bigint (no Android SDK needed)
 set -euo pipefail
@@ -470,11 +472,13 @@ do_publish() {
     ${ios[@]+"${ios[@]}"}
   find "$repo/app/cash/zipline" \( -name "*.jar" -o -name "*.aar" -o -name "*.klib" \) | sort
   # A klib without the engine's bitcode would link against nothing: check each one carries it.
-  local k
+  # The listing is captured first: `unzip | grep -q` under pipefail fails when grep exits on the
+  # first match and unzip gets SIGPIPE.
+  local k bitcode
   for k in $(find "$repo/app/cash/zipline" -name "zipline-ios*-$FORK_VERSION.klib" | sort); do
-    unzip -l "$k" | grep -qE 'native/.*quickjs.*\.bc$' \
-      || { echo "publish: $(basename "$k") has no QuickJS bitcode" >&2; return 1; }
-    echo "publish: $(basename "$k"): $(unzip -l "$k" | grep -oE '[^ ]*native/[^ ]*\.bc$' | tr '\n' ' ')"
+    bitcode="$(unzip -Z1 "$k" | grep -E 'native/.*quickjs.*\.bc$' || true)"
+    [ -n "$bitcode" ] || { echo "publish: $(basename "$k") has no QuickJS bitcode" >&2; return 1; }
+    echo "publish: $(basename "$k"): $(tr '\n' ' ' <<<"$bitcode")"
   done
 }
 
