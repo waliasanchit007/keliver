@@ -91,6 +91,34 @@ New:
   `KeliverNavHost(controller, content)` is unchanged (#259).
 - keliver-compose: an experimental `LocalBackHandlersEnabled` (opt in with `@ExperimentalKeliverBackApi`).
   A `BackHandler` is enabled only while both its own `enabled` and this composition local are true (#259).
+- keliver-nav: experimental host back for retained stacks (`@ExperimentalKeliverNavRetentionApi`).
+  A `KeliverNavHostFrame` puts the stack in a host container that, on a system back press, shows the
+  entry below in the frame of the press; the guest then pops to it (`KeliverNavHost` pops its
+  controller; `KeliverRetainedStack(keys, retention, onHostBack, content)` calls `onHostBack`).
+  A `BackHandler` enabled in the top entry still takes the press (#262).
+- keliver-nav: `KeliverNavPreparation` and `KeliverPreparedStack` (experimental, `ExperimentalKeliverNavRetentionApi`):
+  compose a screen while the finger is down and show it at the tap without composing it again (NF3). A prepared
+  screen's effects run on press (#265).
+- keliver-nav: `KeliverNavHost(controller, content)` retains the back stack by default where the app
+  provides `LocalKeliverNavDefaults` (experimental): the host's retained container on a host that
+  declares `keliver.nav.retainedContainer@1`, otherwise the guest frame, otherwise nothing (as before).
+  Providing the defaults is app-wide: a covered screen stays composed, so effects that assumed a
+  screen is composed again when shown (a `DisposableEffect` that sets a title or status bar, a
+  "screen viewed" `LaunchedEffect`) no longer run on back; move them to `LaunchedWhileVisible` or
+  `LaunchedOnReturn`, or opt the route out. Hosts nested in a screen do not inherit the defaults (#266).
+- keliver-nav: `LaunchedOnReturn` (refresh when a screen is shown again) and `LaunchedOnceShown` (run once
+  the screen is first shown; a prepared screen at the tap) (experimental) (#266).
+- keliver-nav: results passed back: `KeliverNavResultKey`, `KeliverNavController.popWithResult`,
+  `LaunchedOnResult` (experimental). Keys from the `KeliverNavResultKey(name)` constructor are compared by
+  identity; `keliverNavResultKey<T>(name)` makes keys that are equal by name and type, so a key written where
+  it is used still matches (#266, #271).
+- keliver-nav: `KeliverNavController.replaceStack(routes)` for deep links (#266).
+- keliver-nav: per-route retention (`KeliverNavEntryRetention.Retain` / `Dispose` / `Discard`) and
+  `trimKeliverNavRetention()` for memory pressure (experimental) (#266).
+- keliver-treehouse, keliver-treehouse-host: hosts declare optional features (`TreehouseApp.Spec.hostFeatures`,
+  experimental; `AppLifecycle.Host.hostFeatures`); guests read them as `LocalHostFeatures` (keliver-compose,
+  experimental). An older host reports none. Breaking only for outside implementers:
+  `AppLifecycle.Host.hostFeatures` is a new abstract member, so a custom `AppLifecycle.Host` must add it (#266).
 
 Changed:
 
@@ -101,6 +129,15 @@ Changed:
   collected yet (#231).
 - Generated Compose API (prototype, `keliver-compose-gatea-composeui`): during a fling a lazy list reports to the guest only the window it will come to rest at, predicted from the platform's own default fling, so the guest no longer composes windows the list has left (NF1) (#258).
 - Generated Compose API (prototype): rows the guest has not composed yet are drawn as placeholders (never blank, hidden from screen readers) at the measured size of the guest's rows, instead of empty 48 dp spacers (#258).
+- keliver-nav: on a code update across this version, the start screen's `rememberSaveable` state is
+  lost once (the host's composition structure changed); the controller already restarts at the
+  start route on a code update (#266).
+- Generated API (prototype): a lazy list's first window is sized from the largest viewport the host reported
+  for that place in the composition, instead of a fixed 15 rows (`LazyWindowSizing`) (#265).
+- keliver-treehouse-guest: a host whose `hostFeatures` getter fails is now reported once on the console. The
+  guest still sees no features (#271).
+- Gate A host (prototype, `ExtraRetained`): host back is enabled only when the entry below can be shown, so a
+  failed host back no longer leaves the stack's back callback switched off (#271).
 
 Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 
@@ -158,6 +195,12 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 - `parallel` shows the cached release only when the index names the same manifest URL at the sha256 of the manifest bytes it was loaded from (recorded with the last good bundle); otherwise the start loads from the network as `network-first` does. An install from before this record makes one network load at its first `parallel` start. Under `parallel` and `cache-first`, when Zipline's cache is gone and it refetches the cached release's manifest, only the recorded bytes are accepted (`manifest sha256 mismatch` otherwise); a confirmed `parallel` start whose cached load fails then loads the named release from the network once (#249).
 - Under `parallel` and `cache-first`, a start from the cache still takes updates (on resume, live, `checkForUpdate`): each loads in a new app, swapped in once loaded with no blank frame. A replaced app's late close (`Zipline closed`) is logged at debug, not as an uncaught exception (#249).
 - `keliver-publish --set-start-policy <policy|default> [--channel <name>]`: a release owner's per-channel override in `bundles/index.json` (`startPolicy`), applied by hosts from their next start; older hosts ignore it. An app refuses it with `keliver.startPolicyOverride=none` (iOS `START_POLICY_OVERRIDE = "none"`) (#249).
+- Production host templates: `KeliverConfig.prefetch` / `KeliverPrefetch`. On a start toward a screen (the
+  first activity's creation), the host sends the first screen's declared GETs while the bundle loads, and the
+  screen's identical request takes the response: once, 2xx, within 5 s of its arrival, waiting at most 1 s for
+  one in flight; same client and RequestPolicy. Any non-GET through HostHttp drops untaken responses;
+  `KeliverHost.discardPrefetched()` does too (call it on sign-out). No protocol change (NF4) (#269).
+- Production host templates: the guests' HostHttp is now one instance per process (it was one per code load) (#269).
 
 ## Keliver 0.4.1 - 2026-10-27
 
