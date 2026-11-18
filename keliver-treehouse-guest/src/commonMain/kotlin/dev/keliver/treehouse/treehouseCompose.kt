@@ -18,6 +18,7 @@ package dev.keliver.treehouse
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import app.cash.zipline.ZiplineScope
 import app.cash.zipline.ZiplineScoped
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import dev.keliver.compose.RedwoodComposition
 import dev.keliver.protocol.EventSink
 import dev.keliver.protocol.guest.GuestProtocolAdapter
@@ -100,7 +101,10 @@ private class RedwoodZiplineTreehouseUi(
     )
     this.composition = composition
 
-    composition.bind(treehouseUi)
+    // The host's optional features (empty for a host older than 0.5.0), for code that uses a feature
+    // only where the host has it (keliver-nav's retained container).
+    @OptIn(ExperimentalKeliverHostFeaturesApi::class)
+    composition.bind(treehouseUi, appLifecycle.hostFeatures)
 
     // The first composition is done (setContent composes and applies at once): tell a host that
     // profiles frames (M4) before its change list goes.

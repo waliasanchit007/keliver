@@ -27,6 +27,7 @@ import dev.keliver.protocol.guest.ProtocolWidgetSystemFactory
 import dev.keliver.protocol.guest.guestRedwoodVersion
 import dev.keliver.treehouse.AppLifecycle.Host
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
@@ -48,6 +49,24 @@ public class StandardAppLifecycle(
       host.hostProtocolVersion
     } catch (_: ZiplineApiMismatchException) {
       RedwoodVersion.Unknown
+    }
+  }
+
+  /**
+   * The host's optional features ([Host.hostFeatures]), asked once. A host older than 0.5.0 has no
+   * such property: Zipline fails the call, and that host has no optional features.
+   *
+   * The probe is optional, so any failure means "no features": the mismatch may reach the guest as
+   * [ZiplineApiMismatchException], as a plain `ZiplineException` carrying the host's text, or as
+   * something else, and none of them may stop a screen from starting. Only cancellation passes.
+   */
+  internal val hostFeatures: Set<String> by lazy {
+    try {
+      host.hostFeatures.toSet()
+    } catch (e: CancellationException) {
+      throw e
+    } catch (_: Exception) {
+      emptySet()
     }
   }
 

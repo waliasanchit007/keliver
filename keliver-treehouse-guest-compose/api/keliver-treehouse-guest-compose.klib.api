@@ -12,3 +12,4 @@ abstract interface dev.keliver.treehouse/TreehouseUi { // dev.keliver.treehouse/
 }
 
 final fun (dev.keliver.compose/RedwoodComposition).dev.keliver.treehouse/bind(dev.keliver.treehouse/TreehouseUi) // dev.keliver.treehouse/bind|bind@dev.keliver.compose.RedwoodComposition(dev.keliver.treehouse.TreehouseUi){}[0]
+final fun (dev.keliver.compose/RedwoodComposition).dev.keliver.treehouse/bind(dev.keliver.treehouse/TreehouseUi, kotlin.collections/Set<kotlin/String>) // dev.keliver.treehouse/bind|bind@dev.keliver.compose.RedwoodComposition(dev.keliver.treehouse.TreehouseUi;kotlin.collections.Set<kotlin.String>){}[0]

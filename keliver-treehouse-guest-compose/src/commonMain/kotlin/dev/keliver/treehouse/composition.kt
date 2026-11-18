@@ -15,11 +15,24 @@
  */
 package dev.keliver.treehouse
 
+import androidx.compose.runtime.CompositionLocalProvider
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.LocalHostFeatures
 import dev.keliver.compose.RedwoodComposition
 
 // Inline at callsite once https://github.com/Kotlin/kotlinx.serialization/issues/1454 is fixed.
 public fun RedwoodComposition.bind(treehouseUi: TreehouseUi) {
   setContent {
     treehouseUi.Show()
+  }
+}
+
+/** [bind], with [hostFeatures] provided as [LocalHostFeatures] to the whole UI. */
+@ExperimentalKeliverHostFeaturesApi
+public fun RedwoodComposition.bind(treehouseUi: TreehouseUi, hostFeatures: Set<String>) {
+  setContent {
+    CompositionLocalProvider(LocalHostFeatures provides hostFeatures) {
+      treehouseUi.Show()
+    }
   }
 }

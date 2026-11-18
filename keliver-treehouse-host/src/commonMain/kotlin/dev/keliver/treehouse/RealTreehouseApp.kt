@@ -22,6 +22,7 @@ import app.cash.zipline.loader.LoaderEventListener
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import app.cash.zipline.loader.ZiplineLoader
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import dev.keliver.leaks.LeakDetector
 import dev.keliver.protocol.host.HostProtocol
 import kotlinx.coroutines.CoroutineDispatcher
@@ -169,6 +170,7 @@ internal class RealTreehouseApp<A : AppService> private constructor(
       appScope = appScope,
       leakDetector = leakDetector,
       hostProtocol = hostProtocol,
+      hostFeatures = @OptIn(ExperimentalKeliverHostFeaturesApi::class) spec.hostFeatures,
     )
   }
 

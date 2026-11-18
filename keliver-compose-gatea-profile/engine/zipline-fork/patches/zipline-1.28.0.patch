@@ -15,6 +15,1721 @@ index f3ffcb7..aa02e1c 100644
 +target_compile_options(quickjs PRIVATE -fwrapv)
 +
  target_link_options(quickjs PRIVATE "-Wl,-z,max-page-size=16384")
+diff --git a/zipline-bytecode/build.gradle.kts b/zipline-bytecode/build.gradle.kts
+index 6c8f8f2..67f3281 100644
+--- a/zipline-bytecode/build.gradle.kts
++++ b/zipline-bytecode/build.gradle.kts
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: RealBundleTest's corpus property.
+ import com.vanniktech.maven.publish.JavadocJar
+ import com.vanniktech.maven.publish.KotlinJvm
+ import com.vanniktech.maven.publish.MavenPublishBaseExtension
+@@ -27,6 +28,17 @@ dependencies {
+   testImplementation(libs.kotlin.test)
+ }
+ 
++// Keliver fork: RealBundleTest reads Kotlin/JS bundles from -PziplineBytecodeCorpus=<dir>[:<dir>...].
++tasks.withType<Test>().configureEach {
++  val corpus = providers.gradleProperty("ziplineBytecodeCorpus").orElse("").get()
++  for (dir in corpus.split(File.pathSeparator).filter { it.isNotBlank() }) {
++    inputs.dir(dir).withPropertyName("ziplineBytecodeCorpus:$dir")
++      .withPathSensitivity(PathSensitivity.RELATIVE)
++  }
++  systemProperty("ziplineBytecodeCorpus", corpus)
++  testLogging.showStandardStreams = corpus.isNotEmpty()
++}
++
+ configure<MavenPublishBaseExtension> {
+   configure(
+     KotlinJvm(
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectReader.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectReader.kt
+index ec978eb..c65346c 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectReader.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectReader.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -19,6 +20,11 @@ import okio.Buffer
+ import okio.Closeable
+ import okio.IOException
+ 
++/**
++ * Decodes QuickJS 2026-06-04's `JS_WriteObject` output (bytecode version 5) for a compiled script:
++ * the atom table, then function bytecode and its constants. Modules, plain objects, typed arrays,
++ * array buffers, dates and boxed values are not read (Zipline's compiler does not produce them).
++ */
+ class JsObjectReader(
+   private val source: Buffer,
+ ) : Closeable by source {
+@@ -41,13 +47,17 @@ class JsObjectReader(
+   fun readJsObject(): JsObject {
+     check(!::atoms.isInitialized)
+     atoms = readAtoms()
+-    return readObjectRecursive()
++    val result = readObjectRecursive()
++    if (!source.exhausted()) {
++      throw IOException("${source.size} unexpected bytes at 0x${offset.toString(16)}")
++    }
++    return result
+   }
+ 
+   private fun readAtoms(): AtomSet {
+     val version = source.readByte().toInt()
+     if (version != BC_VERSION) {
+-      throw IOException("unexpected version (expected $BC_VERSION)")
++      throw IOException("unexpected version $version (expected $BC_VERSION)")
+     }
+     val atomCount = source.readLeb128()
+     val result = mutableListOf<JsString>()
+@@ -60,7 +70,7 @@ class JsObjectReader(
+   private fun readJsString(): JsString {
+     val stringLengthAndType = source.readLeb128()
+     val isWideChar = stringLengthAndType and 0x1
+-    val stringLength = stringLengthAndType shr 1
++    val stringLength = stringLengthAndType ushr 1
+     return when (isWideChar) {
+       0x1 -> {
+         val byteCount = stringLength.toLong() * 2
+@@ -82,21 +92,35 @@ class JsObjectReader(
+       BC_TAG_BOOL_FALSE -> JsBoolean(false)
+       BC_TAG_BOOL_TRUE -> JsBoolean(true)
+       BC_TAG_INT32 -> JsInt(source.readSleb128())
+-      BC_TAG_FLOAT64 -> JsDouble(Double.fromBits(source.readLong()))
++      BC_TAG_FLOAT64 -> JsDouble(Double.fromBits(source.readLongLe()))
+       BC_TAG_STRING -> readJsString()
++      BC_TAG_BIG_INT -> JsBigInt(source.readByteString(source.readLeb128().toLong()))
++      BC_TAG_ARRAY, BC_TAG_TEMPLATE_OBJECT -> readArray(isTemplate = tag == BC_TAG_TEMPLATE_OBJECT)
++      BC_TAG_OBJECT_REFERENCE -> JsObjectReference(source.readLeb128())
+       BC_TAG_FUNCTION_BYTECODE -> readFunction()
+       else -> throw IOException("unsupported tag: $tag at 0x${objectOffset.toString(16)}")
+     }
+   }
+ 
++  private fun readArray(isTemplate: Boolean): JsArray {
++    val length = source.readLeb128()
++    val elements = mutableListOf<JsObject>()
++    for (i in 0 until length) {
++      elements += readObjectRecursive()
++    }
++    val raw = if (isTemplate) readObjectRecursive() else JsUndefined
++    return JsArray(elements, isTemplate, raw)
++  }
++
+   private fun readFunction(): JsFunctionBytecode {
+-    val flags = source.readShortLe().toInt()
++    val flags = source.readShortLe().toInt() and 0xffff
+     val jsMode = source.readByte()
+     val functionName = readAtomString()
+     val argCount = source.readLeb128()
+     val varCount = source.readLeb128()
+     val definedArgCount = source.readLeb128()
+     val stackSize = source.readLeb128()
++    val varRefCount = source.readLeb128()
+     val closureVarCount = source.readLeb128()
+     val constantPoolCount = source.readLeb128()
+     val bytecodeLength = source.readLeb128()
+@@ -112,10 +136,11 @@ class JsObjectReader(
+       closureVars += readClosureVar()
+     }
+ 
++    // Atoms within the bytecode are indexes into the same table; they are kept as they are, so
++    // the atom table must not be reordered (only appended to).
+     val bytecode = source.readByteString(bytecodeLength.toLong())
+-    // TODO: fixup atoms within bytecode?
+ 
+-    val hasDebug = flags.bit(11)
++    val hasDebug = flags.bit(10)
+     val debug: Debug? = if (hasDebug) readDebug() else null
+ 
+     val constantPool = mutableListOf<JsObject>()
+@@ -131,6 +156,7 @@ class JsObjectReader(
+       varCount = varCount,
+       definedArgCount = definedArgCount,
+       stackSize = stackSize,
++      varRefCount = varRefCount,
+       locals = locals,
+       closureVars = closureVars,
+       bytecode = bytecode,
+@@ -141,58 +167,52 @@ class JsObjectReader(
+ 
+   private fun readAtomString(): JsString {
+     val valueAndType = source.readLeb128()
+-    val value = valueAndType shr 1
++    val value = valueAndType ushr 1
+     check(valueAndType and 0x1 != 0x1) { "expected a string but got an int" }
+     return atoms.get(value)
+   }
+ 
+-  private fun readAtomInt(): Int {
+-    val valueAndType = source.readLeb128()
+-    val value = valueAndType shr 1
+-    check(valueAndType and 0x1 == 0x1) { "expected an int but got a string" }
+-    return value
+-  }
+-
+   private fun readVarDef(): JsVarDef {
+     val name = readAtomString()
+-    val scopeLevel = source.readLeb128()
+     val scopeNext = source.readLeb128() - 1
+-    val flags = source.readByte().toInt()
++    val varRefIndex = source.readLeb128()
++    val flags = source.readByte().toInt() and 0xff
+     return JsVarDef(
+       name = name.string,
+-      scopeLevel = scopeLevel,
+       scopeNext = scopeNext,
++      varRefIndex = varRefIndex,
+       kind = flags.bits(bit = 0, bitCount = 4),
+       isConst = flags.bit(4),
+       isLexical = flags.bit(5),
+       isCaptured = flags.bit(6),
++      hasScope = flags.bit(7),
+     )
+   }
+ 
+   private fun readClosureVar(): JsClosureVar {
+     val name = readAtomString()
+     val varIndex = source.readLeb128()
+-    val flags = source.readByte().toInt()
++    val flags = source.readShortLe().toInt() and 0xffff
+     return JsClosureVar(
+       name = name.string,
+       varIndex = varIndex,
+-      isLocal = flags.bit(0),
+-      isArg = flags.bit(1),
+-      isConst = flags.bit(2),
+-      isLexical = flags.bit(3),
+-      kind = flags.bits(bit = 4, bitCount = 4),
++      closureType = flags.bits(bit = 0, bitCount = 3),
++      isConst = flags.bit(3),
++      isLexical = flags.bit(4),
++      kind = flags.bits(bit = 5, bitCount = 4),
+     )
+   }
+ 
+   private fun readDebug(): Debug {
+     val fileName = readAtomString()
+-    val lineNumber = source.readLeb128()
+     val pc2lineLength = source.readLeb128()
+     val pc2line = source.readByteString(pc2lineLength.toLong())
++    val sourceLength = source.readLeb128()
++    val functionSource = source.readByteString(sourceLength.toLong())
+     return Debug(
+       fileName = fileName.string,
+-      lineNumber = lineNumber,
+       pc2Line = pc2line,
++      source = functionSource,
+     )
+   }
+ }
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectWriter.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectWriter.kt
+index c06771b..7f4ec3e 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectWriter.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/JsObjectWriter.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -19,10 +20,11 @@ import okio.BufferedSink
+ import okio.Closeable
+ 
+ /**
+- * Encodes a [JsObject] as bytes.
++ * Encodes a [JsObject] as bytes, in QuickJS 2026-06-04's format (bytecode version 5).
+  *
+  * @param atoms the mapping from string to integer used to encode the object. If the object was
+- *     decoded with a [JsObjectReader], it should be encoded with the same atoms.
++ *     decoded with a [JsObjectReader], it should be encoded with the same atoms (or a copy that
++ *     was only appended to: the bytecode refers to atoms by index).
+  */
+ class JsObjectWriter(
+   private val atoms: AtomSet,
+@@ -79,7 +81,7 @@ class JsObjectWriter(
+ 
+       is JsDouble -> {
+         sink.writeByte(BC_TAG_FLOAT64)
+-        sink.writeLong(value.value.toRawBits())
++        sink.writeLongLe(value.value.toRawBits())
+       }
+ 
+       is JsString -> {
+@@ -87,6 +89,28 @@ class JsObjectWriter(
+         writeJsString(value)
+       }
+ 
++      is JsBigInt -> {
++        sink.writeByte(BC_TAG_BIG_INT)
++        sink.writeLeb128(value.twosComplementLittleEndian.size)
++        sink.write(value.twosComplementLittleEndian)
++      }
++
++      is JsArray -> {
++        sink.writeByte(if (value.isTemplate) BC_TAG_TEMPLATE_OBJECT else BC_TAG_ARRAY)
++        sink.writeLeb128(value.elements.size)
++        for (element in value.elements) {
++          writeObjectRecursive(element)
++        }
++        if (value.isTemplate) {
++          writeObjectRecursive(value.raw)
++        }
++      }
++
++      is JsObjectReference -> {
++        sink.writeByte(BC_TAG_OBJECT_REFERENCE)
++        sink.writeLeb128(value.index)
++      }
++
+       is JsFunctionBytecode -> {
+         sink.writeByte(BC_TAG_FUNCTION_BYTECODE)
+         writeFunction(value)
+@@ -95,13 +119,17 @@ class JsObjectWriter(
+   }
+ 
+   private fun writeFunction(value: JsFunctionBytecode) {
+-    sink.writeShortLe(value.flags)
++    // has_debug (bit 10) follows the model, so a function given or stripped of debug information
++    // is written consistently.
++    val flags = (value.flags and (1 shl 10).inv()) or (value.debug != null).toBit(10)
++    sink.writeShortLe(flags)
+     sink.writeByte(value.jsMode.toInt())
+     writeAtom(value.name.toJsString())
+     sink.writeLeb128(value.argCount)
+     sink.writeLeb128(value.varCount)
+     sink.writeLeb128(value.definedArgCount)
+     sink.writeLeb128(value.stackSize)
++    sink.writeLeb128(value.varRefCount)
+     sink.writeLeb128(value.closureVars.size)
+     sink.writeLeb128(value.constantPool.size)
+     sink.writeLeb128(value.bytecode.size)
+@@ -115,7 +143,6 @@ class JsObjectWriter(
+       writeClosureVar(closureVar)
+     }
+ 
+-    // TODO: fixup atoms within bytecode?
+     sink.write(value.bytecode)
+ 
+     if (value.debug != null) {
+@@ -134,32 +161,33 @@ class JsObjectWriter(
+ 
+   private fun writeVarDef(value: JsVarDef) {
+     writeAtom(value.name.toJsString())
+-    sink.writeLeb128(value.scopeLevel)
+     sink.writeLeb128(value.scopeNext + 1)
++    sink.writeLeb128(value.varRefIndex)
+     sink.writeByte(
+       value.kind or
+         value.isConst.toBit(4) or
+         value.isLexical.toBit(5) or
+-        value.isCaptured.toBit(6),
++        value.isCaptured.toBit(6) or
++        value.hasScope.toBit(7),
+     )
+   }
+ 
+   private fun writeClosureVar(value: JsClosureVar) {
+     writeAtom(value.name.toJsString())
+     sink.writeLeb128(value.varIndex)
+-    sink.writeByte(
+-      value.isLocal.toBit(0) or
+-        value.isArg.toBit(1) or
+-        value.isConst.toBit(2) or
+-        value.isLexical.toBit(3) or
+-        (value.kind shl 4),
++    sink.writeShortLe(
++      value.closureType or
++        value.isConst.toBit(3) or
++        value.isLexical.toBit(4) or
++        (value.kind shl 5),
+     )
+   }
+ 
+   private fun writeDebug(debug: Debug) {
+     writeAtom(debug.fileName.toJsString())
+-    sink.writeLeb128(debug.lineNumber)
+     sink.writeLeb128(debug.pc2Line.size)
+     sink.write(debug.pc2Line)
++    sink.writeLeb128(debug.source.size)
++    sink.write(debug.source)
+   }
+ }
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
+index a208c89..7566a63 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -67,39 +68,47 @@ private class SourceMapBytecodeRewriter(
+     }
+   }
+ 
+-  fun Debug.jsToKt(): Debug {
+-    val ktPc2LineBuffer = Buffer()
+-
+-    val jsReader = LineNumberReader(
+-      functionLineNumber = lineNumber,
+-      source = Buffer().write(pc2Line),
+-    )
++  private class Position(val pc: Int, val line: Int, val column: Int, val segment: Segment?)
+ 
+-    var ktFileName: String? = null
+-    var functionKtLineNumber: Int = -1
+-    lateinit var ktWriter: LineNumberWriter
+-    while (jsReader.next()) {
+-      val segment = sourceMap.find(jsReader.line)
+-      val instructionKtLineNumber = segment?.sourceLine?.toInt() ?: jsReader.line
++  /**
++   * Version 5's table starts with the function's own line and column, then one entry per change
++   * of line or column. Each position is mapped by its line, as in Zipline 1.28.0: the line's first
++   * segment gives the Kotlin file, line and column. A position the source map has no segment for
++   * keeps its JavaScript line and column, as before.
++   *
++   * The function's own position is usually the `function` keyword's line, which Kotlin's source
++   * maps rarely cover. When it is not mapped, it takes its first mapped instruction's position
++   * (1.28.0 did the same for its separate function line number).
++   */
++  fun Debug.jsToKt(): Debug {
++    if (pc2Line.size == 0) return this // Stripped: nothing to map.
+ 
+-      // If we haven't initialized declaration-level data, do that now. We'd prefer to map from the
+-      // source declaration line number, but we can't because that information isn't in the source
+-      // map. (It maps instructions, not declarations).
+-      if (ktFileName == null) {
+-        ktFileName = segment?.source?.also {
+-          atoms.add(it)
+-        }
+-        functionKtLineNumber = instructionKtLineNumber
+-        ktWriter = LineNumberWriter(functionKtLineNumber, ktPc2LineBuffer)
++    val positions = mutableListOf<Position>()
++    LineNumberReader(Buffer().write(pc2Line)).use { reader ->
++      positions += Position(0, reader.line, reader.column, sourceMap.find(reader.line))
++      while (reader.next()) {
++        positions += Position(reader.pc, reader.line, reader.column, sourceMap.find(reader.line))
+       }
+-
+-      ktWriter.next(jsReader.pc, instructionKtLineNumber)
+     }
+ 
++    val firstMapped = positions.firstOrNull { it.segment?.source != null }
++      ?: return this // Nothing in this function is in the source map.
++    val ktFileName = firstMapped.segment!!.source!!
++    atoms.add(ktFileName)
++
++    val header = positions[0].takeIf { it.segment != null } ?: firstMapped
++    val ktPc2Line = Buffer()
++    val writer = LineNumberWriter(header.ktLine(), header.ktColumn(), ktPc2Line)
++    for (position in positions.drop(1)) {
++      writer.next(position.pc, position.ktLine(), position.ktColumn())
++    }
+     return Debug(
+-      fileName = ktFileName ?: fileName,
+-      lineNumber = functionKtLineNumber,
+-      pc2Line = ktPc2LineBuffer.readByteString(),
++      fileName = ktFileName,
++      pc2Line = ktPc2Line.readByteString(),
++      source = source,
+     )
+   }
++
++  private fun Position.ktLine(): Int = segment?.sourceLine?.toInt() ?: line
++  private fun Position.ktColumn(): Int = segment?.sourceColumn?.toInt() ?: column
+ }
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt
+index 3a8a2d3..a0cb604 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's built-in atoms.
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -35,11 +36,13 @@ class MutableAtomSet(
+   private val stringToId = mutableMapOf<JsString, Int>()
+ 
+   init {
++    // The first occurrence wins: "<brand>" is both a string atom and, later, a symbol
++    // (JS_ATOM_Private_brand). A name in bytecode is the string atom.
+     for ((index, string) in BUILT_IN_ATOMS.withIndex()) {
+-      stringToId[string] = index
++      stringToId.putIfAbsent(string, index)
+     }
+     for ((index, string) in strings.withIndex()) {
+-      stringToId[string] = index + BUILT_IN_ATOMS.size
++      stringToId.putIfAbsent(string, index + BUILT_IN_ATOMS.size)
+     }
+   }
+ 
+@@ -48,7 +51,8 @@ class MutableAtomSet(
+   override fun get(id: Int): JsString {
+     return when {
+       id < BUILT_IN_ATOMS.size -> BUILT_IN_ATOMS[id]
+-      else -> _strings[id - BUILT_IN_ATOMS.size]
++      else -> _strings.getOrNull(id - BUILT_IN_ATOMS.size)
++        ?: throw IllegalArgumentException("invalid atom index: $id")
+     }
+   }
+ 
+@@ -72,8 +76,15 @@ class MutableAtomSet(
+   override fun toMutableAtomSet(): MutableAtomSet = MutableAtomSet(_strings)
+ }
+ 
+-/** This is computed dynamically at QuickJS boot, and depends on build flags. */
+-private val BUILT_IN_ATOMS: List<JsString> = listOf(
++/** The number of atoms built into QuickJS: `JS_ATOM_END`, the first index of a bytecode's own. */
++internal val BUILT_IN_ATOM_COUNT: Int get() = BUILT_IN_ATOMS.size
++
++/**
++ * QuickJS 2026-06-04's `quickjs-atom.h`, in order, after `JS_ATOM_NULL`. Bytecode refers to these
++ * by index, so this list must match the engine exactly (`JS_ATOM_END` is 243). The 2026 header has
++ * no build-flag conditionals.
++ */
++internal val BUILT_IN_ATOMS: List<JsString> = listOf(
+   // JS_ATOM_NULL
+   "\u0000",
+   "null",
+@@ -123,10 +134,14 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+   "yield",
+   "await",
+   "",
++  "keys",
++  "size",
+   "length",
+   "fileName",
+   "lineNumber",
++  "columnNumber",
+   "message",
++  "cause",
+   "errors",
+   "stack",
+   "name",
+@@ -188,6 +203,7 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+   "global",
+   "unicode",
+   "raw",
++  "rawJSON",
+   "new.target",
+   "this.active_func",
+   "<home_object>",
+@@ -211,13 +227,30 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+   "async",
+   "exec",
+   "groups",
++  "indices",
+   "status",
+   "reason",
+   "globalThis",
++  "bigint",
++  "-0",
++  "Infinity",
++  "-Infinity",
++  "NaN",
++  "hasIndices",
++  "ignoreCase",
++  "multiline",
++  "dotAll",
++  "sticky",
++  "unicodeSets",
+   "not-equal",
+   "timed-out",
+   "ok",
++  "toISOString",
++  "alphabet",
++  "lastChunkHandling",
++  "omitPadding",
+   "toJSON",
++  "maxByteLength",
+   "Object",
+   "Array",
+   "Error",
+@@ -242,13 +275,23 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+   "Uint16Array",
+   "Int32Array",
+   "Uint32Array",
++  "BigInt64Array",
++  "BigUint64Array",
++  "Float16Array",
+   "Float32Array",
+   "Float64Array",
+   "DataView",
++  "BigInt",
++  "WeakRef",
++  "FinalizationRegistry",
+   "Map",
+   "Set",
+   "WeakMap",
+   "WeakSet",
++  "Iterator",
++  "Iterator Helper",
++  "Iterator Concat",
++  "Iterator Wrap",
+   "Map Iterator",
+   "Set Iterator",
+   "Array Iterator",
+@@ -271,6 +314,7 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+   "TypeError",
+   "URIError",
+   "InternalError",
++  "AggregateError",
+   // Symbols:
+   "<brand>",
+   "Symbol.toPrimitive",
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/bytecodeConstants.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/bytecodeConstants.kt
+index 6e5e506..e7ba2fa 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/bytecodeConstants.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/bytecodeConstants.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -15,7 +16,12 @@
+  */
+ package app.cash.zipline.bytecode
+ 
+-internal const val BC_VERSION = 1
++/**
++ * QuickJS 2026-06-04's `BC_VERSION` and `BCTagEnum` (quickjs.c). Version 1 (QuickJS 2021-03-27
++ * without `CONFIG_BIGNUM`) is not read: its tags after `BC_TAG_ARRAY` and its function, variable,
++ * closure and debug records differ.
++ */
++internal const val BC_VERSION = 5
+ internal const val BC_TAG_NULL = 1
+ internal const val BC_TAG_UNDEFINED = 2
+ internal const val BC_TAG_BOOL_FALSE = 3
+@@ -26,14 +32,12 @@ internal const val BC_TAG_STRING = 7
+ internal const val BC_TAG_OBJECT = 8
+ internal const val BC_TAG_ARRAY = 9
+ internal const val BC_TAG_BIG_INT = 10
+-internal const val BC_TAG_BIG_FLOAT = 11
+-internal const val BC_TAG_BIG_DECIMAL = 12
+-internal const val BC_TAG_TEMPLATE_OBJECT = 13
+-internal const val BC_TAG_FUNCTION_BYTECODE = 14
+-internal const val BC_TAG_MODULE = 15
+-internal const val BC_TAG_TYPED_ARRAY = 16
+-internal const val BC_TAG_ARRAY_BUFFER = 17
+-internal const val BC_TAG_SHARED_ARRAY_BUFFER = 18
+-internal const val BC_TAG_DATE = 19
+-internal const val BC_TAG_OBJECT_VALUE = 20
+-internal const val BC_TAG_OBJECT_REFERENCE = 21
++internal const val BC_TAG_TEMPLATE_OBJECT = 11
++internal const val BC_TAG_FUNCTION_BYTECODE = 12
++internal const val BC_TAG_MODULE = 13
++internal const val BC_TAG_TYPED_ARRAY = 14
++internal const val BC_TAG_ARRAY_BUFFER = 15
++internal const val BC_TAG_SHARED_ARRAY_BUFFER = 16
++internal const val BC_TAG_DATE = 17
++internal const val BC_TAG_OBJECT_VALUE = 18
++internal const val BC_TAG_OBJECT_REFERENCE = 19
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/encoding.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/encoding.kt
+index 137f97d..40f4bc5 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/encoding.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/encoding.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: flag bits read as set when set.
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -25,17 +26,22 @@ internal inline infix fun Byte.shl(other: Int): Int = toInt() shl other
+ @Suppress("NOTHING_TO_INLINE") // Syntactic sugar.
+ internal inline infix fun Byte.and(other: Int): Int = toInt() and other
+ 
+-/** Like QuickJS' `bc_get_flags` where n is 1. */
++/**
++ * Like QuickJS' `bc_get_flags` where n is 1: true when the bit is set.
++ *
++ * Keliver fork: 1.28.0 returned the inverse (`a and 0x1 != 0x1` parses as `(a and 0x1) != 0x1`),
++ * and [toBit] inverted it back, so a round trip was right but every flag property read inverted.
++ */
+ @Suppress("NOTHING_TO_INLINE") // Syntactic sugar.
+ internal inline fun Int.bit(bit: Int): Boolean {
+-  return (this shr bit) and 0x1 != 0x1
++  return ((this shr bit) and 0x1) == 0x1
+ }
+ 
+ @Suppress("NOTHING_TO_INLINE") // Syntactic sugar.
+ internal inline fun Boolean.toBit(bit: Int): Int {
+   return when {
+-    this -> 0
+-    else -> 1 shl bit
++    this -> 1 shl bit
++    else -> 0
+   }
+ }
+ 
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/lineNumbers.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/lineNumbers.kt
+index 66246b6..b944f0c 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/lineNumbers.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/lineNumbers.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's pc2line table (columns).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -19,18 +20,39 @@ import okio.BufferedSink
+ import okio.BufferedSource
+ import okio.Closeable
+ 
+-/** Decode the pc2line table. */
++/**
++ * Decode the pc2line table of QuickJS 2026 (`compute_pc2line_info` and `find_line_num` in
++ * quickjs.c):
++ *
++ * - a header: the function's line and column, each minus one, as unsigned LEB128;
++ * - then one entry per change: a byte that packs the pc and line deltas (or 0, an unsigned LEB128
++ *   pc delta and a signed LEB128 line delta), followed by a signed LEB128 column delta.
++ *
++ * Lines and columns are 1-based. An empty table (stripped) has no header: [line] and [column] are
++ * 0 and [next] returns false.
++ */
+ class LineNumberReader(
+-  functionLineNumber: Int,
+   private val source: BufferedSource,
+ ) : Closeable by source {
+   var pc: Int = 0
+-  var line: Int = functionLineNumber
++  var line: Int = 0
++  var column: Int = 0
++
++  init {
++    if (!source.exhausted()) {
++      line = source.readLeb128() + 1
++      column = source.readLeb128() + 1
++    }
++  }
++
++  /** The function's own line and column, from the header. */
++  val functionLine: Int = line
++  val functionColumn: Int = column
+ 
+   fun next(): Boolean {
+     if (source.exhausted()) return false
+ 
+-    val op = source.readByte().toInt()
++    val op = source.readByte().toInt() and 0xff
+     val diffPc: Int
+     val diffLine: Int
+     if (op != 0) {
+@@ -41,28 +63,41 @@ class LineNumberReader(
+       diffPc = source.readLeb128()
+       diffLine = source.readSleb128()
+     }
++    val diffColumn = source.readSleb128()
+     pc += diffPc
+     line += diffLine
++    column += diffColumn
+ 
+     return true
+   }
+ }
+ 
+-/** Encode a pc2line table. */
++/**
++ * Encode a pc2line table in QuickJS 2026's format (see [LineNumberReader]). The header is written
++ * on construction, so even a function with no entries has its line and column.
++ */
+ class LineNumberWriter(
+-  functionLineNumber: Int,
++  functionLine: Int,
++  functionColumn: Int,
+   private val sink: BufferedSink,
+ ) : Closeable by sink {
+   private var lastPc = 0
+-  private var lastLine = functionLineNumber
++  private var lastLine = functionLine.coerceAtLeast(1)
++  private var lastColumn = functionColumn.coerceAtLeast(1)
++
++  init {
++    sink.writeLeb128(lastLine - 1)
++    sink.writeLeb128(lastColumn - 1)
++  }
+ 
+-  fun next(pc: Int, line: Int) {
+-    if (line < 0) return // Drop negative line numbers.
++  fun next(pc: Int, line: Int, column: Int) {
++    if (line < 1 || column < 1) return // Drop unknown positions.
+ 
+     val diffPc = pc - lastPc
+     val diffLine = line - lastLine
++    val diffColumn = column - lastColumn
+ 
+-    if (diffLine == 0) return // Nothing to do.
++    if (diffLine == 0 && diffColumn == 0) return // Nothing to do.
+     if (diffPc < 0) return // PC may only advance.
+ 
+     val linePart = diffLine - PC2LINE_BASE
+@@ -74,9 +109,11 @@ class LineNumberWriter(
+       sink.writeLeb128(diffPc)
+       sink.writeSleb128(diffLine)
+     }
++    sink.writeSleb128(diffColumn)
+ 
+     lastPc = pc
+     lastLine = line
++    lastColumn = column
+   }
+ }
+ 
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/types.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/types.kt
+index a95a96e..4519d86 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/types.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/types.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -15,10 +16,11 @@
+  */
+ package app.cash.zipline.bytecode
+ 
++import java.math.BigInteger
++import okio.Buffer
+ import okio.ByteString
+ import okio.ByteString.Companion.encode
+-import okio.ByteString.Companion.encodeUtf8
+-import okio.utf8Size
++import okio.ByteString.Companion.toByteString
+ 
+ sealed class JsObject
+ 
+@@ -32,6 +34,40 @@ data class JsInt(val value: Int) : JsObject()
+ 
+ data class JsDouble(val value: Double) : JsObject()
+ 
++/**
++ * A BigInt constant, as QuickJS writes it: the shortest two's-complement form, little-endian
++ * (`JS_WriteBigInt`). Zero is no bytes. Kept as bytes so that a round trip is byte-identical on
++ * either limb size.
++ */
++data class JsBigInt(val twosComplementLittleEndian: ByteString) : JsObject() {
++  val value: BigInteger
++    get() = when (twosComplementLittleEndian.size) {
++      0 -> BigInteger.ZERO
++      else -> BigInteger(twosComplementLittleEndian.toByteArray().reversedArray())
++    }
++}
++
++/** An array constant (`BC_TAG_ARRAY`), or a tagged template's strings (`BC_TAG_TEMPLATE_OBJECT`). */
++data class JsArray(
++  val elements: List<JsObject>,
++  val isTemplate: Boolean = false,
++  /** A template's `raw` strings; [JsUndefined] when it has none. Not written for an array. */
++  val raw: JsObject = JsUndefined,
++) : JsObject()
++
++/**
++ * A second occurrence of an object already written (`BC_TAG_OBJECT_REFERENCE`, written because
++ * Zipline compiles with `JS_WRITE_OBJ_REFERENCE`): the index of the object in write order.
++ */
++data class JsObjectReference(val index: Int) : JsObject()
++
++/**
++ * A QuickJS string: 8-bit characters (Latin-1, U+0000–U+00FF) or 16-bit ones (UTF-16LE).
++ *
++ * Keliver fork: 1.28.0 decoded 8-bit strings as UTF-8 and encoded only ASCII as 8-bit, so a name
++ * with a Latin-1 letter (`café`) read as `caf�` and could not be written back. Both
++ * directions are Latin-1 now, as in QuickJS.
++ */
+ data class JsString(
+   val isWideChar: Boolean,
+   val bytes: ByteString,
+@@ -39,17 +75,23 @@ data class JsString(
+   val string: String
+     get() = when {
+       isWideChar -> bytes.string(Charsets.UTF_16LE)
+-      else -> bytes.utf8()
++      else -> bytes.string(Charsets.ISO_8859_1)
+     }
+ }
+ 
+ fun String.toJsString(): JsString {
+-  return when (length) {
+-    utf8Size().toInt() -> JsString(isWideChar = false, bytes = encodeUtf8())
++  return when {
++    all { it.code < 0x100 } -> JsString(isWideChar = false, bytes = encode(Charsets.ISO_8859_1))
+     else -> JsString(isWideChar = true, bytes = encode(Charsets.UTF_16LE))
+   }
+ }
+ 
++/** `BigInteger` to [JsBigInt], in QuickJS's shortest two's-complement form. */
++fun BigInteger.toJsBigInt(): JsBigInt {
++  if (signum() == 0) return JsBigInt(ByteString.EMPTY)
++  return JsBigInt(toByteArray().reversedArray().toByteString())
++}
++
+ data class JsFunctionBytecode(
+   val flags: Int,
+   val jsMode: Byte,
+@@ -58,12 +100,15 @@ data class JsFunctionBytecode(
+   val varCount: Int,
+   val definedArgCount: Int,
+   val stackSize: Int,
++  /** New in version 5: the number of variable references the function's closures capture. */
++  val varRefCount: Int,
+   val locals: List<JsVarDef>,
+   val closureVars: List<JsClosureVar>,
+   val bytecode: ByteString,
+   val constantPool: List<JsObject>,
+   val debug: Debug?,
+ ) : JsObject() {
++  // The order of quickjs.c's JS_WriteFunctionTag.
+   val hasPrototype get() = flags.bit(0)
+   val hasSimpleParameterList get() = flags.bit(1)
+   val isDerivedClassConstructor get() = flags.bit(2)
+@@ -74,33 +119,53 @@ data class JsFunctionBytecode(
+   val superAllowed get() = flags.bit(8)
+   val argumentsAllowed get() = flags.bit(9)
+   val hasDebug get() = flags.bit(10)
+-  val backtraceBarrier get() = flags.bit(11)
++  val isDirectOrIndirectEval get() = flags.bit(11)
+ }
+ 
+ data class JsVarDef(
+   val name: String,
+-  val scopeLevel: Int,
+   val scopeNext: Int,
++  /** New in version 5: the variable's index among the function's variable references. */
++  val varRefIndex: Int,
+   // JsVarKindEnum
+   val kind: Int,
+   val isConst: Boolean,
+   val isLexical: Boolean,
+   val isCaptured: Boolean,
++  /** New in version 5. */
++  val hasScope: Boolean,
+ )
+ 
+ data class JsClosureVar(
+   val name: String,
+   val varIndex: Int,
+-  val isLocal: Boolean,
+-  val isArg: Boolean,
++  /** JSClosureTypeEnum (version 5): replaces version 1's `is_local` and `is_arg` flags. */
++  val closureType: Int,
+   val isConst: Boolean,
+   val isLexical: Boolean,
+   // JsVarKindEnum
+   val kind: Int,
+ )
+ 
++/**
++ * A function's debug information. In version 5 the function's own line and column are the first
++ * two numbers of [pc2Line] (see [LineNumberReader]); an empty table has neither, and QuickJS then
++ * shows no line for the function's frames.
++ */
+ data class Debug(
+   val fileName: String,
+-  val lineNumber: Int,
+   val pc2Line: ByteString,
+-)
++  /**
++   * The function's source text, which QuickJS 2026 keeps unless the runtime strips it
++   * (`JS_STRIP_SOURCE`) and uses for `Function.prototype.toString`. Empty when absent.
++   */
++  val source: ByteString = ByteString.EMPTY,
++) {
++  /** The function's line (1-based), or 0 if the table is empty. */
++  val lineNumber: Int
++    get() = LineNumberReader(Buffer().write(pc2Line)).use { it.line }
++
++  /** The function's column (1-based), or 0 if the table is empty. */
++  val columnNumber: Int
++    get() = LineNumberReader(Buffer().write(pc2Line)).use { it.column }
++}
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt
+index ced2dcd..3638144 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -120,17 +121,58 @@ class ApplySourceMapToBytecodeTest {
+     val exception = assertFailsWith<Exception> {
+       quickJs.evaluate("require('demo').sayHello()")
+     }
++    // Keliver fork: version 5 keeps a line for every instruction, so goBoom1's throw has its Kotlin
++    // line (1.28.0's rewrite lost it), and QuickJS 2026 gives the evaluated script a line.
+     assertThat(exception.stackTraceToString()).startsWith(
+       """
+       |app.cash.zipline.QuickJsException: boom!
+-      |	at JavaScript.goBoom1(throwException.kt)
++      |	at JavaScript.goBoom1(throwException.kt:12)
+       |	at JavaScript.goBoom2(throwException.kt:9)
+       |	at JavaScript.goBoom3(throwException.kt:6)
+       |	at JavaScript.sayHello(throwException.kt:3)
+-      |	at JavaScript.<eval>(?)
++      |	at JavaScript.<eval>(?:1)
+       |
+       """.trimMargin(),
+     )
++
++    // The engine's own stack, with columns: the Kotlin column of the line's first segment.
++    val stack = quickJs.evaluate(
++      "try { require('demo').sayHello(); 'no exception' } catch (e) { e.stack }",
++    ) as String
++    assertThat(stack).startsWith(
++      """
++      |    at goBoom1 (throwException.kt:12:3)
++      |    at goBoom2 (throwException.kt:9:3)
++      |    at goBoom3 (throwException.kt:6:3)
++      |    at sayHello (throwException.kt:3:3)
++      |
++      """.trimMargin(),
++    )
++  }
++
++  /** Keliver fork: a module with BigInt constants and a template keeps them through the rewrite. */
++  @Test fun bigIntsAndTemplatesSurviveTheRewrite() {
++    val js = """
++       /*  1 */ function tag(s, ...v) { return s.raw.join('|') + v.join('|'); }
++       /*  2 */ function compute() {
++       /*  3 */   return String(18446744073709551616n * -3n + 9007199254740993n) + tag`a${'$'}{1n}b`;
++       /*  4 */ }
++       """.trimIndent()
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["compute.kt"],
++      |  "sourcesContent": [null],
++      |  "names": [],
++      |  "mappings": "AAAA;AACA;EACE;AACF"
++      |}
++      """.trimMargin(),
++    )
++    val bytecode = quickJs.compile(js, "compute.js")
++    quickJs.execute(applySourceMapToBytecode(bytecode, sourceMap))
++    // 2^64 * -3 + (2^53 + 1), then the template's raw strings and its value.
++    assertThat(quickJs.evaluate("compute()")).isEqualTo("-55331225021873913855a|b1")
+   }
+ 
+   @Test fun removeLeadingDotDotsInSourceMap() {
+@@ -180,7 +222,7 @@ class ApplySourceMapToBytecodeTest {
+       |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
+       |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
+       |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
+-      |  at JavaScript.<eval>(?)
++      |  at JavaScript.<eval>(?:1)
+       |
+       """.trimMargin(),
+     )
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt
+index 6e09133..09c162d 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's atoms; Latin-1 strings.
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -19,6 +20,7 @@ import assertk.assertThat
+ import assertk.assertions.isEqualTo
+ import assertk.assertions.isFalse
+ import assertk.assertions.isGreaterThanOrEqualTo
++import assertk.assertions.isLessThan
+ import assertk.assertions.isNotEqualTo
+ import assertk.assertions.isTrue
+ import kotlin.test.assertFailsWith
+@@ -66,17 +68,30 @@ class AtomSetTest {
+    * UTF-8.
+    */
+   @Test fun atomSetHoldsNonUtf8Strings() {
+-    val unicodeReplacementChar = "\ufffd"
+     val atomSet = MutableAtomSet(listOf())
+ 
++    // Keliver fork: 8-bit strings are Latin-1, as in QuickJS (1.28.0 decoded them as UTF-8,
++    // which made both of these "\ufffd").
+     val fe = JsString(isWideChar = false, "fe".decodeHex())
+-    assertThat(fe.string).isEqualTo(unicodeReplacementChar)
++    assertThat(fe.string).isEqualTo("\u00fe")
+     assertThat(atomSet.add(fe)).isTrue()
+ 
+     val ff = JsString(isWideChar = false, "ff".decodeHex())
+-    assertThat(ff.string).isEqualTo(unicodeReplacementChar)
++    assertThat(ff.string).isEqualTo("\u00ff")
+     assertThat(atomSet.add(ff)).isTrue()
+ 
+     assertThat(atomSet.idOf(fe)).isNotEqualTo(atomSet.idOf(ff))
++    assertThat("\u00fe".toJsString()).isEqualTo(fe)
++  }
++
++  /** "<brand>" is a string atom and, later in the table, a symbol: a name is the string. */
++  @Test fun brandIsTheStringAtom() {
++    val atomSet = MutableAtomSet(listOf())
++    val id = atomSet.idOf("<brand>".toJsString())
++    assertThat(id).isLessThan(BUILT_IN_ATOM_COUNT - 14)
++  }
++
++  @Test fun builtInAtomCountIsQuickJs2026AtomEnd() {
++    assertThat(BUILT_IN_ATOM_COUNT).isEqualTo(243)
+   }
+ }
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/EncodingTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/EncodingTest.kt
+index d5ab063..6eff8f4 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/EncodingTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/EncodingTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: flag bits read as set when set.
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -23,22 +24,23 @@ import okio.Buffer
+ import org.junit.Test
+ 
+ class EncodingTest {
++  // Keliver fork: 1.28.0's expectations were inverted (a set bit read as false).
+   @Test fun intGetBit() {
+-    assertThat(0b00000001.bit(0)).isFalse()
+-    assertThat(0b00000000.bit(0)).isTrue()
+-    assertThat(0b11111111.bit(0)).isFalse()
+-    assertThat(0b11111110.bit(0)).isTrue()
+-    assertThat(0b10000000.bit(7)).isFalse()
+-    assertThat(0b00000000.bit(7)).isTrue()
+-    assertThat(0b11111111.bit(7)).isFalse()
+-    assertThat(0b01111111.bit(7)).isTrue()
++    assertThat(0b00000001.bit(0)).isTrue()
++    assertThat(0b00000000.bit(0)).isFalse()
++    assertThat(0b11111111.bit(0)).isTrue()
++    assertThat(0b11111110.bit(0)).isFalse()
++    assertThat(0b10000000.bit(7)).isTrue()
++    assertThat(0b00000000.bit(7)).isFalse()
++    assertThat(0b11111111.bit(7)).isTrue()
++    assertThat(0b01111111.bit(7)).isFalse()
+   }
+ 
+   @Test fun booleanToBit() {
+-    assertThat(true.toBit(0)).isEqualTo(0b00000000)
+-    assertThat(false.toBit(0)).isEqualTo(0b00000001)
+-    assertThat(true.toBit(7)).isEqualTo(0b00000000)
+-    assertThat(false.toBit(7)).isEqualTo(0b10000000)
++    assertThat(true.toBit(0)).isEqualTo(0b00000001)
++    assertThat(false.toBit(0)).isEqualTo(0b00000000)
++    assertThat(true.toBit(7)).isEqualTo(0b10000000)
++    assertThat(false.toBit(7)).isEqualTo(0b00000000)
+   }
+ 
+   @Test fun intGetBits() {
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/Es2015SupportTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/Es2015SupportTest.kt
+index be0b566..983562c 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/Es2015SupportTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/Es2015SupportTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026 gives the evaluated script a line.
+ /*
+  * Copyright (C) 2025 Cash App
+  *
+@@ -72,7 +73,7 @@ class Es2015SupportTest {
+       |	at JavaScript.goBoom2(demo.js:15)
+       |	at JavaScript.goBoom3(demo.js:11)
+       |	at JavaScript.sayHello(demo.js:7)
+-      |	at JavaScript.<eval>(?)
++      |	at JavaScript.<eval>(?:1)
+       """.trimMargin(),
+     )
+   }
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt
+index f7b5cfe..3544938 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -17,9 +18,14 @@ package app.cash.zipline.bytecode
+ 
+ import app.cash.zipline.QuickJs
+ import assertk.assertThat
++import assertk.assertions.containsAtLeast
+ import assertk.assertions.containsExactly
+ import assertk.assertions.isEqualTo
++import assertk.assertions.isTrue
++import java.io.File
+ import okio.Buffer
++import okio.ByteString.Companion.decodeHex
++import okio.ByteString.Companion.encodeUtf8
+ import okio.ByteString.Companion.toByteString
+ import org.junit.After
+ import org.junit.Test
+@@ -101,10 +107,12 @@ class JsObjectEncodingTest {
+     )
+ 
+     assertThat(evalFunction.name).isEqualTo("<eval>")
+-    assertThat(assertLineNumbersRoundTrip(evalFunction.debug!!))
+-      .containsExactly(0, 10)
++    assertThat(evalFunction.debug!!.lineNumber).isEqualTo(1)
++    assertLineNumbersRoundTrip(evalFunction.debug!!)
+ 
+     val function = evalFunction.constantPool.single() as JsFunctionBytecode
++    assertThat(function.debug!!.lineNumber).isEqualTo(1)
++    assertThat(function.debug!!.columnNumber).isEqualTo(1)
+     assertThat(assertLineNumbersRoundTrip(function.debug!!))
+       .containsExactly(2, 5, 6, 8, 9)
+   }
+@@ -213,19 +221,193 @@ class JsObjectEncodingTest {
+     return decoded as JsFunctionBytecode
+   }
+ 
+-  /** Returns the line numbers only. */
++  /**
++   * Returns the line numbers only, one per change of line (version 5 also has an entry for each
++   * change of column on the same line).
++   */
+   private fun assertLineNumbersRoundTrip(debug: Debug): List<Int> {
+-    val reader = LineNumberReader(debug.lineNumber, Buffer().write(debug.pc2Line))
++    val reader = LineNumberReader(Buffer().write(debug.pc2Line))
+     val result = mutableListOf<Int>()
+ 
+     val buffer = Buffer()
+-    val writer = LineNumberWriter(debug.lineNumber, buffer)
++    val writer = LineNumberWriter(reader.line, reader.column, buffer)
+     while (reader.next()) {
+-      writer.next(reader.pc, reader.line)
+-      result += reader.line
++      writer.next(reader.pc, reader.line, reader.column)
++      if (result.lastOrNull() != reader.line) result += reader.line
+     }
+ 
+     assertThat(buffer.readByteString()).isEqualTo(debug.pc2Line)
+     return result
+   }
++
++  // Keliver fork: version 5's new records.
++
++  @Test fun bigIntConstants() {
++    val values = listOf(
++      "0", "1", "-1", "127", "128", "-128", "-129", "255", "256", "2147483647", "-2147483648",
++      "9007199254740993", "9223372036854775807", "-9223372036854775808", "9223372036854775808",
++      "18446744073709551615", "18446744073709551616", "-18446744073709551616",
++      "340282366920938463463374607431768211457", "-340282366920938463463374607431768211457",
++    )
++    val evalFunction = assertRoundTrip(
++      """
++      |function bigInts() {
++      |  return [${values.joinToString { "${it}n" }}];
++      |}
++      """.trimMargin(),
++    )
++    val function = evalFunction.constantPool.single() as JsFunctionBytecode
++    // Short values are pushed by an instruction; every constant in the pool is one of the values.
++    val decoded = function.constantPool.filterIsInstance<JsBigInt>().map { it.value }
++    assertThat(decoded.isNotEmpty()).isTrue()
++    // The pool holds the literals; a minus sign is an instruction.
++    assertThat(values.map { it.toBigInteger().abs() }).containsAtLeast(*decoded.toTypedArray())
++    for (constant in decoded) {
++      // The writer's form is QuickJS's: shortest two's complement, little-endian.
++      assertThat(constant.toJsBigInt().value).isEqualTo(constant)
++    }
++    assertThat(function.constantPool.filterIsInstance<JsBigInt>().map { it.twosComplementLittleEndian })
++      .isEqualTo(decoded.map { it.toJsBigInt().twosComplementLittleEndian })
++
++    // The re-encoded bytecode runs and yields the same values.
++    quickJs.execute(roundTrip(quickJs.compile(
++      "function bigInts() { return [${values.joinToString { "${it}n" }}]; }",
++      "bigints.js",
++    )))
++    assertThat(quickJs.evaluate("bigInts().map(String).join(',')"))
++      .isEqualTo(values.joinToString(","))
++  }
++
++  @Test fun bigIntEncoding() {
++    assertThat("0".toBigInteger().toJsBigInt().twosComplementLittleEndian.hex()).isEqualTo("")
++    assertThat("-1".toBigInteger().toJsBigInt().twosComplementLittleEndian.hex()).isEqualTo("ff")
++    assertThat("128".toBigInteger().toJsBigInt().twosComplementLittleEndian.hex()).isEqualTo("8000")
++    assertThat("-129".toBigInteger().toJsBigInt().twosComplementLittleEndian.hex()).isEqualTo("7fff")
++    assertThat(JsBigInt("0001".decodeHex()).value).isEqualTo("256".toBigInteger())
++  }
++
++  @Test fun templateObjects() {
++    val evalFunction = assertRoundTrip(
++      """
++      |function tag(strings, ...values) {
++      |  return strings.raw.join('|') + ':' + strings.join('|') + ':' + values.join('|');
++      |}
++      |function tagged() {
++      |  return tag`a\n${'$'}{1}b${'$'}{2n}c`;
++      |}
++      """.trimMargin(),
++    )
++    val tagged = evalFunction.constantPool.filterIsInstance<JsFunctionBytecode>()
++      .single { it.name == "tagged" }
++    val template = tagged.constantPool.filterIsInstance<JsArray>().single()
++    assertThat(template.isTemplate).isTrue()
++    assertThat(template.elements).isEqualTo(listOf("a\n".toJsString(), "b".toJsString(), "c".toJsString()))
++    val raw = template.raw as JsArray
++    assertThat(raw.isTemplate).isTrue()
++    assertThat(raw.elements).isEqualTo(listOf("a\\n".toJsString(), "b".toJsString(), "c".toJsString()))
++  }
++
++  /** Closures, classes (private fields and methods, the brand), generators and async functions. */
++  @Test fun closuresAndClassesRunAfterRoundTrip() {
++    val script = """
++      |class Counter {
++      |  #count = 0;
++      |  static #instances = 0;
++      |  constructor() { Counter.#instances++; }
++      |  #step() { return 1; }
++      |  get count() { return this.#count; }
++      |  increment() { this.#count += this.#step(); return this; }
++      |  static instances() { return Counter.#instances; }
++      |}
++      |class Named extends Counter {
++      |  constructor(name) { super(); this.name = name; }
++      |  toString() { return this.name + '=' + this.count; }
++      |}
++      |function makeAdder(a) {
++      |  let total = a;
++      |  const add = (b) => { total += b; return total; };
++      |  return function (c) { return add(c) * (arguments.length + 0); };
++      |}
++      |function* range(n) { for (let i = 0; i < n; i++) yield i; }
++      |async function later(x) { return await Promise.resolve(x * 2); }
++      |async function* agen() { yield 1; yield 2; }
++      |function run() {
++      |  const named = new Named('n').increment().increment();
++      |  const adder = makeAdder(10);
++      |  const { a, ...rest } = { a: 1, b: 2, c: 3 };
++      |  let out = [String(named), Counter.instances(), adder(5), adder(1), [...range(4)].join(''),
++      |    a, Object.keys(rest).join('')];
++      |  later(21).then((v) => { globalThis.laterResult = v; });
++      |  return out.join(',');
++      |}
++      """.trimMargin()
++    val bytecode = quickJs.compile(script, "classes.js")
++    val evalFunction = assertRoundTrip(script, "classes.js")
++    // QuickJS 2026 names class constructors and methods when the class is defined, so their
++    // bytecode has no name (JS_ATOM_NULL).
++    assertThat(evalFunction.constantPool.filterIsInstance<JsFunctionBytecode>().map { it.name })
++      .containsAtLeast("makeAdder", "range", "later", "agen", "run")
++
++    quickJs.execute(roundTrip(bytecode))
++    assertThat(quickJs.evaluate("run()")).isEqualTo("n=2,1,15,16,0123,1,bc")
++  }
++
++  /** The atom table above QuickJS's built-in atoms is the file's; the built-in ones are ours. */
++  @Test fun builtInAtomsMatchTheEngine() {
++    // quickjs-atom.h, from the engine this module's tests run against.
++    val header = File("../zipline/native/quickjs/quickjs-atom.h").readText()
++    val engineAtoms = Regex("""^DEF\(\w+,\s*"((?:[^"\\]|\\.)*)"\)""", RegexOption.MULTILINE)
++      .findAll(header)
++      .map { it.groupValues[1].replace("\\\\", "\\").replace("\\\"", "\"") }
++      .toList()
++    assertThat(BUILT_IN_ATOMS.drop(1).map { it.string }).isEqualTo(engineAtoms)
++    assertThat(BUILT_IN_ATOMS.first().string).isEqualTo("\u0000") // JS_ATOM_NULL
++  }
++
++  /** Every built-in atom QuickJS uses for a name reads as itself. */
++  @Test fun builtInAtomsInNames() {
++    val evalFunction = assertRoundTrip(
++      """
++      |function Symbol() {}
++      |function asyncIterator() {}
++      |function Float16Array() {}
++      |function FinalizationRegistry() {}
++      |function toPrimitive(hint, ...rest) { let length = 1; return length; }
++      """.trimMargin(),
++    )
++    assertThat(evalFunction.constantPool.filterIsInstance<JsFunctionBytecode>().map { it.name })
++      .isEqualTo(listOf("Symbol", "asyncIterator", "Float16Array", "FinalizationRegistry", "toPrimitive"))
++    val toPrimitive = evalFunction.constantPool.filterIsInstance<JsFunctionBytecode>().last()
++    assertThat(toPrimitive.locals.map { it.name }).containsAtLeast("hint", "rest", "length")
++  }
++
++  /**
++   * Version 5's debug record has the function's source text. The fork's `QuickJs.compile` leaves
++   * it out (as QuickJS 2021 did), but the record must still read and write when it is there.
++   */
++  @Test fun functionSource() {
++    val evalFunction = assertRoundTrip("function f(a) { return a + 1; }", "source.js")
++    val f = evalFunction.constantPool.single() as JsFunctionBytecode
++    assertThat(f.debug!!.source.size).isEqualTo(0)
++
++    val withSource = evalFunction.copy(
++      constantPool = listOf(f.copy(debug = f.debug!!.copy(source = "function f(a) { return a + 1; }".encodeUtf8()))),
++    )
++    val atoms = JsObjectReader(quickJs.compile("function f(a) { return a + 1; }", "source.js"))
++      .let { reader -> reader.use { it.readJsObject() }; reader.atoms }
++    val bytes = Buffer().also { JsObjectWriter(atoms, it).use { w -> w.writeJsObject(withSource) } }
++      .readByteArray()
++    assertThat(JsObjectReader(bytes).use { it.readJsObject() }).isEqualTo(withSource)
++    // Function.prototype.toString uses it.
++    quickJs.execute(bytes)
++    assertThat(quickJs.evaluate("f.toString()")).isEqualTo("function f(a) { return a + 1; }")
++  }
++
++  private fun roundTrip(bytecode: ByteArray): ByteArray {
++    val reader = JsObjectReader(bytecode)
++    val decoded = reader.use { it.readJsObject() }
++    val buffer = Buffer()
++    JsObjectWriter(reader.atoms, buffer).use { it.writeJsObject(decoded) }
++    return buffer.readByteArray()
++  }
+ }
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/LineNumbersTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/LineNumbersTest.kt
+index 66a64b6..a74ed9e 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/LineNumbersTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/LineNumbersTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's pc2line table (columns).
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -23,26 +24,68 @@ import okio.Buffer
+ import okio.ByteString.Companion.decodeHex
+ import org.junit.Test
+ 
++/**
++ * QuickJS 2026's pc2line table (`compute_pc2line_info`): the function's line and column minus one
++ * as unsigned LEB128, then per entry a packed byte (or 0, an unsigned LEB128 pc delta and a signed
++ * LEB128 line delta) and a signed LEB128 column delta.
++ */
+ class LineNumbersTest {
++  // Header (line 1, column 1): 00 00.
++  // pc 6, line 2, column 3: packed (2 - -1) + 6 * 5 + 1 = 0x21, column +2 = 04.
++  // pc 14, line 9, column 1: line +7 is outside the packed range: 00, pc +8 = 08, line +7 = 0e,
++  //   column -2 = 03.
++  // pc 300, line 8, column 1: pc +286 is too far for a packed byte: 00 9e02 01 00.
++  private val golden = "0000" + "2104" + "00080e03" + "009e020100"
++
+   @Test
+   fun readGoldenValue() {
+-    val reader = LineNumberReader(1, Buffer().write("1f000812".decodeHex()))
++    val reader = LineNumberReader(Buffer().write(golden.decodeHex()))
++    assertThat(reader.line).isEqualTo(1)
++    assertThat(reader.column).isEqualTo(1)
+     assertThat(reader.next()).isTrue()
+     assertThat(reader.pc).isEqualTo(6)
+-    assertThat(reader.line).isEqualTo(0)
++    assertThat(reader.line).isEqualTo(2)
++    assertThat(reader.column).isEqualTo(3)
+     assertThat(reader.next()).isTrue()
+     assertThat(reader.pc).isEqualTo(14)
+     assertThat(reader.line).isEqualTo(9)
++    assertThat(reader.column).isEqualTo(1)
++    assertThat(reader.next()).isTrue()
++    assertThat(reader.pc).isEqualTo(300)
++    assertThat(reader.line).isEqualTo(8)
++    assertThat(reader.column).isEqualTo(1)
+     assertThat(reader.next()).isFalse()
+   }
+ 
+   @Test
+   fun writeGoldenValue() {
+     val buffer = Buffer()
+-    LineNumberWriter(1, buffer).use { writer ->
+-      writer.next(pc = 6, line = 0)
+-      writer.next(pc = 14, line = 9)
++    LineNumberWriter(functionLine = 1, functionColumn = 1, buffer).use { writer ->
++      writer.next(pc = 6, line = 2, column = 3)
++      writer.next(pc = 14, line = 9, column = 1)
++      writer.next(pc = 20, line = 9, column = 1) // No change: no entry.
++      writer.next(pc = 300, line = 8, column = 1)
+     }
+-    assertThat(buffer.readByteString()).isEqualTo("1f000812".decodeHex())
++    assertThat(buffer.readByteString()).isEqualTo(golden.decodeHex())
++  }
++
++  @Test
++  fun header() {
++    val buffer = Buffer()
++    LineNumberWriter(functionLine = 1000, functionColumn = 200, buffer).close()
++    assertThat(buffer.snapshot()).isEqualTo("e707c701".decodeHex())
++    val reader = LineNumberReader(buffer)
++    assertThat(reader.line).isEqualTo(1000)
++    assertThat(reader.column).isEqualTo(200)
++    assertThat(reader.next()).isFalse()
++  }
++
++  /** A stripped table is empty: no header, so no line (QuickJS then shows the file only). */
++  @Test
++  fun emptyTable() {
++    val reader = LineNumberReader(Buffer())
++    assertThat(reader.line).isEqualTo(0)
++    assertThat(reader.column).isEqualTo(0)
++    assertThat(reader.next()).isFalse()
+   }
+ }
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/RealBundleTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/RealBundleTest.kt
+new file mode 100644
+index 0000000..df11d2f
+--- /dev/null
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/RealBundleTest.kt
+@@ -0,0 +1,222 @@
++/*
++ * Copyright (C) 2026 the Keliver fork of Zipline.
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package app.cash.zipline.bytecode
++
++import app.cash.zipline.QuickJs
++import assertk.assertThat
++import assertk.assertions.isEqualTo
++import assertk.assertions.isTrue
++import java.io.File
++import okio.Buffer
++import okio.ByteString
++import okio.ByteString.Companion.toByteString
++import org.junit.Assume.assumeTrue
++import org.junit.Test
++
++/**
++ * Keliver fork (NF2 step 1b): real Kotlin/JS bundles through version 5, the way Zipline's compiler
++ * uses this module. Point `-PziplineBytecodeCorpus=<dir>[:<dir>...]` at directories of `.js` files
++ * (with their `.js.map` files, as Kotlin writes them); skipped without it.
++ *
++ * For every module: QuickJS's bytecode reads and writes back byte for byte; with its source map
++ * applied, every instruction's line is the source map's line for the JavaScript line QuickJS
++ * recorded; stripped, no function keeps a line table. Then the bundle is loaded in dependency
++ * order three times (as compiled, source maps applied, stripped), and each load must end as the
++ * first one did.
++ */
++class RealBundleTest {
++  private val corpus = System.getProperty("ziplineBytecodeCorpus").orEmpty()
++    .split(File.pathSeparator).filter { it.isNotBlank() }.map { File(it) }
++
++  @Test fun realBundles() {
++    assumeTrue("set -PziplineBytecodeCorpus to run", corpus.isNotEmpty())
++    for (dir in corpus) {
++      val modules = dir.listFiles { f -> f.name.endsWith(".js") }!!.sortedBy { it.name }
++      check(modules.isNotEmpty()) { "no .js files in $dir" }
++      val compiled = linkedMapOf<String, ByteArray>()
++      val applied = linkedMapOf<String, ByteArray>()
++      val stripped = linkedMapOf<String, ByteArray>()
++      val stats = Stats()
++      QuickJs.create().use { quickJs ->
++        for (js in modules) {
++          val bytecode = quickJs.compile(js.readText(), js.name)
++          compiled[js.name] = bytecode
++          val model = assertRoundTrip(bytecode, stats)
++
++          val mapFile = File("${js.path}.map")
++          val withMap = if (mapFile.exists()) {
++            val sourceMap = SourceMap.parse(mapFile.readText()).clean()
++            val result = applySourceMapToBytecode(bytecode, sourceMap)
++            val mapped = assertRoundTrip(result, null)
++            stats.mappedFunctions += assertMapped(model, mapped, sourceMap)
++            stats.modulesWithMaps++
++            result
++          } else {
++            bytecode
++          }
++          applied[js.name] = withMap
++
++          val strippedBytecode = stripLineNumbers(withMap)
++          val strippedModel = assertRoundTrip(strippedBytecode, null)
++          assertThat(strippedModel.functions().all { it.debug == null || it.debug.pc2Line.size == 0 })
++            .isTrue()
++          stripped[js.name] = strippedBytecode
++          stats.bytesCompiled += bytecode.size
++          stats.bytesApplied += withMap.size
++          stats.bytesStripped += strippedBytecode.size
++        }
++      }
++
++      val order = loadOrder(compiled)
++      val asCompiled = load(order, compiled)
++      assertThat(load(order, applied)).isEqualTo(asCompiled)
++      assertThat(load(order, stripped)).isEqualTo(asCompiled)
++      println(
++        "RealBundleTest ${dir.path}: ${modules.size} modules (${stats.modulesWithMaps} with source " +
++          "maps), ${stats.functions} functions, ${stats.mappedFunctions} mapped; byte-identical " +
++          "round trips; bytes compiled ${stats.bytesCompiled}, source maps applied " +
++          "${stats.bytesApplied}, stripped ${stats.bytesStripped}; function source text " +
++          "${stats.sourceBytes} bytes, pc2line ${stats.pc2LineBytes} bytes; " +
++          "BigInt constants ${stats.bigInts}; load: ${asCompiled.joinToString()}",
++      )
++    }
++  }
++
++  private class Stats {
++    var functions = 0
++    var mappedFunctions = 0
++    var modulesWithMaps = 0
++    var bytesCompiled = 0L
++    var bytesApplied = 0L
++    var bytesStripped = 0L
++    var sourceBytes = 0L
++    var pc2LineBytes = 0L
++    var bigInts = 0
++  }
++
++  private fun assertRoundTrip(bytecode: ByteArray, stats: Stats?): JsObject {
++    val reader = JsObjectReader(bytecode)
++    val model = reader.use { it.readJsObject() }
++    val buffer = Buffer()
++    JsObjectWriter(reader.atoms, buffer).use { it.writeJsObject(model) }
++    assertThat(buffer.readByteString()).isEqualTo(bytecode.toByteString())
++    if (stats != null) {
++      val functions = model.functions()
++      stats.functions += functions.size
++      stats.sourceBytes += functions.sumOf { it.debug?.source?.size ?: 0 }
++      stats.pc2LineBytes += functions.sumOf { it.debug?.pc2Line?.size ?: 0 }
++      stats.bigInts += model.all().count { it is JsBigInt }
++    }
++    return model
++  }
++
++  /**
++   * Checks the mapped bytecode against the source map, instruction by instruction: at every pc
++   * where the JavaScript table has an entry, the mapped table gives the line of the source map's
++   * segment for that JavaScript line (its first, as Zipline maps lines), or the JavaScript line
++   * where the source map has none. Returns the number of functions given a Kotlin file.
++   */
++  private fun assertMapped(js: JsObject, kt: JsObject, sourceMap: SourceMap): Int {
++    val jsFunctions = js.functions()
++    val ktFunctions = kt.functions()
++    assertThat(ktFunctions.size).isEqualTo(jsFunctions.size)
++    var mapped = 0
++    for ((jsFunction, ktFunction) in jsFunctions.zip(ktFunctions)) {
++      assertThat(ktFunction.bytecode).isEqualTo(jsFunction.bytecode)
++      val jsDebug = jsFunction.debug ?: continue
++      val ktDebug = ktFunction.debug!!
++      if (ktDebug.fileName != jsDebug.fileName) mapped++
++      for ((pc, jsLine) in jsDebug.pc2Line.entries()) {
++        val expected = sourceMap.find(jsLine)?.sourceLine?.toInt() ?: jsLine
++        if (ktDebug.fileName == jsDebug.fileName) {
++          // Nothing in the function was mapped: the table is the JavaScript one.
++          assertThat(ktDebug.pc2Line).isEqualTo(jsDebug.pc2Line)
++          break
++        }
++        assertThat(findLine(ktDebug.pc2Line, pc), "${jsFunction.name} pc $pc").isEqualTo(expected)
++      }
++    }
++    return mapped
++  }
++
++  /** Each entry's pc and line (positions with a column change only are included). */
++  private fun ByteString.entries(): List<Pair<Int, Int>> {
++    val result = mutableListOf<Pair<Int, Int>>()
++    LineNumberReader(Buffer().write(this)).use { reader ->
++      while (reader.next()) result += reader.pc to reader.line
++    }
++    return result
++  }
++
++  /** QuickJS's `find_line_num`: the line of the last entry at or before [pc]. */
++  private fun findLine(pc2Line: ByteString, pc: Int): Int {
++    LineNumberReader(Buffer().write(pc2Line)).use { reader ->
++      var line = reader.line
++      while (reader.next()) {
++        if (pc < reader.pc) break
++        line = reader.line
++      }
++      return line
++    }
++  }
++
++  private fun JsObject.all(): List<JsObject> = when (this) {
++    is JsFunctionBytecode -> listOf(this) + constantPool.flatMap { it.all() }
++    is JsArray -> listOf(this) + elements.flatMap { it.all() } + raw.all()
++    else -> listOf(this)
++  }
++
++  private fun JsObject.functions(): List<JsFunctionBytecode> =
++    all().filterIsInstance<JsFunctionBytecode>()
++
++  @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER") // Access :zipline internals.
++  private fun loadOrder(modules: Map<String, ByteArray>): List<String> {
++    val dependencies = modules.mapValues { (_, bytecode) ->
++      QuickJs.create().use { quickJs ->
++        app.cash.zipline.internal.collectModuleDependencies(quickJs)
++        quickJs.execute(bytecode)
++        app.cash.zipline.internal.getModuleDependencies(quickJs)
++          .map { it.removePrefix("./") }
++          .filter { it in modules }
++      }
++    }
++    val result = mutableListOf<String>()
++    fun visit(name: String, path: Set<String>) {
++      if (name in result) return
++      check(name !in path) { "dependency cycle at $name" }
++      for (dependency in dependencies.getValue(name)) visit(dependency, path + name)
++      result += name
++    }
++    for (name in modules.keys) visit(name, emptySet())
++    return result
++  }
++
++  /** Loads every module as Zipline's loader does; returns "ok" or the failure for each. */
++  @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER") // Access :zipline internals.
++  private fun load(order: List<String>, modules: Map<String, ByteArray>): List<String> {
++    QuickJs.create().use { quickJs ->
++      app.cash.zipline.internal.initModuleLoader(quickJs)
++      return order.map { name ->
++        try {
++          app.cash.zipline.internal.loadJsModule(quickJs, "./$name", modules.getValue(name))
++          "$name ok"
++        } catch (e: Exception) {
++          "$name ${e.message}"
++        }
++      }
++    }
++  }
++}
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt
+index d9cd25a..5ef18bd 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026 gives the evaluated script a line.
+ /*
+  * Copyright (C) 2023 Cash App
+  *
+@@ -59,7 +60,7 @@ class StripLineNumbersTest {
+       |	at JavaScript.goBoom2(demo.js)
+       |	at JavaScript.goBoom3(demo.js)
+       |	at JavaScript.sayHello(demo.js)
+-      |	at JavaScript.<eval>(?)
++      |	at JavaScript.<eval>(?:1)
+       |
+       """.trimMargin(),
+     )
+diff --git a/zipline-cli/src/test/kotlin/app/cash/zipline/cli/ZiplineCompilerTest.kt b/zipline-cli/src/test/kotlin/app/cash/zipline/cli/ZiplineCompilerTest.kt
+index f430a7d..a510c11 100644
+--- a/zipline-cli/src/test/kotlin/app/cash/zipline/cli/ZiplineCompilerTest.kt
++++ b/zipline-cli/src/test/kotlin/app/cash/zipline/cli/ZiplineCompilerTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: stack traces on QuickJS 2026's bytecode.
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -59,14 +60,16 @@ class ZiplineCompilerTest {
+       quickJs.evaluate("require('./hello.js').sayHello()", "test.js")
+     }
+     // .kt files in the stacktrace means that the sourcemap was applied correctly.
++    // Keliver fork: on QuickJS 2026 (bytecode version 5) goBoom1 keeps its Kotlin line, which
++    // 1.28.0's rewrite lost, and the evaluated script has a line.
+     assertThat(exception.stackTraceToString()).startsWith(
+       """
+       |app.cash.zipline.QuickJsException: boom!
+-      |	at JavaScript.goBoom1(throwException.kt)
++      |	at JavaScript.goBoom1(throwException.kt:12)
+       |	at JavaScript.goBoom2(throwException.kt:9)
+       |	at JavaScript.goBoom3(throwException.kt:6)
+       |	at JavaScript.sayHello(throwException.kt:3)
+-      |	at JavaScript.<eval>(test.js)
++      |	at JavaScript.<eval>(test.js:1)
+       |
+       """.trimMargin(),
+     )
 diff --git a/zipline/build.gradle.kts b/zipline/build.gradle.kts
 index 0f029ed..3a7c4bf 100644
 --- a/zipline/build.gradle.kts
@@ -58,19 +1773,34 @@ index 1cf1c56..8711292 100644
    });
  
 diff --git a/zipline/native/Context.cpp b/zipline/native/Context.cpp
-index 4c82811..257333f 100644
+index 4c82811..eb68600 100644
 --- a/zipline/native/Context.cpp
 +++ b/zipline/native/Context.cpp
-@@ -12,6 +12,8 @@
+@@ -12,6 +12,9 @@
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
 + *
-+ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt).
++ * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt,
++ * compiling without function source text).
   */
  #include "Context.h"
  #include <cstring>
-@@ -347,11 +349,48 @@ Context::toJavaObject(JNIEnv* env, const JSValueConst& value, bool throwOnUnsupp
+@@ -165,7 +168,13 @@ jbyteArray Context::compile(JNIEnv* env, jstring source, jstring file) {
+   const auto sourceCode = env->GetStringUTFChars(source, 0);
+   const auto fileName = env->GetStringUTFChars(file, 0);
+ 
++  // Keliver fork: QuickJS 2026 writes every function's source text into its bytecode (for
++  // Function.prototype.toString); 2021 did not. Nested functions each keep their own copy, so it is
++  // most of a Kotlin/JS bundle's bytes. Compile without it, as before; lines and columns stay.
++  const int stripFlags = JS_GetStripInfo(jsRuntime);
++  JS_SetStripInfo(jsRuntime, stripFlags | JS_STRIP_SOURCE);
+   auto compiled = JS_Eval(jsContextForCompiling, sourceCode, strlen(sourceCode), fileName, JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_FLAG_STRICT);
++  JS_SetStripInfo(jsRuntime, stripFlags);
+ 
+   env->ReleaseStringUTFChars(file, fileName);
+   env->ReleaseStringUTFChars(source, sourceCode);
+@@ -347,11 +356,48 @@ Context::toJavaObject(JNIEnv* env, const JSValueConst& value, bool throwOnUnsupp
        break;
      }
  
@@ -226,10 +1956,10 @@ index ba1d5b9..9205e67 100644
  }
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..82d1b2d
+index 0000000..7a60b17
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,126 @@
+@@ -0,0 +1,143 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -285,6 +2015,23 @@ index 0000000..82d1b2d
 +    quickJs.close()
 +    quickJs = QuickJs.create()
 +    assertEquals("9223372036854775807 18446744073709551615 bigint", quickJs.execute(code))
++  }
++
++  /**
++   * QuickJS 2026 would write each function's source text into the bytecode (2021 did not), most of
++   * a Kotlin/JS bundle's bytes; `compile` leaves it out (step 1b).
++   */
++  @Test fun compileLeavesOutFunctionSource() {
++    val source = "function sourceTextOfF(a) { return a + 1; }"
++    val code = quickJs.compile(source, "f.js")
++    assertEquals(-1, code.decodeToString().indexOf("sourceTextOfF(a) { return"))
++
++    quickJs.close()
++    quickJs = QuickJs.create()
++    quickJs.execute(code)
++    assertEquals(2, quickJs.evaluate("sourceTextOfF(1)"))
++    // What 1.28.0 (QuickJS 2021) gave for any function loaded from bytecode.
++    assertEquals("function sourceTextOfF() {\n    [native code]\n}", quickJs.evaluate("sourceTextOfF.toString()"))
 +  }
 +
 +  @Test fun asUintNIsGeneral() {
@@ -458,7 +2205,7 @@ index 441f653..7e6991d 100644
 +  return inRange;
 +}
 diff --git a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt b/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
-index 026bb0c..f598a07 100644
+index 026bb0c..041df8b 100644
 --- a/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
 +++ b/zipline/src/nativeMain/kotlin/app/cash/zipline/QuickJs.kt
 @@ -12,6 +12,9 @@
@@ -467,11 +2214,34 @@ index 026bb0c..f598a07 100644
   * limitations under the License.
 + *
 + * Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04 (strings as ropes, BigInt, a
-+ * result now checked).
++ * result now checked, compiling without function source text).
   */
  @file:OptIn(ExperimentalNativeApi::class, ExperimentalForeignApi::class)
  
-@@ -74,12 +77,16 @@ import app.cash.zipline.quickjs.JS_TAG_FLOAT64
+@@ -44,6 +47,7 @@ import app.cash.zipline.quickjs.JS_GetPropertyStr
+ import app.cash.zipline.quickjs.JS_GetPropertyUint32
+ import app.cash.zipline.quickjs.JS_GetRuntime
+ import app.cash.zipline.quickjs.JS_GetRuntimeOpaque
++import app.cash.zipline.quickjs.JS_GetStripInfo
+ import app.cash.zipline.quickjs.JS_HasProperty
+ import app.cash.zipline.quickjs.JS_IsArray
+ import app.cash.zipline.quickjs.JS_IsException
+@@ -61,6 +65,7 @@ import app.cash.zipline.quickjs.JS_READ_OBJ_REFERENCE
+ import app.cash.zipline.quickjs.JS_ReadObject
+ import app.cash.zipline.quickjs.JS_ResolveModule
+ import app.cash.zipline.quickjs.JS_RunGC
++import app.cash.zipline.quickjs.JS_STRIP_SOURCE
+ import app.cash.zipline.quickjs.JS_SetGCThreshold
+ import app.cash.zipline.quickjs.JS_SetInterruptHandler
+ import app.cash.zipline.quickjs.JS_SetMaxStackSize
+@@ -68,18 +73,23 @@ import app.cash.zipline.quickjs.JS_SetMemoryLimit
+ import app.cash.zipline.quickjs.JS_SetProperty
+ import app.cash.zipline.quickjs.JS_SetPropertyFunctionList
+ import app.cash.zipline.quickjs.JS_SetRuntimeOpaque
++import app.cash.zipline.quickjs.JS_SetStripInfo
+ import app.cash.zipline.quickjs.JS_TAG_BOOL
+ import app.cash.zipline.quickjs.JS_TAG_EXCEPTION
+ import app.cash.zipline.quickjs.JS_TAG_FLOAT64
  import app.cash.zipline.quickjs.JS_TAG_INT
  import app.cash.zipline.quickjs.JS_TAG_NULL
  import app.cash.zipline.quickjs.JS_TAG_OBJECT
@@ -488,7 +2258,7 @@ index 026bb0c..f598a07 100644
  import app.cash.zipline.quickjs.JsCallFunction
  import app.cash.zipline.quickjs.JsDisconnectFunction
  import app.cash.zipline.quickjs.JsFalse
-@@ -98,6 +105,7 @@ import kotlinx.cinterop.CPointer
+@@ -98,6 +108,7 @@ import kotlinx.cinterop.CPointer
  import kotlinx.cinterop.CValue
  import kotlinx.cinterop.CValuesRef
  import kotlinx.cinterop.ExperimentalForeignApi
@@ -496,7 +2266,26 @@ index 026bb0c..f598a07 100644
  import kotlinx.cinterop.StableRef
  import kotlinx.cinterop.UByteVar
  import kotlinx.cinterop.alloc
-@@ -358,7 +366,10 @@ actual class QuickJs private constructor(
+@@ -264,6 +275,10 @@ actual class QuickJs private constructor(
+     checkNotClosed()
+ 
+     val sourceCodeUtf8 = sourceCode.utf8
++    // Keliver fork: compile without each function's source text, which QuickJS 2026 would write
++    // into the bytecode (2021 did not); see Context::compile on JNI.
++    val stripFlags = JS_GetStripInfo(runtime)
++    JS_SetStripInfo(runtime, stripFlags or JS_STRIP_SOURCE)
+     val compiled = JS_Eval(
+       contextForCompiling,
+       sourceCodeUtf8,
+@@ -272,6 +287,7 @@ actual class QuickJs private constructor(
+       fileName.utf8,
+       JS_EVAL_FLAG_COMPILE_ONLY or JS_EVAL_FLAG_STRICT,
+     )
++    JS_SetStripInfo(runtime, stripFlags)
+     if (JS_IsException(compiled) != 0) {
+       throwJsException()
+     }
+@@ -358,7 +374,10 @@ actual class QuickJs private constructor(
          JsCallFunction(staticCFunction(::outboundCall)),
          JsDisconnectFunction(staticCFunction(::outboundDisconnect)),
        )
@@ -508,7 +2297,7 @@ index 026bb0c..f598a07 100644
      } finally {
        JS_FreeAtom(context, propertyName)
        JS_FreeValue(context, globalThis)
-@@ -439,13 +450,21 @@ actual class QuickJs private constructor(
+@@ -439,13 +458,21 @@ actual class QuickJs private constructor(
      return when (JsValueGetNormTag(this)) {
        JS_TAG_EXCEPTION -> throwJsException()
  
