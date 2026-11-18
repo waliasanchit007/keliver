@@ -48,45 +48,37 @@ import app.cash.zipline.CallResult
 import app.cash.zipline.EngineApi
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
-import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
 import dev.keliver.compose.gatea.composeui.LocalHostBackDispatcher
 import dev.keliver.compose.gatea.composeui.keliverComposeGateAWidgetSystem
-import dev.keliver.compose.gatea.protocol.host.KeliverComposeGateAHostProtocol
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
-import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.sample.threeway.ThreewayAppService
 import dev.keliver.sample.threeway.ThreewayGuestStats
-import dev.keliver.sample.threeway.ThreewayHost
 import dev.keliver.sample.threeway.data.ItemsPage
 import dev.keliver.sample.threeway.data.ThreewayApi
 import dev.keliver.sample.threeway.data.ThreewayMarks
 import dev.keliver.sample.threeway.data.parseItems
 import dev.keliver.sample.threeway.nativecopy.ThreewayApp as NativeThreewayApp
 import dev.keliver.treehouse.EventListener
-import dev.keliver.treehouse.MemoryStateStore
 import dev.keliver.treehouse.TreehouseApp
-import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.modules.EmptySerializersModule
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString
-import okio.ByteString.Companion.decodeHex
 import okio.ByteString.Companion.toByteString
 import org.json.JSONObject
 
@@ -119,7 +111,9 @@ class ThreewayActivity : ComponentActivity() {
    */
   private var experiments = ""
   private val experimentSet: Set<String> get() = experiments.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-  private val recorder = Recorder()
+
+  /** The process's (ThreewayGuest's): a guest prestarted before this activity reports into it too. */
+  private val recorder = ThreewayGuest.recorder
 
   /** The guest form's app (for reading QuickJS's memory on its thread); null in the other forms. */
   private var guestApp: TreehouseApp<ThreewayAppService>? = null
@@ -137,9 +131,7 @@ class ThreewayActivity : ComponentActivity() {
    * frees acyclic objects). Bytes; null = QuickJS's default (run that arm as `x=mem`, so it pays the
    * same memory reads as the others).
    */
-  private fun gcThresholdBytes(): Long? = experimentSet.firstNotNullOfOrNull {
-    if (it == "gcoff") -1L else Regex("gc(\\d+)").matchEntire(it)?.groupValues?.get(1)?.toLong()?.let { mib -> mib * 1024 * 1024 }
-  }
+  private fun gcThresholdBytes(): Long? = ThreewayListener.gcThresholdBytes(experiments)
 
   private var scroll: ScrollTracker? = null
 
@@ -181,10 +173,12 @@ class ThreewayActivity : ComponentActivity() {
     form = intent.getStringExtra("form") ?: "native"
     experiments = intent.getStringExtra("x").orEmpty()
     Log.i(TAG, "form=$form x=$experiments")
-    ThreewayListener.gcThresholdBytes = gcThresholdBytes()
-    // `x=trace` (NF0's system trace): trace sections for the guest's calls on the Zipline thread and
-    // for every main-thread message, so a Perfetto trace shows when the guest's changes are applied.
-    ThreewayListener.traceCalls = "trace" in experimentSet
+    // NF4 `prestart`: what the next process's ThreewayPrestartProvider acts on (ThreewayPrestart.kt).
+    ThreewayGuest.remember(this, form, experiments, intent.getBooleanExtra("localApi", false))
+    // `x=trace` (NF0's system trace): trace sections for the guest's calls on the Zipline thread (set
+    // with the GC threshold experiment here) and for every main-thread message, so a Perfetto trace
+    // shows when the guest's changes are applied.
+    ThreewayListener.applyExperiments(experiments)
     if ("trace" in experimentSet) {
       Looper.getMainLooper().setMessageLogging { line ->
         if (line.startsWith(">>>>> ")) {
@@ -263,23 +257,20 @@ class ThreewayActivity : ComponentActivity() {
   }
 
   private fun startGuest() {
-    val host = object : ThreewayHost {
-      @Volatile var awaiting: Pair<String, Int>? = null
-
-      override fun composed(screen: String, seq: Int, marksJson: String) {
-        recorder.addJson(marksJson)
-        awaiting = screen to seq
-      }
-
-      override fun experiments(): String = experiments
+    // The guest's host services are the process's (ThreewayGuest), so that a guest prestarted
+    // before this activity (NF4 `prestart`) reports here too; set before any content binds.
+    ThreewayGuest.experiments = experiments
+    val awaiting = AtomicReference<Pair<String, Int>?>(null)
+    ThreewayGuest.onComposed = { screen, seq, marksJson ->
+      recorder.addJson(marksJson)
+      awaiting.set(screen to seq)
     }
     // The guest calls `composed` in its apply phase, then sends that frame's change batch: when the
     // host's sendChanges returns, the batch is queued on the main thread, and a message posted then
     // runs after it.
     ThreewayListener.onSendChangesEnd = {
-      val done = host.awaiting
+      val done = awaiting.getAndSet(null)
       if (done != null) {
-        host.awaiting = null
         recorder.mark(done.second, "batchSent", System.currentTimeMillis())
         main.post {
           // Hand the applied changes to the host's composition now, so the next frame recomposes.
@@ -288,28 +279,16 @@ class ThreewayActivity : ComponentActivity() {
         }
       }
     }
-    val factory = TreehouseAppFactory(
-      context = applicationContext,
-      httpClient = AssetsHttpClient(assets),
-      manifestVerifier = ManifestVerifier.Builder()
-        .addEd25519(name = "keliver-sample-ed25519", trustedKey = SAMPLE_SIGNING_PUBLIC_KEY.decodeHex())
-        .build(),
-      cacheName = "keliver-threeway-zipline",
-      stateStore = MemoryStateStore(),
-      leakDetector = LeakDetector.none(),
-      hostProtocolFactory = KeliverComposeGateAHostProtocol.Factory,
-    )
-    val spec = object : TreehouseApp.Spec<ThreewayAppService>() {
-      override val name = "keliver-threeway"
-      override val manifestUrl = MutableStateFlow(MANIFEST_URL)
-      override val serializersModule = EmptySerializersModule()
-      override suspend fun bindServices(treehouseApp: TreehouseApp<ThreewayAppService>, zipline: Zipline) {
-        zipline.bind<HostHttpProvider>("HostHttp", BenchHostHttp(okHttp, recorder))
-        zipline.bind<ThreewayHost>("threewayHost", host)
-      }
-      override fun create(zipline: Zipline): ThreewayAppService = zipline.take("app")
+    // NF4 `prefetch`: the list's first request goes out now unless the prestart already sent it.
+    if ("prefetch" in experimentSet) ThreewayGuest.prefetch.start()
+    // NF4 `prestart`: the code load this process started in bindApplication, if it did; otherwise
+    // created here and started by the first content, as before.
+    val app = ThreewayGuest.takePrestarted(experiments) ?: run {
+      // The same main-thread work as the prestart's (`n_prestartMainMs`), here in onCreate.
+      val began = SystemClock.elapsedRealtimeNanos()
+      ThreewayGuest.create(applicationContext, lifecycleScope)
+        .also { ColdStart.mainThreadNanos("guestCreateMain", SystemClock.elapsedRealtimeNanos() - began) }
     }
-    val app = factory.create(appScope = lifecycleScope, spec = spec, eventListenerFactory = ThreewayListener)
     guestApp = app
     setContent {
       MaterialTheme {
@@ -719,8 +698,6 @@ class ThreewayActivity : ComponentActivity() {
 
   private companion object {
     const val TAG = "Threeway"
-    const val MANIFEST_URL = "https://threeway.invalid/manifest.zipline.json"
-    const val SAMPLE_SIGNING_PUBLIC_KEY = "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
 
     /** The fixture API (docs/THREE_WAY_BENCHMARK.md), on the Mac, through `adb reverse`. */
     const val API_BASE = "http://localhost:8491"
@@ -734,15 +711,19 @@ class ThreewayActivity : ComponentActivity() {
     /** Between a QuickJS memory read and the tap it precedes (memory reads only). */
     const val MEMORY_PAUSE_MILLIS = 300L
 
-    /** The app's one HTTP client, used by the native form directly and by the guest's HostHttp. */
-    val okHttp: OkHttpClient by lazy {
-      OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
-    }
+    val okHttp: OkHttpClient get() = ThreewayHttp.okHttp
+  }
+}
+
+internal object ThreewayHttp {
+  /** The app's one HTTP client, used by the native form directly and by the guest's HostHttp. */
+  val okHttp: OkHttpClient by lazy {
+    OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
   }
 }
 
 /** Marks per request or navigation, epoch ms; filled from the host, the guest and the page. */
-private class Recorder {
+internal class Recorder {
   private val marks = ConcurrentHashMap<Int, ConcurrentHashMap<String, Long>>()
 
   fun mark(seq: Int, name: String, atMillis: Long) {
@@ -779,8 +760,15 @@ internal object ColdStart {
   @Volatile var slowestModule = ""
   @Volatile var slowestModuleNanos = 0L
 
+  /** Main-thread work measured once per process (NF4 `prestart`), logged as `n_<name>Ms` (fractional). */
+  private val mainThread = ConcurrentHashMap<String, Long>()
+
   /** Records [name] once; returns true the first time. */
   fun mark(name: String): Boolean = marks.putIfAbsent(name, System.currentTimeMillis()) == null
+
+  fun mainThreadNanos(name: String, nanos: Long) {
+    mainThread.putIfAbsent(name, nanos)
+  }
 
   /** Records [name], replacing an earlier value (the last occurrence). */
   fun markLast(name: String) {
@@ -799,6 +787,7 @@ internal object ColdStart {
         .put("slowestModule", slowestModule).put("n_slowestModuleMs", slowestModuleNanos / 1_000_000)
         .put("n_modulesFromAssets", ThreewayListener.modulesFromAssets)
     }
+    for ((name, nanos) in mainThread) o.put("n_${name}Ms", nanos / 100_000 / 10.0)
     return o.toString()
   }
 }
@@ -809,26 +798,39 @@ internal object ColdStart {
  * Marks, on the host's clock: `hostIn` (the call arrived from the guest), `hostNet` (the body has
  * been read) and `hostOut` (returning to the guest).
  */
-private class BenchHostHttp(private val client: OkHttpClient, private val recorder: Recorder) : HostHttpProvider {
+internal class BenchHostHttp(
+  private val client: OkHttpClient,
+  private val recorder: Recorder,
+  private val prefetch: FirstRequestPrefetch? = null,
+) : HostHttpProvider {
   override suspend fun execute(request: HttpRequest): HttpResponse {
     val seq = request.query["seq"]?.toIntOrNull() ?: -1
     recorder.mark(seq, "hostIn", System.currentTimeMillis())
-    return withContext(Dispatchers.IO) {
+    // NF4 `prefetch`: the host already sent this request; a failed or non-200 one is not used.
+    val prefetched = prefetch?.take(request)?.let { runCatching { it.await() }.getOrNull() }?.takeIf { it.status == 200 }
+    if (prefetched != null) recorder.mark(seq, "prefetched", System.currentTimeMillis())
+    val response = prefetched ?: withContext(Dispatchers.IO) {
+      send(client, request).also { recorder.mark(seq, "hostNet", System.currentTimeMillis()) }
+    }
+    return response.also { recorder.mark(seq, "hostOut", System.currentTimeMillis()) }
+  }
+
+  companion object {
+    /** Blocking: the call and its body. */
+    fun send(client: OkHttpClient, request: HttpRequest): HttpResponse {
       val url = "http://localhost:8491".toHttpUrl().newBuilder().apply {
         request.path.split('/').filter { it.isNotEmpty() }.forEach { addPathSegment(it) }
         request.query.forEach { (k, v) -> addQueryParameter(k, v) }
       }.build()
-      client.newCall(Request.Builder().url(url).method(request.method, null).build()).execute().use { response ->
-        val body = response.body?.string().orEmpty()
-        recorder.mark(seq, "hostNet", System.currentTimeMillis())
-        HttpResponse(status = response.code, body = body, headers = emptyMap())
+      return client.newCall(Request.Builder().url(url).method(request.method, null).build()).execute().use { response ->
+        HttpResponse(status = response.code, body = response.body?.string().orEmpty(), headers = emptyMap())
       }
-    }.also { recorder.mark(seq, "hostOut", System.currentTimeMillis()) }
+    }
   }
 }
 
 /** Serves the bundle from the APK's `assets/threeway/` by file name (no network for code). */
-private class AssetsHttpClient(private val assets: AssetManager) : ZiplineHttpClient() {
+internal class AssetsHttpClient(private val assets: AssetManager) : ZiplineHttpClient() {
   override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString = withContext(Dispatchers.IO) {
     val name = url.substringAfterLast('/')
     assets.open("threeway/$name").use { it.readBytes().toByteString() }
@@ -844,6 +846,17 @@ internal object ThreewayListener : EventListener.Factory {
 
   /** The `gc<MiB>` experiment: QuickJS's GC threshold, set when the Zipline is created; null = QuickJS's default. */
   @Volatile var gcThresholdBytes: Long? = null
+
+  /** The `gc<MiB>`/`gcoff` experiment in [experiments] (comma-separated), in bytes; null = none. */
+  fun gcThresholdBytes(experiments: String): Long? = experiments.split(',').map { it.trim() }.firstNotNullOfOrNull {
+    if (it == "gcoff") -1L else Regex("gc(\\d+)").matchEntire(it)?.groupValues?.get(1)?.toLong()?.let { mib -> mib * 1024 * 1024 }
+  }
+
+  /** What the listener does for the run's [experiments]; before Zipline starts (the activity, or the prestart). */
+  fun applyExperiments(experiments: String) {
+    gcThresholdBytes = gcThresholdBytes(experiments)
+    traceCalls = "trace" in experiments.split(',').map { it.trim() }
+  }
 
   /** The guest's Zipline (for memory reads and the scrolling series' counters), on its thread only. */
   @Volatile var zipline: Zipline? = null

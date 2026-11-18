@@ -97,6 +97,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -305,8 +306,17 @@ class KeliverConfig(
   val startPolicy: KeliverStartPolicy? = null,
   /** Whether the index's start policy override may change [startPolicy] (keliver.startPolicyOverride: any, or none). */
   val startPolicyOverrideAllowed: Boolean = true,
+  /**
+   * NF4 (cold start): GETs your first screen makes as soon as it shows, sent by the host when a
+   * started process creates its first activity, so the screen's identical request finds its
+   * response (HostPrefetch.kt has the rules: same request, once, within 5 s of the answer, 2xx
+   * only; any non-GET or [KeliverHost.discardPrefetched] drops it). Your credentials must be ready
+   * before [KeliverHost.start]. Empty: nothing is prefetched. Needs [apiBaseUrl].
+   */
+  prefetch: List<KeliverPrefetch> = emptyList(),
 ) {
   val bridges: List<KeliverBridgeBinding> = bridges.toList()
+  val prefetch: List<KeliverPrefetch> = prefetch.toList()
 
   init {
     require(httpClient == null || requestPolicy != null) {
@@ -333,6 +343,8 @@ class KeliverConfig(
       startPolicy: KeliverStartPolicy? = KeliverStartPolicy.parse(BuildConfig.KELIVER_START_POLICY),
       /** keliver.startPolicyOverride (gradle.properties) unless given here. */
       startPolicyOverrideAllowed: Boolean = parseStartPolicyOverride(BuildConfig.KELIVER_START_POLICY_OVERRIDE) ?: true,
+      /** NF4: the first screen's requests to send at start (HostPrefetch.kt). */
+      prefetch: List<KeliverPrefetch> = emptyList(),
     ): KeliverConfig = KeliverConfig(
       bundleServer = debugBundleServer(context) ?: BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
@@ -352,6 +364,7 @@ class KeliverConfig(
       crashWindowMillis = crashWindowMillis,
       startPolicy = startPolicy,
       startPolicyOverrideAllowed = startPolicyOverrideAllowed,
+      prefetch = prefetch,
     )
   }
 }
@@ -839,6 +852,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    */
   fun start() {
     registerDebugCheckForUpdate()
+    watchForUiStart()
     if (!started.compareAndSet(false, true)) return
     // A retried start (after "no bundle") is loading again: a screen must not act on the old failure.
     mutableState.value = KeliverHostState.Loading
@@ -889,6 +903,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       return
     }
     val apiBase = config.apiBaseUrl?.takeIf { it.isNotBlank() }?.toHttpUrlOrNull()
+    // NF4: the guests' HostHttp, one for the process; the app's declared first requests go out
+    // through it at the first activity's creation (watchForUiStart), while the bundle loads
+    // (HostPrefetch.kt).
+    if (apiBase != null) hostHttp(okhttp, apiBase).startPrefetch(scope)
+    else if (config.prefetch.isNotEmpty()) Log.w(TAG, "KeliverConfig.prefetch is set but there is no API base: nothing is prefetched")
     // Advertise only what this host really provides: the bundle lookup uses it
     // to pick a compatible bundle.
     val capabilities = buildList {
@@ -1201,6 +1220,76 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private fun sameOrigin(url: HttpUrl?, server: HttpUrl): Boolean =
     url != null && url.scheme == server.scheme && url.host == server.host && url.port == server.port
 
+  /** NF4: the app's declared first requests (HostPrefetch.kt); null when it declared none. */
+  private val prefetched: PrefetchedRequests? = config.prefetch.takeIf { it.isNotEmpty() }?.let { declared ->
+    PrefetchedRequests(declared, now = SystemClock::elapsedRealtime, log = { if (BuildConfig.DEBUG) Log.d(TAG, "prefetch: $it") })
+  }
+
+  /**
+   * NF4: drops every prefetched response not taken yet (KeliverConfig.prefetch; HostPrefetch.kt).
+   * Call it when the user signs in, signs out or changes, so a screen never gets an answer fetched
+   * for another session. (A request other than a GET through HostHttp does the same by itself.)
+   * From any thread.
+   */
+  fun discardPrefetched() {
+    prefetched?.discard("the app called discardPrefetched()")
+  }
+
+  private val uiWatched = AtomicBoolean(false)
+
+  /**
+   * NF4 (M2): the declared requests go out only when this process starts toward a screen: at its
+   * first activity's creation (onActivityPreCreated, Android 10+; onActivityCreated before that).
+   * A process started for a push, a job, a boot or a broadcast that shows nothing sends none.
+   * That costs the prefetch the time between the Application's onCreate and the first activity's
+   * (less than the 359 ms from the process start to Activity.onCreate on the A12, NF0); the guest
+   * asks about 1 s after that, so the answer is normally there first. A start() called after
+   * the first activity was created (or a process restored straight into a deep screen) prefetches
+   * at the next activity's creation, which can cost one unused GET.
+   */
+  private fun watchForUiStart() {
+    val prefetched = prefetched ?: return
+    if (!uiWatched.compareAndSet(false, true)) return
+    val app = context as? android.app.Application ?: run {
+      Log.w(TAG, "KeliverConfig.prefetch: the context is not the Application, so a start toward a screen cannot be told apart: nothing is prefetched")
+      return
+    }
+    app.registerActivityLifecycleCallbacks(object : android.app.Application.ActivityLifecycleCallbacks {
+      private fun uiStarting() {
+        prefetched.uiStarting()
+        app.unregisterActivityLifecycleCallbacks(this)
+      }
+      override fun onActivityPreCreated(activity: android.app.Activity, savedInstanceState: Bundle?) = uiStarting()
+      override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: Bundle?) = uiStarting()
+      override fun onActivityStarted(activity: android.app.Activity) = Unit
+      override fun onActivityResumed(activity: android.app.Activity) = Unit
+      override fun onActivityPaused(activity: android.app.Activity) = Unit
+      override fun onActivityStopped(activity: android.app.Activity) = Unit
+      override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: Bundle) = Unit
+      override fun onActivityDestroyed(activity: android.app.Activity) = Unit
+    })
+  }
+
+  @Volatile private var sharedHostHttp: OkHttpHostHttp? = null
+
+  /**
+   * The guests' HostHttp: one for the process (run() makes it before any app, so every app's code
+   * load binds the same one and the first request finds what NF4's prefetch sent). The app's own
+   * client (B1) only here; the bundles keep the host's plain one.
+   *
+   * Memoized with the FIRST run's [okhttp]: a retried start (after "no bundle") makes a new plain
+   * client in run() that this ignores. That is harmless (the plain client holds no state of its
+   * own), and it keeps one HostHttp, and so the prefetch, for the process.
+   */
+  @Synchronized
+  private fun hostHttp(okhttp: OkHttpClient, apiBase: HttpUrl): OkHttpHostHttp {
+    sharedHostHttp?.let { return it }
+    val made = config.httpClient?.let { OkHttpHostHttp(it, apiBase, config.requestPolicy, appOwnsCredentials = true, prefetched = prefetched) }
+      ?: OkHttpHostHttp(okhttp, apiBase, config.requestPolicy, prefetched = prefetched)
+    sharedHostHttp = made
+    return made
+  }
+
   /** The apps' factory: its Zipline cache (one per key), and [ziplineHttp], the pinning client. */
   private fun appFactory(verifier: ManifestVerifier, cacheName: String, ziplineHttp: ManifestPinningHttpClient): TreehouseApp.Factory =
     TreehouseAppFactory(
@@ -1332,10 +1421,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         zipline.bind<HostSqlDriver>("HostSqlDriver", sqlHost)
         if (apiBase == null && config.httpClient != null) Log.w(TAG, "KeliverConfig.httpClient is set but there is no API base: no HostHttp")
         if (apiBase != null) {
-          // The app's own client (B1) only here; the bundles keep the host's plain one.
-          val hostHttp = config.httpClient
-            ?.let { OkHttpHostHttp(it, apiBase, config.requestPolicy, appOwnsCredentials = true) }
-            ?: OkHttpHostHttp(okhttp, apiBase, config.requestPolicy)
+          val hostHttp = hostHttp(okhttp, apiBase)
           zipline.bind<HostHttpProvider>("HostHttp", if (held) GatedHostHttp(hostHttp, fence.calls) else hostHttp)
         }
         KeliverTiming.bindServices(zipline) // KeliverTrace, in debug and benchmark builds only (M0)

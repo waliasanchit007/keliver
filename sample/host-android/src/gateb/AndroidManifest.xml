@@ -12,5 +12,11 @@
         <activity
             android:name="dev.keliver.sample.host.threeway.ThreewayActivity"
             android:exported="true" />
+        <!-- NF4 `x=prestart`: starts the guest's code load in bindApplication when the previous
+             launch asked for it (ThreewayPrestart.kt). Serves no data; not exported. -->
+        <provider
+            android:name="dev.keliver.sample.host.threeway.ThreewayPrestartProvider"
+            android:authorities="${applicationId}.threeway-prestart"
+            android:exported="false" />
     </application>
 </manifest>
