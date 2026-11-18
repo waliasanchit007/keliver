@@ -109,6 +109,110 @@ internal fun withSignedBridges(constraints: JsonObject?, signed: SignedBridges):
   return merged.takeIf { it.isNotEmpty() }?.let(::JsonObject)
 }
 
+/*
+ * NF2 (docs/GUEST_PROFILE.md, "NF2: the Zipline fork"): QuickJS bytecode loads only on the engine
+ * that compiled it. A bundle compiled for an engine other than [DEFAULT_ENGINE] names it in its
+ * SIGNED metadata (`keliver.engine`, written by the signing block from the modules' bytecode), and
+ * its index entry carries the same as the `engine` constraint, which hosts from before NF2 skip (an
+ * unknown constraint key), so they only ever take a [DEFAULT_ENGINE] bundle. One release (one
+ * sequence) may have one entry per engine, each with its own `v<N>/` and signed manifest; a host
+ * takes the one for its engine (the template's BundleIndex.kt). The same rules as the hosts'
+ * `engineProblem`; EngineGateTest holds the two together.
+ */
+
+/** The engine of a manifest that names none: every bundle published before NF2. */
+internal const val DEFAULT_ENGINE = "quickjs-2021"
+internal const val ENGINE_METADATA_KEY = "keliver.engine"
+
+/**
+ * The engines a bundle may be published for, with the QuickJS bytecode version each one's
+ * compiler writes and its loader alone reads (1: Zipline 1.28.0's QuickJS 2021-03-27, built
+ * without BigNum; 5: QuickJS 2026-06-04, the NF2 fork). In the order publishing lists them.
+ */
+internal val ENGINE_BYTECODE_VERSIONS: Map<String, Int> = linkedMapOf(DEFAULT_ENGINE to 1, "quickjs-2026" to 5)
+
+/** A manifest's engine (its signed `keliver.engine`, else [DEFAULT_ENGINE]), or why it is unusable. */
+internal data class SignedEngine(val engine: String, val problem: String?) {
+  /** The index constraint an entry for this engine carries; null for [DEFAULT_ENGINE], which hosts from before NF2 must keep taking. */
+  val constraint: JsonObject? get() = if (problem == null && engine != DEFAULT_ENGINE) JsonObject(mapOf("engine" to JsonPrimitive(engine))) else null
+}
+
+internal fun signedEngine(manifestJson: String): SignedEngine {
+  val root = runCatching { Json.parseToJsonElement(manifestJson) as? JsonObject }.getOrNull()
+    ?: return SignedEngine(DEFAULT_ENGINE, "the manifest is not a JSON object")
+  val v = (root["metadata"] as? JsonObject)?.get(ENGINE_METADATA_KEY) ?: return SignedEngine(DEFAULT_ENGINE, null)
+  val text = (v as? JsonPrimitive)?.takeIf { it.isString }?.content
+    ?: return SignedEngine(DEFAULT_ENGINE, "the manifest's $ENGINE_METADATA_KEY is not a string")
+  if (text !in ENGINE_BYTECODE_VERSIONS) {
+    return SignedEngine(text, "the manifest's $ENGINE_METADATA_KEY '$text' is not an engine this tool publishes for (${ENGINE_BYTECODE_VERSIONS.keys.joinToString()})")
+  }
+  return SignedEngine(text, null)
+}
+
+/** [constraints] with `engine` set from [signed] (and any copied `engine` dropped); null when empty. */
+internal fun withSignedEngine(constraints: JsonObject?, signed: SignedEngine): JsonObject? {
+  // Every caller has refused a malformed value; never write an entry without its gate.
+  check(signed.problem == null) { signed.problem!! }
+  val merged = (constraints.orEmpty() - "engine") + signed.constraint.orEmpty()
+  return merged.takeIf { it.isNotEmpty() }?.let(::JsonObject)
+}
+
+private val ZIPLINE_MAGIC = "ZIPLINE\u0000".encodeToByteArray()
+private const val ZIPLINE_SECTION_QUICKJS_BYTECODE = 1
+
+/**
+ * The QuickJS bytecode version in a `.zipline` file (Zipline's ZiplineFile: an 8-byte magic, the
+ * file format's version, then sections of a 4-byte id and a 4-byte length; the bytecode section's
+ * first byte is QuickJS's BC_VERSION), or null when [bytes] is not a Zipline file.
+ */
+internal fun ziplineBytecodeVersion(bytes: ByteArray): Int? {
+  if (bytes.size < 12 || !bytes.copyOfRange(0, 8).contentEquals(ZIPLINE_MAGIC)) return null
+  fun int(at: Int) = ((bytes[at].toInt() and 0xff) shl 24) or ((bytes[at + 1].toInt() and 0xff) shl 16) or
+    ((bytes[at + 2].toInt() and 0xff) shl 8) or (bytes[at + 3].toInt() and 0xff)
+  var at = 12
+  while (at + 8 <= bytes.size) {
+    val id = int(at)
+    val length = int(at + 4)
+    if (length < 0 || at + 8 + length > bytes.size) return null
+    if (id == ZIPLINE_SECTION_QUICKJS_BYTECODE) return if (length > 0) bytes[at + 8].toInt() and 0xff else null
+    at += 8 + length
+  }
+  return null
+}
+
+/**
+ * Why the bundle in [output] (its manifest [manifestJson], already checked complete) is not what
+ * its signed engine says, or null: every module that is a Zipline file must hold the bytecode
+ * version of the engine the manifest names ([DEFAULT_ENGINE] when it names none). A module that is
+ * not a Zipline file loads on no engine, so it is not this check's to refuse.
+ */
+internal fun engineBytecodeProblem(output: File, manifestJson: String): String? {
+  val signed = signedEngine(manifestJson)
+  signed.problem?.let { return it }
+  val expected = ENGINE_BYTECODE_VERSIONS.getValue(signed.engine)
+  val modules = (runCatching { Json.parseToJsonElement(manifestJson) as JsonObject }.getOrNull()?.get("modules") as? JsonObject).orEmpty()
+  for ((id, m) in modules) {
+    val url = ((m as? JsonObject)?.get("url") as? JsonPrimitive)?.content ?: continue
+    val file = File(output, url).takeIf { it.isFile } ?: continue
+    val version = ziplineBytecodeVersion(file.readBytes()) ?: continue
+    if (version != expected) {
+      val compiledFor = ENGINE_BYTECODE_VERSIONS.entries.firstOrNull { it.value == version }?.key ?: "no engine this tool knows"
+      val named = if (signedEngineNamed(manifestJson)) "names ${signed.engine}" else "names no engine (so ${signed.engine})"
+      return "module $id holds QuickJS bytecode version $version ($compiledFor), but the signed manifest $named, " +
+        "whose bytecode is version $expected: hosts would fetch code their engine cannot load. The signing block " +
+        "writes $ENGINE_METADATA_KEY from the modules' bytecode: run keliver-new-publish-target.sh to update it, and build again"
+    }
+  }
+  return null
+}
+
+private fun signedEngineNamed(manifestJson: String): Boolean =
+  runCatching { ((Json.parseToJsonElement(manifestJson) as JsonObject)["metadata"] as? JsonObject)?.containsKey(ENGINE_METADATA_KEY) }.getOrNull() == true
+
+/** An entry's engine, as hosts read it: its `engine` constraint (as written), else [DEFAULT_ENGINE]. */
+internal fun entryEngine(e: JsonObject): String =
+  ((e["constraints"] as? JsonObject)?.get("engine") as? JsonPrimitive)?.content ?: DEFAULT_ENGINE
+
 /** Why [manifestJson] may not be published at [sequence], or null. */
 internal fun sequenceProblem(manifestJson: String, sequence: Long): String? {
   val signed = signedSequenceText(manifestJson)
@@ -191,11 +295,13 @@ internal fun readIndex(bundlesDir: File): JsonObject {
   if (format != INDEX_FORMAT) throw PublishRefused("$f has format $format; this tool writes format $INDEX_FORMAT only")
   val entries = root["entries"] as? JsonArray ?: throw PublishRefused("$f has no entries array; it was left as it is")
   // W4.4: a promoted bundle has one entry per channel, so a sequence may appear
-  // more than once, but once per channel, and always for the same v<N>.
-  val onChannel = HashSet<Pair<Long, String>>()
-  val versionOf = HashMap<Long, Int>()
+  // more than once, but once per channel, and always for the same v<N>. NF2: a release may have one
+  // entry per engine, each its own v<N>; so the same holds per (sequence, engine).
+  val onChannel = HashSet<Triple<Long, String, String>>()
+  val versionOf = HashMap<Pair<Long, String>, Int>()
   val sequenceOf = HashMap<Int, Long>()
-  val manifestOf = HashMap<Long, Pair<JsonElement?, JsonElement?>>()
+  val engineOf = HashMap<Int, String>()
+  val manifestOf = HashMap<Pair<Long, String>, Pair<JsonElement?, JsonElement?>>()
   entries.forEachIndexed { i, e ->
     val o = e as? JsonObject ?: throw PublishRefused("$f entry $i is not an object")
     val sequence = (o["sequence"] as? JsonPrimitive)?.longOrNull
@@ -212,18 +318,23 @@ internal fun readIndex(bundlesDir: File): JsonObject {
       }
     }
     val channel = entryChannel(o)
-    if (!onChannel.add(sequence to channel)) {
-      throw PublishRefused("$f has two entries with sequence $sequence on channel $channel; it was left as it is")
+    val engine = entryEngine(o)
+    val forEngine = if (engine == DEFAULT_ENGINE) "" else " for engine $engine"
+    if (!onChannel.add(Triple(sequence, channel, engine))) {
+      throw PublishRefused("$f has two entries with sequence $sequence on channel $channel$forEngine; it was left as it is")
     }
-    versionOf.put(sequence, version)?.takeIf { it != version }?.let {
-      throw PublishRefused("$f has sequence $sequence for both v$it and v$version; it was left as it is")
+    versionOf.put(sequence to engine, version)?.takeIf { it != version }?.let {
+      throw PublishRefused("$f has sequence $sequence$forEngine for both v$it and v$version; it was left as it is")
     }
     sequenceOf.put(version, sequence)?.takeIf { it != sequence }?.let {
       throw PublishRefused("$f has two entries for v$version, at sequences $it and $sequence; it was left as it is")
     }
+    engineOf.put(version, engine)?.takeIf { it != engine }?.let {
+      throw PublishRefused("$f has entries for v$version for both engine $it and $engine; it was left as it is")
+    }
     val manifest = o["manifest"] to o["manifestSha256"]
-    manifestOf.put(sequence, manifest)?.takeIf { it != manifest }?.let {
-      throw PublishRefused("$f has entries at sequence $sequence naming different manifests; it was left as it is")
+    manifestOf.put(sequence to engine, manifest)?.takeIf { it != manifest }?.let {
+      throw PublishRefused("$f has entries at sequence $sequence$forEngine naming different manifests; it was left as it is")
     }
   }
   return root
@@ -237,7 +348,11 @@ internal fun readIndex(bundlesDir: File): JsonObject {
 private fun noStricterThan(other: JsonObject, source: JsonObject): Boolean {
   fun caps(e: JsonObject) = (e["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }.toSet()
   fun wv(e: JsonObject) = (e["widgetVersion"] as JsonPrimitive).intOrNull!!
-  return other["constraints"] == null && caps(source).containsAll(caps(other)) && wv(other) <= wv(source)
+  // NF2: an entry serves only hosts of its engine, so only one for the same engine competes; its
+  // engine constraint asks nothing more of those hosts.
+  val otherGates = ((other["constraints"] as? JsonObject).orEmpty() - "engine")
+  return (other["constraints"] == null || other["constraints"] is JsonObject) && otherGates.isEmpty() &&
+    entryEngine(other) == entryEngine(source) && caps(source).containsAll(caps(other)) && wv(other) <= wv(source)
 }
 
 /**
@@ -303,7 +418,8 @@ internal fun entryJson(
   put("createdAt", createdAt.toString())
 }
 
-internal data class StaticPublish(val version: Int, val sequence: Long, val dir: File, val entry: JsonObject)
+/** A publish; [also] is what was published with it for the release's other engines (NF2, a republish). */
+internal data class StaticPublish(val version: Int, val sequence: Long, val dir: File, val entry: JsonObject, val also: List<StaticPublish> = emptyList())
 
 /**
  * W8: a guard against signing with the wrong key by mistake. Null when the
@@ -365,14 +481,44 @@ internal fun publishStatic(
   extraFields: Map<String, JsonElement> = emptyMap(), // added to (or replacing) the new entry's fields
   acceptKeyChange: Boolean = false, // W8: publish although no signing key is shared with the newest published bundle
   beforeLock: () -> Unit = {}, // a test hook: another publish landing between the checks and the lock
-): StaticPublish {
+): StaticPublish = publishStaticVariants(
+  listOf(PublishVariant(output, extraFields)), outDir, publicKeyHex, channel, capabilities, now, init, constraints,
+  acceptKeyChange, beforeLock,
+).single()
+
+/** One engine's compile output for a release, and the fields its entry adds to (or replaces in) the usual ones. */
+internal data class PublishVariant(val output: File, val extraFields: Map<String, JsonElement> = emptyMap())
+
+/**
+ * NF2: publish one release for one or more engines: each output in [variants] is a compile output
+ * for one engine (its signed `keliver.engine`; [DEFAULT_ENGINE] when it names none), all signed for
+ * the same sequence. Each goes to a `v<N>/` of its own, in the order given, and gets an entry at that
+ * one sequence; an entry for an engine other than [DEFAULT_ENGINE] carries the `engine` constraint,
+ * so hosts from before NF2 skip it and hosts of each engine take their own. Everything
+ * [publishStatic] checks is checked for every output, and two outputs for the same engine are
+ * refused; a refusal writes nothing. The index is written once, after every `v<N>/` is in place.
+ */
+internal fun publishStaticVariants(
+  variants: List<PublishVariant>,
+  outDir: File,
+  publicKeyHex: String,
+  channel: String = DEFAULT_CHANNEL,
+  capabilities: List<String> = emptyList(),
+  now: Instant = Instant.now(),
+  init: Boolean = false,
+  constraints: Constraints = Constraints(),
+  acceptKeyChange: Boolean = false,
+  beforeLock: () -> Unit = {},
+): List<StaticPublish> {
+  require(variants.isNotEmpty()) { "nothing to publish" }
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
   constraints.problem?.let { throw PublishRefused(it) }
-  val outputRoot = output.canonicalFile.toPath()
-  if (outDir.canonicalFile.toPath().startsWith(outputRoot)) {
-    throw PublishRefused("--out $outDir is inside the compile output $output; choose a directory outside it")
+  for ((output, _) in variants) {
+    if (outDir.canonicalFile.toPath().startsWith(output.canonicalFile.toPath())) {
+      throw PublishRefused("--out $outDir is inside the compile output $output; choose a directory outside it")
+    }
+    staticOutputProblem(output, publicKeyHex)?.let { throw PublishRefused(it, aboutSigning = true) }
   }
-  staticOutputProblem(output, publicKeyHex)?.let { throw PublishRefused(it, aboutSigning = true) }
   val bundlesDir = File(outDir, "bundles")
   if (!File(bundlesDir, INDEX_FILE).exists() && !init) {
     throw PublishRefused(
@@ -383,10 +529,17 @@ internal fun publishStatic(
   }
   // Read (and so validate) the index before creating anything, and check the
   // signed sequence against it: a refusal here writes nothing.
-  val manifestText = File(output, "manifest.zipline.json").readText()
-  sequenceProblem(manifestText, nextSequence(readIndex(bundlesDir), bundlesDir))?.let { throw PublishRefused(it) }
-  signedBridges(manifestText).problem?.let { throw PublishRefused(it) }
-  if (!acceptKeyChange) keyChangeProblem(bundlesDir, readIndex(bundlesDir), manifestText, publicKeyHex)?.let { throw PublishRefused(it) }
+  val firstSequence = nextSequence(readIndex(bundlesDir), bundlesDir)
+  val seenEngines = HashSet<String>()
+  for ((output, _) in variants) {
+    val manifestText = File(output, "manifest.zipline.json").readText()
+    sequenceProblem(manifestText, firstSequence)?.let { throw PublishRefused(it) }
+    signedBridges(manifestText).problem?.let { throw PublishRefused(it) }
+    engineBytecodeProblem(output, manifestText)?.let { throw PublishRefused(it) }
+    val engine = signedEngine(manifestText).engine
+    if (!seenEngines.add(engine)) throw PublishRefused("two of the outputs are for engine $engine: one release has one bundle per engine")
+    if (!acceptKeyChange) keyChangeProblem(bundlesDir, readIndex(bundlesDir), manifestText, publicKeyHex)?.let { throw PublishRefused(it) }
+  }
   beforeLock()
 
   return withPublishLock(bundlesDir) {
@@ -395,41 +548,48 @@ internal fun publishStatic(
     val dirVersions = bundlesDir.listFiles { f -> f.isDirectory }.orEmpty()
       .mapNotNull { VERSION_DIR_RE.matchEntire(it.name)?.groupValues?.get(1)?.toInt() }
     val highest = (dirVersions + entries.map { (it["version"] as JsonPrimitive).intOrNull!! }).maxOrNull() ?: 0
-    if (highest >= MAX_VERSION) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
-    val version = highest + 1
+    if (highest > MAX_VERSION - variants.size) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
     val sequence = nextSequence(index, bundlesDir)
 
-    val dest = File(bundlesDir, "v$version")
-    val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")
-    try {
-      output.copyRecursively(staging, overwrite = false)
-      // What was copied must still be what was verified.
-      staticOutputProblem(staging, publicKeyHex)?.let {
-        throw PublishRefused("the copy in $staging failed its check: $it", aboutSigning = true)
+    val published = variants.mapIndexed { i, (output, extraFields) ->
+      val version = highest + 1 + i
+      val dest = File(bundlesDir, "v$version")
+      val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")
+      try {
+        output.copyRecursively(staging, overwrite = false)
+        // What was copied must still be what was verified.
+        staticOutputProblem(staging, publicKeyHex)?.let {
+          throw PublishRefused("the copy in $staging failed its check: $it", aboutSigning = true)
+        }
+        val copied = File(staging, "manifest.zipline.json").readText()
+        // Under the lock: another publish may have taken this sequence since the build.
+        sequenceProblem(copied, sequence)?.let { throw PublishRefused(it) }
+        // And what was copied must still name well-formed bridges, and the engine it was compiled for.
+        signedBridges(copied).problem?.let { throw PublishRefused(it) }
+        engineBytecodeProblem(staging, copied)?.let { throw PublishRefused(it) }
+        if (!acceptKeyChange) keyChangeProblem(bundlesDir, index, copied, publicKeyHex)?.let { throw PublishRefused(it) }
+        Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
+      } finally {
+        if (staging.exists()) staging.deleteRecursively()
       }
-      // Under the lock: another publish may have taken this sequence since the build.
-      sequenceProblem(File(staging, "manifest.zipline.json").readText(), sequence)?.let { throw PublishRefused(it) }
-      // And what was copied must still name well-formed bridges.
-      signedBridges(File(staging, "manifest.zipline.json").readText()).problem?.let { throw PublishRefused(it) }
-      if (!acceptKeyChange) keyChangeProblem(bundlesDir, index, File(staging, "manifest.zipline.json").readText(), publicKeyHex)?.let { throw PublishRefused(it) }
-      Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
-    } finally {
-      if (staging.exists()) staging.deleteRecursively()
-    }
 
-    val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
-    // B4: what the signed manifest says it needs, over any copied (republish) bridges.
-    val entryConstraints = withSignedBridges(
-      constraints.over(extraFields["constraints"]),
-      signedBridges(File(dest, "manifest.zipline.json").readText()),
-    )
-    val entry = JsonObject(
-      entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields - "constraints" +
-        listOfNotNull(entryConstraints?.let { "constraints" to it }),
-    )
-    val next = JsonObject(index + ("entries" to JsonArray(entries + entry)))
+      val manifestText = File(dest, "manifest.zipline.json").readText()
+      val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
+      // B4: what the signed manifest says it needs, over any copied (republish) bridges; NF2: and
+      // the engine it names.
+      val entryConstraints = withSignedEngine(
+        withSignedBridges(constraints.over(extraFields["constraints"]), signedBridges(manifestText)),
+        signedEngine(manifestText),
+      )
+      val entry = JsonObject(
+        entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields - "constraints" +
+          listOfNotNull(entryConstraints?.let { "constraints" to it }),
+      )
+      StaticPublish(version, sequence, dest, entry)
+    }
+    val next = JsonObject(index + ("entries" to JsonArray(entries + published.map { it.entry })))
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
-    StaticPublish(version, sequence, dest, entry)
+    published
   }
 }
 
@@ -456,7 +616,8 @@ private fun <T> withPublishLock(bundlesDir: File, block: () -> T): T {
   }
 }
 
-internal data class StaticPromotion(val sequence: Long, val version: Int, val from: String, val entry: JsonObject)
+/** A promotion; [entry] is the first engine's new entry, [also] the other engines' (NF2), in index order. */
+internal data class StaticPromotion(val sequence: Long, val version: Int, val from: String, val entry: JsonObject, val also: List<JsonObject> = emptyList())
 
 /**
  * Promotion (W4.4, `keliver-publish --promote <sequence> --channel <name>`): the
@@ -489,59 +650,70 @@ internal fun promoteStatic(
   if (!File(bundlesDir, INDEX_FILE).exists()) {
     throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to promote in: download the served bundles/ first")
   }
-  fun check(index: JsonObject): JsonObject {
+  // NF2: a release may have one entry per engine at [sequence]; each engine's is promoted, together.
+  fun check(index: JsonObject): List<JsonObject> {
     val entries = (index["entries"] as JsonArray).map { it as JsonObject }
     val atSequence = entries.filter { (it["sequence"] as JsonPrimitive).longOrNull == sequence }
-    val source = atSequence.firstOrNull() ?: throw PublishRefused("${File(bundlesDir, INDEX_FILE)} has no entry at sequence $sequence")
+    if (atSequence.isEmpty()) throw PublishRefused("${File(bundlesDir, INDEX_FILE)} has no entry at sequence $sequence")
     if (atSequence.any { entryChannel(it) == channel }) throw PublishRefused("sequence $sequence is already on channel $channel")
-    entryShapeProblem(source)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
-    constraints.loosening(source["constraints"])?.let { throw PublishRefused(it) }
-    // Hosts on [channel] see its entries and stable's. A higher one that every host able
-    // to run this bundle can also run (no constraints, nothing more required) means none
-    // of them would pick this one. A higher entry that some of them skip does not.
-    entries.filter { (entryChannel(it) == channel || entryChannel(it) == DEFAULT_CHANNEL) && entryShapeProblem(it) == null }
-      .filter { (it["sequence"] as JsonPrimitive).longOrNull!! > sequence && noStricterThan(it, source) }
-      .maxOfOrNull { (it["sequence"] as JsonPrimitive).longOrNull!! }
-      ?.let {
-        throw PublishRefused(
-          "hosts on channel $channel already take sequence $it, above $sequence and asking no more of them, so none " +
-            "would pick this one. To put older code back, republish it (--republish) as a new sequence.",
-        )
+    val sources = atSequence.groupBy(::entryEngine).values.map { it.first() }
+    for (source in sources) {
+      val forEngine = entryEngine(source).takeIf { it != DEFAULT_ENGINE }?.let { " (engine $it)" }.orEmpty()
+      entryShapeProblem(source)?.let { throw PublishRefused("the index entry at sequence $sequence$forEngine $it; it was left as it is") }
+      constraints.loosening(source["constraints"])?.let { throw PublishRefused(it) }
+      // Hosts on [channel] see its entries and stable's. A higher one that every host able
+      // to run this bundle can also run (no constraints, nothing more required) means none
+      // of them would pick this one. A higher entry that some of them skip does not.
+      entries.filter { (entryChannel(it) == channel || entryChannel(it) == DEFAULT_CHANNEL) && entryShapeProblem(it) == null }
+        .filter { (it["sequence"] as JsonPrimitive).longOrNull!! > sequence && noStricterThan(it, source) }
+        .maxOfOrNull { (it["sequence"] as JsonPrimitive).longOrNull!! }
+        ?.let {
+          throw PublishRefused(
+            "hosts on channel $channel$forEngine already take sequence $it, above $sequence and asking no more of them, so none " +
+              "would pick this one. To put older code back, republish it (--republish) as a new sequence.",
+          )
+        }
+      if ((source["manifest"] as? JsonPrimitive)?.content != "v${(source["version"] as JsonPrimitive).content}/manifest.zipline.json") {
+        throw PublishRefused("the entry at sequence $sequence$forEngine names ${source["manifest"]}, not its own v<N>/manifest.zipline.json")
       }
-    if ((source["manifest"] as? JsonPrimitive)?.content != "v${(source["version"] as JsonPrimitive).content}/manifest.zipline.json") {
-      throw PublishRefused("the entry at sequence $sequence names ${source["manifest"]}, not its own v<N>/manifest.zipline.json")
+      val version = (source["version"] as JsonPrimitive).intOrNull!!
+      val dir = File(bundlesDir, "v$version")
+      val manifest = File(dir, "manifest.zipline.json")
+      val expected = (source["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
+      if (!manifest.isFile || sha256Hex(manifest.readBytes()) != expected) {
+        throw PublishRefused("$manifest is not the manifest the entry at sequence $sequence$forEngine names (manifestSha256)")
+      }
+      staticOutputProblem(dir, publicKeyHex)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
+      signedBridges(manifest.readText()).problem?.let { throw PublishRefused("v$version: $it") }
+      signedEngine(manifest.readText()).problem?.let { throw PublishRefused("v$version: $it") }
+      if (signedEngine(manifest.readText()).engine != entryEngine(source)) {
+        throw PublishRefused("v$version's signed manifest is for engine ${signedEngine(manifest.readText()).engine}, but its entry says ${entryEngine(source)}; it was left as it is")
+      }
     }
-    val version = (source["version"] as JsonPrimitive).intOrNull!!
-    val dir = File(bundlesDir, "v$version")
-    val manifest = File(dir, "manifest.zipline.json")
-    val expected = (source["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
-    if (!manifest.isFile || sha256Hex(manifest.readBytes()) != expected) {
-      throw PublishRefused("$manifest is not the manifest the entry at sequence $sequence names (manifestSha256)")
-    }
-    staticOutputProblem(dir, publicKeyHex)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
-    signedBridges(manifest.readText()).problem?.let { throw PublishRefused("v$version: $it") }
-    return source
+    return sources
   }
   check(readIndex(bundlesDir)) // before the lock: a refusal writes nothing, not even the lock file
   return withPublishLock(bundlesDir) {
     val index = readIndex(bundlesDir)
-    val source = check(index) // again, under the lock
-    val entry = JsonObject(
-      source - "constraints" + mapOf(
-        "channel" to JsonPrimitive(channel),
-        "promotedFrom" to JsonPrimitive(entryChannel(source)),
-        "createdAt" to JsonPrimitive(now.toString()),
-      ) + listOfNotNull(
-        // B4: derived from the signed manifest, so an entry from before B4 gains its bridges.
-        withSignedBridges(
-          constraints.over(source["constraints"]),
-          signedBridges(File(bundlesDir, "v${(source["version"] as JsonPrimitive).content}/manifest.zipline.json").readText()),
-        )?.let { "constraints" to it },
-      ),
-    )
-    val next = JsonObject(index + ("entries" to JsonArray((index["entries"] as JsonArray) + entry)))
+    val sources = check(index) // again, under the lock
+    val promoted = sources.map { source ->
+      val manifestText = File(bundlesDir, "v${(source["version"] as JsonPrimitive).content}/manifest.zipline.json").readText()
+      JsonObject(
+        source - "constraints" + mapOf(
+          "channel" to JsonPrimitive(channel),
+          "promotedFrom" to JsonPrimitive(entryChannel(source)),
+          "createdAt" to JsonPrimitive(now.toString()),
+        ) + listOfNotNull(
+          // B4: derived from the signed manifest, so an entry from before B4 gains its bridges; NF2: and its engine.
+          withSignedEngine(withSignedBridges(constraints.over(source["constraints"]), signedBridges(manifestText)), signedEngine(manifestText))
+            ?.let { "constraints" to it },
+        ),
+      )
+    }
+    val next = JsonObject(index + ("entries" to JsonArray((index["entries"] as JsonArray) + promoted)))
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
-    StaticPromotion(sequence, (source["version"] as JsonPrimitive).intOrNull!!, entryChannel(source), entry)
+    val first = sources.first()
+    StaticPromotion(sequence, (first["version"] as JsonPrimitive).intOrNull!!, entryChannel(first), promoted.first(), promoted.drop(1))
   }
 }
 
@@ -561,36 +733,43 @@ internal fun setRolloutStatic(outDir: File, sequence: Long, rollout: Int, channe
   if (!File(bundlesDir, INDEX_FILE).exists()) {
     throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to change: download the served bundles/ first")
   }
-  fun target(index: JsonObject): Int {
+  // NF2: a release may have one entry per engine on a channel; the rollout is set on each (the same buckets).
+  fun target(index: JsonObject): List<Int> {
     val entries = (index["entries"] as JsonArray).map { it as JsonObject }
     val at = entries.withIndex().filter { (_, e) -> (e["sequence"] as JsonPrimitive).longOrNull == sequence }
     if (at.isEmpty()) throw PublishRefused("${File(bundlesDir, INDEX_FILE)} has no entry at sequence $sequence")
+    val channels = at.map { entryChannel(it.value) }.distinct()
     val chosen = when {
-      channel != null -> at.singleOrNull { (_, e) -> entryChannel(e) == channel }
+      channel != null -> at.filter { (_, e) -> entryChannel(e) == channel }.ifEmpty { null }
         ?: throw PublishRefused("sequence $sequence is not on channel $channel")
-      at.size == 1 -> at.single()
-      else -> throw PublishRefused("sequence $sequence is on channels ${at.joinToString { entryChannel(it.value) }}: name one with --channel")
+      channels.size == 1 -> at
+      else -> throw PublishRefused("sequence $sequence is on channels ${channels.joinToString()}: name one with --channel")
     }
-    entryShapeProblem(chosen.value)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
-    // Hosts from before W4.5 skip any entry with constraints. Giving a live, unconstrained
-    // entry some would hide it from them (and their floor would then refuse the older one).
-    if (chosen.value["constraints"] == null) {
-      throw PublishRefused(
-        "the entry at sequence $sequence has no constraints, and hosts from before staged rollouts skip any entry " +
-          "that has some: adding a rollout now would hide a bundle they may already run. Stage a rollout when " +
-          "publishing (--rollout), or republish with --rollout.",
-      )
+    for ((_, e) in chosen) {
+      entryShapeProblem(e)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
+      // Hosts from before W4.5 skip any entry with constraints. Giving a live, unconstrained
+      // entry some would hide it from them (and their floor would then refuse the older one).
+      if (e["constraints"] == null) {
+        throw PublishRefused(
+          "the entry at sequence $sequence has no constraints, and hosts from before staged rollouts skip any entry " +
+            "that has some: adding a rollout now would hide a bundle they may already run. Stage a rollout when " +
+            "publishing (--rollout), or republish with --rollout.",
+        )
+      }
     }
-    return chosen.index
+    return chosen.map { it.index }
   }
   target(readIndex(bundlesDir)) // before the lock: a refusal writes nothing
   return withPublishLock(bundlesDir) {
     val index = readIndex(bundlesDir)
-    val i = target(index)
+    val targets = target(index)
     val entries = (index["entries"] as JsonArray).map { it as JsonObject }.toMutableList()
-    val old = entries[i]
-    val entry = JsonObject(old - "constraints" + ("constraints" to Constraints(rollout = rollout).over(old["constraints"])!!))
-    entries[i] = entry
+    for (i in targets) {
+      entries[i] = JsonObject(entries[i] - "constraints" + ("constraints" to Constraints(rollout = rollout).over(entries[i]["constraints"])!!))
+    }
+    val i = targets.first()
+    val old = (index["entries"] as JsonArray)[i] as JsonObject
+    val entry = entries[i]
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), JsonObject(index + ("entries" to JsonArray(entries)))) + "\n")
     // Hosts on another channel also take stable's entry at this sequence (the same buckets).
     val stableTwin = entries.firstOrNull {
@@ -722,42 +901,59 @@ internal fun republishStatic(
         "--channel; republish once per channel if it is more than one.",
     )
   }
-  entryShapeProblem(original)?.let { throw PublishRefused("the index entry for v$version $it; it was left as it is") }
-  constraints.loosening(original["constraints"])?.let { throw PublishRefused(it) }
-  val source = File(bundlesDir, "v$version")
-  val sourceManifest = File(source, "manifest.zipline.json")
-  val expectedSha = (original["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
-  if (!sourceManifest.isFile || sha256Hex(sourceManifest.readBytes()) != expectedSha) {
-    throw PublishRefused("$sourceManifest is not the manifest the index entry for v$version names (manifestSha256); it was left as it is")
-  }
-  // Only whether a listed key signed it: the copy is signed again, and checked as a new publish.
-  staticOutputProblem(source, publicKeyHex, authenticOnly = true)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
-  // B4: before the re-sign build, not after it (a version stored before B4 may be malformed).
-  signedBridges(sourceManifest.readText()).problem?.let { throw PublishRefused("v$version: $it") }
   val entryChannel = channel ?: (original["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
-  val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
-  val extra = buildMap<String, JsonElement> {
-    put("widgetVersion", original["widgetVersion"]!!)
-    // Host-version gates are about the code, so they are copied. A rollout is not: a new
-    // sequence draws new buckets, so a copied 10% would be another 10%, and a copied halt
-    // would keep the rollback from the hosts that need it. Pass --rollout to stage it.
-    constraints.over((original["constraints"] as? JsonObject)?.let { JsonObject(it - "rollout") })?.let { put("constraints", it) }
-    put("republishOf", JsonPrimitive(version))
+  // NF2: v[version] is one engine's bundle of its release; the release's other engines' bundles
+  // (the entries at its sequence for other engines) are republished with it, at the same new
+  // sequence, so no engine's hosts are left on the code being rolled back.
+  val originalSequence = (original["sequence"] as JsonPrimitive).longOrNull
+  val siblings = (index["entries"] as JsonArray).map { it as JsonObject }
+    .filter { (it["sequence"] as JsonPrimitive).longOrNull == originalSequence && entryEngine(it) != entryEngine(original) }
+    .groupBy(::entryEngine).values.map { forEngine -> forEngine.firstOrNull { entryChannel(it) == entryChannel(original) } ?: forEngine.first() }
+  val variants = (listOf(original) + siblings).map { e ->
+    val v = (e["version"] as JsonPrimitive).intOrNull!!
+    entryShapeProblem(e)?.let { throw PublishRefused("the index entry for v$v $it; it was left as it is") }
+    constraints.loosening(e["constraints"])?.let { throw PublishRefused(it) }
+    val source = File(bundlesDir, "v$v")
+    val sourceManifest = File(source, "manifest.zipline.json")
+    val expectedSha = (e["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
+    if (!sourceManifest.isFile || sha256Hex(sourceManifest.readBytes()) != expectedSha) {
+      throw PublishRefused("$sourceManifest is not the manifest the index entry for v$v names (manifestSha256); it was left as it is")
+    }
+    // Only whether a listed key signed it: the copy is signed again, and checked as a new publish.
+    staticOutputProblem(source, publicKeyHex, authenticOnly = true)?.let { throw PublishRefused("v$v: $it", aboutSigning = true) }
+    // B4: before the re-sign build, not after it (a version stored before B4 may be malformed).
+    signedBridges(sourceManifest.readText()).problem?.let { throw PublishRefused("v$v: $it") }
+    signedEngine(sourceManifest.readText()).problem?.let { throw PublishRefused("v$v: $it") }
+    val extra = buildMap<String, JsonElement> {
+      put("widgetVersion", e["widgetVersion"]!!)
+      put("capabilities", e["capabilities"]!!)
+      // Host-version gates are about the code, so they are copied. A rollout is not: a new
+      // sequence draws new buckets, so a copied 10% would be another 10%, and a copied halt
+      // would keep the rollback from the hosts that need it. Pass --rollout to stage it.
+      constraints.over((e["constraints"] as? JsonObject)?.let { JsonObject(it - "rollout") })?.let { put("constraints", it) }
+      put("republishOf", JsonPrimitive(v))
+    }
+    Triple(v, source, extra)
   }
+  val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
 
   val scratch = Files.createTempDirectory("keliver-republish-").toFile()
   try {
-    val copy = File(scratch, "v$version")
-    source.copyRecursively(copy, overwrite = false)
     val sequence = nextSequence(index, bundlesDir)
-    val code = resign(copy, sequence)
-    if (code != 0) throw BuildFailed(code)
-    republishProblem(sourceManifest.readText(), File(copy, "manifest.zipline.json").readText())?.let { throw PublishRefused(it) }
+    val copies = variants.map { (v, source, extra) ->
+      val copy = File(scratch, "v$v")
+      source.copyRecursively(copy, overwrite = false)
+      val code = resign(copy, sequence)
+      if (code != 0) throw BuildFailed(code)
+      republishProblem(File(source, "manifest.zipline.json").readText(), File(copy, "manifest.zipline.json").readText())?.let { throw PublishRefused(it) }
+      PublishVariant(copy, extra)
+    }
     try {
-      return publishStatic(copy, outDir, publicKeyHex, entryChannel, capabilities, now, extraFields = extra, acceptKeyChange = acceptKeyChange)
+      val published = publishStaticVariants(copies, outDir, publicKeyHex, entryChannel, capabilities, now, acceptKeyChange = acceptKeyChange)
+      return published.first().copy(also = published.drop(1))
     } catch (e: PublishRefused) {
       // Another publish took this sequence while the re-sign ran: the advice is not "build again".
-      val signedFor = signedSequenceText(File(copy, "manifest.zipline.json").readText())
+      val signedFor = signedSequenceText(File(copies.first().output, "manifest.zipline.json").readText())
       if (signedFor == sequence.toString() && e.message.orEmpty().contains("but this publish is sequence")) {
         throw PublishRefused("another publish took sequence $sequence while this republish ran; nothing was written. Run --republish $version again.")
       }
@@ -837,10 +1033,12 @@ internal fun relayIndexJson(bundlesDir: File): String {
       val bytes = manifest.readBytes()
       // B4: a malformed keliver.bridges leaves the version out (fail closed).
       val bridges = signedBridges(bytes.decodeToString()).takeIf { it.problem == null } ?: return@mapNotNull null
+      // NF2: likewise a malformed keliver.engine; a bundle for another engine carries the `engine` constraint.
+      val engine = signedEngine(bytes.decodeToString()).takeIf { it.problem == null } ?: return@mapNotNull null
       JsonObject(
         entryJson(version.toLong(), version, DEFAULT_CHANNEL, caps, sha256Hex(bytes), created) +
           ("widgetVersion" to JsonPrimitive(widgetVersion)) +
-          listOfNotNull(bridges.constraint?.let { "constraints" to it }),
+          listOfNotNull(withSignedEngine(bridges.constraint, engine)?.let { "constraints" to it }),
       )
     }
   return Json.encodeToString(
@@ -864,8 +1062,12 @@ internal fun legacyLatest(bundlesDir: File, widgetVersion: Int, hostCaps: Set<St
       val required = Regex("\"capabilities\":\\[([^\\]]*)]").find(metaText)
         ?.groupValues?.get(1)?.split(',')?.map { it.trim().trim('"') }?.filter { it.isNotEmpty() }
         ?: emptyList()
-      val signed = File(dir, "manifest.zipline.json").takeIf { it.isFile }?.let { signedBridges(it.readText()) }
+      val manifestText = File(dir, "manifest.zipline.json").takeIf { it.isFile }?.readText()
+      val signed = manifestText?.let { signedBridges(it) }
+      // NF2: such a host runs DEFAULT_ENGINE, so never a bundle for another (or a malformed value).
+      val engine = manifestText?.let { signedEngine(it) }
       recorded <= widgetVersion && hostCaps.containsAll(required) && signed != null &&
-        signed.problem == null && signed.constraint == null
+        signed.problem == null && signed.constraint == null &&
+        engine != null && engine.problem == null && engine.engine == DEFAULT_ENGINE
     }
     ?.maxByOrNull { it.name.removePrefix("v").toIntOrNull() ?: 0 }

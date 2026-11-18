@@ -84,6 +84,8 @@ def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/Bridges.kt'))
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/CrashRollback.kt'))
   from(rootProject.file('scripts/templates/production-host/src/test/kotlin/CrashRollbackTest.kt'))
+  // NF2: the hosts' engine gate (in BundleIndex.kt) and its tests; EngineGateTest holds the publisher to it.
+  from(rootProject.file('scripts/templates/production-host/src/test/kotlin/EngineGateTest.kt'))
   // The start policy's decision (StartPolicy.kt, both hosts) and its tests.
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/StartPolicy.kt'))
   from(rootProject.file('scripts/templates/production-host/src/test/kotlin/StartPolicyTest.kt'))

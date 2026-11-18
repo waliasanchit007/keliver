@@ -27,6 +27,15 @@
  * host passes its own as [HostFacts.bridges], known before its first lookup); it skips an
  * entry, and refuses a manifest, that needs one it does not serve, at a newer version, or (at
  * the same version) built against another contract shape.
+ *
+ * Engines (NF2, docs/GUEST_PROFILE.md "NF2: the Zipline fork"): QuickJS bytecode loads only on
+ * the engine that compiled it (version 1 for Zipline 1.28.0's QuickJS 2021, 5 for the fork's
+ * QuickJS 2026). A bundle compiled for another engine than [DEFAULT_ENGINE] names it in its SIGNED
+ * metadata ("keliver.engine"), and its index entry carries the same as the `engine` constraint
+ * (which hosts from before NF2 skip, so they only ever take a [DEFAULT_ENGINE] bundle). One release
+ * may have one entry per engine, at the same sequence. A host takes only entries for its own
+ * engine ([HostFacts.engine]; an entry naming none is for [DEFAULT_ENGINE]), and refuses a manifest
+ * for another, on the network, from the cache and from crash rollback's kept copy.
  */
 package @@PACKAGE@@
 
@@ -72,7 +81,51 @@ internal const val DEFAULT_CHANNEL = "stable"
  * Constraint keys this host understands (W4.5). An entry carrying any other is
  * skipped, so a constraint added later never reaches a host that can't honour it.
  */
-private val KNOWN_CONSTRAINTS = setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")
+private val KNOWN_CONSTRAINTS = setOf("rollout", "minHostVersion", "maxHostVersion", "bridges", "engine")
+
+/**
+ * NF2: the engine every bundle published before NF2 was compiled for (Zipline 1.28.0's QuickJS
+ * 2021-03-27, bytecode version 1). A manifest without "keliver.engine", and an index entry
+ * without an `engine` constraint, are for it.
+ */
+internal const val DEFAULT_ENGINE = "quickjs-2021"
+
+/** The manifest metadata key that names a bundle's engine, inside the signed part of the manifest. */
+internal const val ENGINE_METADATA_KEY = "keliver.engine"
+
+/** The engines Keliver names, by the QuickJS release Zipline links (`QuickJs.version`). */
+internal val ENGINES_BY_QUICKJS_VERSION = mapOf("2021-03-27" to DEFAULT_ENGINE, "2026-06-04" to "quickjs-2026")
+
+private val ENGINE_ID = Regex("[a-z0-9][a-z0-9.-]{0,31}")
+
+/**
+ * The engine of a host whose Zipline links QuickJS [quickJsVersion] (`QuickJs.version`, a
+ * constant of the Zipline build). A release Keliver does not name is named by itself
+ * (`quickjs-<version>`), so such a host takes only bundles published for exactly that engine.
+ */
+internal fun engineOfQuickJsVersion(quickJsVersion: String): String =
+  ENGINES_BY_QUICKJS_VERSION[quickJsVersion] ?: "quickjs-${quickJsVersion.lowercase()}"
+
+/**
+ * Why a bundle for [bundleEngine] (a manifest's "keliver.engine"; null: none, so
+ * [DEFAULT_ENGINE]) must not run on a host whose engine is [hostEngine], or null when it may.
+ */
+internal fun engineProblem(bundleEngine: String?, hostEngine: String): String? {
+  val engine = bundleEngine ?: DEFAULT_ENGINE
+  return when {
+    !ENGINE_ID.matches(engine) -> "engine refused: malformed $ENGINE_METADATA_KEY"
+    engine != hostEngine -> "engine refused: the bundle is compiled for $engine; this host runs $hostEngine"
+    else -> null
+  }
+}
+
+/** A manifest's "keliver.engine", read from its JSON before Zipline has verified it: used only to refuse. */
+internal fun manifestEngine(manifestJson: String): String? = runCatching {
+  val metadata = (Json.parseToJsonElement(manifestJson) as JsonObject)["metadata"] as? JsonObject
+  val value = metadata?.get(ENGINE_METADATA_KEY) ?: return@runCatching null
+  // Present but not a string: malformed, never "the default engine".
+  (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: "\u0000"
+}.getOrElse { null }
 
 /**
  * What an entry's constraints are checked against (W4.5): this install's random
@@ -97,6 +150,12 @@ internal data class HostFacts(
    * this install's own healthy bundle (CrashGuard.rollbackTo), never to an older entry.
    */
   val setAside: Long = 0,
+  /**
+   * NF2: the engine this host's Zipline links (each host passes its own: [engineOfQuickJsVersion]
+   * of `QuickJs.version`). Only entries for it are taken; an entry that names none is for
+   * [DEFAULT_ENGINE].
+   */
+  val engine: String = DEFAULT_ENGINE,
 )
 
 /** A bridge this host serves: its contract version and shape (a generated `<Name>Bridge`'s VERSION and SHAPE). */
@@ -246,6 +305,9 @@ internal data class IndexPick(val sequence: Long, val manifestPath: String, val 
  * - `rollout` (0..100): only installs whose [rolloutBucket] is below it. It
  *   gates only sequences above the host's floor: a host that has already run a
  *   sequence keeps it when its rollout is lowered or halted.
+ * - `engine` (NF2): the entry is taken only by a host whose [HostFacts.engine] it names; an entry
+ *   without it is for [DEFAULT_ENGINE]. A release with no entry for this host's engine is skipped,
+ *   as an unmet constraint is.
  */
 internal fun pickFromIndex(
   indexJson: String,
@@ -263,7 +325,7 @@ internal fun pickFromIndex(
   val entries = root["entries"] as? JsonArray ?: throw IOException("the index has no entries")
   entries.mapNotNull { usable(it as? JsonObject ?: return@mapNotNull null, capabilities, widgetVersion, channel, facts) }
     .maxByOrNull { it.sequence }
-    ?: throw IOException("no compatible entry among ${entries.size} (channel $channel, widget version $widgetVersion, capabilities $capabilities)")
+    ?: throw IOException("no compatible entry among ${entries.size} (channel $channel, widget version $widgetVersion, capabilities $capabilities, engine ${facts.engine})")
 }
 
 private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersion: Int, channel: String, facts: HostFacts): IndexPick? {
@@ -275,11 +337,13 @@ private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersio
     else -> (c as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
   }
   if (entryChannel != channel && entryChannel != DEFAULT_CHANNEL) return null
-  when (val c = e["constraints"]) {
-    null -> Unit
-    is JsonObject -> if (!KNOWN_CONSTRAINTS.containsAll(c.keys) || !admits(c, sequence, facts)) return null
+  val constraints = when (val c = e["constraints"]) {
+    null -> null
+    is JsonObject -> c.takeIf { KNOWN_CONSTRAINTS.containsAll(c.keys) && admits(c, sequence, facts) } ?: return null
     else -> return null
   }
+  // NF2: only an entry for this host's engine; one that names none is for DEFAULT_ENGINE.
+  if (indexEngine(constraints) != facts.engine) return null
   val wv = (e["widgetVersion"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull ?: return null
   if (wv > widgetVersion) return null
   val required = (e["capabilities"] as? JsonArray ?: return null).map {
@@ -313,6 +377,12 @@ private fun admits(constraints: JsonObject, sequence: Long, facts: HostFacts): B
     if (bridgeProblem(needed, facts.bridges) != null) return false
   }
   return true
+}
+
+/** The engine an entry with [constraints] is for: its `engine` constraint, else [DEFAULT_ENGINE]; null when malformed. */
+private fun indexEngine(constraints: JsonObject?): String? {
+  val e = constraints?.get("engine") ?: return DEFAULT_ENGINE
+  return (e as? JsonPrimitive)?.takeIf { it.isString && ENGINE_ID.matches(it.content) }?.content
 }
 
 /** An entry's `bridges` constraint (`{"ShopActions": {"min": 2, "shape": "…"}}`), or null when malformed. */
@@ -375,6 +445,8 @@ internal class ManifestPinningHttpClient(
   sha256: String?,
   private val floor: () -> Long = { 0 },
   private val crash: CrashGuard? = null,
+  /** NF2: the engine this host links; a manifest for another is refused (engineProblem). */
+  private val engine: String = DEFAULT_ENGINE,
   private val bridges: () -> Map<String, HostBridge> = { emptyMap() },
 ) : ZiplineHttpClient() {
   /** Manifest URL -> the sha256 the index holds it to (null: the floor only). Copied on write. */
@@ -426,6 +498,7 @@ internal class ManifestPinningHttpClient(
     local[url]?.let { kept ->
       if (manifestSequence(kept.manifest) != kept.sequence) throw IOException("the kept manifest for $url is not sequence ${kept.sequence}")
       manifestBridgeProblem(manifestBridges(kept.manifest), bridges())?.let { throw IOException(it) }
+      engineProblem(manifestEngine(kept.manifest), engine)?.let { throw IOException(it) }
       return kept.manifest.encodeUtf8().also { served = served + (url to it) }
     }
     val body = delegate.download(url, requestHeaders)
@@ -441,6 +514,8 @@ internal class ManifestPinningHttpClient(
       rollbackProblem(sequence, floor())?.let { throw IOException(it) }
       crash?.setAsideProblem(sequence)?.let { throw IOException(it) }
       manifestBridgeProblem(manifestBridges(json), bridges())?.let { throw IOException(it) }
+      // NF2: before Zipline downloads any module, which this engine could not load.
+      engineProblem(manifestEngine(json), engine)?.let { throw IOException(it) }
       served = served + (url to body)
     }
     return body
@@ -486,6 +561,7 @@ internal fun reportReason(outcome: String, detail: String): String {
     "bridge bind failed" in d -> "bridge-bind"
     "bridge refused: the bundle was built against another" in d -> "bridge-shape"
     "bridge refused" in d -> "bridge-missing"
+    "engine refused" in d -> "engine"
     "signature" in d || "verif" in d -> "signature"
     "lookup failed" in d || "nothing is cached" in d -> "lookup-failed"
     listOf("timeout", "timed out", "connect", "unreachable", "resolve", "unknownhost", "network", "offline", "reset").any { it in d } -> "network"

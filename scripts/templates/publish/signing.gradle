@@ -1,6 +1,6 @@
 
 // ---------------------------------------------------------------------------
-// keliver: PUBLISH SIGNING (v3) — written by keliver-new-publish-target.sh.
+// keliver: PUBLISH SIGNING (v4) — written by keliver-new-publish-target.sh.
 //
 // The relay's POST /publish runs `publishTask` (keliver.portal.json) and keeps
 // its output as a versioned bundle ONLY if the manifest is signed with this
@@ -58,6 +58,15 @@
 // from before W8 trust only that name, and Zipline checks only the first
 // signature a host trusts. Hosts that trust either key load the bundle.
 //
+// ENGINE (NF2, docs/DEVICE_HOST.md "Engines"). QuickJS bytecode loads only on
+// the engine that compiled it. Before signing, this block reads the bytecode
+// version of every module the manifest names: version 1 (Zipline 1.28.0's
+// QuickJS 2021) adds nothing, as every bundle before NF2; version 5 (QuickJS
+// 2026, the NF2 fork) adds "keliver.engine": "quickjs-2026" to the signed
+// metadata, so hosts on another engine refuse it. Modules of two versions, a
+// version no engine here names, or a keliver.engine that says otherwise fail
+// the build. keliver-publish checks the same again.
+//
 // Not configuration-cache compatible: the store is resolved by running a
 // process (keliver-init leaves the cache off).
 //
@@ -97,6 +106,39 @@ def keliverSigningKeyFile = { ->
 }.memoize()
 def keliverPublishSequence = providers.gradleProperty('keliver.sequence')
   .orElse(providers.environmentVariable('KELIVER_PUBLISH_SEQUENCE'))
+// NF2: the engine each QuickJS bytecode version is for (null: the default engine, named by no key).
+def keliverEngines = [1: null, 5: 'quickjs-2026']
+// The QuickJS bytecode version in a .zipline file (its 8-byte magic, a format version, then
+// sections of a 4-byte id and a 4-byte length; section 1 is bytecode, whose first byte is
+// QuickJS's BC_VERSION), or null when the file is not one.
+def keliverBytecodeVersion = { byte[] b ->
+  if (b.length < 12 || !Arrays.equals(Arrays.copyOfRange(b, 0, 8), 'ZIPLINE\u0000'.getBytes('UTF-8'))) return null
+  def buf = java.nio.ByteBuffer.wrap(b)
+  int at = 12
+  while (at + 8 <= b.length) {
+    int id = buf.getInt(at)
+    int length = buf.getInt(at + 4)
+    if (length < 0 || at + 8 + length > b.length) return null
+    if (id == 1) return length > 0 ? (b[at + 8] & 0xff) : null
+    at += 8 + length
+  }
+  return null
+}
+// The engine the manifest's modules (in dir) were compiled for: null for the default engine.
+def keliverEngineOf = { File dir, manifest ->
+  def versions = manifest.modules.values().collect { m ->
+    def f = new File(dir, m.url)
+    f.isFile() ? keliverBytecodeVersion(f.bytes) : null
+  }.findAll { it != null }.toSet()
+  if (versions.size() > 1) throw new GradleException("keliver: the modules in ${dir} hold QuickJS bytecode of versions ${versions.sort()}: compiled by two engines")
+  if (versions.isEmpty()) return null
+  def v = versions.iterator().next()
+  if (!keliverEngines.containsKey(v)) throw new GradleException("keliver: the modules in ${dir} hold QuickJS bytecode version ${v}, which no engine these tools publish for compiles")
+  def engine = keliverEngines[v]
+  def named = manifest.metadata['keliver.engine']
+  if (named != engine) throw new GradleException("keliver: the manifest's keliver.engine is '${named}', but its modules were compiled for ${engine ?: 'the default engine (named by none)'}")
+  return engine
+}
 // Signs manifestFile in place, after writing the publish sequence (if any) into its metadata.
 def keliverSign = { File manifestFile, boolean keyRequired, String missing ->
   def sequence = keliverPublishSequence.getOrNull()
@@ -130,14 +172,18 @@ def keliverSign = { File manifestFile, boolean keyRequired, String missing ->
   def signer = builder.addEd25519('portal-ed25519', okio.ByteString.decodeHex(lines[0].toLowerCase())).build()
   // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
   def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
-  if (sequence != null) {
+  // NF2: before the manifest is changed, from the modules beside it (a re-sign finds what it found).
+  def engine = keliverEngineOf(manifestFile.parentFile, manifest)
+  def added = (sequence != null ? ['keliver.sequence': sequence] : [:]) + (engine != null ? ['keliver.engine': engine] : [:])
+  if (!added.isEmpty()) {
     // metadata is in the signed part of the manifest, so the signature below covers it.
     manifest = manifest.copy(manifest.unsigned, manifest.modules, manifest.mainModuleId, manifest.mainFunction,
-      manifest.version, manifest.metadata + ['keliver.sequence': sequence])
+      manifest.version, manifest.metadata + added)
   }
   manifestFile.text = signer.sign(manifest).encodeJson()
   logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key (${names[0]})" +
-    (names.size() > 1 ? " and the next key (${names[1]})" : "") + (sequence != null ? ", for sequence ${sequence}" : ""))
+    (names.size() > 1 ? " and the next key (${names[1]})" : "") + (sequence != null ? ", for sequence ${sequence}" : "") +
+    (engine != null ? ", for engine ${engine}" : ""))
 }
 tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compileTask ->
   compileTask.inputs.property('keliverPublishSequence', keliverPublishSequence.orElse(''))
