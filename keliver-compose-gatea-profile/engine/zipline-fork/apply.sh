@@ -22,7 +22,7 @@
 #                             this exercises NaN-boxed values (JS_NAN_BOXING) and 32-bit limbs
 #   apply.sh test    <work> [gradle args]   Zipline's own build, e.g. :zipline:jvmTest, or
 #                             :zipline:connectedAndroidDeviceTest (its device tests, on ANDROID_SERIAL)
-#   apply.sh publish <work> <maven repo dir>   publish the forked JVM and Android artifacts (zipline-jvm,
+#   apply.sh publish <work> <maven repo dir>   publish the forked artifacts (zipline-jvm, zipline-bytecode,
 #                             zipline-android, zipline-android-ndk) as 1.28.0-q20260604 to a scratch
 #                             Maven repository (never ~/.m2)
 #   apply.sh diff    <work>   maintainers: regenerate patches/ from an edited checkout
@@ -272,11 +272,13 @@ do_publish() {
   local repo="${3:?maven repo dir}"
   mkdir -p "$repo"; repo="$(cd "$repo" && pwd)"
   case "$repo" in "$HOME/.m2"*) echo "refusing ~/.m2" >&2; exit 2 ;; esac
-  # JVM (the engine the Gradle plugin compiles bundles with) and Android (the JNI classes and the AAR
-  # with libquickjs.so). Every other Zipline module stays 1.28.0 (use-fork.init.gradle).
+  # zipline-jvm (the engine the Gradle plugin compiles bundles with), zipline-bytecode (step 1b: the
+  # compiler's source maps and line stripping read and write version 5) and, for Android hosts (step
+  # 2), zipline-android (its JNI classes) and zipline-android-ndk (the AAR with libquickjs.so). Every
+  # other Zipline module stays 1.28.0; use-fork.init.gradle substitutes these four.
   zipline_gradle -PVERSION_NAME="$FORK_VERSION" "-Dmaven.repo.local=$repo" -PRELEASE_SIGNING_ENABLED=false \
-    :zipline:publishJvmPublicationToMavenLocal :zipline:publishAndroidPublicationToMavenLocal \
-    :zipline-android-ndk:publishMavenPublicationToMavenLocal
+    :zipline:publishJvmPublicationToMavenLocal :zipline-bytecode:publishMavenPublicationToMavenLocal \
+    :zipline:publishAndroidPublicationToMavenLocal :zipline-android-ndk:publishMavenPublicationToMavenLocal
   find "$repo/app/cash/zipline" \( -name "*.jar" -o -name "*.aar" \) | sort
 }
 

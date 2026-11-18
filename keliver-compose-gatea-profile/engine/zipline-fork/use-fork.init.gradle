@@ -1,14 +1,17 @@
 // NF2: points a Keliver build at the forked Zipline (README.md here), without changing the build.
-// Replaced are the modules with the engine in them: `zipline-jvm` (the JNI engine the bytecode
-// compiler, the Zipline Gradle plugin in the build's classpath, and JVM hosts load; step 1) and, for
-// Android hosts, `zipline-android` (its JNI classes) and `zipline-android-ndk` (the AAR with
-// libquickjs.so; step 2). Every other Zipline module stays 1.28.0 from Maven Central.
+// Replaced are the modules the fork changes: `app.cash.zipline:zipline-jvm`, the JNI engine the
+// bytecode compiler (zipline-cli, which the Zipline Gradle plugin runs) and the JVM hosts load;
+// (step 1b) `app.cash.zipline:zipline-bytecode`, through which the compiler applies source maps
+// and strips line numbers, now in QuickJS 2026's bytecode (version 5); and (step 2), for Android
+// hosts, `zipline-android` (its JNI classes) and `zipline-android-ndk` (the AAR with
+// libquickjs.so). Every other Zipline module stays 1.28.0 from Maven Central.
 //
 //   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
 //     -PziplineForkRepo=<the scratch Maven repo `apply.sh publish` wrote> --no-daemon <tasks>
 //
-// -PziplineForkRepo=none keeps Zipline 1.28.0 and only turns the source maps off (below): the
-// like-for-like baseline for a measurement of the fork.
+// -PziplineForkRepo=none keeps Zipline 1.28.0: the baseline for a measurement of the fork. Both
+// are built as Keliver builds, with source maps (step 1 turned them off on both until 1b).
+// -PziplineForkNoSourceMaps turns the production link's source maps off again, on either.
 //
 // -PziplineForkLongAsBigInt links every Kotlin/JS executable (a guest bundle) with `Long` as a JS
 // BigInt (-Xes-long-as-bigint; the link generates JS for every library, so it covers all of them).
@@ -21,9 +24,10 @@ if (gradle.parent != null) return
 def forkRepo = startParameter.projectProperties['ziplineForkRepo']
 if (forkRepo == null) throw new GradleException('use-fork.init.gradle: pass -PziplineForkRepo=<maven repo dir> (or none)')
 def useFork = forkRepo != 'none'
+def noSourceMaps = startParameter.projectProperties.containsKey('ziplineForkNoSourceMaps')
 def forkVersion = '1.28.0-q20260604'
 def upstreamVersion = '1.28.0'
-def forkedModules = ['zipline-jvm', 'zipline-android', 'zipline-android-ndk']
+def forkedModules = ['zipline-jvm', 'zipline-bytecode', 'zipline-android', 'zipline-android-ndk']
 def longAsBigInt = startParameter.projectProperties.containsKey('ziplineForkLongAsBigInt')
 if (longAsBigInt && !useFork) throw new GradleException('use-fork.init.gradle: -PziplineForkLongAsBigInt needs the fork')
 
@@ -31,7 +35,9 @@ def addRepo = { RepositoryHandler repos ->
   repos.maven {
     name = 'ziplineFork'
     url = new File(forkRepo).toURI()
-    content { forkedModules.each { m -> includeVersion('app.cash.zipline', m, forkVersion) } }
+    content {
+      forkedModules.each { includeVersion('app.cash.zipline', it, forkVersion) }
+    }
   }
 }
 def substitute = { ConfigurationContainer configurations ->
@@ -61,16 +67,21 @@ allprojects { p ->
     substitute(p.configurations)
   }
   // Zipline's compiler rewrites the bytecode itself when a .js.map is present (source lines into
-  // the bytecode) or line numbers are stripped, through zipline-bytecode, which reads and writes
-  // QuickJS 2021's bytecode format only (version 1; 2026 writes 5). Until the fork ports it, the
-  // production link writes no source maps here. Debug information only: the code is the same.
-  // Also with `none`, so the baseline's bundle is built the same way.
-  p.tasks.configureEach { t ->
-    if (t.name.startsWith('compileProductionExecutableKotlinJs') && t.hasProperty('compilerOptions')) {
-      t.compilerOptions.sourceMap.set(false)
+  // the bytecode) or line numbers are stripped, through zipline-bytecode, which the fork has ported
+  // to version 5 (step 1b), so source maps stay on. -PziplineForkNoSourceMaps turns them off, as
+  // step 1 had to: debug information only, the code is the same.
+  if (noSourceMaps) {
+    p.tasks.configureEach { t ->
+      if (t.name.startsWith('compileProductionExecutableKotlinJs') && t.hasProperty('compilerOptions')) {
+        t.compilerOptions.sourceMap.set(false)
+      }
     }
-    if (longAsBigInt && t.name in ['compileProductionExecutableKotlinJs', 'compileDevelopmentExecutableKotlinJs']) {
-      t.compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')
+  }
+  if (longAsBigInt) {
+    p.tasks.configureEach { t ->
+      if (t.name in ['compileProductionExecutableKotlinJs', 'compileDevelopmentExecutableKotlinJs']) {
+        t.compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')
+      }
     }
   }
 }

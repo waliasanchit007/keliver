@@ -19,8 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -100,9 +98,10 @@ public class KeliverNavPreparation<K : Any> {
  * on touch-down, and again on every press that is then cancelled (the finger moved away, a scroll
  * started on the row): a screen that records analytics ("screen viewed"), marks something as read,
  * or creates something (an order, a session) in such an effect does so for screens the user never
- * opened. Put those effects in [LaunchedWhileVisible], which waits for the tap. A prepared screen
- * cannot otherwise tell "about to be shown" from "shown before and now below the top": both are
- * [KeliverNavEntryLifecycle.Hidden].
+ * opened. Put those effects in [LaunchedOnceShown], which waits for the tap and runs once (or in
+ * [LaunchedWhileVisible] for work that lasts while the screen is shown). Both "about to be shown"
+ * and "shown before and now below the top" are [KeliverNavEntryLifecycle.Hidden];
+ * [LaunchedOnceShown] and [LaunchedOnReturn] tell them apart.
  *
  * Without a press this stack composes what a plain stack would, but its frame's wrappers still run:
  * the guest profile measured open at 30.98 ms against 28.06 ms for the shipped stack (+10%, Mac).
@@ -161,12 +160,14 @@ public fun <K : Any> KeliverPreparedStack(
       key(entry) {
         val visible = entry == top
         val lifecycle = remember(parentLifecycle, parentBackHandlers) {
-          PreparedEntryLifecycle(visible, parentLifecycle, parentBackHandlers)
+          EntryLifecycle(visible, parentLifecycle, parentBackHandlers)
         }
-        SideEffect { lifecycle.shown = visible }
+        SideEffect { lifecycle.update(visible) }
+        CountShows(lifecycle)
         frame.Entry(visible) {
           CompositionLocalProvider(
             LocalKeliverNavEntryLifecycle provides lifecycle.state,
+            LocalKeliverNavEntryShows provides lifecycle.shows,
             LocalBackHandlersEnabled provides lifecycle.backHandlersEnabled,
           ) {
             PreparedEntryContent(entry, content)
@@ -186,31 +187,4 @@ private class LastKeys<K> {
 @Composable
 private fun <K> PreparedEntryContent(key: K, content: @Composable (K) -> Unit) {
   content(key)
-}
-
-@OptIn(ExperimentalKeliverNavRetentionApi::class)
-private class PreparedEntryLifecycle(
-  shown: Boolean,
-  parentLifecycle: State<KeliverNavEntryLifecycle>,
-  parentBackHandlers: State<Boolean>,
-) {
-  private val top = mutableStateOf(shown)
-
-  var shown: Boolean
-    get() = top.value
-    set(value) {
-      if (top.value != value) top.value = value
-    }
-
-  val state: State<KeliverNavEntryLifecycle> = derivedStateOf {
-    if (top.value && parentLifecycle.value == KeliverNavEntryLifecycle.Visible) {
-      KeliverNavEntryLifecycle.Visible
-    } else {
-      KeliverNavEntryLifecycle.Hidden
-    }
-  }
-
-  val backHandlersEnabled: State<Boolean> = derivedStateOf {
-    state.value == KeliverNavEntryLifecycle.Visible && parentBackHandlers.value
-  }
 }

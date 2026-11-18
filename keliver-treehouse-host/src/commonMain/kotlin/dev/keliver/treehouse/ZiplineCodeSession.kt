@@ -34,6 +34,7 @@ internal class ZiplineCodeSession<A : AppService>(
   val zipline: Zipline,
   private val leakDetector: LeakDetector,
   override val hostProtocol: HostProtocol,
+  private val hostFeatures: Set<String> = emptySet(),
 ) : CodeSession<A>(
   dispatchers = dispatchers,
   eventPublisher = eventPublisher,
@@ -64,6 +65,7 @@ internal class ZiplineCodeSession<A : AppService>(
       frameClock = frameClockFactory.create(scope, dispatchers),
       eventPublisher = eventPublisher,
       codeSession = this,
+      features = hostFeatures,
     )
 
     appLifecycle.start(host)
