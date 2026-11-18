@@ -137,7 +137,8 @@ internal class ComposeUiExtraRetained :
   /**
    * Whether a back press now would be handled here, on the host. Every condition [goBack] needs is
    * here, so [goBack] fails only when this is false: a callback that passes a press on (and disables
-   * itself) is then removed and added again as this changes, never left off while this stays true.
+   * itself) is then removed and added again as this changes. (If this goes false and true again within
+   * one frame, a callback that disabled itself on the failed press stays off until it next changes.)
    */
   internal val canGoBack: Boolean
     get() = keyBelowShown() != null

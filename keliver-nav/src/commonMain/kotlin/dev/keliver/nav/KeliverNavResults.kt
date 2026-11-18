@@ -44,6 +44,12 @@ import kotlinx.coroutines.flow.filterNotNull
  * matches, and two keys with one name and different types never do: a result never reaches a
  * listener that expects another type.
  *
+ * Write the type argument explicitly where a key is made inline
+ * (`keliverNavResultKey<Item>("item")`), or declare the key once as a `val`: an inferred type comes
+ * from each call site (the value passed to [popWithResult], or the listener's parameter), and the
+ * match is exact (no subtypes; nullability counts), so `Book` sent to an `Item` listener is never
+ * delivered, without an error.
+ *
  * A key made with the constructor has no type to compare, so it is compared by identity: declare it
  * once, as a top-level `val`, and use that one value on both sides. It never equals a key made by
  * [keliverNavResultKey].

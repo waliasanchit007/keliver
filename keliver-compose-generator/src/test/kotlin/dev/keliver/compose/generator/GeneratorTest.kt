@@ -318,7 +318,7 @@ class GeneratorTest {
     }
     val row = hostOf("LazyRow")
     assertTrue("val lazyHost_content = rememberLazyHost(state, vertical = false)\n" in row, row)
-    assertTrue("flingBehavior = lazyHost_content.fling," in row, "a guest that sets no fling gets the predicting one")
+    assertTrue("flingBehavior = lazyHost_content.fling," in row, "the generated lazy list passes the host's predicting fling")
     val column = hostOf("LazyColumn")
     assertTrue("val lazyHost_content = rememberLazyHost(state)\n" in column, column)
     assertTrue("flingBehavior = lazyHost_content.fling," in column)
