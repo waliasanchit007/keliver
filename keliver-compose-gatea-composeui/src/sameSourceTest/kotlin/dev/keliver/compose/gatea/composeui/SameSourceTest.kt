@@ -47,7 +47,6 @@ import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.keliver.compose.foundation.lazy.LazyListState as GuestLazyListState
 import dev.keliver.compose.foundation.lazy.LazyWindowSizing
-import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.compose.gatea.composeui.samples.guest.AnimatedPanel as GuestAnimatedPanel
 import dev.keliver.compose.gatea.composeui.samples.guest.FrameClockPanel as GuestFrameClockPanel
 import dev.keliver.compose.gatea.composeui.samples.guest.InsertedModifierPanel as GuestInsertedModifierPanel
@@ -63,6 +62,7 @@ import dev.keliver.compose.gatea.composeui.samples.native.SampleCard as NativeSa
 import dev.keliver.compose.gatea.composeui.samples.native.SampleOrders as NativeSampleOrders
 import dev.keliver.compose.gatea.protocol.guest.KeliverComposeGateAProtocolWidgetSystemFactory
 import dev.keliver.compose.gatea.protocol.host.KeliverComposeGateAHostProtocol
+import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.layout.composeui.ComposeUiRedwoodLayoutWidgetFactory
 import dev.keliver.lazylayout.composeui.ComposeUiRedwoodLazyLayoutWidgetFactory
 import dev.keliver.leaks.LeakDetector

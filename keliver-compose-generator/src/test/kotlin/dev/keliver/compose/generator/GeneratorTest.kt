@@ -305,6 +305,25 @@ class GeneratorTest {
     assertTrue(runCatching { api.find("androidx.compose.animation.AnimatedVisibility@BoxScope$params") }.isFailure)
   }
 
+  @Test fun aLazyRowsHostStateIsHorizontalAndALazyColumnsIsNot() {
+    // NF1: the host's lazy state sizes placeholders and probes flings along the list's own axis.
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+    val api = ApiReader(classpath.split(File.pathSeparator).map(::File))
+    val src = SourceReader(sources.split(File.pathSeparator).map(::File))
+    val config = loadConfig(File("gatea.json"))
+    fun hostOf(name: String): String {
+      val spec = config.declarations.single { it.startsWith("androidx.compose.foundation.lazy.$name(") }
+      return Emitter(config, plan(config, listOf(api.find(spec).also(src::complete)), LockBuilder(Lock("g")))).host().second
+    }
+    val row = hostOf("LazyRow")
+    assertTrue("val lazyHost_content = rememberLazyHost(state, vertical = false)\n" in row, row)
+    assertTrue("flingBehavior = lazyHost_content.fling," in row, "the generated lazy list passes the host's predicting fling")
+    val column = hostOf("LazyColumn")
+    assertTrue("val lazyHost_content = rememberLazyHost(state)\n" in column, column)
+    assertTrue("flingBehavior = lazyHost_content.fling," in column)
+  }
+
   @Test fun deprecationIsReadFromTheSources() {
     assertEquals("Use the other one", stringLiteral("\"Use the \" + \"other one\""))
   }

@@ -54,9 +54,12 @@ import dev.keliver.ui.OnBackPressedDispatcher
  * - keliver-nav handles `onBack` against the stack as it is then (two presses handled in one guest
  *   tick see the first one's pop): if the guest's top entry has an enabled `BackHandler` (one
  *   enabled after the host last heard otherwise), that handler takes the press and nothing is
- *   popped (the host shows the top again); the same if the top entry last told the host it may not
- *   go back from it. Otherwise the stack is popped to the entry the host shows, even if the guest
- *   pushed entries meanwhile. Either way `backHandled` grows by one in the same batch.
+ *   popped (the host shows the top again). If instead the top entry last told the host it may not
+ *   go back from it, nothing is popped and **the press is dropped**: no handler runs (the top's
+ *   handlers are still gated off while the host hides it), so the user presses again. A host only
+ *   sends such an `onBack` from a stale `hostBack`, since one that is current re-dispatches the press
+ *   through the guest instead. Otherwise the stack is popped to the entry the host shows, even if the
+ *   guest pushed entries meanwhile. Either way `backHandled` grows by one in the same batch.
  * - An entry never shown (below the top of a deep link) tells the host it may not go back from it,
  *   since nothing is known of its handlers yet.
  *
@@ -146,7 +149,8 @@ internal fun <T : Any> HostRetainedEntries(
       // A handler enabled in the top after the host last heard of it: the press was its, as it would
       // have been on the guest path. Nothing is popped; the host shows the top again. The same if the
       // top told the host it may not leave it (an entry never shown, or one that had a handler
-      // enabled when last shown): the host's view was stale.
+      // enabled when last shown): the host's view was stale, and that press is dropped (its handlers
+      // are gated off while the host hides the entry, so none can take it).
       val refused = trackers[topKey]?.dispatchToNewestEnabled() == true || told[topKey] == false
       if (!refused) {
         val index = stack.indexOfLast { currentIdOf(it) == id }
