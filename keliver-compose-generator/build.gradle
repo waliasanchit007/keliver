@@ -77,10 +77,14 @@ tasks.register('generateComposeApi', JavaExec) {
   args = generatorArgs([])
 }
 
-// GeneratorTest.findPicksAnOverloadByItsReceiver reads the same Compose API the generator does.
+// GeneratorTest reads the same Compose API (and, for default texts, its sources) the generator does.
 tasks.named('test') {
   inputs.files(configurations.composeApi).withPropertyName('composeApi').withNormalizer(ClasspathNormalizer)
-  doFirst { systemProperty 'keliver.composeApi', configurations.composeApi.asPath }
+  inputs.files(configurations.composeSources).withPropertyName('composeSources').withNormalizer(ClasspathNormalizer)
+  doFirst {
+    systemProperty 'keliver.composeApi', configurations.composeApi.asPath
+    systemProperty 'keliver.composeSources', configurations.composeSources.asPath
+  }
 }
 
 tasks.register('checkComposeApi', JavaExec) {

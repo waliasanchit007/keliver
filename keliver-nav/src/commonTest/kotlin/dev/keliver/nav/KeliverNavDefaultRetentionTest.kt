@@ -40,6 +40,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -899,6 +900,71 @@ class KeliverNavDefaultRetentionTest {
     nav.popWithResult(asString, "s")
     harness.settle()
     assertEquals(listOf<Any?>("s"), received)
+    harness.close()
+  }
+
+  // Review of #266 (Low 1): keys from keliverNavResultKey match by name and type.
+
+  @Test
+  fun typedResultKeysAreEqualByNameAndType() {
+    assertEquals(keliverNavResultKey<String>("x"), keliverNavResultKey<String>("x"))
+    assertEquals(keliverNavResultKey<String>("x").hashCode(), keliverNavResultKey<String>("x").hashCode())
+    assertEquals(keliverNavResultKey<List<Int>?>("x"), keliverNavResultKey<List<Int>?>("x"))
+    assertNotEquals<Any>(keliverNavResultKey<String>("x"), keliverNavResultKey<String>("y"))
+    assertNotEquals<Any>(keliverNavResultKey<String>("x"), keliverNavResultKey<Int>("x"))
+    assertNotEquals<Any>(keliverNavResultKey<String>("x"), keliverNavResultKey<String?>("x"))
+    assertNotEquals<Any>(keliverNavResultKey<List<Int>>("x"), keliverNavResultKey<List<String>>("x"))
+    // Keys made with the constructor stay identity keys, and never equal a typed one.
+    val identity = KeliverNavResultKey<String>("x")
+    assertEquals(identity, identity)
+    assertNotEquals(identity, KeliverNavResultKey<String>("x"))
+    assertNotEquals(identity, keliverNavResultKey<String>("x"))
+    assertNotEquals(keliverNavResultKey<String>("x"), identity)
+  }
+
+  @Test
+  fun aTypedKeyWrittenWhereItIsUsedStillReceives() = runTest {
+    val received = mutableListOf<Any?>()
+    val (harness, nav) = navHost(
+      screen = { route ->
+        // A key made anew on each composition, as an inline argument.
+        if (route == Route.Home) LaunchedOnResult(keliverNavResultKey<String>("color")) { received += it }
+        Leaf(nameOf(route))
+      },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.popWithResult(keliverNavResultKey<Int>("color"), 1)
+    harness.settle()
+    assertEquals(emptyList(), received, "same name, another type: no ClassCastException, no delivery")
+
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    nav.popWithResult(keliverNavResultKey<String>("color"), "teal")
+    harness.settle()
+    assertEquals(listOf<Any?>("teal"), received, "the sender's own key of the same name and type")
+    harness.close()
+  }
+
+  @Test
+  fun popWithResultThenNavigateInOneFrameDropsTheResult() = runTest {
+    // Review of #266 (Low 3): documented on popWithResult; pinned here.
+    val received = mutableListOf<Int>()
+    val count = keliverNavResultKey<Int>("count")
+    val (harness, nav) = navHost(
+      screen = { route ->
+        if (route == Route.Home) LaunchedOnResult(count) { received += it }
+        Leaf(nameOf(route))
+      },
+    )
+    nav.navigate(Route.Detail(1))
+    harness.settle()
+    nav.popWithResult(count, 1)
+    nav.navigate(Route.Detail(2))
+    harness.settle()
+    nav.pop()
+    harness.settle()
+    assertEquals(emptyList(), received, "covered again before any listener read it")
     harness.close()
   }
 

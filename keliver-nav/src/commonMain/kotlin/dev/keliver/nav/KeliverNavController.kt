@@ -142,8 +142,11 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
   /**
    * Pops the top entry and hands [value] to the entry below, which receives it in
    * [LaunchedOnResult] for [key] (once). Returns `false`, and delivers nothing, at the root.
-   * A result that entry has not received when it is covered again is dropped. Results are not
-   * saved: a result not yet received when the guest is recreated is lost.
+   * A result that entry has not received when it is covered again is dropped, and that includes a
+   * [navigate] in the same frame (`popWithResult(...)` then `navigate(...)` in one click handler):
+   * listeners read results only after the change is applied, by which time [navigate] has dropped
+   * it, even on a retained screen whose listener is already running. Results are not saved: a
+   * result not yet received when the guest is recreated is lost.
    */
   @ExperimentalKeliverNavRetentionApi
   public fun <T> popWithResult(key: KeliverNavResultKey<T>, value: T): Boolean {

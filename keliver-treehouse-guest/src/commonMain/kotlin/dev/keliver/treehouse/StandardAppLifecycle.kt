@@ -59,16 +59,25 @@ public class StandardAppLifecycle(
    * The probe is optional, so any failure means "no features": the mismatch may reach the guest as
    * [ZiplineApiMismatchException], as a plain `ZiplineException` carrying the host's text, or as
    * something else, and none of them may stop a screen from starting. Only cancellation passes.
+   * The mismatch is expected and silent; any other failure (a host whose features getter throws) is
+   * [report]ed once, so the host's console says why the guest saw no features.
    */
   internal val hostFeatures: Set<String> by lazy {
     try {
       host.hostFeatures.toSet()
     } catch (e: CancellationException) {
       throw e
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+      if (!e.isApiMismatch()) report("Keliver: the host's features could not be read; the guest sees none: $e")
       emptySet()
     }
   }
+
+  /** Where [hostFeatures] reports a failure that is not a mismatch; tests replace it. */
+  internal var report: (String) -> Unit = ::println
+
+  private fun Exception.isApiMismatch(): Boolean =
+    this is ZiplineApiMismatchException || message?.contains(API_MISMATCH_TEXT) == true
 
   private val broadcastFrameClock = BroadcastFrameClock {
     if (started) {
@@ -140,3 +149,6 @@ public class StandardAppLifecycle(
     fun onFrame(timeNanos: Long)
   }
 }
+
+/** Zipline's text for a call the other side does not have, when it arrives as a plain exception. */
+private const val API_MISMATCH_TEXT = "incompatible API versions"
