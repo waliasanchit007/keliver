@@ -1287,7 +1287,9 @@ experiments, so one build measures every arm:
 - **`x=prefetch`**: the list's first request (`GET /items?size=small&seq=1`) is sent by the host as
   it starts the guest (at process start with `prestart`, otherwise in `onCreate`), and the
   guest's identical request takes the response. The guest is unchanged. Production hosts get the
-  same thing as `KeliverConfig.prefetch` (`HostPrefetch.kt`; [`DEVICE_HOST.md`](DEVICE_HOST.md)).
+  same thing as `KeliverConfig.prefetch` (`HostPrefetch.kt`; [`DEVICE_HOST.md`](DEVICE_HOST.md)),
+  sent at the first activity's creation (only a start toward a screen sends it), so on a device
+  it goes out somewhat later than this prototype's process-start send with `prestart`.
 
 **Method.** The prototype at this PR's commit (published to a scratch Maven repository as in "How
 to run it"), `ThreewayStartupBenchmark#guest` with `-e localApi true` and the new `-e x <experiments>`
@@ -1296,6 +1298,21 @@ the Mac with other builds, so the baseline has outliers. Each process's `"cold"`
 by what actually ran in it (a prestart mark, and the request answered within 10 ms). Processes
 whose prestart was not used are left out: a series' first launch inherits the previous
 series' preference. The table gives the medians of those lines (ms from the process start).
+
+- **No process was reclassified by the 10 ms rule** (checked in the raw lines after the review):
+  every guest process that sent the prefetch (21, the two left out included) had the guest's
+  request answered in 0–1 ms, and every one that did not (29) in 104–128 ms. So "answered within
+  10 ms" and "the prefetch was sent" pick the same processes, and no prefetch process whose answer
+  was late was left out of its arm.
+- **Left out: two processes**, the first launches of the as-shipped series (it inherited
+  `prestart,prefetch`) and of the `prestart,prefetch` series (it inherited `prestart`): in both the
+  prestarted app was refused for its other experiments. The first launch of the `prestart` series
+  inherited nothing and ran as shipped, so it is counted there (hence 20 as shipped, 9 per prestart
+  arm). The native series' first process inherited `prestart,prefetch` and started a guest code load
+  in the background; it is counted (347 ms; native's median is 324 without it).
+- **Since the review**, the benchmark's setup makes one unmeasured launch with the series' own
+  form and experiments before the first iteration, so every measured process acts on its own
+  series' preference and none of the above recurs. The runs recorded here predate that.
 
 | Arm | Processes | List's data drawn: median (min–max) | Code load starts | First frame | Guest's request → host's answer |
 |---|---|---|---|---|---|
@@ -1309,8 +1326,11 @@ Macrobenchmark's own `timeToFullDisplayMs` medians agree: as shipped 931.5 and 9
 series), `prefetch` 805.9, `prestart` 818.8, both 702.1, native 365.2. Its `timeToInitialDisplayMs`
 did not grow (as shipped 263.5 / 256.7, `prestart` 237.6, both 210.6).
 
-- **The first frame does not wait for the prestart.** The code load now starts before the first
-  frame (145 against 168), and the first frame comes no later than without it. The prestart's
+- **The first frame's median does not grow with the prestart.** The code load now starts before
+  the first frame (145 against 168, medians). The first frame's median (min–max) is 206 (129–891)
+  as shipped, 185 (149–480) with `prefetch`, 168 (125–193) with `prestart` and 148 (120–172) with
+  both; the prestart arms' slowest first frames (193, 172) are below the as-shipped median, so
+  none was held back past the baseline's own range. The prestart's
   main-thread work (creating the factory and the app, `start()`; the benchmark's fixture server
   is measured apart) is 2.3 ms median (1.8–6.2; 2.9 with the prefetch, at most 8.2), against
   1.0 ms for the same `create` in `onCreate` as shipped.
@@ -1825,7 +1845,8 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #   -e x gc4|gc16|gc64|gcoff guest: QuickJS's GC threshold (MiB; gcoff = -1) set when Zipline is created (implies mem)
 #   am instrument ... -e localApi true   the startup benchmark with the app's own fixture (NF0's cold start)
 #   am instrument ... -e x prestart,prefetch   the startup benchmark with the activity's experiments
-#                            (NF4 step 1; `prestart` acts from the second launch: see that section)
+#                            (NF4 step 1; one unmeasured launch first records the series' preference,
+#                            so `prestart` acts in every measured launch: see that section)
 #   -e x prestart            guest: the code load starts in bindApplication (the NEXT process's start)
 #   -e x prefetch            guest: the host sends the list's first request as it starts the guest
 # Every process logs one {"cold":"<form>",...} line when the list's data is first drawn: its marks in ms

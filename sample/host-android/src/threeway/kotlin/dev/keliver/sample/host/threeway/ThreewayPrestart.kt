@@ -93,7 +93,11 @@ internal object ThreewayGuest {
       .apply()
   }
 
-  /** Main thread, from the provider: starts the code load if the previous launch asked for it. */
+  /**
+   * Main thread, from the provider: starts the code load if the previous launch asked for it.
+   * Prototype only: it reads SharedPreferences from disk on the main thread in every process start
+   * (part of `n_prestartMainMs` only when it prestarts); keep that out of any production port.
+   */
   fun prestartIfAsked(context: Context) {
     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     if (!prefs.getBoolean("prestart", false)) return
@@ -178,6 +182,10 @@ internal class FirstRequestPrefetch {
   @Synchronized
   fun take(request: HttpRequest): Deferred<HttpResponse>? {
     val p = pending ?: return null
+    // Not the production host's match (HostPrefetch.kt): that one compares the path's segments
+    // ("items", "/items/" and "/items" are one request) and refuses a request with headers of its
+    // own; this compares the raw path and ignores headers. The guest sends exactly "/items" with
+    // none, so both match it (108 → 1 ms here); the measurement does not depend on the difference.
     if (request.method.uppercase() != "GET" || request.path != path || request.query != query || request.body != null) return null
     pending = null
     return p

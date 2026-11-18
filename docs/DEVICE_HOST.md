@@ -1187,20 +1187,39 @@ for byte):
   your interceptor's headers back to the guest. Your client is used only for
   HostHttp.
 - **`KeliverPrefetch`** (NF4, cold start; unreleased, tools after 0.3.18): the
-  GETs your first screen makes as soon as it shows, sent by the host at
-  `KeliverHost.start()` (from the Application), while the bundle loads:
+  GETs your first screen makes as soon as it shows, sent by the host while the
+  bundle loads:
   `KeliverConfig.fromBuild(this, requestPolicy, prefetch = listOf(KeliverPrefetch("/items", mapOf("page" to "1"))))`.
-  The screen's own request takes the response instead of waiting for the
-  network, only when it is the SAME request (GET, the same path and query, no
-  body, no header of its own besides the ones the host drops), once, within
-  30 s, and only a 2xx; otherwise it goes out as usual. The prefetch goes
-  through the same client and the same `RequestPolicy` as a guest's request
-  (a declared request the policy refuses sends nothing). Nothing changes for
-  the guest, so any bundle works with it. Declare only a request whose answer
-  does not depend on what the app does in its first seconds (a sign-in). On
-  the emulator, with the three-way benchmark's 100 ms fixture, it took the
+  - **When it goes out:** only when the process starts toward a screen, at its
+    first activity's creation (`onActivityPreCreated`; the host watches for it
+    from `KeliverHost.start()`). A process started for a push, a job, a boot or
+    a broadcast that shows nothing sends nothing. Call `start()` from
+    `Application.onCreate` (as `HostApp` does); a later `start()` prefetches at
+    the next activity's creation.
+  - **Who it is for:** it goes out through your `httpClient`, with your
+    credentials as they are then. **Restore your session before
+    `keliver.start()`**, and call **`keliver.discardPrefetched()`** when the
+    user signs out or changes, so the next user's screen never gets the
+    previous one's answer.
+  - **When the screen takes it:** only when its request is the SAME request
+    (GET, the same path and query, no body, no header of its own besides the
+    ones the host drops), once, within 5 s of the answer's arrival, and only a
+    2xx. A request still in flight is waited for at most 1 s. Otherwise the
+    screen's request goes out as usual. In debug builds, an answer that expires
+    untaken, a GET of the same path that is not the same request, and an answer
+    that is not used are logged (`prefetch:` under the host's tag; names only,
+    never header or query values).
+  - **Fresh data:** any request other than a GET through HostHttp drops every
+    answer not taken yet (the screen may have changed what it would show).
+  - The prefetch goes through the same client and the same `RequestPolicy` as a
+    guest's request (a declared request the policy refuses sends nothing).
+    Nothing changes for the guest, so any bundle works with it.
+
+  On the emulator, with the three-way benchmark's 100 ms fixture, it took the
   guest's request to the host's response from about 108 ms to 1–3 ms
-  ([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md), "NF4, step 1").
+  ([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md), "NF4, step 1"; that
+  prototype sends it at the activity's creation or the process start, before
+  this review's start-toward-a-screen rule).
 - **`ExternalLinkPolicy.open(context, url)`**: call it from whatever your app
   exposes to screens for opening a link. `https` opens in a Custom Tab, on any
   host. `intent:` is handled as a browser handles it, and stricter: a VIEW

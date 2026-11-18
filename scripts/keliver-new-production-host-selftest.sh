@@ -195,6 +195,17 @@ grep -q 'if (apiBase != null) hostHttp(okhttp, apiBase).startPrefetch(scope)' "$
   && [ -f "$(dirname "$M")/HostPrefetch.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/HostPrefetchTest.kt" ] \
   && ok "NF4: KeliverConfig.prefetch is sent at start and taken by the guests' one HostHttp" \
   || bad "NF4: the first request's prefetch is not wired"
+# NF4 review (#269): sent only at a start toward a screen (the first activity's creation), dropped
+# by any non-GET and by discardPrefetched(), kept 5 s from the answer, waited for at most 1 s.
+grep -q '    watchForUiStart()' "$M" && grep -q 'app.registerActivityLifecycleCallbacks(object' "$M" \
+  && grep -q 'override fun onActivityPreCreated(activity: android.app.Activity, savedInstanceState: Bundle?) = uiStarting()' "$M" \
+  && grep -q '  fun discardPrefetched() {' "$M" \
+  && grep -q 'prefetched.discard("a ${request.method.uppercase()} went through HostHttp")' "${M%/*}/OkHttpHostHttp.kt" \
+  && grep -q 'const val DEFAULT_PREFETCH_MAX_AGE_MILLIS = 5_000L' "${M%/*}/HostPrefetch.kt" \
+  && grep -q 'withTimeoutOrNull(maxWaitMillis) { pending.await() }' "${M%/*}/HostPrefetch.kt" \
+  && grep -q 'restore your session BEFORE keliver.start()' "${M%/*}/HostApp.kt" \
+  && ok "NF4: the prefetch goes out only toward a screen, is dropped on a change or sign-out, and is waited for at most 1 s" \
+  || bad "NF4: the prefetch's start, discard or wait bound is not wired"
 # W4.4: the host takes one channel besides stable, stable by default.
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
   && grep -q 'channel = BuildConfig.KELIVER_CHANNEL' "$M" && grep -q 'pickFromIndex(body, capabilities, channel = config.channel' "$M" \

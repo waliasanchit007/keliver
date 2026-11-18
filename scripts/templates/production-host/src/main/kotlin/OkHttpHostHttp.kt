@@ -45,9 +45,10 @@ import okhttp3.Response
  *   allows them: a `TRACE` would echo your interceptor's headers back to the
  *   guest.
  *
- * NF4: requests the app declares in `KeliverConfig.prefetch` are sent at process
- * start through these same checks ([startPrefetch]), and a guest's identical GET
- * takes the response once (HostPrefetch.kt).
+ * NF4: requests the app declares in `KeliverConfig.prefetch` are sent at a start
+ * toward a screen, through these same checks ([startPrefetch]), and a guest's
+ * identical GET takes the response once (HostPrefetch.kt). Any other method
+ * drops what was not taken.
  *
  * Authentication, retries or certificate pinning: pass your app's OkHttpClient
  * as `KeliverConfig.httpClient` (it then needs a [RequestPolicy]), or edit this
@@ -87,18 +88,24 @@ class OkHttpHostHttp(
   private val baseRefusal: String? = policy?.baseRefusal(base)?.also { Log.e(TAG, "HostHttp: $it; every request is refused") }
 
   override suspend fun execute(request: HttpRequest): HttpResponse = withContext(Dispatchers.IO) {
+    // NF4: a request that may change what the screens show (anything but a GET, refused or not)
+    // drops every prefetched response not taken yet, before it goes out.
+    if (prefetched != null && !request.method.equals("GET", ignoreCase = true)) {
+      prefetched.discard("a ${request.method.uppercase()} went through HostHttp")
+    }
     val checked = check(request)
     // NF4: the app declared this request and the host already sent it (HostPrefetch.kt).
-    prefetched?.take(request, checked.headers)?.let { pending -> usablePrefetch(pending)?.let { return@withContext it } }
+    prefetched?.responseFor(request, checked.headers)?.let { return@withContext it }
     send(checked, request.body)
   }
 
   /**
-   * NF4: sends the requests the app declared (KeliverConfig.prefetch) now, in [scope], exactly as
-   * a guest's would go (every check above); a guest's identical request takes the response.
+   * NF4: how the requests the app declared (KeliverConfig.prefetch) go out, in [scope], exactly as
+   * a guest's would (every check above): once the process starts toward a screen
+   * ([PrefetchedRequests.uiStarting]); a guest's identical request takes the response.
    */
   fun startPrefetch(scope: CoroutineScope) {
-    prefetched?.start(scope) { request -> withContext(Dispatchers.IO) { send(check(request), null) } }
+    prefetched?.arm(scope) { request -> withContext(Dispatchers.IO) { send(check(request), null) } }
   }
 
   private class Checked(val url: HttpUrl, val method: String, val headers: Map<String, String>)
