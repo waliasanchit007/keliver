@@ -9,6 +9,19 @@ if (ndk) {
   }
 }
 
+// Zipline's device tests (:zipline:connectedAndroidDeviceTest, step 2) load the same testing JS as
+// its JVM tests. 1.28.0 adds it to the Android resources only through an androidComponents hook for
+// the `release` build type, which the Kotlin Multiplatform Android library's device-test variant
+// does not match, so every test that loads it failed with "file not found: kotlin-kotlin-stdlib.js".
+// Give the device test the JS the way jvmTest gets it (zipline/build.gradle.kts: resources.srcDir).
+allprojects { p ->
+  if (p.path != ':zipline') return
+  p.afterEvaluate {
+    def deviceTest = p.kotlin.sourceSets.findByName('androidDeviceTest')
+    if (deviceTest != null) deviceTest.resources.srcDir(p.tasks.named('copyTestingJs'))
+  }
+}
+
 // -PziplineForkLongAsBigInt: link the JavaScript the host tests load (zipline-testing, with Zipline's
 // own JS and kotlinx.serialization in it) with Kotlin's Long as a JS BigInt, so the tests that send
 // a Long across the bridge (EncodingTest: ±2^53 and around it, Long.MIN_VALUE, Long.MAX_VALUE) run

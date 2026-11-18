@@ -660,7 +660,7 @@ step 1, above option 5's 4–8: `zipline-bytecode` was not in that estimate.
 | Step | What | Estimate |
 |---|---|---|
 | 1b. `zipline-bytecode` | Port Zipline's bytecode reader and writer to version 5 (new tags, BigInt constants, the column table), so source maps and line stripping work again; its round-trip tests on the new engine's output. **Done 2026-11-18** (next section) | 1–1.5 |
-| 2. Android | Build the AAR (`zipline-android-ndk`, the NDK's CMake; the patch already adds `-fwrapv`) for the four ABIs, run Zipline's device tests on the emulator, then the A12 matrix through Zipline itself, not `qjs` | 0.5–1 |
+| 2. Android | Build the AAR (`zipline-android-ndk`, the NDK's CMake; the patch already adds `-fwrapv`) for the four ABIs, run Zipline's device tests on the emulator, then the A12 matrix through Zipline itself, not `qjs`. **Done on the emulator 2026-11-18** ("NF2 step 2 (Android)"); 32-bit and the A12 remain | 0.5–1 |
 | 3. iOS | cklib and Kotlin/Native: compile the patched `nativeMain` and `quickjs.def` (not compiled in step 1; `JS_NewString` is now `static inline`, which cinterop must wrap), run the host tests on a simulator, then the iPhone once its signing exists | 0.5–1.5 |
 | 4. Publishing the fork | Our own coordinates (not `app.cash.zipline`) from this patch set: JVM, Android, iOS, and the JS library unchanged; a CI job that runs `apply.sh all` and the tests | 0.5–1 |
 | 5. Dual bytecode | The Gradle plugin compiles each bundle twice, once per engine (bytecode version 1 and 5), from the same JS; the BigInt build (`-Xes-long-as-bigint`) only for the new engine, since the old one cannot parse it | 1–1.5 |
@@ -735,6 +735,104 @@ loaded function's `toString()` reads `[native code]`, lines and columns stay.
 **Not checked:** Android and iOS (steps 2 and 3; the iOS `compile` change is not compiled); a stack
 trace from a real Kotlin crash in the three-way guest on a device; whether any guest code calls
 `Function.prototype.toString` (Kotlin/JS does not; 1.28.0 gave the same `[native code]`).
+
+## NF2 step 2 (Android)
+
+2026-11-18, on the Mac and the arm64 emulator (`keliver_a12_api35`, API 35); no phone. The same
+patch set as steps 1 and 1b, extended (`keliver-compose-gatea-profile/engine/zipline-fork/`, its
+README): `apply.sh android`, `qjs-android`, `check-bigint-device`, Android in `publish`, Android in
+`use-fork.init.gradle`, and the device tests' JavaScript in `zipline-build.init.gradle`. Every result
+below is from one fresh `apply.sh all` of the combined patch set (1b's and this step's). Nothing
+was published outside a scratch Maven repository.
+
+**The AAR.** `apply.sh android` builds `zipline-android-ndk` with Zipline's own CMake and release
+flags (`-Os -fomit-frame-pointer -DNDEBUG -fvisibility=hidden -fstrict-aliasing`, `MinSizeRel`,
+16 KB pages) plus the patch's `-fwrapv`, NDK 28.0.12674087, for the four ABIs Zipline ships
+(`arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`), and checks in each ABI's compile commands that
+`quickjs.c` got those flags (all of them, `-fomit-frame-pointer` and `-g0` included), and with the
+NDK's `llvm-readelf -lW` that every LOAD segment of each ABI's `libquickjs.so` in the AAR is aligned
+for 16 KB pages: 0x4000 on all four ABIs (required of the 64-bit ones). `dtoa.c` comes in through
+the CMake glob. `libquickjs.so` (Zipline keeps its symbols in the AAR): arm64-v8a 2,618,752 bytes,
+armeabi-v7a 1,903,772, x86_64 2,464,728, x86 2,096,868, **7.6–9.4% above 1.28.0's** (2,432,744,
+1,766,772, 2,284,096, 1,916,408: Maven Central's `zipline-android-ndk-1.28.0.aar`, checked against
+its `.sha1`, which `apply.sh android` downloads and compares with).
+
+**Two native fixes** (the step 1 review's Lows), with `QuickJs2026JniTest` (JNI tests: JVM and
+Android, 4 tests):
+- **An unexpected inbound result throws.** Inbound `call` (not a string) and `disconnect` (not a
+  boolean) throw `IllegalStateException` naming the JS tag. Upstream had an `assert`, compiled out
+  of release builds; step 1 returned `null` and `false`, which the Kotlin side (a non-null
+  `String`) would have trusted. The unexpected result is freed before the exception is thrown:
+  freeing an object runs finalizers at once, and a `FinalizationRegistry` callback runs guest code
+  that may call the host over JNI, which must not happen with a Java exception pending.
+- **`disconnect` frees its result.** Upstream never freed it, so an object result leaked: 1,000
+  disconnects returning an object leave fewer than 10 objects after a GC; without the fix, 2,000
+  (the object and its array, each time; measured by the earlier session on its checkout).
+
+(The source-text strip in `compile`, which this step had also found, is step 1b's; the combined
+patch carries 1b's version.)
+
+**Checked:**
+- **Zipline's device tests** (`apply.sh test <work> :zipline:connectedAndroidDeviceTest`, on the
+  emulator): 47 classes, **266 run, 264 pass, 2 skipped** (upstream's), 0 failed, among them
+  `QuickJs2026Test` (9) and `QuickJs2026JniTest` (4); again with `-PziplineForkLongAsBigInt` (the
+  device test's `kotlin-kotlin-stdlib.js` has `BigInt.asIntN(64`): 266 run, 264 pass, 2 skipped, 0
+  failed. Both runs' JUnit XML: `<testsuites tests="266" failures="0" errors="0" skipped="2">`
+  (Gradle's console says "Starting 266 tests" and then "Finished 268": it counts the 2 skipped
+  twice; the XML is the count of record). Without
+  the `zipline-build.init.gradle` wiring, 1.28.0's build gives the device tests no testing JS
+  (it is added only for a `release` build type) and most fail with "file not found". These runs
+  predate the review's fixes (below): the device has not run the reordered inbound-result path.
+- **Zipline's JVM tests** on the same checkout: `:zipline:jvmTest` 49 classes, **270 run, 268 pass,
+  2 skipped**, plain and with `Long` as BigInt; `:zipline-bytecode:test` 42 (1 skipped:
+  `RealBundleTest` without a corpus); `:zipline-cli:test` 12. `check-bigint` (Mac): both patched
+  `qjs` builds match Node on all 292 lines, the unpatched ones differ on 76 and 108.
+- **BigInt on the device** (`qjs-android`, `check-bigint-device`): `android/run-js.c` on the fork's
+  engine, built with the NDK, matches Node on all 292 lines of `bigint-ops.js` on arm64-v8a (it
+  reports `JS_NAN_BOXING no`, 64-bit limbs); the unpatched release differs on 76. That run used
+  Zipline's release flags plus `-fwrapv`; `qjs-android` now takes the AAR's whole compile line for
+  `quickjs.c` (its target, `-mthumb` on armeabi-v7a, `-fstack-protector-strong`,
+  `-D_FORTIFY_SOURCE=2`, `-ffunction-sections` and the rest), and those builds have not yet run on
+  a device.
+- **After the review** (2026-11-18, a fresh `apply.sh all` of the regenerated patch set, no
+  device): `check-bigint` as above; `apply.sh android` with every flag present and every LOAD
+  segment at 0x4000 on all four ABIs; `qjs-android` with the AAR's compile line; `:zipline:jvmTest`
+  49 classes, 270 run, 268 pass, 2 skipped, 0 failed, among them `QuickJs2026JniTest` (4), which
+  covers both unexpected-result paths. `check-bigint-device` now requires the runner's header from
+  both builds (the control proves nothing if it never ran), fails the fork's build on a non-zero
+  exit, and deletes its device directory on any exit.
+- **The three-way guest on the fork** (sample, `-PkeliverComposePrototype`, the benchmark build,
+  installed under its own application id): built with `use-fork.init.gradle` (source maps on, as
+  Keliver builds since 1b) against the scratch repository, the APK carries the fork's
+  `libquickjs.so` for all four ABIs. The guest loads its 54 modules from assets, renders the list
+  and the detail screen, and the nav series ran open and back 14 times each, three builds in
+  rotation, twice, no crash. **Relative timings only** (an emulator on a shared Mac; medians of 12
+  after 2 warm-up, the guest's part, `composed`, then to `drawn`):
+
+  | Build (round 1 / round 2) | Open, composed | Open, drawn | Back, composed | Back, drawn |
+  |---|---|---|---|---|
+  | Zipline 1.28.0 | 48.5 / 46 | 68.5 / 61.5 | 73 / 75 | 90 / 93 |
+  | fork | 42.5 / 43.5 | 52 / 51 | 62 / 64 | 74 / 74 |
+  | **fork, `Long` as BigInt** | **27.5 / 25.5** | **34 / 34.5** | **37 / 37** | **57 / 57** |
+
+  The guest's part is about 1.8× faster on "open" and 2.0× on "back" with `Long` as BigInt, in line
+  with the Mac (2.46× and 1.99×). APK: 25,245,655 bytes on 1.28.0, 26,023,851 on the fork (+3.1%),
+  26,007,687 with BigInt (the three APKs, kept in the step's scratch directory); the `.zipline`
+  files 3,918,636, 4,168,065 and 4,121,237 bytes (reported by the session that built them; not in
+  its logs, and not re-measured since: treat them as unverified).
+
+**Not checked:**
+- **32-bit (`JS_NAN_BOXING`).** The only image on this Mac is arm64 API 35, whose ABI list is
+  `arm64-v8a` alone; the Apple-silicon emulator runs no x86 images and no 32-bit ARM ones. The
+  32-bit runners are built (`<work>/build/android/{armeabi-v7a,x86}/run-js`), and
+  `check-bigint-device` runs them on any device whose `ro.product.cpu.abilist` names `armeabi-v7a`
+  or `x86` (many arm64 phones still run `armeabi-v7a` too; or a 32-bit phone, or an x86 image on an
+  x86_64 Linux host with KVM). Zipline's device tests on such a device
+  (`ANDROID_SERIAL=<serial> apply.sh test <work> :zipline:connectedAndroidDeviceTest`) would cover
+  the JNI layer on 32-bit too. Until then 32-bit is covered only by the Mac's 32-bit-limb `qjs`,
+  which has no NaN boxing.
+- The A12 matrix through Zipline (the plan's step 2 says "then the A12 matrix"): a phone run at the
+  next batched checkpoint. Absolute timings: none here.
 
 ## NF3: the open path, measured (Mac)
 
@@ -917,7 +1015,16 @@ bash scripts/zipline-fork.sh jni <work> --warnings          # the -Wall review b
 # step 1b: the bytecode module's tests; RealBundleTest on a real bundle (after the production link below)
 bash scripts/zipline-fork.sh test <work> :zipline-bytecode:test :zipline-cli:test \
   -PziplineBytecodeCorpus=$PWD/keliver-compose-gatea-profile/build/compileSync/js/main/productionExecutable/kotlin
-bash scripts/zipline-fork.sh publish <work> <work>/m2   # zipline-jvm and zipline-bytecode
+bash scripts/zipline-fork.sh publish <work> <work>/m2   # zipline-jvm, zipline-bytecode and (step 2) Android: needs the NDK
+# step 2 ("NF2 step 2 (Android)"): the AAR, the device tests and the BigInt check on a device
+bash scripts/zipline-fork.sh android <work>                 # four ABIs, flags checked
+ANDROID_SERIAL=<serial> bash scripts/zipline-fork.sh test <work> :zipline:connectedAndroidDeviceTest [-PziplineForkLongAsBigInt]
+bash scripts/zipline-fork.sh qjs-android <work>
+bash scripts/zipline-fork.sh check-bigint-device <work> <serial>   # every ABI the device runs; 32-bit = NaN boxing
+# the threeway sample on the fork (from sample/, after the prototype publish in docs/THREE_WAY_BENCHMARK.md)
+./gradlew --no-daemon -I ../keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
+  -PziplineForkRepo=<work>/m2 -PziplineForkLongAsBigInt -Dmaven.repo.local=<prototype m2> \
+  -PkeliverComposePrototype :host-android:assembleBenchmark       # -PziplineForkRepo=none: the baseline
 # the baseline (-PziplineForkRepo=none: 1.28.0), then the fork; [-PprofileBigInt] on the fork. Source maps
 # are on since step 1b (-PziplineForkNoSourceMaps turns them off, as step 1 measured)
 ./gradlew --no-daemon -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle \
