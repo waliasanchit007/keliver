@@ -1114,6 +1114,96 @@ step, after the frame it follows.
   at the click: at depth 1 that is the app's navigation counter, which re-runs the content lambda
   and effects at the click. Not measured on a device: the host has no touch-down event yet.
 
+## NF3: the host's press signal (Mac)
+
+2026-11-21. The press above was the driver calling `KeliverNavPreparation.prepare` itself; the host had
+no touch-down event. Now it has one in the gate-A prototype:
+- **Gate A's `ExtraPress` (modifier tag 501, an extra like `ExtraAnimated`)** carries two
+  modifier-event handles. The host's renderer (`applyExtraPress`) watches the pointer without
+  consuming anything and sends `onPress` on touch-down and `onCancel` at the end of every gesture that
+  sent a press: from the final pass of the up, after the clickable has sent its click in the main
+  pass, so a tap reaches the guest as press, click, cancel (the cancel finds the screen pushed and
+  drops nothing). So a press that did not open its screen is always dropped: the finger left the
+  element or a scroll took the gesture (cancelled at once), a button inside the row took the click, a
+  long press, a double click, a disabled clickable, a click that does not navigate, a gesture the
+  system cancelled, the element leaving the tree. Both go on the click's event path (the widget's
+  modifier event).
+- **Inside a scroll container the host waits** (review of #278; the owner's decision): the press is
+  sent once the finger has stayed within half the touch slop for 50 ms (`PressSignalTiming`, a
+  host-side default a host can change through `LocalPressSignalTiming`), and never when the finger
+  moved further first or the touch-down stopped a moving list (the container was scrolling at the
+  down). Outside scroll containers it stays immediate. The generated renderers mark the containers
+  (`gatea.json`'s `scrollContainers`: `verticalScroll`, `horizontalScroll`, `LazyColumn`, `LazyRow`
+  add `pressScrollContainer(state, enabled)`), and the press renderer looks for the nearest enabled
+  one above it. A fling that starts on a row costs the guest nothing; a tap shorter than 50 ms sends
+  the click only (composed at the click, as before). Not tuned on a phone yet: compare how long taps
+  last with how long a fling takes to pass the touch slop on the A12.
+- **keliver-nav remembers what it prepared:** `prepareOnPress` cancels the route that was pressed,
+  even if the element's route changed during the press, and cancels it itself when the element
+  leaves the composition while the finger is down (a refreshed list, a replaced row): the host's
+  cancel would then go to a node the guest no longer has and be dropped.
+- **D2:** a host declares the host feature `keliver.press@1`; the guest sends the modifier only to a
+  host that does, so a host without it (any host today) gets the click only, and the screen is
+  composed at the click as before.
+- **keliver-nav:** `Modifier.prepareOnPress(controller, route)` (or `(preparation, key)`) adds the
+  schema's press modifier through the app's `LocalKeliverNavPress`. `KeliverNavController.prepare`
+  and `cancelPreparation` compose the route under `KeliverNavHost` (retention depth 1 or more), and
+  `navigate` to it pushes the prepared entry. `KeliverPreparedStack` now runs on the retained stack's
+  own path; on a host container (`ExtraRetained`, which shows its last entry) the prepared entry goes
+  first, so the host never shows it or goes back to it, and the click moves it to the top (a move,
+  nothing created).
+
+Tests: `PressSignalTest` (gate A's host and guest over the real protocol, JVM; each checks the
+events the guest received, in order: press, click, cancel for a tap that opens the screen, which the
+click shows without composing or creating anything; press, cancel and the composition disposed for a
+finger that moves off and a disabled click; press, click, cancel for a click
+that does not navigate and press, the inner button's click, cancel for a button inside the row, both
+dropping the preparation; a host back during a press; in a scroll container, a held tap sends the
+press after the delay and a fling that starts on the row sends nothing; a host without the feature →
+no modifier on the wire, click only), `PressHostTest` (the host's renderer alone with Compose's own
+clickables: the order around a long press and a double click, an element removed mid-press, the
+clickable's interactions (its ripple) the same with and without the signal, in and out of a scroll
+container, the delay and its tuning, a tap that stops a fling; a system-cancelled gesture is not
+tested, as the desktop test host's `cancel()` delivers nothing to the handler), `KeliverNavPressTest` (JVM and JS:
+also the cancel after a navigating click, the pressed route cancelled after the row changed, a row
+removed mid-press), the generator's test (the containers are marked), and the profile's
+`ProfileRunTest` (the press step sends the row's event; with `press=1` the open step sends the
+click and then the cancel, as the host does).
+
+**Numbers.** Zipline's QuickJS 2021 on the Mac (`profileQuickJs`, Zipline 1.28.0 as shipped; the
+fork was not available to this run), kotlinx encoding, `viewport=10`, 3 warm-up and 30 measured
+pairs, medians of the guest's step in ms, one run per row (differences under about 1 ms are noise).
+The press step is the host's press event now, not a direct call.
+
+| Configuration | Press | Open (click) | Back | Cancelled press / its cancel |
+|---|---|---|---|---|
+| As shipped | – | 28.00 | 61.50 | – |
+| Prepared stack, depth 1, no press (click only) | – | 17.00 | 3.00 | – |
+| Prepared stack, depth 1, press | 16.00 | **9.00** | 4.00 | 16.50 / 2.00 |
+| Prepared stack, depth 0, no press (click only) | – | 34.00 | 67.00 | – |
+| Prepared stack, depth 0, press | 17.00 | **25.00** | 67.50 | 17.00 / 2.00 |
+
+- **Press → show against click only:** with the list retained (depth 1) the click's step falls from
+  17.0 to 9.0 ms (−47%) and creates nothing (24 widgets at the press, 0 at the click); depth 0, 34.0 →
+  25.0 (−26%; −11% against shipped 28.0). The press itself (16–17 ms) runs while the finger is down.
+- **Against #265's direct call** (table above): press 14.7 → 16.0, click 6.9 → 9.0 (depth 1); click
+  only 15.9 → 17.0 (depth 1), 31.0 → 34.0 (depth 0). Each row is one run, so part of it is noise; the
+  rest is what the signal adds: every row's chain carries `ExtraPress` and its two handles, `prepareOnPress`
+  runs per row, and `KeliverPreparedStack` now goes through the retained stack's path. Not split
+  further.
+- A cancelled press costs its composition (16.5–17 ms) and 2 ms to drop it, as before.
+- **On a phone** (scaling as in "NF3: the open path" above, 12–15×, not measured): at depth 1 the
+  press is about 190–240 ms, longer than the finger's ~100 ms, so the click waits for it; the gain is
+  then what the click no longer does (17 → 9 ms of guest work, about 95–120 ms on the A12), less the
+  part of the press still running when the finger lifts. Only with NF2's engine (about 2× on "open")
+  does the press finish while the finger is down.
+
+**Not run:** the fork with `Long` as BigInt (`use-fork.init.gradle`; no fork repository was at hand in
+the first session, and in the review session the fork's build was queued behind a full disk and never
+started), the numbers after the review fixes (the cancel after each click, the scroll delay; neither
+changes the steps above except `open` with `press=1`, which now also delivers the cancel), Node, a device (the threeway Android host does not declare the feature yet), iOS
+(the press renderer is common Compose code, compiled for iOS but not exercised there).
+
 ## Memory growth per navigation
 
 Measured 2026-11-17 on the Mac, Zipline's QuickJS (`profileQuickJs`, `cycles=…`), no device.
@@ -1216,7 +1306,9 @@ past the collection point.
 #   viewport=10              the host's viewport report (rows 0-9) after each new list, its own step
 #   sized=0                  the fixed first window (before NF3); the viewport-sized one is the default
 #   prepared=0|1             the three-way app on keliver-nav's KeliverPreparedStack at that depth
-#   press=1                  (with prepared) a touch-down step before each open, and 10 cancelled presses
+#   press=1                  (with prepared) a touch-down step before each open, and 10 cancelled presses;
+#                            since the host's press signal, the step sends the row's ExtraPress event
+#                            (handle 1; cancel 2) on a guest that sees the feature keliver.press@1
 #   one QJS NF3 line per run: openGuest, backGuest, press, viewportGuest, cancelledPressGuest, cancelGuest
 # memory growth per navigation ("Memory growth per navigation"): one JSON line per reading in
 #   <label>-<mode>.jsonl, a "QJS_MEM" line each on stdout; gcEvery=0 leaves collection to QuickJS

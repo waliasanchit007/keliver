@@ -42,9 +42,12 @@ fun loadConfig(file: File): Config {
     extras = strings("extras"),
     animated = strings("animated"),
     extraModifiers = strings("extraModifiers"),
+    scrollContainers = strings("scrollContainers"),
   ).also { c ->
     val unknown = c.animated.filter { it !in c.declarations }
     require(unknown.isEmpty()) { "animated: not in declarations: $unknown" }
+    val unknownScroll = c.scrollContainers.filter { it !in c.declarations }
+    require(unknownScroll.isEmpty()) { "scrollContainers: not in declarations: $unknownScroll" }
   }
 }
 

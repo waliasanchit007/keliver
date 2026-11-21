@@ -324,6 +324,35 @@ class GeneratorTest {
     assertTrue("flingBehavior = lazyHost_content.fling," in column)
   }
 
+  @Test fun aScrollContainerIsMarkedForThePressSignal() {
+    // NF3: a press inside a scroll container waits until it is a tap; the renderers mark the container.
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+    val api = ApiReader(classpath.split(File.pathSeparator).map(::File))
+    val src = SourceReader(sources.split(File.pathSeparator).map(::File))
+    val config = loadConfig(File("gatea.json"))
+    fun hostOf(spec: String, configured: Config = config): String =
+      Emitter(configured, plan(configured, listOf(api.find(spec).also(src::complete)), LockBuilder(Lock("g")))).host().second
+    val lazySpec = config.declarations.single { it.startsWith("androidx.compose.foundation.lazy.LazyColumn(") }
+    val scrollSpec = "androidx.compose.foundation.verticalScroll(state,enabled,flingBehavior,reverseScrolling)"
+    assertTrue(lazySpec in config.scrollContainers && scrollSpec in config.scrollContainers)
+    val lazy = hostOf(lazySpec)
+    assertTrue(
+      "modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyColumn1).pressScrollContainer(state = state, enabled = userScrollEnabled),\n" in lazy,
+      lazy,
+    )
+    val scroll = hostOf(scrollSpec)
+    assertTrue(
+      "m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling).pressScrollContainer(state = state, enabled = enabled) }" in scroll,
+      scroll,
+    )
+    // Without the config entry, nothing is added.
+    val unmarked = Config(config.group, config.schemaPackage, config.schemaName, config.dependencies, config.declarations,
+      config.errors, config.typeMessages, config.icons, config.extras, config.animated, config.extraModifiers)
+    assertFalse("pressScrollContainer" in hostOf(lazySpec, unmarked))
+    assertFalse("pressScrollContainer" in hostOf(scrollSpec, unmarked))
+  }
+
   @Test fun deprecationIsReadFromTheSources() {
     assertEquals("Use the other one", stringLiteral("\"Use the \" + \"other one\""))
   }

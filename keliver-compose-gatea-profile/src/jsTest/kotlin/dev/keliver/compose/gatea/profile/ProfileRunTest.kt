@@ -120,6 +120,21 @@ class ProfileRunTest {
     }
   }
 
+  /**
+   * NF3, D2: without the host's press feature the rows carry no press modifier, so the click's
+   * handle is the row's only one; the press event's handle names nothing and composes nothing.
+   */
+  @Test fun withoutThePressFeatureTheClickComposes() {
+    val run = ProfileRun(Encoding.KOTLINX, timeCalls = false, items = 20, prepared = 0, press = false)
+    try {
+      run.first()
+      assertEquals(0, run.press(1).creates)
+      assertEquals(24, run.open(1).creates)
+    } finally {
+      run.close()
+    }
+  }
+
   /** NF3: a cancelled press disposes what it composed; the next click composes as without a press. */
   @Test fun aCancelledPressIsDropped() {
     val run = ProfileRun(Encoding.KOTLINX, timeCalls = false, items = 20, prepared = 0, press = true)

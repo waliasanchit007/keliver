@@ -85,6 +85,7 @@ import dev.keliver.schema.Widget
     GenAnimateContentSize1::class,
     GenAnimateContentSize2::class,
     ExtraAnimated::class,
+    ExtraPress::class,
   ],
   dependencies = [
     Dependency(1, dev.keliver.layout.RedwoodLayout::class),

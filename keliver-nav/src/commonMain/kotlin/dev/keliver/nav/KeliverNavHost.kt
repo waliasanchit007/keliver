@@ -80,6 +80,11 @@ public fun <R : Any> KeliverNavHost(
  * Retention does not add saving: a controller from [rememberKeliverNavController] is remembered,
  * not saved, so a recreated guest composition starts again from its start route, with or without
  * retention.
+ *
+ * NF3: with a retention of depth 1 or more, the route being prepared
+ * ([KeliverNavController.prepare], usually from the host's press signal through [prepareOnPress]) is
+ * composed hidden while the finger is down, and [KeliverNavController.navigate] to it shows that
+ * composition. See [KeliverPreparedStack] for what preparing does to a screen's effects.
  */
 @ExperimentalKeliverNavRetentionApi
 @Composable
@@ -134,10 +139,15 @@ public fun <R : Any> KeliverNavHost(
     }
   }
 
+  // NF3: the entry composed ahead of its tap (KeliverNavController.prepare); only with a retention,
+  // whose frame hides it.
+  val prepared = if (retention == null || retention.depth == 0) null else controller.prepared
+
   // Track which entry ids the host has provided state slots for; when
-  // an id leaves the stack (popped / replaced), reclaim its slot.
+  // an id leaves the stack (popped / replaced), reclaim its slot. A prepared entry has a slot too,
+  // reclaimed when its press is cancelled.
   val seenIds = remember { mutableSetOf<Long>() }
-  val currentIds = entries.map { it.id }.toSet()
+  val currentIds = entries.map { it.id }.toSet() + listOfNotNull(prepared?.id)
   DisposableEffect(currentIds) {
     (seenIds - currentIds).forEach { stateHolder.removeState(it) }
     seenIds.clear()
@@ -170,6 +180,7 @@ public fun <R : Any> KeliverNavHost(
         onHostBack = { controller.popToEntry(it.id) },
         liveItems = { controller.entries.toList() },
         retainable = { currentEntryRetention(it.route) == KeliverNavEntryRetention.Retain },
+        prepared = prepared,
       )
     }
   }

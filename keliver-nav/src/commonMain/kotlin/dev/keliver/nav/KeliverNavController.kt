@@ -17,9 +17,12 @@ package dev.keliver.nav
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 
 /**
@@ -76,12 +79,43 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
    */
   public val canPop: Boolean get() = entries.size > 1
 
-  /** Push [route] onto the back stack. */
+  /**
+   * The entry composed ahead of its tap (NF3, [prepare]), not yet on the stack; null if none. Any
+   * change to the stack other than pushing it drops it.
+   */
+  internal var prepared: NavEntry<R>? by mutableStateOf(null)
+    private set
+
+  /**
+   * Push [route] onto the back stack. If [route] equals the route being prepared ([prepare]), the
+   * prepared entry is pushed: a [KeliverNavHost] shows the composition it already has.
+   */
   @OptIn(ExperimentalKeliverNavRetentionApi::class)
   public fun navigate(route: R) {
+    val ahead = prepared
+    prepared = null
     // A result is for the visit it was passed to: one the covered entry has not received is dropped.
     entries.last().results.clear()
-    entries.add(NavEntry(nextId++, route))
+    entries.add(if (ahead != null && ahead.route == route) ahead else NavEntry(nextId++, route))
+  }
+
+  /**
+   * A finger went down on something that opens [route] (NF3; usually called by [prepareOnPress],
+   * from the host's press signal): a [KeliverNavHost] with a retention composes it now, hidden, and
+   * a [navigate] to an equal route then shows that composition instead of composing it. One at a
+   * time: a second call with another route replaces the first. Without a retention it is composed
+   * at the [navigate], as before. Its effects run now: see [KeliverPreparedStack].
+   */
+  @ExperimentalKeliverNavRetentionApi
+  public fun prepare(route: R) {
+    if (prepared?.route == route) return
+    prepared = NavEntry(nextId++, route)
+  }
+
+  /** The press on [route] ended without a click: drop its composition, if it is being prepared. */
+  @ExperimentalKeliverNavRetentionApi
+  public fun cancelPreparation(route: R) {
+    if (prepared?.route == route) prepared = null
   }
 
   /**
@@ -93,6 +127,7 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
    * ```
    */
   public fun pop(): Boolean {
+    prepared = null
     if (entries.size <= 1) return false
     entries.removeAt(entries.lastIndex)
     return true
@@ -111,6 +146,7 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
    * ```
    */
   public fun popUntil(predicate: (R) -> Boolean): Boolean {
+    prepared = null
     while (entries.size > 1 && !predicate(entries.last().route)) {
       entries.removeAt(entries.lastIndex)
     }
@@ -123,6 +159,7 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
    * [KeliverNavHost]'s next composition.
    */
   public fun replaceAll(route: R) {
+    prepared = null
     entries.clear()
     entries.add(NavEntry(nextId++, route))
   }
@@ -135,6 +172,7 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
    */
   public fun replaceStack(routes: List<R>) {
     require(routes.isNotEmpty()) { "routes must not be empty" }
+    prepared = null
     entries.clear()
     for (route in routes) entries.add(NavEntry(nextId++, route))
   }
@@ -150,6 +188,7 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
    */
   @ExperimentalKeliverNavRetentionApi
   public fun <T> popWithResult(key: KeliverNavResultKey<T>, value: T): Boolean {
+    prepared = null
     if (entries.size <= 1) return false
     entries.removeAt(entries.lastIndex)
     entries.last().results[key] = NavResult(value)
@@ -161,6 +200,7 @@ public class KeliverNavController<R : Any> internal constructor(initialRoute: R)
    * own); otherwise changes nothing.
    */
   internal fun popToEntry(id: Long) {
+    prepared = null
     if (entries.none { it.id == id }) return
     while (entries.last().id != id) {
       entries.removeAt(entries.lastIndex)
