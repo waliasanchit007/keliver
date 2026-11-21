@@ -2179,7 +2179,9 @@ total over the clean flings; the guest's last frame after the finger lifted, med
   already suggested.
 - **Scrolling against NF1's target** (frames over 25 ms under 2%; the target is judged by hand):
   scripted, with the counters on, the gentle fling is within it (0.2–0.5%) and the fast fling is
-  not (6.4–12.2%). Placeholders (`x=scroll,blank`) were not run.
+  not (6.4–12.2%), although at that speed the share is noisy (series F's same arm: 5.3% and
+  32.9%; missed vsyncs, 3–4 per fling, are the stable measure). Placeholders (`x=scroll,blank`)
+  were not run.
 
 ### Series E: the cold start, shipped against `x=prestart` and `x=prestart,prefetch` (NF4)
 
@@ -2219,6 +2221,80 @@ Macrobenchmark's (which starts about 270 ms earlier, at the launch).
   `onCreate` (122.5 against 382). The guest's shipped cold start is close to NF0's (2,775 against
   2,608), so the gap to native is wider today (+2,171 against +1,580).
 - NF4's target, within 0.4 s of native: **not met** (+1,929 ms with both steps).
+
+### Series F: the press signal on the phone (NF3)
+
+**What was added for it** (prototype only, in this change): the guest's `x=prepared` (keliver-nav's
+`KeliverPreparedStack` at depth 1, each row with `prepareOnPress`; `RetainedStack.kt`), `x=press`
+(the host declares `keliver.press@1` in the threeway app's `Spec.hostFeatures`, and the guest
+provides `GateAPress`), and the driver's `--ei hold <ms>`: a tap whose finger stays down that long
+without blocking the main thread (the existing taps sleep 40 ms on it), with every time measured
+from the DOWN. A detail composed ahead of its tap reports the previous navigation's number, so the
+driver now counts a screen only with a newer number than the last one (a first version counted
+the first iteration's prepared detail; only the dropped `i=1` was affected, and it is fixed).
+
+**Method.** One build (main plus the above). Open and back (`bench=nav`, header back), 100 ms hold,
+`x=prepared` (the press off: the rows add nothing, the stack composes what `retain` does) against
+`x=prepared,press`, simple and heavy, alternating in two rounds; `x=retain` with the same hold as a
+reference; then the scrolling series (as in series D, `x=prepared` and `x=prepared,press`, without
+the counters).
+
+**Phone state.** 03:44–04:05, and the second fast scrolling pair from 04:07, uptime 92–115 min, on
+battery 93% → 92%, 25.5–25.7 °C, thermal status 0, CPU idle 81–99%.
+
+**Open from the touch-down** (ms; `click` is when the guest's `onClick` ran):
+
+| Arm | Round 1: drawn | Round 2: drawn | `click` (medians) | Back: drawn |
+|---|---|---|---|---|
+| press off | 381.5 / 395 / 374–397 | 392.5 / 406 / 382–415 | 113; 113 | 187.5; 193 |
+| **press on** | **405.5** / 419 / 387–420 | **403.5** / 406 / 386–417 | **313; 308** | 191; 188.5 |
+| heavy, press off | 1,019.5 / 1,056 / 984–1,101 | 1,005 / 1,028 / 969–1,041 | 113.5; 112.5 | 208.5; 212.5 |
+| **heavy, press on** | **1,089** / 1,116 / 1,051–1,116 | **1,060** / 1,098 / 1,021–1,171 | **932.5; 916.5** | 210; 209 |
+| `retain`, same hold (reference) | 394 / 398 / 377–398 | — | 113.5 | 186 |
+
+- **On this phone and this engine the press signal makes open slower**: +11 to +24 ms on the
+  simple screen, +55 to +70 on the heavy one. The press reaches the guest 50 ms after the DOWN
+  (the scroll container's still-finger delay), and composing the detail takes longer than the 50 ms
+  left before a 100 ms tap lifts: the guest's `onClick` runs only when that composition ends (313
+  ms after the DOWN instead of 113; heavy 932.5 instead of 113.5), since QuickJS runs one task at
+  a time. Then showing the prepared entry costs about 70–120 ms more (click → composed: 73 on the
+  simple screen, about 125 on the heavy), because the three-way detail reads the navigation
+  counter that the click increments (its `composed` mark), so it recomposes at the tap: the
+  caveat `KeliverPreparedStack` documents. A screen that reads nothing the tap changes would not
+  pay that part.
+- What would make it pay: a guest frame short enough to finish within the press (series A's
+  BigInt build composes the simple detail's frame in about 129 ms, still longer than 50 ms), a
+  longer press (a slower tap), or a host-side transition that hides the wait. Not measured: the
+  press on the BigInt build, and other hold times.
+- Back is unchanged (187.5–193 ms in every arm): the press only touches opening.
+
+**Scrolling with the press signal** (series D's columns; one run each at 1,422 dp/s, two at
+6,667 dp/s, the second pair in the order on, off):
+
+| Speed | Arm, run | Clean flings | Moving frames | Over 25 ms | Missed vsyncs | Guest's last frame after the UP |
+|---|---|---|---|---|---|---|
+| 1,422 dp/s | press off | 20 | 1,218 | 0.3% | 1 / 17 | 2,376 ms |
+| | press on | 19 | 1,148 | 0.3% | 1 / 22 | 2,526 |
+| 6,667 dp/s | press off, 1 | 14 | 1,923 | 5.3% | 3 / 50 | 4,621 |
+| | press on, 1 | 13 (12 flung) | 1,660 | 21.1% | 3 / 40 | 4,445 |
+| | press on, 2 | 13 | 1,788 | 13.4% | 3 / 49 | 4,616 |
+| | press off, 2 | 14 | 1,911 | 32.9% | 4 / 60 | 4,569 |
+
+- **The press signal's 50 ms scroll delay costs no jank that this route can see**: at 1,422 dp/s
+  both arms have 0.3% of frames over 25 ms and 1 missed vsync per fling; at 6,667 dp/s both miss
+  3–4 vsyncs per fling. The swipes move at once, so no press is ever sent; what is exercised is
+  the host's pending press timer on every DOWN.
+- **At 6,667 dp/s the share of frames over 25 ms is noise**: the same press-off arm gave 5.3% and
+  32.9% in two runs, while missed vsyncs stayed at 3–4 (series D: 6.4–12.2%). FrameMetrics' total
+  duration depends on where a frame starts against the vsync; use missed vsyncs at that speed.
+
+**Owner's checklist (by hand on the A12; not scriptable here):**
+- [ ] The press feel: open a row with `x=prepared,press` against `x=prepared` (both on the build
+  installed now): does the delay before the detail feel different?
+- [ ] The scroll by hand with `x=scroll,blank` (placeholders), both speeds: any blank rows, and
+  does it stutter?
+- [ ] The scroll by hand with `x=prepared,press`: does a slow drag that stops on a row ever open
+  it, or feel sticky?
 
 ## For an iOS run (follow-up)
 

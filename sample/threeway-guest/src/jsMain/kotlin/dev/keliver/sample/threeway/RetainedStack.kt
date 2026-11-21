@@ -32,9 +32,12 @@ import dev.keliver.compose.ui.unit.dp
 import dev.keliver.nav.ExperimentalKeliverNavRetentionApi
 import dev.keliver.nav.KeliverNavFrame
 import dev.keliver.nav.KeliverNavHostFrame
+import dev.keliver.nav.KeliverNavPreparation
 import dev.keliver.nav.KeliverNavPress
 import dev.keliver.nav.KeliverNavRetention
+import dev.keliver.nav.KeliverPreparedStack
 import dev.keliver.nav.KeliverRetainedStack
+import dev.keliver.nav.prepareOnPress
 
 // The guest's `retain` experiment (NF1, docs/PLAN_2026-11.md WS7): keliver-nav's retained stack with
 // a frame built from the generated API's own widgets. `retainhost`: the same stack in the host's
@@ -118,6 +121,26 @@ internal object RetainedHostThreewayStack : ThreewayStack {
 
   @Composable
   override fun rowPress(key: Any): Modifier = Modifier
+}
+
+/**
+ * NF3 (`prepared`): the app's screens on keliver-nav's [KeliverPreparedStack] at depth 1 (the list
+ * stays composed under the detail, as `retain`), each row carrying `prepareOnPress`. With `press`
+ * the host declares its press signal and [GateAPress] is provided, so a touch-down on a row composes
+ * its detail, hidden, before the click; without it the rows add nothing and the stack composes what
+ * `retain` does, inside the same frame (the press signal's off arm). Back goes through the guest.
+ */
+internal object PressPreparedThreewayStack : ThreewayStack {
+  private val preparation = KeliverNavPreparation<Any>()
+
+  @Composable
+  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+    BackHandler(enabled = keys.size > 1) { onBack() }
+    KeliverPreparedStack(keys, preparation, GateAFrame, depth = 1, content = content)
+  }
+
+  @Composable
+  override fun rowPress(key: Any): Modifier = Modifier.prepareOnPress(preparation, key)
 }
 
 /**

@@ -2,15 +2,20 @@
  * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
+@file:OptIn(ExperimentalKeliverNavRetentionApi::class)
+
 package dev.keliver.sample.threeway
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import app.cash.zipline.Zipline
 import dev.keliver.capabilities.HostHttp
 import dev.keliver.capabilities.HostHttpRequest
 import dev.keliver.compose.gatea.protocol.guest.KeliverComposeGateAProtocolWidgetSystemFactory
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.asHostHttp
+import dev.keliver.nav.ExperimentalKeliverNavRetentionApi
+import dev.keliver.nav.LocalKeliverNavPress
 import dev.keliver.sample.threeway.data.Item
 import dev.keliver.sample.threeway.data.ItemsPage
 import dev.keliver.sample.threeway.data.ThreewayApi
@@ -54,12 +59,20 @@ private class ThreewayAppServiceImpl : ThreewayAppService {
       override fun Show() {
         // `retain` (NF1): the list stays composed under the detail (RetainedStack.kt); `retainhost`:
         // the same in the host's retained container, whose system back the host shows itself.
+        // `prepared` (NF3): keliver-nav's prepared stack; with `press`, the host's press signal too.
         val stack = when {
+          "prepared" in experiments -> PressPreparedThreewayStack
           "retainhost" in experiments -> RetainedHostThreewayStack
           "retain" in experiments -> RetainedThreewayStack
           else -> null
         }
-        ThreewayApp(GuestApi, GuestMarks, stack)
+        if ("press" in experiments) {
+          CompositionLocalProvider(LocalKeliverNavPress provides GateAPress) {
+            ThreewayApp(GuestApi, GuestMarks, stack)
+          }
+        } else {
+          ThreewayApp(GuestApi, GuestMarks, stack)
+        }
       }
     }
     return ui.asZiplineTreehouseUi(appLifecycle)
