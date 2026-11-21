@@ -442,7 +442,14 @@ class Emitter(
         },
       )
       body.append("internal class $cls : ${w.entry.name}<@Composable (Modifier) -> Unit>, GeneratedWidget {\n")
-      body.append("  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)\n")
+      // NF1: one snapshot state per widget. The properties and the modifier are plain fields; a
+      // setter that changes one (by ==, as mutableStateOf's structural policy compared) bumps
+      // `version`, which the renderer reads first. Compose then records one read per widget, not one
+      // per property, and the scan it makes after every state change walks that many fewer.
+      // A container reads a child's modifier and recomposes on its own tick (onModifierUpdated).
+      body.append("  private var version by mutableIntStateOf(0)\n")
+      body.append("  override var modifier: KeliverModifier = KeliverModifier\n")
+      body.append("    set(value) { if (field != value) { field = value; version++ } }\n")
       body.append("  override var modifierEventSink: ((Int) -> Unit)? = null\n")
       for (c in w.wire) {
         val n = c.param.name
@@ -450,29 +457,31 @@ class Emitter(
           ParamKind.SLOT -> body.append("  override val $n: ScopedChildren = ScopedChildren()\n")
           ParamKind.LAZY -> {
             body.append("  override val $n: ScopedChildren = ScopedChildren()\n")
-            body.append("  private var p_${n}Before: Any? by mutableStateOf<Any?>(0)\n")
-            body.append("  override fun ${n}Before(${n}Before: kotlin.Int) { p_${n}Before = ${n}Before }\n")
-            body.append("  private var p_${n}After: Any? by mutableStateOf<Any?>(0)\n")
-            body.append("  override fun ${n}After(${n}After: kotlin.Int) { p_${n}After = ${n}After }\n")
+            body.append("  private var p_${n}Before: Any? = 0\n")
+            body.append("  override fun ${n}Before(${n}Before: kotlin.Int) { if (p_${n}Before != ${n}Before) { p_${n}Before = ${n}Before; version++ } }\n")
+            body.append("  private var p_${n}After: Any? = 0\n")
+            body.append("  override fun ${n}After(${n}After: kotlin.Int) { if (p_${n}After != ${n}After) { p_${n}After = ${n}After; version++ } }\n")
             body.append("  private var p_${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)? = null\n")
             body.append("  override fun ${n}Viewport(${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_${n}Viewport = ${n}Viewport }\n")
           }
           ParamKind.EVENT -> {
-            body.append("  private var p_$n: Any? by mutableStateOf<Any?>(null)\n")
+            body.append("  private var p_$n: Any? = null\n")
             val lt = "(${c.param.type.functionParams.joinToString(", ") { it.fq }}) -> Unit"
-            body.append("  override fun $n($n: ($lt)?) { p_$n = $n }\n")
+            body.append("  override fun $n($n: ($lt)?) { if (p_$n != $n) { p_$n = $n; version++ } }\n")
           }
           else -> {
             // A parameter with a default starts as "not sent" (null): a guest built before this
             // parameter travelled never sends it, and the renderer then uses Compose's default.
-            body.append("  private var p_$n: Any? by mutableStateOf<Any?>(${if (c.param.hasDefault) "null" else "Unset"})\n")
-            body.append("  override fun $n($n: ${TypeMap.wireType(c.param.type, c.param.type.nullable || c.defaultCase == DefaultCase.EXPRESSION)}) { p_$n = $n }\n")
+            body.append("  private var p_$n: Any? = ${if (c.param.hasDefault) "null" else "Unset"}\n")
+            body.append("  override fun $n($n: ${TypeMap.wireType(c.param.type, c.param.type.nullable || c.defaultCase == DefaultCase.EXPRESSION)}) { if (p_$n != $n) { p_$n = $n; version++ } }\n")
           }
         }
       }
       body.append("  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }\n")
       val required = w.wire.filter { it.kind == ParamKind.VALUE && !it.param.hasDefault }
       body.append("  override val value: @Composable (Modifier) -> Unit = { incoming ->\n")
+      // The one read: every field below is read after it, in this scope.
+      body.append("    version\n")
       if (required.isNotEmpty()) body.append("    if (${required.joinToString(" && ") { "p_${it.param.name} !== Unset" }}) {\n") else body.append("    run {\n")
       // Locals in Compose's order, so a default that names an earlier parameter (`fallback = error`) reads it.
       // A hidden overload passes only what its visible successor takes; Compose defaults the rest.
@@ -497,14 +506,21 @@ class Emitter(
       // horizontal list (it takes a horizontalArrangement, not a verticalArrangement) says so.
       val horizontal = d.params.any { it.name == "horizontalArrangement" } && d.params.none { it.name == "verticalArrangement" }
       val orientation = if (horizontal) ", vertical = false" else ""
-      for (c in lazyParams) body.append("      val lazyHost_${c.param.name} = rememberLazyHost(${w.lazyState!!.param.name}$orientation)\n")
+      for (c in lazyParams) {
+        val n = c.param.name
+        body.append("      val lazyHost_$n = rememberLazyHost(${w.lazyState!!.param.name}$orientation)\n")
+        // Read here, after `version`, not in the list's content lambda: Compose runs that lambda in
+        // a derived state, which sees snapshot reads only. Captured, a changed count is a new lambda.
+        body.append("      val lazyBefore_$n = p_${n}Before as Int\n")
+        body.append("      val lazyAfter_$n = p_${n}After as Int\n")
+      }
       body.append("      ${d.pkg}.${d.name}(\n")
       for (c in w.called) {
         val n = c.param.name
         when (c.kind) {
           ParamKind.MODIFIER -> body.append("        $n = incoming.applyGenerated(modifier, this@$cls)${scrollContainerMark(w)},\n")
           ParamKind.SLOT -> body.append("        $n = { this@$cls.$n.Render(${if (c.param.type.receiver != null) "this" else "null"}) },\n")
-          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, p_${n}Before as Int, p_${n}After as Int, lazyHost_$n) },\n")
+          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, lazyBefore_$n, lazyAfter_$n, lazyHost_$n) },\n")
           ParamKind.VALUE, ParamKind.EVENT -> body.append("        $n = $n,\n")
           else -> {}
         }
@@ -603,7 +619,7 @@ class Emitter(
       val fixed = listOf(
         "androidx.compose.runtime.Composable",
         "androidx.compose.runtime.getValue",
-        "androidx.compose.runtime.mutableStateOf",
+        "androidx.compose.runtime.mutableIntStateOf",
         "androidx.compose.runtime.setValue",
         "androidx.compose.ui.Modifier",
         "dev.keliver.Modifier as KeliverModifier",

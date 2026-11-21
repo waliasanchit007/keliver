@@ -16,13 +16,18 @@
 package dev.keliver.compose.gatea.composeui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.runComposeUiTest
 import dev.keliver.compose.foundation.background
 import dev.keliver.compose.foundation.clickable
@@ -75,6 +80,13 @@ import kotlin.test.assertTrue
  * - `-Dkeliver.retainedBack.measured=3000 -Dkeliver.retainedBack.sample=true`: a profiler's run,
  *   which adds per-method sample counts of the timed frame to the same file.
  *
+ * NF1 state scan (docs/THREE_WAY_BENCHMARK.md, "NF1, one Compose state per generated widget"): two
+ * guest batches are timed the same way, a text change on the heavy detail (the list retained below
+ * it) and a scroll window shift on a 1,000-row list. Their timed window covers the host's part only:
+ * applying the batch, the snapshot's apply notifications (where Compose's recomposer records the
+ * changes and scans the recorded state reads) and the frame. Every test also writes how many state
+ * reads the host's compositions record ([StateReads]).
+ *
  * On a phone, the three-way benchmark's `firstDraw` mark (a `ViewTreeObserver.OnDrawListener`) runs
  * after the frame's recomposition and apply but before `AndroidComposeView` measures and lays out
  * (which, when the root keeps its size, it does inside its own draw): of these phases it sees only
@@ -104,19 +116,64 @@ class RetainedBackFrameBenchmark {
 
   private class Item(val id: Int, val title: String, val subtitle: String, val amount: String, val status: String)
 
-  private val items = List(20) { i ->
+  private fun items(count: Int) = List(count) { i ->
     Item(i, "Order ${1000 + i}", "Customer $i, City ${i % 7}", "${100 + i * 7}.50", listOf("Paid", "Pending", "Shipped", "Refunded")[i % 4])
   }
 
+  private var items = items(20)
+
   private var keys by mutableStateOf(listOf("list"))
 
-  @Test
-  fun simpleScreen() = measure(heavy = false)
+  /** The heavy detail's last line counts how often it was opened: the text-change batch's change. */
+  private var opened by mutableStateOf(1)
 
   @Test
-  fun heavyScreen() = measure(heavy = true)
+  fun simpleScreen() = measure("back, simple screen", heavy = false) { host, tap, back ->
+    pressBack(host, tap, back)
+  }
 
-  private fun measure(heavy: Boolean) = runComposeUiTest {
+  @Test
+  fun heavyScreen() = measure("back, heavy screen", heavy = true) { host, tap, back ->
+    pressBack(host, tap, back)
+  }
+
+  /**
+   * NF1 state scan: one guest batch that changes one text on the heavy detail (the list retained
+   * below it). The timed frame applies the batch's recomposition (the protocol's property set ran
+   * just before, on this thread, as Redwood's host does).
+   */
+  @Test
+  fun heavyScreenTextChange() = measure("text change, heavy screen", heavy = true, initialKeys = listOf("list", "detail")) { host, _, _ ->
+    opened++
+    timedBatch(host)
+  }
+
+  /**
+   * NF1 state scan: one guest batch that shifts the window of the list (1,000 rows, the
+   * prototype's "Load 1,000"): the host scrolls 30 rows, reports its viewport, and the guest's
+   * batch (rows in and out, the list's before and after counts) is applied in the timed frame.
+   */
+  @Test
+  fun listScrollWindowShift() = measure("scroll window shift, list screen", heavy = false, itemCount = 1_000) { host, _, _ ->
+    scrollStep = (scrollStep + 1) % 30
+    onNode(hasScrollToIndexAction()).performScrollToIndex(30 + scrollStep * 30)
+    waitForIdle()
+    timedBatch(host)
+  }
+
+  private var scrollStep = 0
+
+  private fun measure(
+    label: String,
+    heavy: Boolean,
+    initialKeys: List<String> = listOf("list"),
+    itemCount: Int = 20,
+    step: ComposeUiTest.(GuestOnHost, EventTap, PressDispatcher) -> Unit,
+  ) = runComposeUiTest {
+    items = items(itemCount)
+    keys = initialKeys
+    opened = 1
+    scrollStep = 0
     val back = PressDispatcher()
     val tap = EventTap()
     val host = guestOnHost(tap, back) {
@@ -125,41 +182,110 @@ class RetainedBackFrameBenchmark {
         if (key == "list") ListScreen() else if (heavy) HeavyDetailScreen(items[3]) else DetailScreen(items[3])
       }
     }
-    setContent { CompositionLocalProvider(LocalHostBackDispatcher provides back) { host.root.Render(null) } }
+    setContent {
+      context = rememberCompositionContext()
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { host.root.Render(null) }
+    }
     sync(host)
+    val before = StateReads.count(context!!)
+    inStep = null
 
-    // A plain jvmTest run (CI included) does 5 backs: a smoke run, not a measurement. The numbers in
-    // docs/THREE_WAY_BENCHMARK.md are -Dkeliver.retainedBack.measured=60 (40 warm-up backs, then 60).
+    // A plain jvmTest run (CI included) does 5 steps: a smoke run, not a measurement. The numbers in
+    // docs/THREE_WAY_BENCHMARK.md are -Dkeliver.retainedBack.measured=60 (40 warm-up steps, then 60).
     val measuredProperty = System.getProperty("keliver.retainedBack.measured")?.toInt()
     val warmup = if (measuredProperty == null) 0 else 40
     val measured = measuredProperty ?: 5
-    val frames = mutableListOf<Double>()
     val sampler = if (System.getProperty("keliver.retainedBack.sample") != null) FrameSampler(runOnUiThread { Thread.currentThread() }) else null
+    timer = FrameTimer(sampler)
     repeat(warmup + measured) { i ->
-      keys = keys + "detail"
-      sync(host)
-      tap.hold = true
-      mainClock.autoAdvance = false
-      runOnIdle { assertTrue(back.press(), "the host takes the press") }
-      val began = System.nanoTime()
-      sampler?.inFrame = i >= warmup
-      mainClock.advanceTimeByFrame()
-      sampler?.inFrame = false
-      val ms = (System.nanoTime() - began) / 1e6
-      mainClock.autoAdvance = true
-      if (i >= warmup) frames += ms
-      tap.release()
-      sync(host)
+      timer.counting = i >= warmup
+      step(host, tap, back)
+      // The harness keeps every batch's text and every event: a long run would run out of memory.
+      host.wire.clear()
+      tap.sent.clear()
     }
-    frames.sort()
-    val line = "retained back frame, ${if (heavy) "heavy" else "simple"} screen: median %.3f ms, p90 %.3f, min %.3f, max %.3f (n=%d)%s".format(
+    val frames = timer.frames.sorted()
+    val line = "$label: median %.3f ms, p90 %.3f, min %.3f, max %.3f (n=%d)%s".format(
       frames[frames.size / 2], frames[frames.size * 9 / 10], frames.first(), frames.last(), frames.size,
       if (measuredProperty == null) " [smoke run, no warm-up: not a measurement]" else "",
     )
     println(line)
     results += line
-    sampler?.let { results += it.stop(if (heavy) "heavy" else "simple") }
+    // The state reads the host's compositions record, as the scan after a state change walks them.
+    val reads = "$label, state reads recorded: before the steps $before; at the first timed step ${inStep ?: "(not counted)"}; after ${StateReads.count(context!!)}"
+    println(reads)
+    results += reads
+    sampler?.let { results += it.stop(label) }
     writeArtifact("retained-back-frame.txt", results.joinToString("\n", postfix = "\n").encodeToByteArray())
+  }
+
+  private lateinit var timer: FrameTimer
+
+  /** The host's root composition context, for [StateReads]. */
+  private var context: CompositionContext? = null
+
+  /** The state reads just before the first timed step (the detail pushed, the list scrolled). */
+  private var inStep: Any? = null
+
+  private fun countInStep() {
+    if (inStep == null) inStep = StateReads.count(context!!)
+  }
+
+  /** The timed frames of one test, and the profiler that samples them. */
+  private class FrameTimer(val sampler: FrameSampler?) {
+    var counting = false
+    val frames = mutableListOf<Double>()
+
+    fun ComposeUiTest.timedFrame() = timed { mainClock.advanceTimeByFrame() }
+
+    inline fun timed(block: () -> Unit) {
+      val began = System.nanoTime()
+      sampler?.inFrame = counting
+      block()
+      sampler?.inFrame = false
+      val ms = (System.nanoTime() - began) / 1e6
+      if (counting) frames += ms
+    }
+  }
+
+  /** A back the host handles itself, with the guest held: the frame after the press is timed. */
+  private fun ComposeUiTest.pressBack(host: GuestOnHost, tap: EventTap, back: PressDispatcher) {
+    keys = keys + "detail"
+    sync(host)
+    if (timer.counting) runOnIdle { countInStep() }
+    tap.hold = true
+    mainClock.autoAdvance = false
+    runOnIdle { assertTrue(back.press(), "the host takes the press") }
+    with(timer) { timedFrame() }
+    mainClock.autoAdvance = true
+    tap.release()
+    sync(host)
+  }
+
+  /**
+   * The guest's next batch: its frame and the wire are not timed. Timed, on the UI thread: the host
+   * applies the batch as Redwood's host does (widgets made and set, outside composition), the
+   * snapshot's apply notifications (where the recomposer records the changes: Compose's scan of the
+   * recorded reads runs there, before the frame, as it does on a phone), then the one frame.
+   */
+  private fun ComposeUiTest.timedBatch(host: GuestOnHost) {
+    mainClock.autoAdvance = false
+    val batch = runOnIdle {
+      if (timer.counting) countInStep()
+      Snapshot.sendApplyNotifications()
+      host.takeBatch()
+    }
+    with(timer) {
+      timed {
+        runOnUiThread {
+          if (batch != null) host.applyBatch(batch)
+          Snapshot.sendApplyNotifications()
+        }
+        mainClock.advanceTimeByFrame()
+      }
+    }
+    mainClock.autoAdvance = true
+    sync(host)
   }
 
   private fun ComposeUiTest.sync(host: GuestOnHost) {
@@ -208,6 +334,9 @@ class RetainedBackFrameBenchmark {
       return synchronized(this) {
         buildString {
           appendLine("samples in the frame ($label): $samples")
+          // The state scan (Compose's runtime, after a state change: it walks every recorded read of
+          // a composition that has an invalidated scope) and the frame's phases, inclusive.
+          for (method in FocusMethods) appendLine("  focus: ${inclusive[method] ?: 0} $method")
           appendLine("inclusive:")
           inclusive.entries.sortedByDescending { it.value }.take(500).forEach { appendLine("  ${it.value} ${it.key}") }
           appendLine("leaf:")
@@ -325,7 +454,7 @@ class RetainedBackFrameBenchmark {
       Row(Modifier.fillMaxWidth().height(48.dp).padding(top = 8.dp)) {
         for (label in listOf("Call", "Email", "Cancel")) Action(label, Modifier.weight(1f)) {}
       }
-      Text("Order id ${item.id} · opened 1×", Modifier.padding(top = 8.dp), color = Muted, fontSize = 12.sp)
+      Text("Order id ${item.id} · opened $opened×", Modifier.padding(top = 8.dp), color = Muted, fontSize = 12.sp)
     }
   }
 
@@ -359,5 +488,77 @@ class RetainedBackFrameBenchmark {
 
     /** Both screens' lines, in one file (the tests share a JVM). */
     val results = mutableListOf<String>()
+
+    val FocusMethods = listOf(
+      "Recomposer.recordComposerModifications",
+      "CompositionImpl.recordModificationsOf",
+      "CompositionImpl.addPendingInvalidationsLocked",
+      "CompositionImpl.cleanUpDerivedStateObservations",
+      "CompositionImpl.recompose",
+      "CompositionImpl.applyChanges",
+      "MeasureAndLayoutDelegate.measureAndLayout",
+      "RootNodeOwner.draw",
+    )
+  }
+}
+
+/**
+ * The state reads Compose records per composition (`CompositionImpl.observations`: state → the
+ * scopes that read it). After a state change, a composition with an invalidated scope walks all of
+ * them (`addPendingInvalidationsLocked`), so their number is that scan's size. Read by reflection
+ * (the fields are internal); a runtime that renames them reports the fields it has instead.
+ */
+internal object StateReads {
+  class Count(val compositions: Int, val states: Int, val reads: Int, val largestStates: Int, val largestReads: Int) {
+    override fun toString() = "$reads reads of $states states in $compositions compositions (largest: $largestReads reads of $largestStates states)"
+  }
+
+  /** The recomposer above [context]: a child context is its composer's (`this$0`), whose parent is the next one up. */
+  private fun recomposerOf(context: Any): Recomposer? {
+    var at: Any? = context
+    repeat(8) {
+      if (at is Recomposer) return at as Recomposer
+      val composer = at!!.javaClass.declaredFields.firstOrNull { it.name == "this\$0" }?.apply { isAccessible = true }?.get(at) ?: return null
+      at = composer.javaClass.declaredFields.firstOrNull { it.name == "parentContext" }?.apply { isAccessible = true }?.get(composer) ?: return null
+    }
+    return null
+  }
+
+  fun count(context: CompositionContext): Any {
+    val recomposer = recomposerOf(context) ?: return "not counted: no recomposer above ${context::class.java.name}"
+    val known = Recomposer::class.java.declaredFields.firstOrNull { it.name == "knownCompositions" || it.name == "_knownCompositions" }
+      ?: return "not counted: Recomposer fields ${Recomposer::class.java.declaredFields.map { it.name }}"
+    known.isAccessible = true
+    val compositions: List<Any?> = when (val value = known.get(recomposer)) {
+      is List<*> -> value
+      is androidx.collection.ObjectList<*> -> value.asList()
+      else -> return "not counted: knownCompositions is ${value?.let { it::class.java.name }}"
+    }
+    var states = 0
+    var reads = 0
+    var largestStates = 0
+    var largestReads = 0
+    for (composition in compositions) {
+      if (composition == null) continue
+      val field = composition::class.java.declaredFields.firstOrNull { it.name == "observations" }
+        ?: return "not counted: ${composition::class.java.name} fields ${composition::class.java.declaredFields.map { it.name }}"
+      field.isAccessible = true
+      var map = field.get(composition)
+      if (map !is androidx.collection.ScatterMap<*, *>) {
+        val inner = map!!::class.java.declaredFields.firstOrNull { it.name == "map" } ?: return "not counted: ${map::class.java.name}"
+        inner.isAccessible = true
+        map = inner.get(map)
+      }
+      map as androidx.collection.ScatterMap<*, *>
+      var compositionReads = 0
+      map.forEachValue { scopes -> compositionReads += if (scopes is androidx.collection.ScatterSet<*>) scopes.size else 1 }
+      states += map.size
+      reads += compositionReads
+      if (compositionReads > largestReads) {
+        largestReads = compositionReads
+        largestStates = map.size
+      }
+    }
+    return Count(compositions.size, states, reads, largestStates, largestReads)
   }
 }

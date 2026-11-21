@@ -353,6 +353,50 @@ class GeneratorTest {
     assertFalse("pressScrollContainer" in hostOf(scrollSpec, unmarked))
   }
 
+  @Test fun aRendererHoldsOneSnapshotStatePerWidget() {
+    // NF1: properties, events, the lazy counts and the modifier are plain fields; a setter that
+    // changes one bumps the widget's one state, which the renderer reads first.
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+    val api = ApiReader(classpath.split(File.pathSeparator).map(::File))
+    val src = SourceReader(sources.split(File.pathSeparator).map(::File))
+    val config = loadConfig(File("gatea.json"))
+    fun hostOf(prefix: String): String {
+      val spec = config.declarations.first { it.startsWith(prefix) }
+      return Emitter(config, plan(config, listOf(api.find(spec).also(src::complete)), LockBuilder(Lock("g")))).host().second
+    }
+    val button = hostOf("androidx.compose.material3.Button(")
+    assertFalse("mutableStateOf" in button, "no state per property: $button")
+    assertEquals(1, Regex("mutableIntStateOf").findAll(button.substringAfter("internal class")).count(), button)
+    assertTrue("  private var version by mutableIntStateOf(0)\n" in button, button)
+    assertTrue(
+      "  override var modifier: KeliverModifier = KeliverModifier\n    set(value) { if (field != value) { field = value; version++ } }\n" in button,
+      button,
+    )
+    // An event, and a value with a default (starts as "not sent").
+    assertTrue("  private var p_onClick: Any? = null\n" in button, button)
+    assertTrue("  override fun onClick(onClick: (() -> Unit)?) { if (p_onClick != onClick) { p_onClick = onClick; version++ } }\n" in button, button)
+    assertTrue("  private var p_enabled: Any? = null\n" in button, button)
+    assertTrue("{ if (p_enabled != enabled) { p_enabled = enabled; version++ } }\n" in button, button)
+    // The renderer reads the version before any field.
+    assertTrue("  override val value: @Composable (Modifier) -> Unit = { incoming ->\n    version\n" in button, button)
+    // A required value starts unset.
+    val text = hostOf("androidx.compose.material3.Text(text,modifier,color,autoSize,")
+    assertTrue("  private var p_text: Any? = Unset\n" in text, text)
+    assertTrue("{ if (p_text != text) { p_text = text; version++ } }\n" in text, text)
+    // A lazy list's before and after counts bump it too; its viewport callback is a plain field.
+    val lazy = hostOf("androidx.compose.foundation.lazy.LazyColumn(")
+    assertTrue("  private var p_contentBefore: Any? = 0\n" in lazy, lazy)
+    assertTrue("  override fun contentBefore(contentBefore: kotlin.Int) { if (p_contentBefore != contentBefore) { p_contentBefore = contentBefore; version++ } }\n" in lazy, lazy)
+    assertTrue("  override fun contentAfter(contentAfter: kotlin.Int) { if (p_contentAfter != contentAfter) { p_contentAfter = contentAfter; version++ } }\n" in lazy, lazy)
+    assertTrue("  override fun contentViewport(contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_contentViewport = contentViewport }\n" in lazy, lazy)
+    // The counts are read in the renderer's scope and captured: the list's content lambda runs in a
+    // derived state, which would not see a plain field change.
+    assertTrue("      val lazyBefore_content = p_contentBefore as Int\n      val lazyAfter_content = p_contentAfter as Int\n" in lazy, lazy)
+    assertTrue("content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, lazyBefore_content, lazyAfter_content, lazyHost_content) },\n" in lazy, lazy)
+    assertFalse(Regex("\\{[^\\n]*p_content(Before|After)").containsMatchIn(lazy.substringAfter("override val value")), "no count read inside a lambda: $lazy")
+  }
+
   @Test fun deprecationIsReadFromTheSources() {
     assertEquals("Use the other one", stringLiteral("\"Use the \" + \"other one\""))
   }

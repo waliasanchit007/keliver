@@ -1351,7 +1351,8 @@ sees (above), and measure, layout and draw come after it:
   recorded in the composition, so its cost grows with everything retained, including the hidden
   heavy detail, whose generated widgets keep one state per property. Lowering it means fewer
   state reads (a generator change) or each entry in its own composition (a larger change to
-  `ExtraRetained`).
+  `ExtraRetained`). The generator change was made and measured later: see
+  [NF1, one Compose state per generated widget](#nf1-one-compose-state-per-generated-widget-mac).
 - **Hiding and showing entries re-places their trees.** Hiding the detail un-places it (about 700
   samples); showing the list places it again and recreates its layers. The draw then re-records
   the list. Keeping hidden entries placed (off screen, with their layers kept) would avoid this.
@@ -1424,6 +1425,87 @@ Trace numbers compare only with trace numbers (`x=trace` adds a section per mess
 (keep hidden entries placed) is judged on these, not on `firstDraw`**: its saving is placement,
 layers and drawing, which come after the mark. If the heavy screen's press-to-present is already
 within the target with this change alone, it is not needed.
+
+### NF1, one Compose state per generated widget (Mac)
+
+2026-11-21, **the Mac only** (JVM tests; no phone). This follows up the item above, "Compose scans
+the whole composition after a state change". When a snapshot change invalidates a scope, Compose's
+`CompositionImpl.addPendingInvalidationsLocked` walks every state read the composition recorded.
+Gate A's generated renderers held one `mutableStateOf` per property plus one for the modifier, and
+each renderer reads all of them, so each widget recorded about a dozen reads.
+
+**The change.** The generator (`keliver-compose-generator`, `Emit.kt`) now gives each renderer one
+`mutableIntStateOf` version. The properties, events, the lazy list's before/after counts and the
+modifier are plain fields. A setter compares the new value with `==`, which is what
+`mutableStateOf`'s structural policy did, and bumps the version only on a change. The renderer
+reads the version first. The guest API and the wire are unchanged. Two points needed care:
+- **The modifier.** A container reads its children's modifiers (`ScopedChildren`,
+  `ComposeWidgetChildren`). It still recomposes on a modifier change through its own tick, which
+  Redwood's host bumps with `onModifierUpdated` after every modifier set.
+- **A lazy list's counts.** Compose runs the list's content lambda inside a derived state, which
+  sees only snapshot reads. The counts are therefore read in the renderer's scope and captured, so
+  a changed count gives the list a new content lambda
+  (`OneStatePerWidgetTest.aLazyListsCounts` changes only a count).
+
+**Method (repeatable).** `RetainedBackFrameBenchmark` now has four scenarios. The two backs are
+unchanged. The two guest batches are new:
+- a text change on the heavy detail, with the list retained below it;
+- a window shift on a 1,000-row list: the host scrolls 30 rows, then the guest's batch arrives.
+
+A batch's timed window is only the host's part: applying the batch, the snapshot's apply
+notifications, and the frame. The recomposer records the changes, and so runs the scan, when it is
+notified. On a phone that happens in a main-thread message before the frame, so a window that
+covered only the frame missed it. Each scenario also writes the state reads the host's
+compositions record (`StateReads`, read by reflection). The same commands as above:
+
+```
+./gradlew :keliver-compose-gatea-composeui:jvmTest --tests '*RetainedBackFrameBenchmark' \
+  -Dkeliver.retainedBack.measured=60                      # medians
+./gradlew :keliver-compose-gatea-composeui:jvmTest --tests '*RetainedBackFrameBenchmark' \
+  -Dkeliver.retainedBack.measured=2000 -Dkeliver.retainedBack.sample=true   # profile
+```
+
+**State reads recorded** (all of the host's compositions; the heavy back is counted with the detail
+pushed):
+
+| | Before | After |
+|---|---|---|
+| heavy back (list + heavy detail, 10 compositions) | 2,335 reads of 2,145 states | **423 of 419** (−82%) |
+| text change (1 composition) | 1,337 of 1,231 | **196 of 193** (−85%) |
+| simple back | 1,294 of 1,184 | **285 of 281** (−78%) |
+
+**Profile** (2,000 timed steps; inclusive samples of the UI thread inside the window):
+
+| | Scan (`addPendingInvalidationsLocked`) | Record + recompose + apply | Measure and layout | Draw | All samples |
+|---|---|---|---|---|---|
+| heavy back, before | 1,662 | 4,716 | 2,967 | 7,482 | 22,425 |
+| heavy back, after | 1,388 | 3,804 | 2,520 | 6,980 | 19,811 |
+| text change, before | 1,538 | 2,746 | 1,753 | 7,518 | 20,016 |
+| text change, after | **389** | **1,812** | 2,040 | 7,974 | 21,142 |
+| simple back, before | 838 | 2,283 | 1,741 | 6,858 | 16,841 |
+| simple back, after | 568 | 1,948 | 1,807 | 6,890 | 16,686 |
+| scroll shift, before | 1,004 | 9,649 | 53,892 | 11,749 | 102,917 |
+| scroll shift, after | 906 | 11,237 | 51,112 | 11,881 | 100,595 |
+
+- **Before the change, the scan was a real share of what the phone's `firstDraw` sees.** It was
+  35% of record + recompose + apply on the heavy back and 56% on the text change. Measured against
+  the whole window, draw included, it was 7.4% and 7.7%.
+- **A small batch gains the most.** The text change's scan fell by 75% (1,538 → 389) and its record
+  + recompose + apply by 34%.
+- **The heavy back's scan fell by only 16%**, although its reads fell by 82%. What remains is
+  sampled mostly in `Object.hashCode`, the identity hash of the scopes the walk tests. That points
+  to a cost per invalidated scope or per composition, not per recorded read. The profiler samples
+  at safepoints (`Thread.getStackTrace`) and cannot split the method further: **not resolved**.
+- **Scrolling barely moves.** Its window is dominated by measuring and subcomposing the new rows
+  (about half the samples). The scan was 1% of the window before and is 1% after.
+- **Medians (60 steps) moved within the noise** of this shared machine: heavy back 0.609 → 0.618
+  ms, text change 0.416 → 0.392, simple back 0.390 → 0.355, scroll shift 3.130 → 2.762.
+
+**Not measured:** a phone (the A12 recipe above applies unchanged). keliver-material-composeui is
+unchanged: its 63 widget classes hold 218 `mutableStateOf`, about 3.5 per widget, and their
+modifier is already a plain field. The same pattern applies there. On those numbers, the estimate
+is a 70% cut in recorded reads per widget, a smaller gain than gate A's twelve reads to one, and
+it would be a hand port with the same derived-state care.
 
 ### NF4, step 1: the code load at process start, and the first request sent by the host (emulator)
 
