@@ -117,5 +117,13 @@
     "AutoMirrored.Filled.ArrowBack", "AutoMirrored.Filled.TrendingUp", "Filled.ChevronRight", "Filled.Close",
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
-  "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry"]
+  "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry"],
+  "scrollContainers": [
+    "androidx.compose.foundation.horizontalScroll(state,enabled,flingBehavior,reverseScrolling)",
+    "androidx.compose.foundation.horizontalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",
+    "androidx.compose.foundation.verticalScroll(state,enabled,flingBehavior,reverseScrolling)",
+    "androidx.compose.foundation.verticalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",
+    "androidx.compose.foundation.lazy.LazyColumn(modifier,state,contentPadding,reverseLayout,verticalArrangement,horizontalAlignment,flingBehavior,userScrollEnabled,overscrollEffect,content)",
+    "androidx.compose.foundation.lazy.LazyRow(modifier,state,contentPadding,reverseLayout,horizontalArrangement,verticalAlignment,flingBehavior,userScrollEnabled,overscrollEffect,content)"
+  ]
 }

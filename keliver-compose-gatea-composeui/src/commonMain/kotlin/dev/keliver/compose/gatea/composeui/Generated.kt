@@ -670,7 +670,7 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
       val lazyHost_content = rememberLazyHost(state)
       androidx.compose.foundation.lazy.LazyColumn(
-        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyColumn1),
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyColumn1).pressScrollContainer(state = state, enabled = userScrollEnabled),
         state = state,
         contentPadding = contentPadding,
         reverseLayout = reverseLayout,
@@ -719,7 +719,7 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
       val lazyHost_content = rememberLazyHost(state, vertical = false)
       androidx.compose.foundation.lazy.LazyRow(
-        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyRow1),
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyRow1).pressScrollContainer(state = state, enabled = userScrollEnabled),
         state = state,
         contentPadding = contentPadding,
         reverseLayout = reverseLayout,
@@ -1330,8 +1330,8 @@ internal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWid
         is GenBorder2 -> run { val border = e.border.toCompose(); val shape = e.shape.toCompose(); m.border(border = border, shape = shape) }
         is GenClickable1 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
         is GenClickable2 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
-        is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
-        is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
+        is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling).pressScrollContainer(state = state, enabled = enabled) }
+        is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling).pressScrollContainer(state = state, enabled = enabled) }
         is GenClip1 -> run { val shape = e.shape.toCompose(); m.clip(shape = shape) }
         is GenAlpha1 -> run { val alpha = e.alpha.animated(pending, "alpha"); m.alpha(alpha = alpha) }
         is GenShadow1 -> run { val elevation = e.elevation.toCompose(); val shape = e.shape.toCompose(); val clip = (if (e.clipIsDefault) elevation > 0.dp else e.clip); val ambientColor = (if (e.ambientColorIsDefault) DefaultShadowColor else e.ambientColor.toCompose()); val spotColor = (if (e.spotColorIsDefault) DefaultShadowColor else e.spotColor.toCompose()); m.shadow(elevation = elevation, shape = shape, clip = clip, ambientColor = ambientColor, spotColor = spotColor) }

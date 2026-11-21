@@ -36,7 +36,8 @@ import androidx.compose.runtime.setValue
  * shown again.
  *
  * The host's press signal ([KeliverNavPress], [prepareOnPress]) calls prepare on touch-down and
- * cancel when the press ends without a click, on a host that declares it (D2). Guest code that knows
+ * cancel when the press ends (after the click, if any: a cancel after the push is harmless), on a
+ * host that declares it (D2). Guest code that knows
  * earlier (a screen's most likely next step) may call [KeliverNavPreparation.prepare] itself.
  */
 
@@ -90,8 +91,10 @@ public class KeliverNavPreparation<K : Any> {
  * request starts 100 ms earlier) and one that uses [LaunchedWhileVisible] waits for the tap.
  *
  * Side effects run on press. Every `LaunchedEffect` and `DisposableEffect` of a prepared screen runs
- * on touch-down, and again on every press that is then cancelled (the finger moved away, a scroll
- * started on the row): a screen that records analytics ("screen viewed"), marks something as read,
+ * on touch-down, and again on every press that is then cancelled (the finger moved away, a long
+ * press, a click that did not navigate; a host waits inside scroll containers, so a scroll that
+ * starts on a row prepares nothing): a screen that loads in `LaunchedEffect` sends its request and
+ * then cancels it, and one that records analytics ("screen viewed"), marks something as read,
  * or creates something (an order, a session) in such an effect does so for screens the user never
  * opened. Put those effects in [LaunchedOnceShown], which waits for the tap and runs once (or in
  * [LaunchedWhileVisible] for work that lasts while the screen is shown). Both "about to be shown"

@@ -358,4 +358,138 @@ class KeliverNavPressTest {
       harness.close()
     }
   }
+
+  /** What the row on "home" carries: the route it prepares, and whether it is there at all. */
+  private class Row {
+    var target by mutableStateOf("detail")
+    var shown by mutableStateOf(true)
+  }
+
+  /** [KeliverNavHost] whose "home" has one row with [prepareOnPress], on a host that declares the signal. */
+  private fun pressHost(block: TestScope.(Harness, KeliverNavController<String>, Counts, RecordingPress, Row) -> Unit) = runTest {
+    val counts = Counts()
+    val harness = Harness(this, counts)
+    val nav = KeliverNavController("home")
+    val press = RecordingPress()
+    val row = Row()
+    harness.setContent {
+      CompositionLocalProvider(LocalKeliverNavPress provides press, LocalHostFeatures provides setOf(press.hostFeature)) {
+        KeliverNavHost(nav, KeliverNavRetention(PlainFrame, depth = 1)) { route ->
+          counts.compositions[route] = (counts.compositions[route] ?: 0) + 1
+          DisposableEffect(route) { onDispose { counts.disposed += route } }
+          ComposeNode<Node, TestApplier>(factory = { Node(route) }, update = {})
+          if (route == "home" && row.shown) {
+            Modifier.prepareOnPress(nav, row.target)
+          }
+        }
+      }
+    }
+    try {
+      block(harness, nav, counts, press, row)
+    } finally {
+      harness.close()
+    }
+  }
+
+  @Test
+  fun theCancelAfterAClickThatNavigatedChangesNothing() = pressHost { harness, nav, counts, press, _ ->
+    // The host sends press, click, cancel: the cancel comes after the click has navigated.
+    press.onPress!!()
+    harness.settle()
+    assertEquals(1, counts.compositions["detail"])
+    val preparedId = nav.prepared!!.id
+    counts.reset()
+    nav.navigate("detail")
+    press.onCancel!!()
+    harness.settle()
+    assertEquals(listOf("home", "detail"), nav.backstack)
+    assertEquals(preparedId, nav.entries.last().id, "the prepared entry was pushed")
+    assertEquals(emptyMap(), counts.compositions, "nothing composed again")
+    assertEquals(emptyList(), counts.disposed, "nothing dropped")
+    assertEquals(0, counts.inserts)
+  }
+
+  @Test
+  fun aClickThatDoesNotNavigateIsFollowedByTheCancel() = pressHost { harness, nav, counts, press, _ ->
+    // A long press, a disabled click, a "log in first" click: the host's cancel at the end drops it.
+    press.onPress!!()
+    harness.settle()
+    counts.reset()
+    press.onCancel!!()
+    harness.settle()
+    assertNull(nav.prepared)
+    assertEquals(listOf("detail"), counts.disposed)
+    assertEquals(listOf("home"), nav.backstack)
+  }
+
+  @Test
+  fun theCancelDropsTheRouteThatWasPressedEvenIfTheRowChanged() = pressHost { harness, nav, counts, press, row ->
+    press.onPress!!()
+    harness.settle()
+    assertEquals("detail", nav.prepared?.route)
+    // The row now opens another route (its data refreshed mid-press).
+    row.target = "other"
+    harness.settle()
+    counts.reset()
+    press.onCancel!!()
+    harness.settle()
+    assertNull(nav.prepared, "the pressed route was cancelled, not the row's new one")
+    assertEquals(listOf("detail"), counts.disposed)
+    // The next press prepares the new route.
+    press.onPress!!()
+    harness.settle()
+    assertEquals("other", nav.prepared?.route)
+  }
+
+  @Test
+  fun aRowRemovedMidPressCancelsItsPreparation() = pressHost { harness, nav, counts, press, row ->
+    press.onPress!!()
+    harness.settle()
+    assertEquals("detail", nav.prepared?.route)
+    counts.reset()
+    // The list refreshed: the row left the composition while the finger was down. The host's cancel
+    // would go to a node the guest no longer has.
+    row.shown = false
+    harness.settle()
+    assertNull(nav.prepared)
+    assertEquals(listOf("detail"), counts.disposed)
+    // A row removed without a press open cancels nothing (another row's preparation stays).
+    row.shown = true
+    harness.settle()
+    nav.prepare("elsewhere")
+    harness.settle()
+    row.shown = false
+    harness.settle()
+    assertEquals("elsewhere", nav.prepared?.route)
+  }
+
+  @Test
+  fun aPreparedStackKeepsTheCompositionWhenTheCancelArrivesWithThePush() = runTest {
+    val counts = Counts()
+    val harness = Harness(this, counts)
+    val preparation = KeliverNavPreparation<String>()
+    var keys by mutableStateOf(listOf("home"))
+    harness.setContent {
+      KeliverPreparedStack(keys, preparation, PlainFrame, depth = 1) { key ->
+        counts.compositions[key] = (counts.compositions[key] ?: 0) + 1
+        DisposableEffect(key) { onDispose { counts.disposed += key } }
+        ComposeNode<Node, TestApplier>(factory = { Node(key) }, update = {})
+      }
+    }
+    try {
+      preparation.prepare("detail")
+      harness.settle()
+      counts.reset()
+      // Click (the app pushes) and the host's cancel, in one frame.
+      keys = listOf("home", "detail")
+      preparation.cancel("detail")
+      harness.settle()
+      assertEquals("root[stack[entry(hidden)[home],entry[detail]]]", harness.root.dump())
+      assertEquals(emptyMap(), counts.compositions, "the prepared composition is the one shown")
+      assertEquals(emptyList(), counts.disposed)
+      assertEquals(0, counts.inserts)
+    } finally {
+      harness.close()
+    }
+  }
 }

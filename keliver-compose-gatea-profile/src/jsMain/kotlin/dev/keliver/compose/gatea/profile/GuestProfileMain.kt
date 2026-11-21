@@ -319,12 +319,24 @@ internal class ProfileRun(
     adapter.sendEvent(Event(Id(id), EventTag(1000), listOf(JsonPrimitive(0))))
   }
 
-  /** Open: tap row [row] of the list (live clickables: Load 20, Load 1,000, then the rows). */
+  /**
+   * Open: tap row [row] of the list (live clickables: Load 20, Load 1,000, then the rows). With
+   * [press], the host's cancel follows the click in the same event, as the host sends it at the end
+   * of every gesture that sent a press (it finds the pushed screen and drops nothing).
+   */
   fun open(row: Int): StepResult {
     check(screen == "list")
     reset()
     val start = now()
-    click(2 + row)
+    if (press) {
+      // Both before the frame: the host sends them from one up event.
+      adapter.clickables.retainAll { adapter.isLive(it) }
+      val id = adapter.clickables[2 + row]
+      adapter.sendEvent(Event(Id(id), EventTag(1000), listOf(JsonPrimitive(0))))
+      adapter.sendEvent(Event(Id(id), EventTag(1000), listOf(JsonPrimitive(CANCEL_HANDLE))))
+    } else {
+      click(2 + row)
+    }
     settle()
     screen = "detail"
     return result("open", start)

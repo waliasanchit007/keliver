@@ -502,7 +502,7 @@ class Emitter(
       for (c in w.called) {
         val n = c.param.name
         when (c.kind) {
-          ParamKind.MODIFIER -> body.append("        $n = incoming.applyGenerated(modifier, this@$cls),\n")
+          ParamKind.MODIFIER -> body.append("        $n = incoming.applyGenerated(modifier, this@$cls)${scrollContainerMark(w)},\n")
           ParamKind.SLOT -> body.append("        $n = { this@$cls.$n.Render(${if (c.param.type.receiver != null) "this" else "null"}) },\n")
           ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, p_${n}Before as Int, p_${n}After as Int, lazyHost_$n) },\n")
           ParamKind.VALUE, ParamKind.EVENT -> body.append("        $n = $n,\n")
@@ -654,6 +654,19 @@ class Emitter(
   private fun hostConversion(t: TypeRef): String =
     if (t.fq in TypeMap.generic) "toCompose<${t.args.joinToString(", ") { it.fq }}>()" else "toCompose()"
 
+  /**
+   * NF3: `.pressScrollContainer(state, enabled)` after a scroll container the config names
+   * ([Config.scrollContainers]), so a press inside it waits; empty for anything else. The renderer's
+   * locals: `state`, and `enabled` or `userScrollEnabled` when the declaration has one.
+   */
+  private fun scrollContainerMark(p: Plan.Generated): String {
+    if (p.decl.spec !in config.scrollContainers) return ""
+    val values = p.called.filter { it.kind == ParamKind.VALUE }.map { it.param.name }
+    require("state" in values) { "${p.decl.spec}: a scroll container needs a sent `state` parameter" }
+    val enabled = listOf("enabled", "userScrollEnabled").firstOrNull { it in values } ?: "true"
+    return ".pressScrollContainer(state = state, enabled = $enabled)"
+  }
+
   private fun modifierCall(mod: Plan.Generated, receiver: String, imports: MutableSet<String>): String {
     val d = mod.decl
     val args = mutableListOf<String>()
@@ -682,7 +695,7 @@ class Emitter(
         else -> {}
       }
     }
-    val call = "$receiver.${d.name}(${args.joinToString(", ")})"
+    val call = "$receiver.${d.name}(${args.joinToString(", ")})" + scrollContainerMark(mod)
     if (d.kind == DeclKind.MODIFIER) imports += "${d.pkg}.${d.name}"
     return if (locals.isEmpty()) call else "run { ${locals.joinToString("; ")}; $call }"
   }

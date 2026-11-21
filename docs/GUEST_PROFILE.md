@@ -1008,12 +1008,29 @@ step, after the frame it follows.
 2026-11-21. The press above was the driver calling `KeliverNavPreparation.prepare` itself; the host had
 no touch-down event. Now it has one in the gate-A prototype:
 - **Gate A's `ExtraPress` (modifier tag 501, an extra like `ExtraAnimated`)** carries two
-  modifier-event handles. The host's renderer (`applyExtraPress`) watches the pointer in the final
-  pass, consuming nothing, and sends `onPress` on touch-down and `onCancel` when the press ends without
-  a click: the finger lifts outside the element, a change is consumed before it lifts (a scroll
-  took it, as the clickable's own press is cancelled then), or the gesture is stopped. Both go on the
-  click's event path (the widget's modifier event), so the guest hears the press first and the click
-  after it.
+  modifier-event handles. The host's renderer (`applyExtraPress`) watches the pointer without
+  consuming anything and sends `onPress` on touch-down and `onCancel` at the end of every gesture that
+  sent a press: from the final pass of the up, after the clickable has sent its click in the main
+  pass, so a tap reaches the guest as press, click, cancel (the cancel finds the screen pushed and
+  drops nothing). So a press that did not open its screen is always dropped: the finger left the
+  element or a scroll took the gesture (cancelled at once), a button inside the row took the click, a
+  long press, a double click, a disabled clickable, a click that does not navigate, a gesture the
+  system cancelled, the element leaving the tree. Both go on the click's event path (the widget's
+  modifier event).
+- **Inside a scroll container the host waits** (review of #278; the owner's decision): the press is
+  sent once the finger has stayed within half the touch slop for 50 ms (`PressSignalTiming`, a
+  host-side default a host can change through `LocalPressSignalTiming`), and never when the finger
+  moved further first or the touch-down stopped a moving list (the container was scrolling at the
+  down). Outside scroll containers it stays immediate. The generated renderers mark the containers
+  (`gatea.json`'s `scrollContainers`: `verticalScroll`, `horizontalScroll`, `LazyColumn`, `LazyRow`
+  add `pressScrollContainer(state, enabled)`), and the press renderer looks for the nearest enabled
+  one above it. A fling that starts on a row costs the guest nothing; a tap shorter than 50 ms sends
+  the click only (composed at the click, as before). Not tuned on a phone yet: compare how long taps
+  last with how long a fling takes to pass the touch slop on the A12.
+- **keliver-nav remembers what it prepared:** `prepareOnPress` cancels the route that was pressed,
+  even if the element's route changed during the press, and cancels it itself when the element
+  leaves the composition while the finger is down (a refreshed list, a replaced row): the host's
+  cancel would then go to a node the guest no longer has and be dropped.
 - **D2:** a host declares the host feature `keliver.press@1`; the guest sends the modifier only to a
   host that does, so a host without it (any host today) gets the click only, and the screen is
   composed at the click as before.
@@ -1025,11 +1042,21 @@ no touch-down event. Now it has one in the gate-A prototype:
   first, so the host never shows it or goes back to it, and the click moves it to the top (a move,
   nothing created).
 
-Tests: `PressSignalTest` (gate A's host and guest over the real protocol, JVM: press → prepared →
-the click composes and creates nothing; press then moving off → cancel, the composition disposed; a
-scroll that takes the gesture → cancel; a host without the feature → no modifier on the wire, click
-only), `KeliverNavPressTest` (JVM and JS), and the profile's `ProfileRunTest` (the press step now
-sends the row's event).
+Tests: `PressSignalTest` (gate A's host and guest over the real protocol, JVM; each checks the
+events the guest received, in order: press, click, cancel for a tap that opens the screen, which the
+click shows without composing or creating anything; press, cancel and the composition disposed for a
+finger that moves off, a disabled click, a system-cancelled gesture; press, click, cancel for a click
+that does not navigate and press, the inner button's click, cancel for a button inside the row, both
+dropping the preparation; a host back during a press; in a scroll container, a held tap sends the
+press after the delay and a fling that starts on the row sends nothing; a host without the feature →
+no modifier on the wire, click only), `PressHostTest` (the host's renderer alone with Compose's own
+clickables: the order around a long press and a double click, an element removed mid-press, the
+clickable's interactions (its ripple) the same with and without the signal, in and out of a scroll
+container, the delay and its tuning, a tap that stops a fling), `KeliverNavPressTest` (JVM and JS:
+also the cancel after a navigating click, the pressed route cancelled after the row changed, a row
+removed mid-press), the generator's test (the containers are marked), and the profile's
+`ProfileRunTest` (the press step sends the row's event; with `press=1` the open step sends the
+click and then the cancel, as the host does).
 
 **Numbers.** Zipline's QuickJS 2021 on the Mac (`profileQuickJs`, Zipline 1.28.0 as shipped; the
 fork was not available to this run), kotlinx encoding, `viewport=10`, 3 warm-up and 30 measured

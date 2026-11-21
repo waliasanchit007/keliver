@@ -28,9 +28,13 @@ public const val PRESS_HOST_FEATURE: String = "keliver.press@1"
 
 /**
  * A Keliver extra, not Compose API: the host's press signal. [onPress] runs when a finger goes down
- * on this element, before its click (on a phone the finger stays down about 100 ms); [onCancel] when
- * that press ends without a click (the finger moved out, a scroll took the gesture). A press that
- * ends in a click calls neither again: the click follows.
+ * on this element, before its click (on a phone the finger stays down about 100 ms); inside a scroll
+ * container the host sends it only once the finger has stayed still for a moment (about 50 ms), and
+ * never for a scroll that starts on the element or a touch that stops a moving list. [onCancel] runs
+ * when that press ends, whatever ended it: after the click if there was one (the click comes first),
+ * or when the finger moved out, a scroll took the gesture, another element took the click, or the
+ * system cancelled the touch. Treat it as "the press is over": drop what [onPress] started unless
+ * the click has used it.
  *
  * Send it only to a host that declares [PRESS_HOST_FEATURE] (D2). It does not replace the click:
  * keep `clickable` for the action, and use this to start work the click is likely to need

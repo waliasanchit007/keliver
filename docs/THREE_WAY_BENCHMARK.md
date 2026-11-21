@@ -1728,9 +1728,10 @@ from the `x=scroll` run.
 
 2026-11-21. The "press signal" the NF1 gate rows above name as missing is now built in the gate-A
 prototype: gate A's `ExtraPress` modifier (tag 501), which the host answers with a press event on
-touch-down and a cancel event when the press ends without a click (the finger left the element, a
-scroll took the gesture, the gesture was stopped), both on the click's own event path and before
-it. A host declares it as the host feature `keliver.press@1`; a guest sends the modifier only to a
+touch-down (inside a scroll container, once the finger has stayed still for 50 ms; never for a
+fling that starts on a row or a touch that stops a moving list) and a cancel event at the end of
+every gesture that sent a press (after the click, if any), both on the click's own event path. A
+host declares it as the host feature `keliver.press@1`; a guest sends the modifier only to a
 host that declares it, so an older host gets the click only (D2). keliver-nav's `prepareOnPress`
 turns it into pre-composition (`KeliverNavController.prepare` under `KeliverNavHost`, or
 `KeliverPreparedStack`). Tests: `PressSignalTest` (host and guest over the real protocol on the
@@ -1740,7 +1741,9 @@ JVM). Guest-side timings on the Mac: `GUEST_PROFILE.md`, "NF3: the host's press 
 not provide the signal, so no device number is new: open on the A12 stays as in "NF1 gate, part 2"
 (about 310 ms). What a device run needs: the threeway host's `hostFeatures` to include
 `keliver.press@1`, the guest's `Main.kt` to provide `GateAPress` and a prepared stack, and the bench
-to time from the touch-down (not the click) to the detail drawn. The tap-within-one-frame target
+to time from the touch-down (not the click) to the detail drawn. Before the host declares the
+feature, measure list-scroll jank on the A12 with the press on and off, and tune the scroll delay
+(`PressSignalTiming`) against how long taps last there. The tap-within-one-frame target
 also needs the host's pressed state (the ripple), which the host draws already; the guest is not in
 that path.
 
