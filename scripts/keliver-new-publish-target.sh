@@ -27,7 +27,7 @@
 #
 # UPGRADING an app wired by an earlier tools release: run this again. A signing
 # block that is exactly one an earlier release wrote (templates/publish/legacy/:
-# 0.3.6, 0.3.7) is replaced in place by the current one, and nothing else in
+# 0.3.6, 0.3.7, 0.3.8, 0.3.18) is replaced in place by the current one, and nothing else in
 # the app is touched (keliver.portal.json included). An edited block, or any
 # other signingKeys configuration, is refused with nothing written. 0.3.7's
 # block already signed safely; 0.3.6's did not (U31). After upgrading a 0.3.6

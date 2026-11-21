@@ -55,7 +55,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import dev.keliver.Modifier as KeliverModifier
 import dev.keliver.compose.gatea.modifier.ExtraAnimated
+import dev.keliver.compose.gatea.modifier.ExtraPress
 import dev.keliver.compose.gatea.modifier.GenAlpha1
 import dev.keliver.compose.gatea.modifier.GenAnimateContentSize1
 import dev.keliver.compose.gatea.modifier.GenAnimateContentSize2
@@ -151,15 +152,18 @@ import dev.keliver.compose.wire.arg
 
 /** Calls the real `androidx.compose.foundation.layout.Box`. */
 internal class ComposeUiGenBox1 : GenBox1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_contentAlignment: Any? by mutableStateOf<Any?>(null)
-  override fun contentAlignment(contentAlignment: dev.keliver.compose.ui.Alignment) { p_contentAlignment = contentAlignment }
-  private var p_propagateMinConstraints: Any? by mutableStateOf<Any?>(null)
-  override fun propagateMinConstraints(propagateMinConstraints: kotlin.Boolean) { p_propagateMinConstraints = propagateMinConstraints }
+  private var p_contentAlignment: Any? = null
+  override fun contentAlignment(contentAlignment: dev.keliver.compose.ui.Alignment) { if (p_contentAlignment != contentAlignment) { p_contentAlignment = contentAlignment; version++ } }
+  private var p_propagateMinConstraints: Any? = null
+  override fun propagateMinConstraints(propagateMinConstraints: kotlin.Boolean) { if (p_propagateMinConstraints != propagateMinConstraints) { p_propagateMinConstraints = propagateMinConstraints; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val contentAlignment = (p_contentAlignment as dev.keliver.compose.ui.Alignment?)?.toCompose() ?: Alignment.TopStart
       val propagateMinConstraints = (p_propagateMinConstraints as kotlin.Boolean?) ?: false
@@ -175,10 +179,13 @@ internal class ComposeUiGenBox1 : GenBox1<@Composable (Modifier) -> Unit>, Gener
 
 /** Calls the real `androidx.compose.foundation.layout.Box`. */
 internal class ComposeUiGenBox2 : GenBox2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       androidx.compose.foundation.layout.Box(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenBox2),
@@ -189,15 +196,18 @@ internal class ComposeUiGenBox2 : GenBox2<@Composable (Modifier) -> Unit>, Gener
 
 /** Calls the real `androidx.compose.foundation.layout.Row`. */
 internal class ComposeUiGenRow1 : GenRow1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_horizontalArrangement: Any? by mutableStateOf<Any?>(null)
-  override fun horizontalArrangement(horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal) { p_horizontalArrangement = horizontalArrangement }
-  private var p_verticalAlignment: Any? by mutableStateOf<Any?>(null)
-  override fun verticalAlignment(verticalAlignment: dev.keliver.compose.ui.Alignment.Vertical) { p_verticalAlignment = verticalAlignment }
+  private var p_horizontalArrangement: Any? = null
+  override fun horizontalArrangement(horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal) { if (p_horizontalArrangement != horizontalArrangement) { p_horizontalArrangement = horizontalArrangement; version++ } }
+  private var p_verticalAlignment: Any? = null
+  override fun verticalAlignment(verticalAlignment: dev.keliver.compose.ui.Alignment.Vertical) { if (p_verticalAlignment != verticalAlignment) { p_verticalAlignment = verticalAlignment; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val horizontalArrangement = (p_horizontalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Horizontal?)?.toCompose() ?: Arrangement.Start
       val verticalAlignment = (p_verticalAlignment as dev.keliver.compose.ui.Alignment.Vertical?)?.toCompose() ?: Alignment.Top
@@ -213,15 +223,18 @@ internal class ComposeUiGenRow1 : GenRow1<@Composable (Modifier) -> Unit>, Gener
 
 /** Calls the real `androidx.compose.foundation.layout.Column`. */
 internal class ComposeUiGenColumn1 : GenColumn1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_verticalArrangement: Any? by mutableStateOf<Any?>(null)
-  override fun verticalArrangement(verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical) { p_verticalArrangement = verticalArrangement }
-  private var p_horizontalAlignment: Any? by mutableStateOf<Any?>(null)
-  override fun horizontalAlignment(horizontalAlignment: dev.keliver.compose.ui.Alignment.Horizontal) { p_horizontalAlignment = horizontalAlignment }
+  private var p_verticalArrangement: Any? = null
+  override fun verticalArrangement(verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical) { if (p_verticalArrangement != verticalArrangement) { p_verticalArrangement = verticalArrangement; version++ } }
+  private var p_horizontalAlignment: Any? = null
+  override fun horizontalAlignment(horizontalAlignment: dev.keliver.compose.ui.Alignment.Horizontal) { if (p_horizontalAlignment != horizontalAlignment) { p_horizontalAlignment = horizontalAlignment; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val verticalArrangement = (p_verticalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Vertical?)?.toCompose() ?: Arrangement.Top
       val horizontalAlignment = (p_horizontalAlignment as dev.keliver.compose.ui.Alignment.Horizontal?)?.toCompose() ?: Alignment.Start
@@ -237,10 +250,13 @@ internal class ComposeUiGenColumn1 : GenColumn1<@Composable (Modifier) -> Unit>,
 
 /** Calls the real `androidx.compose.foundation.layout.Spacer`. */
 internal class ComposeUiGenSpacer1 : GenSpacer1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       androidx.compose.foundation.layout.Spacer(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenSpacer1),
@@ -251,21 +267,24 @@ internal class ComposeUiGenSpacer1 : GenSpacer1<@Composable (Modifier) -> Unit>,
 
 /** Calls the real `androidx.compose.foundation.layout.FlowRow`. */
 internal class ComposeUiGenFlowRow1 : GenFlowRow1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_horizontalArrangement: Any? by mutableStateOf<Any?>(null)
-  override fun horizontalArrangement(horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal) { p_horizontalArrangement = horizontalArrangement }
-  private var p_verticalArrangement: Any? by mutableStateOf<Any?>(null)
-  override fun verticalArrangement(verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical) { p_verticalArrangement = verticalArrangement }
-  private var p_itemVerticalAlignment: Any? by mutableStateOf<Any?>(null)
-  override fun itemVerticalAlignment(itemVerticalAlignment: dev.keliver.compose.ui.Alignment.Vertical) { p_itemVerticalAlignment = itemVerticalAlignment }
-  private var p_maxItemsInEachRow: Any? by mutableStateOf<Any?>(null)
-  override fun maxItemsInEachRow(maxItemsInEachRow: kotlin.Int) { p_maxItemsInEachRow = maxItemsInEachRow }
-  private var p_maxLines: Any? by mutableStateOf<Any?>(null)
-  override fun maxLines(maxLines: kotlin.Int) { p_maxLines = maxLines }
+  private var p_horizontalArrangement: Any? = null
+  override fun horizontalArrangement(horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal) { if (p_horizontalArrangement != horizontalArrangement) { p_horizontalArrangement = horizontalArrangement; version++ } }
+  private var p_verticalArrangement: Any? = null
+  override fun verticalArrangement(verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical) { if (p_verticalArrangement != verticalArrangement) { p_verticalArrangement = verticalArrangement; version++ } }
+  private var p_itemVerticalAlignment: Any? = null
+  override fun itemVerticalAlignment(itemVerticalAlignment: dev.keliver.compose.ui.Alignment.Vertical) { if (p_itemVerticalAlignment != itemVerticalAlignment) { p_itemVerticalAlignment = itemVerticalAlignment; version++ } }
+  private var p_maxItemsInEachRow: Any? = null
+  override fun maxItemsInEachRow(maxItemsInEachRow: kotlin.Int) { if (p_maxItemsInEachRow != maxItemsInEachRow) { p_maxItemsInEachRow = maxItemsInEachRow; version++ } }
+  private var p_maxLines: Any? = null
+  override fun maxLines(maxLines: kotlin.Int) { if (p_maxLines != maxLines) { p_maxLines = maxLines; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val horizontalArrangement = (p_horizontalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Horizontal?)?.toCompose() ?: Arrangement.Start
       val verticalArrangement = (p_verticalArrangement as dev.keliver.compose.foundation.layout.Arrangement.Vertical?)?.toCompose() ?: Arrangement.Top
@@ -287,40 +306,43 @@ internal class ComposeUiGenFlowRow1 : GenFlowRow1<@Composable (Modifier) -> Unit
 
 /** A hidden overload of `androidx.compose.material3.Text` (kept for guests built before it was hidden): calls the visible one. */
 internal class ComposeUiGenText1 : GenText1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_text: Any? by mutableStateOf<Any?>(Unset)
-  override fun text(text: kotlin.String) { p_text = text }
-  private var p_color: Any? by mutableStateOf<Any?>(null)
-  override fun color(color: dev.keliver.compose.ui.graphics.Color) { p_color = color }
-  private var p_fontSize: Any? by mutableStateOf<Any?>(null)
-  override fun fontSize(fontSize: dev.keliver.compose.ui.unit.TextUnit) { p_fontSize = fontSize }
-  private var p_fontStyle: Any? by mutableStateOf<Any?>(null)
-  override fun fontStyle(fontStyle: dev.keliver.compose.ui.text.font.FontStyle?) { p_fontStyle = fontStyle }
-  private var p_fontWeight: Any? by mutableStateOf<Any?>(null)
-  override fun fontWeight(fontWeight: dev.keliver.compose.ui.text.font.FontWeight?) { p_fontWeight = fontWeight }
-  private var p_fontFamily: Any? by mutableStateOf<Any?>(null)
-  override fun fontFamily(fontFamily: dev.keliver.compose.ui.text.font.FontFamily?) { p_fontFamily = fontFamily }
-  private var p_letterSpacing: Any? by mutableStateOf<Any?>(null)
-  override fun letterSpacing(letterSpacing: dev.keliver.compose.ui.unit.TextUnit) { p_letterSpacing = letterSpacing }
-  private var p_textDecoration: Any? by mutableStateOf<Any?>(null)
-  override fun textDecoration(textDecoration: dev.keliver.compose.ui.text.style.TextDecoration?) { p_textDecoration = textDecoration }
-  private var p_textAlign: Any? by mutableStateOf<Any?>(null)
-  override fun textAlign(textAlign: dev.keliver.compose.ui.text.style.TextAlign?) { p_textAlign = textAlign }
-  private var p_lineHeight: Any? by mutableStateOf<Any?>(null)
-  override fun lineHeight(lineHeight: dev.keliver.compose.ui.unit.TextUnit) { p_lineHeight = lineHeight }
-  private var p_overflow: Any? by mutableStateOf<Any?>(null)
-  override fun overflow(overflow: dev.keliver.compose.ui.text.style.TextOverflow) { p_overflow = overflow }
-  private var p_softWrap: Any? by mutableStateOf<Any?>(null)
-  override fun softWrap(softWrap: kotlin.Boolean) { p_softWrap = softWrap }
-  private var p_maxLines: Any? by mutableStateOf<Any?>(null)
-  override fun maxLines(maxLines: kotlin.Int) { p_maxLines = maxLines }
-  private var p_minLines: Any? by mutableStateOf<Any?>(null)
-  override fun minLines(minLines: kotlin.Int) { p_minLines = minLines }
-  private var p_style: Any? by mutableStateOf<Any?>(null)
-  override fun style(style: dev.keliver.compose.ui.text.TextStyle?) { p_style = style }
+  private var p_text: Any? = Unset
+  override fun text(text: kotlin.String) { if (p_text != text) { p_text = text; version++ } }
+  private var p_color: Any? = null
+  override fun color(color: dev.keliver.compose.ui.graphics.Color) { if (p_color != color) { p_color = color; version++ } }
+  private var p_fontSize: Any? = null
+  override fun fontSize(fontSize: dev.keliver.compose.ui.unit.TextUnit) { if (p_fontSize != fontSize) { p_fontSize = fontSize; version++ } }
+  private var p_fontStyle: Any? = null
+  override fun fontStyle(fontStyle: dev.keliver.compose.ui.text.font.FontStyle?) { if (p_fontStyle != fontStyle) { p_fontStyle = fontStyle; version++ } }
+  private var p_fontWeight: Any? = null
+  override fun fontWeight(fontWeight: dev.keliver.compose.ui.text.font.FontWeight?) { if (p_fontWeight != fontWeight) { p_fontWeight = fontWeight; version++ } }
+  private var p_fontFamily: Any? = null
+  override fun fontFamily(fontFamily: dev.keliver.compose.ui.text.font.FontFamily?) { if (p_fontFamily != fontFamily) { p_fontFamily = fontFamily; version++ } }
+  private var p_letterSpacing: Any? = null
+  override fun letterSpacing(letterSpacing: dev.keliver.compose.ui.unit.TextUnit) { if (p_letterSpacing != letterSpacing) { p_letterSpacing = letterSpacing; version++ } }
+  private var p_textDecoration: Any? = null
+  override fun textDecoration(textDecoration: dev.keliver.compose.ui.text.style.TextDecoration?) { if (p_textDecoration != textDecoration) { p_textDecoration = textDecoration; version++ } }
+  private var p_textAlign: Any? = null
+  override fun textAlign(textAlign: dev.keliver.compose.ui.text.style.TextAlign?) { if (p_textAlign != textAlign) { p_textAlign = textAlign; version++ } }
+  private var p_lineHeight: Any? = null
+  override fun lineHeight(lineHeight: dev.keliver.compose.ui.unit.TextUnit) { if (p_lineHeight != lineHeight) { p_lineHeight = lineHeight; version++ } }
+  private var p_overflow: Any? = null
+  override fun overflow(overflow: dev.keliver.compose.ui.text.style.TextOverflow) { if (p_overflow != overflow) { p_overflow = overflow; version++ } }
+  private var p_softWrap: Any? = null
+  override fun softWrap(softWrap: kotlin.Boolean) { if (p_softWrap != softWrap) { p_softWrap = softWrap; version++ } }
+  private var p_maxLines: Any? = null
+  override fun maxLines(maxLines: kotlin.Int) { if (p_maxLines != maxLines) { p_maxLines = maxLines; version++ } }
+  private var p_minLines: Any? = null
+  override fun minLines(minLines: kotlin.Int) { if (p_minLines != minLines) { p_minLines = minLines; version++ } }
+  private var p_style: Any? = null
+  override fun style(style: dev.keliver.compose.ui.text.TextStyle?) { if (p_style != style) { p_style = style; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_text !== Unset) {
       val text = (p_text as kotlin.String)
       val color = (p_color as dev.keliver.compose.ui.graphics.Color?)?.toCompose() ?: Color.Unspecified
@@ -361,40 +383,43 @@ internal class ComposeUiGenText1 : GenText1<@Composable (Modifier) -> Unit>, Gen
 
 /** Calls the real `androidx.compose.material3.Text`. */
 internal class ComposeUiGenText2 : GenText2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_text: Any? by mutableStateOf<Any?>(Unset)
-  override fun text(text: kotlin.String) { p_text = text }
-  private var p_color: Any? by mutableStateOf<Any?>(null)
-  override fun color(color: dev.keliver.compose.ui.graphics.Color) { p_color = color }
-  private var p_fontSize: Any? by mutableStateOf<Any?>(null)
-  override fun fontSize(fontSize: dev.keliver.compose.ui.unit.TextUnit) { p_fontSize = fontSize }
-  private var p_fontStyle: Any? by mutableStateOf<Any?>(null)
-  override fun fontStyle(fontStyle: dev.keliver.compose.ui.text.font.FontStyle?) { p_fontStyle = fontStyle }
-  private var p_fontWeight: Any? by mutableStateOf<Any?>(null)
-  override fun fontWeight(fontWeight: dev.keliver.compose.ui.text.font.FontWeight?) { p_fontWeight = fontWeight }
-  private var p_fontFamily: Any? by mutableStateOf<Any?>(null)
-  override fun fontFamily(fontFamily: dev.keliver.compose.ui.text.font.FontFamily?) { p_fontFamily = fontFamily }
-  private var p_letterSpacing: Any? by mutableStateOf<Any?>(null)
-  override fun letterSpacing(letterSpacing: dev.keliver.compose.ui.unit.TextUnit) { p_letterSpacing = letterSpacing }
-  private var p_textDecoration: Any? by mutableStateOf<Any?>(null)
-  override fun textDecoration(textDecoration: dev.keliver.compose.ui.text.style.TextDecoration?) { p_textDecoration = textDecoration }
-  private var p_textAlign: Any? by mutableStateOf<Any?>(null)
-  override fun textAlign(textAlign: dev.keliver.compose.ui.text.style.TextAlign?) { p_textAlign = textAlign }
-  private var p_lineHeight: Any? by mutableStateOf<Any?>(null)
-  override fun lineHeight(lineHeight: dev.keliver.compose.ui.unit.TextUnit) { p_lineHeight = lineHeight }
-  private var p_overflow: Any? by mutableStateOf<Any?>(null)
-  override fun overflow(overflow: dev.keliver.compose.ui.text.style.TextOverflow) { p_overflow = overflow }
-  private var p_softWrap: Any? by mutableStateOf<Any?>(null)
-  override fun softWrap(softWrap: kotlin.Boolean) { p_softWrap = softWrap }
-  private var p_maxLines: Any? by mutableStateOf<Any?>(null)
-  override fun maxLines(maxLines: kotlin.Int) { p_maxLines = maxLines }
-  private var p_minLines: Any? by mutableStateOf<Any?>(null)
-  override fun minLines(minLines: kotlin.Int) { p_minLines = minLines }
-  private var p_style: Any? by mutableStateOf<Any?>(null)
-  override fun style(style: dev.keliver.compose.ui.text.TextStyle?) { p_style = style }
+  private var p_text: Any? = Unset
+  override fun text(text: kotlin.String) { if (p_text != text) { p_text = text; version++ } }
+  private var p_color: Any? = null
+  override fun color(color: dev.keliver.compose.ui.graphics.Color) { if (p_color != color) { p_color = color; version++ } }
+  private var p_fontSize: Any? = null
+  override fun fontSize(fontSize: dev.keliver.compose.ui.unit.TextUnit) { if (p_fontSize != fontSize) { p_fontSize = fontSize; version++ } }
+  private var p_fontStyle: Any? = null
+  override fun fontStyle(fontStyle: dev.keliver.compose.ui.text.font.FontStyle?) { if (p_fontStyle != fontStyle) { p_fontStyle = fontStyle; version++ } }
+  private var p_fontWeight: Any? = null
+  override fun fontWeight(fontWeight: dev.keliver.compose.ui.text.font.FontWeight?) { if (p_fontWeight != fontWeight) { p_fontWeight = fontWeight; version++ } }
+  private var p_fontFamily: Any? = null
+  override fun fontFamily(fontFamily: dev.keliver.compose.ui.text.font.FontFamily?) { if (p_fontFamily != fontFamily) { p_fontFamily = fontFamily; version++ } }
+  private var p_letterSpacing: Any? = null
+  override fun letterSpacing(letterSpacing: dev.keliver.compose.ui.unit.TextUnit) { if (p_letterSpacing != letterSpacing) { p_letterSpacing = letterSpacing; version++ } }
+  private var p_textDecoration: Any? = null
+  override fun textDecoration(textDecoration: dev.keliver.compose.ui.text.style.TextDecoration?) { if (p_textDecoration != textDecoration) { p_textDecoration = textDecoration; version++ } }
+  private var p_textAlign: Any? = null
+  override fun textAlign(textAlign: dev.keliver.compose.ui.text.style.TextAlign?) { if (p_textAlign != textAlign) { p_textAlign = textAlign; version++ } }
+  private var p_lineHeight: Any? = null
+  override fun lineHeight(lineHeight: dev.keliver.compose.ui.unit.TextUnit) { if (p_lineHeight != lineHeight) { p_lineHeight = lineHeight; version++ } }
+  private var p_overflow: Any? = null
+  override fun overflow(overflow: dev.keliver.compose.ui.text.style.TextOverflow) { if (p_overflow != overflow) { p_overflow = overflow; version++ } }
+  private var p_softWrap: Any? = null
+  override fun softWrap(softWrap: kotlin.Boolean) { if (p_softWrap != softWrap) { p_softWrap = softWrap; version++ } }
+  private var p_maxLines: Any? = null
+  override fun maxLines(maxLines: kotlin.Int) { if (p_maxLines != maxLines) { p_maxLines = maxLines; version++ } }
+  private var p_minLines: Any? = null
+  override fun minLines(minLines: kotlin.Int) { if (p_minLines != minLines) { p_minLines = minLines; version++ } }
+  private var p_style: Any? = null
+  override fun style(style: dev.keliver.compose.ui.text.TextStyle?) { if (p_style != style) { p_style = style; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_text !== Unset) {
       val text = (p_text as kotlin.String)
       val color = (p_color as dev.keliver.compose.ui.graphics.Color?)?.toCompose() ?: Color.Unspecified
@@ -435,16 +460,19 @@ internal class ComposeUiGenText2 : GenText2<@Composable (Modifier) -> Unit>, Gen
 
 /** Calls the real `androidx.compose.material3.Icon`. */
 internal class ComposeUiGenIcon1 : GenIcon1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_imageVector: Any? by mutableStateOf<Any?>(Unset)
-  override fun imageVector(imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector) { p_imageVector = imageVector }
-  private var p_contentDescription: Any? by mutableStateOf<Any?>(Unset)
-  override fun contentDescription(contentDescription: kotlin.String?) { p_contentDescription = contentDescription }
-  private var p_tint: Any? by mutableStateOf<Any?>(null)
-  override fun tint(tint: dev.keliver.compose.ui.graphics.Color?) { p_tint = tint }
+  private var p_imageVector: Any? = Unset
+  override fun imageVector(imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector) { if (p_imageVector != imageVector) { p_imageVector = imageVector; version++ } }
+  private var p_contentDescription: Any? = Unset
+  override fun contentDescription(contentDescription: kotlin.String?) { if (p_contentDescription != contentDescription) { p_contentDescription = contentDescription; version++ } }
+  private var p_tint: Any? = null
+  override fun tint(tint: dev.keliver.compose.ui.graphics.Color?) { if (p_tint != tint) { p_tint = tint; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_imageVector !== Unset && p_contentDescription !== Unset) {
       val imageVector = (p_imageVector as dev.keliver.compose.ui.graphics.vector.ImageVector).toCompose()
       val contentDescription = (p_contentDescription as kotlin.String?)
@@ -461,26 +489,29 @@ internal class ComposeUiGenIcon1 : GenIcon1<@Composable (Modifier) -> Unit>, Gen
 
 /** Calls the real `coil3.compose.AsyncImage`. */
 internal class ComposeUiGenAsyncImage1 : GenAsyncImage1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_model: Any? by mutableStateOf<Any?>(Unset)
-  override fun model(model: kotlin.String?) { p_model = model }
-  private var p_contentDescription: Any? by mutableStateOf<Any?>(Unset)
-  override fun contentDescription(contentDescription: kotlin.String?) { p_contentDescription = contentDescription }
-  private var p_alignment: Any? by mutableStateOf<Any?>(null)
-  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { p_alignment = alignment }
-  private var p_contentScale: Any? by mutableStateOf<Any?>(null)
-  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { p_contentScale = contentScale }
-  private var p_alpha: Any? by mutableStateOf<Any?>(null)
-  override fun alpha(alpha: kotlin.Float?) { p_alpha = alpha }
-  private var p_colorFilter: Any? by mutableStateOf<Any?>(null)
-  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { p_colorFilter = colorFilter }
-  private var p_filterQuality: Any? by mutableStateOf<Any?>(null)
-  override fun filterQuality(filterQuality: dev.keliver.compose.ui.graphics.FilterQuality?) { p_filterQuality = filterQuality }
-  private var p_clipToBounds: Any? by mutableStateOf<Any?>(null)
-  override fun clipToBounds(clipToBounds: kotlin.Boolean) { p_clipToBounds = clipToBounds }
+  private var p_model: Any? = Unset
+  override fun model(model: kotlin.String?) { if (p_model != model) { p_model = model; version++ } }
+  private var p_contentDescription: Any? = Unset
+  override fun contentDescription(contentDescription: kotlin.String?) { if (p_contentDescription != contentDescription) { p_contentDescription = contentDescription; version++ } }
+  private var p_alignment: Any? = null
+  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { if (p_alignment != alignment) { p_alignment = alignment; version++ } }
+  private var p_contentScale: Any? = null
+  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { if (p_contentScale != contentScale) { p_contentScale = contentScale; version++ } }
+  private var p_alpha: Any? = null
+  override fun alpha(alpha: kotlin.Float?) { if (p_alpha != alpha) { p_alpha = alpha; version++ } }
+  private var p_colorFilter: Any? = null
+  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { if (p_colorFilter != colorFilter) { p_colorFilter = colorFilter; version++ } }
+  private var p_filterQuality: Any? = null
+  override fun filterQuality(filterQuality: dev.keliver.compose.ui.graphics.FilterQuality?) { if (p_filterQuality != filterQuality) { p_filterQuality = filterQuality; version++ } }
+  private var p_clipToBounds: Any? = null
+  override fun clipToBounds(clipToBounds: kotlin.Boolean) { if (p_clipToBounds != clipToBounds) { p_clipToBounds = clipToBounds; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_model !== Unset && p_contentDescription !== Unset) {
       val model = (p_model as kotlin.String?)
       val contentDescription = (p_contentDescription as kotlin.String?)
@@ -507,30 +538,33 @@ internal class ComposeUiGenAsyncImage1 : GenAsyncImage1<@Composable (Modifier) -
 
 /** Calls the real `coil3.compose.AsyncImage`. */
 internal class ComposeUiGenAsyncImage2 : GenAsyncImage2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_model: Any? by mutableStateOf<Any?>(Unset)
-  override fun model(model: kotlin.String?) { p_model = model }
-  private var p_contentDescription: Any? by mutableStateOf<Any?>(Unset)
-  override fun contentDescription(contentDescription: kotlin.String?) { p_contentDescription = contentDescription }
-  private var p_placeholder: Any? by mutableStateOf<Any?>(null)
-  override fun placeholder(placeholder: dev.keliver.compose.ui.graphics.painter.Painter?) { p_placeholder = placeholder }
-  private var p_error: Any? by mutableStateOf<Any?>(null)
-  override fun error(error: dev.keliver.compose.ui.graphics.painter.Painter?) { p_error = error }
-  private var p_alignment: Any? by mutableStateOf<Any?>(null)
-  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { p_alignment = alignment }
-  private var p_contentScale: Any? by mutableStateOf<Any?>(null)
-  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { p_contentScale = contentScale }
-  private var p_alpha: Any? by mutableStateOf<Any?>(null)
-  override fun alpha(alpha: kotlin.Float?) { p_alpha = alpha }
-  private var p_colorFilter: Any? by mutableStateOf<Any?>(null)
-  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { p_colorFilter = colorFilter }
-  private var p_filterQuality: Any? by mutableStateOf<Any?>(null)
-  override fun filterQuality(filterQuality: dev.keliver.compose.ui.graphics.FilterQuality?) { p_filterQuality = filterQuality }
-  private var p_clipToBounds: Any? by mutableStateOf<Any?>(null)
-  override fun clipToBounds(clipToBounds: kotlin.Boolean) { p_clipToBounds = clipToBounds }
+  private var p_model: Any? = Unset
+  override fun model(model: kotlin.String?) { if (p_model != model) { p_model = model; version++ } }
+  private var p_contentDescription: Any? = Unset
+  override fun contentDescription(contentDescription: kotlin.String?) { if (p_contentDescription != contentDescription) { p_contentDescription = contentDescription; version++ } }
+  private var p_placeholder: Any? = null
+  override fun placeholder(placeholder: dev.keliver.compose.ui.graphics.painter.Painter?) { if (p_placeholder != placeholder) { p_placeholder = placeholder; version++ } }
+  private var p_error: Any? = null
+  override fun error(error: dev.keliver.compose.ui.graphics.painter.Painter?) { if (p_error != error) { p_error = error; version++ } }
+  private var p_alignment: Any? = null
+  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { if (p_alignment != alignment) { p_alignment = alignment; version++ } }
+  private var p_contentScale: Any? = null
+  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { if (p_contentScale != contentScale) { p_contentScale = contentScale; version++ } }
+  private var p_alpha: Any? = null
+  override fun alpha(alpha: kotlin.Float?) { if (p_alpha != alpha) { p_alpha = alpha; version++ } }
+  private var p_colorFilter: Any? = null
+  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { if (p_colorFilter != colorFilter) { p_colorFilter = colorFilter; version++ } }
+  private var p_filterQuality: Any? = null
+  override fun filterQuality(filterQuality: dev.keliver.compose.ui.graphics.FilterQuality?) { if (p_filterQuality != filterQuality) { p_filterQuality = filterQuality; version++ } }
+  private var p_clipToBounds: Any? = null
+  override fun clipToBounds(clipToBounds: kotlin.Boolean) { if (p_clipToBounds != clipToBounds) { p_clipToBounds = clipToBounds; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_model !== Unset && p_contentDescription !== Unset) {
       val model = (p_model as kotlin.String?)
       val contentDescription = (p_contentDescription as kotlin.String?)
@@ -561,22 +595,25 @@ internal class ComposeUiGenAsyncImage2 : GenAsyncImage2<@Composable (Modifier) -
 
 /** Calls the real `androidx.compose.foundation.Image`. */
 internal class ComposeUiGenImage1 : GenImage1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_painter: Any? by mutableStateOf<Any?>(Unset)
-  override fun painter(painter: dev.keliver.compose.ui.graphics.painter.Painter) { p_painter = painter }
-  private var p_contentDescription: Any? by mutableStateOf<Any?>(Unset)
-  override fun contentDescription(contentDescription: kotlin.String?) { p_contentDescription = contentDescription }
-  private var p_alignment: Any? by mutableStateOf<Any?>(null)
-  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { p_alignment = alignment }
-  private var p_contentScale: Any? by mutableStateOf<Any?>(null)
-  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { p_contentScale = contentScale }
-  private var p_alpha: Any? by mutableStateOf<Any?>(null)
-  override fun alpha(alpha: kotlin.Float?) { p_alpha = alpha }
-  private var p_colorFilter: Any? by mutableStateOf<Any?>(null)
-  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { p_colorFilter = colorFilter }
+  private var p_painter: Any? = Unset
+  override fun painter(painter: dev.keliver.compose.ui.graphics.painter.Painter) { if (p_painter != painter) { p_painter = painter; version++ } }
+  private var p_contentDescription: Any? = Unset
+  override fun contentDescription(contentDescription: kotlin.String?) { if (p_contentDescription != contentDescription) { p_contentDescription = contentDescription; version++ } }
+  private var p_alignment: Any? = null
+  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { if (p_alignment != alignment) { p_alignment = alignment; version++ } }
+  private var p_contentScale: Any? = null
+  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { if (p_contentScale != contentScale) { p_contentScale = contentScale; version++ } }
+  private var p_alpha: Any? = null
+  override fun alpha(alpha: kotlin.Float?) { if (p_alpha != alpha) { p_alpha = alpha; version++ } }
+  private var p_colorFilter: Any? = null
+  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { if (p_colorFilter != colorFilter) { p_colorFilter = colorFilter; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_painter !== Unset && p_contentDescription !== Unset) {
       val painter = (p_painter as dev.keliver.compose.ui.graphics.painter.Painter).toCompose()
       val contentDescription = (p_contentDescription as kotlin.String?)
@@ -599,22 +636,25 @@ internal class ComposeUiGenImage1 : GenImage1<@Composable (Modifier) -> Unit>, G
 
 /** Calls the real `androidx.compose.foundation.Image`. */
 internal class ComposeUiGenImage2 : GenImage2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_imageVector: Any? by mutableStateOf<Any?>(Unset)
-  override fun imageVector(imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector) { p_imageVector = imageVector }
-  private var p_contentDescription: Any? by mutableStateOf<Any?>(Unset)
-  override fun contentDescription(contentDescription: kotlin.String?) { p_contentDescription = contentDescription }
-  private var p_alignment: Any? by mutableStateOf<Any?>(null)
-  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { p_alignment = alignment }
-  private var p_contentScale: Any? by mutableStateOf<Any?>(null)
-  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { p_contentScale = contentScale }
-  private var p_alpha: Any? by mutableStateOf<Any?>(null)
-  override fun alpha(alpha: kotlin.Float?) { p_alpha = alpha }
-  private var p_colorFilter: Any? by mutableStateOf<Any?>(null)
-  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { p_colorFilter = colorFilter }
+  private var p_imageVector: Any? = Unset
+  override fun imageVector(imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector) { if (p_imageVector != imageVector) { p_imageVector = imageVector; version++ } }
+  private var p_contentDescription: Any? = Unset
+  override fun contentDescription(contentDescription: kotlin.String?) { if (p_contentDescription != contentDescription) { p_contentDescription = contentDescription; version++ } }
+  private var p_alignment: Any? = null
+  override fun alignment(alignment: dev.keliver.compose.ui.Alignment) { if (p_alignment != alignment) { p_alignment = alignment; version++ } }
+  private var p_contentScale: Any? = null
+  override fun contentScale(contentScale: dev.keliver.compose.ui.layout.ContentScale) { if (p_contentScale != contentScale) { p_contentScale = contentScale; version++ } }
+  private var p_alpha: Any? = null
+  override fun alpha(alpha: kotlin.Float?) { if (p_alpha != alpha) { p_alpha = alpha; version++ } }
+  private var p_colorFilter: Any? = null
+  override fun colorFilter(colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?) { if (p_colorFilter != colorFilter) { p_colorFilter = colorFilter; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_imageVector !== Unset && p_contentDescription !== Unset) {
       val imageVector = (p_imageVector as dev.keliver.compose.ui.graphics.vector.ImageVector).toCompose()
       val contentDescription = (p_contentDescription as kotlin.String?)
@@ -637,29 +677,32 @@ internal class ComposeUiGenImage2 : GenImage2<@Composable (Modifier) -> Unit>, G
 
 /** Calls the real `androidx.compose.foundation.lazy.LazyColumn`. */
 internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_state: Any? by mutableStateOf<Any?>(null)
-  override fun state(state: dev.keliver.compose.foundation.lazy.LazyListStateWire) { p_state = state }
-  private var p_contentPadding: Any? by mutableStateOf<Any?>(null)
-  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { p_contentPadding = contentPadding }
-  private var p_reverseLayout: Any? by mutableStateOf<Any?>(null)
-  override fun reverseLayout(reverseLayout: kotlin.Boolean) { p_reverseLayout = reverseLayout }
-  private var p_verticalArrangement: Any? by mutableStateOf<Any?>(null)
-  override fun verticalArrangement(verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical?) { p_verticalArrangement = verticalArrangement }
-  private var p_horizontalAlignment: Any? by mutableStateOf<Any?>(null)
-  override fun horizontalAlignment(horizontalAlignment: dev.keliver.compose.ui.Alignment.Horizontal) { p_horizontalAlignment = horizontalAlignment }
-  private var p_userScrollEnabled: Any? by mutableStateOf<Any?>(null)
-  override fun userScrollEnabled(userScrollEnabled: kotlin.Boolean) { p_userScrollEnabled = userScrollEnabled }
+  private var p_state: Any? = null
+  override fun state(state: dev.keliver.compose.foundation.lazy.LazyListStateWire) { if (p_state != state) { p_state = state; version++ } }
+  private var p_contentPadding: Any? = null
+  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { if (p_contentPadding != contentPadding) { p_contentPadding = contentPadding; version++ } }
+  private var p_reverseLayout: Any? = null
+  override fun reverseLayout(reverseLayout: kotlin.Boolean) { if (p_reverseLayout != reverseLayout) { p_reverseLayout = reverseLayout; version++ } }
+  private var p_verticalArrangement: Any? = null
+  override fun verticalArrangement(verticalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Vertical?) { if (p_verticalArrangement != verticalArrangement) { p_verticalArrangement = verticalArrangement; version++ } }
+  private var p_horizontalAlignment: Any? = null
+  override fun horizontalAlignment(horizontalAlignment: dev.keliver.compose.ui.Alignment.Horizontal) { if (p_horizontalAlignment != horizontalAlignment) { p_horizontalAlignment = horizontalAlignment; version++ } }
+  private var p_userScrollEnabled: Any? = null
+  override fun userScrollEnabled(userScrollEnabled: kotlin.Boolean) { if (p_userScrollEnabled != userScrollEnabled) { p_userScrollEnabled = userScrollEnabled; version++ } }
   override val content: ScopedChildren = ScopedChildren()
-  private var p_contentBefore: Any? by mutableStateOf<Any?>(0)
-  override fun contentBefore(contentBefore: kotlin.Int) { p_contentBefore = contentBefore }
-  private var p_contentAfter: Any? by mutableStateOf<Any?>(0)
-  override fun contentAfter(contentAfter: kotlin.Int) { p_contentAfter = contentAfter }
+  private var count_contentBefore by mutableIntStateOf(0)
+  override fun contentBefore(contentBefore: kotlin.Int) { count_contentBefore = contentBefore }
+  private var count_contentAfter by mutableIntStateOf(0)
+  override fun contentAfter(contentAfter: kotlin.Int) { count_contentAfter = contentAfter }
   private var p_contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)? = null
   override fun contentViewport(contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_contentViewport = contentViewport }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val state = (p_state as dev.keliver.compose.foundation.lazy.LazyListStateWire?)?.toCompose() ?: rememberLazyListState()
       val contentPadding = (p_contentPadding as dev.keliver.compose.foundation.layout.PaddingValues?)?.toCompose() ?: PaddingValues(0.dp)
@@ -669,14 +712,14 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
       val lazyHost_content = rememberLazyHost(state)
       androidx.compose.foundation.lazy.LazyColumn(
-        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyColumn1),
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyColumn1).pressScrollContainer(state = state, enabled = userScrollEnabled),
         state = state,
         contentPadding = contentPadding,
         reverseLayout = reverseLayout,
         verticalArrangement = verticalArrangement,
         horizontalAlignment = horizontalAlignment,
         userScrollEnabled = userScrollEnabled,
-        content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, p_contentBefore as Int, p_contentAfter as Int, lazyHost_content) },
+        content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, count_contentBefore, count_contentAfter, lazyHost_content) },
         flingBehavior = lazyHost_content.fling,
       )
       ReportLazyViewport(state, lazyHost_content) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }
@@ -686,29 +729,32 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
 
 /** Calls the real `androidx.compose.foundation.lazy.LazyRow`. */
 internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_state: Any? by mutableStateOf<Any?>(null)
-  override fun state(state: dev.keliver.compose.foundation.lazy.LazyListStateWire) { p_state = state }
-  private var p_contentPadding: Any? by mutableStateOf<Any?>(null)
-  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { p_contentPadding = contentPadding }
-  private var p_reverseLayout: Any? by mutableStateOf<Any?>(null)
-  override fun reverseLayout(reverseLayout: kotlin.Boolean) { p_reverseLayout = reverseLayout }
-  private var p_horizontalArrangement: Any? by mutableStateOf<Any?>(null)
-  override fun horizontalArrangement(horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal?) { p_horizontalArrangement = horizontalArrangement }
-  private var p_verticalAlignment: Any? by mutableStateOf<Any?>(null)
-  override fun verticalAlignment(verticalAlignment: dev.keliver.compose.ui.Alignment.Vertical) { p_verticalAlignment = verticalAlignment }
-  private var p_userScrollEnabled: Any? by mutableStateOf<Any?>(null)
-  override fun userScrollEnabled(userScrollEnabled: kotlin.Boolean) { p_userScrollEnabled = userScrollEnabled }
+  private var p_state: Any? = null
+  override fun state(state: dev.keliver.compose.foundation.lazy.LazyListStateWire) { if (p_state != state) { p_state = state; version++ } }
+  private var p_contentPadding: Any? = null
+  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { if (p_contentPadding != contentPadding) { p_contentPadding = contentPadding; version++ } }
+  private var p_reverseLayout: Any? = null
+  override fun reverseLayout(reverseLayout: kotlin.Boolean) { if (p_reverseLayout != reverseLayout) { p_reverseLayout = reverseLayout; version++ } }
+  private var p_horizontalArrangement: Any? = null
+  override fun horizontalArrangement(horizontalArrangement: dev.keliver.compose.foundation.layout.Arrangement.Horizontal?) { if (p_horizontalArrangement != horizontalArrangement) { p_horizontalArrangement = horizontalArrangement; version++ } }
+  private var p_verticalAlignment: Any? = null
+  override fun verticalAlignment(verticalAlignment: dev.keliver.compose.ui.Alignment.Vertical) { if (p_verticalAlignment != verticalAlignment) { p_verticalAlignment = verticalAlignment; version++ } }
+  private var p_userScrollEnabled: Any? = null
+  override fun userScrollEnabled(userScrollEnabled: kotlin.Boolean) { if (p_userScrollEnabled != userScrollEnabled) { p_userScrollEnabled = userScrollEnabled; version++ } }
   override val content: ScopedChildren = ScopedChildren()
-  private var p_contentBefore: Any? by mutableStateOf<Any?>(0)
-  override fun contentBefore(contentBefore: kotlin.Int) { p_contentBefore = contentBefore }
-  private var p_contentAfter: Any? by mutableStateOf<Any?>(0)
-  override fun contentAfter(contentAfter: kotlin.Int) { p_contentAfter = contentAfter }
+  private var count_contentBefore by mutableIntStateOf(0)
+  override fun contentBefore(contentBefore: kotlin.Int) { count_contentBefore = contentBefore }
+  private var count_contentAfter by mutableIntStateOf(0)
+  override fun contentAfter(contentAfter: kotlin.Int) { count_contentAfter = contentAfter }
   private var p_contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)? = null
   override fun contentViewport(contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_contentViewport = contentViewport }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val state = (p_state as dev.keliver.compose.foundation.lazy.LazyListStateWire?)?.toCompose() ?: rememberLazyListState()
       val contentPadding = (p_contentPadding as dev.keliver.compose.foundation.layout.PaddingValues?)?.toCompose() ?: PaddingValues(0.dp)
@@ -718,14 +764,14 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
       val lazyHost_content = rememberLazyHost(state, vertical = false)
       androidx.compose.foundation.lazy.LazyRow(
-        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyRow1),
+        modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyRow1).pressScrollContainer(state = state, enabled = userScrollEnabled),
         state = state,
         contentPadding = contentPadding,
         reverseLayout = reverseLayout,
         horizontalArrangement = horizontalArrangement,
         verticalAlignment = verticalAlignment,
         userScrollEnabled = userScrollEnabled,
-        content = { lazyWindow(this@ComposeUiGenLazyRow1.content, p_contentBefore as Int, p_contentAfter as Int, lazyHost_content) },
+        content = { lazyWindow(this@ComposeUiGenLazyRow1.content, count_contentBefore, count_contentAfter, lazyHost_content) },
         flingBehavior = lazyHost_content.fling,
       )
       ReportLazyViewport(state, lazyHost_content) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }
@@ -735,16 +781,19 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
 
 /** Calls the real `androidx.compose.material3.Icon`. */
 internal class ComposeUiGenIcon2 : GenIcon2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_painter: Any? by mutableStateOf<Any?>(Unset)
-  override fun painter(painter: dev.keliver.compose.ui.graphics.painter.Painter) { p_painter = painter }
-  private var p_contentDescription: Any? by mutableStateOf<Any?>(Unset)
-  override fun contentDescription(contentDescription: kotlin.String?) { p_contentDescription = contentDescription }
-  private var p_tint: Any? by mutableStateOf<Any?>(null)
-  override fun tint(tint: dev.keliver.compose.ui.graphics.Color?) { p_tint = tint }
+  private var p_painter: Any? = Unset
+  override fun painter(painter: dev.keliver.compose.ui.graphics.painter.Painter) { if (p_painter != painter) { p_painter = painter; version++ } }
+  private var p_contentDescription: Any? = Unset
+  override fun contentDescription(contentDescription: kotlin.String?) { if (p_contentDescription != contentDescription) { p_contentDescription = contentDescription; version++ } }
+  private var p_tint: Any? = null
+  override fun tint(tint: dev.keliver.compose.ui.graphics.Color?) { if (p_tint != tint) { p_tint = tint; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_painter !== Unset && p_contentDescription !== Unset) {
       val painter = (p_painter as dev.keliver.compose.ui.graphics.painter.Painter).toCompose()
       val contentDescription = (p_contentDescription as kotlin.String?)
@@ -761,23 +810,26 @@ internal class ComposeUiGenIcon2 : GenIcon2<@Composable (Modifier) -> Unit>, Gen
 
 /** Calls the real `androidx.compose.material3.Surface`. */
 internal class ComposeUiGenSurface1 : GenSurface1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape) { p_shape = shape }
-  private var p_color: Any? by mutableStateOf<Any?>(null)
-  override fun color(color: dev.keliver.compose.ui.graphics.Color?) { p_color = color }
-  private var p_contentColor: Any? by mutableStateOf<Any?>(null)
-  override fun contentColor(contentColor: dev.keliver.compose.ui.graphics.Color?) { p_contentColor = contentColor }
-  private var p_tonalElevation: Any? by mutableStateOf<Any?>(null)
-  override fun tonalElevation(tonalElevation: dev.keliver.compose.ui.unit.Dp) { p_tonalElevation = tonalElevation }
-  private var p_shadowElevation: Any? by mutableStateOf<Any?>(null)
-  override fun shadowElevation(shadowElevation: dev.keliver.compose.ui.unit.Dp) { p_shadowElevation = shadowElevation }
-  private var p_border: Any? by mutableStateOf<Any?>(null)
-  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { p_border = border }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape) { if (p_shape != shape) { p_shape = shape; version++ } }
+  private var p_color: Any? = null
+  override fun color(color: dev.keliver.compose.ui.graphics.Color?) { if (p_color != color) { p_color = color; version++ } }
+  private var p_contentColor: Any? = null
+  override fun contentColor(contentColor: dev.keliver.compose.ui.graphics.Color?) { if (p_contentColor != contentColor) { p_contentColor = contentColor; version++ } }
+  private var p_tonalElevation: Any? = null
+  override fun tonalElevation(tonalElevation: dev.keliver.compose.ui.unit.Dp) { if (p_tonalElevation != tonalElevation) { p_tonalElevation = tonalElevation; version++ } }
+  private var p_shadowElevation: Any? = null
+  override fun shadowElevation(shadowElevation: dev.keliver.compose.ui.unit.Dp) { if (p_shadowElevation != shadowElevation) { p_shadowElevation = shadowElevation; version++ } }
+  private var p_border: Any? = null
+  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { if (p_border != border) { p_border = border; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val shape = (p_shape as dev.keliver.compose.ui.graphics.Shape?)?.toCompose() ?: RectangleShape
       val color = (p_color as dev.keliver.compose.ui.graphics.Color?)?.toCompose() ?: MaterialTheme.colorScheme.surface
@@ -801,27 +853,30 @@ internal class ComposeUiGenSurface1 : GenSurface1<@Composable (Modifier) -> Unit
 
 /** Calls the real `androidx.compose.material3.Surface`. */
 internal class ComposeUiGenSurface2 : GenSurface2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_onClick: Any? by mutableStateOf<Any?>(null)
-  override fun onClick(onClick: (() -> Unit)?) { p_onClick = onClick }
-  private var p_enabled: Any? by mutableStateOf<Any?>(null)
-  override fun enabled(enabled: kotlin.Boolean) { p_enabled = enabled }
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape) { p_shape = shape }
-  private var p_color: Any? by mutableStateOf<Any?>(null)
-  override fun color(color: dev.keliver.compose.ui.graphics.Color?) { p_color = color }
-  private var p_contentColor: Any? by mutableStateOf<Any?>(null)
-  override fun contentColor(contentColor: dev.keliver.compose.ui.graphics.Color?) { p_contentColor = contentColor }
-  private var p_tonalElevation: Any? by mutableStateOf<Any?>(null)
-  override fun tonalElevation(tonalElevation: dev.keliver.compose.ui.unit.Dp) { p_tonalElevation = tonalElevation }
-  private var p_shadowElevation: Any? by mutableStateOf<Any?>(null)
-  override fun shadowElevation(shadowElevation: dev.keliver.compose.ui.unit.Dp) { p_shadowElevation = shadowElevation }
-  private var p_border: Any? by mutableStateOf<Any?>(null)
-  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { p_border = border }
+  private var p_onClick: Any? = null
+  override fun onClick(onClick: (() -> Unit)?) { if (p_onClick != onClick) { p_onClick = onClick; version++ } }
+  private var p_enabled: Any? = null
+  override fun enabled(enabled: kotlin.Boolean) { if (p_enabled != enabled) { p_enabled = enabled; version++ } }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape) { if (p_shape != shape) { p_shape = shape; version++ } }
+  private var p_color: Any? = null
+  override fun color(color: dev.keliver.compose.ui.graphics.Color?) { if (p_color != color) { p_color = color; version++ } }
+  private var p_contentColor: Any? = null
+  override fun contentColor(contentColor: dev.keliver.compose.ui.graphics.Color?) { if (p_contentColor != contentColor) { p_contentColor = contentColor; version++ } }
+  private var p_tonalElevation: Any? = null
+  override fun tonalElevation(tonalElevation: dev.keliver.compose.ui.unit.Dp) { if (p_tonalElevation != tonalElevation) { p_tonalElevation = tonalElevation; version++ } }
+  private var p_shadowElevation: Any? = null
+  override fun shadowElevation(shadowElevation: dev.keliver.compose.ui.unit.Dp) { if (p_shadowElevation != shadowElevation) { p_shadowElevation = shadowElevation; version++ } }
+  private var p_border: Any? = null
+  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { if (p_border != border) { p_border = border; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val onClick = (p_onClick as (() -> Unit)?) ?: {}
       val enabled = (p_enabled as kotlin.Boolean?) ?: true
@@ -849,19 +904,22 @@ internal class ComposeUiGenSurface2 : GenSurface2<@Composable (Modifier) -> Unit
 
 /** Calls the real `androidx.compose.material3.Card`. */
 internal class ComposeUiGenCard1 : GenCard1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { p_shape = shape }
-  private var p_colors: Any? by mutableStateOf<Any?>(null)
-  override fun colors(colors: dev.keliver.compose.material3.CardColors?) { p_colors = colors }
-  private var p_elevation: Any? by mutableStateOf<Any?>(null)
-  override fun elevation(elevation: dev.keliver.compose.material3.CardElevation?) { p_elevation = elevation }
-  private var p_border: Any? by mutableStateOf<Any?>(null)
-  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { p_border = border }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { if (p_shape != shape) { p_shape = shape; version++ } }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.CardColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
+  private var p_elevation: Any? = null
+  override fun elevation(elevation: dev.keliver.compose.material3.CardElevation?) { if (p_elevation != elevation) { p_elevation = elevation; version++ } }
+  private var p_border: Any? = null
+  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { if (p_border != border) { p_border = border; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val shape = (p_shape as dev.keliver.compose.ui.graphics.Shape?)?.toCompose() ?: CardDefaults.shape
       val colors = (p_colors as dev.keliver.compose.material3.CardColors?)?.toCompose() ?: CardDefaults.cardColors()
@@ -881,23 +939,26 @@ internal class ComposeUiGenCard1 : GenCard1<@Composable (Modifier) -> Unit>, Gen
 
 /** Calls the real `androidx.compose.material3.Card`. */
 internal class ComposeUiGenCard2 : GenCard2<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_onClick: Any? by mutableStateOf<Any?>(null)
-  override fun onClick(onClick: (() -> Unit)?) { p_onClick = onClick }
-  private var p_enabled: Any? by mutableStateOf<Any?>(null)
-  override fun enabled(enabled: kotlin.Boolean) { p_enabled = enabled }
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { p_shape = shape }
-  private var p_colors: Any? by mutableStateOf<Any?>(null)
-  override fun colors(colors: dev.keliver.compose.material3.CardColors?) { p_colors = colors }
-  private var p_elevation: Any? by mutableStateOf<Any?>(null)
-  override fun elevation(elevation: dev.keliver.compose.material3.CardElevation?) { p_elevation = elevation }
-  private var p_border: Any? by mutableStateOf<Any?>(null)
-  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { p_border = border }
+  private var p_onClick: Any? = null
+  override fun onClick(onClick: (() -> Unit)?) { if (p_onClick != onClick) { p_onClick = onClick; version++ } }
+  private var p_enabled: Any? = null
+  override fun enabled(enabled: kotlin.Boolean) { if (p_enabled != enabled) { p_enabled = enabled; version++ } }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { if (p_shape != shape) { p_shape = shape; version++ } }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.CardColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
+  private var p_elevation: Any? = null
+  override fun elevation(elevation: dev.keliver.compose.material3.CardElevation?) { if (p_elevation != elevation) { p_elevation = elevation; version++ } }
+  private var p_border: Any? = null
+  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { if (p_border != border) { p_border = border; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val onClick = (p_onClick as (() -> Unit)?) ?: {}
       val enabled = (p_enabled as kotlin.Boolean?) ?: true
@@ -921,25 +982,28 @@ internal class ComposeUiGenCard2 : GenCard2<@Composable (Modifier) -> Unit>, Gen
 
 /** Calls the real `androidx.compose.material3.Button`. */
 internal class ComposeUiGenButton1 : GenButton1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_onClick: Any? by mutableStateOf<Any?>(null)
-  override fun onClick(onClick: (() -> Unit)?) { p_onClick = onClick }
-  private var p_enabled: Any? by mutableStateOf<Any?>(null)
-  override fun enabled(enabled: kotlin.Boolean) { p_enabled = enabled }
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { p_shape = shape }
-  private var p_colors: Any? by mutableStateOf<Any?>(null)
-  override fun colors(colors: dev.keliver.compose.material3.ButtonColors?) { p_colors = colors }
-  private var p_elevation: Any? by mutableStateOf<Any?>(null)
-  override fun elevation(elevation: dev.keliver.compose.material3.ButtonElevation?) { p_elevation = elevation }
-  private var p_border: Any? by mutableStateOf<Any?>(null)
-  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { p_border = border }
-  private var p_contentPadding: Any? by mutableStateOf<Any?>(null)
-  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { p_contentPadding = contentPadding }
+  private var p_onClick: Any? = null
+  override fun onClick(onClick: (() -> Unit)?) { if (p_onClick != onClick) { p_onClick = onClick; version++ } }
+  private var p_enabled: Any? = null
+  override fun enabled(enabled: kotlin.Boolean) { if (p_enabled != enabled) { p_enabled = enabled; version++ } }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { if (p_shape != shape) { p_shape = shape; version++ } }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.ButtonColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
+  private var p_elevation: Any? = null
+  override fun elevation(elevation: dev.keliver.compose.material3.ButtonElevation?) { if (p_elevation != elevation) { p_elevation = elevation; version++ } }
+  private var p_border: Any? = null
+  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { if (p_border != border) { p_border = border; version++ } }
+  private var p_contentPadding: Any? = null
+  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { if (p_contentPadding != contentPadding) { p_contentPadding = contentPadding; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val onClick = (p_onClick as (() -> Unit)?) ?: {}
       val enabled = (p_enabled as kotlin.Boolean?) ?: true
@@ -965,25 +1029,28 @@ internal class ComposeUiGenButton1 : GenButton1<@Composable (Modifier) -> Unit>,
 
 /** Calls the real `androidx.compose.material3.TextButton`. */
 internal class ComposeUiGenTextButton1 : GenTextButton1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_onClick: Any? by mutableStateOf<Any?>(null)
-  override fun onClick(onClick: (() -> Unit)?) { p_onClick = onClick }
-  private var p_enabled: Any? by mutableStateOf<Any?>(null)
-  override fun enabled(enabled: kotlin.Boolean) { p_enabled = enabled }
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { p_shape = shape }
-  private var p_colors: Any? by mutableStateOf<Any?>(null)
-  override fun colors(colors: dev.keliver.compose.material3.ButtonColors?) { p_colors = colors }
-  private var p_elevation: Any? by mutableStateOf<Any?>(null)
-  override fun elevation(elevation: dev.keliver.compose.material3.ButtonElevation?) { p_elevation = elevation }
-  private var p_border: Any? by mutableStateOf<Any?>(null)
-  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { p_border = border }
-  private var p_contentPadding: Any? by mutableStateOf<Any?>(null)
-  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { p_contentPadding = contentPadding }
+  private var p_onClick: Any? = null
+  override fun onClick(onClick: (() -> Unit)?) { if (p_onClick != onClick) { p_onClick = onClick; version++ } }
+  private var p_enabled: Any? = null
+  override fun enabled(enabled: kotlin.Boolean) { if (p_enabled != enabled) { p_enabled = enabled; version++ } }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { if (p_shape != shape) { p_shape = shape; version++ } }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.ButtonColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
+  private var p_elevation: Any? = null
+  override fun elevation(elevation: dev.keliver.compose.material3.ButtonElevation?) { if (p_elevation != elevation) { p_elevation = elevation; version++ } }
+  private var p_border: Any? = null
+  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { if (p_border != border) { p_border = border; version++ } }
+  private var p_contentPadding: Any? = null
+  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { if (p_contentPadding != contentPadding) { p_contentPadding = contentPadding; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val onClick = (p_onClick as (() -> Unit)?) ?: {}
       val enabled = (p_enabled as kotlin.Boolean?) ?: true
@@ -1009,25 +1076,28 @@ internal class ComposeUiGenTextButton1 : GenTextButton1<@Composable (Modifier) -
 
 /** Calls the real `androidx.compose.material3.OutlinedButton`. */
 internal class ComposeUiGenOutlinedButton1 : GenOutlinedButton1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_onClick: Any? by mutableStateOf<Any?>(null)
-  override fun onClick(onClick: (() -> Unit)?) { p_onClick = onClick }
-  private var p_enabled: Any? by mutableStateOf<Any?>(null)
-  override fun enabled(enabled: kotlin.Boolean) { p_enabled = enabled }
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { p_shape = shape }
-  private var p_colors: Any? by mutableStateOf<Any?>(null)
-  override fun colors(colors: dev.keliver.compose.material3.ButtonColors?) { p_colors = colors }
-  private var p_elevation: Any? by mutableStateOf<Any?>(null)
-  override fun elevation(elevation: dev.keliver.compose.material3.ButtonElevation?) { p_elevation = elevation }
-  private var p_border: Any? by mutableStateOf<Any?>(null)
-  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { p_border = border }
-  private var p_contentPadding: Any? by mutableStateOf<Any?>(null)
-  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { p_contentPadding = contentPadding }
+  private var p_onClick: Any? = null
+  override fun onClick(onClick: (() -> Unit)?) { if (p_onClick != onClick) { p_onClick = onClick; version++ } }
+  private var p_enabled: Any? = null
+  override fun enabled(enabled: kotlin.Boolean) { if (p_enabled != enabled) { p_enabled = enabled; version++ } }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { if (p_shape != shape) { p_shape = shape; version++ } }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.ButtonColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
+  private var p_elevation: Any? = null
+  override fun elevation(elevation: dev.keliver.compose.material3.ButtonElevation?) { if (p_elevation != elevation) { p_elevation = elevation; version++ } }
+  private var p_border: Any? = null
+  override fun border(border: dev.keliver.compose.foundation.BorderStroke?) { if (p_border != border) { p_border = border; version++ } }
+  private var p_contentPadding: Any? = null
+  override fun contentPadding(contentPadding: dev.keliver.compose.foundation.layout.PaddingValues?) { if (p_contentPadding != contentPadding) { p_contentPadding = contentPadding; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val onClick = (p_onClick as (() -> Unit)?) ?: {}
       val enabled = (p_enabled as kotlin.Boolean?) ?: true
@@ -1053,19 +1123,22 @@ internal class ComposeUiGenOutlinedButton1 : GenOutlinedButton1<@Composable (Mod
 
 /** Calls the real `androidx.compose.material3.IconButton`. */
 internal class ComposeUiGenIconButton1 : GenIconButton1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_onClick: Any? by mutableStateOf<Any?>(null)
-  override fun onClick(onClick: (() -> Unit)?) { p_onClick = onClick }
-  private var p_enabled: Any? by mutableStateOf<Any?>(null)
-  override fun enabled(enabled: kotlin.Boolean) { p_enabled = enabled }
-  private var p_colors: Any? by mutableStateOf<Any?>(null)
-  override fun colors(colors: dev.keliver.compose.material3.IconButtonColors?) { p_colors = colors }
-  private var p_shape: Any? by mutableStateOf<Any?>(null)
-  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { p_shape = shape }
+  private var p_onClick: Any? = null
+  override fun onClick(onClick: (() -> Unit)?) { if (p_onClick != onClick) { p_onClick = onClick; version++ } }
+  private var p_enabled: Any? = null
+  override fun enabled(enabled: kotlin.Boolean) { if (p_enabled != enabled) { p_enabled = enabled; version++ } }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.IconButtonColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
+  private var p_shape: Any? = null
+  override fun shape(shape: dev.keliver.compose.ui.graphics.Shape?) { if (p_shape != shape) { p_shape = shape; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val onClick = (p_onClick as (() -> Unit)?) ?: {}
       val enabled = (p_enabled as kotlin.Boolean?) ?: true
@@ -1085,14 +1158,17 @@ internal class ComposeUiGenIconButton1 : GenIconButton1<@Composable (Modifier) -
 
 /** Calls the real `androidx.compose.material3.HorizontalDivider`. */
 internal class ComposeUiGenHorizontalDivider1 : GenHorizontalDivider1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_thickness: Any? by mutableStateOf<Any?>(null)
-  override fun thickness(thickness: dev.keliver.compose.ui.unit.Dp?) { p_thickness = thickness }
-  private var p_color: Any? by mutableStateOf<Any?>(null)
-  override fun color(color: dev.keliver.compose.ui.graphics.Color?) { p_color = color }
+  private var p_thickness: Any? = null
+  override fun thickness(thickness: dev.keliver.compose.ui.unit.Dp?) { if (p_thickness != thickness) { p_thickness = thickness; version++ } }
+  private var p_color: Any? = null
+  override fun color(color: dev.keliver.compose.ui.graphics.Color?) { if (p_color != color) { p_color = color; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val thickness = (p_thickness as dev.keliver.compose.ui.unit.Dp?)?.toCompose() ?: DividerDefaults.Thickness
       val color = (p_color as dev.keliver.compose.ui.graphics.Color?)?.toCompose() ?: DividerDefaults.color
@@ -1107,17 +1183,20 @@ internal class ComposeUiGenHorizontalDivider1 : GenHorizontalDivider1<@Composabl
 
 /** Calls the real `androidx.compose.material3.TopAppBar`. */
 internal class ComposeUiGenTopAppBar1 : GenTopAppBar1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
   override val title: ScopedChildren = ScopedChildren()
   override val navigationIcon: ScopedChildren = ScopedChildren()
   override val actions: ScopedChildren = ScopedChildren()
-  private var p_expandedHeight: Any? by mutableStateOf<Any?>(null)
-  override fun expandedHeight(expandedHeight: dev.keliver.compose.ui.unit.Dp?) { p_expandedHeight = expandedHeight }
-  private var p_colors: Any? by mutableStateOf<Any?>(null)
-  override fun colors(colors: dev.keliver.compose.material3.TopAppBarColors?) { p_colors = colors }
+  private var p_expandedHeight: Any? = null
+  override fun expandedHeight(expandedHeight: dev.keliver.compose.ui.unit.Dp?) { if (p_expandedHeight != expandedHeight) { p_expandedHeight = expandedHeight; version++ } }
+  private var p_colors: Any? = null
+  override fun colors(colors: dev.keliver.compose.material3.TopAppBarColors?) { if (p_colors != colors) { p_colors = colors; version++ } }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     run {
       val expandedHeight = (p_expandedHeight as dev.keliver.compose.ui.unit.Dp?)?.toCompose() ?: TopAppBarDefaults.TopAppBarExpandedHeight
       val colors = (p_colors as dev.keliver.compose.material3.TopAppBarColors?)?.toCompose() ?: TopAppBarDefaults.topAppBarColors()
@@ -1135,19 +1214,22 @@ internal class ComposeUiGenTopAppBar1 : GenTopAppBar1<@Composable (Modifier) -> 
 
 /** Calls the real `androidx.compose.animation.AnimatedVisibility`. */
 internal class ComposeUiGenAnimatedVisibility1 : GenAnimatedVisibility1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_visible: Any? by mutableStateOf<Any?>(Unset)
-  override fun visible(visible: kotlin.Boolean) { p_visible = visible }
-  private var p_enter: Any? by mutableStateOf<Any?>(null)
-  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { p_enter = enter }
-  private var p_exit: Any? by mutableStateOf<Any?>(null)
-  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { p_exit = exit }
-  private var p_label: Any? by mutableStateOf<Any?>(null)
-  override fun label(label: kotlin.String?) { p_label = label }
+  private var p_visible: Any? = Unset
+  override fun visible(visible: kotlin.Boolean) { if (p_visible != visible) { p_visible = visible; version++ } }
+  private var p_enter: Any? = null
+  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { if (p_enter != enter) { p_enter = enter; version++ } }
+  private var p_exit: Any? = null
+  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { if (p_exit != exit) { p_exit = exit; version++ } }
+  private var p_label: Any? = null
+  override fun label(label: kotlin.String?) { if (p_label != label) { p_label = label; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_visible !== Unset) {
       val visible = (p_visible as kotlin.Boolean)
       val enter = (p_enter as dev.keliver.compose.animation.EnterTransition?)?.toCompose() ?: fadeIn() + expandIn()
@@ -1167,19 +1249,22 @@ internal class ComposeUiGenAnimatedVisibility1 : GenAnimatedVisibility1<@Composa
 
 /** Calls the real `androidx.compose.animation.AnimatedVisibility`. */
 internal class ComposeUiGenColumnScopeAnimatedVisibility1 : GenColumnScopeAnimatedVisibility1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_visible: Any? by mutableStateOf<Any?>(Unset)
-  override fun visible(visible: kotlin.Boolean) { p_visible = visible }
-  private var p_enter: Any? by mutableStateOf<Any?>(null)
-  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { p_enter = enter }
-  private var p_exit: Any? by mutableStateOf<Any?>(null)
-  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { p_exit = exit }
-  private var p_label: Any? by mutableStateOf<Any?>(null)
-  override fun label(label: kotlin.String?) { p_label = label }
+  private var p_visible: Any? = Unset
+  override fun visible(visible: kotlin.Boolean) { if (p_visible != visible) { p_visible = visible; version++ } }
+  private var p_enter: Any? = null
+  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { if (p_enter != enter) { p_enter = enter; version++ } }
+  private var p_exit: Any? = null
+  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { if (p_exit != exit) { p_exit = exit; version++ } }
+  private var p_label: Any? = null
+  override fun label(label: kotlin.String?) { if (p_label != label) { p_label = label; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_visible !== Unset) {
       val visible = (p_visible as kotlin.Boolean)
       val enter = (p_enter as dev.keliver.compose.animation.EnterTransition?)?.toCompose() ?: fadeIn() + expandVertically()
@@ -1199,19 +1284,22 @@ internal class ComposeUiGenColumnScopeAnimatedVisibility1 : GenColumnScopeAnimat
 
 /** Calls the real `androidx.compose.animation.AnimatedVisibility`. */
 internal class ComposeUiGenRowScopeAnimatedVisibility1 : GenRowScopeAnimatedVisibility1<@Composable (Modifier) -> Unit>, GeneratedWidget {
-  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)
+  private var version by mutableIntStateOf(0)
+  override var modifier: KeliverModifier = KeliverModifier
+    set(value) { if (field != value) { field = value; version++ } }
   override var modifierEventSink: ((Int) -> Unit)? = null
-  private var p_visible: Any? by mutableStateOf<Any?>(Unset)
-  override fun visible(visible: kotlin.Boolean) { p_visible = visible }
-  private var p_enter: Any? by mutableStateOf<Any?>(null)
-  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { p_enter = enter }
-  private var p_exit: Any? by mutableStateOf<Any?>(null)
-  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { p_exit = exit }
-  private var p_label: Any? by mutableStateOf<Any?>(null)
-  override fun label(label: kotlin.String?) { p_label = label }
+  private var p_visible: Any? = Unset
+  override fun visible(visible: kotlin.Boolean) { if (p_visible != visible) { p_visible = visible; version++ } }
+  private var p_enter: Any? = null
+  override fun enter(enter: dev.keliver.compose.animation.EnterTransition?) { if (p_enter != enter) { p_enter = enter; version++ } }
+  private var p_exit: Any? = null
+  override fun exit(exit: dev.keliver.compose.animation.ExitTransition?) { if (p_exit != exit) { p_exit = exit; version++ } }
+  private var p_label: Any? = null
+  override fun label(label: kotlin.String?) { if (p_label != label) { p_label = label; version++ } }
   override val content: ScopedChildren = ScopedChildren()
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
   override val value: @Composable (Modifier) -> Unit = { incoming ->
+    version
     if (p_visible !== Unset) {
       val visible = (p_visible as kotlin.Boolean)
       val enter = (p_enter as dev.keliver.compose.animation.EnterTransition?)?.toCompose() ?: fadeIn() + expandHorizontally()
@@ -1291,6 +1379,7 @@ public class ComposeUiKeliverComposeGateAWidgetFactory : KeliverComposeGateAWidg
   override fun GenAnimateContentSize1(value: @Composable (Modifier) -> Unit, modifier: GenAnimateContentSize1) {}
   override fun GenAnimateContentSize2(value: @Composable (Modifier) -> Unit, modifier: GenAnimateContentSize2) {}
   override fun ExtraAnimated(value: @Composable (Modifier) -> Unit, modifier: ExtraAnimated) {}
+  override fun ExtraPress(value: @Composable (Modifier) -> Unit, modifier: ExtraPress) {}
 }
 
 /** Applies a generated widget's own (unscoped) generated modifiers, in the guest's order. */
@@ -1328,8 +1417,8 @@ internal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWid
         is GenBorder2 -> run { val border = e.border.toCompose(); val shape = e.shape.toCompose(); m.border(border = border, shape = shape) }
         is GenClickable1 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
         is GenClickable2 -> run { val enabled = e.enabled; val handle = e.onClick; m.clickable(enabled = enabled, onClick = { owner?.modifierEventSink?.invoke(handle) }) }
-        is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
-        is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling) }
+        is GenHorizontalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.horizontalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling).pressScrollContainer(state = state, enabled = enabled) }
+        is GenVerticalScroll1 -> run { val state = e.state.toCompose(); val enabled = e.enabled; val reverseScrolling = e.reverseScrolling; m.verticalScroll(state = state, enabled = enabled, reverseScrolling = reverseScrolling).pressScrollContainer(state = state, enabled = enabled) }
         is GenClip1 -> run { val shape = e.shape.toCompose(); m.clip(shape = shape) }
         is GenAlpha1 -> run { val alpha = e.alpha.animated(pending, "alpha"); m.alpha(alpha = alpha) }
         is GenShadow1 -> run { val elevation = e.elevation.toCompose(); val shape = e.shape.toCompose(); val clip = (if (e.clipIsDefault) elevation > 0.dp else e.clip); val ambientColor = (if (e.ambientColorIsDefault) DefaultShadowColor else e.ambientColor.toCompose()); val spotColor = (if (e.spotColorIsDefault) DefaultShadowColor else e.spotColor.toCompose()); m.shadow(elevation = elevation, shape = shape, clip = clip, ambientColor = ambientColor, spotColor = spotColor) }
@@ -1338,6 +1427,7 @@ internal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWid
         is GenScale1 -> run { val scale = e.scale.animated(pending, "scale"); m.scale(scale = scale) }
         is GenAnimateContentSize1 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); m.animateContentSize(animationSpec = animationSpec) }
         is GenAnimateContentSize2 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); val alignment = e.alignment.toCompose(); m.animateContentSize(animationSpec = animationSpec, alignment = alignment) }
+        is ExtraPress -> m.applyExtraPress(e, owner)
         else -> m
       }
     }

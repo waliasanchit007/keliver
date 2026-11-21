@@ -1,0 +1,440 @@
+/*
+ * The bundle server's index, bundles/index.json (W3 in Keliver's
+ * docs/DELIVERY_PLAN.md). Written by keliver-publish for a static server or CDN,
+ * and served by the Keliver relay. The SAME file is in the Android and the iOS
+ * host; keep them identical.
+ *
+ * The index is not signed and doesn't need to be for integrity: what runs is
+ * decided by the manifest, which Zipline verifies against this host's key.
+ * `manifestSha256` ties an entry to the exact manifest its publisher meant, and
+ * is checked on the bytes Zipline loads (ManifestPinningHttpClient).
+ *
+ * Rollback protection (W4): every manifest keliver-publish or the relay
+ * publishes carries its sequence in its SIGNED metadata ("keliver.sequence").
+ * The host remembers the highest sequence it has run (its floor) and refuses a
+ * manifest below it, or one without a sequence once the floor is above 0, on
+ * the network (ManifestPinningHttpClient) and on a cache start. The floor rises
+ * only after a load succeeded, so after Zipline verified that sequence's
+ * signature. Not protected: a reinstall or cleared app data resets the floor.
+ *
+ * Bridges (B4, docs/BRIDGE_CODEGEN_DESIGN.md): a bundle that calls an app's generated bridges
+ * names them, with the oldest version it can talk to, in its SIGNED metadata
+ * ("keliver.bridges"), and its index entry carries the same as the `bridges` constraint (which
+ * hosts from before B4 skip). A host serves the bridges its app declares (B5, Bridges.kt; each
+ * host passes its own as [HostFacts.bridges], known before its first lookup); it skips an
+ * entry, and refuses a manifest, that needs one it does not serve, at a newer version, or (at
+ * the same version) built against another contract shape.
+ */
+package @@PACKAGE@@
+
+import app.cash.zipline.loader.ZiplineHttpClient
+import kotlin.concurrent.Volatile
+import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
+import okio.ByteString
+import okio.ByteString.Companion.encodeUtf8
+import okio.IOException
+
+/** The widget protocol version this host renders. */
+internal const val HOST_WIDGET_VERSION = 1
+
+/**
+ * The whole bundle lookup's time budget: the index and, on a 404 for it, the
+ * relay's bundles/latest share it, so a slow 404 and a slow fallback never add
+ * up to two timeouts. Offline, this is how long the app waits before it starts
+ * from the cache.
+ */
+internal const val LOOKUP_BUDGET_MILLIS = 10_000L
+
+/**
+ * The largest index (or bundles/latest answer) a host reads. Each published
+ * sequence adds an entry of a few hundred bytes, so 1 MiB is thousands of
+ * them; anything larger is refused rather than held in memory.
+ */
+internal const val MAX_INDEX_BYTES = 1L shl 20
+
+/**
+ * The base channel. An entry without a channel is on it, and every host takes it:
+ * a host built for another channel (HostConfig / BuildConfig, W4.4) takes that
+ * channel's entries AND stable's, so it is never behind stable.
+ */
+internal const val DEFAULT_CHANNEL = "stable"
+
+/**
+ * Constraint keys this host understands (W4.5). An entry carrying any other is
+ * skipped, so a constraint added later never reaches a host that can't honour it.
+ */
+private val KNOWN_CONSTRAINTS = setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")
+
+/**
+ * What an entry's constraints are checked against (W4.5): this install's random
+ * id (generated once, kept on the device, never sent anywhere), this host build's
+ * version (Android versionCode, iOS CFBundleVersion; null when it is not an
+ * integer), and the rollback floor.
+ */
+internal data class HostFacts(
+  val installId: String,
+  val hostVersion: Long?,
+  val floor: Long,
+  /**
+   * The bridges this host serves ([servedBridgesOf] the app's configuration, B5), known before
+   * its first lookup: binding happens after the lookup, the cache check and the manifest check,
+   * so bridges recorded at bind would make a cold start refuse a bundle it can serve. Each host
+   * passes its own; none (the default) skips every entry, and refuses every manifest, that needs one.
+   */
+  val bridges: Map<String, HostBridge> = emptyMap(),
+)
+
+/** A bridge this host serves: its contract version and shape (a generated `<Name>Bridge`'s VERSION and SHAPE). */
+internal data class HostBridge(val version: Int, val shape: String?)
+
+/** One bridge an app declares (B5): a generated `<Name>Bridge`'s NAME, VERSION and SHAPE. */
+internal data class DeclaredBridge(val name: String, val version: Int, val shape: String?)
+
+/** Services the host binds itself: a bridge cannot take their names. */
+internal val HOST_SERVICE_NAMES = setOf("HostSqlDriver", "HostHttp")
+
+/**
+ * Names that start with this are the host's own (the timing service a debug build binds, and any
+ * later one), so a bridge cannot take them either. A prefix, not the timing service's own name:
+ * the release checks look for that name in a store build's code.
+ */
+internal const val HOST_SERVICE_PREFIX = "Keliver"
+
+private val BRIDGE_SHAPE = Regex("[0-9a-f]{16}")
+
+/**
+ * The bridges an app declares, as the map the gate reads ([HostFacts.bridges]). Throws
+ * IllegalArgumentException for a list the host must not serve, an app's programming error: a
+ * name a bundle's `keliver.bridges` could not carry, a version below 1 or above what that value
+ * can carry, a shape that is not a generated SHAPE (16 lowercase hex digits), a name twice, or a
+ * name the host binds itself or keeps for itself ([HOST_SERVICE_PREFIX]).
+ */
+internal fun servedBridgesOf(declared: List<DeclaredBridge>): Map<String, HostBridge> {
+  val served = linkedMapOf<String, HostBridge>()
+  for (b in declared) {
+    require(BRIDGE_NAME.matches(b.name)) { "bridge \"${b.name}\": not a bridge name (a generated <Name>Bridge.NAME)" }
+    require(b.name !in HOST_SERVICE_NAMES) { "bridge \"${b.name}\": the host binds a service of that name itself" }
+    require(!b.name.startsWith(HOST_SERVICE_PREFIX)) { "bridge \"${b.name}\": names starting with $HOST_SERVICE_PREFIX are the host's own" }
+    require(b.version in 1..999_999_999) { "bridge ${b.name}: version ${b.version} is outside 1..999999999" }
+    require(b.shape == null || BRIDGE_SHAPE.matches(b.shape)) { "bridge ${b.name}: shape \"${b.shape}\" is not a generated SHAPE (16 lowercase hex digits)" }
+    require(served.put(b.name, HostBridge(b.version, b.shape)) == null) { "bridge ${b.name}: declared twice" }
+  }
+  return served
+}
+
+/** A bridge a bundle needs: the oldest version it can talk to, and the shape it was built against. */
+internal data class NeededBridge(val min: Int, val shape: String?)
+
+/** The manifest metadata key that carries the bridges a bundle calls, inside the signed part of the manifest. */
+internal const val BRIDGES_METADATA_KEY = "keliver.bridges"
+private val BRIDGE_NAME = Regex("[A-Za-z_][A-Za-z0-9_.]*")
+private val BRIDGE_ITEM = Regex("(${BRIDGE_NAME.pattern})@([1-9][0-9]{0,8})(?:#([0-9a-f]{16}))?")
+
+/**
+ * The bridges in a `keliver.bridges` value (`ShopActions@2#cd5829702ffe49be,Other@1`), or null
+ * when it is malformed (an unknown form, a name twice). An empty value needs none.
+ */
+internal fun parseBridges(value: String): Map<String, NeededBridge>? {
+  if (value.isEmpty()) return emptyMap()
+  val needed = linkedMapOf<String, NeededBridge>()
+  for (item in value.split(',')) {
+    val m = BRIDGE_ITEM.matchEntire(item) ?: return null
+    if (needed.put(m.groupValues[1], NeededBridge(m.groupValues[2].toInt(), m.groupValues[3].ifEmpty { null })) != null) return null
+  }
+  return needed
+}
+
+/** Why a bundle needing [needed] must not run on a host serving [served], or null when it may. */
+internal fun bridgeProblem(needed: Map<String, NeededBridge>, served: Map<String, HostBridge>): String? {
+  for ((name, need) in needed) {
+    val have = served[name]
+    when {
+      have == null -> return "bridge refused: the bundle needs $name@${need.min}, which this host does not serve"
+      have.version < need.min -> return "bridge refused: the bundle needs $name@${need.min}; this host serves version ${have.version}"
+      have.version == need.min && need.shape != null && have.shape != null && need.shape != have.shape ->
+        return "bridge refused: the bundle was built against another $name@${need.min} contract (shape ${need.shape}; this host's is ${have.shape})"
+    }
+  }
+  return null
+}
+
+/** The same check on a manifest's `keliver.bridges` [value] (null: the bundle needs none). */
+internal fun manifestBridgeProblem(value: String?, served: Map<String, HostBridge>): String? {
+  if (value == null) return null
+  val needed = parseBridges(value) ?: return "bridge refused: malformed $BRIDGES_METADATA_KEY"
+  return bridgeProblem(needed, served)
+}
+
+/** A manifest's `keliver.bridges`, read from its JSON before Zipline has verified it: used only to refuse. */
+internal fun manifestBridges(manifestJson: String): String? = runCatching {
+  val metadata = (Json.parseToJsonElement(manifestJson) as JsonObject)["metadata"] as? JsonObject
+  val value = metadata?.get(BRIDGES_METADATA_KEY) ?: return@runCatching null
+  // Present but not a string: malformed, never "needs none".
+  (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: "\u0000"
+}.getOrElse { null }
+
+/**
+ * The install's bucket for a staged rollout of [sequence], 0..99: the first four
+ * bytes of sha256("<installId>:<sequence>") as an unsigned number, mod 100. An
+ * entry at rollout R reaches the installs whose bucket is below R; each sequence
+ * draws its own buckets.
+ */
+internal fun rolloutBucket(installId: String, sequence: Long): Int {
+  val h = "$installId:$sequence".encodeUtf8().sha256()
+  val first = ((h[0].toLong() and 0xff) shl 24) or ((h[1].toLong() and 0xff) shl 16) or
+    ((h[2].toLong() and 0xff) shl 8) or (h[3].toLong() and 0xff)
+  return (first % 100).toInt()
+}
+
+private val SEGMENT = Regex("[A-Za-z0-9._-]+")
+private val SHA256 = Regex("[0-9a-f]{64}")
+private val SHAPE = Regex("[0-9a-f]{16}")
+
+/** The manifest metadata key that carries the publish sequence, inside the signed part of the manifest. */
+internal const val SEQUENCE_METADATA_KEY = "keliver.sequence"
+private val SEQUENCE_TEXT = Regex("[1-9][0-9]{0,17}")
+
+/** The signed sequence in a (verified) manifest's metadata; null when absent or malformed. */
+internal fun manifestSequence(metadata: Map<String, String>): Long? =
+  metadata[SEQUENCE_METADATA_KEY]?.takeIf { SEQUENCE_TEXT.matches(it) }?.toLong()
+
+/** The same, read from a manifest's JSON before Zipline has verified it: used only to refuse. */
+internal fun manifestSequence(manifestJson: String): Long? = runCatching {
+  val metadata = (Json.parseToJsonElement(manifestJson) as JsonObject)["metadata"] as? JsonObject
+  (metadata?.get(SEQUENCE_METADATA_KEY) as? JsonPrimitive)?.takeIf { it.isString }?.content
+}.getOrNull()?.takeIf { SEQUENCE_TEXT.matches(it) }?.toLong()
+
+/** Why a manifest at [sequence] must not run on a host whose floor is [floor], or null when it may. */
+internal fun rollbackProblem(sequence: Long?, floor: Long): String? = when {
+  floor <= 0 -> null
+  sequence == null -> "rollback refused: the manifest carries no signed sequence, and this host has run sequence $floor"
+  sequence < floor -> "rollback refused: sequence $sequence is below $floor, the highest this host has run"
+  else -> null
+}
+
+/** The newest usable entry: its channel, manifest path (relative to `<server>/bundles/`) and that manifest's sha256. */
+internal data class IndexPick(val sequence: Long, val manifestPath: String, val manifestSha256: String, val channel: String = DEFAULT_CHANNEL)
+
+/**
+ * The entry this host should load from [indexJson], or a reason there is none.
+ *
+ * An entry is usable when its channel is [channel] or [DEFAULT_CHANNEL], it carries no constraint
+ * this host doesn't know, its constraints admit [facts], its widget version is
+ * at most [widgetVersion], every capability it requires is in [capabilities],
+ * and its manifest path and sha256 are well formed. Of those, the highest
+ * `sequence` wins. `format`, `sequence`, `widgetVersion` and the constraints are
+ * JSON numbers; a quoted number makes the entry (or the index) unusable.
+ *
+ * Constraints (W4.5):
+ * - `minHostVersion` / `maxHostVersion`: this host's version must be within
+ *   them; a host whose version is unknown skips any entry that has them.
+ * - `rollout` (0..100): only installs whose [rolloutBucket] is below it. It
+ *   gates only sequences above the host's floor: a host that has already run a
+ *   sequence keeps it when its rollout is lowered or halted.
+ */
+internal fun pickFromIndex(
+  indexJson: String,
+  capabilities: Collection<String>,
+  widgetVersion: Int = HOST_WIDGET_VERSION,
+  channel: String = DEFAULT_CHANNEL,
+  facts: HostFacts = HostFacts(installId = "", hostVersion = null, floor = 0),
+): Result<IndexPick> = runCatching {
+  // The hosts stop reading past MAX_INDEX_BYTES; this holds for any other caller.
+  // (A string longer than that in chars is longer in UTF-8 bytes too.)
+  if (indexJson.length > MAX_INDEX_BYTES) throw IOException("the index is larger than $MAX_INDEX_BYTES bytes")
+  val root = Json.parseToJsonElement(indexJson) as? JsonObject ?: throw IOException("the index is not a JSON object")
+  val format = (root["format"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull
+  if (format != 1) throw IOException("index format $format is not 1")
+  val entries = root["entries"] as? JsonArray ?: throw IOException("the index has no entries")
+  entries.mapNotNull { usable(it as? JsonObject ?: return@mapNotNull null, capabilities, widgetVersion, channel, facts) }
+    .maxByOrNull { it.sequence }
+    ?: throw IOException("no compatible entry among ${entries.size} (channel $channel, widget version $widgetVersion, capabilities $capabilities)")
+}
+
+private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersion: Int, channel: String, facts: HostFacts): IndexPick? {
+  // Numbers are JSON numbers: "8" (a string) is not a sequence, a widget version or a constraint.
+  val sequence = (e["sequence"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.takeIf { it > 0 } ?: return null
+  val entryChannel = when (val c = e["channel"]) {
+    null -> DEFAULT_CHANNEL
+    else -> (c as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
+  }
+  if (entryChannel != channel && entryChannel != DEFAULT_CHANNEL) return null
+  when (val c = e["constraints"]) {
+    null -> Unit
+    is JsonObject -> if (!KNOWN_CONSTRAINTS.containsAll(c.keys) || !admits(c, sequence, facts)) return null
+    else -> return null
+  }
+  val wv = (e["widgetVersion"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull ?: return null
+  if (wv > widgetVersion) return null
+  val required = (e["capabilities"] as? JsonArray ?: return null).map {
+    (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content ?: return null
+  }
+  if (!capabilities.containsAll(required)) return null
+  val manifest = (e["manifest"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
+  if (!manifestPathOk(manifest)) return null
+  val sha = (e["manifestSha256"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.lowercase() ?: return null
+  if (!SHA256.matches(sha)) return null
+  return IndexPick(sequence, manifest, sha, entryChannel)
+}
+
+/** Whether [constraints] (only known keys) admit this host for [sequence]. A malformed value admits nobody. */
+private fun admits(constraints: JsonObject, sequence: Long, facts: HostFacts): Boolean {
+  fun number(key: String): Long? = (constraints[key] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull
+  if ("minHostVersion" in constraints) {
+    val min = number("minHostVersion") ?: return false
+    if (facts.hostVersion == null || facts.hostVersion < min) return false
+  }
+  if ("maxHostVersion" in constraints) {
+    val max = number("maxHostVersion") ?: return false
+    if (facts.hostVersion == null || facts.hostVersion > max) return false
+  }
+  if ("rollout" in constraints) {
+    val rollout = number("rollout")?.takeIf { it in 0..100 } ?: return false
+    if (sequence > facts.floor && rolloutBucket(facts.installId, sequence) >= rollout) return false
+  }
+  if ("bridges" in constraints) {
+    val needed = indexBridges(constraints["bridges"]) ?: return false
+    if (bridgeProblem(needed, facts.bridges) != null) return false
+  }
+  return true
+}
+
+/** An entry's `bridges` constraint (`{"ShopActions": {"min": 2, "shape": "…"}}`), or null when malformed. */
+private fun indexBridges(element: Any?): Map<String, NeededBridge>? {
+  val o = element as? JsonObject ?: return null
+  return o.mapValues { (name, v) ->
+    if (!BRIDGE_NAME.matches(name)) return null
+    val b = v as? JsonObject ?: return null
+    if (!setOf("min", "shape").containsAll(b.keys)) return null
+    val min = (b["min"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull?.takeIf { it >= 1 } ?: return null
+    val shape = when (val sh = b["shape"]) {
+      null -> null
+      else -> (sh as? JsonPrimitive)?.takeIf { it.isString && SHAPE.matches(it.content) }?.content ?: return null
+    }
+    NeededBridge(min, shape)
+  }
+}
+
+/** A relative path under bundles/: no scheme, no leading '/', no '.' or '..' segment. */
+internal fun manifestPathOk(path: String): Boolean =
+  path.split('/').all { SEGMENT.matches(it) && it != "." && it != ".." }
+
+/**
+ * Zipline's HTTP client, with the manifest at [manifestUrl] held to [sha256]
+ * (when the index gave one) and to the rollback floor, read from [floor] at the
+ * moment the manifest arrives (a restart after a crash sees a floor raised since
+ * the host started). Both checks run on the
+ * very bytes Zipline then verifies and loads, so there is no second fetch to
+ * differ from the first. They only ever refuse: a sequence read here is not yet
+ * verified, so it never raises the floor. Every other download is unchanged.
+ *
+ * [pin] adds another manifest to check (W5: an update, or the fall-back to the
+ * last good bundle) before the host hands Zipline its URL. Earlier pins stay:
+ * a download still in flight for one of them is checked as before, and a pin
+ * without a hash never erases one a URL already has. The host's one Treehouse
+ * app keeps this one client for its whole life. Called from one thread (the
+ * host's main thread).
+ */
+internal class ManifestPinningHttpClient(
+  private val delegate: ZiplineHttpClient,
+  manifestUrl: String,
+  sha256: String?,
+  private val floor: () -> Long = { 0 },
+  private val bridges: () -> Map<String, HostBridge> = { emptyMap() },
+) : ZiplineHttpClient() {
+  /** Manifest URL -> the sha256 the index holds it to (null: the floor only). Copied on write. */
+  @Volatile private var pinned: Map<String, String?> = mapOf(manifestUrl to sha256)
+
+  /**
+   * Hold [manifestUrl] to [sha256] and to the floor. A null [sha256] (no index
+   * hash: the last good bundle's URL) keeps a hash the URL is already held to.
+   */
+  fun pin(manifestUrl: String, sha256: String?) {
+    pinned = pinned + (manifestUrl to (sha256 ?: pinned[manifestUrl]))
+  }
+
+  /** The sha256 [manifestUrl] is held to, or null (none, or not pinned). */
+  fun pinnedSha256(manifestUrl: String): String? = pinned[manifestUrl]
+
+  override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString {
+    val body = delegate.download(url, requestHeaders)
+    val pinned = pinned
+    if (url in pinned) {
+      val sha256 = pinned[url]
+      if (sha256 != null) {
+        val actual = body.sha256().hex()
+        if (actual != sha256) throw IOException("manifest sha256 mismatch: $url is $actual, the index says $sha256")
+      }
+      val json = body.utf8()
+      rollbackProblem(manifestSequence(json), floor())?.let { throw IOException(it) }
+      manifestBridgeProblem(manifestBridges(json), bridges())?.let { throw IOException(it) }
+    }
+    return body
+  }
+
+  override suspend fun openDevelopmentServerWebSocket(
+    url: String,
+    requestHeaders: List<Pair<String, String>>,
+  ): Flow<String> = delegate.openDevelopmentServerWebSocket(url, requestHeaders)
+}
+
+/**
+ * The reason a report sends off the device (W6): a fixed category, never the
+ * exception text, which can carry addresses, file paths or URLs. The full text
+ * stays with the app (KeliverHost.reports / Keliver.onReport).
+ */
+internal fun reportReason(outcome: String, detail: String): String {
+  val d = detail.lowercase()
+  return when {
+    outcome == "refused" -> "config"
+    outcome == "screen-failed" -> "exception"
+    d.isEmpty() -> ""
+    "sha256 mismatch" in d -> "sha256-mismatch"
+    "rollback refused" in d -> "below-floor"
+    // Before "signature": a bridge's text can name a contract, never a signature.
+    "bridge bind failed" in d -> "bridge-bind"
+    "bridge refused: the bundle was built against another" in d -> "bridge-shape"
+    "bridge refused" in d -> "bridge-missing"
+    "signature" in d || "verif" in d -> "signature"
+    "lookup failed" in d || "nothing is cached" in d -> "lookup-failed"
+    listOf("timeout", "timed out", "connect", "unreachable", "resolve", "unknownhost", "network", "offline", "reset").any { it in d } -> "network"
+    else -> "other"
+  }
+}
+
+/*
+ * W8, signing-key rotation (docs/KEY_ROTATION.md). A host trusts this app's key
+ * and, during a rotation, the next one. Zipline 1.22's ManifestVerifier checks
+ * only the FIRST signature in a manifest whose name the host trusts, and fails
+ * if that one does not verify, so a name must mean the same key to every host
+ * and every signer: each key signs under a name of its own, made from its first
+ * 16 hex digits, and those signatures come first. The signing block then adds
+ * `portal-ed25519`, signed by its first key, LAST: hosts from before W8 trust
+ * only that name. A host trusts each of its keys under the key's own name, and
+ * its first key under `portal-ed25519` too, so bundles signed before W8 load.
+ */
+
+/** The only signature name hosts from before W8 trust. */
+internal const val LEGACY_SIGNATURE_NAME = "portal-ed25519"
+
+/** The name a key's own signature carries in a manifest (W8). */
+internal fun keySignatureName(publicKeyHex: String): String = "keliver-ed25519-${publicKeyHex.lowercase().take(16)}"
+
+/** The (name, public key hex) pairs a host trusting [publicKeysHex] verifies manifests with, in that order. */
+internal fun trustedSignatures(publicKeysHex: List<String>): List<Pair<String, String>> {
+  require(publicKeysHex.size in 1..2 && publicKeysHex.toSet().size == publicKeysHex.size) { "one or two distinct keys" }
+  return publicKeysHex.map { keySignatureName(it) to it.lowercase() } + (LEGACY_SIGNATURE_NAME to publicKeysHex.first().lowercase())
+}
+
+/**
+ * The rollback floor across a rotation (W8): the highest of the floors kept for
+ * each trusted key ([floors], null where a key has none). A host writes it back
+ * under each key, so a key change never lowers it.
+ */
+internal fun floorAcross(floors: List<Long?>): Long = floors.maxOf { it ?: 0L }

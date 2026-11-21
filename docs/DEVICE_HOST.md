@@ -687,11 +687,68 @@ carry `constraints`:
   (a failed call's message) is written in debug builds only.
   [`BRIDGE_CODEGEN_DESIGN.md`](BRIDGE_CODEGEN_DESIGN.md), section "B5". The
   generated code itself (`keliver-bridge*`) is not published yet.
+- **`engine`** (NF2, from the templates after tools 0.3.18; see "Engines" below):
+  the QuickJS engine the bundle was compiled for, when it is not the default
+  `quickjs-2021`. Copied from the manifest's **signed** `keliver.engine`, never
+  typed into the index.
 
 A host skipping an entry takes the newest one it may run. An entry with a
 constraint key the host doesn't know is skipped, so hosts from before W4.5 skip
-every constrained entry, and hosts from before B4 skip every entry that needs a
-bridge.
+every constrained entry, hosts from before B4 skip every entry that needs a
+bridge, and hosts from before NF2 skip every entry for an engine other than the
+default one.
+
+**Engines** (NF2, both hosts; docs/GUEST_PROFILE.md, "NF2: the Zipline fork").
+QuickJS bytecode loads only on the engine that compiled it: Zipline 1.28.0's
+QuickJS 2021 writes version 1, the NF2 fork's QuickJS 2026 version 5, and
+neither loads the other's. So during a transition one release is published once
+per engine, and each host only ever receives the one its engine loads (D2):
+- **Naming.** An engine is `quickjs-2021` (the default: every bundle from
+  before NF2) or `quickjs-2026`. A host names its own from the QuickJS its
+  Zipline links (`QuickJs.version`, a constant of the build); a QuickJS release
+  Keliver does not name is `quickjs-<version>`, which takes only bundles
+  published for exactly it.
+- **Signing.** The signing block (from the tools after 0.3.18; run
+  `keliver-new-publish-target.sh` again to upgrade) reads the bytecode version of
+  every module before it signs: version 5 adds `"keliver.engine": "quickjs-2026"`
+  to the signed metadata, version 1 adds nothing. A `keliver.engine` already in
+  the manifest (a re-sign, or a build that sets one, `quickjs-2021` included) is
+  kept when the bytecode bears it out. Mixed versions, an unknown version, or a
+  `keliver.engine` the bytecode does not bear out fail the build; the publisher
+  and the hosts apply the same rule.
+- **Publishing.** `engineTargets` in `keliver.portal.json`
+  (`[{"publishTask": …, "publishOutput": …}]`) names the extra builds, for example
+  a second guest module that applies the fork's Zipline Gradle plugin.
+  `keliver-publish` builds `publishTask` and then each target, all for one
+  sequence, checks every module's bytecode against its signed engine, and
+  writes a `v<N>/` and an index entry per engine at that sequence; an entry for
+  an engine other than the default carries the `engine` constraint. Two outputs
+  for one engine, or any refusal, publish nothing. `--promote`, `--republish`
+  and `--set-rollout` act on every engine's entry of the release together. The
+  relay's own `/publish` (development) publishes `publishOutput` only, and its
+  index names the engine too.
+- **Lookup.** A host takes only entries for its engine (an entry that names
+  none is for `quickjs-2021`). A release with no entry for its engine is skipped,
+  as an unmet constraint is; a host on an engine no entry names finds nothing.
+- **Load.** The manifest's signed `keliver.engine` is checked again on the
+  network (before any module is fetched), on a cache start and for crash
+  rollback's kept copy, and a bundle for another engine is refused
+  (`engine refused: …`, reported as `engine`). A host updated to another engine
+  therefore never runs what its old engine cached.
+- **After an app update to another engine.** A host records the engine with its
+  last good bundle (none recorded, as by every host from before NF2, means
+  `quickjs-2021`). A last good bundle for another engine counts as nothing
+  cached, so the start is network-first under every start policy, and the W5
+  fall-back and the "lookup failed" start do not use it; crash rollback likewise
+  goes back only to a kept bundle whose signed manifest is for the host's engine.
+- **Older tools and relays** (0.3.18 and earlier). Their `keliver-publish`
+  refuses an index with two entries at one sequence on a channel, so it cannot
+  publish, promote or set a rollout on a multi-engine index (safe: it writes
+  nothing; use these tools or later). An older relay drops a host report whose
+  reason is `engine`. And an older `keliver-publish` does not check bytecode
+  against the signed engine, so it would publish a fork build as an
+  unconstrained default-engine entry that reaches every host and fails at load:
+  **publish fork builds only with these tools or later**.
 
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,

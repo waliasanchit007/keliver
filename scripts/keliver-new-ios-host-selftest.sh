@@ -137,7 +137,7 @@ PY
 # W3: the lookup reads bundles/index.json, holds the manifest to its sha256,
 # and falls back to the relay's bundles/latest only on a 404.
 grep -q '/bundles/index.json"' "$K/MainViewController.kt" && grep -q 'status == 404' "$K/MainViewController.kt" \
-  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor, crash)' "$K/MainViewController.kt" \
+  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor, crash, hostEngine)' "$K/MainViewController.kt" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
 # W2: one host per process (Keliver), started once; every view controller only observes it.
@@ -150,7 +150,7 @@ grep -q '^public object Keliver {' "$K/MainViewController.kt" && grep -q 'if (st
 # keys (the highest), and written under each.
 grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'floorAcross(trust.publicKeysHex.map' "$K/MainViewController.kt" \
   && grep -q 'raiseFloor(trust, sequence)' "$K/MainViewController.kt" && grep -q 'raiseFloor(trust, floor())' "$K/MainViewController.kt" \
-  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor, crash, Keliver.served)' "$K/MainViewController.kt" \
+  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor, crash, Keliver.served, hostEngine)' "$K/MainViewController.kt" \
   && grep -q 'manifestSequence(manifest.metadata)' "$K/MainViewController.kt" && grep -q 'sequence?.let(onSequence)' "$K/MainViewController.kt" \
   && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
   || bad "W4.2: the rollback floor is not wired"
@@ -168,7 +168,7 @@ grep -q '  public var bridges: List<KeliverBridgeBinding> = emptyList()' "$V" \
   && grep -A8 '    if (started) return' "$V" | grep -q 'served = servedBridgesOf(bridges.map { it.declared })' \
   && [ "$(grep -c 'HostFacts(' "$V")" = "$(grep -cE 'HostFacts\(.*, (Keliver\.)?served[,)]' "$V")" ] \
   && [ "$(grep -c 'ManifestPinningHttpClient(' "$V")" = "$(grep -c 'ManifestPinningHttpClient(.*) { served }' "$V")" ] \
-  && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, crash, (Keliver\.)?served\)' "$V")" ] \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$V")" = "$(grep -cE 'AcceptCachedBundle\(floor, crash, (Keliver\.)?served, hostEngine\)' "$V")" ] \
   && ! grep -q 'ServedBridges' "$V" "$K/BundleIndex.kt" \
   && grep -q 'val bridges = Keliver.startedBridges' "$V" \
   && grep -A8 'override suspend fun bindServices' "$V" | grep -q 'bindAppBridges(bridges, bridgeBinds, Keliver::bridgeDebugLog, { load?.isCancelled == true })' \
@@ -421,9 +421,26 @@ grep -q 'val n = write(1, pinned.addressOf(at), (bytes.size - at).convert()).toI
   && ok "the host's console lines are one write each, under a lock (no println)" \
   || bad "a host console line can be split by another thread's (println, or no ConsoleLine.kt)"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
-grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside = crash.setAside())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
-  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$K/BundleIndex.kt" \
+grep -q 'HostFacts(installId(), hostVersion(), floor(), Keliver.served, setAside = crash.setAside(), engine = hostEngine)' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
+  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges", "engine")' "$K/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
+# NF2: as on Android, the host's engine gates every lookup and every load.
+grep -q 'engineOfQuickJsVersion(app.cash.zipline.QuickJs.version)' "$K/MainViewController.kt" \
+  && [ "$(grep -c 'HostFacts(' "$K/MainViewController.kt")" = "$(grep -c 'engine = hostEngine)' "$K/MainViewController.kt")" ] \
+  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor, crash, hostEngine)' "$K/MainViewController.kt" \
+  && ! grep -q 'AcceptCachedBundle(floor, crash, [A-Za-z.]*served)' "$K/MainViewController.kt" \
+  && grep -A16 '^private class AcceptCachedBundle' "$K/MainViewController.kt" | grep -q 'engineProblem(manifest.metadata\[ENGINE_METADATA_KEY\], engine)' \
+  && [ "$(grep -c 'engineProblem(manifestEngine(' "$K/BundleIndex.kt")" = 3 ] \
+  && grep -q '"engine refused:" in reason' "$K/MainViewController.kt" \
+  && ok "NF2: the host's engine gates every lookup, and the network load, the kept copy and the cache start refuse another engine's bundle" \
+  || bad "NF2: the engine gate is not wired"
+# NF2 (M1): as on Android, another engine's last good or kept bundle is nothing cached.
+grep -A4 'val lastGood = lastGoodForEngine(' "$K/MainViewController.kt" | grep -q 'stringForKey(lastGoodEngineKey(trust))' \
+  && [ "$(grep -c 'stringForKey(lastGoodKey(trust))' "$K/MainViewController.kt")" = 1 ] \
+  && grep -q 'defaults.setObject(hostEngine, forKey = lastGoodEngineKey(trust))' "$K/MainViewController.kt" \
+  && [ "$(grep -c 'crash.rollbackTo(' "$K/MainViewController.kt")" = "$(grep -c 'keptForEngine(crash.rollbackTo(floor()), hostEngine)' "$K/MainViewController.kt")" ] \
+  && ok "NF2: a last good or kept bundle for another engine is nothing cached (network-first), and lastGood records its engine" \
+  || bad "NF2: the start still counts another engine's cache"
 # WS6: crash rollback, as on Android. The ledger (src/commonMain/CrashRollback.kt, the Android
 # host's file) and its JVM tests are scaffolded; the trial starts once the bundle's code begins
 # to evaluate, a load failure counts only when it came from that code (not a download), the

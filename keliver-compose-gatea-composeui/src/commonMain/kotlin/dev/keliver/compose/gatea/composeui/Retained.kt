@@ -29,7 +29,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
@@ -66,6 +65,11 @@ public interface HostBackDispatcher : OnBackPressedDispatcher {
  * before, such as an app's root `BackHandler` that pops the same stack in the guest. A hidden entry
  * of a stack sees null here, so a stack nested in it never takes a press.
  *
+ * Not a static local: every entry's slot provides it, and the value changes as the entry is hidden
+ * or shown, in the frame of a host back. A static local's change recomposes everything under the
+ * slot without skipping (the whole retained screen: about 100 widgets on the three-way prototype's
+ * heavy detail, the NF1 gate's 56.5 ms back); this one recomposes only its readers.
+ *
  * Prototype only. Known gaps, to close before gate A leaves the prototype:
  * - Host back is ahead of an enabled guest `BackHandler` registered earlier OUTSIDE the stack (a
  *   root-level sheet's, say): the guest refuses a press only for a handler in the entry it leaves.
@@ -82,7 +86,7 @@ public interface HostBackDispatcher : OnBackPressedDispatcher {
  *   marked experimental.
  */
 public val LocalHostBackDispatcher: ProvidableCompositionLocal<HostBackDispatcher?> =
-  staticCompositionLocalOf { null }
+  compositionLocalOf { null }
 
 /**
  * Whether the content is in a hidden entry of a retained stack ([ExtraRetained]). Host renderers

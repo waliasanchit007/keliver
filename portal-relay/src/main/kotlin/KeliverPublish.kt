@@ -30,6 +30,12 @@ import kotlinx.serialization.json.JsonPrimitive
  * next sequence, and it is published as a new `v<N>/` with the original's
  * capabilities and channel (or `--channel`). Nothing is compiled.
  *
+ * Engines (NF2): with `engineTargets` in keliver.portal.json, each release is built once more per
+ * engine (each target's task, signed for the same sequence) and published as one `v<N>/` and index
+ * entry per engine, at one sequence; each signed manifest names its engine, and so does its entry,
+ * so a host only ever takes the bundle its engine loads. `--republish` and `--promote` carry every
+ * engine's bundle of the release along.
+ *
  * `--promote <sequence> --channel <name>` (W4.4) offers an already published
  * bundle on another channel: a second index entry for the same `v<N>/`. Nothing
  * is built or signed; only the public key is needed.
@@ -189,14 +195,18 @@ object KeliverPublish {
       return refuse(e.message.orEmpty())
     }
 
-    if (skipBuild) {
-      println("keliver-publish: --skip-build: publishing the existing output of ${config.publishTask} (it must be signed for sequence $sequence)")
-    } else {
-      println("keliver-publish: building ${config.publishTask} in $repoDir, signed for sequence $sequence")
-      val code = build(repoDir, config.publishTask, sequence)
-      if (code != 0) {
-        System.err.println("keliver-publish: the build failed (gradle exit $code). Nothing was published.")
-        return 3
+    // NF2: the bundle, then one more per engine in engineTargets, all for this one release.
+    val targets = listOf(config.publishTask to config.publishOutput) + config.engineTargets.map { t -> t.publishTask to t.publishOutput }
+    for ((task, _) in targets) {
+      if (skipBuild) {
+        println("keliver-publish: --skip-build: publishing the existing output of $task (it must be signed for sequence $sequence)")
+      } else {
+        println("keliver-publish: building $task in $repoDir, signed for sequence $sequence")
+        val code = build(repoDir, task, sequence)
+        if (code != 0) {
+          System.err.println("keliver-publish: the build failed (gradle exit $code). Nothing was published.")
+          return 3
+        }
       }
     }
 
@@ -206,10 +216,10 @@ object KeliverPublish {
     } else {
       emptyList()
     }
-    val result = try {
-      publishStatic(
-        File(repoDir, config.publishOutput), File(out), publicKeyHex, channel ?: DEFAULT_CHANNEL, caps, init = init,
-        constraints = constraints, acceptKeyChange = acceptKeyChange,
+    val results = try {
+      publishStaticVariants(
+        targets.map { (_, output) -> PublishVariant(File(repoDir, output)) }, File(out), publicKeyHex, channel ?: DEFAULT_CHANNEL, caps,
+        init = init, constraints = constraints, acceptKeyChange = acceptKeyChange,
       )
     } catch (e: PublishRefused) {
       return refuse(e.message.orEmpty(), e.aboutSigning)
@@ -221,13 +231,19 @@ object KeliverPublish {
       return 5
     }
     println("keliver-publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key; every module is present")
-    println(
-      "keliver-publish: published v${result.version} (sequence ${result.sequence}, channel ${channel ?: DEFAULT_CHANNEL}, " +
-        "capabilities ${caps.ifEmpty { listOf("none") }.joinToString(",")}) -> ${result.dir}",
-    )
-    println("keliver-publish: index ${File(result.dir.parentFile, INDEX_FILE)}")
+    for (result in results) {
+      println(
+        "keliver-publish: published v${result.version} (sequence ${result.sequence}, channel ${channel ?: DEFAULT_CHANNEL}, " +
+          "capabilities ${caps.ifEmpty { listOf("none") }.joinToString(",")}${engineNote(result.entry)}) -> ${result.dir}",
+      )
+    }
+    println("keliver-publish: index ${File(results.first().dir.parentFile, INDEX_FILE)}")
     return 0
   }
+
+  /** NF2: ", engine <id>" for an entry for an engine other than DEFAULT_ENGINE; "" otherwise. */
+  private fun engineNote(entry: kotlinx.serialization.json.JsonObject): String =
+    entryEngine(entry).takeIf { it != DEFAULT_ENGINE }?.let { ", engine $it" }.orEmpty()
 
   private fun runRepublish(
     repoDir: File,
@@ -265,6 +281,12 @@ object KeliverPublish {
       "keliver-publish: republished v$version as v${result.version} (sequence ${result.sequence}, channel " +
         "${(e["channel"] as JsonPrimitive).content}): the same modules, signed again for the new sequence -> ${result.dir}",
     )
+    for (other in result.also) {
+      println(
+        "keliver-publish: and, for the same release on another engine, v${(other.entry["republishOf"] as JsonPrimitive).content} " +
+          "as v${other.version}${engineNote(other.entry)} -> ${other.dir}",
+      )
+    }
     println("keliver-publish: index ${File(result.dir.parentFile, INDEX_FILE)}")
     return 0
   }
@@ -282,6 +304,9 @@ object KeliverPublish {
       "keliver-publish: promoted sequence ${result.sequence} (v${result.version}) from ${result.from} to $channel: " +
         "a second index entry for the same signed bundle; nothing was built or signed",
     )
+    for (other in result.also) {
+      println("keliver-publish: and its bundle for another engine (v${(other["version"] as JsonPrimitive).content}${engineNote(other)})")
+    }
     println("keliver-publish: index ${File(File(out, "bundles"), INDEX_FILE)}")
     return 0
   }

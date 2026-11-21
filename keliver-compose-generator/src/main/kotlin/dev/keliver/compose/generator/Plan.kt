@@ -66,6 +66,13 @@ class Config(
   val animated: List<String> = emptyList(),
   /** Hand-written modifiers of the group (`ExtraAnimated`), as [extras] are widgets. */
   val extraModifiers: List<String> = emptyList(),
+  /**
+   * NF3: declarations that render a scroll container (a scroll modifier, a lazy list). Their
+   * renderers add `pressScrollContainer(state, enabled)` (hand-written, next to the press signal's
+   * renderer) after the container, so a press inside it waits until it is a tap, not a scroll.
+   * Each takes a `state` and may take `enabled` or `userScrollEnabled`.
+   */
+  val scrollContainers: List<String> = emptyList(),
 ) {
   /** The Compose versions read (for the schema's header), or null. */
   var input: String? = null

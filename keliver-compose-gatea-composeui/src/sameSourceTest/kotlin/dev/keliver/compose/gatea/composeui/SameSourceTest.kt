@@ -532,14 +532,27 @@ internal class GuestOnHost(
   val created = mutableMapOf<Int, Int>()
 
   fun pump(frameTimeNanos: Long = 0L) {
+    takeBatch(frameTimeNanos)?.let(::applyBatch)
+  }
+
+  /**
+   * The guest's next frame and its batch, through the wire and decoded for the host, but not
+   * applied: a benchmark times [applyBatch] (the host's part) alone. Null when there is no change.
+   */
+  fun takeBatch(frameTimeNanos: Long = 0L): List<UiChange>? {
     clock.sendFrame(frameTimeNanos)
     val changes = guestAdapter.takeChanges()
-    if (changes.isEmpty()) return
+    if (changes.isEmpty()) return null
     val text = json.encodeToString(ListSerializer(Change.serializer()), changes)
     wire += text
     val decoded = json.decodeFromString(ListSerializer(Change.serializer()), text)
     decoded.filterIsInstance<dev.keliver.protocol.Create>().forEach { created[it.tag.value] = (created[it.tag.value] ?: 0) + 1 }
-    hostAdapter.sendChanges(decoded.mapNotNull { UiChange.fromProtocol(protocol, it) })
+    return decoded.mapNotNull { UiChange.fromProtocol(protocol, it) }
+  }
+
+  /** Applies a batch on the host, as Redwood's host does: widgets made and set, outside composition. */
+  fun applyBatch(batch: List<UiChange>) {
+    hostAdapter.sendChanges(batch)
   }
 
   fun clickFirst(test: androidx.compose.ui.test.ComposeUiTest) {

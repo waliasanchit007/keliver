@@ -1246,7 +1246,7 @@ retained screen without waiting for the guest:
   run), The confirming batch carries one structural and one property change; whether the screen visibly
   changes when it lands was not recorded.
 - The heavy screen (about 100 widgets) shows its retained list at 56.5 ms (max 74): over the
-  target. Not investigated; one candidate is the host laying out the larger retained tree.
+  target. Investigated since (Mac only): see [Back on the heavy screen](#nf1-back-on-the-heavy-screen-where-the-extra-time-went-mac).
 - Guest-side retention alone (#259) stays at about 100 ms, as in part 1; as shipped the guest's
   back is 873.5 ms (part 1: 1,116, a phone in worse state).
 - Open is unchanged (about 310 ms). #265 is in the build, but its touch-down pre-composition is not
@@ -1270,6 +1270,262 @@ established. NF1's scrolling targets are judged by hand (the owner), as the gate
 with placeholders: indicative only; a hand check is next); tap within one frame
 **not measured** (no host pressed-state instrumentation). Raw output:
 `keliver-scratch/nf1-gate2/out` (not in this repository).
+
+### NF1, back on the heavy screen: where the extra time went (Mac)
+
+2026-11-21, **the Mac only** (JVM tests; no phone): relative numbers, and an A12 run is still to
+come. Part 2's question: why does the heavy screen's host back take 56.5 ms to the first draw when
+the simple screen's takes 37.5? In both, the host shows the same retained list.
+
+**What `firstDraw` covers: recompose and apply, very likely not measure and layout.** The mark is
+a `ViewTreeObserver.OnDrawListener`. In the platform's source (the SDK's `android-36.1` sources),
+`ViewRootImpl.draw` calls `mTreeObserver.dispatchOnDraw()` and only then
+`ThreadedRenderer.draw`, which opens the `Record View#draw()` trace section and walks the views'
+display lists, so `AndroidComposeView.dispatchDraw` runs after the mark. A view tree's own
+`requestLayout()` is measured and laid out earlier, in `performTraversals`, before the draw. As
+Compose's `AndroidComposeView` is remembered here (its source could not be opened in this
+session, so this half is **not checked**), when a layout changes inside the root but the root's
+size does not, it calls `invalidate()`, not `requestLayout()`, and measures and lays out at the
+start of `dispatchDraw`. A retained back changes which entry the container measures, not the
+root's size, so on that reading `firstDraw` covers the wait for the next vsync, the recomposition
+in that frame's animation callback and applying its changes, and not measure, layout or drawing.
+The A12 recipe below adds a trace that shows where the layout runs. At 60 Hz the extra 19 ms is
+about one frame: the heavy frame's work missed a vsync that the simple frame made. Both series
+also start high and fall (heavy 132, 149, then 74 … 38; simple 63 … 27): the
+host's code warming up over the series.
+
+**The cause, found in the code.** Each entry of the host's retained container (`ExtraRetained`,
+`Retained.kt`) is wrapped in a slot that provides `LocalHostBackDispatcher`: null while the entry is
+hidden, the dispatcher while it is shown. That local was a *static* composition local. When a
+static local's value changes, everything under the provider recomposes without skipping. So a
+host back recomposed every widget of both entries: the list shown again, and the heavy detail
+(102 widgets) as it was hidden. Each rebuilt widget then updated its modifiers, so their layout
+was redone too. `RetainedHostBackTest.goingBackRecomposesNeitherEntrysContent` proves it: before
+the fix, the entry shown again composed a second time on the back.
+
+**The fix.** `LocalHostBackDispatcher` is now an ordinary (dynamic) `compositionLocalOf`, so a change
+recomposes only the places that read it (a nested stack's container). Its declared type is the
+same (`ProvidableCompositionLocal`). This module is a prototype with no API dump, so its API does
+not change.
+
+**Measured on the Mac** (`RetainedBackFrameBenchmark`): the prototype's list and both details, ported
+to the same generated guest API, run through the real protocol into the host's renderers. Each
+back is pressed with the guest held, and the one host frame after the press is timed: recompose,
+measure, layout and draw. 40 warm-up backs, then 60 measured (ms). A plain `jvmTest` run (CI's)
+presses back 5 times with no warm-up and measures nothing; these numbers are
+`-Dkeliver.retainedBack.measured=60` on the Gradle command line, which the module's `jvmTest` task
+forwards to the test JVM (as it does every `keliver.retainedBack.*` property):
+
+```
+./gradlew :keliver-compose-gatea-composeui:jvmTest --tests '*RetainedBackFrameBenchmark' \
+  -Dkeliver.retainedBack.measured=60     # results: that module's build/retained-back-frame.txt
+```
+
+| | Before | After |
+|---|---|---|
+| heavy screen: median / p90 | 1.43 / 1.67 | **0.76 / 0.93** |
+| simple screen: median / p90 | 0.91 / 1.15 | **0.48 / 0.58** |
+
+A profiler's run (3,000 backs each, sampling the UI thread during the timed frame) splits the
+frame. Counts are samples; recompose and apply is the part the phone's `firstDraw` very likely
+sees (above), and measure, layout and draw come after it:
+
+| | Recompose and apply | Measure and layout | Draw |
+|---|---|---|---|
+| heavy, before | 19,998 | 13,685 | 11,835 |
+| heavy, after | 3,582 | 3,760 | 10,218 |
+| simple, before | 7,978 | 11,458 | 10,815 |
+| simple, after | 1,287 | 2,964 | 10,091 |
+
+- The heavy screen's recompose and apply, the part `firstDraw` sees, falls by 82% (19,998 → 3,582
+  samples), and its lead over the simple screen there by 81% (12,020 → 2,295). Measure and layout,
+  which come after the mark, fall too (13,685 → 3,760): recompose plus layout falls by 78% (33,683 →
+  7,342), but a phone's `firstDraw` will not show that part.
+- The simple screen gains as well (recompose and apply 7,978 → 1,287): the list shown again was
+  being recomposed too.
+
+**What is left (not fixed here):**
+- **Compose scans the whole composition after a state change.** About a third of what remains
+  before the draw (2,600 of the heavy screen's 7,342 samples) is the Compose runtime's
+  `addPendingInvalidationsLocked`. After a state change it goes through every state read
+  recorded in the composition, so its cost grows with everything retained, including the hidden
+  heavy detail, whose generated widgets keep one state per property. Lowering it means fewer
+  state reads (a generator change) or each entry in its own composition (a larger change to
+  `ExtraRetained`). The generator change was made and measured later: see
+  [NF1, one Compose state per generated widget](#nf1-one-compose-state-per-generated-widget-mac).
+- **Hiding and showing entries re-places their trees.** Hiding the detail un-places it (about 700
+  samples); showing the list places it again and recreates its layers. The draw then re-records
+  the list. Keeping hidden entries placed (off screen, with their layers kept) would avoid this.
+  A trial on the Mac, not kept in this change: every entry measured, the hidden ones placed off
+  screen in a layer with alpha 0. Medians fell to 0.40 ms for the heavy screen (from 0.78) and
+  0.34 for the simple one (from 0.49). In the heavy screen's profile, the part before the draw fell
+  from 7,342 to 4,970 samples; the simple screen's profile run was too noisy to use. The costs:
+  the memory the hidden layers hold, layout work on hidden entries while the guest changes them,
+  and redrawing a hidden layer on every frame of an animation that runs inside it. That is a
+  policy decision, and it should be measured on a phone first, **by the trace in the A12 recipe
+  below, not by `firstDraw`**: what it saves is placement, layers and drawing, which come after
+  the mark.
+- **The guest's confirmation.** About 150 ms after the press, the guest's batch removes the
+  detail. The host then disposes of the detail's widgets in a later frame. That frame is not in
+  `firstDraw`; whether it drops a frame is not measured.
+
+**A12 before/after (prepared, not run).** Build the APK twice, once from main and once from this
+change, as in [How to run it](#how-to-run-it). Both checkouts publish the prototype as
+`0.0.0-gateb` into the same `/tmp/m2`, and the second build writes over the first's APK, so build
+them one after the other, each straight after its own publish, and copy each APK aside:
+
+```
+mkdir -p ~/nf1-back
+# 1. in the main checkout (root, then sample/), exactly as in How to run it:
+./gradlew publishToMavenLocal -Dmaven.repo.local=/tmp/m2 -PkeliverVersion=0.0.0-gateb \
+  -PkeliverComposePrototype -DRELEASE_SIGNING_ENABLED=false
+(cd sample && ./gradlew :host-android:assembleBenchmark -Dmaven.repo.local=/tmp/m2 -PkeliverComposePrototype)
+cp sample/host-android/build/outputs/apk/benchmark/*.apk ~/nf1-back/main.apk
+# 2. in this change's checkout: the same two commands again (republishing over main's /tmp/m2), then
+cp sample/host-android/build/outputs/apk/benchmark/*.apk ~/nf1-back/change.apk
+```
+
+Install each in turn (`adb install -r ~/nf1-back/<build>.apk`) and run, from the Mac (`A` as in
+"The rerun, series by series"):
+
+```
+adb shell "$A -e form guest -e bench sysback --ei n 14 --ei warmup 2 -e x retainhost"
+adb shell "$A -e form guest -e bench sysback --ei n 14 --ei warmup 2 -e x heavy,retainhost"
+# wait for {"done":true} in the results file after each launch, then
+adb pull /sdcard/Android/data/dev.keliver.sample/files/threeway-results.txt
+```
+
+Alternate the builds (main, change, main, change) so the phone's drift shows. Compare the
+`firstDraw` medians in the `"summary":"back"` lines. Target: the heavy screen under 50 ms. That
+target is on `firstDraw`, which very likely sees only recompose and apply (above): under 50 ms there
+does not mean the pixels arrive in 50 ms.
+
+**A measure that sees layout and the pixels.** One more heavy series per build, under a Perfetto
+trace, recorded as in "Method" for the scrolling traces (`perfetto --txt -c -` on the phone, the
+same atrace categories with `gfx view` and `atrace_apps: dev.keliver.sample`, and SurfaceFlinger's
+frame timeline), with `x=trace` added so each main-thread message is a section:
+
+```
+adb shell "$A -e form guest -e bench sysback --ei n 14 --ei warmup 2 -e x heavy,retainhost,trace"
+```
+
+For each back after the warm-up, take the main-thread message that presses it (the bench's step,
+which calls `onBackPressedDispatcher.onBackPressed()`), then the first `Choreographer#doFrame` after
+it, and read:
+- **where the layout runs:** whether a Compose measure-and-layout section (`AndroidOwner:...`
+  sections from Compose's own tracing; the exact name is to be read from the trace) sits inside
+  `Record View#draw()` (after the `firstDraw` mark, as read above) or in `traversal` before it;
+- **main-thread work:** the press to the end of that `doFrame` (recompose, apply, measure, layout,
+  recording), and `Record View#draw()`'s own duration;
+- **the pixels:** the press to the present of that frame in SurfaceFlinger's actual frame timeline
+  for the app's layer (or that frame's FrameMetrics `TOTAL_DURATION` added to the press-to-intended-vsync
+  gap, which the sysback bench does not log today).
+
+Trace numbers compare only with trace numbers (`x=trace` adds a section per message). **Decision 1
+(keep hidden entries placed) is judged on these, not on `firstDraw`**: its saving is placement,
+layers and drawing, which come after the mark. If the heavy screen's press-to-present is already
+within the target with this change alone, it is not needed.
+
+### NF1, one Compose state per generated widget (Mac)
+
+2026-11-21, **the Mac only** (JVM tests; no phone). This follows up the item above, "Compose scans
+the whole composition after a state change". When a snapshot change invalidates a scope, Compose's
+`CompositionImpl.addPendingInvalidationsLocked` walks every state read the composition recorded.
+Gate A's generated renderers held one `mutableStateOf` per property plus one for the modifier, and
+each renderer reads all of them, so each widget recorded about a dozen reads.
+
+**The change.** The generator (`keliver-compose-generator`, `Emit.kt`) now gives each renderer one
+`mutableIntStateOf` version. The properties, events and the modifier are plain fields. A setter
+compares the new value with `==`, which is what `mutableStateOf`'s structural policy did, and bumps
+the version only on a change. The renderer reads the version first, and reads every plain field in
+its own scope, never inside a lambda (`GeneratorTest.noRendererReadsAPlainFieldInsideALambda`
+checks all 29 renderers). The guest API and the wire are unchanged. Two points needed care:
+- **The modifier.** A container reads its children's modifiers (`ScopedChildren`,
+  `ComposeWidgetChildren`). It still recomposes on a modifier change through its own tick, which
+  Redwood's host bumps with `onModifierUpdated` after every modifier set.
+- **A lazy list's counts stay snapshot state.** They are two `mutableIntStateOf` of their own,
+  outside the version, read only inside the list's content lambda, as before the change. Compose
+  runs that lambda in a derived state, so a scroll window shift, which changes only the counts,
+  updates the list's items without rerunning the renderer or recomposing `LazyColumn`
+  (`OneStatePerWidgetTest.aLazyListsCounts`). That is two recorded states per lazy list, not per
+  widget. A first version of this change put the counts in the version too, read in the
+  renderer's scope and captured: every window shift then recomposed the list's renderer and
+  `LazyColumn`, and the scroll's record + recompose + apply rose 16% (9,649 → 11,237 samples, with
+  1,479 in the renderer's lambda). The independent review caught it; it is fixed, and the numbers
+  below are measured after the fix.
+
+**Method (repeatable).** `RetainedBackFrameBenchmark` now has four scenarios. The two backs are
+unchanged. The two guest batches are new:
+- a text change on the heavy detail, with the list retained below it;
+- a window shift on a 1,000-row list: the host scrolls 30 rows, then the guest's batch arrives.
+
+A batch's timed window is only the host's part: applying the batch, the snapshot's apply
+notifications, and the frame. The recomposer records the changes, and so runs the scan, when it is
+notified. On a phone that happens in a main-thread message before the frame, so a window that
+covered only the frame missed it. Each scenario also writes the state reads the host's
+compositions record (`StateReads`, read by reflection). The same commands as above:
+
+```
+./gradlew :keliver-compose-gatea-composeui:jvmTest --tests '*RetainedBackFrameBenchmark' \
+  -Dkeliver.retainedBack.measured=60                      # medians
+./gradlew :keliver-compose-gatea-composeui:jvmTest --tests '*RetainedBackFrameBenchmark' \
+  -Dkeliver.retainedBack.measured=2000 -Dkeliver.retainedBack.sample=true   # profile
+```
+
+**State reads recorded** (all of the host's compositions; the heavy back is counted with the detail
+pushed):
+
+| | Before | After |
+|---|---|---|
+| heavy back (list + heavy detail, 10 compositions) | 2,335 reads of 2,145 states | **423 of 419** (−82%) |
+| text change (1 composition) | 1,337 of 1,231 | **196 of 193** (−85%) |
+| simple back | 1,294 of 1,184 | **285 of 281** (−78%) |
+
+**Profile** (2,000 timed steps; inclusive samples of the UI thread inside the window; record +
+recompose + apply is `recordComposerModifications` + `CompositionImpl.recompose` +
+`CompositionImpl.applyChanges`). One session: the change's `Generated.kt` swapped for the one before
+it for the "before" run, then the change measured twice, to show the run-to-run noise:
+
+| | Scan (`addPendingInvalidationsLocked`) | Record + recompose + apply | Measure and layout | Draw | All samples |
+|---|---|---|---|---|---|
+| heavy back, before | 1,592 | 4,311 | 2,778 | 7,019 | 20,512 |
+| heavy back, after (runs 1, 2) | 1,219; 1,305 | 4,101; 4,055 | 3,016; 2,777 | 7,356; 7,446 | 21,195; 21,374 |
+| text change, before | 1,197 | 2,866 | 2,368 | 8,257 | 22,800 |
+| text change, after | **479; 421** | **1,994; 1,776** | 2,337; 2,098 | 8,106; 7,477 | 21,708; 20,150 |
+| simple back, before | 808 | 2,016 | 1,660 | 6,379 | 15,764 |
+| simple back, after | 527; 848 | 1,870; 2,014 | 1,830; 1,822 | 6,593; 7,009 | 16,345; 16,987 |
+| scroll shift, before | 1,000 | 10,945 | 57,876 | 12,171 | 106,404 |
+| scroll shift, after | 1,003; 969 | 9,977; 9,903 | 53,567; 52,048 | 12,135; 11,961 | 101,498; 99,630 |
+
+- **Before the change, the scan was a real share of what the phone's `firstDraw` sees.** It was
+  37% of record + recompose + apply on the heavy back and 42% on the text change. Measured against
+  the whole window, draw included, it was 7.8% and 5.3%.
+- **A small batch gains the most.** The text change's scan fell by 60–65% (1,197 → 479 and 421)
+  and its record + recompose + apply by 30–38%. **Its whole window did not reliably shrink**: the
+  scan is a small part of it, and draw and measure vary more between runs than the scan saved. In
+  the first measuring session (before the review) the total rose, 20,016 → 21,142 samples, while
+  the scan fell 75%; in this one it fell 5% and 12%. The medians below agree: no visible change.
+- **The heavy back's scan fell by only 18–23%**, although its reads fell by 82%, and its whole
+  window did not shrink (20,512 → 21,195 and 21,374). What remains of the scan is sampled mostly in
+  `Object.hashCode`, the identity hash of the scopes the walk tests. That points to a cost per
+  invalidated scope or per composition, not per recorded read. The profiler samples at safepoints
+  (`Thread.getStackTrace`) and cannot split the method further: **not resolved**.
+- **Scrolling does not regress.** Its window is dominated by measuring and subcomposing the new
+  rows (about half the samples). The scan is 1% of the window before and after; the renderer's
+  recompose is unchanged (1,477 → 1,498 and 1,467 samples), and neither the list renderer's lambda
+  nor `LazyColumn` appears in the window, as before the change. Its record + recompose + apply fell
+  9–10%, within this machine's noise.
+- **Medians (60 steps) moved within the noise** of this shared machine: heavy back 0.797 → 0.661
+  ms, text change 0.461 → 0.411, simple back 0.495 → 0.396, scroll shift 3.610 → 3.112 (one run
+  each; the first session's were 0.609 → 0.618, 0.416 → 0.392, 0.390 → 0.355, 3.130 → 2.762).
+
+**Not measured:** a phone (the A12 recipe above applies unchanged). keliver-material-composeui is
+unchanged: its 64 widget classes hold 198 per-widget field states (`mutableStateOf` in a field,
+not counting imports or a composable's own `remember { mutableStateOf }`), about 3.1 per widget;
+62 of them override the modifier, which is already a plain field. The same pattern applies there.
+On those numbers, the estimate is a cut of about 68% in recorded reads per widget, a smaller gain
+than gate A's twelve reads to one, and it would be a hand port: every state-dependent lambda in 62
+renderers checked by hand, with a test per widget that each setter's change recomposes.
 
 ### NF4, step 1: the code load at process start, and the first request sent by the host (emulator)
 
@@ -1728,6 +1984,29 @@ numbers come from the old route.
 `x=scroll` (the guest's widget counters) wraps the guest's protocol adapter, a cost only the guest
 pays; the clean pass for the guest/native comparison is run once without it, and the counters come
 from the `x=scroll` run.
+
+## NF3: the host's press signal (built, not run on a device)
+
+2026-11-21. The "press signal" the NF1 gate rows above name as missing is now built in the gate-A
+prototype: gate A's `ExtraPress` modifier (tag 501), which the host answers with a press event on
+touch-down (inside a scroll container, once the finger has stayed still for 50 ms; never for a
+fling that starts on a row or a touch that stops a moving list) and a cancel event at the end of
+every gesture that sent a press (after the click, if any), both on the click's own event path. A
+host declares it as the host feature `keliver.press@1`; a guest sends the modifier only to a
+host that declares it, so an older host gets the click only (D2). keliver-nav's `prepareOnPress`
+turns it into pre-composition (`KeliverNavController.prepare` under `KeliverNavHost`, or
+`KeliverPreparedStack`). Tests: `PressSignalTest` (host and guest over the real protocol on the
+JVM). Guest-side timings on the Mac: `GUEST_PROFILE.md`, "NF3: the host's press signal".
+
+**Not measured here.** This bench's Android host does not declare the feature and its guest does
+not provide the signal, so no device number is new: open on the A12 stays as in "NF1 gate, part 2"
+(about 310 ms). What a device run needs: the threeway host's `hostFeatures` to include
+`keliver.press@1`, the guest's `Main.kt` to provide `GateAPress` and a prepared stack, and the bench
+to time from the touch-down (not the click) to the detail drawn. Before the host declares the
+feature, measure list-scroll jank on the A12 with the press on and off, and tune the scroll delay
+(`PressSignalTiming`) against how long taps last there. The tap-within-one-frame target
+also needs the host's pressed state (the ripple), which the host draws already; the guest is not in
+that path.
 
 ## For an iOS run (follow-up)
 

@@ -52,6 +52,13 @@ import kotlinx.serialization.json.encodeToDynamic
 internal const val LAZY_COLUMN_TAG = 14
 internal const val LAZY_VIEWPORT_TAG = 13
 
+/**
+ * NF3: a list row's modifier-event handles. Its chain has the clickable (handle 0) and then
+ * `prepareOnPress`'s `ExtraPress` (press 1, cancel 2), as ThreewayScreens.kt's ItemRow orders them.
+ */
+internal const val PRESS_HANDLE = 1
+internal const val CANCEL_HANDLE = 2
+
 internal enum class Encoding {
   /** As shipped: `json.encodeToDynamic(serializer, value)` for every value (treehouse-guest's FastGuestProtocolAdapter). */
   KOTLINX,

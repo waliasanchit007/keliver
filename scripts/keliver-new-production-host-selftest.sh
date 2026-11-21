@@ -146,13 +146,13 @@ grep -A2 '^    if (!held) makeTheHosts()$' "$M" | grep -q '^    app.start()$' \
   && ok "M3: the code load starts when the host starts, not when the first screen asks" \
   || bad "M3: the host does not start the code load at host start"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
-  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor, crash)' "$M" \
+  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor, crash, hostEngine)' "$M" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
 # W4.2: the rollback floor is read per key, guards the network load and the cache
 # start, and rises only from a verified successful load.
-grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor, crash, servedBridges)' "$M" \
-  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor, crash)' "$M" \
+grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor, crash, servedBridges, hostEngine)' "$M" \
+  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor, crash, hostEngine)' "$M" \
   && grep -q 'putLong(floorKey(it), sequence)' "$M" && grep -q 'prefs.raiseFloor(floorNames, sequence)' "$M" \
   && grep -q 'edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()' "$M" \
   && grep -q 'floorAcross(cacheNames.map { floor(it) })' "$M" && grep -q 'val floor = { prefs.floor(floorNames) }' "$M" \
@@ -175,7 +175,7 @@ grep -q '  bridges: List<KeliverBridgeBinding> = emptyList(),' "$M" && grep -q '
   && grep -q 'private val servedBridges: Map<String, HostBridge> = servedBridgesOf(config.bridges.map { it.declared })' "$M" \
   && [ "$(grep -c 'HostFacts(' "$M")" = "$(grep -cE 'HostFacts\(.*, servedBridges[,)]' "$M")" ] \
   && [ "$(grep -c 'ManifestPinningHttpClient(' "$M")" = "$(grep -c 'ManifestPinningHttpClient(.*) { servedBridges }' "$M")" ] \
-  && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, crash, servedBridges)' "$M")" ] \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, crash, servedBridges, hostEngine)' "$M")" ] \
   && ! grep -q 'ServedBridges' "$M" "$(dirname "$M")/BundleIndex.kt" \
   && grep -A10 'override suspend fun bindServices' "$M" | grep -q 'bindAppBridges(config.bridges, bridgeBinds, ::bridgeDebugLog, { load?.isCancelled == true })' \
   && grep -A10 'override suspend fun bindServices' "$M" | grep -q 'KeliverBridgeScope(zipline, main, ::bridgeDebugLog)' \
@@ -374,10 +374,32 @@ grep -q 'android:scheme="keliver-com.example.demo"' "$D/AndroidManifest.xml" 2>/
   && ok "ED3: the debug link (keliver-com.example.demo://keliver-debug/bundles, any port from 1024) is in src/debug only: none of it in src/main" \
   || bad "ED3: the debug link is not wired, or reaches src/main"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
-grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges, setAside = crash.setAside())' "$M" && grep -q 'facts = facts' "$M" \
+grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor(), servedBridges, setAside = crash.setAside(), engine = hostEngine)' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
-  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
+  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion", "bridges", "engine")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, versionCode, floor)" || bad "W4.5: constraints are not wired"
+# NF2: the host names its engine from the QuickJS its Zipline links; every lookup takes only that
+# engine's entries, and every load (network, cache start, kept copy) refuses another engine's manifest.
+B="$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt"
+grep -q 'engineOfQuickJsVersion(app.cash.zipline.QuickJs.version)' "$M" \
+  && [ "$(grep -c 'HostFacts(' "$M")" = "$(grep -c 'engine = hostEngine)' "$M")" ] \
+  && [ "$(grep -c 'ManifestPinningHttpClient(okhttp' "$M")" = "$(grep -c 'crash, hostEngine) { servedBridges }' "$M")" ] \
+  && ! grep -q 'AcceptCachedBundle(floor, crash, servedBridges)' "$M" \
+  && [ "$(grep -c 'AcceptCachedBundle(floor' "$M")" = "$(grep -c 'AcceptCachedBundle(floor, crash, servedBridges, hostEngine)' "$M")" ] \
+  && grep -A16 '^private class AcceptCachedBundle' "$M" | grep -q 'engineProblem(manifest.metadata\[ENGINE_METADATA_KEY\], engine)' \
+  && [ "$(grep -c 'engineProblem(manifestEngine(' "$B")" = 3 ] \
+  && grep -q '"engine refused:" in reason' "$M" \
+  && ok "NF2: the host's engine gates every lookup, and the network load, the kept copy and the cache start refuse another engine's bundle" \
+  || bad "NF2: the engine gate is not wired"
+# NF2 (M1): a cache another engine left (an app update that switched engine) is nothing cached, so the
+# start policy cannot pick a cache-first or parallel start from it; nor does crash rollback go back
+# to a kept bundle for another engine. lastGood is recorded with the engine that loaded it.
+grep -A4 'val lastGood = lastGoodForEngine(' "$M" | grep -q 'prefs.stringOrNull(lastGoodEngineKey(cacheName))' \
+  && [ "$(grep -c 'getString(lastGoodKey(cacheName)' "$M")" = 1 ] \
+  && grep -q 'putString(lastGoodKey(cacheName), url).putString(lastGoodEngineKey(cacheName), hostEngine)' "$M" \
+  && [ "$(grep -c 'crash.rollbackTo(' "$M")" = "$(grep -c 'keptForEngine(crash.rollbackTo(floor()), hostEngine)' "$M")" ] \
+  && ok "NF2: a last good or kept bundle for another engine is nothing cached (network-first), and lastGood records its engine" \
+  || bad "NF2: the start still counts another engine's cache"
 # WS6: crash rollback. The ledger (CrashRollback.kt) and its JVM tests are scaffolded; the trial
 # starts once the bundle's code begins to evaluate (the first moduleLoadStart), a load failure
 # counts only when it came from that code (CodeLoadProgress: not a download), the "not yet
@@ -433,7 +455,7 @@ SP="${M%/*}/StartPolicy.kt"
   && grep -q 'Log.i(TAG, choice.logLine(policy))' "$M" \
   && [ "$(grep -c 'recordStartOverride(.*, it)' "$M")" -ge 3 ] \
   && grep -q '          held.drop()' "$M" \
-  && grep -q 'val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, recordedSha256, floor, crash) { servedBridges }' "$M" \
+  && grep -q 'val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, recordedSha256, floor, crash, hostEngine) { servedBridges }' "$M" \
   && grep -q 'afterParallelLookup(latest?.manifestUrl, latest?.manifestSha256, lastGood, recordedSha256)' "$M" \
   && grep -A1 'held.retryFromNetwork(retryAfterShownCache(step, latest?.manifestUrl, latest?.manifestSha256))' "$M" | grep -q '          held.show()' \
   && grep -q '      } else if (retryFromNetwork != null && step !is CrashStep.SetAside) {' "$M" \

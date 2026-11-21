@@ -84,6 +84,8 @@ def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/Bridges.kt'))
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/CrashRollback.kt'))
   from(rootProject.file('scripts/templates/production-host/src/test/kotlin/CrashRollbackTest.kt'))
+  // NF2: the hosts' engine gate (in BundleIndex.kt) and its tests; EngineGateTest holds the publisher to it.
+  from(rootProject.file('scripts/templates/production-host/src/test/kotlin/EngineGateTest.kt'))
   // The start policy's decision (StartPolicy.kt, both hosts) and its tests.
   from(rootProject.file('scripts/templates/production-host/src/main/kotlin/StartPolicy.kt'))
   from(rootProject.file('scripts/templates/production-host/src/test/kotlin/StartPolicyTest.kt'))
@@ -95,6 +97,15 @@ def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   into layout.buildDirectory.dir('generated/hostTemplate/kotlin')
 }
 sourceSets.test.kotlin.srcDir(hostTemplateTestSource)
+// NF2: the index reader tools 0.3.18 shipped to hosts (the template's BundleIndex.kt at 878311ae,
+// byte for byte: EngineGateTest checks its git blob id), so the test that hosts from before NF2
+// take only the default engine's bundle runs their real constraint check.
+def legacyHostTestSource = tasks.register('legacyHostTestSource', Copy) {
+  from(file('src/test/legacy/BundleIndex-0.3.18.kt.txt')) { rename { 'BundleIndex0318.kt' } }
+  filter { line -> line.replace('@@PACKAGE@@', 'hostlegacy0318') }
+  into layout.buildDirectory.dir('generated/legacyHost/kotlin')
+}
+sourceSets.test.kotlin.srcDir(legacyHostTestSource)
 
 // Compiled component preview (docs/COMPILED_COMPONENT_PREVIEW.md): write the
 // per-app editor's adapters file without a relay, or `-Pcheck` that the
