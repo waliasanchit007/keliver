@@ -471,7 +471,8 @@ class KeliverNavPressTest {
     var keys by mutableStateOf(listOf("home"))
     harness.setContent {
       KeliverPreparedStack(keys, preparation, PlainFrame, depth = 1) { key ->
-        counts.compositions[key] = (counts.compositions[key] ?: 0) + 1
+        // Fresh compositions only (the stack's own recomposition re-runs this lambda).
+        androidx.compose.runtime.remember(key) { counts.compositions[key] = (counts.compositions[key] ?: 0) + 1 }
         DisposableEffect(key) { onDispose { counts.disposed += key } }
         ComposeNode<Node, TestApplier>(factory = { Node(key) }, update = {})
       }
