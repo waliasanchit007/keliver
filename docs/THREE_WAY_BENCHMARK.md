@@ -2107,6 +2107,119 @@ assets):
 - NF2's gate for Android, the guest's work about halved on the A12: **met, with `Long` as BigInt**
   (not met by the new engine alone). The iPhone is not measured.
 
+### Series C: the heavy screen's host back, before and after #276
+
+**Method.** `bench=sysback`, `x=heavy,retainhost` (and the simple screen's `x=retainhost`), on
+three builds installed in turn, twice: main, before #276 (`228a229b0`), before #280 (`4f3a5c865`,
+series D's), then the same again. So each build has 2 runs of 12 measured backs (24 pooled), and
+the phone's drift shows between rounds. Then one heavy series per build under a Perfetto trace
+(below).
+
+**Phone state** (series C and D together): 02:49–03:35, uptime 37–83 min, on battery 98% → 94%,
+25.6–25.8 °C, thermal status 0, CPU idle 82–98% before each series.
+
+**Back, first draw after the press** (the host showing the retained list) and the guest's
+confirming frame (`drawn`), pooled over both runs; the two runs' own `firstDraw` medians in brackets:
+
+| Build | Heavy: first draw | Heavy: guest's frame | Simple: first draw | Simple: guest's frame |
+|---|---|---|---|---|
+| before #276 | **35** / 39 / 23–40 (37; 32.5) | 221 / 239 / 194–241 | 27 / 29 / 22–31 (26.5; 27) | 149 / 167 / 129–171 |
+| main | **14** / 21 / 7–22 (13.5; 14) | 183.5 / 193 / 165–198 | 20.5 / 23 / 13–24 (20.5; 20) | 119 / 121 / 95–123 |
+
+- **#276 takes the heavy screen's host back from 35 to 14 ms to the first draw** (−60%; p90 39 →
+  21), and the simple screen's from 27 to 20.5. The heavy screen is now no slower than the simple
+  one on this measure. The guest's confirming frame is faster too (heavy 221 → 183.5 ms), as the
+  host no longer recomposes both entries when the confirming batch changes them.
+- Part 2 (2026-11-17, `229e876cf`) measured 56.5 ms heavy and 37.5 simple. Today's before-#276
+  build gives 35 and 27 on the same measure: the phone is faster today (native's back 13 ms
+  against 31 that day), so compare within today only.
+- On `firstDraw`, the heavy back is under 50 ms: **met**. Whether the pixels are within 50 ms is
+  the trace's question (next).
+
+### Series D: one Compose state per generated widget, before and after #280
+
+**Method.** Back as in series C (the before-#280 build against main, in the same rounds), and a
+scrolling series per build and round with `x=scroll` (the guest's counters on) at two speeds, the
+doc's swipes: gentle (800 px in 300 ms, 1,422 dp/s, 10 each way, 8 s apart) and fast (1,000 px in
+80 ms, 6,667 dp/s, 7 each way, 14 s apart). Frames over 25 ms are counted over the moving frames of
+the clean flings (none closed by a touch, busy at the DOWN or at an end), from each fling's
+`movingFrames` (FrameMetrics' total duration, which depends on where a frame starts against the
+vsync; missed vsyncs are the jank measure).
+
+**Scripted flings flung today**, unlike both NF1 gate sessions: every clean swipe but one started a
+fling, and the list stopped 743 ms (gentle) and 2,245 ms (fast) after the finger lifted, as in runs
+2–3.
+
+**Back** (pooled as in series C):
+
+| Build | Heavy: first draw | Heavy: guest's frame | Simple: first draw | Simple: guest's frame |
+|---|---|---|---|---|
+| before #280 | 17 / 22 / 6–24 (19; 16) | 185.5 / 191 / 164–192 | 19 / 21 / 15–23 (19; 19.5) | 118 / 120 / 103–122 |
+| main | 14 / 21 / 7–22 (13.5; 14) | 183.5 / 193 / 165–198 | 20.5 / 23 / 13–24 (20.5; 20) | 119 / 121 / 95–123 |
+
+**Scrolling** (per run; flings clean of 20 or 14 swipes; frames over 25 ms; missed vsyncs median /
+total over the clean flings; the guest's last frame after the finger lifted, median):
+
+| Speed | Build, run | Clean flings | Moving frames | Over 25 ms | Missed vsyncs | Guest's last frame after the UP |
+|---|---|---|---|---|---|---|
+| 1,422 dp/s | before #280, 1 | 19 | 1,149 | 0.5% | 2 / 25 | 2,773 ms |
+| | before #280, 2 | 19 | 1,151 | 0.2% | 1 / 17 | 2,305 |
+| | main, 1 | 19 | 1,155 | 0.4% | 1 / 19 | 2,791 |
+| | main, 2 | 19 | 1,152 | 0.3% | 1 / 22 | 2,399 |
+| 6,667 dp/s | before #280, 1 | 14 | 1,921 | 10.6% | 3 / 52 | 4,412 |
+| | before #280, 2 | 13 | 1,782 | 12.2% | 4 / 51 | 4,498 |
+| | main, 1 | 14 | 1,924 | 12.2% | 3 / 50 | 4,165 |
+| | main, 2 | 13 (12 flung) | 1,653 | 6.4% | 3 / 42 | 4,611 |
+
+- **#280 changes nothing measurable on the phone**: the heavy back's first draw 17 → 14 ms is inside
+  the run-to-run spread (main's runs 13.5 and 14, the before build's 19 and 16), the guest's
+  frames are unchanged, and **scrolling does not regress** (gentle 0.2–0.5% of frames over 25 ms
+  in both builds, 1–2 missed vsyncs; fast 6.4–12.2%, 3–4 missed, in both). The Mac's −82% in
+  recorded state reads does not show as time on the A12 at these sizes, as the Mac's medians
+  already suggested.
+- **Scrolling against NF1's target** (frames over 25 ms under 2%; the target is judged by hand):
+  scripted, with the counters on, the gentle fling is within it (0.2–0.5%) and the fast fling is
+  not (6.4–12.2%). Placeholders (`x=scroll,blank`) were not run.
+
+### Series E: the cold start, shipped against `x=prestart` and `x=prestart,prefetch` (NF4)
+
+**Method.** Main's build (installed last in series C). Each arm: one unmeasured launch (it writes
+the preference the next process's prestart acts on), then 4 cold launches (`am force-stop`, 4 s,
+`am start`, wait for the process's `"cold"` line), in two rounds (native, shipped, `prestart`,
+`prestart,prefetch`, then again): 8 measured launches per arm. The marks are ms from the process
+start (`Process.getStartUptimeMillis`), as in [Cold start (NF0)](#cold-start-nf0), not
+Macrobenchmark's (which starts about 270 ms earlier, at the launch).
+
+**Phone state.** 03:35–03:42, uptime 83–91 min, on battery 94% → 93%, 25.6–25.7 °C, thermal status
+0, CPU idle 85–98%.
+
+| Arm | Launches | Data drawn: median (min–max) | − native | First frame | Code load starts → succeeds | Request → response | List composed |
+|---|---|---|---|---|---|---|---|
+| native | 8 | **604** (595–630) | — | 375 | — | 143 | 602 |
+| guest, shipped | 8 | **2,775** (2,745–2,811) | +2,171 | 374.5 | 485.5 → 1,086 | 144.5 | 2,522 |
+| guest, `prestart` | 8 | **2,649.5** (2,617–2,689) | +2,045.5 | 369.5 | 312.5 → 940.5 | 143 | 2,390.5 |
+| guest, `prestart,prefetch` | 8 | **2,533** (2,518–2,794) | +1,929 | 371.5 | 314 → 926.5 | 16 | 2,288 |
+
+(Request → response is the median of each launch's difference.)
+
+- **Together the two steps save 242 ms on the A12** (2,775 → 2,533, −8.7%): `prestart` 125.5 and
+  the prefetch about 117 more. The emulator's step 1 saved 272 ms (−29%) on a much shorter start.
+- **The prestart moves the code load 173 ms earlier, not to the process start.** The provider
+  runs at 79 ms (the `prestart` mark), but the code load's first event comes at 312.5 ms, between
+  `onCreate` (195) and the first frame (369.5): the load waits about 230 ms after the prestart.
+  Where it waits is not established (a main-thread hop in the app's start is the candidate). The
+  prestart's own main-thread work is 11.9 ms median (15.3 with the prefetch), and `onCreate` comes
+  74 ms later than as shipped (195 against 121); the first frame does not move (369.5–375).
+- **The prefetch removes the network wait** (request → response 144.5 → 16 ms), as on the emulator.
+- **What is left is the list's composition**: parsed → composed (medians of the marks) is 994.5 ms as
+  shipped (1,008.5 with `prestart`, 1,039.5 with both), as NF0 found (995). That is guest work in QuickJS, which series A
+  halves with `Long` as BigInt (an inference for the cold start: the BigInt build's cold start was
+  not measured).
+- Native today is 604 ms to the data drawn (NF0's same mark: 1,028), most of the difference before
+  `onCreate` (122.5 against 382). The guest's shipped cold start is close to NF0's (2,775 against
+  2,608), so the gap to native is wider today (+2,171 against +1,580).
+- NF4's target, within 0.4 s of native: **not met** (+1,929 ms with both steps).
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
@@ -2232,6 +2345,11 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #                            so `prestart` acts in every measured launch: see that section)
 #   -e x prestart            guest: the code load starts in bindApplication (the NEXT process's start)
 #   -e x prefetch            guest: the host sends the list's first request as it starts the guest
+#   -e x prepared            guest (NF3): keliver-nav's prepared stack, depth 1, rows with prepareOnPress
+#   -e x prepared,press      the same, with the host's press signal declared (keliver.press@1) and the
+#                            guest's GateAPress provided: a touch-down on a row composes its detail
+#   --ei hold 100            taps hold the finger down 100 ms without blocking the main thread, and the
+#                            series' times are from the DOWN (the press series; see "A12 checkpoint")
 # Every process logs one {"cold":"<form>",...} line when the list's data is first drawn: its marks in ms
 # from the process start (see "Cold start (NF0)").
 # Every state/summary/fling line carries "api":"app"|"mac"; the state line also refreshHz and density.
