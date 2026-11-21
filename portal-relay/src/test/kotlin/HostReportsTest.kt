@@ -109,6 +109,8 @@ class HostReportsTest {
       "bridge refused: the bundle needs A@1, which this host does not serve",
       "bridge refused: the bundle was built against another A@1 contract (shape a; this host's is b)",
       "bridge bind failed: A bound [] (it must bind A, once)",
+      // NF2: a manifest for another engine.
+      "engine refused: the bundle is compiled for quickjs-2026; this host runs quickjs-2021",
       "manifest signature for key k did not verify", "lookup failed", "timeout", "something else",
       // WS6: a set-aside manifest refused, and what runs in place of the set-aside bundle.
       "set aside: sequence 5 failed 2 times on this install (crash rollback); only a newer one runs",
@@ -130,7 +132,7 @@ class HostReportsTest {
     // Every category the hosts send was produced above, so each was checked.
     assertEquals(
       setOf(
-        "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "signature", "lookup-failed",
+        "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "engine", "signature", "lookup-failed",
         "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "other",
       ),
       produced,

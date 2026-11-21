@@ -92,7 +92,7 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
     // rollback adds crash-rollback (previous-good, newer-bundle, app-view) and set-aside.
     private val OUTCOMES = setOf("loaded", "fell-back", "update-applied", "update-failed", "not-loaded", "no-bundle", "refused", "screen-failed", "crash-rollback")
     private val REASONS = setOf(
-      "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "signature", "lookup-failed",
+      "", "sha256-mismatch", "below-floor", "set-aside", "bridge-missing", "bridge-shape", "bridge-bind", "engine", "signature", "lookup-failed",
       "network", "config", "exception", "previous-good", "newer-bundle", "app-view", "other",
     )
     private val INSTALL_ID = Regex("[A-Za-z0-9-]{1,64}")
