@@ -2107,6 +2107,43 @@ assets):
 - NF2's gate for Android, the guest's work about halved on the A12: **met, with `Long` as BigInt**
   (not met by the new engine alone). The iPhone is not measured.
 
+### Series B: the fork on 32-bit ARM (NaN boxing)
+
+The phone's ABI list is `arm64-v8a,armeabi-v7a,armeabi` (`ro.zygote` `zygote64_32`), so a package
+installed with `--abi armeabi-v7a` runs as a 32-bit process on the fork's 32-bit `libquickjs.so`,
+where QuickJS NaN-boxes its values (`JS_NAN_BOXING`).
+
+**Method.** Zipline's device tests from the fork's checkout (`:zipline:assembleAndroidDeviceTest`,
+plain and with `-PziplineForkLongAsBigInt`), installed on the phone with `pm install -t --abi
+armeabi-v7a` and run with `am instrument -w -r`. The test APK as built does not install on this
+phone: its `lib/*/wrap.sh` (a one-line `exec "$@"` that lets native `printf` reach the log) is
+stored compressed and not page-aligned, while the APK loads native libraries in place, and the
+installer refuses it (`INSTALL_FAILED_INVALID_APK: Failed to extract native libraries`; logcat
+names `wrap.sh`). So each APK was installed without its `wrap.sh` (removed, zipaligned for 16 KB,
+signed with the debug key); its tests, JavaScript and `libquickjs.so` are the build's own (the
+BigInt APK's `kotlin-kotlin-stdlib.js` has `BigInt.asIntN(64`). The `asUintN` check:
+`apply.sh qjs-android` and `check-bigint-device` (step 2's runner, on the AAR's compile line).
+Both test packages were uninstalled after.
+
+**Phone state.** 04:14–04:19 (the check: 02:46), on battery 92% → 91%, thermal status 0.
+
+| Check (armeabi-v7a, `primaryCpuAbi=armeabi-v7a`) | Plain | `Long` as BigInt |
+|---|---|---|
+| Zipline's device tests: run / passed / skipped / failed | 271 / 269 / 2 / 0 | 271 / 269 / 2 / 0 |
+| among them | `QuickJs2026Test`, `QuickJs2026InboundChannelTest`, `BigIntOpsTest` (48 classes) | the same |
+
+| `bigint-ops.js` on the phone (292 lines against Node) | Fork | 2026-06-04 unpatched |
+|---|---|---|
+| arm64-v8a (`JS_NAN_BOXING no`, 64-bit limbs) | **matches all 292** | differs on 76 |
+| armeabi-v7a (`JS_NAN_BOXING yes`, 32-bit limbs, 32-bit pointers) | **matches all 292** | differs on 108 |
+
+- **The fork works on 32-bit ARM**: Zipline's whole device suite passes in a 32-bit process, plain
+  and with `Long` as BigInt across the bridge, and the `asUintN` fix holds with NaN boxing (the
+  unpatched engine is wrong on 108 lines there, more than on 64-bit). The 2 skipped are upstream's
+  (`genericSuspendResultInList`, `veryDeepRecursionFailsGracefully`). Step 2's emulator run had 266
+  run in 47 classes; the suite has grown since (#274 moved the JNI tests into it).
+- Not covered: x86 (32-bit) and x86_64, which this phone does not run.
+
 ### Series C: the heavy screen's host back, before and after #276
 
 **Method.** `bench=sysback`, `x=heavy,retainhost` (and the simple screen's `x=retainhost`), on
@@ -2135,6 +2172,36 @@ confirming frame (`drawn`), pooled over both runs; the two runs' own `firstDraw`
   against 31 that day), so compare within today only.
 - On `firstDraw`, the heavy back is under 50 ms: **met**. Whether the pixels are within 50 ms is
   the trace's question (next).
+
+**The measure that sees the pixels (Perfetto, the #276 recipe).** One heavy series per build
+(`x=heavy,retainhost,trace`, 14 backs, the first 2 dropped) under a Perfetto trace started on the
+phone (the config of the NF0 traces: sched, atrace `gfx view input am wm dalvik`, the app's own
+sections, SurfaceFlinger's frame timeline), read on the phone with `trace_processor_shell` (the
+build of the one that androidx.benchmark's macro library ships). For each back: the press is the
+bench's step message (the opens' step messages are the ones that sleep 40 ms in the tap); then the
+first `Choreographer#doFrame` after it, its sections, and the app's actual frame timeline row for
+that frame's vsync id, whose end is the present.
+
+| Build | Press → frame starts | Press → end of the frame's main-thread work | `Record View#draw()` (of it: Compose's measure and layout) | `Recomposer:recompose` | **Press → presented** |
+|---|---|---|---|---|---|
+| before #276 | 10.8 | 65.4 / 89.5 / 57.2–90.2 | 30.4 (25.2) | 22.9 | **74.2** / 99.4 / 66.1–99.7 |
+| before #280 | 13.1 | 29.4 / 32 / 15.6–32.3 | 9.0 (3.4) | 4.5 | **37.3** / 41.7 / 22.7–42.5 |
+| main | 14.1 | 26.9 / 34.7 / 19–34.9 | 8.5 (3.2) | 4.4 | **36.1** / 44.4 / 29.4–44.8 |
+
+(Medians, or median / p90 / min–max; ms; 12 backs per build. The traced series' own `firstDraw`
+medians: 34.5 before #276, 17.5 before #280, 17.5 on main; tracing adds a section per message.)
+
+- **Where the layout runs: inside `Record View#draw()`**, in every back of every build
+  (`AndroidOwner:measureAndLayout` nested in it, after the `firstDraw` mark), as #276's section
+  read from the sources. So `firstDraw` sees the recomposition and the apply only, and the pixels
+  come about 20 ms after it.
+- **With #276 the heavy screen's back is presented 36.1 ms after the press** (p90 44.4, at most
+  44.8): **the 50 ms target is met on the measure that sees pixels**, with every one of the 12
+  backs under it. Before #276: 74.2 ms (p90 99.4), none under 50. The frame's main-thread work
+  falls from 65.4 to 26.9 ms; the recomposition from 22.9 to 4.4 and the layout from 25.2 to 3.2.
+- #280 adds nothing measurable here (37.3 against 36.1).
+- So decision 1 of #276's section (keep hidden entries placed, to save placement, layers and
+  drawing) is **not needed for the 50 ms target** on this phone.
 
 ### Series D: one Compose state per generated widget, before and after #280
 
@@ -2295,6 +2362,35 @@ battery 93% → 92%, 25.5–25.7 °C, thermal status 0, CPU idle 81–99%.
   does it stutter?
 - [ ] The scroll by hand with `x=prepared,press`: does a slow drag that stops on a row ever open
   it, or feel sticky?
+
+The build left on the phone is main (`1e083833f`, Zipline 1.28.0) with this change's bench options,
+so the checklist runs on it, for example
+`am start -S -n dev.keliver.sample/dev.keliver.sample.host.threeway.ThreewayActivity --ez localApi true -e form guest -e x prepared,press`.
+
+### Verdicts against the owner's targets
+
+| Target | Verdict | Evidence (this checkpoint) |
+|---|---|---|
+| Back under 50 ms | **Met**, simple and heavy, on the pixels | Host back, heavy screen: first draw 14 ms (p90 21), presented 36.1 ms after the press (p90 44.4, max 44.8; trace); simple first draw 20.5. Before #276 the heavy one was presented at 74.2 |
+| Tap response within one frame | **Not measured** | The host's pressed state (the ripple) is drawn by the host; no measure of its first frame was taken |
+| About 100 ms to the destination (open: simple ~100, heavy ≤ 150) | **Not met** | Retained, Zipline 1.28.0: simple 289.5, heavy 908.5; with `Long` as BigInt 174.5 and 478. The press signal makes it slower on this engine (+11 to +24 ms; heavy +55 to +70) |
+| 55 fps scrolling (frames over 25 ms under 2%, by hand) | **Partly measured**, scripted only | 1,422 dp/s: 0.2–0.5% over 25 ms, 1–2 missed vsyncs per fling; 6,667 dp/s: 3–4 missed per fling (the share over 25 ms is noisy there). No hand check; no placeholder pass |
+| Cold start within +400 ms of native | **Not met** | +2,171 ms as shipped, +1,929 with `prestart,prefetch` (native 604) |
+| NF2: the guest's work about halved on the A12 | **Met with `Long` as BigInt** | Guest frame 2.73× (open), 2.11× (back); the new engine alone 1.23×. 32-bit: all tests pass |
+
+**What it changes in the plan (proposals for the owner):**
+- NF1's back is done on Android for both screens: no "keep hidden entries placed" step is needed
+  for the target; #280 is neutral on the phone (keep it for the Mac's state-read savings, but it
+  is not a reason to port the pattern to keliver-material by hand).
+- NF2's engine with `Long` as BigInt is the largest lever left for open and for the cold start (the
+  list's composition, about 1 s of the cold start, is guest work): shipping it (the bundles for both
+  engines and the transition) moves up in value. The new engine without BigInt is not worth a
+  transition on its own.
+- NF3's pre-composition on touch-down does not pay on the A12 with 1.28.0: composing a detail takes
+  longer than a tap's press. Keep the press signal off by default until a run on the BigInt engine
+  shows a gain, and keep screens that use it from reading state the tap changes.
+- NF4: `prestart,prefetch` saves 242 ms; the rest of the gap is the list's composition. The prestart's
+  code load waits about 230 ms after the provider runs: worth finding before more cold-start work.
 
 ## For an iOS run (follow-up)
 
