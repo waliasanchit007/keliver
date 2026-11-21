@@ -686,9 +686,10 @@ and `has_scope`, the closure record a 3-bit `closure_type` in place of two flags
 lost its separate line number and gained the function's source text; and the line table now starts
 with the function's line and column and has a column delta in every entry. The 243 built-in atoms
 are 2026's (a test compares them with `quickjs-atom.h`). Source maps map each entry by its
-JavaScript line, as 1.28.0 did (the line's first segment gives the Kotlin file, line and column).
-Two 1.28.0 bugs went on the way: 8-bit strings are Latin-1, not UTF-8, and the function flags read
-inverted.
+JavaScript line, as 1.28.0 did (the line's first segment gives the Kotlin file, line and column);
+since the reviews' Lows ("NF2: the reviews' Lows" below), by line and column. Three 1.28.0 bugs
+went on the way: 8-bit strings are Latin-1, not UTF-8, the function flags read inverted, and the
+line table's op byte was read as signed.
 
 **The source text.** QuickJS 2026 writes every function's source text into its bytecode (for
 `Function.prototype.toString`); 2021 did not. Each nested function keeps its own copy, so in the
@@ -710,7 +711,9 @@ loaded function's `toString()` reads `[native code]`, lines and columns stay.
   modules with their source maps, as Keliver builds them: 9,573 functions, every one read and written
   back byte for byte; with the source maps applied, 9,026 functions get a Kotlin file and every
   instruction with a line entry was checked against the source map (the line `find_line_num` gives
-  at that pc is the source map's line for the JavaScript line); stripped, no function keeps a line
+  at that pc is the source map's line for the JavaScript line; that check shows only that the
+  line rule was applied everywhere, and "NF2: the reviews' Lows" below replaced it with one of
+  file, line and column); stripped, no function keeps a line
   table; then the bundle loads in dependency order as compiled, with source maps and stripped, every
   module without error. Again with `Long` as BigInt: the same 47 modules, 9,575 functions, 471
   BigInt constants, all byte for byte, 9,027 functions mapped and checked, every module loaded.
@@ -730,7 +733,14 @@ loaded function's `toString()` reads `[native code]`, lines and columns stay.
   bundle from 6.9× 1.28.0's size to 1.06× (the 47 files with the manifest, apparent size) and the
   heap after loading from 2.2× to 0.96×; loading is not slower than on 1.28.0 (one run each).
   Every run's batch hash is the same (637745288 as shipped, 394047653 with recording off). The
-  BigInt bundle is 1% smaller than the plain one; it has 471 BigInt constants.
+  BigInt bundle is 1% smaller than the plain one; it has 471 BigInt constants. The `.zipline`
+  column (and so the 6.9× and 1.06×) is the session's measurement of the files' apparent size; the
+  command and its output were not kept with the run logs (which hold only Gradle's output), so
+  that column is unverified. **Measured again 2026-11-21** ("NF2: the reviews' Lows" below), with
+  the command recorded, on that day's guest: 1.28.0 1,800,224 bytes, the fork 1,979,605 (**1.10×**),
+  the fork with `Long` as BigInt 1,955,333 (1.09×). The guest has changed since step 1b, so the
+  1.06× is neither confirmed nor refuted; 1.10× is the figure of record. Step 1's 6.9× (a patch
+  set that no longer exists) was not measured again.
 
 **Not checked:** Android and iOS (steps 2 and 3, since done: the iOS `compile` change compiles and its test passes on the simulator); a stack
 trace from a real Kotlin crash in the three-way guest on a device; whether any guest code calls
@@ -940,6 +950,107 @@ channel the first of them killed the simulator test process: `Assertion failed:
   (`-PziplineForkAllowIosX64` lets it through). The other Kotlin/Native targets Zipline has (macOS, tvOS, Linux) were not
   built.
 - Sizes: the klibs and the linked apps were not compared with 1.28.0's.
+
+## NF2: the reviews' Lows
+
+2026-11-21, Mac and JVM only, the same patch set. The five reviews of steps 1 to 3 left Low
+findings; most were fixed in the steps themselves (the scripts' checks, the native layers, the
+docs). This pass fixed the rest that a Mac can fix, all in `zipline-bytecode`:
+- **Atom names never resolve to a built-in symbol.** Built-in symbols (from
+  `JS_ATOM_Private_brand` on) are no longer in the name-to-index map, so a file's own string atom
+  `"Symbol.iterator"` (a file or function name) is written back as itself, not as the symbol's
+  index. (1.28.0 got this right by letting the file's strings overwrite; step 1b's "first one wins",
+  added for `<brand>`, had broken it.) A built-in symbol's index read where a name belongs is
+  refused with a message naming the symbol: QuickJS's parser never writes one there, and it could
+  not be written back as the symbol.
+- **Source maps by line and column.** A function carries one file name: the file of the segment
+  covering its own position (its `function` keyword, which Kotlin maps to the declaration), else
+  1.28.0's choice, its first mapped line's first file (the inlined function's file when that line
+  starts with an inlined `require` or `check`). The file most positions are in was tried and
+  dropped: in a function whose body is Kotlin `js("…")` code, most segments are in the pseudo-file
+  `<js-code>`, and Zipline's stack trace dropped that frame (`happyPath`'s `goBoom1`). A position takes the segment covering its column
+  when that segment is in the function's file, else its line's first segment in that file, so two
+  statements on one JavaScript line keep their own Kotlin positions (`e.stack` columns now mark the
+  throw, not the start of its line). A segment in another file (code inlined from it) is never
+  used: its line would be printed under the function's file name. A position with no segment in
+  the function's file on its line takes the previous position's Kotlin line and column, the
+  nearest preceding Kotlin position. That is an approximation: a call on an unmapped line shows
+  the line before it. 1.28.0 printed the JavaScript line under the Kotlin file name, a line of the
+  wrong file. A one-field segment counts as unmapped (1.28.0 gave it the previous segment's source
+  and line).
+- **Stripping drops the source text.** `stripLineNumbers` clears each function's source text as
+  well as its line table (the fork's `compile` leaves it out, but bytecode compiled any other way
+  kept it after a strip).
+- **`RealBundleTest` claims what it checks.** It now compares every function's file, header and
+  recorded position (line and column) with the rule computed a second time from the parsed
+  segments, and says that this shows the rule was applied everywhere, not that the Kotlin positions
+  are right; the hand-checked stack traces are the independent check.
+
+**Checked** (a fresh `apply.sh all`, then the edited checkout, then a second fresh `apply.sh all` of
+the regenerated patch set): `:zipline-bytecode:test` 48 run, 47 pass, 1 skipped (`RealBundleTest`
+without a corpus). Six tests are new; with the atom, strip and column fixes reverted, the four
+that cover them fail (48 run, 4 failed). The other two cover the unmapped-position and one-field
+changes, which that control kept. The unmapped-position change also changes one upstream
+expectation (`removeLeadingDotDotsInSourceMap`: `goBoom.kt:10` becomes `goBoom.kt:4`).
+`RealBundleTest` on the guest profile's production bundle (`compileProductionExecutableKotlinJs
+-Pkeliver.guestProfile`): 47 modules, 9,591 functions, 9,030 mapped, every header, line and column
+consistent, every module loaded; with `Long` as BigInt (`-PprofileBigInt`) 9,593 functions, 9,031
+mapped, 471 BigInt constants, the same. `:zipline-cli:test` 12 of 12 (its stack traces, from Kotlin's
+own source maps, unchanged). `:zipline:jvmTest` 50 classes, 275 run, 273 pass, 2 skipped, plain and
+with `Long` as BigInt.
+
+**After the review of this pass** (one Medium, three Lows; a fresh `apply.sh all`, edited,
+regenerated, and the regenerated set applied to a second fresh clone, its `zipline-bytecode`
+sources identical to the tested ones):
+- **A segment in another file is never used** (the Medium). The fallback for a position whose
+  covering segment is in another file was the line's first mapped segment in any file, so a throw
+  in an inlined `require` printed a line of `Preconditions.kt` under the caller's file name. It is
+  now the line's first segment in the function's own file, else the previous position. On upstream's
+  real `goBoom.kt` (`zipline-testing`; `require` on line 5, the recursive call on line 6), Kotlin's
+  own map covers the `function` header (`goBoom.kt:4:1`), maps the call to `goBoom.kt:6:3`, and
+  covers the inlined throw only with `Preconditions.kt:38`; the throw now takes `goBoom.kt:5`, the
+  `require` line.
+- **The function's file is its declaration's**: the segment covering its `function` keyword. Kotlin
+  covers it in 8,335 of the plain bundle's 9,030 mapped functions (8,336 of 9,031 with BigInt); 68
+  functions in each get another file than 1.28.0's rule gave. 40,361 positions (36,974 with BigInt)
+  are covered by a segment in another file than their function's and take the previous position.
+- **The nearest preceding Kotlin position is an approximation**, written down as one.
+  `removeLeadingDotDotsInSourceMap`'s map is hand-written and maps only the throw (to `:4`), so its
+  recursive-call frames print `:4`, not the call's line; 1.28.0 printed `:10`, and `goBoom.kt` has 7
+  lines.
+- **A built-in symbol read as a name is refused**, with a message naming it.
+- **Tests**: `:zipline-bytecode:test` 53 run, all pass with the corpus (without it, 52 pass and
+  `RealBundleTest` is skipped);
+  5 new (another file's line never used, by `SourceMap` and through bytecode; the declaration's file;
+  a position exactly on a segment's first column, at the column QuickJS reports; symbols refused).
+  Controls: with the old behaviour back (any file's segment as the fallback, 1.28.0's file rule, the
+  JavaScript position for an unmapped line, one-field segments inheriting a source, symbols read as
+  text) 7 of 53 fail, each new or changed test: `main.kt:150:5`, `other.kt:4:3`, `main.kt:3:14`
+  where the fork gives `main.kt:5:3`, `main.kt:4:3`, `main.kt:7:3`. With the covering column one too
+  far right 4 fail, one too far left 2 fail, the boundary test in both. `RealBundleTest`,
+  `:zipline-cli:test` (12 of 12) and `:zipline:jvmTest` (275 run, 273 pass, 2 skipped, plain and with
+  `Long` as BigInt) as above.
+
+**The bundle sizes, with their command.** `apply.sh test <work> -PVERSION_NAME=1.28.0-q20260604
+-Dmaven.repo.local=<repo> -PRELEASE_SIGNING_ENABLED=false :zipline:publishJvmPublicationToMavenLocal
+:zipline-bytecode:publishMavenPublicationToMavenLocal` (the compiler's two modules); then
+`./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle
+-PziplineForkRepo=<none | repo> [-PziplineForkLongAsBigInt] --no-daemon -Pkeliver.guestProfile
+:keliver-compose-gatea-profile:compileProductionExecutableKotlinJsZipline` and `wc -c
+keliver-compose-gatea-profile/build/zipline/Production/*` (47 modules and the manifest, source maps
+on, as Keliver builds):
+
+| Engine | Bundle | Bytes | vs 1.28.0 |
+|---|---|---|---|
+| 1.28.0, QuickJS 2021-03-27 | as shipped | 1,800,224 | — |
+| fork | as shipped | 1,979,605 | 1.10× |
+| fork | `Long` as BigInt | 1,955,333 | 1.09× |
+
+**Not fixed, and why:**
+- **32-bit (`JS_NAN_BOXING`)** (step 1's and step 2's reviews): needs an `armeabi-v7a` or `x86`
+  device or image; this Mac has neither. `check-bigint-device` and the device tests run it on one.
+- **The source-map rule's Kotlin positions** are still checked independently only by the
+  hand-written stack-trace tests; a real Kotlin crash on a device remains unchecked (as before).
 
 ## NF3: the open path, measured (Mac)
 

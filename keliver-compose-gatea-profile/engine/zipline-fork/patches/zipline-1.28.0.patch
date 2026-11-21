@@ -355,16 +355,91 @@ index c06771b..7f4ec3e 100644
 +    sink.write(debug.source)
    }
  }
-diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
-index a208c89..7566a63 100644
---- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
-+++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/SourceMap.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/SourceMap.kt
+index 5703638..2fdeb53 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/SourceMap.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/SourceMap.kt
 @@ -1,3 +1,4 @@
-+// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5).
++// Modified by the Keliver fork of Zipline, 2026: per-position lookup; one-field segments unmapped.
  /*
   * Copyright (C) 2021 Square, Inc.
   *
-@@ -67,39 +68,47 @@ private class SourceMapBytecodeRewriter(
+@@ -55,6 +56,41 @@ data class SourceMap(
+     return groups[lineNumber - 1].segments.firstOrNull()
+   }
+ 
++  /**
++   * Keliver fork: the first segment on [lineNumber] that maps somewhere (has a [Segment.source]),
++   * or null when nothing on the line is mapped. This is Zipline's rule for a line.
++   */
++  fun findMapped(lineNumber: Int): Segment? {
++    if (lineNumber < 1 || lineNumber > groups.size) return null
++    return groups[lineNumber - 1].segments.firstOrNull { it.source != null }
++  }
++
++  /**
++   * Keliver fork: the segment covering a position (1-based line and column): the last one on
++   * [lineNumber] starting at or before [column], mapped or not; null before the line's first.
++   */
++  fun covering(lineNumber: Int, column: Int): Segment? {
++    if (lineNumber < 1 || lineNumber > groups.size) return null
++    return groups[lineNumber - 1].segments.lastOrNull { it.startingColumn <= column }
++  }
++
++  /**
++   * Keliver fork: the segment for one position (1-based line and column, as QuickJS 2026 records
++   * them). That is the segment covering [column] (the last one starting at or before it) when it
++   * maps into [source], so two statements on one JavaScript line keep their own Kotlin positions.
++   * Otherwise it is the line's first segment in [source], else null. A function carries one file
++   * name, [source], so a segment in another file (code inlined from it) is never used: its line
++   * would be printed under [source]'s name, a line of the wrong file. An unmapped segment (one
++   * field) is never used either.
++   */
++  fun find(lineNumber: Int, column: Int, source: String): Segment? {
++    if (lineNumber < 1 || lineNumber > groups.size) return null
++    val segments = groups[lineNumber - 1].segments
++    val covering = covering(lineNumber, column)
++    if (covering != null && covering.source == source) return covering
++    return segments.firstOrNull { it.source == source }
++  }
++
+   companion object {
+     private val json = Json {
+       ignoreUnknownKeys = true
+@@ -89,7 +125,10 @@ data class SourceMap(
+           startingColumn += buffer.readVarint()
+ 
+           // Read an optional updated source file, column, and row.
+-          if (!buffer.exhausted()) {
++          // Keliver fork: a one-field segment (no source) marks unmapped code; it no longer takes
++          // the previous segment's source, line and column.
++          val mapped = !buffer.exhausted()
++          if (mapped) {
+             sourceIndex += buffer.readVarint().toInt()
+             sourceLine += buffer.readVarint()
+             sourceColumn += buffer.readVarint()
+@@ -111,8 +150,8 @@ data class SourceMap(
+           }
+           check(sourceColumn >= -1)
+ 
+-          val source = sourceMap.sources.elementAtOrNull(sourceIndex)
+-          val name = sourceMap.names.elementAtOrNull(nameIndex)
++          val source = if (mapped) sourceMap.sources.elementAtOrNull(sourceIndex) else null
++          val name = if (mapped) sourceMap.names.elementAtOrNull(nameIndex) else null
+           segments += Segment(
+             startingColumn = startingColumn + 1,
+             source = source,
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
+index a208c89..1fe80bb 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/applySourceMap.kt
+@@ -1,3 +1,5 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's bytecode (version 5), each
++// position mapped by its line and column.
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -67,39 +69,65 @@ private class SourceMapBytecodeRewriter(
      }
    }
  
@@ -375,7 +450,7 @@ index a208c89..7566a63 100644
 -      functionLineNumber = lineNumber,
 -      source = Buffer().write(pc2Line),
 -    )
-+  private class Position(val pc: Int, val line: Int, val column: Int, val segment: Segment?)
++  private class Position(val pc: Int, val line: Int, val column: Int)
  
 -    var ktFileName: String? = null
 -    var functionKtLineNumber: Int = -1
@@ -385,13 +460,24 @@ index a208c89..7566a63 100644
 -      val instructionKtLineNumber = segment?.sourceLine?.toInt() ?: jsReader.line
 +  /**
 +   * Version 5's table starts with the function's own line and column, then one entry per change
-+   * of line or column. Each position is mapped by its line, as in Zipline 1.28.0: the line's first
-+   * segment gives the Kotlin file, line and column. A position the source map has no segment for
-+   * keeps its JavaScript line and column, as before.
++   * of line or column.
 +   *
-+   * The function's own position is usually the `function` keyword's line, which Kotlin's source
-+   * maps rarely cover. When it is not mapped, it takes its first mapped instruction's position
-+   * (1.28.0 did the same for its separate function line number).
++   * The function's Kotlin file ([ktFileName]) is the file of the segment covering its own position
++   * (its `function` keyword, which Kotlin maps to the declaration), else Zipline 1.28.0's rule: the
++   * file of the first mapped segment on its first position's line that has one. 1.28.0's rule alone
++   * names the wrong file when that line starts with code inlined from another file (`require`,
++   * `check`, `let`). The file most positions are in is no better: in a function whose body is
++   * Kotlin `js("…")` code, most segments are in the pseudo-file `<js-code>`.
++   *
++   * Each position then takes the Kotlin line and column of the segment covering its column when
++   * that segment is in the function's file, else of its line's first segment in that file
++   * ([SourceMap.find]). A position with neither (its line unmapped, or only mapped into another
++   * file) takes the previous position's Kotlin line and column. That is the nearest preceding
++   * Kotlin position, an approximation: a call on an unmapped line shows the line before it.
++   * 1.28.0 printed the JavaScript line under the Kotlin file name, a line of the wrong file, and
++   * the line of an inlined function's file under the caller's name. When the function's own
++   * position has no Kotlin position, it takes its first mapped position's (1.28.0 did the same for
++   * its separate function line number), and so does any position before that one.
 +   */
 +  fun Debug.jsToKt(): Debug {
 +    if (pc2Line.size == 0) return this // Stripped: nothing to map.
@@ -407,24 +493,27 @@ index a208c89..7566a63 100644
 -        ktWriter = LineNumberWriter(functionKtLineNumber, ktPc2LineBuffer)
 +    val positions = mutableListOf<Position>()
 +    LineNumberReader(Buffer().write(pc2Line)).use { reader ->
-+      positions += Position(0, reader.line, reader.column, sourceMap.find(reader.line))
++      positions += Position(0, reader.line, reader.column)
 +      while (reader.next()) {
-+        positions += Position(reader.pc, reader.line, reader.column, sourceMap.find(reader.line))
++        positions += Position(reader.pc, reader.line, reader.column)
        }
 -
 -      ktWriter.next(jsReader.pc, instructionKtLineNumber)
      }
  
-+    val firstMapped = positions.firstOrNull { it.segment?.source != null }
++    val ktFileName = ktFileName(positions)
 +      ?: return this // Nothing in this function is in the source map.
-+    val ktFileName = firstMapped.segment!!.source!!
 +    atoms.add(ktFileName)
 +
-+    val header = positions[0].takeIf { it.segment != null } ?: firstMapped
++    val segments = positions.map { sourceMap.find(it.line, it.column, ktFileName) }
++    var previous = segments.first { it != null }!!
 +    val ktPc2Line = Buffer()
-+    val writer = LineNumberWriter(header.ktLine(), header.ktColumn(), ktPc2Line)
-+    for (position in positions.drop(1)) {
-+      writer.next(position.pc, position.ktLine(), position.ktColumn())
++    val header = segments[0] ?: previous
++    val writer = LineNumberWriter(header.sourceLine.toInt(), header.sourceColumn.toInt(), ktPc2Line)
++    for (i in 1 until positions.size) {
++      val segment = segments[i] ?: previous
++      writer.next(positions[i].pc, segment.sourceLine.toInt(), segment.sourceColumn.toInt())
++      previous = segment
 +    }
      return Debug(
 -      fileName = ktFileName ?: fileName,
@@ -436,27 +525,35 @@ index a208c89..7566a63 100644
      )
    }
 +
-+  private fun Position.ktLine(): Int = segment?.sourceLine?.toInt() ?: line
-+  private fun Position.ktColumn(): Int = segment?.sourceColumn?.toInt() ?: column
++  /** The function's Kotlin file (see [jsToKt]), or null when none of its positions is mapped. */
++  private fun ktFileName(positions: List<Position>): String? {
++    val header = positions[0]
++    return sourceMap.covering(header.line, header.column)?.source
++      ?: positions.firstNotNullOfOrNull { sourceMap.findMapped(it.line)?.source }
++  }
  }
 diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt
-index 3a8a2d3..a0cb604 100644
+index 3a8a2d3..fd5fe7b 100644
 --- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt
 +++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/atoms.kt
-@@ -1,3 +1,4 @@
-+// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's built-in atoms.
+@@ -1,3 +1,5 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026-06-04's built-in atoms; names never
++// resolve to a built-in symbol, and a built-in symbol read as a name is refused.
  /*
   * Copyright (C) 2021 Square, Inc.
   *
-@@ -35,11 +36,13 @@ class MutableAtomSet(
+@@ -35,11 +37,15 @@ class MutableAtomSet(
    private val stringToId = mutableMapOf<JsString, Int>()
  
    init {
-+    // The first occurrence wins: "<brand>" is both a string atom and, later, a symbol
-+    // (JS_ATOM_Private_brand). A name in bytecode is the string atom.
-     for ((index, string) in BUILT_IN_ATOMS.withIndex()) {
+-    for ((index, string) in BUILT_IN_ATOMS.withIndex()) {
 -      stringToId[string] = index
-+      stringToId.putIfAbsent(string, index)
++    // Only the built-in string atoms: a name in bytecode is a string, never one of the built-in
++    // symbols (from JS_ATOM_Private_brand on). Their text is not their identity: a file's own
++    // string atom "Symbol.iterator" (a file or function name) must not be written back as the
++    // symbol's index. "<brand>" is a string atom too, earlier in the table, and stays one.
++    for (index in 0 until FIRST_BUILT_IN_SYMBOL) {
++      stringToId.putIfAbsent(BUILT_IN_ATOMS[index], index)
      }
      for ((index, string) in strings.withIndex()) {
 -      stringToId[string] = index + BUILT_IN_ATOMS.size
@@ -464,9 +561,16 @@ index 3a8a2d3..a0cb604 100644
      }
    }
  
-@@ -48,7 +51,8 @@ class MutableAtomSet(
+@@ -47,8 +53,15 @@ class MutableAtomSet(
+ 
    override fun get(id: Int): JsString {
      return when {
++      // Keliver fork: a name is never a built-in symbol (QuickJS's parser never writes one as a
++      // name), and idOf could not write it back as the symbol, so refuse it here, where it is read.
++      id >= FIRST_BUILT_IN_SYMBOL && id < BUILT_IN_ATOMS.size -> throw IllegalArgumentException(
++        "atom $id is QuickJS's built-in symbol ${BUILT_IN_ATOMS[id].string}, not a string: " +
++          "zipline-bytecode reads atoms only as names, and a name is a string",
++      )
        id < BUILT_IN_ATOMS.size -> BUILT_IN_ATOMS[id]
 -      else -> _strings[id - BUILT_IN_ATOMS.size]
 +      else -> _strings.getOrNull(id - BUILT_IN_ATOMS.size)
@@ -474,7 +578,7 @@ index 3a8a2d3..a0cb604 100644
      }
    }
  
-@@ -72,8 +76,15 @@ class MutableAtomSet(
+@@ -72,8 +85,15 @@ class MutableAtomSet(
    override fun toMutableAtomSet(): MutableAtomSet = MutableAtomSet(_strings)
  }
  
@@ -492,7 +596,7 @@ index 3a8a2d3..a0cb604 100644
    // JS_ATOM_NULL
    "\u0000",
    "null",
-@@ -123,10 +134,14 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+@@ -123,10 +143,14 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
    "yield",
    "await",
    "",
@@ -507,7 +611,7 @@ index 3a8a2d3..a0cb604 100644
    "errors",
    "stack",
    "name",
-@@ -188,6 +203,7 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+@@ -188,6 +212,7 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
    "global",
    "unicode",
    "raw",
@@ -515,7 +619,7 @@ index 3a8a2d3..a0cb604 100644
    "new.target",
    "this.active_func",
    "<home_object>",
-@@ -211,13 +227,30 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+@@ -211,13 +236,30 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
    "async",
    "exec",
    "groups",
@@ -546,7 +650,7 @@ index 3a8a2d3..a0cb604 100644
    "Object",
    "Array",
    "Error",
-@@ -242,13 +275,23 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+@@ -242,13 +284,23 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
    "Uint16Array",
    "Int32Array",
    "Uint32Array",
@@ -570,7 +674,7 @@ index 3a8a2d3..a0cb604 100644
    "Map Iterator",
    "Set Iterator",
    "Array Iterator",
-@@ -271,6 +314,7 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+@@ -271,6 +323,7 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
    "TypeError",
    "URIError",
    "InternalError",
@@ -578,6 +682,16 @@ index 3a8a2d3..a0cb604 100644
    // Symbols:
    "<brand>",
    "Symbol.toPrimitive",
+@@ -287,3 +340,9 @@ private val BUILT_IN_ATOMS: List<JsString> = listOf(
+   "Symbol.unscopables",
+   "Symbol.asyncIterator",
+ ).map { it.toJsString() }
++
++/**
++ * The index of the first built-in symbol, `JS_ATOM_Private_brand` (the second "<brand>": the first
++ * is a string atom). Every built-in atom from here to [BUILT_IN_ATOM_COUNT] is a symbol.
++ */
++internal val FIRST_BUILT_IN_SYMBOL: Int = BUILT_IN_ATOMS.lastIndexOf("<brand>".toJsString())
 diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/bytecodeConstants.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/bytecodeConstants.kt
 index 6e5e506..e7ba2fa 100644
 --- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/bytecodeConstants.kt
@@ -774,6 +888,27 @@ index 66246b6..b944f0c 100644
    }
  }
  
+diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/stripLineNumbers.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/stripLineNumbers.kt
+index 7f0fc86..e6c8f18 100644
+--- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/stripLineNumbers.kt
++++ b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/stripLineNumbers.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: a strip also drops the function's source text.
+ /*
+  * Copyright (C) 2023 Square, Inc.
+  *
+@@ -38,7 +39,10 @@ fun JsObject.stripLineNumbers(): JsObject {
+   return when (this) {
+     is JsFunctionBytecode -> {
+       copy(
+-        debug = debug?.copy(pc2Line = ByteString.EMPTY),
++        // Keliver fork: version 5's debug record may also hold the function's source text. The
++        // fork's QuickJs.compile leaves it out, but bytecode compiled any other way keeps it, and
++        // a strip removes it too: the file name is all that is left.
++        debug = debug?.copy(pc2Line = ByteString.EMPTY, source = ByteString.EMPTY),
+         constantPool = constantPool.map { it.stripLineNumbers() },
+       )
+     }
 diff --git a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/types.kt b/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/types.kt
 index a95a96e..4519d86 100644
 --- a/zipline-bytecode/src/main/kotlin/app/cash/zipline/bytecode/types.kt
@@ -942,7 +1077,7 @@ index a95a96e..4519d86 100644
 +    get() = LineNumberReader(Buffer().write(pc2Line)).use { it.column }
 +}
 diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt
-index ced2dcd..3638144 100644
+index ced2dcd..11878e6 100644
 --- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt
 +++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/ApplySourceMapToBytecodeTest.kt
 @@ -1,3 +1,4 @@
@@ -950,7 +1085,17 @@ index ced2dcd..3638144 100644
  /*
   * Copyright (C) 2021 Square, Inc.
   *
-@@ -120,17 +121,58 @@ class ApplySourceMapToBytecodeTest {
+@@ -17,7 +18,9 @@ package app.cash.zipline.bytecode
+ 
+ import app.cash.zipline.QuickJs
+ import assertk.assertThat
++import assertk.assertions.contains
+ import assertk.assertions.isEqualTo
++import assertk.assertions.isGreaterThan
+ import assertk.assertions.startsWith
+ import kotlin.test.assertFailsWith
+ import org.junit.After
+@@ -120,17 +123,236 @@ class ApplySourceMapToBytecodeTest {
      val exception = assertFailsWith<Exception> {
        quickJs.evaluate("require('demo').sayHello()")
      }
@@ -985,6 +1130,184 @@ index ced2dcd..3638144 100644
 +    )
 +  }
 +
++  /**
++   * Keliver fork: two statements on one JavaScript line keep their own Kotlin positions (1.28.0
++   * gave every position on a line the line's first segment). Hand-written map: `g()` is main.kt
++   * 3:3 and the `throw` is main.kt 4:3.
++   */
++  @Test fun positionsAreMappedByColumn() {
++    val js = """
++      |function f() {
++      |  g(); throw Error('boom');
++      |}
++      |function g() { if (globalThis.boomInG) throw Error('g'); }
++      """.trimMargin()
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["main.kt"],
++      |  "sourcesContent": [null],
++      |  "names": [],
++      |  "mappings": ";EAEE,KACA;;"
++      |}
++      """.trimMargin(),
++    )
++    quickJs.execute(applySourceMapToBytecode(quickJs.compile(js, "cols.js"), sourceMap))
++    val stack = quickJs.evaluate("try { f(); 'no exception' } catch (e) { e.stack }") as String
++    assertThat(stack).startsWith("    at f (main.kt:4:3)\n")
++
++    // The call's frame: g has no mapping and keeps its JavaScript file; f's frame is the call's
++    // Kotlin position.
++    val inG = quickJs.evaluate(
++      "globalThis.boomInG = true; try { f(); 'no exception' } catch (e) { e.stack }",
++    ) as String
++    assertThat(inG).startsWith("    at g (cols.js:4:")
++    assertThat(inG).contains("\n    at f (main.kt:3:3)\n")
++  }
++
++  /**
++   * Keliver fork: a position on a line with no mapping takes the previous position's Kotlin line
++   * and column. 1.28.0 kept its JavaScript line and column under the Kotlin file name: main.kt:3
++   * here, a line of the wrong file.
++   */
++  @Test fun unmappedPositionsTakeThePreviousOne() {
++    val js = """
++      |function f() {
++      |  g();
++      |  throw Error('boom');
++      |}
++      |function g() {}
++      """.trimMargin()
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["main.kt"],
++      |  "sourcesContent": [null],
++      |  "names": [],
++      |  "mappings": ";EAME;;;"
++      |}
++      """.trimMargin(),
++    )
++    quickJs.execute(applySourceMapToBytecode(quickJs.compile(js, "unmapped.js"), sourceMap))
++    val stack = quickJs.evaluate("try { f(); 'no exception' } catch (e) { e.stack }") as String
++    assertThat(stack).startsWith("    at f (main.kt:7:3)\n")
++  }
++
++  /**
++   * Keliver fork: a line whose only segment is in another file (code inlined from other.kt, as
++   * Kotlin maps `check { }` or `require { }`) takes the previous position, never other.kt's line
++   * under main.kt's name (main.kt:150 here).
++   */
++  @Test fun inlinedCodeNeverTakesItsFilesLine() {
++    val js = """
++      |function f() {
++      |  g();
++      |  g();
++      |  g();
++      |  throw Error('boom');
++      |}
++      |function g() {}
++      """.trimMargin()
++    // Lines 2-4: main.kt 3:3, 4:3, 5:3. Line 5: other.kt 150:5.
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["main.kt", "other.kt"],
++      |  "sourcesContent": [null, null],
++      |  "names": [],
++      |  "mappings": ";EAEE;EACA;EACA;ECiJE;;"
++      |}
++      """.trimMargin(),
++    )
++    quickJs.execute(applySourceMapToBytecode(quickJs.compile(js, "inlined.js"), sourceMap))
++    val stack = quickJs.evaluate("try { f(); 'no exception' } catch (e) { e.stack }") as String
++    assertThat(stack).startsWith("    at f (main.kt:5:3)\n")
++  }
++
++  /**
++   * Keliver fork: the function's file is the one the segment covering its `function` keyword is
++   * in (Kotlin maps it to the declaration), not its first mapped line's first file (1.28.0's
++   * rule), which is other.kt here: that line starts with code inlined from other.kt.
++   */
++  @Test fun functionFileIsTheDeclarationsNotItsLinesFirst() {
++    val js = """
++      |h(); function f() {
++      |  g();
++      |  throw Error('boom');
++      |}
++      |function g() {}
++      |function h() {}
++      """.trimMargin()
++    // Line 1: col 1 -> other.kt 150:5, col 6 -> main.kt 2:1 (the declaration). Lines 2-3:
++    // main.kt 3:3, 4:3.
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["main.kt", "other.kt"],
++      |  "sourcesContent": [null, null],
++      |  "names": [],
++      |  "mappings": "ACqJI,KDpJJ;EACE;EACA;;;"
++      |}
++      """.trimMargin(),
++    )
++    quickJs.execute(applySourceMapToBytecode(quickJs.compile(js, "first.js"), sourceMap))
++    val stack = quickJs.evaluate("try { f(); 'no exception' } catch (e) { e.stack }") as String
++    assertThat(stack).startsWith("    at f (main.kt:4:3)\n")
++  }
++
++  /**
++   * Keliver fork: a position exactly on a segment's first column takes that segment, not the one
++   * before it or after it (QuickJS's columns and the map's are both taken as 1-based). The column
++   * is the one QuickJS reports for the throw, and the map has segments starting one column before
++   * it (main.kt 3:3), on it (main.kt 5:3) and one after it (main.kt 7:3).
++   */
++  @Test fun positionOnASegmentsFirstColumn() {
++    val js = """
++      |function f() {
++      |  g(); throw Error('boom');
++      |}
++      |function g() {}
++      """.trimMargin()
++    quickJs.execute(quickJs.compile(js, "edge.js"))
++    val jsStack = quickJs.evaluate("try { f(); 'no exception' } catch (e) { e.stack }") as String
++    val column = Regex("""at f \(edge\.js:2:(\d+)\)""").find(jsStack)!!.groupValues[1].toInt()
++    assertThat(column).isGreaterThan(2)
++
++    // Fields: column (0-based, relative), source, line and column (relative).
++    val segments = listOf(vlq(column - 2, 0, 2, 2), vlq(1, 0, 2, 0), vlq(1, 0, 2, 0))
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["main.kt"],
++      |  "sourcesContent": [null],
++      |  "names": [],
++      |  "mappings": ";${segments.joinToString(",")};;"
++      |}
++      """.trimMargin(),
++    )
++    quickJs.execute(applySourceMapToBytecode(quickJs.compile(js, "edge.js"), sourceMap))
++    val stack = quickJs.evaluate("try { f(); 'no exception' } catch (e) { e.stack }") as String
++    assertThat(stack).startsWith("    at f (main.kt:5:3)\n")
++  }
++
++  /** Base64 VLQ, as source maps encode each field. */
++  private fun vlq(vararg values: Int): String = buildString {
++    for (value in values) {
++      var v = if (value < 0) (-value shl 1) or 1 else value shl 1
++      do {
++        var digit = v and 31
++        v = v ushr 5
++        if (v != 0) digit = digit or 32
++        append("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[digit])
++      } while (v != 0)
++    }
++  }
++
 +  /** Keliver fork: a module with BigInt constants and a template keeps them through the rewrite. */
 +  @Test fun bigIntsAndTemplatesSurviveTheRewrite() {
 +    val js = """
@@ -1011,17 +1334,31 @@ index ced2dcd..3638144 100644
    }
  
    @Test fun removeLeadingDotDotsInSourceMap() {
-@@ -180,7 +222,7 @@ class ApplySourceMapToBytecodeTest {
-       |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
-       |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
-       |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
+@@ -173,14 +395,18 @@ class ApplySourceMapToBytecodeTest {
+     val exception = assertFailsWith<Exception> {
+       quickJs.evaluate("require('goBoom').app.cash.zipline.testing.goBoom(3)")
+     }
++    // Keliver fork: this map is hand-written and maps only line 9 (the throw), to goBoom.kt:4.
++    // Line 10, the recursive call, has no mapping, so the call frames take the nearest preceding
++    // Kotlin position, :4: an approximation (the call is not on the throw's line). 1.28.0 printed
++    // the JavaScript line, :10, under the Kotlin name; the real goBoom.kt has 7 lines.
+     assertThat(exception.stackTraceToString().replace("\t", "  ")).startsWith(
+       """
+       |app.cash.zipline.QuickJsException: boom
+       |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:4)
+-      |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
+-      |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
+-      |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:10)
 -      |  at JavaScript.<eval>(?)
++      |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:4)
++      |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:4)
++      |  at JavaScript.<anonymous>(app/cash/zipline/testing/goBoom.kt:4)
 +      |  at JavaScript.<eval>(?:1)
        |
        """.trimMargin(),
      )
 diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt
-index 6e09133..09c162d 100644
+index 6e09133..5f32ce9 100644
 --- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt
 +++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/AtomSetTest.kt
 @@ -1,3 +1,4 @@
@@ -1029,7 +1366,11 @@ index 6e09133..09c162d 100644
  /*
   * Copyright (C) 2021 Square, Inc.
   *
-@@ -19,6 +20,7 @@ import assertk.assertThat
+@@ -16,9 +17,11 @@
+ package app.cash.zipline.bytecode
+ 
+ import assertk.assertThat
++import assertk.assertions.contains
  import assertk.assertions.isEqualTo
  import assertk.assertions.isFalse
  import assertk.assertions.isGreaterThanOrEqualTo
@@ -1037,7 +1378,7 @@ index 6e09133..09c162d 100644
  import assertk.assertions.isNotEqualTo
  import assertk.assertions.isTrue
  import kotlin.test.assertFailsWith
-@@ -66,17 +68,30 @@ class AtomSetTest {
+@@ -66,17 +69,68 @@ class AtomSetTest {
     * UTF-8.
     */
    @Test fun atomSetHoldsNonUtf8Strings() {
@@ -1069,6 +1410,44 @@ index 6e09133..09c162d 100644
 +
 +  @Test fun builtInAtomCountIsQuickJs2026AtomEnd() {
 +    assertThat(BUILT_IN_ATOM_COUNT).isEqualTo(243)
++    // JS_ATOM_Private_brand, then the 13 well-known symbols.
++    assertThat(FIRST_BUILT_IN_SYMBOL).isEqualTo(BUILT_IN_ATOM_COUNT - 14)
++  }
++
++  /**
++   * A file's own string with the text of a built-in symbol is the file's atom, not the symbol:
++   * written back as the symbol's index, it would name the symbol instead.
++   */
++  @Test fun stringsNamedLikeBuiltInSymbolsAreTheFilesOwn() {
++    val iterator = "Symbol.iterator".toJsString()
++    val atomSet = MutableAtomSet(listOf(helloJsString, iterator))
++    assertThat(atomSet.idOf(iterator)).isEqualTo(BUILT_IN_ATOM_COUNT + 1)
++    assertThat(atomSet.get(BUILT_IN_ATOM_COUNT + 1)).isEqualTo(iterator)
++
++    val asyncIterator = "Symbol.asyncIterator".toJsString()
++    assertThat(atomSet.add(asyncIterator)).isTrue()
++    assertThat(atomSet.idOf(asyncIterator)).isEqualTo(BUILT_IN_ATOM_COUNT + 2)
++
++    // Without the file's own entry it is not an atom at all.
++    assertFailsWith<IllegalArgumentException> {
++      MutableAtomSet(listOf()).idOf("Symbol.toPrimitive".toJsString())
++    }
++  }
++
++  /**
++   * A built-in symbol's index read as a name is refused when it is read: it could not be written
++   * back as the symbol (1.28.0 round-tripped it; QuickJS never writes one as a name).
++   */
++  @Test fun builtInSymbolsAreRefusedWhenRead() {
++    val atomSet = MutableAtomSet(listOf(helloJsString))
++    for (id in FIRST_BUILT_IN_SYMBOL until BUILT_IN_ATOM_COUNT) {
++      assertFailsWith<IllegalArgumentException> { atomSet.get(id) }
++    }
++    val e = assertFailsWith<IllegalArgumentException> { atomSet.get(FIRST_BUILT_IN_SYMBOL + 2) }
++    assertThat(e.message!!).contains("built-in symbol Symbol.iterator")
++    // The last built-in string and the file's own strings still read.
++    assertThat(atomSet.get(FIRST_BUILT_IN_SYMBOL - 1)).isEqualTo("AggregateError".toJsString())
++    assertThat(atomSet.get(BUILT_IN_ATOM_COUNT)).isEqualTo(helloJsString)
    }
  }
 diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/EncodingTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/EncodingTest.kt
@@ -1135,7 +1514,7 @@ index be0b566..983562c 100644
      )
    }
 diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt
-index f7b5cfe..3544938 100644
+index f7b5cfe..0fe8cc9 100644
 --- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt
 +++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/JsObjectEncodingTest.kt
 @@ -1,3 +1,4 @@
@@ -1143,7 +1522,7 @@ index f7b5cfe..3544938 100644
  /*
   * Copyright (C) 2021 Square, Inc.
   *
-@@ -17,9 +18,14 @@ package app.cash.zipline.bytecode
+@@ -17,9 +18,15 @@ package app.cash.zipline.bytecode
  
  import app.cash.zipline.QuickJs
  import assertk.assertThat
@@ -1151,6 +1530,7 @@ index f7b5cfe..3544938 100644
  import assertk.assertions.containsExactly
  import assertk.assertions.isEqualTo
 +import assertk.assertions.isTrue
++import assertk.assertions.startsWith
 +import java.io.File
  import okio.Buffer
 +import okio.ByteString.Companion.decodeHex
@@ -1158,7 +1538,7 @@ index f7b5cfe..3544938 100644
  import okio.ByteString.Companion.toByteString
  import org.junit.After
  import org.junit.Test
-@@ -101,10 +107,12 @@ class JsObjectEncodingTest {
+@@ -101,10 +108,12 @@ class JsObjectEncodingTest {
      )
  
      assertThat(evalFunction.name).isEqualTo("<eval>")
@@ -1173,7 +1553,7 @@ index f7b5cfe..3544938 100644
      assertThat(assertLineNumbersRoundTrip(function.debug!!))
        .containsExactly(2, 5, 6, 8, 9)
    }
-@@ -213,19 +221,193 @@ class JsObjectEncodingTest {
+@@ -213,19 +222,205 @@ class JsObjectEncodingTest {
      return decoded as JsFunctionBytecode
    }
  
@@ -1343,6 +1723,18 @@ index f7b5cfe..3544938 100644
 +  }
 +
 +  /**
++   * A file name with the text of a built-in symbol is a string atom of the file's own, and writes
++   * back as itself (the built-in symbol's index would make it the symbol).
++   */
++  @Test fun namesLikeBuiltInSymbolsRoundTrip() {
++    val evalFunction = assertRoundTrip("function f() { throw Error('boom'); }", "Symbol.iterator")
++    assertThat(evalFunction.debug!!.fileName).isEqualTo("Symbol.iterator")
++    quickJs.execute(roundTrip(quickJs.compile("function g() { throw Error('boom'); }", "Symbol.iterator")))
++    val stack = quickJs.evaluate("try { g(); 'no exception' } catch (e) { e.stack }") as String
++    assertThat(stack).startsWith("    at g (Symbol.iterator:1:")
++  }
++
++  /**
 +   * Version 5's debug record has the function's source text. The fork's `QuickJs.compile` leaves
 +   * it out (as QuickJS 2021 did), but the record must still read and write when it is there.
 +   */
@@ -1458,12 +1850,12 @@ index 66a64b6..a74ed9e 100644
  }
 diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/RealBundleTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/RealBundleTest.kt
 new file mode 100644
-index 0000000..df11d2f
+index 0000000..b364706
 --- /dev/null
 +++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/RealBundleTest.kt
-@@ -0,0 +1,222 @@
+@@ -0,0 +1,289 @@
 +/*
-+ * Copyright (C) 2026 the Keliver fork of Zipline.
++ * Copyright (C) 2026 Keliver contributors
 + *
 + * Licensed under the Apache License, Version 2.0 (the "License");
 + * you may not use this file except in compliance with the License.
@@ -1496,8 +1888,10 @@ index 0000000..df11d2f
 + * (with their `.js.map` files, as Kotlin writes them); skipped without it.
 + *
 + * For every module: QuickJS's bytecode reads and writes back byte for byte; with its source map
-+ * applied, every instruction's line is the source map's line for the JavaScript line QuickJS
-+ * recorded; stripped, no function keeps a line table. Then the bundle is loaded in dependency
++ * applied, every function's file, header and recorded position (line and column) is consistent
++ * with `applySourceMap`'s rule (a second implementation of it here, from the parsed segments: this
++ * checks the rule was applied everywhere, not that its Kotlin positions are right); stripped, no
++ * function keeps a line table or source text. Then the bundle is loaded in dependency
 + * order three times (as compiled, source maps applied, stripped), and each load must end as the
 + * first one did.
 + */
@@ -1525,7 +1919,7 @@ index 0000000..df11d2f
 +            val sourceMap = SourceMap.parse(mapFile.readText()).clean()
 +            val result = applySourceMapToBytecode(bytecode, sourceMap)
 +            val mapped = assertRoundTrip(result, null)
-+            stats.mappedFunctions += assertMapped(model, mapped, sourceMap)
++            stats.mappedFunctions += assertMapped(model, mapped, sourceMap, stats)
 +            stats.modulesWithMaps++
 +            result
 +          } else {
@@ -1535,8 +1929,11 @@ index 0000000..df11d2f
 +
 +          val strippedBytecode = stripLineNumbers(withMap)
 +          val strippedModel = assertRoundTrip(strippedBytecode, null)
-+          assertThat(strippedModel.functions().all { it.debug == null || it.debug.pc2Line.size == 0 })
-+            .isTrue()
++          assertThat(
++            strippedModel.functions().all {
++              it.debug == null || (it.debug.pc2Line.size == 0 && it.debug.source.size == 0)
++            },
++          ).isTrue()
 +          stripped[js.name] = strippedBytecode
 +          stats.bytesCompiled += bytecode.size
 +          stats.bytesApplied += withMap.size
@@ -1550,7 +1947,9 @@ index 0000000..df11d2f
 +      assertThat(load(order, stripped)).isEqualTo(asCompiled)
 +      println(
 +        "RealBundleTest ${dir.path}: ${modules.size} modules (${stats.modulesWithMaps} with source " +
-+          "maps), ${stats.functions} functions, ${stats.mappedFunctions} mapped; byte-identical " +
++          "maps), ${stats.functions} functions, ${stats.mappedFunctions} mapped (file from the " +
++          "header ${stats.headerFiles}, not 1.28.0's file ${stats.filesNotFirstMappedLine}; " +
++          "positions covered in another file ${stats.otherFilePositions}); byte-identical " +
 +          "round trips; bytes compiled ${stats.bytesCompiled}, source maps applied " +
 +          "${stats.bytesApplied}, stripped ${stats.bytesStripped}; function source text " +
 +          "${stats.sourceBytes} bytes, pc2line ${stats.pc2LineBytes} bytes; " +
@@ -1569,6 +1968,15 @@ index 0000000..df11d2f
 +    var sourceBytes = 0L
 +    var pc2LineBytes = 0L
 +    var bigInts = 0
++
++    /** Mapped functions whose file is their own position's covering segment's. */
++    var headerFiles = 0
++
++    /** Mapped functions whose file is not 1.28.0's (its first mapped line's first file). */
++    var filesNotFirstMappedLine = 0
++
++    /** Positions whose covering segment is in another file than their function's. */
++    var otherFilePositions = 0
 +  }
 +
 +  private fun assertRoundTrip(bytecode: ByteArray, stats: Stats?): JsObject {
@@ -1588,12 +1996,16 @@ index 0000000..df11d2f
 +  }
 +
 +  /**
-+   * Checks the mapped bytecode against the source map, instruction by instruction: at every pc
-+   * where the JavaScript table has an entry, the mapped table gives the line of the source map's
-+   * segment for that JavaScript line (its first, as Zipline maps lines), or the JavaScript line
-+   * where the source map has none. Returns the number of functions given a Kotlin file.
++   * Checks the mapped bytecode against the source map, position by position: the function's own
++   * position (the table's header) and, at every pc where the JavaScript table has an entry, the
++   * Kotlin line and column. The expected values come from the rule `applySourceMap` states (see
++   * [expectedPositions]), computed again here from the parsed segments, so this shows the rule
++   * was applied to every position of a real bundle, consistently; it cannot show the rule's
++   * Kotlin positions are right. Independent checks of those are the stack traces in
++   * `ApplySourceMapToBytecodeTest` and `ZiplineCompilerTest`, against hand-checked Kotlin lines.
++   * Returns the number of functions given a Kotlin file.
 +   */
-+  private fun assertMapped(js: JsObject, kt: JsObject, sourceMap: SourceMap): Int {
++  private fun assertMapped(js: JsObject, kt: JsObject, sourceMap: SourceMap, stats: Stats): Int {
 +    val jsFunctions = js.functions()
 +    val ktFunctions = kt.functions()
 +    assertThat(ktFunctions.size).isEqualTo(jsFunctions.size)
@@ -1602,39 +2014,86 @@ index 0000000..df11d2f
 +      assertThat(ktFunction.bytecode).isEqualTo(jsFunction.bytecode)
 +      val jsDebug = jsFunction.debug ?: continue
 +      val ktDebug = ktFunction.debug!!
-+      if (ktDebug.fileName != jsDebug.fileName) mapped++
-+      for ((pc, jsLine) in jsDebug.pc2Line.entries()) {
-+        val expected = sourceMap.find(jsLine)?.sourceLine?.toInt() ?: jsLine
-+        if (ktDebug.fileName == jsDebug.fileName) {
-+          // Nothing in the function was mapped: the table is the JavaScript one.
-+          assertThat(ktDebug.pc2Line).isEqualTo(jsDebug.pc2Line)
-+          break
-+        }
-+        assertThat(findLine(ktDebug.pc2Line, pc), "${jsFunction.name} pc $pc").isEqualTo(expected)
++      val jsPositions = jsDebug.pc2Line.positions()
++      val expected = expectedPositions(jsPositions, sourceMap)
++      if (expected == null) {
++        // Nothing in the function was mapped: the debug record is the JavaScript one.
++        assertThat(ktDebug).isEqualTo(jsDebug)
++        continue
++      }
++      mapped++
++      val file = expected.first
++      val covering = jsPositions.map { (_, line, column) -> sourceMap.covering(line, column)?.source }
++      if (covering[0] == file) stats.headerFiles++
++      if (jsPositions.firstNotNullOfOrNull { sourceMap.findMapped(it.second)?.source } != file) {
++        stats.filesNotFirstMappedLine++
++      }
++      stats.otherFilePositions += covering.count { it != null && it != file }
++      assertThat(ktDebug.fileName, "${jsFunction.name}").isEqualTo(file)
++      val ktPositions = ktDebug.pc2Line.positions()
++      assertThat(ktPositions.first(), "${jsFunction.name} header").isEqualTo(expected.second.first())
++      for ((jsPosition, expectedPosition) in jsPositions.zip(expected.second).drop(1)) {
++        val pc = jsPosition.first
++        assertThat(findPosition(ktPositions, pc), "${jsFunction.name} pc $pc").isEqualTo(expectedPosition)
 +      }
 +    }
 +    return mapped
 +  }
 +
-+  /** Each entry's pc and line (positions with a column change only are included). */
-+  private fun ByteString.entries(): List<Pair<Int, Int>> {
-+    val result = mutableListOf<Pair<Int, Int>>()
++  /**
++   * The rule, from the segments. The covering segment of a position is the last on its line
++   * starting at or before its column. The function's file is the header's covering segment's
++   * source if it has one, else the source of the first segment with one on the line of its first
++   * position that has one. Each position takes its covering segment if that segment's source is the function's
++   * file, else its line's first segment in the function's file; with neither, the previous
++   * position's result (the header, and positions before the first mapped one: the first mapped
++   * one's). A segment in another file is never used. Returns the file and, per position, the pc
++   * and expected line and column; null when nothing is mapped.
++   */
++  private fun expectedPositions(
++    positions: List<Triple<Int, Int, Int>>,
++    sourceMap: SourceMap,
++  ): Pair<String, List<Triple<Int, Int, Int>>>? {
++    fun segments(line: Int) = sourceMap.groups.getOrNull(line - 1)?.segments.orEmpty()
++    val covering = positions.map { (_, line, column) ->
++      segments(line).lastOrNull { it.startingColumn <= column }
++    }
++    val file = covering[0]?.source
++      ?: positions.firstNotNullOfOrNull { (_, line, _) ->
++        segments(line).firstOrNull { it.source != null }?.source
++      }
++      ?: return null
++    val found = positions.mapIndexed { i, (_, line, _) ->
++      val segment = covering[i]?.takeIf { it.source == file } ?: segments(line).firstOrNull { it.source == file }
++      segment?.let { it.sourceLine.toInt() to it.sourceColumn.toInt() }
++    }
++    var previous = found.first { it != null }!!
++    val result = found.mapIndexed { i, position ->
++      val p = position ?: previous
++      previous = p
++      Triple(positions[i].first, p.first, p.second)
++    }
++    return file to result
++  }
++
++  /** The header (pc 0) and each entry: pc, line and column. */
++  private fun ByteString.positions(): List<Triple<Int, Int, Int>> {
++    val result = mutableListOf<Triple<Int, Int, Int>>()
 +    LineNumberReader(Buffer().write(this)).use { reader ->
-+      while (reader.next()) result += reader.pc to reader.line
++      result += Triple(0, reader.line, reader.column)
++      while (reader.next()) result += Triple(reader.pc, reader.line, reader.column)
 +    }
 +    return result
 +  }
 +
-+  /** QuickJS's `find_line_num`: the line of the last entry at or before [pc]. */
-+  private fun findLine(pc2Line: ByteString, pc: Int): Int {
-+    LineNumberReader(Buffer().write(pc2Line)).use { reader ->
-+      var line = reader.line
-+      while (reader.next()) {
-+        if (pc < reader.pc) break
-+        line = reader.line
-+      }
-+      return line
++  /** QuickJS's `find_line_num`: the position of the last entry at or before [pc] (or the header). */
++  private fun findPosition(positions: List<Triple<Int, Int, Int>>, pc: Int): Triple<Int, Int, Int> {
++    var result = positions.first()
++    for (position in positions.drop(1)) {
++      if (pc < position.first) break
++      result = position
 +    }
++    return Triple(pc, result.second, result.third)
 +  }
 +
 +  private fun JsObject.all(): List<JsObject> = when (this) {
@@ -1684,16 +2143,123 @@ index 0000000..df11d2f
 +    }
 +  }
 +}
+diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/SourceMapParsingTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/SourceMapParsingTest.kt
+index 1b44ec6..250b8fd 100644
+--- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/SourceMapParsingTest.kt
++++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/SourceMapParsingTest.kt
+@@ -1,3 +1,4 @@
++// Modified by the Keliver fork of Zipline, 2026: per-position lookup; one-field segments unmapped.
+ /*
+  * Copyright (C) 2021 Square, Inc.
+  *
+@@ -112,6 +113,83 @@ class SourceMapParsingTest {
+     SourceMap.parse(json)
+   }
+ 
++  /**
++   * Keliver fork: one-field segments are unmapped (1.28.0 gave them the previous segment's
++   * source and line), and a position is found by its column within the line.
++   */
++  @Test fun findByColumnAndOneFieldSegments() {
++    // Line 1: col 1 -> main.kt 1:1; col 3 -> main.kt 2:3; col 6 unmapped.
++    // Line 2: col 3 unmapped only.
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["main.kt"],
++      |  "sourcesContent": [null],
++      |  "names": [],
++      |  "mappings": "AAAA,EACE,G;E"
++      |}
++      """.trimMargin(),
++    )
++    val first = Segment(startingColumn = 1, source = "main.kt", sourceLine = 1, sourceColumn = 1, name = null)
++    val second = Segment(startingColumn = 3, source = "main.kt", sourceLine = 2, sourceColumn = 3, name = null)
++    assertEquals(listOf(null, null), listOf(sourceMap.groups[0].segments[2].source, sourceMap.groups[1].segments[0].source))
++
++    assertEquals(first, sourceMap.find(lineNumber = 1))
++    assertEquals(first, sourceMap.findMapped(lineNumber = 1))
++    assertEquals(first, sourceMap.find(lineNumber = 1, column = 2, source = "main.kt"))
++    assertEquals(second, sourceMap.find(lineNumber = 1, column = 3, source = "main.kt"))
++    assertEquals(second, sourceMap.find(lineNumber = 1, column = 5, source = "main.kt"))
++    // Covered by the unmapped segment: the line's first segment in the file.
++    assertEquals(first, sourceMap.find(lineNumber = 1, column = 6, source = "main.kt"))
++    // Nothing on the line is in the function's file.
++    assertNull(sourceMap.find(lineNumber = 1, column = 3, source = "other.kt"))
++    // Nothing mapped on the line.
++    assertNull(sourceMap.findMapped(lineNumber = 2))
++    assertNull(sourceMap.find(lineNumber = 2, column = 3, source = "main.kt"))
++    assertNull(sourceMap.find(lineNumber = 3, column = 1, source = "main.kt"))
++    // The covering segment, mapped or not; none before the line's first.
++    assertEquals(second, sourceMap.covering(lineNumber = 1, column = 3))
++    assertNull(sourceMap.covering(lineNumber = 1, column = 6)?.source)
++    assertNull(sourceMap.covering(lineNumber = 2, column = 2))
++  }
++
++  /**
++   * Keliver fork: a segment in another file than the function's (code inlined from it) is never
++   * used for the function's positions; its line would be printed under the function's file name.
++   */
++  @Test fun findNeverTakesAnotherFilesLine() {
++    // Line 1: col 1 -> main.kt 3:3; col 5 -> other.kt 150:5 (inlined).
++    // Line 2: col 3 -> other.kt 151:5 only.
++    // Line 3: col 1 -> other.kt 152:1; col 5 -> main.kt 4:3.
++    val sourceMap = SourceMap.parse(
++      """
++      |{
++      |  "version": 3,
++      |  "sources": ["main.kt", "other.kt"],
++      |  "sourcesContent": [null, null],
++      |  "names": [],
++      |  "mappings": "AAEE,ICmJE;EACA;AACJ,IDpJE"
++      |}
++      """.trimMargin(),
++    )
++    val main3 = Segment(startingColumn = 1, source = "main.kt", sourceLine = 3, sourceColumn = 3, name = null)
++    val other150 = Segment(startingColumn = 5, source = "other.kt", sourceLine = 150, sourceColumn = 5, name = null)
++    val main4 = Segment(startingColumn = 5, source = "main.kt", sourceLine = 4, sourceColumn = 3, name = null)
++    assertEquals(other150, sourceMap.covering(lineNumber = 1, column = 6))
++    assertEquals(main4, sourceMap.covering(lineNumber = 3, column = 5))
++
++    // Covered by other.kt: the line's own main.kt segment, never other.kt's line.
++    assertEquals(main3, sourceMap.find(lineNumber = 1, column = 6, source = "main.kt"))
++    // Only other.kt on the line: nothing (the caller takes the previous position).
++    assertNull(sourceMap.find(lineNumber = 2, column = 3, source = "main.kt"))
++    // A main.kt segment later on the line than the position.
++    assertEquals(main4, sourceMap.find(lineNumber = 3, column = 2, source = "main.kt"))
++    // The function in other.kt keeps its own segments.
++    assertEquals(other150, sourceMap.find(lineNumber = 1, column = 6, source = "other.kt"))
++    assertEquals(other150, sourceMap.find(lineNumber = 1, column = 1, source = "other.kt"))
++  }
++
+   @Test fun readVarints() {
+     val buffer = Buffer().writeUtf8("IAkpZI")
+     assertEquals(4L, buffer.readVarint())
 diff --git a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt
-index d9cd25a..5ef18bd 100644
+index d9cd25a..83169d0 100644
 --- a/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt
 +++ b/zipline-bytecode/src/test/kotlin/app/cash/zipline/bytecode/StripLineNumbersTest.kt
-@@ -1,3 +1,4 @@
-+// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026 gives the evaluated script a line.
+@@ -1,3 +1,5 @@
++// Modified by the Keliver fork of Zipline, 2026: QuickJS 2026 gives the evaluated script a line;
++// a strip drops the function's source text.
  /*
   * Copyright (C) 2023 Cash App
   *
-@@ -59,7 +60,7 @@ class StripLineNumbersTest {
+@@ -17,8 +19,12 @@ package app.cash.zipline.bytecode
+ 
+ import app.cash.zipline.QuickJs
+ import assertk.assertThat
++import assertk.assertions.doesNotContain
++import assertk.assertions.isEqualTo
+ import assertk.assertions.startsWith
+ import kotlin.test.assertFailsWith
++import okio.Buffer
++import okio.ByteString.Companion.encodeUtf8
+ import org.junit.After
+ import org.junit.Test
+ 
+@@ -59,9 +65,36 @@ class StripLineNumbersTest {
        |	at JavaScript.goBoom2(demo.js)
        |	at JavaScript.goBoom3(demo.js)
        |	at JavaScript.sayHello(demo.js)
@@ -1702,6 +2268,35 @@ index d9cd25a..5ef18bd 100644
        |
        """.trimMargin(),
      )
+   }
++
++  /**
++   * Keliver fork: bytecode compiled with each function's source text (as QuickJS 2026 writes it
++   * unless the runtime strips it) loses it in a strip, as it loses its line table.
++   */
++  @Test fun stripDropsFunctionSource() {
++    val text = "function f(a) { return a + 1; }"
++    val reader = JsObjectReader(quickJs.compile(text, "source.js"))
++    val model = reader.use { it.readJsObject() } as JsFunctionBytecode
++    val f = model.constantPool.single() as JsFunctionBytecode
++    val withSource = model.copy(
++      constantPool = listOf(f.copy(debug = f.debug!!.copy(source = text.encodeUtf8()))),
++    )
++    val bytecode = Buffer().also { JsObjectWriter(reader.atoms, it).use { w -> w.writeJsObject(withSource) } }
++      .readByteArray()
++
++    val stripped = JsObjectReader(stripLineNumbers(bytecode)).use { it.readJsObject() } as JsFunctionBytecode
++    val strippedF = stripped.constantPool.single() as JsFunctionBytecode
++    val debug = strippedF.debug!!
++    assertThat(debug.source.size).isEqualTo(0)
++    assertThat(debug.pc2Line.size).isEqualTo(0)
++    assertThat(debug.fileName).isEqualTo("source.js")
++
++    quickJs.execute(stripLineNumbers(bytecode))
++    assertThat(quickJs.evaluate("f.toString()") as String).doesNotContain("return a + 1")
++    assertThat(quickJs.evaluate("f(41)")).isEqualTo(42)
++  }
+ }
 diff --git a/zipline-cli/src/test/kotlin/app/cash/zipline/cli/ZiplineCompilerTest.kt b/zipline-cli/src/test/kotlin/app/cash/zipline/cli/ZiplineCompilerTest.kt
 index f430a7d..a510c11 100644
 --- a/zipline-cli/src/test/kotlin/app/cash/zipline/cli/ZiplineCompilerTest.kt
