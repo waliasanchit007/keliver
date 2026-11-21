@@ -170,6 +170,24 @@ data class CompiledComponentsConfig(
   }
 }
 
+/**
+ * NF2: one more engine's compile of the app's bundle ([PortalConfig.engineTargets]): the Gradle
+ * task that compiles and signs it (with the same signing block, which names the engine in the
+ * signed manifest from the modules' bytecode), and the directory it writes, relative to the repo.
+ */
+@Serializable
+data class EngineTarget(
+  val publishTask: String,
+  val publishOutput: String,
+) {
+  init {
+    require(publishTask.isNotBlank() && publishOutput.isNotBlank()) { "an engineTargets entry needs a publishTask and a publishOutput" }
+    require(!publishOutput.startsWith("/") && publishOutput.split('/').none { it == ".." }) {
+      "an engineTargets publishOutput must be inside the repository: $publishOutput"
+    }
+  }
+}
+
 @Serializable
 private data class RuntimeMetadataResponse(
   val appRuntime: AppRuntimeMetadata?,
@@ -276,8 +294,20 @@ data class PortalConfig(
    * each preview build. Null = off (opaque components preview as placeholders).
    */
   val compiledComponents: CompiledComponentsConfig? = null,
+  /**
+   * NF2 (docs/DEVICE_HOST.md, "Engines"): more compile outputs for each release, one per QuickJS
+   * engine other than the one [publishTask] compiles for (QuickJS bytecode loads only on the engine
+   * that compiled it). `keliver-publish` builds [publishTask] and then each of these, all signed for
+   * the same sequence, and publishes them as one release: a `v<N>/` and an index entry per engine,
+   * each entry naming its engine, so each host takes the one its engine loads. Empty: one bundle.
+   * The relay's own /publish (development) publishes [publishOutput] only.
+   */
+  val engineTargets: List<EngineTarget> = emptyList(),
 ) {
   init {
+    require(engineTargets.map { it.publishOutput }.distinct().size == engineTargets.size && engineTargets.none { it.publishOutput == publishOutput }) {
+      "engineTargets must each have a publishOutput of their own, other than publishOutput's"
+    }
     previewAssetHosts.forEach { host ->
       require(isPreviewAssetHost(host)) {
         "previewAssetHosts entries must be lowercase multi-label DNS host names (no scheme, port, path, " +

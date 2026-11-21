@@ -277,6 +277,29 @@ assert after == before.replace(legacy, new) and after.count(new) == 1
 PY
 then ok "a 0.3.8 signing block is swapped for the current one, without the U31 advice"
 else bad "upgrading a 0.3.8 block: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"; fi
+# An app wired by tools 0.3.9 to 0.3.18 (W8): swapped for the current block (NF2: it names the
+# bundle's engine from the modules' bytecode), also without the U31 advice.
+LEGACY318="$ROOT/scripts/templates/publish/legacy/signing-0.3.18.gradle"
+make_app wired318 device
+( cd "$DISP/wired318" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/wired318/build.gradle" "$LEGACY318" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy)
+PY
+cp "$DISP/wired318/build.gradle" "$DISP/wired318.before"
+out="$( cd "$DISP/wired318" && "$SCAFFOLD" 2>&1 )"; rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q '(signing-0.3.18) was replaced by the current one' \
+   && ! printf '%s' "$out" | grep -q 'U31' \
+   && python3 - "$DISP/wired318.before" "$DISP/wired318/build.gradle" "$LEGACY318" "$ROOT/scripts/templates/publish/signing.gradle" <<'PY'
+import sys
+before, after, legacy, new = (open(p).read() for p in sys.argv[1:5])
+assert after == before.replace(legacy, new) and after.count(new) == 1
+PY
+then ok "a 0.3.18 signing block is swapped for the current one (NF2 engines), without the U31 advice"
+else bad "upgrading a 0.3.18 block: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"; fi
 # The upgrade swaps the block only: an app on another publish variant keeps it.
 make_app prodvariant device
 ( cd "$DISP/prodvariant" && "$SCAFFOLD" > /dev/null 2>&1 )
@@ -477,6 +500,80 @@ PY
   [ "$rc" = 0 ] && [ "$got" = signed:true ] && [ "$seq" = 7 ] \
     && ok "KELIVER_PUBLISH_SEQUENCE=7: metadata keliver.sequence is \"7\" and the signature over it verifies" \
     || bad "a publish sequence: rc=$rc, signature $got, sequence '$seq'"
+  # NF2: Zipline 1.28.0 compiles QuickJS 2021 bytecode (version 1), the default engine, which no key names.
+  engine="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("metadata",{}).get("keliver.engine","none"))' "$MANIFEST" 2>/dev/null)"
+  [ "$rc" = 0 ] && [ "$engine" = none ] && ! grep -q 'for engine' "$DISP/build-seq.log" \
+    && ok "NF2: a QuickJS 2021 build names no engine (hosts from before NF2 keep taking it)" \
+    || bad "NF2: a QuickJS 2021 build's keliver.engine is '$engine'"
+  # NF2: a keliver.engine the modules' bytecode does not bear out fails the build.
+  cp "$APP/build.gradle" "$DISP/build.gradle.noengine"
+  printf '\nzipline { metadata.put("keliver.engine", "quickjs-2026") }\n' >> "$APP/build.gradle"
+  compile "$DISP/build-misnamed.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=7; rc=$?
+  cp "$DISP/build.gradle.noengine" "$APP/build.gradle"
+  [ "$rc" != 0 ] && grep -q "keliver.engine is 'quickjs-2026', but its modules were compiled for the default engine" "$DISP/build-misnamed.log" \
+    && ok "NF2: a keliver.engine its modules' bytecode does not bear out fails the build" \
+    || bad "NF2: a misnamed engine: rc=$rc"
+  # NF2 (L3): an explicit "quickjs-2021" on QuickJS 2021 bytecode is what the publisher and hosts
+  # accept, so the block accepts it too, and keeps it.
+  printf '\nzipline { metadata.put("keliver.engine", "quickjs-2021") }\n' >> "$APP/build.gradle"
+  compile "$DISP/build-named2021.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=7; rc=$?
+  cp "$DISP/build.gradle.noengine" "$APP/build.gradle"
+  engine="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("metadata",{}).get("keliver.engine","none"))' "$MANIFEST" 2>/dev/null)"
+  [ "$rc" = 0 ] && [ "$(signature_of)" = signed:true ] && [ "$engine" = quickjs-2021 ] \
+    && ok "NF2: an explicit keliver.engine quickjs-2021 on QuickJS 2021 bytecode is accepted, kept and signed" \
+    || bad "NF2: an explicit quickjs-2021: rc=$rc, engine '$engine'"
+  # NF2 (H1): a fresh QuickJS 2026 compile (bytecode version 5) names no engine in its manifest; the
+  # block names it. The fork's compiler is not built here, so a compile action that runs before the
+  # block's (registered ahead of it) rewrites each module's BC_VERSION byte to 5, as the fork writes it.
+  python3 - "$APP/build.gradle" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+v5 = '''// selftest: QuickJS 2026 bytecode (version 5), as the NF2 fork's compiler writes it.
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { t ->
+  t.doLast {
+    t.outputDir.get().asFile.listFiles().findAll { it.name.endsWith('.zipline') }.each { f ->
+      byte[] b = f.bytes
+      def buf = java.nio.ByteBuffer.wrap(b)
+      int at = 12
+      while (at + 8 <= b.length) {
+        if (buf.getInt(at) == 1) { b[at + 8] = (byte) 5; break }
+        at += 8 + buf.getInt(at + 4)
+      }
+      f.bytes = b
+    }
+  }
+}
+'''
+open(p, 'w').write(s[:i] + v5 + s[i:])
+PY
+  compile "$DISP/build-v5.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=7; rc=$?
+  engine="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("metadata",{}).get("keliver.engine","none"))' "$MANIFEST" 2>/dev/null)"
+  v5mods="$(python3 - "$APP/build/zipline/Production" <<'PY'
+import os, struct, sys
+d = sys.argv[1]; vs = set()
+for f in os.listdir(d):
+    if f.endswith('.zipline'):
+        b = open(os.path.join(d, f), 'rb').read(); at = 12
+        while at + 8 <= len(b):
+            i, n = struct.unpack('>ii', b[at:at + 8])
+            if i == 1: vs.add(b[at + 8]); break
+            at += 8 + n
+print(','.join(map(str, sorted(vs))))
+PY
+)"
+  [ "$rc" = 0 ] && [ "$v5mods" = 5 ] && [ "$(signature_of)" = signed:true ] && [ "$engine" = quickjs-2026 ] \
+    && grep -q 'for engine quickjs-2026' "$DISP/build-v5.log" \
+    && ok "NF2: a fresh QuickJS 2026 build (version 5, no keliver.engine) is signed naming quickjs-2026, and verifies" \
+    || bad "NF2: a fresh QuickJS 2026 build: rc=$rc, bytecode '$v5mods', engine '$engine' $(grep -E 'keliver: ' "$DISP/build-v5.log" | head -2 | tr '\n' ' ')"
+  # And a version-5 build that names quickjs-2021 fails, as the publisher would refuse it.
+  printf '\nzipline { metadata.put("keliver.engine", "quickjs-2021") }\n' >> "$APP/build.gradle"
+  compile "$DISP/build-v5-misnamed.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=7; rc=$?
+  cp "$DISP/build.gradle.noengine" "$APP/build.gradle"
+  [ "$rc" != 0 ] && grep -q "keliver.engine is 'quickjs-2021', but its modules were compiled for quickjs-2026" "$DISP/build-v5-misnamed.log" \
+    && ok "NF2: a QuickJS 2026 build that names quickjs-2021 fails the build" \
+    || bad "NF2: a QuickJS 2026 build named quickjs-2021: rc=$rc"
+  compile "$DISP/build-seq.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=7; rc=$?
   python3 - "$MANIFEST" "$T/edited.json" <<'PY'
 import json, sys
 m = json.load(open(sys.argv[1])); m['metadata']['keliver.sequence'] = '8'

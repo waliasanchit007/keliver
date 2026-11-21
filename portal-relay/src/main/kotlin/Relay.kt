@@ -526,6 +526,10 @@ private fun publish(): Pair<Boolean, String> {
   signedBridges(manifest.readText()).problem?.let {
     return false to log.appendLine("publish REFUSED: $it. Nothing was stored.").toString()
   }
+  // NF2: likewise the signed keliver.engine, and it must be the engine the modules were compiled for.
+  engineBytecodeProblem(ziplineOut, manifest.readText())?.let {
+    return false to log.appendLine("publish REFUSED: $it. Nothing was stored.").toString()
+  }
   val dest = File(bundlesDir, "v$version")
   ziplineOut.copyRecursively(dest, overwrite = true)
   // M6: the audit hash is of the CANONICAL screen source (what actually compiled).
