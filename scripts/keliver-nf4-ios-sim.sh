@@ -17,21 +17,22 @@
 #   4. scaffolds host-ios/ (keliver-new-ios-host.sh, this checkout's template) for that server and
 #      API, UPDATES next-launch, and replaces iosApp/iOSApp.swift with the template's own init()
 #      made switchable by a launch argument (-nf4Arm): a = no start() in init (the host starts at
-#      the first screen), b = start() in init(), c = b + the prefetch of GET /items?page=1.
+#      the first screen), b = start() in init(), c = b + the prefetch of GET /items?page=1,
+#      d = a + that prefetch (declared in init(), sent once the first screen started the host).
 #      The Swift prints the process's exec time and init() on CACurrentMediaTime's clock;
 #   5. builds the Debug configuration (it has the timing marks and the prefetch's debug log),
 #      CREATES a simulator (newest iOS runtime, an iPhone), installs the host, launches it once to
 #      fill Zipline's cache and stays until the bundle proved healthy (crash rollback counts a
 #      process ended while a new bundle is on trial as a failure), then N rounds of process-cold
-#      launches (terminate, 1 s, launch), the three arms in a rotating order, each until its
+#      launches (terminate, 1 s, launch), the four arms in a rotating order, each until its
 #      "content" mark or 45 s; then E5, a background launch (a content-available push: the
 #      harness's copy adds UIBackgroundModes remote-notification) and the same process brought
 #      to the foreground;
 #   6. checks, from each launch's console and the server's log (E1-E4 below), writes the medians,
 #      and deletes the simulator and stops the server, whatever happened.
-#   E1  every launch drew the guest's answer (content), and arms b and c logged exactly one UI start
-#       (what it was, and whether start() in init() was held until it: the app state read in init)
-#   E2  arm c: one GET items per launch at the server, sent before the bundle's code loaded, and the
+#   E1  every launch drew the guest's answer (content), and every arm logged exactly one UI start
+#       (what it was, and whether start() was held until it: the app state read in init)
+#   E2  arms c and d: one GET items per launch at the server, sent before the bundle's code loaded, and the
 #       guest's request answered in under the server's delay (less 20 ms): it took the prefetch,
 #       in flight when it asked or answered already (its own request would take the whole delay)
 #   E3  arms a and b: one GET items per launch, after the code loaded, answered in at least the delay
@@ -270,7 +271,7 @@ import KeliverHost
 
 /// NF4 harness (scripts/keliver-nf4-ios-sim.sh): the template's App, its start chosen per launch
 /// (-nf4Arm): a = no start() in init (the host starts at the first screen); b = start() in init();
-/// c = b and the first screen's GET declared as a prefetch.
+/// c = b and the first screen's GET declared as a prefetch; d = a and that prefetch.
 @main
 struct iOSApp: App {
     init() {
@@ -285,8 +286,8 @@ struct iOSApp: App {
         let hasApp = (UIApplication.self as AnyObject).value(forKey: "sharedApplication") != nil
         let state = hasApp ? UIApplication.shared.applicationState.rawValue : -1
         let arm = UserDefaults.standard.string(forKey: "nf4Arm") ?? "c"
-        if arm == "c" { Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])] }
-        if arm != "a" { Keliver.shared.start() }
+        if arm == "c" || arm == "d" { Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])] }
+        if arm == "b" || arm == "c" { Keliver.shared.start() }
         let done = Int64(CACurrentMediaTime() * 1e9)
         print("nf4: arm=\(arm) state=\(state) exec=\(execNanos(initNanos)) init=\(initNanos) initDone=\(done) wall=\(wall)")
     }
@@ -378,10 +379,10 @@ grep -q "proved healthy on this install" "$EV/launches/warmup.console.txt" \
   && ok "the warmup launch drew the guest's answer and the bundle proved healthy (later terminations are not crashes)" \
   || die "the warmup did not prove the bundle healthy: $(grep -E 'CRASH|refus|fail' "$EV/launches/warmup.console.txt" | head -3 | tr '\n' ' ')"
 xcrun simctl io "$UDID" screenshot "$EV/warmup.png" > /dev/null 2>&1
-ARMS=(a b c)
+ARMS=(a b c d)
 for r in $(seq 1 "$RUNS"); do
-  for k in 0 1 2; do
-    arm="${ARMS[$(( (k + r) % 3 ))]}"
+  for k in 0 1 2 3; do
+    arm="${ARMS[$(( (k + r) % 4 ))]}"
     launch "$arm-$r" "$arm"
     [ "$r" = 1 ] && xcrun simctl io "$UDID" screenshot "$EV/arm-$arm.png" > /dev/null 2>&1
   done

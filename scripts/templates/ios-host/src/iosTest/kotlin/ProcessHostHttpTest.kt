@@ -33,6 +33,8 @@ class ProcessHostHttpTest {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   private val center = NSNotificationCenter()
   private val logged = mutableListOf<String>() // main thread only: ProcessHostHttp's log runs on it
+  /** What the watch's sceneInForeground answers now. */
+  private var foreground = false
 
   private val items = KeliverPrefetch("/items", mapOf("page" to "1"))
   private val orders = KeliverPrefetch("/orders")
@@ -44,7 +46,8 @@ class ProcessHostHttpTest {
 
   /** As `Keliver` makes it, with a HostHttp that asks the app's headers here, not on the main thread (the test holds it). */
   private fun processHttp(inForeground: Boolean): Pair<ProcessHostHttp, UiStartWatch> {
-    val watch = UiStartWatch(inForeground = { inForeground }, center = center)
+    foreground = inForeground
+    val watch = UiStartWatch(inForeground = { foreground }, center = center)
     val made = ProcessHostHttp(watch, scope, log = { logged += it }) { base, policy, headers, prefetched ->
       NSURLSessionHostHttp(base, policy, headers, EmptyCoroutineContext, 2.seconds, prefetched = prefetched)
     }
@@ -116,12 +119,27 @@ class ProcessHostHttpTest {
   }
 
   @Test fun aScreenBeforeStartSendsItOnceTheHostPassedItsChecks() {
-    // A background launch, then a Keliver screen made before Keliver.start() (the screen starts the host).
-    val (http, watch) = processHttp(inForeground = false)
+    // A Keliver screen made in the foreground before Keliver.start() (the screen starts the host);
+    // the scene is in the background again by the time start() runs.
+    val (http, watch) = processHttp(inForeground = true)
     watch.screenShown()
+    foreground = false
     http.firstStart(base, null, null, listOf(items))
     nothingMoreThan(0) // the host has not passed its checks yet
     http.checksPassed()
+    assertTrue(seen(1))
+    nothingMoreThan(1)
+  }
+
+  @Test fun aScreenInABackgroundSceneSendsNothingUntilTheForeground() {
+    // A scene connected in the background builds its root view, a Keliver screen.
+    val (http, watch) = processHttp(inForeground = false)
+    http.firstStart(base, null, null, listOf(items))
+    http.checksPassed()
+    watch.screenShown()
+    nothingMoreThan(0)
+    foreground = true
+    center.postNotificationName(UISceneWillEnterForegroundNotification, null)
     assertTrue(seen(1))
     nothingMoreThan(1)
   }

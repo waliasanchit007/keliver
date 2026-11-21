@@ -3,11 +3,14 @@ package @@PACKAGE@@
 import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
-import platform.UIKit.UIScene
+import platform.UIKit.UISceneActivationState
 import platform.UIKit.UISceneActivationStateForegroundActive
 import platform.UIKit.UISceneActivationStateForegroundInactive
 import platform.UIKit.UISceneWillEnterForegroundNotification
+import platform.UIKit.UIWindowScene
+import platform.UIKit.UIWindowSceneSessionRoleApplication
 import platform.darwin.NSObjectProtocol
 
 /**
@@ -19,10 +22,14 @@ import platform.darwin.NSObjectProtocol
  * - a scene entering the foreground (a host started in the App's init() or at didFinishLaunching:
  *   no scene is connected yet, and the application state means nothing then), or the app
  *   entering it, or becoming active;
- * - a Keliver screen being made ([screenShown]).
+ * - a Keliver screen being made ([screenShown]) while a scene is in the foreground.
  *
- * A process launched in the background (a push, a background fetch or refresh, a location event)
- * shows nothing and sends nothing, until the user brings the app to the foreground in that process.
+ * A screen made while no scene is in the foreground is not a UI start: iOS may connect a scene
+ * in the background (Apple's example is a location event), and SwiftUI may then build its root
+ * view, the template's Keliver screen, with nobody seeing it. That launch waits for the
+ * foreground notifications like any other. So a launch whose scenes stay in the background (a
+ * push, a background fetch or refresh, a location event) shows nothing and sends nothing, until
+ * the user brings the app to the foreground in that process.
  *
  * Main thread only: UIKit posts these notifications on it, and the host starts on it.
  */
@@ -49,8 +56,15 @@ internal class UiStartWatch(
     }
   }
 
-  /** A Keliver screen is being made: this process shows a screen. */
-  fun screenShown() = uiStarting("a Keliver screen is being made")
+  /**
+   * A Keliver screen is being made: a UI start when a scene is in the foreground. Otherwise (a
+   * scene connected in the background builds its root view) nothing: the screen's own start()
+   * waits for the foreground notifications ([whenStarted]).
+   */
+  fun screenShown() {
+    if (started || !inForeground()) return
+    uiStarting("a Keliver screen is being made")
+  }
 
   private fun uiStarting(cause: String) {
     if (started) return
@@ -73,16 +87,23 @@ internal class UiStartWatch(
 }
 
 /**
- * Whether a connected scene is in the foreground (inactive or active): the process shows UI.
+ * Whether the process shows UI now: one of the app's own window scenes is in the foreground
+ * (inactive or active).
  *
- * Not `UIApplication.applicationState`, which says nothing this early: in a SwiftUI App's init()
- * there is no shared application yet, so the read answers 0, `active`, whatever the launch
+ * Not `UIApplication.applicationState` alone, which says nothing this early: in a SwiftUI App's
+ * init() there is no shared application yet, so the read answers 0, `active`, whatever the launch
  * (measured on the simulator, scripts/keliver-nf4-ios-sim.sh), and at didFinishLaunching a
- * scene-based app reads `background` in every launch, the user's too. A scene is connected in the foreground only once
- * the process shows UI; a launch in the background connects none there. So a host started in
- * init() waits for the first scene's foreground notification (or its first screen), and a host
- * started later, with its scene already up, starts toward the screen at once. An app without
- * scenes waits for didBecomeActive, or its first Keliver screen.
+ * scene-based app reads `background` in every launch, the user's too. A scene is in the
+ * foreground only once the process shows UI. So a host started in init() waits for the first
+ * scene's foreground notification (or its first screen made in the foreground), and a host
+ * started later, with its scene already up, starts toward the screen at once.
+ *
+ * Only the app's own window scenes count (session role `UIWindowSceneSessionRoleApplication`): a
+ * CarPlay scene (a `CPTemplateApplicationScene`, not a window scene) or an external display's
+ * scene (another role) can be in the foreground while the phone is locked and the app's own UI is
+ * not, and neither shows a Keliver screen. An app without scenes (a shared application with none
+ * connected) shows UI when the application is active; until then it waits for didBecomeActive.
+ * [showsUi] is the rule, tested without a UIApplication (StartGateTest).
  */
 internal fun sceneInForeground(): Boolean {
   // In a SwiftUI App's init() there is no UIApplication yet (UIApplicationMain has not made it):
@@ -92,9 +113,27 @@ internal fun sceneInForeground(): Boolean {
   if (app !is UIApplication) return false
   val scenes: Any? = app.connectedScenes
   if (scenes !is Set<*>) return false
+  return showsUi(
+    scenes.map { scene ->
+      val window = scene as? UIWindowScene
+      SceneSeen(role = window?.session?.role, state = window?.activationState)
+    },
+    appActive = { app.applicationState == UIApplicationState.UIApplicationStateActive },
+  )
+}
+
+/** A connected scene as [showsUi] sees it: its session role (null: not a window scene) and state. */
+internal class SceneSeen(val role: String?, val state: UISceneActivationState?)
+
+/**
+ * [sceneInForeground]'s rule: an application window scene in the foreground; with no scene
+ * connected (an app without scenes), the application active ([appActive], read only then).
+ */
+internal fun showsUi(scenes: List<SceneSeen>, appActive: () -> Boolean): Boolean {
+  if (scenes.isEmpty()) return appActive()
   return scenes.any {
-    val state = (it as? UIScene)?.activationState
-    state == UISceneActivationStateForegroundInactive || state == UISceneActivationStateForegroundActive
+    it.role == UIWindowSceneSessionRoleApplication &&
+      (it.state == UISceneActivationStateForegroundInactive || it.state == UISceneActivationStateForegroundActive)
   }
 }
 
@@ -105,8 +144,8 @@ internal fun sceneInForeground(): Boolean {
  * bundle lookup, the code load and the declared first requests would spend that launch's small
  * time and memory budget on a screen nobody sees. So [run] starts the host now when the process
  * is starting toward a screen ([UiStartWatch]), and otherwise once it does: a scene or the app
- * entering the foreground, or a Keliver screen being made. A process that never comes to the
- * foreground looks up nothing, loads no code and sends nothing.
+ * entering the foreground, or a Keliver screen being made while a scene is in the foreground. A
+ * process whose scenes stay in the background looks up nothing, loads no code and sends nothing.
  *
  * In the App's init() no scene is connected yet, in any launch, so a launch the user made waits
  * too: until its first scene enters the foreground, about 45 ms before SwiftUI makes the first
@@ -129,6 +168,6 @@ internal class StartGate(
       waiting = false
       start()
     }
-    if (waiting) log("start: no scene in the foreground yet; the host starts when one enters it, the app becomes active, or a Keliver screen is made")
+    if (waiting) log("start: no scene in the foreground yet; the host starts when one enters it, the app becomes active, or a Keliver screen is made while one is")
   }
 }

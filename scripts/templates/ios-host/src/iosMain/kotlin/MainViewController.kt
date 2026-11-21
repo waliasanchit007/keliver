@@ -760,9 +760,10 @@ public object Keliver {
    * Looks up and loads the bundle, once per process; later calls do nothing. From any thread: it
    * runs on the main one. Call it early, in your App's init() (NF4; the template does). Until a
    * scene is in the foreground it waits, and the host starts when one enters it, the app becomes
-   * active, or a Keliver screen is made (UiStart.kt: StartGate): in a launch the user made, as the
-   * first scene comes up; in a process launched in the background (a silent push, a background
-   * refresh), only if the user opens the app, so such a launch loads no code.
+   * active, or a Keliver screen is made while a scene is in the foreground (UiStart.kt: StartGate):
+   * in a launch the user made, as the first scene comes up; in a process whose scenes stay in the
+   * background (a silent push, a background refresh, a scene connected for a location event), only
+   * if the user opens the app, so such a launch loads no code.
    */
   public fun start() {
     if (!NSThread.isMainThread) {
@@ -1211,7 +1212,7 @@ public object Keliver {
     onClose: (() -> Unit)?,
   ): UIViewController {
     KeliverTiming.memory("open") // Debug and Benchmark builds only (M5)
-    uiStart.screenShown() // NF4: this process shows a screen (UiStart.kt)
+    uiStart.screenShown() // NF4: a UI start only while a scene is in the foreground (UiStart.kt)
     // Weak: the screen holds this closure, and a view controller that went closes nothing.
     var shownBy: kotlin.native.ref.WeakReference<UIViewController>? = null
     val close: () -> Unit = onClose ?: { shownBy?.get()?.let(::closeShown) }

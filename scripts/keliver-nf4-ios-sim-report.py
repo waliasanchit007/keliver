@@ -33,7 +33,7 @@ for line in open(os.path.join(ev, 'server.log')):
 
 launches = []
 for name in sorted(os.listdir(os.path.join(ev, 'launches'))):
-    m = re.match(r'([abc])-(\d+)\.console\.txt$', name)
+    m = re.match(r'([abcd])-(\d+)\.console\.txt$', name)
     if not m:
         continue
     text = open(os.path.join(ev, 'launches', name), errors='replace').read().replace('\r', '')
@@ -64,7 +64,8 @@ def check(cond, text):
     print(('PASS ' if cond else 'FAIL ') + text)
     ok = ok and cond
 
-for arm in 'abc':
+ARMS = 'abcd'
+for arm in ARMS:
     got = [l for l in launches if l['arm'] == arm]
     check(len(got) == runs, f'arm {arm}: {len(got)} launches of {runs}')
 
@@ -72,7 +73,7 @@ for arm in 'abc':
 drawn = [l for l in launches if 'content' in l['marks'] and 'exec' in l]
 check(len(drawn) == len(launches) and launches,
       f'E4: every launch reached its content mark, the nf4 line first (no crash in init): {len(drawn)} of {len(launches)}')
-for arm in 'bc':
+for arm in ARMS:
     got = [l for l in launches if l['arm'] == arm]
     once = [l for l in got if len(l['ui']) == 1]
     causes = sorted({c for l in got for c in l['ui']})
@@ -81,10 +82,10 @@ for arm in 'bc':
     check(got and len(once) == len(got),
           f'E1: arm {arm}: one UI start per launch ({len(once)} of {len(got)}): {"; ".join(causes)}; '
           f'UIApplication state read in init(): {states} (-1 no shared application yet, 0 active, 1 inactive, 2 background); '
-          f'start() in init() held until the UI start in {held} of {len(got)}')
+          f'start() held until the UI start in {held} of {len(got)}')
 
-# E2: arm c's guest took the prefetched answer.
-for l in [l for l in launches if l['arm'] == 'c']:
+# E2: arms c's and d's guests took the prefetched answer.
+for l in [l for l in launches if l['arm'] in 'cd']:
     code = l['marks'].get('code')
     good = (l['requests'] == 1 and l.get('req') is not None and code is not None and l['req'] < code
             # A request of its own takes at least the delay; under it, with one GET at the server,
@@ -92,7 +93,7 @@ for l in [l for l in launches if l['arm'] == 'c']:
             and l['http'] is not None and l['http'] < delay - 20)
     check(good, f"E2: {l['label']}: {l['requests']} GET items, sent {ms(l.get('req'), code)} ms before the code loaded, "
                 f"the guest's request answered in {l['http']} ms (the server takes {delay})")
-# E3: arms a and b went to the network after the code loaded.
+# E3: arms a and b (no prefetch) went to the network after the code loaded.
 for l in [l for l in launches if l['arm'] in 'ab']:
     code = l['marks'].get('code')
     good = (l['requests'] == 1 and l.get('req') is not None and code is not None and l['req'] > code
@@ -117,21 +118,21 @@ rows = [
     ('exec → first frame', 'exec', 'first-frame'),
     ('exec → content (first guest frame with its data)', 'exec', 'content'),
 ]
-names = {'a': 'a: start at the first screen', 'b': 'b: start() in init()', 'c': 'c: b + prefetch'}
+names = {'a': 'a: start at the first screen', 'b': 'b: start() in init()', 'c': 'c: b + prefetch', 'd': 'd: a + prefetch'}
 out = ['# NF4 on iOS: the simulator run', '',
        f'Median (min-max) milliseconds over {runs} process-cold launches per arm (terminate, 1 s, launch), '
        f'arms rotated; Debug build; the API answers after {delay} ms. A simulator on a Mac is not a phone: '
        'these compare the arms here and are not phone numbers.', '',
-       '| | ' + ' | '.join(names[a] for a in 'abc') + ' |', '|---|---|---|---|']
+       '| | ' + ' | '.join(names[a] for a in ARMS) + ' |', '|---' * (len(ARMS) + 1) + '|']
 for title, a, b in rows:
     cells = []
-    for arm in 'abc':
+    for arm in ARMS:
         r = med(arm, a, b)
         cells.append('-' if r is None else f'{r[0]:.0f} ({r[1]:.0f}-{r[2]:.0f})')
     out.append(f'| {title} | ' + ' | '.join(cells) + ' |')
-http = {arm: [l['http'] for l in launches if l['arm'] == arm and l['http'] is not None] for arm in 'abc'}
+http = {arm: [l['http'] for l in launches if l['arm'] == arm and l['http'] is not None] for arm in ARMS}
 out.append("| the guest's GET answered in | " + ' | '.join(
-    f'{statistics.median(http[a]):.0f}' if http[a] else '-' for a in 'abc') + ' |')
+    f'{statistics.median(http[a]):.0f}' if http[a] else '-' for a in ARMS) + ' |')
 out += ['', '## Each launch', '', '| launch | exec→init | exec→ui-start | exec→start | exec→code | exec→content | GET answered | GETs | UI start |',
         '|---|---|---|---|---|---|---|---|---|']
 for l in sorted(launches, key=lambda l: (l['arm'], int(l['label'].split('-')[1]))):

@@ -4,10 +4,11 @@ import KeliverHost
 @main
 struct iOSApp: App {
     // NF4: the host starts here, at launch, so the bundle lookup and the code load run while the
-    // first scene connects (as the Android host's HostApp does). A launch in the background (a
-    // silent push, a background refresh) loads nothing: the host waits until the app comes to the
-    // foreground or a Keliver screen is made (UiStart.kt). An app whose Keliver screens are rarely
-    // opened can delete the start() line: the first screen starts the host.
+    // first scene connects (as the Android host's HostApp does). A launch whose scenes stay in the
+    // background (a silent push, a background refresh, a location event) loads nothing: the host
+    // waits until one of the app's scenes comes to the foreground (UiStart.kt). An app whose
+    // Keliver screens are rarely opened can delete the start() line: the first screen starts the
+    // host.
     //
     // To have your first screen's data on its way while the bundle loads, declare the GET it
     // makes first (HostPrefetch.kt has the rules), before start():
