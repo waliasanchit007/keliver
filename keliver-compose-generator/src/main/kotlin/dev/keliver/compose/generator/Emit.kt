@@ -442,7 +442,14 @@ class Emitter(
         },
       )
       body.append("internal class $cls : ${w.entry.name}<@Composable (Modifier) -> Unit>, GeneratedWidget {\n")
-      body.append("  override var modifier: KeliverModifier by mutableStateOf<KeliverModifier>(KeliverModifier)\n")
+      // NF1: one snapshot state per widget, plus a lazy list's two counts (below). The properties,
+      // events and the modifier are plain fields (`p_`); a setter that changes one (by ==, as mutableStateOf's structural policy compared) bumps
+      // `version`, which the renderer reads first. Compose then records one read per widget, not one
+      // per property, and the scan it makes after every state change walks that many fewer.
+      // A container reads a child's modifier and recomposes on its own tick (onModifierUpdated).
+      body.append("  private var version by mutableIntStateOf(0)\n")
+      body.append("  override var modifier: KeliverModifier = KeliverModifier\n")
+      body.append("    set(value) { if (field != value) { field = value; version++ } }\n")
       body.append("  override var modifierEventSink: ((Int) -> Unit)? = null\n")
       for (c in w.wire) {
         val n = c.param.name
@@ -450,29 +457,35 @@ class Emitter(
           ParamKind.SLOT -> body.append("  override val $n: ScopedChildren = ScopedChildren()\n")
           ParamKind.LAZY -> {
             body.append("  override val $n: ScopedChildren = ScopedChildren()\n")
-            body.append("  private var p_${n}Before: Any? by mutableStateOf<Any?>(0)\n")
-            body.append("  override fun ${n}Before(${n}Before: kotlin.Int) { p_${n}Before = ${n}Before }\n")
-            body.append("  private var p_${n}After: Any? by mutableStateOf<Any?>(0)\n")
-            body.append("  override fun ${n}After(${n}After: kotlin.Int) { p_${n}After = ${n}After }\n")
+            // The counts are snapshot state of their own, outside `version`, read only in the list's
+            // content lambda (which Compose runs in a derived state): a scroll window shift changes
+            // them and must update the list's items without recomposing this renderer. An int
+            // state's setter skips an equal value, as the structural policy did.
+            body.append("  private var count_${n}Before by mutableIntStateOf(0)\n")
+            body.append("  override fun ${n}Before(${n}Before: kotlin.Int) { count_${n}Before = ${n}Before }\n")
+            body.append("  private var count_${n}After by mutableIntStateOf(0)\n")
+            body.append("  override fun ${n}After(${n}After: kotlin.Int) { count_${n}After = ${n}After }\n")
             body.append("  private var p_${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)? = null\n")
             body.append("  override fun ${n}Viewport(${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_${n}Viewport = ${n}Viewport }\n")
           }
           ParamKind.EVENT -> {
-            body.append("  private var p_$n: Any? by mutableStateOf<Any?>(null)\n")
+            body.append("  private var p_$n: Any? = null\n")
             val lt = "(${c.param.type.functionParams.joinToString(", ") { it.fq }}) -> Unit"
-            body.append("  override fun $n($n: ($lt)?) { p_$n = $n }\n")
+            body.append("  override fun $n($n: ($lt)?) { if (p_$n != $n) { p_$n = $n; version++ } }\n")
           }
           else -> {
             // A parameter with a default starts as "not sent" (null): a guest built before this
             // parameter travelled never sends it, and the renderer then uses Compose's default.
-            body.append("  private var p_$n: Any? by mutableStateOf<Any?>(${if (c.param.hasDefault) "null" else "Unset"})\n")
-            body.append("  override fun $n($n: ${TypeMap.wireType(c.param.type, c.param.type.nullable || c.defaultCase == DefaultCase.EXPRESSION)}) { p_$n = $n }\n")
+            body.append("  private var p_$n: Any? = ${if (c.param.hasDefault) "null" else "Unset"}\n")
+            body.append("  override fun $n($n: ${TypeMap.wireType(c.param.type, c.param.type.nullable || c.defaultCase == DefaultCase.EXPRESSION)}) { if (p_$n != $n) { p_$n = $n; version++ } }\n")
           }
         }
       }
       body.append("  override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }\n")
       val required = w.wire.filter { it.kind == ParamKind.VALUE && !it.param.hasDefault }
       body.append("  override val value: @Composable (Modifier) -> Unit = { incoming ->\n")
+      // The one read: every field below is read after it, in this scope.
+      body.append("    version\n")
       if (required.isNotEmpty()) body.append("    if (${required.joinToString(" && ") { "p_${it.param.name} !== Unset" }}) {\n") else body.append("    run {\n")
       // Locals in Compose's order, so a default that names an earlier parameter (`fallback = error`) reads it.
       // A hidden overload passes only what its visible successor takes; Compose defaults the rest.
@@ -504,7 +517,7 @@ class Emitter(
         when (c.kind) {
           ParamKind.MODIFIER -> body.append("        $n = incoming.applyGenerated(modifier, this@$cls)${scrollContainerMark(w)},\n")
           ParamKind.SLOT -> body.append("        $n = { this@$cls.$n.Render(${if (c.param.type.receiver != null) "this" else "null"}) },\n")
-          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, p_${n}Before as Int, p_${n}After as Int, lazyHost_$n) },\n")
+          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, count_${n}Before, count_${n}After, lazyHost_$n) },\n")
           ParamKind.VALUE, ParamKind.EVENT -> body.append("        $n = $n,\n")
           else -> {}
         }
@@ -603,7 +616,7 @@ class Emitter(
       val fixed = listOf(
         "androidx.compose.runtime.Composable",
         "androidx.compose.runtime.getValue",
-        "androidx.compose.runtime.mutableStateOf",
+        "androidx.compose.runtime.mutableIntStateOf",
         "androidx.compose.runtime.setValue",
         "androidx.compose.ui.Modifier",
         "dev.keliver.Modifier as KeliverModifier",
