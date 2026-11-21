@@ -38,8 +38,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Fresh data, and the right user's: any request other than a GET through the guests' HostHttp drops
  * every response not taken yet (the guest may have changed what it would show), and so does
  * `discardPrefetched()` (Android: `KeliverHost`; iOS: `Keliver.shared`), which the app calls on
- * sign-out or a change of user. The app's credentials must be ready BEFORE the host starts: the
- * prefetch goes out with whatever they are then.
+ * sign-out or a change of user. The app's credentials are taken as the request goes out (at the
+ * start toward a screen, which can be later than the host's start), so the session must be restored
+ * by then: the prefetch goes out with whatever they are at that moment.
  *
  * The SAME file is in the Android and the iOS host; keep them identical (common Kotlin: no lock,
  * one atomic state).

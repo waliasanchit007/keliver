@@ -1006,16 +1006,19 @@ It behaves like the Android host in §2:
   0.3.16 it is measured by the host's simulator tests,
   `./gradlew -p host-ios iosSimulatorArm64Test`, against a local server; no
   running guest has used HostHttp yet.) There is one HostHttp per process,
-  made when the host starts, with `requestPolicy` and `requestHeaders` as they
-  are then.
+  made when the host FIRST starts, with `requestPolicy` and `requestHeaders`
+  as they are then: a start retried after "no bundle" keeps it, and setting
+  either after the first start logs that it applies from the next process.
 - **`KeliverPrefetch`** (NF4, cold start; unreleased, tools after 0.3.18): the
   same as Android's (§2), with the same rules from the same file
   (`HostPrefetch.kt`, byte for byte). In Swift, before the host starts:
   `Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])]`,
   then `Keliver.shared.start()` in your App's `init()` (or your app delegate's
   `didFinishLaunching`). The scaffolded `iOSApp.swift` shows it as a comment.
-  - **When it goes out:** when the process starts toward a screen
-    (`UiStart.kt`). That is the first of three things: the host starting while
+  - **When it goes out:** once the host has passed its own checks (the key
+    and the bundle server, as on Android: a host that refuses to load sends
+    nothing) and the process starts toward a screen (`UiStart.kt`). That
+    second one is the first of three things: the host starting while
     the app is not in the background; a scene (or the app) entering the
     foreground, or the app becoming active; or a Keliver screen being made. A
     SwiftUI or other scene-based app is still in the background state while it
@@ -1026,8 +1029,11 @@ It behaves like the Android host in §2:
     the host, and the prefetch goes out with it: that is later, and saves less.
   - **Who it is for:** it goes out through the guests' HostHttp, so your
     `requestPolicy` applies, and so do your `requestHeaders` as they answer
-    then. The guest's request that takes it does not ask them again. **Restore
-    your session before `Keliver.shared.start()`.** Call
+    then, as the prefetch goes out (at the start toward a screen: in a
+    SwiftUI app, when the first scene enters the foreground, not at
+    `start()`). The guest's request that takes it does not ask them again.
+    **Have your session restored by then** (restoring it before `start()` is
+    the simple way to be sure). Call
     **`Keliver.shared.discardPrefetched()`** when the user signs in, signs out
     or changes. **If your first screen establishes the session, don't declare
     a prefetch.** A prefetch your `requestHeaders` refused (`done(nil)`) is not
@@ -1038,10 +1044,27 @@ It behaves like the Android host in §2:
     drops what was not taken. In a DEBUG binary, an answer that goes unused is
     logged (`KeliverHost: prefetch:`, names only).
 
+  The declaration, `requestPolicy` and `requestHeaders` are taken at the
+  host's FIRST start, with the one HostHttp: a start retried after "no
+  bundle" keeps them, and the prefetch is sent at most once per process.
+
   Measured by the host's simulator tests (`HostPrefetchTest`, over
-  `NSURLSession` to a local server). Not measured: a running guest taking a
-  prefetched response on a simulator or an iPhone, and how much earlier the
-  first screen shows its data on iOS.
+  `NSURLSession` to a local server; `ProcessHostHttpTest`, the host's wiring:
+  `start()` twice, a retried start, a screen before `start()`, a refused host;
+  `HostPrefetchRaceTest`, shared with Android: 1,000 races of the calls).
+  Not measured: a running guest taking a prefetched response on a simulator or
+  an iPhone, and how much earlier the first screen shows its data on iOS.
+
+  **Follow-up: `start()` in the scaffolded `iOSApp.swift` by default.** It
+  stays a comment until three things are done: (1) one simulator run with the
+  comment switched on, showing that `UiStartWatch` reads the application state
+  safely that early in a SwiftUI app and that the prefetch goes out when the
+  first scene enters the foreground; (2) an iOS timing of the gain over
+  starting from the first screen; (3) a decision on background launches: a
+  host started in `init()` looks up and loads its code on every silent push
+  and background refresh (the prefetch is held back, the code load is not),
+  so either hold the code load until the start toward a screen in a background
+  launch, or document that cost.
 - **Guest SQL** (`HostSqlDriver`) is real SQLite in Application Support, bound
   through `src/nativeInterop/cinterop/sqlite3.def`.
 - **Images** load over the network (Coil with Ktor's Darwin engine).

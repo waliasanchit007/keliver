@@ -416,3 +416,63 @@ internal class NSURLSessionHostHttp(
 
 /** A request the app's [RequestPolicy] does not allow; nothing was sent. */
 public class HostHttpRefused(message: String) : IllegalArgumentException(message)
+
+/**
+ * NF4: the guests' one HostHttp for this process, and the app's declared first requests
+ * ([Keliver.prefetch], HostPrefetch.kt). Both are made at the host's FIRST start ([firstStart]),
+ * from `requestPolicy`, `requestHeaders` and `prefetch` as they are then, and kept for the process:
+ * every code load binds the same HostHttp, so the first request finds what the prefetch sent, and a
+ * start retried after "no bundle" changes neither (a prefetch may already have gone out with those
+ * settings). The requests go out once the host passed its own checks ([checksPassed]: the key and
+ * the bundle server, as Android's run()) AND the process starts toward a screen ([UiStartWatch]),
+ * in either order: a host that refuses to load, or a background launch, sends nothing.
+ * Main thread.
+ */
+internal class ProcessHostHttp(
+  private val uiStart: UiStartWatch,
+  /** Where the declared requests go out (off the main thread). */
+  private val scope: CoroutineScope,
+  private val log: (String) -> Unit,
+  /** What the prefetch reports went unused (the host logs it in a debug binary only). */
+  private val prefetchLog: (String) -> Unit = {},
+  /** Makes the HostHttp (a test passes one that does not hop to the main thread for requestHeaders). */
+  private val make: (base: String, RequestPolicy?, KeliverRequestHeaders?, PrefetchedRequests?) -> NSURLSessionHostHttp =
+    { base, policy, headers, prefetched -> NSURLSessionHostHttp(base, policy, headers, prefetched = prefetched) },
+) {
+  /** Whether the host has started in this process: the settings are fixed from then on. */
+  var started = false
+    private set
+
+  /** The guests' HostHttp; null before the first start, or without an API base. */
+  var http: NSURLSessionHostHttp? = null
+    private set
+
+  /** The app's declared first requests; null when it declared none (or there is no API base). Read from any thread. */
+  @kotlin.concurrent.Volatile var prefetched: PrefetchedRequests? = null
+    private set
+
+  /** The host's first start in this process: fixes the settings. Later calls (a retried start) do nothing. */
+  fun firstStart(apiBase: String?, policy: RequestPolicy?, headers: KeliverRequestHeaders?, prefetch: List<KeliverPrefetch>) {
+    if (started) return
+    started = true
+    if (apiBase == null) {
+      if (prefetch.isNotEmpty()) log("prefetch is set but there is no API_BASE_URL: nothing is prefetched")
+      return
+    }
+    val made = prefetch.takeIf { it.isNotEmpty() }?.let { PrefetchedRequests(it, log = prefetchLog) }
+    prefetched = made
+    http = make(apiBase, policy, headers, made)
+    // Watched from the start, as on Android: a scene may enter the foreground while the host checks.
+    if (made != null) uiStart.whenStarted { made.uiStarting() }
+  }
+
+  /** The host passed its checks (the key, the bundle server): the declared requests may go out. Again: nothing more. */
+  fun checksPassed() {
+    http?.startPrefetch(scope)
+  }
+
+  /** Drops every prefetched response not taken yet. From any thread. */
+  fun discard(why: String) {
+    prefetched?.discard(why)
+  }
+}

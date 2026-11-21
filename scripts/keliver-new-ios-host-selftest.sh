@@ -223,7 +223,8 @@ grep -q 'public class RequestPolicy(' "$KC/RequestPolicy.kt" && [ -f "$H/src/jvm
   && grep -q '    policy?.refusal(method, request.path)?.let { why ->' "$K/IosHttp.kt" \
   && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "$K/IosHttp.kt" \
   && grep -q '"x-original-url", "x-rewrite-url", "x-forwarded-host", "x-forwarded-prefix", "x-forwarded-proto",' "$K/IosHttp.kt" \
-  && grep -q 'NSURLSessionHostHttp(apiBase, requestPolicy, requestHeaders, prefetched = prefetched)' "$K/MainViewController.kt" \
+  && grep -q '    { base, policy, headers, prefetched -> NSURLSessionHostHttp(base, policy, headers, prefetched = prefetched) },' "$K/IosHttp.kt" \
+  && grep -q '    processHttp.firstStart(API_BASE_URL.takeIf { it.isNotBlank() }, requestPolicy, requestHeaders, prefetch)' "$K/MainViewController.kt" \
   && grep -q "implementation 'org.jetbrains.kotlin:kotlin-test'" "$H/build.gradle" \
   && ok "host kit K2: HostHttp checks the app's RequestPolicy before sending; its JVM tests are scaffolded" \
   || bad "host kit K2: RequestPolicy is not wired into NSURLSessionHostHttp, or its tests are missing"
@@ -242,20 +243,26 @@ grep -q 'public var requestHeaders: KeliverRequestHeaders? = null' "$K/MainViewC
   && ok "B2: Keliver.requestHeaders adds the app's credentials (needs a requestPolicy; the guest's own dropped, no Set-Cookie back); its simulator tests are scaffolded" \
   || bad "B2: requestHeaders is not wired into NSURLSessionHostHttp, or its simulator tests are missing"
 # NF4: the app's declared first requests (Keliver.prefetch), as on Android: the rules are the Android
-# host's HostPrefetch.kt byte for byte; sent through the guests' one HostHttp (made once per process,
-# before any app) when the host starts, once the process starts toward a screen (UiStart.kt: not in a
-# background launch); dropped by any non-GET and by Keliver.discardPrefetched(); simulator tests.
+# host's HostPrefetch.kt byte for byte; sent through the guests' one HostHttp (made at the host's
+# FIRST start, kept by a retried one: ProcessHostHttp) once startHost() passed the key and bundle
+# server checks (Android: run()) and the process starts toward a screen (UiStart.kt: not in a
+# background launch); dropped by any non-GET and by Keliver.discardPrefetched(); simulator tests,
+# and the race test shared with the Android host.
 PHT=""
 for d in "$ROOT/scripts/templates/production-host" "$(dirname "$SCAFFOLD")/../templates/production-host"; do
   [ -f "$d/src/main/kotlin/HostPrefetch.kt" ] && { PHT="$d"; break; }
 done
 [ -n "$PHT" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHT/src/main/kotlin/HostPrefetch.kt" | cmp -s - "$K/HostPrefetch.kt" \
+  && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHT/src/test/kotlin/HostPrefetchRaceTest.kt" | cmp -s - "$H/src/iosTest/kotlin/com/example/demo/host/HostPrefetchRaceTest.kt" \
   && grep -q '  public var prefetch: List<KeliverPrefetch> = emptyList()' "$V" \
   && grep -q '  public fun discardPrefetched() {' "$V" \
-  && grep -q '    sharedHttp ?: NSURLSessionHostHttp(apiBase, requestPolicy, requestHeaders, prefetched = prefetched).also { sharedHttp = it }' "$V" \
-  && grep -q '  val http = apiBase?.let { Keliver.hostHttp(it) } // one for the process (NF4)' "$V" \
-  && grep -A3 'KeliverTiming.start() // Debug and Benchmark builds only (M0); nothing elsewhere' "$V" | grep -q '    startPrefetch()' \
-  && grep -q '    hostHttp(apiBase).startPrefetch(prefetchScope)' "$V" && grep -q '    uiStart.whenStarted { made.uiStarting() }' "$V" \
+  && grep -q '      if (processHttp.started) log("requestHeaders set after the host first started: it applies from the next process start")' "$V" \
+  && grep -q '      if (processHttp.started) log("prefetch set after the host first started: it applies from the next process start")' "$V" \
+  && grep -q '  val http = apiBase?.let { Keliver.hostHttp } // one for the process, made at the first start (NF4)' "$V" \
+  && grep -A5 'KeliverTiming.start() // Debug and Benchmark builds only (M0); nothing elsewhere' "$V" | grep -q '    processHttp.firstStart(' \
+  && grep -B4 '  Keliver.hostChecksPassed()' "$V" | grep -q 'is not an http(s) URL.")' \
+  && grep -q '    if (started) return' "$K/IosHttp.kt" && grep -q '    if (made != null) uiStart.whenStarted { made.uiStarting() }' "$K/IosHttp.kt" \
+  && grep -q '    http?.startPrefetch(scope)' "$K/IosHttp.kt" \
   && grep -q '    uiStart.screenShown() // NF4' "$V" \
   && grep -q 'UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateBackground' "$K/UiStart.kt" \
   && grep -q '      UISceneWillEnterForegroundNotification,' "$K/UiStart.kt" \
@@ -263,9 +270,10 @@ done
   && grep -q '      prefetched.responseFor(request, kept)?.let { return it }' "$K/IosHttp.kt" \
   && grep -q '    prefetched?.arm(scope) { request -> exchange(request, prefetchable = false) }' "$K/IosHttp.kt" \
   && [ -f "$H/src/iosTest/kotlin/com/example/demo/host/HostPrefetchTest.kt" ] \
+  && [ -f "$H/src/iosTest/kotlin/com/example/demo/host/ProcessHostHttpTest.kt" ] \
   && grep -q 'Keliver.shared.prefetch = \[KeliverPrefetch(path: "/items", query: \["page": "1"\])\]' "$H/iosApp/iOSApp.swift" \
-  && ok "NF4: Keliver.prefetch (the Android host's HostPrefetch.kt) goes out through the one HostHttp at a start toward a screen, is dropped by a non-GET or discardPrefetched(); its simulator tests are scaffolded" \
-  || bad "NF4: the iOS first request's prefetch is not wired, or HostPrefetch.kt differs from the Android host's"
+  && ok "NF4: Keliver.prefetch (the Android host's HostPrefetch.kt) goes out through the one HostHttp (fixed at the first start) once the host passed its checks and at a start toward a screen, is dropped by a non-GET or discardPrefetched(); its simulator tests and the shared race test are scaffolded" \
+  || bad "NF4: the iOS first request's prefetch is not wired, or HostPrefetch.kt (or HostPrefetchRaceTest.kt) differs from the Android host's"
 # Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).
 grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = emptyMap())' "$KC/KeliverRoute.kt" \
   && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
@@ -614,6 +622,14 @@ if [ "$BUILD" = 1 ]; then
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*HostPrefetchTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
     [ "$rc" = 0 ] && [ "${n:-0}" -ge 20 ] && ok "NF4: the prefetch's simulator tests pass ($n: once, 2xx only, 5 s window, 1 s in-flight wait, non-GET and discard drop it, background launch sends nothing)" \
       || bad "NF4: the prefetch's simulator tests failed (rc=$rc, ${n:-no} passed)"
+    # NF4 review (#279): the host's wiring (start() twice, a retried start, a screen before start(),
+    # a refused host) and the race test shared with the Android host (1,000 runs each).
+    n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*ProcessHostHttpTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 8 ] && ok "NF4: the host's prefetch wiring tests pass ($n: start() twice, a retried start keeps the first settings, a screen before start(), a refused host sends nothing)" \
+      || bad "NF4: the host's prefetch wiring tests failed (rc=$rc, ${n:-no} passed)"
+    n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*HostPrefetchRaceTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 2 ] && ok "NF4: the prefetch's race tests pass on the simulator ($n, 1,000 runs each: never two sends)" \
+      || bad "NF4: the prefetch's race tests failed (rc=$rc, ${n:-no} passed)"
     # A release framework refuses http:// — the check exists, fails here, and is wired to every release link.
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-urls.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/release-urls.log" \
