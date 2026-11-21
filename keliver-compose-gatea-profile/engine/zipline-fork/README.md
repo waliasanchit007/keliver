@@ -1,4 +1,4 @@
-# Zipline on QuickJS 2026 (NF2 steps 1, 1b, 2 and 3)
+# Zipline on QuickJS 2026 (NF2 steps 1, 1b, 2 and 3, and the reviews' Lows)
 
 Keliver's fork of Zipline, kept as a patch set: Zipline **1.28.0** (commit `f6cd1536`) with its
 vendored QuickJS 2021-03-27 replaced by Bellard's **QuickJS 2026-06-04** (SHA-256
@@ -55,13 +55,26 @@ Anything published from this patch set (step 4) carries both licences.
     `has_scope`, the closure record's `closure_type`, the function's source text in its debug
     record, and the line table: the function's line and column in a header, then a column delta
     with every entry. The built-in atom table is 2026's (243 atoms; a test checks it against
-    `quickjs-atom.h`). Source maps map each entry's line as 1.28.0 did (the line's first segment
-    gives the Kotlin file, line and column). Two 1.28.0 bugs fixed on the way: 8-bit strings are
-    Latin-1, not UTF-8 (`café` read as `caf�`), and the flag properties read inverted.
-    Tests: Zipline's, adapted to version 5, plus BigInt, template, class/closure and
-    run-after-rewrite cases, and `RealBundleTest`, which takes real Kotlin/JS bundles
-    (`-PziplineBytecodeCorpus=<dir>`) through a byte-identical round trip, the source map (checked
-    instruction by instruction) and stripping, then loads them in dependency order.
+    `quickjs-atom.h`); a name is never written as one of its symbols, so a file's own string
+    `"Symbol.iterator"` stays a string. Source maps: a function's Kotlin file is its first mapped
+    line's (as 1.28.0 chose it), and each position takes the Kotlin line and column of the segment
+    covering its column when that segment is in the function's file, else of its line's first
+    mapped segment, so two statements on one JavaScript line keep their own Kotlin positions
+    (1.28.0 mapped by line only). A position on a line with no mapping takes the previous
+    position's (1.28.0 kept its JavaScript line under the Kotlin file name), and a one-field
+    segment counts as unmapped (1.28.0 gave it the previous segment's source and line). Stripping
+    line numbers drops each function's source text too. Three 1.28.0 bugs fixed on the way: 8-bit
+    strings are Latin-1, not UTF-8 (`café` read as `caf�`), the flag properties read inverted,
+    and the line table's op byte was read as signed (a large pc step decoded wrong).
+    Tests: Zipline's, adapted to version 5, plus BigInt, template, class/closure,
+    run-after-rewrite and per-column mapping cases, and `RealBundleTest`, which takes real
+    Kotlin/JS bundles (`-PziplineBytecodeCorpus=<dir>`) through a byte-identical round trip, the
+    source map and stripping, then loads them in dependency order. Its source-map check computes
+    the mapping rule a second time from the parsed segments and compares every function's file,
+    header and recorded position (line and column): that shows the rule was applied everywhere,
+    not that the rule's Kotlin positions are right. The stack traces in
+    `ApplySourceMapToBytecodeTest` and `ZiplineCompilerTest`, against hand-checked Kotlin lines,
+    are the independent check.
   - `compile` (JNI `Context::compile`, iOS `QuickJs.compile`; step 1b) leaves out each function's
     source text, which QuickJS 2026 writes into the bytecode and 2021 did not: it was 83% of the
     three-way guest's bytecode (10.3 of 12.5 MB). It sets `JS_STRIP_SOURCE` only while compiling;
