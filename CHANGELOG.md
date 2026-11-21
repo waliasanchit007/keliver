@@ -119,6 +119,13 @@ New:
   experimental; `AppLifecycle.Host.hostFeatures`); guests read them as `LocalHostFeatures` (keliver-compose,
   experimental). An older host reports none. Breaking only for outside implementers:
   `AppLifecycle.Host.hostFeatures` is a new abstract member, so a custom `AppLifecycle.Host` must add it (#266).
+- keliver-nav: `KeliverNavController.prepare` / `cancelPreparation`, `Modifier.prepareOnPress`, `KeliverNavPress` /
+  `LocalKeliverNavPress` (experimental): compose the screen a tap opens while the finger is down, under
+  `KeliverNavHost` with a retention, on a host that declares the press signal. The prepared screen's effects run
+  on press (#278).
+- Gate A prototype (unpublished): the `ExtraPress` modifier and the host feature `keliver.press@1`; the press waits
+  inside scroll containers (`PressSignalTiming`, `LocalPressSignalTiming`); the generator's `scrollContainers`
+  config (#278).
 
 Changed:
 
@@ -138,6 +145,13 @@ Changed:
   guest still sees no features (#271).
 - Gate A host (prototype, `ExtraRetained`): host back is enabled only when the entry below can be shown, so a
   failed host back no longer leaves the stack's back callback switched off (#271).
+- keliver-nav: `KeliverPreparedStack` runs on the retained stack's path; on a host container the prepared entry is
+  placed under the shown entries. keliver-nav now exposes `keliver-runtime` as an API dependency (#278).
+- Gate A prototype (`keliver-compose-gatea-composeui`): a host back on a retained stack no longer recomposes the
+  entries' content. `LocalHostBackDispatcher` is a dynamic composition local (was static). Mac: the frame after
+  the press is about half as long, and the heavy screen's recomposition and apply is 82% shorter (#276).
+- Gate A prototype: generated host renderers hold one Compose snapshot state per widget instead of one per
+  property, which cuts the state reads Compose scans after every change (NF1) (#280).
 
 Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 
@@ -201,6 +215,27 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   one in flight; same client and RequestPolicy. Any non-GET through HostHttp drops untaken responses;
   `KeliverHost.discardPrefetched()` does too (call it on sign-out). No protocol change (NF4) (#269).
 - Production host templates: the guests' HostHttp is now one instance per process (it was one per code load) (#269).
+- NF2: one bundle per QuickJS engine. The signing block names a bundle's engine in its signed metadata
+  (`keliver.engine`, from the modules' bytecode; QuickJS 2021 bundles name none and are unchanged). `engineTargets`
+  in keliver.portal.json makes `keliver-publish` build and publish the release once per engine at one sequence;
+  `--promote`, `--republish` and `--set-rollout` act on every engine's bundle of a release (#275).
+- Hosts (Android, iOS templates) take only index entries for the engine their Zipline links and refuse a manifest
+  for another engine on the network, from the cache and from crash rollback's kept copy (`engine refused`, report
+  reason `engine`). Hosts from before this release only ever take the QuickJS 2021 bundle (#275).
+- A host updated to another engine treats a last good or crash-rollback bundle left by its old engine as nothing
+  cached, so it starts network-first under every start policy (#275).
+- `keliver-publish` checks every engine's bundle of a release before writing any `v<N>/`, and leaves none behind
+  on a failure (#275).
+- Upgrading: run `keliver-new-publish-target.sh` again to replace the 0.3.9–0.3.18 signing block. Publish builds
+  from the Zipline fork (QuickJS 2026) only with this tools release or later: older `keliver-publish` would
+  publish them as default-engine bundles. Tools 0.3.18 and earlier refuse a multi-engine index (they write
+  nothing), and older relays drop host reports whose reason is `engine` (#275).
+- iOS host template: `Keliver.shared.prefetch` and `Keliver.shared.discardPrefetched()` (NF4). Once the host has
+  passed its checks, the first screen's declared GETs go out at a start toward a screen (never in a background
+  launch, never from a host that refuses to load) through the guests' HostHttp, now one per process and fixed at
+  the first start. The screen's identical request takes the response with the Android host's rules (#279).
+- Both host templates: `HostPrefetch.kt` is common Kotlin, identical in the Android and iOS hosts; Android's
+  behaviour is unchanged (#279).
 
 ## Keliver 0.4.1 - 2026-10-27
 
