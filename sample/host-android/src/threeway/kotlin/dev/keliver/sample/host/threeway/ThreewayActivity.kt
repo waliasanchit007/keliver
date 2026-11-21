@@ -389,8 +389,16 @@ class ThreewayActivity : ComponentActivity() {
   private fun runBench() {
     val benches = intent.getStringExtra("bench")?.split(',')?.filter { it.isNotBlank() } ?: return
     val n = intent.getIntExtra("n", 12)
+    // `--ei hold <ms>` (NF3's press series): taps hold the finger down that long without blocking the
+    // main thread, and every time in the series is measured from the DOWN instead of the UP.
+    val hold = intent.getIntExtra("hold", 0).toLong()
     val steps = ArrayDeque<() -> Unit>()
     var lastData = 1
+    // The last navigation result's number: a screen counts only with a newer one. A detail composed
+    // ahead of its tap (`prepared` with `press`) reports the number of the navigation before it. The
+    // forms number navigations from NAV_BASE + 1 (ThreewayScreens.kt, index.html), so the first
+    // open's prepared detail reports NAV_BASE itself.
+    var lastNav = NAV_BASE
     fun next() = steps.removeFirstOrNull()?.invoke() ?: log("""{"form":"$form","done":true}""")
 
     fun iteration(
@@ -408,16 +416,16 @@ class ThreewayActivity : ComponentActivity() {
           log("""{"form":"$form","bench":"$bench","i":$i,"timeout":true}""")
           main.postDelayed({ next() }, pause)
         }
-        val tap = press?.invoke() ?: tap(xDp, yDp)
+        val tap = press?.invoke() ?: if (hold > 0) heldTap(xDp, yDp, hold) else tap(xDp, yDp)
         // A system back (`sysback`): also the press's first draw, which shows the list when the host
         // goes back on its own (`retainhost`) and is the guest's frame otherwise.
         fun pressExtra(): Map<String, Long> =
           if (press != null && firstDrawAfterPress > 0) mapOf("firstDraw" to firstDrawAfterPress - tap) else emptyMap()
         waiter = { screen, seq ->
-          if (accept(screen, seq)) {
+          if (accept(screen, seq) && (screen == "data" || seq > lastNav)) {
             waiter = null
             main.removeCallbacks(timeout)
-            if (screen == "data") lastData = seq
+            if (screen == "data") lastData = seq else lastNav = seq
             if (before == null) {
               log(result(bench, i, tap, seq, extra = pressExtra()))
               main.postDelayed({ next() }, pause)
@@ -642,6 +650,25 @@ class ThreewayActivity : ComponentActivity() {
     return upAt
   }
 
+  /**
+   * A tap whose finger stays down [holdMillis] (`--ei hold`) without blocking the main thread, so the
+   * host's press signal and the guest's work during the press run as under a real finger. Returns the
+   * time the DOWN was dispatched (epoch ms): the series' times are from the touch-down.
+   */
+  private fun heldTap(xDp: Float, yDp: Float, holdMillis: Long): Long {
+    val content = findViewById<View>(android.R.id.content)
+    val location = IntArray(2)
+    content.getLocationInWindow(location)
+    val density = resources.displayMetrics.density
+    val x = location[0] + xDp * density
+    val y = location[1] + yDp * density
+    val downTime = SystemClock.uptimeMillis()
+    val downAt = System.currentTimeMillis()
+    dispatch(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0))
+    main.postDelayed({ dispatch(MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0)) }, holdMillis)
+    return downAt
+  }
+
   private fun dispatch(event: MotionEvent) {
     event.source = InputDevice.SOURCE_TOUCHSCREEN
     window.decorView.dispatchTouchEvent(event)
@@ -706,6 +733,9 @@ class ThreewayActivity : ComponentActivity() {
     const val ROWS_TOP_DP = 56f + 48f + 24f
     const val ROW_DP = 72f
     const val TAP_HOLD_MILLIS = 40L
+
+    /** The forms' first navigation number minus one (NAV_BASE in ThreewayScreens.kt and index.html). */
+    const val NAV_BASE = 100_000
     const val SETTLE_MILLIS = 2_000L
 
     /** Between a QuickJS memory read and the tap it precedes (memory reads only). */

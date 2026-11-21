@@ -1998,6 +1998,9 @@ turns it into pre-composition (`KeliverNavController.prepare` under `KeliverNavH
 `KeliverPreparedStack`). Tests: `PressSignalTest` (host and guest over the real protocol on the
 JVM). Guest-side timings on the Mac: `GUEST_PROFILE.md`, "NF3: the host's press signal".
 
+**Since measured on the A12** ([A12 checkpoint, series F](#series-f-the-press-signal-on-the-phone-nf3)):
+the bench now has `x=prepared,press` and `--ei hold`. What follows is this section as written.
+
 **Not measured here.** This bench's Android host does not declare the feature and its guest does
 not provide the signal, so no device number is new: open on the A12 stays as in "NF1 gate, part 2"
 (about 310 ms). What a device run needs: the threeway host's `hostFeatures` to include
@@ -2007,6 +2010,413 @@ feature, measure list-scroll jank on the A12 with the press on and off, and tune
 (`PressSignalTiming`) against how long taps last there. The tap-within-one-frame target
 also needs the host's pressed state (the ripple), which the host draws already; the guest is not in
 that path.
+
+## A12 checkpoint, 2026-11-22
+
+The batched A12 checkpoint for the native-feel work (PLAN_2026-11.md, WS7): the engine (NF2), the
+heavy screen's host back (#276), one Compose state per generated widget (#280) and the cold start
+(NF4), on the same Galaxy A12, restarted by the owner at about 02:12 IST. The first timed series
+started at 02:29 (17 minutes of uptime). Builds came first.
+
+**Method, common to every series.**
+- **Builds.** Each build is the prototype published to its own scratch Maven repository
+  (`-Dmaven.repo.local=<scratch>/m2-<build>`, version `0.0.0-gateb`), then the sample's benchmark
+  APK from the same checkout, as in [How to run it](#how-to-run-it). "Main" is `1e083833f`. The
+  "before" builds are each merge's first parent, in detached checkouts: `228a229b0` before #276
+  and `4f3a5c865` before #280. The engine arms are main's sample built with
+  `use-fork.init.gradle` against the fork published from a fresh `apply.sh` (`1.28.0-q20260604`;
+  its `libquickjs.so` sizes equal step 2's on all four ABIs), with and without
+  `-PziplineForkLongAsBigInt`. Every APK installs as `dev.keliver.sample`.
+- **Every series ran from a script on the phone** (`nohup sh`, the APKs pushed to the phone and
+  installed there with `pm install -r`, so a dropped adb link cannot stop a series). After each
+  install the script started the app once, sent profileinstaller's install-profile broadcast and
+  compiled `speed-profile` (`cmd package compile -f`), the same for every build. Each series is a
+  fresh process (`am start -S`) with the in-app fixture (`--ez localApi true`), 14 iterations with
+  the first 2 dropped, unless said otherwise. Before each series the script woke the screen and
+  logged the uptime, `/proc/loadavg`, the battery, the thermal status and the CPU idle share over
+  2 s (`/proc/stat`). The load average stays at 20–23 even when idle (kernel threads), so the idle
+  share is the check.
+- Medians are written median / p90 / min–max, in ms from the tap (or the press), unless said
+  otherwise.
+
+### Series A: the engine on the phone (NF2)
+
+**Arms.** Zipline 1.28.0 (main as built), the fork (QuickJS 2026-06-04), and the fork with `Long`
+as a JS BigInt. Each arm ran five series in a row: navigation (`bench=nav`, header back), the same
+on the heavy detail (`x=heavy`), system back with the host's retained back (`bench=sysback`,
+`x=retainhost`), the same on the heavy detail, and `x=split` on the simple screen. Native ran
+once, on the first arm's install (its code does not depend on the engine).
+
+**Phone state.** 02:29–02:44, uptime 17.5–32.5 min, on battery 100% → 98%, unplugged, 25.8–26.3 °C,
+thermal status 0, CPU idle 84–98% before each series.
+
+**Navigation, header back** (simple screen; heavy detail below it):
+
+| Arm | Open (warm) | Back | Open (cold, i=1) |
+|---|---|---|---|
+| native | 16 / 17 / 14–18 | 13 / 14 / 10–14 | 28 |
+| guest, Zipline 1.28.0 | 436 / 456 / 414–456 | 834 / 847 / 827–855 | 445 |
+| guest, fork | 353.5 / 370 / 344–374 | 698.5 / 708 / 678–715 | 368 |
+| **guest, fork, `Long` as BigInt** | **208** / 220 / 184–222 | **461.5** / 478 / 441–487 | 208 |
+| heavy: native | 22 / 23 / 20–25 | 14 / 15 / 11–33 | 35 |
+| heavy: guest, Zipline 1.28.0 | 1,028.5 / 1,072 / 1,008–1,136 | 856.5 / 880 / 819–921 | 1,098 |
+| heavy: guest, fork | 828.5 / 859 / 799–879 | 702 / 717 / 689–719 | 884 |
+| **heavy: guest, fork, BigInt** | **514** / 559 / 499–585 | **468** / 497 / 452–498 | 565 |
+
+**System back with the host's retained back (`x=retainhost`)**: `firstDraw` is the press to the
+window's first draw (the host showing the retained list), `drawn` the guest's confirming frame:
+
+| Arm | Back, first draw | Back, drawn (guest) | Open (warm) |
+|---|---|---|---|
+| Zipline 1.28.0 | 17 / 22 / 10–23 | 119 / 123 / 92–126 | 289.5 / 305 / 273–306 |
+| fork | 17 / 23 / 12–23 | 98.5 / 102 / 92–121 | 240 / 260 / 234–261 |
+| fork, BigInt | 16 / 19 / 13–24 | 97 / 99 / 70–101 | 174.5 / 176 / 170–253 |
+| heavy: Zipline 1.28.0 | 18 / 22 / 7–23 | 187 / 194 / 165–194 | 908.5 / 951 / 891–979 |
+| heavy: fork | 14.5 / 17 / 9–19 | 150 / 155 / 142–157 | 740 / 767 / 713–792 |
+| heavy: fork, BigInt | 12 / 19 / 8–24 | 95 / 101 / 87–103 | 478 / 536 / 451–536 |
+
+**The guest's split** (`x=split`, simple screen; the guest's frame is from the frame's start to
+`composed`, in QuickJS; encoding is the split's modifier plus property time). The frame and encoding
+columns are the **difference (or sum) of the marks' medians**, not the median of each iteration's
+difference: per iteration the guest's frame is 352.5 / 738 (1.28.0), 284.5 / 605 (fork) and
+127.5 / 353 (BigInt), so 2.76× on open and 2.09× on back, and encoding 67 / 287, 50.5 / 233 and
+12.5 / 63 (open / back). The conclusions below hold either way.
+
+| Arm | Open: guest's frame | Open: encoding | Open: drawn | Back: guest's frame | Back: encoding | Back: drawn |
+|---|---|---|---|---|---|---|
+| Zipline 1.28.0 | 352.5 | 67 | 447 | 742 | 286.5 | 862 |
+| fork | 285.5 | 51.5 | 367.5 | 605.5 | 231.5 | 723.5 |
+| fork, BigInt | **129** | 13.5 | 213.5 | **351.5** | 61.5 | 469.5 |
+
+Every arm's batches had the same shape (open: 70 structural changes, 22 modifiers, 213
+properties; back: 319, 109, 835), so the arms did the same work.
+
+**APK size per arm** (bytes; the `.zipline` files are the three-way guest's 54 modules in the APK's
+assets):
+
+| Arm | APK | `libquickjs.so` (arm64-v8a) | Guest `.zipline` files |
+|---|---|---|---|
+| Zipline 1.28.0 | 25,264,991 | 2,432,744 | 2,077,321 |
+| fork | 26,058,183 (+3.1%) | 2,618,752 (+7.6%) | 2,215,853 (+6.7%) |
+| fork, BigInt | 26,041,387 (+3.1%) | 2,618,752 (+7.6%) | 2,193,386 (+5.6%) |
+
+- **With `Long` as BigInt the guest's work is more than halved on the phone**: its frame 2.73× faster
+  on open (352.5 → 129 ms) and 2.11× on back (742 → 351.5); encoding 4.7× on back (286.5 →
+  61.5). The emulator's step 2 had 1.8× and 2.0×, and NF0's command-line engine on this phone 2.4×
+  and 2.0×. On the screen, open goes from 436 to 208 ms (2.1×) and the heavy open from 1,028.5 to
+  514 (2.0×).
+- **The new engine alone gains about 20%** (frame 1.23× on both; open 436 → 353.5): the gain is
+  mostly BigInt, as on the Mac.
+- **The host's back does not depend on the engine**: the retained list is on screen 12–18 ms after
+  the press on every arm, the heavy screen included (see series C for #276). What the engine changes
+  is the guest's confirming frame (heavy: 187 → 95 ms).
+- **Native was fast again** (open 16, back 13, as in runs 1–3), unlike part 1's slow day (43 / 32).
+- NF2's gate, the guest's work about halved: **the A12 part is met, with `Long` as BigInt** (not
+  met by the new engine alone). Still open: the iPhone, and "both engines load their own bytecode",
+  which this checkpoint did not test.
+
+### Series B: the fork on 32-bit ARM (NaN boxing)
+
+The phone's ABI list is `arm64-v8a,armeabi-v7a,armeabi` (`ro.zygote` `zygote64_32`), so a package
+installed with `--abi armeabi-v7a` runs as a 32-bit process on the fork's 32-bit `libquickjs.so`,
+where QuickJS NaN-boxes its values (`JS_NAN_BOXING`).
+
+**Method.** Zipline's device tests from the fork's checkout (`:zipline:assembleAndroidDeviceTest`,
+plain and with `-PziplineForkLongAsBigInt`), installed on the phone with `pm install -t --abi
+armeabi-v7a` and run with `am instrument -w -r`. The test APK as built does not install on this
+phone: its `lib/*/wrap.sh` (a one-line `exec "$@"` that lets native `printf` reach the log) is
+stored compressed and not page-aligned, while the APK loads native libraries in place, and the
+installer refuses it (`INSTALL_FAILED_INVALID_APK: Failed to extract native libraries`; logcat
+names `wrap.sh`). So each APK was installed without its `wrap.sh` (removed, zipaligned for 16 KB,
+signed with the debug key); its tests, JavaScript and `libquickjs.so` are the build's own (the
+BigInt APK's `kotlin-kotlin-stdlib.js` has `BigInt.asIntN(64`). The `asUintN` check:
+`apply.sh qjs-android` and `check-bigint-device` (step 2's runner, on the AAR's compile line).
+Both test packages were uninstalled after.
+
+**Phone state.** 04:14–04:19 (the check: 02:46), on battery 92% → 91%, thermal status 0.
+
+| Check (armeabi-v7a, `primaryCpuAbi=armeabi-v7a`) | Plain | `Long` as BigInt |
+|---|---|---|
+| Zipline's device tests: run / passed / skipped / failed | 271 / 269 / 2 / 0 | 271 / 269 / 2 / 0 |
+| among them | `QuickJs2026Test`, `QuickJs2026InboundChannelTest`, `BigIntOpsTest` (48 classes) | the same |
+
+| `bigint-ops.js` on the phone (292 lines against Node) | Fork | 2026-06-04 unpatched |
+|---|---|---|
+| arm64-v8a (`JS_NAN_BOXING no`, 64-bit limbs) | **matches all 292** | differs on 76 |
+| armeabi-v7a (`JS_NAN_BOXING yes`, 32-bit limbs, 32-bit pointers) | **matches all 292** | differs on 108 |
+
+- **The fork works on 32-bit ARM**: Zipline's whole device suite passes in a 32-bit process, plain
+  and with `Long` as BigInt across the bridge, and the `asUintN` fix holds with NaN boxing (the
+  unpatched engine is wrong on 108 lines there, more than on 64-bit). The 2 skipped are upstream's
+  (`genericSuspendResultInList`, `veryDeepRecursionFailsGracefully`). Step 2's emulator run had 266
+  run in 47 classes; the suite has grown since (#274 moved the JNI tests into it).
+- Not covered: x86 (32-bit) and x86_64, which this phone does not run.
+
+### Series C: the heavy screen's host back, before and after #276
+
+**Method.** `bench=sysback`, `x=heavy,retainhost` (and the simple screen's `x=retainhost`), on
+three builds installed in turn, twice: main, before #276 (`228a229b0`), before #280 (`4f3a5c865`,
+series D's), then the same again. So each build has 2 runs of 12 measured backs (24 pooled), and
+the phone's drift shows between rounds. Then one heavy series per build under a Perfetto trace
+(below).
+
+**Phone state** (series C and D together): 02:49–03:35, uptime 37–83 min, on battery 98% → 94%,
+25.6–25.8 °C, thermal status 0, CPU idle 82–98% before each series.
+
+**Back, first draw after the press** (the host showing the retained list) and the guest's
+confirming frame (`drawn`), pooled over both runs; the two runs' own `firstDraw` medians in brackets:
+
+| Build | Heavy: first draw | Heavy: guest's frame | Simple: first draw | Simple: guest's frame |
+|---|---|---|---|---|
+| before #276 | **35** / 39 / 23–40 (37; 32.5) | 221 / 239 / 194–241 | 27 / 29 / 22–31 (26.5; 27) | 149 / 167 / 129–171 |
+| main | **14** / 21 / 7–22 (13.5; 14) | 183.5 / 193 / 165–198 | 20.5 / 23 / 13–24 (20.5; 20) | 119 / 121 / 95–123 |
+
+- **#276 takes the heavy screen's host back from 35 to 14 ms to the first draw** (−60%; p90 39 →
+  21), and the simple screen's from 27 to 20.5. The heavy screen is now no slower than the simple
+  one on this measure. The guest's confirming frame is faster too (heavy 221 → 183.5 ms), as the
+  host no longer recomposes both entries when the confirming batch changes them.
+- Part 2 (2026-11-17, `229e876cf`) measured 56.5 ms heavy and 37.5 simple. Today's before-#276
+  build gives 35 and 27 on the same measure: the phone is faster today (native's back 13 ms
+  against 31 that day), so compare within today only.
+- On `firstDraw`, the heavy back is under 50 ms: **met**. Whether the pixels are within 50 ms is
+  the trace's question (next).
+
+**The measure that sees the pixels (Perfetto, the #276 recipe).** One heavy series per build
+(`x=heavy,retainhost,trace`, 14 backs, the first 2 dropped) under a Perfetto trace started on the
+phone (the config of the NF0 traces: sched, atrace `gfx view input am wm dalvik`, the app's own
+sections, SurfaceFlinger's frame timeline), read on the phone with `trace_processor_shell` (the
+build of the one that androidx.benchmark's macro library ships). For each back: the press is the
+bench's step message (the opens' step messages are the ones that sleep 40 ms in the tap); then the
+first `Choreographer#doFrame` after it, its sections, and the app's actual frame timeline row for
+that frame's vsync id, whose end is the present.
+
+| Build | Press → frame starts | Press → end of the frame's main-thread work | `Record View#draw()` (of it: Compose's measure and layout) | `Recomposer:recompose` | **Press → presented** |
+|---|---|---|---|---|---|
+| before #276 | 10.8 | 65.4 / 89.5 / 57.2–90.2 | 30.4 (25.2) | 22.9 | **74.2** / 99.4 / 66.1–99.7 |
+| before #280 | 13.1 | 29.4 / 32 / 15.6–32.3 | 9.0 (3.4) | 4.5 | **37.3** / 41.7 / 22.7–42.5 |
+| main | 14.1 | 26.9 / 34.7 / 19–34.9 | 8.5 (3.2) | 4.4 | **36.1** / 44.4 / 29.4–44.8 |
+
+(Medians, or median / p90 / min–max; ms; 12 backs per build. The traced series' own `firstDraw`
+medians: 34.5 before #276, 17.5 before #280, 17.5 on main; tracing adds a section per message.)
+
+- **Where the layout runs: inside `Record View#draw()`**, in every back of every build
+  (`AndroidOwner:measureAndLayout` nested in it, after the `firstDraw` mark), as #276's section
+  read from the sources. So `firstDraw` sees the recomposition and the apply only, and the pixels
+  come about 20 ms after it.
+- **With #276 the heavy screen's back is presented 36.1 ms after the press** (p90 44.4, at most
+  44.8): **the 50 ms target is met on the measure that sees pixels**, with every one of the 12
+  backs under it. Before #276: 74.2 ms (p90 99.4), none under 50. The frame's main-thread work
+  falls from 65.4 to 26.9 ms; the recomposition from 22.9 to 4.4 and the layout from 25.2 to 3.2.
+- #280 adds nothing measurable here (37.3 against 36.1).
+- So decision 1 of #276's section (keep hidden entries placed, to save placement, layers and
+  drawing) is **not needed for the 50 ms target** on this phone today; the margin is thin (p90
+  44.4, max 44.8) and the phone was fast today, so park it rather than drop it.
+
+### Series D: one Compose state per generated widget, before and after #280
+
+**Method.** Back as in series C (the before-#280 build against main, in the same rounds), and a
+scrolling series per build and round with `x=scroll` (the guest's counters on) at two speeds, the
+doc's swipes: gentle (800 px in 300 ms, 1,422 dp/s, 10 each way, 8 s apart) and fast (1,000 px in
+80 ms, 6,667 dp/s, 7 each way, 14 s apart). Frames over 25 ms are counted over the moving frames of
+the clean flings (none closed by a touch, busy at the DOWN or at an end), from each fling's
+`movingFrames` (FrameMetrics' total duration, which depends on where a frame starts against the
+vsync; missed vsyncs are the jank measure).
+
+**Scripted flings flung today**, unlike both NF1 gate sessions: every clean swipe but one started a
+fling, and the list stopped 743 ms (gentle) and 2,245 ms (fast) after the finger lifted, as in runs
+2–3.
+
+**Back** (pooled as in series C):
+
+| Build | Heavy: first draw | Heavy: guest's frame | Simple: first draw | Simple: guest's frame |
+|---|---|---|---|---|
+| before #280 | 17 / 22 / 6–24 (19; 16) | 185.5 / 191 / 164–192 | 19 / 21 / 15–23 (19; 19.5) | 118 / 120 / 103–122 |
+| main | 14 / 21 / 7–22 (13.5; 14) | 183.5 / 193 / 165–198 | 20.5 / 23 / 13–24 (20.5; 20) | 119 / 121 / 95–123 |
+
+**Scrolling** (per run; flings clean of 20 or 14 swipes; frames over 25 ms; missed vsyncs median /
+total over the clean flings; the guest's last frame after the finger lifted, median):
+
+| Speed | Build, run | Clean flings | Moving frames | Over 25 ms | Missed vsyncs | Guest's last frame after the UP |
+|---|---|---|---|---|---|---|
+| 1,422 dp/s | before #280, 1 | 19 | 1,149 | 0.5% | 2 / 25 | 2,773 ms |
+| | before #280, 2 | 19 | 1,151 | 0.2% | 1 / 17 | 2,305 |
+| | main, 1 | 19 | 1,155 | 0.4% | 1 / 19 | 2,791 |
+| | main, 2 | 19 | 1,152 | 0.3% | 1 / 22 | 2,399 |
+| 6,667 dp/s | before #280, 1 | 14 | 1,921 | 10.6% | 3 / 52 | 4,412 |
+| | before #280, 2 | 13 | 1,782 | 12.2% | 4 / 51 | 4,498 |
+| | main, 1 | 14 | 1,924 | 12.2% | 3 / 50 | 4,165 |
+| | main, 2 | 13 (12 flung) | 1,653 | 6.4% | 3 / 42 | 4,611 |
+
+- **#280 changes nothing measurable on the phone**, on the trace's evidence (series C): the traced
+  heavy backs' first draw is 17.5 ms in both builds and the press → presented 37.3 against 36.1.
+  The untraced first draw, 17 → 14 ms, is not by itself proof of neutral: both before-#280 runs
+  (19 and 16) sit above both of main's (13.5 and 14). The guest's frames are unchanged, and **scrolling does not regress** (gentle 0.2–0.5% of frames over 25 ms
+  in both builds, 1–2 missed vsyncs; fast 6.4–12.2%, 3–4 missed, in both). The Mac's −82% in
+  recorded state reads does not show as time on the A12 at these sizes, as the Mac's medians
+  already suggested.
+- **Scrolling against NF1's target** (frames over 25 ms under 2%; the target is judged by hand):
+  scripted, with the counters on, the gentle fling is within it (0.2–0.5%) and the fast fling is
+  not (6.4–12.2%), although at that speed the share is noisy (series F's same arm: 5.3% and
+  32.9%; missed vsyncs, 3–4 per fling, are the stable measure). Placeholders (`x=scroll,blank`)
+  were not run.
+
+### Series E: the cold start, shipped against `x=prestart` and `x=prestart,prefetch` (NF4)
+
+**Method.** Main's build (installed last in series C). Each arm: one unmeasured launch (it writes
+the preference the next process's prestart acts on), then 4 cold launches (`am force-stop`, 4 s,
+`am start`, wait for the process's `"cold"` line), in two rounds (native, shipped, `prestart`,
+`prestart,prefetch`, then again): 8 measured launches per arm. The marks are ms from the process
+start (`Process.getStartUptimeMillis`), as in [Cold start (NF0)](#cold-start-nf0), not
+Macrobenchmark's (which starts about 270 ms earlier, at the launch).
+
+**Phone state.** 03:35–03:42, uptime 83–91 min, on battery 94% → 93%, 25.6–25.7 °C, thermal status
+0, CPU idle 85–98%.
+
+| Arm | Launches | Data drawn: median (min–max) | − native | First frame | Code load starts → succeeds | Request → response | List composed |
+|---|---|---|---|---|---|---|---|
+| native | 8 | **604** (595–630) | — | 375 | — | 143 | 602 |
+| guest, shipped | 8 | **2,775** (2,745–2,811) | +2,171 | 374.5 | 485.5 → 1,086 | 144.5 | 2,522 |
+| guest, `prestart` | 8 | **2,649.5** (2,617–2,689) | +2,045.5 | 369.5 | 312.5 → 940.5 | 143 | 2,390.5 |
+| guest, `prestart,prefetch` | 8 | **2,533** (2,518–2,794) | +1,929 | 371.5 | 314 → 926.5 | 16 | 2,288 |
+
+(Request → response is the median of each launch's difference.)
+
+- **Together the two steps save 242 ms on the A12** (2,775 → 2,533, −8.7%): `prestart` 125.5 and
+  the prefetch about 117 more. The emulator's step 1 saved 272 ms (−29%) on a much shorter start.
+- **The prestart moves the code load 173 ms earlier, not to the process start.** The provider
+  runs at 79 ms (the `prestart` mark), but the code load's first event comes at 312.5 ms, between
+  `onCreate` (195) and the first frame (369.5): the load waits about 230 ms after the prestart.
+  Where it waits is not established (a main-thread hop in the app's start is the candidate). The
+  prestart's own main-thread work is 11.9 ms median (15.3 with the prefetch), and `onCreate` comes
+  74 ms later than as shipped (195 against 121); the first frame does not move (369.5–375).
+- **The prefetch removes the network wait** (request → response 144.5 → 16 ms), as on the emulator.
+- **What is left is the list's composition**: parsed → composed (medians of the marks) is 994.5 ms as
+  shipped (1,008.5 with `prestart`, 1,039.5 with both), as NF0 found (995). That is guest work in QuickJS, which series A
+  halves with `Long` as BigInt (an inference for the cold start: the BigInt build's cold start was
+  not measured).
+- Native today is 604 ms to the data drawn (NF0's same mark: 1,028), most of the difference before
+  `onCreate` (122.5 against 382). The guest's shipped cold start is close to NF0's (2,775 against
+  2,608), so the gap to native is wider today (+2,171 against +1,580).
+- NF4's target, within 0.4 s of native: **not met** (+1,929 ms with both steps).
+
+### Series F: the press signal on the phone (NF3)
+
+**What was added for it** (prototype only, in this change): the guest's `x=prepared` (keliver-nav's
+`KeliverPreparedStack` at depth 1, each row with `prepareOnPress`; `RetainedStack.kt`), `x=press`
+(the host declares `keliver.press@1` in the threeway app's `Spec.hostFeatures`, and the guest
+provides `GateAPress`), and the driver's `--ei hold <ms>`: a tap whose finger stays down that long
+without blocking the main thread (the existing taps sleep 40 ms on it), with every time measured
+from the DOWN. A detail composed ahead of its tap reports the previous navigation's number, so the
+driver now counts a screen only with a newer number than the last one.
+
+**Series F's data came from the first driver, not the committed one.** The APK the series
+installed (`press.apk`) was built at 02:59, before that rule existed; the build with it finished at
+03:46, after the series had started, and never ran on the phone. All four press-on result files log
+`i=1 seq=100000`, the prepared detail counted as drawn: the bug the rule fixes. So the committed
+"navigation number is newer" rule was built but has not run on a device. Only the dropped `i=1` was
+affected: every `i ≥ 2` number matches 100,000 + 2i − 1. The earlier series (A–E) stay comparable,
+by reading the code: all three forms number navigations from 100,001 (`ThreewayScreens.kt` is
+copied into the native form, and `index.html` uses the same base), every navigation increases the
+number, a timeout leaves the last number alone, and `data` screens are exempt, so the rule cannot
+reject a screen the old driver accepted on an as-shipped arm.
+
+**Method.** One build (main plus the above). Open and back (`bench=nav`, header back), 100 ms hold,
+`x=prepared` (the press off: the rows add nothing, the stack composes what `retain` does) against
+`x=prepared,press`, simple and heavy, alternating in two rounds; `x=retain` with the same hold as a
+reference; then the scrolling series (as in series D, `x=prepared` and `x=prepared,press`, without
+the counters).
+
+**Phone state.** 03:44–04:05, and the second fast scrolling pair from 04:07, uptime 92–115 min, on
+battery 93% → 92%, 25.5–25.7 °C, thermal status 0, CPU idle 81–99%.
+
+**Open from the touch-down** (ms; `click` is when the guest's `onClick` ran):
+
+| Arm | Round 1: drawn | Round 2: drawn | `click` (medians) | Back: drawn |
+|---|---|---|---|---|
+| press off | 381.5 / 395 / 374–397 | 392.5 / 406 / 382–415 | 113; 113 | 187.5; 193 |
+| **press on** | **405.5** / 419 / 387–420 | **403.5** / 406 / 386–417 | **313; 308** | 191; 188.5 |
+| heavy, press off | 1,019.5 / 1,056 / 984–1,101 | 1,005 / 1,028 / 969–1,041 | 113.5; 112.5 | 208.5; 212.5 |
+| **heavy, press on** | **1,089** / 1,116 / 1,051–1,116 | **1,060** / 1,098 / 1,021–1,171 | **932.5; 916.5** | 210; 209 |
+| `retain`, same hold (reference) | 394 / 398 / 377–398 | — | 113.5 | 186 |
+
+- **On this phone and this engine the press signal makes open slower.** The solid evidence is the
+  click (113 → 313 ms after the DOWN) and the heavy screen (+55 to +70 ms in both rounds). On the
+  simple screen round 1 gives +24 ms, but round 2's +11 is within the round-to-round spread: the
+  press-off arm itself moved 11 ms between rounds (381.5 → 392.5), and round 2's ranges overlap
+  (382–415 against 386–417). The press reaches the guest 50 ms after the DOWN
+  (the scroll container's still-finger delay), and composing the detail takes longer than the 50 ms
+  left before a 100 ms tap lifts: the guest's `onClick` runs only when that composition ends (313
+  ms after the DOWN instead of 113; heavy 932.5 instead of 113.5), since QuickJS runs one task at
+  a time. Then showing the prepared entry costs about 70–130 ms more (click → composed, round 1,
+  as the difference of the marks' medians: 73 on the simple screen, 129 on the heavy; per
+  iteration 68 and 123.5), because the three-way detail reads the navigation
+  counter that the click increments (its `composed` mark), so it recomposes at the tap: the
+  caveat `KeliverPreparedStack` documents. A screen that reads nothing the tap changes would not
+  pay that part.
+- What would make it pay: a guest frame short enough to finish within the press (series A's
+  BigInt build composes the simple detail's frame in about 129 ms, still longer than 50 ms), a
+  longer press (a slower tap), or a host-side transition that hides the wait. Not measured: the
+  press on the BigInt build, and other hold times.
+- Back is unchanged (187.5–193 ms in every arm): the press only touches opening.
+
+**Scrolling with the press signal** (series D's columns; one run each at 1,422 dp/s, two at
+6,667 dp/s, the second pair in the order on, off):
+
+| Speed | Arm, run | Clean flings | Moving frames | Over 25 ms | Missed vsyncs | Guest's last frame after the UP |
+|---|---|---|---|---|---|---|
+| 1,422 dp/s | press off | 20 | 1,218 | 0.3% | 1 / 17 | 2,376 ms |
+| | press on | 19 | 1,148 | 0.3% | 1 / 22 | 2,526 |
+| 6,667 dp/s | press off, 1 | 14 | 1,923 | 5.3% | 3 / 50 | 4,621 |
+| | press on, 1 | 13 (12 flung) | 1,660 | 21.1% | 3 / 40 | 4,445 |
+| | press on, 2 | 13 | 1,788 | 13.4% | 3 / 49 | 4,616 |
+| | press off, 2 | 14 | 1,911 | 32.9% | 4 / 60 | 4,569 |
+
+- **The press signal's 50 ms scroll delay costs no jank that this route can see**: at 1,422 dp/s
+  both arms have 0.3% of frames over 25 ms and 1 missed vsync per fling; at 6,667 dp/s both miss
+  3–4 vsyncs per fling. The swipes move at once, so no press is ever sent; what is exercised is
+  the host's pending press timer on every DOWN.
+- **At 6,667 dp/s the share of frames over 25 ms is noise**: the same press-off arm gave 5.3% and
+  32.9% in two runs, while missed vsyncs stayed at 3–4 (series D: 6.4–12.2%). FrameMetrics' total
+  duration depends on where a frame starts against the vsync; use missed vsyncs at that speed.
+
+**Owner's checklist (by hand on the A12; not scriptable here):**
+- [ ] The press feel: open a row with `x=prepared,press` against `x=prepared` (both on the build
+  installed now): does the delay before the detail feel different?
+- [ ] The scroll by hand with `x=scroll,blank` (placeholders), both speeds: any blank rows, and
+  does it stutter?
+- [ ] The scroll by hand with `x=prepared,press`: does a slow drag that stops on a row ever open
+  it, or feel sticky?
+
+The build left on the phone is main (`1e083833f`, Zipline 1.28.0) with this change's bench options,
+so the checklist runs on it, for example
+`am start -S -n dev.keliver.sample/dev.keliver.sample.host.threeway.ThreewayActivity --ez localApi true -e form guest -e x prepared,press`.
+
+### Verdicts against the owner's targets
+
+| Target | Verdict | Evidence (this checkpoint) |
+|---|---|---|
+| Back under 50 ms | **Met for the heavy screen on the pixels** (trace, the prototype's `x=retainhost`); simple: first draw 20.5 ms, not traced today | Host back, heavy screen: first draw 14 ms (p90 21), presented 36.1 ms after the press (p90 44.4, max 44.8; trace). Simple: first draw 20.5 only, and the pixels come about 20 ms after the first draw (series C). Before #276 the heavy one was presented at 74.2. Only the prototype's retained host back: the shipped header back is still 834 ms (series A), and the guest's own frame after a retained back is 119–187 ms |
+| Tap response within one frame | **Not measured** | The host's pressed state (the ripple) is drawn by the host; no measure of its first frame was taken |
+| About 100 ms to the destination (open: simple ~100, heavy ≤ 150) | **Not met** | Retained, Zipline 1.28.0: simple 289.5, heavy 908.5; with `Long` as BigInt 174.5 and 478. The press signal makes it slower on this engine (click 113 → 313 ms; heavy +55 to +70; simple +24 in round 1, round 2's +11 within the noise) |
+| 55 fps scrolling (frames over 25 ms under 2%, by hand) | **Partly measured**, scripted only | 1,422 dp/s: 0.2–0.5% over 25 ms, 1–2 missed vsyncs per fling; 6,667 dp/s: 3–4 missed per fling (the share over 25 ms is noisy there). No hand check; no placeholder pass |
+| Cold start within +400 ms of native | **Not met** | +2,171 ms as shipped, +1,929 with `prestart,prefetch` (native 604) |
+| NF2: the guest's work about halved | **The A12 part is met, with `Long` as BigInt**; the iPhone and "both engines load their own bytecode" still open | Guest frame 2.73× (open), 2.11× (back) as the difference of the marks' medians (2.76× and 2.09× per iteration); the new engine alone 1.23×. 32-bit: all tests pass |
+
+**What it changes in the plan (proposals for the owner):**
+- NF1's back meets the target on Android for the heavy screen on the pixels (the prototype's
+  retained host back; the simple screen's pixels not traced). Park "keep hidden entries placed"
+  rather than drop it: the margin is thin (p90 44.4, max 44.8 against 50) and was measured on a
+  fast day (native back 13 ms against 31 on 11-17). #280 is neutral on the phone (keep it for the Mac's state-read savings, but it
+  is not a reason to port the pattern to keliver-material by hand).
+- NF2's engine with `Long` as BigInt is the largest lever left for open and for the cold start (the
+  list's composition, about 1 s of the cold start, is guest work): shipping it (the bundles for both
+  engines and the transition) moves up in value. The new engine without BigInt is not worth a
+  transition on its own.
+- NF3's pre-composition on touch-down does not pay on the A12 with 1.28.0: composing a detail takes
+  longer than a tap's press. Keep the press signal off by default until a run on the BigInt engine
+  shows a gain, and keep screens that use it from reading state the tap changes.
+- NF4: `prestart,prefetch` saves 242 ms; the rest of the gap is the list's composition. The prestart's
+  code load waits about 230 ms after the provider runs: worth finding before more cold-start work.
 
 ## For an iOS run (follow-up)
 
@@ -2133,6 +2543,11 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #                            so `prestart` acts in every measured launch: see that section)
 #   -e x prestart            guest: the code load starts in bindApplication (the NEXT process's start)
 #   -e x prefetch            guest: the host sends the list's first request as it starts the guest
+#   -e x prepared            guest (NF3): keliver-nav's prepared stack, depth 1, rows with prepareOnPress
+#   -e x prepared,press      the same, with the host's press signal declared (keliver.press@1) and the
+#                            guest's GateAPress provided: a touch-down on a row composes its detail
+#   --ei hold 100            taps hold the finger down 100 ms without blocking the main thread, and the
+#                            series' times are from the DOWN (the press series; see "A12 checkpoint")
 # Every process logs one {"cold":"<form>",...} line when the list's data is first drawn: its marks in ms
 # from the process start (see "Cold start (NF0)").
 # Every state/summary/fling line carries "api":"app"|"mac"; the state line also refreshHz and density.
