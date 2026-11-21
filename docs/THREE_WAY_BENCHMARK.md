@@ -1332,9 +1332,14 @@ frame. Counts are samples; recompose and layout are the part the phone's `firstD
   `ExtraRetained`).
 - **Hiding and showing entries re-places their trees.** Hiding the detail un-places it (about 700
   samples); showing the list places it again and recreates its layers. The draw then re-records
-  the list. Keeping hidden entries placed (off screen, with their layers kept) would avoid this,
-  at the cost of the memory those layers hold and of layout work on hidden entries while the
-  guest changes them. That is a policy decision, and it should be measured on a phone first.
+  the list. Keeping hidden entries placed (off screen, with their layers kept) would avoid this.
+  A trial on the Mac, not kept in this change: every entry measured, the hidden ones placed off
+  screen in a layer with alpha 0. Medians fell to 0.40 ms for the heavy screen (from 0.78) and
+  0.34 for the simple one (from 0.49). In the heavy screen's profile, the part before the draw fell
+  from 7,342 to 4,970 samples; the simple screen's profile run was too noisy to use. The costs:
+  the memory the hidden layers hold, layout work on hidden entries while the guest changes them,
+  and redrawing a hidden layer on every frame of an animation that runs inside it. That is a
+  policy decision, and it should be measured on a phone first.
 - **The guest's confirmation.** About 150 ms after the press, the guest's batch removes the
   detail. The host then disposes of the detail's widgets in a later frame. That frame is not in
   `firstDraw`; whether it drops a frame is not measured.
