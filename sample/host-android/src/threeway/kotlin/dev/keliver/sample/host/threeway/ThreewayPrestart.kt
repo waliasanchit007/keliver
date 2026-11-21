@@ -57,7 +57,7 @@ internal object ThreewayGuest {
   private const val MANIFEST_URL = "https://threeway.invalid/manifest.zipline.json"
   /** Gate A's press signal's host feature (`PRESS_HOST_FEATURE` in keliver-compose-gatea-compose, a guest module). */
   private const val PRESS_HOST_FEATURE = "keliver.press@1"
-  private const val SAMPLE_SIGNING_PUBLIC_KEY ="98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
+  private const val SAMPLE_SIGNING_PUBLIC_KEY = "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
 
   /** The process's marks and the guest's host services: one per process, so a prestarted guest can use them. */
   val recorder = Recorder()
