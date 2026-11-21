@@ -76,19 +76,27 @@ internal class UiStartWatch(
  * Whether a connected scene is in the foreground (inactive or active): the process shows UI.
  *
  * Not `UIApplication.applicationState`, which says nothing this early: in a SwiftUI App's init()
- * it is not set yet and reads `active` (measured on the simulator, scripts/keliver-nf4-ios-sim.sh:
- * 0 in every launch), whatever the launch, and at didFinishLaunching a scene-based app reads
- * `background` in every launch, the user's too. A scene is connected in the foreground only once
+ * there is no shared application yet, so the read answers 0, `active`, whatever the launch
+ * (measured on the simulator, scripts/keliver-nf4-ios-sim.sh), and at didFinishLaunching a
+ * scene-based app reads `background` in every launch, the user's too. A scene is connected in the foreground only once
  * the process shows UI; a launch in the background connects none there. So a host started in
  * init() waits for the first scene's foreground notification (or its first screen), and a host
  * started later, with its scene already up, starts toward the screen at once. An app without
  * scenes waits for didBecomeActive, or its first Keliver screen.
  */
-internal fun sceneInForeground(): Boolean =
-  UIApplication.sharedApplication.connectedScenes.any {
-    val state = (it as UIScene).activationState
+internal fun sceneInForeground(): Boolean {
+  // In a SwiftUI App's init() there is no UIApplication yet (UIApplicationMain has not made it):
+  // sharedApplication is nil though declared non-null, and a message to it answers 0 or nil. So a
+  // runtime type check, which the compiler cannot fold away, before any use.
+  val app: Any? = UIApplication.sharedApplication
+  if (app !is UIApplication) return false
+  val scenes: Any? = app.connectedScenes
+  if (scenes !is Set<*>) return false
+  return scenes.any {
+    val state = (it as? UIScene)?.activationState
     state == UISceneActivationStateForegroundInactive || state == UISceneActivationStateForegroundActive
   }
+}
 
 /**
  * NF4: the host's start, held in a launch that is not toward a screen. `Keliver.start()` is
@@ -101,8 +109,9 @@ internal fun sceneInForeground(): Boolean =
  * foreground looks up nothing, loads no code and sends nothing.
  *
  * In the App's init() no scene is connected yet, in any launch, so a launch the user made waits
- * too: until its first scene enters the foreground, a few milliseconds before SwiftUI makes the
- * first screen (the simulator run's "ui-start" mark). [log] says so (a debug build logs it).
+ * too: until its first scene enters the foreground, about 45 ms before SwiftUI makes the first
+ * screen on a simulator (scripts/keliver-nf4-ios-sim.sh's "ui-start" and "open" marks). [log]
+ * says so (a debug build logs it).
  *
  * Main thread only, as [UiStartWatch].
  */

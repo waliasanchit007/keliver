@@ -279,9 +279,11 @@ struct iOSApp: App {
         // A launch the system made (no -nf4Arm: a background push) has no console: its lines go to
         // Library/Caches/nf4-console.txt, which the harness reads.
         if !CommandLine.arguments.contains("-nf4Arm") { consoleToFile() }
-        // UIApplication's state as init() sees it (0 active, 1 inactive, 2 background): the read
-        // the host's UiStartWatch makes in start().
-        let state = UIApplication.shared.applicationState.rawValue
+        // UIApplication's state as init() sees it (0 active, 1 inactive, 2 background; -1: there
+        // is no shared application yet).
+        // Whether the shared application exists yet (KVC on the class: nil-safe, unlike .shared).
+        let hasApp = (UIApplication.self as AnyObject).value(forKey: "sharedApplication") != nil
+        let state = hasApp ? UIApplication.shared.applicationState.rawValue : -1
         let arm = UserDefaults.standard.string(forKey: "nf4Arm") ?? "c"
         if arm == "c" { Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])] }
         if arm != "a" { Keliver.shared.start() }
@@ -407,11 +409,11 @@ else
     sleep 5
     cp "$BGC" "$EV/launches/background.console.txt"
     bgreq="$(sed -n '/^=== background$/,$p' "$SLOG" | grep -c ' GET ')"
-    grep -q '^nf4: arm=c state=2 ' "$BGC" \
+    grep -q '^nf4: arm=c ' "$BGC" \
       && grep -q 'start: no scene in the foreground yet' "$BGC" \
       && ! grep -q 'KeliverTiming: start [0-9]' "$BGC" && ! grep -q 'KeliverTiming: code [0-9]' "$BGC" \
       && [ "$bgreq" = 0 ] \
-      && ok "E5: a push launched the app in the background (state 2 in init()): start() in init() was held; no lookup, no code load, $bgreq requests at the server" \
+      && ok "E5: a push launched the app in the background ($(sed -n 's/^nf4: arm=c \(state=-*[0-9]*\).*/\1/p' "$BGC") in init()): start() in init() was held; no lookup, no code load, $bgreq requests at the server" \
       || bad "E5: the background launch was not held ($bgreq requests at the server; $(grep -E '^nf4:|UI start|background|KeliverTiming: (start|code) ' "$BGC" | head -4 | tr '\n' ' '))"
     # The user opens the app: the same process comes to the foreground.
     echo "=== background-foreground" >> "$SLOG"

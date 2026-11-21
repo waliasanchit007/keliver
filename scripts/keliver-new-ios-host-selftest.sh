@@ -265,7 +265,7 @@ done
   && grep -q '    http?.startPrefetch(scope)' "$K/IosHttp.kt" \
   && grep -q '    uiStart.screenShown() // NF4' "$V" \
   && grep -q '  private val inForeground: () -> Boolean = ::sceneInForeground,' "$K/UiStart.kt" \
-  && grep -A2 '^internal fun sceneInForeground(): Boolean =$' "$K/UiStart.kt" | grep -q 'UIApplication.sharedApplication.connectedScenes.any {' \
+  && grep -A5 '^internal fun sceneInForeground(): Boolean {$' "$K/UiStart.kt" | grep -q '^  if (app !is UIApplication) return false$' \
   && grep -q '      UISceneWillEnterForegroundNotification,' "$K/UiStart.kt" \
   && grep -q 'prefetched.discard("a ${request.method.uppercase()} went through HostHttp")' "$K/IosHttp.kt" \
   && grep -q '      prefetched.responseFor(request, kept)?.let { return it }' "$K/IosHttp.kt" \
@@ -639,7 +639,7 @@ if [ "$BUILD" = 1 ]; then
       || bad "NF4: the host's prefetch wiring tests failed (rc=$rc, ${n:-no} passed)"
     # NF4, early start: start() in init() starts at once toward a screen and waits in a background launch.
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*StartGateTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
-    [ "$rc" = 0 ] && [ "${n:-0}" -ge 7 ] && ok "NF4: the early start's simulator tests pass ($n: a launch toward a screen starts at once; a background launch loads nothing until a scene or the app comes forward, or a screen is made)" \
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 8 ] && ok "NF4: the early start's simulator tests pass ($n: no shared application, as in init(), is no scene in the foreground; a start with a scene up runs at once; a held start loads nothing until a scene or the app comes forward, or a screen is made)" \
       || bad "NF4: the early start's simulator tests failed (rc=$rc, ${n:-no} passed)"
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*HostPrefetchRaceTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
     [ "$rc" = 0 ] && [ "${n:-0}" -ge 2 ] && ok "NF4: the prefetch's race tests pass on the simulator ($n, 1,000 runs each: never two sends)" \

@@ -24,6 +24,19 @@ class StartGateTest {
     return StartGate(watch, log = { logged += it }) to watch
   }
 
+  @Test fun noSharedApplicationIsNoSceneInTheForeground() {
+    // The test binary runs without UIApplicationMain, as a SwiftUI App's init() does: there is no
+    // shared application yet. The read must answer false, not end the process.
+    assertEquals(false, sceneInForeground())
+    // And so the default watch waits there, rather than taking the launch for the user's.
+    val center = NSNotificationCenter()
+    var ran = 0
+    UiStartWatch(center = center).whenStarted { ran++ }
+    assertEquals(0, ran)
+    center.postNotificationName(UISceneWillEnterForegroundNotification, null)
+    assertEquals(1, ran)
+  }
+
   @Test fun aLaunchTowardAScreenStartsAtOnce() {
     val (gate, _) = gate(inForeground = true)
     gate.run { starts++ }

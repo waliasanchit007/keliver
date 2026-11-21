@@ -16,7 +16,7 @@ import sys
 
 ev, delay, runs = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
 MARK = re.compile(r'KeliverTiming: ([a-z0-9-]+) (\d+)')
-NF4 = re.compile(r'nf4: arm=(\w) state=(\d+) exec=(-?\d+) init=(\d+) initDone=(\d+) wall=(\d+)')
+NF4 = re.compile(r'nf4: arm=(\w) state=(-?\d+) exec=(-?\d+) init=(\d+) initDone=(\d+) wall=(\d+)')
 API = re.compile(r'^(\d+) GET (/api/items\S*) #(\d+)$')
 
 server = {}
@@ -80,7 +80,7 @@ for arm in 'bc':
     states = sorted({l.get('state') for l in got if 'state' in l})
     check(got and len(once) == len(got),
           f'E1: arm {arm}: one UI start per launch ({len(once)} of {len(got)}): {"; ".join(causes)}; '
-          f'UIApplication state read in init(): {states} (0 active, 1 inactive, 2 background); '
+          f'UIApplication state read in init(): {states} (-1 no shared application yet, 0 active, 1 inactive, 2 background); '
           f'start() in init() held until the UI start in {held} of {len(got)}')
 
 # E2: arm c's guest took the prefetched answer.
