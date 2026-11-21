@@ -2418,6 +2418,65 @@ so the checklist runs on it, for example
 - NF4: `prestart,prefetch` saves 242 ms; the rest of the gap is the list's composition. The prestart's
   code load waits about 230 ms after the provider runs: worth finding before more cold-start work.
 
+## A12 checkpoint 2, 2026-11-22
+
+The second A12 checkpoint of the night, for what the first left open: the cold start and the press
+signal on the BigInt build (series G and H), the tap's first response in frames (I), and where the
+prestarted code load waits (J). Same Galaxy A12, still up since about 02:12 IST; the series ran
+from 04:43 (2 h 31 min of uptime), on battery. The phone was fast again (native as in the first
+checkpoint), but compare within this section only.
+
+**Method, as in the [first checkpoint](#a12-checkpoint-2026-11-22), except:**
+- **Two builds, both from this checkpoint's branch** (the first checkpoint's head `338a02f81`, which
+  has the committed "navigation number is newer" rule in the driver): the prototype published to a
+  scratch Maven repository, then the sample's benchmark APK. **1.28.0** is the sample as built;
+  **BigInt** is the same sample built with `use-fork.init.gradle` against the fork, rebuilt for this
+  session with `apply.sh` (`clone`, `engine`, `jni`, `android`, `publish`; `1.28.0-q20260604`, its
+  `libquickjs.so` sizes equal series A's on all four ABIs), and `-PziplineForkLongAsBigInt` (the init
+  script named both guest links it changed). APKs 25,271,283 and 26,047,427 bytes.
+- **One script on the phone ran all four series** (`nohup sh`), installing the two APKs in turn as
+  before (`pm install -r`, profileinstaller's broadcast, `speed-profile`).
+
+### Series G: the cold start on the BigInt build (NF4)
+
+**Method.** Series E's (`cold`: one unmeasured launch per run, then 4 cold launches, `am force-stop`
+between, each waiting for the process's `"cold"` line; marks in ms from the process start), in two
+rounds. Each round installed the BigInt build and ran native, as shipped, `x=prestart` and
+`x=prestart,prefetch`, then installed 1.28.0 and ran as shipped and `x=prestart,prefetch` (the
+anchor to series E): 8 measured launches per arm. Native ran on the BigInt install (its code does
+not use the engine).
+
+**Phone state.** 04:43–04:57, uptime 2 h 32 min – 2 h 44 min, on battery 90% → 88%, 25.5–25.6 °C,
+thermal status 0, CPU idle 84–98% before each run.
+
+| Build, arm | Data drawn: median (min–max) | − native | First frame | Code load starts → succeeds | Request → response | Parsed → composed | List composed |
+|---|---|---|---|---|---|---|---|
+| native | **618** (612–622) | — | 378.5 | — | 143 | 25.5 | 616 |
+| 1.28.0, shipped | **2,834** (2,772–2,985) | +2,216 | 378.5 | 491.5 → 1,145.5 | 144 | 998.5 | 2,580 |
+| 1.28.0, `prestart,prefetch` | **2,577** (2,547–2,622) | +1,959 | 373 | 314.5 → 981 | 16 | 1,029.5 | 2,320 |
+| BigInt, shipped | **2,143** (2,127–2,159) | +1,525 | 377 | 486.5 → 1,106.5 | 142 | 434.5 | 1,902.5 |
+| BigInt, `prestart` | **1,988.5** (1,975–2,022) | +1,370.5 | 368 | 312.5 → 953.5 | 141 | 427 | 1,743.5 |
+| **BigInt, `prestart,prefetch`** | **1,866** (1,856–1,875) | **+1,248** | 374 | 314.5 → 945 | 15 | 448.5 | 1,636 |
+
+(Request → response and parsed → composed are medians of each launch's difference; the other
+columns are medians of the marks.)
+
+- **The BigInt build's cold-start gain is real: −691 ms as shipped** (2,834 → 2,143, −24%) and
+  **−711 ms with `prestart,prefetch`** (2,577 → 1,866, −28%), measured in the same rounds, with no
+  overlap between the arms' ranges. Almost all of it is the list's composition (parsed → composed
+  998.5 → 434.5 ms, 2.3×, as series A's 2.73× on open). The code load gains little (modules loaded
+  in 306 → 239 ms; the load succeeds 39 ms earlier as shipped): it is bytecode loading, not guest
+  work.
+- **The 1.28.0 anchor reproduces series E** within 60 ms (2,834 against 2,775 as shipped, 2,577
+  against 2,533 with both steps), and native too (618 against 604).
+- **With BigInt the two NF4 steps still add up**: `prestart` −154.5 ms, the prefetch −122.5 more,
+  −277 together (1.28.0 here: −257).
+- NF4's target, within 0.4 s of native: **not met**, +1,248 ms at best. What is left, BigInt with
+  both steps (medians of the marks): the code load 314.5 → 945 (630 ms, of it the modules 406 ms); its
+  start still waits about 230 ms after the prestart (81 ms; series J); the guest's first frame
+  ("Loading…") and the request, 945 → 1,149 (the first batch sent); the list's composition, 448.5;
+  and the batch to the screen, composed → drawn 230.5 ms (241.5 as shipped, 2 for native).
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
