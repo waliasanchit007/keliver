@@ -2477,6 +2477,46 @@ columns are medians of the marks.)
   ("Loading…") and the request, 945 → 1,149 (the first batch sent); the list's composition, 448.5;
   and the batch to the screen, composed → drawn 230.5 ms (241.5 as shipped, 2 for native).
 
+### Series H: the press signal on the BigInt build (NF3)
+
+**Method.** Series F's open and back (`bench=nav`, header back, `--ei hold 100`, timed from the
+touch-down), on the BigInt build: `x=prepared` (press off) against `x=prepared,press`, simple and
+heavy, alternating, in two rounds (14 iterations, the first 2 dropped). **The driver is the
+committed one this time**, with the "navigation number is newer" rule: every press-on file's `i=1`
+is `seq=100001` (the click's navigation, drawn 301–311 ms simple, 728–732 heavy), not series F's
+`seq=100000` (the prepared detail counted as drawn). The rule works on the device; no run timed out.
+
+**Phone state.** 04:57–05:03, uptime 2 h 46 min – 2 h 51 min, on battery 87%, 25.6–25.7 °C, thermal
+status 0, CPU idle 86–99%.
+
+**Open from the touch-down** (ms; median / p90 / min–max of `drawn`; `click` is when the guest's
+`onClick` ran; the last two columns are medians of each iteration's difference):
+
+| Arm | Round 1: drawn | Round 2: drawn | `click` (medians) | Click → composed | Click → drawn | Back: drawn |
+|---|---|---|---|---|---|---|
+| press off | 280.5 / 283 / 251–288 | 278 / 285 / 264–298 | 113; 113 | 116.5; 112 | 167; 163.5 | 169.5; 171.5 |
+| **press on** | **278** / 287 / 258–288 | **287** / 300 / 267–304 | **198.5; 201** | 57.5; 58 | 80; 85 | 174; 169.5 |
+| heavy, press off | 590 / 627 / 569–628 | 583 / 598 / 564–610 | 111; 113 | 369.5; 363 | 479; 470.5 | 183.5; 181 |
+| **heavy, press on** | **626** / 671 / 593–683 | **635** / 647 / 596–651 | **488.5; 494** | 114.5; 111 | 140.5; 131.5 | 189; 187.5 |
+
+- **With `Long` as BigInt the press signal is neutral on the simple screen** (round 1 −2.5 ms,
+  round 2 +9, inside the round-to-round spread; series F on 1.28.0: +11 to +24) **and still slower
+  on the heavy one** (+36 and +52; F: +55 to +70). It never makes open faster here.
+- **Why, per iteration.** The press reaches the guest at 50 ms. On the simple screen it then
+  composes the prepared detail, and the click, queued behind that work, runs at about 200 ms
+  instead of 113 (F: 313). From the click the prepared detail is drawn in 80–85 ms instead of
+  163.5–167, so the two halves cancel: the head start is spent waiting for QuickJS. On the heavy
+  screen the click waits until about 490 ms: preparing costs more than it saves (click → drawn
+  131.5–140.5 against 470.5–479). The detail still recomposes at the click (click → composed
+  57.5–58 simple, 111–114.5 heavy), because the three-way detail reads the counter the click
+  increments (series F's caveat).
+- What would make it pay is unchanged from F: a guest frame shorter than the press, or a
+  preparation that does not hold the engine when the click comes (cancellable, or yielding between
+  frames). Back is unchanged (169.5–189 ms), as in F.
+- On the BigInt build, open without the press is **278–280.5 ms simple and 583–590 heavy from the
+  touch-down** (163.5–167 and 470.5–479 from the click). NF3's gate (about 100 ms simple, 150 heavy)
+  is **not met**.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
