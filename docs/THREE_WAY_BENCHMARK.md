@@ -1246,7 +1246,7 @@ retained screen without waiting for the guest:
   run), The confirming batch carries one structural and one property change; whether the screen visibly
   changes when it lands was not recorded.
 - The heavy screen (about 100 widgets) shows its retained list at 56.5 ms (max 74): over the
-  target. Not investigated; one candidate is the host laying out the larger retained tree.
+  target. Investigated since (Mac only): see [Back on the heavy screen](#nf1-back-on-the-heavy-screen-where-the-extra-time-went-mac).
 - Guest-side retention alone (#259) stays at about 100 ms, as in part 1; as shipped the guest's
   back is 873.5 ms (part 1: 1,116, a phone in worse state).
 - Open is unchanged (about 310 ms). #265 is in the build, but its touch-down pre-composition is not
@@ -1270,6 +1270,88 @@ established. NF1's scrolling targets are judged by hand (the owner), as the gate
 with placeholders: indicative only; a hand check is next); tap within one frame
 **not measured** (no host pressed-state instrumentation). Raw output:
 `keliver-scratch/nf1-gate2/out` (not in this repository).
+
+### NF1, back on the heavy screen: where the extra time went (Mac)
+
+2026-11-21, **the Mac only** (JVM tests; no phone): relative numbers, and an A12 run is still to
+come. Part 2's question: why does the heavy screen's host back take 56.5 ms to the first draw when
+the simple screen's takes 37.5? In both, the host shows the same retained list.
+
+**What `firstDraw` covers.** The mark is a `ViewTreeObserver.OnDrawListener`, which fires before
+Compose records the frame's drawing. So it covers the wait for the next vsync, the recomposition
+in that frame's animation callback, and the measure and layout. It does not cover drawing. At 60 Hz
+the extra 19 ms is about one frame: the heavy frame's work missed a vsync that the simple frame
+made. Both series also start high and fall (heavy 132, 149, then 74 … 38; simple 63 … 27): the
+host's code warming up over the series.
+
+**The cause, found in the code.** Each entry of the host's retained container (`ExtraRetained`,
+`Retained.kt`) is wrapped in a slot that provides `LocalHostBackDispatcher`: null while the entry is
+hidden, the dispatcher while it is shown. That local was a *static* composition local. When a
+static local's value changes, everything under the provider recomposes without skipping. So a
+host back recomposed every widget of both entries: the list shown again, and the heavy detail
+(102 widgets) as it was hidden. Each rebuilt widget then updated its modifiers, so their layout
+was redone too. `RetainedHostBackTest.goingBackRecomposesNeitherEntrysContent` proves it: before
+the fix, the entry shown again composed a second time on the back.
+
+**The fix.** `LocalHostBackDispatcher` is now an ordinary (dynamic) `compositionLocalOf`, so a change
+recomposes only the places that read it (a nested stack's container). Its declared type is the
+same (`ProvidableCompositionLocal`). This module is a prototype with no API dump, so its API does
+not change.
+
+**Measured on the Mac** (`RetainedBackFrameBenchmark`): the prototype's list and both details, ported
+to the same generated guest API, run through the real protocol into the host's renderers. Each
+back is pressed with the guest held, and the one host frame after the press is timed: recompose,
+measure, layout and draw. 40 warm-up backs, then 60 measured (ms):
+
+| | Before | After |
+|---|---|---|
+| heavy screen: median / p90 | 1.43 / 1.67 | **0.76 / 0.93** |
+| simple screen: median / p90 | 0.91 / 1.15 | **0.48 / 0.58** |
+
+A profiler's run (3,000 backs each, sampling the UI thread during the timed frame) splits the
+frame. Counts are samples; recompose and layout are the part the phone's `firstDraw` sees:
+
+| | Recompose and apply | Measure and layout | Draw |
+|---|---|---|---|
+| heavy, before | 19,998 | 13,685 | 11,835 |
+| heavy, after | 3,582 | 3,760 | 10,218 |
+| simple, before | 7,978 | 11,458 | 10,815 |
+| simple, after | 1,287 | 2,964 | 10,091 |
+
+- The heavy screen's recompose-plus-layout falls by 78% (33,683 → 7,342 samples). Its lead over the
+  simple screen in that part also falls by 78% (14,247 → 3,091).
+- The simple screen gains as well (19,436 → 4,251): the list shown again was being recomposed too.
+
+**What is left (not fixed here):**
+- **Compose scans the whole composition after a state change.** About a third of what remains
+  before the draw (2,600 of the heavy screen's 7,342 samples) is the Compose runtime's
+  `addPendingInvalidationsLocked`. After a state change it goes through every state read
+  recorded in the composition, so its cost grows with everything retained, including the hidden
+  heavy detail, whose generated widgets keep one state per property. Lowering it means fewer
+  state reads (a generator change) or each entry in its own composition (a larger change to
+  `ExtraRetained`).
+- **Hiding and showing entries re-places their trees.** Hiding the detail un-places it (about 700
+  samples); showing the list places it again and recreates its layers. The draw then re-records
+  the list. Keeping hidden entries placed (off screen, with their layers kept) would avoid this,
+  at the cost of the memory those layers hold and of layout work on hidden entries while the
+  guest changes them. That is a policy decision, and it should be measured on a phone first.
+- **The guest's confirmation.** About 150 ms after the press, the guest's batch removes the
+  detail. The host then disposes of the detail's widgets in a later frame. That frame is not in
+  `firstDraw`; whether it drops a frame is not measured.
+
+**A12 before/after (prepared, not run).** Build the APK twice, once from main and once from this
+change, as in [How to run it](#how-to-run-it). Install each in turn and run, from the Mac (`A` as in
+"The rerun, series by series"):
+
+```
+adb shell "$A -e form guest -e bench sysback --ei n 14 --ei warmup 2 -e x retainhost"
+adb shell "$A -e form guest -e bench sysback --ei n 14 --ei warmup 2 -e x heavy,retainhost"
+# wait for {"done":true} in the results file after each launch, then
+adb pull /sdcard/Android/data/dev.keliver.sample/files/threeway-results.txt
+```
+
+Alternate the builds (main, change, main, change) so the phone's drift shows. Compare the
+`firstDraw` medians in the `"summary":"back"` lines. Target: the heavy screen under 50 ms.
 
 ### NF4, step 1: the code load at process start, and the first request sent by the host (emulator)
 

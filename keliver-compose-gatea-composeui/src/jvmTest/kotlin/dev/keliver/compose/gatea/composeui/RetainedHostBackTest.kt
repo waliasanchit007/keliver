@@ -391,6 +391,42 @@ class RetainedHostBackTest {
     assertEquals(null, probe.dispatcher)
   }
 
+  /** A host-side widget that counts its compositions and reads no composition local. */
+  private class Counter : dev.keliver.widget.Widget<@Composable (Modifier) -> Unit> {
+    var compositions = 0
+    override var modifier: dev.keliver.Modifier = dev.keliver.Modifier
+    override val value: @Composable (Modifier) -> Unit = { incoming ->
+      compositions++
+      Box(incoming.size(10.dp))
+    }
+  }
+
+  @Test
+  fun goingBackRecomposesNeitherEntrysContent() = runComposeUiTest {
+    // The heavy screen's back (NF1 gate part 2): the frame of the press must not do work that grows
+    // with the entries. Hiding one entry and showing another changes what their slots provide; the
+    // content under them must not recompose (it did when the dispatcher was a static local).
+    val sent = mutableListOf<String>()
+    val below = Counter()
+    val top = Counter()
+    val stack = ComposeUiExtraRetained().apply { onBack { sent += it } }
+    stack.entries.insert(0, entry("a", below))
+    stack.entries.insert(1, entry("b", top))
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { stack.value(Modifier) }
+    }
+    waitForIdle()
+    val belowBefore = below.compositions
+    val topBefore = top.compositions
+
+    runOnIdle { assertTrue(back.press()) }
+    waitForIdle()
+    assertEquals(listOf("a"), sent)
+    assertEquals(0, stack.shownIndex)
+    assertEquals(belowBefore, below.compositions, "the entry shown again is not recomposed")
+    assertEquals(topBefore, top.compositions, "the entry hidden is not recomposed")
+  }
+
   /** Whether anything in the composition waits for a frame (a running animation always does). */
   private fun framesAsked(): Boolean = Recomposer.runningRecomposers.value.any { it.hasPendingWork }
 
