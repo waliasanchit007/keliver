@@ -391,6 +391,80 @@ class RetainedHostBackTest {
     assertEquals(null, probe.dispatcher)
   }
 
+  /** A host-side widget that counts its compositions and reads no composition local. */
+  private class Counter : dev.keliver.widget.Widget<@Composable (Modifier) -> Unit> {
+    var compositions = 0
+    override var modifier: dev.keliver.Modifier = dev.keliver.Modifier
+    override val value: @Composable (Modifier) -> Unit = { incoming ->
+      compositions++
+      Box(incoming.size(10.dp))
+    }
+  }
+
+  @Test
+  fun goingBackRecomposesNeitherEntrysContent() = runComposeUiTest {
+    // The heavy screen's back (NF1 gate part 2): the frame of the press must not do work that grows
+    // with the entries. Hiding one entry and showing another changes what their slots provide; the
+    // content under them must not recompose (it did when the dispatcher was a static local).
+    val sent = mutableListOf<String>()
+    val below = Counter()
+    val top = Counter()
+    val stack = ComposeUiExtraRetained().apply { onBack { sent += it } }
+    stack.entries.insert(0, entry("a", below))
+    stack.entries.insert(1, entry("b", top))
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { stack.value(Modifier) }
+    }
+    waitForIdle()
+    val belowBefore = below.compositions
+    val topBefore = top.compositions
+
+    runOnIdle { assertTrue(back.press()) }
+    waitForIdle()
+    assertEquals(listOf("a"), sent)
+    assertEquals(0, stack.shownIndex)
+    assertEquals(belowBefore, below.compositions, "the entry shown again is not recomposed")
+    assertEquals(topBefore, top.compositions, "the entry hidden is not recomposed")
+  }
+
+  @Test
+  fun theEntryHiddenByABackLosesItsDispatcherInTheFrameOfThePress() = runComposeUiTest {
+    // #262's rule, frame by frame: LocalHostBackDispatcher is a dynamic local, so its readers update
+    // in the recomposition of the frame after the press, not later. A nested stack in the entry the
+    // back hides must drop its callback in that same frame, or a second press in it could reach it.
+    val sent = mutableListOf<String>()
+    val probe = Probe()
+    val hiddenByTheBack = entry("b", probe)
+    val outer = ComposeUiExtraRetained().apply { onBack { sent += it } }
+    outer.entries.insert(0, entry("a", null))
+    outer.entries.insert(1, hiddenByTheBack)
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { outer.value(Modifier) }
+    }
+    waitForIdle()
+    val outerCallback = back.callbacks.single()
+
+    // A stack nested in the shown entry, able to go back: it adds its own callback.
+    val inner = ComposeUiExtraRetained().apply { onBack {} }
+    inner.entries.insert(0, entry("x", null))
+    inner.entries.insert(1, entry("y", null))
+    runOnIdle { hiddenByTheBack.content.insert(1, inner) }
+    waitForIdle()
+    val innerCallback = back.callbacks.single { it !== outerCallback }
+    assertTrue(probe.dispatcher === back)
+
+    mainClock.autoAdvance = false
+    // The press as it reaches the outer stack's callback (which callback a dispatcher picks is
+    // tested above; what this pins is the frame its effects land in).
+    runOnIdle { outerCallback.handleOnBackPressed() }
+    mainClock.advanceTimeByFrame()
+    assertEquals(listOf("a"), sent)
+    assertEquals(true, probe.hidden)
+    assertEquals(null, probe.dispatcher, "the hidden entry sees no dispatcher in the frame of the press")
+    assertTrue(innerCallback !in back.callbacks, "its nested stack removed its callback in that frame")
+    mainClock.autoAdvance = true
+  }
+
   /** Whether anything in the composition waits for a frame (a running animation always does). */
   private fun framesAsked(): Boolean = Recomposer.runningRecomposers.value.any { it.hasPendingWork }
 
