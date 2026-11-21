@@ -16,33 +16,28 @@
 package dev.keliver.nav
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import dev.keliver.compose.ExperimentalKeliverBackApi
-import dev.keliver.compose.LocalBackHandlersEnabled
 
 /*
  * NF3's pre-composition (docs/PLAN_2026-11.md, WS7): a finger stays down about 100 ms before a tap
  * fires. If the guest learns on touch-down which screen the tap will open, it can compose that screen
  * in those 100 ms, hidden, and the tap only has to show it.
  *
- * Built here: the guest's half. [KeliverNavPreparation] is told what is about to open and what was
- * cancelled; [KeliverPreparedStack] composes the prepared screen as a hidden entry of the same
- * [KeliverNavFrame] the retained stack uses, keyed by the screen's key, so when the tap pushes that
- * key the entry that is already composed becomes the top. Nothing is composed a second time: only
- * the frame's own widget changes, as when a retained entry is shown again.
+ * [KeliverNavPreparation] is told what is about to open and what was cancelled; [KeliverPreparedStack]
+ * composes the prepared screen as a hidden entry of the retained stack's frame (the same path as
+ * [KeliverNavHost], whose controller prepares with `KeliverNavController.prepare`), keyed by the
+ * screen's key, so when the tap pushes that key the entry that is already composed becomes the top.
+ * Nothing is composed a second time: only the frame's own widget changes, as when a retained entry is
+ * shown again.
  *
- * Not built: the host's touch-down signal. A host learns about a press before the click, but the
- * protocol has no event for it yet; see the PR that added this file for the design (a schema
- * modifier carrying press and cancel, gated by the widget version as any schema change is, D2).
- * Until then [KeliverNavPreparation.prepare] can be called by guest code that knows earlier (a
- * prefetch on a list's first visible rows, a screen's most likely next step).
+ * The host's press signal ([KeliverNavPress], [prepareOnPress]) calls prepare on touch-down and
+ * cancel when the press ends without a click, on a host that declares it (D2). Guest code that knows
+ * earlier (a screen's most likely next step) may call [KeliverNavPreparation.prepare] itself.
  */
 
 /**
@@ -108,8 +103,12 @@ public class KeliverNavPreparation<K : Any> {
  *
  * Caveat: what [content] reads must not change at the tap, or the prepared entry recomposes then
  * (for example a counter of opens that the click increments and the screen shows).
+ *
+ * On a [KeliverNavHostFrame] (a host container that shows its last entry) the prepared entry goes
+ * first, under the others, so the host never shows it and never goes back to it; when it is pushed
+ * its entry moves to the top (the host moves its native tree, nothing is created). The host never
+ * goes back on its own here: back goes through the guest (use [KeliverNavHost] for host back).
  */
-@OptIn(ExperimentalKeliverBackApi::class)
 @ExperimentalKeliverNavRetentionApi
 @Composable
 public fun <K : Any> KeliverPreparedStack(
@@ -122,7 +121,6 @@ public fun <K : Any> KeliverPreparedStack(
   require(keys.isNotEmpty()) { "keys must not be empty" }
   require(keys.size == 1 || keys.toSet().size == keys.size) { "keys must be unique: $keys" }
   require(depth >= 0) { "depth must not be negative: $depth" }
-  val top = keys.last()
   // The stack changed since the last composition without the prepared key (the tap opened something
   // else; a back press or a pop arrived during the press): the preparation is stale. Drop it now, or
   // it would stay composed, hidden, with its effects running, until the next press. Compared with
@@ -142,49 +140,23 @@ public fun <K : Any> KeliverPreparedStack(
     SideEffect { preparation.adopted(prepared) }
   }
 
-  // As the retained stack: only entries composed last time stay below the top (an evicted entry is
-  // not composed again, hidden, on the way back).
-  val composedKeys = remember { HashSet<K>() }
-  val candidates = keys.takeLast(depth + 1)
-  val window = candidates.filterIndexed { i, it -> i == candidates.lastIndex || it in composedKeys }
-  SideEffect {
-    composedKeys.clear()
-    composedKeys.addAll(window)
-  }
-  val entries = if (prepared != null && prepared !in keys) window + prepared else window
-
-  val parentLifecycle = LocalKeliverNavEntryLifecycle.current
-  val parentBackHandlers = LocalBackHandlersEnabled.current
-  frame.Stack {
-    for (entry in entries) {
-      key(entry) {
-        val visible = entry == top
-        val lifecycle = remember(parentLifecycle, parentBackHandlers) {
-          EntryLifecycle(visible, parentLifecycle, parentBackHandlers)
-        }
-        SideEffect { lifecycle.update(visible) }
-        CountShows(lifecycle)
-        frame.Entry(visible) {
-          CompositionLocalProvider(
-            LocalKeliverNavEntryLifecycle provides lifecycle.state,
-            LocalKeliverNavEntryShows provides lifecycle.shows,
-            LocalBackHandlersEnabled provides lifecycle.backHandlersEnabled,
-          ) {
-            PreparedEntryContent(entry, content)
-          }
-        }
-      }
-    }
-  }
+  // The retained stack's own path (KeliverNavHost's too), with the frame even at depth 0. On a
+  // KeliverNavHostFrame the host never goes back on its own here (no onHostBack).
+  val ids = remember { KeyIds() }
+  SideEffect { ids.retain(keys + listOfNotNull(prepared)) }
+  val retention = remember(frame, depth) { KeliverNavRetention(frame, depth) }
+  RetainedEntries(
+    items = keys,
+    keyOf = { it },
+    retention = retention,
+    content = content,
+    idOf = { ids.idOf(it) },
+    prepared = prepared,
+    framed = true,
+  )
 }
 
 /** The keys of the last composition that was applied. */
 private class LastKeys<K> {
   var keys: List<K>? = null
-}
-
-/** A skippable boundary: showing a prepared entry re-runs the frame, never the entry's content. */
-@Composable
-private fun <K> PreparedEntryContent(key: K, content: @Composable (K) -> Unit) {
-  content(key)
 }

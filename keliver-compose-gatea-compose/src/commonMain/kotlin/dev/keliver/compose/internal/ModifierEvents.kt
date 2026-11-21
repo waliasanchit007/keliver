@@ -32,21 +32,40 @@ public class ModifierEventElement(
   override fun hashCode(): Int = 1
 }
 
+/**
+ * A lambda modifier with two lambdas (the press signal's press and cancel): as
+ * [ModifierEventElement], with [factory] given both handles.
+ */
+public class ModifierEventPairElement(
+  public val first: () -> Unit,
+  public val second: () -> Unit,
+  public val factory: (first: Int, second: Int) -> Modifier.Element,
+) : Modifier.UnscopedElement {
+  override fun equals(other: Any?): Boolean = other is ModifierEventPairElement
+  override fun hashCode(): Int = 2
+}
+
 /** A widget's chain without lambdas, and the event sink that calls them by handle. */
 public class SplitModifier(public val modifier: Modifier, public val events: ((Int) -> Unit)?)
 
 public fun splitModifierEvents(modifier: Modifier): SplitModifier {
   var hasEvents = false
-  modifier.forEach { if (it is ModifierEventElement) hasEvents = true }
+  modifier.forEach { if (it is ModifierEventElement || it is ModifierEventPairElement) hasEvents = true }
   if (!hasEvents) return SplitModifier(modifier, null)
   val lambdas = ArrayList<() -> Unit>()
   var out: Modifier = Modifier
   modifier.forEach { e ->
-    out = out then if (e is ModifierEventElement) {
-      lambdas += e.lambda
-      e.factory(lambdas.size - 1)
-    } else {
-      e
+    out = out then when (e) {
+      is ModifierEventElement -> {
+        lambdas += e.lambda
+        e.factory(lambdas.size - 1)
+      }
+      is ModifierEventPairElement -> {
+        lambdas += e.first
+        lambdas += e.second
+        e.factory(lambdas.size - 2, lambdas.size - 1)
+      }
+      else -> e
     }
   }
   return SplitModifier(out) { handle -> lambdas.getOrNull(handle)?.invoke() }

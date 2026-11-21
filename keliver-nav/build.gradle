@@ -19,6 +19,8 @@ kotlin {
         api libs.jetbrains.compose.runtime
         api libs.jetbrains.compose.runtime.saveable
         api libs.kotlinx.coroutines.core
+        // dev.keliver.Modifier, in prepareOnPress and KeliverNavPress (NF3's press signal).
+        api projects.keliverRuntime
         // LocalBackHandlersEnabled: a hidden retained entry's BackHandlers must not take back presses.
         implementation projects.keliverCompose
       }

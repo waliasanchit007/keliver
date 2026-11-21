@@ -72,6 +72,13 @@ private fun chipColors(status: String): Pair<Color, Color> = when (status) {
 interface ThreewayStack {
   @Composable
   fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit)
+
+  /**
+   * NF3: what a list row adds so a press on it prepares the screen it opens ([key], the row's
+   * [Item]); `Modifier` for a stack that does not prepare.
+   */
+  @Composable
+  fun rowPress(key: Any): Modifier
 }
 
 /** The list's key in a [ThreewayStack] (a detail's key is its [Item]). */
@@ -142,7 +149,7 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks, stack: ThreewayStack? = 
     stack.Show(if (item == null) listOf(ListKey) else listOf(ListKey, item), back) { key ->
       Column(Modifier.fillMaxSize().background(Color.White)) {
         if (key == ListKey) {
-          ListScreen(page = page, nav = 0, marks = marks, onLoad = load, onOpen = open)
+          ListScreen(page = page, nav = 0, marks = marks, onLoad = load, onOpen = open, stack = stack)
         } else if (marks.heavyDetail) {
           HeavyDetailScreen(item = key as Item, nav = nav, marks = marks, onBack = back)
         } else {
@@ -197,7 +204,14 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks, stack: ThreewayStack? = 
 }
 
 @Composable
-private fun ListScreen(page: ItemsPage?, nav: Int, marks: ThreewayMarks, onLoad: (String) -> Unit, onOpen: (Item) -> Unit) {
+private fun ListScreen(
+  page: ItemsPage?,
+  nav: Int,
+  marks: ThreewayMarks,
+  onLoad: (String) -> Unit,
+  onOpen: (Item) -> Unit,
+  stack: ThreewayStack? = null,
+) {
   Header("Orders", onBack = null)
   Row(Modifier.fillMaxWidth().height(48.dp)) {
     Action("Load 20", Modifier.weight(1f)) { onLoad("small") }
@@ -224,15 +238,15 @@ private fun ListScreen(page: ItemsPage?, nav: Int, marks: ThreewayMarks, onLoad:
   )
   LazyColumn(Modifier.fillMaxSize()) {
     items(page.items, key = { it.id }) { item ->
-      ItemRow(item) { onOpen(item) }
+      ItemRow(item, stack?.rowPress(item) ?: Modifier) { onOpen(item) }
     }
   }
 }
 
 @Composable
-private fun ItemRow(item: Item, onClick: () -> Unit) {
+private fun ItemRow(item: Item, press: Modifier, onClick: () -> Unit) {
   Row(
-    Modifier.fillMaxWidth().height(72.dp).clickable(onClick = onClick).padding(horizontal = 16.dp),
+    Modifier.fillMaxWidth().height(72.dp).clickable(onClick = onClick).then(press).padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Column(Modifier.weight(1f)) {

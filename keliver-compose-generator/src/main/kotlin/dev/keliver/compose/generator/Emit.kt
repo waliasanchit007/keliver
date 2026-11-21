@@ -562,6 +562,12 @@ class Emitter(
       imports += "$schemaPkg.modifier.${mod.entry.name}"
       body.append("${caseIndent}is ${mod.entry.name} -> ${modifierCall(mod, "m", imports)}\n")
     }
+    // Hand-written modifiers other than `ExtraAnimated` (paired above) have hand-written renderers:
+    // `Modifier.applyExtra<Name>(element, owner)`, next to the extras' widgets.
+    for (e in config.extraModifiers.filter { it != "Animated" }) {
+      imports += "$schemaPkg.modifier.Extra$e"
+      body.append("${caseIndent}is Extra$e -> m.applyExtra$e(e, owner)\n")
+    }
     if (anyAnimated) body.append("${caseIndent}else -> m\n      }\n    }\n") else body.append("      else -> m\n    }\n")
     body.append("  }\n  return m\n}\n\n")
     body.append("/** Applies a child's scoped modifiers with its parent's real scope as receiver (§9). */\n")

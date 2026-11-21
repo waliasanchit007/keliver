@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import dev.keliver.Modifier as KeliverModifier
 import dev.keliver.compose.gatea.modifier.ExtraAnimated
+import dev.keliver.compose.gatea.modifier.ExtraPress
 import dev.keliver.compose.gatea.modifier.GenAlpha1
 import dev.keliver.compose.gatea.modifier.GenAnimateContentSize1
 import dev.keliver.compose.gatea.modifier.GenAnimateContentSize2
@@ -1291,6 +1292,7 @@ public class ComposeUiKeliverComposeGateAWidgetFactory : KeliverComposeGateAWidg
   override fun GenAnimateContentSize1(value: @Composable (Modifier) -> Unit, modifier: GenAnimateContentSize1) {}
   override fun GenAnimateContentSize2(value: @Composable (Modifier) -> Unit, modifier: GenAnimateContentSize2) {}
   override fun ExtraAnimated(value: @Composable (Modifier) -> Unit, modifier: ExtraAnimated) {}
+  override fun ExtraPress(value: @Composable (Modifier) -> Unit, modifier: ExtraPress) {}
 }
 
 /** Applies a generated widget's own (unscoped) generated modifiers, in the guest's order. */
@@ -1338,6 +1340,7 @@ internal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWid
         is GenScale1 -> run { val scale = e.scale.animated(pending, "scale"); m.scale(scale = scale) }
         is GenAnimateContentSize1 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); m.animateContentSize(animationSpec = animationSpec) }
         is GenAnimateContentSize2 -> run { val animationSpec = (if (e.animationSpecIsDefault) spring( stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold, ) else e.animationSpec.toCompose<androidx.compose.ui.unit.IntSize>()); val alignment = e.alignment.toCompose(); m.animateContentSize(animationSpec = animationSpec, alignment = alignment) }
+        is ExtraPress -> m.applyExtraPress(e, owner)
         else -> m
       }
     }

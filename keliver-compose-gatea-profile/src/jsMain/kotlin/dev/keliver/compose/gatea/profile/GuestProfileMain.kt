@@ -2,16 +2,27 @@
  * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
-@file:OptIn(RedwoodCodegenApi::class, KeliverGeneratedApi::class, ExperimentalKeliverNavRetentionApi::class)
+@file:OptIn(
+  RedwoodCodegenApi::class,
+  KeliverGeneratedApi::class,
+  ExperimentalKeliverNavRetentionApi::class,
+  ExperimentalKeliverHostFeaturesApi::class,
+)
 
 package dev.keliver.compose.gatea.profile
 
 import androidx.compose.runtime.BroadcastFrameClock
+import androidx.compose.runtime.CompositionLocalProvider
 import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.LocalHostFeatures
 import dev.keliver.compose.RedwoodComposition
+import dev.keliver.compose.extras.PRESS_HOST_FEATURE
 import dev.keliver.compose.foundation.lazy.LazyWindowSizing
 import dev.keliver.compose.wire.KeliverGeneratedApi
 import dev.keliver.nav.ExperimentalKeliverNavRetentionApi
+import dev.keliver.nav.LocalKeliverNavPress
+import dev.keliver.sample.threeway.GateAPress
 import dev.keliver.compose.gatea.protocol.guest.KeliverComposeGateAProtocolWidgetSystemFactory
 import dev.keliver.protocol.Event
 import dev.keliver.protocol.EventTag
@@ -232,7 +243,14 @@ internal class ProfileRun(
     reset()
     val start = now()
     val stack = preparedStack ?: if (retain) RetainedThreewayStack else null
-    composition.setContent { ThreewayApp(api, NoMarks, stack) }
+    // NF3 (`press=1`): a host that declares the press signal, and the app's binding for it.
+    val features = if (press) setOf(PRESS_HOST_FEATURE) else emptySet()
+    val signal = if (press) GateAPress else null
+    composition.setContent {
+      CompositionLocalProvider(LocalHostFeatures provides features, LocalKeliverNavPress provides signal) {
+        ThreewayApp(api, NoMarks, stack)
+      }
+    }
     settle()
     return result("first", start)
   }
@@ -259,28 +277,36 @@ internal class ProfileRun(
   }
 
   /**
-   * NF3: the finger goes down on row [row]: its touch-down handler prepares the detail it opens
-   * (the host's press event does not exist yet, so the driver calls the guest's handler directly).
+   * NF3: the finger goes down on row [row]: the host's press event (gate A's `ExtraPress`, the
+   * row's modifier event 1; its click is 0), which the row's `prepareOnPress` turns into preparing
+   * the detail it opens.
    */
   fun press(row: Int): StepResult {
     check(screen == "list")
-    val stack = checkNotNull(preparedStack) { "press needs prepared=0|1" }
+    checkNotNull(preparedStack) { "press needs prepared=0|1" }
     reset()
     val start = now()
-    stack.preparation.prepare(page.items[row])
+    rowEvent(row, PRESS_HANDLE)
     settle()
     return result("press", start)
   }
 
-  /** NF3: the press on row [row] is cancelled (the finger moved): its preparation is dropped. */
+  /** NF3: the press on row [row] is cancelled (the finger moved): the host's cancel event (2). */
   fun cancel(row: Int): StepResult {
     check(screen == "list")
-    val stack = checkNotNull(preparedStack) { "cancel needs prepared=0|1" }
+    checkNotNull(preparedStack) { "cancel needs prepared=0|1" }
     reset()
     val start = now()
-    stack.preparation.cancel(page.items[row])
+    rowEvent(row, CANCEL_HANDLE)
     settle()
     return result("cancel", start)
+  }
+
+  /** Sends row [row]'s modifier event [handle] (live clickables: Load 20, Load 1,000, the rows). */
+  private fun rowEvent(row: Int, handle: Int) {
+    adapter.clickables.retainAll { adapter.isLive(it) }
+    val id = adapter.clickables[2 + row]
+    adapter.sendEvent(Event(Id(id), EventTag(1000), listOf(JsonPrimitive(handle))))
   }
 
   /** Clicks the [index]th live clickable (in recording order), then runs frames until idle. */

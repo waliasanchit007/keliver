@@ -123,6 +123,7 @@ internal fun <T : Any> HostRetainedEntries(
   onHostBack: ((T) -> Unit)?,
   content: @Composable (T) -> Unit,
   liveItems: (() -> List<T>)? = null,
+  prepared: T? = null,
 ) {
   val parentLifecycle = LocalKeliverNavEntryLifecycle.current
   val parentBackHandlers = LocalBackHandlersEnabled.current
@@ -163,14 +164,25 @@ internal fun <T : Any> HostRetainedEntries(
   }
   val stackIndex = HashMap<Any, Int>(items.size)
   items.forEachIndexed { i, it -> stackIndex[keyOf(it)] = i }
+  // NF3: an entry being prepared goes first, under the window. The host shows the last entry and
+  // goes back only to the one under the shown one, so it never shows a prepared entry and never
+  // goes back to it; when the entry is pushed its group moves to the end (a move on the host, its
+  // composition kept).
+  val entries = if (prepared != null) listOf(prepared) + window else window
+  val offset = entries.size - window.size
   frame.HostStack(handled.intValue, onBack) {
-    for ((index, item) in window.withIndex()) {
+    for ((position, item) in entries.withIndex()) {
       val itemKey = keyOf(item)
+      val index = position - offset
       // The host goes back to the entry it shows below this one, so it may only when that is the
       // entry below in the stack: not when the one between was not kept (a route that opted out of
-      // retention), or the host would skip a screen.
+      // retention), or the host would skip a screen, and not to a prepared entry.
       val below = (stackIndex[itemKey] ?: 0) - 1
-      val nextBelowIsShown = index == 0 || (below >= 0 && keyOf(items[below]) == keyOf(window[index - 1]))
+      val nextBelowIsShown = when {
+        index < 0 -> false
+        index == 0 -> offset == 0
+        else -> below >= 0 && keyOf(items[below]) == keyOf(window[index - 1])
+      }
       key(itemKey) {
         val top = index == window.lastIndex
         val lifecycle = remember(parentLifecycle, parentBackHandlers) {

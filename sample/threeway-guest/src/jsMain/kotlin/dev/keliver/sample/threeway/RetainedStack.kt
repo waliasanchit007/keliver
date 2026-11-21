@@ -19,6 +19,8 @@ package dev.keliver.sample.threeway
 
 import androidx.compose.runtime.Composable
 import dev.keliver.compose.BackHandler
+import dev.keliver.compose.extras.PRESS_HOST_FEATURE
+import dev.keliver.compose.extras.pressSignal
 import dev.keliver.compose.foundation.layout.Box
 import dev.keliver.compose.foundation.layout.fillMaxSize
 import dev.keliver.compose.foundation.layout.offset
@@ -30,6 +32,7 @@ import dev.keliver.compose.ui.unit.dp
 import dev.keliver.nav.ExperimentalKeliverNavRetentionApi
 import dev.keliver.nav.KeliverNavFrame
 import dev.keliver.nav.KeliverNavHostFrame
+import dev.keliver.nav.KeliverNavPress
 import dev.keliver.nav.KeliverNavRetention
 import dev.keliver.nav.KeliverRetainedStack
 
@@ -70,6 +73,9 @@ internal object RetainedThreewayStack : ThreewayStack {
     BackHandler(enabled = keys.size > 1) { onBack() }
     KeliverRetainedStack(keys, retention, content)
   }
+
+  @Composable
+  override fun rowPress(key: Any): Modifier = Modifier
 }
 
 /**
@@ -109,4 +115,19 @@ internal object RetainedHostThreewayStack : ThreewayStack {
     BackHandler(enabled = keys.size > 1) { onBack() }
     KeliverRetainedStack(keys, retention, onHostBack = { onBack() }, content = content)
   }
+
+  @Composable
+  override fun rowPress(key: Any): Modifier = Modifier
+}
+
+/**
+ * NF3: gate A's press signal (`ExtraPress`) for keliver-nav. With it provided as
+ * `LocalKeliverNavPress`, `prepareOnPress` on a host that declares [PRESS_HOST_FEATURE] composes the
+ * screen a row opens while the finger is down.
+ */
+internal object GateAPress : KeliverNavPress {
+  override val hostFeature: String = PRESS_HOST_FEATURE
+
+  override fun pressSignal(modifier: dev.keliver.Modifier, onPress: () -> Unit, onCancel: () -> Unit): dev.keliver.Modifier =
+    modifier.pressSignal(onPress, onCancel)
 }

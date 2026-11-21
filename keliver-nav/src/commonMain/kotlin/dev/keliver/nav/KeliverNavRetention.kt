@@ -277,6 +277,10 @@ public fun <K : Any> KeliverRetainedStack(
  * by [keyOf] so an entry's composition survives entries added above it and removed from below it.
  * On a [KeliverNavHostFrame], [idOf] names an entry to the host, [onHostBack] makes an entry the
  * top after the host went back to it, and [liveItems] (if given) reads the stack as it is now.
+ *
+ * NF3: [prepared], when not in [items], is composed too, hidden (an entry about to be pushed, composed
+ * while the finger is down); when it is pushed its composition is the one shown. [framed] uses the
+ * frame even at depth 0, so a press does not change the top's place in the composition.
  */
 @OptIn(ExperimentalKeliverNavRetentionApi::class, ExperimentalKeliverBackApi::class)
 @Composable
@@ -289,9 +293,11 @@ internal fun <T : Any> RetainedEntries(
   onHostBack: ((T) -> Unit)? = null,
   liveItems: (() -> List<T>)? = null,
   retainable: (T) -> Boolean = { true },
+  prepared: T? = null,
+  framed: Boolean = false,
 ) {
   val depth = retention?.depth ?: 0
-  if (retention == null || depth == 0) {
+  if (retention == null || (depth == 0 && !framed)) {
     val top = items.last()
     key(keyOf(top)) {
       content(top)
@@ -321,16 +327,20 @@ internal fun <T : Any> RetainedEntries(
     composedKeys.clear()
     window.mapTo(composedKeys, keyOf)
   }
+  val ahead = prepared?.takeIf { p -> keyOf(p).let { k -> items.none { keyOf(it) == k } } }
   val frame = retention.frame
   if (frame is KeliverNavHostFrame) {
-    HostRetainedEntries(items, window, keyOf, idOf, frame, onHostBack, content, liveItems)
+    HostRetainedEntries(items, window, keyOf, idOf, frame, onHostBack, content, liveItems, ahead)
     return
   }
   // An entry is shown only while the entry enclosing this stack (if any) is shown too.
   val parentLifecycle = LocalKeliverNavEntryLifecycle.current
   val parentBackHandlers = LocalBackHandlersEnabled.current
+  // The prepared entry goes last: the plain frame hides by [visible], and when it is pushed it stays
+  // where it is.
+  val entries = if (ahead != null) window + ahead else window
   retention.frame.Stack {
-    for ((index, item) in window.withIndex()) {
+    for ((index, item) in entries.withIndex()) {
       key(keyOf(item)) {
         val visible = index == window.lastIndex
         val lifecycle = remember(parentLifecycle, parentBackHandlers) {

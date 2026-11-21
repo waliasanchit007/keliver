@@ -58,6 +58,24 @@ public data class ExtraAnimated(
 )
 
 /**
+ * The host's press signal (NF3; keliver-nav's pre-composition on touch-down): the host sends
+ * [onPress] (a modifier event handle, as a clickable's) when a finger goes down on the element, and
+ * [onCancel] when that press ends without a click (the finger moved out, a scroll took the gesture,
+ * the gesture was cancelled). A press that ends in a click sends nothing more: the click follows.
+ * Both are sent on the event path a click takes, so they reach the guest before the click and
+ * without waiting for it. Structure only; screens never name it.
+ *
+ * D2: a host declares it as the host feature `keliver.press@1` and a guest sends it only to a host
+ * that does. A host built before it would ignore it as an unknown modifier, and a guest then falls
+ * back to the click.
+ */
+@Modifier(501)
+public data class ExtraPress(
+  val onPress: Int,
+  val onCancel: Int,
+)
+
+/**
  * A retained back stack whose back the host shows (NF1; keliver-nav's `KeliverNavHostFrame`).
  * [entries] are [ExtraRetainedEntry]s, bottom first, and the host shows the last one. The others
  * stay in the host's tree, so their native state (a list's scroll position) survives, but they are
