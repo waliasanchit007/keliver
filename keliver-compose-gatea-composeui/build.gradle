@@ -96,6 +96,13 @@ tasks.withType(org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimu
   doFirst { out.mkdirs() }
 }
 
+// RetainedBackFrameBenchmark: -Dkeliver.retainedBack.measured=<n> (and .sample=true) on the Gradle
+// command line reach the test JVM. Read through a provider, so a changed value reruns the task.
+def retainedBackProperties = providers.systemPropertiesPrefixedBy('keliver.retainedBack.')
+tasks.named('jvmTest', Test).configure {
+  retainedBackProperties.get().each { key, value -> systemProperty(key, value) }
+}
+
 // The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
 afterEvaluate {
   spotless {
