@@ -2008,6 +2008,105 @@ feature, measure list-scroll jank on the A12 with the press on and off, and tune
 also needs the host's pressed state (the ripple), which the host draws already; the guest is not in
 that path.
 
+## A12 checkpoint, 2026-11-22
+
+The batched A12 checkpoint for the native-feel work (PLAN_2026-11.md, WS7): the engine (NF2), the
+heavy screen's host back (#276), one Compose state per generated widget (#280) and the cold start
+(NF4), on the same Galaxy A12, restarted by the owner at about 02:12 IST. The first timed series
+started at 02:29 (17 minutes of uptime). Builds came first.
+
+**Method, common to every series.**
+- **Builds.** Each build is the prototype published to its own scratch Maven repository
+  (`-Dmaven.repo.local=<scratch>/m2-<build>`, version `0.0.0-gateb`), then the sample's benchmark
+  APK from the same checkout, as in [How to run it](#how-to-run-it). "Main" is `1e083833f`. The
+  "before" builds are each merge's first parent, in detached checkouts: `228a229b0` before #276
+  and `4f3a5c865` before #280. The engine arms are main's sample built with
+  `use-fork.init.gradle` against the fork published from a fresh `apply.sh` (`1.28.0-q20260604`;
+  its `libquickjs.so` sizes equal step 2's on all four ABIs), with and without
+  `-PziplineForkLongAsBigInt`. Every APK installs as `dev.keliver.sample`.
+- **Every series ran from a script on the phone** (`nohup sh`, the APKs pushed to the phone and
+  installed there with `pm install -r`, so a dropped adb link cannot stop a series). After each
+  install the script started the app once, sent profileinstaller's install-profile broadcast and
+  compiled `speed-profile` (`cmd package compile -f`), the same for every build. Each series is a
+  fresh process (`am start -S`) with the in-app fixture (`--ez localApi true`), 14 iterations with
+  the first 2 dropped, unless said otherwise. Before each series the script woke the screen and
+  logged the uptime, `/proc/loadavg`, the battery, the thermal status and the CPU idle share over
+  2 s (`/proc/stat`). The load average stays at 20–23 even when idle (kernel threads), so the idle
+  share is the check.
+- Medians are written median / p90 / min–max, in ms from the tap (or the press), unless said
+  otherwise.
+
+### Series A: the engine on the phone (NF2)
+
+**Arms.** Zipline 1.28.0 (main as built), the fork (QuickJS 2026-06-04), and the fork with `Long`
+as a JS BigInt. Each arm ran five series in a row: navigation (`bench=nav`, header back), the same
+on the heavy detail (`x=heavy`), system back with the host's retained back (`bench=sysback`,
+`x=retainhost`), the same on the heavy detail, and `x=split` on the simple screen. Native ran
+once, on the first arm's install (its code does not depend on the engine).
+
+**Phone state.** 02:29–02:44, uptime 17.5–32.5 min, on battery 100% → 98%, unplugged, 25.8–26.3 °C,
+thermal status 0, CPU idle 84–98% before each series.
+
+**Navigation, header back** (simple screen; heavy detail below it):
+
+| Arm | Open (warm) | Back | Open (cold, i=1) |
+|---|---|---|---|
+| native | 16 / 17 / 14–18 | 13 / 14 / 10–14 | 28 |
+| guest, Zipline 1.28.0 | 436 / 456 / 414–456 | 834 / 847 / 827–855 | 445 |
+| guest, fork | 353.5 / 370 / 344–374 | 698.5 / 708 / 678–715 | 368 |
+| **guest, fork, `Long` as BigInt** | **208** / 220 / 184–222 | **461.5** / 478 / 441–487 | 208 |
+| heavy: native | 22 / 23 / 20–25 | 14 / 15 / 11–33 | 35 |
+| heavy: guest, Zipline 1.28.0 | 1,028.5 / 1,072 / 1,008–1,136 | 856.5 / 880 / 819–921 | 1,098 |
+| heavy: guest, fork | 828.5 / 859 / 799–879 | 702 / 717 / 689–719 | 884 |
+| **heavy: guest, fork, BigInt** | **514** / 559 / 499–585 | **468** / 497 / 452–498 | 565 |
+
+**System back with the host's retained back (`x=retainhost`)**: `firstDraw` is the press to the
+window's first draw (the host showing the retained list), `drawn` the guest's confirming frame:
+
+| Arm | Back, first draw | Back, drawn (guest) | Open (warm) |
+|---|---|---|---|
+| Zipline 1.28.0 | 17 / 22 / 10–23 | 119 / 123 / 92–126 | 289.5 / 305 / 273–306 |
+| fork | 17 / 23 / 12–23 | 98.5 / 102 / 92–121 | 240 / 260 / 234–261 |
+| fork, BigInt | 16 / 19 / 13–24 | 97 / 99 / 70–101 | 174.5 / 176 / 170–253 |
+| heavy: Zipline 1.28.0 | 18 / 22 / 7–23 | 187 / 194 / 165–194 | 908.5 / 951 / 891–979 |
+| heavy: fork | 14.5 / 17 / 9–19 | 150 / 155 / 142–157 | 740 / 767 / 713–792 |
+| heavy: fork, BigInt | 12 / 19 / 8–24 | 95 / 101 / 87–103 | 478 / 536 / 451–536 |
+
+**The guest's split** (`x=split`, simple screen, medians; the guest's frame is from the frame's
+start to `composed`, in QuickJS; encoding is the split's modifier plus property time):
+
+| Arm | Open: guest's frame | Open: encoding | Open: drawn | Back: guest's frame | Back: encoding | Back: drawn |
+|---|---|---|---|---|---|---|
+| Zipline 1.28.0 | 352.5 | 67 | 447 | 742 | 286.5 | 862 |
+| fork | 285.5 | 51.5 | 367.5 | 605.5 | 231.5 | 723.5 |
+| fork, BigInt | **129** | 13.5 | 213.5 | **351.5** | 61.5 | 469.5 |
+
+Every arm's batches had the same shape (open: 70 structural changes, 22 modifiers, 213
+properties; back: 319, 109, 835), so the arms did the same work.
+
+**APK size per arm** (bytes; the `.zipline` files are the three-way guest's 54 modules in the APK's
+assets):
+
+| Arm | APK | `libquickjs.so` (arm64-v8a) | Guest `.zipline` files |
+|---|---|---|---|
+| Zipline 1.28.0 | 25,264,991 | 2,432,744 | 2,077,321 |
+| fork | 26,058,183 (+3.1%) | 2,618,752 (+7.6%) | 2,215,853 (+6.7%) |
+| fork, BigInt | 26,041,387 (+3.1%) | 2,618,752 (+7.6%) | 2,193,386 (+5.6%) |
+
+- **With `Long` as BigInt the guest's work is more than halved on the phone**: its frame 2.73× faster
+  on open (352.5 → 129 ms) and 2.11× on back (742 → 351.5); encoding 4.7× on back (286.5 →
+  61.5). The emulator's step 2 had 1.8× and 2.0×, and NF0's command-line engine on this phone 2.4×
+  and 2.0×. On the screen, open goes from 436 to 208 ms (2.1×) and the heavy open from 1,028.5 to
+  514 (2.0×).
+- **The new engine alone gains about 20%** (frame 1.23× on both; open 436 → 353.5): the gain is
+  mostly BigInt, as on the Mac.
+- **The host's back does not depend on the engine**: the retained list is on screen 12–18 ms after
+  the press on every arm, the heavy screen included (see series C for #276). What the engine changes
+  is the guest's confirming frame (heavy: 187 → 95 ms).
+- **Native was fast again** (open 16, back 13, as in runs 1–3), unlike part 1's slow day (43 / 32).
+- NF2's gate for Android, the guest's work about halved on the A12: **met, with `Long` as BigInt**
+  (not met by the new engine alone). The iPhone is not measured.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
