@@ -4,6 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UISceneActivationStateBackground
 import platform.UIKit.UISceneActivationStateForegroundActive
 import platform.UIKit.UISceneActivationStateForegroundInactive
@@ -171,6 +173,45 @@ class StartGateTest {
     gate.run { starts++ }
     assertEquals(2, starts)
     assertEquals(1, logged.size) // only the first, held, start said it waits
+  }
+
+  @Test fun theLaunchsOwnForegroundIsNoResume() {
+    // The host's own order: start() in init() is held; the first scene's foreground starts it, and
+    // the start watches for returns (on-resume updates). UIKit then posts the application's
+    // foreground for the same launch: no check (it used to log "update check skipped").
+    val (gate, _) = gate(inForeground = false)
+    var returns = 0
+    val foregroundReturns = ForegroundReturns(center) { returns++ }
+    gate.run {
+      starts++
+      foregroundReturns.watch()
+    }
+    center.postNotificationName(UISceneWillEnterForegroundNotification, null)
+    center.postNotificationName(UIApplicationWillEnterForegroundNotification, null)
+    center.postNotificationName(UIApplicationDidBecomeActiveNotification, null)
+    assertEquals(1, starts)
+    assertEquals(0, returns)
+    // The user leaves and comes back: a return, once per return.
+    center.postNotificationName(UIApplicationDidEnterBackgroundNotification, null)
+    center.postNotificationName(UISceneWillEnterForegroundNotification, null)
+    center.postNotificationName(UIApplicationWillEnterForegroundNotification, null)
+    assertEquals(1, returns)
+    center.postNotificationName(UIApplicationWillEnterForegroundNotification, null)
+    assertEquals(1, returns)
+    center.postNotificationName(UIApplicationDidEnterBackgroundNotification, null)
+    center.postNotificationName(UIApplicationWillEnterForegroundNotification, null)
+    assertEquals(2, returns)
+  }
+
+  @Test fun aHostStartedInTheForegroundChecksAtTheFirstReturn() {
+    // Started late (a screen, with its scene already up): no launch foreground is still to come.
+    var returns = 0
+    val foregroundReturns = ForegroundReturns(center) { returns++ }
+    foregroundReturns.watch()
+    foregroundReturns.watch() // a start retried after "no bundle": still one watch, one check per return
+    center.postNotificationName(UIApplicationDidEnterBackgroundNotification, null)
+    center.postNotificationName(UIApplicationWillEnterForegroundNotification, null)
+    assertEquals(1, returns)
   }
 
   @Test fun theDeclaredRequestsWaitBehindAHeldStartAndGoAtTheSameUiStart() {

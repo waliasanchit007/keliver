@@ -372,7 +372,10 @@ that opens.
   each time the app comes back to the foreground, at most every 30 s, the host
   looks up again and applies a newer bundle in place. Zipline loads it while
   the running code goes on, swaps it in on success (the floor rises as for any
-  load), and keeps the running one on failure. `next-launch` (a release
+  load), and keeps the running one on failure. On iOS only a return after the
+  app was in the background counts: the launch's own foreground, which
+  follows the host's start (NF4: at the first scene's foreground), is no
+  resume and makes no check. `next-launch` (a release
   build's default) never looks up while the app runs.
 - A DEBUG build also checks at once, applying a newer bundle and not held to
   the 30 s, when told to from the computer: on Android

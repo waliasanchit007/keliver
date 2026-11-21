@@ -158,13 +158,10 @@ import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString.Companion.decodeHex
 import platform.Foundation.NSBundle
 import platform.Foundation.NSLock
-import platform.Foundation.NSNotificationCenter
-import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSThread
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
-import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIViewController
 import platform.UIKit.navigationController
 import platform.darwin.NOTIFY_STATUS_OK
@@ -788,14 +785,11 @@ public object Keliver {
     // made once per process (a start retried after "no bundle" keeps them); the requests go out
     // once startHost() passed its checks and the process starts toward a screen.
     processHttp.firstStart(API_BASE_URL.takeIf { it.isNotBlank() }, requestPolicy, requestHeaders, prefetch)
-    // Once: a start that created nothing runs again (started is reset), and a
-    // second observer would make every foreground check twice.
-    if (updatesMode() != "next-launch" && !resumeObserved) {
-      resumeObserved = true
-      NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue) { _ ->
-        resumed()
-      }
-    }
+    // Returns to the foreground only: this launch's own foreground, which UIKit posts right after
+    // the UI start that is running this, is no resume (UiStart.kt: ForegroundReturns). watch()
+    // adds nothing the second time: a start that created nothing runs again (started is reset),
+    // and a second observer would make every foreground check twice.
+    if (updatesMode() != "next-launch") foregroundReturns.watch()
     registerDebugCheckForUpdate()
     lastLookup = TimeSource.Monotonic.markNow()
     // A start after "no bundle" looks again: Loading meanwhile, as on the first.
@@ -1003,7 +997,8 @@ public object Keliver {
   }
 
   private var debugCheckRegistered = false // main thread
-  private var resumeObserved = false // main thread
+  /** The on-resume check's trigger: the app back in the foreground after a background. Main thread. */
+  private val foregroundReturns = ForegroundReturns { resumed() }
 
   /**
    * A DEBUG binary only: a check now, applying a newer bundle, not held to the 30 s between
@@ -1028,7 +1023,10 @@ public object Keliver {
     if (status != NOTIFY_STATUS_OK.toUInt()) log("could not register $name (notify status $status)")
   }
 
-  /** With UPDATES = "on-resume" or "live": check and apply, at most every 30 s (the host observes the foreground itself). */
+  /**
+   * With UPDATES = "on-resume" or "live", the app back in the foreground ([foregroundReturns]; not
+   * the launch's own foreground): check and apply, at most every 30 s.
+   */
   private fun resumed() {
     val since = lastLookup.elapsedNow()
     if (since < 30.seconds) {

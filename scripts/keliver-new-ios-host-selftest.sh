@@ -329,8 +329,10 @@ grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', '
   && grep -q 'if (!kotlin.native.Platform.isDebugBinary || debugCheckRegistered) return' "$K/MainViewController.kt" \
   && grep -q 'val url = "$base/bundles/events"' "$K/MainViewController.kt" && grep -q 'screenShown()' "$K/MainViewController.kt" \
   && grep -q 'text/event-stream' "$K/BundleEvents.kt" \
+  && grep -q 'if (updatesMode() != "next-launch") foregroundReturns.watch()' "$K/MainViewController.kt" \
+  && grep -q 'private val foregroundReturns = ForegroundReturns { resumed() }' "$K/MainViewController.kt" \
   && grep -q "implementation 'org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:" "$H/build.gradle" \
-  && ok "updates: live in a debug binary (on-resume in a release one), next-launch in a release one; a debug-only check-now notification" \
+  && ok "updates: live in a debug binary (on-resume in a release one), next-launch in a release one; a debug-only check-now notification; resume checks on a return to the foreground, not the launch's own" \
   || bad "updates: the debug default, live updates or the check-now notification is not wired"
 # M0: timing marks only when KELIVER_TIMING=YES (Debug, Benchmark); a no-op elsewhere.
 grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/com/example/demo/host/KeliverTiming.kt" 2>/dev/null \
@@ -656,7 +658,7 @@ if [ "$BUILD" = 1 ]; then
       || bad "NF4: the host's prefetch wiring tests failed (rc=$rc, ${n:-no} passed)"
     # NF4, early start: start() in init() starts at once toward a screen and waits in a background launch.
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*StartGateTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
-    [ "$rc" = 0 ] && [ "${n:-0}" -ge 12 ] && ok "NF4: the early start's simulator tests pass ($n: no shared application, as in init(), is no scene in the foreground; a start with a scene up runs at once; a held start loads nothing until a scene or the app comes forward, or a screen is made in the foreground; a screen in a background scene starts nothing; only the app's own window scenes count; an app without scenes counts active)" \
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 14 ] && ok "NF4: the early start's simulator tests pass ($n: no shared application, as in init(), is no scene in the foreground; a start with a scene up runs at once; a held start loads nothing until a scene or the app comes forward, or a screen is made in the foreground; a screen in a background scene starts nothing; only the app's own window scenes count; an app without scenes counts active; the launch's own foreground is no resume, a return after a background is)" \
       || bad "NF4: the early start's simulator tests failed (rc=$rc, ${n:-no} passed)"
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*HostPrefetchRaceTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
     [ "$rc" = 0 ] && [ "${n:-0}" -ge 2 ] && ok "NF4: the prefetch's race tests pass on the simulator ($n, 1,000 runs each: never two sends)" \

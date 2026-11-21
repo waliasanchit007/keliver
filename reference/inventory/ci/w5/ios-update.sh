@@ -102,11 +102,14 @@ reads U1-after Cellar && ok "U1: the running app now reads 'Cellar' (v9)" \
 if [ -z "$U1_UPDATES" ]; then
   U2_NAME="$BID.keliver.check-for-update"
   n0="$(grep -c 'KeliverHost: update check: up to date (sequence 9)' "$C")"
+  # The console's length before the notifications: the "nothing skipped" clause reads only
+  # what U2's window wrote (the launch and U1's resume before it are not U2's to judge).
+  l0="$(wc -l < "$C" | tr -d ' ')"
   xcrun simctl spawn "$UDID" notifyutil -p "$U2_NAME"; sleep 6
   xcrun simctl spawn "$UDID" notifyutil -p "$U2_NAME"; sleep 6
   n1="$(grep -c 'KeliverHost: update check: up to date (sequence 9)' "$C")"
   [ "$(grep -c "KeliverHost: update check requested by $U2_NAME (a debug build)" "$C")" = 2 ] && [ $(( n1 - n0 )) = 2 ] \
-    && ! grep -q 'update check skipped' "$C" && [ "$(app_pid)" = "$pid_before" ] \
+    && [ "$(tail -n "+$((l0 + 1))" "$C" | grep -c 'update check skipped')" = 0 ] && [ "$(app_pid)" = "$pid_before" ] \
     && ok "U2: two '$U2_NAME' notifications, two lookups at once (up to date on v9), same process" \
     || bad "U2: the debug check-now hook: $(grep -E 'KeliverHost: update check' "$C" | tail -4 | tr '\n' ' ')"
 else

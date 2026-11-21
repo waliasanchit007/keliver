@@ -3,6 +3,7 @@ package @@PACKAGE@@
 import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UISceneActivationState
@@ -134,6 +135,45 @@ internal fun showsUi(scenes: List<SceneSeen>, appActive: () -> Boolean): Boolean
   return scenes.any {
     it.role == UIWindowSceneSessionRoleApplication &&
       (it.state == UISceneActivationStateForegroundInactive || it.state == UISceneActivationStateForegroundActive)
+  }
+}
+
+/**
+ * The app coming back to the foreground, for the on-resume update check: [onReturn] runs on each
+ * `UIApplicationWillEnterForegroundNotification` that follows a
+ * `UIApplicationDidEnterBackgroundNotification` seen since [watch].
+ *
+ * A foreground with no background before it is the launch's own, not a return. The host watches
+ * from its start, and NF4 starts it at the UI start, which is the first scene's
+ * `UISceneWillEnterForegroundNotification`: UIKit posts the application's
+ * `UIApplicationWillEnterForegroundNotification` right after it, for the same foreground. Taken
+ * for a resume, it came 0 s after the start's own lookup and was skipped by the 30 s throttle (a
+ * "skipped" line in every launch); it is not a check to make at all. A host started later, with
+ * its scene already up, sees no launch foreground: the first one after a background is the user's
+ * return either way.
+ *
+ * Main thread only: UIKit posts these notifications on it.
+ */
+internal class ForegroundReturns(
+  private val center: NSNotificationCenter = NSNotificationCenter.defaultCenter,
+  private val onReturn: () -> Unit,
+) {
+  private var wentToBackground = false
+  private var observers: List<NSObjectProtocol>? = null
+
+  /** Starts watching; a second call adds nothing. */
+  fun watch() {
+    if (observers != null) return
+    observers = listOf(
+      // A null queue: the block runs where the notification is posted (UIKit: the main thread).
+      center.addObserverForName(UIApplicationDidEnterBackgroundNotification, null, null) { _ -> wentToBackground = true },
+      center.addObserverForName(UIApplicationWillEnterForegroundNotification, null, null) { _ ->
+        if (wentToBackground) {
+          wentToBackground = false
+          onReturn()
+        }
+      },
+    )
   }
 }
 
