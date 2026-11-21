@@ -999,6 +999,24 @@ It behaves like the Android host in §2:
   names and behaviour as Android's (§2, "Start policy").
   A host scaffolded by tools 0.3.18 or earlier has no `START_POLICY` line: its
   build says so; add `internal const val START_POLICY: String = ""`.
+- **When the host starts** (NF4; unreleased, tools after 0.3.18). The
+  scaffolded `iOSApp.swift` calls `Keliver.shared.start()` in the App's
+  `init()`, as the Android host's `HostApp` does in `onCreate`, so the lookup
+  and the code load run while the first scene connects. What §2 says about a
+  start at launch holds here too (the download, the `loaded` report, update
+  checks, a first load that fails at launch); an app whose Keliver screens are
+  rarely opened can delete the line, and the first screen starts the host.
+  Unlike Android, **a launch in the background loads nothing**: iOS runs the
+  App's `init()` for a silent push, a background fetch or refresh, or a
+  location event too, and there `start()` only records the wish
+  (`UiStart.kt`, `StartGate`; logged `start: this process launched in the
+  background; …`). The host then starts at the first of: a scene or the app
+  entering the foreground, the app becoming active, or a Keliver screen being
+  made. Such a launch looks nothing up, loads no code and sends nothing. A
+  launch the user made is not held: in a SwiftUI `App.init()` the application
+  state is already `inactive` (the simulator run below shows it in every
+  launch), so the host starts there and then. Hosts scaffolded by tools 0.3.18
+  or earlier have the call as a comment, and their `start()` has no gate.
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
   set. Paths can't climb out of it; a method that isn't a plain token, or a
   header holding CR or LF, is refused; hop-by-hop headers are dropped; and
@@ -1013,25 +1031,28 @@ It behaves like the Android host in §2:
   same as Android's (§2), with the same rules from the same file
   (`HostPrefetch.kt`, byte for byte). In Swift, before the host starts:
   `Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])]`,
-  then `Keliver.shared.start()` in your App's `init()` (or your app delegate's
-  `didFinishLaunching`). The scaffolded `iOSApp.swift` shows it as a comment.
+  before the scaffolded `Keliver.shared.start()` in your App's `init()` (or in
+  your app delegate's `didFinishLaunching`). The scaffolded `iOSApp.swift`
+  shows the declaration as a comment.
   - **When it goes out:** once the host has passed its own checks (the key
     and the bundle server, as on Android: a host that refuses to load sends
     nothing) and the process starts toward a screen (`UiStart.kt`). That
     second one is the first of three things: the host starting while
     the app is not in the background; a scene (or the app) entering the
-    foreground, or the app becoming active; or a Keliver screen being made. A
-    SwiftUI or other scene-based app is still in the background state while it
-    finishes launching, so there it goes out when the first scene enters the
-    foreground. A process launched in the background (a push, a background
-    refresh, a location event) sends nothing until the user opens the app in
-    that process. Without an early `start()`, the first Keliver screen starts
-    the host, and the prefetch goes out with it: that is later, and saves less.
+    foreground, or the app becoming active; or a Keliver screen being made. In
+    a launch the user made, a SwiftUI `App.init()` already sees the app
+    `inactive` (measured on the simulator, below), so it goes out at
+    `start()`, as the host's checks pass. A process launched in the background
+    (a push, a background refresh, a location event) holds the host's start
+    itself (above), and so sends nothing, until the user opens the app in that
+    process. Without an early `start()`, the first Keliver screen starts the
+    host, and the prefetch goes out with it: that is later, and saves less.
   - **Who it is for:** it goes out through the guests' HostHttp, so your
     `requestPolicy` applies, and so do your `requestHeaders` as they answer
     then, as the prefetch goes out (at the start toward a screen: in a
-    SwiftUI app, when the first scene enters the foreground, not at
-    `start()`). The guest's request that takes it does not ask them again.
+    launch the user made, as `start()` in `init()` passes the host's checks;
+    in a process launched in the background, when it comes to the
+    foreground). The guest's request that takes it does not ask them again.
     **Have your session restored by then** (restoring it before `start()` is
     the simple way to be sure). Call
     **`Keliver.shared.discardPrefetched()`** when the user signs in, signs out

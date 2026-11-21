@@ -120,7 +120,9 @@ w3_host_build(){
 W3_BRIDGED=0; CIB=""; SWIFTAPP="$APP/host-ios/iosApp/iOSApp.swift"
 if [ -f "$SWIFTAPP" ] && CIB="$(w3_bridge_stub "$APP/host-ios/src/iosMain/kotlin")"; then
   cp "$SWIFTAPP" "$W3/iOSApp.swift.saved"
-  python3 -c 'import sys; p=sys.argv[1]; s=open(p).read(); a="struct iOSApp: App {\n"; assert s.count(a)==1; s=s.replace("import SwiftUI\n","import SwiftUI\nimport KeliverHost\n",1).replace(a,a+"    init() { Keliver.shared.bridges = CiBridgeKt.ciBridges() } // CI only (S17c, S17d)\n\n"); open(p,"w").write(s)' "$SWIFTAPP" \
+  # A host whose App has an init() (NF4: it calls Keliver.shared.start()) gets the line first in
+  # it, before the start; an older host gets an init() of its own.
+  python3 -c 'import sys; p=sys.argv[1]; s=open(p).read(); a="struct iOSApp: App {\n"; i="    init() {\n"; assert s.count(a)==1; s=s.replace(i,i+"        Keliver.shared.bridges = CiBridgeKt.ciBridges() // CI only (S17c, S17d): before start()\n",1) if s.count(i)==1 else s.replace("import SwiftUI\n","import SwiftUI\nimport KeliverHost\n",1).replace(a,a+"    init() { Keliver.shared.bridges = CiBridgeKt.ciBridges() } // CI only (S17c, S17d)\n\n"); open(p,"w").write(s)' "$SWIFTAPP" \
     && W3_BRIDGED=1 || bad "B5: iOSApp.swift has no 'struct iOSApp: App {': CiStub not declared"
 fi
 if [ "$W3_BRIDGED" = 1 ] && ! w3_host_build; then
