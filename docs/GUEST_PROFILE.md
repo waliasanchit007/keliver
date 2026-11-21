@@ -1045,14 +1045,15 @@ no touch-down event. Now it has one in the gate-A prototype:
 Tests: `PressSignalTest` (gate A's host and guest over the real protocol, JVM; each checks the
 events the guest received, in order: press, click, cancel for a tap that opens the screen, which the
 click shows without composing or creating anything; press, cancel and the composition disposed for a
-finger that moves off, a disabled click, a system-cancelled gesture; press, click, cancel for a click
+finger that moves off and a disabled click; press, click, cancel for a click
 that does not navigate and press, the inner button's click, cancel for a button inside the row, both
 dropping the preparation; a host back during a press; in a scroll container, a held tap sends the
 press after the delay and a fling that starts on the row sends nothing; a host without the feature →
 no modifier on the wire, click only), `PressHostTest` (the host's renderer alone with Compose's own
 clickables: the order around a long press and a double click, an element removed mid-press, the
 clickable's interactions (its ripple) the same with and without the signal, in and out of a scroll
-container, the delay and its tuning, a tap that stops a fling), `KeliverNavPressTest` (JVM and JS:
+container, the delay and its tuning, a tap that stops a fling; a system-cancelled gesture is not
+tested, as the desktop test host's `cancel()` delivers nothing to the handler), `KeliverNavPressTest` (JVM and JS:
 also the cancel after a navigating click, the pressed route cancelled after the row changed, a row
 removed mid-press), the generator's test (the containers are marked), and the profile's
 `ProfileRunTest` (the press step sends the row's event; with `press=1` the open step sends the
@@ -1087,7 +1088,9 @@ The press step is the host's press event now, not a direct call.
   does the press finish while the finger is down.
 
 **Not run:** the fork with `Long` as BigInt (`use-fork.init.gradle`; no fork repository was at hand in
-this session), Node, a device (the threeway Android host does not declare the feature yet), iOS
+the first session, and in the review session the fork's build was queued behind a full disk and never
+started), the numbers after the review fixes (the cancel after each click, the scroll delay; neither
+changes the steps above except `open` with `press=1`, which now also delivers the cancel), Node, a device (the threeway Android host does not declare the feature yet), iOS
 (the press renderer is common Compose code, compiled for iOS but not exercised there).
 
 ## Memory growth per navigation
