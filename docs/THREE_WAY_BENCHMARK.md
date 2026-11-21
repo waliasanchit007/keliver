@@ -2517,6 +2517,124 @@ status 0, CPU idle 86–99%.
   touch-down** (163.5–167 and 470.5–479 from the click). NF3's gate (about 100 ms simple, 150 heavy)
   is **not met**.
 
+### Series I: the tap's first response, in frames (NF1's "tap within one frame")
+
+**Method.** Real touches through the input system (the shell's `input`, injected into the
+InputDispatcher; the driver's synthetic taps cannot be used, they bypass it), under a Perfetto
+trace (series C's config). One fresh process per arm (`--ez localApi true`, no `bench`), then 11
+rounds, 2.5 s apart so the app is idle (no frame in flight) before each touch: a quick tap on a list
+row (`input tap`: it opens the detail), the detail's header **Back** (a button), **Load 20** (a
+button: a new request), a **held** press on a row (`input swipe` in place for 300 ms; it opens the
+detail), and Back again. The first round is dropped (the process's first touch is slower), leaving
+10 of each (9 of the last Back). Arms: the guest on BigInt and native (the BigInt install), then the
+guest on 1.28.0. Read on the phone with `trace_processor_shell`:
+- **the DOWN**: system_server's `interceptMotionBeforeQueueing` for the injected event (the first of
+  its gesture; the app receives it 1.4–1.9 ms later, median, its `processInputEventForCompatibility`);
+- **the response frame**: the app's first `Choreographer#doFrame` after the DOWN (the app draws
+  nothing while idle), and **its present**: the end of the app's actual frame timeline row for that
+  frame's vsync id (SurfaceFlinger's present).
+
+What that frame draws was not captured. In the guest arms it is the host's ripple: a quick tap's
+first frame is followed by frames at every vsync through the 450 ms looked at (an animation), and the guest's
+destination comes much later (series H: about 280 ms after the touch on BigInt). In native, the
+first frame for a row and for Back is the destination itself (one frame, then nothing until the next
+vsync-locked work). For a held press every arm, native included, starts an animation 8–25 ms after
+the DOWN (the pressed state). A real touchscreen adds its own sampling and controller delay before
+the DOWN, the same for every form (not measured).
+
+**Phone state.** 05:03–05:12, uptime 2 h 52 min – 2 h 58 min, on battery 87% → 86%, 25.6–25.8 °C,
+thermal status 0, CPU idle 85–98%.
+
+**DOWN → the response frame presented** (ms; median / p90 / min–max; in brackets the frame's start
+after the DOWN, median; the quick taps' UP came 4.8–6.7 ms after the DOWN, median):
+
+| Touch | Guest, BigInt | Guest, 1.28.0 | Native |
+|---|---|---|---|
+| Row, quick tap | **23.8** / 30.2 / 14.7–31.9 (13.7) | **26.8** / 30.9 / 15.8–31 (17.3) | 55.4 / 58 / 16.3–59.8 (16.8): the detail |
+| Back (header), quick tap | **27.8** / 30.8 / 20.2–33 (18.5) | **23.9** / 28.3 / 15.9–29.2 (14.3) | 110.3 / 117.2 / 95.5–117.4 (15.6): the list |
+| Back, second (n=9) | **18.6** / 29.7 / 14.5–29.7 (10) | **21.3** / 27 / 15.4–27 (12.2) | 114.9 / 117.8 / 83.6–117.8 (19.9): the list |
+| Load 20, quick tap | **24.1** / 26.9 / 16.1–28.8 (15) | **25.3** / 29 / 13.8–29.4 (15.9) | 31.8 / 33.4 / 22.2–33.8 (19.1) |
+| Row, held 300 ms | **32.4** / 35.3 / 19.5–36.5 (20) | **26.8** / 33.4 / 17.1–37.3 (15.1) | 30.2 / 35.4 / 22.1–36.7 (17.7) |
+
+- **The guest's first response to a tap is the next frame the pipeline allows**: the frame starts
+  at the first vsync after the touch arrives (10–18.5 ms after the DOWN, median, depending on where
+  the touch falls in the 16.7 ms period) and is presented one vsync later. Every quick tap in both
+  guest arms (78 of 78) was on screen within **33 ms** of the DOWN, two frame periods, medians
+  18.6–27.8 ms; no frame missed its deadline. Held presses: within 37.3 ms, as native.
+- **The engine does not matter here** (BigInt and 1.28.0 are within a few ms both ways): the
+  pressed state and the ripple are drawn by the host's Compose `clickable`, and the click reaches
+  the guest without holding the main thread. The guest pays later, for the destination.
+- **Native's first frame is no earlier**: for Load 20 and the held press it is the same 30–32 ms; for
+  a row and Back its first frame is the new screen itself, composed in that frame (main-thread work
+  to 46 and 100 ms) and presented at 55.4 and 110.3 ms. So against native, the guest acknowledges a
+  tap sooner and arrives later.
+- **Against the target, "the first response to a tap within one frame"**: **met, as one frame
+  after the touch is delivered** (no frame waits for the guest or the engine). Within 16.7 ms of
+  the DOWN itself it is met by no form on this phone (7 of 78 guest quick taps, 1 of 39 native): the app
+  draws at the next vsync and the compositor shows that frame one vsync later.
+
+### Series J: where the prestarted code load waits (NF4)
+
+**Method.** The 1.28.0 build, `x=prestart,prefetch,trace` (`trace` names every main-thread message
+and the guest's calls), one unmeasured launch, then two cold launches each under a 20 s Perfetto
+trace (series C's config). The trace's times are aligned with the `"cold"` line's marks (ms from
+`Process.getStartUptimeMillis`) by `onCreate`: in J-1 the trace's `performCreate` begins 286.8 ms
+after the main thread first runs and the `activityCreate` mark is 203, so the trace leads the marks by 84 ms
+(the process forks and specialises before its start time is set). Times below are the marks'.
+
+**Phone state.** 05:12–05:14, on battery 86%, 25.8 °C, thermal status 0.
+
+The two launches' marks: prestart 84 and 90, `codeLoadStart` 316 and 343, data drawn 2,591 and
+2,652 (series G's median for this arm: 2,577). Launch J-1, from the provider to `codeLoadStart`
+(J-2 has the same steps, 253 ms from the prestart to `codeLoadStart` against J-1's 232):
+
+| From → to (ms) | What runs | Where |
+|---|---|---|
+| 84 → 153 | the bench's own fixture API starting (`n_fixtureMainMs` 68.8): the prestart marks itself before it | main thread, in `bindApplication` |
+| 153 → 169 | the prestart's own work: `create`, `start` (`n_prestartMainMs` 16) | main thread |
+| 164 → 214 | the Treehouse (Zipline dispatcher) thread starts and runs about 45 ms: opening the code cache's SQLite database (`androidx.sqlite`'s `ProcessLock`), first-use class loading | the Treehouse thread |
+| 214 → 263 | **the Treehouse thread sleeps 49.1 ms** (J-2: 50.4) | — |
+| 263 → 316 | it runs again (kotlinx.serialization's JSON and Zipline's signature classes loading), then `codeLoadStart` | the Treehouse thread |
+
+- **The wait is about 85 ms on the main thread and about 150 ms on the Treehouse thread, not a
+  main-thread hop.** 69 ms of it is the bench's fixture, which a real host does not have, placed
+  between the prestart's mark and its work: a production prestart would start its code load about
+  70 ms sooner than this bench shows.
+- **The 49–50 ms sleep is the Treehouse thread waiting on another thread**: the trace does not
+  record the waker (this trace processor leaves it empty), but in both launches, in the 2 ms before
+  the wake, a `Dispatchers` pool thread (`DefaultDispatch`) loads `ZiplineManifest`,
+  `TopologicalSort` and `LoadedManifest`: the loader's cache work on its own dispatcher (reading
+  the cached manifest), while the main thread loads classes too (the threads log `Lock contention
+  on ClassLinker classes lock` against each other around it). The wake comes 6–7 ms after the main thread's
+  `activityResume` ends in both launches; whether the main thread's class loading is what delays
+  the pool thread is not established.
+- **`codeLoadStart` is not the load's start**: the Treehouse thread has run about 100 ms by then.
+  Most of what precedes it is first-use class loading and the cache's database, cost that a
+  baseline profile for the host's loader (Gate B's option 5) or opening the cache earlier could
+  address. Findings only; no fix was tried.
+
+### Verdicts against the owner's targets (checkpoint 2)
+
+| Target | Verdict | Evidence |
+|---|---|---|
+| Tap response within one frame | **Met as one frame after the touch is delivered**, on both engines; not within 16.7 ms of the touch-down, which no form reaches here | Guest quick taps presented 18.6–27.8 ms after the DOWN (median), all ≤ 33 ms; native's first frame 31.8 ms for a button, 55.4 / 110.3 ms where it navigates in that frame (series I) |
+| About 100 ms to the destination (open: simple ~100, heavy ≤ 150) | **Not met** | BigInt, press off, from the touch-down: 278–280.5 simple, 583–590 heavy; the press signal neutral (simple) or worse (heavy, +36 to +52) (series H) |
+| Cold start within +400 ms of native | **Not met** | BigInt with `prestart,prefetch`: 1,866 against native 618, +1,248 (1.28.0: +1,959); BigInt alone −691 ms as shipped (series G) |
+
+**What it changes in the plan (proposals for the owner):**
+- NF2: the BigInt build's cold-start gain is measured, not inferred (−691 ms as shipped, −711 with
+  both NF4 steps). It is the largest single cold-start step measured so far.
+- NF3: the press signal does not pay on BigInt either (neutral simple, worse heavy). Keep it off by
+  default; the open path's remaining cost is the guest's frame from the click (163.5–167 ms simple,
+  470.5–479 heavy on BigInt).
+- NF1: the tap's first response is the host's, one frame after the touch, on both engines: the
+  "tap within one frame" item needs no guest work. Whether a frame period's lag is acceptable is the
+  owner's call (native is no faster).
+- NF4: before more cold-start work, the code load's first 150 ms on the Treehouse thread (class
+  loading, the cache's database and a 50 ms wait on the cache's thread) and the 230 ms from the
+  guest's composition to the screen are the next places to look; the bench's own fixture inflates
+  the prestart's apparent wait by about 70 ms.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
