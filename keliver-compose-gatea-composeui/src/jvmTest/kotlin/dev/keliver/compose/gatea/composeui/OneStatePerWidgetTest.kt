@@ -32,9 +32,10 @@ import kotlin.test.assertTrue
  * NF1: a generated renderer holds one snapshot state (a version its setters bump), not one per
  * property. A value set again to an equal value must not recompose the renderer (as the old
  * per-property `mutableStateOf`'s structural policy did not), and a changed one must, for every
- * kind of property: a required value, a value with a default, an event, the modifier, and a lazy
- * list's before and after counts. Setters run as Redwood's host runs them: on the UI thread,
- * outside composition.
+ * kind of property: a required value, a value with a default, an event and the modifier. A lazy
+ * list's before and after counts are the exception: state of their own, they reach the list without
+ * rerunning the renderer. Setters run as Redwood's host runs them: on the UI thread, outside
+ * composition.
  */
 @OptIn(ExperimentalTestApi::class)
 class OneStatePerWidgetTest {
@@ -117,13 +118,22 @@ class OneStatePerWidgetTest {
     setContent { list.value(Modifier) }
     waitForIdle()
 
+    // The counts are state of their own, outside the widget's version, read only in the list's
+    // content lambda (which Compose runs in a derived state). A scroll window shift changes them:
+    // it must reach the list, which then has placeholders to scroll to, without rerunning the
+    // renderer (and so without a new content lambda and a LazyColumn recomposition).
     assertRecomposes(runs, false, "the same before count") { list.contentBefore(0) }
-    assertRecomposes(runs, true, "a new after count") { list.contentAfter(10) }
-    assertRecomposes(runs, false, "the same after count") { list.contentAfter(10) }
-    // The list's content lambda runs in a derived state: a count changed alone (no child added or
-    // removed) must still reach the list, which now has ten placeholders to scroll to.
+    assertRecomposes(runs, false, "a new after count") { list.contentAfter(10) }
     onNode(hasScrollToIndexAction()).performScrollToIndex(9)
-    assertRecomposes(runs, true, "a new before count") { list.contentBefore(5) }
+    assertRecomposes(runs, false, "the same after count") { list.contentAfter(10) }
+    assertRecomposes(runs, false, "a new before count") { list.contentBefore(5) }
     onNode(hasScrollToIndexAction()).performScrollToIndex(14)
+    assertRecomposes(runs, false, "both counts in one batch") {
+      list.contentBefore(20)
+      list.contentAfter(30)
+    }
+    onNode(hasScrollToIndexAction()).performScrollToIndex(49)
+    // A property still reruns it.
+    assertRecomposes(runs, true, "a property") { list.userScrollEnabled(false) }
   }
 }

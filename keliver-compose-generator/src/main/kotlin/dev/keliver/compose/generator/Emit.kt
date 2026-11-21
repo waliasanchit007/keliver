@@ -442,8 +442,8 @@ class Emitter(
         },
       )
       body.append("internal class $cls : ${w.entry.name}<@Composable (Modifier) -> Unit>, GeneratedWidget {\n")
-      // NF1: one snapshot state per widget. The properties and the modifier are plain fields; a
-      // setter that changes one (by ==, as mutableStateOf's structural policy compared) bumps
+      // NF1: one snapshot state per widget, plus a lazy list's two counts (below). The properties,
+      // events and the modifier are plain fields (`p_`); a setter that changes one (by ==, as mutableStateOf's structural policy compared) bumps
       // `version`, which the renderer reads first. Compose then records one read per widget, not one
       // per property, and the scan it makes after every state change walks that many fewer.
       // A container reads a child's modifier and recomposes on its own tick (onModifierUpdated).
@@ -457,10 +457,14 @@ class Emitter(
           ParamKind.SLOT -> body.append("  override val $n: ScopedChildren = ScopedChildren()\n")
           ParamKind.LAZY -> {
             body.append("  override val $n: ScopedChildren = ScopedChildren()\n")
-            body.append("  private var p_${n}Before: Any? = 0\n")
-            body.append("  override fun ${n}Before(${n}Before: kotlin.Int) { if (p_${n}Before != ${n}Before) { p_${n}Before = ${n}Before; version++ } }\n")
-            body.append("  private var p_${n}After: Any? = 0\n")
-            body.append("  override fun ${n}After(${n}After: kotlin.Int) { if (p_${n}After != ${n}After) { p_${n}After = ${n}After; version++ } }\n")
+            // The counts are snapshot state of their own, outside `version`, read only in the list's
+            // content lambda (which Compose runs in a derived state): a scroll window shift changes
+            // them and must update the list's items without recomposing this renderer. An int
+            // state's setter skips an equal value, as the structural policy did.
+            body.append("  private var count_${n}Before by mutableIntStateOf(0)\n")
+            body.append("  override fun ${n}Before(${n}Before: kotlin.Int) { count_${n}Before = ${n}Before }\n")
+            body.append("  private var count_${n}After by mutableIntStateOf(0)\n")
+            body.append("  override fun ${n}After(${n}After: kotlin.Int) { count_${n}After = ${n}After }\n")
             body.append("  private var p_${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)? = null\n")
             body.append("  override fun ${n}Viewport(${n}Viewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_${n}Viewport = ${n}Viewport }\n")
           }
@@ -506,21 +510,14 @@ class Emitter(
       // horizontal list (it takes a horizontalArrangement, not a verticalArrangement) says so.
       val horizontal = d.params.any { it.name == "horizontalArrangement" } && d.params.none { it.name == "verticalArrangement" }
       val orientation = if (horizontal) ", vertical = false" else ""
-      for (c in lazyParams) {
-        val n = c.param.name
-        body.append("      val lazyHost_$n = rememberLazyHost(${w.lazyState!!.param.name}$orientation)\n")
-        // Read here, after `version`, not in the list's content lambda: Compose runs that lambda in
-        // a derived state, which sees snapshot reads only. Captured, a changed count is a new lambda.
-        body.append("      val lazyBefore_$n = p_${n}Before as Int\n")
-        body.append("      val lazyAfter_$n = p_${n}After as Int\n")
-      }
+      for (c in lazyParams) body.append("      val lazyHost_${c.param.name} = rememberLazyHost(${w.lazyState!!.param.name}$orientation)\n")
       body.append("      ${d.pkg}.${d.name}(\n")
       for (c in w.called) {
         val n = c.param.name
         when (c.kind) {
           ParamKind.MODIFIER -> body.append("        $n = incoming.applyGenerated(modifier, this@$cls)${scrollContainerMark(w)},\n")
           ParamKind.SLOT -> body.append("        $n = { this@$cls.$n.Render(${if (c.param.type.receiver != null) "this" else "null"}) },\n")
-          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, lazyBefore_$n, lazyAfter_$n, lazyHost_$n) },\n")
+          ParamKind.LAZY -> body.append("        $n = { lazyWindow(this@$cls.$n, count_${n}Before, count_${n}After, lazyHost_$n) },\n")
           ParamKind.VALUE, ParamKind.EVENT -> body.append("        $n = $n,\n")
           else -> {}
         }

@@ -694,10 +694,10 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
   private var p_userScrollEnabled: Any? = null
   override fun userScrollEnabled(userScrollEnabled: kotlin.Boolean) { if (p_userScrollEnabled != userScrollEnabled) { p_userScrollEnabled = userScrollEnabled; version++ } }
   override val content: ScopedChildren = ScopedChildren()
-  private var p_contentBefore: Any? = 0
-  override fun contentBefore(contentBefore: kotlin.Int) { if (p_contentBefore != contentBefore) { p_contentBefore = contentBefore; version++ } }
-  private var p_contentAfter: Any? = 0
-  override fun contentAfter(contentAfter: kotlin.Int) { if (p_contentAfter != contentAfter) { p_contentAfter = contentAfter; version++ } }
+  private var count_contentBefore by mutableIntStateOf(0)
+  override fun contentBefore(contentBefore: kotlin.Int) { count_contentBefore = contentBefore }
+  private var count_contentAfter by mutableIntStateOf(0)
+  override fun contentAfter(contentAfter: kotlin.Int) { count_contentAfter = contentAfter }
   private var p_contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)? = null
   override fun contentViewport(contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_contentViewport = contentViewport }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
@@ -711,8 +711,6 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
       val horizontalAlignment = (p_horizontalAlignment as dev.keliver.compose.ui.Alignment.Horizontal?)?.toCompose() ?: Alignment.Start
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
       val lazyHost_content = rememberLazyHost(state)
-      val lazyBefore_content = p_contentBefore as Int
-      val lazyAfter_content = p_contentAfter as Int
       androidx.compose.foundation.lazy.LazyColumn(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyColumn1).pressScrollContainer(state = state, enabled = userScrollEnabled),
         state = state,
@@ -721,7 +719,7 @@ internal class ComposeUiGenLazyColumn1 : GenLazyColumn1<@Composable (Modifier) -
         verticalArrangement = verticalArrangement,
         horizontalAlignment = horizontalAlignment,
         userScrollEnabled = userScrollEnabled,
-        content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, lazyBefore_content, lazyAfter_content, lazyHost_content) },
+        content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, count_contentBefore, count_contentAfter, lazyHost_content) },
         flingBehavior = lazyHost_content.fling,
       )
       ReportLazyViewport(state, lazyHost_content) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }
@@ -748,10 +746,10 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
   private var p_userScrollEnabled: Any? = null
   override fun userScrollEnabled(userScrollEnabled: kotlin.Boolean) { if (p_userScrollEnabled != userScrollEnabled) { p_userScrollEnabled = userScrollEnabled; version++ } }
   override val content: ScopedChildren = ScopedChildren()
-  private var p_contentBefore: Any? = 0
-  override fun contentBefore(contentBefore: kotlin.Int) { if (p_contentBefore != contentBefore) { p_contentBefore = contentBefore; version++ } }
-  private var p_contentAfter: Any? = 0
-  override fun contentAfter(contentAfter: kotlin.Int) { if (p_contentAfter != contentAfter) { p_contentAfter = contentAfter; version++ } }
+  private var count_contentBefore by mutableIntStateOf(0)
+  override fun contentBefore(contentBefore: kotlin.Int) { count_contentBefore = contentBefore }
+  private var count_contentAfter by mutableIntStateOf(0)
+  override fun contentAfter(contentAfter: kotlin.Int) { count_contentAfter = contentAfter }
   private var p_contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)? = null
   override fun contentViewport(contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_contentViewport = contentViewport }
   override fun modifierEvent(modifierEvent: ((Int) -> Unit)?) { modifierEventSink = modifierEvent }
@@ -765,8 +763,6 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
       val verticalAlignment = (p_verticalAlignment as dev.keliver.compose.ui.Alignment.Vertical?)?.toCompose() ?: Alignment.Top
       val userScrollEnabled = (p_userScrollEnabled as kotlin.Boolean?) ?: true
       val lazyHost_content = rememberLazyHost(state, vertical = false)
-      val lazyBefore_content = p_contentBefore as Int
-      val lazyAfter_content = p_contentAfter as Int
       androidx.compose.foundation.lazy.LazyRow(
         modifier = incoming.applyGenerated(modifier, this@ComposeUiGenLazyRow1).pressScrollContainer(state = state, enabled = userScrollEnabled),
         state = state,
@@ -775,7 +771,7 @@ internal class ComposeUiGenLazyRow1 : GenLazyRow1<@Composable (Modifier) -> Unit
         horizontalArrangement = horizontalArrangement,
         verticalAlignment = verticalAlignment,
         userScrollEnabled = userScrollEnabled,
-        content = { lazyWindow(this@ComposeUiGenLazyRow1.content, lazyBefore_content, lazyAfter_content, lazyHost_content) },
+        content = { lazyWindow(this@ComposeUiGenLazyRow1.content, count_contentBefore, count_contentAfter, lazyHost_content) },
         flingBehavior = lazyHost_content.fling,
       )
       ReportLazyViewport(state, lazyHost_content) { first, last, offset -> p_contentViewport?.invoke(first, last, offset) }

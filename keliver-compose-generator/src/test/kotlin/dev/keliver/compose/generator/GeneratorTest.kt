@@ -384,17 +384,72 @@ class GeneratorTest {
     val text = hostOf("androidx.compose.material3.Text(text,modifier,color,autoSize,")
     assertTrue("  private var p_text: Any? = Unset\n" in text, text)
     assertTrue("{ if (p_text != text) { p_text = text; version++ } }\n" in text, text)
-    // A lazy list's before and after counts bump it too; its viewport callback is a plain field.
+    // A lazy list's before and after counts are state of their own, outside `version`: a scroll
+    // window shift changes them and must not recompose the renderer. Its viewport callback is a
+    // plain field.
     val lazy = hostOf("androidx.compose.foundation.lazy.LazyColumn(")
-    assertTrue("  private var p_contentBefore: Any? = 0\n" in lazy, lazy)
-    assertTrue("  override fun contentBefore(contentBefore: kotlin.Int) { if (p_contentBefore != contentBefore) { p_contentBefore = contentBefore; version++ } }\n" in lazy, lazy)
-    assertTrue("  override fun contentAfter(contentAfter: kotlin.Int) { if (p_contentAfter != contentAfter) { p_contentAfter = contentAfter; version++ } }\n" in lazy, lazy)
+    assertEquals(3, Regex("mutableIntStateOf").findAll(lazy.substringAfter("internal class")).count(), lazy)
+    assertTrue("  private var count_contentBefore by mutableIntStateOf(0)\n" in lazy, lazy)
+    assertTrue("  override fun contentBefore(contentBefore: kotlin.Int) { count_contentBefore = contentBefore }\n" in lazy, lazy)
+    assertTrue("  private var count_contentAfter by mutableIntStateOf(0)\n" in lazy, lazy)
+    assertTrue("  override fun contentAfter(contentAfter: kotlin.Int) { count_contentAfter = contentAfter }\n" in lazy, lazy)
+    assertFalse(Regex("p_content(Before|After)").containsMatchIn(lazy), lazy)
     assertTrue("  override fun contentViewport(contentViewport: ((kotlin.Int, kotlin.Int, kotlin.Int) -> Unit)?) { p_contentViewport = contentViewport }\n" in lazy, lazy)
-    // The counts are read in the renderer's scope and captured: the list's content lambda runs in a
-    // derived state, which would not see a plain field change.
-    assertTrue("      val lazyBefore_content = p_contentBefore as Int\n      val lazyAfter_content = p_contentAfter as Int\n" in lazy, lazy)
-    assertTrue("content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, lazyBefore_content, lazyAfter_content, lazyHost_content) },\n" in lazy, lazy)
-    assertFalse(Regex("\\{[^\\n]*p_content(Before|After)").containsMatchIn(lazy.substringAfter("override val value")), "no count read inside a lambda: $lazy")
+    // The counts are read only inside the list's content lambda, which Compose runs in a derived
+    // state: that state, not the renderer, is invalidated when they change.
+    assertTrue("content = { lazyWindow(this@ComposeUiGenLazyColumn1.content, count_contentBefore, count_contentAfter, lazyHost_content) },\n" in lazy, lazy)
+    assertEquals(1, Regex("count_contentBefore\\b").findAll(lazy.substringAfter("override val value")).count(), lazy)
+  }
+
+  @Test fun noRendererReadsAPlainFieldInsideALambda() {
+    // NF1: a plain field (`p_`) is seen by Compose only because `version`, read first in the
+    // renderer's scope, changes with it. A read inside a lambda in the renderer (a slot, a modifier
+    // block, a derived state, an effect) would run outside that scope and miss the change. Across
+    // every renderer gate A's config emits, every `p_` read sits in the renderer's own scope: inside
+    // its one wrapper (`run {` or `if (required) {`), not inside a further `{`. The viewport callback
+    // is the exception: it was a plain field before NF1, called from an effect, never composed.
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+    val config = loadConfig(File("gatea.json"))
+    val lock = lockJson.decodeFromString(Lock.serializer(), File("gatea.lock.json").readText())
+    val host = generate(config, lock, classpath.split(File.pathSeparator).map(::File), sources.split(File.pathSeparator).map(::File))
+      .host.values.single()
+    val renderers = host.split("\ninternal class ").drop(1).filter { "override val value: @Composable (Modifier) -> Unit = { incoming ->" in it }
+    // Every widget class has a renderer (29 today), the lazy lists among them.
+    assertEquals(Regex(", GeneratedWidget \\{\n").findAll(host).count(), renderers.size)
+    assertTrue(renderers.size >= 29 && renderers.any { it.startsWith("ComposeUiGenLazyRow1 ") }, "every renderer: ${renderers.size}")
+    for (r in renderers) {
+      val name = r.substringBefore(" ")
+      assertEquals(emptyList(), plainFieldReadsInsideALambda(r), name)
+      assertTrue("Unit = { incoming ->\n    version\n" in r, "$name reads its version first")
+    }
+    // The check itself finds a read inside a lambda, and allows the viewport callback.
+    val bad = "override val value: @Composable (Modifier) -> Unit = { incoming ->\n    version\n    run {\n" +
+      "      val a = p_a\n      Box(content = { Text(p_b) })\n      Report { p_contentViewport?.invoke() }\n    }\n  }\n}\n"
+    assertEquals(listOf("p_b"), plainFieldReadsInsideALambda(bad))
+  }
+
+  /** The `p_` names read inside a `{` nested in a renderer's wrapper, the viewport callback aside. */
+  private fun plainFieldReadsInsideALambda(renderer: String): List<String> {
+    val marker = "Unit = { incoming ->"
+    val body = renderer.substring(renderer.indexOf(marker) + marker.length)
+    val found = mutableListOf<String>()
+    var depth = 0 // 0: the value lambda's own scope; 1: inside its wrapper
+    var i = 0
+    while (i < body.length && depth >= 0) {
+      when {
+        body[i] == '{' -> depth++
+        body[i] == '}' -> depth--
+        body.startsWith("p_", i) && (i == 0 || !(body[i - 1].isLetterOrDigit() || body[i - 1] == '_')) -> {
+          val name = Regex("p_\\w+").find(body, i)!!.value
+          if (depth > 1 && !name.endsWith("Viewport")) found += name
+          i += name.length
+          continue
+        }
+      }
+      i++
+    }
+    return found
   }
 
   @Test fun deprecationIsReadFromTheSources() {
