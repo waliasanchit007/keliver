@@ -1277,11 +1277,21 @@ with placeholders: indicative only; a hand check is next); tap within one frame
 come. Part 2's question: why does the heavy screen's host back take 56.5 ms to the first draw when
 the simple screen's takes 37.5? In both, the host shows the same retained list.
 
-**What `firstDraw` covers.** The mark is a `ViewTreeObserver.OnDrawListener`, which fires before
-Compose records the frame's drawing. So it covers the wait for the next vsync, the recomposition
-in that frame's animation callback, and the measure and layout. It does not cover drawing. At 60 Hz
-the extra 19 ms is about one frame: the heavy frame's work missed a vsync that the simple frame
-made. Both series also start high and fall (heavy 132, 149, then 74 … 38; simple 63 … 27): the
+**What `firstDraw` covers: recompose and apply, very likely not measure and layout.** The mark is
+a `ViewTreeObserver.OnDrawListener`. In the platform's source (the SDK's `android-36.1` sources),
+`ViewRootImpl.draw` calls `mTreeObserver.dispatchOnDraw()` and only then
+`ThreadedRenderer.draw`, which opens the `Record View#draw()` trace section and walks the views'
+display lists, so `AndroidComposeView.dispatchDraw` runs after the mark. A view tree's own
+`requestLayout()` is measured and laid out earlier, in `performTraversals`, before the draw. As
+Compose's `AndroidComposeView` is remembered here (its source could not be opened in this
+session, so this half is **not checked**), when a layout changes inside the root but the root's
+size does not, it calls `invalidate()`, not `requestLayout()`, and measures and lays out at the
+start of `dispatchDraw`. A retained back changes which entry the container measures, not the
+root's size, so on that reading `firstDraw` covers the wait for the next vsync, the recomposition
+in that frame's animation callback and applying its changes, and not measure, layout or drawing.
+The A12 recipe below adds a trace that shows where the layout runs. At 60 Hz the extra 19 ms is
+about one frame: the heavy frame's work missed a vsync that the simple frame made. Both series
+also start high and fall (heavy 132, 149, then 74 … 38; simple 63 … 27): the
 host's code warming up over the series.
 
 **The cause, found in the code.** Each entry of the host's retained container (`ExtraRetained`,
@@ -1301,7 +1311,15 @@ not change.
 **Measured on the Mac** (`RetainedBackFrameBenchmark`): the prototype's list and both details, ported
 to the same generated guest API, run through the real protocol into the host's renderers. Each
 back is pressed with the guest held, and the one host frame after the press is timed: recompose,
-measure, layout and draw. 40 warm-up backs, then 60 measured (ms):
+measure, layout and draw. 40 warm-up backs, then 60 measured (ms). A plain `jvmTest` run (CI's)
+presses back 5 times with no warm-up and measures nothing; these numbers are
+`-Dkeliver.retainedBack.measured=60` on the Gradle command line, which the module's `jvmTest` task
+forwards to the test JVM (as it does every `keliver.retainedBack.*` property):
+
+```
+./gradlew :keliver-compose-gatea-composeui:jvmTest --tests '*RetainedBackFrameBenchmark' \
+  -Dkeliver.retainedBack.measured=60     # results: that module's build/retained-back-frame.txt
+```
 
 | | Before | After |
 |---|---|---|
@@ -1309,7 +1327,8 @@ measure, layout and draw. 40 warm-up backs, then 60 measured (ms):
 | simple screen: median / p90 | 0.91 / 1.15 | **0.48 / 0.58** |
 
 A profiler's run (3,000 backs each, sampling the UI thread during the timed frame) splits the
-frame. Counts are samples; recompose and layout are the part the phone's `firstDraw` sees:
+frame. Counts are samples; recompose and apply is the part the phone's `firstDraw` very likely
+sees (above), and measure, layout and draw come after it:
 
 | | Recompose and apply | Measure and layout | Draw |
 |---|---|---|---|
@@ -1318,9 +1337,12 @@ frame. Counts are samples; recompose and layout are the part the phone's `firstD
 | simple, before | 7,978 | 11,458 | 10,815 |
 | simple, after | 1,287 | 2,964 | 10,091 |
 
-- The heavy screen's recompose-plus-layout falls by 78% (33,683 → 7,342 samples). Its lead over the
-  simple screen in that part also falls by 78% (14,247 → 3,091).
-- The simple screen gains as well (19,436 → 4,251): the list shown again was being recomposed too.
+- The heavy screen's recompose and apply, the part `firstDraw` sees, falls by 82% (19,998 → 3,582
+  samples), and its lead over the simple screen there by 81% (12,020 → 2,295). Measure and layout,
+  which come after the mark, fall too (13,685 → 3,760): recompose plus layout falls by 78% (33,683 →
+  7,342), but a phone's `firstDraw` will not show that part.
+- The simple screen gains as well (recompose and apply 7,978 → 1,287): the list shown again was
+  being recomposed too.
 
 **What is left (not fixed here):**
 - **Compose scans the whole composition after a state change.** About a third of what remains
@@ -1339,13 +1361,30 @@ frame. Counts are samples; recompose and layout are the part the phone's `firstD
   from 7,342 to 4,970 samples; the simple screen's profile run was too noisy to use. The costs:
   the memory the hidden layers hold, layout work on hidden entries while the guest changes them,
   and redrawing a hidden layer on every frame of an animation that runs inside it. That is a
-  policy decision, and it should be measured on a phone first.
+  policy decision, and it should be measured on a phone first, **by the trace in the A12 recipe
+  below, not by `firstDraw`**: what it saves is placement, layers and drawing, which come after
+  the mark.
 - **The guest's confirmation.** About 150 ms after the press, the guest's batch removes the
   detail. The host then disposes of the detail's widgets in a later frame. That frame is not in
   `firstDraw`; whether it drops a frame is not measured.
 
 **A12 before/after (prepared, not run).** Build the APK twice, once from main and once from this
-change, as in [How to run it](#how-to-run-it). Install each in turn and run, from the Mac (`A` as in
+change, as in [How to run it](#how-to-run-it). Both checkouts publish the prototype as
+`0.0.0-gateb` into the same `/tmp/m2`, and the second build writes over the first's APK, so build
+them one after the other, each straight after its own publish, and copy each APK aside:
+
+```
+mkdir -p ~/nf1-back
+# 1. in the main checkout (root, then sample/), exactly as in How to run it:
+./gradlew publishToMavenLocal -Dmaven.repo.local=/tmp/m2 -PkeliverVersion=0.0.0-gateb \
+  -PkeliverComposePrototype -DRELEASE_SIGNING_ENABLED=false
+(cd sample && ./gradlew :host-android:assembleBenchmark -Dmaven.repo.local=/tmp/m2 -PkeliverComposePrototype)
+cp sample/host-android/build/outputs/apk/benchmark/*.apk ~/nf1-back/main.apk
+# 2. in this change's checkout: the same two commands again (republishing over main's /tmp/m2), then
+cp sample/host-android/build/outputs/apk/benchmark/*.apk ~/nf1-back/change.apk
+```
+
+Install each in turn (`adb install -r ~/nf1-back/<build>.apk`) and run, from the Mac (`A` as in
 "The rerun, series by series"):
 
 ```
@@ -1356,7 +1395,35 @@ adb pull /sdcard/Android/data/dev.keliver.sample/files/threeway-results.txt
 ```
 
 Alternate the builds (main, change, main, change) so the phone's drift shows. Compare the
-`firstDraw` medians in the `"summary":"back"` lines. Target: the heavy screen under 50 ms.
+`firstDraw` medians in the `"summary":"back"` lines. Target: the heavy screen under 50 ms. That
+target is on `firstDraw`, which very likely sees only recompose and apply (above): under 50 ms there
+does not mean the pixels arrive in 50 ms.
+
+**A measure that sees layout and the pixels.** One more heavy series per build, under a Perfetto
+trace, recorded as in "Method" for the scrolling traces (`perfetto --txt -c -` on the phone, the
+same atrace categories with `gfx view` and `atrace_apps: dev.keliver.sample`, and SurfaceFlinger's
+frame timeline), with `x=trace` added so each main-thread message is a section:
+
+```
+adb shell "$A -e form guest -e bench sysback --ei n 14 --ei warmup 2 -e x heavy,retainhost,trace"
+```
+
+For each back after the warm-up, take the main-thread message that presses it (the bench's step,
+which calls `onBackPressedDispatcher.onBackPressed()`), then the first `Choreographer#doFrame` after
+it, and read:
+- **where the layout runs:** whether a Compose measure-and-layout section (`AndroidOwner:...`
+  sections from Compose's own tracing; the exact name is to be read from the trace) sits inside
+  `Record View#draw()` (after the `firstDraw` mark, as read above) or in `traversal` before it;
+- **main-thread work:** the press to the end of that `doFrame` (recompose, apply, measure, layout,
+  recording), and `Record View#draw()`'s own duration;
+- **the pixels:** the press to the present of that frame in SurfaceFlinger's actual frame timeline
+  for the app's layer (or that frame's FrameMetrics `TOTAL_DURATION` added to the press-to-intended-vsync
+  gap, which the sysback bench does not log today).
+
+Trace numbers compare only with trace numbers (`x=trace` adds a section per message). **Decision 1
+(keep hidden entries placed) is judged on these, not on `firstDraw`**: its saving is placement,
+layers and drawing, which come after the mark. If the heavy screen's press-to-present is already
+within the target with this change alone, it is not needed.
 
 ### NF4, step 1: the code load at process start, and the first request sent by the host (emulator)
 

@@ -68,10 +68,17 @@ import kotlin.test.assertTrue
  * vary); the check that the frame does not recompose the entries is
  * [RetainedHostBackTest.goingBackRecomposesNeitherEntrysContent].
  *
- * A profiler's run: the system properties `keliver.retainedBack.measured=3000` and
- * `keliver.retainedBack.sample=true`, set on the module's `jvmTest` task (`systemProperty`), add per-method sample counts of the timed frame to the
- * same file. On a phone, the three-way benchmark's `firstDraw` mark is taken before the frame's
- * draw, so of these phases recomposition and layout are the ones it sees.
+ * A plain `jvmTest` run (CI's included) presses back 5 times with no warm-up: it checks the path
+ * runs, and its numbers mean nothing. A measurement passes system properties on the Gradle command
+ * line; the module's `jvmTest` task forwards every `keliver.retainedBack.*` one to the test JVM:
+ * - `-Dkeliver.retainedBack.measured=60`: 40 warm-up backs, then 60 timed (the documented table);
+ * - `-Dkeliver.retainedBack.measured=3000 -Dkeliver.retainedBack.sample=true`: a profiler's run,
+ *   which adds per-method sample counts of the timed frame to the same file.
+ *
+ * On a phone, the three-way benchmark's `firstDraw` mark (a `ViewTreeObserver.OnDrawListener`) runs
+ * after the frame's recomposition and apply but before `AndroidComposeView` measures and lays out
+ * (which, when the root keeps its size, it does inside its own draw): of these phases it sees only
+ * recomposition and apply.
  */
 @OptIn(ExperimentalTestApi::class, ExperimentalKeliverNavRetentionApi::class)
 class RetainedBackFrameBenchmark {
@@ -121,9 +128,11 @@ class RetainedBackFrameBenchmark {
     setContent { CompositionLocalProvider(LocalHostBackDispatcher provides back) { host.root.Render(null) } }
     sync(host)
 
-    // More with -Dkeliver.retainedBack.measured=<n> (a profiler's run).
-    val warmup = 40
-    val measured = System.getProperty("keliver.retainedBack.measured")?.toInt() ?: 60
+    // A plain jvmTest run (CI included) does 5 backs: a smoke run, not a measurement. The numbers in
+    // docs/THREE_WAY_BENCHMARK.md are -Dkeliver.retainedBack.measured=60 (40 warm-up backs, then 60).
+    val measuredProperty = System.getProperty("keliver.retainedBack.measured")?.toInt()
+    val warmup = if (measuredProperty == null) 0 else 40
+    val measured = measuredProperty ?: 5
     val frames = mutableListOf<Double>()
     val sampler = if (System.getProperty("keliver.retainedBack.sample") != null) FrameSampler(runOnUiThread { Thread.currentThread() }) else null
     repeat(warmup + measured) { i ->
@@ -143,8 +152,9 @@ class RetainedBackFrameBenchmark {
       sync(host)
     }
     frames.sort()
-    val line = "retained back frame, ${if (heavy) "heavy" else "simple"} screen: median %.3f ms, p90 %.3f, min %.3f, max %.3f (n=%d)".format(
+    val line = "retained back frame, ${if (heavy) "heavy" else "simple"} screen: median %.3f ms, p90 %.3f, min %.3f, max %.3f (n=%d)%s".format(
       frames[frames.size / 2], frames[frames.size * 9 / 10], frames.first(), frames.last(), frames.size,
+      if (measuredProperty == null) " [smoke run, no warm-up: not a measurement]" else "",
     )
     println(line)
     results += line

@@ -427,6 +427,44 @@ class RetainedHostBackTest {
     assertEquals(topBefore, top.compositions, "the entry hidden is not recomposed")
   }
 
+  @Test
+  fun theEntryHiddenByABackLosesItsDispatcherInTheFrameOfThePress() = runComposeUiTest {
+    // #262's rule, frame by frame: LocalHostBackDispatcher is a dynamic local, so its readers update
+    // in the recomposition of the frame after the press, not later. A nested stack in the entry the
+    // back hides must drop its callback in that same frame, or a second press in it could reach it.
+    val sent = mutableListOf<String>()
+    val probe = Probe()
+    val hiddenByTheBack = entry("b", probe)
+    val outer = ComposeUiExtraRetained().apply { onBack { sent += it } }
+    outer.entries.insert(0, entry("a", null))
+    outer.entries.insert(1, hiddenByTheBack)
+    setContent {
+      CompositionLocalProvider(LocalHostBackDispatcher provides back) { outer.value(Modifier) }
+    }
+    waitForIdle()
+    val outerCallback = back.callbacks.single()
+
+    // A stack nested in the shown entry, able to go back: it adds its own callback.
+    val inner = ComposeUiExtraRetained().apply { onBack {} }
+    inner.entries.insert(0, entry("x", null))
+    inner.entries.insert(1, entry("y", null))
+    runOnIdle { hiddenByTheBack.content.insert(1, inner) }
+    waitForIdle()
+    val innerCallback = back.callbacks.single { it !== outerCallback }
+    assertTrue(probe.dispatcher === back)
+
+    mainClock.autoAdvance = false
+    // The press as it reaches the outer stack's callback (which callback a dispatcher picks is
+    // tested above; what this pins is the frame its effects land in).
+    runOnIdle { outerCallback.handleOnBackPressed() }
+    mainClock.advanceTimeByFrame()
+    assertEquals(listOf("a"), sent)
+    assertEquals(true, probe.hidden)
+    assertEquals(null, probe.dispatcher, "the hidden entry sees no dispatcher in the frame of the press")
+    assertTrue(innerCallback !in back.callbacks, "its nested stack removed its callback in that frame")
+    mainClock.autoAdvance = true
+  }
+
   /** Whether anything in the composition waits for a frame (a running animation always does). */
   private fun framesAsked(): Boolean = Recomposer.runningRecomposers.value.any { it.hasPendingWork }
 
