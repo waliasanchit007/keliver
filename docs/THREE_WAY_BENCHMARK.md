@@ -1998,6 +1998,9 @@ turns it into pre-composition (`KeliverNavController.prepare` under `KeliverNavH
 `KeliverPreparedStack`). Tests: `PressSignalTest` (host and guest over the real protocol on the
 JVM). Guest-side timings on the Mac: `GUEST_PROFILE.md`, "NF3: the host's press signal".
 
+**Since measured on the A12** ([A12 checkpoint, series F](#series-f-the-press-signal-on-the-phone-nf3)):
+the bench now has `x=prepared,press` and `--ei hold`. What follows is this section as written.
+
 **Not measured here.** This bench's Android host does not declare the feature and its guest does
 not provide the signal, so no device number is new: open on the A12 stays as in "NF1 gate, part 2"
 (about 310 ms). What a device run needs: the threeway host's `hostFeatures` to include
