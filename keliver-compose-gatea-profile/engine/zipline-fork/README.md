@@ -56,18 +56,26 @@ Anything published from this patch set (step 4) carries both licences.
     record, and the line table: the function's line and column in a header, then a column delta
     with every entry. The built-in atom table is 2026's (243 atoms; a test checks it against
     `quickjs-atom.h`); a name is never written as one of its symbols, so a file's own string
-    `"Symbol.iterator"` stays a string. Source maps: a function's Kotlin file is its first mapped
-    line's (as 1.28.0 chose it), and each position takes the Kotlin line and column of the segment
-    covering its column when that segment is in the function's file, else of its line's first
-    mapped segment, so two statements on one JavaScript line keep their own Kotlin positions
-    (1.28.0 mapped by line only). A position on a line with no mapping takes the previous
-    position's (1.28.0 kept its JavaScript line under the Kotlin file name), and a one-field
-    segment counts as unmapped (1.28.0 gave it the previous segment's source and line). Stripping
+    `"Symbol.iterator"` stays a string, and a built-in symbol read where a name belongs is refused
+    with a message (QuickJS's parser never writes one there; 1.28.0 read it as its text). Source
+    maps: a function's Kotlin file is the file of the segment covering its own position (its
+    `function` keyword, which Kotlin maps to the declaration), else, as 1.28.0 chose it for every
+    function, its first mapped line's first file (wrong when that line starts with code inlined
+    from another file, such as `require`). Each position takes the Kotlin line and column of the segment covering its column
+    when that segment is in the function's file, else of its line's first segment in that file,
+    so two statements on one JavaScript line keep their own Kotlin positions (1.28.0 mapped by
+    line only). A segment in another file is never used: a line of `Preconditions.kt` would be
+    printed under the function's file name. A position with no segment in the function's file on
+    its line takes the previous position's Kotlin line and column, the **nearest preceding Kotlin
+    position: an approximation**, so a call on an unmapped line shows the line before it (1.28.0
+    printed the JavaScript line under the Kotlin file name). A one-field segment counts as
+    unmapped (1.28.0 gave it the previous segment's source and line). Stripping
     line numbers drops each function's source text too. Three 1.28.0 bugs fixed on the way: 8-bit
     strings are Latin-1, not UTF-8 (`café` read as `caf�`), the flag properties read inverted,
     and the line table's op byte was read as signed (a large pc step decoded wrong).
     Tests: Zipline's, adapted to version 5, plus BigInt, template, class/closure,
-    run-after-rewrite and per-column mapping cases, and `RealBundleTest`, which takes real
+    run-after-rewrite, per-column (including a position exactly on a segment's first column),
+    inlined-file and unmapped-position mapping cases, and `RealBundleTest`, which takes real
     Kotlin/JS bundles (`-PziplineBytecodeCorpus=<dir>`) through a byte-identical round trip, the
     source map and stripping, then loads them in dependency order. Its source-map check computes
     the mapping rule a second time from the parsed segments and compares every function's file,

@@ -710,10 +710,10 @@ loaded function's `toString()` reads `[native code]`, lines and columns stay.
 - **Real bundles** (`RealBundleTest`, `-PziplineBytecodeCorpus`): the three-way guest's 47 production
   modules with their source maps, as Keliver builds them: 9,573 functions, every one read and written
   back byte for byte; with the source maps applied, 9,026 functions get a Kotlin file and every
-  instruction with a line entry was checked to be consistent with the line rule (the line
-  `find_line_num` gives at that pc is the one the rule, computed again in the test, gives for the
-  JavaScript line: this shows the rule was applied everywhere, not that its Kotlin lines are right;
-  the hand-checked stack traces are the independent check); stripped, no function keeps a line
+  instruction with a line entry was checked against the source map (the line `find_line_num` gives
+  at that pc is the source map's line for the JavaScript line; that check shows only that the
+  line rule was applied everywhere, and "NF2: the reviews' Lows" below replaced it with one of
+  file, line and column); stripped, no function keeps a line
   table; then the bundle loads in dependency order as compiled, with source maps and stripped, every
   module without error. Again with `Long` as BigInt: the same 47 modules, 9,575 functions, 471
   BigInt constants, all byte for byte, 9,027 functions mapped and checked, every module loaded.
@@ -960,15 +960,24 @@ docs). This pass fixed the rest that a Mac can fix, all in `zipline-bytecode`:
   `JS_ATOM_Private_brand` on) are no longer in the name-to-index map, so a file's own string atom
   `"Symbol.iterator"` (a file or function name) is written back as itself, not as the symbol's
   index. (1.28.0 got this right by letting the file's strings overwrite; step 1b's "first one wins",
-  added for `<brand>`, had broken it.)
-- **Source maps by line and column.** A position takes the segment covering its column when that
-  segment is in the function's Kotlin file, else its line's first mapped segment (the old rule), so
-  two statements on one JavaScript line keep their own Kotlin positions (`e.stack` columns now mark
-  the throw, not the start of its line). A position on a line with no mapping takes the previous
-  position's Kotlin line and column (1.28.0 kept the JavaScript line under the Kotlin file name: a
-  line of the wrong file), and a one-field segment counts as unmapped (1.28.0 gave it the previous
-  segment's source and line). The function still carries one file name, so the column is used only
-  within that file: a position inlined from another file is labelled as before, never worse.
+  added for `<brand>`, had broken it.) A built-in symbol's index read where a name belongs is
+  refused with a message naming the symbol: QuickJS's parser never writes one there, and it could
+  not be written back as the symbol.
+- **Source maps by line and column.** A function carries one file name: the file of the segment
+  covering its own position (its `function` keyword, which Kotlin maps to the declaration), else
+  1.28.0's choice, its first mapped line's first file (the inlined function's file when that line
+  starts with an inlined `require` or `check`). The file most positions are in was tried and
+  dropped: in a function whose body is Kotlin `js("…")` code, most segments are in the pseudo-file
+  `<js-code>`, and Zipline's stack trace dropped that frame (`happyPath`'s `goBoom1`). A position takes the segment covering its column
+  when that segment is in the function's file, else its line's first segment in that file, so two
+  statements on one JavaScript line keep their own Kotlin positions (`e.stack` columns now mark the
+  throw, not the start of its line). A segment in another file (code inlined from it) is never
+  used: its line would be printed under the function's file name. A position with no segment in
+  the function's file on its line takes the previous position's Kotlin line and column, the
+  nearest preceding Kotlin position. That is an approximation: a call on an unmapped line shows
+  the line before it. 1.28.0 printed the JavaScript line under the Kotlin file name, a line of the
+  wrong file. A one-field segment counts as unmapped (1.28.0 gave it the previous segment's source
+  and line).
 - **Stripping drops the source text.** `stripLineNumbers` clears each function's source text as
   well as its line table (the fork's `compile` leaves it out, but bytecode compiled any other way
   kept it after a strip).
@@ -989,6 +998,38 @@ consistent, every module loaded; with `Long` as BigInt (`-PprofileBigInt`) 9,593
 mapped, 471 BigInt constants, the same. `:zipline-cli:test` 12 of 12 (its stack traces, from Kotlin's
 own source maps, unchanged). `:zipline:jvmTest` 50 classes, 275 run, 273 pass, 2 skipped, plain and
 with `Long` as BigInt.
+
+**After the review of this pass** (one Medium, three Lows; a fresh `apply.sh all`, edited,
+regenerated, and the regenerated set applied to a second fresh clone, its `zipline-bytecode`
+sources identical to the tested ones):
+- **A segment in another file is never used** (the Medium). The fallback for a position whose
+  covering segment is in another file was the line's first mapped segment in any file, so a throw
+  in an inlined `require` printed a line of `Preconditions.kt` under the caller's file name. It is
+  now the line's first segment in the function's own file, else the previous position. On upstream's
+  real `goBoom.kt` (`zipline-testing`; `require` on line 5, the recursive call on line 6), Kotlin's
+  own map covers the `function` header (`goBoom.kt:4:1`), maps the call to `goBoom.kt:6:3`, and
+  covers the inlined throw only with `Preconditions.kt:38`; the throw now takes `goBoom.kt:5`, the
+  `require` line.
+- **The function's file is its declaration's**: the segment covering its `function` keyword. Kotlin
+  covers it in 8,335 of the plain bundle's 9,030 mapped functions (8,336 of 9,031 with BigInt); 68
+  functions in each get another file than 1.28.0's rule gave. 40,361 positions (36,974 with BigInt)
+  are covered by a segment in another file than their function's and take the previous position.
+- **The nearest preceding Kotlin position is an approximation**, written down as one.
+  `removeLeadingDotDotsInSourceMap`'s map is hand-written and maps only the throw (to `:4`), so its
+  recursive-call frames print `:4`, not the call's line; 1.28.0 printed `:10`, and `goBoom.kt` has 7
+  lines.
+- **A built-in symbol read as a name is refused**, with a message naming it.
+- **Tests**: `:zipline-bytecode:test` 53 run, all pass with the corpus (without it, 52 pass and
+  `RealBundleTest` is skipped);
+  5 new (another file's line never used, by `SourceMap` and through bytecode; the declaration's file;
+  a position exactly on a segment's first column, at the column QuickJS reports; symbols refused).
+  Controls: with the old behaviour back (any file's segment as the fallback, 1.28.0's file rule, the
+  JavaScript position for an unmapped line, one-field segments inheriting a source, symbols read as
+  text) 7 of 53 fail, each new or changed test: `main.kt:150:5`, `other.kt:4:3`, `main.kt:3:14`
+  where the fork gives `main.kt:5:3`, `main.kt:4:3`, `main.kt:7:3`. With the covering column one too
+  far right 4 fail, one too far left 2 fail, the boundary test in both. `RealBundleTest`,
+  `:zipline-cli:test` (12 of 12) and `:zipline:jvmTest` (275 run, 273 pass, 2 skipped, plain and with
+  `Long` as BigInt) as above.
 
 **The bundle sizes, with their command.** `apply.sh test <work> -PVERSION_NAME=1.28.0-q20260604
 -Dmaven.repo.local=<repo> -PRELEASE_SIGNING_ENABLED=false :zipline:publishJvmPublicationToMavenLocal
