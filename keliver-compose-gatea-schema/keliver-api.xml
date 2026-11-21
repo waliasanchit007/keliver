@@ -420,4 +420,8 @@
     <property name="param" type="kotlin.String" />
     <property name="ref" type="dev.keliver.compose.animation.core.AnimatedRef" />
   </modifier>
+  <modifier tag="501" type="dev.keliver.compose.gatea.ExtraPress">
+    <property name="onCancel" type="kotlin.Int" />
+    <property name="onPress" type="kotlin.Int" />
+  </modifier>
 </schema>
