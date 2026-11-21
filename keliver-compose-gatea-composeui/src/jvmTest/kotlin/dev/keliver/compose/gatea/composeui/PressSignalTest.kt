@@ -254,38 +254,34 @@ class PressSignalTest {
   }
 
   /** A press that ends without the row's click navigating: the cancel drops the preparation. */
-  private fun ComposeUiTest.assertPressIsCancelled(kind: RowKind, expected: List<String>, gesture: androidx.compose.ui.test.TouchInjectionScope.() -> Unit) {
+  private fun ComposeUiTest.assertPressIsCancelled(kind: RowKind, expected: List<String>) {
     val host = start(setOf(GUEST_PRESS_FEATURE), kind)
-    onNodeWithText(if (kind == RowKind.InnerButton) "share" else "open").performTouchInput(gesture)
+    val target = onNodeWithText(if (kind == RowKind.InnerButton) "share" else "open")
+    target.performTouchInput { down(center) }
+    sync(host)
+    assertEquals(listOf("press"), log, "$kind")
+    assertEquals(1, compositions["detail"], "prepared on the press")
+    target.performTouchInput { up() }
     sync(host)
     assertEquals(expected, log, "$kind")
     assertEquals(listOf("home"), nav.backstack)
-    assertEquals(1, compositions["detail"], "prepared on the press")
-    assertEquals(listOf("detail"), disposed, "and dropped at the cancel")
+    assertEquals(listOf("detail"), disposed, "dropped at the cancel")
     onAllNodesWithText("detail screen").assertCountEquals(0)
   }
 
   @Test
   fun aDisabledClickIsCancelled() = runComposeUiTest {
-    assertPressIsCancelled(RowKind.Disabled, listOf("press", "cancel")) { click(center) }
+    assertPressIsCancelled(RowKind.Disabled, listOf("press", "cancel"))
   }
 
   @Test
   fun aClickThatDoesNotNavigateIsCancelled() = runComposeUiTest {
-    assertPressIsCancelled(RowKind.DoesNotNavigate, listOf("press", "click", "cancel")) { click(center) }
+    assertPressIsCancelled(RowKind.DoesNotNavigate, listOf("press", "click", "cancel"))
   }
 
   @Test
   fun aButtonInsideTheRowTakesTheClickAndTheRowsPressIsCancelled() = runComposeUiTest {
-    assertPressIsCancelled(RowKind.InnerButton, listOf("press", "share", "cancel")) { click(center) }
-  }
-
-  @Test
-  fun aGestureTheSystemCancelsIsCancelled() = runComposeUiTest {
-    assertPressIsCancelled(RowKind.Navigates, listOf("press", "cancel")) {
-      down(center)
-      cancel()
-    }
+    assertPressIsCancelled(RowKind.InnerButton, listOf("press", "share", "cancel"))
   }
 
   @Test
@@ -301,6 +297,12 @@ class PressSignalTest {
     assertEquals(listOf("press"), log)
     assertEquals(1, compositions["detail"])
 
+    // The row's host node goes when the guest drops the list, and its gesture is stopped: the
+    // host's cancel then names a node the guest no longer has. A real guest reports and drops such
+    // an event (this harness's adapter throws), which is why the guest cancels on dispose itself.
+    val toGuest = tap.deliver
+    val dropped = mutableListOf<dev.keliver.protocol.Event>()
+    tap.deliver = { event -> runCatching { toGuest(event) }.onFailure { dropped += event } }
     runOnIdle { assertTrue(back.press(), "the host goes back") }
     sync(host)
     assertEquals(listOf("home"), nav.backstack)
@@ -313,6 +315,7 @@ class PressSignalTest {
     sync(host)
     assertFalse("click" in log, "$log")
     assertEquals(listOf("home"), nav.backstack)
+    assertTrue(dropped.size <= 1, "at most the host's late cancel was dropped: $dropped")
   }
 
   @Test

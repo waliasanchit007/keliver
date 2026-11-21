@@ -101,7 +101,9 @@ internal fun Modifier.applyExtraPress(press: ExtraPress, owner: GeneratedWidget?
  * navigated finds nothing prepared. That covers every press that did not open what it prepared: the
  * finger lifted outside, a scroll took the gesture, a button inside the element took the click, a
  * long press, a double click, a disabled clickable, a click that does not navigate, and a gesture
- * the system cancelled or the element leaving the tree (the gesture is stopped).
+ * the system cancelled or the element leaving the tree (the gesture is stopped). The system cancel
+ * relies on Compose ending a cancelled gesture with an all-up event or stopping the handler; it is
+ * not exercised by the tests (the desktop test host's `cancel()` delivers nothing to the handler).
  *
  * Inside a scroll container (marked by [pressScrollContainer]) the press waits, as
  * [PressSignalTiming] says: a scroll that starts on the element sends nothing.
