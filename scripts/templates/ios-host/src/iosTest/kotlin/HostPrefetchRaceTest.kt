@@ -37,7 +37,7 @@ class HostPrefetchRaceTest {
     // 1 ms: the expiry each sent request waits for ends at once, so the run can wait for it.
     val prefetched = PrefetchedRequests(listOf(items), maxAgeMillis = 1, maxWaitMillis = 1_000)
     val send: suspend (HttpRequest) -> HttpResponse = {
-      sends.incrementAndFetch()
+      sends.addAndFetch(1)
       HttpResponse(200, "prefetched")
     }
     val calls = mutableListOf<suspend () -> Unit>(
@@ -51,7 +51,7 @@ class HostPrefetchRaceTest {
       calls += {
         // A response taken before the winner started it starts when awaited: still once.
         val pending = prefetched.take(guests, emptyMap())
-        if (pending != null && runCatching { pending.await() }.getOrNull()?.body == "prefetched") took.incrementAndFetch()
+        if (pending != null && runCatching { pending.await() }.getOrNull()?.body == "prefetched") took.addAndFetch(1)
       }
     }
     val go = CompletableDeferred<Unit>()
