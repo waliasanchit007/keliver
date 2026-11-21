@@ -279,8 +279,12 @@ class AppHeadersHostHttpTest {
   private fun header(request: String, name: String): String? = values(request, name).firstOrNull()
 }
 
-/** One HTTP/1.1 request per connection on 127.0.0.1, answered by [respond]; [requests] holds each, raw. */
-private class LocalServer {
+/**
+ * One HTTP/1.1 request per connection on 127.0.0.1, answered by [respond]; [requests] holds each,
+ * raw. Each connection is served on a thread of its own, so a [respond] that holds one answer (NF4's
+ * in-flight tests) does not hold the next request. Also used by HostPrefetchTest.
+ */
+internal class LocalServer {
   private val lock = NSLock()
   private val seen = mutableListOf<String>()
   @Volatile private var stopping = false
@@ -323,26 +327,30 @@ private class LocalServer {
         val wait = alloc<timeval>().apply { tv_sec = 5; tv_usec = 0 }
         setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, wait.ptr, sizeOf<timeval>().convert())
       }
-      val raw = StringBuilder()
-      val buffer = ByteArray(8192)
-      while (true) {
-        val n = buffer.usePinned { recv(client, it.addressOf(0), buffer.size.convert(), 0) }.toInt()
-        if (n <= 0) break
-        raw.append(buffer.decodeToString(0, n))
-        val text = raw.toString()
-        val end = text.indexOf("\r\n\r\n")
-        if (end >= 0) {
-          val length = Regex("(?i)\r\ncontent-length: *(\\d+)").find(text.substring(0, end))?.groupValues?.get(1)?.toInt() ?: 0
-          if (text.length - end - 4 >= length) break
-        }
-      }
-      val request = raw.toString()
-      locked { seen += request }
-      val answer = respond(request).encodeToByteArray()
-      answer.usePinned { send(client, it.addressOf(0), answer.size.convert(), 0) }
-      close(client)
+      NSThread { answer(client) }.start()
     }
     stopped = true
+  }
+
+  private fun answer(client: Int) {
+    val raw = StringBuilder()
+    val buffer = ByteArray(8192)
+    while (true) {
+      val n = buffer.usePinned { recv(client, it.addressOf(0), buffer.size.convert(), 0) }.toInt()
+      if (n <= 0) break
+      raw.append(buffer.decodeToString(0, n))
+      val text = raw.toString()
+      val end = text.indexOf("\r\n\r\n")
+      if (end >= 0) {
+        val length = Regex("(?i)\r\ncontent-length: *(\\d+)").find(text.substring(0, end))?.groupValues?.get(1)?.toInt() ?: 0
+        if (text.length - end - 4 >= length) break
+      }
+    }
+    val request = raw.toString()
+    locked { seen += request }
+    val answer = respond(request).encodeToByteArray()
+    answer.usePinned { send(client, it.addressOf(0), answer.size.convert(), 0) }
+    close(client)
   }
 
   /**

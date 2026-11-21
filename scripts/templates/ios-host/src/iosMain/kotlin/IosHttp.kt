@@ -235,6 +235,10 @@ public typealias KeliverRequestHeaders = (method: String, path: String, done: (M
  *   parameter, an API-key header) are your callback's to set. No code of
  *   yours runs between the check and the wire, so the URL sent is the one
  *   checked.
+ * - NF4: requests the app declares in [Keliver.prefetch] are sent at a start
+ *   toward a screen, through these same checks ([startPrefetch]), and a
+ *   guest's identical GET takes the response once (HostPrefetch.kt). Any
+ *   other method drops what was not taken.
  *
  * Retries or certificate pinning: add them here — this is your code.
  */
@@ -245,6 +249,8 @@ internal class NSURLSessionHostHttp(
   /** Where [appHeaders] is called: the main thread (a test passes another context). */
   private val appHeadersContext: CoroutineContext = Dispatchers.Main,
   private val appHeadersTimeout: Duration = 30.seconds,
+  /** NF4: the app's declared first requests (HostPrefetch.kt); null = none. */
+  private val prefetched: PrefetchedRequests? = null,
 ) : HostHttpProvider {
   private val appOwnsCredentials = appHeaders != null
 
@@ -273,6 +279,24 @@ internal class NSURLSessionHostHttp(
   )
 
   override suspend fun execute(request: HttpRequest): HttpResponse {
+    // NF4: a request that may change what the screens show (anything but a GET, refused or not)
+    // drops every prefetched response not taken yet, before it goes out.
+    if (prefetched != null && !request.method.equals("GET", ignoreCase = true)) {
+      prefetched.discard("a ${request.method.uppercase()} went through HostHttp")
+    }
+    return exchange(request, prefetchable = true)
+  }
+
+  /**
+   * NF4: how the requests the app declared ([Keliver.prefetch]) go out, in [scope], exactly as a
+   * guest's would (every check below, and your requestHeaders): once the process starts toward a
+   * screen ([PrefetchedRequests.uiStarting]); a guest's identical request takes the response.
+   */
+  fun startPrefetch(scope: CoroutineScope) {
+    prefetched?.arm(scope) { request -> exchange(request, prefetchable = false) }
+  }
+
+  private suspend fun exchange(request: HttpRequest, prefetchable: Boolean): HttpResponse {
     val segments = request.path.split('/').filter { it.isNotEmpty() }
     require(segments.none { it == "." || it == ".." || '\\' in it }) {
       "HostHttp: '${request.path}' is not a plain relative path under the API base"
@@ -288,6 +312,15 @@ internal class NSURLSessionHostHttp(
     if (appOwnsCredentials && method in ECHOING_METHODS) refused("$method is never sent with the app's credentials")
     request.headers.forEach { (k, v) ->
       require(validHeader(k, v)) { "HostHttp: header '$k' is not a valid header name and value" }
+    }
+    if (prefetchable && prefetched != null) {
+      // NF4: the app declared this request and the host already sent it (HostPrefetch.kt), with
+      // your requestHeaders' answer as it was then: they are not asked again for it.
+      val kept = request.headers.filterKeys {
+        val name = it.lowercase()
+        name !in DROPPED_HEADERS && !(appOwnsCredentials && name in CREDENTIAL_HEADERS)
+      }
+      prefetched.responseFor(request, kept)?.let { return it }
     }
     val added = appHeaders?.let { credentials(it, method, segments.joinToString("/")) }.orEmpty()
     val replaced = added.keys.mapTo(HashSet()) { it.lowercase() }
@@ -383,3 +416,63 @@ internal class NSURLSessionHostHttp(
 
 /** A request the app's [RequestPolicy] does not allow; nothing was sent. */
 public class HostHttpRefused(message: String) : IllegalArgumentException(message)
+
+/**
+ * NF4: the guests' one HostHttp for this process, and the app's declared first requests
+ * ([Keliver.prefetch], HostPrefetch.kt). Both are made at the host's FIRST start ([firstStart]),
+ * from `requestPolicy`, `requestHeaders` and `prefetch` as they are then, and kept for the process:
+ * every code load binds the same HostHttp, so the first request finds what the prefetch sent, and a
+ * start retried after "no bundle" changes neither (a prefetch may already have gone out with those
+ * settings). The requests go out once the host passed its own checks ([checksPassed]: the key and
+ * the bundle server, as Android's run()) AND the process starts toward a screen ([UiStartWatch]),
+ * in either order: a host that refuses to load, or a background launch, sends nothing.
+ * Main thread.
+ */
+internal class ProcessHostHttp(
+  private val uiStart: UiStartWatch,
+  /** Where the declared requests go out (off the main thread). */
+  private val scope: CoroutineScope,
+  private val log: (String) -> Unit,
+  /** What the prefetch reports went unused (the host logs it in a debug binary only). */
+  private val prefetchLog: (String) -> Unit = {},
+  /** Makes the HostHttp (a test passes one that does not hop to the main thread for requestHeaders). */
+  private val make: (base: String, RequestPolicy?, KeliverRequestHeaders?, PrefetchedRequests?) -> NSURLSessionHostHttp =
+    { base, policy, headers, prefetched -> NSURLSessionHostHttp(base, policy, headers, prefetched = prefetched) },
+) {
+  /** Whether the host has started in this process: the settings are fixed from then on. */
+  var started = false
+    private set
+
+  /** The guests' HostHttp; null before the first start, or without an API base. */
+  var http: NSURLSessionHostHttp? = null
+    private set
+
+  /** The app's declared first requests; null when it declared none (or there is no API base). Read from any thread. */
+  @kotlin.concurrent.Volatile var prefetched: PrefetchedRequests? = null
+    private set
+
+  /** The host's first start in this process: fixes the settings. Later calls (a retried start) do nothing. */
+  fun firstStart(apiBase: String?, policy: RequestPolicy?, headers: KeliverRequestHeaders?, prefetch: List<KeliverPrefetch>) {
+    if (started) return
+    started = true
+    if (apiBase == null) {
+      if (prefetch.isNotEmpty()) log("prefetch is set but there is no API_BASE_URL: nothing is prefetched")
+      return
+    }
+    val made = prefetch.takeIf { it.isNotEmpty() }?.let { PrefetchedRequests(it, log = prefetchLog) }
+    prefetched = made
+    http = make(apiBase, policy, headers, made)
+    // Watched from the start, as on Android: a scene may enter the foreground while the host checks.
+    if (made != null) uiStart.whenStarted { made.uiStarting() }
+  }
+
+  /** The host passed its checks (the key, the bundle server): the declared requests may go out. Again: nothing more. */
+  fun checksPassed() {
+    http?.startPrefetch(scope)
+  }
+
+  /** Drops every prefetched response not taken yet. From any thread. */
+  fun discard(why: String) {
+    prefetched?.discard(why)
+  }
+}

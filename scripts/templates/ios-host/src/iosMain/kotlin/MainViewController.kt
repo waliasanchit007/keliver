@@ -450,7 +450,7 @@ public object Keliver {
    */
   public var requestPolicy: RequestPolicy? = null
     set(value) {
-      if (started) log("requestPolicy set after the host started: it applies from the next process start")
+      if (processHttp.started) log("requestPolicy set after the host first started: it applies from the next process start")
       field = value
     }
 
@@ -473,9 +473,78 @@ public object Keliver {
    */
   public var requestHeaders: KeliverRequestHeaders? = null
     set(value) {
-      if (started) log("requestHeaders set after the host started: it applies from the next process start")
+      if (processHttp.started) log("requestHeaders set after the host first started: it applies from the next process start")
       field = value
     }
+
+  /**
+   * NF4 (cold start): the GETs your first Keliver screen makes as soon as it shows, in Swift:
+   * `Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])]`. The host
+   * sends them through the guests' HostHttp (your [requestPolicy] and [requestHeaders] included)
+   * when this process starts toward a screen (UiStart.kt: never in a background launch), while the
+   * bundle loads, and the screen's identical request takes the response: the same request, once,
+   * within 5 s of the answer, 2xx only (HostPrefetch.kt has the rules). Any request other than a GET
+   * through HostHttp, or [discardPrefetched], drops what was not taken. Needs API_BASE_URL.
+   *
+   * Set it before the host first starts (a start retried after "no bundle" keeps what the first
+   * one took), and start it early (`Keliver.shared.start()` in your App's init or your app
+   * delegate's didFinishLaunching). It is sent once the host has passed its own checks and the
+   * process starts toward a screen: in a SwiftUI app, when the first scene enters the foreground.
+   * [requestHeaders] is asked then, as the request goes out, so your session must be restored by
+   * that moment (not necessarily before `start()`). If your first screen establishes the session
+   * (a PIN, biometric or login screen), don't declare a prefetch: it would go out before the
+   * session exists.
+   */
+  public var prefetch: List<KeliverPrefetch> = emptyList()
+    set(value) {
+      if (processHttp.started) log("prefetch set after the host first started: it applies from the next process start")
+      field = value.toList()
+    }
+
+  /**
+   * NF4: drops every prefetched response not taken yet ([prefetch]; HostPrefetch.kt). Call it when
+   * the user signs in, signs out or changes, so a screen never gets an answer fetched for another
+   * session. (A request other than a GET through HostHttp does the same by itself.) From any thread.
+   */
+  public fun discardPrefetched() {
+    processHttp.discard("the app called discardPrefetched()")
+  }
+
+  /**
+   * NF4: whether this process starts toward a screen (UiStart.kt). A debug build logs what the
+   * UI start was, and the Debug and Benchmark builds mark it ("ui-start", M0). Main thread.
+   */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  private val uiStart = UiStartWatch(onUiStart = { cause ->
+    KeliverTiming.mark("ui-start") // Debug and Benchmark builds only (M0)
+    if (kotlin.native.Platform.isDebugBinary) log("UI start: $cause")
+  })
+
+  /**
+   * NF4: start() before a scene is in the foreground (in init(), and in a background launch)
+   * waits for the UI start (UiStart.kt). A debug build logs the wait. Main thread.
+   */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  private val startGate = StartGate(uiStart) { if (kotlin.native.Platform.isDebugBinary) log(it) }
+
+  /**
+   * The guests' HostHttp and NF4's declared first requests: one of each for the process, made at
+   * the host's FIRST start from [requestPolicy], [requestHeaders] and [prefetch] as they are then
+   * (IosHttp.kt: ProcessHostHttp). A start retried after "no bundle" keeps them. Main thread.
+   */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  private val processHttp = ProcessHostHttp(
+    uiStart,
+    CoroutineScope(SupervisorJob() + Dispatchers.Default), // where the declared requests go out
+    log = ::log,
+    prefetchLog = { if (kotlin.native.Platform.isDebugBinary) log("prefetch: $it") },
+  )
+
+  /** The guests' HostHttp, one for the process (made at the first start); null without API_BASE_URL. Main thread. */
+  internal val hostHttp: NSURLSessionHostHttp? get() = processHttp.http
+
+  /** NF4: the host passed its checks (the key, the bundle server): the declared requests may go out. Main thread. */
+  internal fun hostChecksPassed() = processHttp.checksPassed()
 
   /**
    * B5: YOUR app's generated action bridges (docs/BRIDGE_CODEGEN_DESIGN.md), served to guests.
@@ -687,19 +756,37 @@ public object Keliver {
       .build()
   }
 
-  /** Looks up and loads the bundle, once per process; later calls do nothing. From any thread: it runs on the main one. */
+  /**
+   * Looks up and loads the bundle, once per process; later calls do nothing. From any thread: it
+   * runs on the main one. Call it early, in your App's init() (NF4; the template does). Until a
+   * scene is in the foreground it waits, and the host starts when one enters it, the app becomes
+   * active, or a Keliver screen is made (UiStart.kt: StartGate): in a launch the user made, as the
+   * first scene comes up; in a process launched in the background (a silent push, a background
+   * refresh), only if the user opens the app, so such a launch loads no code.
+   */
   public fun start() {
     if (!NSThread.isMainThread) {
       dispatch_async(dispatch_get_main_queue()) { start() }
       return
     }
     if (started) return
+    startGate.run(::startNow)
+  }
+
+  /** [start], once the process starts toward a screen. Main thread. */
+  private fun startNow() {
+    if (started) return
     started = true
+    KeliverTiming.mark("start") // Debug and Benchmark builds only (M0): the host starts its lookup
     // B5: the bridges this process serves, before its first lookup (B4's gate reads them there,
     // on a cache start and on each manifest), and binds: one copy, as they are now.
     startedBridges = bridges
     served = servedBridgesOf(bridges.map { it.declared })
     KeliverTiming.start() // Debug and Benchmark builds only (M0); nothing elsewhere
+    // The guests' HostHttp and NF4's declared first requests, from the settings as they are now:
+    // made once per process (a start retried after "no bundle" keeps them); the requests go out
+    // once startHost() passed its checks and the process starts toward a screen.
+    processHttp.firstStart(API_BASE_URL.takeIf { it.isNotBlank() }, requestPolicy, requestHeaders, prefetch)
     // Once: a start that created nothing runs again (started is reset), and a
     // second observer would make every foreground check twice.
     if (updatesMode() != "next-launch" && !resumeObserved) {
@@ -1124,6 +1211,7 @@ public object Keliver {
     onClose: (() -> Unit)?,
   ): UIViewController {
     KeliverTiming.memory("open") // Debug and Benchmark builds only (M5)
+    uiStart.screenShown() // NF4: this process shows a screen (UiStart.kt)
     // Weak: the screen holds this closure, and a view controller that went closes nothing.
     var shownBy: kotlin.native.ref.WeakReference<UIViewController>? = null
     val close: () -> Unit = onClose ?: { shownBy?.get()?.let(::closeShown) }
@@ -1449,6 +1537,9 @@ private suspend fun startHost(): HostState {
     log("refusing to load: the bundle server '$serverUrl' is not an http(s) URL without a query")
     return HostState.Message("Refusing to load", "The bundle server '$serverUrl' is not an http(s) URL.")
   }
+  // NF4: the app's declared first requests may go out from now, as on Android (its run()): a host
+  // that refuses to load sends nothing.
+  Keliver.hostChecksPassed()
   val apiBase = API_BASE_URL.takeIf { it.isNotBlank() }
   // Advertise only what this host really provides: the lookup picks a bundle that needs no more.
   val capabilities = buildList {
@@ -1713,7 +1804,7 @@ private class AppParts(
   // One of each per host, bound into every code load (not one per load: each
   // holds a connection or a session).
   val sql = IosSqlHost()
-  val http = apiBase?.let { NSURLSessionHostHttp(it, Keliver.requestPolicy, Keliver.requestHeaders) }
+  val http = apiBase?.let { Keliver.hostHttp } // one for the process, made at the first start (NF4)
 }
 
 private fun createApp(

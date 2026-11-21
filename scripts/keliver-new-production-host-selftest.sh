@@ -193,6 +193,7 @@ grep -q 'if (apiBase != null) hostHttp(okhttp, apiBase).startPrefetch(scope)' "$
   && grep -A16 'override suspend fun bindServices' "$M" | grep -q 'val hostHttp = hostHttp(okhttp, apiBase)' \
   && grep -q 'prefetch: List<KeliverPrefetch> = emptyList(),' "$M" \
   && [ -f "$(dirname "$M")/HostPrefetch.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/HostPrefetchTest.kt" ] \
+  && [ -f "$H/src/test/kotlin/com/example/demo/host/HostPrefetchRaceTest.kt" ] \
   && ok "NF4: KeliverConfig.prefetch is sent at start and taken by the guests' one HostHttp" \
   || bad "NF4: the first request's prefetch is not wired"
 # NF4 review (#269): sent only at a start toward a screen (the first activity's creation), dropped
@@ -587,6 +588,11 @@ if [ "$BUILD" = 1 ]; then
     hpt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.HostPrefetchTest.xml"
     [ -f "$hpt" ] && grep -q 'failures="0" errors="0"' "$hpt" && ! grep -q 'tests="0"' "$hpt" \
       && ok "NF4: the first request's prefetch tests ran: $(grep -o 'tests="[0-9]*"' "$hpt" | head -1)" || bad "NF4: the prefetch tests did not run, or failed"
+    # The race test shared with the iOS host (the same file): 1,000 runs each, never two sends.
+    hrt="$H/build/test-results/testDebugUnitTest/TEST-com.example.demo.host.HostPrefetchRaceTest.xml"
+    [ -f "$hrt" ] && grep -q 'failures="0" errors="0"' "$hrt" && grep -q 'tests="2"' "$hrt" \
+      && ok "NF4: the prefetch's race tests ran (arm, UI start, take and discard racing, 1,000 runs each): $(grep -o 'tests="[0-9]*"' "$hrt" | head -1)" \
+      || bad "NF4: the prefetch's race tests did not run, or failed"
     # A release build with an http:// server is refused.
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleRelease > "$DISP/assemble-release.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \
