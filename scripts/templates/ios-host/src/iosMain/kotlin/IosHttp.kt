@@ -235,6 +235,10 @@ public typealias KeliverRequestHeaders = (method: String, path: String, done: (M
  *   parameter, an API-key header) are your callback's to set. No code of
  *   yours runs between the check and the wire, so the URL sent is the one
  *   checked.
+ * - NF4: requests the app declares in [Keliver.prefetch] are sent at a start
+ *   toward a screen, through these same checks ([startPrefetch]), and a
+ *   guest's identical GET takes the response once (HostPrefetch.kt). Any
+ *   other method drops what was not taken.
  *
  * Retries or certificate pinning: add them here — this is your code.
  */
@@ -245,6 +249,8 @@ internal class NSURLSessionHostHttp(
   /** Where [appHeaders] is called: the main thread (a test passes another context). */
   private val appHeadersContext: CoroutineContext = Dispatchers.Main,
   private val appHeadersTimeout: Duration = 30.seconds,
+  /** NF4: the app's declared first requests (HostPrefetch.kt); null = none. */
+  private val prefetched: PrefetchedRequests? = null,
 ) : HostHttpProvider {
   private val appOwnsCredentials = appHeaders != null
 
@@ -273,6 +279,24 @@ internal class NSURLSessionHostHttp(
   )
 
   override suspend fun execute(request: HttpRequest): HttpResponse {
+    // NF4: a request that may change what the screens show (anything but a GET, refused or not)
+    // drops every prefetched response not taken yet, before it goes out.
+    if (prefetched != null && !request.method.equals("GET", ignoreCase = true)) {
+      prefetched.discard("a ${request.method.uppercase()} went through HostHttp")
+    }
+    return exchange(request, prefetchable = true)
+  }
+
+  /**
+   * NF4: how the requests the app declared ([Keliver.prefetch]) go out, in [scope], exactly as a
+   * guest's would (every check below, and your requestHeaders): once the process starts toward a
+   * screen ([PrefetchedRequests.uiStarting]); a guest's identical request takes the response.
+   */
+  fun startPrefetch(scope: CoroutineScope) {
+    prefetched?.arm(scope) { request -> exchange(request, prefetchable = false) }
+  }
+
+  private suspend fun exchange(request: HttpRequest, prefetchable: Boolean): HttpResponse {
     val segments = request.path.split('/').filter { it.isNotEmpty() }
     require(segments.none { it == "." || it == ".." || '\\' in it }) {
       "HostHttp: '${request.path}' is not a plain relative path under the API base"
@@ -288,6 +312,15 @@ internal class NSURLSessionHostHttp(
     if (appOwnsCredentials && method in ECHOING_METHODS) refused("$method is never sent with the app's credentials")
     request.headers.forEach { (k, v) ->
       require(validHeader(k, v)) { "HostHttp: header '$k' is not a valid header name and value" }
+    }
+    if (prefetchable && prefetched != null) {
+      // NF4: the app declared this request and the host already sent it (HostPrefetch.kt), with
+      // your requestHeaders' answer as it was then: they are not asked again for it.
+      val kept = request.headers.filterKeys {
+        val name = it.lowercase()
+        name !in DROPPED_HEADERS && !(appOwnsCredentials && name in CREDENTIAL_HEADERS)
+      }
+      prefetched.responseFor(request, kept)?.let { return it }
     }
     val added = appHeaders?.let { credentials(it, method, segments.joinToString("/")) }.orEmpty()
     val replaced = added.keys.mapTo(HashSet()) { it.lowercase() }

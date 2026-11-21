@@ -1005,7 +1005,43 @@ It behaves like the Android host in §2:
   redirects aren't followed. (That last one is the delegate's job. From tools
   0.3.16 it is measured by the host's simulator tests,
   `./gradlew -p host-ios iosSimulatorArm64Test`, against a local server; no
-  running guest has used HostHttp yet.)
+  running guest has used HostHttp yet.) There is one HostHttp per process,
+  made when the host starts, with `requestPolicy` and `requestHeaders` as they
+  are then.
+- **`KeliverPrefetch`** (NF4, cold start; unreleased, tools after 0.3.18): the
+  same as Android's (§2), with the same rules from the same file
+  (`HostPrefetch.kt`, byte for byte). In Swift, before the host starts:
+  `Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])]`,
+  then `Keliver.shared.start()` in your App's `init()` (or your app delegate's
+  `didFinishLaunching`). The scaffolded `iOSApp.swift` shows it as a comment.
+  - **When it goes out:** when the process starts toward a screen
+    (`UiStart.kt`). That is the first of three things: the host starting while
+    the app is not in the background; a scene (or the app) entering the
+    foreground, or the app becoming active; or a Keliver screen being made. A
+    SwiftUI or other scene-based app is still in the background state while it
+    finishes launching, so there it goes out when the first scene enters the
+    foreground. A process launched in the background (a push, a background
+    refresh, a location event) sends nothing until the user opens the app in
+    that process. Without an early `start()`, the first Keliver screen starts
+    the host, and the prefetch goes out with it: that is later, and saves less.
+  - **Who it is for:** it goes out through the guests' HostHttp, so your
+    `requestPolicy` applies, and so do your `requestHeaders` as they answer
+    then. The guest's request that takes it does not ask them again. **Restore
+    your session before `Keliver.shared.start()`.** Call
+    **`Keliver.shared.discardPrefetched()`** when the user signs in, signs out
+    or changes. **If your first screen establishes the session, don't declare
+    a prefetch.** A prefetch your `requestHeaders` refused (`done(nil)`) is not
+    used, and the screen's own request then asks them again.
+  - **When the screen takes it, and fresh data:** as on Android: the same
+    request, once, within 5 s of the answer, only a 2xx, an in-flight one
+    waited for at most 1 s, and any request other than a GET through HostHttp
+    drops what was not taken. In a DEBUG binary, an answer that goes unused is
+    logged (`KeliverHost: prefetch:`, names only).
+
+  Measured by the host's simulator tests (`HostPrefetchTest`, over
+  `NSURLSession` to a local server). Not measured: a running guest taking a
+  prefetched response on a simulator or an iPhone, and how much earlier the
+  first screen shows its data on iOS.
 - **Guest SQL** (`HostSqlDriver`) is real SQLite in Application Support, bound
   through `src/nativeInterop/cinterop/sqlite3.def`.
 - **Images** load over the network (Coil with Ktor's Darwin engine).

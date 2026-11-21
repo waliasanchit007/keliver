@@ -1345,8 +1345,13 @@ did not grow (as shipped 263.5 / 256.7, `prestart` 237.6, both 210.6).
   from the process start to the guest's request). Neither is measured on the A12 yet.
 - **Not built:** item 4 (unpacking the bundle into the cache in the background after an install
   or an update): a production host has no embedded bundle, so its first launch loads from the
-  network. That item applies only to the prototype and to apps that embed a bundle. Not built
-  either: an iOS host prefetch.
+  network. That item applies only to the prototype and to apps that embed a bundle.
+- **iOS (added after this run):** the production iOS host template has the same prefetch
+  (`Keliver.shared.prefetch`, the same `HostPrefetch.kt`; [`DEVICE_HOST.md`](DEVICE_HOST.md) §3).
+  It goes out when the process starts toward a screen: the host starts while the app is not in the
+  background, or the first scene enters the foreground, or the first Keliver screen is made. Only
+  its rules are measured, by the host's simulator tests. No iOS timing exists yet: neither this
+  benchmark nor an iPhone run has measured what it saves there.
 
 ### Scrolling, run 2
 

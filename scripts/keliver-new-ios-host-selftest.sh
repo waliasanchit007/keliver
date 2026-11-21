@@ -108,7 +108,7 @@ for f in settings.gradle build.gradle gradle.properties .gitignore src/nativeInt
          Configuration/Config.xcconfig; do
   [ -f "$H/$f" ] || { bad "missing $f"; missing=1; }
 done
-for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt; do
+for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt HostPrefetch.kt UiStart.kt; do
   [ -f "$K/$f" ] || { bad "missing $K/$f"; missing=1; }
 done
 [ "$missing" = 0 ] && ok "every expected file is there"
@@ -223,7 +223,7 @@ grep -q 'public class RequestPolicy(' "$KC/RequestPolicy.kt" && [ -f "$H/src/jvm
   && grep -q '    policy?.refusal(method, request.path)?.let { why ->' "$K/IosHttp.kt" \
   && grep -q '"x-http-method-override", "x-http-method", "x-method-override",' "$K/IosHttp.kt" \
   && grep -q '"x-original-url", "x-rewrite-url", "x-forwarded-host", "x-forwarded-prefix", "x-forwarded-proto",' "$K/IosHttp.kt" \
-  && grep -q 'NSURLSessionHostHttp(it, Keliver.requestPolicy, Keliver.requestHeaders)' "$K/MainViewController.kt" \
+  && grep -q 'NSURLSessionHostHttp(apiBase, requestPolicy, requestHeaders, prefetched = prefetched)' "$K/MainViewController.kt" \
   && grep -q "implementation 'org.jetbrains.kotlin:kotlin-test'" "$H/build.gradle" \
   && ok "host kit K2: HostHttp checks the app's RequestPolicy before sending; its JVM tests are scaffolded" \
   || bad "host kit K2: RequestPolicy is not wired into NSURLSessionHostHttp, or its tests are missing"
@@ -241,6 +241,31 @@ grep -q 'public var requestHeaders: KeliverRequestHeaders? = null' "$K/MainViewC
   && grep -q 'val ECHOING_METHODS = setOf("TRACE", "TRACK", "CONNECT")' "$K/IosHttp.kt" \
   && ok "B2: Keliver.requestHeaders adds the app's credentials (needs a requestPolicy; the guest's own dropped, no Set-Cookie back); its simulator tests are scaffolded" \
   || bad "B2: requestHeaders is not wired into NSURLSessionHostHttp, or its simulator tests are missing"
+# NF4: the app's declared first requests (Keliver.prefetch), as on Android: the rules are the Android
+# host's HostPrefetch.kt byte for byte; sent through the guests' one HostHttp (made once per process,
+# before any app) when the host starts, once the process starts toward a screen (UiStart.kt: not in a
+# background launch); dropped by any non-GET and by Keliver.discardPrefetched(); simulator tests.
+PHT=""
+for d in "$ROOT/scripts/templates/production-host" "$(dirname "$SCAFFOLD")/../templates/production-host"; do
+  [ -f "$d/src/main/kotlin/HostPrefetch.kt" ] && { PHT="$d"; break; }
+done
+[ -n "$PHT" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHT/src/main/kotlin/HostPrefetch.kt" | cmp -s - "$K/HostPrefetch.kt" \
+  && grep -q '  public var prefetch: List<KeliverPrefetch> = emptyList()' "$V" \
+  && grep -q '  public fun discardPrefetched() {' "$V" \
+  && grep -q '    sharedHttp ?: NSURLSessionHostHttp(apiBase, requestPolicy, requestHeaders, prefetched = prefetched).also { sharedHttp = it }' "$V" \
+  && grep -q '  val http = apiBase?.let { Keliver.hostHttp(it) } // one for the process (NF4)' "$V" \
+  && grep -A3 'KeliverTiming.start() // Debug and Benchmark builds only (M0); nothing elsewhere' "$V" | grep -q '    startPrefetch()' \
+  && grep -q '    hostHttp(apiBase).startPrefetch(prefetchScope)' "$V" && grep -q '    uiStart.whenStarted { made.uiStarting() }' "$V" \
+  && grep -q '    uiStart.screenShown() // NF4' "$V" \
+  && grep -q 'UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateBackground' "$K/UiStart.kt" \
+  && grep -q '      UISceneWillEnterForegroundNotification,' "$K/UiStart.kt" \
+  && grep -q 'prefetched.discard("a ${request.method.uppercase()} went through HostHttp")' "$K/IosHttp.kt" \
+  && grep -q '      prefetched.responseFor(request, kept)?.let { return it }' "$K/IosHttp.kt" \
+  && grep -q '    prefetched?.arm(scope) { request -> exchange(request, prefetchable = false) }' "$K/IosHttp.kt" \
+  && [ -f "$H/src/iosTest/kotlin/com/example/demo/host/HostPrefetchTest.kt" ] \
+  && grep -q 'Keliver.shared.prefetch = \[KeliverPrefetch(path: "/items", query: \["page": "1"\])\]' "$H/iosApp/iOSApp.swift" \
+  && ok "NF4: Keliver.prefetch (the Android host's HostPrefetch.kt) goes out through the one HostHttp at a start toward a screen, is dropped by a non-GET or discardPrefetched(); its simulator tests are scaffolded" \
+  || bad "NF4: the iOS first request's prefetch is not wired, or HostPrefetch.kt differs from the Android host's"
 # Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).
 grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = emptyMap())' "$KC/KeliverRoute.kt" \
   && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
@@ -506,7 +531,7 @@ grep -q 'Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnav
 grep -q 'CHANNEL: String = "beta"' "$LK/HostConfig.kt" && grep -q 'BUNDLE_SERVER: String = "https://bundles.example.com"' "$LK/HostConfig.kt" \
   && ok "the settings are in HostConfig.kt, as for the standalone host" || bad "HostConfig.kt"
 [ "$(cat "$EX/MyApp.xcodeproj/project.pbxproj")" = 'PRODUCT_NAME = "MyApp";' ] && ok "--embed edited no file of the existing app" || bad "--embed changed the existing project"
-same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt; do
+same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt HostPrefetch.kt UiStart.kt; do
   cmp -s "$LK/$f" "$K/$f" || { same=0; bad "$f differs between the embedded framework and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the embedded framework and the standalone host"
@@ -549,13 +574,15 @@ if [ "$BUILD" = 1 ]; then
             '    standInBind(zipline: scope.zipline, callbacks: callbacks, context: scope.main, log: scope.log)' \
             '  }' \
             '  Keliver.shared.bridges = [binding]' \
+            '  Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])]' \
+            '  Keliver.shared.discardPrefetched()' \
             '  let version: Int32 = binding.version; _ = (binding.name, binding.shape, version)' \
             '}' \
             '// The generated <Name>Bridge.bind(zipline:callbacks:context:log:), standing in (B5c compiles the real one).' \
             'func standInBind<Z>(zipline: Z, callbacks: AnyObject, context: KotlinCoroutineContext, log: @escaping (String) -> Void) { log("bound") }' > "$DISP/policy-check.swift" \
           && xcrun -sdk iphonesimulator swiftc -typecheck -target "$(uname -m)-apple-ios16.0-simulator" \
           -F "$(dirname "$fw")" "$L/KeliverScreen.swift" "$DISP/policy-check.swift" > "$DISP/swift-typecheck.log" 2>&1; then
-        ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable), setting a RequestPolicy and requestHeaders, and B5's bridges (a KeliverBridgeBinding with its closure, set on Keliver.shared)"
+        ok "Swift type-checks against the built framework: the embed's KeliverScreen.swift (onUnavailable), setting a RequestPolicy and requestHeaders, and B5's bridges (a KeliverBridgeBinding with its closure, set on Keliver.shared), and NF4's prefetch"
       else
         bad "KeliverScreen.swift does not type-check (framework '${fw}'): $(grep -m3 'error:' "$DISP/swift-typecheck.log" | tr '\n' ' ')"
       fi
@@ -582,6 +609,11 @@ if [ "$BUILD" = 1 ]; then
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*AppHeadersHostHttpTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
     [ "$rc" = 0 ] && [ "${n:-0}" -ge 20 ] && ok "B2: the HostHttp simulator tests pass ($n: the app's credentials on the main thread, refusals, no redirect, no Set-Cookie)" \
       || bad "B2: the HostHttp simulator tests failed (rc=$rc, ${n:-no} passed): $(grep -E 'FAILED|What went wrong' -A2 "$DISP/ios-tests.log" | head -6 | tr '\n' ' ')"
+    # NF4: the prefetch's rules on the simulator (once, 2xx only, 5 s from the answer, 1 s in-flight
+    # wait, a non-GET and discard drop it, a background launch sends nothing), through NSURLSessionHostHttp.
+    n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*HostPrefetchTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 20 ] && ok "NF4: the prefetch's simulator tests pass ($n: once, 2xx only, 5 s window, 1 s in-flight wait, non-GET and discard drop it, background launch sends nothing)" \
+      || bad "NF4: the prefetch's simulator tests failed (rc=$rc, ${n:-no} passed)"
     # A release framework refuses http:// — the check exists, fails here, and is wired to every release link.
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-urls.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/release-urls.log" \

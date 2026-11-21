@@ -1,8 +1,14 @@
+@file:OptIn(kotlin.concurrent.atomics.ExperimentalAtomicApi::class)
+
 package @@PACKAGE@@
 
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
@@ -13,27 +19,30 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * NF4 (cold start): a request YOUR first screen makes as soon as it shows (its first page of data),
- * declared in `KeliverConfig.prefetch`. The host sends it when the process starts toward a screen
- * (the first activity's creation, KeliverHost.start()'s watch: never in a start for a push, a job
- * or a broadcast that shows nothing), while the bundle loads and the screen's first composition
- * runs, and the screen's identical request takes the response instead of waiting for the network.
- * The guest is not changed and cannot tell (no protocol change: any bundle, old or new, benefits
- * or is unaffected).
+ * declared by the app (Android: `KeliverConfig.prefetch`; iOS: `Keliver.shared.prefetch`). The host
+ * sends it when the process starts toward a screen (Android: the first activity's creation; iOS: a
+ * start in the foreground, the first scene entering it, or the first Keliver screen; never in a
+ * start for a push, a job or a background launch that shows nothing), while the bundle loads and
+ * the screen's first composition runs, and the screen's identical request takes the response
+ * instead of waiting for the network. The guest is not changed and cannot tell (no protocol change:
+ * any bundle, old or new, benefits or is unaffected).
  *
- * The request is a GET under `keliver.apiBaseUrl`, sent exactly as a guest's would be
- * (OkHttpHostHttp: the same client, the RequestPolicy, the checks on the wire): a declared request
- * the policy refuses is refused, and sends nothing. The guest's request takes it only when it is
- * the SAME request: GET, the same path and query, no body, and no header of its own (after the
- * headers OkHttpHostHttp drops). It is taken once, and only within [PrefetchedRequests]'
- * `maxAgeMillis` of its answer ARRIVING; a prefetch that failed, answered anything but 2xx, or is
- * still in flight `maxWaitMillis` after the guest asked, is not used, and the guest's request goes
- * out as usual.
+ * The request is a GET under the API base, sent exactly as a guest's would be (the guests' one
+ * HostHttp: the same client, the RequestPolicy, the same checks): a declared request the policy
+ * refuses is refused, and sends nothing. The guest's request takes it only when it is the SAME
+ * request: GET, the same path and query, no body, and no header of its own (after the headers the
+ * HostHttp drops). It is taken once, and only within [PrefetchedRequests]' `maxAgeMillis` of its
+ * answer ARRIVING; a prefetch that failed, answered anything but 2xx, or is still in flight
+ * `maxWaitMillis` after the guest asked, is not used, and the guest's request goes out as usual.
  *
  * Fresh data, and the right user's: any request other than a GET through the guests' HostHttp drops
  * every response not taken yet (the guest may have changed what it would show), and so does
- * `KeliverHost.discardPrefetched()`, which the app calls on sign-out or a change of user. The app's
- * credentials (its `httpClient`'s session) must be ready BEFORE `keliver.start()`: the prefetch goes
- * out with whatever they are then.
+ * `discardPrefetched()` (Android: `KeliverHost`; iOS: `Keliver.shared`), which the app calls on
+ * sign-out or a change of user. The app's credentials must be ready BEFORE the host starts: the
+ * prefetch goes out with whatever they are then.
+ *
+ * The SAME file is in the Android and the iOS host; keep them identical (common Kotlin: no lock,
+ * one atomic state).
  */
 class KeliverPrefetch(path: String, query: Map<String, String> = emptyMap()) {
   /** The path's segments: `/items` and `items` are the same request, as HostHttp sends them. */
@@ -49,7 +58,7 @@ class KeliverPrefetch(path: String, query: Map<String, String> = emptyMap()) {
 
   fun toRequest(): HttpRequest = HttpRequest(method = "GET", path = segments.joinToString("/"), query = query)
 
-  /** Whether [request] (the guest's), with [keptHeaders] (what OkHttpHostHttp would send of its headers), is this one. */
+  /** Whether [request] (the guest's), with [keptHeaders] (what the HostHttp would send of its headers), is this one. */
   fun matches(request: HttpRequest, keptHeaders: Map<String, String>): Boolean = mismatch(request, keptHeaders) == null
 
   /** Whether [request] is a GET of this one's path (a near match, when it is not the same request). */
@@ -71,9 +80,9 @@ class KeliverPrefetch(path: String, query: Map<String, String> = emptyMap()) {
 
 /**
  * The declared requests' responses (see [KeliverPrefetch]). They are sent once both [arm] (the
- * HostHttp, from KeliverHost.run()) and [uiStarting] (the first activity's creation) have been
- * called, in either order: a process that never shows a screen sends nothing. [responseFor] hands
- * a guest's matching request its response, once; [discard] drops what was not taken. Thread-safe.
+ * HostHttp, when the host starts) and [uiStarting] (the start toward a screen) have been called, in
+ * either order: a process that never shows a screen sends nothing. [responseFor] hands a guest's
+ * matching request its response, once; [discard] drops what was not taken. Thread-safe.
  */
 class PrefetchedRequests(
   declared: List<KeliverPrefetch>,
@@ -81,21 +90,47 @@ class PrefetchedRequests(
   private val maxAgeMillis: Long = DEFAULT_PREFETCH_MAX_AGE_MILLIS,
   /** How long a guest's request waits for a prefetch still in flight before it goes out itself. */
   private val maxWaitMillis: Long = DEFAULT_PREFETCH_MAX_WAIT_MILLIS,
-  /** Monotonic milliseconds (SystemClock.elapsedRealtime on a device). */
-  private val now: () -> Long = { System.nanoTime() / 1_000_000 },
-  /** What went unused, and why (KeliverHost passes Log.d in debug builds only); never header or query values. */
+  /** Monotonic milliseconds (Android passes SystemClock.elapsedRealtime). */
+  private val now: () -> Long = monotonicMillis(),
+  /** What went unused, and why (the hosts log it in debug builds only); never header or query values. */
   private val log: (String) -> Unit = {},
 ) {
   private val declared = declared.toList()
+
   private class Sent(val prefetch: KeliverPrefetch) {
     lateinit var response: Deferred<HttpResponse>
+
     /** When the answer (or the failure) arrived; -1 while in flight. */
     @Volatile var arrivedAt: Long = -1
+
+    fun olderThan(maxAgeMillis: Long, at: Long): Boolean = arrivedAt >= 0 && at - arrivedAt > maxAgeMillis
   }
-  private val sent = ArrayList<Sent>()
-  private var sender: Pair<CoroutineScope, suspend (HttpRequest) -> HttpResponse>? = null
-  private var uiStarted = false
-  private var started = false
+
+  /** Everything this object knows, replaced as a whole (compare-and-set), never changed in place. */
+  private class State(
+    val sender: Pair<CoroutineScope, suspend (HttpRequest) -> HttpResponse>? = null,
+    val uiStarted: Boolean = false,
+    val started: Boolean = false,
+    /** Sent and not taken, dropped or expired yet. */
+    val sent: List<Sent> = emptyList(),
+  ) {
+    fun with(
+      sender: Pair<CoroutineScope, suspend (HttpRequest) -> HttpResponse>? = this.sender,
+      uiStarted: Boolean = this.uiStarted,
+      started: Boolean = this.started,
+      sent: List<Sent> = this.sent,
+    ) = State(sender, uiStarted, started, sent)
+  }
+
+  private val state = AtomicReference(State())
+
+  /** Replaces the state with [change]'s answer for it (run again if another thread changed it first); returns the state it replaced. */
+  private inline fun update(change: (State) -> State): State {
+    while (true) {
+      val old = state.load()
+      if (state.compareAndSet(old, change(old))) return old
+    }
+  }
 
   init {
     require(maxAgeMillis > 0) { "PrefetchedRequests: maxAgeMillis $maxAgeMillis is not a positive duration" }
@@ -103,62 +138,68 @@ class PrefetchedRequests(
   }
 
   /** How the requests go out: [send] in [scope]. Nothing is sent before [uiStarting]. */
-  @Synchronized
   fun arm(scope: CoroutineScope, send: suspend (HttpRequest) -> HttpResponse) {
-    if (sender == null) sender = scope to send
+    update { if (it.sender == null) it.with(sender = scope to send) else it }
     sendIfReady()
   }
 
-  /** The process is starting toward a screen (its first activity is being created). */
-  @Synchronized
+  /** The process is starting toward a screen. */
   fun uiStarting() {
-    uiStarted = true
+    update { if (it.uiStarted) it else it.with(uiStarted = true) }
     sendIfReady()
   }
 
   /** Sends every declared request, once for this object's life, when both [arm] and [uiStarting] came. */
   private fun sendIfReady() {
-    val (scope, send) = sender ?: return
-    if (!uiStarted || started) return
-    started = true
-    for (p in declared) {
-      val s = Sent(p)
-      s.response = scope.async {
-        try {
-          send(p.toRequest())
-        } finally {
-          s.arrivedAt = now()
+    while (true) {
+      val s = state.load()
+      val (scope, send) = s.sender ?: return
+      if (!s.uiStarted || s.started) return
+      // Made lazily, and started only once this thread is the one that marked the state started.
+      val made = declared.map { p ->
+        Sent(p).also { sent ->
+          sent.response = scope.async(start = CoroutineStart.LAZY) {
+            try {
+              send(p.toRequest())
+            } finally {
+              sent.arrivedAt = now()
+            }
+          }
         }
       }
-      // Dropped (and logged) when it expires, whether or not a request ever asks for it.
-      scope.launch {
-        s.response.join()
-        delay(maxAgeMillis + 1)
-        sweep()
+      if (!state.compareAndSet(s, s.with(started = true, sent = s.sent + made))) {
+        made.forEach { it.response.cancel() }
+        continue
       }
-      sent += s
+      for (sent in made) {
+        sent.response.start() // a discard() since the state changed has cancelled it: then nothing goes out
+        // Dropped (and logged) when it expires, whether or not a request ever asks for it.
+        scope.launch {
+          sent.response.join()
+          delay(maxAgeMillis + 1)
+          expire(now())
+        }
+      }
+      return
     }
   }
 
-  /** Drops every response not taken yet (any non-GET through HostHttp; KeliverHost.discardPrefetched()). */
-  @Synchronized
+  /** Drops every response not taken yet (any non-GET through HostHttp; the app's discardPrefetched()). */
   fun discard(why: String) {
-    for (s in sent) {
+    for (s in update { it.with(sent = emptyList()) }.sent) {
       log("${s.prefetch} dropped untaken: $why")
       s.response.cancel()
     }
-    sent.clear()
   }
 
-  @Synchronized
-  private fun sweep() = expire(now())
-
+  /** Drops what arrived more than maxAgeMillis before [at]. */
   private fun expire(at: Long) {
-    sent.removeAll { s ->
-      val old = s.arrivedAt >= 0 && at - s.arrivedAt > maxAgeMillis
-      if (old) log("${s.prefetch} expired untaken (its answer arrived ${at - s.arrivedAt} ms ago, over $maxAgeMillis)")
-      old
+    var old: List<Sent> = emptyList()
+    update { s ->
+      old = s.sent.filter { it.olderThan(maxAgeMillis, at) }
+      if (old.isEmpty()) s else s.with(sent = s.sent - old.toSet())
     }
+    for (s in old) log("${s.prefetch} expired untaken (its answer arrived ${at - s.arrivedAt} ms ago, over $maxAgeMillis)")
   }
 
   /**
@@ -166,18 +207,18 @@ class PrefetchedRequests(
    * maxAgeMillis ago (or is still in flight), not taken yet; it is taken now. Null otherwise (the
    * caller sends the request itself).
    */
-  @Synchronized
   fun take(request: HttpRequest, keptHeaders: Map<String, String>): Deferred<HttpResponse>? {
     // Too old to hand out: dropped, so a later identical request goes to the network.
     expire(now())
-    val i = sent.indexOfFirst { it.prefetch.matches(request, keptHeaders) }
-    if (i < 0) {
-      sent.firstOrNull { it.prefetch.samePath(request) }?.let { near ->
-        log("${near.prefetch} not taken by a GET of the same path: ${near.prefetch.mismatch(request, keptHeaders)}")
-      }
-      return null
+    var taken: Sent? = null
+    var near: Sent? = null
+    update { s ->
+      taken = s.sent.firstOrNull { it.prefetch.matches(request, keptHeaders) }
+      near = if (taken == null) s.sent.firstOrNull { it.prefetch.samePath(request) } else null
+      taken?.let { t -> s.with(sent = s.sent.filter { it !== t }) } ?: s
     }
-    return sent.removeAt(i).response
+    near?.let { log("${it.prefetch} not taken by a GET of the same path: ${it.prefetch.mismatch(request, keptHeaders)}") }
+    return taken?.response
   }
 
   /**
@@ -192,7 +233,7 @@ class PrefetchedRequests(
       withTimeoutOrNull(maxWaitMillis) { pending.await() }
     } catch (e: Exception) {
       currentCoroutineContext().ensureActive()
-      log("$what failed (${e::class.java.simpleName}): the request goes out itself")
+      log("$what failed (${e::class.simpleName}): the request goes out itself")
       return null
     }
     if (response == null) {
@@ -209,8 +250,7 @@ class PrefetchedRequests(
 
   /** Tests: waits until every sent request has answered or failed. */
   internal suspend fun settled() {
-    val all = synchronized(this) { sent.map { it.response } }
-    all.forEach { it.join() }
+    state.load().sent.forEach { it.response.join() }
   }
 
   companion object {
@@ -226,11 +266,17 @@ class PrefetchedRequests(
     const val DEFAULT_PREFETCH_MAX_AGE_MILLIS = 5_000L
 
     /**
-     * 1 s. A prefetch sent at the activity's creation has normally answered before the guest asks
+     * 1 s. A prefetch sent at the start toward a screen has normally answered before the guest asks
      * (on the A12, about 1 s later); one still in flight then a second later is likely stalled (a
-     * network switch), and waiting on it to OkHttp's read timeout (10 s or more) would make the
+     * network switch), and waiting on it to the client's read timeout (10 s or more) would make the
      * first screen slower than no prefetch at all. The worst case is now 1 s over not having one.
      */
     const val DEFAULT_PREFETCH_MAX_WAIT_MILLIS = 1_000L
   }
+}
+
+/** Milliseconds on the monotonic clock, from when it was made. */
+private fun monotonicMillis(): () -> Long {
+  val origin = TimeSource.Monotonic.markNow()
+  return { origin.elapsedNow().inWholeMilliseconds }
 }
