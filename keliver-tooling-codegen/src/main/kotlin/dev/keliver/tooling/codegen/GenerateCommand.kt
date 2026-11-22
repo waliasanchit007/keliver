@@ -40,6 +40,9 @@ internal class GenerateCommand : CliktCommand(name = "generate") {
       "--protocol-host" to ProtocolCodegenType.Host,
       "--testing" to CodegenType.Testing,
       "--widget" to CodegenType.Widget,
+      // Not Kotlin: baseline-profile rules for the host code the others generate (see
+      // baselineProfileGeneration.kt). Opt-in, through dev.keliver.generator.host-baseline-profile.
+      "--host-baseline-profile" to HostBaselineProfile,
     )
     .help("Type of code to generate")
     .required()
@@ -70,7 +73,15 @@ internal class GenerateCommand : CliktCommand(name = "generate") {
         schemaSet.generate(type, out)
       }
 
+      HostBaselineProfile -> {
+        val schemaSet = ProtocolSchemaSet.load(schemaType, classLoader)
+        schemaSet.generateHostBaselineProfile(out)
+      }
+
       else -> throw AssertionError()
     }
   }
 }
+
+/** The `--host-baseline-profile` switch's value. */
+internal object HostBaselineProfile

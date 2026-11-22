@@ -107,6 +107,12 @@ gradlePlugin {
       description = "Redwood schema widget code generation Gradle plugin"
       implementationClass = "dev.keliver.gradle.RedwoodWidgetGeneratorPlugin"
     }
+    redwoodHostBaselineProfile {
+      id = "dev.keliver.generator.host-baseline-profile"
+      displayName = "Keliver generator (host baseline profile)"
+      description = "Android baseline-profile rules for a schema's generated host code"
+      implementationClass = "dev.keliver.gradle.RedwoodHostBaselineProfilePlugin"
+    }
     redwoodWidgetProtocolGenerator {
       id = "dev.keliver.generator.widget.protocol"
       displayName = "Redwood generator (widget protocol)"

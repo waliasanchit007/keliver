@@ -65,7 +65,7 @@ if (composePrototype) {
       create("libs") {
         from(files("gradle/libs.versions.toml"))
         version("kotlin", "2.4.20")
-        version("ksp", "2.3.13")
+        version("ksp", "2.3.14")
         version("keliver", providers.gradleProperty("keliverVersion").getOrElse("0.0.0-gateb"))
         version("zipline", "1.28.0")
         version("composeMultiplatform", "1.12.2")
