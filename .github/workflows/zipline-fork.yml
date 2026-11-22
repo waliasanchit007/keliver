@@ -13,7 +13,7 @@
 #     zipline-fork-v<RELEASE_VERSION> as apply.sh has it at the tag, on main's history; the typed
 #     version matches; the secrets exist.
 #   fork (every run; the tag's commit when one is given), from a fresh checkout of Zipline at its
-#     pinned commit:
+#     pinned commit (first, in seconds, the release checks' unit tests, checks_test.py):
 #     1. `apply.sh all`: clone, the QuickJS 2026 engine and both patches (exactly two), the Mac's
 #        JNI library, the command-line qjs builds and check-bigint (the patched engine matches Node
 #        on bigint-ops.js);
@@ -29,6 +29,8 @@
 #     5. `apply.sh release` to a directory, checked by check-release.py (coordinates, names,
 #        licences and notices, capabilities, Central's file rules, the engines, the plugin's
 #        BuildConfig), and `apply.sh check-capabilities` (a classpath with both groups is refused);
+#        `apply.sh check-upload-gate`: vanniktech's plugin writes no bundle and connects nowhere when
+#        the build fails after its Maven Central publication ran (a local listener, never Central);
 #     6. `apply.sh jvm-test-dist`: Zipline's JVM tests as a distribution, for jvm-matrix.
 #   jvm-matrix: that distribution on the six runners upstream's build.yaml uses, so every JNI
 #     library the jar carries is loaded and tested on its own host.
@@ -40,7 +42,8 @@
 #     mode by a second Gradle invocation that may not sign anything again; the bundle it uploaded is
 #     compared file for file with the checked directory, and its sha1 manifest (also in the step
 #     summary, with the spot-check list), the bundle and the signed directory are kept as artifacts
-#     for 90 days, for the comparison in the Portal.
+#     for 90 days, for the comparison in the Portal. If the upload step fails, the summary says the
+#     upload may have happened and to Drop any deployment, and keeps the bundle if one was written.
 name: zipline-fork
 
 on:
@@ -171,6 +174,11 @@ jobs:
         id: sha
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      # Seconds, before hours of build (review 4 of PR #289): publish-checks.py and check-release.py's
+      # licence-path rule on synthetic repositories.
+      - name: Unit tests of the release checks
+        run: python3 -I keliver-compose-gatea-profile/engine/zipline-fork/checks_test.py -v
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -220,6 +228,12 @@ jobs:
         run: |
           scripts/zipline-fork.sh release "$WORK" "$REPO"
           scripts/zipline-fork.sh check-capabilities "$WORK" "$REPO"
+
+      # What the publish job's upload relies on from vanniktech's plugin (review 4 of PR #289, N-2):
+      # a build that fails after its Maven Central publication ran writes no bundle and connects
+      # nowhere; the control run writes one and connects. Every connection goes to a local listener.
+      - name: The upload gate, against a local listener (apply.sh check-upload-gate)
+        run: scripts/zipline-fork.sh check-upload-gate "$WORK"
 
       - name: The JVM tests as a distribution, for every host (apply.sh jvm-test-dist)
         run: scripts/zipline-fork.sh jvm-test-dist "$WORK"
@@ -423,4 +437,43 @@ jobs:
             build/zipline-fork/SHA1SUMS-*.txt
             build/zipline-fork/central-bundle-*.zip
           if-no-files-found: error
+          retention-days: 90
+
+      # The upload step failed (review 4 of PR #289, N-1). vanniktech's plugin uploads only after a
+      # successful build, writing the bundle right before it and never deleting it (the README,
+      # "What the upload relies on"), and a refused or broken upload fails the build after that. So
+      # the step can fail with a deployment already in the Portal (in review mode: held, not
+      # released). Say so, and keep the bundle if it was written.
+      - name: The upload step failed, what may be in the Central Portal
+        env:
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        if: ${{ (failure() || cancelled()) && (steps.upload.outcome == 'failure' || steps.upload.outcome == 'cancelled') }}
+        run: |
+          # The bundles the Maven Central invocation wrote (apply.sh marks its start).
+          bundles=""
+          if [ -f "$WORK/central-upload.started" ]; then
+            bundles="$(find "$WORK/zipline/build/publish" -name '*.zip' -newer "$WORK/central-upload.started" 2>/dev/null || true)"
+          fi
+          mkdir -p build/zipline-fork/failed-upload
+          {
+            echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: the upload step FAILED or was CANCELLED (outcome: ${UPLOAD_OUTCOME})"
+            echo "**The upload may have happened: Drop any deployment of this version in the Central Portal. Do not press Publish.**"
+            if [ -n "$bundles" ]; then
+              while IFS= read -r b; do cp "$b" build/zipline-fork/failed-upload/; done <<< "$bundles"
+              echo "A bundle was written, so the upload was attempted; it is this run's artifact"
+              echo "zipline-fork-failed-upload-${ZIPLINE_FORK_SOURCE_REF}. The upload step's log says why it failed."
+            elif [ -f "$WORK/central-upload.started" ]; then
+              echo "The Maven Central invocation started, but no bundle was found where the plugin writes it, so the"
+              echo "upload should not have been attempted. Check the Portal's Deployments and Drop any deployment of this version."
+            else
+              echo "It failed before the Maven Central invocation (the checks, the signing or the native comparison;"
+              echo "the upload step's log), so nothing should have been uploaded. Check the Portal's Deployments all the same."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ (failure() || cancelled()) && (steps.upload.outcome == 'failure' || steps.upload.outcome == 'cancelled') }}
+        with:
+          name: zipline-fork-failed-upload-${{ inputs.tag }}
+          path: build/zipline-fork/failed-upload
+          if-no-files-found: ignore
           retention-days: 90

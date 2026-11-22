@@ -166,11 +166,12 @@ curl, clang, make and Node):
 | `results [test task...]` | sums the JUnit XML a test run left (`zipline/build/test-results/<task>`, default `jvmTest`): classes, run, passed, skipped, failed, and the failed tests' names; fails if any failed |
 | `jni-all` | step 4: the JVM's JNI library for every host upstream ships (Linux, macOS and Windows; arm64 and x86-64: six libraries) with zig 0.16.0, as upstream's release workflow builds them (`zipline/build.zig`, which the patch gives `dtoa.c` and `-fwrapv`). Uses a `zig` of that version on `PATH`, else downloads the pinned tarball into `<work>/tools` and checks its SHA-256. Replaces what `jni` built; each library must carry QuickJS's version string |
 | `jni-from <tested repo>` | step 4, instead of `jni-all` (the workflow's `publish` job): the six JNI libraries from the `zipline-jvm` jar in a directory `release` wrote (the `fork` job's, whose libraries `jvm-matrix` ran on every host), into the source tree, not rebuilt |
-| `release <repo> [--central <tested repo>]` | step 4, after `engine` and `jni-all` (or `jni-from`), on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`, to an empty directory, without the build cache, then `check-release.py` (below) and a listing with sizes. The POMs point at `ZIPLINE_FORK_SOURCE_REF` (the release tag; default `main`). With `--central` (the CI workflow only, by hand), the directory is signed and checked with its signatures, its native libraries must be byte for byte the tested directory's (`publish-checks.py natives`), then `publishToMavenCentral` from the same, up-to-date build, in review mode, with `-PziplineForkUploadOnly`: a signing task that would run again fails that build before anything is uploaded. The bundle vanniktech's plugin uploaded (`<zipline>/build/publish/*.zip`) is kept as `<work>/central-bundle.zip` |
+| `release <repo> [--central <tested repo>]` | step 4, after `engine` and `jni-all` (or `jni-from`), on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`, to an empty directory, without the build cache, then `check-release.py` (below) and a listing with sizes. The POMs point at `ZIPLINE_FORK_SOURCE_REF` (the release tag; default `main`). With `--central` (the CI workflow only, by hand), the directory is signed and checked with its signatures, its native libraries must be byte for byte the tested directory's (`publish-checks.py natives`), then `publishToMavenCentral` from the same, up-to-date build, in review mode, with `-PziplineForkUploadOnly`: a signing task that would run again fails that build before anything is uploaded. The bundle vanniktech's plugin uploaded (`<zipline>/build/publish/*.zip`) is kept as `<work>/central-bundle.zip`; if that invocation fails, it says whether a bundle was written (the upload was attempted). Refuses a Zipline checkout that uses a vanniktech plugin other than `VANNIKTECH_VERSION` ("What the upload relies on") |
 | `check-release <repo> [signed]` | `check-release.py` again on a directory `release` wrote |
 | `check-natives <tested repo> <repo>` | `publish-checks.py natives`: every native library (JNI libraries in `zipline-jvm`, `libquickjs.so` in the AAR, QuickJS bitcode in the klibs) identical by sha256 in two directories `release` wrote (built in the same work directory: the linuxX64 bitcode records it) |
 | `sha1-manifest <repo> <out>` | after `release --central`, `publish-checks.py sha1`: fails unless `<work>/central-bundle.zip` (what Central received) and the checked directory `<repo>` hold the same files byte for byte (sha1), `maven-metadata.xml` aside (the plugin leaves it out of the bundle and Central writes its own; a second invocation also rewrites its timestamp), each file matching its `.sha1` in the bundle; writes the bundle's files' sha1s (signatures included, checksum files not listed) to `<out>`, and the spot-check list ("Publishing the fork") as a Markdown table |
 | `check-capabilities <repo>` | after `release`: `capability-check/`, a plain Gradle consumer, resolves the fork's modules alone (each at the release version, no `app.cash.zipline` module in the graph) and fails unless the fork's runtime or Gradle plugin together with upstream's is refused with a capability conflict |
+| `check-upload-gate` | after `clone`: `upload-gate-check/`, a one-project build on the vanniktech plugin version Zipline's build uses, run with Zipline's wrapper. It publishes to Maven Central's staging, then fails a task, and must write no bundle zip and open no connection. The control run doesn't fail a task, and must write the zip and connect. Every connection goes to a local listener, never to Central ("What the upload relies on") |
 | `jvm-test-dist` | after `jni-all`: Zipline's JVM tests as a runnable distribution (`zipline/build/install/jvmTest`, `bin/zipline-test` and, for Windows, `bin/zipline-test.bat`; both must be there), which the workflow runs on every host the jar has an engine for |
 | `publish <repo>` | publishes the forked `zipline-jvm`, `zipline-bytecode`, `zipline-android` and `zipline-android-ndk`, and on a Mac with Xcode `zipline-iosarm64` and `zipline-iossimulatorarm64`, as `1.28.0-q20260604` to a scratch Maven repository (never `~/.m2`) |
 | `diff` | for maintainers: regenerates `patches/` from an edited checkout |
@@ -296,7 +297,10 @@ compiler plugin classpaths). Substitution alone would hide such a leak:
 for Markdown alone) and by hand. The `fork` job (macOS): `all`, `jni-all`, Zipline's host tests on
 the JVM and the iOS simulator, the same again with the test JavaScript linked with `Long` as BigInt
 (`-PziplineForkLongAsBigInt`), `check-bigint-zipline` on the JVM, `android`, `release` to a
-directory (kept as the run's artifact) and `check-capabilities`, and `jvm-test-dist`. The
+directory (kept as the run's artifact), `check-capabilities` and `check-upload-gate`, and
+`jvm-test-dist`. Before all of that, in seconds, `checks_test.py`: unit tests of
+`publish-checks.py` (`natives` and `sha1`) and of `check-release.py`'s licence-path rule, on
+synthetic repositories (`python3 -I keliver-compose-gatea-profile/engine/zipline-fork/checks_test.py`). The
 `jvm-matrix` job runs that distribution on the six runners upstream's `build.yaml` uses
 (`macos-15-intel`, `macos-15`, `ubuntu-24.04`, `ubuntu-24.04-arm`, `windows-2025`,
 `windows-11-arm`), so each JNI library in `zipline-jvm` is loaded and tested on its own host
@@ -338,10 +342,15 @@ third release line, beside the libraries and the tools bundle, CLAUDE.md "Releas
    files, their 311 `.asc` signatures (Gradle writes no checksum files for those), the 1,244
    checksum files and no `maven-metadata.xml`. Every entry was byte for byte the signed directory's.
    The guard's own negative control: with its action added in the upload invocation only, every
-   signing task was out of date, and the build stopped before the upload.
+   signing task was out of date, and the build stopped before the upload. That a stopped build
+   uploads nothing rests on the plugin's bytecode, and `check-upload-gate` shows it on every
+   `fork` run ("What the upload relies on", below).
 3. **Drop unless the `publish` job is fully green.** Its last step compares what was uploaded with
    what was checked, after the upload: a red step there, or any failure after the upload, leaves a
-   deployment in the Portal that nothing vouches for. Then, in the Central Portal (Deployments),
+   deployment in the Portal that nothing vouches for. If the upload step itself fails, the summary
+   says **the upload may have happened: Drop any deployment of this version**. If the bundle was
+   written, the upload was attempted, and the job keeps the bundle as
+   `zipline-fork-failed-upload-<tag>`. Then, in the Central Portal (Deployments),
    check the deployment before anything goes live: it lists `dev.keliver.zipline` and is VALIDATED,
    not PUBLISHED. The run's summary has the sha1 of every file in the uploaded bundle (also the
    artifact `zipline-fork-sha1-<tag>`, with the bundle itself, and the signed directory is
@@ -357,6 +366,50 @@ third release line, beside the libraries and the tools bundle, CLAUDE.md "Releas
 
    Then press **Publish**, or **Drop** to abandon it. Maven Central has no undo; a fix after that
    is `1.28.0-keliver.2`.
+
+### What the upload relies on
+
+The upload uses vanniktech's maven-publish plugin, at the version Zipline 1.28.0's build pins:
+0.36.0. `apply.sh` records it as `VANNIKTECH_VERSION`, and `release` and `check-upload-gate`
+refuse a Zipline checkout whose version catalog names another. On 2026-11-22 its behaviour was
+read with `javap -c` from `gradle-maven-publish-plugin-0.36.0.jar` (`MavenCentralBuildService`,
+`EndOfBuildAction`, `PrepareMavenCentralPublishingTask`) and `central-portal-0.36.0.jar`
+(`SonatypeCentralPortal`) (review 4 of PR #289, N-1 and N-2):
+
+- **Registration.** Each project's `prepareMavenCentralPublishing` task registers the project with
+  the plugin's build service. That queues two actions: an `Upload`, which never runs after a
+  failure, and a `Drop`, which runs only after a failure and only for a deployment the build
+  created.
+- **A failed build.** The service listens to every task's finish event, and any failed task marks
+  the build failed. When the service closes at the end of a failed build, it runs only the
+  after-failure actions. So it writes no zip and uploads nothing. The `Drop` has no deployment to
+  drop, and the Portal client is created lazily, so no connection is opened either.
+- **A successful build.** The service creates `<root build dir>/publish/<name>-<millis>.zip` (it
+  fails if the file exists). It writes every staged file into it except `maven-metadata*`, closes
+  it, and only then uploads it, USER_MANAGED in review mode. Review mode adds no validate action,
+  so there's no wait for validation.
+- **The zip is never deleted.** Nothing in either class deletes, moves or renames it, on any path.
+- **An upload error fails the build.** The error isn't caught on the success path, so the build
+  fails ("Failed to stop service 'maven-central-build-service'") with the zip left behind.
+
+For the `publish` job, this means that if the upload step fails, either the upload was never
+reached (no zip), or it was attempted (a zip, which the job keeps). An attempt that failed may
+still have left a deployment in the Portal, for example when the Portal accepted the bundle but
+its response was lost. That's why the summary says to Drop any deployment. A copy from inside the
+build isn't needed, because the plugin never removes its zip.
+
+`check-upload-gate` (`upload-gate-check/`) shows the plugin's part. On 2026-11-22 it ran on this
+Mac with Zipline's own Gradle 9.8.0:
+
+- **Failing run.** `prepareMavenCentralPublishing` and the publication ran, then a task failed. The
+  build failed, with no zip under `build/publish` and no connection at the listener.
+- **Control run.** The zip was written, the listener saw `CONNECT central.sonatype.com:443`, the
+  upload failed (the listener closes the connection), the build failed with "Failed to stop
+  service 'maven-central-build-service' … unexpected end of stream", and the zip was still there.
+
+The `fork` job runs it on every run. It doesn't run Zipline's own build under the Sign guard. That
+case depends on the same rule (any failed task stops the upload) and on step 2's local run, where
+the build stopped before the upload.
 
 ## Not yet
 

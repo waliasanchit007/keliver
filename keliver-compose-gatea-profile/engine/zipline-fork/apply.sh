@@ -68,6 +68,11 @@
 #   apply.sh check-capabilities <work> <repo>   after release: a Gradle consumer (capability-check/)
 #                             resolves the fork's modules alone, and fails, with a capability conflict,
 #                             on the fork's and upstream's together
+#   apply.sh check-upload-gate <work>   after clone: vanniktech's plugin, at the version Zipline's
+#                             build uses, writes no bundle and opens no connection when a build that
+#                             already ran its Maven Central publication then fails; and (the
+#                             control) writes the bundle and connects when it does not. Every
+#                             connection goes to a local listener, never to Central (upload-gate-check/)
 #   apply.sh jvm-test-dist <work>   after jni-all: Zipline's JVM tests as a runnable distribution
 #                             (zipline/build/install/jvmTest, bin/zipline-test), for every host
 #   apply.sh diff    <work>   maintainers: regenerate patches/ from an edited checkout
@@ -75,7 +80,7 @@
 set -euo pipefail
 shopt -s nullglob
 here="$(cd "$(dirname "$0")" && pwd)"
-cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|jni-from|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|check-release|check-capabilities|check-natives|sha1-manifest|jvm-test-dist|diff|all <work dir> [...]}"
+cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|jni-from|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|check-release|check-capabilities|check-upload-gate|check-natives|sha1-manifest|jvm-test-dist|diff|all <work dir> [...]}"
 work="${2:?work dir}"
 mkdir -p "$work"
 work="$(cd "$work" && pwd)"
@@ -92,6 +97,11 @@ FORK_VERSION=1.28.0-q20260604
 # group as -PziplineForkRelease; use-release.init.gradle and the workflow read both from here).
 RELEASE_GROUP=dev.keliver.zipline
 RELEASE_VERSION=1.28.0-keliver.1
+# The version of vanniktech's maven-publish plugin Zipline's build uploads with. What `release
+# --central` relies on from it was read from this version's bytecode (the fork's README, "What the
+# upload relies on"): the bundle zip is written right before the upload and never deleted, and a
+# failed build writes no zip and uploads nothing. `release` refuses another version.
+VANNIKTECH_VERSION=0.36.0
 # The git ref the POMs and NOTICE point at: the release tag in CI (zipline-fork.yml), else main.
 SOURCE_REF="${ZIPLINE_FORK_SOURCE_REF:-main}"
 # patches/: one for the engine, one for Zipline.
@@ -650,6 +660,81 @@ do_check_capabilities() { # <repo>: a pure fork classpath resolves; one mixed wi
     "-PziplineUpstreamVersion=$ZIPLINE_TAG" checkCapabilities)
 }
 
+vanniktech_pinned() { # Zipline's build uses $VANNIKTECH_VERSION, the version whose behaviour the upload relies on
+  local toml="$zl/gradle/libs.versions.toml"
+  [ -f "$toml" ] || { echo "no $toml (run clone first)" >&2; exit 1; }
+  grep -qF "module = \"com.vanniktech:gradle-maven-publish-plugin\", version = \"$VANNIKTECH_VERSION\"" "$toml" \
+    || { echo "Zipline's build does not use vanniktech's maven-publish plugin $VANNIKTECH_VERSION ($toml): what the upload" \
+              "relies on was read from that version; read the new one's MavenCentralBuildService, run check-upload-gate," \
+              "then change VANNIKTECH_VERSION" >&2; exit 1; }
+}
+
+do_check_upload_gate() { # review 4 of PR #289, N-2: upload-gate-check/, against a local listener
+  vanniktech_pinned
+  local d="$work/upload-gate-check" port_file log out listener port n
+  rm -rf "$d"; mkdir -p "$d"; cp "$here"/upload-gate-check/*.gradle "$d/"
+  port_file="$d/listener.port"; log="$d/listener.log"; : > "$log"
+  # The listener: records each connection's request line, then closes it (so the upload fails).
+  python3 -I -c '
+import os, socket, sys
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+s.listen(16)
+with open(sys.argv[1] + ".tmp", "w") as f:
+    f.write(str(s.getsockname()[1]))
+os.rename(sys.argv[1] + ".tmp", sys.argv[1])
+while True:
+    c, _ = s.accept()
+    c.settimeout(5)
+    try:
+        line = c.recv(4096).split(b"\r\n", 1)[0].decode("latin-1") or "(empty)"
+    except OSError:
+        line = "(no request line)"
+    with open(sys.argv[2], "a") as f:
+        f.write(line + "\n")
+    c.close()
+' "$port_file" "$log" &
+  listener=$!
+  # shellcheck disable=SC2064 # expand now: the PID is known here
+  trap "kill $listener 2>/dev/null || true" EXIT
+  n=0; while [ ! -s "$port_file" ] && [ $n -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+  [ -s "$port_file" ] || { echo "check-upload-gate: the listener did not start" >&2; exit 1; }
+  port="$(cat "$port_file")"
+  local fail=0 status zips run
+  for run in failing control; do
+    rm -rf "$d/build" "$d/.gradle"; : > "$log"
+    local fail_arg=(); [ $run = failing ] && fail_arg=(-PuploadGateFail)
+    status=0
+    out="$(cd "$d" && "$zl/gradlew" --console=plain --no-daemon --no-build-cache --no-configuration-cache -p "$d" \
+      -PmavenCentralUsername=upload-gate-check -PmavenCentralPassword=not-a-secret "-PuploadGateProxyPort=$port" \
+      "-PvanniktechVersion=$VANNIKTECH_VERSION" ${fail_arg[@]+"${fail_arg[@]}"} publishToMavenCentral boom 2>&1)" || status=$?
+    echo "$out" > "$d/$run.log"
+    zips="$( (find "$d/build/publish" -name '*.zip' 2>/dev/null || true) | wc -l | tr -d ' ')"
+    # The publication ran (the plugin registered the project for the upload) in both runs.
+    if ! grep -q '^> Task :publishMavenPublicationToMavenCentralRepository$' <<<"$out"; then
+      echo "check-upload-gate: $run: the Maven Central publication did not run ($d/$run.log)" >&2; fail=1; continue
+    fi
+    if [ $run = failing ]; then
+      if [ $status = 0 ] || [ "$zips" != 0 ] || [ -s "$log" ]; then
+        echo "check-upload-gate: failing: exit $status, $zips bundle zip(s), connections: $(tr '\n' ' ' < "$log")" \
+          "(expected a failed build, no zip, no connection; $d/$run.log)" >&2; fail=1
+      else
+        echo "check-upload-gate: failing: the build failed after the publication ran; no bundle zip, no connection"
+      fi
+    else
+      if [ "$zips" != 1 ] || ! grep -q '^CONNECT central\.sonatype\.com:443 ' "$log"; then
+        echo "check-upload-gate: control: exit $status, $zips bundle zip(s), connections: $(tr '\n' ' ' < "$log")" \
+          "(expected one zip and a CONNECT to central.sonatype.com:443, at the listener; $d/$run.log)" >&2; fail=1
+      else
+        echo "check-upload-gate: control: the bundle zip was written ($(find "$d/build/publish" -name '*.zip' -exec basename {} \;))," \
+          "the plugin connected ($(head -1 "$log"), to the listener), the upload failed (exit $status), and the zip is still there"
+      fi
+    fi
+  done
+  [ $fail = 0 ] || exit 1
+  echo "check-upload-gate: OK (vanniktech's maven-publish plugin $VANNIKTECH_VERSION)"
+}
+
 do_jvm_test_dist() { # step 4: Zipline's JVM tests as a distribution, run on every host (zipline-fork.yml)
   [ -n "$(find "$zl/zipline/src/jvmMain/resources/jni" -name '*.dll' 2>/dev/null)" ] \
     || { echo "jvm-test-dist: run jni-all first (the distribution carries every host's engine)" >&2; exit 1; }
@@ -676,6 +761,10 @@ do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEAS
   if [ "$(uname -s)" != Darwin ] || ! xcrun --sdk iphoneos --show-sdk-path > /dev/null 2>&1; then
     echo "release: needs a Mac with Xcode (the Apple targets' klibs)" >&2; exit 1
   fi
+  # The upload invocation's marker: present only once it has started (the workflow's failure step
+  # reads it, with the kept bundle, to say what may have reached the Central Portal).
+  rm -f "$work/central-upload.started" "$work/central-bundle.zip"
+  vanniktech_pinned
   mkdir -p "$repo"; repo="$(cd "$repo" && pwd)"
   case "$repo" in "$HOME/.m2"*) echo "refusing ~/.m2" >&2; exit 2 ;; esac
   [ -z "$(ls -A "$repo")" ] || { echo "release: $repo is not empty" >&2; exit 2; }
@@ -704,11 +793,15 @@ do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEAS
   # it with the checked directory and presses Publish (the fork's README, "Publishing the fork").
   # -PziplineForkUploadOnly (review 3 of PR #289, M1): every signing task must be UP-TO-DATE, so the
   # files and signatures uploaded are the ones checked; one that would run fails the build first.
-  # vanniktech's plugin zips its staging repository into <zipline>/build/publish/*.zip and uploads
-  # that zip at the end of the build; a copy is kept as $work/central-bundle.zip, which
-  # `sha1-manifest` compares with the checked directory and lists for the Portal.
+  # vanniktech's plugin (0.36.0, read from its bytecode; the README, "What the upload relies on"),
+  # when the build service closes after a successful build: zips its staging repositories into
+  # <zipline>/build/publish/<name>-<millis>.zip, then uploads that zip, and never deletes it. After
+  # a failed build it writes no zip and opens no connection (`check-upload-gate` shows both). So a
+  # new zip means the upload was attempted, whether or not it succeeded; a copy is kept as
+  # $work/central-bundle.zip, which `sha1-manifest` compares with the checked directory and lists
+  # for the Portal (and the workflow keeps it after a failure too).
   local marker="$work/central-upload.started" bundles status=0
-  rm -f "$work/central-bundle.zip"; : > "$marker"
+  : > "$marker"
   zipline_gradle "${props[@]}" -PziplineForkUploadOnly publishToMavenCentral || status=$?
   bundles="$(find "$zl/build/publish" -name '*.zip' -newer "$marker" 2>/dev/null || true)"
   if [ -n "$bundles" ] && [ "$(wc -l <<<"$bundles")" -eq 1 ]; then
@@ -718,7 +811,16 @@ do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEAS
     echo "release: expected one new bundle zip under $zl/build/publish, found: ${bundles:-none}" >&2
     [ $status != 0 ] || status=1
   fi
-  [ $status = 0 ] || { echo "release: the upload invocation failed (exit $status)" >&2; exit "$status"; }
+  if [ $status != 0 ]; then
+    if [ -n "$bundles" ]; then
+      echo "release: the upload invocation failed (exit $status) AFTER writing a bundle, so the upload was attempted" \
+        "and may have reached the Central Portal: Drop any deployment of $RELEASE_VERSION there" >&2
+    else
+      echo "release: the upload invocation failed (exit $status) and no bundle was found where vanniktech $VANNIKTECH_VERSION writes it, so the upload" \
+        "should not have been attempted; check the Central Portal's Deployments and Drop any of $RELEASE_VERSION" >&2
+    fi
+    exit "$status"
+  fi
 }
 
 do_diff() { # maintainers: regenerate patches/ from an edited clone (after `engine` and editing)
@@ -762,6 +864,7 @@ case "$cmd" in
   release) do_release "$@" ;;
   check-release) check_release "${3:?check-release <work> <repo release wrote> [signed]}" "${4:-unsigned}" ;;
   check-capabilities) do_check_capabilities "$@" ;;
+  check-upload-gate) do_check_upload_gate ;;
   jvm-test-dist) do_jvm_test_dist ;;
   all) do_clone; do_engine; do_jni; do_qjs; do_check_bigint ;;
   *) echo "unknown: $cmd" >&2; exit 2 ;;
