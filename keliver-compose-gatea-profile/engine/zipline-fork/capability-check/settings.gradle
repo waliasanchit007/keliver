@@ -1,0 +1,4 @@
+// Copyright (C) 2026 Keliver contributors. Licensed under the Apache License, Version 2.0.
+//
+// A plain Gradle consumer of the fork's release (apply.sh check-capabilities; build.gradle).
+rootProject.name = 'zipline-fork-capability-check'
