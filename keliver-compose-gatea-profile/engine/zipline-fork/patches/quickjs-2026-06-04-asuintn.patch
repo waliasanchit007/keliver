@@ -1,118 +1,143 @@
 diff -ru a/quickjs.c b/quickjs.c
---- a/quickjs.c	2026-11-17 17:56:14
-+++ b/quickjs.c	2026-11-17 17:56:14
-@@ -56072,50 +56072,77 @@
-     if (bits == 0) {
-         JS_FreeValue(ctx, a);
-         res = __JS_NewShortBigInt(ctx, 0);
--    } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
--        /* fast case */
--        if (bits >= JS_SHORT_BIG_INT_BITS) {
--            res = a;
-+    } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT &&
-+               bits < JS_SHORT_BIG_INT_BITS) {
-+        /* fast case: the result fits in a short big int */
-+        uint64_t v;
-+        int shift;
-+        shift = 64 - bits;
-+        v = JS_VALUE_GET_SHORT_BIG_INT(a);
-+        v = v << shift;
-+        if (asIntN)
-+            v = (int64_t)v >> shift;
-+        else
-+            v = v >> shift;
-+        res = __JS_NewShortBigInt(ctx, v);
-+    } else {
-+        /* Keliver fork (NF2): the general case, for every width, for short
-+           and multi-limb values and for 32- and 64-bit limbs. The 2026-06-04
-+           release returned the argument unchanged when it had no more limbs
-+           than the width, so BigInt.asUintN(64, -1n) gave -1n, and dropped
-+           the sign limb when the width was a multiple of the limb size, so
-+           BigInt.asUintN(64, 2n**64n + 2n**63n) gave -(2n**63n). Values are
-+           two's complement, sign-extended past their last limb. */
-+        const js_limb_t *tab;
-+        js_limb_t tab1[1];
-+        int len, rlen, i, neg;
-+        JSBigInt *r;
+--- a/quickjs.c	2026-11-22 23:46:19
++++ b/quickjs.c	2026-11-22 23:46:19
+@@ -12373,10 +12373,12 @@
+         /* compute f so that 2^f <= abs(a) < 2^(f+1) */
+         a_mant = js_bigint_get_mant_exp(ctx, &f, a);
+         if (f != e) {
++            /* Keliver fork (NF2): backport of bellard/quickjs 7852f3a80f
++               (#583): the magnitudes order is reversed for negative values */
+             if (f < e)
+-                return -1;
++                return 2 * a_sign - 1;
+             else
+-                return 1;
++                return 1 - 2 * a_sign;
+         } else {
+             mant = (mant | ((uint64_t)1 << 52)) << 11; /* align to a_mant */
+             if (a_mant < mant)
+@@ -14703,8 +14705,13 @@
+         /* return the value mod 2^64 */
+         res = p->tab[0];
+ #if JS_LIMB_BITS == 32
+-        if (p->len >= 2)
++        /* Keliver fork (NF2): backport of bellard/quickjs 0d9e58551a (a
++           one-limb value is sign-extended) */
++        if (p->len >= 2) {
+             res |= (uint64_t)p->tab[1] << 32;
++        } else {
++            res = (js_slimb_t)res;
++        }
+ #endif
+         JS_FreeValue(ctx, val);
+     }
+@@ -14809,7 +14816,11 @@
+                 {
+                     JSBigIntBuf buf2;
+                     JSBigInt *p2;
+-                    p2 = js_bigint_set_si(&buf2, 2 * (op - OP_dec) - 1);
++                    /* Keliver fork (NF2): backport of bellard/quickjs
++                       ef5c6e356c. 'op - OP_dec' is unsigned, so with 64-bit
++                       limbs OP_dec added 2^32 - 1; 'v' is an int. */
++                    v = 2 * (op - OP_dec) - 1;
++                    p2 = js_bigint_set_si(&buf2, v);
+                     r = js_bigint_add(ctx, p1, p2, 0);
+                 }
+                 break;
+@@ -56061,9 +56072,16 @@
+                                   JSValueConst this_val,
+                                   int argc, JSValueConst *argv, int asIntN)
+ {
++    /* Keliver fork (NF2): backport of bellard/quickjs c17f7fc1db (issue
++       #557): the 2026-06-04 release returned the argument unchanged when it
++       had no more limbs than the width, so BigInt.asUintN(64, -1n) gave -1n,
++       and kept the sign limb when the width was a multiple of the limb size,
++       so BigInt.asUintN(64, 2n**64n + 2n**63n) gave -(2n**63n). */
+     uint64_t bits;
+     JSValue res, a;
+-    
++    JSBigInt *p;
++    JSBigIntBuf buf;
 +
-+        if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
-+            tab1[0] = (js_slimb_t)JS_VALUE_GET_SHORT_BIG_INT(a);
-+            tab = tab1;
-+            len = 1;
+     if (JS_ToIndex(ctx, &bits, argv[0]))
+         return JS_EXCEPTION;
+     a = JS_ToBigInt(ctx, argv[1]);
+@@ -56074,13 +56092,18 @@
+         res = __JS_NewShortBigInt(ctx, 0);
+     } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
+         /* fast case */
++        js_slimb_t sv = JS_VALUE_GET_SHORT_BIG_INT(a);
+         if (bits >= JS_SHORT_BIG_INT_BITS) {
+-            res = a;
++            if (!asIntN && sv < 0) {
++                p = js_bigint_set_short(&buf, a);
++                goto slow_case;
++            } else {
++                res = a;
++            }
          } else {
 -            uint64_t v;
--            int shift;
--            shift = 64 - bits;
++            uint64_t v = sv;
+             int shift;
+             shift = 64 - bits;
 -            v = JS_VALUE_GET_SHORT_BIG_INT(a);
--            v = v << shift;
--            if (asIntN)
--                v = (int64_t)v >> shift;
--            else
--                v = v >> shift;
--            res = __JS_NewShortBigInt(ctx, v);
-+            JSBigInt *p = JS_VALUE_GET_PTR(a);
-+            tab = p->tab;
-+            len = p->len;
+             v = v << shift;
+             if (asIntN)
+                 v = (int64_t)v >> shift;
+@@ -56089,30 +56112,49 @@
+             res = __JS_NewShortBigInt(ctx, v);
          }
--    } else {
+     } else {
 -        JSBigInt *r, *p = JS_VALUE_GET_PTR(a);
 -        if (bits >= p->len * JS_LIMB_BITS) {
--            res = a;
-+        neg = (js_slimb_t)tab[len - 1] < 0;
-+        if (bits >= (uint64_t)len * JS_LIMB_BITS && (asIntN || !neg)) {
-+            /* the value is already in range */
-+            return a;
-+        }
-+        if (asIntN) {
-+            /* bits < len * JS_LIMB_BITS here */
-+            rlen = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
++        JSBigInt *r;
++        p = JS_VALUE_GET_PTR(a);
++        if (bits >= p->len * JS_LIMB_BITS && (asIntN || !js_bigint_sign(p))) {
+             res = a;
          } else {
 -            int len, shift, i;
--            js_limb_t v;
++            uint64_t len64;
++            int len, shift, i, l, is_neg;
+             js_limb_t v;
 -            len = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
--            r = js_bigint_new(ctx, len);
--            if (!r) {
-+            /* one more bit than the width, for a zero sign bit */
-+            if (bits / JS_LIMB_BITS + 1 > JS_BIGINT_MAX_SIZE) {
++        slow_case:
++            is_neg = js_bigint_sign(p);
++            len64 = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
++            len = min_int64(len64, INT32_MAX);
+             r = js_bigint_new(ctx, len);
+             if (!r) {
                  JS_FreeValue(ctx, a);
--                return JS_EXCEPTION;
-+                return JS_ThrowRangeError(ctx, "BigInt is too large to allocate");
+                 return JS_EXCEPTION;
              }
--            r->len = len;
++            /* sign extend */
+             r->len = len;
 -            for(i = 0; i < len - 1; i++)
--                r->tab[i] = p->tab[i];
--            shift = (-bits) & (JS_LIMB_BITS - 1);
--            /* 0 <= shift <= JS_LIMB_BITS - 1 */
++            l = min_int(len, p->len);
++            for(i = 0; i < l; i++)
+                 r->tab[i] = p->tab[i];
++            for(i = l; i < len; i++)
++                r->tab[i] = -is_neg;
++
+             shift = (-bits) & (JS_LIMB_BITS - 1);
+             /* 0 <= shift <= JS_LIMB_BITS - 1 */
 -            v = p->tab[len - 1] << shift;
--            if (asIntN)
--                v = (js_slimb_t)v >> shift;
--            else
--                v = v >> shift;
--            r->tab[len - 1] = v;
++            v = r->tab[len - 1] << shift;
+             if (asIntN)
+                 v = (js_slimb_t)v >> shift;
+             else
+                 v = v >> shift;
+             r->tab[len - 1] = v;
 -            r = js_bigint_normalize(ctx, r);
-+            rlen = bits / JS_LIMB_BITS + 1;
-+        }
-+        r = js_bigint_new(ctx, rlen);
-+        if (!r) {
++
++            if (!asIntN) {
++                r = js_bigint_extend(ctx, r, 0);
++                if (!r) {
++                    JS_FreeValue(ctx, a);
++                    return JS_EXCEPTION;
++                }
++            } else {
++                r = js_bigint_normalize(ctx, r);
++            }
              JS_FreeValue(ctx, a);
--            res = JS_CompactBigInt(ctx, r);
-+            return JS_EXCEPTION;
+             res = JS_CompactBigInt(ctx, r);
          }
-+        for(i = 0; i < rlen; i++)
-+            r->tab[i] = i < len ? tab[i] : (neg ? (js_limb_t)-1 : 0);
-+        JS_FreeValue(ctx, a); /* 'tab' is not used after this point */
-+        if (asIntN) {
-+            int shift = (-bits) & (JS_LIMB_BITS - 1);
-+            /* 0 <= shift <= JS_LIMB_BITS - 1 */
-+            js_limb_t v = r->tab[rlen - 1] << shift;
-+            r->tab[rlen - 1] = (js_slimb_t)v >> shift;
-+        } else {
-+            /* keep the low (bits % JS_LIMB_BITS) bits of the last limb */
-+            int m = bits % JS_LIMB_BITS;
-+            r->tab[rlen - 1] &= m ? (((js_limb_t)1 << m) - 1) : 0;
-+        }
-+        r = js_bigint_normalize(ctx, r);
-+        res = JS_CompactBigInt(ctx, r);
-     }
-     return res;
- }

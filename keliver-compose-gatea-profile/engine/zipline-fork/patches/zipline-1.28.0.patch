@@ -2870,10 +2870,10 @@ index 0000000..82bcab6
 +}
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..25d8f57
+index 0000000..c0296a4
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,156 @@
+@@ -0,0 +1,199 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -2976,19 +2976,62 @@ index 0000000..25d8f57
 +
 +  @Test fun asUintNAtTheSizeLimit() {
 +    // QuickJS caps a BigInt at 2^20 bits (Node at 2^30, so bigint-ops.js cannot compare this). A
-+    // negative value at a width of 2^20 or more needs one bit more than that: a RangeError, not a
-+    // crash or a truncated result. One bit narrower fits; a non-negative value is returned as is.
++    // negative value at a width of 2^20 or more needs one bit more than that. Upstream's asUintN
++    // (bellard/quickjs c17f7fc1db) returns it at exactly 2^20, one limb over the cap, and most
++    // operations on it are then a RangeError (they allocate through the capped path); wider is a
++    // RangeError at once. Never a crash or a truncated result. One bit narrower fits; a
++    // non-negative value is returned as is.
 +    assertEquals(1_048_575, quickJs.evaluate("BigInt.asUintN(2 ** 20 - 1, -1n).toString(2).length"))
-+    for (width in listOf("2 ** 20", "2 ** 30", "2 ** 53 - 1")) {
-+      assertEquals(
-+        "RangeError",
-+        quickJs.evaluate(
-+          "try { BigInt.asUintN($width, -1n); 'none' } catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
-+        ),
-+      )
++    assertEquals(1_048_576, quickJs.evaluate("BigInt.asUintN(2 ** 20, -1n).toString(2).length"))
++    assertEquals(
++      "RangeError",
++      quickJs.evaluate(
++        "try { BigInt.asUintN(2 ** 20, -1n) & 1n; 'none' } catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
++      ),
++    )
++    for (width in listOf("2 ** 20", "2 ** 20 + 1", "2 ** 30", "2 ** 53 - 1")) {
++      if (width != "2 ** 20") {
++        assertEquals(
++          "RangeError",
++          quickJs.evaluate(
++            "try { BigInt.asUintN($width, -1n); 'none' } catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
++          ),
++        )
++      }
 +      assertEquals("12345", quickJs.evaluate("String(BigInt.asUintN($width, 12345n))"))
 +      assertEquals("-1", quickJs.evaluate("String(BigInt.asIntN($width, -1n))"))
 +    }
++  }
++
++  @Test fun bigIntUpstreamFixes() {
++    // bellard/quickjs fixes after 2026-06-04, backported. ef5c6e356c: with 64-bit limbs, -- on a
++    // BigInt that is not short added 2^32 - 1 (Long.MIN_VALUE - 1 gave -9223372032559808513).
++    assertEquals(
++      "true true true true",
++      quickJs.evaluate(
++        """
++        var a = -(2n**63n); a--;
++        var b = 2n**64n; b--;
++        var c = 0x1ffffffffffffffffffffff01n; --c;
++        var d = -(2n**64n); --d;
++        [a === -(2n**63n) - 1n, b === 2n**64n - 1n, c === 0x1ffffffffffffffffffffff00n,
++          d === -(2n**64n) - 1n].join(' ');
++        """.trimIndent(),
++      ),
++    )
++    // 7852f3a80f (#583): a negative BigInt against a negative float of another magnitude.
++    assertEquals(
++      "true true true true true",
++      quickJs.evaluate("[-10n < -1.5, -1n > -2.5, -(2n**70n) < -1e20, -0.5 > -1n, -2147483648 < -1n].join(' ')"),
++    )
++    // 0d9e58551a: a 64-bit store (JS_ToBigInt64), whichever limb size the host has.
++    assertEquals(
++      "-1 18446744073709551615 -9223372036854775808",
++      quickJs.evaluate(
++        "var t = new BigInt64Array(2), u = new BigUint64Array(1); t[0] = -1n; u[0] = -1n; t[1] = 2n**63n;" +
++          " [t[0], u[0], t[1]].join(' ')",
++      ),
++    )
 +  }
 +
 +  @Test fun bigIntsReturnAsLong() {
