@@ -1,0 +1,297 @@
+diff -ru a/libunicode.c b/libunicode.c
+--- a/libunicode.c	2026-11-22 23:51:03
++++ b/libunicode.c	2026-11-22 23:51:03
+@@ -1390,7 +1390,9 @@
+         cr_free(cr1);
+         cr_free(cr2);
+     }
+-    goto fail;
++    /* Keliver fork (NF2): backport of bellard/quickjs 817509a (an
++       allocation failure looped here forever) */
++    return -1;
+ }
+ 
+ #define M(id) (1U << UNICODE_GC_ ## id)
+diff -ru a/quickjs.c b/quickjs.c
+--- a/quickjs.c	2026-11-22 23:51:03
++++ b/quickjs.c	2026-11-22 23:51:03
+@@ -4546,6 +4546,8 @@
+         *plen = str_new->len;
+     return (const char *)str_new->u.str8;
+  fail:
++    /* Keliver fork (NF2): backport of bellard/quickjs 552d5eb (#587) */
++    JS_FreeValue(ctx, val);
+     if (plen)
+         *plen = 0;
+     return NULL;
+@@ -7535,20 +7537,26 @@
+ 
+ /* if filename != NULL, an additional level is added with the filename
+    and line number information (used for parse error). */
+-static void build_backtrace(JSContext *ctx, JSValueConst error_obj,
++static void build_backtrace(JSContext *ctx, JSValueConst error_val,
+                             const char *filename, int line_num, int col_num,
+                             int backtrace_flags)
+ {
+     JSStackFrame *sf;
+-    JSValue str;
++    JSValue str, error_obj;
+     DynBuf dbuf;
+     const char *func_name_str;
+     const char *str1;
+     JSObject *p;
+ 
+-    if (!JS_IsObject(error_obj))
++    if (!JS_IsObject(error_val))
+         return; /* protection in the out of memory case */
+-    
++
++    /* Keliver fork (NF2): backport of bellard/quickjs cd97c2b (#529).
++       hold a reference: the allocations below can raise an out of memory,
++       which frees the current exception, aliased by error_obj in the call
++       sites passing rt->current_exception */
++    error_obj = JS_DupValue(ctx, error_val);
++
+     js_dbuf_init(ctx, &dbuf);
+     if (filename) {
+         dbuf_printf(&dbuf, "    at %s", filename);
+@@ -7557,7 +7565,7 @@
+         dbuf_putc(&dbuf, '\n');
+         str = JS_NewString(ctx, filename);
+         if (JS_IsException(str))
+-            return;
++            goto done;
+         /* Note: SpiderMonkey does that, could update once there is a standard */
+         if (JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_fileName, str,
+                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
+@@ -7565,7 +7573,7 @@
+                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0 ||
+             JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, col_num),
+                                    JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) < 0) {
+-            return;
++            goto done;
+         }
+     }
+     for(sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
+@@ -7614,6 +7622,8 @@
+     dbuf_free(&dbuf);
+     JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str,
+                            JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
++ done:
++    JS_FreeValue(ctx, error_obj);
+ }
+ 
+ /* Note: it is important that no exception is returned by this function */
+@@ -9018,7 +9028,11 @@
+         if (JS_IsException(str))
+             return JS_ATOM_NULL;
+         if (JS_VALUE_GET_TAG(str) == JS_TAG_SYMBOL) {
+-            atom = js_symbol_to_atom(ctx, str);
++            /* Keliver fork (NF2): backport of bellard/quickjs c530305 (#590,
++               this hunk only): a built-in symbol's atom is not reference
++               counted, so handing over the reference leaked it */
++            atom = JS_DupAtom(ctx, js_symbol_to_atom(ctx, str));
++            JS_FreeValue(ctx, str);
+         } else {
+             atom = JS_NewAtomStr(ctx, JS_VALUE_GET_STRING(str));
+         }
+@@ -12373,10 +12387,12 @@
+         /* compute f so that 2^f <= abs(a) < 2^(f+1) */
+         a_mant = js_bigint_get_mant_exp(ctx, &f, a);
+         if (f != e) {
++            /* Keliver fork (NF2): backport of bellard/quickjs 7852f3a80f
++               (#583): the magnitudes order is reversed for negative values */
+             if (f < e)
+-                return -1;
++                return 2 * a_sign - 1;
+             else
+-                return 1;
++                return 1 - 2 * a_sign;
+         } else {
+             mant = (mant | ((uint64_t)1 << 52)) << 11; /* align to a_mant */
+             if (a_mant < mant)
+@@ -14703,8 +14719,13 @@
+         /* return the value mod 2^64 */
+         res = p->tab[0];
+ #if JS_LIMB_BITS == 32
+-        if (p->len >= 2)
++        /* Keliver fork (NF2): backport of bellard/quickjs 0d9e58551a (a
++           one-limb value is sign-extended) */
++        if (p->len >= 2) {
+             res |= (uint64_t)p->tab[1] << 32;
++        } else {
++            res = (js_slimb_t)res;
++        }
+ #endif
+         JS_FreeValue(ctx, val);
+     }
+@@ -14809,7 +14830,11 @@
+                 {
+                     JSBigIntBuf buf2;
+                     JSBigInt *p2;
+-                    p2 = js_bigint_set_si(&buf2, 2 * (op - OP_dec) - 1);
++                    /* Keliver fork (NF2): backport of bellard/quickjs
++                       ef5c6e356c. 'op - OP_dec' is unsigned, so with 64-bit
++                       limbs OP_dec added 2^32 - 1; 'v' is an int. */
++                    v = 2 * (op - OP_dec) - 1;
++                    p2 = js_bigint_set_si(&buf2, v);
+                     r = js_bigint_add(ctx, p1, p2, 0);
+                 }
+                 break;
+@@ -38555,14 +38580,15 @@
+ 
+ static JSValue JS_ReadBigInt(BCReaderState *s)
+ {
+-    JSValue obj = JS_UNDEFINED;
++    /* Keliver fork (NF2): backport of bellard/quickjs 79f58c1 (the limbs
++       read so far were leaked on truncated input) */
+     uint32_t len, i, n;
+     JSBigInt *p;
+     js_limb_t v;
+     uint8_t v8;
+-    
++
+     if (bc_get_leb128(s, &len))
+-        goto fail;
++        return JS_EXCEPTION;
+     bc_read_trace(s, "len=%" PRId64 "\n", (int64_t)len);
+     if (len == 0) {
+         /* zero case */
+@@ -38571,7 +38597,7 @@
+     }
+     p = js_bigint_new(s->ctx, (len - 1) / (JS_LIMB_BITS / 8) + 1);
+     if (!p)
+-        goto fail;
++        return JS_EXCEPTION;
+     for(i = 0; i < len / (JS_LIMB_BITS / 8); i++) {
+ #if JS_LIMB_BITS == 32
+         if (bc_get_u32(s, &v))
+@@ -38601,7 +38627,7 @@
+     bc_read_trace(s, "}\n");
+     return JS_CompactBigInt(s->ctx, p);
+  fail:
+-    JS_FreeValue(s->ctx, obj);
++    js_free(s->ctx, p);
+     return JS_EXCEPTION;
+ }
+ 
+@@ -39013,7 +39039,10 @@
+             if (ret < 0)
+                 goto fail;
+         }
+-        JS_PreventExtensions(ctx, obj);
++        /* Keliver fork (NF2): backport of bellard/quickjs 88130c0 (#598):
++           as the parser does, so 'length' is not writable either */
++        if (seal_template_obj(ctx, obj))
++            goto fail;
+     }
+     return obj;
+  fail:
+@@ -39289,7 +39318,9 @@
+             if (bc_get_leb128(s, &val))
+                 return JS_EXCEPTION;
+             bc_read_trace(s, "%u\n", val);
+-            if (val >= s->objects_count) {
++            /* Keliver fork (NF2): backport of bellard/quickjs f68db0e (a
++               reference to an object still being read is NULL) */
++            if (val >= s->objects_count || !s->objects[val]) {
+                 return JS_ThrowSyntaxError(ctx, "invalid object reference (%u >= %u)",
+                                            val, s->objects_count);
+             }
+@@ -56061,9 +56092,16 @@
+                                   JSValueConst this_val,
+                                   int argc, JSValueConst *argv, int asIntN)
+ {
++    /* Keliver fork (NF2): backport of bellard/quickjs c17f7fc1db (issue
++       #557): the 2026-06-04 release returned the argument unchanged when it
++       had no more limbs than the width, so BigInt.asUintN(64, -1n) gave -1n,
++       and kept the sign limb when the width was a multiple of the limb size,
++       so BigInt.asUintN(64, 2n**64n + 2n**63n) gave -(2n**63n). */
+     uint64_t bits;
+     JSValue res, a;
+-    
++    JSBigInt *p;
++    JSBigIntBuf buf;
++
+     if (JS_ToIndex(ctx, &bits, argv[0]))
+         return JS_EXCEPTION;
+     a = JS_ToBigInt(ctx, argv[1]);
+@@ -56074,13 +56112,18 @@
+         res = __JS_NewShortBigInt(ctx, 0);
+     } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
+         /* fast case */
++        js_slimb_t sv = JS_VALUE_GET_SHORT_BIG_INT(a);
+         if (bits >= JS_SHORT_BIG_INT_BITS) {
+-            res = a;
++            if (!asIntN && sv < 0) {
++                p = js_bigint_set_short(&buf, a);
++                goto slow_case;
++            } else {
++                res = a;
++            }
+         } else {
+-            uint64_t v;
++            uint64_t v = sv;
+             int shift;
+             shift = 64 - bits;
+-            v = JS_VALUE_GET_SHORT_BIG_INT(a);
+             v = v << shift;
+             if (asIntN)
+                 v = (int64_t)v >> shift;
+@@ -56089,30 +56132,49 @@
+             res = __JS_NewShortBigInt(ctx, v);
+         }
+     } else {
+-        JSBigInt *r, *p = JS_VALUE_GET_PTR(a);
+-        if (bits >= p->len * JS_LIMB_BITS) {
++        JSBigInt *r;
++        p = JS_VALUE_GET_PTR(a);
++        if (bits >= p->len * JS_LIMB_BITS && (asIntN || !js_bigint_sign(p))) {
+             res = a;
+         } else {
+-            int len, shift, i;
++            uint64_t len64;
++            int len, shift, i, l, is_neg;
+             js_limb_t v;
+-            len = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
++        slow_case:
++            is_neg = js_bigint_sign(p);
++            len64 = (bits + JS_LIMB_BITS - 1) / JS_LIMB_BITS;
++            len = min_int64(len64, INT32_MAX);
+             r = js_bigint_new(ctx, len);
+             if (!r) {
+                 JS_FreeValue(ctx, a);
+                 return JS_EXCEPTION;
+             }
++            /* sign extend */
+             r->len = len;
+-            for(i = 0; i < len - 1; i++)
++            l = min_int(len, p->len);
++            for(i = 0; i < l; i++)
+                 r->tab[i] = p->tab[i];
++            for(i = l; i < len; i++)
++                r->tab[i] = -is_neg;
++
+             shift = (-bits) & (JS_LIMB_BITS - 1);
+             /* 0 <= shift <= JS_LIMB_BITS - 1 */
+-            v = p->tab[len - 1] << shift;
++            v = r->tab[len - 1] << shift;
+             if (asIntN)
+                 v = (js_slimb_t)v >> shift;
+             else
+                 v = v >> shift;
+             r->tab[len - 1] = v;
+-            r = js_bigint_normalize(ctx, r);
++
++            if (!asIntN) {
++                r = js_bigint_extend(ctx, r, 0);
++                if (!r) {
++                    JS_FreeValue(ctx, a);
++                    return JS_EXCEPTION;
++                }
++            } else {
++                r = js_bigint_normalize(ctx, r);
++            }
+             JS_FreeValue(ctx, a);
+             res = JS_CompactBigInt(ctx, r);
+         }
