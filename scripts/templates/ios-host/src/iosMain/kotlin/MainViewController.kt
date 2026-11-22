@@ -158,13 +158,10 @@ import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString.Companion.decodeHex
 import platform.Foundation.NSBundle
 import platform.Foundation.NSLock
-import platform.Foundation.NSNotificationCenter
-import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSThread
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
-import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIViewController
 import platform.UIKit.navigationController
 import platform.darwin.NOTIFY_STATUS_OK
@@ -510,8 +507,22 @@ public object Keliver {
     processHttp.discard("the app called discardPrefetched()")
   }
 
-  /** NF4: whether this process starts toward a screen (UiStart.kt). Main thread. */
-  private val uiStart = UiStartWatch()
+  /**
+   * NF4: whether this process starts toward a screen (UiStart.kt). A debug build logs what the
+   * UI start was, and the Debug and Benchmark builds mark it ("ui-start", M0). Main thread.
+   */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  private val uiStart = UiStartWatch(onUiStart = { cause ->
+    KeliverTiming.mark("ui-start") // Debug and Benchmark builds only (M0)
+    if (kotlin.native.Platform.isDebugBinary) log("UI start: $cause")
+  })
+
+  /**
+   * NF4: start() before a scene is in the foreground (in init(), and in a background launch)
+   * waits for the UI start (UiStart.kt). A debug build logs the wait. Main thread.
+   */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+  private val startGate = StartGate(uiStart) { if (kotlin.native.Platform.isDebugBinary) log(it) }
 
   /**
    * The guests' HostHttp and NF4's declared first requests: one of each for the process, made at
@@ -742,14 +753,29 @@ public object Keliver {
       .build()
   }
 
-  /** Looks up and loads the bundle, once per process; later calls do nothing. From any thread: it runs on the main one. */
+  /**
+   * Looks up and loads the bundle, once per process; later calls do nothing. From any thread: it
+   * runs on the main one. Call it early, in your App's init() (NF4; the template does). Until a
+   * scene is in the foreground it waits, and the host starts when one enters it, the app becomes
+   * active, or a Keliver screen is made while a scene is in the foreground (UiStart.kt: StartGate):
+   * in a launch the user made, as the first scene comes up; in a process whose scenes stay in the
+   * background (a silent push, a background refresh, a scene connected for a location event), only
+   * if the user opens the app, so such a launch loads no code.
+   */
   public fun start() {
     if (!NSThread.isMainThread) {
       dispatch_async(dispatch_get_main_queue()) { start() }
       return
     }
     if (started) return
+    startGate.run(::startNow)
+  }
+
+  /** [start], once the process starts toward a screen. Main thread. */
+  private fun startNow() {
+    if (started) return
     started = true
+    KeliverTiming.mark("start") // Debug and Benchmark builds only (M0): the host starts its lookup
     // B5: the bridges this process serves, before its first lookup (B4's gate reads them there,
     // on a cache start and on each manifest), and binds: one copy, as they are now.
     startedBridges = bridges
@@ -759,14 +785,11 @@ public object Keliver {
     // made once per process (a start retried after "no bundle" keeps them); the requests go out
     // once startHost() passed its checks and the process starts toward a screen.
     processHttp.firstStart(API_BASE_URL.takeIf { it.isNotBlank() }, requestPolicy, requestHeaders, prefetch)
-    // Once: a start that created nothing runs again (started is reset), and a
-    // second observer would make every foreground check twice.
-    if (updatesMode() != "next-launch" && !resumeObserved) {
-      resumeObserved = true
-      NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue) { _ ->
-        resumed()
-      }
-    }
+    // Returns to the foreground only: this launch's own foreground, which UIKit posts right after
+    // the UI start that is running this, is no resume (UiStart.kt: ForegroundReturns). watch()
+    // adds nothing the second time: a start that created nothing runs again (started is reset),
+    // and a second observer would make every foreground check twice.
+    if (updatesMode() != "next-launch") foregroundReturns.watch()
     registerDebugCheckForUpdate()
     lastLookup = TimeSource.Monotonic.markNow()
     // A start after "no bundle" looks again: Loading meanwhile, as on the first.
@@ -974,7 +997,8 @@ public object Keliver {
   }
 
   private var debugCheckRegistered = false // main thread
-  private var resumeObserved = false // main thread
+  /** The on-resume check's trigger: the app back in the foreground after a background. Main thread. */
+  private val foregroundReturns = ForegroundReturns { resumed() }
 
   /**
    * A DEBUG binary only: a check now, applying a newer bundle, not held to the 30 s between
@@ -999,7 +1023,10 @@ public object Keliver {
     if (status != NOTIFY_STATUS_OK.toUInt()) log("could not register $name (notify status $status)")
   }
 
-  /** With UPDATES = "on-resume" or "live": check and apply, at most every 30 s (the host observes the foreground itself). */
+  /**
+   * With UPDATES = "on-resume" or "live", the app back in the foreground ([foregroundReturns]; not
+   * the launch's own foreground): check and apply, at most every 30 s.
+   */
   private fun resumed() {
     val since = lastLookup.elapsedNow()
     if (since < 30.seconds) {
@@ -1183,7 +1210,7 @@ public object Keliver {
     onClose: (() -> Unit)?,
   ): UIViewController {
     KeliverTiming.memory("open") // Debug and Benchmark builds only (M5)
-    uiStart.screenShown() // NF4: this process shows a screen (UiStart.kt)
+    uiStart.screenShown() // NF4: a UI start only while a scene is in the foreground (UiStart.kt)
     // Weak: the screen holds this closure, and a view controller that went closes nothing.
     var shownBy: kotlin.native.ref.WeakReference<UIViewController>? = null
     val close: () -> Unit = onClose ?: { shownBy?.get()?.let(::closeShown) }

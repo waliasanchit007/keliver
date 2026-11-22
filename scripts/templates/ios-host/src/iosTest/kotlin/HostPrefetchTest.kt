@@ -297,15 +297,20 @@ class HostPrefetchTest {
     }
   }
 
-  @Test fun aKeliverScreenIsAStartTowardAScreenBeforeOrAfterTheHostStarts() {
-    val before = UiStartWatch(inForeground = { false }, center = NSNotificationCenter())
+  @Test fun aKeliverScreenInTheForegroundIsAStartTowardAScreenBeforeOrAfterTheHostStarts() {
+    var foreground = true
+    val before = UiStartWatch(inForeground = { foreground }, center = NSNotificationCenter())
     before.screenShown()
+    foreground = false
     var ran = 0
     before.whenStarted { ran++ }
     assertEquals(1, ran)
-    val after = UiStartWatch(inForeground = { false }, center = NSNotificationCenter())
+    val after = UiStartWatch(inForeground = { foreground }, center = NSNotificationCenter())
     after.whenStarted { ran++ }
     assertEquals(1, ran)
+    after.screenShown() // a scene connected in the background built it: not a UI start
+    assertEquals(1, ran)
+    foreground = true
     after.screenShown()
     after.screenShown()
     assertEquals(2, ran)

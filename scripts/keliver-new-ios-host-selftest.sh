@@ -264,7 +264,8 @@ done
   && grep -q '    if (started) return' "$K/IosHttp.kt" && grep -q '    if (made != null) uiStart.whenStarted { made.uiStarting() }' "$K/IosHttp.kt" \
   && grep -q '    http?.startPrefetch(scope)' "$K/IosHttp.kt" \
   && grep -q '    uiStart.screenShown() // NF4' "$V" \
-  && grep -q 'UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateBackground' "$K/UiStart.kt" \
+  && grep -q '  private val inForeground: () -> Boolean = ::sceneInForeground,' "$K/UiStart.kt" \
+  && grep -A5 '^internal fun sceneInForeground(): Boolean {$' "$K/UiStart.kt" | grep -q '^  if (app !is UIApplication) return false$' \
   && grep -q '      UISceneWillEnterForegroundNotification,' "$K/UiStart.kt" \
   && grep -q 'prefetched.discard("a ${request.method.uppercase()} went through HostHttp")' "$K/IosHttp.kt" \
   && grep -q '      prefetched.responseFor(request, kept)?.let { return it }' "$K/IosHttp.kt" \
@@ -274,6 +275,15 @@ done
   && grep -q 'Keliver.shared.prefetch = \[KeliverPrefetch(path: "/items", query: \["page": "1"\])\]' "$H/iosApp/iOSApp.swift" \
   && ok "NF4: Keliver.prefetch (the Android host's HostPrefetch.kt) goes out through the one HostHttp (fixed at the first start) once the host passed its checks and at a start toward a screen, is dropped by a non-GET or discardPrefetched(); its simulator tests and the shared race test are scaffolded" \
   || bad "NF4: the iOS first request's prefetch is not wired, or HostPrefetch.kt (or HostPrefetchRaceTest.kt) differs from the Android host's"
+# NF4, early start: the App starts the host in its init() (as HostApp.kt does on Android), and a
+# background launch holds the start until the UI start (UiStart.kt: StartGate).
+grep -A1 '^    init() {$' "$H/iosApp/iOSApp.swift" | grep -q '^        Keliver.shared.start()$' \
+  && grep -q '^internal class StartGate(' "$K/UiStart.kt" \
+  && grep -A6 '^  public fun start() {$' "$V" | grep -q '^    startGate.run(::startNow)$' \
+  && grep -A3 '^  private fun startNow() {$' "$V" | grep -q '^    started = true$' \
+  && [ -f "$H/src/iosTest/kotlin/com/example/demo/host/StartGateTest.kt" ] \
+  && ok "NF4: iOSApp.swift starts the host in init(); in a background launch start() waits for a scene's foreground or a Keliver screen made in it (StartGate), with its simulator tests" \
+  || bad "NF4: iOSApp.swift does not start the host in init(), or start() is not held in a background launch"
 # Host kit K2: routes and close (the same route text as Android; a guest from before it still opens).
 grep -q 'public class KeliverRoute(path: String, query: Map<String, String> = emptyMap())' "$KC/KeliverRoute.kt" \
   && [ -f "$H/src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt" ] \
@@ -319,8 +329,10 @@ grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', '
   && grep -q 'if (!kotlin.native.Platform.isDebugBinary || debugCheckRegistered) return' "$K/MainViewController.kt" \
   && grep -q 'val url = "$base/bundles/events"' "$K/MainViewController.kt" && grep -q 'screenShown()' "$K/MainViewController.kt" \
   && grep -q 'text/event-stream' "$K/BundleEvents.kt" \
+  && grep -q 'if (updatesMode() != "next-launch") foregroundReturns.watch()' "$K/MainViewController.kt" \
+  && grep -q 'private val foregroundReturns = ForegroundReturns { resumed() }' "$K/MainViewController.kt" \
   && grep -q "implementation 'org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:" "$H/build.gradle" \
-  && ok "updates: live in a debug binary (on-resume in a release one), next-launch in a release one; a debug-only check-now notification" \
+  && ok "updates: live in a debug binary (on-resume in a release one), next-launch in a release one; a debug-only check-now notification; resume checks on a return to the foreground, not the launch's own" \
   || bad "updates: the debug default, live updates or the check-now notification is not wired"
 # M0: timing marks only when KELIVER_TIMING=YES (Debug, Benchmark); a no-op elsewhere.
 grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/com/example/demo/host/KeliverTiming.kt" 2>/dev/null \
@@ -642,8 +654,12 @@ if [ "$BUILD" = 1 ]; then
     # NF4 review (#279): the host's wiring (start() twice, a retried start, a screen before start(),
     # a refused host) and the race test shared with the Android host (1,000 runs each).
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*ProcessHostHttpTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
-    [ "$rc" = 0 ] && [ "${n:-0}" -ge 8 ] && ok "NF4: the host's prefetch wiring tests pass ($n: start() twice, a retried start keeps the first settings, a screen before start(), a refused host sends nothing)" \
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 9 ] && ok "NF4: the host's prefetch wiring tests pass ($n: start() twice, a retried start keeps the first settings, a screen before start(), a screen in a background scene sends nothing, a refused host sends nothing)" \
       || bad "NF4: the host's prefetch wiring tests failed (rc=$rc, ${n:-no} passed)"
+    # NF4, early start: start() in init() starts at once toward a screen and waits in a background launch.
+    n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*StartGateTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
+    [ "$rc" = 0 ] && [ "${n:-0}" -ge 14 ] && ok "NF4: the early start's simulator tests pass ($n: no shared application, as in init(), is no scene in the foreground; a start with a scene up runs at once; a held start loads nothing until a scene or the app comes forward, or a screen is made in the foreground; a screen in a background scene starts nothing; only the app's own window scenes count; an app without scenes counts active; the launch's own foreground is no resume, a return after a background is)" \
+      || bad "NF4: the early start's simulator tests failed (rc=$rc, ${n:-no} passed)"
     n="$(cat "$H"/build/test-results/iosSimulatorArm64Test/TEST-*HostPrefetchRaceTest.xml 2>/dev/null | sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="0" errors="0".*/\1/p' | head -1)"
     [ "$rc" = 0 ] && [ "${n:-0}" -ge 2 ] && ok "NF4: the prefetch's race tests pass on the simulator ($n, 1,000 runs each: never two sends)" \
       || bad "NF4: the prefetch's race tests failed (rc=$rc, ${n:-no} passed)"

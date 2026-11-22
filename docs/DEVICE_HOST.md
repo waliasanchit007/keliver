@@ -372,7 +372,10 @@ that opens.
   each time the app comes back to the foreground, at most every 30 s, the host
   looks up again and applies a newer bundle in place. Zipline loads it while
   the running code goes on, swaps it in on success (the floor rises as for any
-  load), and keeps the running one on failure. `next-launch` (a release
+  load), and keeps the running one on failure. On iOS only a return after the
+  app was in the background counts: the launch's own foreground, which
+  follows the host's start (NF4: at the first scene's foreground), is no
+  resume and makes no check. `next-launch` (a release
   build's default) never looks up while the app runs.
 - A DEBUG build also checks at once, applying a newer bundle and not held to
   the 30 s, when told to from the computer: on Android
@@ -1056,6 +1059,38 @@ It behaves like the Android host in §2:
   names and behaviour as Android's (§2, "Start policy").
   A host scaffolded by tools 0.3.18 or earlier has no `START_POLICY` line: its
   build says so; add `internal const val START_POLICY: String = ""`.
+- **When the host starts** (NF4; unreleased, tools after 0.3.18). The
+  scaffolded `iOSApp.swift` calls `Keliver.shared.start()` in the App's
+  `init()`, as the Android host's `HostApp` does in `onCreate`, next to where
+  a prefetch is declared. On a simulator this alone gained nothing measurable
+  over a start at the first screen (the table below: the gain is the
+  prefetch's), and it costs nothing in a launch the user made. What §2 says about a
+  start at launch holds here too (the download, the `loaded` report, update
+  checks, a first load that fails at launch); an app whose Keliver screens are
+  rarely opened can delete the line, and the first screen starts the host.
+  Unlike Android, **a launch whose scenes stay in the background loads
+  nothing**: iOS runs the App's `init()` for a silent push, a background
+  fetch or refresh, or a location event too. So `start()` starts the host
+  only once one of the app's own window scenes is in the foreground
+  (`UiStart.kt`, `StartGate`; a CarPlay or external-display scene doesn't
+  count, and an app without scenes counts the application being active).
+  Until then it records the wish (a debug build logs `start: no scene in
+  the foreground yet; …`), and the host starts at the first of: a scene or
+  the app entering the foreground, the app becoming active, or a Keliver
+  screen being made while a scene is in the foreground. A screen made in a
+  scene iOS connected in the background (SwiftUI may build the template's
+  root view, a Keliver screen, then) is not a start: that launch waits for
+  the foreground too. So a launch whose scenes stay in the background looks
+  nothing up, loads no code and sends nothing. A launch the user made waits
+  too, for its first scene, which enters the foreground just before SwiftUI
+  makes the first screen. The application state can't tell the two apart
+  that early: in `App.init()` there is no shared `UIApplication` yet (the
+  read answers `active`, 0, in every launch), and at `didFinishLaunching` a
+  scene-based app reads `background` in every launch. Hosts scaffolded by
+  tools 0.3.18 or earlier have no `init()` in `iOSApp.swift` (their first
+  screen starts the host), and their `start()` has no gate: an app that adds
+  `start()` to an `init()` there starts the host, and sends a declared
+  prefetch, in every launch, background ones included.
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
   set. Paths can't climb out of it; a method that isn't a plain token, or a
   header holding CR or LF, is refused; hop-by-hop headers are dropped; and
@@ -1070,25 +1105,25 @@ It behaves like the Android host in §2:
   same as Android's (§2), with the same rules from the same file
   (`HostPrefetch.kt`, byte for byte). In Swift, before the host starts:
   `Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])]`,
-  then `Keliver.shared.start()` in your App's `init()` (or your app delegate's
-  `didFinishLaunching`). The scaffolded `iOSApp.swift` shows it as a comment.
+  before the scaffolded `Keliver.shared.start()` in your App's `init()` (or in
+  your app delegate's `didFinishLaunching`). The scaffolded `iOSApp.swift`
+  shows the declaration as a comment.
   - **When it goes out:** once the host has passed its own checks (the key
     and the bundle server, as on Android: a host that refuses to load sends
     nothing) and the process starts toward a screen (`UiStart.kt`). That
-    second one is the first of three things: the host starting while
-    the app is not in the background; a scene (or the app) entering the
-    foreground, or the app becoming active; or a Keliver screen being made. A
-    SwiftUI or other scene-based app is still in the background state while it
-    finishes launching, so there it goes out when the first scene enters the
-    foreground. A process launched in the background (a push, a background
-    refresh, a location event) sends nothing until the user opens the app in
-    that process. Without an early `start()`, the first Keliver screen starts
-    the host, and the prefetch goes out with it: that is later, and saves less.
+    second one is the first of three things: the host starting while a
+    connected scene is in the foreground; a scene (or the app) entering the
+    foreground, or the app becoming active; or a Keliver screen being made
+    while a scene is in the foreground. With `start()` in `init()` that is
+    when the first scene enters the foreground, which is also when the host
+    starts (above). A process whose scenes stay in the background (a push, a
+    background refresh, a location event) holds the host's start, and so
+    sends nothing, until the user opens the app in that process.
   - **Who it is for:** it goes out through the guests' HostHttp, so your
     `requestPolicy` applies, and so do your `requestHeaders` as they answer
-    then, as the prefetch goes out (at the start toward a screen: in a
-    SwiftUI app, when the first scene enters the foreground, not at
-    `start()`). The guest's request that takes it does not ask them again.
+    then, as the prefetch goes out (when the first scene enters the
+    foreground and the host has passed its checks, not at `start()`). The
+    guest's request that takes it does not ask them again.
     **Have your session restored by then** (restoring it before `start()` is
     the simple way to be sure). Call
     **`Keliver.shared.discardPrefetched()`** when the user signs in, signs out
@@ -1108,20 +1143,59 @@ It behaves like the Android host in §2:
   Measured by the host's simulator tests (`HostPrefetchTest`, over
   `NSURLSession` to a local server; `ProcessHostHttpTest`, the host's wiring:
   `start()` twice, a retried start, a screen before `start()`, a refused host;
-  `HostPrefetchRaceTest`, shared with Android: 1,000 races of the calls).
-  Not measured: a running guest taking a prefetched response on a simulator or
-  an iPhone, and how much earlier the first screen shows its data on iOS.
+  `HostPrefetchRaceTest`, shared with Android: 1,000 races of the calls;
+  `StartGateTest`, the held start).
 
-  **Follow-up: `start()` in the scaffolded `iOSApp.swift` by default.** It
-  stays a comment until three things are done: (1) one simulator run with the
-  comment switched on, showing that `UiStartWatch` reads the application state
-  safely that early in a SwiftUI app and that the prefetch goes out when the
-  first scene enters the foreground; (2) an iOS timing of the gain over
-  starting from the first screen; (3) a decision on background launches: a
-  host started in `init()` looks up and loads its code on every silent push
-  and background refresh (the prefetch is held back, the code load is not),
-  so either hold the code load until the start toward a screen in a background
-  launch, or document that cost.
+  **On a simulator, with a running guest** (`scripts/keliver-nf4-ios-sim.sh
+  <parent> [--runs N]`, self-contained: it scaffolds the app and this host,
+  publishes a signed bundle to a local server whose API answers after 300 ms,
+  and launches the Debug build on a new simulator). Four arms, chosen per
+  launch: (a) no `start()` in `init()`, so the first screen starts the host;
+  (b) `start()` in `init()`; (c) (b) and the first screen's GET declared as a
+  prefetch; (d) (a) and the same prefetch. Medians of 5 process-cold launches
+  each (terminate, 1 s, launch; the arms rotated), in milliseconds from the
+  process's exec, on an iOS 26.4 iPhone simulator on an Apple-silicon Mac,
+  2026-11-22:
+
+  | | (a) first screen | (b) `init()` | (c) (b) + prefetch | (d) (a) + prefetch |
+  |---|---|---|---|---|
+  | the host starts (lookup) | 325 | 292 | 310 | 339 |
+  | the code loaded | 451 | 466 | 471 | 490 |
+  | the first frame | 501 | 516 | 512 | 550 |
+  | the first frame with its data | 848 | 866 | **762** | **754** |
+  | the guest's GET answered in | 320 | 318 | **204** | **194** |
+
+  In every launch of (c) and (d) the server saw one GET, sent 76–141 ms
+  before the code loaded, and the guest's request took it. **The gain is the
+  prefetch's, about 100 ms on a 300 ms API, and starting in `init()` adds
+  nothing measurable to it:** (d), started by the first screen, is as fast
+  as (c) (754 against 762, with overlapping ranges), and (b) is no faster
+  than (a). The early start moves the lookup about 30 ms earlier, but the
+  code load ends at the same time whichever way it starts. In (a) and (d)
+  the UI start was the first screen, made while its scene was already in the
+  foreground, so the screen's start was never held. `start()` in `init()`
+  stays the template's default for other reasons: the gate makes it free in
+  a launch the user made (the start waits for the scene's foreground, which
+  comes just before the screen anyway), it matches Android's `HostApp`, and
+  it sits next to the prefetch declaration. The shared application reads nil
+  in `init()` in every launch (above). The first round's (b) and (c)
+  launches were slow outliers (about 1 s to the code load); they are in the
+  ranges, and a median of 5 is not moved by one. **A simulator is not a phone:** the
+  Mac's CPU runs it, it is a Debug build, and the server is on the same
+  machine. These numbers compare the arms here and nothing more. To repeat it
+  on an iPhone, build the evidence's `iOSApp.swift` (the arm comes from the
+  `-nf4Arm` launch argument) in the Benchmark configuration, against a server
+  the phone can reach, and launch each arm with `xcrun devicectl device
+  process launch --console --terminate-existing --device <id> <bundle id>
+  -nf4Arm a|b|c|d`. `scripts/keliver-nf4-ios-sim-report.py` reads the same
+  console lines. That has not been run.
+
+  **Not shown on a simulator: a launch in the background.** The run sends a
+  content-available push (`xcrun simctl push`, with the background mode set),
+  and the simulator did not launch the app for it, so that check reports
+  SKIP. The held start is covered by the unit tests (`StartGateTest`,
+  including the test binary's own missing shared application) and by the
+  launches above, which were all held until the first scene's foreground.
 - **Guest SQL** (`HostSqlDriver`) is real SQLite in Application Support, bound
   through `src/nativeInterop/cinterop/sqlite3.def`.
 - **Images** load over the network (Coil with Ktor's Darwin engine).

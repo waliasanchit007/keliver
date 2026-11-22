@@ -3,14 +3,24 @@ import KeliverHost
 
 @main
 struct iOSApp: App {
-    // NF4: to have your first screen's data on its way while the bundle loads, declare the GET it
-    // makes first (HostPrefetch.kt has the rules) and start the host here, in an init():
+    // NF4: the host starts here, at launch, so the bundle lookup and the code load run while the
+    // first scene connects (as the Android host's HostApp does). A launch whose scenes stay in the
+    // background (a silent push, a background refresh, a location event) loads nothing: the host
+    // waits until one of the app's scenes comes to the foreground (UiStart.kt). An app whose
+    // Keliver screens are rarely opened can delete the start() line: the first screen starts the
+    // host.
+    //
+    // To have your first screen's data on its way while the bundle loads, declare the GET it
+    // makes first (HostPrefetch.kt has the rules), before start():
     //   Keliver.shared.prefetch = [KeliverPrefetch(path: "/items", query: ["page": "1"])]
-    //   Keliver.shared.start()
     // It goes out with your requestHeaders as they are when the app comes to the foreground, so
-    // restore your session BEFORE Keliver.shared.start(), and call Keliver.shared.discardPrefetched()
-    // when the user signs in, signs out or changes. If your first screen establishes the session
-    // (a PIN, biometric or login screen), don't declare a prefetch.
+    // restore your session by then (before start() is the simple way to be sure), and call
+    // Keliver.shared.discardPrefetched() when the user signs in, signs out or changes. If your
+    // first screen establishes the session (a PIN, biometric or login screen), don't declare one.
+    init() {
+        Keliver.shared.start()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
