@@ -2757,6 +2757,189 @@ n=16 each):
   guest's composition to the screen are the next places to look; the bench's own fixture inflates
   the prestart's apparent wait by about 70 ms.
 
+## NF4: composed to drawn on a cold start (A12, 2026-11-22)
+
+Series G left about 230 ms on a cold start between the guest's `composed` mark for the list with
+data and the `drawn` mark (230.5 ms on 1.28.0, 241.5 on BigInt; native 2). This section names what
+runs there, slice by slice, and measures one fix.
+
+**Answer.** Most of it was **the host's code running interpreted**: the Keliver libraries, Zipline
+and kotlinx.serialization had no entry in any shipped baseline profile, so on a cold start the host
+decoded the guest's first big batch (1,593 changes), mapped it and applied it in ART's interpreter
+while the JIT compiled it. **A baseline profile shipped in `keliver-treehouse-host`'s AAR** (this
+change) takes the guest's composed → the data frame's main-thread end from **362.5 to 155.5 ms**
+(native: 80.5), and the data frame's end from 2,711 to 2,503.5 ms (untraced, `x=prestart,prefetch`,
+8 and 12 launches). Without the prefetch (the as-shipped arm) the cold start gains **525.5 ms**
+(2,920 → 2,394.5), because the code load runs compiled too.
+Also, `drawn` is earlier than the pixels: it fires as the frame starts drawing. Compose then measures
+and lays out the list inside that draw (about 100–120 ms on this first data frame, native too).
+
+**Method.**
+- **Builds**, from this branch (main `003b84c23`), each prototype published to its own scratch Maven
+  repository and the sample's benchmark APK built against it, as in
+  [How to run it](#how-to-run-it): **base** (as main, no host profile) and **fix** (with
+  `keliver-treehouse-host/src/androidMain/baseline-prof.txt`). The traced builds (T, U) are the
+  sample as on main. The timed builds (series W, X) add one bench mark: **`dataFrameEnd`**, posted
+  at the front of the main thread's queue from the `drawn` listener, so it runs as the data frame's
+  main-thread work ends. The two APKs have byte-identical dex files (only `assets/dexopt/baseline.prof`
+  differs: 12,846 → 13,618 bytes).
+- **Phone**: the Galaxy A12, still up since about 02:12 IST, on battery, as in the checkpoints. Each
+  install ran the app once, sent profileinstaller's broadcast and compiled `speed-profile`; the
+  installed reference profile was dumped (`cmd package dump-profiles`) and its host lines counted:
+  base **0** kotlinx.serialization / 0 Zipline / 0 `dev.keliver.protocol` lines, fix **30,552 /
+  14,130 / 7,798**. Every run was a script on the phone (`nohup sh`), with the in-app fixture,
+  `am force-stop` between launches, and each run's first launch unmeasured.
+- **Traces** (series C's Perfetto config; `x=prestart,prefetch,trace`, so every guest call is a
+  section): 3 cold starts of base (T, 07:55–07:56), 3 of fix (U, 08:05) and 2 of native (N,
+  08:06–08:07), read on the phone with `trace_processor_shell`. The window opens at the guest's
+  `zl:composed` call (inside the 1.2 s `zl:sendFrame` that composes the list), so no clock alignment
+  is needed. It ends at the main thread's frame that runs `reportFullyDrawn`.
+- **Not used: a sampling profiler.** `simpleperf record -p` on the app (profileable, not
+  debuggable) is refused on this Android 12 build (`Permission denied` opening the event); enabling it
+  needs a system property change, which this session does not make. So which share of a Treehouse
+  thread slice is QuickJS and which is the host's Kotlin is read from the JIT's compile events, not
+  sampled.
+- **Timed series W** (`x=prestart,prefetch`, untraced): base and fix installed in turn, **each install
+  after `pm uninstall`**, 3 rounds of 4 cold launches, 08:18–08:30. A first attempt (V) reinstalled
+  with `pm install -r` and was aborted: with identical dex files the fix's reference profile
+  survived into the base install (its composed → batchSent was 68 ms). In W's round 2 the base
+  install's profile again had 3,101 kotlinx.serialization lines, saved by ART's profile saver from the
+  install's own 12 s launch (rounds 1 and 3: none). So round 2's base is reported apart, and the
+  base arm is rounds 1 and 3 (8 launches); fix is all 12. **Series X**: the same on the as-shipped arm
+  (no experiments), 2 rounds, 8 launches per arm.
+
+**Phone state.** 07:54–08:40, uptime 5 h 43 min – 6 h 28 min, on battery 82% → 77%, 22.9–25.0 °C,
+thermal status 0, CPU idle 63–84% before each run (lower than the checkpoints' 84–98%).
+
+**The slices, traced** (ms from the guest's `zl:composed`; median of 3 traces, min–max in brackets):
+
+| Slice | Thread | Base | Fix | Native |
+|---|---|---|---|---|
+| composed → the host's `sendChanges` begins: the rest of the guest's frame, the batch's JSON encoding in QuickJS, the bridge, and the host decoding the batch (kotlinx.serialization) | Treehouse | **157.3** (151.9–157.8) | **61.7** (59.7–62.5) | — |
+| the host's `sendChanges`: `UiChange.fromProtocol` for 1,593 changes (property values decoded) | Treehouse | **56.0** (51.8–56.8) | **8.5** (7.4–8.5) | — |
+| wait for the main thread | — | 0.3 | 0.6 | — |
+| applying the batch: `HostProtocolAdapter`, widgets created (`msg ViewContentCodeBinding$sendChanges`) | main | **27.8** (24.2–27.9) | **8.7** (7.2–8.8) | — |
+| wait for the frame | — | 1.7 | 1.8 | — |
+| the data frame (`Choreographer#doFrame`) | main | 142.3 (138.8–144.9) | 148.3 (117.5–149.1) | 130.5–135.0 |
+| of it: `Recomposer:recompose` | main | 20.9 | 21.7 | 23.8–25.1 |
+| of it: `Record View#draw()` (Compose's measure and layout, then recording) | main | 116.8 (105.8–117.1) | 119.5 (90.3–120.6) | 100.4–105.5 |
+| **the data frame's main-thread end** | | **382.0** (375.8–386.0) | **225.5** (199.0–230.6) | — |
+| frame start → presented (frame timeline) | RenderThread, SurfaceFlinger | 159.8 (157.9–164.6) | 131.9 (one trace matched) | 147.8–153.2 |
+| **presented** | | **401.0** (398.1–401.0) | 213.4 (one trace) | — |
+| JIT compilations in the window (JIT thread time) | Jit thread pool | **28** (100.3 ms), 24–25 of them kotlinx.serialization | **0** | — |
+
+- **Where the base's time goes.** From 46 ms after `composed` the JIT compiles kotlinx.serialization's
+  JSON decoder (`StringJsonLexer`, `StreamingJsonDecoder.decodeSerializableValue`, `JsonTreeReader`,
+  `PropertyChange$$serializer.deserialize`, …, all `kind=Baseline`): the host is decoding the batch
+  in the interpreter. Then `UiChange.fromProtocol` and, on the main thread,
+  `GenText1ProtocolNode.apply` and the generated `applyGenerated` modifiers (its compile alone took
+  36.9 ms on the JIT thread during the frame). The Treehouse thread runs 227 of the window's 382 ms
+  (fix: 81 of 199).
+- **The bench's `drawn` comes before the pixels**, for every form: it is `ViewTreeObserver.onDraw`,
+  which runs as the frame starts drawing, before `Record View#draw()`, where Compose measures and
+  lays out. Series G's composed → drawn (230.5) therefore leaves out about 110 ms of the data frame and
+  about 20 ms to its present; native's "2 ms" leaves out its own 130 ms frame (native's present
+  comes about 150 ms after its frame starts too).
+- **What the profile does not touch: the first layout of the list** (`Record View#draw()`, 90–121 ms
+  traced). Native pays nearly the same (100–105 ms), so it is a first-use cost of Compose itself (the
+  list's first measure, text and fonts), not the guest's, and not part of the gap to native.
+
+**Before and after, untraced** (series W, `x=prestart,prefetch`, ms from the process start or
+between marks; median (min–max)):
+
+| Measure | Base (rounds 1, 3; n=8) | **Fix (n=12)** | Base, round 2 (ART's own saved profile; n=4) | Native (n=8) |
+|---|---|---|---|---|
+| composed → batchSent | 205 (203–206) | **63** (60–71) | 62 (61–68) | — |
+| batchSent → inTree | 26 (25–28) | **4** (3–7) | 3.5 (2–4) | — |
+| inTree → drawn | 21.5 (20–23) | 19 (8–25) | — | — |
+| drawn → `dataFrameEnd` | 110 (101–134) | **73.5** (60–87) | 71 (60–78) | 79 (9–91) |
+| **composed → `dataFrameEnd`** | **362.5** (353–390) | **155.5** (137–184) | 152.5 (145–173) | 80.5 (68–93) |
+| composed → drawn (series G's measure) | 252.5 (252–256) | 88 (74–99) | — | — |
+| the code load: starts → succeeds | 326 → 965 | **210 → 710.5** | 197.5 → 703 | — |
+| the activity's first frame (`firstDraw`, "Loading…") | 399 | **311** | 292 | 359 |
+| the guest's request reaches the host (`hostIn`) | 1,259 | **930.5** | — | 423 (its request) |
+| ... and waits for the prefetched response | 52 (27–79) | 374.5 (278–409) | — | — |
+| the prefetched response (`prefetchDone`) | 1,306 | 1,306 | — | — |
+| parsed → composed (the guest's composition) | 1,013 | 1,012 | — | — |
+| **the data frame's end (`dataFrameEnd`)** | **2,711** (2,674–2,769) | **2,503.5** (2,452–2,538) | 2,454 | 665 |
+| data drawn (`dataDrawn`, series G's measure) | 2,603 (2,572–2,637) | 2,432 (2,378–2,462) | 2,381 | 615.5 |
+
+Per round, the data frame's end: base 2,710 and 2,711 (rounds 1, 3), fix 2,478.5, 2,530 and 2,494.5:
+no overlap between the arms.
+
+- **The profile takes composed → the data frame's end from 362.5 to 155.5 ms (−207)**: the host's
+  decode, mapping and apply fall from 231 to 67 ms (composed → inTree), and the frame's own draw by
+  about 36 ms (the generated widgets' modifiers compiled). What is left against native (75 ms) is
+  composed → batchSent, 63 ms: the guest encoding 1,593 changes in QuickJS, the bridge, and the
+  host's decode, now compiled. That part recurs on every screen, in proportion to the batch.
+- **It also takes 255 ms off the code load** (it succeeds at 710.5 instead of 965; it starts 116 ms
+  sooner after the prestart, at 210 instead of 326: series J's first 150 ms on the Treehouse thread
+  were mostly this) and **88 ms off the activity's first frame** (311 instead of 399; native's is
+  359). The guest's request reaches the host 328.5 ms sooner.
+- **In this session the prefetch absorbs that second gain.** The prefetched response came back at
+  about 1,306 ms in every launch of both builds, so with the fix the guest's request waits 374.5 ms
+  for it and the list's data arrives no sooner (parsed 1,336 → 1,327.5). In series G the same
+  prefetch was done at about 297 ms. The sample's Android code is unchanged since then, and the
+  traced launches show the same ~1.3 s, so **why the prefetch took about 1.1 s today is not
+  established** (the fixture binds 127.0.0.1 while the client asks for `localhost`, and the phone's
+  idle share was lower; neither was tested). With the prefetch as fast as in series G, the fix would also
+  bring the data about 320 ms sooner (inferred, not measured). Series X, without the prefetch, is
+  below.
+- **Round 2's base shows what ART does on its own**: its install's launch saved a profile (3,101
+  lines), and with it the base build matches the fix (152.5 ms). On a real phone that is what
+  happens after the app has run and the phone has done its idle-and-charging compile; the shipped
+  profile gives the first launches after an install or an app update the same, and every launch on
+  a phone that has not run that compile yet. A guest update (OTA) does not change the host's code, so
+  it does not reset this.
+
+**The as-shipped arm** (series X, no prestart or prefetch, 08:33–08:40; 2 rounds of 4 launches per
+build). Round 2's base install again had ART's own saved profile (3,101 lines), so the clean base is
+round 1 only (n=4, below the 8 wanted); round 2's base is in the last column:
+
+| Measure | Base (round 1; n=4) | **Fix (n=8)** | Base, round 2 (ART's own saved profile; n=4) |
+|---|---|---|---|
+| the code load succeeds | 1,110 (1,103–1,112) | **841.5** (775–933) | 771 |
+| the guest's request | 1,386.5 | **1,052** | — |
+| parsed → composed | 1,004 | 1,012 | — |
+| composed → batchSent | 202.5 (202–207) | **66** (61–72) | — |
+| composed → `dataFrameEnd` | 373 (351–386) | **170.5** (145–193) | 149.5 |
+| **the data frame's end** | **2,920** (2,899–2,944) | **2,394.5** (2,267–2,497) | 2,264 |
+| data drawn (`dataDrawn`) | 2,802 (2,797–2,813) | 2,317.5 (2,196–2,406) | 2,197 |
+
+- **Without the prefetch to wait for, the profile takes 525.5 ms off the cold start** (the data
+  frame's end 2,920 → 2,394.5, −18%; data drawn 2,802 → 2,317.5): about 270 ms before the request
+  (the code load and the guest's first frame) and about 200 ms after `composed`. The guest's
+  composition is unchanged (1,004 → 1,012). The fix's spread is wider (2,267–2,497; its round 1 was
+  the slower), and ART's own saved profile (round 2's base) is a little faster still, as it also
+  holds the app's own hot code.
+- Against series G's as shipped on 1.28.0 (2,834 to `dataDrawn`), this is the same build without
+  the profile (2,802). With it, 2,317.5: still far from NF4's target (native 615.5 today, so
+  +1,702).
+
+**First use, or every screen.**
+
+| Slice (base, ms) | Kind | Removed by the profile |
+|---|---|---|
+| host decoding the batch (in composed → sendChanges, ~95 of 157) | first use per process (interpreted until the JIT compiles it); every cold start until ART compiles the host | yes (157 → 62 traced) |
+| `UiChange.fromProtocol` (56) | the same | yes (→ 8.5) |
+| applying the batch on the main thread (28) | the same | yes (→ 8.7) |
+| the generated widgets' modifiers in the frame's draw (~36 untraced) | the same | yes |
+| the guest's encoding, the bridge, the compiled decode (~62 with the fix) | every screen, with the batch's size | no |
+| Compose's first layout of the list (~100–120) | first use, native too | no (Compose's own profile already covers its code) |
+| the frame to the screen (~20) | every frame | no |
+
+**Inferred, not measured.** The split of the fix's remaining 62 ms between QuickJS (encoding) and
+the host's compiled decode (no sampling profiler; see Method). That production apps get the
+profile: the AAR carries `baseline-prof.txt` (checked in the library's build), AGP merges it into
+the app's profile (checked in the sample's merged profile), and profileinstaller installs it.
+Compose UI brings profileinstaller as a dependency, so the production-host template has it too (not
+checked in a template-built app). Play installs use the profile without it. The BigInt build was
+not measured: the host's part does not depend on the engine, so the same ~200 ms is expected there
+(series G's 241.5 against 230.5 ms suggests so). The heavy screen and other screens' first batches
+were not measured. An adopter's own generated code outside `dev.keliver` is not covered by the rule
+(the sample's generated code is). The traced frame-timeline present was matched for 4 of the 6
+guest traces only.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
@@ -2888,7 +3071,8 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #   --ei hold 100            taps hold the finger down 100 ms without blocking the main thread, and the
 #                            series' times are from the DOWN (the press series; see "A12 checkpoint")
 # Every process logs one {"cold":"<form>",...} line when the list's data is first drawn: its marks in ms
-# from the process start (see "Cold start (NF0)").
+# from the process start (see "Cold start (NF0)"), logged as the data frame's main-thread work ends
+# (its `dataFrameEnd` mark; `drawn`/`dataDrawn` fire as that frame starts drawing: see "NF4: composed to drawn").
 # Every state/summary/fling line carries "api":"app"|"mac"; the state line also refreshHz and density.
 # The results file also has the per-frame "frameDetail" lines, which logcat does not get:
 adb pull /sdcard/Android/data/dev.keliver.sample/files/threeway-results.txt

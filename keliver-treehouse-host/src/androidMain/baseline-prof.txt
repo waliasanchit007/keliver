@@ -1,0 +1,6 @@
+HSPLdev/keliver/**;->**(**)**
+HSPLapp/cash/zipline/**;->**(**)**
+HSPLkotlinx/serialization/**;->**(**)**
+Ldev/keliver/**;
+Lapp/cash/zipline/**;
+Lkotlinx/serialization/**;
