@@ -5,7 +5,8 @@ from Bellard's repository (github.com/bellard/quickjs). This file records the tr
 upstream commit from `04be246` to `e585640` (master on 2026-11-10) that touches the engine files
 Zipline vendors (`quickjs.c`, `quickjs.h`, `libregexp`, `libunicode`, `cutils`, `dtoa`, the atom
 and opcode tables). Each change in the patch is marked in the source with
-`Keliver fork (NF2): backport of bellard/quickjs <sha>`.
+`Keliver fork (NF2): backport of bellard/quickjs <sha>`, except four size guards that are the
+fork's own, marked `Keliver fork (NF2): not in bellard/quickjs` ("Keliver-only fixes", below).
 
 The rules applied:
 
@@ -43,7 +44,7 @@ emits; the reader changes only validate input, fix leaks, or set property flags 
 | 092277a iterator read twice in js_append_enumerate | not needed | observable only with a getter on `[Symbol.iterator]` during spread/for-of setup; spec order |
 | 66fdddf ToIndex on maxByteLength | not needed | resizable ArrayBuffer option, spec |
 | 3134fbd tests for Array iterator length | not needed | tests |
-| e25861c invalid js_get_length32 (#597) | not needed | array-likes over 2^32 elements and proxy `ownKeys` over 2^31 give a truncated length; every read is a property get, so nothing reads out of bounds (but see "Known and not fixed upstream" below) |
+| e25861c invalid js_get_length32 (#597) | not needed | array-likes over 2^32 elements and proxy `ownKeys` over 2^31 give a truncated length; every read is a property get, so nothing reads out of bounds (the 32-bit wrap it leaves in `ownKeys` is guarded in "Keliver-only fixes" below) |
 | 673c622 regexp after template/private field (#596) | not needed | parser; Kotlin/JS emits neither before a `/` |
 | 88130c0 seal template objects when deserializing (#598) | **taken** | bytecode reader |
 | af2e282 extensibility test for generic arrays (#593) | not needed | spec, non-extensible sparse arrays |
@@ -156,13 +157,36 @@ nothing twice and leaks nothing.
 | `js_atomics_wait_result` | no | no | a double free, but in `Atomics.waitAsync` (f2eb204, out of scope); the release's `Atomics.wait` has no such path |
 | `JS_AddIntrinsicTypedArrays` | yes | **yes** | a **leak**: `Array.prototype.toString` was not freed when reading `%TypedArray%.prototype` failed during context creation |
 
-## Known and not fixed upstream
+## Keliver-only fixes
 
-`js_proxy_get_own_property_names` sizes its table as `sizeof(JSPropertyEnum) * len`, with `len`
-from the `ownKeys` trap's result. On a 32-bit host (armeabi-v7a, x86) a length just over 2^29
-makes that product wrap to a few bytes, and the loop then writes past the table: for example
-`Reflect.ownKeys(new Proxy({}, { ownKeys: () => ({ length: 2 ** 29 + 1, 0: 'a', 1: 'b' }) }))`.
-On 64-bit hosts the allocation fails cleanly. Upstream's e25861c limits the length to 2^31 - 1,
-which does not prevent the wrap, so master has the same code. Not changed in the fork, which
-takes upstream fixes only; Kotlin/JS output does not use Proxy. Found by reading the code; not
-reproduced on a 32-bit device.
+Upstream master (`e585640`) has none of these. Each guards an allocation sized `sizeof(X) * n`,
+where a script controls `n`, against `size_t` wrapping on a 32-bit host (armeabi-v7a, x86: there
+`JSValue` and `JSPropertyEnum` are 8 bytes, so any `n` over 2^29 wraps to a few bytes and the
+loop that fills the table writes past it). Kotlin/JS output reaches none of them, and guest code
+is signed; they went in because the release is immutable (maintainer's decision, 2026-11-23).
+Found by reading the code; none of the wraps was reproduced on a 32-bit build.
+
+| Function | Trigger on a 32-bit host | Guard |
+|---|---|---|
+| `js_proxy_get_own_property_names` | an `ownKeys` trap returning `{ length: 2 ** 29 + 1 }` (`Reflect.ownKeys`, `Object.keys`, `for…in`, …). Upstream's e25861c limits the length to 2^31 - 1, which does not prevent the wrap | a RangeError for a length over `JS_PROXY_OWNKEYS_MAX` (2^27) **on every host**, before allocating: 2^27 keys is a 1 GiB table, and the duplicate-key check after it is quadratic, so no result near that size ever finished anyway. Unguarded, a 64-bit host allocated 4 GiB for that length before failing. Tested on the JVM (`proxyOwnKeysWithAHugeLengthThrows`) |
+| `JS_GetOwnPropertyNamesInternal` | `Object.getOwnPropertyNames(new String(s))` with `s` over 2^29 characters (strings go to 2^30 - 1): its count was limited to 2^31 - 1 only | the existing out-of-memory exit when the table cannot be addressed; no change on 64-bit |
+| `expand_fast_array` | `Array.prototype.toReversed.call({ length: 2 ** 29 + 1 })`, and `toSorted`, `toSpliced` and `with` (`js_allocate_fast_array` takes any length up to 2^31 - 1) | out of memory when the array cannot be addressed; no change on 64-bit |
+| `js_typed_array_sort` (with a comparator) | `new Uint8Array(2 ** 30).sort(f)`: the index table is 4 bytes per element | out of memory when the table cannot be addressed; no change on 64-bit |
+
+Sites checked and left alone (the 2026-06-04 release's allocations sized by a count, and its
+`js_get_length32` callers):
+
+| Site | Why it cannot wrap |
+|---|---|
+| `build_arg_list` (CreateListFromArrayLike: `apply`, `Reflect.apply`, `Reflect.construct`, bound and proxied calls) | the length is limited to `JS_MAX_LOCAL_VARS` (65,534) before the allocation |
+| `js_build_arguments`, `js_build_mapped_arguments`, the argument buffers of `js_call_c_function` and `js_call_bound_function`, `js_function_bind`, `js_iterator_concat`, `js_c_function_data_call` | an argument count, limited the same way (a call's arguments come from bytecode or from `build_arg_list`) |
+| `js_typed_array_sort`'s copy of the array | the byte length, at most 2^31 - 1 (the ArrayBuffer limit) |
+| `JS_ToUTF32String` | 4 bytes per character of a string of at most 2^30 - 1 |
+| RegExp capture tables (`js_regexp_exec`, `js_regexp_replace`) | at most 255 captures (libregexp) |
+| BigInt limbs (`js_bigint_new`, `js_bigint_extend`, `js_bigint_divrem`) | at most `JS_BIGINT_MAX_SIZE` limbs |
+| `js_get_length32` in the spread fast path, `JS_WriteArray`, the array iterator, `GetSubstitution`, `RegExp.prototype[Symbol.replace]`, JSON's reviver | none sizes an allocation by the length |
+| `JS_NewCFunctionData`, job arguments, `dump_byte_code` | sizes from the host or the engine, not a script |
+
+Not checked: the bytecode reader's counts (it reads Zipline's own signed bundles) and the
+engine's internal tables (atoms, shapes, the compiler's). Not guarded: `expand_fast_array`'s
+`size * 3 / 2` (upstream's own XXX) overflows only past 1.4 billion elements, 11 GiB of array.

@@ -60,6 +60,12 @@ one Android app share the path, which Android's packaging would refuse) and `MET
   function ran again when it was finalized) and, in `libunicode.c`, `817509a`
   (`unicode_script` looped forever after an allocation failure). Every upstream commit in the
   range, taken or not and why, and the hunks of `0943061`: [`BACKPORTS.md`](BACKPORTS.md).
+
+  The fork's own, not in upstream: four size guards where a script-controlled count made
+  `sizeof(X) * n` wrap `size_t` on a 32-bit host and a table filled past its end (a Proxy
+  `ownKeys` result, which is also capped at 2^27 keys on every host as a RangeError;
+  `toReversed` and its siblings on an array-like; a String object's keys; a typed array sort's
+  index table). The sites, and those checked and left alone: BACKPORTS.md, "Keliver-only fixes".
   `../bigint-ops.js` covers the BigInt fixes against Node (`check-bigint`,
   `check-bigint-zipline`); `QuickJs2026Test` covers them through Zipline.
 - `patches/zipline-1.28.0.patch` (applied to the Zipline checkout):
