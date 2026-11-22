@@ -3120,7 +3120,7 @@ it), and Flutter with both engine policies. No Shorebird account or service was 
 | Open, heavy detail | 59 | 1,081 | 548 | 44.5 | **No**: 24× and 12× (F2) |
 | Back, header button (frame end) | 81 | 921.5 | 516 | 33.5 | **No** (F2) |
 | Back, system back with `x=retainhost` (the retained list's first draw) | — | 17 | 17 | 33.5 (frame end, header back) | **On the main thread, yes**: the retained list's frame starts 17 ms after the press; FILL-PX-BACK |
-| Scrolling | FILL-F3 | | | | |
+| Scrolling: missed vsyncs per fling, gentle / fast (down) | 0.5 / 3 | 1 / 3.5 | 1 / 10 | 0 / 0 | **No**: Flutter missed 2 vsyncs in 33 flings, Keliver 68 and 133, native 36 (F3) |
 | Size added on an arm64 phone (installed) | — | about 2.9 MB (engine 0.83 + bundle 2.11) + an unmeasured host dex share | the same, 3.2 MB | 16.1 MB (floor: 15.8) | **Yes, smaller** by about 13 MB (F4) |
 | Memory after the list (PSS, settled, MB) | 55.2–56.1 | 72.7 | 72.9 | 83.5 (pre-warmed 85.7) | **Yes, less**: about 11 MB below Flutter (F5) |
 
@@ -3334,7 +3334,70 @@ frame's start), then the guest's confirming frame (its frame end):
 
 FILL-F2-PIXELS
 
-FILL-F3
+### F3. Scrolling the 1,000-item list
+
+**Method.** Series D's two scripted speeds (run 3's commands in [How to run it](#how-to-run-it)):
+gentle, 800 px in 300 ms (1,422 dp/s), 10 swipes each way 8 s apart; fast, 1,000 px in 80 ms
+(6,667 dp/s), 7 each way 14 s apart; one fresh process per arm and speed, `bench=scroll`. Flings
+closed by a touch, busy at DOWN or ending at an edge are dropped, as the summary does. Per fling,
+from the DOWN to the list's last move: **missed vsyncs** (the gaps between consecutive moving frames,
+in vsync periods, minus one) and each moving frame's time. Compose forms: the host's ScrollTracker
+on `FrameMetrics` (the intended vsync to the GPU's completion of the frame). Flutter: the module's
+probe on `FrameTiming` (the vsync to the raster thread's end, `totalSpan`), the missed vsyncs
+counted the same way from its frames' vsync timestamps, and logged through the host in the host's
+fling format, so the same summary runs.
+
+**The frame times are not like for like; the missed vsyncs are.** `FrameMetrics`' total includes
+the GPU executing the frame (native's gentle flings: 12.3 ms of GPU in a 20.5 ms median frame);
+`FrameTiming`'s raster end is when Flutter's raster thread has submitted, before the GPU has run it.
+So Flutter's frame times below are lower by construction, and the column to compare is missed
+vsyncs (a frame that was not produced in time, whatever the measure). Flutter's fling physics also
+differ (its `ClampingScrollPhysics` against Android's `OverScroller`): the same swipe travels about
+the same distance but the list stops sooner (gentle 605 against 743 ms after the UP, fast 1,870
+against 2,245).
+
+**Phone state.** 16:57–17:25, uptime 14 h 46 min – 15 h 13 min, thermal status 0, CPU idle 85–99%.
+Main's arms on battery, 48% → 45%, unplugged, 25.2 °C; **the BigInt arm on the charger** (the owner
+plugged the phone in at about 17:17), 47% → 53%, 28.8–30.5 °C.
+
+| Speed, direction | Arm | Flings kept | Missed vsyncs per fling: median (min–max), total | Moving frames | Frame p50 / p90 / max (ms) | Over 25 ms |
+|---|---|---|---|---|---|---|
+| gentle, down | native | 10 | 0.5 (0–3), 10 | 610 | 17.3 / 21 / 26.4 | 1 (0.2%) |
+| | Keliver 1.28.0 | 10 | 1 (0–2), 9 | 612 | 13.8 / 20.4 / 33.7 | 2 (0.3%) |
+| | Keliver BigInt | 10 | 1 (0–2), 10 | 610 | 20.2 / 20.7 / 26.1 | 2 (0.3%) |
+| | **Flutter** | 10 | **0 (0–0), 0** | 544 | 9.9 / 12.6 / 18.5 † | 0 |
+| gentle, up | native | 9 | 1 (0–1), 5 | 549 | 20 / 21 / 23.5 | 0 |
+| | Keliver 1.28.0 | 10 | 1 (0–6), 16 | 548 | 20 / 20.6 / 29.9 | 1 (0.2%) |
+| | Keliver BigInt | 10 | 1 (0–2), 11 | 611 | 20.1 / 20.8 / 30 | 3 (0.5%) |
+| | **Flutter** | 10 | **0 (0–0), 0** | 546 | 9.7 / 12.4 / 18.5 † | 0 |
+| fast, down | native | 7 | 3 (0–5), 18 | 967 | 20.6 / 25.4 / 58 | 102 (10.5%) |
+| | Keliver 1.28.0 | 6 | 3.5 (0–6), 22 | 691 | 20.8 / 21.6 / 65.4 | 42 (6.1%) |
+| | Keliver BigInt | 7 | **10 (7–16), 71** | 916 | 20.9 / 37.5 / 162.5 | 270 (29.5%) |
+| | **Flutter** | 7 | **0 (0–1), 2** | 820 | 12 / 14.8 / 26.4 † | 1 (0.1%) |
+| fast, up | native | 7 | 0 (0–2), 3 | 977 | 20.6 / 37.2 / 52.4 | 144 (14.7%) |
+| | Keliver 1.28.0 | 6 | 3.5 (2–5), 21 | 822 | 20.9 / 21.8 / 61.3 | 60 (7.3%) |
+| | Keliver BigInt | 6 | 7 (5–9), 41 | 808 | 20.9 / 37.5 / 119.5 | 191 (23.6%) |
+| | **Flutter** | 6 | **0 (0–0), 0** | 703 | 12.1 / 14.5 / 20.5 † | 0 |
+
+† Flutter's frame times end at the raster thread's submit, without the GPU (above); not comparable
+with the Compose rows' times.
+
+- **Missed vsyncs over all kept flings (32–33 per arm): Flutter 2, native 36, Keliver 68 (1.28.0)
+  and 133 (BigInt).** Flutter scrolled this list without a missed vsync at the gentle speed and with
+  2 at the fast one; its two threads stayed well inside a frame (UI-thread build median 1.5 ms gentle,
+  4.2 fast, max 16.9; raster thread 6.8 and 7.1, max 14.7).
+- **Keliver matches native at the gentle speed** (1 missed per fling against native's 0.5–1), as in
+  series D, and falls behind it on fast flings.
+- **The BigInt guest missed more vsyncs on fast flings than 1.28.0** (10 and 7 per fling against
+  3.5 and 3.5). Its guest finished its work for each fling within the fling (2.0–2.2 s of guest work,
+  the list stopping 2.24 s after the UP), while 1.28.0's guest was still composing rows 4.0–4.4 s
+  after the DOWN, about 2 s after the list had stopped. **Inferred, not measured**: the faster guest
+  sends more of its row batches while the list moves, and the host applies them on the main thread
+  during the fling; the slower one leaves rows blank and applies them after it. The placeholder pass
+  (`x=scroll,blank`) that would show the blank rows was not run, and the BigInt arm ran on the
+  charger, 4–5 °C warmer than the others (thermal status 0 throughout).
+- What a user would see is not measured here: the Keliver rows that are still blank while the list
+  moves (series D's "blank rows") are not in these frame counts.
 
 ### F4. Size
 
@@ -3577,4 +3640,27 @@ adb shell "$A -e form F -e bench scroll --ei group 7; sleep 14; \
 #    blank measure (Chromium's own renderer is not visible to the route).
 # Each summary drops flings closed by a touch, busy at DOWN or at an edge, and counts them: if
 # excludedTouch is not 0, lengthen the gap and rerun that speed.
+```
+
+**The Flutter form** ("Flutter on the A12"; not built by CI, a recipe):
+
+```
+# a Flutter module from the bench's two files (Flutter 3.50.1 stable)
+flutter create -t module --org dev.keliver.bench threeway_flutter
+cp docs/flutter-a12/main.dart threeway_flutter/lib/main.dart
+cp docs/flutter-a12/pubspec.yaml threeway_flutter/pubspec.yaml
+(cd threeway_flutter && flutter pub get && \
+  flutter build aar --no-debug --no-profile --release --output /tmp/flutter-aar)
+# the sample with the fourth form (from the Keliver root, on main 2073a4ace)
+git apply docs/flutter-a12/flutter-recipe.patch
+./gradlew publishToMavenLocal -Dmaven.repo.local=/tmp/m2 -PkeliverVersion=0.0.0-gateb \
+  -PkeliverComposePrototype -DRELEASE_SIGNING_ENABLED=false
+(cd sample && ./gradlew :host-android:assembleBenchmark -Dmaven.repo.local=/tmp/m2 \
+  -PkeliverComposePrototype -PthreewayFlutterRepo=/tmp/flutter-aar/host/outputs/repo \
+  -PthreewayNdkVersion=<an installed NDK, so native libraries are stripped>)
+# install as series Y did (uninstall first, profileinstaller's broadcast, speed-profile), then
+adb shell "$A -e form flutter"                   # on demand: the engine created in onCreate
+adb shell "$A -e form flutter -e x prewarm"      # pre-warmed: created in bindApplication, from the
+                                                 # NEXT process on (the setting is saved, as prestart)
+adb shell "$A -e form flutter -e bench nav --ei n 14 --ei warmup 2"   # and every other bench
 ```
