@@ -152,6 +152,12 @@ Changed:
   the press is about half as long, and the heavy screen's recomposition and apply is 82% shorter (#276).
 - Gate A prototype: generated host renderers hold one Compose snapshot state per widget instead of one per
   property, which cuts the state reads Compose scans after every change (NF1) (#280).
+- `keliver-treehouse-host` ships a baseline profile (`baseline-prof.txt` in its AAR) for the library code between
+  the guest's change batch and the screen: Keliver's treehouse, protocol and widget packages, Zipline, and the
+  kotlinx.serialization packages that decode the batch. After a Play install or update, those first cold starts
+  run that code compiled. On a Galaxy A12, as shipped, the data frame's end moves from 2,921.5 to 2,566.5 ms, and
+  the guest's composed → frame end from 365 to 223.5 ms. It costs about 1.7 MB of compiled code on the phone
+  (THREE_WAY_BENCHMARK.md, "NF4: composed to drawn") (#286).
 
 Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 
