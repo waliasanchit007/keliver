@@ -27,6 +27,24 @@ if [ "${KELIVER_USE_MAVEN_LOCAL:-0}" = "1" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The toolchain the Keliver version was built with (the published 0.4.x line: Kotlin 2.2.0). From
+# 0.5.0 Keliver builds on its Zipline fork with Kotlin 2.4.20 (keliver-runtime-line.sh, which
+# keliver-new-device-target.sh also reads when it adds Zipline to this app).
+KOTLIN_VERSION=2.2.0
+COMPOSE_VERSION=1.8.2
+COROUTINES_VERSION=1.10.2
+SERIALIZATION_VERSION=1.9.0
+[ -f "$SCRIPT_DIR/keliver-runtime-line.sh" ] || { echo "keliver-runtime-line.sh is missing beside this script ($SCRIPT_DIR)"; exit 1; }
+# shellcheck source=keliver-runtime-line.sh
+. "$SCRIPT_DIR/keliver-runtime-line.sh"
+keliver_zipline_line "$KELIVER_VERSION" || { echo "KELIVER_VERSION '$KELIVER_VERSION' is not a version (<major>.<minor>.<patch>)"; exit 1; }
+if $KELIVER_ZIPLINE_FORK; then
+  KOTLIN_VERSION="$FORK_KOTLIN_VERSION"
+  COMPOSE_VERSION="$FORK_COMPOSE_VERSION"
+  COROUTINES_VERSION="$FORK_COROUTINES_VERSION"
+  SERIALIZATION_VERSION="$FORK_SERIALIZATION_VERSION"
+fi
 # The gradle wrapper ships beside this script in the tools bundle (../wrapper),
 # or lives at the repo root when run from a keliver checkout.
 WRAPPER=""
@@ -41,10 +59,10 @@ cat > "$DIR/settings.gradle" <<EOF
 pluginManagement {
   repositories { ${MAVEN_LOCAL}gradlePluginPortal(); mavenCentral(); google() }
   plugins {
-    id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0'
-    id 'org.jetbrains.compose' version '1.8.2'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.0'
+    id 'org.jetbrains.kotlin.multiplatform' version '${KOTLIN_VERSION}'
+    id 'org.jetbrains.kotlin.plugin.compose' version '${KOTLIN_VERSION}'
+    id 'org.jetbrains.compose' version '${COMPOSE_VERSION}'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '${KOTLIN_VERSION}'
   }
 }
 dependencyResolutionManagement {
@@ -81,9 +99,9 @@ kotlin {
         api 'dev.keliver:keliver-material-compose:${KELIVER_VERSION}'   // StyledText/Button/Icon/ListItem/…
         api 'dev.keliver:keliver-layout-compose:${KELIVER_VERSION}'     // Column/Row/Spacer
         api 'dev.keliver:portal-sql:${KELIVER_VERSION}'                 // HostSqlDriver data layer
-        implementation 'org.jetbrains.compose.runtime:runtime:1.8.2'
-        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
-        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+        implementation 'org.jetbrains.compose.runtime:runtime:${COMPOSE_VERSION}'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:${COROUTINES_VERSION}'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:${SERIALIZATION_VERSION}'
       }
     }
   }

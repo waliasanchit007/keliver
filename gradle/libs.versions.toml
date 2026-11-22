@@ -15,7 +15,8 @@ ksp = "2.3.13"
 # AGP's lint is AGP + 23 (AGP 9.3.1 -> 32.3.1).
 lint = "32.3.1"
 paparazzi = "1.3.5"
-zipline = "1.28.0"
+# Keliver's Zipline fork (keliver-compose-gatea-profile/engine/zipline-fork; RELEASE_VERSION in its apply.sh).
+zipline = "1.28.0-keliver.1"
 coil = "3.3.0"
 okio = "3.17.0"
 burst = "2.14.0"
@@ -123,9 +124,14 @@ kotlinx-browser = { module = "org.jetbrains.kotlinx:kotlinx-browser", version.re
 okio-assetfilesystem = { module = "com.squareup.okio:okio-assetfilesystem", version.ref = "okio" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version = "5.3.2" }
 paging-compose-common = { module = "app.cash.paging:paging-compose-common", version = "3.3.0-alpha02-0.5.1" }
-zipline = { module = "app.cash.zipline:zipline", version.ref = "zipline" }
-zipline-gradlePlugin = { module = "app.cash.zipline:zipline-gradle-plugin", version.ref = "zipline" }
-zipline-loader = { module = "app.cash.zipline:zipline-loader", version.ref = "zipline" }
+# NF2: Keliver's fork of Zipline (QuickJS 2026, BigInt), the only engine Keliver builds on from 0.5.0.
+# Same artifact names and packages as upstream's app.cash.zipline; its Gradle plugin keeps the id
+# `app.cash.zipline` on the build classpath. Its modules declare upstream's capabilities, so a
+# classpath that also gets app.cash.zipline fails (and build-support refuses any app.cash.zipline
+# module outright: RedwoodBuildPlugin, "one Zipline").
+zipline = { module = "dev.keliver.zipline:zipline", version.ref = "zipline" }
+zipline-gradlePlugin = { module = "dev.keliver.zipline:zipline-gradle-plugin", version.ref = "zipline" }
+zipline-loader = { module = "dev.keliver.zipline:zipline-loader", version.ref = "zipline" }
 paparazzi-gradlePlugin = { module = "app.cash.paparazzi:paparazzi-gradle-plugin", version.ref = "paparazzi" }
 paparazzi = { module = "app.cash.paparazzi:paparazzi", version.ref = "paparazzi" }
 jimfs = "com.google.jimfs:jimfs:1.3.1"

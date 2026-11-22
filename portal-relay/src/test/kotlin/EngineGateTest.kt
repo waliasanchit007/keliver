@@ -108,9 +108,13 @@ class EngineGateTest {
   }
 
   @Test
-  fun thisBuildsZiplineIsTheDefaultEngine() {
-    // Zipline 1.28.0 (here the JVM's build of the QuickJS the phones run) links QuickJS 2021.
-    assertEquals(HOST_DEFAULT_ENGINE, engineOfQuickJsVersion(QuickJs.version))
+  fun thisBuildsZiplineIsTheForksEngine() {
+    // NF2, one engine: Keliver builds on its Zipline fork (here the JVM's build of the QuickJS the
+    // phones run), QuickJS 2026, which every host built from these templates names quickjs-2026. The
+    // default engine (a manifest naming none) stays quickjs-2021 in the protocol, so hosts from
+    // before NF2 keep skipping these bundles.
+    assertEquals("quickjs-2026", engineOfQuickJsVersion(QuickJs.version))
+    assertTrue(engineOfQuickJsVersion(QuickJs.version) != HOST_DEFAULT_ENGINE)
   }
 
   @Test

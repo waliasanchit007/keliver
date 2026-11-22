@@ -34,6 +34,9 @@ kotlin {
   js {
     browser()
     binaries.executable()
+    // NF2: Kotlin's Long as a JavaScript BigInt, as build-support links Keliver's own guests. Only
+    // the Zipline fork's engine (QuickJS 2026, this prototype stack's) runs such a bundle.
+    compilerOptions.freeCompilerArgs.add("-Xes-long-as-bigint")
   }
 
   sourceSets {

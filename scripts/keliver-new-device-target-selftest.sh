@@ -166,9 +166,64 @@ X="$(scaffold Badver)"; set_app_version "$X" 'x"y'; before="$(fingerprint "$X")"
 chk "a malformed appRuntime.keliverVersion is refused" 1 "$rc"
 [ "$(fingerprint "$X")" = "$before" ] && ok "the refused app is byte-identical" || bad "the refused app was changed"
 
+# --- 7b2. NF2: the Zipline line follows the Keliver version ------------------
+# Before 0.5.0 upstream Zipline; from 0.5.0 (a pre-release too) Keliver's Zipline fork, with the
+# guest's Long as a JavaScript BigInt; never both in one app.
+nameds() { grep -cE "['\"]$2['\":]" "$1" 2>/dev/null; }
+grep -q "id 'app.cash.zipline' version '1.22.0'" "$A/settings.gradle" && grep -q "implementation 'app.cash.zipline:zipline:1.22.0'" "$A/build.gradle" \
+  && [ "$(nameds "$A/settings.gradle" 'dev\.keliver\.zipline')$(nameds "$A/build.gradle" 'dev\.keliver\.zipline')" = 00 ] \
+  && ! grep -q -- '-Xes-long-as-bigint' "$A/build.gradle" \
+  && ok "NF2: an app on 0.4.1 keeps upstream Zipline 1.22.0, without Long as BigInt" || bad "NF2: the 0.4.1 app's Zipline changed"
+for v in 0.5.0 0.5.0-SNAPSHOT 1.0.0; do
+  P="$(KELIVER_VERSION=$v scaffold "Fork${v//[.-]/}")"
+  ( cd "$P" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
+  if [ "$rc" = 0 ] && grep -q "id 'dev.keliver.zipline' version '1.28.0-keliver.1'" "$P/settings.gradle" \
+    && grep -q "^  id 'dev.keliver.zipline'$" "$P/build.gradle" \
+    && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$P/build.gradle" \
+    && [ "$(nameds "$P/settings.gradle" 'app\.cash\.zipline')$(nameds "$P/build.gradle" 'app\.cash\.zipline')" = 00 ] \
+    && [ "$(grep -c "compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')" "$P/build.gradle")" = 1 ] \
+    && python3 -c 'import re,sys; b=open(sys.argv[1]).read(); m=re.search(r"\n(\s*)js \{\n(.*?)\n\1\}", b, re.S); sys.exit(0 if m and "binaries.executable()" in m.group(2) and "-Xes-long-as-bigint" in m.group(2) else 1)' "$P/build.gradle" \
+    && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.20'" "$P/settings.gradle"; then
+    ok "NF2: an app on $v gets Keliver's Zipline fork (plugin, library) and Long as BigInt in its js block, Kotlin 2.4.20"
+  else
+    bad "NF2: an app on $v (exit $rc): $(grep -hE "zipline|bigint|kotlin.multiplatform" "$P/settings.gradle" "$P/build.gradle" | tr -s ' ' | tr '\n' '|')"
+  fi
+done
+# An app already on the other line's Zipline is refused, byte-identical.
+M1="$(KELIVER_VERSION=0.5.0 scaffold MixUp)"
+python3 -c 'import re,sys
+p=sys.argv[1]; s=open(p).read()
+s=re.sub(r"(\n(\s*)id .org\.jetbrains\.compose. version .[^\x27]+.)", "\\1\n\\2id \x27app.cash.zipline\x27 version \x271.22.0\x27", s, count=1)
+open(p,"w").write(s)' "$M1/settings.gradle"
+before="$(fingerprint "$M1")"
+( cd "$M1" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
+chk "NF2: an app on 0.5.0 whose settings name app.cash.zipline is refused" 3 "$rc"
+[ "$(fingerprint "$M1")" = "$before" ] && ok "NF2: the refused 0.5.0 app is byte-identical" || bad "NF2: the refused 0.5.0 app was changed"
+M2="$(scaffold MixDown)"
+printf "\n// dependencies { implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1' }\n" >> "$M2/build.gradle"
+before="$(fingerprint "$M2")"
+( cd "$M2" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
+chk "NF2: an app on 0.4.1 whose build names dev.keliver.zipline is refused" 3 "$rc"
+[ "$(fingerprint "$M2")" = "$before" ] && ok "NF2: the refused 0.4.1 app is byte-identical" || bad "NF2: the refused 0.4.1 app was changed"
+# A fork-line app whose js block is already an executable gets the flag once, under it.
+E5="$(KELIVER_VERSION=0.5.0 scaffold Already)"
+python3 -c 'import re,sys
+p=sys.argv[1]; s=open(p).read()
+s=re.sub(r"\n(\s*)js \{ browser\(\) \}", "\n\\1js {\n\\1  browser()\n\\1  binaries.executable()\n\\1}", s, count=1)
+open(p,"w").write(s)' "$E5/build.gradle"
+( cd "$E5" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
+[ "$rc" = 0 ] && [ "$(grep -c -- "-Xes-long-as-bigint')" "$E5/build.gradle")" = 1 ] \
+  && grep -A2 'binaries.executable()' "$E5/build.gradle" | grep -q -- '-Xes-long-as-bigint' \
+  && ok "NF2: an executable js block on 0.5.0 gets Long as BigInt once, under binaries.executable()" || bad "NF2: the executable js block on 0.5.0 (exit $rc)"
+# The class names in the signing block (app.cash.zipline.gradle....) are not a Zipline coordinate.
+S1="$(KELIVER_VERSION=0.5.0 scaffold Signed)"
+printf '\ntasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { }\n' >> "$S1/build.gradle"
+( cd "$S1" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
+chk "NF2: app.cash.zipline class names (the signing block) on 0.5.0 are not refused" 0 "$rc"
+
 # --- 7c. the tools bundle's layout (bin/ beside templates/), a symlink, no template
 KP="$WORK/bundle"; mkdir -p "$KP/bin" "$KP/templates" "$WORK/links"
-cp "$DEV" "$KP/bin/"; cp -R "$ROOT/scripts/templates/guest" "$KP/templates/"
+cp "$DEV" "$ROOT/scripts/keliver-runtime-line.sh" "$KP/bin/"; cp -R "$ROOT/scripts/templates/guest" "$KP/templates/"
 ln -s "$KP/bin/keliver-new-device-target.sh" "$WORK/links/kndt"
 L1="$(scaffold Linked)"
 ( cd "$L1" && "$WORK/links/kndt" >/dev/null 2>&1 ); rc=$?
@@ -180,6 +235,11 @@ N="$(scaffold Notmpl)"; before="$(fingerprint "$N")"
 ( cd "$N" && "$KP/bin/keliver-new-device-target.sh" >/dev/null 2>&1 ); rc=$?
 chk "no templates/guest is refused" 1 "$rc"
 [ "$(fingerprint "$N")" = "$before" ] && ok "no templates/guest: app unchanged" || bad "no templates/guest: the app was changed"
+cp -R "$ROOT/scripts/templates/guest" "$KP/templates/"; rm "$KP/bin/keliver-runtime-line.sh"
+N2="$(scaffold Noline)"; before="$(fingerprint "$N2")"
+( cd "$N2" && "$KP/bin/keliver-new-device-target.sh" >/dev/null 2>&1 ); rc=$?
+chk "NF2: no keliver-runtime-line.sh beside it is refused" 1 "$rc"
+[ "$(fingerprint "$N2")" = "$before" ] && ok "NF2: no keliver-runtime-line.sh: app unchanged" || bad "NF2: no keliver-runtime-line.sh: the app was changed"
 
 # --- 8. the generated output actually compiles -------------------------------
 if [ $DO_COMPILE = 1 ]; then

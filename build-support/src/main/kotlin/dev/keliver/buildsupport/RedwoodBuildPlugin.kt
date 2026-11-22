@@ -118,6 +118,9 @@ class RedwoodBuildPlugin : Plugin<Project> {
     target.configureSkikoForWebTests()
     target.configureCommonAndroid()
     target.configureCommonKotlin()
+    // NF2: Keliver's Zipline fork, the only one (ZiplineFork.kt).
+    target.configureZiplineGuestLongAsBigInt()
+    target.refuseUpstreamZipline()
   }
 
   private fun Project.configureCommonSpotless() {

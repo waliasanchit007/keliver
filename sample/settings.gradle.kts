@@ -32,6 +32,10 @@ pluginManagement {
       if (requested.id.id == "app.cash.zipline") {
         useModule("app.cash.zipline:zipline-gradle-plugin:${requested.version}")
       }
+      // NF2: Keliver's Zipline fork (the prototype stack below).
+      if (requested.id.id == "dev.keliver.zipline") {
+        useModule("dev.keliver.zipline:zipline-gradle-plugin:${requested.version}")
+      }
     }
   }
 }
@@ -67,7 +71,12 @@ if (composePrototype) {
         version("kotlin", "2.4.20")
         version("ksp", "2.3.13")
         version("keliver", providers.gradleProperty("keliverVersion").getOrElse("0.0.0-gateb"))
-        version("zipline", "1.28.0")
+        // NF2: main's stack builds on Keliver's Zipline fork (QuickJS 2026): same artifact names and
+        // packages, another group, and the plugin id dev.keliver.zipline (pluginManagement above).
+        version("zipline", "1.28.0-keliver.1")
+        library("zipline", "dev.keliver.zipline", "zipline").versionRef("zipline")
+        library("zipline-loader", "dev.keliver.zipline", "zipline-loader").versionRef("zipline")
+        plugin("zipline", "dev.keliver.zipline").versionRef("zipline")
         version("composeMultiplatform", "1.12.2")
         // main's Android artifacts require compileSdk 37 (AAR metadata).
         version("android-compileSdk", "37")

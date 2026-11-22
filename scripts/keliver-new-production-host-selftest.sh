@@ -665,6 +665,51 @@ PY
   fi
 fi
 
+echo "=== NF2: the Zipline line follows the app's Keliver version (keliver-runtime-line.sh)"
+# The app above names no version (0.4.1): upstream Zipline 1.22.0 on Kotlin 2.2.0, as before.
+grep -q "^  id 'app.cash.zipline' version '1.22.0'$" "$H/build.gradle" && grep -q "implementation 'app.cash.zipline:zipline:1.22.0'" "$H/build.gradle" \
+  && grep -q "implementation 'app.cash.zipline:zipline-loader:1.22.0'" "$H/build.gradle" && grep -q "id 'org.jetbrains.kotlin.android' version '2.2.0'" "$H/build.gradle" \
+  && ! grep -q 'dev\.keliver\.zipline' "$H/build.gradle" && grep -q "^  id 'app.cash.zipline' // IR rewrite" "$L/build.gradle" \
+  && grep -q "implementation 'app.cash.zipline:zipline:1.22.0'" "$L/build.gradle" && ! grep -q 'dev\.keliver\.zipline:' "$L/build.gradle" \
+  && ok "NF2: a 0.4.1 app's host and library keep upstream Zipline 1.22.0 on Kotlin 2.2.0" || bad "NF2: the 0.4.1 app's host changed its Zipline"
+for v in 0.5.0 0.5.1-SNAPSHOT; do
+  APPF="$DISP/fork-${v//./-}"; mkdir -p "$APPF/src/jsMain/kotlin/screens"
+  printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "keliverVersion": "%s", "widgetVersion": 1 } }\n' "$v" > "$APPF/keliver.portal.json"
+  cp "$APP/settings.gradle" "$APPF/"; cp "$APP/src/jsMain/kotlin/screens/home.kt" "$APPF/src/jsMain/kotlin/screens/"
+  keliver_require_isolated_store "$DISP" "$APPF" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
+  out="$( cd "$APPF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+  HF="$APPF/host-android/build.gradle"
+  [ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.1'$" "$HF" \
+    && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$HF" && grep -q "implementation 'dev.keliver.zipline:zipline-loader:1.28.0-keliver.1'" "$HF" \
+    && grep -q "id 'org.jetbrains.kotlin.android' version '2.4.20'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
+    && grep -q "implementation 'dev.keliver:keliver-treehouse-host:$v'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
+    && ok "NF2: an app on $v gets Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries) on Kotlin 2.4.20, Compose 1.12.2" \
+    || bad "NF2: the host of an app on $v (rc=$rc): $(grep -hE 'zipline|kotlin.android|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
+done
+KELIVER_HOST_ZIPLINE_VERSION=1.28.0-keliver.9 KELIVER_HOST_KOTLIN_VERSION=2.4.99 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.9'$" "$DISP/fork-0-5-0/host-android/build.gradle" \
+  && grep -q "id 'org.jetbrains.kotlin.android' version '2.4.99'" "$DISP/fork-0-5-0/host-android/build.gradle" \
+  && ok "NF2: KELIVER_HOST_*_VERSION still override the fork line's defaults" || bad "NF2: the overrides on the fork line (rc=$rc)"
+# --embed on 0.5.0: the library names the fork's plugin; an existing app still on app.cash.zipline is warned.
+EXF="$DISP/existing-fork"; mkdir -p "$EXF/app"
+printf "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\nrootProject.name = 'existing'\ninclude ':app'\n" > "$EXF/settings.gradle"
+printf "plugins {\n  id 'com.android.application' version '8.12.0' apply false\n  id 'app.cash.zipline' version '1.22.0' apply false\n}\n" > "$EXF/build.gradle"
+out="$( cd "$DISP/fork-0-5-0" && "$SCAFFOLD" --embed --into "$EXF" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+LF="$EXF/keliver-host/build.gradle"
+[ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' // IR rewrite" "$LF" && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$LF" \
+  && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$LF" \
+  && printf '%s' "$out" | grep -q "warning: no dev.keliver.zipline plugin found" \
+  && printf '%s' "$out" | grep -q "names app.cash.zipline: Keliver 0.5.0 builds on Keliver's Zipline fork" \
+  && printf '%s' "$out" | grep -q "warning: no Kotlin 2.4.20 found" \
+  && ok "NF2: --embed on 0.5.0 writes the fork's plugin id and libraries, and warns about the app's app.cash.zipline and its Kotlin" \
+  || bad "NF2: --embed on 0.5.0 (rc=$rc): $(printf '%s' "$out" | grep warning | tr '\n' ' ')"
+# The helper must sit beside the scaffolder (the tools bundle's bin/ carries it).
+NL="$DISP/noline"; mkdir -p "$NL"; cp "$SCAFFOLD" "$NL/"; cp -R "$(dirname "$SCAFFOLD")/templates" "$NL/" 2>/dev/null || cp -R "$(dirname "$SCAFFOLD")/../templates" "$NL/"
+before="$(snapshot "$APP")"
+out="$( cd "$APP" && "$NL/keliver-new-production-host.sh" --embed --into "$EXF" --module nl --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+[ "$rc" != 0 ] && printf '%s' "$out" | grep -q "keliver-runtime-line.sh is missing" && [ ! -e "$EXF/nl" ] && [ "$before" = "$(snapshot "$APP")" ] \
+  && ok "NF2: without keliver-runtime-line.sh beside it, the scaffolder refuses and writes nothing" || bad "NF2: no keliver-runtime-line.sh (rc=$rc): $(printf '%s' "$out" | tail -1)"
+
 echo "=== without a store: accepted, and said so"
 unset PORTAL_STORE
 APP2="$DISP/demo2"; mkdir -p "$APP2/src/jsMain/kotlin/screens"

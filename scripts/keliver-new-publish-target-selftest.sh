@@ -86,6 +86,13 @@ refuses "an app without the bundle entry point" "no src/jsMain/kotlin/device/Mai
 make_app signed device
 printf '\ntasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { signingKeys.set([]) }\n' >> "$DISP/signed/build.gradle"
 refuses "an app that already configures signingKeys" "already configures signingKeys" "$DISP/signed"
+# NF2: an app on Keliver 0.5.0 applies Keliver's Zipline fork's plugin id, dev.keliver.zipline.
+KELIVER_VERSION=0.5.0 make_app forkline device
+out="$( cd "$DISP/forkline" && "$SCAFFOLD" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline'$" "$DISP/forkline/build.gradle" \
+  && grep -q 'keliver: PUBLISH SIGNING' "$DISP/forkline/build.gradle" \
+  && ok "NF2: an app on 0.5.0 (plugin dev.keliver.zipline, Keliver's Zipline fork) is wired for publishing" \
+  || bad "NF2: an app on 0.5.0: rc=$rc $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
 make_app othertask device
 python3 - "$DISP/othertask/keliver.portal.json" <<'PY'
 import json, sys

@@ -83,6 +83,9 @@ cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/kelive
    scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh \
    scripts/keliver-new-production-host.sh scripts/keliver-new-publish-target.sh \
    scripts/keliver-new-ios-host.sh scripts/keliver-run-android.sh scripts/keliver-run-ios.sh "$STAGE/bin/"
+# NF2: sourced by keliver-init and those scaffolders (which Zipline an app's Keliver version needs);
+# not a command, so not executable.
+cp scripts/keliver-runtime-line.sh "$STAGE/bin/"
 # The production-host scaffolder's templates: an Android module's SOURCE, with
 # no key in it — the key is copied from the adopter's own store when they run
 # the scaffolder. It finds them at bin/../templates.

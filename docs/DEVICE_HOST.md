@@ -704,8 +704,14 @@ default one.
 **Engines** (NF2, both hosts; docs/GUEST_PROFILE.md, "NF2: the Zipline fork").
 QuickJS bytecode loads only on the engine that compiled it: Zipline 1.28.0's
 QuickJS 2021 writes version 1, the NF2 fork's QuickJS 2026 version 5, and
-neither loads the other's. So during a transition one release is published once
-per engine, and each host only ever receives the one its engine loads (D2):
+neither loads the other's. **One engine** (the owner, 2026-11-22): from Keliver
+0.5.0 every app builds on Keliver's Zipline fork (`dev.keliver.zipline`), so
+every bundle is compiled for `quickjs-2026` and published once; no app ever
+shipped on QuickJS 2021, so nothing is published for it. The scaffolders write
+the fork only for an app on Keliver 0.5.0 or later (an app on 0.4.x keeps
+upstream Zipline 1.22.0, whose bundles name no engine). The machinery below
+also serves several engines, and each host only ever receives the bundle its
+engine loads (D2):
 - **Naming.** An engine is `quickjs-2021` (the default: every bundle from
   before NF2) or `quickjs-2026`. A host names its own from the QuickJS its
   Zipline links (`QuickJs.version`, a constant of the build); a QuickJS release
@@ -719,9 +725,10 @@ per engine, and each host only ever receives the one its engine loads (D2):
   kept when the bytecode bears it out. Mixed versions, an unknown version, or a
   `keliver.engine` the bytecode does not bear out fail the build; the publisher
   and the hosts apply the same rule.
-- **Publishing.** `engineTargets` in `keliver.portal.json`
-  (`[{"publishTask": …, "publishOutput": …}]`) names the extra builds, for example
-  a second guest module that applies the fork's Zipline Gradle plugin.
+- **Publishing.** An app on the fork publishes its one build, whose entries carry
+  the `engine` constraint `quickjs-2026`. `engineTargets` in `keliver.portal.json`
+  (`[{"publishTask": …, "publishOutput": …}]`) names extra builds for other
+  engines; with one engine nothing needs it.
   `keliver-publish` builds `publishTask` and then each target, all for one
   sequence, checks every module's bytecode against its signed engine, and
   writes a `v<N>/` and an index entry per engine at that sequence; an entry for

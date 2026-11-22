@@ -12,7 +12,8 @@ plugins {
   id 'org.jetbrains.kotlin.android' version '@@KOTLIN_VERSION@@'
   id 'org.jetbrains.kotlin.plugin.compose' version '@@KOTLIN_VERSION@@'
   id 'org.jetbrains.compose' version '@@COMPOSE_VERSION@@'
-  id 'app.cash.zipline' version '@@ZIPLINE_VERSION@@' // IR rewrite of zipline.take/bind
+  // IR rewrite of zipline.take/bind. From Keliver 0.5.0, Keliver's Zipline fork (QuickJS 2026).
+  id '@@ZIPLINE_PLUGIN_ID@@' version '@@ZIPLINE_VERSION@@'
 }
 
 def bundleServer = providers.gradleProperty('keliver.bundleServer').getOrElse('').trim()
@@ -182,8 +183,8 @@ dependencies {
   implementation 'dev.keliver:keliver-material-protocol-host-web:@@KELIVER_VERSION@@'
   implementation 'dev.keliver:portal-sql:@@KELIVER_VERSION@@'
   implementation 'dev.keliver:keliver-http:@@KELIVER_VERSION@@'
-  implementation 'app.cash.zipline:zipline:@@ZIPLINE_VERSION@@'
-  implementation 'app.cash.zipline:zipline-loader:@@ZIPLINE_VERSION@@'
+  implementation '@@ZIPLINE_GROUP@@:zipline:@@ZIPLINE_VERSION@@'
+  implementation '@@ZIPLINE_GROUP@@:zipline-loader:@@ZIPLINE_VERSION@@'
   implementation 'com.squareup.okhttp3:okhttp:5.1.0'
   implementation 'androidx.activity:activity-compose:1.10.1'
   implementation 'androidx.core:core-ktx:1.16.0'

@@ -346,3 +346,13 @@ in the fork's plugin, which keeps upstream's behaviour) → the scaffolders writ
 coordinates only for an app whose `appRuntime.keliverVersion` is 0.5.0 or later (one engine,
 `quickjs-2026`) → then a tools release. Also iOS on a phone (step 3 ran the simulator only), and
 the upstream offer. The plan and estimates are in `docs/GUEST_PROFILE.md`.
+
+The second and third steps are built, as Keliver's side of the switch (a draft PR until the fork is
+on Central): the catalog names `dev.keliver.zipline`, build-support links every Zipline guest with
+`-Xes-long-as-bigint` and refuses any `app.cash.zipline` module (`ZiplineFork.kt`), and the
+scaffolders choose the line with `scripts/keliver-runtime-line.sh`. Until the fork is on Central, a
+Keliver build resolves it from a directory `release` wrote with `use-release.init.gradle
+-PziplineReleaseRepo=<dir>` (which now reaches the nested build-support build and projects that
+declare their own repositories). On a Keliver build that is already on the fork, `use-fork.init.gradle`
+(which swaps `app.cash.zipline` modules) changes nothing, and `-PziplineForkRepo=none` no longer
+gives the 1.28.0 baseline.
