@@ -236,6 +236,18 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   the first start. The screen's identical request takes the response with the Android host's rules (#279).
 - Both host templates: `HostPrefetch.kt` is common Kotlin, identical in the Android and iOS hosts; Android's
   behaviour is unchanged (#279).
+- iOS host template: the scaffolded `iOSApp.swift` starts the host in `init()`; `Keliver.start()` waits until one
+  of the app's window scenes is in the foreground (a Keliver screen counts only while one is), so a launch whose
+  scenes stay in the background (silent push, background refresh, location event) loads no code and sends no
+  prefetch (NF4) (#281).
+- iOS host template: fixed the prefetch's UI start, which read `applicationState` before a `UIApplication` existed
+  when the host started in `init()`, and took every launch for the user's (NF4) (#281).
+- iOS host template: the launch's own foreground is not a resume, so an early start no longer makes (and logs as
+  skipped) an update check in every launch; a real return to the foreground still checks, at most every 30 s
+  (#281).
+- In the repository, not the bundle: `scripts/keliver-nf4-ios-sim.sh` measures NF4's cold start on an iOS
+  simulator with a running guest (start at the first screen or in `init()`, each with and without a prefetch)
+  (#281).
 
 ## Keliver 0.4.1 - 2026-10-27
 
