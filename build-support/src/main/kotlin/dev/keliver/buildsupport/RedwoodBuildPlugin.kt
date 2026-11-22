@@ -97,6 +97,14 @@ private fun Project.keliverVersion(): String =
 
 private val isCiEnvironment = System.getenv("CI") == "true"
 
+/**
+ * Matches a file that does NOT start with a Redwood-derived "Square, Inc." notice. Spotless
+ * applies (and checks) the Keliver header only to such files; Spotless normalizes line endings
+ * to `\n` before its steps run.
+ */
+internal const val NOT_A_REDWOOD_HEADER =
+  """\A(?!/\*\n \* Copyright \(C\) \d{4}(-\d{4})? Square, Inc\.\n)"""
+
 @Suppress("unused") // Invoked reflectively by Gradle.
 class RedwoodBuildPlugin : Plugin<Project> {
   private lateinit var libs: LibrariesForLibs
@@ -123,6 +131,9 @@ class RedwoodBuildPlugin : Plugin<Project> {
   private fun Project.configureCommonSpotless() {
     plugins.apply("com.diffplug.spotless")
     val spotless = extensions.getByName("spotless") as SpotlessExtension
+    // New files get the Keliver contributors notice. Files derived from Redwood keep their
+    // Square, Inc. notice (Apache 2.0, section 4(c)): the header step skips any file that already
+    // starts with one, so neither spotlessCheck nor spotlessApply touches it.
     val licenseHeaderFile = rootProject.file("gradle/license-header.txt")
     spotless.apply {
       // The nested build-support Gradle project contains Java sources. Use our root project to
@@ -132,6 +143,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
           it.target("build-support/keliver-settings/src/**/*.java")
           it.googleJavaFormat(libs.googleJavaFormat.get().version)
           it.licenseHeaderFile(licenseHeaderFile)
+            .onlyIfContentMatches(NOT_A_REDWOOD_HEADER)
         }
       }
 
@@ -162,6 +174,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
             ),
           )
         it.licenseHeaderFile(licenseHeaderFile)
+          .onlyIfContentMatches(NOT_A_REDWOOD_HEADER)
       }
     }
   }
