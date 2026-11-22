@@ -17,11 +17,14 @@ package dev.keliver.gradle
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.containsAtLeast
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
+import assertk.assertions.isNotNull
 import assertk.assertions.prop
 import java.io.File
+import java.util.zip.ZipFile
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome.FAILED
@@ -168,6 +171,33 @@ class FixtureTest {
     // Ensure that it does not produce warnings (which are set to error in this build).
     val fixtureDir = File("src/test/fixture/protocol-no-modifiers")
     fixtureGradleRunner(fixtureDir).build()
+  }
+
+  @Test fun hostBaselineProfile() {
+    // dev.keliver.generator.host-baseline-profile, from the published plugin and codegen, on an
+    // Android app and an Android library (docs/DEVICE_HOST.md, "Baseline profiles").
+    val fixtureDir = File("src/test/fixture/host-baseline-profile")
+    fixtureGradleRunner(fixtureDir, "clean", ":app:mergeReleaseArtProfile", ":lib:bundleReleaseAar").build()
+    val rules = listOf(
+      "HSPLexample/counter/protocol/host/**;->**(**)**",
+      "HSPLexample/counter/widget/*;->**(**)**",
+      "HSPLexample/counter/modifier/*;->**(**)**",
+      "Lexample/counter/protocol/host/**;",
+      "Lexample/counter/widget/*;",
+      "Lexample/counter/modifier/*;",
+    )
+
+    // The app: the rules reach the merged profile AGP compiles into the APK.
+    val merged = fixtureDir.resolve("app/build/intermediates/merged_art_profile/release").walk()
+      .single { it.name == "baseline-prof.txt" }
+    assertThat(merged.readLines()).containsAtLeast(*rules.toTypedArray())
+
+    // The library: the rules ship in its AAR, from which an app's build merges them.
+    val aar = fixtureDir.resolve("lib/build/outputs/aar").walk().single { it.name.endsWith("release.aar") }
+    val aarProfile = ZipFile(aar).use { zip ->
+      zip.getEntry("baseline-prof.txt")?.let { entry -> zip.getInputStream(entry).reader().readLines() }
+    }
+    assertThat(aarProfile).isNotNull().containsAtLeast(*rules.toTypedArray())
   }
 
   private fun fixtureGradleRunner(
