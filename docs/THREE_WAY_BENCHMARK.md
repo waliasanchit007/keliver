@@ -2422,7 +2422,8 @@ so the checklist runs on it, for example
 
 The second A12 checkpoint of the night, for what the first left open: the cold start and the press
 signal on the BigInt build (series G and H), the tap's first response in frames (I), and where the
-prestarted code load waits (J). Same Galaxy A12, still up since about 02:12 IST; the series ran
+prestarted code load waits (J); after this checkpoint's review, the tap's first visible change on
+the pixels (K) and a rerun naming J's waker. Same Galaxy A12, still up since about 02:12 IST; the series ran
 from 04:43 (2 h 31 min of uptime), on battery. The phone was fast again (native as in the first
 checkpoint), but compare within this section only.
 
@@ -2543,8 +2544,10 @@ guest on 1.28.0. Read on the phone with `trace_processor_shell`:
   nothing while idle), and **its present**: the end of the app's actual frame timeline row for that
   frame's vsync id (SurfaceFlinger's present).
 
-**What that frame draws was not captured**, so this series measures the first frame *scheduled*
-after the touch, not the first *visible* change. In the guest arms a quick tap's first frame is
+**What that frame draws was not captured here**, so this series measures the first frame
+*scheduled* after the touch, not the first *visible* change (series K below captures it: the guest's
+first frame is pixel-identical to the screen before, and the first visible change comes one frame
+later). In the guest arms a quick tap's first frame is
 followed by frames at every vsync through the 450 ms looked at (an animation), and the guest's
 destination comes much later (series H: about 280 ms after the touch on BigInt). The three-way host
 wraps its content in material3's `MaterialTheme` (`ThreewayActivity`), so the host's tap feedback is
@@ -2596,9 +2599,10 @@ after the DOWN, median; the quick taps' UP came 4.8–6.7 ms after the DOWN, med
   110.3 ms. Whether the guest *visibly* acknowledges a row or Back tap sooner than native is not
   established by this series: its first frame may be an invisible start of a fade-in, native's is
   the whole destination. The guest arrives later.
-- **Against the target, "the first response to a tap within one frame"**: **not established.**
-  The first frame scheduled after the touch is one frame after it is delivered (no frame waits for
-  the guest or the engine), but what it shows was not captured. Within 16.7 ms of the DOWN itself
+- **Against the target, "the first response to a tap within one frame"**: **not established by
+  this series** (settled on the pixels by series K: not met). The first frame scheduled after the
+  touch is one frame after it is delivered (no frame waits for the guest or the engine), but what
+  it shows was not captured. Within 16.7 ms of the DOWN itself
   no form reaches even the scheduled frame on this phone (7 of 78 guest quick taps, 1 of 39
   native): the app draws at the next vsync and the compositor shows that frame one vsync later.
 
@@ -2630,26 +2634,96 @@ The two launches' marks: prestart 84 and 90, `codeLoadStart` 316 and 343, data d
   between the prestart's mark and its work: a production prestart should start its code load about
   70 ms sooner than this bench shows, if nothing else takes the fixture's place (a prediction, not
   measured).
-- **Inferred: the 49–50 ms sleep is the Treehouse thread waiting on another thread.** The trace
-  config records `sched/sched_waking`, but this trace processor leaves `thread_state.waker_utid`
-  empty, the raw `sched_waking` events were not queried, and the traces were deleted from the phone
-  after the run, so the waker is not measured. In both launches, in the 2 ms before
-  the wake, a `Dispatchers` pool thread (`DefaultDispatch`) loads `ZiplineManifest`,
-  `TopologicalSort` and `LoadedManifest`: the loader's cache work on its own dispatcher (reading
-  the cached manifest), while the main thread loads classes too (the threads log `Lock contention
-  on ClassLinker classes lock` against each other around it). The wake comes 6–7 ms after the main thread's
-  `activityResume` ends in both launches; whether the main thread's class loading is what delays
-  the pool thread is not established.
+- **The 49–50 ms sleep is the Treehouse thread waiting on a `Dispatchers.Default` pool thread
+  (measured in a rerun).** This trace processor leaves `thread_state.waker_utid` empty and J's
+  traces were not kept, so J itself could not name the waker. Two more traced cold launches of the
+  same build and arm at 05:50 (marks: prestart 85 and 84, `codeLoadStart` 351 and 340, data drawn
+  2,702 and 2,642) show the same sleep (64.1 and 51.6 ms). In both, the raw `sched_waking` event
+  for the Treehouse thread at the end of the sleep was emitted by a `DefaultDispatch` thread of the
+  app (in the first launch the process still carried the name `zygote64`), which had just loaded
+  `ZiplineManifest`, `TopologicalSortKt` and `LoadedManifest` (0.2–1.8 ms before the wake). J's two
+  launches show the same pool-thread work in the 2 ms before the wake: the loader's cache work on
+  its own dispatcher (reading the cached manifest), while the main thread loads classes too (the
+  threads log `Lock contention on ClassLinker classes lock` against each other around it). The wake
+  comes 6–7 ms after the main thread's `activityResume` ends in J's two launches; whether the main
+  thread's class loading is what delays the pool thread is not established.
 - **`codeLoadStart` is not the load's start**: the Treehouse thread has run about 100 ms by then.
   Most of what precedes it is first-use class loading and the cache's database, cost that a
   baseline profile for the host's loader (Gate B's option 5) or opening the cache earlier could
   address. Findings only; no fix was tried.
 
+### Series K: the tap's first visible change, on the pixels (NF1)
+
+Added after the review of this checkpoint, to settle what series I's response frame shows.
+
+**Method.** Series I's touches (`input tap`, the same coordinates; 2.5 s apart) under series I's
+Perfetto trace **and** a screen recording of every composited frame: `screenrecord
+--output-format=frames --size 180x400` writes each frame the compositor sends to its virtual display
+as raw RGB (a 20-byte header with the size and format, no timestamp), so unchanged frames stay
+byte-identical and any changed byte is a pixel change. One fresh process per arm, then 9 rounds of a
+quick tap on a list row (it opens the detail), the detail's header **Back**, and **Load 20**; the
+first round dropped, leaving 8 of each per run. **Two runs** (K at 05:40, K2 at 05:54), each with
+the 1.28.0 guest and then native (the as-shipped install; the BigInt build was not rebuilt). The
+frames were compared on the phone, each with the one before it: changed bytes below the status bar,
+their bounding box, and the largest channel change (0–255).
+
+**Timing.** Raw frame *i* is screenrecord's *i*-th `acquireBuffer` in the trace (697–708 frames per
+guest run; the counts match the file exactly). The recorder trails the display: where a frame's
+identity is known (native row and Back, whose first frame is the destination; the last frame of each
+Load 20 ripple), the virtual display's buffer is queued 10–31 ms after that frame's present. So the
+first raw frame after the DOWN is the app's first frame after it: it trails that frame's present by
+11–23 ms in every guest touch. Matching it to the app's second frame instead would need a lag of
+−2 to +6 ms, which no known frame shows. The recorder drops a few frames (0–5 of each touch's 24–32
+app frames), so the frame counts alone cannot prove the order; the lags do. Times below are the matched app frame's
+present (frame timeline), from the DOWN (system_server's `interceptMotionBeforeQueueing`, as in I).
+The recording did not shift the first frame: the guest row's first frame was presented 26.9 ms after
+the DOWN in K (median; I: 26.8), and native's row 57.0 (I: 55.4).
+
+**Phone state.** 05:40–05:57, uptime 3 h 28 min – 3 h 45 min, on battery 85% → 83%, 25.7–25.8 °C,
+thermal status 0, CPU idle 97–98%.
+
+**What the frames show.**
+- **Every guest touch's first frame after the DOWN is pixel-identical to the screen before it**
+  (48 of 48 kept, and the 6 of the dropped first rounds), and so is native **Load 20**'s (16 of
+  16): the host's Compose ripple draws its first frame at alpha 0.
+- **The first changed frame is the app's second frame after the touch** (47 of 48 kept guest
+  touches; one row tap's first change came a frame later, in its third), and it shows **the host's
+  ripple, faint**: for a row a circle centred on the touch inside the row's band, for Back a circle
+  on the back icon, for Load 20 the button. Its largest channel change is 5–6 of 255 (about 2%,
+  at this scale); for a row and Load 20 it is 9–10, 14–16 and 19–22 in the next three frames (the
+  ripple fading in), for Back it grows more slowly (7, 9–10, 13).
+- **Native's row and Back first change is the destination itself** (the whole screen, in one frame),
+  except in two rounds, where an unchanged press frame came first (one row: then the destination
+  in the next frame; one Back: a ripple first, the destination later).
+
+**DOWN → the first visibly changed frame presented** (ms; median / p90 / min–max over both runs,
+n=16 each):
+
+| Touch | Guest, 1.28.0 | Native |
+|---|---|---|
+| Row, quick tap | **46.8** / 48.5 / 39.2–50.4: the ripple | 56.6 / 61.1 / 47.4–64.4: the detail |
+| Back (header) | **44.8** / 49.1 / 36.2–50.0: the ripple | 117.8 / 124.3 / 34.3–125.6: the list (34.3: the one ripple-first round) |
+| Load 20 | **39.3** / 45.5 / 31.9–50.6: the ripple | 44.2 / 48.9 / 36.6–50.3: the ripple |
+
+- **The guest's first visible response to a tap is one frame later than its first scheduled
+  frame**: 39.3–46.8 ms after the DOWN (medians), all ≤ 50.6 ms, about three frame periods, and
+  it is faint for one more frame. The cause is the host's ripple starting at alpha 0, not the guest
+  or the engine: native Compose's own button (Load 20) is the same, 44.2 ms.
+- **Against native**: the guest shows *something* sooner for a row (46.8 against 56.6) and for Back
+  (44.8 against 117.8), but only the ripple; native shows the destination. For a button that does
+  not navigate they are the same.
+- **"Tap within one frame" is not met** on the pixels, by the guest or by native's Compose button:
+  the first visible change is presented in the app's second frame after the touch. Within two frame
+  periods of the DOWN (33.3 ms, the bar the review proposes) it comes for 1 of 48 guest touches
+  (Load 20 at 31.9 ms) and none of native's button taps. What would meet it is on the host: an
+  indication that draws a visible pressed state in its first frame (a pressed layer at full alpha at
+  once, the ripple after it) instead of fading in from 0. No guest work is involved.
+
 ### Verdicts against the owner's targets (checkpoint 2)
 
 | Target | Verdict | Evidence |
 |---|---|---|
-| Tap response within one frame | **Not established**: the first frame scheduled after the touch is presented one frame after it is delivered, on both engines, but whether it shows a visible change was not captured (with a fade-in ripple the first visible change may be one frame later) | The first frame scheduled after the touch: guest quick taps 18.6–27.8 ms after the DOWN (median), all ≤ 33 ms; native 31.8 ms for a button, 55.4 / 110.3 ms where it navigates in that frame (series I) |
+| Tap response within one frame | **Not met** (on the pixels): the first frame scheduled after the touch, presented one frame after it is delivered, is pixel-identical to the screen before (the host's ripple at alpha 0); the first visible change is the next frame, a faint ripple. Native Compose's own button is the same | First visible change, guest on 1.28.0: 39.3–46.8 ms after the DOWN (median), all ≤ 50.6; native button 44.2, native row / Back the destination at 56.6 / 117.8 (series K). The first scheduled frame: 18.6–27.8 ms on both engines (series I) |
 | About 100 ms to the destination (open: simple ~100, heavy ≤ 150) | **Not met** | BigInt, press off, from the touch-down: 278–280.5 simple, 583–590 heavy; the press signal neutral (simple) or worse (heavy, +36 to +52) (series H) |
 | Cold start within +400 ms of native | **Not met** | BigInt with `prestart,prefetch`: 1,866 against native 618, +1,248 (1.28.0: +1,959); BigInt alone −691 ms as shipped (series G) |
 
@@ -2659,11 +2733,12 @@ The two launches' marks: prestart 84 and 90, `codeLoadStart` 316 and 343, data d
 - NF3: the press signal does not pay on BigInt either (neutral simple, worse heavy). Keep it off by
   default; the open path's remaining cost is the guest's frame from the click (163.5–167 ms simple,
   470.5–479 heavy on BigInt).
-- NF1: the first frame scheduled after a tap is the host's, one frame after the touch, on both
-  engines, and no frame waits for the guest; whether it shows a visible change is not established,
-  so "tap within one frame" stays open until a pixel check (a frame-by-frame screen recording, or a
-  capture of the response frame's contents). Whether a frame period's lag is acceptable is the
-  owner's call.
+- NF1: "tap within one frame" is not met on the pixels, and the gap is the host's, not the guest's:
+  no frame waits for the guest, but the host's ripple draws its first frame at alpha 0, so the first
+  visible change (a faint ripple) is presented in the app's second frame after the touch, 39.3–46.8
+  ms after the touch-down (native Compose's button: 44.2). The fix to try is a host indication that
+  is visible in its first frame (a pressed layer at full alpha at once). Whether the bar is "one
+  frame after delivery" or "within two frame periods of the touch-down" is the owner's call.
 - NF4: before more cold-start work, the code load's first 150 ms on the Treehouse thread (class
   loading, the cache's database and a 50 ms wait on the cache's thread) and the 230 ms from the
   guest's composition to the screen are the next places to look; the bench's own fixture inflates
