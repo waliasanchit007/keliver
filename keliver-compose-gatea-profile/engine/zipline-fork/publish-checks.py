@@ -11,11 +11,17 @@
 #     archives are not compared (their timestamps differ from build to build). Fails otherwise, so a
 #     rebuilt engine that no runner loaded never reaches Maven Central.
 #
-#   publish-checks.py sha1 <release repo> <group> <version> <manifest out>
-#     Writes "<sha1>  <path>" for every file of the release but its checksum files (signatures
-#     included), checks each against the .sha1 beside it, and prints the fixed spot-check list (the
-#     fork's README, "Publishing the fork") as a Markdown table, for the comparison with the Central
-#     Portal before anyone presses Publish.
+#   publish-checks.py sha1 <bundle zip> <checked repo> <group> <version> <manifest out>
+#     The manifest of what Maven Central received (review 3 of PR #289, M1): <bundle zip> is the
+#     bundle vanniktech's plugin wrote and uploaded (apply.sh release --central keeps a copy). Writes
+#     "<sha1>  <path>" for every file in it but the checksum files (signatures included), and fails
+#     unless each matches the .sha1 beside it in the bundle (a signature has none: Gradle writes no
+#     checksums for .asc files), and the bundle and the checked directory
+#     (`release` wrote and check-release.py checked it) hold the same files byte for byte. The
+#     directory's maven-metadata.xml files are not compared: the plugin leaves them out of the bundle
+#     (Central writes its own), and a second Gradle invocation rewrites their timestamp. Prints the
+#     fixed spot-check list (the fork's README, "Publishing the fork") as a Markdown table, for the
+#     comparison with the Central Portal before anyone presses Publish.
 import hashlib
 import os
 import re
@@ -86,28 +92,60 @@ def sha1_of(p):
     return h.hexdigest()
 
 
-def cmd_sha1(repo, group, version, out):
-    gdir = os.path.join(repo, *group.split("."))
-    rows, errors = [], []
-    for root, _, names in os.walk(gdir):
-        for n in sorted(names):
-            if n.endswith(CHECKSUMS):
+def is_metadata(rel):
+    # vanniktech 0.36.0 (MavenCentralBuildService) leaves out every file whose name contains this.
+    return "maven-metadata" in rel.rsplit("/", 1)[-1]
+
+
+def cmd_sha1(bundle, repo, group, version, out):
+    prefix = "/".join(group.split(".")) + "/"
+    errors = []
+    # What Central received: the bundle's entries, by path.
+    with zipfile.ZipFile(bundle) as z:
+        sent = {}
+        for i in z.infolist():
+            if i.is_dir():
                 continue
+            name = i.filename.replace("\\", "/")
+            if name in sent:
+                errors.append("the bundle has %s twice" % name)
+            sent[name] = z.read(i)
+    # What was checked: the directory, without the metadata the bundle leaves out.
+    checked = {}
+    for root, _, names in os.walk(repo):
+        for n in names:
             p = os.path.join(root, n)
             rel = os.path.relpath(p, repo).replace(os.sep, "/")
-            digest = sha1_of(p)
-            side = p + ".sha1"
-            if not os.path.isfile(side):
-                errors.append("%s has no .sha1" % rel)
-            elif open(side, encoding="utf-8").read().split()[0] != digest:
-                errors.append("%s: its .sha1 is not the file's sha1 %s" % (rel, digest))
-            rows.append((rel, digest))
-    rows.sort()
+            if not is_metadata(rel):
+                checked[rel] = p
+    for rel in sorted(set(sent) - set(checked)):
+        errors.append("the bundle has %s, which the checked directory does not" % rel)
+    for rel in sorted(set(checked) - set(sent)):
+        errors.append("the checked directory has %s, which the bundle does not" % rel)
+    rows = []
+    for rel in sorted(sent):
+        if not rel.startswith(prefix):
+            errors.append("the bundle has %s, outside %s" % (rel, group))
+        if is_metadata(rel):
+            errors.append("the bundle has %s (expected left out)" % rel)
+        if rel in checked and sha1_of(checked[rel]) != hashlib.sha1(sent[rel]).hexdigest():
+            errors.append("%s differs from the checked directory's (sha1 %s, the directory's %s)"
+                          % (rel, hashlib.sha1(sent[rel]).hexdigest(), sha1_of(checked[rel])))
+        if rel.endswith(CHECKSUMS):
+            continue
+        digest = hashlib.sha1(sent[rel]).hexdigest()
+        side = sent.get(rel + ".sha1")
+        if rel.endswith(".asc"):
+            pass  # Gradle writes no checksum files for signatures (measured: none of 311 has one).
+        elif side is None:
+            errors.append("%s has no .sha1 in the bundle" % rel)
+        elif side.decode("utf-8", "replace").split()[:1] != [digest]:
+            errors.append("%s: its .sha1 in the bundle is not the file's sha1 %s" % (rel, digest))
+        rows.append((rel, digest))
     with open(out, "w", encoding="utf-8") as f:
         for rel, digest in rows:
             f.write("%s  %s\n" % (digest, rel))
     by_path = dict(rows)
-    prefix = "/".join(group.split(".")) + "/"
     print("| File | sha1 |")
     print("|---|---|")
     for s in SPOT_CHECK:
@@ -117,18 +155,24 @@ def cmd_sha1(repo, group, version, out):
             elif not rel.endswith(".asc"):
                 errors.append("spot-check file %s is not in the release" % rel)
     print("")
-    print("%d files in the manifest (%s)." % (len(rows), os.path.basename(out)))
+    asc = sum(1 for rel, _ in rows if rel.endswith(".asc"))
+    print("%d files in the manifest (%s): %d files and %d .asc signatures; with their "
+          "checksum files, %d entries in the uploaded bundle." % (len(rows), os.path.basename(out), len(rows) - asc, asc, len(sent)))
+    if not errors:
+        print("Each is byte for byte (sha1) the file the checks passed in the signed directory; "
+              "maven-metadata.xml is not uploaded (Central writes its own).")
     for e in errors:
         print("publish-checks: FAIL " + e, file=sys.stderr)
     if errors:
-        raise SystemExit("publish-checks: %d sha1 manifest failure(s)" % len(errors))
+        raise SystemExit("publish-checks: %d failure(s): what was uploaded is not what was checked; Drop the deployment"
+                         % len(errors))
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 6 and sys.argv[1] == "natives":
         cmd_natives(*sys.argv[2:6])
-    elif len(sys.argv) == 6 and sys.argv[1] == "sha1":
-        cmd_sha1(*sys.argv[2:6])
+    elif len(sys.argv) == 7 and sys.argv[1] == "sha1":
+        cmd_sha1(*sys.argv[2:7])
     else:
         raise SystemExit("usage: publish-checks.py natives <tested repo> <release repo> <group> <version>\n"
-                         "       publish-checks.py sha1 <release repo> <group> <version> <manifest out>")
+                         "       publish-checks.py sha1 <bundle zip> <checked repo> <group> <version> <manifest out>")

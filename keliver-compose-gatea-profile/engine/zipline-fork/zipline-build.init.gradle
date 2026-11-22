@@ -202,6 +202,40 @@ if (startParameter.projectProperties.containsKey('ziplineForkRelease')) {
         "VALIDATED, not PUBLISHED, until someone presses Publish"
     }
   }
+  // -PziplineForkUploadOnly (`apply.sh release --central`'s second invocation, publishToMavenCentral;
+  // review 3 of PR #289, M1): this build only uploads what the first invocation built, signed and
+  // check-release.py checked. Every signing task must be UP-TO-DATE: one that runs would write new
+  // .asc files (an OpenPGP signature carries its time), so it fails the build instead, and
+  // vanniktech's plugin uploads only after a successful build. Up to date, each Sign task also shows
+  // the file it signs is the one it signed in the first invocation. publish-checks.py sha1 then
+  // compares the bundle the plugin uploaded with the checked directory, file by file. The action is
+  // added in both invocations: a task whose actions differ from its last run is out of date (measured:
+  // with the action in the second invocation only, every Sign task ran again).
+  def uploadOnly = startParameter.projectProperties.containsKey('ziplineForkUploadOnly')
+  def isSign = { t -> t.class.name.startsWith('org.gradle.plugins.signing.Sign') }
+  allprojects { p ->
+    p.tasks.configureEach { t ->
+      if (!isSign(t)) return
+      t.doFirst {
+        if (uploadOnly) {
+          throw new GradleException("zipline-build.init.gradle: ${t.path} would sign again in the upload invocation " +
+            "(-PziplineForkUploadOnly): it is out of date since the first invocation signed and check-release.py checked, " +
+            "so its signatures would not be the checked ones; nothing is uploaded")
+        }
+      }
+    }
+  }
+  if (uploadOnly) {
+    gradle.taskGraph.whenReady { g ->
+      def signing = g.allTasks.findAll { isSign(it) }
+      if (signing.isEmpty()) {
+        throw new GradleException("zipline-build.init.gradle: -PziplineForkUploadOnly, but no signing task in the task graph " +
+          "(is the signing key set?)")
+      }
+      println "zipline-fork: upload only: ${signing.size()} signing task(s) in the graph, each must be UP-TO-DATE " +
+        "(the signatures the first invocation wrote and check-release.py checked); one that runs fails the build before the upload"
+    }
+  }
   gradle.rootProject { root ->
     root.afterEvaluate {
       root.allprojects { it.group = releaseGroup }

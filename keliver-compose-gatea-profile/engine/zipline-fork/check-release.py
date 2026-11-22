@@ -33,9 +33,10 @@
 #   - zipline-jvm carries the same JNI libraries as upstream's jar, each the new engine;
 #   - zipline-android-ndk's AAR has libquickjs.so for its four ABIs, each the new engine;
 #   - each Kotlin/Native klib of `zipline` carries the engine's bitcode (cklib);
-#   - zipline-jvm's and the Gradle plugin's classes are no newer a class-file version than
-#     upstream's (the release is built on JDK 21, .java-version, and Gradle builds may run on 17: a
-#     module without a pinned bytecode target would otherwise need the newer JDK);
+#   - every main jar's classes (zipline-jvm, the Gradle and Kotlin compiler plugins, the loader, the
+#     CLI, ...) are no newer a class-file version than upstream's jar of the same name (the release
+#     is built on JDK 21, .java-version, and Gradle builds may run on 17: a module without a pinned
+#     bytecode target would otherwise need the newer JDK); apply.sh downloads upstream's jars;
 #   - the Gradle plugin's jar declares both plugin ids, names no app.cash.zipline coordinate, and its
 #     BuildConfig's constants name the fork: KOTLIN_PLUGIN_GROUP and ziplineGroup are <group>,
 #     KOTLIN_PLUGIN_VERSION and ziplineVersion are <version> (the compiler plugin and the CLI that
@@ -260,6 +261,21 @@ for a in artifacts:
                 fail("%s has no %s" % (n, ext))
 
 # 3c. The licence notices in every archive.
+# The Gradle project each artifact belongs to, exactly (review 3 of PR #289, L-d): a Kotlin
+# Multiplatform module's platform artifacts (zipline-jvm, zipline-iosarm64, ...) are the
+# `available-at` modules of its root artifact's Gradle module metadata, and the root artifact is the
+# project's name; every other artifact is its own project's name.
+module_of = {}
+for a in artifacts:
+    mod = artifact_file(a, "module")
+    if not os.path.exists(mod):
+        continue
+    for v in json.load(open(mod, encoding="utf-8")).get("variants", []):
+        at = v.get("available-at")
+        if at and at.get("module"):
+            if module_of.get(at["module"], a) != a:
+                fail("%s is a platform artifact of both %s and %s" % (at["module"], module_of[at["module"]], a))
+            module_of[at["module"]] = a
 archives = 0
 for p in files:
     if not p.endswith((".jar", ".aar", ".klib")):
@@ -279,16 +295,18 @@ for p in files:
                 fail("%s has %d copies of %s: %s" % (name, len(copies), what, ", ".join(i.filename for i in copies)))
             elif needle not in z.open(copies[0]).read():
                 fail("%s: %s is not the fork's" % (name, copies[0].filename))
-        # Under its own module's name (an artifact is <module> or <module>-<platform>), so two of the
-        # fork's archives never carry the same path; the old shared path is gone.
+        # Under its own module's name, exactly, so two of the fork's archives never carry the same
+        # path; the old shared path is gone.
         for i in licences:
             module = LICENSE_ENTRY.match(i.filename).group(1)
-            if artifact != module and not artifact.startswith(module + "-"):
-                fail("%s: %s is not under its module's name (artifact %s)" % (name, i.filename, artifact))
+            if module != module_of.get(artifact, artifact):
+                fail("%s: %s is not under its module's name %s (artifact %s)"
+                     % (name, i.filename, module_of.get(artifact, artifact), artifact))
         if "META-INF/LICENSE-QuickJS.txt" in z.namelist():
             fail("%s has META-INF/LICENSE-QuickJS.txt, a path every module would share" % name)
-print("check-release: %d jars, AARs and klibs, each with META-INF/NOTICE and META-INF/<module>/LICENSE-QuickJS.txt"
-      % archives)
+print("check-release: %d jars, AARs and klibs, each with META-INF/NOTICE and META-INF/<module>/LICENSE-QuickJS.txt, "
+      "<module> exactly the artifact's Gradle project (%d platform artifacts mapped from the root modules' metadata)"
+      % (archives, len(module_of)))
 
 
 def class_major(z):
@@ -299,14 +317,26 @@ def class_major(z):
     return max(majors) if majors else None
 
 
-# 3d. Class-file versions no newer than upstream's (review 2 of PR #289, L3).
-for a, theirs_path in (("zipline-jvm", upstream_jar), ("zipline-gradle-plugin", upstream_plugin_jar)):
+# 3d. Class-file versions no newer than upstream's (review 2 of PR #289, L3), for every main jar of
+# the release with a counterpart upstream (review 3, L-b: the Kotlin compiler plugin, the loader,
+# the CLI and the bytecode tools load in consumers' builds too). apply.sh downloads upstream's
+# <artifact>-<upstream version>.jar for each into the directory with the other upstream files.
+upstream_dir = os.path.dirname(upstream_jar)
+jars_compared = 0
+for a in artifacts:
     mine_path = artifact_file(a, "jar")
-    if not os.path.exists(mine_path):
-        continue  # Reported below.
+    if not os.path.exists(mine_path) or a not in upstream:
+        continue
+    theirs_path = os.path.join(upstream_dir, "%s-%s.jar" % (a, upstream_version))
+    if not os.path.exists(theirs_path):
+        fail("%s: upstream's %s was not downloaded to compare class-file versions" % (a, os.path.basename(theirs_path)))
+        continue
+    jars_compared += 1
     with zipfile.ZipFile(mine_path) as z, zipfile.ZipFile(theirs_path) as u:
         mine_major, theirs_major = class_major(z), class_major(u)
-    if mine_major is None or theirs_major is None:
+    if mine_major is None and theirs_major is None:
+        print("check-release: %s has no classes, nor has upstream's (a metadata jar)" % a)
+    elif mine_major is None or theirs_major is None:
         fail("%s: no classes to compare (fork's %s, upstream's %s)" % (a, mine_major, theirs_major))
     elif mine_major > theirs_major:
         fail("%s: class-file major version %d (Java %d), newer than upstream's %d (Java %d)"
@@ -314,6 +344,10 @@ for a, theirs_path in (("zipline-jvm", upstream_jar), ("zipline-gradle-plugin", 
     else:
         print("check-release: %s classes at class-file major %d (Java %d); upstream's %d (Java %d)"
               % (a, mine_major, mine_major - 44, theirs_major, theirs_major - 44))
+for a in ("zipline-jvm", "zipline-gradle-plugin", "zipline-kotlin-plugin"):
+    if os.path.exists(artifact_file(a, "jar")) and a not in upstream:
+        fail("%s: no upstream counterpart to compare class-file versions with" % a)
+print("check-release: class-file versions of %d jars compared with upstream's" % jars_compared)
 
 # 4. zipline-jvm's JNI libraries: the same entries as upstream's jar, built from the new engine.
 jar = artifact_file("zipline-jvm", "jar")

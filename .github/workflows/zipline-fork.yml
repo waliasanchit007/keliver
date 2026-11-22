@@ -37,8 +37,10 @@
 #     fork's directory), `apply.sh release --central`: signed to a directory, checked again
 #     (signatures included), every native library compared with fork's (identical sha256s: the six
 #     JNI libraries, the AAR's four .so files, the klibs' bitcode), then uploaded to Central in review
-#     mode; the signed directory and a sha1 manifest (also in the step summary, with the spot-check
-#     list) are kept as artifacts for 90 days, for the comparison in the Portal.
+#     mode by a second Gradle invocation that may not sign anything again; the bundle it uploaded is
+#     compared file for file with the checked directory, and its sha1 manifest (also in the step
+#     summary, with the spot-check list), the bundle and the signed directory are kept as artifacts
+#     for 90 days, for the comparison in the Portal.
 name: zipline-fork
 
 on:
@@ -67,8 +69,10 @@ on:
 permissions:
   contents: read
 
+# A publish dispatch has a group of its own (review 3 of PR #289, L-e): another run on main never
+# cancels one waiting in the queue.
 concurrency:
-  group: zipline-fork-${{ github.ref }}
+  group: zipline-fork-${{ github.ref }}-${{ inputs.publish && 'publish' || 'check' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -355,6 +359,7 @@ jobs:
           scripts/zipline-fork.sh jni-from "$WORK" "$TESTED"
 
       - name: Signed to a directory, checked, natives compared, then to Maven Central in review mode (apply.sh release --central)
+        id: upload
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
@@ -362,8 +367,7 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: scripts/zipline-fork.sh release "$WORK" "$REPO" --central "$TESTED"
 
-      # What was uploaded, signatures included: the Portal's file sha1s are compared with these
-      # before anyone presses Publish.
+      # The checked, signed directory (kept for 90 days).
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -372,18 +376,32 @@ jobs:
           if-no-files-found: ignore
           retention-days: 90
 
-      # Every uploaded file's sha1 (L7): the spot-check list in the summary, the whole manifest in
-      # the summary (folded) and as an artifact.
-      - name: The sha1 manifest, and what to do next
+      # What Central received (review 3 of PR #289, M1): the bundle vanniktech's plugin uploaded,
+      # compared file for file with the checked directory (maven-metadata.xml aside: the plugin
+      # leaves it out, Central writes its own), and its sha1 manifest: the spot-check list and the
+      # whole manifest in the summary, both files as an artifact. If this step fails, what was
+      # uploaded is not what was checked: Drop the deployment.
+      - name: The uploaded bundle against the checked directory, its sha1 manifest, and what to do next
         id: manifest
+        if: ${{ !cancelled() && steps.upload.outcome == 'success' }}
         run: |
           manifest="build/zipline-fork/SHA1SUMS-${ZIPLINE_FORK_SOURCE_REF}.txt"
-          spot="$(scripts/zipline-fork.sh sha1-manifest "$WORK" "$REPO" "$manifest")"
+          cp "$WORK/central-bundle.zip" "build/zipline-fork/central-bundle-${ZIPLINE_FORK_SOURCE_REF}.zip"
+          if ! spot="$(scripts/zipline-fork.sh sha1-manifest "$WORK" "$REPO" "$manifest")"; then
+            {
+              echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: uploaded, but NOT what was checked"
+              echo "The bundle uploaded to the Central Portal differs from the checked directory (this step's log)."
+              echo "**Drop the deployment in the Central Portal. Do not press Publish.**"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           {
             echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: uploaded in review mode, NOT released"
+            echo "The uploaded bundle is the checked directory, file for file (sha1), signatures included."
+            echo "**Drop the deployment unless every job of this run is green.**"
             echo "1. Central Portal, Deployments: the deployment is VALIDATED (not PUBLISHED)."
-            echo "2. Compare the Portal's file list and sha1s with the manifest below (also this run's artifacts"
-            echo "   zipline-fork-sha1-${ZIPLINE_FORK_SOURCE_REF} and zipline-fork-repo-central-${ZIPLINE_FORK_SOURCE_REF});"
+            echo "2. Compare the Portal's file list and sha1s with the manifest below (also this run's artifact"
+            echo "   zipline-fork-sha1-${ZIPLINE_FORK_SOURCE_REF}, with the bundle itself);"
             echo "   at least these files (the README, Publishing the fork):"
             echo ""
             echo "$spot"
@@ -398,9 +416,11 @@ jobs:
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() && steps.manifest.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.upload.outcome == 'success' }}
         with:
           name: zipline-fork-sha1-${{ inputs.tag }}
-          path: build/zipline-fork/SHA1SUMS-*.txt
+          path: |
+            build/zipline-fork/SHA1SUMS-*.txt
+            build/zipline-fork/central-bundle-*.zip
           if-no-files-found: error
           retention-days: 90

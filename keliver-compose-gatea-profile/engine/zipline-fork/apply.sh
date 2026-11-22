@@ -54,10 +54,14 @@
 #                             --central, signed, checked, its native libraries compared with the tested
 #                             repository's (publish-checks.py natives: identical sha256s), then to Maven
 #                             Central in review mode (the credentials as ORG_GRADLE_PROJECT_*
-#                             variables). CI only, by hand. No build cache. The POMs point at
-#                             ZIPLINE_FORK_SOURCE_REF (the release tag; default main)
-#   apply.sh sha1-manifest <work> <repo> <manifest out>   every file's sha1 (publish-checks.py sha1),
-#                             and the spot-check list as a Markdown table on stdout
+#                             variables) by a second invocation that may sign nothing again, keeping
+#                             the bundle it uploaded as <work>/central-bundle.zip. CI only, by hand.
+#                             No build cache. The POMs point at ZIPLINE_FORK_SOURCE_REF (the release
+#                             tag; default main)
+#   apply.sh sha1-manifest <work> <repo> <manifest out>   after release --central: the uploaded bundle
+#                             is the checked directory <repo>, file for file (publish-checks.py sha1;
+#                             maven-metadata.xml aside), its sha1 manifest, and the spot-check list
+#                             as a Markdown table on stdout
 #   apply.sh check-natives <work> <tested repo> <repo>   publish-checks.py natives on two repositories
 #                             `release` wrote: every native library identical (sha256)
 #   apply.sh check-release <work> <repo> [signed]   check-release.py again on what release wrote
@@ -585,9 +589,10 @@ do_jni_from() { # step 4: the JNI libraries the tests ran with (a tested release
   [ $n = 6 ] || { echo "jni-from: $n libraries in $jar, expected 6" >&2; exit 1; }
 }
 
-do_sha1_manifest() { # <repo> <out>: every file's sha1, and the spot-check list (Markdown) on stdout
-  local repo="${3:?sha1-manifest <work> <repo> <manifest out>}" out="${4:?manifest out}"
-  python3 -I "$here/publish-checks.py" sha1 "$repo" "$RELEASE_GROUP" "$RELEASE_VERSION" "$out"
+do_sha1_manifest() { # <repo> <out>: the uploaded bundle against the checked directory, its manifest, the spot-check list
+  local repo="${3:?sha1-manifest <work> <checked repo> <manifest out>}" out="${4:?manifest out}"
+  [ -f "$work/central-bundle.zip" ] || { echo "sha1-manifest: no $work/central-bundle.zip (release --central keeps it)" >&2; exit 1; }
+  python3 -I "$here/publish-checks.py" sha1 "$work/central-bundle.zip" "$repo" "$RELEASE_GROUP" "$RELEASE_VERSION" "$out"
 }
 
 central_file() { # <artifact> <file name>: upstream's file at $ZIPLINE_TAG into $work/dl, checked against its .sha1
@@ -619,6 +624,15 @@ upstream_central() { # into $work/dl: the names upstream publishes at $ZIPLINE_T
 
 check_release() { # <repo> [signed]: check-release.py on what release published there (and the listing)
   upstream_central
+  # Upstream's main jar for every artifact the release has a main jar of, beside the others in
+  # $work/dl, for check-release.py's class-file versions (review 3 of PR #289, L-b).
+  local j a
+  for j in "$1/${RELEASE_GROUP//.//}"/*/"$RELEASE_VERSION"/*-"$RELEASE_VERSION".jar; do
+    a="$(basename "$(dirname "$(dirname "$j")")")"
+    [ "$(basename "$j")" = "$a-$RELEASE_VERSION.jar" ] || continue
+    grep -qxF "$a" "$work/dl/upstream-$ZIPLINE_TAG-artifacts.txt" || continue
+    central_file "$a" "$a-$ZIPLINE_TAG.jar"
+  done
   python3 -I "$here/check-release.py" "$1" "$RELEASE_GROUP" "$RELEASE_VERSION" "$ZIPLINE_TAG" \
     "$work/dl/upstream-$ZIPLINE_TAG-artifacts.txt" "$work/dl/zipline-jvm-$ZIPLINE_TAG.jar" \
     "$work/dl/zipline-android-ndk-$ZIPLINE_TAG.aar" "$work/dl/zipline-gradle-plugin-$ZIPLINE_TAG.jar" \
@@ -642,7 +656,9 @@ do_jvm_test_dist() { # step 4: Zipline's JVM tests as a distribution, run on eve
   zipline_gradle :zipline:installJvmTestDistribution
   local dist="$zl/zipline/build/install/jvmTest"
   [ -x "$dist/bin/zipline-test" ] || { echo "jvm-test-dist: no $dist/bin/zipline-test" >&2; exit 1; }
-  echo "jvm-test-dist: $dist (run bin/zipline-test on each host)"
+  # The Windows legs of jvm-matrix run the .bat (review 3 of PR #289, L-c): fail here, not after fork.
+  [ -f "$dist/bin/zipline-test.bat" ] || { echo "jvm-test-dist: no $dist/bin/zipline-test.bat (the Windows launcher)" >&2; exit 1; }
+  echo "jvm-test-dist: $dist (run bin/zipline-test, or bin\\zipline-test.bat on Windows, on each host)"
 }
 
 do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEASE_VERSION
@@ -683,11 +699,26 @@ do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEAS
   check_release "$repo" "$signed"
   [ "$central" = --central ] || return 0
   python3 -I "$here/publish-checks.py" natives "$tested" "$repo" "$RELEASE_GROUP" "$RELEASE_VERSION"
-  # Maven Central only after the same build's outputs passed the check above (the tasks are up to
-  # date in this checkout, so this uploads what was checked), in review mode
+  # Maven Central only after the same build's outputs passed the check above, in review mode
   # (zipline-build.init.gradle): the deployment waits in the Central Portal until someone compares
   # it with the checked directory and presses Publish (the fork's README, "Publishing the fork").
-  zipline_gradle "${props[@]}" publishToMavenCentral
+  # -PziplineForkUploadOnly (review 3 of PR #289, M1): every signing task must be UP-TO-DATE, so the
+  # files and signatures uploaded are the ones checked; one that would run fails the build first.
+  # vanniktech's plugin zips its staging repository into <zipline>/build/publish/*.zip and uploads
+  # that zip at the end of the build; a copy is kept as $work/central-bundle.zip, which
+  # `sha1-manifest` compares with the checked directory and lists for the Portal.
+  local marker="$work/central-upload.started" bundles status=0
+  rm -f "$work/central-bundle.zip"; : > "$marker"
+  zipline_gradle "${props[@]}" -PziplineForkUploadOnly publishToMavenCentral || status=$?
+  bundles="$(find "$zl/build/publish" -name '*.zip' -newer "$marker" 2>/dev/null || true)"
+  if [ -n "$bundles" ] && [ "$(wc -l <<<"$bundles")" -eq 1 ]; then
+    cp "$bundles" "$work/central-bundle.zip"
+    echo "release: the bundle for Maven Central: $bundles ($(wc -c < "$bundles" | tr -d ' ') bytes), kept as $work/central-bundle.zip"
+  else
+    echo "release: expected one new bundle zip under $zl/build/publish, found: ${bundles:-none}" >&2
+    [ $status != 0 ] || status=1
+  fi
+  [ $status = 0 ] || { echo "release: the upload invocation failed (exit $status)" >&2; exit "$status"; }
 }
 
 do_diff() { # maintainers: regenerate patches/ from an edited clone (after `engine` and editing)
