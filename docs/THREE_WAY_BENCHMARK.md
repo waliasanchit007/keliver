@@ -2985,9 +2985,9 @@ lines), 2,530 (15,273) and 2,494.5 (30,552): no overlap between the arms.
   about 1,306 ms in every launch of both builds, so with broad the guest's request waits 374.5 ms
   for it and the list's data arrives no sooner (parsed 1,336 → 1,327.5). In series G the same
   prefetch was done at about 297 ms. The sample's Android code is unchanged since then, and the
-  traced launches show the same ~1.3 s, so **why the prefetch took about 1.1 s today is not
-  established** (the fixture binds 127.0.0.1 while the client asks for `localhost`, and the phone's
-  idle share was lower; neither was tested). Series X and Y, without the prefetch, are the measure.
+  traced launches show the same ~1.3 s. **Series Q (below) rules out the host name and the
+  fixture.** Its 18 launches were done at 292–333 ms, so the extra second belonged to that morning's
+  session, and its cause is not established. Series X and Y, without the prefetch, are the measure.
 - **Round 2's base shows what ART does on its own**: its install's 12 s launch left ART's own
   profile (3,101 kotlinx.serialization lines), and with it the base build matches broad (152.5 ms).
   On a phone, ART builds that profile from the app's own launches and compiles it at the next
@@ -3028,6 +3028,57 @@ launches per build), per round with each install's profile state (n=4 each):
 | the guest's encoding, the bridge, the compiled decode (~62 with the profile) | every screen, with the batch's size | no |
 | Compose's first layout of the list (~100–120) | first use, native too | no (Compose's own profile already covers its code) |
 | the frame to the screen (~20) | every frame | no |
+
+### Why the bench's prefetch took a second (series Q)
+
+In series W and the traced launches (07:55–08:30), the `prestart,prefetch` arm's prefetched
+response came back about 1.14 s after it was sent: done − start 1,136–1,171 ms in every launch,
+against about 143 ms the night before (series G). That held from the provider (sent at about 162
+ms) and from `onCreate` (each series' first launch, sent at about 232 ms). Native's first request on
+the same client, sent at 462–573 ms, took 140 ms. **The excess is a fixed 1.0 s.** Linux retransmits
+an unanswered TCP SYN after 1 s, so a lost first SYN fits it. A DNS retry does not: none was seen
+here, and a resolver retry is not a 1 s step.
+
+**Series Q** (the A12, 09:46–09:51, uptime 7 h 34 min – 7 h 40 min, on battery 73% → 72%, 24–25 °C,
+thermal status 0, CPU idle 63–83% before each block, `deviceidle` light state IDLE throughout). One install of this
+branch's sample, compiled `speed-profile` as in series Y. Three arms, interleaved, 2 rounds of 3
+measured cold launches each. Each block's first launch is unmeasured, because the prestart acts on
+the previous launch's settings. A new bench option, **`x=netlog`**, writes OkHttp's `EventListener`
+times for the process's first call (here the prefetch) and the fixture's listen, first accept and
+first request line into the cold line's `netEvents`. **`x=ip4`** sends the bench's requests to
+`127.0.0.1` instead of `localhost`. Its first try (series P) was refused by the sample's cleartext
+policy, which listed only `localhost`; that policy now lists `127.0.0.1` too. Median (min–max), n=6
+per arm, ms from the process start:
+
+| Arm | Prefetch sent | Name lookup | Connect | Prefetch done | The guest's request (`hostIn`) | Data drawn | The data frame's end |
+|---|---|---|---|---|---|---|---|
+| `prestart,prefetch` (`localhost`) | 153.5 | 3 (3–6), `127.0.0.1` only | 6 (5–9) | **296** (294–308) | 1,065.5 | 2,224.5 | 2,332.5 |
+| `prestart,prefetch,ip4` (`127.0.0.1`) | 153.5 | none | 6 (5–8) | **292** (288–294) | 1,059.5 | 2,219 | 2,328 |
+| `prefetch` (sent from `onCreate`) | 196.5 | 2.5 (2–3) | 5 (4–6) | 332 (331–333) | 1,201 | 2,354 | 2,463.5 |
+
+- **The host name is not the cause.** `localhost` resolves in 2–6 ms to `127.0.0.1` alone (no `::1`
+  is tried), and the 127.0.0.1 arm is 4 ms sooner, within the spread.
+- **The fixture is not the cause.** It listens 18–24 ms before the prefetch's call starts, and it
+  accepts the connection 2–4 ms after the connect starts (series P).
+- **What happened that morning is not established.** The extra second did not come back in 23
+  launches (series P's 5 included). The phone was then, as now, locked on battery and in Doze: the
+  bench never unlocks it (`wait_for_unlock=true`). `dumpsys netpolicy` shows the sample's uid on the
+  Doze firewall chain's deny between launches. Today the rule turns to allow when the process becomes
+  the top app. That was 3–8 ms after the process start in the launches checked, and 125 ms in one
+  unmeasured launch. Either way it came before the first SYN (150–200 ms). A SYN sent while
+  the deny rule still held would be dropped and resent 1 s later, which matches the morning's fixed
+  second. But the firewall log of that hour had rolled over, so this is a candidate, not a finding.
+  Series Q's phone script recorded the Doze state (`dumpsys deviceidle`) before each launch and the
+  uid's lines of `dumpsys netpolicy` after each block. A run of the prefetch arm should do the same
+  and add `netlog`; if it happens again, that shows which step takes the second.
+- **With the prefetch working, the narrow profile's code-load gain reaches the data.** The
+  guest's request finds the response waiting (wait 0–1 ms; series W's broad arm waited 374.5 ms).
+  Data drawn is 2,224.5 ms, against series Y's as-shipped narrow 2,463 (−238.5; another session,
+  not an interleaved A/B). The guest's composition is still the largest part (parsed → composed
+  about 1,000 ms on 1.28.0).
+- **The library's prefetch**: the production host sends its prefetch when the first activity is
+  being created (`onActivityPreCreated`). That is the third arm's moment, which was not delayed. The
+  templates are unchanged.
 
 **Inferred, not measured.** The split of the remaining ~62–70 ms between QuickJS (encoding) and
 the host's compiled decode (no sampling profiler; see Method). That production apps get the
@@ -3169,6 +3220,9 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #                            so `prestart` acts in every measured launch: see that section)
 #   -e x prestart            guest: the code load starts in bindApplication (the NEXT process's start)
 #   -e x prefetch            guest: the host sends the list's first request as it starts the guest
+#   -e x netlog              OkHttp's EventListener times for the process's first call and the fixture's
+#                            listen/accept/request, in the cold line's "netEvents" (series Q)
+#   -e x ip4                 the bench's requests go to 127.0.0.1 instead of localhost (series Q)
 #   -e x prepared            guest (NF3): keliver-nav's prepared stack, depth 1, rows with prepareOnPress
 #   -e x prepared,press      the same, with the host's press signal declared (keliver.press@1) and the
 #                            guest's GateAPress provided: a touch-down on a row composes its detail

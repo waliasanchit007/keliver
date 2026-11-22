@@ -26,6 +26,7 @@ internal object LocalFixture {
   private const val PORT = 8491
   private const val DELAY_MILLIS = 100L
   @Volatile private var started = false
+  private val firstRequest = java.util.concurrent.atomic.AtomicBoolean(false)
 
   private val STATUSES = listOf("Paid", "Pending", "Shipped", "Refunded", "Failed")
   private val NAMES = listOf("Asha Rao", "Vikram Mehta", "Lena Fischer", "Tom Okafor", "Mei Lin", "Ravi Kumar", "Sara Haddad", "Jon Berg")
@@ -78,9 +79,13 @@ internal object LocalFixture {
     val server = checkNotNull(bound).getOrElse {
       throw IllegalStateException("localApi: could not bind 127.0.0.1:$PORT", it)
     }
+    // `x=netlog`: when the socket listens, and when the first connection and request arrive.
+    ColdStart.netEvent("fixtureListening")
     thread(name = "threeway-fixture", isDaemon = true) {
+      var accepted = false
       while (true) {
         val socket = server.accept()
+        if (!accepted) ColdStart.netEvent("fixtureAccept").also { accepted = true }
         thread(name = "threeway-fixture-conn", isDaemon = true) { serve(socket) }
       }
     }
@@ -92,6 +97,7 @@ internal object LocalFixture {
     while (true) {
       val requestLine = readLine(input) ?: return
       val receivedNs = System.nanoTime()
+      if (firstRequest.compareAndSet(false, true)) ColdStart.netEvent("fixtureRequest")
       while (true) {
         val header = readLine(input) ?: return
         if (header.isEmpty()) break

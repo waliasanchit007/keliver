@@ -106,6 +106,8 @@ internal object ThreewayGuest {
     if (!prefs.getBoolean("prestart", false)) return
     ColdStart.mark("prestart")
     val x = prefs.getString("x", "").orEmpty()
+    // Bench-only `ip4`/`netlog` (ThreewayHttp), before the fixture starts and any request goes out.
+    ThreewayHttp.applyExperiments(x)
     // The benchmark's own fixture API (not part of a host's start), measured apart.
     if (prefs.getBoolean("localApi", false)) {
       val fixtureBegan = SystemClock.elapsedRealtimeNanos()
