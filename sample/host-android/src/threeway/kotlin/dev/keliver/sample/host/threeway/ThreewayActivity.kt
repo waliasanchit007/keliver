@@ -75,9 +75,18 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.util.concurrent.atomic.AtomicBoolean
+import okhttp3.Call as OkCall
+import okhttp3.EventListener as OkEventListener
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
+import okhttp3.Response
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import org.json.JSONObject
@@ -179,6 +188,7 @@ class ThreewayActivity : ComponentActivity() {
     // with the GC threshold experiment here) and for every main-thread message, so a Perfetto trace
     // shows when the guest's changes are applied.
     ThreewayListener.applyExperiments(experiments)
+    ThreewayHttp.applyExperiments(experiments)
     if ("trace" in experimentSet) {
       Looper.getMainLooper().setMessageLogging { line ->
         if (line.startsWith(">>>>> ")) {
@@ -236,7 +246,7 @@ class ThreewayActivity : ComponentActivity() {
     val api = object : ThreewayApi {
       override suspend fun items(size: String, seq: Int): ItemsPage {
         val body = withContext(Dispatchers.IO) {
-          val url = API_BASE.toHttpUrl().newBuilder().addPathSegment("items")
+          val url = ThreewayHttp.apiBase.toHttpUrl().newBuilder().addPathSegment("items")
             .addQueryParameter("size", size).addQueryParameter("seq", seq.toString()).build()
           okHttp.newCall(Request.Builder().url(url).build()).execute().use { response ->
             check(response.code == 200) { "HTTP ${response.code}" }
@@ -735,9 +745,6 @@ class ThreewayActivity : ComponentActivity() {
   private companion object {
     const val TAG = "Threeway"
 
-    /** The fixture API (docs/THREE_WAY_BENCHMARK.md), on the Mac, through `adb reverse`. */
-    const val API_BASE = "http://localhost:8491"
-
     // The screens' fixed geometry (ThreewayScreens.kt, index.html).
     const val ROWS_TOP_DP = 56f + 48f + 24f
     const val ROW_DP = 72f
@@ -755,9 +762,51 @@ class ThreewayActivity : ComponentActivity() {
 }
 
 internal object ThreewayHttp {
+  /**
+   * The fixture API's host: on the Mac through `adb reverse`, or the app's own (LocalFixture, bound to
+   * 127.0.0.1). Bench-only `x=ip4` asks for the literal 127.0.0.1 instead of `localhost` (no name lookup).
+   */
+  @Volatile private var apiHost = "localhost"
+  val apiBase: String get() = "http://$apiHost:8491"
+
+  /**
+   * Bench-only `x=netlog`: OkHttp's [EventListener] timings for the process's first call (with
+   * `prefetch`, the prefetch), and the fixture's bind, first accept and first request line, in the
+   * cold line's `netEvents` (ms from the process start).
+   */
+  @Volatile var netLog = false
+    private set
+  private val firstCall = AtomicBoolean(false)
+
+  /** From the activity's intent, or from the previous launch's (the prestart); before any request. */
+  fun applyExperiments(experiments: String) {
+    val set = experiments.split(',').map { it.trim() }.toSet()
+    apiHost = if ("ip4" in set) "127.0.0.1" else "localhost"
+    netLog = "netlog" in set
+  }
+
   /** The app's one HTTP client, used by the native form directly and by the guest's HostHttp. */
   val okHttp: OkHttpClient by lazy {
-    OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
+    OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS)
+      .eventListenerFactory { if (netLog && firstCall.compareAndSet(false, true)) FirstCallEvents else OkEventListener.NONE }
+      .build()
+  }
+
+  /** The first call's events (`x=netlog`), with the addresses each step used. */
+  private object FirstCallEvents : OkEventListener() {
+    private fun e(name: String) = ColdStart.netEvent(name)
+    override fun callStart(call: OkCall) = e("callStart")
+    override fun dnsStart(call: OkCall, domainName: String) = e("dnsStart($domainName)")
+    override fun dnsEnd(call: OkCall, domainName: String, inetAddressList: List<InetAddress>) =
+      e("dnsEnd(${inetAddressList.joinToString("|") { it.hostAddress.orEmpty() }})")
+    override fun connectStart(call: OkCall, inetSocketAddress: InetSocketAddress, proxy: Proxy) = e("connectStart(${inetSocketAddress.address?.hostAddress})")
+    override fun connectEnd(call: OkCall, inetSocketAddress: InetSocketAddress, proxy: Proxy, protocol: Protocol?) = e("connectEnd(${inetSocketAddress.address?.hostAddress})")
+    override fun connectFailed(call: OkCall, inetSocketAddress: InetSocketAddress, proxy: Proxy, protocol: Protocol?, ioe: IOException) =
+      e("connectFailed(${inetSocketAddress.address?.hostAddress},${ioe.javaClass.simpleName})")
+    override fun requestHeadersEnd(call: OkCall, request: Request) = e("requestHeadersEnd")
+    override fun responseHeadersEnd(call: OkCall, response: Response) = e("responseHeadersEnd(${response.code})")
+    override fun callEnd(call: OkCall) = e("callEnd")
+    override fun callFailed(call: OkCall, ioe: IOException) = e("callFailed(${ioe.javaClass.simpleName})")
   }
 }
 
@@ -805,6 +854,13 @@ internal object ColdStart {
   /** Records [name] once; returns true the first time. */
   fun mark(name: String): Boolean = marks.putIfAbsent(name, System.currentTimeMillis()) == null
 
+  /** `x=netlog`'s events in order (epoch ms), from any thread. */
+  private val netEvents = java.util.concurrent.ConcurrentLinkedQueue<Pair<String, Long>>()
+
+  fun netEvent(name: String) {
+    if (ThreewayHttp.netLog) netEvents.add(name to System.currentTimeMillis())
+  }
+
   fun mainThreadNanos(name: String, nanos: Long) {
     mainThread.putIfAbsent(name, nanos)
   }
@@ -827,6 +883,12 @@ internal object ColdStart {
         .put("n_modulesFromAssets", ThreewayListener.modulesFromAssets)
     }
     for ((name, nanos) in mainThread) o.put("n_${name}Ms", nanos / 100_000 / 10.0)
+    if (netEvents.isNotEmpty()) {
+      // `x=netlog`: the events in ms from the process start, and the start on the epoch clock (to
+      // line up with `dumpsys netpolicy`'s firewall log).
+      o.put("netEvents", netEvents.joinToString(" ") { (name, at) -> "$name@${at - processStart}" })
+        .put("n_processStartEpochMs", processStart)
+    }
     return o.toString()
   }
 }
@@ -857,7 +919,7 @@ internal class BenchHostHttp(
   companion object {
     /** Blocking: the call and its body. */
     fun send(client: OkHttpClient, request: HttpRequest): HttpResponse {
-      val url = "http://localhost:8491".toHttpUrl().newBuilder().apply {
+      val url = ThreewayHttp.apiBase.toHttpUrl().newBuilder().apply {
         request.path.split('/').filter { it.isNotEmpty() }.forEach { addPathSegment(it) }
         request.query.forEach { (k, v) -> addQueryParameter(k, v) }
       }.build()
