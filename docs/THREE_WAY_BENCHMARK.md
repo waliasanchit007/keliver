@@ -3094,7 +3094,11 @@ profile: the AAR carries `baseline-prof.txt` (checked in the library's build, an
 and Compose UI), which was not checked in a template-built app; Play installs use the profile
 without it. **An app that repackages classes with R8** (`-repackageclasses`) moves them out of these
 packages, and the package rules then match nothing; the template's R8 settings do not repackage, and
-whether R8's profile rewriting keeps wildcard rules was not checked. The BigInt build was not
+whether R8's profile rewriting keeps wildcard rules was not checked. *Later checked (PR "Baseline
+profiles: opt-out for the host profile, opt-in for generated code")*: it does. AGP 9.3 expands the
+wildcards against the classes before R8 and R8 rewrites the expanded list, so in a build with
+`-repackageclasses ''` the repackaged classes kept their rules under their new names (docs/DEVICE_HOST.md,
+"Baseline profiles"). The BigInt build was not
 measured: the host's part does not depend on the engine, so the same gain is expected there (series
 G's 241.5 against 230.5 ms suggests so). The heavy screen and other screens' first batches were not
 measured. Generated code (gate-A's and an adopter's own) is not covered by the shipped rules. The

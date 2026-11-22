@@ -1029,6 +1029,73 @@ Sizes are in KiB (the lines say KB); `-` is "not read here".
   after the first content, off start-up. A store build compiles none of it
   (`src/notiming/`); only the listener's `ziplineCreated` override, doing nothing, remains.
 
+**Baseline profiles** (Android; from library 0.5.0). A baseline profile lists code that Android
+compiles ahead of time when an app is installed from Play, so a cold start does not run that code
+in the interpreter while the JIT catches up. There are two, one on by default and one off:
+
+- **The host library's profile: on.** `keliver-treehouse-host`'s AAR carries 15 rules (its own
+  file, `src/androidMain/baseline-prof.txt`) for the code a cold start runs to load the guest and
+  apply its first batch: Keliver's treehouse, protocol and widget packages, Zipline and the
+  kotlinx.serialization packages the decoding uses. AGP merges any AAR's profile into the app's.
+  *Buys*, measured on a slow phone (the A12 of docs/THREE_WAY_BENCHMARK.md, "NF4: composed to
+  drawn on a cold start", series Y, 16 launches per build): the cold start to the first frame with data
+  2,921.5 → 2,566.5 ms (**−355 ms**), of which 212 ms before the guest's request (the code loads
+  sooner) and 141.5 ms between the guest's first composition and that frame (365 → 223.5 ms).
+  *Costs*: about **+1.72 MB** of compiled code (`base.odex`) and **+0.23 MB** of app image
+  (`base.art`) per install, and about a second more for the install's compile (8.3–9.1 s → 9.2–9.3
+  s on that phone). It applies to the first launches after a Play install or update; a sideloaded
+  build gets it from `androidx.profileinstaller` (the template has it through Compose), and an
+  install that has run a while gets the same from Android's own profile of it.
+  **Opting out**: `keliver.hostBaselineProfile=false` in the production host's
+  `gradle.properties` (new hosts scaffolded from 0.5.0's tools; for an older host, or an app that
+  embeds the host library, add the same lines to the APP module's `build.gradle`):
+  ```groovy
+  android.buildTypes.configureEach { bt ->
+    // AGP's own switch (incubating in AGP 9.3): the AAR that carries the profile is the
+    // Android module Gradle resolves keliver-treehouse-host to.
+    bt.baselineProfile.ignoreFrom.add('dev.keliver:keliver-treehouse-host-android')
+  }
+  ```
+  It must be set in the app module: a library module's setting does not reach the app's merge.
+  It names Maven modules only, so it has no effect on a project dependency (an in-repo build of
+  Keliver). Checked on an app build: the merged profile holds the 15 rules by default and none
+  with the property false.
+- **A profile for the schema's generated host code: off.** The rules above do not cover the code
+  the schema generators write for your schema: the host protocol (its protocol nodes and modifier
+  implementations) and the widget and modifier interfaces, of your schema and of each schema it
+  depends on. On the phone above, a broad profile that also covered the generated code of the
+  benchmark's schema took another 42 ms off between the first composition and the data frame,
+  mostly in applying the batch (20 → 7 ms) and drawing (104.5 → 84.5 ms); that part was not
+  measured on its own. To add it, apply `dev.keliver.generator.host-baseline-profile` to the
+  Android module that ships the app (or to an Android library it depends on: its AAR then carries
+  the rules) and name the schema:
+  ```kotlin
+  plugins { id("dev.keliver.generator.host-baseline-profile") version "<keliver version>" }
+  keliverHostBaselineProfile {
+    source = project(":schema")          // as for the generator plugins
+    type = "com.example.schema.MySchema"
+  }
+  ```
+  It writes `build/generated/redwood/hostBaselineProfile/keliver-<schema>-host-baseline-prof.txt`
+  (method and startup-class rules for `<schema package>.protocol.host` and below,
+  `<package>.widget` and `<package>.modifier` of the schema and each dependency) into every
+  variant's `baselineProfiles` sources. It is a plugin on the Android module, not an option of the
+  generator plugins, because the generated host code usually lives in a JVM module and AGP takes a
+  library's profile only from an AAR. Your own widget implementations (hand-written, in your
+  packages) are not covered: list them in the app's `src/main/baseline-prof.txt`, or generate a
+  profile with the AndroidX Baseline Profile plugin. Its cost scales with the schema; for Keliver's
+  material schema (with layout and lazy layout) it is 14 rules, which in a minified build of the
+  generic device host matched the 135 protocol classes R8 kept. Its size on a phone was not
+  measured.
+
+  **R8 and repackaging.** Both profiles are package rules. AGP 9.3 expands them against the app's
+  classes before R8 runs and hands R8 the expanded list, which R8 rewrites to the names it gives
+  the classes. So the rules survive renaming and `-repackageclasses`: in an app build minified with
+  `-repackageclasses ''`, all 135 generated protocol classes R8 kept moved to the root package and
+  every one was still listed in the profile under its new name (the host's own packages: 108 of
+  112; R8 had removed the other classes). No keep rule is needed for the profile. A debuggable
+  build skips the profile altogether.
+
 ## 3. Your own production iOS host
 
 `keliver-new-ios-host.sh` (run from the app root; scaffolding needs bash and

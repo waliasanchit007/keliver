@@ -39,6 +39,12 @@ public final class dev/keliver/gradle/RedwoodGeneratorPlugin$Strategy : java/lan
 	public static fun values ()[Ldev/keliver/gradle/RedwoodGeneratorPlugin$Strategy;
 }
 
+public final class dev/keliver/gradle/RedwoodHostBaselineProfilePlugin : org/gradle/api/Plugin {
+	public fun <init> ()V
+	public synthetic fun apply (Ljava/lang/Object;)V
+	public fun apply (Lorg/gradle/api/Project;)V
+}
+
 public final class dev/keliver/gradle/RedwoodLintPlugin : org/gradle/api/Plugin {
 	public fun <init> ()V
 	public synthetic fun apply (Ljava/lang/Object;)V
