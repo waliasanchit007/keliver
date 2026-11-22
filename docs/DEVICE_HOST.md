@@ -1044,22 +1044,32 @@ in the interpreter while the JIT catches up. There are two, one on by default an
   *Costs*: about **+1.72 MB** of compiled code (`base.odex`) and **+0.23 MB** of app image
   (`base.art`) per install, and about a second more for the install's compile (8.3–9.1 s → 9.2–9.3
   s on that phone). It applies to the first launches after a Play install or update; a sideloaded
-  build gets it from `androidx.profileinstaller` (the template has it through Compose), and an
-  install that has run a while gets the same from Android's own profile of it.
+  build gets it from `androidx.profileinstaller` (the template should have it through Compose; that
+  was not checked in a template-built app), and an install that has run a while gets the same from
+  Android's own profile of it.
   **Opting out**: `keliver.hostBaselineProfile=false` in the production host's
-  `gradle.properties` (new hosts scaffolded from 0.5.0's tools; for an older host, or an app that
-  embeds the host library, add the same lines to the APP module's `build.gradle`):
+  `gradle.properties` (new hosts scaffolded by the tools after 0.3.18; for an older host, or an app
+  that embeds the host library, add the same lines to the APP module's `build.gradle`):
   ```groovy
   android.buildTypes.configureEach { bt ->
-    // AGP's own switch (incubating in AGP 9.3): the AAR that carries the profile is the
+    // AGP's own switch (incubating): the AAR that carries the profile is the
     // Android module Gradle resolves keliver-treehouse-host to.
-    bt.baselineProfile.ignoreFrom.add('dev.keliver:keliver-treehouse-host-android')
+    bt.optimization.baselineProfile { it.ignoreFrom.add('dev.keliver:keliver-treehouse-host-android') }
   }
   ```
-  It must be set in the app module: a library module's setting does not reach the app's merge.
-  It names Maven modules only, so it has no effect on a project dependency (an in-repo build of
-  Keliver). Checked on an app build: the merged profile holds the 15 rules by default and none
-  with the property false.
+  It needs **AGP 8.2 or later** (the first with `optimization { baselineProfile }` in its DSL; on
+  8.0 and 8.1 the build fails at configuration). The scaffolded host uses AGP 8.12.0. It must be set
+  in the app module: a library module's setting does not reach the app's merge. It names Maven
+  modules only, so it has no effect on a project dependency (an in-repo build of Keliver). Naming
+  `dev.keliver:keliver-treehouse-host` instead matches nothing: AGP logs a warning and the rules
+  stay. Checked on a host scaffolded by `keliver-new-production-host.sh` (AGP 8.12.0, the template's
+  lines as written, the root `keliver-treehouse-host` dependency, the host library from this
+  repository's local Maven build): its release build's merged profile held the 15 rules by default
+  and none with the property false. Also checked on AGP 9.3.1, in an app depending on the `-android`
+  module directly. CI's production-host selftest builds the scaffolded host with the property false
+  on each pull request that changes the template; it takes the host library from Maven Central,
+  whose releases before 0.5.0 carry no profile, so until then it shows only that the opt-out
+  configures and merges on the template's AGP.
 - **A profile for the schema's generated host code: off.** The rules above do not cover the code
   the schema generators write for your schema: the host protocol (its protocol nodes and modifier
   implementations) and the widget and modifier interfaces, of your schema and of each schema it
@@ -1088,13 +1098,15 @@ in the interpreter while the JIT catches up. There are two, one on by default an
   generic device host matched the 135 protocol classes R8 kept. Its size on a phone was not
   measured.
 
-  **R8 and repackaging.** Both profiles are package rules. AGP 9.3 expands them against the app's
-  classes before R8 runs and hands R8 the expanded list, which R8 rewrites to the names it gives
-  the classes. So the rules survive renaming and `-repackageclasses`: in an app build minified with
-  `-repackageclasses ''`, all 135 generated protocol classes R8 kept moved to the root package and
-  every one was still listed in the profile under its new name (the host's own packages: 108 of
-  112; R8 had removed the other classes). No keep rule is needed for the profile. A debuggable
-  build skips the profile altogether.
+  **R8 and repackaging** (checked on AGP 9.3.1 only, in one build). Both profiles are package
+  rules. AGP 9.3.1 expands them against the app's classes before R8 runs and hands R8 the expanded
+  list, which R8 rewrites to the names it gives the classes. So the rules survived renaming and
+  `-repackageclasses` there: in one build of the generic device host (project dependencies, a
+  variant made non-debuggable) minified with `-repackageclasses ''`, all 135 generated protocol
+  classes R8 kept moved to the root package and every one was still listed in the profile under its
+  new name. For the host's own packages 108 of 112 were listed; the other 4 had been removed or
+  merged by R8 (not checked class by class). What AGP 8.x does here was not checked. No keep rule
+  was needed for the profile. A debuggable build skips the profile altogether.
 
 ## 3. Your own production iOS host
 

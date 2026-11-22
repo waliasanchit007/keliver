@@ -1,0 +1,16 @@
+// An Android library: its AAR must carry the generated rules (an app merges an AAR's profile).
+apply plugin: 'com.android.library'
+apply plugin: 'dev.keliver.generator.host-baseline-profile'
+
+android {
+  namespace 'example.lib'
+  compileSdk 35
+  defaultConfig {
+    minSdk 23
+  }
+}
+
+keliverHostBaselineProfile {
+  source = project(':')
+  type = 'example.counter.Counter'
+}

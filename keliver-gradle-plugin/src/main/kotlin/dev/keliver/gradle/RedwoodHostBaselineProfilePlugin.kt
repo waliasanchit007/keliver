@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Keliver contributors
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,10 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
  * profiles). It is a separate plugin, not an option of `dev.keliver.generator.protocol.host`,
  * because the generated host code usually lives in a JVM-only module, and AGP takes a library's
  * baseline profile only from an AAR: a JAR's would never reach the app.
+ *
+ * Only `com.android.application` and `com.android.library` are handled. A module on the Kotlin
+ * Multiplatform Android library plugin (`com.android.kotlin.multiplatform.library`) is not: the build
+ * fails there, saying so. Apply this plugin to the app module instead.
  */
 public class RedwoodHostBaselineProfilePlugin : Plugin<Project> {
   override fun apply(project: Project) {

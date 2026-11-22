@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Keliver contributors
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,9 +124,18 @@ private fun String.toWildcardRegex(): String = buildString {
   val source = this@toWildcardRegex
   while (i < source.length) {
     when {
-      source.startsWith("**", i) -> { append(".*"); i += 2 }
-      source[i] == '*' -> { append("[^/]*"); i += 1 }
-      else -> { append(Regex.escape(source[i].toString())); i += 1 }
+      source.startsWith("**", i) -> {
+        append(".*")
+        i += 2
+      }
+      source[i] == '*' -> {
+        append("[^/]*")
+        i += 1
+      }
+      else -> {
+        append(Regex.escape(source[i].toString()))
+        i += 1
+      }
     }
   }
 }

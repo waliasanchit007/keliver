@@ -141,11 +141,13 @@ android.buildTypes.configureEach { bt ->
 }
 
 // keliver.hostBaselineProfile=false: AGP leaves the host library's baseline profile out of every
-// build type's merged profile (its own switch, incubating in AGP 9.3). It names the Android module
-// that Gradle resolves keliver-treehouse-host to; the AAR carrying the profile is that one.
+// build type's merged profile (its own switch, incubating). It names the Android module that Gradle
+// resolves keliver-treehouse-host to; the AAR carrying the profile is that one (naming
+// keliver-treehouse-host itself matches nothing: AGP only warns). It is reached through
+// optimization { }, in AGP's DSL from 8.2 (checked by a build on 8.12.0, this host's AGP, and 9.3.1).
 if (hostBaselineProfile == 'false') {
   android.buildTypes.configureEach { bt ->
-    bt.baselineProfile.ignoreFrom.add('dev.keliver:keliver-treehouse-host-android')
+    bt.optimization.baselineProfile { it.ignoreFrom.add('dev.keliver:keliver-treehouse-host-android') }
   }
 }
 
