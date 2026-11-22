@@ -49,6 +49,14 @@ kotlin {
         implementation libs.kotlin.test
       }
     }
+    // Coil's ktor3 fetcher is compiled against an older Ktor than the one iOS resolves: these
+    // tests run a load through it, and through the real Darwin engine, on the simulator.
+    iosTest {
+      dependencies {
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.ktor.client.mock
+      }
+    }
   }
 }
 
