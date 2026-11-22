@@ -288,10 +288,20 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq gcc-multilib > /dev/null
+      # shell: bash runs with -o pipefail, so tee does not hide a failure.
       - name: qjs for a 32-bit host, patched and unpatched (apply.sh qjs32host)
-        run: scripts/zipline-fork.sh qjs32host "$WORK"
+        shell: bash
+        run: scripts/zipline-fork.sh qjs32host "$WORK" 2>&1 | tee -a "$RUNNER_TEMP/host32.log"
       - name: bigint-ops.js against Node, size-guards.js with the unpatched control (apply.sh check-bigint32)
-        run: scripts/zipline-fork.sh check-bigint32 "$WORK"
+        shell: bash
+        run: scripts/zipline-fork.sh check-bigint32 "$WORK" 2>&1 | tee -a "$RUNNER_TEMP/host32.log"
+      # The outcome lines (sizeof(size_t), ELF 32-bit, each build against Node and size-guards.expected,
+      # with exit statuses) as notices: on the run's page and in `gh run view` while fork still runs.
+      - name: The results as annotations
+        if: always()
+        run: |
+          grep -E '^(built |qjs32host: |check-bigint32: )' "$RUNNER_TEMP/host32.log" \
+            | sed -e "s|$WORK/||g" -e 's/^/::notice title=host32::/' || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
