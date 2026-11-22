@@ -304,6 +304,10 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 180
     env:
+      # The same WORK as fork's: the linuxX64 klib's QuickJS bitcode records the build directory,
+      # so the native comparison below only holds when both jobs build at one path (measured
+      # 2026-11-22: two builds in different directories differed in that one entry; rebuilt in the
+      # same directory, all 20 native entries matched).
       WORK: ${{ github.workspace }}/build/zipline-fork/work
       REPO: ${{ github.workspace }}/build/zipline-fork/repo-central
       TESTED: ${{ github.workspace }}/build/zipline-fork/repo-tested

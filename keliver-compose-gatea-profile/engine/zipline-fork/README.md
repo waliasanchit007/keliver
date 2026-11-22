@@ -146,7 +146,7 @@ curl, clang, make and Node):
 | `jni-from <tested repo>` | step 4, instead of `jni-all` (the workflow's `publish` job): the six JNI libraries from the `zipline-jvm` jar in a directory `release` wrote (the `fork` job's, whose libraries `jvm-matrix` ran on every host), into the source tree, not rebuilt |
 | `release <repo> [--central <tested repo>]` | step 4, after `engine` and `jni-all` (or `jni-from`), on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`, to an empty directory, without the build cache, then `check-release.py` (below) and a listing with sizes. The POMs point at `ZIPLINE_FORK_SOURCE_REF` (the release tag; default `main`). With `--central` (the CI workflow only, by hand), the directory is signed and checked with its signatures, its native libraries must be byte for byte the tested directory's (`publish-checks.py natives`), then `publishToMavenCentral` from the same, up-to-date build, in review mode |
 | `check-release <repo> [signed]` | `check-release.py` again on a directory `release` wrote |
-| `check-natives <tested repo> <repo>` | `publish-checks.py natives`: every native library (JNI libraries in `zipline-jvm`, `libquickjs.so` in the AAR, QuickJS bitcode in the klibs) identical by sha256 in two directories `release` wrote |
+| `check-natives <tested repo> <repo>` | `publish-checks.py natives`: every native library (JNI libraries in `zipline-jvm`, `libquickjs.so` in the AAR, QuickJS bitcode in the klibs) identical by sha256 in two directories `release` wrote (built in the same work directory: the linuxX64 bitcode records it) |
 | `sha1-manifest <repo> <out>` | `publish-checks.py sha1`: every file's sha1 (signatures included, checked against its `.sha1`) to `<out>`, and the spot-check list ("Publishing the fork") as a Markdown table |
 | `check-capabilities <repo>` | after `release`: `capability-check/`, a plain Gradle consumer, resolves the fork's modules alone (each at the release version, no `app.cash.zipline` module in the graph) and fails unless the fork's runtime or Gradle plugin together with upstream's is refused with a capability conflict |
 | `jvm-test-dist` | after `jni-all`: Zipline's JVM tests as a runnable distribution (`zipline/build/install/jvmTest`, `bin/zipline-test`), which the workflow runs on every host the jar has an engine for |
@@ -294,7 +294,10 @@ third release line, beside the libraries and the tools bundle, CLAUDE.md "Releas
    the ones `jvm-matrix` ran on every host, not rebuilt), signs it into a directory, checks it
    again (signatures included), requires every native library to be byte for byte `fork`'s
    (`publish-checks.py natives`: the six JNI libraries, the AAR's four `.so` files and the klibs'
-   bitcode, by sha256; anything else stops the job before the upload) and uploads it to Central in
+   bitcode, by sha256; anything else stops the job before the upload; both jobs build in the same
+   directory, because the linuxX64 klib's bitcode records it: on 2026-11-22 two local builds in
+   different directories differed in that one entry, and a rebuild in the same directory matched
+   all 20) and uploads it to Central in
    **review mode**: Zipline's own `automaticRelease = true` is overridden
    (`zipline-build.init.gradle`, which also stops the build if the task it disables is no longer
    there), so the deployment is validated and then held.
