@@ -14,6 +14,8 @@ dependencies {
   implementation libs.clikt
 
   testImplementation testFixtures(projects.keliverToolingSchema)
+  // A dependency schema with its published JSON, for BaselineProfileGenerationTest.
+  testImplementation projects.keliverLayoutSchema
   testImplementation libs.junit
   testImplementation libs.assertk
 }

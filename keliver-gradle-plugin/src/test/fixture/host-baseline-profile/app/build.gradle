@@ -1,0 +1,17 @@
+// The app module: its merged ART profile must carry the generated rules.
+apply plugin: 'com.android.application'
+apply plugin: 'dev.keliver.generator.host-baseline-profile'
+
+android {
+  namespace 'example.app'
+  compileSdk 35
+  defaultConfig {
+    applicationId 'example.app'
+    minSdk 23
+  }
+}
+
+keliverHostBaselineProfile {
+  source = project(':')
+  type = 'example.counter.Counter'
+}

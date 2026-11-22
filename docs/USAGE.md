@@ -450,6 +450,9 @@ keliver-generator-widget         = { id = "dev.keliver.generator.widget", versio
 keliver-generator-protocol-host  = { id = "dev.keliver.generator.protocol.host", version.ref = "keliver" }
 keliver-generator-protocol-guest = { id = "dev.keliver.generator.protocol.guest", version.ref = "keliver" }
 keliver-generator-modifiers      = { id = "dev.keliver.generator.modifiers", version.ref = "keliver" }
+# Optional, from 0.5.0, on the Android app module: a baseline profile for the generated host code
+# (off unless applied; docs/DEVICE_HOST.md, "Baseline profiles").
+keliver-generator-host-baseline-profile = { id = "dev.keliver.generator.host-baseline-profile", version.ref = "keliver" }
 ```
 
 ---
