@@ -28,11 +28,19 @@ import kotlin.test.Test
  * The host's baseline profile (`src/androidMain/baseline-prof.txt`, packed into the AAR and merged
  * into every app's profile by AGP). Without it the host's path from the guest's change batch to the
  * screen runs interpreted on a cold start: decoding the batch (kotlinx.serialization), the bridge
- * (Zipline), applying the changes and the generated widgets (dev.keliver). See
+ * (Zipline) and applying the changes (dev.keliver's treehouse, protocol and widget packages). See
  * docs/THREE_WAY_BENCHMARK.md, "NF4: composed to drawn on a cold start".
+ *
+ * The rules list library packages one by one. A wildcard over all of `dev.keliver` would also compile an
+ * app's own code when the app lives under `dev.keliver` (the sample does), which inflates what the
+ * profile appears to buy and costs every adopter space for code that is not theirs.
+ *
+ * This test reads the source file. `checkBaselineProfilePackaged` (build.gradle) checks that the
+ * published AAR carries it.
  */
 class HostBaselineProfileTest {
-  private val rules = File("src/androidMain/baseline-prof.txt").readLines().filter { it.isNotBlank() }
+  private val rules = File("src/androidMain/baseline-prof.txt").readLines()
+    .filter { it.isNotBlank() && !it.startsWith("#") }
 
   /** The classes a traced cold start showed JIT-compiling between the guest's batch and the frame. */
   private val hotPath = listOf(
@@ -46,6 +54,23 @@ class HostBaselineProfileTest {
     "kotlinx.serialization.json.internal.StringJsonLexer",
     "kotlinx.serialization.json.internal.JsonTreeReader",
     "kotlinx.serialization.internal.AbstractPolymorphicSerializer",
+    "kotlinx.serialization.encoding.AbstractDecoder",
+    "kotlinx.serialization.PolymorphicSerializerKt",
+  )
+
+  /** Hot-path classes outside the packages that get startup-class rules (methods only). */
+  private val methodRulesOnly = setOf(
+    "kotlinx.serialization.encoding.AbstractDecoder",
+    "kotlinx.serialization.PolymorphicSerializerKt",
+  )
+
+  /** Classes the profile must not cover: an app's own code, and packages off the host's path. */
+  private val notCovered = listOf(
+    "dev.keliver.sample.host.threeway.ThreewayActivity",
+    "dev.keliver.someapp.MainActivity",
+    "dev.keliver.material.composeui.ComposeUiButton",
+    "dev.keliver.compose.gatea.composeui.GeneratedKt",
+    "kotlinx.serialization.cbor.Cbor",
   )
 
   @Test fun everyLineIsARule() {
@@ -54,20 +79,29 @@ class HostBaselineProfileTest {
   }
 
   @Test fun hotPathClassesExist() {
-    // A renamed class would leave its rule matching nothing, silently.
-    assertThat(hotPath.filter { runCatching { Class.forName(it) }.isFailure }).isEmpty()
+    // The rules are package wildcards: renaming a class inside a covered package is harmless (this
+    // list then needs the new name), but moving it to another package leaves it uncovered.
+    val loader = javaClass.classLoader
+    assertThat(hotPath.filter { runCatching { Class.forName(it, false, loader) }.isFailure }).isEmpty()
   }
 
   @Test fun hotPathMethodsAreHotStartupAndPostStartup() {
-    val methodRules = rules.filter { it.contains("->") && it.takeWhile { c -> c != 'L' }.toSet().containsAll(setOf('H', 'S', 'P')) }
-      .map { glob(it.dropWhile { c -> c != 'L' }.substringBefore("->")) }
     assertThat(hotPath.filter { name -> methodRules.none { it.matches(descriptor(name)) } }).isEmpty()
   }
 
   @Test fun hotPathClassesAreStartupClasses() {
-    val classRules = rules.filter { it.startsWith("L") && !it.contains("->") }.map { glob(it) }
-    assertThat(hotPath.filter { name -> classRules.none { it.matches(descriptor(name)) } }).isEmpty()
+    assertThat((hotPath - methodRulesOnly).filter { name -> classRules.none { it.matches(descriptor(name)) } }).isEmpty()
   }
+
+  @Test fun appCodeAndOtherLibrariesAreNotCovered() {
+    assertThat(notCovered.filter { name -> (methodRules + classRules).any { it.matches(descriptor(name)) } }).isEmpty()
+  }
+
+  private val methodRules get() = rules
+    .filter { it.contains("->") && it.takeWhile { c -> c != 'L' }.toSet().containsAll(setOf('H', 'S', 'P')) }
+    .map { glob(it.dropWhile { c -> c != 'L' }.substringBefore("->")) }
+
+  private val classRules get() = rules.filter { it.startsWith("L") && !it.contains("->") }.map { glob(it) }
 
   private fun descriptor(className: String) = "L" + className.replace('.', '/') + ";"
 
