@@ -2870,10 +2870,10 @@ index 0000000..82bcab6
 +}
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..c0296a4
+index 0000000..080bd2b
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,257 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -2898,6 +2898,7 @@ index 0000000..c0296a4
 +import kotlin.test.assertEquals
 +import kotlin.test.assertNotEquals
 +import kotlin.test.assertNull
++import kotlin.test.assertTrue
 +
 +/**
 + * Keliver's fork (NF2): what QuickJS 2026-06-04 changes for Zipline. BigInt is in the engine, so
@@ -2978,17 +2979,23 @@ index 0000000..c0296a4
 +    // QuickJS caps a BigInt at 2^20 bits (Node at 2^30, so bigint-ops.js cannot compare this). A
 +    // negative value at a width of 2^20 or more needs one bit more than that. Upstream's asUintN
 +    // (bellard/quickjs c17f7fc1db) returns it at exactly 2^20, one limb over the cap, and most
-+    // operations on it are then a RangeError (they allocate through the capped path); wider is a
-+    // RangeError at once. Never a crash or a truncated result. One bit narrower fits; a
++    // operations on it may then be a RangeError (those that allocate through the capped path); wider
++    // is a RangeError at once. Never a crash or a wrong result. One bit narrower fits; a
 +    // non-negative value is returned as is.
 +    assertEquals(1_048_575, quickJs.evaluate("BigInt.asUintN(2 ** 20 - 1, -1n).toString(2).length"))
 +    assertEquals(1_048_576, quickJs.evaluate("BigInt.asUintN(2 ** 20, -1n).toString(2).length"))
-+    assertEquals(
-+      "RangeError",
-+      quickJs.evaluate(
-+        "try { BigInt.asUintN(2 ** 20, -1n) & 1n; 'none' } catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
-+      ),
-+    )
++    // Operations on that value: a RangeError or the right answer, whichever the engine's allocation
++    // gives (which one is not pinned), and the context still works afterwards.
++    for ((op, right) in listOf("x & 1n" to "1", "x >> 1048575n" to "1", "x % 7n" to "1", "-x < 0n" to "true")) {
++      val result = quickJs.evaluate(
++        "try { var x = BigInt.asUintN(2 ** 20, -1n); String($op) } " +
++          "catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
++      )
++      assertTrue(result == right || result == "RangeError", "$op gave $result")
++    }
++    quickJs.evaluate("x = undefined")
++    quickJs.gc()
++    assertEquals("2", quickJs.evaluate("String(1n + 1n)"))
 +    for (width in listOf("2 ** 20", "2 ** 20 + 1", "2 ** 30", "2 ** 53 - 1")) {
 +      if (width != "2 ** 20") {
 +        assertEquals(
@@ -3030,6 +3037,57 @@ index 0000000..c0296a4
 +      quickJs.evaluate(
 +        "var t = new BigInt64Array(2), u = new BigUint64Array(1); t[0] = -1n; u[0] = -1n; t[1] = 2n**63n;" +
 +          " [t[0], u[0], t[1]].join(' ')",
++      ),
++    )
++  }
++
++  /**
++   * Functions whose error paths were patched (bellard/quickjs 0943061: a double free in
++   * Promise.withResolvers when a property cannot be defined; 813636e: a detached or transferred
++   * ArrayBuffer's free function ran again when it was finalized). Those paths need an allocation
++   * failure or an external buffer, which a test cannot arrange here; this checks the reference
++   * counting on the paths every call takes, and that finalizing detached buffers is safe.
++   */
++  @Test fun backportedErrorPathsKeepTheirSuccessPaths() {
++    assertEquals(
++      "promise,resolve,reject true function function 1000",
++      quickJs.evaluate(
++        """
++        var kept = [];
++        for (var i = 0; i < 1000; i++) kept.push(Promise.withResolvers());
++        var r = kept[0];
++        [Object.keys(r).join(), r.promise instanceof Promise, typeof r.resolve, typeof r.reject,
++          kept.length].join(' ');
++        """.trimIndent(),
++      ),
++    )
++    quickJs.evaluate("kept = undefined; r = undefined")
++    quickJs.gc()
++
++    // ArrayBuffer.prototype.transfer detaches the original: through JS_DetachArrayBuffer at length
++    // 0, by moving the data at the same length, by reallocating at another length.
++    assertEquals(
++      "0 true true 7 16 0 true TypeError",
++      quickJs.evaluate(
++        """
++        var a = new ArrayBuffer(8); new Uint8Array(a)[0] = 7;
++        var b = a.transfer();
++        var c = b.transfer(16);
++        var c0 = new Uint8Array(c)[0], cLength = c.byteLength;
++        var d = c.transfer(0);
++        [a.byteLength, a.detached, b.detached, c0, cLength, d.byteLength, c.detached,
++          (function () { try { a.transfer(); return 'none'; } catch (e) { return e instanceof TypeError ? 'TypeError' : String(e); } })()
++        ].join(' ');
++        """.trimIndent(),
++      ),
++    )
++    quickJs.evaluate("a = b = c = d = c0 = cLength = undefined")
++    quickJs.gc()
++    assertEquals(
++      "7 4",
++      quickJs.evaluate(
++        "var e = new ArrayBuffer(4); new Uint8Array(e)[3] = 7; var f = e.transfer(); " +
++          "[new Uint8Array(f)[3], f.byteLength].join(' ')",
 +      ),
 +    )
 +  }

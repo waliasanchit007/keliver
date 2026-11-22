@@ -40,7 +40,8 @@ one Android app share the path, which Android's packaging would refuse) and `MET
     gives `-(2n**63n)`). Upstream's code, verbatim; it replaces the fork's own fix (and the
     measurement-only `../patches/quickjs-2026-06-04-asuintn64.patch`). One difference from that
     fix: `BigInt.asUintN(2 ** 20, -1n)` returns a value one limb over QuickJS's 2^20-bit cap (as
-    Node does), on which most operations are a RangeError; the fork's fix threw at once.
+    Node does), on which an operation either gives the right answer or is a RangeError; the
+    fork's fix threw at once.
   - `ef5c6e356c`: `--` on a BigInt that is not short, with 64-bit limbs, added 2^32 - 1
     (`let a = -(2n**63n); a--` gave `-9223372032559808513n`).
   - `7852f3a80f` (#583): a negative BigInt and a negative float of another magnitude compared
@@ -53,10 +54,14 @@ one Android app share the path, which Android's packaging would refuse) and `MET
   object still being read was a NULL dereference), `79f58c1` (`JS_ReadBigInt` leaked on truncated
   bytecode), `88130c0` (#598, a template object read from bytecode was not sealed as the parser
   seals it), `552d5eb` (#587, `JS_ToCStringLen2` leaked on failure), `c530305` (#590, the
-  `JS_ValueToAtom` hunk: a built-in symbol's reference leaked) and, in `libunicode.c`, `817509a`
-  (`unicode_script` looped forever after an allocation failure). The triage of every other
-  upstream commit: PR #296's description. `../bigint-ops.js` covers the BigInt fixes against Node
-  (`check-bigint`, `check-bigint-zipline`); `QuickJs2026Test` covers them through Zipline.
+  `JS_ValueToAtom` hunk: a built-in symbol's reference leaked), `0943061` (two hunks: a double
+  free in `Promise.withResolvers` when a property cannot be defined, and a leak in
+  `JS_AddIntrinsicTypedArrays`), `813636e` (#606, a detached or transferred `ArrayBuffer`'s free
+  function ran again when it was finalized) and, in `libunicode.c`, `817509a`
+  (`unicode_script` looped forever after an allocation failure). Every upstream commit in the
+  range, taken or not and why, and the hunks of `0943061`: [`BACKPORTS.md`](BACKPORTS.md).
+  `../bigint-ops.js` covers the BigInt fixes against Node (`check-bigint`,
+  `check-bigint-zipline`); `QuickJs2026Test` covers them through Zipline.
 - `patches/zipline-1.28.0.patch` (applied to the Zipline checkout):
   - `zipline/native`: the QuickJS names that changed. `JS_AddIntrinsic*` and
     `JS_SetPropertyFunctionList` now return `int`, and their results are checked (on iOS too).
@@ -126,7 +131,8 @@ one Android app share the path, which Android's packaging would refuse) and `MET
     Android `CMakeLists.txt` and cklib's flags (QuickJS 2026's Makefile builds with it).
   - `QuickJs2026Test` (host tests, JVM and iOS): the version, the compiler accepting BigInt, the
     general `asUintN` and its behaviour at the size limit, the other backported BigInt fixes
-    (`bigIntUpstreamFixes`), BigInt → `Long` and its range, rope
+    (`bigIntUpstreamFixes`), the success paths of the functions whose error paths were patched
+    (`backportedErrorPathsKeepTheirSuccessPaths`), BigInt → `Long` and its range, rope
     strings through `evaluate` and an inbound call, and (1b) bytecode without source text.
   - `BigIntOpsTest` (step 3; host tests, JVM and iOS): `../bigint-ops.js` through Zipline's own
     engine, compared with Node's output line by line, when `apply.sh check-bigint-zipline` has put
