@@ -2838,7 +2838,9 @@ launches exists and gives the same (round 2 of series W and X).
 - **Timed series Y** (as shipped, untraced; the series that the headline numbers come from): base,
   broad and narrow, 4 rounds with the order rotated (base–broad–narrow, broad–narrow–base,
   narrow–base–broad, base–broad–narrow), each install after `pm uninstall` and with series Y's
-  install (above), 4 measured cold launches per install: 16 per build, all in one profile state.
+  install (above), 4 measured cold launches per install: 16 per build, all in one profile state. A
+  first attempt (08:59–09:01) was stopped by a label bug in the script after one launch on each of
+  two builds; nothing from it is used.
 
 **Phone state.** Series T–X: 07:54–08:40, uptime 5 h 43 min – 6 h 28 min, on battery 82% → 77%,
 22.9–25.0 °C, thermal status 0, CPU idle 63–84% before each run (lower than the checkpoints'
@@ -2939,7 +2941,10 @@ narrow one keeps 79% of its gain (355 of 449 ms) for about a third of its size:
 
 Sizes from `ls -l` of the install's `oat/arm64` files (the same in all four installs of a build);
 the compile is the wall time of `cmd package compile -f -m speed-profile` on the phone (four installs
-each). The lines are counted in the profile dump, where one method can appear on more than one line.
+each). The lines are counted in the profile dump: every line that mentions the package anywhere,
+including signatures in other classes' methods. The Zipline and `dev.keliver.protocol` columns differ
+between narrow and broad for that reason (both profiles cover those packages fully; broad's extra
+lines are classes only it covers).
 An adopter pays the narrow profile's cost in every app that uses `keliver-treehouse-host`; it is
 paid once per install or update, on the phone's storage and at the install's compile.
 
