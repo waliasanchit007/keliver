@@ -18,10 +18,13 @@ is published yet.
   tarball, and the notice at the top of each source file, kept verbatim). `patches/quickjs-2026-06-04-asuintn.patch` modifies
   `quickjs.c` and marks its change "Keliver fork (NF2)".
 
-Anything published from this patch set (step 4) carries both licences: every POM keeps Zipline's
-Apache 2.0 licence and adds QuickJS's MIT licence (`zipline-build.init.gradle`, checked by
-`check-release.py`). The fork's own new files (`check-release.py`, the CI workflow) are © The
-Keliver Authors, Apache 2.0.
+Anything built from this patch set (step 4) carries both licences: every POM keeps Zipline's
+Apache 2.0 licence and adds QuickJS's MIT licence, and every jar, AAR and klib carries
+`META-INF/LICENSE-QuickJS.txt` (the MIT notice at the top of `quickjs.c`, verbatim: the engine is in
+the JVM jar's JNI libraries, the AAR's `.so` files and the klibs' bitcode) and `META-INF/NOTICE`
+(Zipline, Apache 2.0, modified by Keliver contributors; where the patch set is), all from
+`zipline-build.init.gradle` and checked by `check-release.py`. The fork's own new files
+(`check-release.py`, `capability-check/`, the CI workflow) are © Keliver contributors, Apache 2.0.
 
 ## The patches
 
@@ -138,7 +141,10 @@ curl, clang, make and Node):
 | `test` | runs Zipline's Gradle build in the checkout with the given tasks, e.g. `:zipline:jvmTest`, `:zipline:connectedAndroidDeviceTest` (Zipline's device tests: the host and JNI tests on the device in `ANDROID_SERIAL`) or `:zipline:iosSimulatorArm64Test` and `:zipline:iosSimulatorArm64ReleaseTest` (the host tests on the simulator the Kotlin plugin's test task starts, debug and optimised); add `-PziplineForkLongAsBigInt` to link the JavaScript the tests load with `Long` as BigInt (`zipline-build.init.gradle`) |
 | `results [test task...]` | sums the JUnit XML a test run left (`zipline/build/test-results/<task>`, default `jvmTest`): classes, run, passed, skipped, failed, and the failed tests' names; fails if any failed |
 | `jni-all` | step 4: the JVM's JNI library for every host upstream ships (Linux, macOS and Windows; arm64 and x86-64: six libraries) with zig 0.16.0, as upstream's release workflow builds them (`zipline/build.zig`, which the patch gives `dtoa.c` and `-fwrapv`). Uses a `zig` of that version on `PATH`, else downloads the pinned tarball into `<work>/tools` and checks its SHA-256. Replaces what `jni` built; each library must carry QuickJS's version string |
-| `release <repo> [--central]` | step 4, after `engine` and `jni-all`, on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`, to an empty directory, then `check-release.py` (below) and a listing with sizes. With `--central` (the CI workflow only, by hand), then `publishToMavenCentral` from the same, up-to-date build, signed |
+| `release <repo> [--central]` | step 4, after `engine` and `jni-all`, on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`, to an empty directory, without the build cache, then `check-release.py` (below) and a listing with sizes. The POMs point at `ZIPLINE_FORK_SOURCE_REF` (the release tag; default `main`). With `--central` (the CI workflow only, by hand), the directory is signed and checked with its signatures, then `publishToMavenCentral` from the same, up-to-date build, in review mode |
+| `check-release <repo> [signed]` | `check-release.py` again on a directory `release` wrote |
+| `check-capabilities <repo>` | after `release`: `capability-check/`, a plain Gradle consumer, resolves the fork's modules alone (each at the release version, no `app.cash.zipline` module in the graph) and fails unless the fork's runtime or Gradle plugin together with upstream's is refused with a capability conflict |
+| `jvm-test-dist` | after `jni-all`: Zipline's JVM tests as a runnable distribution (`zipline/build/install/jvmTest`, `bin/zipline-test`), which the workflow runs on every host the jar has an engine for |
 | `publish <repo>` | publishes the forked `zipline-jvm`, `zipline-bytecode`, `zipline-android` and `zipline-android-ndk`, and on a Mac with Xcode `zipline-iosarm64` and `zipline-iossimulatorarm64`, as `1.28.0-q20260604` to a scratch Maven repository (never `~/.m2`) |
 | `diff` | for maintainers: regenerates `patches/` from an edited checkout |
 | `all` | `clone`, `engine`, `jni`, `qjs`, `check-bigint` (no Android SDK needed) |
@@ -195,11 +201,22 @@ published so the set is complete. `zipline-testing` and `zipline-loader-testing`
 upstream and are not here.
 
 **How.** Zipline's own build, unchanged apart from the patch, driven by
-`zipline-build.init.gradle` with `-PziplineForkRelease`: every project's group becomes
+`zipline-build.init.gradle` with `-PziplineForkRelease=<group>` (`apply.sh` passes `RELEASE_GROUP`;
+the group and version are written once, in `apply.sh`): every project's group becomes
 `dev.keliver.zipline`; every POM keeps Zipline's Apache 2.0 licence and Cash App as its authors and
-adds QuickJS's MIT licence, Keliver as the fork's developer, and this repository as its URL and
-SCM; the Gradle plugin also declares the id `dev.keliver.zipline`, and only that id's marker is
-published (a marker's group is its id; `app.cash.zipline` is not a namespace we can publish to).
+adds QuickJS's MIT licence, Keliver as the fork's developer, and this repository at the release
+tag as its URL and SCM; every variant in the Gradle module metadata declares upstream's capability
+`app.cash.zipline:<name>` beside its own, so Gradle **refuses a classpath that mixes the fork with
+upstream Zipline** (for example an app still on `dev.keliver:*:0.4.x`, which brings
+`app.cash.zipline:zipline:1.28.0`) with a capability conflict (Gradle 9.8: "Cannot select module
+because of conflict with app.cash.zipline:zipline-jvm:1.28.0 … Both provide capability
+'app.cash.zipline:zipline-jvm:…'"), instead
+of putting two copies of `app.cash.zipline`'s classes on it (on the JVM the first copy would win,
+possibly upstream's 2021 engine). Maven, which reads POMs only, does not see capabilities, and a
+build that resolves the conflict with `selectHighestVersion()` gets upstream's, since Gradle orders
+`1.28.0-keliver.1` below `1.28.0`. The Gradle plugin also declares the id `dev.keliver.zipline`, and
+only that id's marker is published (a marker's group is its id; `app.cash.zipline` is not a
+namespace we can publish to).
 The jar keeps the id `app.cash.zipline` as well, so a build that puts the plugin on its build
 classpath (Keliver's own, `apply plugin: 'app.cash.zipline'`) needs no change; a build that
 resolves it by id from a plugin repository (the scaffolded apps' `plugins { id … version … }`)
@@ -213,37 +230,72 @@ bash scripts/zipline-fork.sh release <work> <empty repo dir>
 ```
 
 `check-release.py` fails the release unless every file is under `dev.keliver.zipline` at
-`1.28.0-keliver.1`, nothing names `app.cash.zipline` as a Maven group (POMs, Gradle module
-metadata), the artifact names are exactly upstream's, every POM names both licences, Keliver's
-developer and the SCM, the JVM jar has upstream's JNI entries and the Android AAR its four ABIs
-with each library QuickJS 2026 (the atom `BigInt64Array`, which Zipline's 2021 build never has;
-upstream's own libraries are the control), every native klib of `zipline` carries the engine's
-bitcode, and the Gradle plugin declares both ids and names no `app.cash.zipline` coordinate. It
-then lists every artifact with its files' sizes. 2026-11-22, on this Mac: 54 artifacts, 1,825
-files, 32.2 MB; `zipline-jvm` 2.7 MB (six engines, 776–960 KB each), `zipline-android-ndk`'s AAR
-3.0 MB, each `zipline` klib 2.1 MB.
+`1.28.0-keliver.1`; nothing names `app.cash.zipline` as a Maven group (POMs, Gradle module
+metadata) except as a capability, and every variant with files declares both capabilities; the
+artifact names are exactly upstream's; every POM has a name and a description, names both
+licences, Keliver's developer and the SCM, and points at the source ref (url and scm tag); Maven
+Central's file rules hold (an artifact whose packaging is not `pom` has its main file, sources and
+javadoc jars; every file has `.md5` and `.sha1`, and on a signed release `.asc`); every jar, AAR
+and klib carries the two notices; the JVM jar has upstream's JNI entries and the Android AAR its
+four ABIs with each library QuickJS 2026 (the atom `BigInt64Array`, which Zipline's 2021 build
+never has; upstream's own libraries are the control); every native klib of `zipline` carries the
+engine's bitcode; and the Gradle plugin declares both ids, names no `app.cash.zipline` coordinate,
+and its `BuildConfig` constants are the fork's: `KOTLIN_PLUGIN_GROUP` and `ziplineGroup`
+`dev.keliver.zipline`, `KOTLIN_PLUGIN_VERSION` and `ziplineVersion` `1.28.0-keliver.1` (the
+compiler plugin and the CLI every build applying the plugin resolves). It then lists every
+artifact with its files' sizes. 2026-11-22, on this Mac: 54 artifacts, 1,825 files, 32.6 MB; 53
+Gradle module files with 152 variants; 200 jars, AARs and klibs; `zipline-jvm` 2.7 MB (six
+engines, 776–960 KB each), `zipline-android-ndk`'s AAR 3.0 MB, each `zipline` klib 2.1 MB.
 
-`use-release.init.gradle` points a Keliver build at such a repository without changing it (every
-`app.cash.zipline` module becomes the fork's module of the same name), for trying a release before
-it is on Maven Central:
+`use-release.init.gradle` points a Keliver build at such a repository without changing it, for
+trying a release before it is on Maven Central: every `app.cash.zipline` module becomes the fork's
+module of the same name. With `-PziplineReleaseVerify` it also fails the build when an
+`app.cash.zipline` module was requested by anything but the build's own projects: by one of the
+fork's modules, or in a configuration the fork's Gradle plugin fills (`ziplineCli`, the Kotlin
+compiler plugin classpaths). Substitution alone would hide such a leak:
 
 ```
 ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-release.init.gradle \
-  -PziplineReleaseRepo=<repo dir> --no-daemon :keliver-bridge-fixture:jvmTest
+  -PziplineReleaseRepo=<repo dir> -PziplineReleaseVerify --no-daemon :keliver-bridge-fixture:jvmTest
 ```
 
-**CI**: `.github/workflows/zipline-fork.yml` runs on pull requests that touch this directory and
-by hand: `all`, `jni-all`, Zipline's host tests on the JVM and the iOS simulator,
-`check-bigint-zipline` on the JVM, `android`, and `release` to a directory, kept as the run's
-artifact. Zipline's Android device tests do not run there (GitHub's macOS arm64 runners have no
-emulator). Publishing to Maven Central is a manual dispatch with `publish` ticked and the version
-typed out, from `main`, with the secrets `publish-maven-central.yml` uses; it uploads the outputs
-of the same job's checked build (`release <work> <repo> --central`), and Zipline's build releases
-the deployment once Central validates it.
+**CI**: `.github/workflows/zipline-fork.yml` runs on pull requests that touch this directory (not
+for Markdown alone) and by hand. The `fork` job (macOS): `all`, `jni-all`, Zipline's host tests on
+the JVM and the iOS simulator, the same again with the test JavaScript linked with `Long` as BigInt
+(`-PziplineForkLongAsBigInt`), `check-bigint-zipline` on the JVM, `android`, `release` to a
+directory (kept as the run's artifact) and `check-capabilities`, and `jvm-test-dist`. The
+`jvm-matrix` job runs that distribution on the six runners upstream's `build.yaml` uses
+(`macos-15-intel`, `macos-15`, `ubuntu-24.04`, `ubuntu-24.04-arm`, `windows-2025`,
+`windows-11-arm`), so each JNI library in `zipline-jvm` is loaded and tested on its own host.
+Zipline's Android device tests do not run in CI (GitHub's macOS arm64 runners have no emulator).
+
+**Publishing** (the owner's decision, 2026-11-22: review mode for the first release; this is the
+third release line, beside the libraries and the tools bundle, CLAUDE.md "Releases"):
+
+1. Tag the commit on `main`: `zipline-fork-v<RELEASE_VERSION>` (`zipline-fork-v1.28.0-keliver.1`;
+   it matches neither `v*` nor `portal-tools-v*`, so no other workflow fires).
+2. Dispatch `zipline-fork.yml` from `main` with that tag, `publish` ticked and the version typed
+   out. The `guard` job refuses a run not from `main`, a tag that is not
+   `zipline-fork-v<RELEASE_VERSION>` (as `apply.sh` has it at the tag) or not on `main`'s history,
+   a mistyped version or missing secrets (the ones `publish-maven-central.yml` uses). `fork` and
+   `jvm-matrix` then check the tag's commit; `publish` builds it again on a fresh runner without
+   the build cache, signs it into a directory, checks it again (signatures included) and uploads it
+   to Central in **review mode**: Zipline's own `automaticRelease = true` is overridden
+   (`zipline-build.init.gradle`), so the deployment is validated and then held.
+3. In the Central Portal (Deployments), check the deployment before anything goes live: it lists
+   `dev.keliver.zipline` and is VALIDATED, not PUBLISHED. Download the run's artifact
+   `zipline-fork-repo-central-<tag>` (the signed directory that was checked and uploaded, kept 90
+   days) and compare the Portal's file list and each file's sha1 with it (`<file>.sha1` beside each
+   file). Then press **Publish**, or **Drop** to abandon it. Maven Central has no undo; a fix after
+   that is `1.28.0-keliver.2`.
 
 ## Not yet
 
-Publishing (a manual run of the workflow), then Keliver on the fork: the version catalog, Long as
-BigInt by default and the scaffolders' engine (one engine, `quickjs-2026`); iOS on a phone (step 3
-ran the simulator only); and the upstream offer. The plan and estimates are in
-`docs/GUEST_PROFILE.md`.
+Publishing (a manual run of the workflow), then Keliver on the fork, in this order, because an app
+must never get the fork and upstream together (the capability conflict above would stop its build):
+the fork published → Keliver's version catalog and libraries at 0.5.0 on `dev.keliver.zipline`,
+with Long as BigInt by default in Keliver's build-support and templates (the owner, 2026-11-22: not
+in the fork's plugin, which keeps upstream's behaviour) → the scaffolders write the fork's
+coordinates only for an app whose `appRuntime.keliverVersion` is 0.5.0 or later (one engine,
+`quickjs-2026`) → then a tools release. Also iOS on a phone (step 3 ran the simulator only), and
+the upstream offer. The plan and estimates are in `docs/GUEST_PROFILE.md`.

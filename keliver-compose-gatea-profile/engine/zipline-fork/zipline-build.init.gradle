@@ -61,26 +61,133 @@ allprojects { p ->
   }
 }
 
-// NF2 step 4 (`apply.sh release`): -PziplineForkRelease builds the fork under Keliver's own
-// coordinates, dev.keliver.zipline:<upstream artifact name>:<VERSION_NAME>, never app.cash.zipline:
-//   - every project's group is dev.keliver.zipline, set right after the root script (which sets
+// The licence notices go into every archive the fork's build writes (review of PR #289, M2):
+// META-INF/LICENSE-QuickJS.txt, QuickJS's MIT notice exactly as quickjs.c carries it (the engine is
+// compiled into the JVM jar's six JNI libraries, the AAR's four .so files and the klibs' bitcode, and
+// MIT requires the notice to go with copies), and META-INF/NOTICE (Zipline, Apache-2.0, modified by
+// Keliver; where the patch set is). Jars, sources and javadoc jars and the AAR are Gradle archive
+// tasks, given the files with `from`; the klibs are written by the Kotlin/Native compiler and
+// cinterop, so the notices are added to each .klib (a zip) after the task that wrote it, before the
+// Gradle module metadata records its checksums. check-release.py checks every archive has both.
+def forkUrl = 'https://github.com/waliasanchit007/keliver'
+def forkPath = 'keliver-compose-gatea-profile/engine/zipline-fork'
+// -PziplineForkSourceRef: the git ref the POMs and the NOTICE point at (the release tag; apply.sh
+// passes ZIPLINE_FORK_SOURCE_REF, default main).
+def sourceRef = startParameter.projectProperties['ziplineForkSourceRef'] ?: 'main'
+def forkDir = "$forkUrl/tree/$sourceRef/$forkPath"
+def noticeDir = null
+gradle.rootProject { root ->
+  noticeDir = new File(root.layout.buildDirectory.get().asFile, 'keliver-fork-notice')
+}
+gradle.projectsEvaluated {
+  def root = gradle.rootProject
+  def quickjsC = root.file('zipline/native/quickjs/quickjs.c')
+  // The comment that opens quickjs.c: its copyright lines and the MIT terms, verbatim.
+  def header = quickjsC.text.with { it.substring(it.indexOf('/*') + 2, it.indexOf('*/')) }
+  def mit = header.readLines().collect { it.replaceFirst(/^ ?\* ?/, '') }.join('\n').trim() + '\n'
+  if (!mit.contains('Permission is hereby granted') || !mit.contains('Fabrice Bellard')) {
+    throw new GradleException("zipline-build.init.gradle: no MIT notice at the top of $quickjsC")
+  }
+  def qjsVersion = root.file('zipline/native/quickjs/VERSION').text.trim()
+  def meta = new File(noticeDir, 'META-INF')
+  meta.mkdirs()
+  new File(meta, 'LICENSE-QuickJS.txt').text = "QuickJS $qjsVersion (zipline/native/quickjs), as modified by Keliver contributors:\n\n$mit"
+  new File(meta, 'NOTICE').text = """\
+Keliver's fork of Zipline, ${root.version}.
+
+Zipline: Copyright (C) Square, Inc. and Block, Inc. Licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0). Modified by Keliver contributors, 2026: the patch set
+in $forkDir
+(patches/zipline-1.28.0.patch).
+
+QuickJS $qjsVersion: Copyright (c) Fabrice Bellard and Charlie Gordon. Licensed under the MIT licence
+(META-INF/LICENSE-QuickJS.txt). Modified by Keliver contributors, 2026
+(patches/quickjs-$qjsVersion-asuintn.patch).
+"""
+}
+def addNotices = { File archive ->
+  def fs = java.nio.file.FileSystems.newFileSystem(java.net.URI.create('jar:' + archive.toURI()), [:])
+  try {
+    def meta = fs.getPath('META-INF')
+    java.nio.file.Files.createDirectories(meta)
+    new File(noticeDir, 'META-INF').listFiles().each { f ->
+      java.nio.file.Files.copy(f.toPath(), meta.resolve(f.name), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+  } finally {
+    fs.close()
+  }
+}
+allprojects { p ->
+  p.tasks.withType(AbstractArchiveTask).configureEach { t ->
+    t.from(p.provider { noticeDir }) { s -> s.include('META-INF/**') }
+  }
+  p.tasks.configureEach { t ->
+    def type = t.class.name
+    if (!type.startsWith('org.jetbrains.kotlin.gradle.') || !(type.contains('KotlinNativeCompile') || type.contains('CInteropProcess'))) return
+    t.inputs.dir(p.provider { noticeDir }).withPropertyName('keliverForkNotices')
+    t.doLast {
+      t.outputs.files.files.each { o ->
+        def klibs = o.isFile() ? [o] : (o.isDirectory() ? p.fileTree(o) { include '*.klib', '*/*.klib' }.files : [])
+        klibs.findAll { it.name.endsWith('.klib') }.each { addNotices(it) }
+      }
+    }
+  }
+}
+
+// NF2 step 4 (`apply.sh release`): -PziplineForkRelease=<group> builds the fork under Keliver's own
+// coordinates, <group>:<upstream artifact name>:<VERSION_NAME> (apply.sh passes RELEASE_GROUP,
+// dev.keliver.zipline), never app.cash.zipline:
+//   - every project's group is <group>, set right after the root script (which sets
 //     app.cash.zipline) and before any module's script, which read it eagerly (the Gradle plugin's
 //     BuildConfig names the Kotlin compiler plugin and, with the patch, the CLI in that group);
 //   - every POM keeps Zipline's Apache-2.0 licence and Cash App as its authors and adds QuickJS's
-//     MIT licence, Keliver as the fork's developer, and the fork's URL and SCM, as Keliver's own
-//     POMs name them (build-support's RedwoodBuildPlugin.kt);
-//   - the Gradle plugin also declares the id `dev.keliver.zipline`, whose marker is the one
-//     published (a marker's group is its plugin id, and app.cash.zipline is not ours to publish
-//     to); its jar keeps `app.cash.zipline` too, so `apply plugin: 'app.cash.zipline'` with the jar on
-//     the build classpath works unchanged;
+//     MIT licence, Keliver as the fork's developer, and the fork's URL and SCM at the source ref,
+//     as Keliver's own POMs name them (build-support's RedwoodBuildPlugin.kt);
+//   - every variant in the Gradle module metadata declares, beside its own capability
+//     <group>:<name>, upstream's capability app.cash.zipline:<name> (review of PR #289, M5). Gradle
+//     then refuses a classpath with both a fork module and upstream's module of the same name (a
+//     capability conflict, in Gradle 9.8 "Cannot select module because of conflict with ... Both
+//     provide capability 'app.cash.zipline:zipline-jvm:...'"), instead of putting
+//     two copies of app.cash.zipline's classes on it. Maven, which reads POMs only, does not see it;
+//     `apply.sh check-capabilities` proves both outcomes;
+//   - the Gradle plugin also declares the id <group>, whose marker is the one published (a
+//     marker's group is its plugin id, and app.cash.zipline is not ours to publish to); its jar
+//     keeps `app.cash.zipline` too, so `apply plugin: 'app.cash.zipline'` with the jar on the build
+//     classpath works unchanged;
 //   - -PziplineForkReleaseRepo=<dir> adds that directory as the Maven repository `forkRelease`
 //     (publishAllPublicationsToForkReleaseRepository). Maven Central is the build's own
-//     publishToMavenCentral, with the signing and credentials given as Gradle properties.
+//     publishToMavenCentral, with the signing and credentials given as Gradle properties;
+//   - Maven Central in REVIEW mode unless -PziplineForkAutomaticRelease is given (review of PR #289,
+//     H2): Zipline's root script calls publishToMavenCentral(automaticRelease = true), which
+//     vanniktech 0.36.0 implements as a dependency of every *ToMavenCentralRepository task on the
+//     task `enableAutomaticMavenCentralPublishing`; only that task's action switches its build
+//     service to an AUTOMATIC deployment, and without it the upload is USER_MANAGED (validated, then
+//     held in the Central Portal until someone presses Publish). A second publishToMavenCentral(false)
+//     cannot override it (the property is finalized), so the task is disabled, and a build whose task
+//     graph still has it enabled stops before anything runs.
 if (startParameter.projectProperties.containsKey('ziplineForkRelease')) {
-  def releaseGroup = 'dev.keliver.zipline'
+  def releaseGroup = startParameter.projectProperties['ziplineForkRelease']
+  if (!(releaseGroup ==~ /[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)+/) || releaseGroup == 'app.cash.zipline') {
+    throw new GradleException("zipline-build.init.gradle: -PziplineForkRelease=<group> (apply.sh's RELEASE_GROUP), not '$releaseGroup'")
+  }
   def releaseRepo = startParameter.projectProperties['ziplineForkReleaseRepo']
-  def forkUrl = 'https://github.com/waliasanchit007/keliver'
-  def forkDir = "$forkUrl/tree/main/keliver-compose-gatea-profile/engine/zipline-fork"
+  def automaticRelease = startParameter.projectProperties.containsKey('ziplineForkAutomaticRelease')
+  def automaticTask = 'enableAutomaticMavenCentralPublishing'
+  if (!automaticRelease) {
+    allprojects { p ->
+      p.tasks.configureEach { t -> if (t.name == automaticTask) t.enabled = false }
+    }
+    gradle.taskGraph.whenReady { g ->
+      def central = g.allTasks.findAll { it.name.endsWith('ToMavenCentralRepository') }
+      if (central.isEmpty()) return
+      def automatic = g.allTasks.findAll { it.name == automaticTask }
+      if (automatic.any { it.enabled }) {
+        throw new GradleException("zipline-build.init.gradle: review mode, but $automaticTask is enabled in ${automatic.findAll { it.enabled }*.path}")
+      }
+      println "zipline-fork: Maven Central in REVIEW mode: ${central.size()} publications to one USER_MANAGED deployment, " +
+        "${automatic.size()} $automaticTask task(s) disabled; nothing is released until someone presses Publish in the Central Portal"
+    }
+  }
   gradle.rootProject { root ->
     root.afterEvaluate {
       root.allprojects { it.group = releaseGroup }
@@ -120,8 +227,27 @@ if (startParameter.projectProperties.containsKey('ziplineForkRelease')) {
               scm.url.set(forkUrl)
               scm.connection.set('scm:git:git://github.com/waliasanchit007/keliver.git')
               scm.developerConnection.set('scm:git:ssh://git@github.com/waliasanchit007/keliver.git')
+              scm.tag.set(sourceRef)
             }
           }
+        }
+      }
+      // Upstream's capability beside the fork's own, on every variant that has files (a variant
+      // with `available-at` only points at another module, which carries its own).
+      p.tasks.withType(GenerateModuleMetadata).configureEach { t ->
+        t.doLast {
+          def f = t.outputFile.get().asFile
+          def json = new groovy.json.JsonSlurper().parse(f)
+          // The module's own coordinates: the publication's (a platform module's `component` names
+          // the multiplatform root module it belongs to, not itself).
+          def pub = t.publication.get()
+          json.variants.each { v ->
+            if (v['available-at'] != null) return
+            def caps = v.capabilities ?: [[group: pub.groupId, name: pub.artifactId, version: pub.version]]
+            def twins = caps.findAll { it.group == releaseGroup }.collect { [group: 'app.cash.zipline', name: it.name, version: it.version] }
+            v.capabilities = caps + twins.findAll { tw -> !caps.any { it.group == tw.group && it.name == tw.name } }
+          }
+          f.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json)) + '\n'
         }
       }
     }

@@ -1,0 +1,130 @@
+// Copyright (C) 2026 Keliver contributors. Licensed under the Apache License, Version 2.0.
+//
+// NF2 step 4 (review of PR #289, M5): every variant of the fork's release declares upstream's
+// capability app.cash.zipline:<name> beside its own (zipline-build.init.gradle), so Gradle refuses a
+// classpath that has a fork module and upstream's module of the same name instead of putting two
+// copies of app.cash.zipline's classes on it. `apply.sh check-capabilities <work> <repo>` runs
+// `checkCapabilities` here, a plain JVM consumer, against the directory `apply.sh release` wrote
+// (the fork's group from there only) and Maven Central (upstream's 1.28.0):
+//   - pure: the fork's modules (the runtime, the loader, the Gradle and Kotlin compiler plugins, the
+//     CLI and the rest) resolve, each at the release version, with no app.cash.zipline module in the
+//     graph, and their files are there;
+//   - mixed: the fork's runtime with upstream's `zipline` (what an app still on dev.keliver 0.4.x
+//     would have), and the fork's Gradle plugin with upstream's, each FAIL with a conflict on
+//     upstream's capability.
+def repoDir = providers.gradleProperty('ziplineReleaseRepo').get()
+def forkGroup = providers.gradleProperty('ziplineReleaseGroup').get()
+def forkVersion = providers.gradleProperty('ziplineReleaseVersion').get()
+def upstreamVersion = providers.gradleProperty('ziplineUpstreamVersion').get()
+def upstreamGroup = 'app.cash.zipline'
+
+apply plugin: 'java'
+
+repositories {
+  exclusiveContent {
+    forRepository { maven { name = 'ziplineRelease'; url = file(repoDir).toURI() } }
+    filter { includeGroup(forkGroup) }
+  }
+  mavenCentral()
+  google() // androidx.annotation, which Zipline's common code depends on
+}
+
+def fork = { String name -> "$forkGroup:$name:$forkVersion" }
+def upstream = { String name -> "$upstreamGroup:$name:$upstreamVersion" }
+def cases = [
+  pure: ['zipline', 'zipline-loader', 'zipline-bytecode', 'zipline-cryptography', 'zipline-profiler',
+         'zipline-gradle-plugin', 'zipline-kotlin-plugin', 'zipline-cli', 'zipline-api-validator'].collect(fork),
+  mixedRuntime: [fork('zipline'), upstream('zipline')],
+  mixedPlugin: [fork('zipline-gradle-plugin'), upstream('zipline-gradle-plugin')],
+]
+// The capability each mixed case must be refused on (the JVM runtime is zipline-jvm, through the
+// multiplatform root module).
+def refusedOn = [mixedRuntime: "$upstreamGroup:zipline-jvm", mixedPlugin: "$upstreamGroup:zipline-gradle-plugin"]
+
+cases.each { name, notations ->
+  configurations.create(name) { c ->
+    c.canBeConsumed = false
+    c.canBeResolved = true
+    // A JVM program's runtime classpath (the jvm variant of a multiplatform module), and the Gradle
+    // plugin API of this Gradle (the plugins' dependencies publish one variant per Gradle version).
+    def runtime = configurations.runtimeClasspath.attributes
+    c.attributes { a ->
+      runtime.keySet().each { k -> a.attribute(k, runtime.getAttribute(k)) }
+      a.attribute(GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE, objects.named(GradlePluginApiVersion, gradle.gradleVersion))
+    }
+  }
+  notations.each { dependencies.add(name, it) }
+}
+
+def describe = { Throwable t ->
+  def messages = []
+  for (def e = t; e != null; e = e.cause) {
+    if (e.message) messages << e.message
+    if (e.respondsTo('getCauses')) e.causes.each { cause -> if (cause.message) messages << cause.message }
+  }
+  messages.join('\n')
+}
+// Every failure resolving the configuration's graph, as text; empty when it resolves.
+def problems = { Configuration c ->
+  def found = []
+  try {
+    c.incoming.resolutionResult.allDependencies.each { d ->
+      if (d instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult) found << describe(d.failure)
+    }
+  } catch (Throwable t) {
+    found << describe(t)
+  }
+  if (found.isEmpty()) {
+    try {
+      c.resolvedConfiguration.rethrowFailure()
+    } catch (Throwable t) {
+      found << describe(t)
+    }
+  }
+  found
+}
+
+tasks.register('checkCapabilities') {
+  doLast {
+    def errors = []
+    // pure
+    def pure = configurations.pure
+    def pureProblems = problems(pure)
+    if (pureProblems) {
+      errors << "pure: the fork's modules do not resolve on their own:\n${pureProblems.join('\n')}"
+    } else {
+      def components = pure.incoming.resolutionResult.allComponents.collect { it.moduleVersion }.findAll { it != null }
+      def upstreamModules = components.findAll { it.group == upstreamGroup }
+      if (upstreamModules) errors << "pure: $upstreamGroup modules in the graph: ${upstreamModules.join(', ')}"
+      def forkModules = components.findAll { it.group == forkGroup }
+      def wrongVersion = forkModules.findAll { it.version != forkVersion }
+      if (wrongVersion) errors << "pure: fork modules at another version: ${wrongVersion.join(', ')}"
+      def requested = cases.pure.collect { it.split(':')[1] } as Set
+      def missing = requested - (forkModules.collect { it.name } as Set)
+      if (missing) errors << "pure: not resolved: ${missing.join(', ')}"
+      def files = pure.incoming.artifactView { v ->
+        v.componentFilter { id -> id instanceof ModuleComponentIdentifier && id.group == forkGroup }
+      }.files.files
+      if (files.isEmpty()) errors << 'pure: no fork files resolved'
+      println "check-capabilities: pure: ${components.size()} modules resolve (${forkModules.size()} of the fork, " +
+        "none of $upstreamGroup), ${files.size()} fork files: ${forkModules.collect { it.name }.sort().join(', ')}"
+    }
+    // mixed
+    refusedOn.each { name, capability ->
+      def found = problems(configurations.getByName(name))
+      def text = found.join('\n')
+      // Gradle 9's wording ("Both provide capability '<group>:<name>:<version>'"), and older Gradle's
+      // ("conflict on capability '<group>:<name>:<version>'").
+      def refusal = text.readLines().find { it.contains("provide capability '$capability:") || it.contains("conflict on capability '$capability:") }
+      if (found.isEmpty()) {
+        errors << "$name: resolved; a classpath with both groups must fail on the capability $capability"
+      } else if (refusal == null) {
+        errors << "$name: failed, but not with a conflict on the capability $capability:\n$text"
+      } else {
+        println "check-capabilities: $name: refused as it must be: ${refusal.trim()}"
+      }
+    }
+    if (errors) throw new GradleException("check-capabilities: ${errors.size()} failure(s):\n${errors.join('\n')}")
+    println 'check-capabilities: OK'
+  }
+}

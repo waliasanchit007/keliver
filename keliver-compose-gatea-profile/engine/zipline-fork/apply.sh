@@ -47,15 +47,22 @@
 #   apply.sh release <work> <empty maven repo dir> [--central]   step 4, after engine and jni-all: every
 #                             Zipline artifact as dev.keliver.zipline:<upstream name>:1.28.0-keliver.1
 #                             (a Mac with Xcode), to the directory, checked by check-release.py and
-#                             listed with sizes; with --central, then to Maven Central (signed; the
-#                             credentials as ORG_GRADLE_PROJECT_* variables). CI only, by hand
-#   apply.sh check-release <work> <repo>   check-release.py again on what release wrote to <repo>
+#                             listed with sizes; with --central, signed, then to Maven Central in
+#                             review mode (the credentials as ORG_GRADLE_PROJECT_* variables). CI
+#                             only, by hand. No build cache. The POMs point at ZIPLINE_FORK_SOURCE_REF
+#                             (the release tag; default main)
+#   apply.sh check-release <work> <repo> [signed]   check-release.py again on what release wrote
+#   apply.sh check-capabilities <work> <repo>   after release: a Gradle consumer (capability-check/)
+#                             resolves the fork's modules alone, and fails, with a capability conflict,
+#                             on the fork's and upstream's together
+#   apply.sh jvm-test-dist <work>   after jni-all: Zipline's JVM tests as a runnable distribution
+#                             (zipline/build/install/jvmTest, bin/zipline-test), for every host
 #   apply.sh diff    <work>   maintainers: regenerate patches/ from an edited checkout
 #   apply.sh all     <work>   clone, engine, jni, qjs, check-bigint (no Android SDK needed)
 set -euo pipefail
 shopt -s nullglob
 here="$(cd "$(dirname "$0")" && pwd)"
-cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|diff|all <work dir> [...]}"
+cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|check-release|check-capabilities|jvm-test-dist|diff|all <work dir> [...]}"
 work="${2:?work dir}"
 mkdir -p "$work"
 work="$(cd "$work" && pwd)"
@@ -68,8 +75,14 @@ QJS_SHA256=b376e839b322978313d929fd20663b11ba58b75df5a46c126dd19ea2fa70ad2a
 # `publish` (a scratch repository for use-fork.init.gradle: only the changed modules, under
 # app.cash.zipline) and `release` (step 4: every Zipline artifact, under Keliver's own group).
 FORK_VERSION=1.28.0-q20260604
+# The release's coordinates: the one place they are written (zipline-build.init.gradle gets the
+# group as -PziplineForkRelease; use-release.init.gradle and the workflow read both from here).
 RELEASE_GROUP=dev.keliver.zipline
 RELEASE_VERSION=1.28.0-keliver.1
+# The git ref the POMs and NOTICE point at: the release tag in CI (zipline-fork.yml), else main.
+SOURCE_REF="${ZIPLINE_FORK_SOURCE_REF:-main}"
+# patches/: one for the engine, one for Zipline.
+PATCH_COUNT=2
 # The JVM engine's JNI libraries for every host Zipline ships (zipline/build.zig: Linux, macOS and
 # Windows, arm64 and x86-64), built as upstream's release workflow builds them, with this zig.
 ZIG_VERSION=0.16.0
@@ -115,8 +128,11 @@ do_engine() {
   local q="$zl/zipline/native/quickjs"
   rm -f "$q"/*
   for f in $QJS_FILES; do cp "$work/src/quickjs-$QJS_VERSION/$f" "$q/$f"; done
-  for p in "$here"/patches/quickjs-*.patch; do patch -s -d "$q" -p1 < "$p"; echo "applied $(basename "$p")"; done
-  for p in "$here"/patches/zipline-*.patch; do git -C "$zl" apply --whitespace=nowarn "$p"; echo "applied $(basename "$p")"; done
+  # Exactly the patches the fork is (nullglob would skip a renamed one silently).
+  local n=0
+  for p in "$here"/patches/quickjs-*.patch; do patch -s -d "$q" -p1 < "$p"; echo "applied $(basename "$p")"; n=$((n + 1)); done
+  for p in "$here"/patches/zipline-*.patch; do git -C "$zl" apply --whitespace=nowarn "$p"; echo "applied $(basename "$p")"; n=$((n + 1)); done
+  [ "$n" = "$PATCH_COUNT" ] || { echo "engine: applied $n patches, expected $PATCH_COUNT (patches/)" >&2; exit 1; }
   echo "engine: QuickJS $(cat "$q/VERSION") in $q"
 }
 
@@ -192,7 +208,7 @@ do_check_bigint() {
 
 zipline_gradle() { # Zipline's own wrapper; an installed NDK instead of AGP's download (zipline-build.init.gradle)
   (cd "$zl" && ./gradlew --console=plain --no-daemon -I "$here/zipline-build.init.gradle" \
-    "-PziplineForkNdkVersion=$NDK_VERSION" "$@")
+    "-PziplineForkNdkVersion=$NDK_VERSION" "-PziplineForkSourceRef=$SOURCE_REF" "$@")
 }
 
 sdk_dir() { echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"; }
@@ -570,11 +586,31 @@ upstream_central() { # into $work/dl: the names upstream publishes at $ZIPLINE_T
   central_file zipline-android-ndk "zipline-android-ndk-$ZIPLINE_TAG.aar"
 }
 
-check_release() { # <repo>: check-release.py on what release published there (and the listing)
+check_release() { # <repo> [signed]: check-release.py on what release published there (and the listing)
   upstream_central
   python3 -I "$here/check-release.py" "$1" "$RELEASE_GROUP" "$RELEASE_VERSION" "$ZIPLINE_TAG" \
     "$work/dl/upstream-$ZIPLINE_TAG-artifacts.txt" "$work/dl/zipline-jvm-$ZIPLINE_TAG.jar" \
-    "$work/dl/zipline-android-ndk-$ZIPLINE_TAG.aar"
+    "$work/dl/zipline-android-ndk-$ZIPLINE_TAG.aar" "$SOURCE_REF" "${2:-unsigned}"
+}
+
+do_check_capabilities() { # <repo>: a pure fork classpath resolves; one mixed with upstream fails
+  local repo="${3:?check-capabilities <work> <repo release wrote>}" d="$work/capability-check"
+  repo="$(cd "$repo" && pwd)"
+  # A copy of the check project in the work dir, so Gradle's files stay out of the repository.
+  rm -rf "$d"; mkdir -p "$d"; cp "$here"/capability-check/*.gradle "$d/"
+  # Zipline's own wrapper (its Gradle version); no init script: the check is a plain consumer.
+  (cd "$d" && "$zl/gradlew" --console=plain --no-daemon -p "$d" "-PziplineReleaseRepo=$repo" \
+    "-PziplineReleaseGroup=$RELEASE_GROUP" "-PziplineReleaseVersion=$RELEASE_VERSION" \
+    "-PziplineUpstreamVersion=$ZIPLINE_TAG" checkCapabilities)
+}
+
+do_jvm_test_dist() { # step 4: Zipline's JVM tests as a distribution, run on every host (zipline-fork.yml)
+  [ -n "$(find "$zl/zipline/src/jvmMain/resources/jni" -name '*.dll' 2>/dev/null)" ] \
+    || { echo "jvm-test-dist: run jni-all first (the distribution carries every host's engine)" >&2; exit 1; }
+  zipline_gradle :zipline:installJvmTestDistribution
+  local dist="$zl/zipline/build/install/jvmTest"
+  [ -x "$dist/bin/zipline-test" ] || { echo "jvm-test-dist: no $dist/bin/zipline-test" >&2; exit 1; }
+  echo "jvm-test-dist: $dist (run bin/zipline-test on each host)"
 }
 
 do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEASE_VERSION
@@ -591,19 +627,28 @@ do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEAS
   case "$repo" in "$HOME/.m2"*) echo "refusing ~/.m2" >&2; exit 2 ;; esac
   [ -z "$(ls -A "$repo")" ] || { echo "release: $repo is not empty" >&2; exit 2; }
   upstream_central
-  local props=(-PziplineForkRelease "-PVERSION_NAME=$RELEASE_VERSION")
+  # No build cache: every output of a release is built in this checkout, never taken from an
+  # earlier run's cache entry (Zipline's gradle.properties turns the cache on).
+  local props=("-PziplineForkRelease=$RELEASE_GROUP" "-PVERSION_NAME=$RELEASE_VERSION" --no-build-cache)
+  local v signed=unsigned
+  if [ "$central" = --central ]; then
+    # The credentials as Gradle properties (ORG_GRADLE_PROJECT_*, as publish-maven-central.yml
+    # passes them). With the signing key set, Zipline's build signs every publication, the
+    # directory's too, so what is checked below is what Central gets, signatures included.
+    for v in mavenCentralUsername mavenCentralPassword signingInMemoryKey signingInMemoryKeyPassword; do
+      v="ORG_GRADLE_PROJECT_$v"
+      [ -n "${!v:-}" ] || { echo "release --central: $v is not set" >&2; exit 2; }
+    done
+    signed=signed
+  fi
   # Every publication of every module (the full set upstream publishes), to the directory first.
   zipline_gradle "${props[@]}" "-PziplineForkReleaseRepo=$repo" publishAllPublicationsToForkReleaseRepository
-  check_release "$repo"
+  check_release "$repo" "$signed"
   [ "$central" = --central ] || return 0
-  # Maven Central only after the same build's outputs passed the check above (the tasks are
-  # up to date, so this uploads what was checked), signed, with the credentials as Gradle
-  # properties (ORG_GRADLE_PROJECT_*, as publish-maven-central.yml passes them).
-  local v
-  for v in mavenCentralUsername mavenCentralPassword signingInMemoryKey signingInMemoryKeyPassword; do
-    v="ORG_GRADLE_PROJECT_$v"
-    [ -n "${!v:-}" ] || { echo "release --central: $v is not set" >&2; exit 2; }
-  done
+  # Maven Central only after the same build's outputs passed the check above (the tasks are up to
+  # date in this checkout, so this uploads what was checked), in review mode
+  # (zipline-build.init.gradle): the deployment waits in the Central Portal until someone compares
+  # it with the checked directory and presses Publish (the fork's README, "Publishing the fork").
   zipline_gradle "${props[@]}" publishToMavenCentral
 }
 
@@ -642,7 +687,9 @@ case "$cmd" in
   publish) do_publish "$@" ;;
   jni-all) do_jni_all ;;
   release) do_release "$@" ;;
-  check-release) check_release "${3:?check-release <work> <repo release wrote>}" ;;
+  check-release) check_release "${3:?check-release <work> <repo release wrote> [signed]}" "${4:-unsigned}" ;;
+  check-capabilities) do_check_capabilities "$@" ;;
+  jvm-test-dist) do_jvm_test_dist ;;
   all) do_clone; do_engine; do_jni; do_qjs; do_check_bigint ;;
   *) echo "unknown: $cmd" >&2; exit 2 ;;
 esac

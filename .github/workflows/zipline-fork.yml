@@ -1,29 +1,41 @@
-# Copyright 2026 The Keliver Authors. Licensed under the Apache License, Version 2.0.
+# Copyright (C) 2026 Keliver contributors. Licensed under the Apache License, Version 2.0.
 #
 # NF2 step 4: builds and checks Keliver's fork of Zipline (Zipline 1.28.0 on QuickJS 2026-06-04,
 # kept as a patch set in keliver-compose-gatea-profile/engine/zipline-fork; its README) as
-# dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1, and publishes it to Maven Central
-# ONLY when a person dispatches it by hand with `publish` ticked and the version typed out.
+# dev.keliver.zipline:<upstream artifact name>:<RELEASE_VERSION in apply.sh>, and uploads it to
+# Maven Central ONLY when a person dispatches it by hand from main with `publish` ticked, the
+# release tag named and the version typed out. The upload is in REVIEW mode: nothing is released
+# until someone compares the deployment with the checked directory and presses Publish in the
+# Central Portal (the fork's README, "Publishing the fork").
 #
-# Every run, pull request or dispatch, from a fresh checkout of Zipline at its pinned commit:
-#   1. `apply.sh all`: clone, the QuickJS 2026 engine and both patches, the Mac's JNI library, the
-#      command-line qjs builds and check-bigint (the patched engine matches Node on bigint-ops.js);
-#   2. `apply.sh jni-all`: the JNI library for every host upstream ships (Linux, macOS, Windows;
-#      arm64 and x86-64) with the pinned zig, as upstream's release workflow builds them;
-#   3. the fork's host tests on the JVM (Zipline's :zipline:jvmTest and :zipline-bytecode:test) and
-#      on the iOS simulator, and bigint-ops.js through Zipline's own engine on the JVM;
-#   4. `apply.sh android`: the Android AAR for four ABIs (flags, 16 KB alignment). Zipline's device
-#      tests are NOT run here: GitHub's macOS arm64 runners have no nested virtualisation, so no
-#      Android emulator, and the build needs a Mac (Apple klibs). They ran on an emulator and on a
-#      phone by hand (docs/GUEST_PROFILE.md, NF2 step 2; THREE_WAY_BENCHMARK.md, A12 checkpoint);
-#   5. `apply.sh release` to a directory: every publication of every module, checked by
-#      check-release.py (coordinates, upstream's artifact names, both licences in every POM, the
-#      engines in the JVM jar, the AAR and the klibs, the Gradle plugin's ids) and kept as an
-#      artifact of the run.
-# With `publish`: the same job then runs `apply.sh release --central`, which publishes the checked
-# outputs (the Gradle tasks are up to date) signed, with the secrets publish-maven-central.yml uses.
-# Maven Central has no undo; Zipline's build releases the deployment automatically once it
-# validates.
+# Jobs:
+#   guard (publish only, cheapest first): dispatched from main; the tag is
+#     zipline-fork-v<RELEASE_VERSION> as apply.sh has it at the tag, on main's history; the typed
+#     version matches; the secrets exist.
+#   fork (every run; the tag's commit when one is given), from a fresh checkout of Zipline at its
+#     pinned commit:
+#     1. `apply.sh all`: clone, the QuickJS 2026 engine and both patches (exactly two), the Mac's
+#        JNI library, the command-line qjs builds and check-bigint (the patched engine matches Node
+#        on bigint-ops.js);
+#     2. `apply.sh jni-all`: the JNI library for every host upstream ships (Linux, macOS, Windows;
+#        arm64 and x86-64) with the pinned zig, as upstream's release workflow builds them;
+#     3. the host tests on the JVM (:zipline:jvmTest, :zipline-bytecode:test) and the iOS simulator;
+#        then again with the test JavaScript linked with Long as BigInt (-PziplineForkLongAsBigInt:
+#        EncodingTest's Longs at and beyond 2^53 cross the bridge as BigInt); bigint-ops.js through
+#        Zipline's engine on the JVM;
+#     4. `apply.sh android`: the AAR for four ABIs (flags, 16 KB alignment). Zipline's device tests
+#        are NOT run here: GitHub's macOS arm64 runners have no nested virtualisation, so no
+#        emulator. They ran on an emulator and a phone by hand (docs/GUEST_PROFILE.md, NF2 step 2);
+#     5. `apply.sh release` to a directory, checked by check-release.py (coordinates, names,
+#        licences and notices, capabilities, Central's file rules, the engines, the plugin's
+#        BuildConfig), and `apply.sh check-capabilities` (a classpath with both groups is refused);
+#     6. `apply.sh jvm-test-dist`: Zipline's JVM tests as a distribution, for jvm-matrix.
+#   jvm-matrix: that distribution on the six runners upstream's build.yaml uses, so every JNI
+#     library the jar carries is loaded and tested on its own host.
+#   publish (publish only; needs all three): the tag's commit built again on a fresh runner, no
+#     build cache, `apply.sh release --central`: signed to a directory, checked again (signatures
+#     included), then uploaded to Central in review mode; the signed directory is kept as an
+#     artifact for 90 days, for the comparison in the Portal.
 name: zipline-fork
 
 on:
@@ -33,10 +45,15 @@ on:
       - 'keliver-compose-gatea-profile/engine/bigint-ops.js'
       - 'scripts/zipline-fork.sh'
       - '.github/workflows/zipline-fork.yml'
+      - '!**/*.md'
   workflow_dispatch:
     inputs:
+      tag:
+        description: "The release tag to build, zipline-fork-v<RELEASE_VERSION> (required with publish)"
+        required: false
+        default: ""
       publish:
-        description: "Publish to Maven Central after every check passes (irreversible; main only)"
+        description: "Upload to Maven Central in review mode after every check passes (main only)"
         type: boolean
         default: false
       confirm_version:
@@ -53,25 +70,20 @@ concurrency:
 
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dkotlin.incremental=false"
-  NDK_VERSION: "28.0.12674087"
+  # The NDK the runners install and apply.sh builds the AAR with.
+  KELIVER_NDK_VERSION: "28.0.12674087"
+  # The POMs and NOTICE point at the release tag on a release, else at main.
+  ZIPLINE_FORK_SOURCE_REF: ${{ inputs.tag || 'main' }}
 
 jobs:
-  fork:
-    name: Build, test and check the Zipline fork
-    # A Mac with Xcode: the iOS, macOS and tvOS klibs, and the iOS simulator tests.
-    runs-on: macos-15
-    timeout-minutes: 240
-    permissions:
-      contents: read
-    env:
-      WORK: ${{ github.workspace }}/build/zipline-fork/work
-      REPO: ${{ github.workspace }}/build/zipline-fork/repo
+  guard:
+    name: Check the publish request
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      # Cheapest first: a publish run must be on main, name the version, and have the secrets.
-      - name: Check the publish request
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
+      - name: Main, the secrets
         env:
-          CONFIRM: ${{ inputs.confirm_version }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -88,25 +100,52 @@ jobs:
           if [ -n "$missing" ]; then
             echo "::error::Missing secrets:$missing (docs/MAVEN_CENTRAL_SETUP.md)."; exit 1
           fi
-          echo "confirm_version: '$CONFIRM'"
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
 
-      - name: Check the typed version
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
+      - name: The tag, the version, main's history
         env:
+          TAG: ${{ inputs.tag }}
           CONFIRM: ${{ inputs.confirm_version }}
         run: |
           version="$(sed -nE 's/^RELEASE_VERSION=(.*)$/\1/p' keliver-compose-gatea-profile/engine/zipline-fork/apply.sh)"
-          if [ -z "$version" ] || [ "$CONFIRM" != "$version" ]; then
+          if [ -z "$version" ] || [ "$TAG" != "zipline-fork-v$version" ]; then
+            echo "::error::tag '$TAG' is not zipline-fork-v<RELEASE_VERSION> ('$version' at the tag)."; exit 1
+          fi
+          if [ "$(git rev-parse "refs/tags/$TAG^{commit}")" != "$(git rev-parse HEAD)" ]; then
+            echo "::error::the checkout is not the tag $TAG."; exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::$TAG ($(git rev-parse HEAD)) is not on main's history."; exit 1
+          fi
+          if [ "$CONFIRM" != "$version" ]; then
             echo "::error::confirm_version '$CONFIRM' is not the release version '$version'."; exit 1
           fi
-          echo "Publishing dev.keliver.zipline:*:$version after the checks."
+          echo "Publishing dev.keliver.zipline:*:$version from $TAG ($(git rev-parse HEAD)) after the checks."
+
+  fork:
+    name: Build, test and check the Zipline fork
+    needs: guard
+    # The guard is skipped unless this is a publish run.
+    if: ${{ !cancelled() && (needs.guard.result == 'success' || needs.guard.result == 'skipped') }}
+    # A Mac with Xcode: the iOS, macOS and tvOS klibs, and the iOS simulator tests.
+    runs-on: macos-15
+    timeout-minutes: 300
+    env:
+      WORK: ${{ github.workspace }}/build/zipline-fork/work
+      REPO: ${{ github.workspace }}/build/zipline-fork/repo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
 
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version-file: .github/workflows/.java-version
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -115,8 +154,8 @@ jobs:
       - name: Install the NDK
         run: |
           sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" > /dev/null
-          ls "$sdk/ndk/$NDK_VERSION/source.properties"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$KELIVER_NDK_VERSION" > /dev/null
+          ls "$sdk/ndk/$KELIVER_NDK_VERSION/source.properties"
 
       - name: Clone Zipline, apply the patch set, check BigInt (apply.sh all)
         run: scripts/zipline-fork.sh all "$WORK"
@@ -125,8 +164,6 @@ jobs:
         run: scripts/zipline-fork.sh jni-all "$WORK"
 
       - name: Host tests, JVM and iOS simulator
-        env:
-          KELIVER_NDK_VERSION: ${{ env.NDK_VERSION }}
         # The counts (and the failed tests' names) are printed whether or not a task failed.
         run: |
           status=0
@@ -135,21 +172,34 @@ jobs:
           scripts/zipline-fork.sh results "$WORK" jvmTest zipline-bytecode/test iosSimulatorArm64Test || status=1
           exit "$status"
 
+      - name: Host tests again, the test JavaScript linked with Long as BigInt
+        run: |
+          status=0
+          scripts/zipline-fork.sh test "$WORK" --continue -PziplineForkLongAsBigInt \
+            :zipline:jvmTest :zipline:iosSimulatorArm64Test || status=$?
+          scripts/zipline-fork.sh results "$WORK" jvmTest iosSimulatorArm64Test || status=1
+          exit "$status"
+
       - name: bigint-ops.js through Zipline's engine, JVM
-        env:
-          KELIVER_NDK_VERSION: ${{ env.NDK_VERSION }}
         run: scripts/zipline-fork.sh check-bigint-zipline "$WORK" :zipline:jvmTest
 
       - name: Android AAR (apply.sh android)
-        env:
-          KELIVER_NDK_VERSION: ${{ env.NDK_VERSION }}
         run: scripts/zipline-fork.sh android "$WORK"
 
-      - name: Every artifact to a directory, checked (apply.sh release)
-        env:
-          KELIVER_NDK_VERSION: ${{ env.NDK_VERSION }}
-        run: scripts/zipline-fork.sh release "$WORK" "$REPO"
+      - name: Every artifact to a directory, checked (apply.sh release, check-capabilities)
+        run: |
+          scripts/zipline-fork.sh release "$WORK" "$REPO"
+          scripts/zipline-fork.sh check-capabilities "$WORK" "$REPO"
 
+      - name: The JVM tests as a distribution, for every host (apply.sh jvm-test-dist)
+        run: scripts/zipline-fork.sh jvm-test-dist "$WORK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zipline-fork-jvm-tests
+          path: build/zipline-fork/work/zipline/zipline/build/install/jvmTest
+          if-no-files-found: error
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -165,12 +215,100 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Publish to Maven Central (apply.sh release --central)
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
+  jvm-matrix:
+    name: JVM tests on ${{ matrix.platform }}
+    needs: fork
+    strategy:
+      fail-fast: false
+      matrix:
+        # Upstream's build.yaml: every host zipline-jvm carries a JNI library for.
+        platform:
+          - macos-15-intel
+          - macos-15
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - windows-2025
+          - windows-11-arm
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          sparse-checkout: .github/workflows/.java-version
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version-file: .github/workflows/.java-version
+      - uses: actions/download-artifact@v4
+        with:
+          name: zipline-fork-jvm-tests
+      # As upstream's build.yaml runs it, on every platform.
+      - name: Run the JVM tests
+        run: |
+          chmod +x bin/zipline-test
+          bin/zipline-test
+
+  publish:
+    name: Upload to Maven Central (review mode)
+    needs: [guard, fork, jvm-matrix]
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: macos-15
+    timeout-minutes: 180
+    env:
+      WORK: ${{ github.workspace }}/build/zipline-fork/work
+      REPO: ${{ github.workspace }}/build/zipline-fork/repo-central
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version-file: .github/workflows/.java-version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+
+      - name: Install the NDK
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$KELIVER_NDK_VERSION" > /dev/null
+          ls "$sdk/ndk/$KELIVER_NDK_VERSION/source.properties"
+
+      - name: Clone Zipline, apply the patch set (apply.sh all), every host's JNI library (jni-all)
+        run: |
+          scripts/zipline-fork.sh all "$WORK"
+          scripts/zipline-fork.sh jni-all "$WORK"
+
+      - name: Signed to a directory, checked, then to Maven Central in review mode (apply.sh release --central)
         env:
-          KELIVER_NDK_VERSION: ${{ env.NDK_VERSION }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: scripts/zipline-fork.sh release "$WORK" "$REPO-central" --central
+        run: scripts/zipline-fork.sh release "$WORK" "$REPO" --central
+
+      # What was uploaded, signatures included: the Portal's file sha1s are compared with these
+      # before anyone presses Publish.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zipline-fork-repo-central-${{ inputs.tag }}
+          path: build/zipline-fork/repo-central
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: What to do next
+        run: |
+          {
+            echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: uploaded in review mode, NOT released"
+            echo "1. Central Portal, Deployments: the deployment is VALIDATED (not PUBLISHED)."
+            echo "2. Download this run's artifact zipline-fork-repo-central-${ZIPLINE_FORK_SOURCE_REF} and compare the Portal's"
+            echo "   file list and sha1s with it (the README, Publishing the fork)."
+            echo "3. Only then press Publish. To abandon it, Drop."
+          } >> "$GITHUB_STEP_SUMMARY"
