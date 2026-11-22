@@ -122,6 +122,46 @@ from then on:
   a store it cannot tell them apart: pass only `ed25519.pub`. It never opens
   `ed25519.priv`.
 
+### Toolchain per line
+
+The scaffolders write the toolchain that the app's Keliver version
+(`appRuntime.keliverVersion`) was built with. Each version has one line, and
+each line has one column in `scripts/keliver-runtime-line.sh` (the tools
+bundle's `bin/`). That table is the only place these versions live:
+`keliver-init`, the device target, the Android and iOS hosts and
+`keliver-app-wrapper.sh` all read it. Before 0.5.0 nothing changed: the 0.4
+line's output is byte-identical to what the scaffolders wrote before the table.
+
+| | 0.4 line (before 0.5.0) | 0.5 line (0.5.0 and later, pre-releases too) | why the 0.5 value |
+|---|---|---|---|
+| Zipline | `app.cash.zipline` 1.22.0 | `dev.keliver.zipline` 1.28.0-keliver.1 | the fork (NF2) |
+| Kotlin | 2.2.0 | 2.4.20 | Keliver's catalog at the fork switch |
+| Compose Multiplatform | 1.8.2 | 1.12.2 | the same |
+| AGP | 8.12.0 | 9.3.1 | androidx Compose UI, foundation and material 1.12.1 (what CMP 1.12.2 resolves to on Android) declare `minAndroidGradlePluginVersion=9.1.0` in their AAR metadata. 9.3.1 is what Keliver itself builds with. |
+| compileSdk | 35 | 37 | those AARs, and the fork's `zipline-android` and `zipline-loader-android`, declare `minCompileSdk=37` |
+| targetSdk | 35 | 36 | no library requires one; 36 is what Keliver's sample targets |
+| JDK | 17 | 17 | AGP 8 and 9 both run on 17 |
+| Gradle (app wrapper) | 9.0.0 | 9.7.0 | AGP 9.3.1 refuses Gradle older than 9.5.0 (8.12.0 needs 8.13). 9.7.0 is Keliver's own wrapper, and its sha256 comes from there. |
+
+What the 0.5 line changes in what is written:
+
+- **`keliver-init`** gives the app Gradle 9.7.0 (its `distributionUrl` and
+  `distributionSha256Sum`). `host-android` builds with the app's wrapper
+  (`./gradlew -p host-android`).
+- **The production host** gets AGP 9.3.1, compileSdk 37 and targetSdk 36.
+  AGP 9 compiles Kotlin itself (built-in Kotlin) and refuses a module that
+  applies `org.jetbrains.kotlin.android`. So the host only puts that plugin on
+  the classpath (`apply false`), which pins the Kotlin AGP compiles with to
+  2.4.20. `KELIVER_HOST_AGP_VERSION` set to an 8.x applies it again.
+  When the app's wrapper is older than the AGP's floor (an app made by an
+  earlier `keliver-init`), the scaffolder warns and prints the two lines to set.
+- **`--embed`** applies no Kotlin plugin, because the app's AGP 9 compiles the
+  module. An app that sets `android.builtInKotlin=false` adds
+  `id 'org.jetbrains.kotlin.android'` back. The module gets compileSdk 37, and
+  the scaffolder says the app needs AGP 9.1.0 or newer.
+- **The iOS host** and **the device target** take their Zipline, Kotlin and
+  Compose from the same table. Neither has an AGP.
+
 At runtime:
 
 | embedded key | what happens |

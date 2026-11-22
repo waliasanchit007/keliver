@@ -175,6 +175,12 @@ jobs:
       - name: Scaffolders write into the app
         run: scripts/keliver-new-scaffolders-selftest.sh "$RUNNER_TEMP/scaffolders"
 
+      # keliver-runtime-line.sh's one table of versions per line (Zipline, Kotlin,
+      # AGP, compileSdk, Gradle): each Keliver version gets its line, and the
+      # 0.4 line's wrapper is still templates/app-wrapper's. Shell only; seconds.
+      - name: Toolchain per Keliver line
+        run: scripts/keliver-runtime-line-selftest.sh "$RUNNER_TEMP/runtime-line"
+
       # keliver-run-android.sh against a small relay and adb/gradlew stand-ins:
       # what it asks of the device and the build, and what it refuses. Seconds.
       - name: keliver-run-android (no device)
@@ -399,7 +405,7 @@ jobs:
           set -euo pipefail
           if [ "$EVENT" != "pull_request" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           changed="$(git diff --name-only "$BASE" HEAD)"
-          if grep -Eq '^scripts/(templates/production-host[^/]*/|templates/app-wrapper/|keliver-app-wrapper\.sh$|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$' <<<"$changed"; then
+          if grep -Eq '^scripts/(templates/production-host[^/]*/|templates/app-wrapper/|keliver-app-wrapper\.sh$|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$|keliver-runtime-line\.sh$)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

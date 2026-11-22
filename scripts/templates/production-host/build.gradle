@@ -9,7 +9,7 @@
 //   from the tools bundle, which refuses production.
 plugins {
   id 'com.android.application' version '@@AGP_VERSION@@'
-  id 'org.jetbrains.kotlin.android' version '@@KOTLIN_VERSION@@'
+  id 'org.jetbrains.kotlin.android' version '@@KOTLIN_VERSION@@'@@KOTLIN_ANDROID_APPLY@@
   id 'org.jetbrains.kotlin.plugin.compose' version '@@KOTLIN_VERSION@@'
   id 'org.jetbrains.compose' version '@@COMPOSE_VERSION@@'
   // IR rewrite of zipline.take/bind. From Keliver 0.5.0, Keliver's Zipline fork (QuickJS 2026).
@@ -76,13 +76,13 @@ def portalKeysOk = portalKeyLines.size() in 1..2 && portalKeyLines.every { it ==
 
 android {
   namespace '@@PACKAGE@@'
-  compileSdk 35
+  compileSdk @@COMPILE_SDK@@
   defaultConfig {
     applicationId '@@APPLICATION_ID@@'
     // 23: below it Android ignores usesCleartextTraffic, so http would be allowed
     // whatever the manifest says.
     minSdk 23
-    targetSdk 35
+    targetSdk @@TARGET_SDK@@
     versionCode 1
     versionName '1.0'
     // Off for every build type unless one turns it on (only debug does).
@@ -120,12 +120,12 @@ android {
     }
   }
   buildFeatures { compose true; buildConfig true }
-  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_@@JDK@@; targetCompatibility JavaVersion.VERSION_@@JDK@@ }
   // The host kit's JVM tests (src/test) call code that logs: android.util.Log is a no-op there.
   // Every other android.* call returns a default (null, 0) too, so keep such calls out of them.
   testOptions { unitTests.returnDefaultValues = true }
 }
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(@@JDK@@) }
 
 // Timing marks (M0) are compiled into the debug and benchmark build types only
 // (src/timing/); every other build type, release among them, gets the no-op

@@ -15,7 +15,7 @@
 // on the device before anything is fetched).
 plugins {
   id 'com.android.library'
-  id 'org.jetbrains.kotlin.android'
+@@EMBED_KOTLIN_PLUGIN@@
   id 'org.jetbrains.kotlin.plugin.compose'
   id '@@ZIPLINE_PLUGIN_ID@@' // IR rewrite of zipline.take/bind
 }
@@ -87,7 +87,7 @@ def portalKeysOk = portalKeyLines.size() in 1..2 && portalKeyLines.every { it ==
 
 android {
   namespace '@@PACKAGE@@'
-  compileSdk 35
+  compileSdk @@COMPILE_SDK@@
   defaultConfig {
     minSdk 23
     consumerProguardFiles 'consumer-rules.pro'
@@ -110,9 +110,9 @@ android {
     benchmark { initWith release }
   }
   buildFeatures { compose true; buildConfig true }
-  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_@@JDK@@; targetCompatibility JavaVersion.VERSION_@@JDK@@ }
 }
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(@@JDK@@) }
 
 // Timing marks (M0) are compiled into the debug and benchmark build types only
 // (src/timing/); every other build type, release among them, gets the no-op

@@ -30,7 +30,7 @@ set -euo pipefail
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
 KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}"
 ZIPLINE_VERSION_GIVEN="${ZIPLINE_VERSION:+yes}"
-ZIPLINE_VERSION="${ZIPLINE_VERSION:-1.22.0}"
+ZIPLINE_VERSION="${ZIPLINE_VERSION:-}" # default: the line's (keliver-runtime-line.sh), below
 SCREEN=""
 PRESENTER=""
 while [ $# -gt 0 ]; do
@@ -77,9 +77,7 @@ HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
 keliver_zipline_line "$KELIVER_VERSION" || { echo "error: the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
-if $KELIVER_ZIPLINE_FORK && [ -z "$ZIPLINE_VERSION_GIVEN" ]; then
-  ZIPLINE_VERSION="$FORK_ZIPLINE_VERSION"
-fi
+[ -n "$ZIPLINE_VERSION_GIVEN" ] || ZIPLINE_VERSION="$TOOLCHAIN_ZIPLINE"
 GUEST_TIMING=""
 for t in "$HERE/templates/guest/KeliverTiming.kt" "$HERE/../templates/guest/KeliverTiming.kt"; do
   [ -f "$t" ] && { GUEST_TIMING="$t"; break; }

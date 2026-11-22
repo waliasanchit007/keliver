@@ -68,9 +68,7 @@
 # A rejected input leaves the app byte-identical.
 set -euo pipefail
 
-ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-1.22.0}"
-KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-2.2.0}"
-COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-1.8.2}"
+# The versions come from keliver-runtime-line.sh's table for the app's line (below).
 # Resolve a symlinked invocation to the real script, so the templates are found.
 SELF="${BASH_SOURCE[0]}"
 while [ -L "$SELF" ]; do
@@ -140,9 +138,6 @@ URL_RULE="an http:// or https:// URL: plain ASCII, a host name or [IPv6] (no use
 [ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $URL_RE ]] || fail "--api-base-url must be $URL_RULE (got '$API_BASE_URL')."
 [[ "$CHANNEL" =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]] || fail "--channel must be lower-case letters, digits and '-', at most 32 (got '$CHANNEL')."
 VERSION_RE='^[0-9A-Za-z.+-]+$'
-for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION"; do
-  [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
-done
 
 # The app's package: every screen declares <root>.screens (the keliver-init
 # layout, the same rule keliver-new-device-target.sh uses).
@@ -179,11 +174,13 @@ except Exception: print('0.4.1')" "$APP/keliver.portal.json")}"
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
 keliver_zipline_line "$KELIVER_VERSION" || fail "the Keliver version '$KELIVER_VERSION' does not start with <major>.<minor>.<patch>."
-if $KELIVER_ZIPLINE_FORK; then
-  ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$FORK_ZIPLINE_VERSION}"
-  KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$FORK_KOTLIN_VERSION}"
-  COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$FORK_COMPOSE_VERSION}"
-fi
+# The line's toolchain (keliver-runtime-line.sh's table), each overridable.
+ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
+KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$TOOLCHAIN_KOTLIN}"
+COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$TOOLCHAIN_COMPOSE}"
+for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION"; do
+  [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
+done
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[A-Za-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)+$'
 [[ "$APPLICATION_ID" =~ $ID_RE ]] || fail "--bundle-id must look like com.example.app (got '$APPLICATION_ID')."

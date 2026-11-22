@@ -690,6 +690,57 @@ KELIVER_HOST_ZIPLINE_VERSION=1.28.0-keliver.9 KELIVER_HOST_KOTLIN_VERSION=2.4.99
 [ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.9'$" "$DISP/fork-0-5-0/host-android/build.gradle" \
   && grep -q "id 'org.jetbrains.kotlin.android' version '2.4.99'" "$DISP/fork-0-5-0/host-android/build.gradle" \
   && ok "NF2: KELIVER_HOST_*_VERSION still override the fork line's defaults" || bad "NF2: the overrides on the fork line (rc=$rc)"
+
+echo "=== the toolchain follows the line (keliver-runtime-line.sh's table)"
+# The 0.4.1 app above: exactly the lines it had before the table (AGP 8.12.0 applying Kotlin's
+# Android plugin, compileSdk and targetSdk 35, JDK 17), in the host and in the library.
+grep -qx "  id 'com.android.application' version '8.12.0'" "$H/build.gradle" && grep -qx "  id 'org.jetbrains.kotlin.android' version '2.2.0'" "$H/build.gradle" \
+  && grep -qx '  compileSdk 35' "$H/build.gradle" && grep -qx '    targetSdk 35' "$H/build.gradle" \
+  && grep -qx '  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }' "$H/build.gradle" \
+  && grep -qx 'kotlin { jvmToolchain(17) }' "$H/build.gradle" \
+  && grep -qx "  id 'org.jetbrains.kotlin.android'" "$L/build.gradle" && grep -qx '  compileSdk 35' "$L/build.gradle" && grep -qx 'kotlin { jvmToolchain(17) }' "$L/build.gradle" \
+  && ok "0.4 line: AGP 8.12.0 with Kotlin's Android plugin applied, compileSdk/targetSdk 35, JDK 17 (host and library, as before)" \
+  || bad "0.4 line: the host's toolchain changed: $(grep -hE "com.android|kotlin.android|compileSdk|targetSdk" "$H/build.gradle" "$L/build.gradle" | tr -s ' ' | tr '\n' '|')"
+for v in 0.5.0 0.5.1-SNAPSHOT; do
+  HF="$DISP/fork-${v//./-}/host-android/build.gradle"
+  [ "$v" = 0.5.0 ] && HF="$DISP/fork-0-5-0-fresh/host-android/build.gradle"
+  if [ "$v" = 0.5.0 ]; then
+    # fork-0-5-0's host was rewritten with overrides above: scaffold a clean copy.
+    APPF="$DISP/fork-0-5-0-fresh"; mkdir -p "$APPF/src/jsMain/kotlin/screens"
+    cp "$DISP/fork-0-5-0/keliver.portal.json" "$APP/settings.gradle" "$APPF/"; cp "$APP/src/jsMain/kotlin/screens/home.kt" "$APPF/src/jsMain/kotlin/screens/"
+    keliver_require_isolated_store "$DISP" "$APPF" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
+    ( cd "$APPF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" > /dev/null 2>&1 ) || bad "the fresh 0.5.0 scaffold failed"
+  fi
+  grep -qx "  id 'com.android.application' version '9.3.1'" "$HF" \
+    && grep -q "^  id 'org.jetbrains.kotlin.android' version '2.4.20' apply false //" "$HF" \
+    && grep -qx '  compileSdk 37' "$HF" && grep -qx '    targetSdk 36' "$HF" && grep -qx 'kotlin { jvmToolchain(17) }' "$HF" \
+    && ok "0.5 line ($v): AGP 9.3.1 with built-in Kotlin (Kotlin's Android plugin only pins its version), compileSdk 37, targetSdk 36, JDK 17" \
+    || bad "0.5 line ($v): $(grep -hE "com.android|kotlin.android|compileSdk|targetSdk" "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|')"
+done
+KELIVER_HOST_AGP_VERSION=8.12.0 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -qx "  id 'com.android.application' version '8.12.0'" "$DISP/fork-0-5-0/host-android/build.gradle" \
+  && grep -qx "  id 'org.jetbrains.kotlin.android' version '2.4.20'" "$DISP/fork-0-5-0/host-android/build.gradle" \
+  && ok "0.5 line with KELIVER_HOST_AGP_VERSION=8.12.0: Kotlin's Android plugin is applied again (what AGP 8 needs)" || bad "the AGP override on the 0.5 line (rc=$rc)"
+# The host builds with the app's wrapper: an app on 0.5.0 whose wrapper is older than AGP 9.3.1's
+# floor (Gradle 9.5.0) is told what to set; one on the line's Gradle is not; a 0.4.1 app on 9.0.0 is not.
+WF="$DISP/fork-0-5-0-fresh"; rm -rf "$WF/host-android"
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$WF"
+out="$( cd "$WF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q "warning: this app's Gradle wrapper is Gradle 9.0.0; AGP 9.3.1 (Keliver 0.5.0) needs Gradle 9.5.0 or newer" \
+  && printf '%s' "$out" | grep -qF 'distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip' \
+  && printf '%s' "$out" | grep -q 'distributionSha256Sum=84fbba45c7f4c64abc77460e1c00f541e9f960e3c7ed2538f1ede19eacd873ae' \
+  && ok "0.5 line: an app wrapper on Gradle 9.0.0 is warned, with the lines to set (Gradle 9.7.0 and its sha256)" \
+  || bad "0.5 line: no warning about the app's Gradle 9.0.0 (rc=$rc): $(printf '%s' "$out" | grep -i gradle | head -2 | tr '\n' ' ')"
+rm -rf "$WF/host-android"; bash "$ROOT/scripts/keliver-app-wrapper.sh" "$WF" 0.5.0
+out="$( cd "$WF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q "Gradle wrapper is Gradle" && ok "0.5 line: an app wrapper on the line's Gradle 9.7.0 is not warned" || bad "0.5 line: warned on Gradle 9.7.0 (rc=$rc)"
+A04="$DISP/old-wrapper"; mkdir -p "$A04/src/jsMain/kotlin/screens"
+cp "$APP/keliver.portal.json" "$APP/settings.gradle" "$A04/"; cp "$APP/src/jsMain/kotlin/screens/home.kt" "$A04/src/jsMain/kotlin/screens/"
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$A04"
+keliver_require_isolated_store "$DISP" "$A04" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
+out="$( cd "$A04" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && grep -q 'gradle-9.0.0-bin' "$A04/gradle/wrapper/gradle-wrapper.properties" && ! printf '%s' "$out" | grep -qi "warning" \
+  && ok "0.4 line: a 0.4.1 app on Gradle 9.0.0 (AGP 8.12.0 needs 8.13+) is not warned" || bad "0.4 line: the 0.4.1 app on Gradle 9.0.0 (rc=$rc): $(printf '%s' "$out" | grep -i warning | head -1)"
 # --embed on 0.5.0: the library names the fork's plugin; an existing app still on app.cash.zipline is warned.
 EXF="$DISP/existing-fork"; mkdir -p "$EXF/app"
 printf "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\nrootProject.name = 'existing'\ninclude ':app'\n" > "$EXF/settings.gradle"
@@ -703,6 +754,11 @@ LF="$EXF/keliver-host/build.gradle"
   && printf '%s' "$out" | grep -q "warning: no Kotlin 2.4.20 found" \
   && ok "NF2: --embed on 0.5.0 writes the fork's plugin id and libraries, and warns about the app's app.cash.zipline and its Kotlin" \
   || bad "NF2: --embed on 0.5.0 (rc=$rc): $(printf '%s' "$out" | grep warning | tr '\n' ' ')"
+! grep -q "^  id 'org.jetbrains.kotlin.android'" "$LF" && grep -q "^  // Kotlin: AGP 9 compiles this module itself (built-in Kotlin)" "$LF" \
+  && grep -qx '  compileSdk 37' "$LF" && grep -qx 'kotlin { jvmToolchain(17) }' "$LF" \
+  && printf '%s' "$out" | grep -q "note: Keliver 0.5.0's libraries need .* on AGP 9.1.0 or newer (Keliver builds with 9.3.1) and compileSdk 37" \
+  && ok "0.5 line: --embed applies no Kotlin plugin (the app's AGP 9 compiles Kotlin), compileSdk 37, and says the app needs AGP 9.1.0+" \
+  || bad "0.5 line: --embed's toolchain: $(grep -hE "kotlin.android|Kotlin:|compileSdk" "$LF" | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | grep note: | head -1)"
 # The helper must sit beside the scaffolder (the tools bundle's bin/ carries it).
 NL="$DISP/noline"; mkdir -p "$NL"; cp "$SCAFFOLD" "$NL/"; cp -R "$(dirname "$SCAFFOLD")/templates" "$NL/" 2>/dev/null || cp -R "$(dirname "$SCAFFOLD")/../templates" "$NL/"
 before="$(snapshot "$APP")"
