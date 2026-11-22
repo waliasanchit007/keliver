@@ -816,8 +816,8 @@ do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEAS
       echo "release: the upload invocation failed (exit $status) AFTER writing a bundle, so the upload was attempted" \
         "and may have reached the Central Portal: Drop any deployment of $RELEASE_VERSION there" >&2
     else
-      echo "release: the upload invocation failed (exit $status) without writing a bundle: by vanniktech $VANNIKTECH_VERSION's" \
-        "bytecode nothing was uploaded; still check the Central Portal's Deployments and Drop any of $RELEASE_VERSION" >&2
+      echo "release: the upload invocation failed (exit $status) and no bundle was found where vanniktech $VANNIKTECH_VERSION writes it, so the upload" \
+        "should not have been attempted; check the Central Portal's Deployments and Drop any of $RELEASE_VERSION" >&2
     fi
     exit "$status"
   fi

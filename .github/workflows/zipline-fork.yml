@@ -445,7 +445,9 @@ jobs:
       # the step can fail with a deployment already in the Portal (in review mode: held, not
       # released). Say so, and keep the bundle if it was written.
       - name: The upload step failed, what may be in the Central Portal
-        if: ${{ failure() && steps.upload.outcome == 'failure' }}
+        env:
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        if: ${{ (failure() || cancelled()) && (steps.upload.outcome == 'failure' || steps.upload.outcome == 'cancelled') }}
         run: |
           # The bundles the Maven Central invocation wrote (apply.sh marks its start).
           bundles=""
@@ -454,22 +456,22 @@ jobs:
           fi
           mkdir -p build/zipline-fork/failed-upload
           {
-            echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: the upload step FAILED"
+            echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: the upload step FAILED or was CANCELLED (outcome: ${UPLOAD_OUTCOME})"
             echo "**The upload may have happened: Drop any deployment of this version in the Central Portal. Do not press Publish.**"
             if [ -n "$bundles" ]; then
               while IFS= read -r b; do cp "$b" build/zipline-fork/failed-upload/; done <<< "$bundles"
               echo "A bundle was written, so the upload was attempted; it is this run's artifact"
               echo "zipline-fork-failed-upload-${ZIPLINE_FORK_SOURCE_REF}. The upload step's log says why it failed."
             elif [ -f "$WORK/central-upload.started" ]; then
-              echo "The Maven Central invocation started but wrote no bundle: by vanniktech's plugin's bytecode nothing"
-              echo "was uploaded (the upload step's log says why it failed). Check the Portal's Deployments all the same."
+              echo "The Maven Central invocation started, but no bundle was found where the plugin writes it, so the"
+              echo "upload should not have been attempted. Check the Portal's Deployments and Drop any deployment of this version."
             else
               echo "It failed before the Maven Central invocation (the checks, the signing or the native comparison;"
               echo "the upload step's log), so nothing should have been uploaded. Check the Portal's Deployments all the same."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() && steps.upload.outcome == 'failure' }}
+        if: ${{ (failure() || cancelled()) && (steps.upload.outcome == 'failure' || steps.upload.outcome == 'cancelled') }}
         with:
           name: zipline-fork-failed-upload-${{ inputs.tag }}
           path: build/zipline-fork/failed-upload
