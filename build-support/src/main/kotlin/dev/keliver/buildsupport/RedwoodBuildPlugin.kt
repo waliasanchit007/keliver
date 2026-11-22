@@ -437,13 +437,13 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         project.applyKotlinMultiplatform {
           androidTarget().publishLibraryVariants("release")
           iosTargets()
-          js().nodejs()
+          js().nodejsWithTestTimeout()
           jvm()
         }
       }
       TreehouseGuest -> {
         project.applyKotlinMultiplatform {
-          js().nodejs()
+          js().nodejsWithTestTimeout()
           jvm() // For easier testing.
         }
       }
