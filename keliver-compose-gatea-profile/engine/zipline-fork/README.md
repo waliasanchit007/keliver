@@ -55,7 +55,7 @@ one Android app share the path, which Android's packaging would refuse) and `MET
   seals it), `552d5eb` (#587, `JS_ToCStringLen2` leaked on failure), `c530305` (#590, the
   `JS_ValueToAtom` hunk: a built-in symbol's reference leaked) and, in `libunicode.c`, `817509a`
   (`unicode_script` looped forever after an allocation failure). The triage of every other
-  upstream commit: PR #N's description. `../bigint-ops.js` covers the BigInt fixes against Node
+  upstream commit: PR #296's description. `../bigint-ops.js` covers the BigInt fixes against Node
   (`check-bigint`, `check-bigint-zipline`); `QuickJs2026Test` covers them through Zipline.
 - `patches/zipline-1.28.0.patch` (applied to the Zipline checkout):
   - `zipline/native`: the QuickJS names that changed. `JS_AddIntrinsic*` and
