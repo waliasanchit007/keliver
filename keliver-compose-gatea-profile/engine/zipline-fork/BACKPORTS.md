@@ -176,13 +176,16 @@ Found by reading the code; none of the wraps was reproduced on a 32-bit build.
 **Where they run.** The Proxy cap is tested on every host (above). The 32-bit wraps need a 32-bit
 host: `size-guards.js` (`toReversed`, `toSorted`, `toSpliced` and `with` on `{ length: 2 ** 29 + 1 }`,
 under a 64 MiB memory limit) must print `size-guards.expected`, "InternalError: out of memory" on
-each line, on every build. `check-bigint-device` runs it on each ABI a device or emulator has: on
-armeabi-v7a and x86 that line comes from the guard (the unpatched release, the control, must print
-something else: it writes past an 8-byte table); on a 64-bit ABI, and in `check-bigint` on the
-Mac's qjs builds (CI's `apply.sh all`), the 4 GiB table fails on the memory limit, patched or not,
-with the same line. The typed-array triggers are not in it: their 512 MiB and 1 GiB buffers fail
-on the limit first on every host. No CI job has a 32-bit ABI (the workflow has no emulator), so the
-32-bit run is `check-bigint-device`, by hand.
+each line, on every build. On a 32-bit host that line comes from the guard, and the unpatched
+release, the control, must print something else (it writes past an 8-byte table; a crash counts).
+That runs on every fork workflow run, in the `host32` job: `apply.sh qjs32host` builds qjs on Linux
+with QuickJS's `CONFIG_M32` (`gcc -m32`, gcc-multilib), patched and unpatched, every file compiled
+with a static assert that `size_t` is 4 bytes, and `apply.sh check-bigint32` runs `size-guards.js`
+on both, and `bigint-ops.js` against Node (NaN-boxed values and 32-bit limbs, as on armeabi-v7a).
+`check-bigint-device` runs the same on each ABI a device or emulator has, by hand. On a 64-bit ABI,
+and in `check-bigint` on the Mac's qjs builds (CI's `apply.sh all`), the 4 GiB table fails on the
+memory limit, patched or not, with the same line. The typed-array triggers are not in it: their
+512 MiB and 1 GiB buffers fail on the limit first on every host.
 
 Sites checked and left alone (the 2026-06-04 release's allocations sized by a count, and its
 `js_get_length32` callers):

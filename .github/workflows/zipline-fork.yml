@@ -32,9 +32,12 @@
 #        `apply.sh check-upload-gate`: vanniktech's plugin writes no bundle and connects nowhere when
 #        the build fails after its Maven Central publication ran (a local listener, never Central);
 #     6. `apply.sh jvm-test-dist`: Zipline's JVM tests as a distribution, for jvm-matrix.
+#   host32 (every run, beside fork, Linux): qjs built for a 32-bit host (gcc -m32, a 4-byte size_t
+#     asserted at compile time), patched and unpatched: bigint-ops.js matches Node, and size-guards.js
+#     passes on the patched build through the fork's 32-bit size guards and fails on the unpatched one.
 #   jvm-matrix: that distribution on the six runners upstream's build.yaml uses, so every JNI
 #     library the jar carries is loaded and tested on its own host.
-#   publish (publish only; needs all three): the tag's commit built again on a fresh runner, no
+#   publish (publish only; needs all four): the tag's commit built again on a fresh runner, no
 #     build cache, with the JNI libraries fork built and jvm-matrix ran (`apply.sh jni-from`, from
 #     fork's directory), `apply.sh release --central`: signed to a directory, checked again
 #     (signatures included), every native library compared with fork's (identical sha256s: the six
@@ -92,8 +95,9 @@ jobs:
   #   guard       runs only on a publish dispatch.
   #   fork        runs unless the run was cancelled or guard did not pass (skipped is fine: not a
   #               publish run). A failed guard skips it, and so everything after it.
+  #   host32      the same condition as fork, in parallel with it.
   #   jvm-matrix  runs whenever fork succeeded (pull requests, dispatches, publish runs).
-  #   publish     runs only on a publish dispatch with guard, fork and every jvm-matrix leg
+  #   publish     runs only on a publish dispatch with guard, fork, host32 and every jvm-matrix leg
   #               successful, and the run not cancelled.
   # L2 of review 2: guard resolves the tag to its commit once; every later job checks out that SHA
   # (fork passes the SHA it built on), so a tag moved during the run is never built.
@@ -259,6 +263,43 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  # The fork's 32-bit size guards on a real 32-bit build (size_t is 4 bytes, as on armeabi-v7a and
+  # x86), which no other job has: qjs from the patched engine and the unpatched release with
+  # QuickJS's CONFIG_M32 (gcc -m32, gcc-multilib), each file compiled with a static assert that
+  # size_t is 4 bytes. bigint-ops.js must match Node; size-guards.js must print
+  # size-guards.expected on the patched build (only the guard can) and must not on the unpatched
+  # one (a crash there counts as "differs"). Minutes on ubuntu-latest, in parallel with fork.
+  host32:
+    name: 32-bit host build, size guards and BigInt
+    needs: guard
+    if: ${{ !cancelled() && (needs.guard.result == 'success' || needs.guard.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      WORK: ${{ github.workspace }}/build/zipline-fork/work32
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.sha || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install gcc-multilib
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-multilib > /dev/null
+      - name: qjs for a 32-bit host, patched and unpatched (apply.sh qjs32host)
+        run: scripts/zipline-fork.sh qjs32host "$WORK"
+      - name: bigint-ops.js against Node, size-guards.js with the unpatched control (apply.sh check-bigint32)
+        run: scripts/zipline-fork.sh check-bigint32 "$WORK"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zipline-fork-host32-results
+          path: build/zipline-fork/work32/bigint-check32
+          if-no-files-found: ignore
+          retention-days: 14
+
   jvm-matrix:
     name: JVM tests on ${{ matrix.platform }}
     needs: fork
@@ -310,7 +351,7 @@ jobs:
 
   publish:
     name: Upload to Maven Central (review mode)
-    needs: [guard, fork, jvm-matrix]
+    needs: [guard, fork, host32, jvm-matrix]
     # Every condition spelled out (review 2 of PR #289, N1): a publish dispatch, every job before it
     # successful (jvm-matrix's result is success only when all six legs passed), not cancelled.
     if: >-
@@ -318,6 +359,7 @@ jobs:
       && github.event_name == 'workflow_dispatch' && inputs.publish
       && needs.guard.result == 'success'
       && needs.fork.result == 'success'
+      && needs.host32.result == 'success'
       && needs.jvm-matrix.result == 'success' }}
     runs-on: macos-15
     timeout-minutes: 180

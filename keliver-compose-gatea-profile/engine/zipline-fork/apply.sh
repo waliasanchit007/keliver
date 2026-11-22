@@ -13,6 +13,13 @@
 #                             32-bit limbs (as on a 32-bit host such as armeabi-v7a), for check-bigint
 #   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and both qjs builds; fail on any difference;
 #                             and size-guards.js on every build, which must print size-guards.expected
+#   apply.sh qjs32host <work>   Linux x86-64 with gcc-multilib (CI's host32 job): qjs for a 32-bit host
+#                             (QuickJS's CONFIG_M32: gcc -m32, 4-byte size_t, NaN-boxing, 32-bit limbs),
+#                             the patched engine and the unpatched release; every file compiled with a
+#                             static assert that size_t is 4 bytes, and the executables checked as ELF 32-bit
+#   apply.sh check-bigint32 <work>   after qjs32host: bigint-ops.js against Node (the patched build must
+#                             match, the control must not), and size-guards.js: the patched build must
+#                             print size-guards.expected (only the guard can), the control must not
 #   apply.sh android <work>   build the Android AAR (zipline-android-ndk: Zipline's CMake and release
 #                             flags, -fwrapv) for arm64-v8a, armeabi-v7a, x86_64 and x86 with the NDK, and
 #                             check each ABI's libquickjs.so is in it, built with those flags, and (64-bit
@@ -25,7 +32,7 @@
 #                             this exercises NaN-boxed values (JS_NAN_BOXING) and 32-bit limbs; both
 #                             builds must start, and the fork's must exit 0; then size-guards.js,
 #                             whose expected lines the fork's build must print on every ABI and the
-#                             unpatched release must not on a 32-bit ABI (the guards' only real run)
+#                             unpatched release must not on a 32-bit ABI (as check-bigint32 in CI)
 #   apply.sh ios     <work>   step 3: build the iOS targets (iosArm64, iosSimulatorArm64) with Zipline's own
 #                             build: cklib's QuickJS bitcode (checks each compile line has Zipline's flags
 #                             and -fwrapv), the patched nativeMain and quickjs.def, and the test executables
@@ -83,7 +90,7 @@
 set -euo pipefail
 shopt -s nullglob
 here="$(cd "$(dirname "$0")" && pwd)"
-cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|jni-from|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|check-release|check-capabilities|check-upload-gate|check-natives|sha1-manifest|jvm-test-dist|diff|all <work dir> [...]}"
+cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|jni-from|qjs|check-bigint|qjs32host|check-bigint32|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|check-release|check-capabilities|check-upload-gate|check-natives|sha1-manifest|jvm-test-dist|diff|all <work dir> [...]}"
 work="${2:?work dir}"
 mkdir -p "$work"
 work="$(cd "$work" && pwd)"
@@ -192,22 +199,31 @@ do_jni() {
   echo "jni: $out/libquickjs.dylib ($(wc -c < "$out/libquickjs.dylib" | tr -d ' ') bytes, QuickJS $v)"
 }
 
-do_qjs() { # the forked engine's command-line qjs, from the same tarball and engine patches
+qjs_trees() { # the verified tarball with the engine patches applied, and beside it the unpatched release (the control)
   engine_sources
-  local s="$work/src/quickjs-$QJS_VERSION"
+  rm -rf "${work:?}/src/unpatched"; cp -R "$work/src/quickjs-$QJS_VERSION" "$work/src/unpatched"
+  for p in "$here"/patches/quickjs-*.patch; do patch -s -d "$work/src/quickjs-$QJS_VERSION" -p1 < "$p"; done
+}
+
+build_qjs() { # <name> <C compiler for the limb probe> <extra CFLAGS> [make args]: QuickJS's own Makefile
+  # builds qjs into $work/build/<name>, from the unpatched release when <name> ends in -unpatched.
+  local name="$1" cc="$2" extra="$3" src limbs; shift 3
+  case "$name" in *unpatched) src="$work/src/unpatched" ;; *) src="$work/src/quickjs-$QJS_VERSION" ;; esac
+  # shellcheck disable=SC2086 # $cc and $extra are word lists
+  limbs="$(printf '#include "quickjs.h"\nlimbs JS_LIMB_BITS\n' | $cc -E $extra -I"$src" -x c - | awk '$1=="limbs"{print $2}')"
+  rm -rf "${work:?}/build/$name"; mkdir -p "$work/build"; cp -R "$src" "$work/build/$name"
+  (cd "$work/build/$name" && make -j8 qjs CONFIG_LTO= CFLAGS_OPT="\$(CFLAGS) -O2 $extra" "$@" > build.log 2>&1) \
+    || { tail -30 "$work/build/$name/build.log" >&2; exit 1; }
+  echo "built $work/build/$name/qjs ($limbs-bit BigInt limbs)"
+}
+
+do_qjs() { # the forked engine's command-line qjs, from the same tarball and engine patches
+  qjs_trees
+  local s="$work/src/quickjs-$QJS_VERSION" name
   # The unpatched release too, as the control for check-bigint.
-  rm -rf "${work:?}/src/unpatched"; cp -R "$s" "$work/src/unpatched"
-  for p in "$here"/patches/quickjs-*.patch; do patch -s -d "$s" -p1 < "$p"; done
-  local name extra src limbs
   for name in qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched; do
     # 32-bit limbs on this 64-bit Mac: quickjs.h picks 64-bit limbs only when __SIZEOF_INT128__ is defined.
-    case "$name" in *32limb*) extra="-U__SIZEOF_INT128__" ;; *) extra="" ;; esac
-    case "$name" in *unpatched) src="$work/src/unpatched" ;; *) src="$s" ;; esac
-    limbs="$(printf '#include "quickjs.h"\nlimbs JS_LIMB_BITS\n' | clang -E $extra -I"$src" -x c - | awk '$1=="limbs"{print $2}')"
-    rm -rf "${work:?}/build/$name"; cp -R "$src" "$work/build/$name"
-    (cd "$work/build/$name" && make -j8 qjs CONFIG_LTO= CFLAGS_OPT="\$(CFLAGS) -O2 $extra" > build.log 2>&1) \
-      || { tail -30 "$work/build/$name/build.log" >&2; exit 1; }
-    echo "built $work/build/$name/qjs ($limbs-bit BigInt limbs)"
+    case "$name" in *32limb*) build_qjs "$name" clang "-U__SIZEOF_INT128__" ;; *) build_qjs "$name" clang "" ;; esac
   done
   # android/run-js.c, check-bigint-device's runner, on this Mac and the patched engine: check-bigint
   # runs size-guards.js through its --memory-limit too, so every fork job compiles and runs it.
@@ -217,37 +233,107 @@ do_qjs() { # the forked engine's command-line qjs, from the same tarball and eng
   echo "built $work/build/run-js/run-js (android/run-js.c)"
 }
 
-do_check_bigint() {
-  local ops="$here/../bigint-ops.js" out="$work/bigint-check"
+# qjs32host: the 32-bit host build of qjs, the patched engine and the unpatched release, with QuickJS's
+# own CONFIG_M32 (gcc -m32 -msse2 -mfpmath=sse) on Linux x86-64 with gcc-multilib (zipline-fork.yml's
+# host32 job). size_t is 4 bytes there, as on armeabi-v7a and x86, so the fork's 32-bit size guards
+# are what stops size-guards.js's wraps. Every translation unit includes size32.h, a compile-time
+# assert that size_t is 4 bytes: a build that is not 32-bit fails to compile instead of passing.
+do_qjs32host() {
+  local size32="$work/build/size32.h" cc="gcc -m32"
+  mkdir -p "$work/build"
+  printf '#include <stddef.h>\n_Static_assert(sizeof(size_t) == 4, "qjs32host: size_t is not 4 bytes");\n' > "$size32"
+  printf '#include <stdio.h>\nint main(void) {\n  printf("sizeof(size_t) = %%u, sizeof(void *) = %%u\\n", (unsigned) sizeof(size_t), (unsigned) sizeof(void *));\n  return 0;\n}\n' \
+    > "$work/build/sizeof.c"
+  # shellcheck disable=SC2086 # $cc is a word list
+  $cc -include "$size32" "$work/build/sizeof.c" -o "$work/build/sizeof" \
+    || { echo "qjs32host: '$cc' cannot build a 32-bit program here (Linux x86-64 with gcc-multilib)" >&2; exit 1; }
+  local line; line="$("$work/build/sizeof")"
+  echo "qjs32host: $line"
+  [ "$line" = "sizeof(size_t) = 4, sizeof(void *) = 4" ] || { echo "qjs32host: not a 32-bit build" >&2; exit 1; }
+  qjs_trees
+  local name kind
+  for name in qjs32 qjs32-unpatched; do
+    build_qjs "$name" "$cc" "-include $size32" CONFIG_M32=y
+    grep -q -- "-m32 .*-include $size32 .*quickjs\.c" "$work/build/$name/build.log" \
+      || { echo "qjs32host: $name: quickjs.c was not compiled with -m32 and size32.h ($work/build/$name/build.log)" >&2; exit 1; }
+    kind="$(file -b "$work/build/$name/qjs")"
+    case "$kind" in "ELF 32-bit"*) echo "qjs32host: $name/qjs: $kind" ;;
+      *) echo "qjs32host: $name/qjs is not a 32-bit executable: $kind" >&2; exit 1 ;; esac
+  done
+}
+
+bounded() { # <seconds> <stdout> <stderr, or the stdout file again> <command...>: never fails; sets rc
+  # (the exit status, 128+signal on a crash, or "timeout"). The unpatched release may loop or crash.
+  local secs="$1" o="$2" e="$3" pid t=0; shift 3
+  if [ "$o" = "$e" ]; then "$@" > "$o" 2>&1 & else "$@" > "$o" 2> "$e" & fi
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null && [ $t -lt "$secs" ]; do sleep 1; t=$((t + 1)); done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; rc=timeout
+  else
+    rc=0; wait "$pid" 2>/dev/null || rc=$?
+  fi
+}
+
+check_ops() { # <out dir> <check name> <build name>...: ../bigint-ops.js in Node and in each build's qjs;
+  # a patched build must match Node, the unpatched control must not. Returns 1 on a failure.
+  local ops="$here/../bigint-ops.js" out="$1" tag="$2" name fail=0 lines; shift 2
   mkdir -p "$out"
   node "$ops" > "$out/node.txt"
-  local name fail=0 lines
   lines="$(wc -l < "$out/node.txt" | tr -d ' ')"
-  for name in qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched; do
-    # The unpatched release may not finish every line (it can loop); give each run a bound.
-    "$work/build/$name/qjs" "$ops" > "$out/$name.txt" 2>&1 &
-    local pid=$! t=0
-    while kill -0 "$pid" 2>/dev/null && [ $t -lt 60 ]; do sleep 1; t=$((t + 1)); done
-    kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true
+  for name in "$@"; do
+    bounded 60 "$out/$name.txt" "$out/$name.txt" "$work/build/$name/qjs" "$ops"
     if diff -u "$out/node.txt" "$out/$name.txt" > "$out/$name.diff"; then
-      echo "check-bigint: $name matches Node on all $lines lines"
-      case "$name" in *unpatched) echo "check-bigint: the control did not fail; the check is too weak" >&2; fail=1 ;; esac
+      echo "$tag: $name matches Node on all $lines lines"
+      case "$name" in *unpatched) echo "$tag: the control did not fail; the check is too weak" >&2; fail=1 ;; esac
     else
-      echo "check-bigint: $name differs from Node on $(grep -c '^-[^-]' "$out/$name.diff") of $lines lines ($out/$name.diff)"
+      echo "$tag: $name differs from Node on $(grep -c '^-[^-]' "$out/$name.diff") of $lines lines, exit $rc ($out/$name.diff)"
       case "$name" in *unpatched) ;; *) fail=1 ;; esac
     fi
   done
+  return $fail
+}
+
+do_check_bigint32() { # after qjs32host: bigint-ops.js against Node, and size-guards.js, where only the guard passes
+  local out="$work/bigint-check32" name fail=0
+  check_ops "$out" check-bigint32 qjs32 qjs32-unpatched || fail=1
+  # size-guards.js under the memory limit: with a 4-byte size_t each length overflows the
+  # allocation size, so the patched build prints size-guards.expected only through the guard, and
+  # the unpatched release must not print it (it may crash: a signal counts as "differs").
+  for name in qjs32 qjs32-unpatched; do
+    bounded 120 "$out/$name-size-guards.txt" "$out/$name-size-guards.err" \
+      "$work/build/$name/qjs" --memory-limit "$SIZE_GUARDS_LIMIT" "$here/size-guards.js"
+    if diff -u "$here/size-guards.expected" "$out/$name-size-guards.txt" > "$out/$name-size-guards.diff"; then
+      case "$name" in
+        *unpatched) echo "check-bigint32: $name size-guards.js matches size-guards.expected: the control did not fail, so the guard is not what makes the fork pass" >&2; fail=1 ;;
+        *) echo "check-bigint32: $name size-guards.js matches size-guards.expected, exit $rc (32-bit host: the guard)"
+           [ "$rc" = 0 ] || { echo "check-bigint32: $name size-guards.js exited $rc" >&2; fail=1; } ;;
+      esac
+    else
+      case "$name" in
+        *unpatched) echo "check-bigint32: $name size-guards.js differs from size-guards.expected, exit $rc, as expected (no guard)" ;;
+        *) echo "check-bigint32: $name size-guards.js differs from size-guards.expected, exit $rc ($out/$name-size-guards.diff)" >&2; fail=1 ;;
+      esac
+      head -20 "$out/$name-size-guards.diff" | sed 's/^/  /'
+      head -5 "$out/$name-size-guards.err" | sed 's/^/  stderr: /'
+    fi
+  done
+  return $fail
+}
+
+do_check_bigint() {
+  local out="$work/bigint-check" name fail=0
+  check_ops "$out" check-bigint qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched || fail=1
   # size-guards.js, the fork's 32-bit size guards, under a memory limit: on this 64-bit Mac every
   # build, patched or not, must print size-guards.expected (each 4 GiB table fails on the limit, as
-  # "out of memory"). The 32-bit case, where only the guard gives that line, is check-bigint-device's.
+  # "out of memory"). The 32-bit case, where only the guard gives that line, is check-bigint32's
+  # (a 32-bit Linux build in CI) and check-bigint-device's.
   # Also through run-js (the same option), the runner check-bigint-device uses.
   local exe
   for name in qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched run-js; do
     exe="$work/build/$name/qjs"; [ "$name" = run-js ] && exe="$work/build/run-js/run-js"
-    "$exe" --memory-limit "$SIZE_GUARDS_LIMIT" "$here/size-guards.js" > "$out/$name-size-guards.txt" 2> "$out/$name-size-guards.err" &
-    local pid=$! t=0
-    while kill -0 "$pid" 2>/dev/null && [ $t -lt 60 ]; do sleep 1; t=$((t + 1)); done
-    kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true
+    bounded 60 "$out/$name-size-guards.txt" "$out/$name-size-guards.err" \
+      "$exe" --memory-limit "$SIZE_GUARDS_LIMIT" "$here/size-guards.js"
     if diff -u "$here/size-guards.expected" "$out/$name-size-guards.txt" > "$out/$name-size-guards.diff"; then
       echo "check-bigint: $name size-guards.js matches size-guards.expected: out of memory, then the context still works (64-bit: the memory limit)"
     else
@@ -904,6 +990,8 @@ case "$cmd" in
   jni) do_jni "$@" ;;
   qjs) do_qjs ;;
   check-bigint) do_check_bigint ;;
+  qjs32host) do_qjs32host ;;
+  check-bigint32) do_check_bigint32 ;;
   android) do_android ;;
   qjs-android) do_qjs_android ;;
   check-bigint-device) do_check_bigint_device "$@" ;;

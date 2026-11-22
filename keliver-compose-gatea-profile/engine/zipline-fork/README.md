@@ -67,8 +67,9 @@ one Android app share the path, which Android's packaging would refuse) and `MET
   `toReversed` and its siblings on an array-like; a String object's keys; a typed array sort's
   index table). The sites, and those checked and left alone: BACKPORTS.md, "Keliver-only fixes".
   `size-guards.js` runs the array-like case under a memory limit; every build must print
-  `size-guards.expected` (`check-bigint` on the Mac, `check-bigint-device` on each ABI, where
-  only a 32-bit ABI exercises the guard itself).
+  `size-guards.expected` (`check-bigint` on the Mac; `check-bigint32` on a 32-bit Linux build,
+  every fork workflow run, where the guard itself gives it and the unpatched control must not;
+  `check-bigint-device` on each ABI, where only a 32-bit ABI exercises the guard).
   `../bigint-ops.js` covers the BigInt fixes against Node (`check-bigint`,
   `check-bigint-zipline`); `QuickJs2026Test` covers them through Zipline.
 - `patches/zipline-1.28.0.patch` (applied to the Zipline checkout):
@@ -172,6 +173,8 @@ curl, clang, make and Node):
 | `jni [--warnings]` | builds the JVM JNI library for this Mac with clang into `zipline/src/jvmMain/resources/jni/<arch>` (Zipline's CI uses zig; same sources, `-Os`, `-fwrapv`); `--warnings` builds with `-Wall` instead of `-w` |
 | `qjs` | builds the patched engine's `qjs` with 64-bit and with 32-bit BigInt limbs (`-U__SIZEOF_INT128__`, as on a 32-bit host), and the unpatched release both ways as the control |
 | `check-bigint` | runs `../bigint-ops.js` in Node and in the four `qjs` builds: the patched ones must match Node on every line, the unpatched ones must not. Then `size-guards.js` in all four under a 64 MiB memory limit: each must print `size-guards.expected` (out of memory; on this 64-bit host from the limit, so the unpatched ones too) |
+| `qjs32host` | Linux x86-64 with gcc-multilib (the workflow's `host32` job): builds `qjs` for a 32-bit host with QuickJS's own `CONFIG_M32` (`gcc -m32 -msse2 -mfpmath=sse`: a 4-byte `size_t`, NaN-boxed values, 32-bit limbs), the patched engine and the unpatched release; every file is compiled with `-include size32.h`, a static assert that `size_t` is 4 bytes, the compile line is checked for it, a test program prints `sizeof(size_t)`, and both executables must be ELF 32-bit |
+| `check-bigint32` | after `qjs32host`: `../bigint-ops.js` in Node and both builds (the patched one must match on every line, the unpatched one must not), then `size-guards.js` under the 64 MiB limit: the patched build must print `size-guards.expected` and exit 0 (on a 32-bit host only the guard gives that), the unpatched one must not (a crash or a timeout counts as not) |
 | `android` | step 2: builds the Android AAR (`:zipline-android-ndk:assembleRelease`: Zipline's CMake and release flags, plus `-fwrapv`) for `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` with an installed NDK (`KELIVER_NDK_VERSION`, default 28.0.12674087), and checks each ABI's `libquickjs.so` is in it, its `quickjs.c` was built with those flags (`-Os -fomit-frame-pointer -g0 -DNDEBUG -fvisibility=hidden -fstrict-aliasing -fwrapv`), and (with the NDK's `llvm-readelf -lW`) every LOAD segment is aligned for 16 KB pages (0x4000; required of `arm64-v8a` and `x86_64`); prints each size against 1.28.0's AAR from Maven Central (checked against its `.sha1`) |
 | `qjs-android` | step 2, after `android`: builds `android/run-js.c` (a minimal runner with `print`, that reports `JS_NAN_BOXING` and the limb size) on the fork's engine and on the unpatched release, per ABI, with the NDK and the AAR's own compile line for `quickjs.c` (its target and every flag; executable instead of shared) |
 | `check-bigint-device [serial]` | step 2: runs `../bigint-ops.js` over adb on every ABI the device supports, both builds; both must start (the runner's header), the patched one must match Node and exit 0, the unpatched one must not match. The device directory is deleted on any exit. On a 32-bit ABI this is the check for NaN-boxed values (`JS_NAN_BOXING`), which no Mac build can exercise. Then `size-guards.js` (`run-js --memory-limit`): the patched build must print `size-guards.expected` on every ABI and exit 0; on a 32-bit ABI, where only the size guard gives those lines, the unpatched one must not (BACKPORTS.md, "Where they run") |
@@ -320,8 +323,10 @@ synthetic repositories (`python3 -I keliver-compose-gatea-profile/engine/zipline
 (`macos-15-intel`, `macos-15`, `ubuntu-24.04`, `ubuntu-24.04-arm`, `windows-2025`,
 `windows-11-arm`), so each JNI library in `zipline-jvm` is loaded and tested on its own host
 (`bin/zipline-test` in bash, `bin\zipline-test.bat` in cmd on Windows). It runs whenever `fork`
-passed, pull requests included. Zipline's Android device tests do not run in CI (GitHub's macOS
-arm64 runners have no emulator).
+passed, pull requests included. The `host32` job (Linux, minutes, beside `fork`): `qjs32host`
+and `check-bigint32`, the fork's 32-bit size guards and BigInt on a real 32-bit build; `publish`
+needs it too. Zipline's Android device tests do not run in CI (GitHub's macOS arm64 runners have
+no emulator).
 
 **Publishing** (the owner's decision, 2026-11-22: review mode for the first release; this is the
 third release line, beside the libraries and the tools bundle, CLAUDE.md "Releases"):
@@ -333,7 +338,7 @@ third release line, beside the libraries and the tools bundle, CLAUDE.md "Releas
    `zipline-fork-v<RELEASE_VERSION>` (as `apply.sh` has it at the tag) or not on `main`'s history,
    a mistyped version or missing secrets (the ones `publish-maven-central.yml` uses), and resolves
    the tag to its commit once: every later job checks out that commit, so a tag moved during the
-   run is never built. `fork` and `jvm-matrix` then check it; `publish` builds it again on a fresh
+   run is never built. `fork`, `host32` and `jvm-matrix` then check it; `publish` builds it again on a fresh
    runner without the build cache, taking the JNI libraries from `fork`'s directory (`jni-from`:
    the ones `jvm-matrix` ran on every host, not rebuilt), signs it into a directory, checks it
    again (signatures included), requires every native library to be byte for byte `fork`'s
