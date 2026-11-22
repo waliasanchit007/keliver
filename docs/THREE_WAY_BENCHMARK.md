@@ -3641,7 +3641,7 @@ reports KB).
   to download, estimated), and its floor is 15.8 MB; Keliver's engine and this bundle take about
   3–4 MB installed (counting the bundle's cache copy), plus a host dex share not measured here.
 - **Memory: somewhat less than Flutter, depending on when it is read.** PSS after the list, n = 2
-  per arm: at 6 s Keliver 87.2–88.2 MB, Flutter 89.3–91.5 (1–3 MB more), native 61.5–62.7; after a
+  per arm: at 6 s Keliver 87.2–88.2 MB, Flutter on demand 89.3–89.9 (1–3 MB more; pre-warmed up to 91.5), native 61.5–62.7; after a
   Java collection Keliver 72.5–73.4, Flutter 83.5–85.7 (about 11 more), native 55.2–56.1. The
   collection frees Keliver's host Java objects, not Dart's heap.
 - **Measured vs inferred.** Measured: every table above. Inferred: the screen-time cold starts in the
@@ -3691,13 +3691,16 @@ screen runs AOT, so this section's Flutter numbers stand for Flutter over the ai
 ### Learnings for later
 
 Facts only; each comes from this section's numbers.
-- **The gap is the guest interpreter, not rendering.** Keliver renders through the host's Compose,
-  and from its frame end to the screen it takes what native does (36–59 ms against native's 40.7;
+- **On cold start and open, the gap is the guest interpreter, not rendering.** Keliver renders
+  through the host's Compose, and from its frame end to the screen it takes about what native does (36–59 ms against native's 40.7;
   F1 on the pixels). What it adds is guest work in QuickJS: on cold start the code load (about
   0.5 s) and the list's composition (1,019 ms from parsed to composed on 1.28.0, 456.5 on BigInt
   with both NF4 steps, against native's 23 and Flutter's 13); on open 455.5 / 217.5 ms against
-  native's 28; on fast flings 1.28.0's guest still composing rows 4.0–4.4 s after the DOWN. Flutter's
-  AOT code is native speed on this phone: open 30.5 against native's 28, heavy open 44.5 against 59.
+  native's 28. Flutter's AOT code is native speed on this phone: open 30.5 against native's 28, heavy
+  open 44.5 against 59.
+- **Scrolling is different.** Native Compose also missed 36 vsyncs in 33 flings against Flutter's 2
+  (no arm used R8), so most of that gap is the host's rendering path; the guest adds about 26 over
+  native (62 in 31), mostly on fast flings.
 - **Where Keliver wins, and by how much after the review's corrections.** Back: about the same as
   Flutter (within about 20 ms, ranges overlapping), and only with the host's retained back; without
   it 0.67–1.0 s. Size: Flutter adds about 16 MB installed on arm64 (floor 15.8), Keliver about
@@ -3706,7 +3709,8 @@ Facts only; each comes from this section's numbers.
 - **Where the first request is sent decides much of a cold start.** Flutter's 95 ms lead over native
   is the 100 ms by which its `initState` sends the request before native's first composition does.
   On Keliver, NF4's `prestart,prefetch` moved the request to 298 ms (prefetched) and took the BigInt
-  arm from 1,800.5 to 1,543.5 ms (F1).
+  arm from 1,800.5 to 1,543.5 ms (F1), with prestart's earlier code load: both steps together, not
+  split here.
 - **One option recorded, not decided: "compiled until patched".** Screens would be compiled into the
   store build (native speed, as Flutter's AOT here), and the interpreter would run only screens
   changed over the air since that release: Shorebird's iOS model applied to Kotlin. The owner's
