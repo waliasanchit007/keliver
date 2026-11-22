@@ -2635,17 +2635,18 @@ The two launches' marks: prestart 84 and 90, `codeLoadStart` 316 and 343, data d
   between the prestart's mark and its work: a production prestart should start its code load about
   70 ms sooner than this bench shows, if nothing else takes the fixture's place (a prediction, not
   measured).
-- **The 49–50 ms sleep is the Treehouse thread waiting on a `Dispatchers.Default` pool thread
+- **The ~50–64 ms sleep is the Treehouse thread waiting on a `Dispatchers.Default` pool thread
   (measured in a rerun).** This trace processor leaves `thread_state.waker_utid` empty and J's
   traces were not kept, so J itself could not name the waker. Two more traced cold launches of the
   same build and arm at 05:50 (marks: prestart 85 and 84, `codeLoadStart` 351 and 340, data drawn
-  2,702 and 2,642) show the same sleep (64.1 and 51.6 ms). In both, the raw `sched_waking` event
+  2,702 and 2,642) show a sleep at the same point (64.1 and 51.6 ms). In both, the raw `sched_waking` event
   for the Treehouse thread at the end of the sleep was emitted by a `DefaultDispatch` thread of the
   app (in the first launch the process still carried the name `zygote64`), which had just loaded
   `ZiplineManifest`, `TopologicalSortKt` and `LoadedManifest` (0.2–1.8 ms before the wake). J's two
   launches show the same pool-thread work in the 2 ms before the wake: the loader's cache work on
   its own dispatcher (reading the cached manifest), while the main thread loads classes too (the
-  threads log `Lock contention on ClassLinker classes lock` against each other around it). The wake
+  threads log `Lock contention on ClassLinker classes lock` against each other around it). So J's
+  own sleep is attributed to the pool thread by that work pattern, not by a waker event. The wake
   comes 6–7 ms after the main thread's `activityResume` ends in J's two launches; whether the main
   thread's class loading is what delays the pool thread is not established.
 - **`codeLoadStart` is not the load's start**: the Treehouse thread has run about 100 ms by then.
@@ -2670,12 +2671,15 @@ their bounding box, and the largest channel change (0–255).
 
 **Timing.** Raw frame *i* is screenrecord's *i*-th `acquireBuffer` in the trace (697–708 frames per
 guest run; the counts match the file exactly). The recorder trails the display: where a frame's
-identity is known (native row and Back, whose first frame is the destination; the last frame of each
-Load 20 ripple), the virtual display's buffer is queued 10–31 ms after that frame's present. So the
-first raw frame after the DOWN is the app's first frame after it: it trails that frame's present by
-11–23 ms in every guest touch. Matching it to the app's second frame instead would need a lag of
-−2 to +6 ms, which no known frame shows. The recorder drops a few frames (0–5 of each touch's 24–32
-app frames), so the frame counts alone cannot prove the order; the lags do. Times below are the matched app frame's
+identity is known (native row and Back, whose first frame is the destination, itself series I's
+inference; the last frame of each Load 20 ripple), the virtual display's buffer is queued 10–31 ms
+after that frame's present. Inferred from the lags: the first raw frame after the DOWN is the app's
+first frame after it, trailing that frame's present by 11–23 ms in every guest touch. Matching it to
+the app's second frame instead would need a lag of −2 to +6 ms, which no known frame shows. The
+recorder drops a few frames (0–5 of each touch's 24–32 app frames), so the frame counts alone cannot
+prove the order; the lags support it. The recorder also emits frames that are not the app's: two
+status-bar-only frames in native's K2 run (below), and in two guest Load 20 windows (K2 k=18 and
+k=27) a last recorder frame 1.1–1.9 s after the app's last frame. Times below are the matched app frame's
 present (frame timeline), from the DOWN (system_server's `interceptMotionBeforeQueueing`, as in I).
 The recording did not shift the first frame: the guest row's first frame was presented 26.9 ms after
 the DOWN in K (median; I: 26.8), and native's row 57.0 (I: 55.4).
@@ -2685,17 +2689,24 @@ thermal status 0, CPU idle 97–98%.
 
 **What the frames show.**
 - **Every guest touch's first frame after the DOWN is pixel-identical to the screen before it**
-  (48 of 48 kept, and the 6 of the dropped first rounds), and so is native **Load 20**'s (16 of
-  16): the host's Compose ripple draws its first frame at alpha 0.
+  (48 of 48 kept, and the 6 of the dropped first rounds; unchanged in the status bar too), and so
+  is native **Load 20**'s (16 of 16). Inferred: the host's Compose ripple draws its first frame at
+  alpha 0. The evidence is the ramp that follows: the largest channel change in the first changed
+  frame and the next three is about 5–6, 10, 15 and 20 of 255, the linear fade-in of a ripple that
+  starts from zero.
 - **The first changed frame is the app's second frame after the touch** (47 of 48 kept guest
   touches; one row tap's first change came a frame later, in its third), and it shows **the host's
   ripple, faint**: for a row a circle centred on the touch inside the row's band, for Back a circle
   on the back icon, for Load 20 the button. Its largest channel change is 5–6 of 255 (about 2%,
-  at this scale); for a row and Load 20 it is 9–10, 14–16 and 19–22 in the next three frames (the
-  ripple fading in), for Back it grows more slowly (7, 9–10, 13).
+  at this scale); for a row and Load 20 it is about 9–11, 14–16 and 19–22 in the next three frames
+  (the ripple fading in; where the recorder dropped a frame, a sequence skips a step), for Back it
+  grows more slowly (7, 9–10, 13).
 - **Native's row and Back first change is the destination itself** (the whole screen, in one frame),
   except in two rounds, where an unchanged press frame came first (one row: then the destination
-  in the next frame; one Back: a ripple first, the destination later).
+  in the next frame; one Back: a ripple first, the destination later). In two more native touches
+  (K2: one row, one Back) the recorder had a frame before the app's first frame that changed only
+  the status bar (a status-bar-only update, not an app frame); those two were skipped, and the
+  table uses the destination for them.
 
 **DOWN → the first visibly changed frame presented** (ms; median / p90 / min–max over both runs,
 n=16 each):
@@ -2735,9 +2746,10 @@ n=16 each):
   default; the open path's remaining cost is the guest's frame from the click (163.5–167 ms simple,
   470.5–479 heavy on BigInt).
 - NF1: "tap within one frame" is not met on the pixels, and the gap is the host's, not the guest's:
-  no frame waits for the guest, but the host's ripple draws its first frame at alpha 0, so the first
-  visible change (a faint ripple) is presented in the app's second frame after the touch, 39.3–46.8
-  ms after the touch-down (native Compose's button: 44.2). The fix to try is a host indication that
+  no frame waits for the guest, but the host's ripple (inferred from its 5–6, 10, 15, 20 of 255
+  ramp) draws its first frame at alpha 0, so the first visible change (a faint ripple) is presented
+  in the app's second frame after the touch, 39.3–46.8 ms after the touch-down (native Compose's
+  button: 44.2). The fix to try is a host indication that
   is visible in its first frame (a pressed layer at full alpha at once). Whether the bar is "one
   frame after delivery" or "within two frame periods of the touch-down" is the owner's call.
 - NF4: before more cold-start work, the code load's first 150 ms on the Treehouse thread (class
