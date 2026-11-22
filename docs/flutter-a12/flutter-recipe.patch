@@ -1,0 +1,393 @@
+diff --git a/sample/host-android/build.gradle.kts b/sample/host-android/build.gradle.kts
+index 62278967b..749084fbe 100644
+--- a/sample/host-android/build.gradle.kts
++++ b/sample/host-android/build.gradle.kts
+@@ -130,6 +130,9 @@ if (composePrototype) {
+   }
+ 
+   android {
++    // Flutter on the A12: an installed NDK, so AGP strips the native libraries' debug symbols
++    // (Flutter's engine AAR ships libflutter.so unstripped, about 170 MB per ABI; stripped, about 11).
++    providers.gradleProperty("threewayNdkVersion").orNull?.let { ndkVersion = it }
+     buildTypes.getByName("release") {
+       isMinifyEnabled = true
+       signingConfig = signingConfigs.getByName("debug")
+@@ -166,6 +169,11 @@ if (composePrototype) {
+       add("${type}Implementation", "org.jetbrains.compose.material3:material3:1.9.0")
+       add("${type}Implementation", "org.jetbrains.compose.animation:animation:${libs.versions.composeMultiplatform.get()}")
+     }
++    // Flutter on the A12: the fourth form (`-e form flutter`). This recipe needs -PthreewayFlutterRepo
++    // (the repository is declared in settings.gradle.kts); -PthreewayFlutterModule picks another
++    // module (the size floor's hello-world).
++    val module = providers.gradleProperty("threewayFlutterModule").getOrElse("dev.keliver.bench.threeway_flutter:flutter_release:1.0")
++    for (type in routeBuildTypes) add("${type}Implementation", module)
+   }
+ }
+ 
+diff --git a/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayActivity.kt b/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayActivity.kt
+index 3ee65196f..f5cfdd973 100644
+--- a/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayActivity.kt
++++ b/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayActivity.kt
+@@ -214,6 +214,7 @@ class ThreewayActivity : ComponentActivity() {
+     when (form) {
+       "web" -> startWeb()
+       "guest" -> startGuest()
++      "flutter" -> startFlutter()
+       else -> startNative()
+     }
+     ColdStart.mark("contentSet")
+@@ -358,6 +359,104 @@ class ThreewayActivity : ComponentActivity() {
+     webView.loadUrl("file:///android_asset/threeway-web/index.html")
+   }
+ 
++  // ---------------------------------------------------------------------------------------------
++  // Flutter on the A12 (ThreewayFlutter.kt): the fourth form.
++
++  private var flutterEngine: io.flutter.embedding.engine.FlutterEngine? = null
++  private var flutterView: io.flutter.embedding.android.FlutterView? = null
++
++  private fun startFlutter() {
++    val engine = ThreewayFlutter.takePrewarmed(experiments) ?: run {
++      val began = SystemClock.elapsedRealtimeNanos()
++      ThreewayFlutter.create(applicationContext, experiments)
++        .also { ColdStart.mainThreadNanos("flutterCreateMain", SystemClock.elapsedRealtimeNanos() - began) }
++    }
++    flutterEngine = engine
++    val view = io.flutter.embedding.android.FlutterView(this)
++    // The first Flutter frame rasterized to the view's surface (the "Loading…" frame, or the data).
++    view.addOnFirstFrameRenderedListener(
++      object : io.flutter.embedding.engine.renderer.FlutterUiDisplayListener {
++        override fun onFlutterUiDisplayed() {
++          ColdStart.mark("flutterUiDisplayed")
++        }
++
++        override fun onFlutterUiNoLongerDisplayed() {}
++      },
++    )
++    view.attachToFlutterEngine(engine)
++    flutterView = view
++    setContentView(view)
++    ThreewayFlutter.setHandler(::onFlutterMessage)
++  }
++
++  /** Main thread: a message from the Dart side (main.dart). */
++  private fun onFlutterMessage(method: String, args: Map<*, *>) {
++    when (method) {
++      "mark" -> ColdStart.markAt(args["name"] as String, (args["at"] as Number).toLong())
++      "composed" -> {
++        val screen = args["screen"] as String
++        val seq = (args["seq"] as Number).toInt()
++        val marksJson = args["marks"] as String
++        recorder.addJson(marksJson)
++        val frameEnd = JSONObject(marksJson).getJSONObject(seq.toString()).getLong("frameEnd")
++        // Flutter's frame is not this window's draw: its "drawn" is the end of the Dart UI thread's
++        // work for the frame (a post-frame callback), the Compose forms' `frameEnd`.
++        recorder.mark(seq, "inTree", System.currentTimeMillis())
++        recorder.mark(seq, "drawn", frameEnd)
++        contentDrawn(screen, seq, frameEnd)
++      }
++      "late" -> {
++        // The frame's raster end (FrameTiming), about a second later: logged on its own line, and
++        // for the first data frame added to the cold line.
++        val seq = (args["seq"] as Number).toInt()
++        val o = JSONObject().put("form", form).put("flutterFrame", seq).put("screen", args["screen"])
++        for (k in listOf("vsyncStart", "buildStart", "buildEnd", "rasterStart", "rasterEnd", "frameNumber")) o.put(k, args[k])
++        logFileOnly(o.toString())
++        if (args["screen"] == "data" && pendingCold != null) {
++          ColdStart.markAt("dataVsyncStart", (args["vsyncStart"] as Number).toLong())
++          ColdStart.markAt("dataRasterEnd", (args["rasterEnd"] as Number).toLong())
++          flushCold()
++        }
++      }
++      "fling" -> {
++        val line = JSONObject(args["line"] as String).put("form", form).put("bench", "scroll").put("api", apiRoute)
++        if (experiments.isNotEmpty()) line.put("x", experiments)
++        flingDone(line)
++      }
++    }
++  }
++
++  /** Flutter: the cold line waits (up to 2.5 s) for the data frame's raster end. */
++  private var pendingCold: (() -> Unit)? = null
++
++  private fun flushCold() {
++    val p = pendingCold ?: return
++    pendingCold = null
++    p()
++  }
++
++  override fun onResume() {
++    super.onResume()
++    flutterEngine?.lifecycleChannel?.appIsResumed()
++  }
++
++  override fun onPause() {
++    super.onPause()
++    flutterEngine?.lifecycleChannel?.appIsInactive()
++  }
++
++  override fun onStop() {
++    super.onStop()
++    flutterEngine?.lifecycleChannel?.appIsPaused()
++  }
++
++  override fun onDestroy() {
++    ThreewayFlutter.setHandler(null)
++    flutterView?.detachFromFlutterEngine()
++    flutterEngine?.destroy()
++    super.onDestroy()
++  }
++
+   // ---------------------------------------------------------------------------------------------
+   // "Drawn": the first draw of this window after a form's content is in its tree.
+ 
+@@ -374,34 +473,53 @@ class ThreewayActivity : ComponentActivity() {
+         if (fired) return
+         fired = true
+         recorder.mark(seq, "drawn", System.currentTimeMillis())
++        // Flutter on the A12: the end of this frame's main-thread work, every step (as `dataFrameEnd`
++        // for the first data), comparable with Flutter's post-frame `frameEnd`.
++        main.postAtFrontOfQueue { recorder.mark(seq, "frameEnd", System.currentTimeMillis()) }
+         // A draw listener cannot remove itself during onDraw.
+         main.post { decor.viewTreeObserver.removeOnDrawListener(this) }
+-        if (firstContent && screen == "data") {
+-          firstContent = false
+-          // Inside this frame's draw: the startup benchmark's timeToFullDisplay ends at this frame.
+-          reportFullyDrawn()
+-          // Once per process: a recreated activity (rotation) must not log a second "cold" line.
+-          if (ColdStart.mark("dataDrawn")) {
+-            val requestMarks = recorder.peek(seq)
+-            // onDraw runs at the start of the frame's draw, before the views record it (Compose
+-            // measures and lays out inside Record View#draw()): `dataFrameEnd` is the end of this
+-            // frame's main-thread work, the message after it (NF4 composed-to-drawn).
+-            main.postAtFrontOfQueue {
+-              ColdStart.mark("dataFrameEnd")
+-              log(ColdStart.line(form, requestMarks))
+-            }
+-          }
+-          decor.postInvalidate()
+-          main.postDelayed(::runBench, SETTLE_MILLIS)
+-        }
+-        val w = waiter
+-        if (w != null) main.post { w(screen, seq) }
++        contentDrawn(screen, seq, flutterFrameEnd = null)
+       }
+     }
+     decor.viewTreeObserver.addOnDrawListener(listener)
+     decor.invalidate()
+   }
+ 
++  /**
++   * Main thread: [screen] with [seq] is drawn. [flutterFrameEnd]: the Flutter form's frame end (its
++   * `drawn`, from Dart); null for the other forms, which call this from the window's draw.
++   */
++  private fun contentDrawn(screen: String, seq: Int, flutterFrameEnd: Long?) {
++    if (firstContent && screen == "data") {
++      firstContent = false
++      // Inside this frame's draw: the startup benchmark's timeToFullDisplay ends at this frame.
++      reportFullyDrawn()
++      if (flutterFrameEnd != null) {
++        // Flutter: the data frame's UI-thread end, from Dart; the line waits for its raster end.
++        if (ColdStart.markAt("dataDrawn", flutterFrameEnd)) {
++          ColdStart.markAt("dataFrameEnd", flutterFrameEnd)
++          val requestMarks = recorder.peek(seq)
++          pendingCold = { log(ColdStart.line(form, requestMarks)) }
++          main.postDelayed(::flushCold, 2_500)
++        }
++      } else if (ColdStart.mark("dataDrawn")) {
++        // Once per process: a recreated activity (rotation) must not log a second "cold" line.
++        val requestMarks = recorder.peek(seq)
++        // onDraw runs at the start of the frame's draw, before the views record it (Compose
++        // measures and lays out inside Record View#draw()): `dataFrameEnd` is the end of this
++        // frame's main-thread work, the message after it (NF4 composed-to-drawn).
++        main.postAtFrontOfQueue {
++          ColdStart.mark("dataFrameEnd")
++          log(ColdStart.line(form, requestMarks))
++        }
++      }
++      window.decorView.postInvalidate()
++      main.postDelayed(::runBench, SETTLE_MILLIS)
++    }
++    val w = waiter
++    if (w != null) main.post { w(screen, seq) }
++  }
++
+   // ---------------------------------------------------------------------------------------------
+   // The benchmark driver: synthetic taps at the screens' fixed positions.
+ 
+@@ -558,6 +676,13 @@ class ThreewayActivity : ComponentActivity() {
+ 
+   private fun startScroll() {
+     if (Build.VERSION.SDK_INT < 26) return log("""{"form":"$form","error":"scroll needs API 26"}""")
++    if (form == "flutter") {
++      // Flutter's frames are not this window's: the Dart side tracks the flings (FrameTiming) and
++      // sends one line per fling in the host's format (onFlutterMessage "fling").
++      ThreewayFlutter.channel?.invokeMethod("startScroll", null)
++      log("""{"form":"$form","scroll":"ready","x":${JSONObject.quote(experiments)},"state":${JSONObject.quote(phoneState())}}""")
++      return
++    }
+     val web = webView
+     val tracker = ScrollTracker(
+       window = window,
+@@ -854,6 +979,9 @@ internal object ColdStart {
+   /** Records [name] once; returns true the first time. */
+   fun mark(name: String): Boolean = marks.putIfAbsent(name, System.currentTimeMillis()) == null
+ 
++  /** Records [name] at [atMillis] (epoch ms, taken elsewhere: the Flutter form's Dart side) once. */
++  fun markAt(name: String, atMillis: Long): Boolean = marks.putIfAbsent(name, atMillis) == null
++
+   /** `x=netlog`'s events in order (epoch ms), from any thread. */
+   private val netEvents = java.util.concurrent.ConcurrentLinkedQueue<Pair<String, Long>>()
+ 
+diff --git a/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayFlutter.kt b/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayFlutter.kt
+new file mode 100644
+index 000000000..44ba0625a
+--- /dev/null
++++ b/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayFlutter.kt
+@@ -0,0 +1,96 @@
++/*
++ * Copyright (C) 2026 Keliver contributors.
++ * Licensed under the Apache License, Version 2.0.
++ */
++package dev.keliver.sample.host.threeway
++
++import android.content.Context
++import android.os.SystemClock
++import android.util.Log
++import io.flutter.embedding.engine.FlutterEngine
++import io.flutter.embedding.engine.dart.DartExecutor
++import io.flutter.plugin.common.MethodChannel
++
++/**
++ * The fourth form, Flutter (docs/THREE_WAY_BENCHMARK.md, "Flutter on the A12"; a recipe kept out of
++ * main): the bench's Flutter module (an AAR from `flutter build aar`, release/AOT) in this activity,
++ * in a `FlutterView` attached to a `FlutterEngine` (add-to-app), with one of two engine policies:
++ *
++ * - on demand (as shipped): the activity creates the engine and runs its Dart entrypoint in onCreate;
++ * - `x=prewarm`: the engine is created and its entrypoint run in bindApplication, from
++ *   [ThreewayPrestartProvider] (Flutter's documented recommendation: an engine created and run at
++ *   Application start). As `prestart`, the provider acts on what the PREVIOUS launch asked for.
++ *
++ * The Dart side takes its marks on the wall clock and sends them over the `threeway` method channel
++ * after taking them (main.dart), so the channel's latency is in no mark.
++ */
++internal object ThreewayFlutter {
++  private const val CHANNEL = "threeway"
++
++  /** The engine this process pre-warmed and the experiments it ran with; taken once. */
++  private var prewarmed: Pair<FlutterEngine, String>? = null
++
++  /** Dart's messages, queued until the activity sets [handler] (a pre-warmed engine reports early). */
++  private val queue = ArrayList<Pair<String, Map<*, *>>>()
++  private var handler: ((String, Map<*, *>) -> Unit)? = null
++
++  /** The channel, for messages to Dart (startScroll). */
++  var channel: MethodChannel? = null
++    private set
++
++  /** Main thread. */
++  fun prewarm(context: Context, experiments: String) {
++    ColdStart.mark("flutterPrewarm")
++    val began = SystemClock.elapsedRealtimeNanos()
++    val engine = create(context, experiments)
++    prewarmed = engine to experiments
++    ColdStart.mainThreadNanos("flutterPrewarmMain", SystemClock.elapsedRealtimeNanos() - began)
++    Log.i("Threeway", "flutter: engine pre-warmed in bindApplication (x=$experiments)")
++  }
++
++  fun takePrewarmed(experiments: String): FlutterEngine? {
++    val p = prewarmed ?: return null
++    prewarmed = null
++    if (p.second != experiments) {
++      Log.w("Threeway", "flutter: pre-warmed with x=${p.second}, this launch has x=$experiments; not used")
++      p.first.destroy()
++      return null
++    }
++    return p.first
++  }
++
++  /** Main thread: a new engine (loads libflutter.so and libapp.so), its channel, its Dart entrypoint run. */
++  fun create(context: Context, experiments: String): FlutterEngine {
++    ColdStart.mark("flutterEngineStart")
++    val engine = FlutterEngine(context.applicationContext)
++    ColdStart.mark("flutterEngineCreated")
++    val channel = MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
++    channel.setMethodCallHandler { call, result ->
++      deliver(call.method, call.arguments as? Map<*, *> ?: emptyMap<Any, Any>())
++      result.success(null)
++    }
++    this.channel = channel
++    engine.dartExecutor.executeDartEntrypoint(
++      DartExecutor.DartEntrypoint.createDefault(),
++      listOf("x=$experiments", "api=${ThreewayHttp.apiBase}"),
++    )
++    ColdStart.mark("flutterEntrypointRun")
++    return engine
++  }
++
++  /** Platform (main) thread, as the channel delivers. */
++  private fun deliver(method: String, args: Map<*, *>) {
++    val h = handler
++    if (h == null) queue += method to args else h(method, args)
++  }
++
++  /** Main thread: the activity's handler; queued messages first. */
++  fun setHandler(h: ((String, Map<*, *>) -> Unit)?) {
++    handler = h
++    if (h != null) {
++      val pending = ArrayList(queue)
++      queue.clear()
++      pending.forEach { (m, a) -> h(m, a) }
++    }
++  }
++}
+diff --git a/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayPrestart.kt b/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayPrestart.kt
+index 0b86593a1..fe77a939a 100644
+--- a/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayPrestart.kt
++++ b/sample/host-android/src/threeway/kotlin/dev/keliver/sample/host/threeway/ThreewayPrestart.kt
+@@ -91,6 +91,7 @@ internal object ThreewayGuest {
+     val set = experiments.split(',').map { it.trim() }.toSet()
+     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+       .putBoolean("prestart", form == "guest" && "prestart" in set)
++      .putBoolean("flutterPrewarm", form == "flutter" && "prewarm" in set)
+       .putString("x", experiments)
+       .putBoolean("localApi", localApi)
+       .apply()
+@@ -103,6 +104,18 @@ internal object ThreewayGuest {
+    */
+   fun prestartIfAsked(context: Context) {
+     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
++    // Flutter on the A12, `x=prewarm`: the Flutter engine created and run here (ThreewayFlutter.kt).
++    if (prefs.getBoolean("flutterPrewarm", false)) {
++      val x = prefs.getString("x", "").orEmpty()
++      ThreewayHttp.applyExperiments(x)
++      if (prefs.getBoolean("localApi", false)) {
++        val fixtureBegan = SystemClock.elapsedRealtimeNanos()
++        LocalFixture.start()
++        ColdStart.mainThreadNanos("fixtureMain", SystemClock.elapsedRealtimeNanos() - fixtureBegan)
++      }
++      ThreewayFlutter.prewarm(context.applicationContext, x)
++      return
++    }
+     if (!prefs.getBoolean("prestart", false)) return
+     ColdStart.mark("prestart")
+     val x = prefs.getString("x", "").orEmpty()
+diff --git a/sample/settings.gradle.kts b/sample/settings.gradle.kts
+index 179745b2b..6cb55697b 100644
+--- a/sample/settings.gradle.kts
++++ b/sample/settings.gradle.kts
+@@ -73,6 +73,14 @@ if (composePrototype) {
+         version("android-compileSdk", "37")
+       }
+     }
++    // Flutter on the A12 (docs/THREE_WAY_BENCHMARK.md, "Flutter on the A12"): the bench's Flutter
++    // module as an AAR in a local repository (`flutter build aar`), and Flutter's engine artifacts.
++    providers.gradleProperty("threewayFlutterRepo").orNull?.let { repo ->
++      repositories {
++        maven(repo) { content { includeGroupByRegex("dev\\.keliver\\.bench\\..*") } }
++        maven("https://storage.googleapis.com/download.flutter.io") { content { includeGroup("io.flutter") } }
++      }
++    }
+   }
+   include(":gateb-guest")
+   // The three-way benchmark's guest (docs/THREE_WAY_BENCHMARK.md), on the same prototype stack.
