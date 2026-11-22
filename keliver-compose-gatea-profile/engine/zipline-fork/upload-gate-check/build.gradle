@@ -1,0 +1,58 @@
+// Copyright (C) 2026 Keliver contributors. Licensed under the Apache License, Version 2.0.
+//
+// NF2 step 4 (review 4 of PR #289, N-2): what vanniktech's maven-publish plugin, at the version
+// Zipline's build uses, does at the end of a build whose Maven Central publication already ran
+// (so the project is registered for the upload) and which then FAILS, as `apply.sh release
+// --central`'s upload invocation does when zipline-build.init.gradle's guard stops a Sign task.
+// `apply.sh check-upload-gate <work>` runs it twice with Zipline's own wrapper:
+//   - -PuploadGateFail: the task `boom` fails after publishToMavenCentral. The plugin must write no
+//     bundle zip under build/publish and open no connection;
+//   - without it (the positive control, which shows the check can see an upload): the bundle zip is
+//     written and the plugin connects, and the zip is still there after the upload failed.
+// Every connection goes to a local listener (-PuploadGateProxyPort), never to the Central Portal:
+// once the task graph is ready, the JVM's default ProxySelector sends every URI to it, and the
+// plugin builds its HTTP client lazily, at the upload. The listener records each request line
+// (CONNECT central.sonatype.com:443) and closes the connection, so the upload fails. The credentials
+// are dummies.
+buildscript {
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  dependencies {
+    classpath "com.vanniktech:gradle-maven-publish-plugin:${gradle.startParameter.projectProperties['vanniktechVersion']}"
+  }
+}
+
+apply plugin: 'java-library'
+apply plugin: 'com.vanniktech.maven.publish.base'
+
+group = 'dev.keliver.uploadgatecheck'
+version = '0.0.1'
+
+mavenPublishing {
+  configure(new com.vanniktech.maven.publish.JavaLibrary(new com.vanniktech.maven.publish.JavadocJar.Empty(),
+    new com.vanniktech.maven.publish.SourcesJar.Empty()))
+  // Review mode, as the fork's release (zipline-build.init.gradle disables the switch to automatic).
+  publishToMavenCentral(false)
+  coordinates(project.group.toString(), 'upload-gate-check', project.version.toString())
+}
+
+def proxyPort = providers.gradleProperty('uploadGateProxyPort').get() as int
+gradle.taskGraph.whenReady {
+  def local = new Proxy(Proxy.Type.HTTP, new InetSocketAddress('127.0.0.1', proxyPort))
+  ProxySelector.setDefault(new ProxySelector() {
+    List<Proxy> select(URI uri) { [local] }
+    void connectFailed(URI uri, SocketAddress address, IOException e) {}
+  })
+  println "upload-gate-check: every connection from here on goes to 127.0.0.1:$proxyPort"
+}
+
+def fail = providers.gradleProperty('uploadGateFail').isPresent()
+tasks.register('boom') {
+  mustRunAfter('publishToMavenCentral')
+  doLast {
+    if (fail) throw new GradleException('upload-gate-check: a task failed after publishToMavenCentral (as the Sign guard does)')
+    println 'upload-gate-check: no failure; the plugin uploads at the end of the build'
+  }
+}
