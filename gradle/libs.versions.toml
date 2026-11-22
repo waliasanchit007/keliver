@@ -16,8 +16,11 @@ ksp = "2.3.14"
 lint = "32.3.3"
 paparazzi = "1.3.5"
 zipline = "1.28.0"
-coil = "3.3.0"
-okio = "3.17.0"
+# Also an input of the Compose generator (coil3.compose.AsyncImage): bumping it fails checkComposeApi
+# until the group is regenerated. Coil 3.6.x brings okio 3.18.1, whose base64 drops `=` padding for
+# callers compiled against older okio: keep okio at 3.18.2 or later whenever coil is 3.6+.
+coil = "3.6.3"
+okio = "3.18.2"
 burst = "2.14.0"
 
 [libraries]

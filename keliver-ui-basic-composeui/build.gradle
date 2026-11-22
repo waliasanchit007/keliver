@@ -14,6 +14,9 @@ kotlin {
       dependencies {
         api projects.keliverUiBasicWidget
         api libs.coil.compose
+        // Coil 3.6 brings okio 3.18.1, whose base64 drops `=` padding for libraries compiled
+        // against older okio; this keeps 3.18.2+ the version an adopter resolves.
+        api libs.okio
         api libs.jetbrains.compose.material
         implementation projects.keliverLayoutComposeui
         implementation projects.keliverLazylayoutComposeui

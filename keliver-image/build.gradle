@@ -22,6 +22,9 @@ kotlin {
         // legacy `coil-compose` catalog alias maps to coil-compose-core.
         api libs.coil.compose.full
         api libs.coil.core
+        // Coil 3.6 brings okio 3.18.1, whose base64 drops `=` padding for libraries compiled
+        // against older okio; this keeps 3.18.2+ the version an adopter resolves.
+        api libs.okio
         api libs.jetbrains.compose.runtime
       }
     }
