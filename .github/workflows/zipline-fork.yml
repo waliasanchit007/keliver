@@ -33,9 +33,12 @@
 #   jvm-matrix: that distribution on the six runners upstream's build.yaml uses, so every JNI
 #     library the jar carries is loaded and tested on its own host.
 #   publish (publish only; needs all three): the tag's commit built again on a fresh runner, no
-#     build cache, `apply.sh release --central`: signed to a directory, checked again (signatures
-#     included), then uploaded to Central in review mode; the signed directory is kept as an
-#     artifact for 90 days, for the comparison in the Portal.
+#     build cache, with the JNI libraries fork built and jvm-matrix ran (`apply.sh jni-from`, from
+#     fork's directory), `apply.sh release --central`: signed to a directory, checked again
+#     (signatures included), every native library compared with fork's (identical sha256s: the six
+#     JNI libraries, the AAR's four .so files, the klibs' bitcode), then uploaded to Central in review
+#     mode; the signed directory and a sha1 manifest (also in the step summary, with the spot-check
+#     list) are kept as artifacts for 90 days, for the comparison in the Portal.
 name: zipline-fork
 
 on:
@@ -76,11 +79,24 @@ env:
   ZIPLINE_FORK_SOURCE_REF: ${{ inputs.tag || 'main' }}
 
 jobs:
+  # Skips, failures and cancellation through the graph (GitHub's implicit `success()` covers every
+  # upstream job, transitive ones included, so a skipped guard would skip every job below it that
+  # has no status function in its `if:`; each job therefore spells its conditions out):
+  #   guard       runs only on a publish dispatch.
+  #   fork        runs unless the run was cancelled or guard did not pass (skipped is fine: not a
+  #               publish run). A failed guard skips it, and so everything after it.
+  #   jvm-matrix  runs whenever fork succeeded (pull requests, dispatches, publish runs).
+  #   publish     runs only on a publish dispatch with guard, fork and every jvm-matrix leg
+  #               successful, and the run not cancelled.
+  # L2 of review 2: guard resolves the tag to its commit once; every later job checks out that SHA
+  # (fork passes the SHA it built on), so a tag moved during the run is never built.
   guard:
     name: Check the publish request
     if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.tag.outputs.sha }}
     steps:
       - name: Main, the secrets
         env:
@@ -107,6 +123,7 @@ jobs:
           fetch-depth: 0
 
       - name: The tag, the version, main's history
+        id: tag
         env:
           TAG: ${{ inputs.tag }}
           CONFIRM: ${{ inputs.confirm_version }}
@@ -124,6 +141,7 @@ jobs:
           if [ "$CONFIRM" != "$version" ]; then
             echo "::error::confirm_version '$CONFIRM' is not the release version '$version'."; exit 1
           fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "Publishing dev.keliver.zipline:*:$version from $TAG ($(git rev-parse HEAD)) after the checks."
 
   fork:
@@ -134,13 +152,20 @@ jobs:
     # A Mac with Xcode: the iOS, macOS and tvOS klibs, and the iOS simulator tests.
     runs-on: macos-15
     timeout-minutes: 300
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
     env:
       WORK: ${{ github.workspace }}/build/zipline-fork/work
       REPO: ${{ github.workspace }}/build/zipline-fork/repo
     steps:
+      # A publish run: the commit guard resolved the tag to. Otherwise the tag given (or the event's
+      # own ref).
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ needs.guard.outputs.sha || inputs.tag }}
+      - name: The commit this run builds
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
         with:
@@ -173,10 +198,11 @@ jobs:
           exit "$status"
 
       - name: Host tests again, the test JavaScript linked with Long as BigInt
+        # --rerun: never UP-TO-DATE from the first pass, whose XML `results` would then read again.
         run: |
           status=0
           scripts/zipline-fork.sh test "$WORK" --continue -PziplineForkLongAsBigInt \
-            :zipline:jvmTest :zipline:iosSimulatorArm64Test || status=$?
+            :zipline:jvmTest --rerun :zipline:iosSimulatorArm64Test --rerun || status=$?
           scripts/zipline-fork.sh results "$WORK" jvmTest iosSimulatorArm64Test || status=1
           exit "$status"
 
@@ -218,6 +244,9 @@ jobs:
   jvm-matrix:
     name: JVM tests on ${{ matrix.platform }}
     needs: fork
+    # Not the implicit success(): it also looks at guard, which is skipped on every run but a
+    # publish (review 2 of PR #289, N1).
+    if: ${{ !cancelled() && needs.fork.result == 'success' }}
     strategy:
       fail-fast: false
       matrix:
@@ -234,7 +263,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ needs.fork.outputs.sha }}
           sparse-checkout: .github/workflows/.java-version
           sparse-checkout-cone-mode: false
       - uses: actions/setup-java@v4
@@ -244,25 +273,53 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: zipline-fork-jvm-tests
-      # As upstream's build.yaml runs it, on every platform.
+      # The distribution's own launchers (review 2 of PR #289, N2): the POSIX script in bash on
+      # Linux and macOS, the .bat Gradle writes beside it in cmd on Windows (pwsh, the Windows
+      # default, has no chmod and cannot run an extensionless sh script).
       - name: Run the JVM tests
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           chmod +x bin/zipline-test
           bin/zipline-test
+      - name: Run the JVM tests (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if not exist bin\zipline-test.bat (echo ::error::no bin\zipline-test.bat in the distribution & exit /b 1)
+          call bin\zipline-test.bat
+          if errorlevel 1 exit /b 1
 
   publish:
     name: Upload to Maven Central (review mode)
     needs: [guard, fork, jvm-matrix]
-    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    # Every condition spelled out (review 2 of PR #289, N1): a publish dispatch, every job before it
+    # successful (jvm-matrix's result is success only when all six legs passed), not cancelled.
+    if: >-
+      ${{ !cancelled()
+      && github.event_name == 'workflow_dispatch' && inputs.publish
+      && needs.guard.result == 'success'
+      && needs.fork.result == 'success'
+      && needs.jvm-matrix.result == 'success' }}
     runs-on: macos-15
     timeout-minutes: 180
     env:
       WORK: ${{ github.workspace }}/build/zipline-fork/work
       REPO: ${{ github.workspace }}/build/zipline-fork/repo-central
+      TESTED: ${{ github.workspace }}/build/zipline-fork/repo-tested
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ needs.guard.outputs.sha }}
+      - name: The commit guard resolved the tag to, which fork built and jvm-matrix tested
+        env:
+          GUARD_SHA: ${{ needs.guard.outputs.sha }}
+          FORK_SHA: ${{ needs.fork.outputs.sha }}
+        run: |
+          head="$(git rev-parse HEAD)"
+          if [ -z "$GUARD_SHA" ] || [ "$head" != "$GUARD_SHA" ] || [ "$head" != "$FORK_SHA" ]; then
+            echo "::error::checkout $head, guard's $GUARD_SHA, fork's $FORK_SHA: not one commit."; exit 1
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -280,18 +337,26 @@ jobs:
           yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$KELIVER_NDK_VERSION" > /dev/null
           ls "$sdk/ndk/$KELIVER_NDK_VERSION/source.properties"
 
-      - name: Clone Zipline, apply the patch set (apply.sh all), every host's JNI library (jni-all)
+      # The directory fork built, checked and ran the tests from (jvm-matrix ran its JNI libraries
+      # on every host): the release takes its JNI libraries from it instead of rebuilding them, and
+      # must match every one of its native libraries before anything is uploaded (review 2, N3).
+      - uses: actions/download-artifact@v4
+        with:
+          name: zipline-fork-repo
+          path: build/zipline-fork/repo-tested
+
+      - name: Clone Zipline, apply the patch set (apply.sh all), the tested JNI libraries (jni-from)
         run: |
           scripts/zipline-fork.sh all "$WORK"
-          scripts/zipline-fork.sh jni-all "$WORK"
+          scripts/zipline-fork.sh jni-from "$WORK" "$TESTED"
 
-      - name: Signed to a directory, checked, then to Maven Central in review mode (apply.sh release --central)
+      - name: Signed to a directory, checked, natives compared, then to Maven Central in review mode (apply.sh release --central)
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: scripts/zipline-fork.sh release "$WORK" "$REPO" --central
+        run: scripts/zipline-fork.sh release "$WORK" "$REPO" --central "$TESTED"
 
       # What was uploaded, signatures included: the Portal's file sha1s are compared with these
       # before anyone presses Publish.
@@ -303,12 +368,35 @@ jobs:
           if-no-files-found: ignore
           retention-days: 90
 
-      - name: What to do next
+      # Every uploaded file's sha1 (L7): the spot-check list in the summary, the whole manifest in
+      # the summary (folded) and as an artifact.
+      - name: The sha1 manifest, and what to do next
+        id: manifest
         run: |
+          manifest="build/zipline-fork/SHA1SUMS-${ZIPLINE_FORK_SOURCE_REF}.txt"
+          spot="$(scripts/zipline-fork.sh sha1-manifest "$WORK" "$REPO" "$manifest")"
           {
             echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: uploaded in review mode, NOT released"
             echo "1. Central Portal, Deployments: the deployment is VALIDATED (not PUBLISHED)."
-            echo "2. Download this run's artifact zipline-fork-repo-central-${ZIPLINE_FORK_SOURCE_REF} and compare the Portal's"
-            echo "   file list and sha1s with it (the README, Publishing the fork)."
+            echo "2. Compare the Portal's file list and sha1s with the manifest below (also this run's artifacts"
+            echo "   zipline-fork-sha1-${ZIPLINE_FORK_SOURCE_REF} and zipline-fork-repo-central-${ZIPLINE_FORK_SOURCE_REF});"
+            echo "   at least these files (the README, Publishing the fork):"
+            echo ""
+            echo "$spot"
+            echo ""
             echo "3. Only then press Publish. To abandon it, Drop."
+            echo ""
+            echo "<details><summary>Every file's sha1</summary>"
+            echo ""
+            echo '```'
+            cat "$manifest"
+            echo '```'
+            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.manifest.outcome == 'success' }}
+        with:
+          name: zipline-fork-sha1-${{ inputs.tag }}
+          path: build/zipline-fork/SHA1SUMS-*.txt
+          if-no-files-found: error
+          retention-days: 90

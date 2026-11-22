@@ -44,13 +44,22 @@
 #                             Windows; arm64 and x86-64) with zig $ZIG_VERSION, as upstream's release does
 #                             (zig on PATH at that version, else downloaded and checked into <work>/tools);
 #                             replaces what `jni` built
-#   apply.sh release <work> <empty maven repo dir> [--central]   step 4, after engine and jni-all: every
-#                             Zipline artifact as dev.keliver.zipline:<upstream name>:1.28.0-keliver.1
-#                             (a Mac with Xcode), to the directory, checked by check-release.py and
-#                             listed with sizes; with --central, signed, then to Maven Central in
-#                             review mode (the credentials as ORG_GRADLE_PROJECT_* variables). CI
-#                             only, by hand. No build cache. The POMs point at ZIPLINE_FORK_SOURCE_REF
-#                             (the release tag; default main)
+#   apply.sh jni-from <work> <tested repo>   step 4, instead of jni-all: the JNI libraries from the
+#                             zipline-jvm jar in a repository `release` wrote (the fork job's, which
+#                             the JVM tests ran with on every host), into the source tree
+#   apply.sh release <work> <empty maven repo dir> [--central <tested repo>]   step 4, after engine and
+#                             jni-all (or jni-from): every Zipline artifact as
+#                             dev.keliver.zipline:<upstream name>:1.28.0-keliver.1 (a Mac with Xcode),
+#                             to the directory, checked by check-release.py and listed with sizes; with
+#                             --central, signed, checked, its native libraries compared with the tested
+#                             repository's (publish-checks.py natives: identical sha256s), then to Maven
+#                             Central in review mode (the credentials as ORG_GRADLE_PROJECT_*
+#                             variables). CI only, by hand. No build cache. The POMs point at
+#                             ZIPLINE_FORK_SOURCE_REF (the release tag; default main)
+#   apply.sh sha1-manifest <work> <repo> <manifest out>   every file's sha1 (publish-checks.py sha1),
+#                             and the spot-check list as a Markdown table on stdout
+#   apply.sh check-natives <work> <tested repo> <repo>   publish-checks.py natives on two repositories
+#                             `release` wrote: every native library identical (sha256)
 #   apply.sh check-release <work> <repo> [signed]   check-release.py again on what release wrote
 #   apply.sh check-capabilities <work> <repo>   after release: a Gradle consumer (capability-check/)
 #                             resolves the fork's modules alone, and fails, with a capability conflict,
@@ -62,7 +71,7 @@
 set -euo pipefail
 shopt -s nullglob
 here="$(cd "$(dirname "$0")" && pwd)"
-cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|check-release|check-capabilities|jvm-test-dist|diff|all <work dir> [...]}"
+cmd="${1:?usage: apply.sh clone|engine|jni|jni-all|jni-from|qjs|check-bigint|android|qjs-android|check-bigint-device|ios|check-bigint-zipline|test|results|publish|release|check-release|check-capabilities|check-natives|sha1-manifest|jvm-test-dist|diff|all <work dir> [...]}"
 work="${2:?work dir}"
 mkdir -p "$work"
 work="$(cd "$work" && pwd)"
@@ -560,6 +569,27 @@ do_jni_all() { # step 4: the JNI library for every host upstream ships, as upstr
   [ $n -gt 0 ] || { echo "jni-all: zig built no library" >&2; exit 1; }
 }
 
+do_jni_from() { # step 4: the JNI libraries the tests ran with (a tested release's zipline-jvm jar), not rebuilt
+  local tested="${3:?jni-from <work> <tested repo>}" jar out="$zl/zipline/src/jvmMain/resources/jni" f n=0
+  [ -f "$zl/zipline/native/quickjs/dtoa.c" ] || { echo "run engine first" >&2; exit 1; }
+  jar="$tested/${RELEASE_GROUP//.//}/zipline-jvm/$RELEASE_VERSION/zipline-jvm-$RELEASE_VERSION.jar"
+  [ -f "$jar" ] || { echo "jni-from: no $jar" >&2; exit 1; }
+  # Exactly the jar's jni/ entries (what `jni` may have left here goes first).
+  rm -rf "$out"
+  unzip -q "$jar" 'jni/*' -d "$zl/zipline/src/jvmMain/resources"
+  while IFS= read -r f; do
+    LC_ALL=C grep -q -a -F "$QJS_VERSION" "$f" || { echo "jni-from: ${f#"$out"/} has no QuickJS $QJS_VERSION" >&2; exit 1; }
+    echo "jni-from: ${f#"$out"/} $(wc -c < "$f" | tr -d ' ') bytes, sha256 $(shasum -a 256 "$f" | cut -c1-16)... (from the tested zipline-jvm jar)"
+    n=$((n + 1))
+  done < <(find "$out" -type f \( -name '*.so' -o -name '*.dylib' -o -name '*.dll' \) | sort)
+  [ $n = 6 ] || { echo "jni-from: $n libraries in $jar, expected 6" >&2; exit 1; }
+}
+
+do_sha1_manifest() { # <repo> <out>: every file's sha1, and the spot-check list (Markdown) on stdout
+  local repo="${3:?sha1-manifest <work> <repo> <manifest out>}" out="${4:?manifest out}"
+  python3 -I "$here/publish-checks.py" sha1 "$repo" "$RELEASE_GROUP" "$RELEASE_VERSION" "$out"
+}
+
 central_file() { # <artifact> <file name>: upstream's file at $ZIPLINE_TAG into $work/dl, checked against its .sha1
   local url="https://repo1.maven.org/maven2/app/cash/zipline/$1/$ZIPLINE_TAG/$2" f="$work/dl/$2"
   mkdir -p "$work/dl"
@@ -570,7 +600,7 @@ central_file() { # <artifact> <file name>: upstream's file at $ZIPLINE_TAG into 
   mv "$f.tmp" "$f"
 }
 
-upstream_central() { # into $work/dl: the names upstream publishes at $ZIPLINE_TAG, its zipline-jvm jar and AAR
+upstream_central() { # into $work/dl: the names upstream publishes at $ZIPLINE_TAG, its zipline-jvm jar, AAR and plugin jar
   local base="https://repo1.maven.org/maven2/app/cash/zipline" a
   mkdir -p "$work/dl"
   if [ ! -s "$work/dl/upstream-$ZIPLINE_TAG-artifacts.txt" ]; then
@@ -584,13 +614,15 @@ upstream_central() { # into $work/dl: the names upstream publishes at $ZIPLINE_T
   fi
   central_file zipline-jvm "zipline-jvm-$ZIPLINE_TAG.jar"
   central_file zipline-android-ndk "zipline-android-ndk-$ZIPLINE_TAG.aar"
+  central_file zipline-gradle-plugin "zipline-gradle-plugin-$ZIPLINE_TAG.jar"
 }
 
 check_release() { # <repo> [signed]: check-release.py on what release published there (and the listing)
   upstream_central
   python3 -I "$here/check-release.py" "$1" "$RELEASE_GROUP" "$RELEASE_VERSION" "$ZIPLINE_TAG" \
     "$work/dl/upstream-$ZIPLINE_TAG-artifacts.txt" "$work/dl/zipline-jvm-$ZIPLINE_TAG.jar" \
-    "$work/dl/zipline-android-ndk-$ZIPLINE_TAG.aar" "$SOURCE_REF" "${2:-unsigned}"
+    "$work/dl/zipline-android-ndk-$ZIPLINE_TAG.aar" "$work/dl/zipline-gradle-plugin-$ZIPLINE_TAG.jar" \
+    "$SOURCE_REF" "${2:-unsigned}"
 }
 
 do_check_capabilities() { # <repo>: a pure fork classpath resolves; one mixed with upstream fails
@@ -614,8 +646,13 @@ do_jvm_test_dist() { # step 4: Zipline's JVM tests as a distribution, run on eve
 }
 
 do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEASE_VERSION
-  local repo="${3:?release <work> <empty maven repo dir> [--central]}" central="${4:-}"
+  local repo="${3:?release <work> <empty maven repo dir> [--central <tested repo>]}" central="${4:-}" tested="${5:-}"
   [ -z "$central" ] || [ "$central" = --central ] || { echo "release: unknown argument $central" >&2; exit 2; }
+  if [ "$central" = --central ]; then
+    # What goes to Central must carry the native libraries the tests ran with (review 2 of PR #289, N3).
+    [ -n "$tested" ] && [ -d "$tested" ] || { echo "release --central: give the tested repository (the fork job's) after --central" >&2; exit 2; }
+    tested="$(cd "$tested" && pwd)"
+  fi
   [ -f "$zl/zipline/native/quickjs/dtoa.c" ] || { echo "run engine first" >&2; exit 1; }
   [ -n "$(find "$zl/zipline/src/jvmMain/resources/jni" -name '*.dll' 2>/dev/null)" ] \
     || { echo "release: run jni-all first (zipline-jvm carries every host's engine, built with zig)" >&2; exit 1; }
@@ -645,6 +682,7 @@ do_release() { # step 4: every Zipline artifact as $RELEASE_GROUP:<name>:$RELEAS
   zipline_gradle "${props[@]}" "-PziplineForkReleaseRepo=$repo" publishAllPublicationsToForkReleaseRepository
   check_release "$repo" "$signed"
   [ "$central" = --central ] || return 0
+  python3 -I "$here/publish-checks.py" natives "$tested" "$repo" "$RELEASE_GROUP" "$RELEASE_VERSION"
   # Maven Central only after the same build's outputs passed the check above (the tasks are up to
   # date in this checkout, so this uploads what was checked), in review mode
   # (zipline-build.init.gradle): the deployment waits in the Central Portal until someone compares
@@ -686,6 +724,10 @@ case "$cmd" in
   results) do_results "$@" ;;
   publish) do_publish "$@" ;;
   jni-all) do_jni_all ;;
+  jni-from) do_jni_from "$@" ;;
+  sha1-manifest) do_sha1_manifest "$@" ;;
+  check-natives) python3 -I "$here/publish-checks.py" natives "${3:?check-natives <work> <tested repo> <repo>}" \
+    "${4:?check-natives <work> <tested repo> <repo>}" "$RELEASE_GROUP" "$RELEASE_VERSION" ;;
   release) do_release "$@" ;;
   check-release) check_release "${3:?check-release <work> <repo release wrote> [signed]}" "${4:-unsigned}" ;;
   check-capabilities) do_check_capabilities "$@" ;;

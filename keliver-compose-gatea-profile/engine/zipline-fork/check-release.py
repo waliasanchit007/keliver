@@ -5,11 +5,11 @@
 #
 #   check-release.py <repo> <group> <version> <upstream version> \
 #                    <upstream artifact list> <upstream zipline-jvm jar> <upstream zipline-android-ndk aar> \
-#                    <source ref> <signed|unsigned>
+#                    <upstream zipline-gradle-plugin jar> <source ref> <signed|unsigned>
 #
-# apply.sh fetches the last three from Maven Central with curl (so the machine's trust store
+# apply.sh fetches the upstream files from Maven Central with curl (so the machine's trust store
 # applies): the names upstream publishes at <upstream version>, one per line, and its zipline-jvm
-# jar and zipline-android-ndk AAR, each checked against its .sha1.
+# jar, zipline-android-ndk AAR and zipline-gradle-plugin jar, each checked against its .sha1.
 #
 # An engine library is told apart by the atom "BigInt64Array": QuickJS 2026 always has BigInt, and
 # Zipline built QuickJS 2021 without CONFIG_BIGNUM, which is the only way 2021 has it. Upstream's own
@@ -27,11 +27,15 @@
 #   - Maven Central's file rules: an artifact whose POM packaging is not `pom` has its main file,
 #     a -sources.jar and a -javadoc.jar; every file has .md5 and .sha1; with `signed`, every file
 #     has its .asc signature;
-#   - every jar, AAR and klib carries META-INF/LICENSE-QuickJS.txt (QuickJS's MIT notice) and the
-#     fork's META-INF/NOTICE;
+#   - every jar, AAR and klib carries META-INF/<module>/LICENSE-QuickJS.txt (QuickJS's MIT notice;
+#     <module> is the Gradle project, the artifact name without its platform suffix) and the fork's
+#     META-INF/NOTICE, one copy of each;
 #   - zipline-jvm carries the same JNI libraries as upstream's jar, each the new engine;
 #   - zipline-android-ndk's AAR has libquickjs.so for its four ABIs, each the new engine;
 #   - each Kotlin/Native klib of `zipline` carries the engine's bitcode (cklib);
+#   - zipline-jvm's and the Gradle plugin's classes are no newer a class-file version than
+#     upstream's (the release is built on JDK 21, .java-version, and Gradle builds may run on 17: a
+#     module without a pinned bytecode target would otherwise need the newer JDK);
 #   - the Gradle plugin's jar declares both plugin ids, names no app.cash.zipline coordinate, and its
 #     BuildConfig's constants name the fork: KOTLIN_PLUGIN_GROUP and ziplineGroup are <group>,
 #     KOTLIN_PLUGIN_VERSION and ziplineVersion are <version> (the compiler plugin and the CLI that
@@ -44,7 +48,7 @@ import sys
 import zipfile
 
 (repo, group, version, upstream_version, upstream_list, upstream_jar, upstream_aar,
- source_ref, signed) = sys.argv[1:10]
+ upstream_plugin_jar, source_ref, signed) = sys.argv[1:11]
 if signed not in ("signed", "unsigned"):
     raise SystemExit("check-release: the last argument is signed or unsigned, not %r" % signed)
 UPSTREAM_GROUP = "app.cash.zipline"
@@ -52,8 +56,10 @@ MARKER = group + ".gradle.plugin"
 UPSTREAM_MARKER = UPSTREAM_GROUP + ".gradle.plugin"
 ANDROID_ABIS = ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"]
 NEW_ENGINE_ATOM = b"BigInt64Array"
-NOTICES = {"META-INF/LICENSE-QuickJS.txt": b"Permission is hereby granted",
-           "META-INF/NOTICE": b"Keliver's fork of Zipline"}
+LICENSE_ENTRY = re.compile(r"META-INF/([^/]+)/LICENSE-QuickJS\.txt$")
+LICENSE_NEEDLE = b"Permission is hereby granted"
+NOTICE_ENTRY = "META-INF/NOTICE"
+NOTICE_NEEDLE = b"Keliver's fork of Zipline"
 FORK_DIR = "https://github.com/waliasanchit007/keliver/tree/%s/keliver-compose-gatea-profile/engine/zipline-fork" % source_ref
 CHECKSUMS = (".md5", ".sha1", ".sha256", ".sha512")
 errors = []
@@ -259,17 +265,55 @@ for p in files:
     if not p.endswith((".jar", ".aar", ".klib")):
         continue
     archives += 1
+    name = os.path.basename(p)
+    artifact = os.path.basename(os.path.dirname(os.path.dirname(p)))
     with zipfile.ZipFile(p) as z:
-        entries = z.namelist()
-        for entry, needle in NOTICES.items():
-            copies = [i for i in z.infolist() if i.filename == entry]
+        infos = z.infolist()
+        notices = [i for i in infos if i.filename == NOTICE_ENTRY]
+        licences = [i for i in infos if LICENSE_ENTRY.match(i.filename)]
+        for what, copies, needle in (("META-INF/NOTICE", notices, NOTICE_NEEDLE),
+                                     ("META-INF/<module>/LICENSE-QuickJS.txt", licences, LICENSE_NEEDLE)):
             if not copies:
-                fail("%s has no %s" % (os.path.basename(p), entry))
-            elif not any(needle in z.open(i).read() for i in copies):
-                fail("%s: %s is not the fork's" % (os.path.basename(p), entry))
+                fail("%s has no %s" % (name, what))
             elif len(copies) > 1:
-                fail("%s has %d copies of %s" % (os.path.basename(p), len(copies), entry))
-print("check-release: %d jars, AARs and klibs, each with %s" % (archives, " and ".join(sorted(NOTICES))))
+                fail("%s has %d copies of %s: %s" % (name, len(copies), what, ", ".join(i.filename for i in copies)))
+            elif needle not in z.open(copies[0]).read():
+                fail("%s: %s is not the fork's" % (name, copies[0].filename))
+        # Under its own module's name (an artifact is <module> or <module>-<platform>), so two of the
+        # fork's archives never carry the same path; the old shared path is gone.
+        for i in licences:
+            module = LICENSE_ENTRY.match(i.filename).group(1)
+            if artifact != module and not artifact.startswith(module + "-"):
+                fail("%s: %s is not under its module's name (artifact %s)" % (name, i.filename, artifact))
+        if "META-INF/LICENSE-QuickJS.txt" in z.namelist():
+            fail("%s has META-INF/LICENSE-QuickJS.txt, a path every module would share" % name)
+print("check-release: %d jars, AARs and klibs, each with META-INF/NOTICE and META-INF/<module>/LICENSE-QuickJS.txt"
+      % archives)
+
+
+def class_major(z):
+    """The highest class-file major version in a jar (Java 8 is 52, 17 is 61, 21 is 65), ignoring
+    multi-release entries under META-INF/versions/."""
+    majors = [struct.unpack_from(">H", z.read(n), 6)[0] for n in z.namelist()
+              if n.endswith(".class") and not n.startswith("META-INF/")]
+    return max(majors) if majors else None
+
+
+# 3d. Class-file versions no newer than upstream's (review 2 of PR #289, L3).
+for a, theirs_path in (("zipline-jvm", upstream_jar), ("zipline-gradle-plugin", upstream_plugin_jar)):
+    mine_path = artifact_file(a, "jar")
+    if not os.path.exists(mine_path):
+        continue  # Reported below.
+    with zipfile.ZipFile(mine_path) as z, zipfile.ZipFile(theirs_path) as u:
+        mine_major, theirs_major = class_major(z), class_major(u)
+    if mine_major is None or theirs_major is None:
+        fail("%s: no classes to compare (fork's %s, upstream's %s)" % (a, mine_major, theirs_major))
+    elif mine_major > theirs_major:
+        fail("%s: class-file major version %d (Java %d), newer than upstream's %d (Java %d)"
+             % (a, mine_major, mine_major - 44, theirs_major, theirs_major - 44))
+    else:
+        print("check-release: %s classes at class-file major %d (Java %d); upstream's %d (Java %d)"
+              % (a, mine_major, mine_major - 44, theirs_major, theirs_major - 44))
 
 # 4. zipline-jvm's JNI libraries: the same entries as upstream's jar, built from the new engine.
 jar = artifact_file("zipline-jvm", "jar")

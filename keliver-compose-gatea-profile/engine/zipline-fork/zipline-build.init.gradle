@@ -62,13 +62,17 @@ allprojects { p ->
 }
 
 // The licence notices go into every archive the fork's build writes (review of PR #289, M2):
-// META-INF/LICENSE-QuickJS.txt, QuickJS's MIT notice exactly as quickjs.c carries it (the engine is
-// compiled into the JVM jar's six JNI libraries, the AAR's four .so files and the klibs' bitcode, and
-// MIT requires the notice to go with copies), and META-INF/NOTICE (Zipline, Apache-2.0, modified by
-// Keliver; where the patch set is). Jars, sources and javadoc jars and the AAR are Gradle archive
-// tasks, given the files with `from`; the klibs are written by the Kotlin/Native compiler and
-// cinterop, so the notices are added to each .klib (a zip) after the task that wrote it, before the
-// Gradle module metadata records its checksums. check-release.py checks every archive has both.
+// META-INF/<module>/LICENSE-QuickJS.txt, QuickJS's MIT notice exactly as quickjs.c carries it (the
+// engine is compiled into the JVM jar's six JNI libraries, the AAR's four .so files and the klibs'
+// bitcode, and MIT requires the notice to go with copies), and META-INF/NOTICE (Zipline, Apache-2.0,
+// modified by Keliver; where the patch set is). <module> is the Gradle project's name (the artifact
+// name without its platform suffix: zipline-jvm's is zipline), so two of the fork's jars on one
+// Android app's java resources never carry the same path (Android's packaging refuses duplicates,
+// and excludes META-INF/NOTICE by default but not this file; review 2 of PR #289, L4). Jars, sources
+// and javadoc jars and the AAR are Gradle archive tasks, given the files with `from`; the klibs are
+// written by the Kotlin/Native compiler and cinterop, so the notices are added to each .klib (a zip)
+// after the task that wrote it, before the Gradle module metadata records its checksums.
+// check-release.py checks every archive has both, the licence under its own module's name.
 def forkUrl = 'https://github.com/waliasanchit007/keliver'
 def forkPath = 'keliver-compose-gatea-profile/engine/zipline-fork'
 // -PziplineForkSourceRef: the git ref the POMs and the NOTICE point at (the release tag; apply.sh
@@ -101,25 +105,27 @@ in $forkDir
 (patches/zipline-1.28.0.patch).
 
 QuickJS $qjsVersion: Copyright (c) Fabrice Bellard and Charlie Gordon. Licensed under the MIT licence
-(META-INF/LICENSE-QuickJS.txt). Modified by Keliver contributors, 2026
+(META-INF/<module>/LICENSE-QuickJS.txt in this archive). Modified by Keliver contributors, 2026
 (patches/quickjs-$qjsVersion-asuintn.patch).
 """
 }
-def addNotices = { File archive ->
+def addNotices = { File archive, String module ->
   def fs = java.nio.file.FileSystems.newFileSystem(java.net.URI.create('jar:' + archive.toURI()), [:])
   try {
     def meta = fs.getPath('META-INF')
-    java.nio.file.Files.createDirectories(meta)
-    new File(noticeDir, 'META-INF').listFiles().each { f ->
-      java.nio.file.Files.copy(f.toPath(), meta.resolve(f.name), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-    }
+    java.nio.file.Files.createDirectories(meta.resolve(module))
+    def replace = java.nio.file.StandardCopyOption.REPLACE_EXISTING
+    java.nio.file.Files.copy(new File(noticeDir, 'META-INF/NOTICE').toPath(), meta.resolve('NOTICE'), replace)
+    java.nio.file.Files.copy(new File(noticeDir, 'META-INF/LICENSE-QuickJS.txt').toPath(),
+      meta.resolve(module).resolve('LICENSE-QuickJS.txt'), replace)
   } finally {
     fs.close()
   }
 }
 allprojects { p ->
   p.tasks.withType(AbstractArchiveTask).configureEach { t ->
-    t.from(p.provider { noticeDir }) { s -> s.include('META-INF/**') }
+    t.from(p.provider { noticeDir }) { s -> s.include('META-INF/NOTICE') }
+    t.from(p.provider { new File(noticeDir, 'META-INF/LICENSE-QuickJS.txt') }) { s -> s.into("META-INF/${p.name}") }
   }
   p.tasks.configureEach { t ->
     def type = t.class.name
@@ -128,7 +134,7 @@ allprojects { p ->
     t.doLast {
       t.outputs.files.files.each { o ->
         def klibs = o.isFile() ? [o] : (o.isDirectory() ? p.fileTree(o) { include '*.klib', '*/*.klib' }.files : [])
-        klibs.findAll { it.name.endsWith('.klib') }.each { addNotices(it) }
+        klibs.findAll { it.name.endsWith('.klib') }.each { addNotices(it, p.name) }
       }
     }
   }
@@ -181,11 +187,19 @@ if (startParameter.projectProperties.containsKey('ziplineForkRelease')) {
       def central = g.allTasks.findAll { it.name.endsWith('ToMavenCentralRepository') }
       if (central.isEmpty()) return
       def automatic = g.allTasks.findAll { it.name == automaticTask }
+      // None in the graph means the switch is no longer that task (a vanniktech upgrade renamed or
+      // moved it), so disabling it proves nothing: stop rather than upload in an unknown mode
+      // (review 2 of PR #289, L1). The Portal showing VALIDATED, not PUBLISHED, stays the real check.
+      if (automatic.isEmpty()) {
+        throw new GradleException("zipline-build.init.gradle: ${central.size()} Maven Central publication task(s) but no $automaticTask " +
+          "in the task graph; review mode cannot be shown (has vanniktech's maven-publish plugin changed?)")
+      }
       if (automatic.any { it.enabled }) {
         throw new GradleException("zipline-build.init.gradle: review mode, but $automaticTask is enabled in ${automatic.findAll { it.enabled }*.path}")
       }
-      println "zipline-fork: Maven Central in REVIEW mode: ${central.size()} publications to one USER_MANAGED deployment, " +
-        "${automatic.size()} $automaticTask task(s) disabled; nothing is released until someone presses Publish in the Central Portal"
+      println "zipline-fork: Maven Central in REVIEW mode: ${central.size()} publication task(s); all ${automatic.size()} " +
+        "$automaticTask task(s), the only switch to automatic release, disabled; the Central Portal must show the deployment " +
+        "VALIDATED, not PUBLISHED, until someone presses Publish"
     }
   }
   gradle.rootProject { root ->
