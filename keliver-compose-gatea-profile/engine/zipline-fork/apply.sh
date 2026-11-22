@@ -11,7 +11,8 @@
 #                             zipline/src/jvmMain/resources/jni; --warnings builds with -Wall, not -w
 #   apply.sh qjs     <work>   build the patched engine's command-line qjs twice: 64-bit BigInt limbs and
 #                             32-bit limbs (as on a 32-bit host such as armeabi-v7a), for check-bigint
-#   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and both qjs builds; fail on any difference
+#   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and both qjs builds; fail on any difference;
+#                             and size-guards.js on every build, which must print size-guards.expected
 #   apply.sh android <work>   build the Android AAR (zipline-android-ndk: Zipline's CMake and release
 #                             flags, -fwrapv) for arm64-v8a, armeabi-v7a, x86_64 and x86 with the NDK, and
 #                             check each ABI's libquickjs.so is in it, built with those flags, and (64-bit
@@ -22,7 +23,9 @@
 #   apply.sh check-bigint-device <work> [serial]   run ../bigint-ops.js on a device or emulator over adb
 #                             (serial, else ANDROID_SERIAL) for every ABI it supports; on a 32-bit ABI
 #                             this exercises NaN-boxed values (JS_NAN_BOXING) and 32-bit limbs; both
-#                             builds must start, and the fork's must exit 0
+#                             builds must start, and the fork's must exit 0; then size-guards.js,
+#                             whose expected lines the fork's build must print on every ABI and the
+#                             unpatched release must not on a 32-bit ABI (the guards' only real run)
 #   apply.sh ios     <work>   step 3: build the iOS targets (iosArm64, iosSimulatorArm64) with Zipline's own
 #                             build: cklib's QuickJS bitcode (checks each compile line has Zipline's flags
 #                             and -fwrapv), the patched nativeMain and quickjs.def, and the test executables
@@ -114,6 +117,8 @@ ZIG_SHA256_aarch64_macos=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de1524
 ZIG_SHA256_x86_64_macos=0387557ed1877bc6a2e1802c8391953baddba76081876301c522f52977b52ba7
 ZIG_SHA256_x86_64_linux=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
 ZIG_SHA256_aarch64_linux=ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17
+# size-guards.js's memory limit (64 MiB): over it, a 64-bit host's 4 GiB tables fail as out of memory.
+SIZE_GUARDS_LIMIT=67108864
 # Android: an installed NDK (AGP would otherwise download its default into the shared SDK), and the
 # ABIs zipline-android-ndk builds (its abiFilters). qjs-android takes the target (and Zipline's
 # minSdk) from the AAR's own compile line.
@@ -204,6 +209,12 @@ do_qjs() { # the forked engine's command-line qjs, from the same tarball and eng
       || { tail -30 "$work/build/$name/build.log" >&2; exit 1; }
     echo "built $work/build/$name/qjs ($limbs-bit BigInt limbs)"
   done
+  # android/run-js.c, check-bigint-device's runner, on this Mac and the patched engine: check-bigint
+  # runs size-guards.js through its --memory-limit too, so every fork job compiles and runs it.
+  mkdir -p "$work/build/run-js"
+  clang -std=gnu99 -O2 -w -fwrapv -D_GNU_SOURCE "-DCONFIG_VERSION=\"$QJS_VERSION\"" -I"$s" "$here/android/run-js.c" \
+    "$s/cutils.c" "$s/dtoa.c" "$s/libregexp.c" "$s/libunicode.c" "$s/quickjs.c" -lm -o "$work/build/run-js/run-js"
+  echo "built $work/build/run-js/run-js (android/run-js.c)"
 }
 
 do_check_bigint() {
@@ -224,6 +235,23 @@ do_check_bigint() {
     else
       echo "check-bigint: $name differs from Node on $(grep -c '^-[^-]' "$out/$name.diff") of $lines lines ($out/$name.diff)"
       case "$name" in *unpatched) ;; *) fail=1 ;; esac
+    fi
+  done
+  # size-guards.js, the fork's 32-bit size guards, under a memory limit: on this 64-bit Mac every
+  # build, patched or not, must print size-guards.expected (each 4 GiB table fails on the limit, as
+  # "out of memory"). The 32-bit case, where only the guard gives that line, is check-bigint-device's.
+  # Also through run-js (the same option), the runner check-bigint-device uses.
+  local exe
+  for name in qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched run-js; do
+    exe="$work/build/$name/qjs"; [ "$name" = run-js ] && exe="$work/build/run-js/run-js"
+    "$exe" --memory-limit "$SIZE_GUARDS_LIMIT" "$here/size-guards.js" > "$out/$name-size-guards.txt" 2> "$out/$name-size-guards.err" &
+    local pid=$! t=0
+    while kill -0 "$pid" 2>/dev/null && [ $t -lt 60 ]; do sleep 1; t=$((t + 1)); done
+    kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true
+    if diff -u "$here/size-guards.expected" "$out/$name-size-guards.txt" > "$out/$name-size-guards.diff"; then
+      echo "check-bigint: $name size-guards.js matches size-guards.expected: out of memory, then the context still works (64-bit: the memory limit)"
+    else
+      echo "check-bigint: $name size-guards.js differs from size-guards.expected ($out/$name-size-guards.diff; stderr: $(head -3 "$out/$name-size-guards.err" | tr '\n' ' '))" >&2; fail=1
     fi
   done
   return $fail
@@ -370,6 +398,7 @@ do_check_bigint_device() {
   trap dev_cleanup EXIT
   "${adb[@]}" shell "rm -rf $dir && mkdir -p $dir" >/dev/null
   "${adb[@]}" push "$ops" "$dir/bigint-ops.js" >/dev/null # a failed push stops the script
+  "${adb[@]}" push "$here/size-guards.js" "$dir/size-guards.js" >/dev/null
   for abi in $ANDROID_ABIS; do
     case ",$abis," in *",$abi,"*) ;; *) echo "check-bigint-device: $abi: not supported by $serial, not run"; continue ;; esac
     for name in run-js run-js-unpatched; do
@@ -396,6 +425,33 @@ do_check_bigint_device() {
       fi
       # The fork's build must also exit cleanly (an exception after the last line would not show in the diff).
       case "$name" in *unpatched) ;; *) [ "$rc" = 0 ] || { echo "check-bigint-device: $abi $name exited ${rc:-?}" >&2; fail=1; } ;; esac
+    done
+    # size-guards.js under the memory limit (its header comment): the fork's build prints
+    # size-guards.expected on every ABI. On a 32-bit ABI only the guard gives those lines (the
+    # unpatched release wraps the size and writes past an 8-byte table: it must differ, the control);
+    # on a 64-bit ABI the 4 GiB tables fail on the limit, patched or not.
+    local bits
+    case "$abi" in armeabi-v7a|x86) bits=32 ;; *) bits=64 ;; esac
+    for name in run-js run-js-unpatched; do
+      "${adb[@]}" shell "cd $dir && timeout 120 ./$abi-$name --memory-limit $SIZE_GUARDS_LIMIT size-guards.js 2> $abi-$name-sg.err; echo \$? > $abi-$name-sg.rc" \
+        > "$out/$abi-$name-size-guards.txt" || true
+      rc="$("${adb[@]}" shell cat "$dir/$abi-$name-sg.rc" 2>/dev/null | tr -d '\r\n')" || true
+      tr -d '\r' < "$out/$abi-$name-size-guards.txt" > "$out/$abi-$name-size-guards.tmp" && mv "$out/$abi-$name-size-guards.tmp" "$out/$abi-$name-size-guards.txt"
+      if diff -u "$here/size-guards.expected" "$out/$abi-$name-size-guards.txt" > "$out/$abi-$name-size-guards.diff"; then
+        case "$name/$bits" in
+          *unpatched/32) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected: the control did not fail" >&2; fail=1 ;;
+          *unpatched/64) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected (64-bit: the memory limit, as expected)" ;;
+          */32) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected, exit $rc (32-bit: the guard)" ;;
+          *) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected, exit $rc (64-bit: the memory limit)" ;;
+        esac
+      else
+        case "$name/$bits" in
+          *unpatched/32) echo "check-bigint-device: $abi $name size-guards.js differs from size-guards.expected, exit ${rc:-?}, as expected (no guard on a 32-bit ABI)" ;;
+          *unpatched/64) echo "check-bigint-device: $abi $name size-guards.js: NOTE differs from size-guards.expected on a 64-bit ABI, exit ${rc:-?} ($out/$abi-$name-size-guards.diff)" ;;
+          *) echo "check-bigint-device: $abi $name size-guards.js differs from size-guards.expected, exit ${rc:-?} ($out/$abi-$name-size-guards.diff)" >&2; fail=1 ;;
+        esac
+      fi
+      case "$name" in *unpatched) ;; *) [ "$rc" = 0 ] || { echo "check-bigint-device: $abi $name size-guards.js exited ${rc:-?}" >&2; fail=1; } ;; esac
     done
     ran=$((ran + 1))
     case "$abi" in armeabi-v7a|x86) ran32=$((ran32 + 1)) ;; esac

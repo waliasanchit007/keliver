@@ -169,9 +169,20 @@ Found by reading the code; none of the wraps was reproduced on a 32-bit build.
 | Function | Trigger on a 32-bit host | Guard |
 |---|---|---|
 | `js_proxy_get_own_property_names` | an `ownKeys` trap returning `{ length: 2 ** 29 + 1 }` (`Reflect.ownKeys`, `Object.keys`, `for…in`, …). Upstream's e25861c limits the length to 2^31 - 1, which does not prevent the wrap | a RangeError for a length over `JS_PROXY_OWNKEYS_MAX` (2^27) **on every host**, before allocating: 2^27 keys is a 1 GiB table, and the duplicate-key check after it is quadratic, so no result near that size ever finished anyway. Unguarded, a 64-bit host allocated 4 GiB for that length before failing. Tested on the JVM (`proxyOwnKeysWithAHugeLengthThrows`) |
-| `JS_GetOwnPropertyNamesInternal` | `Object.getOwnPropertyNames(new String(s))` with `s` over 2^29 characters (strings go to 2^30 - 1): its count was limited to 2^31 - 1 only | the existing out-of-memory exit when the table cannot be addressed; no change on 64-bit |
-| `expand_fast_array` | `Array.prototype.toReversed.call({ length: 2 ** 29 + 1 })`, and `toSorted`, `toSpliced` and `with` (`js_allocate_fast_array` takes any length up to 2^31 - 1) | out of memory when the array cannot be addressed; no change on 64-bit |
-| `js_typed_array_sort` (with a comparator) | `new Uint8Array(2 ** 30).sort(f)`: the index table is 4 bytes per element | out of memory when the table cannot be addressed; no change on 64-bit |
+| `JS_GetOwnPropertyNamesInternal` | any object with over 2^29 own keys, its count limited to 2^31 - 1 only: a typed array (`Object.keys(new Uint8Array(2 ** 29))`, a 512 MiB buffer) or another fast array, or a String object (`Object.getOwnPropertyNames(new String(s))` with `s` over 2^29 characters; strings go to 2^30 - 1) | the existing out-of-memory exit when the table cannot be addressed, on the total count; no change on 64-bit |
+| `expand_fast_array` | `Array.prototype.toReversed.call({ length: 2 ** 29 + 1 })`, and `toSorted`, `toSpliced` and `with` (`js_allocate_fast_array` takes any length up to 2^31 - 1) | out of memory when the array cannot be addressed; no change on 64-bit. Run on a device by `size-guards.js` (below) |
+| `js_typed_array_sort` (with a comparator) | `new Uint8Array(2 ** 30).sort(f)`: the index table is 4 bytes per element | out of memory when the table cannot be addressed, checked before the copy of the array is allocated; no change on 64-bit |
+
+**Where they run.** The Proxy cap is tested on every host (above). The 32-bit wraps need a 32-bit
+host: `size-guards.js` (`toReversed`, `toSorted`, `toSpliced` and `with` on `{ length: 2 ** 29 + 1 }`,
+under a 64 MiB memory limit) must print `size-guards.expected`, "InternalError: out of memory" on
+each line, on every build. `check-bigint-device` runs it on each ABI a device or emulator has: on
+armeabi-v7a and x86 that line comes from the guard (the unpatched release, the control, must print
+something else: it writes past an 8-byte table); on a 64-bit ABI, and in `check-bigint` on the
+Mac's qjs builds (CI's `apply.sh all`), the 4 GiB table fails on the memory limit, patched or not,
+with the same line. The typed-array triggers are not in it: their 512 MiB and 1 GiB buffers fail
+on the limit first on every host. No CI job has a 32-bit ABI (the workflow has no emulator), so the
+32-bit run is `check-bigint-device`, by hand.
 
 Sites checked and left alone (the 2026-06-04 release's allocations sized by a count, and its
 `js_get_length32` callers):
