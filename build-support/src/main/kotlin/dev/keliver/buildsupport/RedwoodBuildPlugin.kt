@@ -116,6 +116,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
     target.configureCommonSpotless()
     target.configureCommonTesting()
     target.configureSkikoForWebTests()
+    target.configureJsTestTimeouts()
     target.configureCommonAndroid()
     target.configureCommonKotlin()
   }
@@ -437,13 +438,13 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         project.applyKotlinMultiplatform {
           androidTarget().publishLibraryVariants("release")
           iosTargets()
-          js().nodejsWithTestTimeout()
+          js().nodejs()
           jvm()
         }
       }
       TreehouseGuest -> {
         project.applyKotlinMultiplatform {
-          js().nodejsWithTestTimeout()
+          js().nodejs()
           jvm() // For easier testing.
         }
       }

@@ -98,39 +98,16 @@ enum class JsTests : TargetModifier {
   fun applyTo(dsl: KotlinJsTargetDsl) {
     when (this) {
       Browser -> dsl.browser()
-      NodeJs -> dsl.nodejsWithTestTimeout()
+      NodeJs -> dsl.nodejs()
       Both -> dsl.apply {
         browser()
-        nodejsWithTestTimeout()
+        nodejs()
       }
     }
   }
 
   override val key get() = Companion
   companion object : TargetModifier.Key<JsTests>
-}
-
-/**
- * Mocha's per-test timeout for every Node.js test task (`jsNodeTest`); mocha's own default is 2 s.
- *
- * The first test in a task that reads a stack trace pays for loading source maps: the Kotlin/JS
- * test runner maps stacks to Kotlin lines, and the maps load lazily, file by file (Compose
- * runtime's alone is 1.2 MB). Compose logs the stack of every failed composition, so a test that
- * checks a composable's `require` triggers the loading inside its own timeout. Locally that costs
- * ~0.2 s and the composition itself 0.6 ms; on a loaded hosted macOS runner it took 3.8 s and
- * failed `KeliverNavPreparationTest.keysAreChecked`. A hung test still fails, just later.
- *
- * A module that needs longer sets its own `useMocha { timeout = … }` after `redwoodBuild { }`
- * (keliver-leak-detector does); a later `useMocha` reuses this framework, so it overrides the value.
- */
-internal const val NODE_JS_TEST_TIMEOUT = "10s"
-
-internal fun KotlinJsTargetDsl.nodejsWithTestTimeout() {
-  nodejs {
-    testTask { task ->
-      task.useMocha { timeout = NODE_JS_TEST_TIMEOUT }
-    }
-  }
 }
 
 /**
