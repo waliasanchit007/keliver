@@ -1,6 +1,6 @@
 diff -ru a/libunicode.c b/libunicode.c
---- a/libunicode.c	2026-11-23 04:02:17
-+++ b/libunicode.c	2026-11-23 04:02:17
+--- a/libunicode.c	2026-11-23 04:37:05
++++ b/libunicode.c	2026-11-23 04:37:05
 @@ -1390,7 +1390,9 @@
          cr_free(cr1);
          cr_free(cr2);
@@ -13,8 +13,8 @@ diff -ru a/libunicode.c b/libunicode.c
  
  #define M(id) (1U << UNICODE_GC_ ## id)
 diff -ru a/quickjs.c b/quickjs.c
---- a/quickjs.c	2026-11-23 04:02:17
-+++ b/quickjs.c	2026-11-23 04:02:17
+--- a/quickjs.c	2026-11-23 04:37:05
++++ b/quickjs.c	2026-11-23 04:37:05
 @@ -4546,6 +4546,8 @@
          *plen = str_new->len;
      return (const char *)str_new->u.str8;
@@ -82,7 +82,25 @@ diff -ru a/quickjs.c b/quickjs.c
  }
  
  /* Note: it is important that no exception is returned by this function */
-@@ -8705,7 +8715,12 @@
+@@ -8593,6 +8603,17 @@
+     }
+ }
+ 
++/* Keliver fork (NF2): not in bellard/quickjs. TRUE when 'n' elements of
++   'elt_size' bytes cannot be addressed: their size would wrap size_t,
++   which a 32-bit count can do only on a 32-bit host. A function, so that
++   on a 64-bit target the comparison is not one of a 32-bit count with a
++   constant it can never reach (-Wtautological-constant-out-of-range-compare,
++   an error in Zipline's iOS build). */
++static inline BOOL js_size_overflows(uint64_t n, size_t elt_size)
++{
++    return n > SIZE_MAX / elt_size;
++}
++
+ /* return < 0 in case if exception, 0 if OK. ptab and its atoms must
+    be freed by the user. */
+ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+@@ -8705,7 +8726,12 @@
      if (atom_count < sym_keys_count)
          goto add_overflow;
      atom_count += exotic_keys_count;
@@ -92,11 +110,11 @@ diff -ru a/quickjs.c b/quickjs.c
 +       2^29, e.g. a String object over a 2^29-character string, and the
 +       loops below wrote past the table */
 +    if (atom_count < exotic_keys_count || atom_count > INT32_MAX ||
-+        atom_count > SIZE_MAX / sizeof(JSPropertyEnum)) {
++        js_size_overflows(atom_count, sizeof(JSPropertyEnum))) {
      add_overflow:
          JS_ThrowOutOfMemory(ctx);
          JS_FreePropertyEnum(ctx, tab_exotic, exotic_count);
-@@ -9018,7 +9033,11 @@
+@@ -9018,7 +9044,11 @@
          if (JS_IsException(str))
              return JS_ATOM_NULL;
          if (JS_VALUE_GET_TAG(str) == JS_TAG_SYMBOL) {
@@ -109,7 +127,7 @@ diff -ru a/quickjs.c b/quickjs.c
          } else {
              atom = JS_NewAtomStr(ctx, JS_VALUE_GET_STRING(str));
          }
-@@ -9528,6 +9547,15 @@
+@@ -9528,6 +9558,15 @@
      JSValue *new_array_prop;
      /* XXX: potential arithmetic overflow */
      new_size = max_int(new_len, p->u.array.u1.size * 3 / 2);
@@ -118,14 +136,14 @@ diff -ru a/quickjs.c b/quickjs.c
 +       8 bytes there), and js_allocate_fast_array's callers then filled a
 +       few-byte array: Array.prototype.toReversed.call({ length: 2 ** 29 + 1 }),
 +       and toSorted, toSpliced and with */
-+    if (new_size > SIZE_MAX / sizeof(JSValue)) {
++    if (js_size_overflows(new_size, sizeof(JSValue))) {
 +        JS_ThrowOutOfMemory(ctx);
 +        return -1;
 +    }
      new_array_prop = js_realloc2(ctx, p->u.array.u.values, sizeof(JSValue) * new_size, &slack);
      if (!new_array_prop)
          return -1;
-@@ -10675,6 +10703,16 @@
+@@ -10675,6 +10714,16 @@
      return TRUE;
  }
  
@@ -142,7 +160,7 @@ diff -ru a/quickjs.c b/quickjs.c
  /* shortcut to add or redefine a new property value */
  int JS_DefinePropertyValue(JSContext *ctx, JSValueConst this_obj,
                             JSAtom prop, JSValue val, int flags)
-@@ -12373,10 +12411,12 @@
+@@ -12373,10 +12422,12 @@
          /* compute f so that 2^f <= abs(a) < 2^(f+1) */
          a_mant = js_bigint_get_mant_exp(ctx, &f, a);
          if (f != e) {
@@ -157,7 +175,7 @@ diff -ru a/quickjs.c b/quickjs.c
          } else {
              mant = (mant | ((uint64_t)1 << 52)) << 11; /* align to a_mant */
              if (a_mant < mant)
-@@ -14703,8 +14743,13 @@
+@@ -14703,8 +14754,13 @@
          /* return the value mod 2^64 */
          res = p->tab[0];
  #if JS_LIMB_BITS == 32
@@ -172,7 +190,7 @@ diff -ru a/quickjs.c b/quickjs.c
  #endif
          JS_FreeValue(ctx, val);
      }
-@@ -14809,7 +14854,11 @@
+@@ -14809,7 +14865,11 @@
                  {
                      JSBigIntBuf buf2;
                      JSBigInt *p2;
@@ -185,7 +203,7 @@ diff -ru a/quickjs.c b/quickjs.c
                      r = js_bigint_add(ctx, p1, p2, 0);
                  }
                  break;
-@@ -38555,14 +38604,15 @@
+@@ -38555,14 +38615,15 @@
  
  static JSValue JS_ReadBigInt(BCReaderState *s)
  {
@@ -204,7 +222,7 @@ diff -ru a/quickjs.c b/quickjs.c
      bc_read_trace(s, "len=%" PRId64 "\n", (int64_t)len);
      if (len == 0) {
          /* zero case */
-@@ -38571,7 +38621,7 @@
+@@ -38571,7 +38632,7 @@
      }
      p = js_bigint_new(s->ctx, (len - 1) / (JS_LIMB_BITS / 8) + 1);
      if (!p)
@@ -213,7 +231,7 @@ diff -ru a/quickjs.c b/quickjs.c
      for(i = 0; i < len / (JS_LIMB_BITS / 8); i++) {
  #if JS_LIMB_BITS == 32
          if (bc_get_u32(s, &v))
-@@ -38601,7 +38651,7 @@
+@@ -38601,7 +38662,7 @@
      bc_read_trace(s, "}\n");
      return JS_CompactBigInt(s->ctx, p);
   fail:
@@ -222,7 +240,7 @@ diff -ru a/quickjs.c b/quickjs.c
      return JS_EXCEPTION;
  }
  
-@@ -39013,7 +39063,10 @@
+@@ -39013,7 +39074,10 @@
              if (ret < 0)
                  goto fail;
          }
@@ -234,7 +252,7 @@ diff -ru a/quickjs.c b/quickjs.c
      }
      return obj;
   fail:
-@@ -39289,7 +39342,9 @@
+@@ -39289,7 +39353,9 @@
              if (bc_get_leb128(s, &val))
                  return JS_EXCEPTION;
              bc_read_trace(s, "%u\n", val);
@@ -245,7 +263,7 @@ diff -ru a/quickjs.c b/quickjs.c
                  return JS_ThrowSyntaxError(ctx, "invalid object reference (%u >= %u)",
                                             val, s->objects_count);
              }
-@@ -50989,6 +51044,13 @@
+@@ -50989,6 +51055,13 @@
      return -1;
  }
  
@@ -259,7 +277,7 @@ diff -ru a/quickjs.c b/quickjs.c
  static int js_proxy_get_own_property_names(JSContext *ctx,
                                             JSPropertyEnum **ptab,
                                             uint32_t *plen,
-@@ -51019,6 +51081,16 @@
+@@ -51019,6 +51092,16 @@
      len2 = 0;
      if (js_get_length32(ctx, &len, prop_array))
          goto fail;
@@ -268,7 +286,7 @@ diff -ru a/quickjs.c b/quickjs.c
 +       len > 2^29, so the loop below wrote past a few-byte table. Refuse
 +       lengths the table cannot hold, and anything over
 +       JS_PROXY_OWNKEYS_MAX on every host (see its definition). */
-+    if (len > JS_PROXY_OWNKEYS_MAX || len > SIZE_MAX / sizeof(tab[0])) {
++    if (len > JS_PROXY_OWNKEYS_MAX || js_size_overflows(len, sizeof(tab[0]))) {
 +        JS_ThrowRangeError(ctx, "proxy: too many properties in ownKeys result (only %d allowed)",
 +                           JS_PROXY_OWNKEYS_MAX);
 +        goto fail;
@@ -276,7 +294,7 @@ diff -ru a/quickjs.c b/quickjs.c
      if (len > 0) {
          tab = js_mallocz(ctx, sizeof(tab[0]) * len);
          if (!tab)
-@@ -53602,27 +53674,23 @@
+@@ -53602,27 +53685,23 @@
      obj = JS_NewObject(ctx);
      if (JS_IsException(obj))
          goto exception;
@@ -316,7 +334,7 @@ diff -ru a/quickjs.c b/quickjs.c
  }
  
  static JSValue js_promise_try(JSContext *ctx, JSValueConst this_val,
-@@ -56061,9 +56129,16 @@
+@@ -56061,9 +56140,16 @@
                                    JSValueConst this_val,
                                    int argc, JSValueConst *argv, int asIntN)
  {
@@ -334,7 +352,7 @@ diff -ru a/quickjs.c b/quickjs.c
      if (JS_ToIndex(ctx, &bits, argv[0]))
          return JS_EXCEPTION;
      a = JS_ToBigInt(ctx, argv[1]);
-@@ -56074,13 +56149,18 @@
+@@ -56074,13 +56160,18 @@
          res = __JS_NewShortBigInt(ctx, 0);
      } else if (JS_VALUE_GET_TAG(a) == JS_TAG_SHORT_BIG_INT) {
          /* fast case */
@@ -356,7 +374,7 @@ diff -ru a/quickjs.c b/quickjs.c
              v = v << shift;
              if (asIntN)
                  v = (int64_t)v >> shift;
-@@ -56089,30 +56169,49 @@
+@@ -56089,30 +56180,49 @@
              res = __JS_NewShortBigInt(ctx, v);
          }
      } else {
@@ -413,7 +431,7 @@ diff -ru a/quickjs.c b/quickjs.c
              JS_FreeValue(ctx, a);
              res = JS_CompactBigInt(ctx, r);
          }
-@@ -56840,8 +56939,14 @@
+@@ -56840,8 +56950,14 @@
  
      if (!abuf || abuf->detached)
          return;
@@ -429,7 +447,7 @@ diff -ru a/quickjs.c b/quickjs.c
      abuf->data = NULL;
      abuf->byte_length = 0;
      abuf->detached = TRUE;
-@@ -56981,6 +57086,10 @@
+@@ -56981,6 +57097,10 @@
          abuf->data = NULL;
          abuf->byte_length = 0;
          abuf->detached = TRUE;
@@ -440,14 +458,14 @@ diff -ru a/quickjs.c b/quickjs.c
          js_array_buffer_update_typed_arrays(abuf);
      }
      return res;
-@@ -58659,6 +58768,14 @@
+@@ -58659,6 +58779,14 @@
              memcpy(array, p->u.array.u.ptr, len * elt_size);
              
              /* array_idx is needed to have a stable sort */
 +            /* Keliver fork (NF2): not in bellard/quickjs. On a 32-bit host
 +               len * sizeof(array_idx[0]) wrapped for a 1-byte-element array
 +               of 2^30 or more elements (a 1 GiB buffer) */
-+            if ((size_t)len > SIZE_MAX / sizeof(array_idx[0])) {
++            if (js_size_overflows(len, sizeof(array_idx[0]))) {
 +                js_free(ctx, array);
 +                JS_ThrowOutOfMemory(ctx);
 +                return JS_EXCEPTION;
@@ -455,7 +473,7 @@ diff -ru a/quickjs.c b/quickjs.c
              array_idx = js_malloc(ctx, len * sizeof(array_idx[0]));
              if (!array_idx) {
                  js_free(ctx, array);
-@@ -60843,8 +60960,11 @@
+@@ -60843,8 +60971,11 @@
          goto fail;
      /* XXX: should use alias method in JSCFunctionListEntry */ //@@@
      typed_array_base_proto = JS_GetProperty(ctx, typed_array_base_func, JS_ATOM_prototype);
