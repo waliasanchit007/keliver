@@ -3106,24 +3106,43 @@ The owner's question: **is Keliver faster than Flutter?** Flutter can be added t
 (add-to-app); it was set aside earlier for the size it adds. Over the air Flutter needs Shorebird: on
 Android a patch replaces the compiled Dart library, so a patched screen runs ahead-of-time compiled,
 as fast as the shipped one; on iOS changed functions run in Shorebird's interpreter (an iPhone
-question, not run here). So on this phone **Flutter release (AOT) is the honest number for Flutter
-over the air on Android too.** Same Galaxy A12, same day, same app and process: native Compose,
-Keliver (Zipline 1.28.0 as shipped, with #286's host profile; and the BigInt fork as series G built
-it), and Flutter with both engine policies. No Shorebird account or service was used.
+question, not run here). So on this phone **Flutter release (AOT) stands for Flutter over the air on
+Android too**: that is reasoned from how Shorebird patches on Android, not measured; Shorebird's
+engine fork and its updater ran nowhere here, and what they add to a start is unknown. Same Galaxy
+A12, same day, same app and process: native Compose, Keliver (Zipline 1.28.0 as shipped, with #286's
+host profile; and the **BigInt fork, unreleased**, as series G built it), and Flutter with both
+engine policies. No Shorebird account or service was used.
 
-**Answer in one table** (medians; how each was measured is in the series below):
+**Answer in one table** (medians; how each was measured is in the series below; corrected after
+the review, see [Review fixes](#review-fixes-2026-11-22)):
 
-| Question | Native | Keliver 1.28.0 | Keliver BigInt | Flutter | Is Keliver faster than Flutter? |
+| Question | Native | Keliver 1.28.0 | Keliver BigInt fork (unreleased) | Flutter | Is Keliver faster than Flutter? |
 |---|---|---|---|---|---|
-| Cold start to the list's data (frame end, ms) | 728.5 | 2,537.5 | 1,800.5; `prestart,prefetch` 1,543.5 | on demand 633.5; pre-warmed 558 | **No**: 1.9 s behind on 1.28.0, 0.9 s with BigInt and both NF4 steps (F1) |
+| Cold start to the list's data (frame end, ms) | 728.5 | 2,537.5 | 1,800.5; `prestart,prefetch` 1,543.5 | on demand 633.5; pre-warmed 558 ‡ | **No**: 1.9 s behind on 1.28.0, 0.9 s with BigInt and both NF4 steps. Flutter's 95 ms lead over native is where the bench sends the request (`initState`, 100 ms before native's first composition), not Flutter's rendering (F1) |
 | Open, list → detail (frame end, ms from the tap) | 28 | 455.5 | 217.5 | 30.5 (pre-warmed 31) | **No**: 15× (1.28.0) and 7× (BigInt) Flutter's time (F2) |
 | Open, heavy detail | 59 | 1,081 | 548 | 44.5 | **No**: 24× and 12× (F2) |
 | Back, header button (frame end) | 81 | 921.5 | 516 | 33.5 | **No** (F2) |
-| Back on the screen (the list presented, ms from the DOWN; Keliver with `x=retainhost`) | 168.0 | 91.3 | 79.0 | 99.6 | **Yes, with the retained back**: 8–20 ms sooner (F2, pixels); without it, no (0.67–1.0 s) |
+| Back on the screen (the list presented, ms from the DOWN; Keliver with `x=retainhost`) | 168.0 | 91.3 (74.5–106.7) | 79.0 (68.5–84.4) | 99.6 (90.3–116.6) | **About the same, only with the retained back**: within about 20 ms, the ranges overlap, one run of 8 touches per arm, and Keliver's is system back against Flutter's header button (F2, pixels). Without it, no (0.67–1.0 s) |
 | Cold start on the screen (the data frame presented; F1's frame end + each arm's measured gap) | ≈ 769 | ≈ 2,596 | ≈ 1,580 with both NF4 steps | on demand ≈ 738; pre-warmed ≈ 664 | **No**: about 0.84 s behind on BigInt with both steps (inferred from measured parts) |
-| Scrolling: missed vsyncs per fling, gentle / fast (down) | 0.5 / 3 | 1 / 3.5 | 1 / 10 | 0 / 0 | **No**: Flutter missed 2 vsyncs in 33 flings, Keliver 68 and 133, native 36 (F3) |
-| Size added on an arm64 phone (installed) | — | about 2.9 MB (engine 0.83 + bundle 2.11) + an unmeasured host dex share | the same, 3.2 MB | 16.1 MB (floor: 15.8) | **Yes, smaller** by about 13 MB (F4) |
-| Memory after the list (PSS, settled, MB) | 55.2–56.1 | 72.7 | 72.9 | 83.5 (pre-warmed 85.7) | **Yes, less**: about 11 MB below Flutter (F5) |
+| Scrolling: missed vsyncs per fling, gentle / fast (down) | 0.5 / 3 | 1 / 3.5 | 1 / 10 | 0 / 0 | **No**: Flutter missed 2 vsyncs in 33 flings, native 36 in 33, Keliver 62 in 31 (1.28.0) and 133 in 33 (BigInt; its fast flings may be confounded by the charger) (F3) |
+| Size added on an arm64 phone (installed) | — | about 3.9 MB (engine 0.83 + bundle 0.91 deflated in the APK + its 2.11 cache copy) + an unmeasured host dex share | about 4.2 MB, the same way | 16.1 MB (floor: 15.8), dex included | **Yes, far smaller**: Flutter adds about 16 MB, Keliver about 3–4 MB plus a host dex share not measured (F4) |
+| Memory after the list (PSS, MB; first reading 6 s after the data / second reading, after a Java collection; n = 2 per arm) | 61.5–62.7 / 55.2–56.1 | 87.2–87.3 / 72.5–72.7 | 87.7–88.0 / 72.9–73.3 | 89.3–89.9 / 83.5–84.0 (pre-warmed 90.7–91.5 / 84.9–85.7) | **Somewhat less**: 1–3 MB below Flutter at the first reading, about 11 MB after a Java collection, which does not touch Dart's heap (F5) |
+
+‡ Pre-warmed Flutter's 558 is not a like-for-like frame end: in 5 of its 10 launches the data frame was
+built before Flutter's surface showed its first frame (`dataFrameEnd` 540–552 against
+`flutterUiDisplayed` 545–556, 4–5 ms later each time), so the window bounds it (F1, on the pixels). Its on-screen figure (≈ 664)
+is the one to compare.
+
+**What this does not cover.**
+- **What a Flutter screen is.** Flutter draws its own widgets: its screens cannot reuse the app's
+  Compose components or design system (this bench rebuilt the screens in Dart), and they use no
+  platform views here. Keliver's guest renders through the host's own native widgets (Compose on
+  Android). The tables compare speed and size, not that trade.
+- **Shorebird itself.** Its engine fork and updater were not run; the Android claim above is reasoned.
+- **The BigInt fork is unreleased** (a scratch publish, `1.28.0-q20260604`), and `prestart,prefetch`
+  is not Keliver's default. "BigInt" below means that fork, not something an adopter has today.
+- **R8.** No arm was minified (see [Why it is fair](#why-it-is-fair-and-where-it-is-not-1)).
+- **iOS** (see the iPhone note under [the verdicts](#verdicts-is-keliver-faster-than-flutter)).
 
 ### What was built (a recipe, not merged)
 
@@ -3150,8 +3169,23 @@ measure that last part.
   activity starts each by the `form` extra, the same in-app fixture serves the same bytes, the same
   synthetic taps drive navigation, and every form logs the same cold line and step lines. Every
   install was series Y's (uninstall first, profileinstaller's broadcast, `speed-profile` compile).
-- **Same build shape.** The sample's `benchmark` type (release-shaped, not minified, debug-signed).
-  Flutter is `--release` (AOT). **Native libraries stripped for every arm**: Flutter's engine AAR
+- **ART profile state.** That `speed-profile` compile is the best case for the Kotlin arms: the
+  app's baseline profile (with #286's host profile) is compiled ahead of time. Flutter's Dart code
+  needs no ART profile (it is AOT machine code in `libapp.so`), but its Java embedding is not in the
+  app's baseline profile, so that small part ran interpreted or JIT-compiled.
+- **No arm went through R8.** The sample's `benchmark` type (release-shaped, debug-signed) sets
+  `isMinifyEnabled = false`, and every build's log shows D8 only (`dexBuilderBenchmark`,
+  `mergeDexBenchmark`, no `minifyBenchmarkWithR8`). So native Compose, Keliver's Compose host and
+  Flutter's Java embedding all ran unshrunk and unoptimised by R8. Flutter's Dart code is optimised
+  by its own AOT compiler (`--release`, tree-shaken), so **only the Flutter arm's main code was
+  optimised for release**. This disfavours the Kotlin side, most where the host's Compose work
+  dominates: native's and Keliver's scrolling (native's 36 missed vsyncs against Flutter's 2),
+  native's back (81 ms against Flutter's 33.5), and "Flutter starts as fast as native". It cannot
+  close the Keliver-against-Flutter gaps on cold start and open, which are the guest's work in
+  QuickJS (seconds and hundreds of ms, not the tens R8 might change). Not re-run with R8 here (no
+  phone in the review round); a run of F2 and F3 for native and Keliver on the minified `release`
+  type is a follow-up before the scroll and native comparisons are read as final.
+- **Native libraries stripped for every arm**: Flutter's engine AAR
   ships `libflutter.so` unstripped (170 MB per ABI), and AGP could not strip without an installed
   NDK, so the recipe names one (`threewayNdkVersion`). This also strips `libquickjs.so`, which every
   earlier series packaged unstripped (2,432,744 bytes on arm64; stripped, 833,272): the loaded code
@@ -3165,8 +3199,11 @@ measure that last part.
 - **Differences that could not be removed:**
   - *Where the first request starts.* Native starts it in its first composition (after
     `setContent`); Flutter in `initState`, when `runApp` builds the tree, before Flutter's first
-    frame; Keliver after its code has loaded and its first composition ran. Each is what the
-    framework does by itself; no arm was given a prefetch except Keliver's `prestart,prefetch` arm.
+    frame; Keliver after its code has loaded and its first composition ran. That is where the
+    bench's code for each form sends the request (the usual place in each framework, but a choice,
+    not something the framework forces): Flutter's `initState` sends it at 369 ms, native's first
+    composition at 469, and those 100 ms are Flutter's 95 ms lead over native at the frame end (F1).
+    No arm was given a prefetch except Keliver's `prestart,prefetch` arm.
   - *Pre-warm also prefetches.* A pre-warmed engine runs `main()` in `bindApplication`, so the
     screen's request goes out before the activity exists. That is what Flutter's recommended policy
     does; it is Keliver's `prestart,prefetch` in effect.
@@ -3203,7 +3240,16 @@ measure that last part.
 - **Every series ran from a script on the phone** (`nohup sh`), APKs installed there, each install
   as series Y's. Before each round or run the script woke the screen and logged uptime, load, the
   battery, the thermal status and the CPU idle share over 2 s. The phone was up since about 02:11 IST
-  (14 h at the start), unplugged, on battery throughout.
+  (14 h at the start), unplugged and on battery except where a series' "Phone state" says
+  otherwise (F3's BigInt arm and main's pixel checks ran on the charger).
+- **Which recipe built which APK.** `main-flutter` and `bigint-flutter` (16:15, F1) and
+  `main-flutter2` and its BigInt twin (16:33: F2, F3, the pixel checks) were built from the
+  recipe as it stood at those times; the exact patch text was not saved per build. The committed
+  [`flutter-recipe.patch`](flutter-a12/flutter-recipe.patch) is the host wiring as it stood after
+  every run. A copy saved at 16:21, between the two builds, has the same Flutter wiring with the
+  Flutter frame-end branch written inside the draw listener rather than in a shared function
+  (`contentDrawn`); a full line-by-line reconciliation was not done. `main.dart` and `pubspec.yaml`
+  match the scratch module that built the second AAR.
 
 ### F1. Cold start to the list's data drawn
 
@@ -3225,10 +3271,14 @@ post-frame callback of it); p90 is the nearest rank (the 9th of 10).
 | native (main) | **728.5** | 734 | 722–765 | — |
 | native (bigint) | **699.5** | 736 | 677–792 | — |
 | Keliver 1.28.0, as shipped (main) | **2,537.5** | 2,591 | 2,519–2,637 | +1,809 |
-| Keliver BigInt, as shipped (bigint) | **1,800.5** | 1,827 | 1,784–1,928 | +1,101 |
-| Keliver BigInt, `prestart,prefetch` (bigint) | **1,543.5** | 1,553 | 1,514–1,560 | +844 |
+| Keliver BigInt fork (unreleased), default settings (bigint) | **1,800.5** | 1,827 | 1,784–1,928 | +1,101 |
+| Keliver BigInt fork (unreleased), `prestart,prefetch` (bigint) | **1,543.5** | 1,553 | 1,514–1,560 | +844 |
 | **Flutter, on demand** (main) | **633.5** | 638 | 627–639 | **−95** |
-| **Flutter, pre-warmed** (main) | **558** | 573 | 540–632 | **−170.5** |
+| **Flutter, pre-warmed** (main) | **558** ‡ | 573 | 540–632 | **−170.5** |
+
+‡ Not a like-for-like frame end: in 5 of these 10 launches the data frame ended 4–5 ms before
+Flutter's surface showed its first frame (`flutterUiDisplayed`), so the window, not Flutter, bounds
+it. Use the on-screen figure below.
 
 **Where each start's time goes** (medians of the marks, ms from the process start):
 
@@ -3249,9 +3299,11 @@ post-frame callback of it); p90 is the nearest rank (the 9th of 10).
   frame ends 95 ms before native's; pre-warmed, 170.5 ms before. Flutter's own start costs about the
   same as Compose's: creating the engine is 86 ms of main-thread work (libflutter.so and libapp.so
   loaded, the Dart VM and isolate started), and Flutter's first frame reaches its surface at 503 ms
-  against native's first window frame at 382. What puts it ahead is **the request**: `runApp` builds
-  the screen right away and its `initState` sends the request at 369 ms, 100 ms before native's
-  first composition sends its own (469). Flutter's request then takes longer to come back (210 ms
+  against native's first window frame at 382. What puts it ahead is **where the bench sends the
+  request**, not Flutter's rendering: `runApp` builds the screen right away and its `initState`
+  sends the request at 369 ms, 100 ms before native's first composition sends its own (469); a
+  native screen that sent its request as early would close most of the 95 ms. (Native also ran
+  without R8, see above.) Flutter's request then takes longer to come back (210 ms
   against native's 146 with the same 100 ms fixture: Dart's first connection, while the UI isolate
   builds the first frame), and its data frame's UI-thread work is shorter (composed → frame end
   41.5 ms against native's 87, which includes Compose's first layout of the list inside the draw).
@@ -3263,8 +3315,9 @@ post-frame callback of it); p90 is the nearest rank (the 9th of 10).
 - **Anchors.** Today's guest 1.28.0 matches series Y's narrow-profile build (2,537.5 against
   2,566.5 to the data frame's end), so adding Flutter's code to the APK did not slow the other forms.
   The BigInt arm is faster than series G's (1,439 against 1,866 to `dataDrawn` with both steps)
-  because it now carries #286's host profile, which series G's build did not; native is within 35 ms
-  of series E/G/Y (644 to `dataDrawn` today, 604–618 then).
+  most likely because it now carries #286's host profile, which series G's build did not (other
+  changes on main since series G's build were not excluded); native is within 40 ms of series
+  E/G/Y (644 to `dataDrawn` today, 604–618 then).
 - **Pre-warm's cost to every other start.** A pre-warmed engine is created in `bindApplication` on
   every launch, whether or not the Flutter screen is shown: 86.75 ms of main-thread work before
   `onCreate` (here `onCreate` moved from 127.5 to 282.5 ms, of which about 70 is the bench's own
@@ -3393,9 +3446,14 @@ touches correctly (the analysis had labelled them shifted by one).
 | Keliver BigInt, `x=retainhost`, system back | 66.1 (58.1–74.0), the ripple | 245.0 (224.5–273.8) | the list | **79.0** (68.5–84.4) |
 | **Flutter, on demand** | the detail | **77.0** (63.1–144.5) | the list | **99.6** (90.3–116.6) |
 
-- **Back: Keliver's retained back reaches the screen before Flutter's** (BigInt 79.0, 1.28.0 91.3,
-  against Flutter's 99.6 and native's 168.0). Without the retained back, Keliver's list takes 0.67 s
-  (BigInt) and 1.0 s (1.28.0). Flutter's back is faster than native's on the screen too (99.6
+- **Back: with the retained back, Keliver's list reaches the screen about when Flutter's does**
+  (BigInt 79.0, 1.28.0 91.3, against Flutter's 99.6 and native's 168.0). The medians differ by
+  8–20 ms, but 1.28.0's range (74.5–106.7) overlaps Flutter's (90.3–116.6), each arm is one run of
+  8 touches, and the paths differ: Keliver's is system back (`KEYCODE_BACK`) showing a retained
+  snapshot of the list (the guest's confirming frame lands later, 82–111 ms to its frame end above),
+  Flutter's is its header button (Flutter with system back was not measured; its state switch would
+  be the same path). Read it as **about the same**. Without the retained back, Keliver's list takes
+  0.67 s (BigInt) and 1.0 s (1.28.0). Flutter's back is faster than native's on the screen too (99.6
   against 168.0), as at the frame end.
 - **Open: Flutter's detail is on screen at 77 ms; Keliver shows its ripple at 61–66 ms** (faint: it
   fades in from alpha 0, series K) **and its detail at 245–537 ms.** Native's detail came at 94.1.
@@ -3438,7 +3496,7 @@ plugged the phone in at about 17:17), 47% → 53%, 28.8–30.5 °C.
 | | Keliver BigInt | 10 | 1 (0–2), 10 | 610 | 20.2 / 20.7 / 26.1 | 2 (0.3%) |
 | | **Flutter** | 10 | **0 (0–0), 0** | 544 | 9.9 / 12.6 / 18.5 † | 0 |
 | gentle, up | native | 9 | 1 (0–1), 5 | 549 | 20 / 21 / 23.5 | 0 |
-| | Keliver 1.28.0 | 10 | 1 (0–6), 16 | 548 | 20 / 20.6 / 29.9 | 1 (0.2%) |
+| | Keliver 1.28.0 | 9 § | 1 (0–2), 10 | 546 | 20 / 20.6 / 29.9 | 1 (0.2%) |
 | | Keliver BigInt | 10 | 1 (0–2), 11 | 611 | 20.1 / 20.8 / 30 | 3 (0.5%) |
 | | **Flutter** | 10 | **0 (0–0), 0** | 546 | 9.7 / 12.4 / 18.5 † | 0 |
 | fast, down | native | 7 | 3 (0–5), 18 | 967 | 20.6 / 25.4 / 58 | 102 (10.5%) |
@@ -3453,20 +3511,33 @@ plugged the phone in at about 17:17), 47% → 53%, 28.8–30.5 °C.
 † Flutter's frame times end at the raster thread's submit, without the GPU (above); not comparable
 with the Compose rows' times.
 
-- **Missed vsyncs over all kept flings (32–33 per arm): Flutter 2, native 36, Keliver 68 (1.28.0)
-  and 133 (BigInt).** Flutter scrolled this list without a missed vsync at the gentle speed and with
+§ **Corrected after the review.** This row first read 10 flings, 1 (0–6), 16 missed, 548 frames.
+The first analysis script put each fling in a speed by its release velocity and did not drop flings
+that began while the guest was busy; the fast run's fling 8 (2 frames, 6 missed vsyncs, travel 0, released
+at 107 dp/s, busy at DOWN) landed here. The script now takes the speed from the run, the direction
+from the fling's number, and drops what the host's own summary drops (closed by a touch, at an edge,
+busy at DOWN). Re-run on the raw results, **every row's flings, median, total, moving frames and
+frame p50 / p90 / max now match the host's own summary lines** (to rounding; the min–max and the
+over-25 counts exist only in the per-fling lines); this row is the only one that changed (9 flings,
+fling 20 dropped at the edge).
+
+- **Missed vsyncs over all kept flings (31–33 per arm): Flutter 2 in 33, native 36 in 33, Keliver
+  62 in 31 (1.28.0) and 133 in 33 (BigInt).** Flutter scrolled this list without a missed vsync at the gentle speed and with
   2 at the fast one; its two threads stayed well inside a frame (UI-thread build median 1.5 ms gentle,
   4.2 fast, max 16.9; raster thread 6.8 and 7.1, max 14.7).
 - **Keliver matches native at the gentle speed** (1 missed per fling against native's 0.5–1), as in
   series D, and falls behind it on fast flings.
 - **The BigInt guest missed more vsyncs on fast flings than 1.28.0** (10 and 7 per fling against
-  3.5 and 3.5). Its guest finished its work for each fling within the fling (2.0–2.2 s of guest work,
+  3.5 and 3.5), the opposite of every other series, where BigInt is faster. **This may be the power
+  state, not the engine**: the BigInt arm was the only F3 arm on the charger, 4–5 °C warmer (thermal
+  status 0 throughout), and the two fast arms were not run back to back in the same state. Until
+  they are, this row is not evidence either way. One possible cause if it holds (**inferred, not
+  measured**): its guest finished its work for each fling within the fling (2.0–2.2 s of guest work,
   the list stopping 2.24 s after the UP), while 1.28.0's guest was still composing rows 4.0–4.4 s
-  after the DOWN, about 2 s after the list had stopped. **Inferred, not measured**: the faster guest
-  sends more of its row batches while the list moves, and the host applies them on the main thread
-  during the fling; the slower one leaves rows blank and applies them after it. The placeholder pass
-  (`x=scroll,blank`) that would show the blank rows was not run, and the BigInt arm ran on the
-  charger, 4–5 °C warmer than the others (thermal status 0 throughout).
+  after the DOWN, about 2 s after the list had stopped; so the faster guest would send more of its
+  row batches while the list moves, and the host would apply them on the main thread during the
+  fling, where the slower one leaves rows blank and applies them after it. The placeholder pass
+  (`x=scroll,blank`) that would show the blank rows was not run.
 - What a user would see is not measured here: the Keliver rows that are still blank while the list
   moves (series D's "blank rows") are not in these frame counts.
 
@@ -3501,11 +3572,19 @@ a store's compressed download, which was not measured):
 - **Keliver's own native and code parts, the same way**: `libquickjs.so` 833,272 bytes on arm64
   (gzip 358,741; the BigInt fork's 996,184, gzip 435,681), 533,144 on armeabi-v7a, 801,740 on x86,
   861,952 on x86_64; the three-way guest's bundle (54 modules, in the APK's assets: what an update
-  replaces) 2,106,972 bytes, 906,180 deflated (BigInt: 2,218,711, 946,134). The Keliver host
-  libraries' share of the dex (Treehouse, the protocol, the widget systems, Compose's own runtime
-  which a Compose app has anyway) was not separated: that needs an APK without Keliver, which this
-  session did not build. So on arm64 Keliver's engine and bundle are about **2.9 MB installed**
-  (0.83 + 2.11) against Flutter's 16.1, plus an unmeasured host dex share.
+  replaces) 2,106,972 bytes, 906,180 deflated (BigInt: 2,218,711, 946,134). **Installed, the
+  bundle exists twice**: deflated in the APK, and uncompressed in Zipline's cache after the first
+  launch (F1's log: each install's first launch loaded 54 modules from the assets, every later one
+  0). So on arm64 Keliver's engine and bundle take about **3.9 MB installed** (0.83 + 0.91 in the
+  APK + 2.11 in the cache; BigInt about 4.2: 1.00 + 0.95 + 2.22).
+- **The dex is not counted the same way for both, and could not be here.** Flutter's 1.0 MB of dex
+  is the difference between APKs with and without the module. Keliver's host libraries' share of
+  the dex (Treehouse, the Zipline JVM side, the protocol, the widget systems; Compose's own runtime,
+  which a Compose app has anyway, is not Keliver's) needs an APK without Keliver, which this session
+  did not build, and the APKs were not kept for a per-package dex count. Both are unminified (no R8,
+  above), so R8 would shrink both. **So: Flutter adds about 16 MB installed, Keliver about 3–4 MB
+  plus a host dex share not measured**; the direction is safe (Flutter's floor alone is 15.8 MB),
+  the size of the margin is not a precise 12–13 MB.
 
 ### F5. Memory after the list is shown
 
@@ -3524,10 +3603,15 @@ reports KB).
 | Flutter, pre-warmed | 91.5, 90.7 | 85.7, 84.9 | 17.7, 17.6 | 15.1 / 9.1 | 24.2, 23.4 | 19.1 | 11.0 |
 
 - **The second reading is lower in every arm** (the Java heap falls by 6–15 MB between two dumps 0.3 s
-  apart; the native and graphics lines do not move), most likely garbage collected between them;
-  read the second as the settled figure and the first as what was resident 6 s after the data.
-- **Both Keliver and Flutter add about 25–30 MB of PSS to native** (settled: Keliver +17 MB, Flutter
-  +28 MB; first reading: Keliver +25, Flutter +27). Where it goes differs: Keliver's is QuickJS's
+  apart; the native and graphics lines do not move), most likely garbage collected between them.
+  The first reading is what was resident 6 s after the data, the second what is left after a Java
+  collection. **That collection is not symmetric**: ART's collector frees the Java heap (Keliver's
+  host objects for the guest fell most, 25.4 → 10.7 MB) but not Dart's heap, which is in Flutter's
+  "Private other", nor QuickJS's, which is in Keliver's native heap. Which reading a phone is at
+  depends on when ART collects, so both are given, and neither is "the" figure.
+- **Over native, at the first reading Keliver adds about 25 MB and Flutter about 27; at the second,
+  Keliver about 17 and Flutter about 28.** So Keliver is 1–3 MB below Flutter on demand at the first
+  reading (about 2 at the medians) and about 11 MB below at the second, with 2 samples per arm. Where it goes differs: Keliver's is QuickJS's
   heap (native heap +11 MB) and the host's Java objects for the guest; Flutter's is graphics
   (+11 to 14 MB: Impeller's GL buffers and its own surface, `GL mtrack` 19.4 MB against native's 8.6)
   and private other (+8.6 MB: the Dart VM's heap and code pages). The engine does not change
@@ -3536,26 +3620,35 @@ reports KB).
 ### Verdicts: is Keliver faster than Flutter?
 
 - **Cold start: no.** Flutter starts as fast as native on this phone (on demand 95 ms ahead of native
-  at the frame end, about 30 on the screen; pre-warmed about 105 ahead on the screen). Keliver is
-  0.9 s behind Flutter on demand with BigInt and both NF4 steps, 1.9 s as shipped (measured at the
+  at the frame end, about 30 on the screen; pre-warmed about 105 ahead on the screen). That lead is
+  where the bench sends the request (Flutter's `initState` 100 ms before native's first
+  composition), not Flutter's rendering, and native ran without R8. Keliver is 0.9 s behind Flutter
+  on demand with the unreleased BigInt fork and both NF4 steps, 1.9 s as shipped (measured at the
   frame end; on the screen inferred from each arm's measured gap).
 - **Open: no.** Flutter opens a screen in 30.5 ms to the frame end (77 on the screen), like native;
   Keliver takes 7× (BigInt) to 15× (1.28.0) as long, 12× to 24× on the heavy screen. Keliver's ripple
   is on screen before Flutter's detail, but the detail is 3–7× later.
-- **Back: yes with the host's retained back, otherwise no.** With `x=retainhost` the list is on
-  screen 79 ms (BigInt) or 91 ms (1.28.0) after the press, against Flutter's 99.6 and native's 168.
-  With the header back (the guest recomposing the list) Keliver takes 0.5–0.9 s to the frame end.
-- **Scrolling: no.** Flutter missed 2 vsyncs in 33 flings, native 36, Keliver 68 (1.28.0) and 133
-  (BigInt); at the gentle speed Keliver is close to native (1 per fling) and Flutter misses none.
+- **Back: about the same as Flutter, only with the retained back.** With `x=retainhost` the list is
+  on screen 79 ms (BigInt) or 91 ms (1.28.0) after the press, against Flutter's 99.6 and native's
+  168: within about 20 ms, with overlapping ranges, one run of 8 touches per arm, and system back
+  against Flutter's header button. Without it, no: with the header back (the guest recomposing the
+  list) Keliver's list is on screen after 0.67 s (BigInt) and 1.0 s (1.28.0).
+- **Scrolling: no.** Flutter missed 2 vsyncs in 33 flings, native 36 in 33, Keliver 62 in 31
+  (1.28.0) and 133 in 33 (BigInt, whose fast flings ran on the charger and may be confounded); at
+  the gentle speed Keliver is close to native (1 per fling) and Flutter misses none. Native and
+  Keliver ran without R8, Flutter's Dart AOT-optimised.
 - **Size: yes, Keliver adds far less.** Flutter adds about 16 MB installed on an arm64 phone (7 MB
-  to download, estimated), and its floor is 15.8 MB; Keliver's engine and this bundle are about
-  3 MB, plus a host dex share not measured here.
-- **Memory: yes, less than Flutter.** Settled PSS after the list: Keliver 72.7–73.4 MB, Flutter
-  83.5–85.7, native 55.2–56.1.
+  to download, estimated), and its floor is 15.8 MB; Keliver's engine and this bundle take about
+  3–4 MB installed (counting the bundle's cache copy), plus a host dex share not measured here.
+- **Memory: somewhat less than Flutter, depending on when it is read.** PSS after the list, n = 2
+  per arm: at 6 s Keliver 87.2–88.2 MB, Flutter 89.3–91.5 (1–3 MB more), native 61.5–62.7; after a
+  Java collection Keliver 72.5–73.4, Flutter 83.5–85.7 (about 11 more), native 55.2–56.1. The
+  collection frees Keliver's host Java objects, not Dart's heap.
 - **Measured vs inferred.** Measured: every table above. Inferred: the screen-time cold starts in the
   answer table (F1's untraced frame end plus each arm's gap from the traced pixel launches), why
   Flutter's first data frame takes about 100 ms to reach the screen, why the BigInt guest misses more
-  vsyncs on fast flings, and the download sizes (gzip, not a store's delivery).
+  vsyncs on fast flings (and whether it does, given the charger), that a Shorebird-patched screen
+  on Android runs as fast as release AOT, and the download sizes (gzip, not a store's delivery).
 
 **What an iPhone run with Shorebird would add (not run).** On iOS a Shorebird patch runs changed
 Dart functions in its interpreter while unchanged ones stay AOT, so a patched Flutter screen on
@@ -3576,6 +3669,75 @@ screen runs AOT, so this section's Flutter numbers stand for Flutter over the ai
   delay and native heap (F1, F5), not as a start without the Flutter form.
 - Flutter ran on Impeller's OpenGL ES backend (this phone's choice); Vulkan devices may differ.
 - The recipe's sample wiring is not built by CI; it applies to main `2073a4ace`.
+- **No arm went through R8**; Flutter's Dart code was AOT-optimised by its own compiler. This
+  disfavours native and Keliver's host most on scrolling and native's back (see Why it is fair).
+- The BigInt arm is an unreleased fork; Shorebird itself was not run; Flutter screens cannot reuse
+  the app's Compose components (see What this does not cover, under the answer table).
+
+**Follow-ups** (not in this PR):
+- Re-run F2 and F3 for native and Keliver on the minified `release` type (R8), before the scroll
+  and native comparisons are read as final.
+- Re-run the two fast-fling guest arms (1.28.0 and BigInt) back to back in the same power state, to
+  settle whether BigInt's fast-fling result is the engine or the charger.
+- An APK without Keliver, to count the host's dex share as Flutter's was counted.
+- **A possible double code load with `prestart`.** In the pixel run, the unmeasured `P-bi` launches
+  (default settings, after a `prestart,prefetch` launch, so the provider prestarted from the
+  previous launch's setting) loaded 107–108 modules where one load is 54: the prestarted Zipline
+  app looks not to have been adopted, and the activity loaded the code again. These launches are in
+  no table here; it needs its own look at how the activity adopts a prestarted app when the launch's
+  own settings differ.
+- The iPhone run with Shorebird (below the verdicts).
+
+### Learnings for later
+
+Facts only; each comes from this section's numbers.
+- **The gap is the guest interpreter, not rendering.** Keliver renders through the host's Compose,
+  and from its frame end to the screen it takes what native does (36–59 ms against native's 40.7;
+  F1 on the pixels). What it adds is guest work in QuickJS: on cold start the code load (about
+  0.5 s) and the list's composition (1,019 ms from parsed to composed on 1.28.0, 456.5 on BigInt
+  with both NF4 steps, against native's 23 and Flutter's 13); on open 455.5 / 217.5 ms against
+  native's 28; on fast flings 1.28.0's guest still composing rows 4.0–4.4 s after the DOWN. Flutter's
+  AOT code is native speed on this phone: open 30.5 against native's 28, heavy open 44.5 against 59.
+- **Where Keliver wins, and by how much after the review's corrections.** Back: about the same as
+  Flutter (within about 20 ms, ranges overlapping), and only with the host's retained back; without
+  it 0.67–1.0 s. Size: Flutter adds about 16 MB installed on arm64 (floor 15.8), Keliver about
+  3–4 MB plus a host dex share not measured; a large margin, but not a precise 12–13 MB. Memory: 1–3
+  MB less than Flutter at the first reading, about 11 MB less after a Java collection, n = 2.
+- **Where the first request is sent decides much of a cold start.** Flutter's 95 ms lead over native
+  is the 100 ms by which its `initState` sends the request before native's first composition does.
+  On Keliver, NF4's `prestart,prefetch` moved the request to 298 ms (prefetched) and took the BigInt
+  arm from 1,800.5 to 1,543.5 ms (F1).
+- **One option recorded, not decided: "compiled until patched".** Screens would be compiled into the
+  store build (native speed, as Flutter's AOT here), and the interpreter would run only screens
+  changed over the air since that release: Shorebird's iOS model applied to Kotlin. The owner's
+  stated view: probably not the direction, but not a bad option if implemented correctly. It would
+  have to be squared with PLAN_2026-11.md's **PD8** (one over-the-air lane: no "native by default,
+  the guest between releases") and **PD3** (the Shorebird-style interpreter parked), and with the
+  plan's aim (PD10, WS7) that the one lane itself feels native: a patched screen would fall back to
+  today's interpreted speed.
+
+### Review fixes, 2026-11-22
+
+An independent review of this section ("merge after fixes") checked every figure against the raw
+files. What changed:
+- **The F3 cell for Keliver 1.28.0, gentle up, was wrong** (H1): the analysis script's grouping put
+  a fast-run fling there (F3, note §). Corrected to 9 flings, 10 missed, 546 frames; Keliver 1.28.0
+  missed 62 vsyncs in 31 flings, not 68 in 32, and every total, verdict and the answer table follow.
+  No other F3 cell changed.
+- **R8** (H2): "same build shape" was wrong. No arm was minified; Flutter's Dart was AOT-optimised.
+  Stated in Why it is fair, the caveats and the verdicts.
+- **Back** (M1): "Yes" became "about the same, only with the retained back".
+- **Memory** (M2): both readings are given with n = 2, and the asymmetry of the Java collection;
+  the "both add 25–30 MB" contradiction is gone.
+- **Size** (M3): Keliver's bundle counted twice when installed (APK and cache), about 3.9 MB; the
+  dex is not counted the same way for both and why; "smaller by about 13 MB" dropped.
+- **Owner context** (M4): What this does not cover (Flutter draws its own widgets; Shorebird not
+  run, the Android claim reasoned; the BigInt fork unreleased, `prestart,prefetch` not the default).
+- **BigInt fast flings** (M5): the charger confound comes first; the cause is a hypothesis.
+- **Lows**: ART profile state per arm (L1); request placement in the cold-start verdict (L2); the
+  pre-warmed 558 footnoted (L3); native within 40 ms of the earlier series, and other changes on
+  main not excluded from BigInt's gain (L4); which recipe built which APK (L5). The possible prestart
+  double load (L6) is a follow-up above.
 
 ## For an iOS run (follow-up)
 
