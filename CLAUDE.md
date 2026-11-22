@@ -84,7 +84,7 @@ ingest round-trip on a real screen + (widget changes) device render. The
 universal screen bar is D14 in DECISIONS.md: compile → 0 RawCode ingest → device
 screenshot → surgical write-back round-trip.
 
-**Releases — two independent lines. Do not bump one to name the other.**
+**Releases — three independent lines. Do not bump one to name another.**
 
 *Libraries* (Maven Central + GitHub Packages): bump `KELIVER_VERSION` in
 RedwoodBuildPlugin.kt, tag `vX.Y.Z`, `gh workflow run
@@ -120,6 +120,16 @@ Pre-gate locally: `scripts/build-portal-tools.sh`, then
 acceptance must refuse a portal it did not start). With a device or emulator,
 `scripts/keliver-device-verify.sh <zip> <work> <evidence>` (U22: the bundled
 host must refuse production mode).
+
+*Zipline fork* (`dev.keliver.zipline:<upstream name>:<RELEASE_VERSION>` on Maven
+Central, NF2's QuickJS 2026 engine; the version is `RELEASE_VERSION` in
+`keliver-compose-gatea-profile/engine/zipline-fork/apply.sh`, e.g.
+`1.28.0-keliver.1`): tag **`zipline-fork-vX`** on `main` (matches neither `v*`
+nor `portal-tools-v*`), then dispatch `zipline-fork.yml` from `main` with the
+tag, `publish` ticked and the version typed out. It uploads in **review mode**:
+nothing is released until someone compares the Portal's deployment with the
+run's signed `zipline-fork-repo-central-<tag>` artifact and presses Publish.
+Procedure: the fork's README, "Publishing the fork". Not yet published.
 
 **Store identity** is a contract with one authority (`PortalConfig.storeDir()`)
 and one shell mirror (`scripts/keliver-store-path.sh`), written down in
