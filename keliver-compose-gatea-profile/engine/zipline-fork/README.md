@@ -4,7 +4,9 @@ Keliver's fork of Zipline, kept as a patch set: Zipline **1.28.0** (commit `f6cd
 vendored QuickJS 2021-03-27 replaced by Bellard's **QuickJS 2026-06-04** (SHA-256
 `b376e839…70ad2a`), which brings BigInt, so Kotlin's `Long` can be compiled as a JS BigInt
 (`-Xes-long-as-bigint`). Why, and what it measured: `docs/GUEST_PROFILE.md`, "The engine, measured"
-and "NF2: the Zipline fork, step 1". Nothing here is published; no repository is created.
+and "NF2: the Zipline fork, step 1". Step 4 builds it for Maven Central as
+`dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below); nothing
+is published yet.
 
 ## Licences
 
@@ -16,7 +18,10 @@ and "NF2: the Zipline fork, step 1". Nothing here is published; no repository is
   tarball, and the notice at the top of each source file, kept verbatim). `patches/quickjs-2026-06-04-asuintn.patch` modifies
   `quickjs.c` and marks its change "Keliver fork (NF2)".
 
-Anything published from this patch set (step 4) carries both licences.
+Anything published from this patch set (step 4) carries both licences: every POM keeps Zipline's
+Apache 2.0 licence and adds QuickJS's MIT licence (`zipline-build.init.gradle`, checked by
+`check-release.py`). The fork's own new files (`check-release.py`, the CI workflow) are © The
+Keliver Authors, Apache 2.0.
 
 ## The patches
 
@@ -107,6 +112,10 @@ Anything published from this patch set (step 4) carries both licences.
     100 of each that throw in JavaScript leave neither, and the engine closes cleanly. (The wrong
     result is freed before the exception reaches the caller: freeing an object runs finalizers, and a
     `FinalizationRegistry` callback can call the host.)
+  - `zipline-gradle-plugin` (step 4): the plugin added `app.cash.zipline:zipline-cli:<version>` to
+    every build that applies it, a fixed group. It now names the CLI in the group it was built in
+    (`BuildConfig.ziplineGroup`), so the fork's plugin runs the fork's compiler. Upstream's build is
+    unchanged by it (its group is still `app.cash.zipline`).
   - "Modified by the Keliver fork of Zipline, 2026" in every file it changes.
 
 ## Rebuilding it
@@ -128,6 +137,8 @@ curl, clang, make and Node):
 | `check-bigint-zipline [gradle args]` | step 3: runs `../bigint-ops.js` through Zipline's own engine (`BigIntOpsTest`) on the JVM and the iOS simulator by default (or the test tasks given), and fails unless each host's output matches Node's on every line |
 | `test` | runs Zipline's Gradle build in the checkout with the given tasks, e.g. `:zipline:jvmTest`, `:zipline:connectedAndroidDeviceTest` (Zipline's device tests: the host and JNI tests on the device in `ANDROID_SERIAL`) or `:zipline:iosSimulatorArm64Test` and `:zipline:iosSimulatorArm64ReleaseTest` (the host tests on the simulator the Kotlin plugin's test task starts, debug and optimised); add `-PziplineForkLongAsBigInt` to link the JavaScript the tests load with `Long` as BigInt (`zipline-build.init.gradle`) |
 | `results [test task...]` | sums the JUnit XML a test run left (`zipline/build/test-results/<task>`, default `jvmTest`): classes, run, passed, skipped, failed, and the failed tests' names; fails if any failed |
+| `jni-all` | step 4: the JVM's JNI library for every host upstream ships (Linux, macOS and Windows; arm64 and x86-64: six libraries) with zig 0.16.0, as upstream's release workflow builds them (`zipline/build.zig`, which the patch gives `dtoa.c` and `-fwrapv`). Uses a `zig` of that version on `PATH`, else downloads the pinned tarball into `<work>/tools` and checks its SHA-256. Replaces what `jni` built; each library must carry QuickJS's version string |
+| `release <repo> [--central]` | step 4, after `engine` and `jni-all`, on a Mac with Xcode: every publication of every Zipline module as `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`, to an empty directory, then `check-release.py` (below) and a listing with sizes. With `--central` (the CI workflow only, by hand), then `publishToMavenCentral` from the same, up-to-date build, signed |
 | `publish <repo>` | publishes the forked `zipline-jvm`, `zipline-bytecode`, `zipline-android` and `zipline-android-ndk`, and on a Mac with Xcode `zipline-iosarm64` and `zipline-iossimulatorarm64`, as `1.28.0-q20260604` to a scratch Maven repository (never `~/.m2`) |
 | `diff` | for maintainers: regenerates `patches/` from an edited checkout |
 | `all` | `clone`, `engine`, `jni`, `qjs`, `check-bigint` (no Android SDK needed) |
@@ -166,8 +177,73 @@ the build runs none. Add `-PziplineBytecodeCorpus=<dir of .js and .js.map>` to
 `keliver-compose-gatea-profile/build/compileSync/js/main/productionExecutable/kotlin` after
 `:keliver-compose-gatea-profile:compileProductionExecutableKotlinJs -Pkeliver.guestProfile`.
 
+## Publishing the fork (step 4)
+
+Built and checked, **not published**. The owner's decisions (2026-11-22): group
+`dev.keliver.zipline`, upstream's artifact names, version `1.28.0-keliver.1`, and one engine,
+`quickjs-2026` (no app ever shipped on QuickJS 2021, so nothing publishes the old one).
+
+**What is published: all of Zipline**, the same 54 artifacts upstream publishes at 1.28.0 (checked
+against Maven Central's listing), so the Gradle module metadata never points at a variant that is
+not there: `zipline` (JVM, Android, JS, iOS, macOS, tvOS and Linux), `zipline-android-ndk` (the
+Android engine), `zipline-loader`, `zipline-cryptography`, `zipline-profiler` (each for the same
+targets), `zipline-bytecode`, `zipline-cli`, `zipline-api-validator`, `zipline-kotlin-plugin`,
+`zipline-gradle-plugin` and the plugin marker. Keliver and its scaffolded apps resolve `zipline`
+and `zipline-loader` (and their platform artifacts) and the Gradle plugin, which brings the
+compiler plugin and the CLI (with `zipline-bytecode` and `zipline-api-validator`); the rest is
+published so the set is complete. `zipline-testing` and `zipline-loader-testing` are not published
+upstream and are not here.
+
+**How.** Zipline's own build, unchanged apart from the patch, driven by
+`zipline-build.init.gradle` with `-PziplineForkRelease`: every project's group becomes
+`dev.keliver.zipline`; every POM keeps Zipline's Apache 2.0 licence and Cash App as its authors and
+adds QuickJS's MIT licence, Keliver as the fork's developer, and this repository as its URL and
+SCM; the Gradle plugin also declares the id `dev.keliver.zipline`, and only that id's marker is
+published (a marker's group is its id; `app.cash.zipline` is not a namespace we can publish to).
+The jar keeps the id `app.cash.zipline` as well, so a build that puts the plugin on its build
+classpath (Keliver's own, `apply plugin: 'app.cash.zipline'`) needs no change; a build that
+resolves it by id from a plugin repository (the scaffolded apps' `plugins { id … version … }`)
+uses `dev.keliver.zipline`. The JVM engine is built for every host upstream ships (`jni-all`,
+zig 0.16.0 as upstream's release workflow).
+
+```
+bash scripts/zipline-fork.sh all <work>          # clone, engine, patches, check-bigint
+bash scripts/zipline-fork.sh jni-all <work>      # six JNI libraries with zig
+bash scripts/zipline-fork.sh release <work> <empty repo dir>
+```
+
+`check-release.py` fails the release unless every file is under `dev.keliver.zipline` at
+`1.28.0-keliver.1`, nothing names `app.cash.zipline` as a Maven group (POMs, Gradle module
+metadata), the artifact names are exactly upstream's, every POM names both licences, Keliver's
+developer and the SCM, the JVM jar has upstream's JNI entries and the Android AAR its four ABIs
+with each library QuickJS 2026 (the atom `BigInt64Array`, which Zipline's 2021 build never has;
+upstream's own libraries are the control), every native klib of `zipline` carries the engine's
+bitcode, and the Gradle plugin declares both ids and names no `app.cash.zipline` coordinate. It
+then lists every artifact with its files' sizes. 2026-11-22, on this Mac: 54 artifacts, 1,825
+files, 32.2 MB; `zipline-jvm` 2.7 MB (six engines, 776–960 KB each), `zipline-android-ndk`'s AAR
+3.0 MB, each `zipline` klib 2.1 MB.
+
+`use-release.init.gradle` points a Keliver build at such a repository without changing it (every
+`app.cash.zipline` module becomes the fork's module of the same name), for trying a release before
+it is on Maven Central:
+
+```
+./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-release.init.gradle \
+  -PziplineReleaseRepo=<repo dir> --no-daemon :keliver-bridge-fixture:jvmTest
+```
+
+**CI**: `.github/workflows/zipline-fork.yml` runs on pull requests that touch this directory and
+by hand: `all`, `jni-all`, Zipline's host tests on the JVM and the iOS simulator,
+`check-bigint-zipline` on the JVM, `android`, and `release` to a directory, kept as the run's
+artifact. Zipline's Android device tests do not run there (GitHub's macOS arm64 runners have no
+emulator). Publishing to Maven Central is a manual dispatch with `publish` ticked and the version
+typed out, from `main`, with the secrets `publish-maven-central.yml` uses; it uploads the outputs
+of the same job's checked build (`release <work> <repo> --central`), and Zipline's build releases
+the deployment once Central validates it.
+
 ## Not yet
 
-iOS on a phone (step 3 ran the simulator only), compiling each bundle for both engines, the manifest
-naming the engine, hosts advertising theirs, the transition, and the upstream offer. The plan and estimates
-are in `docs/GUEST_PROFILE.md`.
+Publishing (a manual run of the workflow), then Keliver on the fork: the version catalog, Long as
+BigInt by default and the scaffolders' engine (one engine, `quickjs-2026`); iOS on a phone (step 3
+ran the simulator only); and the upstream offer. The plan and estimates are in
+`docs/GUEST_PROFILE.md`.

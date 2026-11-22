@@ -1,0 +1,51 @@
+// Copyright 2026 The Keliver Authors. Licensed under the Apache License, Version 2.0.
+//
+// NF2 step 4: points a Keliver build at the fork's release, dev.keliver.zipline:<name>:1.28.0-keliver.1,
+// without changing the build: every app.cash.zipline module it resolves (the runtime, the loader,
+// the Gradle plugin on the build classpath) becomes the module of the same name in the fork's
+// group, found in the Maven repository `apply.sh release` wrote. The plugin then resolves the
+// fork's Kotlin compiler plugin and CLI itself (by its own group), and keeps the id
+// `app.cash.zipline`, so `apply plugin: 'app.cash.zipline'` needs no change.
+//
+//   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-release.init.gradle \
+//     -PziplineReleaseRepo=<the directory release wrote> <tasks>
+//
+// It is what switching the version catalog will do (the fork's README, "Publishing the fork"),
+// for trying a release before it is on Maven Central. Bundles are compiled for QuickJS 2026 (the
+// fork's compiler), so a host built without the fork cannot load them.
+// Included builds too: build-support compiles against Zipline (ZiplineManifest), and its classes
+// share the build's classpath with the plugin's, so both must be the fork's (two groups would put
+// two copies of app.cash.zipline's classes there).
+def repoDir = startParameter.projectProperties['ziplineReleaseRepo']
+if (!repoDir) {
+  // Gradle's own nested builds (resolving settings plugins) do not see the property; skip them.
+  if (gradle.parent != null) return
+  throw new GradleException('use-release.init.gradle: pass -PziplineReleaseRepo=<maven repo dir>')
+}
+def releaseGroup = 'dev.keliver.zipline'
+def releaseVersion = '1.28.0-keliver.1'
+
+def addRepo = { RepositoryHandler repos ->
+  repos.maven {
+    name = 'ziplineRelease'
+    url = new File(repoDir).toURI()
+    content { includeGroup(releaseGroup) }
+  }
+}
+def substitute = { ConfigurationContainer configurations ->
+  configurations.configureEach { c ->
+    c.resolutionStrategy.dependencySubstitution.all { d ->
+      def r = d.requested
+      if (r instanceof ModuleComponentSelector && r.group == 'app.cash.zipline') {
+        d.useTarget("$releaseGroup:${r.module}:$releaseVersion", 'NF2: the Zipline fork\'s release')
+      }
+    }
+  }
+}
+
+settingsEvaluated { settings -> addRepo(settings.dependencyResolutionManagement.repositories) }
+allprojects { p ->
+  addRepo(p.buildscript.repositories)
+  substitute(p.buildscript.configurations)
+  substitute(p.configurations)
+}

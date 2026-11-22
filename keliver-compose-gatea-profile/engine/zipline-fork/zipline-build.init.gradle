@@ -1,4 +1,4 @@
-// Used by `apply.sh test` and `apply.sh publish` for Zipline's own build (not Keliver's).
+// Used by `apply.sh test`, `publish` and `release` for Zipline's own build (not Keliver's).
 // Android's Gradle plugin installs its default NDK while configuring :zipline-android-ndk, even
 // for JVM-only tasks. With -PziplineForkNdkVersion=<an installed NDK> the build uses that one
 // instead of downloading another into the shared SDK.
@@ -58,6 +58,87 @@ allprojects { p ->
     t.inputs.property('ziplineForkLongAsBigInt', longAsBigIntInput)
     t.inputs.files(p.provider { p.fileTree(testingJs) }).withPropertyName('ziplineTestingJs')
       .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+  }
+}
+
+// NF2 step 4 (`apply.sh release`): -PziplineForkRelease builds the fork under Keliver's own
+// coordinates, dev.keliver.zipline:<upstream artifact name>:<VERSION_NAME>, never app.cash.zipline:
+//   - every project's group is dev.keliver.zipline, set right after the root script (which sets
+//     app.cash.zipline) and before any module's script, which read it eagerly (the Gradle plugin's
+//     BuildConfig names the Kotlin compiler plugin and, with the patch, the CLI in that group);
+//   - every POM keeps Zipline's Apache-2.0 licence and Cash App as its authors and adds QuickJS's
+//     MIT licence, Keliver as the fork's developer, and the fork's URL and SCM, as Keliver's own
+//     POMs name them (build-support's RedwoodBuildPlugin.kt);
+//   - the Gradle plugin also declares the id `dev.keliver.zipline`, whose marker is the one
+//     published (a marker's group is its plugin id, and app.cash.zipline is not ours to publish
+//     to); its jar keeps `app.cash.zipline` too, so `apply plugin: 'app.cash.zipline'` with the jar on
+//     the build classpath works unchanged;
+//   - -PziplineForkReleaseRepo=<dir> adds that directory as the Maven repository `forkRelease`
+//     (publishAllPublicationsToForkReleaseRepository). Maven Central is the build's own
+//     publishToMavenCentral, with the signing and credentials given as Gradle properties.
+if (startParameter.projectProperties.containsKey('ziplineForkRelease')) {
+  def releaseGroup = 'dev.keliver.zipline'
+  def releaseRepo = startParameter.projectProperties['ziplineForkReleaseRepo']
+  def forkUrl = 'https://github.com/waliasanchit007/keliver'
+  def forkDir = "$forkUrl/tree/main/keliver-compose-gatea-profile/engine/zipline-fork"
+  gradle.rootProject { root ->
+    root.afterEvaluate {
+      root.allprojects { it.group = releaseGroup }
+    }
+  }
+  allprojects { p ->
+    p.plugins.withId('com.vanniktech.maven.publish.base') {
+      if (releaseRepo) {
+        p.publishing.repositories.maven {
+          name = 'forkRelease'
+          url = new File(releaseRepo).toURI()
+        }
+      }
+      // After the root script's pom {}, so these values are set last.
+      p.afterEvaluate {
+        p.publishing.publications.withType(MavenPublication).configureEach { pub ->
+          pub.pom { pom ->
+            pom.description.set('Zipline 1.28.0 on QuickJS 2026-06-04 (BigInt), Keliver\'s fork: ' +
+              'runs Kotlin/JS libraries in Kotlin/JVM and Kotlin/Native programs')
+            pom.url.set(forkDir)
+            pom.licenses { l ->
+              l.license { lic ->
+                lic.name.set('MIT')
+                lic.url.set('https://opensource.org/license/mit')
+                lic.distribution.set('repo')
+                lic.comments.set('QuickJS, (c) Fabrice Bellard and Charlie Gordon, in zipline/native/quickjs')
+              }
+            }
+            pom.developers { d ->
+              d.developer { dev ->
+                dev.id.set('waliasanchit007')
+                dev.name.set('Sanchit Walia')
+                dev.url.set('https://github.com/waliasanchit007')
+              }
+            }
+            pom.scm { scm ->
+              scm.url.set(forkUrl)
+              scm.connection.set('scm:git:git://github.com/waliasanchit007/keliver.git')
+              scm.developerConnection.set('scm:git:ssh://git@github.com/waliasanchit007/keliver.git')
+            }
+          }
+        }
+      }
+    }
+    if (p.path == ':zipline-gradle-plugin') {
+      p.plugins.withId('java-gradle-plugin') {
+        p.gradlePlugin.plugins.create('keliverZipline') { d ->
+          d.id = releaseGroup
+          d.displayName = 'zipline (Keliver fork)'
+          d.description = 'Compiler plugin to generate bridges between platforms'
+          d.implementationClass = 'app.cash.zipline.gradle.ZiplinePlugin'
+        }
+      }
+      // The app.cash.zipline marker is not published (its group is the plugin id).
+      p.tasks.matching { it.name.startsWith('publishZiplinePluginMarkerMavenPublicationTo') }.configureEach {
+        it.enabled = false
+      }
+    }
   }
 }
 
