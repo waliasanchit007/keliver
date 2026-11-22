@@ -1,0 +1,4 @@
+// Copyright (C) 2026 Keliver contributors. Licensed under the Apache License, Version 2.0.
+//
+// The upload gate's negative control (apply.sh check-upload-gate; build.gradle).
+rootProject.name = 'zipline-fork-upload-gate-check'
