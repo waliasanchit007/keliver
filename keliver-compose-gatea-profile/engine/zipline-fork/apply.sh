@@ -445,8 +445,10 @@ do_test() {
 do_results() { # <test task>...: the JUnit XML a test run left, summed (the count of record)
   shift 2 || true
   [ $# -gt 0 ] || set -- jvmTest
-  local t fail=0
+  local t d fail=0
   for t in "$@"; do
+    # <module>/<task> for another module; a bare task is :zipline's.
+    if [ "${t#*/}" != "$t" ]; then d="$zl/${t%%/*}/build/test-results/${t#*/}"; else d="$zl/zipline/build/test-results/$t"; fi
     python3 -I -c '
 import glob, sys, xml.etree.ElementTree as ET
 d = sys.argv[1]
@@ -468,7 +470,7 @@ print("results: %s: %d classes, %d run, %d passed, %d skipped, %d failed" % (d.s
 for b in bad:
     print("results:   failed: " + b)
 sys.exit(1 if f + e else 0)
-' "$(case "$t" in */*) echo "$zl/${t%%/*}/build/test-results/${t#*/}" ;; *) echo "$zl/zipline/build/test-results/$t" ;; esac)" || fail=1
+' "$d" || fail=1
   done
   return $fail
 }

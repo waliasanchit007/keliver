@@ -127,10 +127,13 @@ jobs:
       - name: Host tests, JVM and iOS simulator
         env:
           KELIVER_NDK_VERSION: ${{ env.NDK_VERSION }}
+        # The counts (and the failed tests' names) are printed whether or not a task failed.
         run: |
+          status=0
           scripts/zipline-fork.sh test "$WORK" --continue \
-            :zipline:jvmTest :zipline-bytecode:test :zipline:iosSimulatorArm64Test
-          scripts/zipline-fork.sh results "$WORK" jvmTest zipline-bytecode/test iosSimulatorArm64Test
+            :zipline:jvmTest :zipline-bytecode:test :zipline:iosSimulatorArm64Test || status=$?
+          scripts/zipline-fork.sh results "$WORK" jvmTest zipline-bytecode/test iosSimulatorArm64Test || status=1
+          exit "$status"
 
       - name: bigint-ops.js through Zipline's engine, JVM
         env:
