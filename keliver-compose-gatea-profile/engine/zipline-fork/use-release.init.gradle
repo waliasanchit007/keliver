@@ -1,0 +1,101 @@
+// Copyright (C) 2026 Keliver contributors. Licensed under the Apache License, Version 2.0.
+//
+// NF2 step 4: points a Keliver build at the fork's release, dev.keliver.zipline:<name>:1.28.0-keliver.1
+// (RELEASE_GROUP and RELEASE_VERSION, read from apply.sh next to this script), without changing the
+// build, found in the Maven repository `apply.sh release` wrote. The plugin then resolves the fork's
+// Kotlin compiler plugin and CLI itself (by its own group), and keeps the id `app.cash.zipline`, so
+// `apply plugin: 'app.cash.zipline'` needs no change.
+//
+//   ./gradlew -I keliver-compose-gatea-profile/engine/zipline-fork/use-release.init.gradle \
+//     -PziplineReleaseRepo=<the directory release wrote> [-PziplineReleaseVerify] <tasks>
+//
+// Every app.cash.zipline module the build resolves (the runtime, the loader, the Gradle plugin on
+// the build classpath) becomes the module of the same name in the fork's group. It is what
+// switching the version catalog will do (the fork's README, "Publishing the fork"), for trying a
+// release before it is on Maven Central.
+//
+// -PziplineReleaseVerify (review of PR #289, M1) also FAILS the build when an app.cash.zipline
+// module was requested by anything but the build's own projects (this build's or an included
+// build's, such as build-support): by one of the fork's modules (its POMs or Gradle module
+// metadata), or in a configuration the fork's Gradle plugin fills, `ziplineCli` (the CLI, named by
+// BuildConfig.ziplineGroup) or `*CompilerPluginClasspath*` (the Kotlin compiler plugin,
+// BuildConfig.KOTLIN_PLUGIN_GROUP). Substitution alone would hide such a leak. It checks each
+// resolved graph's requests and who made them, and prints how many it checked.
+// Bundles are compiled for QuickJS 2026 (the fork's compiler), so a host built without the fork
+// cannot load them. Included builds too: build-support compiles against Zipline (ZiplineManifest),
+// and its classes share the build's classpath with the plugin's, so both must be the fork's (two
+// groups would put two copies of app.cash.zipline's classes there).
+def repoDir = startParameter.projectProperties['ziplineReleaseRepo']
+if (!repoDir) {
+  // Gradle's own nested builds (resolving settings plugins) do not see the property; skip them.
+  if (gradle.parent != null) return
+  throw new GradleException('use-release.init.gradle: pass -PziplineReleaseRepo=<maven repo dir>')
+}
+def verify = startParameter.projectProperties.containsKey('ziplineReleaseVerify')
+def applySh = new File(buildscript.sourceFile.parentFile, 'apply.sh').text
+def constant = { String name ->
+  def m = applySh =~ /(?m)^${name}=(\S+)$/
+  if (!m.find()) throw new GradleException("use-release.init.gradle: no $name= in apply.sh")
+  m.group(1)
+}
+def releaseGroup = constant('RELEASE_GROUP')
+def releaseVersion = constant('RELEASE_VERSION')
+def upstreamGroup = 'app.cash.zipline'
+
+def addRepo = { RepositoryHandler repos ->
+  repos.maven {
+    name = 'ziplineRelease'
+    url = new File(repoDir).toURI()
+    content { includeGroup(releaseGroup) }
+  }
+}
+// The configurations the fork's own code fills: the Zipline plugin's CLI, the Kotlin compiler
+// plugins (the Zipline plugin's SubpluginArtifact). Every request in them is the plugin's.
+def filledByThePlugin = { Configuration c -> c.name == 'ziplineCli' || c.name.toLowerCase().contains('compilerpluginclasspath') }
+def checked = [requests: 0, configurations: 0]
+def resolveRule = { ConfigurationContainer configurations ->
+  configurations.configureEach { c ->
+    c.resolutionStrategy.dependencySubstitution.all { d ->
+      def r = d.requested
+      if (r instanceof ModuleComponentSelector && r.group == upstreamGroup) {
+        d.useTarget("$releaseGroup:${r.module}:$releaseVersion", 'NF2: the Zipline fork\'s release')
+      }
+    }
+    if (!verify) return
+    // After the graph is resolved, who asked for each app.cash.zipline module: one of the build's
+    // own projects (this build's or an included build's, such as build-support) is a declaration
+    // the catalog switch will change; a module (the fork's POMs or module metadata), or anything
+    // in a configuration the plugin fills, is a leak in the fork.
+    c.incoming.afterResolve { ResolvableDependencies rd ->
+      def leaks = []
+      // The graph's root is the configuration itself (a project, or a build script's classpath).
+      def root = rd.resolutionResult.root.id
+      rd.resolutionResult.allDependencies.each { dep ->
+        def r = dep.requested
+        if (!(r instanceof ModuleComponentSelector) || r.group != upstreamGroup) return
+        checked.requests++
+        def from = dep.from.id
+        def ours = from == root || from instanceof ProjectComponentIdentifier
+        if (filledByThePlugin(c) || !ours) leaks << "$r, requested by ${from.displayName}"
+      }
+      checked.configurations++
+      if (leaks) {
+        throw new GradleException("use-release.init.gradle (verify): in $c, $upstreamGroup was requested by the fork " +
+          "itself (its artifacts or its Gradle plugin), not by this build:\n  ${leaks.join('\n  ')}")
+      }
+    }
+  }
+}
+
+settingsEvaluated { settings -> addRepo(settings.dependencyResolutionManagement.repositories) }
+allprojects { p ->
+  addRepo(p.buildscript.repositories)
+  resolveRule(p.buildscript.configurations)
+  resolveRule(p.configurations)
+}
+if (verify) {
+  gradle.buildFinished {
+    println "use-release.init.gradle: verify mode: ${checked.requests} $upstreamGroup requests in ${checked.configurations} " +
+      "resolved configurations, every one from this build's own projects"
+  }
+}
