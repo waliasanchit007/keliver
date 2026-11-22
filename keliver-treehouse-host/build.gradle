@@ -103,6 +103,42 @@ android {
   }
 }
 
+// The host's baseline profile (src/androidMain/baseline-prof.txt, see HostBaselineProfileTest) only
+// helps if the published AAR carries it: AGP merges an AAR's root `baseline-prof.txt` into the app's
+// profile. This fails `check` if the release AAR stops carrying it or drops a rule (for example
+// after a move to a different Android plugin).
+def checkBaselineProfilePackaged = tasks.register('checkBaselineProfilePackaged') {
+  def aar = tasks.named('bundleReleaseAar').flatMap { it.archiveFile }
+  def source = layout.projectDirectory.file('src/androidMain/baseline-prof.txt')
+  def marker = layout.buildDirectory.file('tmp/checkBaselineProfilePackaged/ok')
+  inputs.file(aar)
+  inputs.file(source)
+  outputs.file(marker)
+  doLast {
+    def aarFile = aar.get().asFile
+    def zip = new java.util.zip.ZipFile(aarFile)
+    def packaged
+    try {
+      def entry = zip.getEntry('baseline-prof.txt')
+      if (entry == null) {
+        throw new GradleException("${aarFile.name} carries no baseline-prof.txt")
+      }
+      packaged = zip.getInputStream(entry).getText('UTF-8').readLines()*.trim() as Set
+    } finally {
+      zip.close()
+    }
+    def rules = source.asFile.readLines()*.trim().findAll { it && !it.startsWith('#') }
+    def missing = rules.findAll { !packaged.contains(it) }
+    if (rules.isEmpty() || !missing.isEmpty()) {
+      throw new GradleException("${aarFile.name}'s baseline-prof.txt lacks rules: $missing")
+    }
+    marker.get().asFile.text = "${rules.size()} rules packaged\n"
+  }
+}
+tasks.named('check') {
+  dependsOn checkBaselineProfilePackaged
+}
+
 // TreehouseTester loads a real guest bundle from the upstream Redwood
 // `test-app` fixture. That module isn't part of this fork, so the
 // dependency is wired ONLY when the integration tests are explicitly

@@ -371,7 +371,16 @@ class ThreewayActivity : ComponentActivity() {
           // Inside this frame's draw: the startup benchmark's timeToFullDisplay ends at this frame.
           reportFullyDrawn()
           // Once per process: a recreated activity (rotation) must not log a second "cold" line.
-          if (ColdStart.mark("dataDrawn")) log(ColdStart.line(form, recorder.peek(seq)))
+          if (ColdStart.mark("dataDrawn")) {
+            val requestMarks = recorder.peek(seq)
+            // onDraw runs at the start of the frame's draw, before the views record it (Compose
+            // measures and lays out inside Record View#draw()): `dataFrameEnd` is the end of this
+            // frame's main-thread work, the message after it (NF4 composed-to-drawn).
+            main.postAtFrontOfQueue {
+              ColdStart.mark("dataFrameEnd")
+              log(ColdStart.line(form, requestMarks))
+            }
+          }
           decor.postInvalidate()
           main.postDelayed(::runBench, SETTLE_MILLIS)
         }
