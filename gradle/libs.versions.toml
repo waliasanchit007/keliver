@@ -11,7 +11,7 @@ jbCompose = "1.12.2"
 # The Skia build jbCompose uses (bump it with jbCompose: the desktop runtime must match the
 # skiko that compose-ui pulls in). Only its desktop runtime is a direct (test) dependency.
 skiko = "0.150.2"
-ksp = "2.3.13"
+ksp = "2.3.14"
 # AGP's lint is AGP + 23 (AGP 9.3.1 -> 32.3.1).
 lint = "32.3.1"
 paparazzi = "1.3.5"
