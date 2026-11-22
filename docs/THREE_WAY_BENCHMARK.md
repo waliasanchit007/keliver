@@ -2418,6 +2418,332 @@ so the checklist runs on it, for example
 - NF4: `prestart,prefetch` saves 242 ms; the rest of the gap is the list's composition. The prestart's
   code load waits about 230 ms after the provider runs: worth finding before more cold-start work.
 
+## A12 checkpoint 2, 2026-11-22
+
+The second A12 checkpoint of the night, for what the first left open: the cold start and the press
+signal on the BigInt build (series G and H), the tap's first response in frames (I), and where the
+prestarted code load waits (J); after this checkpoint's review, the tap's first visible change on
+the pixels (K) and a rerun naming J's waker. Same Galaxy A12, still up since about 02:12 IST; the series ran
+from 04:43 (2 h 31 min of uptime), on battery. The phone was fast again (native as in the first
+checkpoint), but compare within this section only.
+
+**Method, as in the [first checkpoint](#a12-checkpoint-2026-11-22), except:**
+- **Two builds, both from this checkpoint's branch** (the first checkpoint's head `338a02f81`, which
+  has the committed "navigation number is newer" rule in the driver): the prototype published to a
+  scratch Maven repository, then the sample's benchmark APK. **1.28.0** is the sample as built;
+  **BigInt** is the same sample built with `use-fork.init.gradle` against the fork, rebuilt for this
+  session with `apply.sh` (`clone`, `engine`, `jni`, `android`, `publish`; `1.28.0-q20260604`, its
+  `libquickjs.so` sizes equal series A's on all four ABIs), and `-PziplineForkLongAsBigInt` (the init
+  script named both guest links it changed). APKs 25,271,283 and 26,047,427 bytes. **The engine
+  inside the BigInt APK is inferred, not inspected**: the build log shows the init script switching
+  both guest links to `Long` as BigInt but not the host resolving `zipline-android 1.28.0-q20260604`,
+  the APK was not unzipped, and the `libquickjs.so` sizes above are the fork's own build output. The
+  evidence for it is the APK delta, +776,144 bytes (+3.07%), matching series A's fork-and-BigInt APK
+  (+776,396, +3.1%, where the library sizes were read from the APK), and series G's 2.3× faster
+  composition.
+- **One script on the phone ran all four series** (`nohup sh`), installing the two APKs in turn as
+  before (`pm install -r`, profileinstaller's broadcast, `speed-profile`).
+
+### Series G: the cold start on the BigInt build (NF4)
+
+**Method.** Series E's (`cold`: one unmeasured launch per run, then 4 cold launches, `am force-stop`
+between, each waiting for the process's `"cold"` line; marks in ms from the process start), in two
+rounds. Each round installed the BigInt build and ran native, as shipped, `x=prestart` and
+`x=prestart,prefetch`, then installed 1.28.0 and ran as shipped and `x=prestart,prefetch` (the
+anchor to series E): 8 measured launches per arm. Native ran on the BigInt install (its code does
+not use the engine).
+
+**Phone state.** 04:43–04:57, uptime 2 h 32 min – 2 h 44 min, on battery 90% → 88%, 25.5–25.6 °C,
+thermal status 0, CPU idle 84–98% before each run.
+
+| Build, arm | Data drawn: median (min–max) | − native | First frame | Code load starts → succeeds | Request → response | Parsed → composed | List composed |
+|---|---|---|---|---|---|---|---|
+| native | **618** (612–622) | — | 378.5 | — | 143 | 25.5 | 616 |
+| 1.28.0, shipped | **2,834** (2,772–2,985) | +2,216 | 378.5 | 491.5 → 1,145.5 | 144 | 998.5 | 2,580 |
+| 1.28.0, `prestart,prefetch` | **2,577** (2,547–2,622) | +1,959 | 373 | 314.5 → 981 | 16 | 1,029.5 | 2,320 |
+| BigInt, shipped | **2,143** (2,127–2,159) | +1,525 | 377 | 486.5 → 1,106.5 | 142 | 434.5 | 1,902.5 |
+| BigInt, `prestart` | **1,988.5** (1,975–2,022) | +1,370.5 | 368 | 312.5 → 953.5 | 141 | 427 | 1,743.5 |
+| **BigInt, `prestart,prefetch`** | **1,866** (1,856–1,875) | **+1,248** | 374 | 314.5 → 945 | 15 | 448.5 | 1,636 |
+
+(Request → response and parsed → composed are medians of each launch's difference; the other
+columns are medians of the marks.)
+
+- **The BigInt build's cold-start gain is real: −691 ms as shipped** (2,834 → 2,143, −24%) and
+  **−711 ms with `prestart,prefetch`** (2,577 → 1,866, −28%), measured in the same rounds, with no
+  overlap between the arms' ranges. Almost all of it is the list's composition (parsed → composed
+  998.5 → 434.5 ms, 2.3×, as series A's 2.73× on open). The code load gains little (the summed
+  module load time, `n_moduleLoadMs`, 306 → 239 ms as shipped, 245.5 with both steps; the load
+  succeeds 39 ms earlier as shipped): it is bytecode loading, not guest work.
+- **The 1.28.0 anchor reproduces series E** within 60 ms (2,834 against 2,775 as shipped, 2,577
+  against 2,533 with both steps), and native too (618 against 604).
+- **With BigInt the two NF4 steps still add up**: `prestart` −154.5 ms, the prefetch −122.5 more,
+  −277 together (1.28.0 here: −257).
+- NF4's target, within 0.4 s of native: **not met**, +1,248 ms at best. What is left, BigInt with
+  both steps (medians of the marks): the code load 314.5 → 945 (630 ms, of it 406 ms from the first
+  module's load start to the last one's end, a span, not `n_moduleLoadMs`'s sum); its
+  start still waits about 230 ms after the prestart (81 ms; series J); the guest's first frame
+  ("Loading…") and the request, 945 → 1,149 (the first batch sent); the list's composition, 448.5;
+  and the batch to the screen, composed → drawn 230.5 ms (241.5 as shipped, 2 for native).
+
+### Series H: the press signal on the BigInt build (NF3)
+
+**Method.** Series F's open and back (`bench=nav`, header back, `--ei hold 100`, timed from the
+touch-down), on the BigInt build: `x=prepared` (press off) against `x=prepared,press`, simple and
+heavy, alternating, in two rounds (14 iterations, the first 2 dropped). **The driver is the
+committed one this time**, with the "navigation number is newer" rule: every press-on file's `i=1`
+is `seq=100001` (the click's navigation, drawn 301–311 ms simple, 728–732 heavy), not series F's
+`seq=100000` (the prepared detail counted as drawn). The rule works on the device; no run timed out.
+
+**Phone state.** 04:57–05:03, uptime 2 h 46 min – 2 h 51 min, on battery 87%, 25.6–25.7 °C, thermal
+status 0, CPU idle 86–99%.
+
+**Open from the touch-down** (ms; median / p90 / min–max of `drawn`; `click` is when the guest's
+`onClick` ran; the last two columns are medians of each iteration's difference):
+
+| Arm | Round 1: drawn | Round 2: drawn | `click` (medians) | Click → composed | Click → drawn | Back: drawn |
+|---|---|---|---|---|---|---|
+| press off | 280.5 / 283 / 251–288 | 278 / 285 / 264–298 | 113; 113 | 116.5; 112 | 167; 163.5 | 169.5; 171.5 |
+| **press on** | **278** / 287 / 258–288 | **287** / 300 / 267–304 | **198.5; 201** | 57.5; 58 | 80; 85 | 174; 169.5 |
+| heavy, press off | 590 / 627 / 569–628 | 583 / 598 / 564–610 | 111; 113 | 369.5; 363 | 479; 470.5 | 183.5; 181 |
+| **heavy, press on** | **626** / 671 / 593–683 | **635** / 647 / 596–651 | **488.5; 494** | 114.5; 111 | 140.5; 131.5 | 189; 187.5 |
+
+- **With `Long` as BigInt the press signal is neutral on the simple screen** (round 1 −2.5 ms,
+  round 2 +9, within this run's noise of up to 9 ms (the press-off rounds differ by 2.5); series F
+  on 1.28.0: +11 to +24) **and still slower
+  on the heavy one** (+36 and +52; F: +55 to +70). It never makes open faster here.
+- **Why, per iteration.** The press reaches the guest at about 50 ms (series F; not measured in H). On the simple screen it then
+  composes the prepared detail, and the click, queued behind that work, runs at about 200 ms
+  instead of 113 (F: 313). From the click the prepared detail is drawn in 80–85 ms instead of
+  163.5–167, so the two halves cancel: the head start is spent waiting for QuickJS. On the heavy
+  screen the click waits until about 490 ms: preparing costs more than it saves (click → drawn
+  131.5–140.5 against 470.5–479). The detail still recomposes at the click (click → composed
+  57.5–58 simple, 111–114.5 heavy), because the three-way detail reads the counter the click
+  increments (series F's caveat).
+- What would make it pay is unchanged from F: a guest frame shorter than the press, or a
+  preparation that does not hold the engine when the click comes (cancellable, or yielding between
+  frames). Back is unchanged (169.5–189 ms), as in F.
+- On the BigInt build, open without the press is **278–280.5 ms simple and 583–590 heavy from the
+  touch-down** (163.5–167 and 470.5–479 from the click). NF3's gate (about 100 ms simple, 150 heavy)
+  is **not met**.
+
+### Series I: the tap's first response, in frames (NF1's "tap within one frame")
+
+**Method.** Real touches through the input system (the shell's `input`, injected into the
+InputDispatcher; the driver's synthetic taps cannot be used, they bypass it), under a Perfetto
+trace (series C's config). One fresh process per arm (`--ez localApi true`, no `bench`), then 11
+rounds, 2.5 s apart, meant to leave the app idle (no frame in flight) before each touch (true for
+BigInt and native; see the 1.28.0 caveat below the table): a quick tap on a list
+row (`input tap`: it opens the detail), the detail's header **Back** (a button), **Load 20** (a
+button: a new request), a **held** press on a row (`input swipe` in place for 300 ms; it opens the
+detail), and Back again. The first round is dropped (the process's first touch is slower), leaving
+10 of each (9 of the last Back). Arms: the guest on BigInt and native (the BigInt install), then the
+guest on 1.28.0. Read on the phone with `trace_processor_shell`:
+- **the DOWN**: system_server's `interceptMotionBeforeQueueing` for the injected event (the first of
+  its gesture; the app receives it 1.4–1.9 ms later, median, its `processInputEventForCompatibility`);
+- **the response frame**: the app's first `Choreographer#doFrame` after the DOWN (the app draws
+  nothing while idle), and **its present**: the end of the app's actual frame timeline row for that
+  frame's vsync id (SurfaceFlinger's present).
+
+**What that frame draws was not captured here**, so this series measures the first frame
+*scheduled* after the touch, not the first *visible* change (series K below captures it: the guest's
+first frame is pixel-identical to the screen before, and the first visible change comes one frame
+later). In the guest arms a quick tap's first frame is
+followed by frames at every vsync through the 450 ms looked at (an animation), and the guest's
+destination comes much later (series H: about 280 ms after the touch on BigInt). The three-way host
+wraps its content in material3's `MaterialTheme` (`ThreewayActivity`), so the host's tap feedback is
+a ripple and a pressed state layer, both fading in from alpha 0; Compose draws an animation's
+starting value in its first frame, so that first frame may show little or nothing, and the first
+visible change may be one frame later (about 35–45 ms after the DOWN). For a quick tap on a row
+inside a scrollable list Compose also delays the press until the UP. In native, the first frame for
+a row and for Back is the destination itself (one frame, then nothing until the next vsync-locked
+work), with one exception: native row k=21's first frame, at 16.3 ms with main-thread work ending
+at 9 ms, started before the UP arrived and is not the destination (it is the "1 of 39 native"
+within 16.7 ms below). So for a row and Back the guest and native columns may compare a frame with
+no visible change against a fully visible one; Load 20 and the held press compare like with like
+(both the host's press feedback). For a held press every arm, native included, starts an animation
+8–25 ms after the DOWN (the pressed state). A real touchscreen adds its own sampling and controller delay before
+the DOWN, the same for every form (not measured).
+
+**Phone state.** 05:03–05:12, uptime 2 h 52 min – 2 h 58 min, on battery 87% → 86%, 25.6–25.8 °C,
+thermal status 0, CPU idle 85–98%.
+
+**DOWN → the response frame presented** (ms; median / p90 / min–max; in brackets the frame's start
+after the DOWN, median; the quick taps' UP came 4.8–6.7 ms after the DOWN, median):
+
+| Touch | Guest, BigInt | Guest, 1.28.0 | Native |
+|---|---|---|---|
+| Row, quick tap | **23.8** / 30.2 / 14.7–31.9 (13.7) | **26.8** / 30.9 / 15.8–31 (17.3) | 55.4 / 58 / 16.3–59.8 (16.8): the detail |
+| Back (header), quick tap | **27.8** / 30.8 / 20.2–33 (18.5) | **23.9** / 28.3 / 15.9–29.2 (14.3) | 110.3 / 117.2 / 95.5–117.4 (15.6): the list |
+| Back, second (n=9) | **18.6** / 29.7 / 14.5–29.7 (10) | **21.3** / 27 / 15.4–27 (12.2) | 114.9 / 117.8 / 83.6–117.8 (19.9): the list |
+| Load 20, quick tap | **24.1** / 26.9 / 16.1–28.8 (15) | **25.3** / 29 / 13.8–29.4 (15.9) | 31.8 / 33.4 / 22.2–33.8 (19.1) |
+| Row, held 300 ms | **32.4** / 35.3 / 19.5–36.5 (20) | **26.8** / 33.4 / 17.1–37.3 (15.1) | 30.2 / 35.4 / 22.1–36.7 (17.7) |
+
+- **The 1.28.0 arm was not always idle before the touch**: 10 of its 49 kept touches (rows k=6, 11,
+  26, 36, 41, 46; Load 20 k=8, 23, 43, 53) had 1–3 app frames in the second before the DOWN (BigInt
+  and native: none), so their first frame after the DOWN may not be the touch's. Without them the
+  1.28.0 row median is 23.0 ms (n=4, 15.8–31) instead of 26.8, and Load 20's 21.5 (n=6, 13.8–29.4)
+  instead of 25.3; Back and the held press had none. The conclusion does not change.
+- **The first frame scheduled after a guest tap is the next frame the pipeline allows**: it starts
+  at the first vsync after the touch arrives (10–18.5 ms after the DOWN, median, depending on where
+  the touch falls in the 16.7 ms period) and is presented one vsync later. Every quick tap in both
+  guest arms (78 of 78) had that frame on screen within **33 ms** of the DOWN, two frame periods,
+  medians 18.6–27.8 ms; no frame missed its deadline. Held presses: within 37.3 ms, as native.
+  Whether that frame shows a visible change was not captured: with a ripple fading in from alpha 0,
+  the first visible change may be one frame later.
+- **The engine does not matter for that frame** (BigInt and 1.28.0 are within a few ms both ways):
+  the host's Compose `clickable` schedules it, and the click reaches the guest without holding the
+  main thread. The guest pays later, for the destination.
+- **Native's first frame is no earlier**: for Load 20 and the held press it is the same 30–32 ms
+  (like with like: both are press feedback); for a row and Back its first frame is the new screen
+  itself, composed in that frame (main-thread work to 46 and 100 ms) and presented at 55.4 and
+  110.3 ms. Whether the guest *visibly* acknowledges a row or Back tap sooner than native is not
+  established by this series: its first frame may be an invisible start of a fade-in, native's is
+  the whole destination. The guest arrives later.
+- **Against the target, "the first response to a tap within one frame"**: **not established by
+  this series** (settled on the pixels by series K: not met). The first frame scheduled after the
+  touch is one frame after it is delivered (no frame waits for the guest or the engine), but what
+  it shows was not captured. Within 16.7 ms of the DOWN itself
+  no form reaches even the scheduled frame on this phone (7 of 78 guest quick taps, 1 of 39
+  native): the app draws at the next vsync and the compositor shows that frame one vsync later.
+
+### Series J: where the prestarted code load waits (NF4)
+
+**Method.** The 1.28.0 build, `x=prestart,prefetch,trace` (`trace` names every main-thread message
+and the guest's calls), one unmeasured launch, then two cold launches each under a 20 s Perfetto
+trace (series C's config). The trace's times are aligned with the `"cold"` line's marks (ms from
+`Process.getStartUptimeMillis`) by `onCreate`: in J-1 the trace's `performCreate` begins 286.8 ms
+after the main thread first runs and the `activityCreate` mark is 203, so the trace leads the marks by 84 ms
+(the process forks and specialises before its start time is set). Times below are the marks'.
+
+**Phone state.** 05:12–05:14, on battery 86%, 25.8 °C, thermal status 0.
+
+The two launches' marks: prestart 84 and 90, `codeLoadStart` 316 and 343, data drawn 2,591 and
+2,652 (series G's median for this arm: 2,577). Launch J-1, from the provider to `codeLoadStart`
+(J-2 has the same steps, 253 ms from the prestart to `codeLoadStart` against J-1's 232):
+
+| From → to (ms) | What runs | Where |
+|---|---|---|
+| 84 → 153 | the bench's own fixture API starting (`n_fixtureMainMs` 68.8): the prestart marks itself before it | main thread, in `bindApplication` |
+| 153 → 169 | the prestart's own work: `create`, `start` (`n_prestartMainMs` 16) | main thread |
+| 164 → 214 | the Treehouse (Zipline dispatcher) thread starts and runs about 45 ms: opening the code cache's SQLite database (`androidx.sqlite`'s `ProcessLock`), first-use class loading | the Treehouse thread |
+| 214 → 263 | **the Treehouse thread sleeps 49.1 ms** (J-2: 50.4) | — |
+| 263 → 316 | it runs again (kotlinx.serialization's JSON and Zipline's signature classes loading), then `codeLoadStart` | the Treehouse thread |
+
+- **The wait is about 85 ms on the main thread and about 150 ms on the Treehouse thread, not a
+  main-thread hop.** 69 ms of it is the bench's fixture, which a real host does not have, placed
+  between the prestart's mark and its work: a production prestart should start its code load about
+  70 ms sooner than this bench shows, if nothing else takes the fixture's place (a prediction, not
+  measured).
+- **The 49–50 ms sleep is the Treehouse thread waiting on a `Dispatchers.Default` pool thread
+  (measured in a rerun).** This trace processor leaves `thread_state.waker_utid` empty and J's
+  traces were not kept, so J itself could not name the waker. Two more traced cold launches of the
+  same build and arm at 05:50 (marks: prestart 85 and 84, `codeLoadStart` 351 and 340, data drawn
+  2,702 and 2,642) show the same sleep (64.1 and 51.6 ms). In both, the raw `sched_waking` event
+  for the Treehouse thread at the end of the sleep was emitted by a `DefaultDispatch` thread of the
+  app (in the first launch the process still carried the name `zygote64`), which had just loaded
+  `ZiplineManifest`, `TopologicalSortKt` and `LoadedManifest` (0.2–1.8 ms before the wake). J's two
+  launches show the same pool-thread work in the 2 ms before the wake: the loader's cache work on
+  its own dispatcher (reading the cached manifest), while the main thread loads classes too (the
+  threads log `Lock contention on ClassLinker classes lock` against each other around it). The wake
+  comes 6–7 ms after the main thread's `activityResume` ends in J's two launches; whether the main
+  thread's class loading is what delays the pool thread is not established.
+- **`codeLoadStart` is not the load's start**: the Treehouse thread has run about 100 ms by then.
+  Most of what precedes it is first-use class loading and the cache's database, cost that a
+  baseline profile for the host's loader (Gate B's option 5) or opening the cache earlier could
+  address. Findings only; no fix was tried.
+
+### Series K: the tap's first visible change, on the pixels (NF1)
+
+Added after the review of this checkpoint, to settle what series I's response frame shows.
+
+**Method.** Series I's touches (`input tap`, the same coordinates; 2.5 s apart) under series I's
+Perfetto trace **and** a screen recording of every composited frame: `screenrecord
+--output-format=frames --size 180x400` writes each frame the compositor sends to its virtual display
+as raw RGB (a 20-byte header with the size and format, no timestamp), so unchanged frames stay
+byte-identical and any changed byte is a pixel change. One fresh process per arm, then 9 rounds of a
+quick tap on a list row (it opens the detail), the detail's header **Back**, and **Load 20**; the
+first round dropped, leaving 8 of each per run. **Two runs** (K at 05:40, K2 at 05:54), each with
+the 1.28.0 guest and then native (the as-shipped install; the BigInt build was not rebuilt). The
+frames were compared on the phone, each with the one before it: changed bytes below the status bar,
+their bounding box, and the largest channel change (0–255).
+
+**Timing.** Raw frame *i* is screenrecord's *i*-th `acquireBuffer` in the trace (697–708 frames per
+guest run; the counts match the file exactly). The recorder trails the display: where a frame's
+identity is known (native row and Back, whose first frame is the destination; the last frame of each
+Load 20 ripple), the virtual display's buffer is queued 10–31 ms after that frame's present. So the
+first raw frame after the DOWN is the app's first frame after it: it trails that frame's present by
+11–23 ms in every guest touch. Matching it to the app's second frame instead would need a lag of
+−2 to +6 ms, which no known frame shows. The recorder drops a few frames (0–5 of each touch's 24–32
+app frames), so the frame counts alone cannot prove the order; the lags do. Times below are the matched app frame's
+present (frame timeline), from the DOWN (system_server's `interceptMotionBeforeQueueing`, as in I).
+The recording did not shift the first frame: the guest row's first frame was presented 26.9 ms after
+the DOWN in K (median; I: 26.8), and native's row 57.0 (I: 55.4).
+
+**Phone state.** 05:40–05:57, uptime 3 h 28 min – 3 h 45 min, on battery 85% → 83%, 25.7–25.8 °C,
+thermal status 0, CPU idle 97–98%.
+
+**What the frames show.**
+- **Every guest touch's first frame after the DOWN is pixel-identical to the screen before it**
+  (48 of 48 kept, and the 6 of the dropped first rounds), and so is native **Load 20**'s (16 of
+  16): the host's Compose ripple draws its first frame at alpha 0.
+- **The first changed frame is the app's second frame after the touch** (47 of 48 kept guest
+  touches; one row tap's first change came a frame later, in its third), and it shows **the host's
+  ripple, faint**: for a row a circle centred on the touch inside the row's band, for Back a circle
+  on the back icon, for Load 20 the button. Its largest channel change is 5–6 of 255 (about 2%,
+  at this scale); for a row and Load 20 it is 9–10, 14–16 and 19–22 in the next three frames (the
+  ripple fading in), for Back it grows more slowly (7, 9–10, 13).
+- **Native's row and Back first change is the destination itself** (the whole screen, in one frame),
+  except in two rounds, where an unchanged press frame came first (one row: then the destination
+  in the next frame; one Back: a ripple first, the destination later).
+
+**DOWN → the first visibly changed frame presented** (ms; median / p90 / min–max over both runs,
+n=16 each):
+
+| Touch | Guest, 1.28.0 | Native |
+|---|---|---|
+| Row, quick tap | **46.8** / 48.5 / 39.2–50.4: the ripple | 56.6 / 61.1 / 47.4–64.4: the detail |
+| Back (header) | **44.8** / 49.1 / 36.2–50.0: the ripple | 117.8 / 124.3 / 34.3–125.6: the list (34.3: the one ripple-first round) |
+| Load 20 | **39.3** / 45.5 / 31.9–50.6: the ripple | 44.2 / 48.9 / 36.6–50.3: the ripple |
+
+- **The guest's first visible response to a tap is one frame later than its first scheduled
+  frame**: 39.3–46.8 ms after the DOWN (medians), all ≤ 50.6 ms, about three frame periods, and
+  it is faint for one more frame. The cause is the host's ripple starting at alpha 0, not the guest
+  or the engine: native Compose's own button (Load 20) is the same, 44.2 ms.
+- **Against native**: the guest shows *something* sooner for a row (46.8 against 56.6) and for Back
+  (44.8 against 117.8), but only the ripple; native shows the destination. For a button that does
+  not navigate they are the same.
+- **"Tap within one frame" is not met** on the pixels, by the guest or by native's Compose button:
+  the first visible change is presented in the app's second frame after the touch. Within two frame
+  periods of the DOWN (33.3 ms, the bar the review proposes) it comes for 1 of 48 guest touches
+  (Load 20 at 31.9 ms) and none of native's button taps. What would meet it is on the host: an
+  indication that draws a visible pressed state in its first frame (a pressed layer at full alpha at
+  once, the ripple after it) instead of fading in from 0. No guest work is involved.
+
+### Verdicts against the owner's targets (checkpoint 2)
+
+| Target | Verdict | Evidence |
+|---|---|---|
+| Tap response within one frame | **Not met** (on the pixels): the first frame scheduled after the touch, presented one frame after it is delivered, is pixel-identical to the screen before (the host's ripple at alpha 0); the first visible change is the next frame, a faint ripple. Native Compose's own button is the same | First visible change, guest on 1.28.0: 39.3–46.8 ms after the DOWN (median), all ≤ 50.6; native button 44.2, native row / Back the destination at 56.6 / 117.8 (series K). The first scheduled frame: 18.6–27.8 ms on both engines (series I) |
+| About 100 ms to the destination (open: simple ~100, heavy ≤ 150) | **Not met** | BigInt, press off, from the touch-down: 278–280.5 simple, 583–590 heavy; the press signal neutral (simple) or worse (heavy, +36 to +52) (series H) |
+| Cold start within +400 ms of native | **Not met** | BigInt with `prestart,prefetch`: 1,866 against native 618, +1,248 (1.28.0: +1,959); BigInt alone −691 ms as shipped (series G) |
+
+**What it changes in the plan (proposals for the owner):**
+- NF2: the BigInt build's cold-start gain is measured, not inferred (−691 ms as shipped, −711 with
+  both NF4 steps). It is the largest single cold-start step measured so far.
+- NF3: the press signal does not pay on BigInt either (neutral simple, worse heavy). Keep it off by
+  default; the open path's remaining cost is the guest's frame from the click (163.5–167 ms simple,
+  470.5–479 heavy on BigInt).
+- NF1: "tap within one frame" is not met on the pixels, and the gap is the host's, not the guest's:
+  no frame waits for the guest, but the host's ripple draws its first frame at alpha 0, so the first
+  visible change (a faint ripple) is presented in the app's second frame after the touch, 39.3–46.8
+  ms after the touch-down (native Compose's button: 44.2). The fix to try is a host indication that
+  is visible in its first frame (a pressed layer at full alpha at once). Whether the bar is "one
+  frame after delivery" or "within two frame periods of the touch-down" is the owner's call.
+- NF4: before more cold-start work, the code load's first 150 ms on the Treehouse thread (class
+  loading, the cache's database and a 50 ms wait on the cache's thread) and the 230 ms from the
+  guest's composition to the screen are the next places to look; the bench's own fixture inflates
+  the prestart's apparent wait by about 70 ms.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
