@@ -15,8 +15,8 @@ is published yet.
   modifies carries "Modified by the Keliver fork of Zipline, 2026" (section 4(b)), and the new
   test file is Apache 2.0 too.
 - **QuickJS** is © Fabrice Bellard and Charlie Gordon, under the **MIT licence** (`LICENSE` in the
-  tarball, and the notice at the top of each source file, kept verbatim). `patches/quickjs-2026-06-04-asuintn.patch` modifies
-  `quickjs.c` and marks its change "Keliver fork (NF2)".
+  tarball, and the notice at the top of each source file, kept verbatim). `patches/quickjs-2026-06-04-backports.patch` modifies
+  `quickjs.c` and `libunicode.c` and marks each change "Keliver fork (NF2)".
 
 Anything built from this patch set (step 4) carries both licences: every POM keeps Zipline's
 Apache 2.0 licence and adds QuickJS's MIT licence, and every jar, AAR and klib carries
@@ -30,12 +30,44 @@ one Android app share the path, which Android's packaging would refuse) and `MET
 
 ## The patches
 
-- `patches/quickjs-2026-06-04-asuintn.patch` (applied to the engine directory): a general
-  `BigInt.asUintN`/`asIntN`. The release returns the argument unchanged when it has no more limbs
-  than the width (`BigInt.asUintN(64, -1n)` gives `-1n`), and drops the sign limb when the width is a
-  multiple of the limb size (`BigInt.asUintN(64, 2n**64n + 2n**63n)` gives `-(2n**63n)`). The fix
-  covers every width, short and multi-limb values, and 32- and 64-bit limbs. It replaces the
-  measurement-only `../patches/quickjs-2026-06-04-asuintn64.patch`.
+- `patches/quickjs-2026-06-04-backports.patch` (applied to the engine directory): fixes from
+  Bellard's QuickJS after the 2026-06-04 release (github.com/bellard/quickjs, triaged up to
+  `e585640ffa`, 2026-11-10), each marked with its upstream commit. None changes the bytecode
+  format, the opcodes or the built-in atoms. BigInt, which Kotlin's `Long` compiles to:
+  - `c17f7fc1db` (#557): `BigInt.asUintN`/`asIntN`. The release returns the argument unchanged
+    when it has no more limbs than the width (`BigInt.asUintN(64, -1n)` gives `-1n`), and keeps the
+    sign limb when the width is a multiple of the limb size (`BigInt.asUintN(64, 2n**64n + 2n**63n)`
+    gives `-(2n**63n)`). Upstream's code, verbatim; it replaces the fork's own fix (and the
+    measurement-only `../patches/quickjs-2026-06-04-asuintn64.patch`). One difference from that
+    fix: `BigInt.asUintN(2 ** 20, -1n)` returns a value one limb over QuickJS's 2^20-bit cap (as
+    Node does), on which an operation either gives the right answer or is a RangeError; the
+    fork's fix threw at once.
+  - `ef5c6e356c`: `--` on a BigInt that is not short, with 64-bit limbs, added 2^32 - 1
+    (`let a = -(2n**63n); a--` gave `-9223372032559808513n`).
+  - `7852f3a80f` (#583): a negative BigInt and a negative float of another magnitude compared
+    the wrong way round (`-10n < -1.5` was `false`).
+  - `0d9e58551a`: `JS_ToBigInt64` with 32-bit limbs did not sign-extend a one-limb value
+    (unreachable with canonical BigInts; taken for parity).
+
+  Memory safety and leaks on paths Zipline uses: `cd97c2b` (#529, a use after free in
+  `build_backtrace` when it runs out of memory), `f68db0e` (a bytecode object reference to an
+  object still being read was a NULL dereference), `79f58c1` (`JS_ReadBigInt` leaked on truncated
+  bytecode), `88130c0` (#598, a template object read from bytecode was not sealed as the parser
+  seals it), `552d5eb` (#587, `JS_ToCStringLen2` leaked on failure), `c530305` (#590, the
+  `JS_ValueToAtom` hunk: a built-in symbol's reference leaked), `0943061` (two hunks: a double
+  free in `Promise.withResolvers` when a property cannot be defined, and a leak in
+  `JS_AddIntrinsicTypedArrays`), `813636e` (#606, a detached or transferred `ArrayBuffer`'s free
+  function ran again when it was finalized) and, in `libunicode.c`, `817509a`
+  (`unicode_script` looped forever after an allocation failure). Every upstream commit in the
+  range, taken or not and why, and the hunks of `0943061`: [`BACKPORTS.md`](BACKPORTS.md).
+
+  The fork's own, not in upstream: four size guards where a script-controlled count made
+  `sizeof(X) * n` wrap `size_t` on a 32-bit host and a table filled past its end (a Proxy
+  `ownKeys` result, which is also capped at 2^27 keys on every host as a RangeError;
+  `toReversed` and its siblings on an array-like; a String object's keys; a typed array sort's
+  index table). The sites, and those checked and left alone: BACKPORTS.md, "Keliver-only fixes".
+  `../bigint-ops.js` covers the BigInt fixes against Node (`check-bigint`,
+  `check-bigint-zipline`); `QuickJs2026Test` covers them through Zipline.
 - `patches/zipline-1.28.0.patch` (applied to the Zipline checkout):
   - `zipline/native`: the QuickJS names that changed. `JS_AddIntrinsic*` and
     `JS_SetPropertyFunctionList` now return `int`, and their results are checked (on iOS too).
@@ -104,7 +136,9 @@ one Android app share the path, which Android's packaging would refuse) and `MET
   - Build files: `dtoa.c` (new in QuickJS 2025-04) in `build.zig`; `-fwrapv` in `build.zig`, the
     Android `CMakeLists.txt` and cklib's flags (QuickJS 2026's Makefile builds with it).
   - `QuickJs2026Test` (host tests, JVM and iOS): the version, the compiler accepting BigInt, the
-    general `asUintN` and its RangeError at the size limit, BigInt → `Long` and its range, rope
+    general `asUintN` and its behaviour at the size limit, the other backported BigInt fixes
+    (`bigIntUpstreamFixes`), the success paths of the functions whose error paths were patched
+    (`backportedErrorPathsKeepTheirSuccessPaths`), BigInt → `Long` and its range, rope
     strings through `evaluate` and an inbound call, and (1b) bytecode without source text.
   - `BigIntOpsTest` (step 3; host tests, JVM and iOS): `../bigint-ops.js` through Zipline's own
     engine, compared with Node's output line by line, when `apply.sh check-bigint-zipline` has put
