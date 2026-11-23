@@ -38,7 +38,8 @@ internal object Unset
  * A generated container's children (docs/COMPOSE_GENERATOR_DESIGN.md §9). Each child's scoped
  * modifiers (`weight`, `align`) are applied with the parent's real scope as receiver; a generated
  * child applies its own unscoped modifiers, and a legacy child gets the legacy visual modifiers,
- * as `ComposeWidgetChildren` gives them.
+ * as `ComposeWidgetChildren` gives them. Adapted from Redwood's `ComposeWidgetChildren` (hence
+ * this file's Square notice).
  */
 public class ScopedChildren : Widget.Children<@Composable (Modifier) -> Unit> {
   private var modifierTick by mutableIntStateOf(0)

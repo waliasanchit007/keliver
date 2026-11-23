@@ -104,8 +104,10 @@ private val isCiEnvironment = System.getenv("CI") == "true"
  * its steps run.
  *
  * Only a notice dated 2025 or earlier counts as Redwood-derived (in a range, both years): the
- * fork began in 2026 and upstream Redwood has no later Square notice, so a "2026 Square, Inc."
- * file is a Keliver file copied from a template and is given the Keliver header.
+ * fork began in 2026 and upstream Redwood had no later Square notice at the fork base
+ * (`7da0b0445`), so a "2026 Square, Inc." file is a Keliver file copied from a template and is
+ * given the Keliver header. Upstream is still active: before porting an upstream file dated 2026
+ * or later, widen this exemption, or Spotless replaces Square's notice (a section 4(c) breach).
  *
  * Spotless replaces everything before the first [KELIVER_HEADER_DELIMITER] line with the header,
  * so a short Keliver notice is made the full one, and a comment written above the package line
