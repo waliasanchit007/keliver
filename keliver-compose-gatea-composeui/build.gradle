@@ -99,8 +99,11 @@ tasks.withType(org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimu
 // RetainedBackFrameBenchmark: -Dkeliver.retainedBack.measured=<n> (and .sample=true) on the Gradle
 // command line reach the test JVM. Read through a provider, so a changed value reruns the task.
 def retainedBackProperties = providers.systemPropertiesPrefixedBy('keliver.retainedBack.')
+// CachedFrameReplayBenchmark (NF5): -Dkeliver.nf5.wire=<file> -Dkeliver.nf5.measured=<n>, the same way.
+def nf5Properties = providers.systemPropertiesPrefixedBy('keliver.nf5.')
 tasks.named('jvmTest', Test).configure {
   retainedBackProperties.get().each { key, value -> systemProperty(key, value) }
+  nf5Properties.get().each { key, value -> systemProperty(key, value) }
 }
 
 // The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
