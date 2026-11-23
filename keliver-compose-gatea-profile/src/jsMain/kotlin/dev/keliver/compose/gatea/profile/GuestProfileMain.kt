@@ -117,6 +117,15 @@ private object HeavyMarks : ThreewayMarks {
   override fun composed(screen: String, seq: Int) = Unit
 }
 
+/** NF5 (`heavy=2`): the heavy detail whose structure depends on the item (`variedDetail`). */
+private object VariedHeavyMarks : ThreewayMarks {
+  override val heavyDetail: Boolean get() = true
+  override val variedDetail: Boolean get() = true
+  override fun now(): Long = 0L
+  override fun mark(seq: Int, name: String, atMillis: Long) = Unit
+  override fun composed(screen: String, seq: Int) = Unit
+}
+
 internal class StepResult(
   val kind: String,
   val ms: Double,
@@ -152,6 +161,8 @@ internal class ProfileRun(
   nf5: Nf5Stack.Variant? = null,
   /** NF5: the heavy detail (`heavy=1`). */
   private val heavy: Boolean = false,
+  /** NF5: the heavy detail, its structure depending on the item (`heavy=2`). */
+  private val varied: Boolean = false,
 ) {
   private val preparedStack = if (prepared >= 0) PreparedThreewayStack(prepared) else null
   private val nf5Stack = nf5?.let(::Nf5Stack)
@@ -267,7 +278,7 @@ internal class ProfileRun(
     val signal = if (press) GateAPress else null
     composition.setContent {
       CompositionLocalProvider(LocalHostFeatures provides features, LocalKeliverNavPress provides signal) {
-        ThreewayApp(api, if (heavy) HeavyMarks else NoMarks, stack)
+        ThreewayApp(api, if (varied) VariedHeavyMarks else if (heavy) HeavyMarks else NoMarks, stack)
       }
     }
     settle()
@@ -519,7 +530,8 @@ private fun command(c: String): String {
         encodingOf(a["mode"] ?: "kotlinx"), a["timeCalls"] == "1", (a["items"] ?: "20").toInt(), a["retain"] == "1",
         nf3.prepared, nf3.press, nf3.viewportRows,
         nf5 = a["nf5"]?.let { Nf5Stack.Variant.valueOf(it.uppercase()) },
-        heavy = a["heavy"] == "1",
+        heavy = a["heavy"] == "1" || a["heavy"] == "2",
+        varied = a["heavy"] == "2",
       )
       "{}"
     }

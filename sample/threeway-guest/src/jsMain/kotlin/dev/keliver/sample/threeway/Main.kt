@@ -154,6 +154,8 @@ private object GuestMarks : ThreewayMarks {
 
   override val heavyDetail: Boolean get() = "heavy" in experiments
 
+  override val variedDetail: Boolean get() = "varied" in experiments
+
   override fun now(): Long = Date.now().toLong()
 
   override fun mark(seq: Int, name: String, atMillis: Long) {

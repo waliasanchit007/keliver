@@ -309,7 +309,19 @@ private fun HeavyDetailScreen(item: Item, nav: Int, marks: ThreewayMarks, onBack
     Row(Modifier.height(28.dp)) {
       for (chip in HeavyChips) StatusChip(chip)
     }
-    for ((section, fields) in heavySections(item)) {
+    // NF5's `varied` experiment: the structure depends on the item (a banner on even ids; 2 to 4
+    // sections of 3 to 6 rows), so rebinding the detail to another item adds and removes widgets.
+    val varied = marks.variedDetail
+    if (varied && item.id % 2 == 0) {
+      Row(Modifier.fillMaxWidth().height(32.dp).background(ActionBg), verticalAlignment = Alignment.CenterVertically) {
+        Text("Action needed", Modifier.padding(horizontal = 8.dp), color = Indigo, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text("Confirm the delivery address", color = Ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      }
+    }
+    val sections = heavySections(item).let { all ->
+      if (!varied) all else all.take(2 + item.id % 3).mapIndexed { i, (s, f) -> s to f.take(3 + (item.id + i) % 4) }
+    }
+    for ((section, fields) in sections) {
       Text(section, Modifier.padding(top = 8.dp), color = Indigo, fontSize = 14.sp, fontWeight = FontWeight.Medium)
       for ((label, value) in fields) {
         Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -64,6 +64,14 @@ public interface ThreewayMarks {
    */
   public val heavyDetail: Boolean get() = false
 
+  /**
+   * With [heavyDetail]: whether the heavy detail's structure depends on the item (2 to 4 sections
+   * of 3 to 6 rows, and a banner on even ids), so two items differ in their widgets and not only in
+   * their texts: the benchmark's `varied` experiment (NF5, docs/SHOW_BEFORE_COMPUTE.md). Guest only;
+   * the native and web forms do not implement it. Off as shipped.
+   */
+  public val variedDetail: Boolean get() = false
+
   public fun now(): Long
 
   /** Records that [name] happened for request or navigation [seq] at [atMillis]. */

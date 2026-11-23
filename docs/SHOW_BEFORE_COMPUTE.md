@@ -1,106 +1,109 @@
 # NF5: show before compute (design)
 
-Status: **design, for review. No production code.** Written 2026-11-24 for WS7 of
+Status: **design, revision 2, for review. No production code.** Written 2026-11-24 for WS7 of
 [`PLAN_2026-11.md`](PLAN_2026-11.md). The owner chose this step on 2026-11-24, on one condition:
-"it has to be executed perfectly". So this document states the mechanism, the invariants that make
-it safe, and the measurements that decide go or no-go for each half. Implementation waits for a
-separate review.
+"it has to be executed perfectly". Revision 2 answers the independent design review of revision 1
+(verdict: needs rework). [Appendix A](#appendix-a-review-response) answers every finding, one line
+each.
 
-NF5 has two independent halves:
-- **(A) Cached first frame.** On a cold start the host draws the tree the guest last produced for
-  the first screen, from storage, while the guest's code loads. Then the guest takes over.
-- **(B) Pre-composed destinations.** Likely destinations are composed ahead of the tap, hidden and
-  inert. On the tap only their arguments change.
-
-**Verdicts from the Mac measurements (appendix):** see [section 0](#0-verdicts).
+NF5 has two halves:
+- **(A) Cached first frame.** On a cold start the host draws, from storage, the first screen as the
+  guest last drew it, while the guest's code loads. Then the guest takes over.
+- **(B) Pre-composed destinations.** A likely destination is composed ahead of the tap as a shell
+  with no item's data, hidden and inert. On the tap the host shows the shell at once, and the guest
+  fills in the item.
 
 ## Contents
 
-0. [Verdicts](#0-verdicts)
+0. [Summary](#0-summary)
 1. [The problem and the targets](#1-the-problem-and-the-targets)
-2. [(A) Cached first frame: the mechanism](#2-a-cached-first-frame-the-mechanism)
-3. [(B) Pre-composed destinations: the mechanism](#3-b-pre-composed-destinations-the-mechanism)
+2. [(A) Cached first frame](#2-a-cached-first-frame)
+3. [(B) Pre-composed destinations](#3-b-pre-composed-destinations)
 4. [Correctness invariants](#4-correctness-invariants)
 5. [Cache key, invalidation and storage format](#5-cache-key-invalidation-and-storage-format)
 6. [Failure handling](#6-failure-handling)
 7. [Measurement plan and gates](#7-measurement-plan-and-gates)
 8. [Alternatives considered and rejected](#8-alternatives-considered-and-rejected)
 9. [Implementation plan](#9-implementation-plan)
-10. [Open questions for the owner](#10-open-questions-for-the-owner)
-- [Appendix: the Mac measurements](#appendix-the-mac-measurements)
+10. [Proposed D1 clarification](#10-proposed-d1-clarification)
+11. [Decisions for the owner](#11-decisions-for-the-owner)
+- [Appendix A: review response](#appendix-a-review-response)
+- [Appendix B: the A12 estimate for (B)](#appendix-b-the-a12-estimate-for-b)
+- [Appendix C: the Mac measurements](#appendix-c-the-mac-measurements)
 
-## 0. Verdicts
+## 0. Summary
 
-Mac only: Zipline's QuickJS on the JVM for the guest, the JVM Compose UI host for the replay.
-**Relative numbers, not phone numbers.** The appendix has the method and the raw output.
+**(A) Cached first frame: go to the A12 gate.** On the Mac, drawing the stored list costs the host
+about 24 ms the first time (4 ms when warm). The guest's first composition of the same list costs
+45–88 ms before anything is sent. The stored list is 7.9 KB gzipped and draws pixel-identical to
+the live host. Only the A12 can say whether this lands within native + 0.4 s (section 7).
 
-| Half | The question | Mac answer | Verdict |
-|---|---|---|---|
-| (A) | Is drawing a stored tree much cheaper for the host than waiting for the guest's first composition? | The three-way list (148 widgets): replaying the stored tree takes **4.2 ms** warm (p90 4.7; the first replay 24 ms), decode and frame included. The guest's first composition of the same screen takes **88 ms** (QuickJS 2021) or **45 ms** (2026, BigInt) before its batch is even sent. The stored tree is 87 KB of JSON, **7.9 KB gzipped**, and it draws **pixel-identical** to the live host's tree (0 differing pixels). | **Go** to the A12 gate. |
-| (B) | Is changing a hidden, already-composed destination's arguments clearly cheaper than composing it fresh? | **Yes.** Simple detail: 15.45 → **4.91 ms** (3.1×) on QuickJS 2021, 7.68 → **2.97 ms** (2.6×) on 2026 with BigInt. Heavy detail (102 widgets): 62.94 → **8.42 ms** (7.5×) and 30.77 → **6.51 ms** (4.7×). Batches 20–40× smaller (17,900 → 902 bytes; 82,446 → 2,063). The floor (the destination already has the right arguments) is 2.95 / 1.78 ms simple, 5.46 / 4.27 heavy. | **Go** to the A12 gate, with the risks in section 3.5. |
+**(B) Pre-composed destinations: go to the B1 spike, with a lower expectation.** Changing a hidden
+detail's arguments is 3–8× cheaper than composing it fresh on the Mac. But on the A12 every guest
+step pays a large fixed cost. Even a detail that is already composed with the right item took
+80–85 ms (simple) and 131.5–140.5 ms (heavy) from the click to its first draw (series H).
 
-What the Mac numbers suggest for the A12 (an inference, not a measurement):
-- (B): series H on the A12 already measured the nearest case, a detail composed before the click that
-  only recomposes a counter at the click: **80–85 ms simple and 131.5–140.5 heavy from the click to
-  drawn** (against 163.5–167 and 470.5–479 composed fresh). NF3 lost that gain because the
-  preparation ran at touch-down and the click waited behind it. (B) prepares while idle, so the
-  click does not wait. Rebinding adds about 1.2 ms (simple) and 2.2 ms (heavy) of guest work over that
-  case on the Mac, roughly 15 and 30 ms on the A12 at the Mac-to-A12 ratio of about 12
-  ([`GUEST_PROFILE.md`](GUEST_PROFILE.md)). That would put the simple screen near 100 ms and the
-  heavy one near 160–170: close to the targets, not certainly within them.
-- (A): the host already pays the same apply and draw for the guest's first batch (NF4's "composed
-  to drawn": 223.5 ms on the A12 for the list). A cached frame pays that plus a decode, with no
-  code load and no guest composition before it. Whether that lands within native + 0.4 s depends on
-  how early the host can draw and on CPU contention with the code load. Only the A12 can say
-  (section 7).
+**What (B) alone reaches on the A12 (inferred, appendix B):** about **145–170 ms** for the simple
+screen and **225–275 ms** for the heavy one, tap to frame end. Today's best is 217.5 and 548.
+The targets are about 100 and 150. **(B) alone does not reach them.** It roughly halves the heavy
+open and takes a quarter to a third off the simple one.
+
+That is why (B) is now a shell + data design. The prepared entry is a shell with no item's data.
+On the tap the host shows that shell itself, without a guest round trip, the way the retained back
+already shows the list. On the A12 the retained back's first draw comes 13–17 ms after the press.
+The item's data then arrives at the times above. Whether a shell first, with the data about
+150–300 ms later, counts as "open" for the bar is decision 7 in section 11.
+
+**Items that differ in structure** cost (B) more. On the Mac, rebinding the heavy detail to an item
+with other sections cost 16.0 ms, against 8.6 for the same structure and 46.3 fresh (appendix C,
+table B2). On the A12 that is about 305–315 ms for a heavy open (appendix B).
+
+The owner's decisions are in [section 11](#11-decisions-for-the-owner).
 
 ## 1. The problem and the targets
 
 The bar (PLAN_2026-11.md, section 2, point 3) asks the one over-the-air lane to feel native on a
-Galaxy A12. Two targets are still missed by a wide margin. The best numbers so far come from the
-BigInt engine fork (NF2), on the same A12, on 2026-11-22
-([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md), "Flutter on the A12, 2026-11-22", the answer
-table; and "A12 checkpoint 2", series G and H):
+Galaxy A12. Two targets are still missed by a wide margin. The best numbers come from the BigInt
+engine fork (NF2), on the A12, on 2026-11-22 ([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md),
+"Flutter on the A12, 2026-11-22"; "A12 checkpoint 2", series G and H). All are frame end, from the
+tap.
 
 | Target (PLAN section 2) | Native | Flutter | Keliver, best | Gap |
 |---|---|---|---|---|
-| Open a screen, simple: about 100 ms from the tap | 28 | 30.5 | 217.5 (BigInt) | about 2× the target |
-| Open a heavy screen (about 100 widgets): 150 ms or less | 59 | 44.5 | 548 (BigInt) | about 3.7× the target |
-| Cold start to the list's data: within 0.4 s of native | 728.5 (frame end) | 633.5 | 1,543.5 (BigInt, `prestart,prefetch`) | native + 0.84 s (on the screen, inferred) to + 1.25 s (series G) |
+| Open a screen, simple: about 100 ms | 28 | 30.5 | 217.5 | about 2× |
+| Open a heavy screen (about 100 widgets): 150 ms or less | 59 | 44.5 | 548 | about 3.7× |
+| Cold start to the list's data: within 0.4 s of native | 728.5 | 633.5 | 1,543.5 | native + 0.81 s (on the screen) to + 1.25 s (series G) |
 
 Why the steps so far do not close it:
-- **The faster engine is spent.** NF2 roughly halved the guest's work (2.73× on open, 2.11× on back
-  on the A12, series A). What is left is still composition in QuickJS.
-- **Composing on touch-down did not help** (NF3, series F and H). Composing the detail takes longer
-  than a press lasts, so the click waits for it. On the BigInt engine it is neutral on the simple
-  screen and 36–52 ms slower on the heavy one.
-- **Cold start is the list's first composition.** About 1 s of the cold start on 1.28.0 is the
-  list's first composition in QuickJS ("Cold start (NF0)"; PLAN WS7, NF4). Prestart and prefetch
-  took off 242 ms; the BigInt build about 700 more. The rest is guest work that has to happen
-  before the first content can be drawn.
+- **The faster engine is spent.** NF2 roughly halved the guest's work. What is left is still
+  composition in QuickJS.
+- **Composing on touch-down did not help** (NF3, series F and H). Composing takes longer than a
+  press lasts, so the click waits for it.
+- **Cold start is the list's first composition**, about 1 s of it on 1.28.0.
 
 NF5's idea: do not make the guest faster. Show UI that is already composed, and let the guest's
 work happen behind it.
 
-## 2. (A) Cached first frame: the mechanism
+## 2. (A) Cached first frame
 
 ### 2.1 End to end
 
 ```
 cold start
-  host: KeliverHost.run()            -> knows the cached release's manifest sha (lastGoodSha)
-  host: KeliverScreen composes        -> FrameStore.read(key)   (key: section 5)
-          hit, valid                  -> draws CachedFrame (inert), guest content composed beneath, hidden
-          miss / invalid              -> today's Loading (nothing changes)
-  guest: code loads, first composition, batches   -> applied beneath, unseen
-  guest: marks the screen "ready"     -> host swaps in one frame: guest content shown, cached frame gone
-  host: while the guest runs, folds its batches for that screen; on "ready" and on ON_STOP,
-        writes the folded tree for the next cold start
+  host: chooses the start (StartChoice.mode)       -> decides whether a frame may show, and when (2.8)
+  host: KeliverScreen composes; FrameStore.read(key) -> hit and valid: draw the frame (inert, 2.6)
+                                                    -> otherwise: today's loading()
+  guest: code loads -> codeLoadSuccess              -> the loaded release must equal the frame's (2.8)
+  guest: first composition; batches applied beneath, unseen
+  guest: the marked screen's `ready` goes false -> true
+        host: swaps in one frame (guest shown, frame gone)
+        host: writes the marked subtree for the next start, if the recording rule allows (2.3)
+  the frame is gone at the latest FRAME_LIMIT after its first draw (2.7)
 ```
 
 ### 2.2 Guest
 
-- **Opt-in, per screen.** A screen that may be shown from storage says so, at its root:
+- **Opt-in, per screen.** A screen that may be shown from storage says so at its root:
 
   ```kotlin
   CachedFrame(
@@ -111,598 +114,940 @@ cold start
   }
   ```
 
-  `CachedFrame` is new, in `keliver-compose` (next to `LocalHostFeatures`,
-  `keliver-compose/src/commonMain/kotlin/dev/keliver/compose/HostFeatures.kt`). It emits only when
-  the host declares the feature `keliver.cachedFrame@1` (I8). It adds one modifier element to the
-  screen's root node, carrying the policy and `ready`.
-- **Volatile regions.** `Modifier.notCached()` marks a node whose subtree must never be stored
-  (a balance, a name). With `FrameContent.Shell` the host stores the node's own modifiers (its
-  size) but not its subtree, and draws a neutral placeholder in its place. With
-  `FrameContent.Whole` nothing is replaced, but `notCached()` still drops a subtree.
-- **No other guest change.** The guest's composition, its ids and its batches are as today.
-- **Protocol.** Both markers are modifier elements with tags in a reserved framework range, defined
-  in `keliver-protocol` (new file `FrameCacheTags.kt`) and covered by a lock test, as schema tags
-  are. Not in gate A's extras (501–503), which sit outside the schema lock (survey of 2026-11-24,
-  section 5).
+  `CachedFrame` is new, in `keliver-compose`, next to `LocalHostFeatures` (`HostFeatures.kt`). It
+  emits only when the host declares `keliver.cachedFrame@1` (I8). It adds one marker modifier to
+  the screen's root node, carrying the policy and `ready`.
+- **Two content levels.** The author must choose; there is no default.
+  - `FrameContent.Shell`: an allowlist. Every text and URL value in the subtree is replaced by a
+    placeholder, unless its node is marked `Modifier.cached()` (a title, a label, a section header).
+  - `FrameContent.Whole`: every value is kept, except subtrees marked `Modifier.notCached()`.
+- **Values that are never stored**, in either level: text-field values, and any property the schema
+  marks `@NeverCached` (2.4).
+- **Session changes from the guest.** An app whose login runs in the guest (D13) tells the host
+  through a host feature, `keliver.frameScope@1`: `FrameScope.sessionChanged(id)` and
+  `FrameScope.variantChanged(id)` (an app's own theme or language, held in the guest). The host
+  handles both as `KeliverHost.session()` does (2.9).
+- **Protocol.** The marker modifiers use tags in a reserved framework range, defined in
+  `keliver-protocol` (`FrameCacheTags.kt`) and covered by a lock test, as schema tags are.
+  `HostProtocolAdapter` consumes these tags before widget dispatch, so they never reach a widget or
+  the mismatch handler. That is the one change on the content path.
+- **No other guest change.** The guest's composition, ids and batches are as today.
 
-### 2.3 Host (shared by Android and iOS)
+### 2.3 Which tree is recorded, and when
+
+This is the rule that makes I1 and I11 hold. The recorder is the only writer.
+
+**What is recorded:**
+- Only the subtree under the node that carries the `CachedFrame` marker. Not the whole content.
+- Inside it, only what is shown. Every hidden child of a retained container (NF1's retained entries
+  below the top) and every prepared entry of (B) is pruned. The pruning uses the host's explicit
+  entry state (section 3.6), not the children's order.
+- Placeholders and dropped values as section 2.2 says, applied by the fold before anything reaches
+  the disk.
+
+**When it is recorded: once, at the `ready` edge, and only in a clean state.** The recorder writes
+when all of these hold:
+1. The batch it just applied turned the marker's `ready` from false to true. Only the first such
+   edge for this content counts. Later edges (a refresh) do not write.
+2. The marked node is visible: the content is not hidden, and the node is not inside a hidden,
+   retained or prepared entry.
+3. Every retained container in the marked subtree shows its first entry (the user has not
+   navigated inside it).
+4. Since the content was bound, no input has reached the marked subtree: no touch, scroll, focus or
+   text input. The host's event sink tracks this.
+5. Every lazy list in the subtree is at its first item, at offset 0, and every pager at its first
+   page (the host's own state, so a position the guest restored also counts).
+6. Every widget in the subtree is replayable (2.4). A dialog, sheet or snackbar in the subtree
+   blocks the write.
+
+Otherwise nothing is written, and the previous file stays. **There is no write at `ON_STOP`** or at
+any other time. The stored frame is therefore always the screen as first drawn with its data,
+before the user touched it.
+
+### 2.4 Which widgets can be replayed
+
+The fold works from a list generated by codegen from the schema. Nothing is replayable by default.
+
+- **A schema annotation** marks a widget as replayable: `@Replayable`. `@NeverCached` on a property
+  means its value is never stored.
+- **Codegen** (`keliver-tooling-codegen`, the step that already writes the protocol code) writes
+  `<Schema>FrameRules`: the replayable widget tags, and for each widget and modifier the tags of its
+  text- and URL-bearing properties (any property whose type is or contains a `String`). The fold
+  uses the second list for `Shell`.
+- **keliver-material** marks every widget replayable except nine
+  ([`keliver-material-schema.api`](../keliver-material-schema/api/keliver-material-schema.api)):
+  - window or popup: `AlertDialog`, `Dialog`, `BottomSheet`, `DropdownMenu`, `Snackbar`, `Tooltip`.
+    A dialog opens its own window, which the frame's container cannot make inert, so it must never
+    be replayed;
+  - live input: `TextField`, `OutlinedTextField`, `TextInput`.
+
+  The review named six; a check of the schema found `DropdownMenu`, `Tooltip` and
+  `OutlinedTextField` as well. `HorizontalPager` and `VerticalPager` are replayable only at their
+  first page, as lazy lists are only at their first item (2.3, condition 5).
+- **Text fields.** A screen with a text field (a search box) cannot be cached today. If owners want
+  it, `TextField` becomes replayable with its value `@NeverCached`, drawn empty. That is a later,
+  separate change.
+- **Images.** A replayed image is drawn from the image loader's disk cache only, never the network.
+  A miss draws the widget's placeholder. In `Shell`, image URLs are dropped unless `cached()`.
+- **Keys and descriptions.** In `Shell`, the strings inside modifiers are replaced as well:
+  content descriptions, semantics labels, test tags. Lazy-list item keys, where the protocol carries
+  them, are replaced by their position in both levels.
+
+### 2.5 Host (shared by Android and iOS)
 
 Both production hosts draw with Compose UI (`KeliverScreen.kt` on Android, `MainViewController.kt`
-on iOS through `ComposeUIViewController`), so the host side is common code:
+on iOS), so most of the host side is common code.
 
 | Piece | Where | What |
 |---|---|---|
-| `ChangeFolder` | new, `keliver-protocol` (common) | folds batches (Create, Property, Modifier, Add, Move, Remove) into the current tree; emits a `SnapshotChangeList` (`keliver-protocol/.../SnapshotChangeList.kt:29`, which already rejects Move and Remove). Applies the `notCached` rule. |
-| `FrameRecorder` | new, `keliver-treehouse-host` | wraps the content's change sink (as `KeliverTiming.firstFrame` wraps `ZiplineTreehouseUi.Host.sendChanges` today, `scripts/templates/production-host/src/timing/kotlin/KeliverTiming.kt:436–455`), feeds `ChangeFolder`, and asks the store to write when the root marker says `ready` and when the screen stops. Only for a content whose root carries the opt-in marker. |
-| `FrameStore` | new interface, `keliver-treehouse-host`; file implementation per platform | `read(key)`, `write(key, frame)`, `clear(reason)`. Atomic writes, size cap, integrity tag (I5). |
-| `CachedFrameContent` | new, `keliver-treehouse-host-composeui` | decodes a stored frame and applies it through a fresh `HostProtocolAdapter` (`keliver-protocol-host/.../HostProtocolAdapter.kt:47`) into its own `ScopedChildren`-like container, with the app's widget system. Its event sink drops events (I3). Its mismatch handler is non-throwing: any unknown tag discards the frame (I1). |
-| `TreehouseAppContent` | unchanged | Its first batch still clears `view.children` (`TreehouseAppContent.kt:451–455`). The cached frame never lives in `view.children`, so that clear does not touch it (I4). |
+| `FrameRules` | generated per schema (2.4) | the replayable widgets and the text-bearing properties |
+| `ChangeFolder` | new, `keliver-treehouse-host` (host only) | folds batches (Create, Property, Modifier, Add, Move, Remove) into the current tree of the marked subtree; prunes hidden entries; applies `Shell`, `notCached`, `@NeverCached` and position keys; emits a `SnapshotChangeList` (`keliver-protocol/.../SnapshotChangeList.kt`) |
+| `FrameRecorder` | new, `keliver-treehouse-host` | wraps the content's change sink (as `KeliverTiming.firstFrame` does), feeds `ChangeFolder`, tracks input and list position, and writes by the rule in 2.3 |
+| `FrameStore` | new, `keliver-treehouse-host`; a file implementation per platform | `read(key)`, `write(key, frame)`, `clear(reason)`, `clear(route)`. Atomic writes, size caps, checksum (I5). The file format lives here, on the host, not in `keliver-protocol` |
+| `CachedFrameContent` | new, `keliver-treehouse-host-composeui` | decodes a stored frame and applies it through a fresh `HostProtocolAdapter` with the app's widget system and a cache-only image loader. Its event sink drops events. Its mismatch handler does not throw: any unknown tag discards the frame |
+| `FrameHandOff` | new, `keliver-treehouse-host-composeui` | the swap state: `ready`, `HANDOFF_LIMIT`, `FRAME_LIMIT`, a deferred update (2.7) |
+| `TreehouseContent` | `keliver-treehouse-host-composeui`, one new parameter | `backEnabled`: while false, the content's back callbacks are registered disabled (2.6) |
 
-### 2.4 Host, Android (`scripts/templates/production-host/src/main/kotlin/`)
+`TreehouseAppContent`'s first batch still clears `view.children`. The cached frame never lives in
+`view.children`, so that clear does not touch it.
 
-- `KeliverScreen.kt`: when the state is `Loading` or `Running` and the store has a valid frame for
-  this screen's key, draw `CachedFrameContent` on top. The guest's `AppContent` is composed beneath
-  it with `hidden = true`. That is the mechanism the update swap already uses
-  (`KeliverScreen.kt:130–159`, `206–227`: alpha 0, `clearAndSetSemantics {}`, unfocusable, touches
-  blocked). The swap trigger differs: the root marker's `ready`, not the first changes (I4).
-- `KeliverHost.kt`: computes the key's release fields from `lastGoodShaKey` (written in
-  `onLoaded`, `KeliverHost.kt:1567–1574`) and the start policy's choice (I1). Adds `session(id)`,
-  which generalises `discardPrefetched()` (`KeliverHost.kt:1251`, I5).
-- Storage: `context.noBackupFilesDir/keliver-frames/<cacheName>/` (I5).
-- `HostApp.kt` (template): calls `keliver.session(...)` where it calls `discardPrefetched()` today.
+### 2.6 The frame on screen: inert, with back and an indicator
 
-### 2.5 Host, iOS (`scripts/templates/ios-host/src/iosMain/kotlin/MainViewController.kt`)
+- **Inert.** The frame's container consumes taps and scrolls. It is unfocusable, so no keyboard
+  opens. Its semantics are one node, "Loading", polite live region, no actions. (I3)
+- **Indicator.** A tap or scroll shows a progress indicator at once. It is a slot on `KeliverScreen`
+  (`frameIndicator`), with a thin indeterminate bar as the default (decision 4).
+- **Back, Android.** Today the hidden content's back callbacks register with the activity at once
+  (`KeliverScreen.kt:214–216` says so). While the frame is up, `KeliverScreen` passes
+  `backEnabled = false` to the hidden content, so its callbacks are registered disabled. A back
+  press then does what it does on today's loading screen: it goes to the activity. The same gate
+  also closes today's short update-swap window.
+- **Back, iOS.** The iOS Treehouse back dispatcher is a no-op (`TreehouseContent.ios.kt:25`): a
+  guest never receives back on iOS. Back is the scene's own (an edge swipe in the app's navigation
+  controller), as on the loading screen. The I3 test checks this on the simulator.
 
-- The same screen logic in its screen composable (about lines 1284–1404) and its `Loading()` (1450).
-- `KeliverHost.session(id)` beside `discardPrefetched()` (line 506), called from `iOSApp.swift`.
-- Storage: `Library/Caches/keliver-frames/<cacheName>/`, with `NSURLIsExcludedFromBackupKey` set
-  on the directory, and the default file protection (complete until first unlock).
-- `UiStart.kt` holds `start()` until a scene is foreground (#281). The frame read is not held:
-  it is a local file read, and drawing it needs no guest.
+### 2.7 Hand-off and time limits
 
-### 2.6 Navigation
-
-- Only the **first screen of a launch** (the route the activity or scene opens with, as
-  `KeliverHost.launch` encodes it, `KeliverHost.kt:601–622`, `KeliverRoute.kt`) is drawn from
-  the cache. Screens reached inside the guest's navigation are the guest's business.
-- The route and its launch arguments are part of the key (I1). A deep link to another order's
-  detail never shows the last order's frame.
-
-### 2.7 What (A) does not change
-
-- The guest's code, its load, its start policy, its checks (signature, floor, compatibility).
-- How the guest's tree is drawn once it has taken over.
-- Screens that do not opt in, hosts without the feature, bundles without the opt-in (I8).
-- D1: production UI is still compiled guest code. The cached frame is a recording of that code's
-  own output, keyed to the very bundle that produced it, drawn only until that bundle takes over.
-  No document format is authored, and no logic runs from storage (see question 1 in section 10).
-
-## 3. (B) Pre-composed destinations: the mechanism
-
-### 3.1 End to end
-
-```
-list shown, data drawn, guest idle (no input, no scroll, no frame for 300 ms)
-  guest (keliver-nav): composes one entry per declared destination KIND, hidden, Prepared,
-                       with the kind's initial arguments (e.g. the first row's item); in slices
-  host: the entry sits in the retained container, not laid out, not drawn, no input or semantics
-tap on row N
-  guest: navigate(Detail(N)) adopts the prepared entry of kind Detail: its arguments become N,
-         it recomposes with them, and it is shown (a visibility change)
-  host: applies a small batch (property changes, two modifiers) and shows the entry
-back
-  guest: the entry is popped but KEPT as the prepared entry of its kind (args unchanged until the
-         next tap); its per-visit state is reset (I7)
-```
-
-### 3.2 Guest (keliver-nav, `keliver-nav/src/commonMain/kotlin/dev/keliver/nav/`)
-
-| Change | Where | Today |
-|---|---|---|
-| A route's **kind** is separate from its arguments: `KeliverNavKinds<R>(kindOf: (R) -> Any?)`, given to the controller. `null` = not rebindable (today's behaviour) | `KeliverNavController.kt` | full route equality (`prepared?.route == route`, `KeliverNavController.kt:94–100, 110–119`) |
-| `NavEntry.route` is backed by a snapshot state; `navigate(route)` adopts a prepared entry of the same kind and sets its route | `KeliverNavController.kt` (`NavEntry`, 212) | the route is a `val`; another route means a fresh composition |
-| More than one prepared entry: at most one per kind, at most `maxPreparedKinds` (default 2) | `KeliverNavController.kt` (`prepared`, 86) | one prepared entry, dropped at any stack change |
-| A popped entry of a rebindable kind becomes that kind's prepared entry | `KeliverNavController.kt` (`pop`, `popWithResult`) | popped entries are disposed (or retained, as back entries) |
-| A new lifecycle state, `Prepared`, beside `Visible` and `Hidden` | `KeliverNavRetention.kt:122` | a prepared entry is `Hidden`, and its `LaunchedEffect`s run at prepare time |
-| Prepared entries composed in a sub-composition whose effect coroutine context is **held** until the entry is first shown (I6), and composed in slices that yield between frames | new, `KeliverNavPreparedComposition.kt` | composed in the host's composition, in one frame |
-| Per-visit state helpers: `rememberPerVisit {}`, `rememberSaveablePerVisit {}`, `rememberPerVisitLazyListState()` (scrolls to 0 on a rebind) | new, `KeliverNavPerVisit.kt` | none |
-| An idle policy: prepare only after the first screen is `ready`, with no input, no scroll and no guest frame for 300 ms; drop all prepared entries on the host's memory-pressure signal and when the app goes to the background | new, `KeliverNavIdle.kt`, fed by host signals | NF3 prepares on touch-down |
-
-The screen author declares which kinds are worth preparing and with what initial arguments:
-
-```kotlin
-KeliverNavHost(controller, kinds = KeliverNavKinds { route -> (route as? Detail)?.let { DetailKind } }) { route -> … }
-// on the list, once its data is there:
-KeliverNavPrepare(controller, Detail(page.items.first().id))
-```
-
-### 3.3 Host
-
-- **No new host code for the mechanism.** A prepared entry is a hidden entry of the host's retained
-  container (gate A's `ExtraRetained`, `keliver-compose-gatea-composeui/.../Retained.kt`: only the
-  shown entry is measured and placed, 193–211; `RetainedSlot` clears semantics and focus, 221).
-- **Precondition:** that container in the production widget system, with
-  `keliver.nav.retainedContainer@1` declared by the production templates (today it is gate A's
-  prototype, and the templates declare no host features: survey of 2026-11-24, section 5). NF1's
-  production work delivers it; (B) waits for it.
-- **Two host signals** the idle policy needs, as host features with events to the guest: "user
-  input active" (a touch is down or a fling runs) and "memory pressure" (Android `onTrimMemory` at
-  `RUNNING_LOW` or above; iOS `didReceiveMemoryWarning`).
-- Android and iOS share all of it (both draw with Compose UI).
-
-### 3.4 What (B) does not change
-
-- Destinations that are not rebindable, and every route equality today's code relies on.
-- The retained back stack (NF1), the press signal (NF3; it can stay off).
-- The protocol and the bundle format.
-
-### 3.5 Risks the Mac numbers do not settle
-
-- **A hidden entry recomposes when what it reads changes.** The three-way detail reads the app's
-  navigation counter, so the hidden detail recomposes on every back: back costs 0.5 ms (simple) and
-  2 ms (heavy) more on the Mac (appendix, table B). Destinations should read only their arguments;
-  the docs say so, and a debug counter reports recompositions of Prepared entries.
-- **Preparing still costs one composition.** The first composition of the hidden heavy detail added
-  60 ms (QuickJS 2021) or 30 ms (2026) to the list's first composition on the Mac, several hundred
-  ms on the A12. In one slice, a tap during it would wait, as in NF3. So preparation is idle-only
-  and sliced (pausable composition), and a tap cancels a slice in progress. Spike first (PR B1).
-- **Per-visit state** (scroll position, an expanded section, a half-typed field) must not leak from
-  one item to the next (I7). It needs the screen author's cooperation; keliver-nav makes the safe
-  way the easy one, and a destination that does not opt in is composed fresh.
-- **The heavy screen may land just over 150 ms** on the A12 (section 0). If it does, the lever is a
-  shell + data split: prepare the layout with placeholders and fill the data (the batch is then
-  mostly text properties, the cheapest kind).
-
-## 4. Correctness invariants
-
-Each invariant has an enforcement and a test. "Unit" means a JVM or common test in the module
-named; "host test" a JVM Compose UI test like `RetainedHostBackTest`; "device" the A12 or the
-iPhone.
-
-### I1. Never wrong content
-
-A cached frame is drawn only if every field of its key equals the current one (section 5): the
-release (manifest sha256), the host build, the widget and schema versions, the engine, the route
-and its launch arguments, the session, and the configuration (locale, layout direction, font
-scale, dark mode, size class). Otherwise it is not drawn, and it is deleted (except after a
-configuration change, which keeps it for that configuration: section 5).
-
-**How the release is known before the lookup**, per start policy (`StartPolicy.kt:40`):
-
-| Policy | Release the host will run | Sha known before the lookup? | When the cached frame may show |
-|---|---|---|---|
-| `cache-first` | the cached release (`lastGood`), always at this start | yes: `lastGoodShaKey`, written in `onLoaded` with the sha of the manifest bytes Zipline verified | at once |
-| `parallel` (default) | the cached release **if** the lookup confirms it (`afterParallelLookup`, `StartPolicy.kt:177`) | yes, the same record; but the host has not yet committed to it | **after the lookup confirms** the same sha (`SHOW_CACHED`). If the lookup names another release (`LOAD_NAMED`), the frame is never shown. If the lookup fails or times out, the cached release shows, and so may its frame |
-| `network-first` | whatever the lookup names | no | never before the lookup; after it, only if the named sha equals the frame's (rare: a network-first start already waits for the network) |
-
-No sha recorded (`lastGoodShaKey` absent, a relay's legacy lookup) means no frame.
-
-Why not show it under `parallel` before the lookup returns: a different release would then replace
-a frame the host never runs. That is a visible switch of content (old release, then the loading
-state, then the new one) and it breaks I1. The cost is the lookup's time. On the A12 bench the
-code comes from the APK's assets and the lookup is local, so this is small there; on a real network
-it is one round trip. Section 7 measures it. If it is too slow, the owner can allow the frame
-before confirmation per channel (question 2).
-
-When a newer release arrives later in the same process (an update loading in a new app), the
-cached frame has already handed off. The update swap is unchanged.
-
-**Enforced:** the key check in `FrameStore.read`, before any decoding; the policy table in one
-function next to `afterParallelLookup`; a non-throwing protocol mismatch handler that discards the
-frame on any unknown widget, property, modifier or children tag.
-**Tested:** unit tests for each key field (a frame differing in exactly that field is not read);
-the policy table as a table test (each `ParallelStep` × frame present); a stored frame with an
-unknown tag is discarded, not drawn; a host test where the lookup names another release and no
-frame is ever composed.
-
-### I2. Data freshness is the guest's choice
-
-- **Off by default.** A screen without `CachedFrame` is never stored. Safe for money and personal
-  data, because nothing is written unless the screen's author asked for it.
-- **Two levels.** `FrameContent.Whole` (the whole tree, for screens whose content is not
-  sensitive: a catalogue, a menu) and `FrameContent.Shell` (the tree with every `notCached()`
-  subtree replaced by a placeholder: a balance, a name, a list of transactions).
-  The API has no default for `content`: the author must choose.
-- **Maximum age.** `maxAge`, required; the host caps it at 7 days. A frame older than its
-  `maxAge` (by the wall clock, and also by `elapsedRealtime` within one boot) is deleted, not drawn.
-- **Recommendation for money/PII screens:** `Shell`, with every amount and identity marked
-  `notCached()`. The docs say so with an example.
-
-**Enforced:** the guest API (no default for `content`, `maxAge` required); the fold drops
-`notCached` subtrees before anything reaches the disk. **Tested:** unit tests on `ChangeFolder`
-(a `notCached` text never appears in the stored bytes; a search of the file for the value fails);
-age expiry by both clocks.
-
-### I3. Input before take-over
-
-The cached frame is drawn, not run. Its widgets' event sink drops everything.
-
-| Input on the cached frame | What happens | Why |
-|---|---|---|
-| Tap, long press | Consumed by the frame's container. The host shows its own progress indication at once (a thin indeterminate bar at the top, in the first frame after the touch). The tap is **not** queued for the guest. | Widget ids are not stable across runs, so a queued tap could reach the wrong widget or the wrong data. Feedback means it is not lost silently. |
-| Scroll, fling | Consumed: the frame does not move; the same indication shows. | The stored lazy list holds only its window; scrolling would show blank rows. |
-| Back | Not consumed: it goes to the activity or scene as on the loading screen today (it leaves the app from the first screen). | Same as today's Loading. The guest's back handlers are not registered yet. |
-| Text input | Impossible: the container is unfocusable (as the hidden app is today, `KeliverScreen.kt:230–235`), so no field takes focus and no keyboard opens. | No input can be typed into a frame that will be replaced. |
-
-Accessibility: the frame's container is `clearAndSetSemantics { contentDescription = "Loading";
-liveRegion = Polite }` (iOS: the container is one accessibility element labelled "Loading", its
-children hidden). A screen reader announces a loading screen, never stale content as interactive.
-At the swap the guest's tree appears with its normal semantics, as a screen does when it loads.
-
-**Enforced:** the container in `CachedFrameContent`; the dropping event sink. **Tested:** host test:
-a click, a scroll and an IME request on the cached frame reach no guest (the guest's event tap
-records nothing) and show the indication; the semantics tree under the frame has one node with no
-actions; the swap's next frame exposes the guest's nodes.
-
-### I4. Hand-off without a regression
-
-Today the guest's first batch replaces the Loading view. Many screens' first batch is their own
-loading state. Drawing the cached frame and then that batch would go content → loading → content.
-
-Rule: **the guest's content is composed beneath, hidden, from its first batch; the cached frame
-stays on top until the guest says `ready`.** Then, in one frame, the hidden content becomes visible
-and the cached frame is removed. This is the update swap that ships today (`KeliverScreen.kt:130–159`),
-with `ready` as the trigger instead of the first changes.
+The guest's content is composed beneath, hidden, from its first batch. The frame stays on top until
+one of these happens, whichever is first:
 
 | Event | Result |
 |---|---|
-| The root marker's `ready` becomes true in an applied batch | swap in that frame |
-| No `ready` within `HANDOFF_LIMIT` (proposed 3 s) after the guest's first batch | swap anyway (the guest's tree as it is); reported as `cachedFrame.handoffTimeout` |
-| The guest crashes or the code fails to load | the cached frame goes; the screen shows what it shows today on that failure (`unavailable`) |
-| The guest's first batch carries no opt-in marker (the new release dropped it) | swap at once; the store deletes the frame |
+| The marker's `ready` becomes true in an applied batch | swap in that frame: guest shown, frame gone |
+| `HANDOFF_LIMIT` (proposed 3 s) after the guest's first batch | swap to the guest's tree as it is; `cachedFrame.handoffTimeout` |
+| `FRAME_LIMIT` (proposed 5 s) after the frame's first draw | the frame goes: the guest's tree if it has one, else today's `loading()`; `cachedFrame.frameTimeout` |
+| The guest crashes, or the code fails to load | the frame goes; today's `unavailable` |
+| The guest's first batch has no marker (the release dropped the opt-in) | swap at once; the frame is deleted |
+| `codeLoadSuccess` reports another release than the frame's (2.8) | the frame goes at once; `loading()` until the guest's first batch; the frame is deleted |
 
-How the swap looks: no blank frame (both trees are laid out before the switch; the hidden one has
-been measured beneath). No crossfade, as native shows new data in place. No jump: the stored frame
-draws the list at its top, and the guest's list starts at its top. If the data changed since the
-frame was stored, the new values appear in place, as a refresh does in a native app.
+So the frame is never on screen for longer than `FRAME_LIMIT`. A stuck download or a hung engine
+ends in today's loading screen, not in dead content.
 
-**Enforced:** `KeliverScreen` (Android) and the iOS screen hold the swap state; `ready` is read
-from the applied marker, not from a guest call. **Tested:** host test with a guest whose first
-batch is its loading state: frames recorded across the hand-off never show the loading state and
-never an empty frame; the timeout path; a pixel check that the frame before the swap equals the
-stored frame and the frame after equals the guest's.
+**An update that arrives before the hand-off.** Under `cache-first` or `parallel`, a newer release
+can load in a new app while the frame is still up. Then there are three layers: the frame, the old
+app and the new one. Rule: the update swap is deferred until the frame has handed off to the old
+app. Then today's update swap runs (`KeliverScreen.kt:130–159`). The frame never hands off to an
+app whose release it was not recorded from. `FRAME_LIMIT` still bounds the whole.
+
+**How the swap looks.** No blank frame: both trees are laid out before the switch. No crossfade, as
+a native refresh shows new values in place. Both draw the list from its top (the recording rule).
+Changed data appears in place. In `Shell`, a placeholder has the width of the text it replaced,
+rounded up (2.2, 5.2), so the real text may reflow by a few characters. That small reflow is
+accepted in I4.
+
+### 2.8 Which release the frame belongs to
+
+A frame records the **release identity of the app that produced it**: its sequence, its manifest
+sha256, and a digest of its modules' sha256s. The writer takes them from its own app's
+`codeLoadSuccess` (`KeliverHost.kt:2081`), not from preferences.
+
+**Before the code loads**, the host decides on **this start's mode** (`StartChoice.mode`,
+`StartPolicy.kt:125`), not on the configured policy. `chooseStart` turns `cache-first` into
+network-first after a crash rollback, when a newer release was seen, or before the channel's first
+lookup (`StartPolicy.kt:132–149`).
+
+| This start's mode | When the frame may show |
+|---|---|
+| `cache-first` | at once, if the frame's identity equals the cached release's recorded identity |
+| `parallel` | after the lookup: on `SHOW_CACHED` with the cached release confirmed, or after a failed lookup (the cached release then shows). Never on `LOAD_NAMED` |
+| `network-first` (configured, or chosen for one of the reasons above) | only after the lookup names a manifest whose sha256 equals the frame's; otherwise never |
+
+No identity recorded means no frame.
+
+**When the code has loaded**, `codeLoadSuccess` compares the loaded sequence and module digest with
+the frame's. On a mismatch the frame goes at once (2.7). This catches the one case preferences
+cannot: Zipline runs its pinned manifest, and the preference write after the previous load was lost.
+
+**The record itself** is written with `commit()`, not `apply()` (today `KeliverHost.kt:1571–1573`
+uses `apply()`, while the crash ledger uses `commit()`). This change is part of (A)'s first host PR
+(H0).
+
+### 2.9 Session: fail closed
+
+- **Nothing is stored or drawn until the host knows the session.** The app either calls
+  `KeliverHost.session(id: String?)` at least once (null: signed out), or declares in its host
+  configuration that it has no accounts (`cachedFrames = CachedFrames(accounts = NONE)`). Until one
+  of the two, the store refuses reads and writes.
+- **`session()` deletes synchronously.** When the id differs from the recorded one, every frame of
+  every `cacheName` is deleted before the call returns, and the new record is written with
+  `commit()`. It also drops prefetched code as `discardPrefetched()` does (decision 3).
+- **From the guest.** `FrameScope.sessionChanged(id)` (2.2) runs the same code on the host. A frame
+  written while a session change is in flight is checked after its rename: if the session record
+  changed, the file is deleted.
+- **What is stored.** A hash of the session id with a per-install key from private storage, never
+  the id.
+
+### 2.10 Navigation
+
+- Only the **first screen of a launch** is drawn from the cache: the route the activity or scene
+  opens with (`KeliverHost.launch`, `KeliverRoute.kt`).
+- The route and its launch arguments are part of the key. A deep link to another order never shows
+  the last order's frame.
+- Apps that change data on native screens (D12) call `KeliverHost.clearCachedFrames(route)`.
+
+### 2.11 Remote off switch
+
+The bundle index can turn cached frames off per channel: `cachedFrames: "off"`. The host records it
+as it records `startOverride` (`KeliverHost.kt:817`). With it, the host deletes the channel's frames
+and draws none. Under `parallel` and `network-first` it applies at this start, after the lookup.
+Under `cache-first` it applies from the next start.
+
+### 2.12 What (A) does not change
+
+- The guest's code, its load, its start policy, its checks (signature, floor, compatibility).
+- How the guest's tree is drawn once it has taken over.
+- Screens that do not opt in, hosts without the feature, and bundles without the opt-in.
+- D1 and D2: see section 10.
+
+## 3. (B) Pre-composed destinations
+
+### 3.1 What the numbers say
+
+On the Mac, changing a hidden detail's arguments is clearly cheaper than composing it fresh: 3.1×
+(simple) and 7.5× (heavy) on QuickJS 2021; 2.6× and 4.7× with BigInt. The batches are 20–40×
+smaller.
+
+On the A12 that is not enough. A guest step has a large fixed cost there. In series H, a detail
+already composed with the right item still took 57.5 ms from the click to composed, and 80–85 ms to
+drawn. On the Mac the same step takes 1.78 ms: a ratio of about 30 for tiny steps, against about 12
+for long compositions. Adding the tap before the click and the frame after the draw, (B) alone lands
+at about 145–170 ms (simple) and 225–275 ms (heavy). Appendix B shows the arithmetic.
+
+So (B) has two parts, both part of the design:
+1. **Shell.** A prepared or parked entry holds a shell: the destination's layout with no item's
+   data. Binding it to an item fills the data.
+2. **Host reveal.** On the tap, the host shows the shell itself, before the guest runs. That costs
+   what the retained back costs: its first draw came 13–17 ms after the press on the A12. The guest's
+   bind then fills the data.
+
+### 3.2 End to end
+
+```
+list shown with its data (`ready`), guest idle: no input, scroll or guest frame for 300 ms
+  guest (keliver-nav): composes one entry per declared kind, in slices, as a SHELL (route = the kind's
+                       `unbound` value). Entry state Prepared. Its effects are held.
+  host: the entry sits in the retained container: Prepared, never laid out, drawn or a back target
+tap on row N (the row carries Modifier.revealsPrepared(DetailKind))
+  host: in the click handler, shows the Prepared shell of that kind (state Revealed), then sends the
+        click to the guest
+  guest: navigate(Detail(N)) binds the entry: route = Detail(N); its effects are released;
+         the entry state becomes Shown
+  host: applies the bind batch: the item's data appears in the shell
+back
+  guest: pops the entry and PARKS it: route = unbound, which cancels every effect keyed on the
+         arguments. If anything started during the visit is still running, the entry is disposed
+         instead (3.3).
+```
+
+A kind that is not revealable (3.4) skips the host reveal. Then the click goes to the guest, which
+binds and shows the shell in one batch.
+
+### 3.3 The effect lifecycle
+
+The goal: an entry does nothing outside its composition except while it is shown for a visit. A
+visit runs from a bind to the next park.
+
+| Moment | What runs |
+|---|---|
+| Prepared (shell, never shown) | composition only. Effects are held: their coroutines do not start |
+| Bind (the tap) | held effects are released; effects keyed on the arguments start for the new item |
+| Shown, then hidden by a screen pushed over it | as today with retention (`LaunchedWhileVisible` stops, others keep running) |
+| Pop: park | route = `unbound`. Effects keyed on the arguments are cancelled by the key change. New coroutines are held again |
+| Park check | the entry's effect scope must have no child job left from the visit. If one is left (an effect keyed on `Unit` that collects a flow, say), the entry is **disposed**, not parked, and a debug build logs which kind leaked |
+
+**Rules for a rebindable destination's author:**
+- Work that needs the item runs only while the item is there: `if (id != null) LaunchedEffect(id)
+  { … }` (example in 3.4). It leaves the composition at the park, which cancels it. An effect that
+  outlives the visit (keyed on `Unit`, collecting a flow) makes the kind fall back to disposal at
+  every pop: it still works, without the gain.
+- Loads go there too. They start at the bind, not when the entry is prepared. That is the same time
+  as a fresh open's load, so no load starts later than with a fresh open.
+- Remembered state that depends on the item uses `remember(route)` or the per-visit helpers.
+
+**Show counts are per visit.** `LocalKeliverNavEntryShows` resets to 0 at each bind. So:
+- `LaunchedOnceShown` runs once per visit: once for item 7, once for item 8. "Screen viewed"
+  analytics stay right.
+- `LaunchedOnReturn` runs on a show after the first **within the same visit** (back to item 8 from
+  a screen above it). It never runs on a new visit's first show.
+
+**Docs rewrite.** Today's retention docs tell authors to load in `LaunchedEffect` so that a prepared
+screen loads on touch-down (`KeliverNavRetention.kt:156–158, 189–190`). With held effects that
+advice changes: loads start at the show. The KDoc of `LaunchedWhileVisible`, `LaunchedOnceShown`,
+`LaunchedOnReturn` and `KeliverNavPrepare`, and `docs/SCREEN_ARCHITECTURE.md`, are rewritten in the
+same PR (B2). This also changes NF3's prepared entries, which are off by default (press off,
+2026-11-22); see decision 5.
+
+### 3.4 Guest (keliver-nav)
+
+| Change | Where | Today |
+|---|---|---|
+| A route's **kind**, separate from its arguments: `KeliverNavKind(id, unbound, revealable)`, given to the controller by `KeliverNavKinds<R>(kindOf: (R) -> KeliverNavKind?)`. Null: not rebindable | `KeliverNavController.kt` | full route equality (`prepared?.route == route`) |
+| `NavEntry.route` backed by snapshot state; `navigate(route)` binds the parked or prepared entry of the same kind | `KeliverNavController.kt` | the route is a `val` |
+| At most one prepared entry per kind, at most `maxPreparedKinds` (default 2) | `KeliverNavController.kt` | one prepared entry, dropped at any stack change |
+| Pop parks a rebindable entry (3.3), or disposes it | `KeliverNavController.kt` (`pop`, `popWithResult`) | popped entries are disposed |
+| Entry lifecycle `Prepared`, beside `Visible` and `Hidden` | `KeliverNavRetention.kt:122` | a prepared entry is `Hidden`, and its effects run |
+| Prepared and parked entries composed in a sub-composition whose effect dispatcher holds coroutines; preparation in slices that yield between frames; a tap cancels a slice | new, `KeliverNavPreparedComposition.kt` | composed in one frame, effects run |
+| Per-visit show counts; per-visit helpers `rememberPerVisit {}`, `rememberSaveablePerVisit {}`, `rememberPerVisitLazyListState()` | `KeliverNavRetention.kt`, new `KeliverNavPerVisit.kt` | counts per entry |
+| Idle policy: prepare only after the first screen is `ready` (or, without (A), after its first data batch and 300 ms quiet), with no input, scroll or guest frame for 300 ms; drop prepared and parked entries on memory pressure and in the background | new, `KeliverNavIdle.kt`, fed by host signals | NF3 prepares on touch-down |
+| `Modifier.revealsPrepared(kind)` for rows whose click always opens that kind | new | none |
+
+What a screen author writes:
+
+```kotlin
+sealed interface Route {
+  data object Orders : Route
+  data class Detail(val id: Long) : Route
+  data object DetailShell : Route            // the kind's `unbound` value
+}
+val DetailKind = KeliverNavKind(id = "detail", unbound = Route.DetailShell, revealable = true)
+
+KeliverNavHost(controller, kinds = KeliverNavKinds { r -> if (r is Route.Detail || r == Route.DetailShell) DetailKind else null }) { route ->
+  when (route) {
+    Route.Orders -> OrdersScreen(onOpen = { controller.navigate(Route.Detail(it)) })
+    // ONE call site for both, so binding keeps the composition (two branches would compose anew)
+    is Route.Detail, Route.DetailShell -> DetailScreen(id = (route as? Route.Detail)?.id)
+  }
+}
+
+@Composable fun DetailScreen(id: Long?) {
+  // Work that needs the item runs only while it is there: it starts at the bind, stops at the park.
+  if (id != null) LaunchedEffect(id) { load(id) }
+  …                                          // id == null: the layout with placeholders
+}
+// On the list, once its data is there:
+KeliverNavPrepare(controller, DetailKind)
+```
+
+**Generated tests per declared kind** (the scaffolder writes them; CI runs them):
+- `assertInertWhenPrepared(kind)`: the shell, composed Prepared against capabilities that fail on
+  any call (HTTP, bridges, storage, analytics), runs frames; nothing may be called.
+- `assertInertAfterVisit(kind)`: bind to an item, run its effects, pop; after the park no coroutine
+  from the visit is alive and no call is made in the following frames.
+- `assertRebindEquivalent(kind)`: a fresh `Detail(N)` and `Detail(M)` rebound to `N` fold (A's
+  `ChangeFolder`) to the same tree, ids aside.
+- `assertShellHasNoData(kind)` (revealable kinds only): the shell after a visit to item 7 and after
+  a visit to item 8 fold to the same tree, and it contains none of the items' strings.
+
+### 3.5 Host
+
+| Change | Where |
+|---|---|
+| The retained container in the production widget system (NF1's production step, B0) | keliver-material's host widgets, templates |
+| **An explicit entry state** on the container's entries: `Shown`, `Retained`, `Prepared`, `Revealed`. The host never lays out or draws a `Prepared` entry, and never makes it a back target. `goBack` skips it. Today the container protects hidden entries by their order alone (`shownIndex` is `lastIndex`, `goBack` takes `index - 1`, `Retained.kt:130–165`) | the container's schema (a protocol change, covered by the schema lock) and its renderer |
+| **The host reveal.** On a click on a node with `revealsPrepared(kind)`, the container shows that kind's `Prepared` entry (state `Revealed`) in the same frame, then sends the click. If the guest's next batch does not bind it, or back is pressed first, the host hides it again | the container's renderer |
+| Two host signals with events to the guest: "user input active" (a touch is down or a fling runs) and "memory pressure" (Android `onTrimMemory` at `RUNNING_LOW` or above; iOS `didReceiveMemoryWarning`) | templates, host features |
+
+Android and iOS share all of it (both draw with Compose UI).
+
+### 3.6 What (B) changes and does not change
+
+It changes:
+- the retained container's schema (one entry-state property) and its renderer;
+- two host features with events, and one modifier (`revealsPrepared`);
+- keliver-nav's behaviour for prepared entries (held effects) and, for apps that declare kinds,
+  popped entries (parked).
+
+It does not change:
+- destinations that are not declared rebindable, and every route equality today's code relies on;
+- the retained back stack (NF1), the press signal (NF3, off);
+- the bundle format.
+
+### 3.7 Risks, and what the B1 spike must settle
+
+- **Pausable composition in the guest's runtime.** Is it public API in the Compose runtime the
+  guest uses? If not, slices are not possible, and a long preparation can delay a tap.
+- **Held effects and framework effects.** A held dispatcher must not hold the framework's own
+  effects that a hidden layout needs (lazy layouts' prefetch and measurement). Which effects go
+  through it?
+- **Composition locals** must pass into the sub-composition (`currentCompositionLocalContext`).
+- **One Redwood applier fed by two recomposers** (the main one and the sub-composition's). Is
+  that safe, and in which order are their changes sent?
+- **A slice budget in A12 milliseconds**, stated before the spike: at most 8 ms of guest work per
+  slice on the A12 (about 0.3–0.7 ms on the Mac at ratios of 12–30).
+- **A hidden entry recomposes when what it reads changes.** The three-way detail reads the app's
+  navigation counter, so its hidden copy recomposes at every back (+0.5 to +2 ms on the Mac). Shells
+  should read only their arguments; a debug counter reports recompositions of `Prepared` entries.
+- **Structure that differs per item** costs more (table B2). The shell should hold the common
+  structure; item-specific parts appear at the bind.
+
+## 4. Correctness invariants
+
+Each invariant has an enforcement and a test. "Unit" is a JVM or common test in the module named;
+"host test" a JVM Compose UI test like `RetainedHostBackTest`; "device" the A12, the iPhone or the
+iOS simulator.
+
+### I1. Never wrong content
+
+A cached frame is drawn only if every field of its key equals the current one (section 5), and only
+under the start rule in 2.8. The release it hands off to must be the release it was recorded from,
+checked again at `codeLoadSuccess`. Only the shown, marked subtree is ever recorded (2.3), so a
+frame cannot hold another screen.
+
+**Enforced:** the key check in `FrameStore.read`, before decoding; the start table in one function
+beside `afterParallelLookup`; the `codeLoadSuccess` check; the recording rule; a mismatch handler
+that discards the frame on any unknown tag.
+**Tested:** one unit test per key field (a frame differing in that field only is not read); the
+start table as a table test over every `StartChoice.mode` reason × `ParallelStep` × frame present;
+a stored frame with an unknown tag is discarded; a host test where the lookup names another release
+and no frame is ever composed; a host test where `codeLoadSuccess` reports another module digest and
+the frame goes in that frame.
+
+### I2. Data freshness is the guest's choice
+
+- **Off by default.** A screen without `CachedFrame` is never stored.
+- **Two levels, no default.** `Shell` (an allowlist: only `cached()` texts survive) and `Whole`.
+  For money and personal data: `Shell`. The docs show it.
+- **Maximum age.** `maxAge` is required; the host caps it (proposed 24 h, decision 2). Age is
+  checked by the wall clock and by boot-relative time within one boot.
+- **Relative dates.** A text such as "today" goes stale at midnight. `FrameCachePolicy(dayBound =
+  true)` adds the local date to the key.
+
+**Enforced:** the guest API; the fold. **Tested:** unit tests on `ChangeFolder`: in `Shell`, a text
+not marked `cached()` never appears in the stored bytes (a search of the file fails), nor does a
+content description, an image URL or a lazy key; in `Whole`, a `notCached` value and a
+`@NeverCached` value never appear; age expiry by both clocks; `dayBound` at midnight.
+
+### I3. Input before take-over
+
+The frame is drawn, not run.
+
+| Input on the frame | What happens |
+|---|---|
+| Tap, long press | consumed; the indicator shows at once. Not queued for the guest: ids differ across runs |
+| Scroll, fling | consumed; the frame does not move; the indicator shows |
+| Back (Android) | the hidden guest's callbacks are disabled (`backEnabled = false`), so back goes to the activity, as on today's loading screen |
+| Back (iOS) | the scene's own back, as on the loading screen (guests never receive back on iOS) |
+| Text input | impossible: the container is unfocusable, and text fields are not replayed |
+
+Accessibility: one node, "Loading", polite live region, no actions (iOS: one accessibility element,
+children hidden). At the swap the guest's tree appears with its own semantics.
+
+**Tested:** host test: a click, a scroll and an IME request on the frame reach no guest and show the
+indicator; one semantics node with no actions; a back press while the frame is up reaches no guest
+callback and reaches the activity (Android); the same on the iOS simulator; the next frame after the
+swap exposes the guest's nodes.
+
+### I4. Hand-off without a regression
+
+The frame stays on top until the guest says `ready`, bounded by `HANDOFF_LIMIT` and `FRAME_LIMIT`
+(2.7). The swap is one frame, with both trees laid out. In `Shell` the swapped-in text may reflow
+by the difference between its width and its placeholder's (rounded up to 4 characters); that is the
+only movement allowed.
+
+**Tested:** host test with a guest whose first batch is its loading state: frames across the
+hand-off never show the loading state and never an empty frame; both timeouts with a fake clock;
+the deferred update (2.7); a pixel check that the frame before the swap equals the stored frame and
+the one after equals the guest's.
 
 ### I5. Privacy and security
 
 - **Where.** Android: `noBackupFilesDir` (app-private, excluded from Auto Backup and device
-  transfer). iOS: `Library/Caches` with `isExcludedFromBackup`. Never shared storage.
-- **Cleared:**
-  - on a session change: `KeliverHost.session(id: String?)`, which replaces the documented
-    `discardPrefetched()` call on sign-in, sign-out and user change (`HostApp.kt:16–17`,
-    `iOSApp.swift:18`) and does both. The key stores an HMAC of the session id, never the id;
-  - on a release, key or signing-key change: frames whose key differs are deleted when read, and
-    all of a `cacheName`'s frames when the bundle key changes (the key is in `cacheName`,
-    `KeliverHost.kt:191`);
-  - on an app update: the host build is in the key; the first start of a new build deletes the
-    directory;
-  - on the app's own request: `KeliverHost.clearCachedFrames()`.
-- **Size cap.** 512 KB per frame, 2 MB per `cacheName`, oldest first. Section 7 records the real
-  size (the three-way list: appendix, table A).
-- **What an attacker who can write the app's private storage can make the host draw:** only
-  widgets of the app's own schema, with values of their declared types (the protocol decodes into
-  the generated widget system; nothing is evaluated). The frame is inert (I3), so it cannot take
-  input or send anything. It could show a misleading screen until the guest takes over (at most
-  `HANDOFF_LIMIT` after the guest's first batch). Such an attacker already controls the app's
-  preferences and databases; the code itself stays protected by the bundle's signature (D2).
-- **Integrity tag: yes, cheap.** Each frame carries an HMAC-SHA256 over its header and body, with a
-  per-install key kept by the platform (Android Keystore, non-exportable; iOS Keychain,
-  `AfterFirstUnlockThisDeviceOnly`). A frame whose tag does not verify is deleted, not drawn. Its
-  cost on the A12 is measured before it ships (section 7); if a Keystore operation costs more than
-  20 ms at start, the fallback is a key in the app's private storage (protects against nothing an
-  attacker with that storage cannot also read, so the owner decides: question 3).
+  transfer). iOS: `Library/Caches` with `isExcludedFromBackup`, default file protection. Never
+  shared storage.
+- **Cleared:** on a session change (2.9, synchronously); on a release, key or signing-key change
+  (frames whose key differs are deleted when read; a bundle key change deletes the `cacheName`); on
+  an app update (the host build is in the key); by the remote off switch (2.11); on the app's
+  request (`clearCachedFrames()`, `clearCachedFrames(route)`).
+- **Size caps.** Proposed 512 KB per frame, 2 MB per `cacheName`, oldest first (decision 2).
+- **What a frame can do.** A replayed frame takes no input, runs no guest code and makes no network
+  request: images come from the disk cache only. It draws only replayable widgets of the app's own
+  schema, with values of their declared types.
+- **What an attacker who can write the app's private storage can do.** Make the host draw a
+  misleading but inert screen, from the app's own widgets, for at most `FRAME_LIMIT`. Such an
+  attacker already controls the app's preferences and databases. The code stays protected by the
+  bundle's signature (D2).
+- **Integrity.** A checksum (CRC32C over header and body) catches corruption. No Keystore or
+  Keychain key: it would protect against nobody who can already write private storage, and it costs
+  time on the slowest phone's cold path (decision 9).
 
-**Tested:** unit tests for every clearing path; a backup-rules check in the template's tests
-(the directory is under `noBackupFilesDir`); a frame with one byte changed is refused; a session
-change deletes every frame before the next read.
+**Tested:** unit tests for every clearing path; `session()` has deleted every frame before it
+returns (a read right after it finds nothing, the directory is empty); fail closed: no read or
+write before `session()` or `accounts = NONE`; a backup-rules check in the template's tests; a frame
+with one byte changed is refused; a replay with a cache-only loader makes no network request (a
+fake loader fails on any fetch).
 
 ### I6. Inert pre-composition (B)
 
-A prepared destination sends no request, writes nothing, logs no analytics and runs no effect
-visible outside its own composition until it is first shown. Today it does: NF3's prepared entry
-runs its `LaunchedEffect`s and `DisposableEffect`s at prepare time (`KeliverNavPreparation.kt:90–102`
-says so, and tells authors to move them into `LaunchedOnceShown`).
+A prepared or parked entry sends no request, writes nothing, logs no analytics and runs no effect
+visible outside its composition. Today NF3's prepared entry runs its effects at prepare time
+(`KeliverNavPreparation.kt:90–102`).
 
-**Enforced, in three layers:**
-1. **Held effects.** keliver-nav composes a Prepared entry in its own sub-composition whose effect
-   coroutine context holds every coroutine started in it (`LaunchedEffect`, `produceState`,
-   `rememberCoroutineScope().launch`) until the entry is first shown, and cancels them if the entry
-   is dropped. The same pattern as the start policy's held calls (`CallGate`, `StartPolicy.kt:329`),
-   inside the guest. This needs public Compose runtime API only (a child `Recomposer` with its own
-   effect context, `Composition(applier, recomposer)`, the parent's frame clock), with the
-   composition locals passed on explicitly. Spike: PR B1.
-2. **A lifecycle the screen sees.** `LocalKeliverNavEntryLifecycle` is `Prepared`.
-   `LaunchedOnceShown` and `LaunchedWhileVisible` (`KeliverNavRetention.kt:162, 194`) do not run
-   while Prepared. Synchronous effects (`DisposableEffect`, `SideEffect`) do run at composition; a
-   preparable destination must not call a bridge, `HostHttp` or analytics from them.
-3. **A test every preparable destination gets.** `assertInertWhenPrepared { Destination(args) }`
-   composes it Prepared against capabilities that fail on any call (HTTP, bridges, storage,
-   analytics), runs frames, and fails if anything was called. The scaffolder writes it for each
-   kind an app declares; CI runs it.
+**Enforced:** held effects (3.3, 3.4); the `Prepared` lifecycle (`LaunchedOnceShown` and
+`LaunchedWhileVisible` do not run); the park check, which disposes an entry that leaked; the
+generated `assertInertWhenPrepared` and `assertInertAfterVisit`. Synchronous effects
+(`DisposableEffect`, `SideEffect`) still run at composition, so a rebindable destination must not
+call out from them; the generated tests catch it.
 
-**What screen authors must do:** start work only in effects (held) or in `LaunchedOnceShown`;
-create presenters with `rememberPerVisit { }` (not at composition time with side effects in their
-constructor); keep `DisposableEffect`/`SideEffect` free of calls out.
-
-**Tested:** keliver-nav unit tests: a Prepared entry's `LaunchedEffect` has not started after N
-frames, starts at the show, is cancelled at a drop; `LaunchedOnceShown` likewise; a held HTTP call
-from a prepared entry reaches a fake host only after the show.
+**Tested:** keliver-nav unit tests: a `Prepared` entry's `LaunchedEffect` has not started after N
+frames, starts at the bind, is cancelled at a drop; after a visit and a pop, an effect keyed on the
+route is cancelled and one keyed on `Unit` makes the entry dispose ("inert after a visit");
+`LaunchedOnceShown` runs once per visit; `LaunchedOnReturn` does not run on a new visit's first
+show; a held HTTP call from a prepared entry reaches a fake host only after the bind.
 
 ### I7. Arguments (B)
 
-Today a `NavEntry`'s route is a `val` (`KeliverNavController.kt:212`), its content is
-`content(entry.route)` (`KeliverNavHost.kt:165, 176`), and its `SaveableStateHolder` key is the
-entry's id. A prepared entry is used only when the new route equals it.
+- **Binding.** `navigate(route)` with a parked or prepared entry of the same kind sets the entry's
+  route state and shows it. The entry keeps its id, so its composition and `SaveableStateHolder` key
+  stay.
+- **Remembered state** must be independent of the arguments or keyed by them. Per-visit helpers
+  make the safe way the easy one.
+- **Scroll position.** `rememberPerVisitLazyListState()` returns to the top at each visit.
+- **Saved state across process death.** A shown entry is saved with its route. A prepared or parked
+  entry is not saved; it is rebuilt when idle after a restore.
+- **What cannot be rebound is composed fresh.** A kind is rebindable only if the app declares it.
+  Destinations with a text field, a web view or a media player should not be declared.
+- **Results and back.** `popWithResult` and `LaunchedOnResult` are unchanged.
 
-- **Taking the real arguments.** `navigate(route)` with a prepared entry of the same kind sets the
-  entry's route state to `route` and pushes the entry. Its content recomposes with the new route
-  in the same frame as it becomes visible. The entry keeps its id, so its composition (and its
-  `SaveableStateHolder` key) stays.
-- **Remembered state.** Everything a rebindable destination remembers must be either independent
-  of its arguments or keyed by them. keliver-nav gives a visit counter
-  (`LocalKeliverNavVisit`) that increases at each adoption, and helpers keyed by it:
-  `rememberPerVisit {}`, `rememberSaveablePerVisit {}`. Plain `remember(route.id) {}` is fine too.
-- **Scroll position.** `rememberPerVisitLazyListState()` returns to the top at each visit (a scroll
-  of a live list, not a new composition). A destination's lists must use it.
-- **Saved state across process death.** The entry is saved with the route it shows; a prepared,
-  never-shown entry is not saved (it is rebuilt after a restore, when idle).
-- **What cannot be rebound is composed fresh.** A kind is rebindable only if the app's
-  `KeliverNavKinds` says so. A destination with a text field, a web view, a media player, or
-  anything it cannot reset should not be declared rebindable; then it behaves exactly as today.
-- **Results and back.** `popWithResult` and `LaunchedOnResult` (`KeliverNavResults.kt`) are
-  unchanged: they see the entry's current route.
+**Enforced:** by the generated `assertRebindEquivalent(kind)` for every declared kind, not by
+convention. **Tested:** that test; keliver-nav unit tests (a per-visit counter, a per-visit
+saveable, a list scrolled to row 10 is at row 0 on the next visit; a non-rebindable kind composes
+fresh); the guest profile's `nf5=rebind` checks each open's batch carries the opened item's title.
 
-**Tested:** keliver-nav unit tests: adopting a prepared `Detail(7)` for `Detail(8)` shows item 8's
-content and no remembered value of item 7 (a per-visit counter, a per-visit saveable, a list
-scrolled to row 10 is at row 0); a non-rebindable kind composes fresh; the guest profile's
-`nf5=rebind` checks each open's batch carries the opened item's title (appendix).
+### I8. Old hosts, old bundles, and turning it off
 
-### I8. Old hosts and bundles
+- (A) The guest emits its markers only when the host declares `keliver.cachedFrame@1`. A new host
+  with a bundle that never opts in stores and draws nothing. The remote switch (2.11) turns it off
+  per channel.
+- (B) Preparation needs the host's container with entry states (`keliver.nav.retainedContainer@2`).
+  Without it keliver-nav does what `retentionFor(hostFeatures)` does today: no preparation.
+- Host feature names become constants in one place, with a test that each template declares
+  exactly what it implements (H0).
 
-- (A) The guest emits its markers only when `LocalHostFeatures` contains `keliver.cachedFrame@1`
-  (the host features path: `TreehouseApp.Spec.hostFeatures`, `TreehouseApp.kt:273–275`, to
-  `LocalHostFeatures`, `HostFeatures.kt:32`). An old host does not declare it, so it never sees the
-  markers and behaves as today. A new host with a bundle that never opts in stores nothing and
-  draws nothing new.
-- (B) Pre-composition by kind is guest-side (keliver-nav). It needs the host's retained container
-  (`keliver.nav.retainedContainer@1`) for hidden entries that are not laid out or drawn; without it
-  keliver-nav falls back as `retentionFor(hostFeatures)` does today (`KeliverNavDefaults.kt:66`):
-  no preparation, today's behaviour.
-- Feature names become constants in one place (today they are typed by hand in several,
-  survey section 5), with a test that the templates declare exactly what they implement.
-
-**Tested:** `HostFeaturesGuestTest`-style tests (`keliver-treehouse-host/src/appsJvmTest/.../HostFeaturesGuestTest.kt`):
-without the feature the guest's batches are byte-identical to today's; with it, only the marker
-elements are added.
+**Tested:** `HostFeaturesGuestTest`-style tests: without the feature the guest's batches are
+byte-identical to today's; with it, only the marker elements are added; the switch deletes and
+stops frames.
 
 ### I9. Resource bounds
 
 | Resource | (A) | (B) |
 |---|---|---|
-| Memory | One decoded frame while it is drawn (the three-way list: 148 widgets), freed at the swap. The guest's own tree is composed beneath during the hand-off, so for that window the host holds two trees, as the update swap already does. | One composed destination per prepared kind, guest and host side: the heavy detail is 104 widgets. At most `maxPreparedKinds` (default 2). Dropped on memory pressure and in the background. Measured on the A12 (PSS, section 7). |
-| CPU and battery | A read and a decode per cold start (Mac: about 1 ms for 87 KB of JSON); writes only at `ready` and at `ON_STOP`. | One composition per kind when idle (Mac: +7 to +60 ms, table B's `first`); recompositions when what the hidden entry reads changes (+0.4 to +2 ms per back on the Mac). Never during input, a scroll, a fling or an animation; never before the first screen is ready. |
-| Disk | 512 KB per frame, 2 MB per `cacheName` (the list: 87 KB, 7.9 KB gzipped). | none |
+| Memory | one decoded frame while drawn (the three-way list: 148 widgets), freed at the swap; two trees during the hand-off, as the update swap already holds | one shell per prepared kind, guest and host; at most `maxPreparedKinds` (2); dropped on memory pressure and in the background. Budget: decision 6 |
+| CPU and battery | a read and a decode per cold start; one write per content binding, at most | one composition per kind when idle; recompositions when what a shell reads changes. Never during input, scroll, fling or animation; never before the first screen is ready. Budget: decision 6 |
+| Disk | caps per frame and per `cacheName` | none |
 
-**Enforced:** caps in `FrameStore`; the idle policy and `maxPreparedKinds` in keliver-nav.
-**Tested:** the cap's eviction order; the idle policy with a fake clock and input events; the A12
-series in section 7 (memory, scroll jank, battery).
+**Tested:** the caps' eviction order; the idle policy with a fake clock and input events; the A12
+series in section 7.
 
 ### I10. One writer, one reader
 
-The store is written from one place (the recorder of the content that showed the screen) and read
-once per cold start, before the guest's first batch. Two screens with the same key (two activities
-on one route) write the same file; the last complete write wins (atomic rename). A frame is never
-read while it is being written (the reader opens only the renamed file).
+The store is written only by the recorder of the content that showed the marked screen, and read
+once per cold start before the guest's first batch. Two screens with the same key write the same
+file; the last complete write wins (atomic rename). A reader opens only renamed files.
 
 **Tested:** unit test with two writers and a reader on one key.
 
-### I11. The stored tree is the tree that was drawn
+### I11. The stored tree is the tree that was drawn, and only that
 
-The fold must reproduce exactly what the host had applied. **Enforced:** `ChangeFolder` is tested
-against the host itself, not against a model: every test applies the raw batches to one host and
-the folded snapshot to another, and compares the widget trees (and, on the JVM Compose UI harness,
-the pixels). The appendix's measurement does this for the three-way list (0 differing pixels).
-Random batch sequences (Add, Move, Remove, detach, re-add) are generated in a property test.
+- The fold reproduces what the host applied for the marked subtree, nothing else.
+- **Enforced:** the recording rule (2.3); `ChangeFolder` tested against the host itself, not a model.
+- **Tested:**
+  - every fold test applies the raw batches to one host and the folded snapshot to another, and
+    compares widget trees and, on the JVM Compose UI harness with **keliver-material**, pixels;
+  - a property test over random batch sequences (Add, Move, Remove, detach, re-add);
+  - **the navigation test**: compose a `KeliverNavHost` whose list is marked; let `ready` go true
+    (write 1); navigate to a detail; send the app to the background (`ON_STOP`). Assert the file is
+    write 1, byte for byte, holds the list's tree and no node of the detail, and that no write
+    happened after the navigation;
+  - a write blocked by each condition of 2.3 (scrolled, touched, a dialog, a hidden marked entry);
+  - a frame recorded with a prepared and a retained entry present holds neither.
+
+### I12. Bounded on screen
+
+The frame is on screen for at most `FRAME_LIMIT` after its first draw, whatever the guest does. A
+revealed shell (B) is hidden again if the guest does not bind it in its next batch.
+
+**Tested:** host tests with a guest that never loads, one that never sends `ready`, and one whose
+click handler does not navigate.
 
 ## 5. Cache key, invalidation and storage format
 
 ### 5.1 Key and invalidation
 
-| Field | Source | Changes when | On mismatch |
-|---|---|---|---|
-| release | manifest sha256 (`lastGoodShaKey`; under `parallel`, the confirmed one) | a new release loads | not drawn; deleted |
-| engine | `hostEngine` (NF2: the engine that loaded it, `lastGoodEngineKey`) | the app moves engines | not drawn; deleted |
-| host build | the app's version code / bundle version | an app update | directory deleted at the first start |
-| widget and schema versions | the widget system's version and the schema's tag-lock hash | a host with other renderers | not drawn; deleted |
-| format version | the file's header | the store's code changes | not drawn; deleted |
-| route + launch arguments | the encoded `KeliverRoute` | another deep link | another file (no frame for that route) |
-| session | HMAC(install key, session id) or "signed out" | sign-in, sign-out, user change | all frames deleted at `session()` |
-| configuration | locale, layout direction, font scale (rounded to 0.05), dark mode, width size class | the user changes a setting, rotates into another size class | not drawn (kept for the other configuration, within the cap) |
-| age | `createdAt` (wall clock and boot-relative) vs the screen's `maxAge`, capped at 7 days | time | not drawn; deleted |
+| Field | Source | On mismatch |
+|---|---|---|
+| release identity | sequence, manifest sha256 and module digest of the app that recorded it (2.8) | not drawn; deleted |
+| engine | `hostEngine` (NF2) | not drawn; deleted |
+| host build | Android: version code and `lastUpdateTime` (a same-version reinstall or a dev build changes it). iOS: `CFBundleVersion` and the executable's Mach-O UUID | the directory is deleted at the first start |
+| widget and schema versions | the widget system's version and the schema's tag-lock hash | not drawn; deleted |
+| format version | the file's header | not drawn; deleted |
+| route and launch arguments | the encoded `KeliverRoute` | another file |
+| session | a keyed hash of the session id, or "signed out"; nothing without a session record (2.9) | all frames deleted at the change |
+| variant | the app's guest-held theme or language (`FrameScope.variantChanged`) | all frames of the old variant deleted |
+| display | width and height in dp (rounded to 8), density, orientation | not drawn; kept |
+| insets | system bar and cutout insets (rounded to 4 dp), navigation mode (gestures or buttons) | not drawn; kept |
+| text and contrast | locale, layout direction, font scale (rounded to 0.05; iOS the Dynamic Type category), bold text, high-contrast text | not drawn; kept |
+| appearance | dark mode | not drawn; kept |
+| time | time zone id, 24-hour setting; the local date with `dayBound` | not drawn; kept |
+| age | `createdAt` (wall clock and boot-relative) against `maxAge`, capped | not drawn; deleted |
 
-The file name is a hash of route + configuration + session. The other fields are in the header
-and are checked after reading it.
+"Kept" fields describe the device's configuration: a frame for the other one stays, within the cap.
+The file name is a hash of route, configuration, variant and session. The other fields are in the
+header, checked after reading it.
 
 ### 5.2 Storage format
 
 ```
-magic "KLVF" | format version (1) | header length | header (JSON) | body length | body | HMAC-SHA256 (32 bytes)
-header: { release, engine, hostBuild, widgetVersion, schemaHash, route, configuration,
-          session, createdAtMillis, createdAtBoot, maxAgeMillis, content: "whole"|"shell" }
-body:   a SnapshotChangeList as the bridge's JSON (array polymorphism), gzip-compressed
+magic "KLVF" | format version (1) | header length | header (JSON) | body length | body | CRC32C
+header: { release: {sequence, manifestSha256, moduleDigest}, engine, hostBuild, widgetVersion,
+          schemaHash, route, configuration, variant, session, createdAtMillis, createdAtBoot,
+          maxAgeMillis, content: "whole"|"shell" }
+body:   a SnapshotChangeList as the bridge's JSON, gzip-compressed
 ```
 
-- The body is the fold of every batch the screen's content received, up to the moment of writing.
-  Only Create, PropertyChange, ModifierChange and ChildrenChange.Add, in an order a fresh host can
-  apply (each widget's Create, its last property values, its last modifier, then its children and
-  their Adds). `notCached` subtrees are already dropped (I2).
-- Lazy lists: only the rows the guest had composed (its window) are stored. The frame shows them;
-  no scrolling (I3).
-- Writes: to `<name>.tmp`, `fsync`, then rename. A reader opens only `<name>`.
-- Version 1 is JSON for reviewability and because the decoder exists on both platforms. A binary
-  body is a later, measured choice (the appendix's sizes and decode times).
+- The body is the folded marked subtree at the `ready` edge (2.3): only Create, PropertyChange,
+  ModifierChange and ChildrenChange.Add, in an order a fresh host can apply.
+- **Placeholders** (`Shell`): a replaced text becomes figure spaces (U+2007), as many as the
+  original's length rounded up to a multiple of 4, at most 64. It lays out at about the original
+  width and draws blank. A dropped URL or other text-bearing value is omitted, so the widget uses
+  its default.
+- Lazy lists: only the rows the guest had composed, at the first position.
+- Writes go to `<name>.tmp`, `fsync`, then a rename.
+- Version 1 is JSON, for reviewability. A binary body is a later, measured choice.
+- The format code lives in `keliver-treehouse-host`, which only hosts use.
 
 ## 6. Failure handling
 
 | Failure | Detected by | What the user sees | Record |
 |---|---|---|---|
-| Unreadable, truncated or corrupt file | magic, lengths, HMAC, JSON decode | today's Loading (no frame) | file deleted; `cachedFrame.discarded(reason)` |
-| Unknown tag in the frame (renderers changed without a version change) | the non-throwing mismatch handler | today's Loading | file deleted; reported, because the key should have caught it |
-| Guest crashes after the frame is shown | `KeliverHost.crashed` / the content's Crashed widget | the cached frame goes; today's `unavailable` | frame deleted (the release may be bad); crash rollback as today |
-| Code fails to load (signature, floor, network) | `KeliverHostState.Unavailable` | the cached frame goes; today's failure screen | frame kept only if the failure is the network's and the next start will load the same release |
+| Unreadable, truncated or corrupt file | magic, lengths, CRC, JSON decode | today's loading screen | file deleted; `cachedFrame.discarded(reason)` |
+| Unknown tag in the frame | the non-throwing mismatch handler | today's loading screen | file deleted; reported (the key should have caught it) |
+| The loaded release differs from the frame's | `codeLoadSuccess` (2.8) | the frame goes; loading until the guest's first batch | file deleted; reported |
+| Guest crashes after the frame is shown | `KeliverHost.crashed` / the content's Crashed widget | the frame goes; today's `unavailable` | frame deleted; crash rollback as today |
+| Code fails to load | `KeliverHostState.Unavailable` | the frame goes; today's failure screen | frame kept only for a network failure with the same release next time |
 | The guest never says `ready` | `HANDOFF_LIMIT` after its first batch | the guest's tree as it is | `cachedFrame.handoffTimeout` |
-| No guest batch at all within the code-load limit | the existing load timeout | today's behaviour for a stuck load | frame kept |
-| Process death mid-write | the rename never happened | next start: the previous complete file, or none | the `.tmp` is deleted at the next start |
-| Disk full on write | the write throws | nothing visible | `cachedFrame.writeFailed`; no retry until the next `ready` |
-| The clock jumped (manual time change) | boot-relative age check disagrees with the wall clock | the frame is not drawn | deleted |
+| Nothing from the guest | `FRAME_LIMIT` after the frame's first draw | today's `loading()` | `cachedFrame.frameTimeout`; frame kept |
+| An update loads before the hand-off | the update swap | the frame hands off to the old app first, then the update swaps (2.7) | none |
+| Process death mid-write | the rename never happened | next start: the previous complete file, or none | `.tmp` deleted at the next start |
+| Disk full on write | the write throws | nothing visible | `cachedFrame.writeFailed` |
+| Clock jumped | boot-relative age disagrees with the wall clock | not drawn | deleted |
+| Session changed during a write | the post-rename check (2.9) | nothing visible | file deleted |
 
 ## 7. Measurement plan and gates
 
-All on the A12 with the three-way benchmark's method ([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md),
-"Method": marks, "drawn" as the next window draw; cold start with Macrobenchmark `StartupMode.COLD`,
-10 iterations, `reportFullyDrawn` at the list-data frame; navigation with `bench=nav`, 700 ms
-between taps). iOS: the simulator for relative numbers, the iPhone once it is signed.
+On the A12, with the three-way benchmark's method ([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md),
+"Method"); cold start with Macrobenchmark `StartupMode.COLD`, 10 iterations; navigation with
+`bench=nav`, 700 ms between taps. iOS: the simulator for relative numbers, the iPhone once signed.
+All open times are frame end, from the tap, with first draw reported too.
 
 ### (A) Cold start
 
-Two new marks, both reported:
-- **first content drawn**: the first window draw that shows the cached frame (or the guest's
-  content, without a frame);
-- **guest took over**: the draw after the swap (I4).
+Two marks, both reported: **first content drawn** (the first draw of the frame, or of the guest's
+content without one) and **guest took over** (the draw after the swap).
 
 | Gate | Measure | Pass |
 |---|---|---|
-| A-1 | first content drawn, with a cached frame, `cache-first` | within native + 0.4 s of native's list-data frame (native about 729 ms frame end, so about 1.13 s) |
-| A-2 | the same under `parallel` (lookup confirming) | within native + 0.4 s; else question 2 |
-| A-3 | guest took over | not later than today's data frame for the same build (no regression) |
-| A-4 | cold start without a frame (first launch, after a session change) | not slower than today by more than 10 ms (the store read and key check) |
-| A-5 | the swap | no frame without content between the cached frame and the guest's (frame trace); pixel diff of the swap frames |
-| A-6 | the integrity tag | Keystore HMAC at start ≤ 20 ms (I5) |
+| A-1 | first content drawn, with a frame, `cache-first` | within native + 0.4 s of native's list-data frame (about 1.13 s) |
+| A-2 | the same under `parallel` with the bench's local lookup | within native + 0.4 s |
+| A-2b | the same under `parallel` with a **throttled remote lookup** (a server behind a 3G profile: 300 ms RTT, 1.6 Mbit/s, cold DNS and TLS) | reported; if it misses, the existing per-channel `cache-first` override is the lever (decision 8) |
+| A-3 | guest took over | not later than today's data frame for the same build |
+| A-4 | cold start without a frame (first launch, after a session change) | not slower than today by more than 10 ms |
+| A-5 | the swap | no frame without content between the frame and the guest's (frame trace); pixel diff of the swap frames |
+| A-6 | the frame's read, check and decode | reported, on the main thread's critical path |
+| A-7 | **correctness on the device**, by log line and screenshot: font scale 1.3, another locale, dark mode, sign-out, a deep link to another route, a new release | each: no frame drawn, the log line names the key field |
 
-What "data" means here: with `Whole`, the first content drawn already shows the list's data, from
-storage; A-1 is then the native comparison, and A-3 says when it is live. With `Shell`, the data
-regions are placeholders until the swap, so for the bar only A-3 counts as "data", and A-1 as
-"first content". The report gives both, per screen.
+What "data" means: with `Whole`, first content drawn already shows the list's data from storage, so
+A-1 is the native comparison and A-3 says when it is live. With `Shell`, the data regions are
+placeholders, so only A-3 counts as data. The report gives both, per screen. Decision 1 is whether
+A-1 counts for the bar.
 
 ### (B) Open
 
-The three-way bench gets an arm `x=prepkind` (the detail prepared by kind while idle, press off),
-against today's `x=retainhost` and as shipped; `bench=nav`, simple and `heavy`, both engines.
+Arms of the three-way bench (`bench=nav`, simple and `heavy`, BigInt, press off), against
+`x=retainhost` and as shipped:
+- `x=prepkind`: the detail prepared by kind while idle, bound on the tap (guest-driven).
+- `x=prepkind,reveal`: the same with the host reveal.
+- `x=prepkind,varied`: the heavy detail whose structure depends on the item (the `varied`
+  experiment added in this PR; guest only).
+- `x=prepkind,detailfetch`: the detail loads its item by id through `HostHttp` from the bench's
+  fixture server, asynchronously, as `bench=api-small` loads the list. Measures open to data drawn
+  when the data is not in the arguments.
+- `bench=api-small` with and without idle preparation: preparation must not slow the list's load.
+- All arms on keliver-nav itself, not the profile's stand-in stack.
 
 | Gate | Measure | Pass |
 |---|---|---|
-| B-1 | open, simple, tap to drawn (frame end), BigInt | about 100 ms (median), p90 under 130 |
-| B-2 | open, heavy, tap to drawn, BigInt | 150 ms or less (median) |
-| B-3 | a tap while a preparation slice runs | no slower than open without preparation (the NF3 failure must not come back) |
-| B-4 | back | no regression against `x=retainhost` (series C, checkpoint 2) |
-| B-5 | the inertness test (I6) on the three-way app's detail and on the reference app's preparable screens | zero calls out before the show |
-| B-6 | iOS simulator, the same arms | the same ordering as the A12 (relative) |
+| B-1 | open, simple, tap to data drawn (frame end) | target about 100 ms; expected 145–170 (appendix B) |
+| B-2 | open, heavy, tap to data drawn | target 150 ms or less; expected 225–275 |
+| B-1r, B-2r | with the reveal: tap to the shell's first draw and frame end | under 100 ms; data as B-1, B-2 |
+| B-3 | a tap while a preparation slice runs | no slower than open without preparation |
+| B-4 | back | no regression against `x=retainhost` |
+| B-5 | the generated inertness tests on the three-way app and the reference app's declared kinds | zero calls out |
+| B-6 | `varied` and `detailfetch` | reported against `x=prepkind` |
+| B-7 | iOS simulator, the same arms | the same ordering as the A12 |
 
 ### Regressions to watch
 
 | What | How | Limit |
 |---|---|---|
-| Scroll jank from idle pre-composition (B) | series F3's flings with pre-composition on vs off; frames over 25 ms | no increase beyond the run-to-run spread |
-| Memory (A and B) | PSS after the list (F5's method), with and without | (B) reported per prepared kind; (A) the decoded frame is freed at the swap |
-| Battery (B) | the composition work done while idle, per minute of browsing (guest CPU time) | reported; the owner sets the limit |
-| APK size | F4's method | (A) and (B) add code only; under 50 KB dex |
-| Disk (A) | the store's directory size after a session | under the cap (I5) |
-| First launch (A) | cold start after `pm clear` | unchanged (no frame exists) |
+| Scroll jank from idle preparation (B) | series F3's flings, preparation on and off; frames over 25 ms | no increase beyond run-to-run spread |
+| Memory (A and B) | PSS after the list (F5's method), with and without | decision 6 |
+| Battery (B) | guest CPU time spent preparing, per minute of browsing | decision 6 |
+| APK size | F4's method | under 50 KB dex for each half |
+| Disk (A) | the store's size after a session | under the caps |
+| First launch (A) | cold start after `pm clear` | unchanged |
 
 ## 8. Alternatives considered and rejected
 
 | Alternative | Why not |
 |---|---|
-| A screenshot (bitmap) of the first screen instead of a tree | Wrong on any configuration change (font scale, dark mode, size); not accessible; much larger; text not crisp on another density. The tree is drawn by the real renderers at the current size. |
-| Pre-composing every row's destination | Memory and idle CPU grow with the list; most are never opened; still pays a composition per row. (B) prepares one per kind. |
-| Host-composed documents (the parked fallback, PLAN section 12) | Needs a D1 amendment and a grammar that cannot yet express a keyed lazy list. (A) draws the guest's own recorded output instead, with no new authoring surface. |
-| Keeping the process warm (a foreground service, a persistent process) | Not allowed for this purpose on modern Android, costs battery, and iOS does not allow it at all. |
-| Queuing taps on the cached frame for the guest | Ids differ across runs; mapping a tap to "the same" widget in a new tree is guesswork, and a wrong delivery is worse than a dropped tap with feedback (I3). |
-| Showing the frame under `parallel` before the lookup confirms | Breaks I1 when the lookup names another release (section 4, I1). Kept as an owner option per channel (question 2). |
-| A snapshot of the guest's heap (QuickJS state) instead of the UI tree | QuickJS has no supported heap snapshot; the guest's state includes live coroutines and host handles. |
-| Making the guest faster again | NF2 is spent; NF3 showed composition on touch-down is too slow to hide (section 1). |
+| A screenshot (bitmap) instead of a tree | wrong on any configuration change; not accessible; larger; blurry on another density |
+| Recording at `ON_STOP` as well (revision 1) | records whatever the user left on screen: another screen, a scrolled list, an open dialog (review C1). Recording only at the `ready` edge in a clean state is simpler and always right |
+| Hiding values by a denylist (`notCached()` only, revision 1) | one missed mark leaks a value. `Shell` is an allowlist |
+| Pre-composing every row's destination | memory and idle CPU grow with the list; most are never opened |
+| Host-composed documents (the parked fallback, PLAN section 12) | needs a D1 amendment and a grammar that cannot yet express a keyed lazy list. (A) draws the guest's own recorded output instead (section 10) |
+| Keeping the process warm | not allowed for this on modern Android; iOS does not allow it |
+| Queuing taps on the frame for the guest | ids differ across runs; a wrong delivery is worse than a dropped tap with feedback |
+| Showing the frame under `parallel` before the lookup confirms | breaks I1 when the lookup names another release. The per-channel `cache-first` override already gives "frame at once, new release at the next start" |
+| A platform-kept integrity key (revision 1) | protects against nobody who can already write private storage, and costs time at start |
+| Keeping a popped entry with its effects running (revision 1) | a started coroutine cannot be held again: from the second visit on, a prepared entry would poll and load before the tap (review H7). Parking or disposal instead |
+| Rebinding by arguments without a shell (revision 1's (B)) | on the A12 the guest round trip alone misses the targets (appendix B). The shell lets the host show something at the tap |
+| A heap snapshot of the guest | QuickJS has none supported; the guest's state includes live coroutines and host handles |
+| Making the guest faster again | NF2 is spent; NF3 showed composition on touch-down is too slow to hide |
+
+**Considered for later:** (A) for an activity re-created in a warm process (rotation without
+configuration handling, a process kept but an activity destroyed). There the release is known
+exactly. It is not in the first ship.
 
 ## 9. Implementation plan
 
-(A) and (B) are independent. Each PR has its tests and its gate; none merges without the review
-this document asks for.
-
-### (A) Cached first frame
-
-| PR | Module(s) | What | Tests | Gate |
-|---|---|---|---|---|
-| A1 | `keliver-protocol` | `ChangeFolder` (batches → `SnapshotChangeList`), `FrameCacheTags` (reserved tags, lock test), the frame file format (header, body, HMAC field) | fold equality against a real host (widget tree and, through gate A's JVM harness, pixels) on random Add/Move/Remove/detach sequences; the three-way list (appendix); format round-trip and version refusal | apiCheck; 0 differing pixels |
-| A2 | `keliver-compose` | `CachedFrame(policy, ready)`, `Modifier.notCached()`, behind `keliver.cachedFrame@1` | without the feature, batches byte-identical to today's; with it, only the marker elements added | apiCheck |
-| A3 | `keliver-treehouse-host` | `FrameRecorder`, `FrameStore` (interface + Android/iOS files), the key, `session()`, clearing, caps, HMAC with a platform key | every key field (I1), every clearing path (I5), atomic write and process death (I10), corrupt files (section 6), `notCached` values absent from the bytes (I2) | apiCheck; unit tests on JVM, Android and the iOS simulator |
-| A4 | `keliver-treehouse-host-composeui` | `CachedFrameContent` (inert, semantics, indication) and the hand-off controller | I3 and I4 host tests (gate A's JVM harness): no event reaches a guest; one semantics node; no empty or loading frame across the swap; timeout; crash | the host tests |
-| A5 | templates (Android, iOS), docs | `KeliverScreen` / iOS screen wiring, the policy table, `session()` in `HostApp.kt` and `iOSApp.swift`, adopter docs | template tests (policy × frame table; backup exclusion), the reference app scaffolded from the repo | reference-app and ios-host workflows |
-| A6 | sample, benchmarks | the three-way bench's `x=cachedframe`, the two marks | — | **A-1 to A-6 on the A12** (section 7); the owner reads them before (A) is on by default |
-
-### (B) Pre-composed destinations
+The halves share a first PR (H0) and some pieces: (A)'s fold prunes (B)'s and NF1's hidden entries;
+(B)'s idle policy uses (A)'s `ready` when present; (B)'s equivalence test uses (A)'s fold. So the
+order matters: H0, then (A), then (B) once NF1's production container exists.
 
 | PR | Module(s) | What | Tests | Gate |
 |---|---|---|---|---|
-| B0 | (precondition) | the retained container in the production widget system; host features declared by the templates (NF1's production step) | NF1's | NF1's |
-| B1 | `keliver-nav` (spike, guest profile) | held-effect sub-composition and sliced (pausable) preparation; a tap during a slice | the guest profile: a tap during preparation; effects held | the spike answers "feasible with public Compose API"; else (B) stops here and goes back to the owner |
-| B2 | `keliver-nav` | kinds, adoption, `Prepared` lifecycle, per-visit helpers, `assertInertWhenPrepared` | I6 and I7 unit tests; the profile's `nf5=rebind` | apiCheck |
-| B3 | `keliver-nav`, templates | the idle policy and the two host signals (input active, memory pressure) | idle policy with a fake clock; host signal tests | apiCheck |
-| B4 | sample, benchmarks | the three-way bench's `x=prepkind` | — | **B-1 to B-6 on the A12** and the simulator |
+| **H0** | templates, `keliver-treehouse-host-composeui` | host feature names as constants in one place; templates declare what they implement; `TreehouseContent(backEnabled)` and its use for hidden content; the lastGood record with sequence and module digest, written with `commit()` | a test that each template declares exactly its features; back with hidden content reaches no guest | apiCheck; reference-app and ios-host workflows |
+| **A1** | schema annotations, `keliver-tooling-codegen`, keliver-material schema | `@Replayable`, `@NeverCached`; generated `FrameRules`; keliver-material annotated | codegen tests; the staleness guard | apiCheck |
+| **A2** | `keliver-protocol`, `keliver-compose`, `keliver-protocol-host` | `FrameCacheTags` (lock test); `CachedFrame`, `cached()`, `notCached()`, `FrameScope`; `HostProtocolAdapter` consumes the reserved tags | batches byte-identical without the feature; with it, only the markers; reserved tags never reach the mismatch handler | apiCheck |
+| **A3** | `keliver-treehouse-host` | `ChangeFolder`, `FrameRecorder` (the rule in 2.3), `FrameStore`, the format, the key, the session record and fail-closed rule, the off switch | I1, I2, I5, I10, I11 unit tests, including the navigation test; random-sequence fold tests | apiCheck; unit tests on JVM, Android and the iOS simulator |
+| **A4** | `keliver-treehouse-host-composeui` | `CachedFrameContent` (inert, cache-only images, indicator slot), `FrameHandOff` (both limits, deferred update) | I3, I4, I12 host tests; **0 differing pixels on keliver-material**, replayed against live, on real multi-batch sequences from the sample app's screens | the host tests; the pixel gate |
+| **A5** | templates (Android, iOS), docs | the start table on `StartChoice.mode`, the `codeLoadSuccess` check, `session()` and `accounts = NONE`, storage dirs, the off switch from the index, adopter docs | template tests (start table; backup exclusion; fail closed) | reference-app and ios-host workflows |
+| **A6** | sample, benchmarks | the bench's `x=cachedframe`, both marks, the throttled lookup | — | **A-1 to A-7 on the A12**; the owner reads them before (A) is on by default |
+| **B0** | precondition (NF1's production step) | the retained container in the production widget system, with the entry state (3.5) | NF1's; back never reaches a `Prepared` entry | NF1's |
+| **B1** | `keliver-nav` (spike, guest profile) | held-effect sub-composition, slices, a tap during a slice; the checklist in 3.7 | the guest profile | "feasible with public Compose API, within the slice budget"; else (B) stops and goes back to the owner |
+| **B2** | `keliver-nav`, docs | kinds, shells, bind and park, the park check, `Prepared`, per-visit counts, the generated tests, the retention docs rewrite | I6 and I7 unit tests, "inert after a visit" | apiCheck |
+| **B3** | `keliver-nav`, templates | the idle policy and the two host signals | idle policy with a fake clock; host signal tests | apiCheck |
+| **B4** | container renderer, `keliver-nav` | the host reveal and `revealsPrepared` | reveal, decline, back during a reveal (host tests) | apiCheck |
+| **B5** | sample, benchmarks | the arms in section 7 | — | **B-1 to B-7 on the A12** and the simulator |
 
-Each PR is reviewed on its own. (A) can ship without (B), and (B) without (A).
+## 10. Proposed D1 clarification
 
-## 10. Open questions for the owner
+Revision 1 asked whether (A) needs a D1 amendment. The review's answer: no change in substance,
+but a written clarification, because D1 says "not interpreted JSON" and "production is always
+compiled code", and a stored JSON tree drawn in production touches both. Proposed text, for the
+owner to add to `DECISIONS.md` under D1 in a separate PR (this PR does not edit it):
 
-1. **D1.** This design reads a recording of the guest's own output, keyed to the bundle that
-   produced it and drawn only until that bundle takes over, as within D1 (no document format, no
-   logic from storage), so it proposes no amendment. Do you agree, or do you want D1 amended to
-   name it?
-2. **`parallel` and the lookup.** Under the default start policy the frame shows only after the
-   lookup confirms the cached release (I1). Keep that strict rule, or allow the frame before
-   confirmation per channel, accepting a visible content switch when a new release is found?
-3. **The integrity key.** Require the platform-kept HMAC key (Keystore / Keychain) even if it costs
-   more than 20 ms at start on a low-end phone, or accept a key in private storage then?
-4. **Taps on the cached frame.** The design drops them and shows a progress indication (I3). The
-   alternative, holding them and delivering them to whatever is at that position after the swap,
-   is rejected here as unsafe. Agree?
+> **D1 clarification (NF5, cached first frame).** A production host may draw, on a cold start, a
+> recording of a signed bundle's own UI output while that bundle's code loads. This stays within D1
+> because:
+> 1. it is only the bundle's own recorded output: the folded change batches its compiled code
+>    sent to this host;
+> 2. it is produced on this device and never distributed: no server, build step or editor writes
+>    it;
+> 3. it is drawn only when keyed to that exact signed release (sequence, manifest sha256, module
+>    digest), checked before drawing and again when the code has loaded;
+> 4. it is inert (no input, no guest code, no network) and drawn through the same
+>    `HostProtocolAdapter` and the app's own widget renderers, never through the editor's
+>    `RenderNode`;
+> 5. it is time-bounded: replaced when the code says it is ready, and gone after `FRAME_LIMIT`;
+> 6. it is not the parked host-composed-document fallback (PLAN_2026-11 section 12): no document
+>    is authored, and no logic or layout comes from anywhere but the compiled bundle.
+>
+> **D2:** the recording is not covered by the bundle's signature. Its integrity is a checksum
+> against corruption, the generated widget allowlist and the release key above. An attacker who
+> can write the app's private storage can make it draw a misleading, inert screen for at most
+> `FRAME_LIMIT`; such an attacker already controls the app's data.
 
-## Appendix: the Mac measurements
+D3 (frames are per bundle; the session hook is a host capability) and D12 (native screens clear
+frames by route, 2.10) need no change.
+
+## 11. Decisions for the owner
+
+Each with my recommendation and its cost.
+
+1. **Does a cached `Whole` frame count as "the list's data" for the cold-start bar?** A-1 measures
+   it. *Recommendation:* yes for `Whole`, within the screen's `maxAge`, because it is the data the
+   user last saw, from the same release, and it is refreshed in place at the swap. `Shell` counts
+   only as first content; its data time is A-3. *Cost:* the bar can be met with data up to `maxAge`
+   old.
+2. **The limits.** *Recommendation:* `maxAge` cap 24 h (revision 1 proposed 7 days);
+   `HANDOFF_LIMIT` 3 s; `FRAME_LIMIT` 5 s; 512 KB per frame and 2 MB per `cacheName`. *Cost:* a
+   longer cap shows older data; shorter limits fall back to the loading screen more often on a slow
+   phone, which content → loading → content makes visible. Revisit after A6.
+3. **Replace `discardPrefetched()` with `session()`.** An adopter API change. *Recommendation:* add
+   `session(id)` and `CachedFrames(accounts = NONE)` in 0.5.0; keep `discardPrefetched()` working,
+   deprecated, for one minor release. Frames stay off for an app that calls neither (fail closed).
+   *Cost:* a migration note; apps that ignore it simply get no frames.
+4. **Host-drawn indicator or an app slot.** *Recommendation:* a slot on `KeliverScreen`
+   (`frameIndicator`) with a thin bar as the default. *Cost:* one parameter.
+5. **keliver-nav behaviour changes.** Held effects for every prepared entry (NF3's too); for apps
+   that declare kinds, popped entries parked; show counts per visit; loads start at the show.
+   *Recommendation:* accept. Apps that declare no kinds see only the NF3 change, and NF3 is off by
+   default. *Cost:* a documented behaviour change in 0.5.0 and the docs rewrite (B2).
+6. **The memory and battery budget for (B).** *Recommendation:* at most 2 prepared kinds; PSS on
+   the A12 at most 8 MB above `x=retainhost` with both prepared; preparation's guest CPU under 2%
+   of a minute of browsing; one preparation per kind per list visit. *Cost:* a tighter budget may
+   allow only one kind on the A12.
+7. **Does a shell at the tap, with the data about 150–300 ms later, count as "open"?** The design
+   ships the reveal either way, because it removes dead time. *Recommendation:* no, not for the
+   bar: keep "open" as data drawn (B-1, B-2), report the shell's time beside it, and decide after
+   B5's numbers. *Cost:* the open targets stay unmet by (B). Under PLAN_2026-11 (section 11), if
+   NF5 misses its gates the parked fallbacks come to the owner with the evidence.
+8. **`parallel` before confirmation.** *Recommendation:* keep the strict rule (the frame waits for
+   the lookup) and add no option; a channel that wants the frame at once uses the existing
+   per-channel `cache-first` override. *Cost:* under `parallel` the frame waits one lookup (A-2b).
+9. **Integrity.** *Recommendation:* a checksum, no Keystore or Keychain key; a key in private
+   storage only to hash the session id. *Cost:* none beyond I5's stated attacker.
+10. **Taps on the frame.** *Recommendation:* drop them with the indicator, and gate back (2.6).
+    *Cost:* a tap during the frame needs repeating.
+11. **The D1 clarification** (section 10). *Recommendation:* add it to `DECISIONS.md` before A3
+    merges. *Cost:* none.
+12. **Sequencing.** *Recommendation:* H0, then (A) (A1 to A6); (B) after NF1's production container
+    (B0), starting with the B1 spike. *Cost:* (B) waits for NF1.
+
+## Appendix A: review response
+
+37 rows. **36 fixed** in this revision, 2 of them with a stated partial disagreement (H1's
+"refuses or omits"; H6's heavy figure). **1 agreed with no change needed** (D3). None rejected.
+
+| Finding | Response |
+|---|---|
+| C1 which tree, when | Fixed: 2.3 (marked subtree only, hidden entries pruned by explicit state, one write at the first `ready` edge in a clean state, no `ON_STOP` write); I11's navigation test as the reviewer describes |
+| H1 window-level and stateful widgets | Fixed: 2.4 (codegen `FrameRules`, `@Replayable` allowlist; 9 keliver-material widgets not replayable, the review's 6 plus `DropdownMenu`, `Tooltip`, `OutlinedTextField`; pagers only at their first page; text-field values never stored). Partly disagreed on "refuses or omits": the fold refuses the write; omitting a subtree would record a tree that was not drawn (I11) |
+| H2 `Shell` by denylist; I5 wording | Fixed: `Shell` is an allowlist (`cached()`), covering modifier strings and image URLs; lazy keys by position; replayed images from the disk cache only; I5 reworded ("no input, no guest code, no network request") |
+| H3 back during the hand-off | Fixed: 2.6 (`backEnabled = false` for hidden content on Android; iOS guests never get back); I3 test on both |
+| H4 no cap on the frame | Fixed: `FRAME_LIMIT` from the frame's first draw, then today's `loading()` (2.7, I12, tested) |
+| H5 session fails open | Fixed: 2.9 (nothing until `session()` or `accounts = NONE`; `FrameScope.sessionChanged` from the guest; synchronous delete, tested) |
+| H6 (B)'s A12 estimate | Fixed: appendix B (frame end from the tap; tap → click and draw → frame end added; ratios 12 and 30); section 0 says (B) alone misses both targets; the shell + reveal is part of (B); arms `varied`, `detailfetch` and `api-small` added; the varied arm run on the Mac (table B2). Partly disagreed with the figure: the heavy screen comes out at 225–275 ms, worse than the review's 210–230, because the rebind increment at ratio 30 adds up to 67 ms |
+| H7 effect lifecycle | Fixed: 3.3 (park with `unbound` cancels effects keyed on arguments; the park check disposes a leaking entry; per-visit show counts; `LaunchedOnReturn` within a visit only; docs rewrite in B2); "inert after a visit" test (I6) |
+| H8 `parallel` and the wrong input | Fixed: 2.8 keys on `StartChoice.mode`; gate A-2b with a throttled remote lookup |
+| M1 identity before load | Fixed: 2.8 (the writer's own `codeLoadSuccess` identity: sequence, manifest sha256, module digest; compared again at `codeLoadSuccess`; `commit()` in H0) |
+| M2 evidence on gate A's widgets | Fixed: section 0 headlines the cold 24 ms; A4's gate is 0 differing pixels on keliver-material over real multi-batch sequences |
+| M3 prepared entries protected by order | Fixed: 3.5 explicit entry state (`Prepared` never drawn, never a back target); 3.6 now lists the protocol change and the host code |
+| M4 placeholder sizing | Fixed: 5.2 (figure spaces of the original length, rounded up to 4); I4 accepts a small reflow and says so |
+| M5 key gaps | Fixed: 5.1 adds display, density, insets, navigation mode, time zone, 24-hour, bold and contrast, the guest-held variant; host build uses `lastUpdateTime`, and `CFBundleVersion` with the Mach-O UUID |
+| M6 not independent; device gates; kill switch | Fixed: H0 shared PR and the dependencies in section 9; gate A-7 on the device; per-channel `cachedFrames: "off"` in the index (2.11) |
+| M7 I7 by convention | Fixed: generated `assertRebindEquivalent(kind)` per declared kind (3.4, I7) |
+| M8 update before hand-off | Fixed: defined in 2.7 (the update waits for the hand-off; `FRAME_LIMIT` bounds it) |
+| Low: reserved tags reach the mismatch handler | Fixed: `HostProtocolAdapter` consumes them (2.2); stated as the one content-path change |
+| Low: B1's spike checklist | Fixed: 3.7 lists all five, with a slice budget of 8 ms on the A12 |
+| Low: format and HMAC in `keliver-protocol` | Fixed: the format, checksum and fold move to `keliver-treehouse-host`; only the marker tags stay in `keliver-protocol` |
+| Low: D12 native data changes | Fixed: `clearCachedFrames(route)` (2.10) |
+| Low: warm-process activity re-creation | Fixed: listed as a later option (section 8) |
+| D1 | Fixed: proposed clarification text in section 10, bounded as the review lists; `DECISIONS.md` not edited |
+| D2 | Fixed: stated in the same clarification |
+| D3 | Agreed, no change |
+| D12 | Fixed with the Low item above |
+| Author's decision 1 (D1) | Adopted: no amendment, the clarification instead (decision 11) |
+| Author's decision 2 (`parallel` early) | Adopted: strict rule, no new option (decision 8) |
+| Author's decision 3 (integrity key) | Adopted: checksum, no Keystore; private key only to hash the session id (decision 9) |
+| Author's decision 4 (taps) | Adopted, with the back gate (decision 10) |
+| Unasked: `Whole` frame as data | Now decision 1 |
+| Unasked: the limits | Now decision 2 (`maxAge` cap lowered to 24 h) |
+| Unasked: `discardPrefetched()` → `session()` | Now decision 3 |
+| Unasked: host-drawn indicator | Now a slot, decision 4 |
+| Unasked: keliver-nav behaviour changes | Now decision 5 |
+| Unasked: memory and battery budget | Now decision 6, with numbers |
+| Unasked: sequencing on NF1 | Now decision 12 |
+
+## Appendix B: the A12 estimate for (B)
+
+Inferred, not measured. All on the BigInt build, A12, frame end from the tap, the same measure as
+the targets (217.5 and 548 today).
+
+**The components:**
+
+| Component | Simple | Heavy | Source |
+|---|---|---|---|
+| tap → the guest's `onClick` | about 30 | about 30 | open's first draw from the tap, 197.5 ("Flutter on the A12", BigInt), minus series H's click → drawn without the press, 163.5–167 |
+| click → first draw, the detail already composed with the right item | 80–85 | 131.5–140.5 | series H, press on (the detail only recomposes a counter) |
+| rebinding instead: the extra guest work | 14–36 | 27–67 | Mac: rebind minus shown, +1.19 ms simple and +2.24 heavy (table B1, BigInt), × 12 to × 30 |
+| first draw → frame end | 20 | 38 | 217.5 − 197.5 and 548 − 510 ("Flutter on the A12") |
+| **(B) alone, total** | **144–171** | **226.5–275.5** | |
+
+**The two ratios.** About 12 is the Mac-to-A12 ratio for long guest work
+([`GUEST_PROFILE.md`](GUEST_PROFILE.md)). For tiny steps it is about 30: series H's click →
+composed for a detail that only recomposes a counter is 57.5 ms (simple) and 111–114.5 ms (heavy) on
+the A12, against 1.78 and 4.27 ms for the same step on the Mac (`shown`): 32× and 26×. The
+increment is extra work inside a step whose fixed cost is already counted, so the truth is likely
+nearer 12, but the range keeps both.
+
+**Items that differ in structure** (table B2, QuickJS 2021 only): the rebind's increment over the
+floor was 11.5 ms on the Mac, 4.0× the same-structure 2.9 ms. Scaled to BigInt as the
+same-structure increment scales (2.24 / 2.96), it is about 8.7 ms. A step that size is long guest
+work, so the ratio of 12 applies: about 105 ms on the A12. A varied heavy open is then about
+30 + 131.5–140.5 + 105 + 38 = **305–315 ms** (up to about 470 at a ratio of 30). Still well under
+today's 548, but twice the target. A shell that holds only the common structure pays this cost at
+every bind.
+
+**With the host reveal:** the shell's first draw needs no guest step. The nearest measured case is
+the retained back: its first draw came 13–17 ms after the press on every arm (checkpoint 2,
+`x=retainhost`), and its pixels reached the screen 79–91 ms after the touch-down (the pixel table,
+including the input pipeline). The shell should do about the same. The data then arrives at the
+totals above.
+
+**What would reach 100 / 150 with data:** nothing in this design. The fixed cost of one guest round
+trip on the A12 (click → drawn for a counter: 80–85 ms) plus the tap and the frame end already
+exceeds 100 ms. Closing that needs the guest step itself to get cheaper on the A12, which NF2 and
+NF3 did not achieve. That is why decision 7 exists.
+
+## Appendix C: the Mac measurements
+
+### Environment
 
 2026-11-24, on the project's Mac (shared with other jobs; each run held the machine's heavy-build
-slot), from `2aa0e297f` plus this PR's measurement code. Kotlin 2.4.21, JDK 17. **Relative numbers
-only:** the guest runs in Zipline's QuickJS on the JVM (the guest profile, [`GUEST_PROFILE.md`](GUEST_PROFILE.md)),
-the host in a JIT-warmed JVM with Skia on the CPU. One run per configuration.
+slot). Kotlin 2.4.21, JDK 17. **Relative numbers only:** the guest runs in Zipline's QuickJS on the
+JVM ([`GUEST_PROFILE.md`](GUEST_PROFILE.md)), the host in a JIT-warmed JVM with Skia on the CPU.
+One run per configuration, except table B2 (two runs).
 
 Engines:
 - **QuickJS 2021-03-27**: Zipline 1.28.0 as shipped.
 - **QuickJS 2026-06-04, `Long` as BigInt**: NF2's fork, from a scratch Maven publish
-  (`1.28.0-q20260604`, as the A12 checkpoints used), through
-  `keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle`, with `-PprofileBigInt`.
-  Checked: the run printed `QJS engine: QuickJS 2026-06-04`, and the linked standard library uses
-  `BigInt`.
+  (`1.28.0-q20260604`), through `keliver-compose-gatea-profile/engine/zipline-fork/use-fork.init.gradle`,
+  with `-PprofileBigInt`. The run printed `QJS engine: QuickJS 2026-06-04`.
 
-### The measurement code (prototype modules only, not production)
+### The measurement code (prototype modules only)
 
-- `keliver-compose-gatea-profile/src/jsMain/.../Nf5Stack.kt`: the three-way app's screens (copied
-  unchanged from `sample/threeway-guest`, as the profile always does) on a stand-in stack with three
-  variants. All keep the list composed under the detail (as `retain=1`), so only the detail's path
-  differs:
+- `keliver-compose-gatea-profile/src/jsMain/.../Nf5Stack.kt`: the three-way app's screens on a
+  stand-in stack with three variants. All keep the list composed under the detail, so only the
+  detail's path differs:
   - `fresh`: the detail is composed at the tap and disposed at back (today's open);
   - `rebind`: one detail slot keyed by its kind stays composed and hidden; the tap changes its item
-    and shows it (the slot recomposes with new arguments);
+    and shows it;
   - `shown`: the same slot, but a timed `nf5prepare` step gives it the item before the tap; the tap
     only shows it (the floor).
-- `GuestProfileMain.kt`: options `nf5=`, `heavy=1` (the 102-widget detail), the `nf5prepare` and
-  `wire` commands; the back click skips the heavy detail's three action buttons.
+- `GuestProfileMain.kt`: options `nf5=`, `heavy=1` (the 102-widget detail), `heavy=2` (the heavy
+  detail with the `varied` structure), the `nf5prepare` and `wire` commands.
+- `sample/threeway-guest` (`ThreewayMarks.variedDetail`, the `varied` experiment, guest only, off as
+  shipped): a banner on even ids, and 2–4 sections of 3–6 rows chosen from the item's id. Rows 0–4
+  (ids 1000–1004) all differ from their neighbour.
 - `QuickJsProfile.kt`: `nf5Runs`: per variant and weight, a fresh Zipline, the list, then 10 warm-up
-  and 40 measured open/back pairs on rows 0–4 (`shown`: prepare, open, back). Wall time per step on
-  the JVM's clock (the harness's `evaluate` included, about 0.05 ms) and the guest's own
-  (`Date.now()`, 1 ms resolution, without the batch's `JSON.stringify`). Every step that gives the
-  detail its item is checked to send that item's title, and every open and back to send something,
-  so a wrong click cannot be timed as an open. Writes the list's first batch as a file.
+  and 40 measured open/back pairs on rows 0–4. Every step that gives the detail its item is checked
+  to send that item's title.
 - `keliver-compose-gatea-composeui/src/jvmTest/.../CachedFrameReplayBenchmark.kt`: folds the list's
-  batches into a `SnapshotChangeList`, stores it as the bridge's JSON, and replays it into a fresh
-  `HostProtocolAdapter` with gate A's Compose UI widgets; compares the pixels with a host that
-  applied the batches as they came. Without `-Dkeliver.nf5.wire` (CI's run) it is a smoke test on a
-  small list composed on the JVM (two batches, with a Remove).
+  batches into a `SnapshotChangeList`, stores it as the bridge's JSON, replays it into a fresh
+  `HostProtocolAdapter` with gate A's Compose UI widgets, and compares pixels with a host that
+  applied the batches live.
 
 ### Commands
 
@@ -716,6 +1061,9 @@ W=<this worktree>; OUT=<scratch dir>
   -PziplineForkRepo=<scratch fork repo, 1.28.0-q20260604> -PprofileBigInt -Pkeliver.guestProfile \
   :keliver-compose-gatea-profile:profileQuickJs \
   "-PprofileArgs=nf5=fresh+rebind+shown,heavy=0+1,warmup=10,iterations=40,label=nf5-bigint" -PprofileOut=$OUT
+# (B), items that differ in structure (table B2), QuickJS 2021, run twice
+./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \
+  "-PprofileArgs=nf5=fresh+rebind+shown,heavy=1+2,warmup=10,iterations=40,label=nf5-varied-stock" -PprofileOut=$OUT
 # cross-check of the "fresh" baseline: today's retained stack
 ./gradlew -Pkeliver.guestProfile :keliver-compose-gatea-profile:profileQuickJs \
   "-PprofileArgs=modes=kotlinx,retain=1,warmup=10,iterations=40,label=retain-stock" -PprofileOut=$OUT
@@ -724,9 +1072,9 @@ W=<this worktree>; OUT=<scratch dir>
   -Dkeliver.nf5.wire=$OUT/nf5-stock-list-wire.json -Dkeliver.nf5.measured=40
 ```
 
-### Table B: open and back with a hidden destination (wall ms, median / p90, n = 40)
+### Table B1: open and back with a hidden destination (wall ms, median / p90, n = 40)
 
-| Engine | Detail | Variant | Open | Back | Prepare (`shown` only) | List's first composition (`first`, once) |
+| Engine | Detail | Variant | Open | Back | Prepare (`shown`) | List's first composition (`first`) |
 |---|---|---|---|---|---|---|
 | 2021 | simple | fresh | **15.45** / 15.96 | 2.45 / 2.63 | — | 87.34 |
 | 2021 | simple | rebind | **4.91** / 5.19 | 2.96 / 3.32 | — | 105.61 |
@@ -741,17 +1089,14 @@ W=<this worktree>; OUT=<scratch dir>
 | 2026 BigInt | heavy | rebind | **6.51** / 6.85 | 4.41 / 4.60 | — | 74.88 |
 | 2026 BigInt | heavy | shown | **4.27** / 4.44 | 4.31 / 4.41 | 5.20 / 5.33 | 75.53 |
 
-The guest's own time (1 ms resolution) agrees within 1 ms in every row (raw output below).
-`first` includes, for `rebind` and `shown`, the hidden slot's first composition (the cost of
-preparing it). Cross-check: today's retained stack (`retain=1`, QuickJS 2021) opened in 16.56 ms
-and went back in 3.33, against `fresh`'s 15.45 and 2.45 (the stand-in stack is slightly lighter
-than keliver-nav's).
+The guest's own time (1 ms resolution) agrees within 1 ms in every row. `first` includes, for
+`rebind` and `shown`, the hidden slot's first composition (the cost of preparing it). Cross-check:
+today's retained stack (`retain=1`, 2021) opened in 16.56 ms, against `fresh`'s 15.45.
 
-Ratios, open: rebind against fresh **3.1×** (2021) and **2.6×** (2026) on the simple detail,
-**7.5×** and **4.7×** on the heavy one. Rebind against the floor: +1.96 / +1.19 ms simple,
-+2.96 / +2.24 ms heavy.
+Ratios, open: rebind against fresh **3.1×** (2021) and **2.6×** (2026) simple, **7.5×** and
+**4.7×** heavy. Rebind against the floor: +1.96 / +1.19 ms simple, +2.96 / +2.24 heavy.
 
-**The batches** (the same on both engines; counts of the last measured step):
+**The batches** (the same on both engines; the last measured step):
 
 | Step | Creates | Properties | Modifiers | Structural | Bytes |
 |---|---|---|---|---|---|
@@ -765,36 +1110,51 @@ Ratios, open: rebind against fresh **3.1×** (2021) and **2.6×** (2026) on the 
 | back, fresh | 0 | 0 | 1 | 1 | 104 |
 | back, rebind or shown | 0 | 1 | 2 | 0 | 234 |
 
-The rebind's 8 (simple) and 27 (heavy) property changes are the texts that depend on the item, and
-the "opened N×" line, which reads the app's navigation counter (so the hidden detail also
-recomposes on back: the 1 property in back's batch).
+### Table B2: items that differ in structure (QuickJS 2021, heavy detail)
+
+Wall ms, median / p90, n = 40. The open batch is the last measured step's: item 1004 after 1003,
+which adds the banner and a fourth section.
+
+| Detail | Variant | Open | Back | Prepare (`shown`) | Open batch: creates / properties / structural / bytes |
+|---|---|---|---|---|---|
+| heavy, same structure | fresh | **64.50** / 65.77 | 3.71 | — | 104 / 1,144 / 104 / 82,446 |
+| heavy, same structure | rebind | **8.59** / 8.79 | 5.63 | — | 0 / 27 / 0 / 2,063 |
+| heavy, same structure | shown | **5.70** / 5.94 | 5.80 | 7.01 / 7.27 | 0 / 0 / 0 / 154 |
+| heavy, varied | fresh | **46.31** / 56.68 | 3.23 | — | 89 / 969 / 89 / 70,230 |
+| heavy, varied | rebind | **15.98** / 22.92 | 5.03 | — | 28 / 346 / 31 / 24,332 |
+| heavy, varied | shown | **4.47** / 5.06 | 4.54 | 13.43 / 20.09 | 0 / 0 / 0 / 154 |
+
+- The same-structure rows reproduce table B1's within 2.5% (64.50 against 62.94 fresh, 8.59
+  against 8.42 rebind).
+- **Varied:** rebind is 2.9× cheaper than fresh (7.5× with the same structure). It costs 1.9× a
+  same-structure rebind, and its increment over the floor is 11.5 ms against 2.9 (4.0×).
+- The varied p90s are wide because each pair of neighbouring items differs by a different number of
+  widgets. Varied items are smaller on average (fresh 46.31 against 64.50).
+- A first run of the same command under heavy machine load (load average 33) gave the same ordering
+  with 2–5× the times; it was discarded. Not run on the BigInt engine (its scratch Maven repo was
+  not available to this session).
 
 ### Table A: the cached first frame of the list
 
 | Measure | Value |
 |---|---|
-| The guest's first batch for the list (one batch: the loading text, then the data, folded by the profile's settle) | 1,715 changes, 93,734 bytes |
+| The guest's first batch for the list | 1,715 changes, 93,734 bytes |
 | The folded snapshot | 1,695 changes, 148 widgets; 86,957 bytes of JSON; **7,919 bytes gzipped** |
-| Replayed vs live host, pixels differing (one 360×640 dp frame, same position) | **0** |
-| Replay, warm (n = 40 after 40): read + decode | 1.007 ms median, p90 1.135 |
-| … apply through `HostProtocolAdapter` | 0.227, p90 0.251 |
-| … the frame (recomposition, measure, layout, draw) | 2.959, p90 3.385 |
-| … total | **4.244**, p90 4.717 |
-| The first replay of the run (JIT barely warm) | 24.0 ms (decode 6.0, apply 1.9, frame 16.1) |
-| Applying the guest's raw batch to a fresh host, once, cold JIT (for scale) | 19.8 ms |
-| The guest's first composition of the list, before its batch is sent (QuickJS, wall, table B `fresh`) | 87.34 ms (2021), 45.51 ms (2026 BigInt) |
-| Events the replayed widgets sent, dropped (the lazy list's viewport reports) | 162 in 80 replays (about 2 per replay) |
+| Replayed vs live host, pixels differing (one 360×640 dp frame) | **0** (gate A's widgets, not keliver-material: A4's gate) |
+| **The first replay of the run** (JIT barely warm) | **24.0 ms** (decode 6.0, apply 1.9, frame 16.1) |
+| Replay, warm (n = 40 after 40): read + decode / apply / frame / total | 1.007 / 0.227 / 2.959 / 4.244 ms median (p90 4.717) |
+| Applying the guest's raw batch to a fresh host, once, cold JIT | 19.8 ms |
+| The guest's first composition of the list, before its batch is sent | 87.34 ms (2021), 45.51 ms (2026 BigInt) |
+| Events the replayed widgets sent, dropped (lazy list viewport reports) | 162 in 80 replays |
 | Smoke run (two batches with a Remove, 33 widgets) | 0 differing pixels |
 
-The comparison is across runtimes (QuickJS against the JVM). It says the order of magnitude: the
-host's replay costs what the host's apply and frame cost anyway (and needs no guest), while the
-guest's first composition is an order of magnitude more. On the phone, the host's side of the
-list's first data frame is NF4's "composed to drawn", 223.5 ms; a cached frame pays that plus its
-decode.
+The comparison is across runtimes (QuickJS against the JVM); it gives the order of magnitude. On
+the phone, the host's side of the list's first data frame is NF4's "composed to drawn", 223.5 ms; a
+cached frame pays that plus its decode. The fold over real multi-batch sequences was only
+smoke-tested here (33 widgets); A4's gate covers it.
 
-**Not measured here:** anything on a phone; the HMAC's cost; a frame written by a real host's
-recorder (the fold here ran on the profile's batch, not on `ViewContentCodeBinding`'s); the
-hand-off; memory.
+**Not measured here:** anything on a phone; a frame written by a real host's recorder; the
+hand-off; memory; keliver-material's pixels.
 
 ### Raw output
 
@@ -818,6 +1178,14 @@ QJS NF5 variant=shown heavy=1 back=4.31/p90 4.41 (guest 4.00/p90 5.00; creates 0
 retain=1 cross-check (QuickJS 2021)
 QJS mode=kotlinx gc=default open=16.56 back=3.33 backMin=3.21 reload=- first=88.06 load=24.53 heapBack=7679K->7535K threshold=256K explicitGc=1.98 hash=-384791821
 
+Items that differ in structure, QuickJS 2021 (nf5-varied-stock-2; load average 5.8 at the end)
+QJS NF5 variant=fresh heavy=1 back=3.71/p90 3.81 (guest 4.00/p90 4.00; creates 0 bytes 104) open=64.50/p90 65.77 (guest 62.00/p90 64.00; creates 104 bytes 82446) first=92.24
+QJS NF5 variant=rebind heavy=1 back=5.63/p90 5.80 (guest 6.00/p90 6.00; creates 0 bytes 234) open=8.59/p90 8.79 (guest 9.00/p90 9.00; creates 0 bytes 2063) first=154.03
+QJS NF5 variant=shown heavy=1 back=5.80/p90 6.03 (guest 6.00/p90 6.00; creates 0 bytes 234) open=5.70/p90 5.94 (guest 6.00/p90 6.00; creates 0 bytes 154) prepare=7.01/p90 7.27 (guest 7.00/p90 7.00; creates 0 bytes 1910) first=152.44
+QJS NF5 variant=fresh heavy=2 back=3.23/p90 3.53 (guest 3.00/p90 4.00; creates 0 bytes 104) open=46.31/p90 56.68 (guest 45.00/p90 55.00; creates 89 bytes 70230) first=91.73
+QJS NF5 variant=rebind heavy=2 back=5.03/p90 5.62 (guest 5.00/p90 6.00; creates 0 bytes 234) open=15.98/p90 22.92 (guest 16.00/p90 23.00; creates 28 bytes 24332) first=152.14
+QJS NF5 variant=shown heavy=2 back=4.54/p90 5.03 (guest 5.00/p90 5.00; creates 0 bytes 234) open=4.47/p90 5.06 (guest 4.00/p90 5.00; creates 0 bytes 154) prepare=13.43/p90 20.09 (guest 13.00/p90 20.00; creates 28 bytes 24179) first=142.39
+
 CachedFrameReplayBenchmark (build/nf5-cached-frame.txt)
 input: nf5-stock-list-wire.json; 1 batch(es), 1715 changes, 93734 bytes
 folded snapshot: 1695 changes (148 widgets), 86957 bytes JSON, 7919 bytes gzipped
@@ -828,8 +1196,8 @@ events from the replayed widgets, dropped: 162 (over 80 replays)
 pixels differing, replayed vs live: 0
 ```
 
-A first replay comparison placed the live and replayed trees side by side (360 dp apart) and found
-8 pixels differing by 1–3 of 255 on the status chips' rounded edges (anti-aliasing at another x
-offset); drawn at the same position, they are identical. A first (B) run was discarded: the hidden
-slot's buttons were recorded before the list's rows, so "open" clicked the wrong widget. The driver
-now composes the slot after the rows and checks every open's batch for the opened item's title.
+A first replay comparison placed the live and replayed trees side by side and found 8 pixels
+differing by 1–3 of 255 on rounded edges (anti-aliasing at another x offset); drawn at the same
+position, they are identical. A first (B) run was discarded: the hidden slot's buttons were recorded
+before the list's rows, so "open" clicked the wrong widget. The driver now composes the slot after
+the rows and checks every open's batch for the opened item's title.
