@@ -437,6 +437,32 @@ The `fork` job runs it on every run. It doesn't run Zipline's own build under th
 case depends on the same rule (any failed task stops the upload) and on step 2's local run, where
 the build stopped before the upload.
 
+## Kotlin compatibility
+
+The fork is built with **Kotlin 2.4.21** (the patch's `gradle/libs.versions.toml`). Upstream 1.28.0
+is built with 2.4.20, whose Kotlin/JS production builds no longer minify member names
+([KT-89449](https://youtrack.jetbrains.com/issue/KT-89449)): on the three-way guest, 16,012 names such
+as `onUnknownEvent_8qrmht_k$` (none on 2.4.21), 9.8% more production JS (9.0% gzipped) and 4.4% more
+bytecode. The Zipline Gradle plugin's runtime variant **requires** `kotlin-gradle-plugin` at the
+Kotlin it was built with (upstream 1.28.0: 2.4.20; the fork: 2.4.21), so Gradle, which takes the
+highest version requested, lifts an older Kotlin Gradle plugin on the build classpath to it.
+
+Measured 2026-11-23 on this Mac: the fork's release in a scratch repository (`release`,
+`check-release.py` OK), and upstream 1.28.0 from Maven Central.
+
+| The app's Kotlin | Zipline plugin built with 2.4.20 (upstream 1.28.0) | Zipline plugin built with 2.4.21 (the fork) |
+|---|---|---|
+| **2.4.21** | Works. Keliver's tests, `apiCheck` and `ziplineApiCheck` on JVM, JS and iOS (#303) | Works. Keliver through `use-release.init.gradle -PziplineReleaseVerify`: the guest profile on QuickJS 2026 (the same batches as on upstream's engine) and `:keliver-bridge-fixture:jvmTest`; and an app-shaped build (below) |
+| **2.4.20** | Works (Keliver's `main` until #303) | **Works, as 2.4.21**: the app's Kotlin Gradle plugin is lifted to 2.4.21 without a warning, so its code is compiled by 2.4.21. With the app's `kotlin-gradle-plugin` forced to 2.4.20 (`resolutionStrategy.force` on the build classpath), the fork's compiler plugin runs inside the 2.4.20 compiler and works too |
+
+The app-shaped build: `plugins { id 'org.jetbrains.kotlin.multiplatform'; id 'dev.keliver.zipline' version '1.28.0-keliver.1' }`
+from the plugin portal and the fork's repository, a `ZiplineService` bound in Kotlin/JS (`bind`,
+rewritten by the compiler plugin), its `.zipline` bundle from the fork's compiler, loaded on the JVM
+by the fork's engine and called through `take` (also rewritten), a `Long` argument included. Each
+of the three runs (2.4.21; 2.4.20; 2.4.20 forced) compiled JVM and JS and passed. An app on another
+minor version (2.2, 2.3) was not tried: a Kotlin compiler plugin is built against one compiler, and
+Keliver 0.5.0's apps use 2.4.21.
+
 ## Not yet
 
 Publishing (a manual run of the workflow), then Keliver on the fork, in this order, because an app
