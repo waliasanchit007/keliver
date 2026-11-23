@@ -160,9 +160,9 @@ one Android app share the path, which Android's packaging would refuse) and `MET
     (`BuildConfig.ziplineGroup`), so the fork's plugin runs the fork's compiler. Upstream's build is
     unchanged by it (its group is still `app.cash.zipline`).
   - `gradle/libs.versions.toml`: **Kotlin 2.4.21**, not 1.28.0's 2.4.20, so the fork's compiler
-    plugin, Gradle plugin and runtime klibs are built with the Kotlin Keliver builds with. 2.4.20's
-    Kotlin/JS production builds no longer minify member names
-    ([KT-89449](https://youtrack.jetbrains.com/issue/KT-89449), fixed in 2.4.21), and the
+    plugin, Gradle plugin and runtime klibs are built with the Kotlin Keliver builds with: a
+    Kotlin compiler plugin is built against the compiler it runs in, and the Gradle plugin's
+    metadata makes that Kotlin Gradle plugin version the minimum for an app (see below). The
     release is immutable once published. Which app Kotlin works with which plugin build:
     "Kotlin compatibility" below.
   - "Modified by the Keliver fork of Zipline, 2026" in every file it changes.
@@ -440,12 +440,20 @@ the build stopped before the upload.
 ## Kotlin compatibility
 
 The fork is built with **Kotlin 2.4.21** (the patch's `gradle/libs.versions.toml`). Upstream 1.28.0
-is built with 2.4.20, whose Kotlin/JS production builds no longer minify member names
-([KT-89449](https://youtrack.jetbrains.com/issue/KT-89449)): on the three-way guest, 16,012 names such
-as `onUnknownEvent_8qrmht_k$` (none on 2.4.21), 9.8% more production JS (9.0% gzipped) and 4.4% more
-bytecode. The Zipline Gradle plugin's runtime variant **requires** `kotlin-gradle-plugin` at the
-Kotlin it was built with (upstream 1.28.0: 2.4.20; the fork: 2.4.21), so Gradle, which takes the
-highest version requested, lifts an older Kotlin Gradle plugin on the build classpath to it.
+is built with 2.4.20. Why that matters: a Kotlin compiler plugin is built against the compiler it
+runs in, and the Zipline Gradle plugin's runtime variant **requires** `kotlin-gradle-plugin` at the
+Kotlin it was built with (upstream 1.28.0: 2.4.20; the fork: 2.4.21). Gradle takes the highest
+version requested, so when both plugins resolve on the same build classpath (as in Keliver's
+scaffolds) an older Kotlin Gradle plugin is lifted to it. A multi-project build that pins an older
+Kotlin Gradle plugin on a parent classpath may keep it; that layout was not tried.
+
+The fork's own Kotlin does not decide whether an app's bundle is minified. The app's production
+link does: Kotlin 2.4.20's Kotlin/JS production builds no longer minify member names
+([KT-89449](https://youtrack.jetbrains.com/issue/KT-89449), fixed in 2.4.21). On the three-way guest
+linked with 2.4.20: 16,012 names such as `onUnknownEvent_8qrmht_k$` (none with 2.4.21), 9.8% more
+production JS (9.0% gzipped), and in the shipped `.zipline` bundle 4.4% more bytes (2.7% gzipped).
+An app linked with 2.4.21 is minified on upstream's 2.4.20-built plugin too (#303); an app that
+forces its Kotlin Gradle plugin back to 2.4.20 is not minified on either.
 
 Measured 2026-11-23 on this Mac: the fork's release in a scratch repository (`release`,
 `check-release.py` OK), and upstream 1.28.0 from Maven Central.
@@ -461,7 +469,7 @@ rewritten by the compiler plugin), its `.zipline` bundle from the fork's compile
 by the fork's engine and called through `take` (also rewritten), a `Long` argument included. Each
 of the three runs (2.4.21; 2.4.20; 2.4.20 forced) compiled JVM and JS and passed. An app on another
 minor version (2.2, 2.3) was not tried: a Kotlin compiler plugin is built against one compiler, and
-Keliver 0.5.0's apps use 2.4.21.
+Keliver 0.5.0's scaffolded apps will use 2.4.21 (draft #299's 0.5 line).
 
 ## Not yet
 
