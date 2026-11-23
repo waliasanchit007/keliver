@@ -3,7 +3,7 @@
 Measured 2026-11-16 on a Mac (Apple silicon), without a device. Prototype code only; no library
 changed. This is a measurement, not a plan.
 
-> **Kotlin 2.4.20 (noted 2026-11-23).** The guest was linked with Kotlin 2.4.20, whose production builds were not minified (KT-89449; on the three-way guest the `.zipline` bundle was 4.4% larger and Mac code load about 3% slower, #303). These numbers are re-measured at the next phone checkpoint; they are kept as measured.
+> **Kotlin 2.4.20 (noted 2026-11-23).** The guest was linked with Kotlin 2.4.20, whose production builds were not minified (KT-89449; on the three-way guest 2.4.21 is 4.4% smaller (2.7% gzipped) in the `.zipline` bundle, and with 2.4.20 Mac code load was about 3% slower, #303). These numbers are re-measured at the next phone checkpoint; they are kept as measured.
 
 On a low-end Android phone a guest navigation costs 0.3–1.1 s. On "back" to a 16-row list window,
 about 570 ms is Compose itself in QuickJS and about 390 ms is recording the changes

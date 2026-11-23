@@ -16,8 +16,9 @@ Multiplatform 1.12.2 (#234, #300). An app on 0.5.0 needs:
 
 - **Kotlin 2.4 or later**: the libraries are Kotlin 2.4 klibs. Zipline comes in as **1.28**.
   Build guests with **Kotlin 2.4.21** or later: 2.4.20's Kotlin/JS production links did not
-  minify member names (KT-89449); on one guest (the three-way screens) that made the `.zipline`
-  bundle 4.4% larger (2.7% gzipped) and code load about 3% slower on the Mac JVM harness (#303).
+  minify member names (KT-89449). On one guest (the three-way screens) 2.4.21 is 4.4% smaller
+  (2.7% gzipped) in the `.zipline` bundle; with 2.4.20, code load was about 3% slower on the Mac
+  JVM harness (#303).
 - Zipline's Gradle plugin (upstream's and the Keliver fork's) raises the app's Kotlin Gradle
   plugin to the Kotlin it was built with (the fork: 2.4.21) when both resolve on the same build
   classpath (#303).
@@ -40,8 +41,6 @@ Multiplatform 1.12.2 (#234, #300). An app on 0.5.0 needs:
   `org.jetbrains.kotlin.android` or `kotlin.multiplatform`'s `androidTarget()`: on AGP 9 set
   `android.builtInKotlin=false` and `android.newDsl=false` (as Keliver's own build does) until it
   learns AGP 9's built-in Kotlin and `com.android.kotlin.multiplatform.library` (#234).
-- `androidx.collection:collection` 1.5.0, not `org.jetbrains.compose.collection-internal`
-  (CMP 1.12 no longer publishes it) (#234).
 
 Every multiplatform library's Gradle module metadata carries a constraint raising
 kotlinx-coroutines-core to **1.11.0**. Compose runtime 1.11 still asks for 1.9.0, a
@@ -54,11 +53,14 @@ it prevents exists only on JS/wasm, which always build with Gradle.)
 
 Dependencies the libraries bring (#300):
 
+- `androidx.collection:collection` 1.5.0 (CMP 1.12 publishes no
+  `org.jetbrains.compose.collection-internal`) (#234).
 - OkHttp 5.5.1 (HTTP/2 header cap, IP-canonical hostname checks, blocked eMudhra intermediates),
   Coil 3.6.3, okio 3.18.2, Ktor client darwin 3.6.1, kotlinx-serialization 1.13.0.
-- kotlinx-serialization 1.13.0: JSON nested beyond its depth limit throws
-  `JsonDecodingException` instead of overflowing the stack.
-- Coil 3.4 and later cache eligible non-2xx image responses (e.g. 404) and do not cache
+- kotlinx-serialization 1.13.0: JSON nested deeper than `maxNestingDepth` (default 400;
+  experimental, set in the `Json {}` builder) throws `JsonDecodingException` instead of
+  overflowing the stack.
+- Coil 3.6.3 caches eligible non-2xx image responses (e.g. 404) and does not cache
   non-cacheable ones (e.g. 500).
 - `keliver-image`, `keliver-material-composeui` and `keliver-ui-basic-composeui` declare okio
   (3.18.2) as an `api` dependency, so their Gradle consumers resolve okio 3.18.2 or later (not
@@ -101,8 +103,7 @@ New:
   `KeliverNavFrame`, so going back composes nothing in the guest and creates nothing on the host.
   Hidden entries see `KeliverNavEntryLifecycle.Hidden` (`keliverNavEntryLifecycle()`), their
   `BackHandler`s are disabled, and `LaunchedWhileVisible` runs polling, subscriptions and timers only
-  while the screen is shown; a retained stack inside a hidden entry is hidden too. The existing
-  `KeliverNavHost(controller, content)` is unchanged (#259).
+  while the screen is shown; a retained stack inside a hidden entry is hidden too (#259).
 - keliver-compose: an experimental `LocalBackHandlersEnabled` (opt in with `@ExperimentalKeliverBackApi`).
   A `BackHandler` is enabled only while both its own `enabled` and this composition local are true (#259).
 - keliver-nav: experimental host back for retained stacks (`@ExperimentalKeliverNavRetentionApi`).
@@ -112,7 +113,8 @@ New:
   A `BackHandler` enabled in the top entry still takes the press (#262).
 - keliver-nav: `KeliverNavPreparation` and `KeliverPreparedStack` (experimental, `ExperimentalKeliverNavRetentionApi`):
   compose a screen while the finger is down and show it at the tap without composing it again (NF3). A prepared
-  screen's effects run on press (#265).
+  screen's effects run on press; on a host container the prepared entry is placed under the shown entries.
+  keliver-nav exposes `keliver-runtime` as an `api` dependency (#265, #278).
 - keliver-nav: `KeliverNavHost(controller, content)` retains the back stack by default where the app
   provides `LocalKeliverNavDefaults` (experimental): the host's retained container on a host that
   declares `keliver.nav.retainedContainer@1`, otherwise the guest frame, otherwise nothing (as before).
@@ -131,8 +133,9 @@ New:
   `trimKeliverNavRetention()` for memory pressure (experimental) (#266).
 - keliver-treehouse, keliver-treehouse-host: hosts declare optional features (`TreehouseApp.Spec.hostFeatures`,
   experimental; `AppLifecycle.Host.hostFeatures`); guests read them as `LocalHostFeatures` (keliver-compose,
-  experimental). A host that declares none reports none. `AppLifecycle.Host.hostFeatures` is abstract, so a
-  custom `AppLifecycle.Host` implements it (#266).
+  experimental). Guests see an empty feature set when the host declares none or its `hostFeatures` getter
+  fails; a failing getter is reported once on the console. `AppLifecycle.Host.hostFeatures` is abstract, so a
+  custom `AppLifecycle.Host` implements it (#266, #271).
 - keliver-nav: `KeliverNavController.prepare` / `cancelPreparation`, `Modifier.prepareOnPress`, `KeliverNavPress` /
   `LocalKeliverNavPress` (experimental): compose the screen a tap opens while the finger is down, under
   `KeliverNavHost` with a retention, on a host that declares the press signal. The prepared screen's effects run
@@ -147,8 +150,8 @@ New:
 
 Changed:
 
-- `keliver-leak-detector` on wasmJs: `LeakDetector.timeBasedIn` now returns a working
-  detector instead of the no-op one, as js already did; it uses JS `WeakRef`, and the
+- `keliver-leak-detector` on wasmJs: `LeakDetector.timeBasedIn` returns a working
+  detector, as on js; it uses JS `WeakRef`, and the
   engine's `gc()` when exposed. Without an exposed `gc()` it relies on the engine's own
   collection, so a short `leakThreshold` can report objects the browser has not
   collected yet (#231).
@@ -156,15 +159,8 @@ Changed:
 - Generated Compose API (prototype): rows the guest has not composed yet are drawn as placeholders (never blank, hidden from screen readers) at the measured size of the guest's rows, instead of empty 48 dp spacers (#258).
 - Generated API (prototype): a lazy list's first window is sized from the largest viewport the host reported
   for that place in the composition, instead of a fixed 15 rows (`LazyWindowSizing`) (#265).
-- keliver-treehouse-guest: a host whose `hostFeatures` getter fails is now reported once on the console. The
-  guest still sees no features (#271).
-- Gate A host (prototype, `ExtraRetained`): host back is enabled only when the entry below can be shown, so a
-  failed host back no longer leaves the stack's back callback switched off (#271).
-- keliver-nav: `KeliverPreparedStack` runs on the retained stack's path; on a host container the prepared entry is
-  placed under the shown entries. keliver-nav now exposes `keliver-runtime` as an API dependency (#278).
-- Gate A prototype (`keliver-compose-gatea-composeui`): a host back on a retained stack no longer recomposes the
-  entries' content. `LocalHostBackDispatcher` is a dynamic composition local (was static). Mac: the frame after
-  the press is about half as long, and the heavy screen's recomposition and apply is 82% shorter (#276).
+- Gate A prototype (`keliver-compose-gatea-composeui`): a host back on a retained stack does not recompose the
+  entries' content; `LocalHostBackDispatcher` is a dynamic composition local (#276).
 - Gate A prototype: generated host renderers hold one Compose snapshot state per widget instead of one per
   property, which cuts the state reads Compose scans after every change (NF1) (#280).
 - `keliver-treehouse-host` ships a baseline profile (`baseline-prof.txt` in its AAR) for the library code between
@@ -239,7 +235,7 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 - **`parallel`, the default:** starts from a warm cache are faster (714 vs 1,304 ms to the first frame on a low-end Android phone). A cached release the lookup does not confirm is dropped: its start-up `HostHttp` requests and bridge calls (through `scope.main`) are held and never sent, and its crash records are discarded; `HostSqlDriver` is **not** held, so a dropped release may have touched the local database at start-up. **To opt out:** `keliver.startPolicy=network-first` and `keliver.startPolicyOverride=none` (iOS `START_POLICY = "network-first"`, `START_POLICY_OVERRIDE = "none"`) (#249).
 - `parallel` shows the cached release only when the index names the same manifest URL at the sha256 of the manifest bytes it was loaded from (recorded with the last good bundle); otherwise the start loads from the network as `network-first` does. Under `parallel` and `cache-first`, when Zipline's cache is gone and it refetches the cached release's manifest, only the recorded bytes are accepted (`manifest sha256 mismatch` otherwise); a confirmed `parallel` start whose cached load fails then loads the named release from the network once (#249).
 - Under `parallel` and `cache-first`, a start from the cache still takes updates (on resume, live, `checkForUpdate`): each loads in a new app, swapped in once loaded with no blank frame. A replaced app's late close (`Zipline closed`) is logged at debug, not as an uncaught exception (#249).
-- `keliver-publish --set-start-policy <policy|default> [--channel <name>]`: a release owner's per-channel override in `bundles/index.json` (`startPolicy`), applied by hosts from their next start; older hosts ignore it. An app refuses it with `keliver.startPolicyOverride=none` (iOS `START_POLICY_OVERRIDE = "none"`) (#249).
+- `keliver-publish --set-start-policy <policy|default> [--channel <name>]`: a release owner's per-channel override in `bundles/index.json` (`startPolicy`), applied by hosts from their next start. An app refuses it with `keliver.startPolicyOverride=none` (iOS `START_POLICY_OVERRIDE = "none"`) (#249).
 - Production host templates: `KeliverConfig.prefetch` / `KeliverPrefetch`. On a start toward a screen (the
   first activity's creation), the host sends the first screen's declared GETs while the bundle loads, and the
   screen's identical request takes the response: once, 2xx, within 5 s of its arrival, waiting at most 1 s for
@@ -247,24 +243,19 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   `KeliverHost.discardPrefetched()` does too (call it on sign-out). No protocol change (NF4) (#269).
 - Production host templates: the guests' HostHttp is one instance per process (#269).
 - NF2: one bundle per QuickJS engine. The signing block names a bundle's engine in its signed metadata
-  (`keliver.engine`, from the modules' bytecode; QuickJS 2021 bundles name none and are unchanged). `engineTargets`
+  (`keliver.engine`, from the modules' bytecode; QuickJS 2021 bundles name none). `engineTargets`
   in keliver.portal.json makes `keliver-publish` build and publish the release once per engine at one sequence;
   `--promote`, `--republish` and `--set-rollout` act on every engine's bundle of a release (#275).
 - Hosts (Android, iOS templates) take only index entries for the engine their Zipline links and refuse a manifest
   for another engine on the network, from the cache and from crash rollback's kept copy (`engine refused`, report
   reason `engine`) (#275).
-- A host updated to another engine treats a last good or crash-rollback bundle left by its old engine as nothing
-  cached, so it starts network-first under every start policy (#275).
 - `keliver-publish` checks every engine's bundle of a release before writing any `v<N>/`, and leaves none behind
   on a failure (#275).
-- Bundles built on the Zipline fork (QuickJS 2026) are published with this tools release's `keliver-publish` and
-  the signing block `keliver-new-publish-target.sh` writes (#275).
 - iOS host template: `Keliver.shared.prefetch` and `Keliver.shared.discardPrefetched()` (NF4). Once the host has
   passed its checks, the first screen's declared GETs go out at a start toward a screen (never in a background
-  launch, never from a host that refuses to load) through the guests' HostHttp, now one per process and fixed at
-  the first start. The screen's identical request takes the response with the Android host's rules (#279).
-- Both host templates: `HostPrefetch.kt` is common Kotlin, identical in the Android and iOS hosts; Android's
-  behaviour is unchanged (#279).
+  launch, never from a host that refuses to load) through the guests' HostHttp (one per process, fixed at the
+  first start). The screen's identical request takes the response with the Android host's rules (#279).
+- Both host templates: `HostPrefetch.kt` is common Kotlin, identical in the Android and iOS hosts (#279).
 - iOS host template: the scaffolded `iOSApp.swift` starts the host in `init()`; `Keliver.start()` waits until one
   of the app's window scenes is in the foreground (a Keliver screen counts only while one is), so a launch whose
   scenes stay in the background (silent push, background refresh, location event) loads no code and sends no
@@ -272,8 +263,9 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
 - iOS host template: the launch's own foreground is not a resume, so a launch makes no update check of its own; a
   return to the foreground checks, at most every 30 s (#281).
 - Production host template: `keliver.hostBaselineProfile=false` leaves `keliver-treehouse-host`'s baseline profile
-  out of the app (AGP's `optimization.baselineProfile.ignoreFrom`, AGP 8.2 or later); on by default. Apps not on
-  the template can add the same lines to their app module (#290).
+  out of the app (AGP's `optimization.baselineProfile.ignoreFrom`, AGP 8.2 or later); on by default. An app not on
+  the template adds the `ignoreFrom` line to its app module itself (`docs/DEVICE_HOST.md`, "Baseline profiles")
+  (#290).
 - In the repository, not the bundle: `scripts/keliver-nf4-ios-sim.sh` measures NF4's cold start on an iOS
   simulator with a running guest (start at the first screen or in `init()`, each with and without a prefetch)
   (#281).
