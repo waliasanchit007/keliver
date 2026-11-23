@@ -60,6 +60,29 @@ class LicenseHeaderPatternTest {
     assertFalse(getsHeader("/*\n * Copyright (C) 2021-2023 Square, Inc.\n */\npackage app.cash\n"))
     val square = "/*\n * Copyright (C) 2023 Square, Inc.\n */\npackage app.cash\n"
     assertEquals(square, apply(square))
+    // Upstream's newest notice is 2025.
+    val square2025 = "/*\n * Copyright (C) 2025 Square, Inc.\n */\npackage app.cash\n"
+    assertFalse(getsHeader(square2025))
+    assertEquals(square2025, apply(square2025))
+    assertFalse(getsHeader("/*\n * Copyright (C) 2019 Square, Inc.\n */\npackage app.cash\n"))
+  }
+
+  @Test fun squareNoticeDatedAfterTheForkGetsHeader() {
+    // The fork began in 2026; no upstream file carries a 2026 Square notice, so one is a copied
+    // template, not Redwood code.
+    val rest = "package dev.keliver\n\nclass A\n"
+    val square2026 = "/*\n * Copyright (C) 2026 Square, Inc.\n *\n * Licensed.\n */\n$rest"
+    assertTrue(getsHeader(square2026))
+    val applied = apply(square2026)
+    assertNotEquals(square2026, applied)
+    assertTrue(applied.startsWith("/*\n * Copyright (C) "), applied)
+    assertFalse("Square" in applied, applied)
+    assertTrue(applied.endsWith("*/\n$rest"), applied)
+    assertEquals(applied, apply(applied))
+    // A later year, and a range that runs past 2025, are not Redwood's either.
+    assertTrue(getsHeader("/*\n * Copyright (C) 2027 Square, Inc.\n */\npackage a\n"))
+    assertTrue(getsHeader("/*\n * Copyright (C) 2024-2026 Square, Inc.\n */\npackage a\n"))
+    assertTrue(getsHeader("/*\n * Copyright (C) 2026-2027 Square, Inc.\n */\npackage a\n"))
   }
 
   @Test fun fileWithoutHeaderGetsIt() {

@@ -103,13 +103,17 @@ private val isCiEnvironment = System.getenv("CI") == "true"
  * applies (and checks) the header only to such files; it normalizes line endings to `\n` before
  * its steps run.
  *
+ * Only a notice dated 2025 or earlier counts as Redwood-derived (in a range, both years): the
+ * fork began in 2026 and upstream Redwood has no later Square notice, so a "2026 Square, Inc."
+ * file is a Keliver file copied from a template and is given the Keliver header.
+ *
  * Spotless replaces everything before the first [KELIVER_HEADER_DELIMITER] line with the header,
  * so a short Keliver notice is made the full one, and a comment written above the package line
  * is replaced: a file's own documentation goes below its package/import block, or into the KDoc
  * of its main declaration.
  */
 internal const val GETS_KELIVER_HEADER =
-  """\A(?!/\*\n \* Copyright \(C\) \d{4}(-\d{4})? Square, Inc\.\n)"""
+  """\A(?!/\*\n \* Copyright \(C\) 20(1\d|2[0-5])(-20(1\d|2[0-5]))? Square, Inc\.\n)"""
 
 /**
  * Where a Kotlin file's license header ends: its first `package`, `@file` or `import` line
@@ -147,7 +151,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
     val spotless = extensions.getByName("spotless") as SpotlessExtension
     // New files get the Keliver contributors notice. Files derived from Redwood keep their
     // Square, Inc. notice (Apache 2.0, section 4(c)): the header step skips any file that already
-    // starts with one, so neither spotlessCheck nor spotlessApply touches it.
+    // starts with one dated 2025 or earlier (GETS_KELIVER_HEADER), so neither spotlessCheck nor spotlessApply touches it.
     val licenseHeaderFile = rootProject.file("gradle/license-header.txt")
     spotless.apply {
       // The nested build-support Gradle project contains Java sources. Use our root project to
