@@ -162,6 +162,9 @@ androidComponents {
   }
 }
 
+// keliver-treehouse-host's AAR carries a baseline profile, which your APP's build merges (on by
+// default). To leave it out, set it in your app module, not here: docs/DEVICE_HOST.md, "Baseline
+// profiles".
 dependencies {
   implementation 'dev.keliver:keliver-treehouse-host:@@KELIVER_VERSION@@'
   implementation 'dev.keliver:keliver-treehouse-host-composeui:@@KELIVER_VERSION@@'

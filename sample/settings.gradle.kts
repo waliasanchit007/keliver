@@ -69,7 +69,7 @@ if (composePrototype) {
       create("libs") {
         from(files("gradle/libs.versions.toml"))
         version("kotlin", "2.4.20")
-        version("ksp", "2.3.13")
+        version("ksp", "2.3.14")
         version("keliver", providers.gradleProperty("keliverVersion").getOrElse("0.0.0-gateb"))
         // NF2: main's stack builds on Keliver's Zipline fork (QuickJS 2026): same artifact names and
         // packages, another group, and the plugin id dev.keliver.zipline (pluginManagement above).

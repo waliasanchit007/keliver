@@ -656,6 +656,39 @@ PY
     else
       bad "debug surfaces: no release build to check (rc=$rc, apk '${rel_apk}', aapt2 '${aapt2}')"
     fi
+    # Baseline profiles (docs/DEVICE_HOST.md, "Baseline profiles"): keliver.hostBaselineProfile takes
+    # true, false or nothing; false configures on the template's AGP and leaves the host library's
+    # rules out of the release build's merged profile. The published host library before 0.5.0
+    # carries no profile, so with it this checks only that the opt-out configures and merges on the
+    # template's AGP (an AGP without the DSL fails here); with one that carries it, that the rules go.
+    agp="$(sed -n "s/.*id 'com.android.application' version '\([^']*\)'.*/\1/p" "$H/build.gradle")"
+    ( cd "$APP" && ./gradlew --console=plain -p host-android help -Pkeliver.hostBaselineProfile=maybe > "$DISP/bp-bad.log" 2>&1 ); rc=$?
+    [ "$rc" != 0 ] && grep -q "keliver.hostBaselineProfile must be true, false or empty (got 'maybe')" "$DISP/bp-bad.log" \
+      && ok "baseline profile: keliver.hostBaselineProfile=maybe fails the build, naming the value" \
+      || bad "baseline profile: a bad keliver.hostBaselineProfile was not refused (rc=$rc)"
+    # The host library's rules in a merged profile; 0 when there is no merged profile at all (AGP
+    # writes none when no dependency contributes one).
+    bp_rules() { local n; n="$(grep -cE '^(HSPL|L)dev/keliver/(treehouse|protocol|widget)/\*\*;' "$1" 2>/dev/null)"; echo "${n:-0}"; }
+    bp_merge() { # <on|off> [gradle args...]: the release build's merged profile, copied to $DISP/bp-<on|off>.txt
+      local label="$1"; shift
+      rm -rf "$H/build/intermediates/merged_art_profile" "$DISP/bp-$label.txt"
+      ( cd "$APP" && ./gradlew --console=plain -p host-android mergeReleaseArtProfile \
+          -Pkeliver.bundleServer=https://bundles.example.com "$@" > "$DISP/bp-$label.log" 2>&1 ) || return 1
+      local merged; merged="$(find "$H/build/intermediates/merged_art_profile/release" -name baseline-prof.txt 2>/dev/null | head -1)"
+      [ -z "$merged" ] || cp "$merged" "$DISP/bp-$label.txt"
+    }
+    bp_merge on; bp_rc_on=$?
+    bp_merge off -Pkeliver.hostBaselineProfile=false; bp_rc_off=$?
+    n_on="$(bp_rules "$DISP/bp-on.txt")"; n_off="$(bp_rules "$DISP/bp-off.txt")"
+    if [ "$bp_rc_on" != 0 ] || [ "$bp_rc_off" != 0 ]; then
+      bad "baseline profile: mergeReleaseArtProfile on AGP $agp (or its merged profile): default rc=$bp_rc_on, opted out rc=$bp_rc_off: $(grep -E 'What went wrong' -A3 "$DISP/bp-off.log" "$DISP/bp-on.log" | head -6 | tr '\n' ' ')"
+    elif [ "$n_off" != 0 ]; then
+      bad "baseline profile: keliver.hostBaselineProfile=false left $n_off of the host library's rules in the merged profile (AGP $agp)"
+    elif [ "$n_on" -gt 0 ]; then
+      ok "baseline profile: on AGP $agp the release build merges the host library's $n_on rules by default, and none with keliver.hostBaselineProfile=false"
+    else
+      ok "baseline profile: on AGP $agp keliver.hostBaselineProfile=false configures and merges (this host library version carries no profile, so there was nothing to remove)"
+    fi
     # A key that is not a key fails the BUILD.
     printf 'garbage\n' > "$H/src/main/assets/keliver/portal_ed25519.pub"
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug > "$DISP/assemble-badkey.log" 2>&1 ); rc=$?
