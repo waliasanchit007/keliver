@@ -109,11 +109,14 @@ internal fun mapType(t: FqType): MappedKind? = when {
   t.key() == "kotlin.Boolean" -> MappedKind.BOOL
   t.key() == "kotlin.Double" -> MappedKind.DOUBLE
   t.key() == "kotlin.Float" -> MappedKind.FLOAT
-  t.key() == "kotlin.collections.List" && t.parameterTypes.size == 1 &&
+  t.key() == "kotlin.collections.List" &&
+    t.parameterTypes.size == 1 &&
     t.parameterTypes[0].key() == "kotlin.Int" -> MappedKind.INT_LIST
-  t.key() == "kotlin.collections.List" && t.parameterTypes.size == 1 &&
+  t.key() == "kotlin.collections.List" &&
+    t.parameterTypes.size == 1 &&
     t.parameterTypes[0].key() == "kotlin.Float" -> MappedKind.FLOAT_LIST
-  t.key() == "kotlin.collections.List" && t.parameterTypes.size == 1 &&
+  t.key() == "kotlin.collections.List" &&
+    t.parameterTypes.size == 1 &&
     t.parameterTypes[0].key() == "kotlin.String" -> MappedKind.STRING_LIST
   t.key() == "dev.keliver.ui.Dp" -> MappedKind.DP
   t.key() == "dev.keliver.layout.api.Constraint" -> MappedKind.CONSTRAINT

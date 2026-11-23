@@ -77,8 +77,10 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
     if (fillWidth) m = m.fillMaxWidth()
     if (widthDp > 0) m = m.width(widthDp.dp)
     if (heightDp > 0) m = m.height(heightDp.dp)
-    val hasPerCorner = cornerTopStartDp >= 0 || cornerTopEndDp >= 0 ||
-      cornerBottomStartDp >= 0 || cornerBottomEndDp >= 0
+    val hasPerCorner = cornerTopStartDp >= 0 ||
+      cornerTopEndDp >= 0 ||
+      cornerBottomStartDp >= 0 ||
+      cornerBottomEndDp >= 0
     fun corner(v: Int) = (if (v >= 0) v else cornerRadiusDp).dp
     val shape = if (hasPerCorner) {
       RoundedCornerShape(corner(cornerTopStartDp), corner(cornerTopEndDp), corner(cornerBottomEndDp), corner(cornerBottomStartDp))
