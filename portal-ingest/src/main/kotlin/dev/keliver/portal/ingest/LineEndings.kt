@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 /**
@@ -49,19 +64,31 @@ object LineEndings {
     for (k in 0 until suf) keepCr[new.size - 1 - k] = old[old.size - 1 - k].endsWith("\r")
     // LCS table over the middle.
     val l = Array(a.size + 1) { IntArray(b.size + 1) }
-    for (i in a.indices.reversed()) for (j in b.indices.reversed()) {
-      l[i][j] = if (a[i] == b[j]) l[i + 1][j + 1] + 1 else maxOf(l[i + 1][j], l[i][j + 1])
+    for (i in a.indices.reversed()) {
+      for (j in b.indices.reversed()) {
+        l[i][j] = if (a[i] == b[j]) l[i + 1][j + 1] + 1 else maxOf(l[i + 1][j], l[i][j + 1])
+      }
     }
     var i = 0
     var j = 0
     while (i < a.size && j < b.size) {
       when {
-        a[i] == b[j] -> { keepCr[pre + j] = old[pre + i].endsWith("\r"); i++; j++ }
-        l[i + 1][j] >= l[i][j + 1] -> { if (old[pre + i].endsWith("\r")) return null; i++ }
+        a[i] == b[j] -> {
+          keepCr[pre + j] = old[pre + i].endsWith("\r")
+          i++
+          j++
+        }
+        l[i + 1][j] >= l[i][j + 1] -> {
+          if (old[pre + i].endsWith("\r")) return null
+          i++
+        }
         else -> j++
       }
     }
-    while (i < a.size) { if (old[pre + i].endsWith("\r")) return null; i++ }
+    while (i < a.size) {
+      if (old[pre + i].endsWith("\r")) return null
+      i++
+    }
     return new.indices.joinToString("\n") { if (keepCr[it]) new[it] + "\r" else new[it] }
   }
 }

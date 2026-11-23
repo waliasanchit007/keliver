@@ -1,8 +1,27 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import app.cash.zipline.QuickJs
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestSigner
 import app.cash.zipline.loader.ZiplineFile
+import hostlegacy0318.HostFacts as LegacyHostFacts
+import hostlegacy0318.pickFromIndex as legacyPickFromIndex
+import hosttemplate.DEFAULT_ENGINE as HOST_DEFAULT_ENGINE
 import hosttemplate.ENGINES_BY_QUICKJS_VERSION
+import hosttemplate.ENGINE_METADATA_KEY as HOST_ENGINE_METADATA_KEY
 import hosttemplate.HostFacts
 import hosttemplate.ManifestPinningHttpClient
 import hosttemplate.engineOfQuickJsVersion
@@ -31,10 +50,6 @@ import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
 import okio.ByteString.Companion.toByteString
 import okio.IOException
-import hosttemplate.DEFAULT_ENGINE as HOST_DEFAULT_ENGINE
-import hosttemplate.ENGINE_METADATA_KEY as HOST_ENGINE_METADATA_KEY
-import hostlegacy0318.HostFacts as LegacyHostFacts
-import hostlegacy0318.pickFromIndex as legacyPickFromIndex
 
 /**
  * NF2 steps 5–7 (docs/DEVICE_HOST.md, "Engines"): one bundle per engine for one release, each
@@ -45,7 +60,9 @@ import hostlegacy0318.pickFromIndex as legacyPickFromIndex
 class EngineGateTest {
   private val tmp = Files.createTempDirectory("engine-gate").toFile()
 
-  @AfterTest fun cleanUp() { tmp.deleteRecursively() }
+  @AfterTest fun cleanUp() {
+    tmp.deleteRecursively()
+  }
 
   private val q2026 = "quickjs-2026"
 
@@ -163,7 +180,8 @@ class EngineGateTest {
     val metadata = listOfNotNull("\"$SEQUENCE_METADATA_KEY\":\"$seq\"", named?.let { "\"$ENGINE_METADATA_KEY\":$it" }).joinToString(",")
     val json = """{"unsigned":{"signatures":{},"freshAtEpochMs":null,"baseUrl":null},
       |"modules":{${modules.entries.joinToString(",") { (m, sha) -> "\"./$m.js\":{\"url\":\"$m.zipline\",\"sha256\":\"$sha\",\"dependsOnIds\":[]}" }}},
-      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain","metadata":{$metadata}}""".trimMargin().replace("\n", "")
+      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain","metadata":{$metadata}}
+    """.trimMargin().replace("\n", "")
     File(dir, "manifest.zipline.json").writeText(by.signer.sign(ZiplineManifest.decodeJson(json)).encodeJson())
     return dir
   }
@@ -180,7 +198,10 @@ class EngineGateTest {
       .let { it.sequence to it.manifestPath }
 
   private fun publishBoth(seq: Long = 1, init: Boolean = true) = publishStaticVariants(
-    listOf(PublishVariant(out2021("a$seq", seq)), PublishVariant(out2026("b$seq", seq))), site, app.publicHex, init = init,
+    listOf(PublishVariant(out2021("a$seq", seq)), PublishVariant(out2026("b$seq", seq))),
+    site,
+    app.publicHex,
+    init = init,
   )
 
   @Test
@@ -264,7 +285,9 @@ class EngineGateTest {
     val indexBefore = indexText()
     assertRefusedAndNothingWritten("is signed for sequence 3") {
       publishStaticVariants(
-        listOf(PublishVariant(a), PublishVariant(b)), site, app.publicHex,
+        listOf(PublishVariant(a), PublishVariant(b)),
+        site,
+        app.publicHex,
         // Variant 2's output, rebuilt for another sequence after the pre-check.
         beforeLock = { output("b2", 5, "\"$q2026\"", seq = 3) },
       )
@@ -275,7 +298,9 @@ class EngineGateTest {
     var moves = 0
     val e = assertFailsWith<java.io.IOException> {
       publishStaticVariants(
-        listOf(PublishVariant(out2021("a3", 2)), PublishVariant(out2026("b3", 2))), site, app.publicHex,
+        listOf(PublishVariant(out2021("a3", 2)), PublishVariant(out2026("b3", 2))),
+        site,
+        app.publicHex,
         moveIn = { from, to -> if (++moves == 2) throw java.io.IOException("disk full") else Files.move(from, to) },
       )
     }
@@ -312,7 +337,11 @@ class EngineGateTest {
   @Test
   fun aRolloutIsSetOnEveryEnginesEntry() {
     publishStaticVariants(
-      listOf(PublishVariant(out2021("a")), PublishVariant(out2026("b"))), site, app.publicHex, init = true, constraints = Constraints(rollout = 10),
+      listOf(PublishVariant(out2021("a")), PublishVariant(out2026("b"))),
+      site,
+      app.publicHex,
+      init = true,
+      constraints = Constraints(rollout = 10),
     )
     setRolloutStatic(site, 1, 50)
     assertEquals(listOf("50", "50"), entries().map { (it["constraints"] as JsonObject)["rollout"]!!.jsonPrimitive.content })
@@ -365,7 +394,8 @@ class EngineGateTest {
     File(appDir, "keliver.portal.json").writeText(
       """{"screensDir":"src/jsMain/kotlin/screens","publishTask":":compileProductionExecutableKotlinJsZipline",
         |"publishOutput":"build/zipline/Production",
-        |"engineTargets":[{"publishTask":":guest2026:compileProductionExecutableKotlinJsZipline","publishOutput":"guest2026/build/zipline/Production"}]}""".trimMargin(),
+        |"engineTargets":[{"publishTask":":guest2026:compileProductionExecutableKotlinJsZipline","publishOutput":"guest2026/build/zipline/Production"}]}
+      """.trimMargin(),
     )
     val keyFile = File(tmp, "app.pub").apply { writeText(app.publicHex + "\n") }
     val built = mutableListOf<Pair<String, Long>>()
@@ -382,9 +412,12 @@ class EngineGateTest {
     assertEquals(1L to "v1/manifest.zipline.json", hostPick(DEFAULT_ENGINE))
     assertEquals(1L to "v2/manifest.zipline.json", hostPick(q2026))
     // A failed engine build publishes nothing of the release.
-    assertEquals(3, KeliverPublish.run(listOf(appDir.path, "--out", site.path, "--public-key-file", keyFile.path), null) { _, task, _ ->
-      if (task.startsWith(":guest2026")) 1 else 0
-    })
+    assertEquals(
+      3,
+      KeliverPublish.run(listOf(appDir.path, "--out", site.path, "--public-key-file", keyFile.path), null) { _, task, _ ->
+        if (task.startsWith(":guest2026")) 1 else 0
+      },
+    )
     assertEquals(2, entries().size)
   }
 }

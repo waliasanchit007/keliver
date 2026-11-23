@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Square, Inc.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ import dev.keliver.compose.ui.unit.IntSize
 import dev.keliver.compose.wire.KeliverGeneratedApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 
 class AnimationCodecTest {
@@ -58,7 +58,8 @@ class AnimationCodecTest {
   }
 
   @OptIn(KeliverGeneratedApi::class)
-  @Test fun aCustomEasingIsReportedAndFallsBackToTheDefault() {
+  @Test
+  fun aCustomEasingIsReportedAndFallsBackToTheDefault() {
     val reported = ArrayList<String>()
     val sink = AnimationMismatches.sink
     AnimationMismatches.reset()

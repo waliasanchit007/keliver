@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +60,7 @@ class LivePreviewAsyncTest {
   fun anAsyncCompletionReachesThePreview(): kotlin.js.Promise<kotlin.js.JsAny?> =
     GlobalScope.promise {
       val gate = CompletableDeferred<String>()
-      var presenterState = "?"          // recorded separately from what is displayed
+      var presenterState = "?" // recorded separately from what is displayed
       appPreviewEntry = object : AppPreviewEntry {
         override val label = "test"
         override val screens = mapOf(
@@ -200,7 +215,7 @@ class LivePreviewAsyncTest {
       LiveEngine.request.value = "home"
       editor.pump()
       assertEquals("loading", editor.rendered.last(), "session 3 is waiting on its response")
-      LiveEngine.request.value = "other"          // ends session 3 while it waits
+      LiveEngine.request.value = "other" // ends session 3 while it waits
       editor.pump()
       session3.send("late from session 3")
       yield()

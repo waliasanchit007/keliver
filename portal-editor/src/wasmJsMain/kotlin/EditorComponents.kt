@@ -1,12 +1,27 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.Bind
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
-import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.ComponentSlotSpec
+import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.MapComponentRegistry
-import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropChoice
+import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropSpec
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.deserializeTree
@@ -28,7 +43,9 @@ import kotlinx.serialization.json.jsonPrimitive
 internal var editorComponents: ComponentRegistry = EmptyComponentRegistry
   private set
 
-internal fun setEditorComponents(reg: ComponentRegistry) { editorComponents = reg }
+internal fun setEditorComponents(reg: ComponentRegistry) {
+  editorComponents = reg
+}
 
 /**
  * Bumped when something the canvas draws with changes outside the screen's tree — the
@@ -117,5 +134,9 @@ private fun jsonToAny(raw: String): Any? {
   if (prim.isString) return prim.content
   prim.intOrNull?.let { return it }
   prim.doubleOrNull?.let { return it }
-  return when (prim.content) { "true" -> true; "false" -> false; else -> prim.content }
+  return when (prim.content) {
+    "true" -> true
+    "false" -> false
+    else -> prim.content
+  }
 }

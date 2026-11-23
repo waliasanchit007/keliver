@@ -183,8 +183,8 @@ for v in 0.5.0 0.5.0-SNAPSHOT 1.0.0; do
     && [ "$(nameds "$P/settings.gradle" 'app\.cash\.zipline')$(nameds "$P/build.gradle" 'app\.cash\.zipline')" = 00 ] \
     && [ "$(grep -c "compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')" "$P/build.gradle")" = 1 ] \
     && python3 -c 'import re,sys; b=open(sys.argv[1]).read(); m=re.search(r"\n(\s*)js \{\n(.*?)\n\1\}", b, re.S); sys.exit(0 if m and "binaries.executable()" in m.group(2) and "-Xes-long-as-bigint" in m.group(2) else 1)' "$P/build.gradle" \
-    && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.20'" "$P/settings.gradle"; then
-    ok "NF2: an app on $v gets Keliver's Zipline fork (plugin, library) and Long as BigInt in its js block, Kotlin 2.4.20"
+    && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'" "$P/settings.gradle"; then
+    ok "NF2: an app on $v gets Keliver's Zipline fork (plugin, library) and Long as BigInt in its js block, Kotlin 2.4.21"
   else
     bad "NF2: an app on $v (exit $rc): $(grep -hE "zipline|bigint|kotlin.multiplatform" "$P/settings.gradle" "$P/build.gradle" | tr -s ' ' | tr '\n' '|')"
   fi

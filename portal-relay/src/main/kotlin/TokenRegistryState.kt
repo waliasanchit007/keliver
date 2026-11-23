@@ -1,21 +1,36 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.OpBatch
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.atoms
+import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.mapAtoms
 import dev.keliver.portal.document.mapOperandTree
-import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toAny
 import dev.keliver.portal.ingest.TokenEntry
 import dev.keliver.portal.ingest.TokenFileScan
 import dev.keliver.portal.ingest.TokenTable
-import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * K2: per-project design-token tables (project isolation, thread-safe), like
@@ -56,8 +71,11 @@ object Tokens {
   fun fileId(f: File, root: File): String {
     val file = f.absoluteFile.normalize()
     val base = root.absoluteFile.normalize()
-    return if (file.path.startsWith(base.path + File.separator)) file.relativeTo(base).invariantSeparatorsPath
-    else file.invariantSeparatorsPath
+    return if (file.path.startsWith(base.path + File.separator)) {
+      file.relativeTo(base).invariantSeparatorsPath
+    } else {
+      file.invariantSeparatorsPath
+    }
   }
 
   /**
@@ -80,11 +98,13 @@ object Tokens {
       val bytes = runCatching { f.readBytes() }.getOrNull() ?: return@mapNotNull null
       val digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
       val hit = cache[path]?.takeIf { it.digest == digest && it.id == id }
-      (hit ?: run {
-        parses.incrementAndGet()
-        val scan = runCatching { TokenTable.scanFile(id, bytes.decodeToString()) }.getOrNull()
-        Cached(digest, id, scan).also { cache[path] = it }
-      }).scan
+      (
+        hit ?: run {
+          parses.incrementAndGet()
+          val scan = runCatching { TokenTable.scanFile(id, bytes.decodeToString()) }.getOrNull()
+          Cached(digest, id, scan).also { cache[path] = it }
+        }
+        ).scan
     }
     val next = TokenTable.of(scans)
     val previous = byProject.put(project, next)
@@ -234,7 +254,10 @@ object Tokens {
   ): Pair<Refreshed?, String?> {
     val old = HashMap<Long, DocNode.Widget>()
     fun index(n: DocNode) {
-      if (n is DocNode.Widget) { old[n.handle.v] = n; n.children.forEach(::index) }
+      if (n is DocNode.Widget) {
+        old[n.handle.v] = n
+        n.children.forEach(::index)
+      }
     }
     index(before.root)
     var error: String? = null

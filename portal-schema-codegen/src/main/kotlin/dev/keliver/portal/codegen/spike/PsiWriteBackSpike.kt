@@ -1,12 +1,20 @@
 /*
- * V2 SPIKE S2 — PSI subtree write-back (the platform's #1 engineering risk).
- * Proves: replace a widget call expression via KtPsiFactory on a fresh parse,
- * serialize the file, and everything OUTSIDE the touched node stays
- * byte-identical (comments, formatting, RawCode, imports).
- * Run: ./gradlew :portal-schema-codegen:runWriteBackSpike
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
 @file:OptIn(CoreEnvironmentDeprecation::class)
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
 
 package dev.keliver.portal.codegen.spike
 
@@ -14,7 +22,6 @@ import org.jetbrains.kotlin.CoreEnvironmentDeprecation
 import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.jetbrains.kotlin.com.intellij.core.CoreApplicationEnvironment
 import org.jetbrains.kotlin.com.intellij.lang.jvm.facade.JvmElementProvider
 import org.jetbrains.kotlin.com.intellij.mock.MockComponentManager
 import org.jetbrains.kotlin.com.intellij.openapi.extensions.ExtensionPoint
@@ -34,6 +41,14 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+
+/*
+ * V2 SPIKE S2 — PSI subtree write-back (the platform's #1 engineering risk).
+ * Proves: replace a widget call expression via KtPsiFactory on a fresh parse,
+ * serialize the file, and everything OUTSIDE the touched node stays
+ * byte-identical (comments, formatting, RawCode, imports).
+ * Run: ./gradlew :portal-schema-codegen:runWriteBackSpike
+ */
 
 private val ORIGINAL = """
 package myapp.screens
@@ -78,8 +93,10 @@ private fun enablePsiMutations(project: MockComponentManager) {
     }
   }
   ep("org.jetbrains.kotlin.com.intellij.treeCopyHandler", TreeCopyHandler::class.java)
-  ep("org.jetbrains.kotlin.com.intellij.psi.treeChangePreprocessor",
-    org.jetbrains.kotlin.com.intellij.psi.impl.PsiTreeChangePreprocessor::class.java)
+  ep(
+    "org.jetbrains.kotlin.com.intellij.psi.treeChangePreprocessor",
+    org.jetbrains.kotlin.com.intellij.psi.impl.PsiTreeChangePreprocessor::class.java,
+  )
   ep("org.jetbrains.kotlin.com.intellij.smartPointerAnchorProvider", SmartPointerAnchorProvider::class.java)
   ep("org.jetbrains.kotlin.com.intellij.jvm.elementProvider", JvmElementProvider::class.java)
 
@@ -99,7 +116,9 @@ private fun enablePsiMutations(project: MockComponentManager) {
 fun main() {
   val disposable = Disposer.newDisposable()
   val env = KotlinCoreEnvironment.createForProduction(
-    disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+    disposable,
+    CompilerConfiguration.create(),
+    EnvironmentConfigFiles.JVM_CONFIG_FILES,
   )
   enablePsiMutations(env.project as MockComponentManager)
   val factory = KtPsiFactory(env.project)
@@ -153,8 +172,15 @@ fun main() {
   val idempotent = file4.text == after
   println("test4 Idempotent self-replace: $idempotent")
 
-  val pass = prefixOk && suffixOk && replacedOk && rawStillExact && commentKept && inserted &&
-    deleted && restKept && idempotent
+  val pass = prefixOk &&
+    suffixOk &&
+    replacedOk &&
+    rawStillExact &&
+    commentKept &&
+    inserted &&
+    deleted &&
+    restKept &&
+    idempotent
   println("SPIKE ${if (pass) "PASS" else "FAIL"}")
   Disposer.dispose(disposable)
 }

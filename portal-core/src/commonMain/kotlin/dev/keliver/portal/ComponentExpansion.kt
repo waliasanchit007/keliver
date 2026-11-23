@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal
 
 /**
@@ -19,8 +34,10 @@ package dev.keliver.portal
 public sealed interface Expansion {
   /** Fully-primitive tree ready to render. */
   public data class Transparent(val tree: WidgetNode) : Expansion
+
   /** Render a labeled placeholder (opaque component or unknown type). */
   public data class Opaque(val name: String, val reason: String) : Expansion
+
   /** Render an error chip; [path] is the dependency cycle. */
   public data class Cycle(val path: List<String>) : Expansion
 }
@@ -98,8 +115,13 @@ public fun expandForPreview(
   fun decide(c: Cond): Any = c.reduce(::decideTerm)
 
   fun resolveValue(v: Any?): Any? = when (v) {
-    is Bind -> if ('.' in v.field) v // item.field pass-through
-    else if (v.field in paramNames) (args[v.field] ?: defaults[v.field]) else v
+    is Bind -> if ('.' in v.field) {
+      v // item.field pass-through
+    } else if (v.field in paramNames) {
+      (args[v.field] ?: defaults[v.field])
+    } else {
+      v
+    }
     is Action -> if (v.name in eventNames) (args[v.name] ?: Action(v.name)) else v
     is Conditional -> when (val d = decide(v.cond)) {
       is Boolean -> resolveValue(if (d) v.whenTrue else v.whenFalse)
@@ -148,8 +170,11 @@ public fun expandForPreview(
       return when (val r = expandForPreview(n, registry, compiled, stack)) {
         is Expansion.Transparent -> source(r.tree, n.id)
         // Drawn compiled by the renderer; its own slot content is the caller's too.
-        is Expansion.Opaque -> if (r.name in compiled) source(n.copy(children = n.children.map(::substituteSlotContent)), n.id)
-        else source(placeholder(r.name, r.reason), n.id)
+        is Expansion.Opaque -> if (r.name in compiled) {
+          source(n.copy(children = n.children.map(::substituteSlotContent)), n.id)
+        } else {
+          source(placeholder(r.name, r.reason), n.id)
+        }
         is Expansion.Cycle -> source(cycleChip(r.path), n.id)
       }
     }
@@ -188,19 +213,26 @@ public fun expandForPreview(
     // outer params, then expand it recursively (splicing the result).
     if (registry.isComponent(n.type)) {
       val resolved = resolveDefinitionTree(n)
-      return listOf(when (val r = expandForPreview(resolved, registry, compiled, stack + name)) {
-        is Expansion.Transparent -> r.tree
-        // Drawn compiled by the renderer: the call with its arguments resolved
-        // against this instance's, its slot content substituted like any body node.
-        is Expansion.Opaque -> if (r.name in compiled) n.copy(props = compiledArgs(n), children = n.children.flatMap { substitute(it) })
-        else placeholder(r.name, r.reason)
-        is Expansion.Cycle -> cycleChip(r.path)
-      })
+      return listOf(
+        when (val r = expandForPreview(resolved, registry, compiled, stack + name)) {
+          is Expansion.Transparent -> r.tree
+          // Drawn compiled by the renderer: the call with its arguments resolved
+          // against this instance's, its slot content substituted like any body node.
+          is Expansion.Opaque -> if (r.name in compiled) {
+            n.copy(props = compiledArgs(n), children = n.children.flatMap { substitute(it) })
+          } else {
+            placeholder(r.name, r.reason)
+          }
+          is Expansion.Cycle -> cycleChip(r.path)
+        },
+      )
     }
-    return listOf(n.copy(
-      props = n.props.mapValues { resolveValue(it.value) },
-      children = n.children.flatMap { substitute(it) },
-    ))
+    return listOf(
+      n.copy(
+        props = n.props.mapValues { resolveValue(it.value) },
+        children = n.children.flatMap { substitute(it) },
+      ),
+    )
   }
 
   val expanded = substitute(forwardInstanceModifiers(body, node, spec))

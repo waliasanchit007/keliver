@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Square, Inc.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,8 +69,11 @@ public class AnimatedRef(
   public val visibilityThreshold: Float? = null,
   public val label: String? = null,
 ) {
-  override fun equals(other: Any?): Boolean = other is AnimatedRef && other.id == id && other.spec == spec &&
-    other.visibilityThreshold == visibilityThreshold && other.label == label
+  override fun equals(other: Any?): Boolean = other is AnimatedRef &&
+    other.id == id &&
+    other.spec == spec &&
+    other.visibilityThreshold == visibilityThreshold &&
+    other.label == label
   override fun hashCode(): Int = id * 31 + (spec?.hashCode() ?: 0)
   override fun toString(): String = "AnimatedRef(id=$id, spec=$spec, label=$label)"
 }

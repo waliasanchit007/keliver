@@ -25,17 +25,13 @@
 // cannot load them. Included builds too: build-support compiles against Zipline (ZiplineManifest),
 // and its classes share the build's classpath with the plugin's, so both must be the fork's (two
 // groups would put two copies of app.cash.zipline's classes there).
-// A nested build (build-support, included for its plugins) has its own start parameter, without the
-// command line's -P properties: they are read from the outermost build's.
-def outermost = gradle
-while (outermost.parent != null) outermost = outermost.parent
-def cliProperties = outermost.startParameter.projectProperties
-def repoDir = cliProperties['ziplineReleaseRepo']
+def repoDir = startParameter.projectProperties['ziplineReleaseRepo']
 if (!repoDir) {
+  // Gradle's own nested builds (resolving settings plugins) do not see the property; skip them.
   if (gradle.parent != null) return
   throw new GradleException('use-release.init.gradle: pass -PziplineReleaseRepo=<maven repo dir>')
 }
-def verify = cliProperties.containsKey('ziplineReleaseVerify')
+def verify = startParameter.projectProperties.containsKey('ziplineReleaseVerify')
 def applySh = new File(buildscript.sourceFile.parentFile, 'apply.sh').text
 def constant = { String name ->
   def m = applySh =~ /(?m)^${name}=(\S+)$/
@@ -94,12 +90,6 @@ def resolveRule = { ConfigurationContainer configurations ->
 settingsEvaluated { settings -> addRepo(settings.dependencyResolutionManagement.repositories) }
 allprojects { p ->
   addRepo(p.buildscript.repositories)
-  // A project that declares repositories of its own (build-support does) uses those instead of the
-  // settings' (Gradle's default PREFER_PROJECT); one that declares none must stay without any, or
-  // it would stop using the settings' repositories.
-  p.afterEvaluate {
-    if (!p.repositories.isEmpty() && p.repositories.findByName('ziplineRelease') == null) addRepo(p.repositories)
-  }
   resolveRule(p.buildscript.configurations)
   resolveRule(p.configurations)
 }

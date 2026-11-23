@@ -1,19 +1,34 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.PropChoice
 import dev.keliver.portal.PropKind
+import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.lit
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.widgetSpec
 import dev.keliver.portal.widgetSpecs
-import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.HTMLOptionElement
-import org.w3c.dom.HTMLSelectElement
-import dev.keliver.portal.document.PropValue
-import dev.keliver.portal.document.lit
-import org.w3c.dom.events.Event
-import org.w3c.dom.events.KeyboardEvent
-import org.w3c.dom.events.KeyboardEventInit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLOptionElement
+import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.KeyboardEvent
+import org.w3c.dom.events.KeyboardEventInit
 
 /** The properties panel's typed controls: what they show and what they commit. */
 class EditorPropControlsTest {
@@ -50,8 +65,12 @@ class EditorPropControlsTest {
   }
 
   @Test fun everyChoicePropRendersItsLabelsInOrder() {
-    for (spec in widgetSpecs) for (p in spec.props) if (p.choices.isNotEmpty()) {
-      assertEquals(p.choices.map { it.label }, choiceSelect(p.choices, p.choices.first().value) {}.labels(), "${spec.type}.${p.name}")
+    for (spec in widgetSpecs) {
+      for (p in spec.props) {
+        if (p.choices.isNotEmpty()) {
+          assertEquals(p.choices.map { it.label }, choiceSelect(p.choices, p.choices.first().value) {}.labels(), "${spec.type}.${p.name}")
+        }
+      }
     }
   }
 
@@ -263,21 +282,28 @@ class EditorPropControlsTest {
     val ctl = numberField(24, numberRule("StyledText", "fontSize", dev.keliver.portal.PropKind.Int), { previews += it }) { commits += it }
     val input = ctl.querySelector("input") as HTMLInputElement
     val err = ctl.querySelector(".field-err")!!
-    fun type(v: String) { input.value = v; input.dispatchEvent(Event("input")) }
+    fun type(v: String) {
+      input.value = v
+      input.dispatchEvent(Event("input"))
+    }
     fun leave() = input.dispatchEvent(Event("change"))
 
-    type(""); type("abc"); leave()
+    type("")
+    type("abc")
+    leave()
     assertTrue(commits.isEmpty()) // the empty field is not 0, and abc is nothing
     assertTrue(input.classList.contains("invalid"))
     assertEquals("Enter a whole number", err.textContent)
-    type("-5"); leave()
+    type("-5")
+    leave()
     assertTrue(commits.isEmpty())
     assertEquals("Font size must be at least 1", err.textContent)
 
     // Each invalid commit put the canvas back to the written value (24), sending nothing.
     assertEquals(listOf<Number>(24, 24), previews)
     previews.clear()
-    type("1"); type("18") // typing a two-digit value previews, writes nothing
+    type("1")
+    type("18") // typing a two-digit value previews, writes nothing
     assertEquals(listOf<Number>(1, 18), previews)
     assertTrue(commits.isEmpty())
     input.dispatchEvent(key("Enter"))
@@ -344,16 +370,24 @@ class EditorPropControlsTest {
     var ended = 0
     installTypingTracker { ended++ }
     val doc = kotlinx.browser.document
-    val field = (doc.createElement("input") as HTMLInputElement).also { it.type = "text"; doc.body!!.appendChild(it) }
-    val other = (doc.createElement("input") as HTMLInputElement).also { it.type = "text"; doc.body!!.appendChild(it) }
+    val field = (doc.createElement("input") as HTMLInputElement).also {
+      it.type = "text"
+      doc.body!!.appendChild(it)
+    }
+    val other = (doc.createElement("input") as HTMLInputElement).also {
+      it.type = "text"
+      doc.body!!.appendChild(it)
+    }
     field.focus()
     assertTrue(!typingPending(), "focused, nothing typed: a rebuild may go ahead")
-    field.value = "ab"; field.dispatchEvent(Event("input"))
+    field.value = "ab"
+    field.dispatchEvent(Event("input"))
     assertTrue(typingPending(), "typed and still focused: the rebuild waits")
     other.focus() // the field loses the keyboard without a change (nothing committed)
     assertTrue(!typingPending(), "left: no longer holds the panel")
     // Review 5: a rebuild held off meanwhile is made up after the field's own handlers ran, not inside them.
     assertEquals(0, ended, "told only once the field's own focusout and change handlers had their turn")
-    field.remove(); other.remove()
+    field.remove()
+    other.remove()
   }
 }

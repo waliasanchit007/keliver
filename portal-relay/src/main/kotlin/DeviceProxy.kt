@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import java.io.File
@@ -62,9 +77,15 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
           }
           Route.Events -> {
             val e = events
-            if (e == null) { empty(ex, 404); return@createContext }
+            if (e == null) {
+              empty(ex, 404)
+              return@createContext
+            }
             val remote = listenerKey(ex.remoteAddress)
-            if (!e.hasRoom(remote)) { empty(ex, 503); return@createContext }
+            if (!e.hasRoom(remote)) {
+              empty(ex, 503)
+              return@createContext
+            }
             ex.responseHeaders.add("Content-Type", "text/event-stream")
             ex.responseHeaders.add("Cache-Control", "no-cache")
             ex.responseHeaders.add("X-Content-Type-Options", "nosniff")
@@ -72,7 +93,10 @@ internal class DeviceProxy(private val bundlesDir: File, private val events: Bun
             e.subscribe(ex.responseBody, remote) { ex.close() } // stream stays open
           }
           is Route.BundleFile -> {
-            val f = bundleFile(r) ?: run { empty(ex, 404); return@createContext }
+            val f = bundleFile(r) ?: run {
+              empty(ex, 404)
+              return@createContext
+            }
             sendFile(ex, f, if (r.name.endsWith(".json")) "application/json" else "application/octet-stream")
           }
         }

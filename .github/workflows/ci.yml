@@ -199,11 +199,21 @@ jobs:
       # checkBaselineProfilePackaged (keliver-treehouse-host/build.gradle) is wired
       # to `check`, which CI does not run: named here so CI fails if the host's AAR
       # stops carrying its baseline profile.
+      # ziplineApiCheck (each module's api/zipline-api.toml: the guest<->host
+      # ZiplineService surface) and redwoodApiCheck (each schema's keliver-api.xml:
+      # widget and modifier tags) are on `check` too, and drifted there unseen
+      # until both were named here. Regenerate with ziplineApiDump / redwoodApiGenerate.
+      # spotlessCheck (format and license header) and the Gradle plugin's validatePlugins
+      # are on `check` as well, for the same reason. Fix the first with spotlessApply.
       - name: Test + API check
         run: >
           ./gradlew
           test
           apiCheck
+          ziplineApiCheck
+          redwoodApiCheck
+          spotlessCheck
+          :keliver-gradle-plugin:validatePlugins
           :keliver-treehouse-host:checkBaselineProfilePackaged
           -DRELEASE_SIGNING_ENABLED=false
 
@@ -242,6 +252,9 @@ jobs:
       # keliver-http-fixtures (the HTTP fixture matcher) has no Android target, so no `test`
       # task: it and the debug replay provider built on it (item 5, S2) run here, by name, on
       # every target they have. List them once; the JS and wasm step below leaves them out.
+      # keliver-image's iOS test loads an image through Coil's ktor3 fetcher, which is compiled
+      # against an older Ktor than iOS resolves (Kotlin/Native reports a missing symbol only when
+      # it is reached), and sends a request through the real Darwin engine.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
@@ -260,7 +273,6 @@ jobs:
           :keliver-bridge-fixture:jvmTest
           :keliver-bridge-fixture:compileKotlinJs
           :keliver-bridge-fixture:compileKotlinIosSimulatorArm64
-          :keliver-bridge-fixture:ziplineApiCheck
           :keliver-http-fixtures:jvmTest
           :keliver-http-fixtures:jsTest
           :keliver-http-fixtures:wasmJsTest
@@ -269,6 +281,7 @@ jobs:
           :keliver-http-replay-debug:jsTest
           :keliver-http-replay-debug:iosSimulatorArm64Test
           :keliver-compose-gatea-composeui:iosSimulatorArm64Test
+          :keliver-image:iosSimulatorArm64Test
           -DRELEASE_SIGNING_ENABLED=false
 
       # Every library's Kotlin/JS and wasm tests. Linking a test EXECUTABLE is the only place a

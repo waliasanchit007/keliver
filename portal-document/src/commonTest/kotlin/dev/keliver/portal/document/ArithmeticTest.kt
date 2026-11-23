@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.Arith
@@ -15,13 +30,13 @@ import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.int
 import dev.keliver.portal.serializeTree
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.encodeToString
 
 /**
  * K7: Int arithmetic values and Ints used as Dps — Kotlin's 32-bit semantics
@@ -111,7 +126,8 @@ class ArithmeticTest {
 
   @Test fun bothRoundTripOnTheDocumentWireWithDefaultsLeftOut() {
     val node: DocNode = DocNode.Widget(
-      Handle(2), "Spacer",
+      Handle(2),
+      "Spacer",
       props = mapOf("height" to PropValue.IntDp(a("/", b("gap"), lit(2))), "width" to PropValue.IntDp(b("w"), DP_CTOR_FORM)),
     )
     val json = DocJson.encodeToString(node)
@@ -281,10 +297,14 @@ class ArithmeticTest {
     val before = doc(open, text(2, "fontSize" to a("+", b("x"), lit(1))))
     accepted(before, set(2, "fontSize", a("+", b("x"), lit(2))))
     // An inserted subtree never vouches for itself.
-    val pair = DocNode.Widget(Handle(0), "Column", children = listOf(
-      DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to lit("a"), "fontSize" to a("+", b("x"), lit(1)))),
-      DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to lit("b"), "fontSize" to a("+", b("x"), lit(2)))),
-    ))
+    val pair = DocNode.Widget(
+      Handle(0),
+      "Column",
+      children = listOf(
+        DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to lit("a"), "fontSize" to a("+", b("x"), lit(1)))),
+        DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to lit("b"), "fontSize" to a("+", b("x"), lit(2)))),
+      ),
+    )
     assertNotNull(d.tryApply(DocOp.InsertNode(Handle(1), null, pair)).error)
   }
 

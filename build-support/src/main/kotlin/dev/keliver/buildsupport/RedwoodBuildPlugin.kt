@@ -97,6 +97,33 @@ private fun Project.keliverVersion(): String =
 
 private val isCiEnvironment = System.getenv("CI") == "true"
 
+/**
+ * Matches a file that gets the Keliver license header: every file that does NOT start with a
+ * Redwood-derived "Square, Inc." notice, which it keeps (Apache 2.0, section 4(c)). Spotless
+ * applies (and checks) the header only to such files; it normalizes line endings to `\n` before
+ * its steps run.
+ *
+ * Only a notice dated 2025 or earlier counts as Redwood-derived (in a range, both years): the
+ * fork began in 2026 and upstream Redwood had no later Square notice at the fork base
+ * (`7da0b0445`), so a "2026 Square, Inc." file is a Keliver file copied from a template and is
+ * given the Keliver header. Upstream is still active: before porting an upstream file dated 2026
+ * or later, widen this exemption, or Spotless replaces Square's notice (a section 4(c) breach).
+ *
+ * Spotless replaces everything before the first [KELIVER_HEADER_DELIMITER] line with the header,
+ * so a short Keliver notice is made the full one, and a comment written above the package line
+ * is replaced: a file's own documentation goes below its package/import block, or into the KDoc
+ * of its main declaration.
+ */
+internal const val GETS_KELIVER_HEADER =
+  """\A(?!/\*\n \* Copyright \(C\) 20(1\d|2[0-5])(-20(1\d|2[0-5]))? Square, Inc\.\n)"""
+
+/**
+ * Where a Kotlin file's license header ends: its first `package`, `@file` or `import` line
+ * (Spotless's default), or, in a root-package file with none of them, the first KDoc. A file
+ * with neither fails `spotlessCheck` and `spotlessApply` ("Unable to find delimiter").
+ */
+internal const val KELIVER_HEADER_DELIMITER = """(package |@file|import |/\*\*)"""
+
 @Suppress("unused") // Invoked reflectively by Gradle.
 class RedwoodBuildPlugin : Plugin<Project> {
   private lateinit var libs: LibrariesForLibs
@@ -116,6 +143,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
     target.configureCommonSpotless()
     target.configureCommonTesting()
     target.configureSkikoForWebTests()
+    target.configureJsTestTimeouts()
     target.configureCommonAndroid()
     target.configureCommonKotlin()
     // NF2: Keliver's Zipline fork, the only one (ZiplineFork.kt).
@@ -126,6 +154,9 @@ class RedwoodBuildPlugin : Plugin<Project> {
   private fun Project.configureCommonSpotless() {
     plugins.apply("com.diffplug.spotless")
     val spotless = extensions.getByName("spotless") as SpotlessExtension
+    // New files get the Keliver contributors notice. Files derived from Redwood keep their
+    // Square, Inc. notice (Apache 2.0, section 4(c)): the header step skips any file that already
+    // starts with one dated 2025 or earlier (GETS_KELIVER_HEADER), so neither spotlessCheck nor spotlessApply touches it.
     val licenseHeaderFile = rootProject.file("gradle/license-header.txt")
     spotless.apply {
       // The nested build-support Gradle project contains Java sources. Use our root project to
@@ -135,6 +166,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
           it.target("build-support/keliver-settings/src/**/*.java")
           it.googleJavaFormat(libs.googleJavaFormat.get().version)
           it.licenseHeaderFile(licenseHeaderFile)
+            .onlyIfContentMatches(GETS_KELIVER_HEADER)
         }
       }
 
@@ -162,9 +194,14 @@ class RedwoodBuildPlugin : Plugin<Project> {
               "ktlint_standard_function-expression-body" to "disabled",
               "ktlint_function_naming_ignore_when_annotated_with" to "Composable",
               "ktlint_compose_compositionlocal-allowlist" to "disabled",
+              // mutableStateOf(0) -> mutableIntStateOf(0) is a performance change to the host
+              // renderers' widget state (about 85 properties in keliver-material-composeui),
+              // to be made and measured on its own, not as a lint fix.
+              "ktlint_compose_mutable-state-autoboxing" to "disabled",
             ),
           )
-        it.licenseHeaderFile(licenseHeaderFile)
+        it.licenseHeaderFile(licenseHeaderFile, KELIVER_HEADER_DELIMITER)
+          .onlyIfContentMatches(GETS_KELIVER_HEADER)
       }
     }
   }

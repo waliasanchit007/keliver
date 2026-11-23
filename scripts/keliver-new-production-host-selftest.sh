@@ -656,6 +656,39 @@ PY
     else
       bad "debug surfaces: no release build to check (rc=$rc, apk '${rel_apk}', aapt2 '${aapt2}')"
     fi
+    # Baseline profiles (docs/DEVICE_HOST.md, "Baseline profiles"): keliver.hostBaselineProfile takes
+    # true, false or nothing; false configures on the template's AGP and leaves the host library's
+    # rules out of the release build's merged profile. The published host library before 0.5.0
+    # carries no profile, so with it this checks only that the opt-out configures and merges on the
+    # template's AGP (an AGP without the DSL fails here); with one that carries it, that the rules go.
+    agp="$(sed -n "s/.*id 'com.android.application' version '\([^']*\)'.*/\1/p" "$H/build.gradle")"
+    ( cd "$APP" && ./gradlew --console=plain -p host-android help -Pkeliver.hostBaselineProfile=maybe > "$DISP/bp-bad.log" 2>&1 ); rc=$?
+    [ "$rc" != 0 ] && grep -q "keliver.hostBaselineProfile must be true, false or empty (got 'maybe')" "$DISP/bp-bad.log" \
+      && ok "baseline profile: keliver.hostBaselineProfile=maybe fails the build, naming the value" \
+      || bad "baseline profile: a bad keliver.hostBaselineProfile was not refused (rc=$rc)"
+    # The host library's rules in a merged profile; 0 when there is no merged profile at all (AGP
+    # writes none when no dependency contributes one).
+    bp_rules() { local n; n="$(grep -cE '^(HSPL|L)dev/keliver/(treehouse|protocol|widget)/\*\*;' "$1" 2>/dev/null)"; echo "${n:-0}"; }
+    bp_merge() { # <on|off> [gradle args...]: the release build's merged profile, copied to $DISP/bp-<on|off>.txt
+      local label="$1"; shift
+      rm -rf "$H/build/intermediates/merged_art_profile" "$DISP/bp-$label.txt"
+      ( cd "$APP" && ./gradlew --console=plain -p host-android mergeReleaseArtProfile \
+          -Pkeliver.bundleServer=https://bundles.example.com "$@" > "$DISP/bp-$label.log" 2>&1 ) || return 1
+      local merged; merged="$(find "$H/build/intermediates/merged_art_profile/release" -name baseline-prof.txt 2>/dev/null | head -1)"
+      [ -z "$merged" ] || cp "$merged" "$DISP/bp-$label.txt"
+    }
+    bp_merge on; bp_rc_on=$?
+    bp_merge off -Pkeliver.hostBaselineProfile=false; bp_rc_off=$?
+    n_on="$(bp_rules "$DISP/bp-on.txt")"; n_off="$(bp_rules "$DISP/bp-off.txt")"
+    if [ "$bp_rc_on" != 0 ] || [ "$bp_rc_off" != 0 ]; then
+      bad "baseline profile: mergeReleaseArtProfile on AGP $agp (or its merged profile): default rc=$bp_rc_on, opted out rc=$bp_rc_off: $(grep -E 'What went wrong' -A3 "$DISP/bp-off.log" "$DISP/bp-on.log" | head -6 | tr '\n' ' ')"
+    elif [ "$n_off" != 0 ]; then
+      bad "baseline profile: keliver.hostBaselineProfile=false left $n_off of the host library's rules in the merged profile (AGP $agp)"
+    elif [ "$n_on" -gt 0 ]; then
+      ok "baseline profile: on AGP $agp the release build merges the host library's $n_on rules by default, and none with keliver.hostBaselineProfile=false"
+    else
+      ok "baseline profile: on AGP $agp keliver.hostBaselineProfile=false configures and merges (this host library version carries no profile, so there was nothing to remove)"
+    fi
     # A key that is not a key fails the BUILD.
     printf 'garbage\n' > "$H/src/main/assets/keliver/portal_ed25519.pub"
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug > "$DISP/assemble-badkey.log" 2>&1 ); rc=$?
@@ -681,9 +714,9 @@ for v in 0.5.0 0.5.1-SNAPSHOT; do
   HF="$APPF/host-android/build.gradle"
   [ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.1'$" "$HF" \
     && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$HF" && grep -q "implementation 'dev.keliver.zipline:zipline-loader:1.28.0-keliver.1'" "$HF" \
-    && grep -q "id 'org.jetbrains.kotlin.android' version '2.4.20'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
+    && grep -q "id 'org.jetbrains.kotlin.android' version '2.4.21'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
     && grep -q "implementation 'dev.keliver:keliver-treehouse-host:$v'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
-    && ok "NF2: an app on $v gets Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries) on Kotlin 2.4.20, Compose 1.12.2" \
+    && ok "NF2: an app on $v gets Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries) on Kotlin 2.4.21, Compose 1.12.2" \
     || bad "NF2: the host of an app on $v (rc=$rc): $(grep -hE 'zipline|kotlin.android|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
 done
 KELIVER_HOST_ZIPLINE_VERSION=1.28.0-keliver.9 KELIVER_HOST_KOTLIN_VERSION=2.4.99 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
@@ -700,7 +733,7 @@ LF="$EXF/keliver-host/build.gradle"
   && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$LF" \
   && printf '%s' "$out" | grep -q "warning: no dev.keliver.zipline plugin found" \
   && printf '%s' "$out" | grep -q "names app.cash.zipline: Keliver 0.5.0 builds on Keliver's Zipline fork" \
-  && printf '%s' "$out" | grep -q "warning: no Kotlin 2.4.20 found" \
+  && printf '%s' "$out" | grep -q "warning: no Kotlin 2.4.21 found" \
   && ok "NF2: --embed on 0.5.0 writes the fork's plugin id and libraries, and warns about the app's app.cash.zipline and its Kotlin" \
   || bad "NF2: --embed on 0.5.0 (rc=$rc): $(printf '%s' "$out" | grep warning | tr '\n' ' ')"
 # The helper must sit beside the scaffolder (the tools bundle's bin/ carries it).

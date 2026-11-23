@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 internal fun catalogKind(p: MappedProp): String = when {
@@ -24,8 +39,11 @@ internal fun propSpecs(p: MappedProp): List<String> =
       "PropSpec(\"${p.name}.$side\", PropKind.Double, \"${humanize(p.name)} $side\")"
     }
   } else {
-    val choices = if (p.choices.isEmpty()) "" else
+    val choices = if (p.choices.isEmpty()) {
+      ""
+    } else {
       ", choices = listOf(${p.choices.joinToString(", ") { "PropChoice(${it.value}, ${kotlinString(it.label)})" }})"
+    }
     listOf("PropSpec(\"${p.name}\", PropKind.${catalogKind(p)}, \"${humanize(p.name)}\"$choices)")
   }
 
@@ -96,11 +114,15 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
   // K1: every wire key that holds a Dp (Dp props, Margin sides, Dp/Margin
   // modifier args) — Dp is non-negative, so these clamp at 0 everywhere.
   val dpKeys = buildList {
-    for (w in widgets.sortedBy { it.name }) for (p in w.props) {
-      if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys(p.name, p.kind).forEach { add("${w.name}.$it") }
+    for (w in widgets.sortedBy { it.name }) {
+      for (p in w.props) {
+        if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys(p.name, p.kind).forEach { add("${w.name}.$it") }
+      }
     }
-    for (m in modifiers.sortedBy { it.name }) for (p in m.props) {
-      if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys("mod.${m.name}.${p.name}", p.kind).forEach { add(it) }
+    for (m in modifiers.sortedBy { it.name }) {
+      for (p in m.props) {
+        if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys("mod.${m.name}.${p.name}", p.kind).forEach { add(it) }
+      }
     }
   }
   appendLine("/** Wire keys (\"Widget.prop\", \"mod.Modifier.prop\") holding a Dp — see isDpProp. */")
@@ -113,9 +135,11 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
   // token's own type (an Int constant fits `Int`, not `Constraint` or `Dp`).
   appendLine("/** \"Widget.prop\" wire key -> its Kotlin source type (\"Int\", \"Dp\", \"Constraint\", …) — see propSourceType. */")
   appendLine("internal val widgetPropSourceTypes: Map<String, String> = mapOf(")
-  for (w in widgets.sortedBy { it.name }) for (p in w.props) {
-    val type = if (p.kind == MappedKind.MARGIN) "Dp" else sourceType(p.kind)
-    for (k in wireKeys(p.name, p.kind)) appendLine("  \"${w.name}.$k\" to \"$type\",")
+  for (w in widgets.sortedBy { it.name }) {
+    for (p in w.props) {
+      val type = if (p.kind == MappedKind.MARGIN) "Dp" else sourceType(p.kind)
+      for (k in wireKeys(p.name, p.kind)) appendLine("  \"${w.name}.$k\" to \"$type\",")
+    }
   }
   appendLine(")")
   appendLine()

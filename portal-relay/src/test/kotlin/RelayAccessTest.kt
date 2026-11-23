@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import com.sun.net.httpserver.HttpServer
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -75,8 +90,12 @@ class RelayAccessTest {
   @Test
   fun loopbackOriginsAreAllowed() {
     for (o in listOf(
-      "http://localhost", "http://localhost:8096", "https://localhost:8443", "http://127.0.0.1:8096",
-      "http://[::1]:8096", "HTTP://LOCALHOST:8096",
+      "http://localhost",
+      "http://localhost:8096",
+      "https://localhost:8443",
+      "http://127.0.0.1:8096",
+      "http://[::1]:8096",
+      "HTTP://LOCALHOST:8096",
     )) {
       assertTrue(RelayAccess.originAllowed(o), o)
     }
@@ -111,7 +130,10 @@ class RelayAccessTest {
         append("Content-Length: ${body.length}\r\nConnection: close\r\n\r\n")
         append(body)
       }
-      s.getOutputStream().apply { write(req.encodeToByteArray()); flush() }
+      s.getOutputStream().apply {
+        write(req.encodeToByteArray())
+        flush()
+      }
       val lines = s.getInputStream().readBytes().decodeToString().substringBefore("\r\n\r\n").split("\r\n")
       val code = lines.first().split(' ')[1].toInt()
       val map = lines.drop(1).groupBy({ it.substringBefore(':').trim().lowercase() }, { it.substringAfter(':').trim() })
@@ -186,12 +208,20 @@ class RelayAccessTest {
   @Test
   fun aPreflightIsAnsweredOnlyForALoopbackOrigin() = withServer { port, _ ->
     val foreign = raw(
-      port, "OPTIONS", "/x", "Origin" to "https://evil.example", "Access-Control-Request-Method" to "POST",
+      port,
+      "OPTIONS",
+      "/x",
+      "Origin" to "https://evil.example",
+      "Access-Control-Request-Method" to "POST",
     )
     assertEquals(403, foreign.code)
     assertTrue(foreign.header("Access-Control-Allow-Origin").isEmpty())
     val local = raw(
-      port, "OPTIONS", "/x", "Origin" to "http://localhost:18196", "Access-Control-Request-Method" to "POST",
+      port,
+      "OPTIONS",
+      "/x",
+      "Origin" to "http://localhost:18196",
+      "Access-Control-Request-Method" to "POST",
     )
     assertEquals(listOf("http://localhost:18196"), local.header("Access-Control-Allow-Origin"))
   }

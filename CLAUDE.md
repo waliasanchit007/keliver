@@ -128,8 +128,10 @@ Central, NF2's QuickJS 2026 engine; the version is `RELEASE_VERSION` in
 nor `portal-tools-v*`), then dispatch `zipline-fork.yml` from `main` with the
 tag, `publish` ticked and the version typed out. It uploads in **review mode**:
 nothing is released until someone compares the Portal's deployment with the
-run's signed `zipline-fork-repo-central-<tag>` artifact and presses Publish.
-Procedure: the fork's README, "Publishing the fork". Not yet published.
+run's `zipline-fork-sha1-<tag>` artifact (the uploaded bundle's sha1 manifest,
+with the bundle) and presses Publish; Drop it unless every job is green, and
+whenever the upload step failed. Procedure: the fork's README, "Publishing the
+fork". Not yet published.
 
 **Store identity** is a contract with one authority (`PortalConfig.storeDir()`)
 and one shell mirror (`scripts/keliver-store-path.sh`), written down in

@@ -33,7 +33,7 @@
 #                      app is edited: this prints the lines to add. Your app
 #                      supplies the plugins: Kotlin 2.2.0 with its Compose
 #                      plugin and app.cash.zipline 1.22.0 (Keliver 0.4.x);
-#                      from Keliver 0.5.0, Kotlin 2.4.20 and Keliver's Zipline
+#                      from Keliver 0.5.0, Kotlin 2.4.21 and Keliver's Zipline
 #                      fork, plugin dev.keliver.zipline 1.28.0-keliver.1.
 #   --public-key-file  default: keys/ed25519.pub in this app's portal store,
 #                      found by keliver-store-path.sh. The key is copied into

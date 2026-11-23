@@ -19,10 +19,13 @@ jobs:
     continue-on-error: true  # informational only
     strategy:
       fail-fast: false
+      # No leg below the pin: the Keliver fork of Zipline's Gradle plugin is built with Kotlin
+      # 2.4.21 and requires that kotlin-gradle-plugin, so Gradle lifts an older -PkotlinVersion to
+      # 2.4.21 and such a leg would only rebuild the pin (the fork's README, "Kotlin
+      # compatibility"). Add newer Kotlin versions here when they ship: a higher version wins.
       matrix:
         kotlin:
-          - "2.4.20"  # current pin (sanity check); Zipline 1.28.0 is built on it
-          - "2.4.21"
+          - "2.4.21"  # current pin (sanity check)
 
     steps:
       - uses: actions/checkout@v4

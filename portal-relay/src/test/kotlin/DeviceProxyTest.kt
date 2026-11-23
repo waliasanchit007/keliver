@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import app.cash.zipline.loader.ZiplineHttpClient
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.decoder.Decoder
@@ -203,8 +218,11 @@ class DeviceProxyTest {
   @Test
   fun theHostsDebugLinkCheckAcceptsEveryLinkTheRelayMakes() {
     val lan = setOf(
-      InetAddress.getByName("192.168.1.20"), InetAddress.getByName("10.1.2.3"), InetAddress.getByName("127.0.0.1"),
-      InetAddress.getByName("172.20.0.5"), InetAddress.getByName("100.100.1.2"),
+      InetAddress.getByName("192.168.1.20"),
+      InetAddress.getByName("10.1.2.3"),
+      InetAddress.getByName("127.0.0.1"),
+      InetAddress.getByName("172.20.0.5"),
+      InetAddress.getByName("100.100.1.2"),
     )
     val scheme = "keliver-com.example.shop"
     for (port in listOf(1024, 8078, 9000, 65535)) {
@@ -235,8 +253,10 @@ class DeviceProxyTest {
       assertNull(DeviceProxy.debugLink(scheme, u), u)
       assertNull(hosttemplate.DebugBundleLink.bundleServer(u), u) // the host agrees
     }
-    val items = (Json.parseToJsonElement(DeviceProxy.statusJson(listOf("http://8.8.8.8:8078"), linkScheme = scheme)).jsonObject["urls"]
-      as kotlinx.serialization.json.JsonArray).map { it.jsonObject }
+    val items = (
+      Json.parseToJsonElement(DeviceProxy.statusJson(listOf("http://8.8.8.8:8078"), linkScheme = scheme)).jsonObject["urls"]
+        as kotlinx.serialization.json.JsonArray
+      ).map { it.jsonObject }
     assertEquals("null", items.single()["link"].toString())
     assertEquals(QrCode.encode("http://8.8.8.8:8078").toSvg(), items.single()["qrSvg"]!!.jsonPrimitive.content)
   }

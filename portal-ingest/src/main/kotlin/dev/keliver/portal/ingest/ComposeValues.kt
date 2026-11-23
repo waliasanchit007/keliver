@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.compose.foundation.layout.Arrangement
@@ -8,7 +23,6 @@ import dev.keliver.compose.foundation.layout.VerticalArrangementCodec
 import dev.keliver.compose.foundation.shape.CircleShape
 import dev.keliver.compose.foundation.shape.CutCornerShape
 import dev.keliver.compose.foundation.shape.RoundedCornerShape
-import dev.keliver.compose.material3.MaterialTheme
 import dev.keliver.compose.ui.Alignment
 import dev.keliver.compose.ui.AlignmentCodec
 import dev.keliver.compose.ui.HorizontalAlignmentCodec
@@ -54,12 +68,9 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.float
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
-import org.jetbrains.kotlin.psi.KtBinaryExpressionWithTypeRHS
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtConstantExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -419,7 +430,7 @@ internal object ComposeValues {
     val ref = c.referenceName
     val base = when {
       ref == "LocalContentColor" -> Spelled("LocalContentColor.current", setOf("$M3.LocalContentColor"))
-      ref != null -> Spelled("MaterialTheme.${ref}", setOf("$M3.MaterialTheme"))
+      ref != null -> Spelled("MaterialTheme.$ref", setOf("$M3.MaterialTheme"))
       c == Color.Unspecified -> Spelled("Color.Unspecified", setOf("$GRAPHICS.Color"))
       else -> Spelled("Color(0x${c.argb.toUInt().toString(16).padStart(8, '0').uppercase()})", setOf("$GRAPHICS.Color"))
     }
@@ -580,19 +591,32 @@ internal object ComposeValues {
   )
   private val FONT_STYLES = linkedMapOf("Normal" to FontStyle.Normal, "Italic" to FontStyle.Italic)
   private val FONT_FAMILIES = linkedMapOf(
-    "Default" to FontFamily.Default, "SansSerif" to FontFamily.SansSerif, "Serif" to FontFamily.Serif,
-    "Monospace" to FontFamily.Monospace, "Cursive" to FontFamily.Cursive,
+    "Default" to FontFamily.Default,
+    "SansSerif" to FontFamily.SansSerif,
+    "Serif" to FontFamily.Serif,
+    "Monospace" to FontFamily.Monospace,
+    "Cursive" to FontFamily.Cursive,
   )
   private val TEXT_ALIGNS = linkedMapOf(
-    "Left" to TextAlign.Left, "Right" to TextAlign.Right, "Center" to TextAlign.Center, "Justify" to TextAlign.Justify,
-    "Start" to TextAlign.Start, "End" to TextAlign.End, "Unspecified" to TextAlign.Unspecified,
+    "Left" to TextAlign.Left,
+    "Right" to TextAlign.Right,
+    "Center" to TextAlign.Center,
+    "Justify" to TextAlign.Justify,
+    "Start" to TextAlign.Start,
+    "End" to TextAlign.End,
+    "Unspecified" to TextAlign.Unspecified,
   )
   private val TEXT_OVERFLOWS = linkedMapOf(
-    "Clip" to TextOverflow.Clip, "Ellipsis" to TextOverflow.Ellipsis, "Visible" to TextOverflow.Visible,
-    "StartEllipsis" to TextOverflow.StartEllipsis, "MiddleEllipsis" to TextOverflow.MiddleEllipsis,
+    "Clip" to TextOverflow.Clip,
+    "Ellipsis" to TextOverflow.Ellipsis,
+    "Visible" to TextOverflow.Visible,
+    "StartEllipsis" to TextOverflow.StartEllipsis,
+    "MiddleEllipsis" to TextOverflow.MiddleEllipsis,
   )
   private val TEXT_DECORATIONS = linkedMapOf(
-    "None" to TextDecoration.None, "Underline" to TextDecoration.Underline, "LineThrough" to TextDecoration.LineThrough,
+    "None" to TextDecoration.None,
+    "Underline" to TextDecoration.Underline,
+    "LineThrough" to TextDecoration.LineThrough,
   )
   private val ALIGNMENTS: Map<String, Alignment> = linkedMapOf(
     "TopStart" to Alignment.TopStart, "TopCenter" to Alignment.TopCenter, "TopEnd" to Alignment.TopEnd,
@@ -600,24 +624,44 @@ internal object ComposeValues {
     "BottomStart" to Alignment.BottomStart, "BottomCenter" to Alignment.BottomCenter, "BottomEnd" to Alignment.BottomEnd,
   )
   private val H_ALIGNMENTS: Map<String, Any> = linkedMapOf(
-    "Start" to Alignment.Start, "CenterHorizontally" to Alignment.CenterHorizontally, "End" to Alignment.End,
+    "Start" to Alignment.Start,
+    "CenterHorizontally" to Alignment.CenterHorizontally,
+    "End" to Alignment.End,
   )
   private val V_ALIGNMENTS: Map<String, Any> = linkedMapOf(
-    "Top" to Alignment.Top, "CenterVertically" to Alignment.CenterVertically, "Bottom" to Alignment.Bottom,
+    "Top" to Alignment.Top,
+    "CenterVertically" to Alignment.CenterVertically,
+    "Bottom" to Alignment.Bottom,
   )
   private val H_ARRANGEMENTS: Map<String, Any> = linkedMapOf(
-    "Start" to Arrangement.Start, "End" to Arrangement.End, "Center" to Arrangement.Center,
-    "SpaceBetween" to Arrangement.SpaceBetween, "SpaceAround" to Arrangement.SpaceAround, "SpaceEvenly" to Arrangement.SpaceEvenly,
+    "Start" to Arrangement.Start,
+    "End" to Arrangement.End,
+    "Center" to Arrangement.Center,
+    "SpaceBetween" to Arrangement.SpaceBetween,
+    "SpaceAround" to Arrangement.SpaceAround,
+    "SpaceEvenly" to Arrangement.SpaceEvenly,
   )
   private val V_ARRANGEMENTS: Map<String, Any> = linkedMapOf(
-    "Top" to Arrangement.Top, "Bottom" to Arrangement.Bottom, "Center" to Arrangement.Center,
-    "SpaceBetween" to Arrangement.SpaceBetween, "SpaceAround" to Arrangement.SpaceAround, "SpaceEvenly" to Arrangement.SpaceEvenly,
+    "Top" to Arrangement.Top,
+    "Bottom" to Arrangement.Bottom,
+    "Center" to Arrangement.Center,
+    "SpaceBetween" to Arrangement.SpaceBetween,
+    "SpaceAround" to Arrangement.SpaceAround,
+    "SpaceEvenly" to Arrangement.SpaceEvenly,
   )
   private val CONTENT_SCALES = linkedMapOf(
-    "Crop" to ContentScale.Crop, "Fit" to ContentScale.Fit, "FillHeight" to ContentScale.FillHeight, "FillWidth" to ContentScale.FillWidth,
-    "Inside" to ContentScale.Inside, "None" to ContentScale.None, "FillBounds" to ContentScale.FillBounds,
+    "Crop" to ContentScale.Crop,
+    "Fit" to ContentScale.Fit,
+    "FillHeight" to ContentScale.FillHeight,
+    "FillWidth" to ContentScale.FillWidth,
+    "Inside" to ContentScale.Inside,
+    "None" to ContentScale.None,
+    "FillBounds" to ContentScale.FillBounds,
   )
   private val FILTER_QUALITIES = linkedMapOf(
-    "None" to FilterQuality.None, "Low" to FilterQuality.Low, "Medium" to FilterQuality.Medium, "High" to FilterQuality.High,
+    "None" to FilterQuality.None,
+    "Low" to FilterQuality.Low,
+    "Medium" to FilterQuality.Medium,
+    "High" to FilterQuality.High,
   )
 }

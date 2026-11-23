@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier
 import java.io.File
@@ -120,13 +135,17 @@ class SignedBundleVerificationTest {
     // encoding we are about to hand Zipline.
     val probe = "keliver foreign-key self-check".toByteArray()
     val signature = java.security.Signature.getInstance("Ed25519").run {
-      initSign(foreign.private); update(probe); sign()
+      initSign(foreign.private)
+      update(probe)
+      sign()
     }
     val rebuilt = java.security.KeyFactory.getInstance("Ed25519").generatePublic(
       java.security.spec.X509EncodedKeySpec(x509FromRawEd25519(foreignRaw)),
     )
     val selfCheck = java.security.Signature.getInstance("Ed25519").run {
-      initVerify(rebuilt); update(probe); verify(signature)
+      initVerify(rebuilt)
+      update(probe)
+      verify(signature)
     }
     assertTrue(
       selfCheck,
@@ -204,11 +223,15 @@ class SignedBundleVerificationTest {
 
   /** RFC 8032 raw encoding: little-endian y, high bit of the last byte = x parity. */
   private fun rawEd25519PublicKey(key: java.security.interfaces.EdECPublicKey): ByteArray {
-    val y = key.point.y.toByteArray()          // big-endian, possibly with a sign byte
+    val y = key.point.y.toByteArray() // big-endian, possibly with a sign byte
     val out = ByteArray(32)
     var i = y.size - 1
     var j = 0
-    while (i >= 0 && j < 32) { out[j] = y[i]; i--; j++ }
+    while (i >= 0 && j < 32) {
+      out[j] = y[i]
+      i--
+      j++
+    }
     if (key.point.isXOdd) out[31] = (out[31].toInt() or 0x80).toByte()
     return out
   }

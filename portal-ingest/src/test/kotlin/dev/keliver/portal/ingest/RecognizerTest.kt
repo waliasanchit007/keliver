@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.Contract
@@ -90,20 +105,34 @@ class RecognizerTest {
   @Test fun exporterRoundTrip() {
     val doc = UiDocument(
       screen = "main",
-      root = DocNode.Widget(Handle(1), "StyledBox",
+      root = DocNode.Widget(
+        Handle(1),
+        "StyledBox",
         props = mapOf("cornerRadiusDp" to lit(12), "fillWidth" to lit(true)),
         children = listOf(
-          DocNode.Widget(Handle(2), "Column", children = listOf(
-            DocNode.Widget(Handle(3), "StyledText",
-              props = mapOf("text" to PropValue.Bind("title"), "fontSize" to lit(22)),
-              modifiers = mapOf("Padding.allDp" to lit(8))),
-            DocNode.Widget(Handle(4), "Button",
-              props = mapOf("text" to lit("Buy"), "onClick" to PropValue.Action("buy"))),
-            DocNode.Widget(Handle(5), "Spacer", props = mapOf("height" to PropValue.Lit("d", d = 12.0))),
-          )),
-        )),
+          DocNode.Widget(
+            Handle(2),
+            "Column",
+            children = listOf(
+              DocNode.Widget(
+                Handle(3),
+                "StyledText",
+                props = mapOf("text" to PropValue.Bind("title"), "fontSize" to lit(22)),
+                modifiers = mapOf("Padding.allDp" to lit(8)),
+              ),
+              DocNode.Widget(
+                Handle(4),
+                "Button",
+                props = mapOf("text" to lit("Buy"), "onClick" to PropValue.Action("buy")),
+              ),
+              DocNode.Widget(Handle(5), "Spacer", props = mapOf("height" to PropValue.Lit("d", d = 12.0))),
+            ),
+          ),
+        ),
+      ),
       contract = Contract(fields = mapOf("title" to "String"), actions = listOf("buy")),
-      version = 7, nextHandle = 10,
+      version = 7,
+      nextHandle = 10,
     )
     val exported = exportKotlin(doc.toWidgetTree(), functionName = "PortalScreen")
     val r = Recognizer.recognize("main.kt", exported)!!
@@ -181,7 +210,7 @@ class RecognizerTest {
     val doc = UiDocument("main", r.root, r.contract, 0, 100)
     val exported = exportKotlin(doc.toWidgetTree(), functionName = "Feed")
     assertTrue("b.posts.forEach { post ->" in exported, exported)
-    assertTrue("text = post.title," in exported, exported)          // item-scoped, NOT b.post.title
+    assertTrue("text = post.title," in exported, exported) // item-scoped, NOT b.post.title
     assertTrue("val posts: List<Post>" in exported)
     assertTrue("interface Post {" in exported)
     assertTrue("val title: String" in exported)
@@ -195,14 +224,27 @@ class RecognizerTest {
   @Test fun conditionRepeatRoundTripThroughExport() {
     val doc = UiDocument(
       screen = "main",
-      root = DocNode.Widget(Handle(1), "Column", children = listOf(
-        DocNode.Widget(Handle(2), "Condition", mapOf("field" to PropValue.Lit("s", s = "showBanner")),
-          children = listOf(DocNode.Widget(Handle(3), "StyledText", mapOf("text" to lit("Hi"))))),
-        DocNode.Widget(Handle(4), "Repeat",
-          mapOf("items" to PropValue.Lit("s", s = "cards"), "item" to PropValue.Lit("s", s = "card")),
-          children = listOf(DocNode.Widget(Handle(5), "StyledText", mapOf("text" to lit("row"))))),
-      )),
-      contract = Contract(), version = 0, nextHandle = 10,
+      root = DocNode.Widget(
+        Handle(1),
+        "Column",
+        children = listOf(
+          DocNode.Widget(
+            Handle(2),
+            "Condition",
+            mapOf("field" to PropValue.Lit("s", s = "showBanner")),
+            children = listOf(DocNode.Widget(Handle(3), "StyledText", mapOf("text" to lit("Hi")))),
+          ),
+          DocNode.Widget(
+            Handle(4),
+            "Repeat",
+            mapOf("items" to PropValue.Lit("s", s = "cards"), "item" to PropValue.Lit("s", s = "card")),
+            children = listOf(DocNode.Widget(Handle(5), "StyledText", mapOf("text" to lit("row")))),
+          ),
+        ),
+      ),
+      contract = Contract(),
+      version = 0,
+      nextHandle = 10,
     )
     val exported = exportKotlin(doc.toWidgetTree(), functionName = "S")
     // Real control flow in the output + a typed contract.
@@ -480,29 +522,39 @@ class RecognizerTest {
   @Test fun reconcilerPreservesHandlesAcrossEditsAndAllocatesNew() {
     val old = UiDocument(
       screen = "main",
-      root = DocNode.Widget(Handle(1), "Column", children = listOf(
-        DocNode.Widget(Handle(2), "StyledText", mapOf("text" to lit("a"))),
-        DocNode.Widget(Handle(3), "Button", mapOf("text" to lit("Buy"))),
-      )),
-      contract = Contract(), version = 5, nextHandle = 10,
+      root = DocNode.Widget(
+        Handle(1),
+        "Column",
+        children = listOf(
+          DocNode.Widget(Handle(2), "StyledText", mapOf("text" to lit("a"))),
+          DocNode.Widget(Handle(3), "Button", mapOf("text" to lit("Buy"))),
+        ),
+      ),
+      contract = Contract(),
+      version = 5,
+      nextHandle = 10,
     )
     // parsed: text edited, a Spacer inserted between, button kept
     val parsed = Recognized(
-      root = DocNode.Widget(Handle(-1), "Column", children = listOf(
-        DocNode.Widget(Handle(-2), "StyledText", mapOf("text" to lit("EDITED"))),
-        DocNode.Widget(Handle(-3), "Spacer", mapOf("height" to PropValue.Lit("d", d = 8.0))),
-        DocNode.Widget(Handle(-4), "Button", mapOf("text" to lit("Buy"))),
-      )),
+      root = DocNode.Widget(
+        Handle(-1),
+        "Column",
+        children = listOf(
+          DocNode.Widget(Handle(-2), "StyledText", mapOf("text" to lit("EDITED"))),
+          DocNode.Widget(Handle(-3), "Spacer", mapOf("height" to PropValue.Lit("d", d = 8.0))),
+          DocNode.Widget(Handle(-4), "Button", mapOf("text" to lit("Buy"))),
+        ),
+      ),
       contract = Contract(),
       screenName = "PortalScreen",
     )
     val out = Reconciler.reconcile(old, parsed)
     val root = out.root as DocNode.Widget
     assertEquals(Handle(1), root.handle)
-    assertEquals(Handle(2), root.children[0].handle)            // matched: kept
+    assertEquals(Handle(2), root.children[0].handle) // matched: kept
     assertEquals(lit("EDITED"), (root.children[0] as DocNode.Widget).props["text"])
-    assertEquals(Handle(10), root.children[1].handle)           // new: allocated
-    assertEquals(Handle(3), root.children[2].handle)            // matched: kept
+    assertEquals(Handle(10), root.children[1].handle) // new: allocated
+    assertEquals(Handle(3), root.children[2].handle) // matched: kept
     assertEquals(11, out.nextHandle)
   }
 }

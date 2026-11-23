@@ -13,7 +13,7 @@ apply plugin: 'app.cash.zipline' // IR plugin: rewrites the host's zipline.take/
 //
 // A PROVIDER, not a value: resolving while this file is read made every task in
 // the build depend on an identity most of them never use. Queried only when
-// generatePortalKey is in the graph, i.e. when an iOS framework is compiled.
+// generatePortalKey is in the graph, i.e. when iosMain's sources are compiled or packaged.
 //
 // THE DIRECTORY IS THIS TASK'S, AND HOLDS EXACTLY ONE FILE (#77). It is an
 // iosMain source directory, so ANYTHING in it is compiled into the framework —
@@ -76,9 +76,6 @@ def generatePortalKey = tasks.register('generatePortalKey') {
     }
   }
 }
-tasks.configureEach { t ->
-  if (t.name.startsWith('compileKotlinIos')) t.dependsOn(generatePortalKey)
-}
 
 kotlin {
   [iosArm64(), iosSimulatorArm64()].each { iosTarget ->
@@ -93,7 +90,10 @@ kotlin {
 
   sourceSets {
     iosMain {
-      kotlin.srcDir(portalKeyDir)
+      // The task, not its directory: every task reading iosMain's sources then depends on it.
+      // Wiring only compileKotlinIos* left compileIosMainKotlinMetadata (and sourcesJar) reading
+      // the directory with no dependency, which fails in a full `build`.
+      kotlin.srcDir(generatePortalKey)
       dependencies {
         implementation projects.keliverTreehouseHost
         implementation projects.keliverTreehouseHostComposeui

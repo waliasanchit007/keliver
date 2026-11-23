@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.Action
 import dev.keliver.portal.Cond
 import dev.keliver.portal.CondJoin
@@ -11,12 +26,12 @@ import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.lit
-import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.events.Event
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.events.Event
 
 /**
  * K6: an equality or compound condition is shown read-only (its shape is the
@@ -41,13 +56,23 @@ class EditorCompoundConditionsTest {
     val inputs = row.querySelectorAll("input")
     // No field / negate editor: just the two branches.
     assertEquals(2, inputs.length)
-    (inputs.item(1) as HTMLInputElement).let { it.value = "Cash"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    (inputs.item(1) as HTMLInputElement).let {
+      it.value = "Cash"
+      it.dispatchEvent(Event("input"))
+      it.dispatchEvent(Event("change"))
+    } // E11: committed
     assertEquals(
       DocOp.SetProp(
-        Handle(7), "text",
+        Handle(7),
+        "text",
         PropValue.Conditional(
-          "kind", "eq", whenTrue = lit("Card"), whenFalse = lit("Cash"),
-          operand = PropValue.Token("C.Card", lit("card"), "app.C"), more = listOf(CondTerm("busy", negate = true)), join = "or",
+          "kind",
+          "eq",
+          whenTrue = lit("Card"),
+          whenFalse = lit("Cash"),
+          operand = PropValue.Token("C.Card", lit("card"), "app.C"),
+          more = listOf(CondTerm("busy", negate = true)),
+          join = "or",
         ),
       ),
       sent.single(),
@@ -59,7 +84,10 @@ class EditorCompoundConditionsTest {
     assertEquals(2, evSelects.length) // E28: each branch's action from the contract's list
     openContract = { dev.keliver.portal.document.Contract(actions = listOf("tap", "go")) }
     val ev2 = conditionalEventRow(5, "onClick", Conditional(compound, Action("tap"), null)) { op, _, _ -> events += op }
-    (ev2.querySelector("select[aria-label$=action]") as org.w3c.dom.HTMLSelectElement).let { it.value = "go"; it.dispatchEvent(Event("change")) }
+    (ev2.querySelector("select[aria-label$=action]") as org.w3c.dom.HTMLSelectElement).let {
+      it.value = "go"
+      it.dispatchEvent(Event("change"))
+    }
     assertEquals(PropValue.Action("go"), ((events.single() as DocOp.SetProp).value as PropValue.Conditional).whenTrue)
     assertEquals("or", ((events.single() as DocOp.SetProp).value as PropValue.Conditional).join)
   }

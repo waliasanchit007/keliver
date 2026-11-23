@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.WidgetNode
@@ -10,13 +25,13 @@ import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
-import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
-import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
+import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
 
 /**
  * K3: conditional prop values (`colorArgb = if (b.selected) C.Ink else C.White`)
@@ -149,23 +164,27 @@ class ConditionalGrammarTest {
     val color = child(d, 0).props["colorArgb"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "colorArgb", color.copy(whenFalse = lit(-16777216)))).doc),
-      "else C.White)", "else -16777216)",
+      "else C.White)",
+      "else -16777216)",
     )
     val icon = child(d, 1).props["name"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 1).handle, "name", icon.copy(whenTrue = lit("Up")))).doc),
-      "if (b.open) \"KeyboardArrowUp\"", "if (b.open) \"Up\"",
+      "if (b.open) \"KeyboardArrowUp\"",
+      "if (b.open) \"Up\"",
     )
     val onClick = child(d, 4).props["onClick"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 4).handle, "onClick", onClick.copy(whenTrue = PropValue.Action("go")))).doc),
-      "if (b.enabled) b::tap", "if (b.enabled) b::go",
+      "if (b.enabled) b::tap",
+      "if (b.enabled) b::go",
     )
     val row = child(d, 3)
     val text = (row.children.single() as DocNode.Widget)
     assertOnly(
       merge(d.apply(DocOp.SetProp(text.handle, "text", (text.props["text"] as PropValue.Conditional).copy(whenTrue = lit("—")))).doc),
-      "\"none\" else", "\"—\" else",
+      "\"none\" else",
+      "\"—\" else",
     )
   }
 
@@ -174,12 +193,14 @@ class ConditionalGrammarTest {
     val top = child(d, 2).modifiers["Margin.margin.top"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetModifier(child(d, 2).handle, "Margin.margin.top", top.copy(whenTrue = lit(12.0)))).doc),
-      "if (b.raised) 8.dp", "if (b.raised) 12.dp",
+      "if (b.raised) 8.dp",
+      "if (b.raised) 12.dp",
     )
     val start = child(d, 3).props["margin.start"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 3).handle, "margin.start", start.copy(whenFalse = lit(2.0)))).doc),
-      "16.dp else 0.dp, top", "16.dp else 2.dp, top",
+      "16.dp else 0.dp, top",
+      "16.dp else 2.dp, top",
     )
   }
 
@@ -188,16 +209,19 @@ class ConditionalGrammarTest {
     val color = child(d, 0).props["colorArgb"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "colorArgb", color.copy(negate = true))).doc),
-      "if (b.selected) C.Ink", "if (!b.selected) C.Ink",
+      "if (b.selected) C.Ink",
+      "if (!b.selected) C.Ink",
     )
     // A Condition node's condition: `!b.hidden` -> `b.hidden`, its blocks untouched.
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 5).handle, "negate", lit(false))).doc),
-      "if (!b.hidden) {", "if (b.hidden) {",
+      "if (!b.hidden) {",
+      "if (b.hidden) {",
     )
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 7).handle, "test", lit("empty"))).doc),
-      "if (b.note.isBlank()) {", "if (b.note.isEmpty()) {",
+      "if (b.note.isBlank()) {",
+      "if (b.note.isEmpty()) {",
     )
   }
 
@@ -207,7 +231,8 @@ class ConditionalGrammarTest {
     val hidden = elseNode.children.single() as DocNode.Widget
     assertOnly(
       merge(d.apply(DocOp.SetProp(hidden.handle, "text", lit("gone"))).doc),
-      "StyledText(text = \"hidden\")", "StyledText(text = \"gone\")",
+      "StyledText(text = \"hidden\")",
+      "StyledText(text = \"gone\")",
     )
     val inserted = d.apply(
       DocOp.InsertNode(elseNode.handle, hidden.handle, DocNode.Widget(Handle(0), "StyledText", mapOf("text" to lit("more")))),

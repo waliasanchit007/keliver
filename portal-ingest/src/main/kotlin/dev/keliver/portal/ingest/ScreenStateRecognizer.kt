@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
@@ -160,8 +175,11 @@ object ScreenStateRecognizer {
         when (scope.bindingOf(callee, STATE_CLASS_FQ)) {
           Binding.Ours -> Call.Ok(body)
           Binding.Unbound ->
-            if (callee == STATE_CLASS) Call.Bad("$STATE_CLASS is not imported from $PACKAGE (add `import $STATE_CLASS_FQ`)")
-            else Call.Bad(shape)
+            if (callee == STATE_CLASS) {
+              Call.Bad("$STATE_CLASS is not imported from $PACKAGE (add `import $STATE_CLASS_FQ`)")
+            } else {
+              Call.Bad(shape)
+            }
           Binding.Elsewhere ->
             if (callee == STATE_CLASS) {
               Call.Bad("$STATE_CLASS here is ${scope.explicit[callee]?.let { "`$it`" } ?: "this file's own $STATE_CLASS"}, not $STATE_CLASS_FQ")

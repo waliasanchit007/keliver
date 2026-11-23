@@ -720,9 +720,9 @@ out="$( cd "$APPF" && "$SCAFFOLD" --bundle-server https://bundles.example --publ
 HF="$APPF/host-ios/build.gradle"
 [ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.1'$" "$HF" \
   && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$HF" && grep -q "implementation 'dev.keliver.zipline:zipline-loader:1.28.0-keliver.1'" "$HF" \
-  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.20'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
+  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
   && grep -q "implementation 'dev.keliver:keliver-treehouse-host:0.5.0'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
-  && ok "NF2: an app on 0.5.0 gets an iOS host on Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries), Kotlin 2.4.20, Compose 1.12.2" \
+  && ok "NF2: an app on 0.5.0 gets an iOS host on Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries), Kotlin 2.4.21, Compose 1.12.2" \
   || bad "NF2: the iOS host of an app on 0.5.0 (rc=$rc): $(grep -hE 'zipline|kotlin.multiplatform|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
 
 grep -rqF -f "$PRIV" "$DISP"/demo*/host-ios 2>/dev/null && bad "the private key is in a scaffolded host" \

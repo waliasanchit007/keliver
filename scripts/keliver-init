@@ -29,7 +29,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # The toolchain the Keliver version was built with (the published 0.4.x line: Kotlin 2.2.0). From
-# 0.5.0 Keliver builds on its Zipline fork with Kotlin 2.4.20 (keliver-runtime-line.sh, which
+# 0.5.0 Keliver builds on its Zipline fork with Kotlin 2.4.21 (keliver-runtime-line.sh, which
 # keliver-new-device-target.sh also reads when it adds Zipline to this app).
 KOTLIN_VERSION=2.2.0
 COMPOSE_VERSION=1.8.2

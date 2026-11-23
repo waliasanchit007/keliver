@@ -1,13 +1,28 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
-import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.ComponentSlotSpec
+import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropSpec
-import dev.keliver.portal.serializeTree
 import dev.keliver.portal.ingest.Recognizer
 import dev.keliver.portal.ingest.TokenTable
+import dev.keliver.portal.serializeTree
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -91,8 +106,15 @@ object Components {
     specs.keys.forEach { dfs(it, emptyList()) }
     if (onCycle.isEmpty()) return specs
     return specs.mapValues { (n, s) ->
-      if (n in onCycle) s.copy(transparent = false, body = null,
-        diagnostic = dev.keliver.portal.cycleDiagnostic(n)) else s
+      if (n in onCycle) {
+        s.copy(
+          transparent = false,
+          body = null,
+          diagnostic = dev.keliver.portal.cycleDiagnostic(n),
+        )
+      } else {
+        s
+      }
     }
   }
 

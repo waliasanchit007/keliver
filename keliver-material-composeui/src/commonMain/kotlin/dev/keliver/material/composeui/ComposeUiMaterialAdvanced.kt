@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 @file:OptIn(ExperimentalMaterial3Api::class)
 
@@ -45,19 +56,24 @@ internal class ComposeUiVerticalDivider : VerticalDivider<@Composable (Modifier)
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3VerticalDivider(modifier = m, thickness = thickness.dp)
   }
-  override fun thickness(thickness: Int) { this.thickness = thickness }
+  override fun thickness(thickness: Int) {
+    this.thickness = thickness
+  }
 }
 
-internal class ComposeUiExtendedFloatingActionButton :
-  ExtendedFloatingActionButton<@Composable (Modifier) -> Unit> {
+internal class ComposeUiExtendedFloatingActionButton : ExtendedFloatingActionButton<@Composable (Modifier) -> Unit> {
   private var text by mutableStateOf("")
   private var onClick by mutableStateOf<(() -> Unit)?>(null)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3ExtendedFloatingActionButton(onClick = { onClick?.invoke() }, modifier = m) { M3Text(text) }
   }
-  override fun text(text: String) { this.text = text }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiSegmentedButtonRow : SegmentedButtonRow<@Composable (Modifier) -> Unit> {
@@ -76,9 +92,15 @@ internal class ComposeUiSegmentedButtonRow : SegmentedButtonRow<@Composable (Mod
       }
     }
   }
-  override fun options(options: List<String>) { this.options = options }
-  override fun selectedIndex(selectedIndex: Int) { this.selectedIndex = selectedIndex }
-  override fun onSelect(onSelect: ((Int) -> Unit)?) { this.onSelect = onSelect }
+  override fun options(options: List<String>) {
+    this.options = options
+  }
+  override fun selectedIndex(selectedIndex: Int) {
+    this.selectedIndex = selectedIndex
+  }
+  override fun onSelect(onSelect: ((Int) -> Unit)?) {
+    this.onSelect = onSelect
+  }
 }
 
 internal class ComposeUiDropdownMenu : DropdownMenu<@Composable (Modifier) -> Unit> {
@@ -94,8 +116,16 @@ internal class ComposeUiDropdownMenu : DropdownMenu<@Composable (Modifier) -> Un
       }
     }
   }
-  override fun expanded(expanded: Boolean) { this.expanded = expanded }
-  override fun options(options: List<String>) { this.options = options }
-  override fun onSelect(onSelect: ((Int) -> Unit)?) { this.onSelect = onSelect }
-  override fun onDismiss(onDismiss: (() -> Unit)?) { this.onDismiss = onDismiss }
+  override fun expanded(expanded: Boolean) {
+    this.expanded = expanded
+  }
+  override fun options(options: List<String>) {
+    this.options = options
+  }
+  override fun onSelect(onSelect: ((Int) -> Unit)?) {
+    this.onSelect = onSelect
+  }
+  override fun onDismiss(onDismiss: (() -> Unit)?) {
+    this.onDismiss = onDismiss
+  }
 }

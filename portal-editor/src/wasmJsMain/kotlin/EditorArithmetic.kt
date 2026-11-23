@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.Arith
 import dev.keliver.portal.IntDp
 import dev.keliver.portal.arithKotlin
@@ -28,8 +43,11 @@ internal fun arithmeticLiteral(v: Any?): PropValue.Lit = when (v) {
 
 /** The op replacing the expression at wire key [key] of node [nodeId] by its literal ([arithmeticLiteral]). */
 internal fun arithmeticLiteralOp(nodeId: Int, key: String, v: Any?): DocOp =
-  if (key.startsWith("mod.")) DocOp.SetModifier(Handle(nodeId.toLong()), key.removePrefix("mod."), arithmeticLiteral(v))
-  else DocOp.SetProp(Handle(nodeId.toLong()), key, arithmeticLiteral(v))
+  if (key.startsWith("mod.")) {
+    DocOp.SetModifier(Handle(nodeId.toLong()), key.removePrefix("mod."), arithmeticLiteral(v))
+  } else {
+    DocOp.SetProp(Handle(nodeId.toLong()), key, arithmeticLiteral(v))
+  }
 
 /** The read-only source of [v] and a button sending [onLiteral] with the literal that replaces it. */
 internal fun arithmeticEditor(v: Any?, onLiteral: (PropValue.Lit) -> Unit): HTMLElement {

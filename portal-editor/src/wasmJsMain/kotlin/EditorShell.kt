@@ -1,11 +1,17 @@
 /*
- * portal-editor — the REUSABLE editor shell entry (item ②). Extracted verbatim
- * from web-spike's Main.kt: the app-agnostic wasm-canvas editor runtime. A
- * consumer app depends on this module and ships a thin executable whose main()
- * calls runPortalEditor(itsAppPreviewEntry). See docs/ROADMAP.md item ②.
+ * Copyright (C) 2026 Keliver contributors.
  *
- *   tree (MutableState) --RenderNode--> guest composition --protocol--> host (canvas)
- *   edit the tree --recompose--> minimal changes --> live preview update
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Box
@@ -57,6 +63,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
+/*
+ * portal-editor — the REUSABLE editor shell entry (item ②). Extracted verbatim
+ * from web-spike's Main.kt: the app-agnostic wasm-canvas editor runtime. A
+ * consumer app depends on this module and ships a thin executable whose main()
+ * calls runPortalEditor(itsAppPreviewEntry). See docs/ROADMAP.md item ②.
+ *
+ *   tree (MutableState) --RenderNode--> guest composition --protocol--> host (canvas)
+ *   edit the tree --recompose--> minimal changes --> live preview update
+ */
+
 private val JSON = Json { ignoreUnknownKeys = true }
 
 /**
@@ -104,8 +120,11 @@ internal fun componentStage(root: dev.keliver.portal.WidgetNode): dev.keliver.po
   )
 
 internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
-  val tagged = if (n.type in UNRENDERED_TYPES) n
-  else n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
+  val tagged = if (n.type in UNRENDERED_TYPES) {
+    n
+  } else {
+    n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
+  }
   return tagged.copy(children = tagged.children.map { selectionTagged(it) })
 }
 
@@ -117,8 +136,11 @@ internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.port
 internal fun tagWith(n: dev.keliver.portal.WidgetNode, handle: Int): dev.keliver.portal.WidgetNode {
   val sourceHandle = (n.props[COMPONENT_SOURCE_HANDLE_PROP] as? Int) ?: handle
   val cleanProps = n.props - COMPONENT_SOURCE_HANDLE_PROP
-  val tagged = if (n.type in UNRENDERED_TYPES) n
-  else n.copy(props = cleanProps + ("mod.SelectionTag.handle" to sourceHandle))
+  val tagged = if (n.type in UNRENDERED_TYPES) {
+    n
+  } else {
+    n.copy(props = cleanProps + ("mod.SelectionTag.handle" to sourceHandle))
+  }
   return tagged.copy(
     props = if (tagged.type in UNRENDERED_TYPES) cleanProps else tagged.props,
     children = tagged.children.map { tagWith(it, sourceHandle) },
@@ -169,7 +191,9 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
 private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
   override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable =
-    object : Cancellable { override fun cancel() {} }
+    object : Cancellable {
+      override fun cancel() {}
+    }
 }
 
 /**

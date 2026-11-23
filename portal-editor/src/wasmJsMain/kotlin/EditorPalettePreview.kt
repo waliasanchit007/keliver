@@ -1,7 +1,17 @@
 /*
- * The palette's preview (owner, 25 Oct): hovering a palette row shows what it adds, drawn by the
- * canvas's own renderer — a component with its sample values, a widget as it is inserted — in a
- * small second canvas beside the palette. No guess at what a name looks like before dropping it.
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +27,12 @@ import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
 import dev.keliver.widget.compose.ComposeWidgetChildren
+
+/*
+ * The palette's preview (owner, 25 Oct): hovering a palette row shows what it adds, drawn by the
+ * canvas's own renderer — a component with its sample values, a widget as it is inserted — in a
+ * small second canvas beside the palette. No guess at what a name looks like before dropping it.
+ */
 
 /** The node the palette preview draws; null while no row is hovered. */
 internal val palettePreview = mutableStateOf<WidgetNode?>(null)

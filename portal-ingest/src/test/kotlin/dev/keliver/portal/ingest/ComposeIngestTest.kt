@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
@@ -141,8 +156,10 @@ class ComposeIngestTest {
     assertEquals(listOf("0:size#5"), chain(".size(36.dp)"))
     assertEquals(listOf("0:size#6"), chain(".size(36.dp, 20.dp)"))
     // Repeats keep their order: an ordered list, not one value per name.
-    assertEquals(listOf("0:padding#1", "1:background#18", "2:padding#1", "3:clip#23", "4:background#18"),
-      chain(".padding(8.dp).background(Color.White).padding(4.dp).clip(CircleShape).background(Color.Red)"))
+    assertEquals(
+      listOf("0:padding#1", "1:background#18", "2:padding#1", "3:clip#23", "4:background#18"),
+      chain(".padding(8.dp).background(Color.White).padding(4.dp).clip(CircleShape).background(Color.Red)"),
+    )
     // The Box with content and the one without are two overloads.
     assertEquals(listOf("$layout.Box#2"), widgets(recognize(box("Box(Modifier.size(8.dp))")).root).drop(1).map { it.type })
     assertEquals(listOf("$layout.Box#1"), widgets(recognize(box("Box(Modifier.size(8.dp)) {}")).root).drop(1).map { it.type })

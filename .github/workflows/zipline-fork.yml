@@ -13,7 +13,7 @@
 #     zipline-fork-v<RELEASE_VERSION> as apply.sh has it at the tag, on main's history; the typed
 #     version matches; the secrets exist.
 #   fork (every run; the tag's commit when one is given), from a fresh checkout of Zipline at its
-#     pinned commit:
+#     pinned commit (first, in seconds, the release checks' unit tests, checks_test.py):
 #     1. `apply.sh all`: clone, the QuickJS 2026 engine and both patches (exactly two), the Mac's
 #        JNI library, the command-line qjs builds and check-bigint (the patched engine matches Node
 #        on bigint-ops.js);
@@ -29,10 +29,15 @@
 #     5. `apply.sh release` to a directory, checked by check-release.py (coordinates, names,
 #        licences and notices, capabilities, Central's file rules, the engines, the plugin's
 #        BuildConfig), and `apply.sh check-capabilities` (a classpath with both groups is refused);
+#        `apply.sh check-upload-gate`: vanniktech's plugin writes no bundle and connects nowhere when
+#        the build fails after its Maven Central publication ran (a local listener, never Central);
 #     6. `apply.sh jvm-test-dist`: Zipline's JVM tests as a distribution, for jvm-matrix.
+#   host32 (every run, beside fork, Linux): qjs built for a 32-bit host (gcc -m32, a 4-byte size_t
+#     asserted at compile time), patched and unpatched: bigint-ops.js matches Node, and size-guards.js
+#     passes on the patched build through the fork's 32-bit size guards and fails on the unpatched one.
 #   jvm-matrix: that distribution on the six runners upstream's build.yaml uses, so every JNI
 #     library the jar carries is loaded and tested on its own host.
-#   publish (publish only; needs all three): the tag's commit built again on a fresh runner, no
+#   publish (publish only; needs all four): the tag's commit built again on a fresh runner, no
 #     build cache, with the JNI libraries fork built and jvm-matrix ran (`apply.sh jni-from`, from
 #     fork's directory), `apply.sh release --central`: signed to a directory, checked again
 #     (signatures included), every native library compared with fork's (identical sha256s: the six
@@ -40,7 +45,8 @@
 #     mode by a second Gradle invocation that may not sign anything again; the bundle it uploaded is
 #     compared file for file with the checked directory, and its sha1 manifest (also in the step
 #     summary, with the spot-check list), the bundle and the signed directory are kept as artifacts
-#     for 90 days, for the comparison in the Portal.
+#     for 90 days, for the comparison in the Portal. If the upload step fails, the summary says the
+#     upload may have happened and to Drop any deployment, and keeps the bundle if one was written.
 name: zipline-fork
 
 on:
@@ -89,8 +95,9 @@ jobs:
   #   guard       runs only on a publish dispatch.
   #   fork        runs unless the run was cancelled or guard did not pass (skipped is fine: not a
   #               publish run). A failed guard skips it, and so everything after it.
+  #   host32      the same condition as fork, in parallel with it.
   #   jvm-matrix  runs whenever fork succeeded (pull requests, dispatches, publish runs).
-  #   publish     runs only on a publish dispatch with guard, fork and every jvm-matrix leg
+  #   publish     runs only on a publish dispatch with guard, fork, host32 and every jvm-matrix leg
   #               successful, and the run not cancelled.
   # L2 of review 2: guard resolves the tag to its commit once; every later job checks out that SHA
   # (fork passes the SHA it built on), so a tag moved during the run is never built.
@@ -171,6 +178,11 @@ jobs:
         id: sha
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      # Seconds, before hours of build (review 4 of PR #289): publish-checks.py and check-release.py's
+      # licence-path rule on synthetic repositories.
+      - name: Unit tests of the release checks
+        run: python3 -I keliver-compose-gatea-profile/engine/zipline-fork/checks_test.py -v
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -221,6 +233,12 @@ jobs:
           scripts/zipline-fork.sh release "$WORK" "$REPO"
           scripts/zipline-fork.sh check-capabilities "$WORK" "$REPO"
 
+      # What the publish job's upload relies on from vanniktech's plugin (review 4 of PR #289, N-2):
+      # a build that fails after its Maven Central publication ran writes no bundle and connects
+      # nowhere; the control run writes one and connects. Every connection goes to a local listener.
+      - name: The upload gate, against a local listener (apply.sh check-upload-gate)
+        run: scripts/zipline-fork.sh check-upload-gate "$WORK"
+
       - name: The JVM tests as a distribution, for every host (apply.sh jvm-test-dist)
         run: scripts/zipline-fork.sh jvm-test-dist "$WORK"
 
@@ -242,6 +260,54 @@ jobs:
         with:
           name: zipline-fork-test-results
           path: build/zipline-fork/work/zipline/*/build/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The fork's 32-bit size guards on a real 32-bit build (size_t is 4 bytes, as on armeabi-v7a and
+  # x86), which no other job has: qjs from the patched engine and the unpatched release with
+  # QuickJS's CONFIG_M32 (gcc -m32, gcc-multilib), each file compiled with a static assert that
+  # size_t is 4 bytes. bigint-ops.js must match Node; size-guards.js, one process per case, must
+  # print each case's size-guards.expected lines on the patched build (only the guard can) and must
+  # not on the unpatched one, on any case (a crash there counts as "differs"). Minutes on
+  # ubuntu-latest, in parallel with fork.
+  host32:
+    name: 32-bit host build, size guards and BigInt
+    needs: guard
+    if: ${{ !cancelled() && (needs.guard.result == 'success' || needs.guard.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      WORK: ${{ github.workspace }}/build/zipline-fork/work32
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.guard.outputs.sha || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install gcc-multilib
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-multilib > /dev/null
+      # shell: bash runs with -o pipefail, so tee does not hide a failure.
+      - name: qjs for a 32-bit host, patched and unpatched (apply.sh qjs32host)
+        shell: bash
+        run: scripts/zipline-fork.sh qjs32host "$WORK" 2>&1 | tee -a "$RUNNER_TEMP/host32.log"
+      - name: bigint-ops.js against Node, size-guards.js with the unpatched control (apply.sh check-bigint32)
+        shell: bash
+        run: scripts/zipline-fork.sh check-bigint32 "$WORK" 2>&1 | tee -a "$RUNNER_TEMP/host32.log"
+      # The outcome lines (sizeof(size_t), ELF 32-bit, each build against Node and size-guards.expected,
+      # with exit statuses) as notices: on the run's page and in `gh run view` while fork still runs.
+      - name: The results as annotations
+        if: always()
+        run: |
+          grep -E '^(built |qjs32host: |check-bigint32: )' "$RUNNER_TEMP/host32.log" \
+            | sed -e "s|$WORK/||g" -e 's/^/::notice title=host32::/' || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zipline-fork-host32-results
+          path: build/zipline-fork/work32/bigint-check32
           if-no-files-found: ignore
           retention-days: 14
 
@@ -296,7 +362,7 @@ jobs:
 
   publish:
     name: Upload to Maven Central (review mode)
-    needs: [guard, fork, jvm-matrix]
+    needs: [guard, fork, host32, jvm-matrix]
     # Every condition spelled out (review 2 of PR #289, N1): a publish dispatch, every job before it
     # successful (jvm-matrix's result is success only when all six legs passed), not cancelled.
     if: >-
@@ -304,6 +370,7 @@ jobs:
       && github.event_name == 'workflow_dispatch' && inputs.publish
       && needs.guard.result == 'success'
       && needs.fork.result == 'success'
+      && needs.host32.result == 'success'
       && needs.jvm-matrix.result == 'success' }}
     runs-on: macos-15
     timeout-minutes: 180
@@ -423,4 +490,43 @@ jobs:
             build/zipline-fork/SHA1SUMS-*.txt
             build/zipline-fork/central-bundle-*.zip
           if-no-files-found: error
+          retention-days: 90
+
+      # The upload step failed (review 4 of PR #289, N-1). vanniktech's plugin uploads only after a
+      # successful build, writing the bundle right before it and never deleting it (the README,
+      # "What the upload relies on"), and a refused or broken upload fails the build after that. So
+      # the step can fail with a deployment already in the Portal (in review mode: held, not
+      # released). Say so, and keep the bundle if it was written.
+      - name: The upload step failed, what may be in the Central Portal
+        env:
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        if: ${{ (failure() || cancelled()) && (steps.upload.outcome == 'failure' || steps.upload.outcome == 'cancelled') }}
+        run: |
+          # The bundles the Maven Central invocation wrote (apply.sh marks its start).
+          bundles=""
+          if [ -f "$WORK/central-upload.started" ]; then
+            bundles="$(find "$WORK/zipline/build/publish" -name '*.zip' -newer "$WORK/central-upload.started" 2>/dev/null || true)"
+          fi
+          mkdir -p build/zipline-fork/failed-upload
+          {
+            echo "## dev.keliver.zipline from ${ZIPLINE_FORK_SOURCE_REF}: the upload step FAILED or was CANCELLED (outcome: ${UPLOAD_OUTCOME})"
+            echo "**The upload may have happened: Drop any deployment of this version in the Central Portal. Do not press Publish.**"
+            if [ -n "$bundles" ]; then
+              while IFS= read -r b; do cp "$b" build/zipline-fork/failed-upload/; done <<< "$bundles"
+              echo "A bundle was written, so the upload was attempted; it is this run's artifact"
+              echo "zipline-fork-failed-upload-${ZIPLINE_FORK_SOURCE_REF}. The upload step's log says why it failed."
+            elif [ -f "$WORK/central-upload.started" ]; then
+              echo "The Maven Central invocation started, but no bundle was found where the plugin writes it, so the"
+              echo "upload should not have been attempted. Check the Portal's Deployments and Drop any deployment of this version."
+            else
+              echo "It failed before the Maven Central invocation (the checks, the signing or the native comparison;"
+              echo "the upload step's log), so nothing should have been uploaded. Check the Portal's Deployments all the same."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ (failure() || cancelled()) && (steps.upload.outcome == 'failure' || steps.upload.outcome == 'cancelled') }}
+        with:
+          name: zipline-fork-failed-upload-${{ inputs.tag }}
+          path: build/zipline-fork/failed-upload
+          if-no-files-found: ignore
           retention-days: 90

@@ -1,7 +1,17 @@
 /*
- * The properties panel's typed value controls, shared by plain props, modifier
- * args and conditional branches. Each takes the current value and reports a
- * committed new value through a callback, so it can be tested without a relay.
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import dev.keliver.portal.PropChoice
 import dev.keliver.portal.PropKind
@@ -14,6 +24,12 @@ import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.HTMLTextAreaElement
 import org.w3c.dom.events.KeyboardEvent
+
+/*
+ * The properties panel's typed value controls, shared by plain props, modifier
+ * args and conditional branches. Each takes the current value and reports a
+ * committed new value through a callback, so it can be tested without a relay.
+ */
 
 /**
  * E8: an Int-coded prop's dropdown — one option per named code. A value the
@@ -117,7 +133,12 @@ internal fun colorControl(argb: Int?, onCommit: (Int) -> Unit): HTMLElement {
   swatchWrap.setAttribute("aria-label", "pick a colour")
   swatchWrap.setAttribute("tabindex", "0")
   swatchWrap.addEventListener("click", { e -> if (e.target != picker) picker.click() })
-  swatchWrap.addEventListener("keydown", { e -> if ((e as KeyboardEvent).key == "Enter" || e.key == " ") { e.preventDefault(); picker.click() } })
+  swatchWrap.addEventListener("keydown", { e ->
+    if ((e as KeyboardEvent).key == "Enter" || e.key == " ") {
+      e.preventDefault()
+      picker.click()
+    }
+  })
   val hex = Ui.input()
   hex.setAttribute("type", "text")
   hex.setAttribute("spellcheck", "false")
@@ -146,9 +167,15 @@ internal fun colorControl(argb: Int?, onCommit: (Int) -> Unit): HTMLElement {
   }
   show(current)
   fun commit(v: Int) {
-    if (v == current) { show(v); return }
+    if (v == current) {
+      show(v)
+      return
+    }
     show(v)
-    (box.closest(".prop") as? HTMLElement)?.let { it.classList.remove("unset"); it.removeAttribute("title") } // set now
+    (box.closest(".prop") as? HTMLElement)?.let {
+      it.classList.remove("unset")
+      it.removeAttribute("title")
+    } // set now
     onCommit(v)
   }
   picker.addEventListener("change", { _ -> picker.value.removePrefix("#").toIntOrNull(16)?.let { commit(withRgb(current ?: 0, it)) } })
@@ -159,7 +186,10 @@ internal fun colorControl(argb: Int?, onCommit: (Int) -> Unit): HTMLElement {
   }
   hex.addEventListener("input", { _ -> markPending(hex, ::commitHex) })
   hex.addEventListener("change", { _ -> commitHex() })
-  commitKeys(hex) { clearPending(hex); show(current) }
+  commitKeys(hex) {
+    clearPending(hex)
+    show(current)
+  }
   fun commitAlpha() {
     clearPending(alpha)
     val p = alpha.value.trim().toIntOrNull()
@@ -167,7 +197,10 @@ internal fun colorControl(argb: Int?, onCommit: (Int) -> Unit): HTMLElement {
   }
   alpha.addEventListener("input", { _ -> markPending(alpha, ::commitAlpha) })
   alpha.addEventListener("change", { _ -> commitAlpha() })
-  commitKeys(alpha) { clearPending(alpha); show(current) }
+  commitKeys(alpha) {
+    clearPending(alpha)
+    show(current)
+  }
   box.appendChild(swatchWrap)
   box.appendChild(hex)
   box.appendChild(alpha)
@@ -251,7 +284,12 @@ internal fun markUnset(row: HTMLElement) {
   (prop.querySelector("input[type=checkbox]") as? HTMLInputElement)?.indeterminate = true
   val inputs = prop.querySelectorAll("input:not([type=checkbox]):not([type=color])")
   // Round 5 (L8): a narrow field (an opacity %) shows a dash; the row's mark already says "default".
-  for (i in 0 until inputs.length) (inputs.item(i) as? HTMLInputElement)?.let { it.value = ""; it.placeholder = if (it.classList.contains("alpha")) "–" else "default" }
+  for (i in 0 until inputs.length) {
+    (inputs.item(i) as? HTMLInputElement)?.let {
+      it.value = ""
+      it.placeholder = if (it.classList.contains("alpha")) "–" else "default"
+    }
+  }
   // A dropdown keeps showing its first name: a coded enum's default (Start, Wrap, Clip).
 }
 
@@ -268,7 +306,10 @@ internal fun markComponentDefault(row: HTMLElement) {
 
 /** Round 5 (L5): a value chosen in [prop] (a checkbox ticked, a name picked) is no longer the default — at once, not at the next rebuild. */
 private fun setByHandEndsDefault(prop: HTMLElement) {
-  prop.addEventListener("change", { _ -> prop.classList.remove("unset"); prop.removeAttribute("title") })
+  prop.addEventListener("change", { _ ->
+    prop.classList.remove("unset")
+    prop.removeAttribute("title")
+  })
 }
 
 internal class PropRow(label: String, layout: Layout = Layout.Stacked) {
@@ -322,7 +363,9 @@ internal fun flushPendingField() {
   p.second()
 }
 
-internal fun markPending(field: HTMLElement, commit: () -> Unit) { pendingField = field to commit }
+internal fun markPending(field: HTMLElement, commit: () -> Unit) {
+  pendingField = field to commit
+}
 
 /**
  * Review 3: whether a field holds typed text not yet committed — what a panel rebuild must wait
@@ -352,19 +395,34 @@ private fun isTextField(e: org.w3c.dom.Element?): Boolean = when (e?.tagName?.lo
  * after a field typed in commits or is left (review 5: a panel rebuild held off meanwhile is made up).
  */
 internal fun installTypingTracker(typingEnded: () -> Unit) {
-  fun ended() { kotlinx.browser.window.setTimeout({ typingEnded(); null }, 0) }
+  fun ended() {
+    kotlinx.browser.window.setTimeout({
+      typingEnded()
+      null
+    }, 0)
+  }
   document.addEventListener("input", { ev -> (ev.target as? org.w3c.dom.Element)?.takeIf(::isTextField)?.let { typedField = it } }, true)
-  document.addEventListener("change", { ev -> if (ev.target == typedField) { typedField = null; ended() } }, true)
+  document.addEventListener("change", { ev ->
+    if (ev.target == typedField) {
+      typedField = null
+      ended()
+    }
+  }, true)
   document.addEventListener("focusout", { ev ->
     // Review 5: the window losing focus (a switch to the IDE) keeps the field — it still has the keyboard here.
     if (document.activeElement == ev.target || !document.hasFocus()) return@addEventListener
-    if (ev.target == typedField) { typedField = null; ended() }
+    if (ev.target == typedField) {
+      typedField = null
+      ended()
+    }
     // A pending field left without a change (typed, then put back as it was) is no longer pending.
     if (ev.target == pendingField?.first) pendingField = null
   }, true)
 }
 
-internal fun clearPending(field: HTMLElement) { if (pendingField?.first == field) pendingField = null }
+internal fun clearPending(field: HTMLElement) {
+  if (pendingField?.first == field) pendingField = null
+}
 
 /** Grows [area] to its content (up to [maxPx]); a textarea needs to be in the document to be measured. */
 internal fun fitToContent(area: HTMLTextAreaElement, maxPx: Int = 240) {
@@ -498,8 +556,11 @@ internal fun numberField(
     markInvalid(input, r.exceptionOrNull()?.message, err)
     return r.getOrNull()
   }
+
   // The canvas back to what is written (or to not set).
-  fun revertPreview() { committed?.let(onPreview) ?: onUnsetPreview() }
+  fun revertPreview() {
+    committed?.let(onPreview) ?: onUnsetPreview()
+  }
   fun commit() {
     clearPending(input)
     // Stays marked and nothing is sent; the canvas goes back to the value that is written.

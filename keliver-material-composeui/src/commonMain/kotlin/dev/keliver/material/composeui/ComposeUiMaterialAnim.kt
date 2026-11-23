@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -31,12 +42,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import dev.keliver.Modifier as RedwoodModifier
 import dev.keliver.material.widget.AnimatedVisibility
 import dev.keliver.material.widget.Clickable
 import dev.keliver.material.widget.Shimmer
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.ComposeWidgetChildren
-import dev.keliver.Modifier as RedwoodModifier
 
 internal class ComposeUiShimmer : Shimmer<@Composable (Modifier) -> Unit> {
   private var widthDp by mutableStateOf(0)
@@ -61,9 +72,15 @@ internal class ComposeUiShimmer : Shimmer<@Composable (Modifier) -> Unit> {
     m = m.height(heightDp.dp).clip(RoundedCornerShape(cornerRadiusDp.dp)).background(brush)
     Box(modifier = m)
   }
-  override fun widthDp(widthDp: Int) { this.widthDp = widthDp }
-  override fun heightDp(heightDp: Int) { this.heightDp = heightDp }
-  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
+  override fun widthDp(widthDp: Int) {
+    this.widthDp = widthDp
+  }
+  override fun heightDp(heightDp: Int) {
+    this.heightDp = heightDp
+  }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) {
+    this.cornerRadiusDp = cornerRadiusDp
+  }
 }
 
 internal class ComposeUiClickable : Clickable<@Composable (Modifier) -> Unit> {
@@ -76,7 +93,9 @@ internal class ComposeUiClickable : Clickable<@Composable (Modifier) -> Unit> {
       (content as ComposeWidgetChildren).Render()
     }
   }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiAnimatedVisibility : AnimatedVisibility<@Composable (Modifier) -> Unit> {
@@ -93,5 +112,7 @@ internal class ComposeUiAnimatedVisibility : AnimatedVisibility<@Composable (Mod
       (children as ComposeWidgetChildren).Render()
     }
   }
-  override fun visible(visible: Boolean) { this.visible = visible }
+  override fun visible(visible: Boolean) {
+    this.visible = visible
+  }
 }

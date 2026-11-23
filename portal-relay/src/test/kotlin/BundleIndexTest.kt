@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+@file:Suppress("ktlint:standard:property-naming") // Fixture URLs and manifests, named like constants.
+
 import app.cash.zipline.loader.ZiplineHttpClient
 import hosttemplate.CRASH_ROLLBACK_OUTCOME
 import hosttemplate.CRASH_TO_APP_VIEW
@@ -8,18 +25,18 @@ import hosttemplate.CrashStep
 import hosttemplate.CrashStore
 import hosttemplate.HostFacts
 import hosttemplate.KeptBundle
-import hosttemplate.cachedBundleProblem
-import hosttemplate.indexStartPolicy
-import hosttemplate.crashGoingBackTo
-import hosttemplate.crashRollbackDetail
 import hosttemplate.MAX_INDEX_BYTES
 import hosttemplate.ManifestPinningHttpClient
-import hosttemplate.reportReason
+import hosttemplate.cachedBundleProblem
+import hosttemplate.crashGoingBackTo
+import hosttemplate.crashRollbackDetail
+import hosttemplate.indexStartPolicy
 import hosttemplate.manifestPathOk
 import hosttemplate.manifestSequence
+import hosttemplate.pickFromIndex
+import hosttemplate.reportReason
 import hosttemplate.rollbackProblem
 import hosttemplate.rolloutBucket
-import hosttemplate.pickFromIndex
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,7 +65,8 @@ class BundleIndexTest {
     widgetVersion: Int = 1,
     sha256: String = sha,
   ) = """{"sequence":$sequence,"version":$sequence,"widgetVersion":$widgetVersion,"capabilities":[$capabilities],
-    |"manifest":"$manifest","manifestSha256":"$sha256"$extra}""".trimMargin()
+    |"manifest":"$manifest","manifestSha256":"$sha256"$extra}
+  """.trimMargin()
 
   private fun index(vararg entries: String) = """{"format":1,"entries":[${entries.joinToString(",")}]}"""
 

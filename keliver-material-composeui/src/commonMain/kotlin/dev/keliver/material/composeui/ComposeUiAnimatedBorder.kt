@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -66,7 +77,10 @@ internal class ComposeUiAnimatedBorder : AnimatedBorder<@Composable (Modifier) -
     m = when (effect) {
       1 -> { // gradientSweep — rotating gradient ring ("AI glow")
         val angle by transition.animateFloat(
-          0f, 360f, infiniteRepeatable(tween(durationMs, easing = LinearEasing), RepeatMode.Restart), "sweep",
+          0f,
+          360f,
+          infiniteRepeatable(tween(durationMs, easing = LinearEasing), RepeatMode.Restart),
+          "sweep",
         )
         m.drawWithCache {
           val sw = strokeWidthDp.dp.toPx()
@@ -83,7 +97,10 @@ internal class ComposeUiAnimatedBorder : AnimatedBorder<@Composable (Modifier) -
       }
       2 -> { // pulse — ring breathes in width + alpha
         val p by transition.animateFloat(
-          0f, 1f, infiniteRepeatable(tween(durationMs, easing = FastOutSlowInEasing), RepeatMode.Reverse), "pulse",
+          0f,
+          1f,
+          infiniteRepeatable(tween(durationMs, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+          "pulse",
         )
         m.drawWithCache {
           val sw = strokeWidthDp.dp.toPx()
@@ -97,7 +114,10 @@ internal class ComposeUiAnimatedBorder : AnimatedBorder<@Composable (Modifier) -
       }
       3 -> { // marchingAnts — dashed ring marches around
         val phase by transition.animateFloat(
-          0f, 1f, infiniteRepeatable(tween(durationMs, easing = LinearEasing), RepeatMode.Restart), "ants",
+          0f,
+          1f,
+          infiniteRepeatable(tween(durationMs, easing = LinearEasing), RepeatMode.Restart),
+          "ants",
         )
         m.drawWithCache {
           val sw = strokeWidthDp.dp.toPx()
@@ -106,7 +126,8 @@ internal class ComposeUiAnimatedBorder : AnimatedBorder<@Composable (Modifier) -
           onDrawWithContent {
             drawContent()
             drawPath(
-              path, color = comet,
+              path,
+              color = comet,
               style = Stroke(width = sw, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash), phase * dash * 2f)),
             )
           }
@@ -114,7 +135,10 @@ internal class ComposeUiAnimatedBorder : AnimatedBorder<@Composable (Modifier) -
       }
       4 -> { // glow — soft pulsing halo behind a crisp ring
         val p by transition.animateFloat(
-          0f, 1f, infiniteRepeatable(tween(durationMs, easing = FastOutSlowInEasing), RepeatMode.Reverse), "glow",
+          0f,
+          1f,
+          infiniteRepeatable(tween(durationMs, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+          "glow",
         )
         m.drawWithCache {
           val sw = strokeWidthDp.dp.toPx()
@@ -129,10 +153,16 @@ internal class ComposeUiAnimatedBorder : AnimatedBorder<@Composable (Modifier) -
       else -> { // 0 comet — bright segment travels the perimeter
         // Head leads (fast-out-slow-in), tail trails (linear-out-slow-in).
         val headProgress by transition.animateFloat(
-          0f, 1f, infiniteRepeatable(tween(durationMs, easing = FastOutSlowInEasing), RepeatMode.Restart), "head",
+          0f,
+          1f,
+          infiniteRepeatable(tween(durationMs, easing = FastOutSlowInEasing), RepeatMode.Restart),
+          "head",
         )
         val tailProgress by transition.animateFloat(
-          0f, 1f, infiniteRepeatable(tween(durationMs, easing = LinearOutSlowInEasing), RepeatMode.Restart), "tail",
+          0f,
+          1f,
+          infiniteRepeatable(tween(durationMs, easing = LinearOutSlowInEasing), RepeatMode.Restart),
+          "tail",
         )
         val gradientComet = colorsArgb.size >= 2
         m.drawWithCache {
@@ -169,23 +199,43 @@ internal class ComposeUiAnimatedBorder : AnimatedBorder<@Composable (Modifier) -
     }
   }
 
-  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
-  override fun strokeWidthDp(strokeWidthDp: Int) { this.strokeWidthDp = strokeWidthDp }
-  override fun baseColorArgb(baseColorArgb: Int) { this.baseColorArgb = baseColorArgb }
-  override fun cometColorArgb(cometColorArgb: Int) { this.cometColorArgb = cometColorArgb }
-  override fun durationMs(durationMs: Int) { this.durationMs = durationMs }
-  override fun segmentLenDp(segmentLenDp: Int) { this.segmentLenDp = segmentLenDp }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
-  override fun effect(effect: Int) { this.effect = effect }
-  override fun colorsArgb(colorsArgb: List<Int>) { this.colorsArgb = colorsArgb }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) {
+    this.cornerRadiusDp = cornerRadiusDp
+  }
+  override fun strokeWidthDp(strokeWidthDp: Int) {
+    this.strokeWidthDp = strokeWidthDp
+  }
+  override fun baseColorArgb(baseColorArgb: Int) {
+    this.baseColorArgb = baseColorArgb
+  }
+  override fun cometColorArgb(cometColorArgb: Int) {
+    this.cometColorArgb = cometColorArgb
+  }
+  override fun durationMs(durationMs: Int) {
+    this.durationMs = durationMs
+  }
+  override fun segmentLenDp(segmentLenDp: Int) {
+    this.segmentLenDp = segmentLenDp
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
+  override fun effect(effect: Int) {
+    this.effect = effect
+  }
+  override fun colorsArgb(colorsArgb: List<Int>) {
+    this.colorsArgb = colorsArgb
+  }
 }
 
 /** Rounded-rect perimeter [Path], inset by half the stroke so it isn't clipped. */
 private fun roundedPath(size: Size, inset: Float, cornerPx: Float): Path = Path().apply {
   addRoundRect(
     RoundRect(
-      left = inset, top = inset,
-      right = size.width - inset, bottom = size.height - inset,
+      left = inset,
+      top = inset,
+      right = size.width - inset,
+      bottom = size.height - inset,
       cornerRadius = CornerRadius(cornerPx, cornerPx),
     ),
   )

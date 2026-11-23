@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -11,24 +22,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text as M3FieldText
 import androidx.compose.material3.ElevatedButton as M3ElevatedButton
 import androidx.compose.material3.FilledTonalButton as M3FilledTonalButton
 import androidx.compose.material3.FloatingActionButton as M3FloatingActionButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedButton as M3OutlinedButton
 import androidx.compose.material3.OutlinedTextField as M3OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton as M3RadioButton
 import androidx.compose.material3.Slider as M3Slider
+import androidx.compose.material3.Text as M3FieldText
 import androidx.compose.material3.Text as M3Text
 import androidx.compose.material3.TextButton as M3TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
@@ -88,15 +99,33 @@ internal class ComposeUiOutlinedButton(
       M3Text(text)
     }
   }
-  override fun text(text: String) { this.text = text }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
-  override fun iconUrl(iconUrl: String) { this.iconUrl = iconUrl }
-  override fun iconSizeDp(iconSizeDp: Int) { this.iconSizeDp = iconSizeDp }
-  override fun containerArgb(containerArgb: Int) { this.containerArgb = containerArgb }
-  override fun contentArgb(contentArgb: Int) { this.contentArgb = contentArgb }
-  override fun borderArgb(borderArgb: Int) { this.borderArgb = borderArgb }
-  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
+  override fun iconUrl(iconUrl: String) {
+    this.iconUrl = iconUrl
+  }
+  override fun iconSizeDp(iconSizeDp: Int) {
+    this.iconSizeDp = iconSizeDp
+  }
+  override fun containerArgb(containerArgb: Int) {
+    this.containerArgb = containerArgb
+  }
+  override fun contentArgb(contentArgb: Int) {
+    this.contentArgb = contentArgb
+  }
+  override fun borderArgb(borderArgb: Int) {
+    this.borderArgb = borderArgb
+  }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) {
+    this.cornerRadiusDp = cornerRadiusDp
+  }
 }
 
 internal class ComposeUiTextButton : TextButton<@Composable (Modifier) -> Unit> {
@@ -107,9 +136,15 @@ internal class ComposeUiTextButton : TextButton<@Composable (Modifier) -> Unit> 
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3TextButton(onClick = { onClick?.invoke() }, enabled = enabled, modifier = m) { M3Text(text) }
   }
-  override fun text(text: String) { this.text = text }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiElevatedButton : ElevatedButton<@Composable (Modifier) -> Unit> {
@@ -120,9 +155,15 @@ internal class ComposeUiElevatedButton : ElevatedButton<@Composable (Modifier) -
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3ElevatedButton(onClick = { onClick?.invoke() }, enabled = enabled, modifier = m) { M3Text(text) }
   }
-  override fun text(text: String) { this.text = text }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiFilledTonalButton : FilledTonalButton<@Composable (Modifier) -> Unit> {
@@ -133,9 +174,15 @@ internal class ComposeUiFilledTonalButton : FilledTonalButton<@Composable (Modif
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3FilledTonalButton(onClick = { onClick?.invoke() }, enabled = enabled, modifier = m) { M3Text(text) }
   }
-  override fun text(text: String) { this.text = text }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiFloatingActionButton : FloatingActionButton<@Composable (Modifier) -> Unit> {
@@ -145,8 +192,12 @@ internal class ComposeUiFloatingActionButton : FloatingActionButton<@Composable 
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3FloatingActionButton(onClick = { onClick?.invoke() }, modifier = m) { M3Text(text) }
   }
-  override fun text(text: String) { this.text = text }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiRadioButton : RadioButton<@Composable (Modifier) -> Unit> {
@@ -157,9 +208,15 @@ internal class ComposeUiRadioButton : RadioButton<@Composable (Modifier) -> Unit
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3RadioButton(selected = selected, onClick = { onClick?.invoke() }, enabled = enabled, modifier = m)
   }
-  override fun selected(selected: Boolean) { this.selected = selected }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun selected(selected: Boolean) {
+    this.selected = selected
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiSlider : Slider<@Composable (Modifier) -> Unit> {
@@ -175,9 +232,15 @@ internal class ComposeUiSlider : Slider<@Composable (Modifier) -> Unit> {
       modifier = m,
     )
   }
-  override fun position(position: Float) { this.position = position }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onValueChange(onValueChange: ((Float) -> Unit)?) { this.onValueChange = onValueChange }
+  override fun position(position: Float) {
+    this.position = position
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onValueChange(onValueChange: ((Float) -> Unit)?) {
+    this.onValueChange = onValueChange
+  }
 }
 
 internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modifier) -> Unit> {
@@ -212,7 +275,10 @@ internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modif
     }
     M3OutlinedTextField(
       value = local,
-      onValueChange = { local = it; onValueChange?.invoke(it.text) },
+      onValueChange = {
+        local = it
+        onValueChange?.invoke(it.text)
+      },
       placeholder = {
         if (placeholderState.isNotEmpty()) {
           M3FieldText(placeholderState, modifier = alignedPlaceholder(align), textAlign = fieldTextAlign(align))
@@ -232,19 +298,45 @@ internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modif
       modifier = m,
     )
   }
-  override fun text(text: String) { this.incoming = text }
-  override fun placeholder(placeholder: String) { this.placeholderState = placeholder }
-  override fun onValueChange(onValueChange: ((String) -> Unit)?) { this.onValueChange = onValueChange }
-  override fun label(label: String) { this.label = label }
-  override fun leadingText(leadingText: String) { this.leadingText = leadingText }
-  override fun keyboardType(keyboardType: Int) { this.keyboardType = keyboardType }
-  override fun singleLine(singleLine: Boolean) { this.singleLine = singleLine }
-  override fun maxLines(maxLines: Int) { this.maxLines = maxLines }
-  override fun isError(isError: Boolean) { this.isError = isError }
-  override fun supportingText(supportingText: String) { this.supportingText = supportingText }
-  override fun borderArgb(borderArgb: Int) { this.borderArgb = borderArgb }
-  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
-  override fun align(align: Int) { this.align = align }
+  override fun text(text: String) {
+    this.incoming = text
+  }
+  override fun placeholder(placeholder: String) {
+    this.placeholderState = placeholder
+  }
+  override fun onValueChange(onValueChange: ((String) -> Unit)?) {
+    this.onValueChange = onValueChange
+  }
+  override fun label(label: String) {
+    this.label = label
+  }
+  override fun leadingText(leadingText: String) {
+    this.leadingText = leadingText
+  }
+  override fun keyboardType(keyboardType: Int) {
+    this.keyboardType = keyboardType
+  }
+  override fun singleLine(singleLine: Boolean) {
+    this.singleLine = singleLine
+  }
+  override fun maxLines(maxLines: Int) {
+    this.maxLines = maxLines
+  }
+  override fun isError(isError: Boolean) {
+    this.isError = isError
+  }
+  override fun supportingText(supportingText: String) {
+    this.supportingText = supportingText
+  }
+  override fun borderArgb(borderArgb: Int) {
+    this.borderArgb = borderArgb
+  }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) {
+    this.cornerRadiusDp = cornerRadiusDp
+  }
+  override fun align(align: Int) {
+    this.align = align
+  }
 }
 
 private fun toKeyboardType(i: Int): KeyboardType = when (i) {

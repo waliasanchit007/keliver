@@ -10,7 +10,7 @@
 #  - Before 0.5.0 (the 0.4.x libraries on Maven Central, built against it): upstream Zipline,
 #    app.cash.zipline 1.22.0 on Kotlin 2.2.0, QuickJS 2021. The scaffolders' own defaults.
 #  - 0.5.0 and later (a 0.5.0 pre-release too): Keliver's Zipline fork (NF2; docs/GUEST_PROFILE.md),
-#    dev.keliver.zipline 1.28.0-keliver.1, plugin id dev.keliver.zipline, on Kotlin 2.4.20, QuickJS
+#    dev.keliver.zipline 1.28.0-keliver.1, plugin id dev.keliver.zipline, on Kotlin 2.4.21, QuickJS
 #    2026: the one engine, quickjs-2026. Guests link Kotlin's Long as a JavaScript BigInt
 #    (-Xes-long-as-bigint), which only that engine runs.
 #
@@ -24,13 +24,13 @@
 # shellcheck disable=SC2034 # read by the scaffolders that source this file
 FORK_ZIPLINE_VERSION=1.28.0-keliver.1
 # shellcheck disable=SC2034
-FORK_KOTLIN_VERSION=2.4.20
+FORK_KOTLIN_VERSION=2.4.21
 # shellcheck disable=SC2034
 FORK_COMPOSE_VERSION=1.12.2
 # shellcheck disable=SC2034
 FORK_COROUTINES_VERSION=1.11.0
 # shellcheck disable=SC2034
-FORK_SERIALIZATION_VERSION=1.11.0
+FORK_SERIALIZATION_VERSION=1.13.0
 # The first Keliver version built on the fork.
 KELIVER_FORK_SINCE=0.5.0
 

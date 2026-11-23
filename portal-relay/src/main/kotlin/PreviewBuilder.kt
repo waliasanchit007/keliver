@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -23,6 +38,7 @@ class PreviewBuilder(
   interface Runner {
     /** Run the build; return null on success or an error summary on failure. May block. */
     fun build(cancelled: () -> Boolean): String?
+
     /** Promote the successful dist to the serve dir (atomic-ish copy). */
     fun promote()
   }
@@ -38,10 +54,14 @@ class PreviewBuilder(
     Thread(r, "preview-builder").apply { isDaemon = true }
   }
   private val ids = AtomicLong(0)
+
   @Volatile private var pending: ScheduledFuture<*>? = null
+
   @Volatile private var runningId: Long = -1
+
   @Volatile var status: Status = Status(0, "idle")
     private set
+
   /** Bumped every time a build succeeds — pollers reload on change. */
   @Volatile var promotedId: Long = 0
     private set

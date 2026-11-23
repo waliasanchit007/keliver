@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Square, Inc.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -347,8 +347,10 @@ class GeneratorTest {
       scroll,
     )
     // Without the config entry, nothing is added.
-    val unmarked = Config(config.group, config.schemaPackage, config.schemaName, config.dependencies, config.declarations,
-      config.errors, config.typeMessages, config.icons, config.extras, config.animated, config.extraModifiers)
+    val unmarked = Config(
+      config.group, config.schemaPackage, config.schemaName, config.dependencies, config.declarations,
+      config.errors, config.typeMessages, config.icons, config.extras, config.animated, config.extraModifiers,
+    )
     assertFalse("pressScrollContainer" in hostOf(lazySpec, unmarked))
     assertFalse("pressScrollContainer" in hostOf(scrollSpec, unmarked))
   }

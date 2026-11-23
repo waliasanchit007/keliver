@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import com.sun.net.httpserver.HttpServer
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -5,21 +20,21 @@ import java.net.URLEncoder
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.ResponseBody.Companion.toResponseBody
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.test.assertFailsWith
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 
 /** K5: the editor canvas's image pass-through (`/preview-asset`). */
 class PreviewAssetsTest {
@@ -58,20 +73,29 @@ class PreviewAssetsTest {
 
   init {
     upstream.createContext("/redirect-ok") { ex ->
-      ex.responseHeaders.add("Location", "/img.png"); ex.sendResponseHeaders(302, -1); ex.close()
+      ex.responseHeaders.add("Location", "/img.png")
+      ex.sendResponseHeaders(302, -1)
+      ex.close()
     }
     upstream.createContext("/redirect-off") { ex ->
-      ex.responseHeaders.add("Location", "http://127.0.0.1:$port/img.png"); ex.sendResponseHeaders(302, -1); ex.close()
+      ex.responseHeaders.add("Location", "http://127.0.0.1:$port/img.png")
+      ex.sendResponseHeaders(302, -1)
+      ex.close()
     }
     upstream.createContext("/redirect-loop") { ex ->
-      ex.responseHeaders.add("Location", "/redirect-loop"); ex.sendResponseHeaders(302, -1); ex.close()
+      ex.responseHeaders.add("Location", "/redirect-loop")
+      ex.sendResponseHeaders(302, -1)
+      ex.close()
     }
     // Waits until the test releases it, then answers an image.
     upstream.createContext("/hang") { ex ->
       hits.incrementAndGet()
       release.await(20, TimeUnit.SECONDS)
       ex.responseHeaders.add("Content-Type", "image/png")
-      runCatching { ex.sendResponseHeaders(200, png.size.toLong()); ex.responseBody.use { it.write(png) } }
+      runCatching {
+        ex.sendResponseHeaders(200, png.size.toLong())
+        ex.responseBody.use { it.write(png) }
+      }
       ex.close()
     }
     // Sends the headers and part of the image, then waits until the test releases it.
@@ -95,9 +119,11 @@ class PreviewAssetsTest {
       runCatching {
         if (n >= PreviewAssets.MAX_REDIRECTS) {
           ex.responseHeaders.add("Content-Type", "image/png")
-          ex.sendResponseHeaders(200, png.size.toLong()); ex.responseBody.use { it.write(png) }
+          ex.sendResponseHeaders(200, png.size.toLong())
+          ex.responseBody.use { it.write(png) }
         } else {
-          ex.responseHeaders.add("Location", "/hop/${n + 1}"); ex.sendResponseHeaders(302, -1)
+          ex.responseHeaders.add("Location", "/hop/${n + 1}")
+          ex.sendResponseHeaders(302, -1)
         }
       }
       ex.close()
@@ -226,7 +252,9 @@ class PreviewAssetsTest {
     RelayAccess.gate(HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)).apply {
       a.install(this)
       createContext("/ping") { ex ->
-        ex.sendResponseHeaders(200, 2); ex.responseBody.use { it.write("ok".encodeToByteArray()) }; ex.close()
+        ex.sendResponseHeaders(200, 2)
+        ex.responseBody.use { it.write("ok".encodeToByteArray()) }
+        ex.close()
       }
       executor = null
       start()
@@ -260,7 +288,8 @@ class PreviewAssetsTest {
     val server = relay(assets())
     try {
       val conn = call(
-        server, "$base/img.png",
+        server,
+        "$base/img.png",
         headers = mapOf(
           "Origin" to "http://localhost:8096",
           "Cookie" to "session=abc",
@@ -346,13 +375,17 @@ class PreviewAssetsTest {
     val a = PreviewAssets(listOf("img.example.com"), client = fake { image("image/png") }, log = { logs += it })
       .also { created += it }
     for (ok in listOf(
-      "http://img.example.com/x.png", "http://img.example.com:80/x.png",
-      "https://img.example.com/x.png", "https://img.example.com:443/x.png",
+      "http://img.example.com/x.png",
+      "http://img.example.com:80/x.png",
+      "https://img.example.com/x.png",
+      "https://img.example.com:443/x.png",
     )) {
       assertIs<PreviewAssets.Result.Image>(a.fetch(ok), ok)
     }
     for (url in listOf(
-      "http://img.example.com:6379/x", "http://img.example.com:443/x", "https://img.example.com:80/x",
+      "http://img.example.com:6379/x",
+      "http://img.example.com:443/x",
+      "https://img.example.com:80/x",
       "https://img.example.com:8443/x",
     )) {
       assertEquals(403, assertIs<PreviewAssets.Result.Refused>(a.fetch(url), url).status, url)
@@ -367,8 +400,11 @@ class PreviewAssetsTest {
     val a = PreviewAssets(
       listOf("img.example.com"),
       client = fake { r ->
-        if (r.url.encodedPath == "/a") okhttp3.Response.Builder().code(302).header("Location", "http://img.example.com:6379/x").body("".toResponseBody())
-        else image("image/png")
+        if (r.url.encodedPath == "/a") {
+          okhttp3.Response.Builder().code(302).header("Location", "http://img.example.com:6379/x").body("".toResponseBody())
+        } else {
+          image("image/png")
+        }
       },
       log = { logs += it },
     ).also { created += it }
@@ -503,7 +539,8 @@ class PreviewAssetsTest {
       // The other endpoints still answer.
       assertEquals(200, call(server, "", path = "/ping", timeoutMillis = 2_000).code)
       release.countDown()
-      first.join(10_000); second.join(10_000)
+      first.join(10_000)
+      second.join(10_000)
       assertEquals(listOf(200, 200), codes.sorted())
     } finally {
       server.stop(0)
@@ -561,10 +598,12 @@ class PreviewAssetsTest {
     val a = assets(deadlineMillis = 200)
     fun hang(n: Int) = assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/hang?n=$n"))
     // Two in a row: the host still answers other URLs, and its image ends the run.
-    hang(1); hang(2)
+    hang(1)
+    hang(2)
     assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
     // Two more: not three in a row, so not marked.
-    hang(3); hang(4)
+    hang(3)
+    hang(4)
     assertEquals(5, hits.get())
     // A failure that is not the deadline neither counts nor ends the run.
     assertEquals(502, assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/missing.png")).status)
@@ -640,7 +679,9 @@ class PreviewAssetsTest {
     val a = assets(extraPorts = setOf(closed))
     assertTrue("ConnectException" in assertIs<PreviewAssets.Result.Refused>(a.fetch("http://localhost:$closed/a.png")).reason)
     upstream.createContext("/to-closed") { ex ->
-      ex.responseHeaders.add("Location", "http://localhost:$closed/b.png"); ex.sendResponseHeaders(302, -1); ex.close()
+      ex.responseHeaders.add("Location", "http://localhost:$closed/b.png")
+      ex.sendResponseHeaders(302, -1)
+      ex.close()
     }
     try {
       val viaRedirect = assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/to-closed"))
@@ -653,7 +694,10 @@ class PreviewAssetsTest {
   @Test fun aNameThatDoesNotResolveIsRememberedForEveryUrlOnIt() {
     val lookups = AtomicInteger()
     val noDns = PreviewAssets.defaultClient().newBuilder()
-      .dns { name -> lookups.incrementAndGet(); throw java.net.UnknownHostException(name) }
+      .dns { name ->
+        lookups.incrementAndGet()
+        throw java.net.UnknownHostException(name)
+      }
       .build()
     val a = assets(hosts = listOf("img.example.com"), client = noDns)
     assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("https://img.example.com/a.png")).status)
@@ -667,7 +711,11 @@ class PreviewAssetsTest {
   @Test fun theDeadlineRunningOutWhileConnectingCostsOnlyThatUrl() {
     val lookups = AtomicInteger()
     val slowDns = PreviewAssets.defaultClient().newBuilder()
-      .dns { name -> lookups.incrementAndGet(); Thread.sleep(500); throw java.net.UnknownHostException(name) }
+      .dns { name ->
+        lookups.incrementAndGet()
+        Thread.sleep(500)
+        throw java.net.UnknownHostException(name)
+      }
       .build()
     val a = assets(hosts = listOf("img.example.com"), deadlineMillis = 200, client = slowDns)
     assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("https://img.example.com/a.png")).status)

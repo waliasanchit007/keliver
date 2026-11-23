@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
@@ -79,8 +94,13 @@ class InheritedContractWriteBackTest {
   }
 
   private fun plan(onDisk: String, target: UiDocument, base: UiDocument) = ScreenWriter.plan(
-    onDisk = onDisk, doc = target, base = base, baseText = onDisk,
-    fileName = fileName, functionName = "HomeScreen", packageName = "app.screens",
+    onDisk = onDisk,
+    doc = target,
+    base = base,
+    baseText = onDisk,
+    fileName = fileName,
+    functionName = "HomeScreen",
+    packageName = "app.screens",
   )
 
   private fun UiDocument.child(i: Int) = (root as DocNode.Widget).children[i]
@@ -188,8 +208,14 @@ class InheritedContractWriteBackTest {
     assertIs<ScreenWriter.Refuse>(plan(now, target, d))
     val w = assertIs<ScreenWriter.Write>(
       ScreenWriter.plan(
-        onDisk = now, doc = target, base = d, baseText = now,
-        fileName = fileName, functionName = "HomeScreen", packageName = "app.screens", readText = read,
+        onDisk = now,
+        doc = target,
+        base = d,
+        baseText = now,
+        fileName = fileName,
+        functionName = "HomeScreen",
+        packageName = "app.screens",
+        readText = read,
       ),
     )
     assertTrue("val title" !in w.text, w.text)

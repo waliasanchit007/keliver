@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -67,7 +78,12 @@ internal class ComposeUiRichText : RichText<@Composable (Modifier) -> Unit> {
     M3Text(
       text = annotated,
       fontSize = fontSize.sp,
-      textAlign = when (align) { 1 -> TextAlign.Center; 2 -> TextAlign.End; 3 -> TextAlign.Justify; else -> TextAlign.Start },
+      textAlign = when (align) {
+        1 -> TextAlign.Center
+        2 -> TextAlign.End
+        3 -> TextAlign.Justify
+        else -> TextAlign.Start
+      },
       lineHeight = if (lineHeightSp > 0) lineHeightSp.sp else TextUnit.Unspecified,
       maxLines = if (maxLines > 0) maxLines else Int.MAX_VALUE,
       overflow = if (maxLines > 0) TextOverflow.Ellipsis else TextOverflow.Clip,
@@ -75,11 +91,25 @@ internal class ComposeUiRichText : RichText<@Composable (Modifier) -> Unit> {
     )
   }
 
-  override fun spans(spans: List<TextSpan>) { this.spans = spans }
-  override fun fontSize(fontSize: Int) { this.fontSize = fontSize }
-  override fun bold(bold: Boolean) { this.bold = bold }
-  override fun align(align: Int) { this.align = align }
-  override fun lineHeightSp(lineHeightSp: Int) { this.lineHeightSp = lineHeightSp }
-  override fun maxLines(maxLines: Int) { this.maxLines = maxLines }
-  override fun colorArgb(colorArgb: Int) { this.colorArgb = colorArgb }
+  override fun spans(spans: List<TextSpan>) {
+    this.spans = spans
+  }
+  override fun fontSize(fontSize: Int) {
+    this.fontSize = fontSize
+  }
+  override fun bold(bold: Boolean) {
+    this.bold = bold
+  }
+  override fun align(align: Int) {
+    this.align = align
+  }
+  override fun lineHeightSp(lineHeightSp: Int) {
+    this.lineHeightSp = lineHeightSp
+  }
+  override fun maxLines(maxLines: Int) {
+    this.maxLines = maxLines
+  }
+  override fun colorArgb(colorArgb: Int) {
+    this.colorArgb = colorArgb
+  }
 }

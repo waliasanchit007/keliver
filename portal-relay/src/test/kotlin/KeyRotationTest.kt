@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestSigner
 import app.cash.zipline.loader.ManifestVerifier
@@ -36,7 +51,9 @@ import okio.ByteString.Companion.toByteString
 class KeyRotationTest {
   private val tmp = Files.createTempDirectory("key-rotation").toFile()
 
-  @AfterTest fun cleanUp() { tmp.deleteRecursively() }
+  @AfterTest fun cleanUp() {
+    tmp.deleteRecursively()
+  }
 
   private class Key(val seedHex: String, val publicHex: String)
 
@@ -78,7 +95,8 @@ class KeyRotationTest {
   private fun manifest(seq: Long = 1, title: String = "x"): ZiplineManifest = ZiplineManifest.decodeJson(
     """{"unsigned":{"signatures":{},"freshAtEpochMs":null,"baseUrl":null},
       |"modules":{"./main.js":{"url":"main.zipline","sha256":"${sha256Hex("// $title".encodeToByteArray())}","dependsOnIds":[]}},
-      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain","metadata":{"$SEQUENCE_METADATA_KEY":"$seq"}}""".trimMargin().replace("\n", ""),
+      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain","metadata":{"$SEQUENCE_METADATA_KEY":"$seq"}}
+    """.trimMargin().replace("\n", ""),
   )
 
   /** A host from the W8 templates trusting [keys]. */
@@ -273,8 +291,14 @@ class KeyRotationTest {
     publishStatic(output("a", 1) { signLegacy(it, k0) }, site, k0.publicHex, init = true)
     // The first W8 publish, with the next key already listed: k0 is shared, so no refusal.
     publishStatic(output("b", 2) { signW8(it, k0, k1) }, site, "${k0.publicHex}\n${k1.publicHex}")
-    assertNull(keyChangeProblem(File(site, "bundles"), Json.parseToJsonElement(File(site, "bundles/index.json").readText()).jsonObject,
-      signW8(manifest(3), k1).encodeJson(), "${k0.publicHex}\n${k1.publicHex}"))
+    assertNull(
+      keyChangeProblem(
+        File(site, "bundles"),
+        Json.parseToJsonElement(File(site, "bundles/index.json").readText()).jsonObject,
+        signW8(manifest(3), k1).encodeJson(),
+        "${k0.publicHex}\n${k1.publicHex}",
+      ),
+    )
   }
 
   @Test

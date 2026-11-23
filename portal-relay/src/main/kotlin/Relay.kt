@@ -1,4 +1,35 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
+import dev.keliver.portal.deserializeTree
+import dev.keliver.portal.document.DocJson
+import dev.keliver.portal.document.OpBatch
+import dev.keliver.portal.document.withoutArithmetic
+import dev.keliver.portal.document.withoutConditionals
+import dev.keliver.portal.document.withoutExtendedConditions
+import dev.keliver.portal.document.withoutLists
+import dev.keliver.portal.document.withoutTemplates
+import dev.keliver.portal.serializeTree
+import java.io.File
+import java.net.InetSocketAddress
+import java.security.MessageDigest
+import kotlinx.serialization.encodeToString
+
+/*
  * spike/keliver-web portal — the local-first PORTAL SERVER (P2).
  * Evolved from the M2 tree relay: a JDK HttpServer (still no deps) that now
  * persists projects/screens/drafts as files under ~/.keliver-portal/ so a
@@ -20,22 +51,6 @@
  * ~/.keliver-portal/active (two lines: project, screen). default/main auto-created.
  * Binds 0.0.0.0 so the emulator reaches it at 10.0.2.2:8077.
  */
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
-import dev.keliver.portal.deserializeTree
-import dev.keliver.portal.document.DocJson
-import dev.keliver.portal.document.OpBatch
-import dev.keliver.portal.document.withoutArithmetic
-import dev.keliver.portal.document.withoutConditionals
-import dev.keliver.portal.document.withoutExtendedConditions
-import dev.keliver.portal.document.withoutLists
-import dev.keliver.portal.document.withoutTemplates
-import dev.keliver.portal.exportKotlin
-import dev.keliver.portal.serializeTree
-import kotlinx.serialization.encodeToString
-import java.io.File
-import java.net.InetSocketAddress
-import java.security.MessageDigest
 
 /**
  * The app repo checkout the portal serves (and the publish step compiles in).
@@ -197,7 +212,11 @@ private fun storePointerObstacle(repo: File): String? {
       // A probe, not a permission bit: the failure modes that matter here are
       // the ones `canWrite` does not model.
       val probe = File(gradleDir, ".keliver-pointer-probe.${ProcessHandle.current().pid()}")
-      val ok = runCatching { probe.writeText("probe\n"); probe.delete(); true }.getOrDefault(false)
+      val ok = runCatching {
+        probe.writeText("probe\n")
+        probe.delete()
+        true
+      }.getOrDefault(false)
       runCatching { probe.delete() }
       if (ok) null else "$gradleDir is not writable"
     }
@@ -510,11 +529,13 @@ private fun publish(): Pair<Boolean, String> {
           "bundles: hosts with rollback protection would refuse it and show no bundle. Its signing block predates W4; run " +
           "keliver-new-publish-target.sh to replace it. Nothing was stored.",
       ).toString()
-    } else log.appendLine(
-      "publish: WARNING the manifest carries no signed $SEQUENCE_METADATA_KEY (its signing block predates W4). " +
-        "A host with rollback protection refuses it once it has run a sequenced bundle; run " +
-        "keliver-new-publish-target.sh to replace the block.",
-    )
+    } else {
+      log.appendLine(
+        "publish: WARNING the manifest carries no signed $SEQUENCE_METADATA_KEY (its signing block predates W4). " +
+          "A host with rollback protection refuses it once it has run a sequenced bundle; run " +
+          "keliver-new-publish-target.sh to replace the block.",
+      )
+    }
     version.toString() -> log.appendLine("publish: signed for sequence $version")
     else -> return false to log.appendLine(
       "publish REFUSED: the manifest is signed for sequence $signedSequence, but this bundle would be v$version. " +
@@ -550,7 +571,11 @@ private fun publish(): Pair<Boolean, String> {
 }
 
 private fun respond(ex: HttpExchange, code: Int, body: String? = null, contentType: String = "application/json") {
-  if (body == null) { ex.sendResponseHeaders(code, -1); ex.close(); return }
+  if (body == null) {
+    ex.sendResponseHeaders(code, -1)
+    ex.close()
+    return
+  }
   val bytes = body.encodeToByteArray()
   ex.responseHeaders.add("Content-Type", contentType)
   ex.sendResponseHeaders(code, bytes.size.toLong())
@@ -570,7 +595,10 @@ private fun jsonList(items: List<String>): String =
 // created through RelayAccess.gate), which also sets the CORS headers for an
 // admitted loopback origin. A preflight that gets here was admitted.
 private fun handle(ex: HttpExchange, block: () -> Unit) {
-  if (ex.requestMethod == "OPTIONS") { respond(ex, 204); return }
+  if (ex.requestMethod == "OPTIONS") {
+    respond(ex, 204)
+    return
+  }
   runCatching(block).onFailure {
     // A named screen that does not exist is a client error, and saying so is
     // the point: it used to be answered by inventing the screen.
@@ -629,8 +657,11 @@ private val sessionHistories = SessionHistories()
  */
 private val appScreensDir = File(repoDir, config.screensDir)
 private fun screensDirFor(project: String): File =
-  if (project == "default" && appScreensDir.parentFile.exists()) appScreensDir
-  else File(File(root, "kotlin"), project)
+  if (project == "default" && appScreensDir.parentFile.exists()) {
+    appScreensDir
+  } else {
+    File(File(root, "kotlin"), project)
+  }
 
 /**
  * ED3: this app's debug link scheme (DeviceProxy.linkScheme), from the app's own screens, read on
@@ -648,8 +679,11 @@ private val appComponentsDir = File(repoDir, config.resolvedComponentsDir())
 /** #13 F1: flow declarations live next to screens too (flow{} DSL files). */
 private val appFlowsDir = File(repoDir, config.resolvedFlowsDir())
 private fun flowsDirFor(project: String): File =
-  if (project == "default") appFlowsDir
-  else File(screensDirFor(project).parentFile, "flows")
+  if (project == "default") {
+    appFlowsDir
+  } else {
+    File(screensDirFor(project).parentFile, "flows")
+  }
 // ── P3-12: live-preview rebuild orchestration ───────────────────────────────
 
 /** Compiled component preview: say so when the adapters block cannot take effect. */
@@ -664,8 +698,11 @@ private val previewBuilder = PreviewBuilder(
 )
 
 private fun componentsDirFor(project: String): File =
-  if (project == "default") appComponentsDir
-  else File(screensDirFor(project).parentFile, "components")
+  if (project == "default") {
+    appComponentsDir
+  } else {
+    File(screensDirFor(project).parentFile, "components")
+  }
 
 /**
  * K2: extra design-token dirs (keliver.portal.json `tokensDirs`, relative to
@@ -734,13 +771,15 @@ internal fun declaredScreenFunction(file: File): String? {
 class UnknownScreen(val project: String, val screen: String, val known: List<String>) :
   IllegalArgumentException(
     "no screen '$screen' in project '$project'" +
-      if (known.isEmpty()) " (this app has no screens yet)"
-      else "; known screens: ${known.joinToString(", ")}",
+      if (known.isEmpty()) {
+        " (this app has no screens yet)"
+      } else {
+        "; known screens: ${known.joinToString(", ")}"
+      },
   )
 
 /** E14: raised when a request opens a component the app does not have, or one whose body is edited in code. */
-class UnknownComponent(project: String, name: String, why: String) :
-  IllegalArgumentException("component '$name' in project '$project' cannot be opened: $why")
+class UnknownComponent(project: String, name: String, why: String) : IllegalArgumentException("component '$name' in project '$project' cannot be opened: $why")
 
 /**
  * E14: the file that declares component [name] in [dir] — `<name>.kt` by
@@ -770,7 +809,9 @@ private fun componentDocFor(project: String, name: String): DocumentService {
     val spec = Components.registry(project).spec(name) ?: throw UnknownComponent(project, name, "the app has no such component")
     val file = componentFile(dir, name) ?: throw UnknownComponent(project, name, "its file is not in ${dir.name}/")
     DocumentService.forComponent(
-      "$project/component:$name", file, name,
+      "$project/component:$name",
+      file,
+      name,
       components = { Components.registry(project) },
       tokens = { Tokens.table(project) },
       tokenFileId = tokenFileId(file),
@@ -882,7 +923,7 @@ private fun bootScan() {
     val screen = mirror.name.removeSuffix(".json")
     if (screen !in names) {
       mirror.delete()
-      println("portal-server: retired stale store mirror default/$screen (no ${screen}.kt in $appScreensDir)")
+      println("portal-server: retired stale store mirror default/$screen (no $screen.kt in $appScreensDir)")
     }
   }
   println("portal-server: boot scan ingested ${ktScreens.size} screen(s) from $appScreensDir")
@@ -911,7 +952,10 @@ private fun startKotlinWatcher() {
     // P3-12: watch logic dirs — presenter edits trigger the preview rebuild.
     config.resolvedLogicDirs().forEach { rel ->
       val d = File(repoDir, rel)
-      if (d.parentFile?.exists() == true) { d.mkdirs(); add(d) }
+      if (d.parentFile?.exists() == true) {
+        d.mkdirs()
+        add(d)
+      }
     }
   }.distinctBy { it.absolutePath }
   dirs.forEach { dir ->
@@ -1060,8 +1104,11 @@ private fun isFlowFile(f: File): Boolean {
 
 private fun ingestFlowFile(f: File) {
   runCatching {
-    val project = if (f.parentFile.absolutePath == appFlowsDir.absolutePath) "default"
-    else (f.parentFile.parentFile?.name ?: "default")
+    val project = if (f.parentFile.absolutePath == appFlowsDir.absolutePath) {
+      "default"
+    } else {
+      (f.parentFile.parentFile?.name ?: "default")
+    }
     val flows = Flows.rebuild(project, flowsDirFor(project))
     println("ingest(flow): $project -> ${flows.keys.sorted()} (${f.name} changed)")
   }.onFailure { println("flow ingest failed for $f: $it") }
@@ -1357,7 +1404,8 @@ fun main(args: Array<String>) {
       val project = safe(query(ex)["project"] ?: "default")
       when (ex.requestMethod) {
         "GET" -> respond(
-          ex, 200,
+          ex,
+          200,
           jsonList(
             File(root, project).listFiles { f -> f.name.endsWith(".json") }
               ?.map { it.name.removeSuffix(".json") }?.sorted() ?: emptyList(),
@@ -1444,12 +1492,21 @@ fun main(args: Array<String>) {
   }
   server.createContext("/ops") { ex ->
     handle(ex) {
-      if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
+      if (ex.requestMethod != "POST") {
+        respond(ex, 405)
+        return@handle
+      }
       val q = query(ex)
       val batch = DocJson.decodeFromString<OpBatch>(ex.requestBody.readBytes().decodeToString())
       val svc = docFor(q)
       val ack = if (q["dryRun"] == "1") svc.dryRun(batch) else svc.submit(batch)
-      val code = if (ack.ok) 200 else if (ack.error?.startsWith("stale") == true) 409 else 422
+      val code = if (ack.ok) {
+        200
+      } else if (ack.error?.startsWith("stale") == true) {
+        409
+      } else {
+        422
+      }
       sendStackDepths(ex, svc, batch.envelope.session)
       respond(ex, code, DocJson.encodeToString(ack))
     }
@@ -1457,7 +1514,10 @@ fun main(args: Array<String>) {
   // POST only, like /ops: they change the document, and a GET is what a page's <img> sends.
   server.createContext("/undo") { ex ->
     handle(ex) {
-      if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
+      if (ex.requestMethod != "POST") {
+        respond(ex, 405)
+        return@handle
+      }
       val svc = docFor(query(ex))
       val ack = svc.undo(session(ex))
       sendStackDepths(ex, svc, session(ex))
@@ -1466,7 +1526,10 @@ fun main(args: Array<String>) {
   }
   server.createContext("/redo") { ex ->
     handle(ex) {
-      if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
+      if (ex.requestMethod != "POST") {
+        respond(ex, 405)
+        return@handle
+      }
       val svc = docFor(query(ex))
       val ack = svc.redo(session(ex))
       sendStackDepths(ex, svc, session(ex))
@@ -1477,7 +1540,10 @@ fun main(args: Array<String>) {
   // re-export from the tree (which loses the package, imports, names and declared types). GET only.
   server.createContext("/source") { ex ->
     handle(ex) {
-      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
+      if (ex.requestMethod != "GET") {
+        respond(ex, 405)
+        return@handle
+      }
       val svc = docFor(query(ex))
       val rel = runCatching { svc.file.canonicalFile.relativeTo(repoDir.canonicalFile).path }.getOrDefault(svc.file.name)
       val body = kotlinx.serialization.json.buildJsonObject {
@@ -1494,17 +1560,24 @@ fun main(args: Array<String>) {
   // (editor-fonts/OFL.txt). Read-only and the same for every app.
   server.createContext("/editor-font") { ex ->
     handle(ex) {
-      if (ex.requestMethod != "GET") { respond(ex, 405); return@handle }
+      if (ex.requestMethod != "GET") {
+        respond(ex, 405)
+        return@handle
+      }
       val bytes = Thread.currentThread().contextClassLoader.getResourceAsStream("editor-fonts/NotoSansSymbols2-Regular.ttf")
         ?.use { it.readBytes() }
-      if (bytes == null) { respond(ex, 404); return@handle }
+      if (bytes == null) {
+        respond(ex, 404)
+        return@handle
+      }
       ex.responseHeaders.set("Content-Type", "font/ttf")
       ex.responseHeaders.set("Cache-Control", "public, max-age=86400")
       ex.sendResponseHeaders(200, bytes.size.toLong())
       ex.responseBody.use { it.write(bytes) }
     }
   }
-  server.createContext("/doc-events") { ex -> // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back
+  server.createContext("/doc-events") { ex ->
+    // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
     ex.sendResponseHeaders(200, 0)
@@ -1552,8 +1625,14 @@ fun main(args: Array<String>) {
   // runs its update check on each event (BundleEvents.kt). Read-only; the
   // longer context wins over "/bundles" below.
   server.createContext("/bundles/events") { ex ->
-    if (ex.requestMethod != "GET") { respond(ex, 405); return@createContext }
-    if (!bundleEvents.hasRoom()) { respond(ex, 503, "too many devices listening"); return@createContext }
+    if (ex.requestMethod != "GET") {
+      respond(ex, 405)
+      return@createContext
+    }
+    if (!bundleEvents.hasRoom()) {
+      respond(ex, 503, "too many devices listening")
+      return@createContext
+    }
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
     ex.responseHeaders.add("X-Content-Type-Options", "nosniff")

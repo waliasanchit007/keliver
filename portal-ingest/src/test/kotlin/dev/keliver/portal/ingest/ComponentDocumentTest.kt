@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.Contract
@@ -81,7 +96,8 @@ class ComponentDocumentTest {
 
     val inserted = d0.apply(
       DocOp.InsertNode(
-        d0.root.handle, column(d0).children[2].handle,
+        d0.root.handle,
+        column(d0).children[2].handle,
         DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to PropValue.Bind("value"))),
       ),
     ).doc
@@ -93,8 +109,14 @@ class ComponentDocumentTest {
   @Test fun theWriterRefusesToChangeTheSignatureOrToCreateTheFile() {
     val d0 = doc(component)
     fun plan(onDisk: String?, d: UiDocument) = ScreenWriter.plan(
-      onDisk = onDisk, doc = d, base = d0, baseText = component, fileName = file,
-      functionName = "StatPair", packageName = null, asComponent = true,
+      onDisk = onDisk,
+      doc = d,
+      base = d0,
+      baseText = component,
+      fileName = file,
+      functionName = "StatPair",
+      packageName = null,
+      asComponent = true,
     )
     val renamed = d0.copy(contract = Contract(fields = mapOf("heading" to "String", "value" to "String"), actions = listOf("onTap")))
     assertTrue("parameters" in assertIs<ScreenWriter.Refuse>(plan(component, renamed)).reason)
@@ -172,8 +194,14 @@ class ComponentDocumentTest {
     val d0 = UiDocument("component:InfoBlock", rec.root, rec.contract, 0, 1000)
     val slot = (d0.root as DocNode.Widget).children.single { (it as DocNode.Widget).type == "Slot" }
     val plan = ScreenWriter.plan(
-      onDisk = block, doc = d0.apply(DocOp.DeleteNode(slot.handle)).doc, base = d0, baseText = block,
-      fileName = "app/components/InfoBlock.kt", functionName = "InfoBlock", packageName = null, asComponent = true,
+      onDisk = block,
+      doc = d0.apply(DocOp.DeleteNode(slot.handle)).doc,
+      base = d0,
+      baseText = block,
+      fileName = "app/components/InfoBlock.kt",
+      functionName = "InfoBlock",
+      packageName = null,
+      asComponent = true,
     )
     assertTrue("content slot" in assertIs<ScreenWriter.Refuse>(plan).reason)
   }

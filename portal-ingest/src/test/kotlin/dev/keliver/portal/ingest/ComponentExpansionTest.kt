@@ -1,14 +1,29 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
+import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.ComponentSpec
-import dev.keliver.portal.PropKind
-import dev.keliver.portal.PropSpec
-import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.portal.Expansion
 import dev.keliver.portal.MapComponentRegistry
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.PropSpec
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.expandForPreview
 import kotlin.test.Test
@@ -38,18 +53,21 @@ class ComponentExpansionTest {
 
   @Test fun literalAndScreenBindAndEventSubstitution() {
     // Instance: MenuRow(title = b.name, subtitle = "Account", onClick = { b.open("X") })  (icon omitted)
-    val inst = WidgetNode("MenuRow", mapOf(
-      "title" to Bind("name"),
-      "subtitle" to "Account",
-      "onClick" to Action("open", "\"X\""),
-    ))
+    val inst = WidgetNode(
+      "MenuRow",
+      mapOf(
+        "title" to Bind("name"),
+        "subtitle" to "Account",
+        "onClick" to Action("open", "\"X\""),
+      ),
+    )
     val li = tree(expandForPreview(inst, registry))
     assertEquals("ListItem", li.type)
-    assertEquals(Bind("name"), li.props["headline"])          // param bind -> screen bind
-    assertEquals("Account", li.props["supporting"])            // param bind -> instance literal
-    assertEquals("Star", li.props["leadingIcon"])              // omitted -> signature default
+    assertEquals(Bind("name"), li.props["headline"]) // param bind -> screen bind
+    assertEquals("Account", li.props["supporting"]) // param bind -> instance literal
+    assertEquals("Star", li.props["leadingIcon"]) // omitted -> signature default
     assertEquals("KeyboardArrowRight", li.props["trailingIcon"]) // body literal untouched
-    assertEquals(Action("open", "\"X\""), li.props["onClick"])  // event param -> instance action
+    assertEquals(Action("open", "\"X\""), li.props["onClick"]) // event param -> instance action
   }
 
   @Test fun omittedEventBecomesNoOp() {
@@ -99,10 +117,12 @@ class ComponentExpansionTest {
     val reg = MapComponentRegistry(listOf(menuRow, card))
     val first = WidgetNode("MenuRow", mapOf("title" to "One", "subtitle" to "First"))
     val second = WidgetNode("MenuRow", mapOf("title" to Bind("screenTitle"), "subtitle" to "Second"))
-    val expanded = tree(expandForPreview(
-      WidgetNode("SectionCard", mapOf("label" to "ACCOUNT"), listOf(first, second)),
-      reg,
-    ))
+    val expanded = tree(
+      expandForPreview(
+        WidgetNode("SectionCard", mapOf("label" to "ACCOUNT"), listOf(first, second)),
+        reg,
+      ),
+    )
     assertEquals("StyledBox", expanded.type)
     assertEquals(2, expanded.children.size)
     assertEquals(listOf("ListItem", "ListItem"), expanded.children.map { it.type })
@@ -125,10 +145,12 @@ class ComponentExpansionTest {
     )!!.spec
     val reg = MapComponentRegistry(listOf(wrapper))
     val child = WidgetNode("StyledText", mapOf("text" to Bind("title")))
-    val expanded = tree(expandForPreview(
-      WidgetNode("Wrapper", mapOf("title" to "wrapper literal"), listOf(child)),
-      reg,
-    ))
+    val expanded = tree(
+      expandForPreview(
+        WidgetNode("Wrapper", mapOf("title" to "wrapper literal"), listOf(child)),
+        reg,
+      ),
+    )
     assertEquals(Bind("title"), expanded.children.single().props["text"])
     assertEquals(child.id, expanded.children.single().props[COMPONENT_SOURCE_HANDLE_PROP])
   }
@@ -140,9 +162,12 @@ class ComponentExpansionTest {
       emptyList(),
       mapOf("content" to "@Composable () -> Unit"),
       slots = listOf(dev.keliver.portal.ComponentSlotSpec("content")),
-      body = WidgetNode("Column", children = listOf(
-        WidgetNode("Slot", mapOf("name" to "content")),
-      )),
+      body = WidgetNode(
+        "Column",
+        children = listOf(
+          WidgetNode("Slot", mapOf("name" to "content")),
+        ),
+      ),
       transparent = true,
     )
     val child = ComponentSpec(
@@ -150,18 +175,23 @@ class ComponentExpansionTest {
       emptyList(),
       emptyList(),
       emptyMap(),
-      body = WidgetNode("Wrapper", children = listOf(
-        WidgetNode("StyledText", mapOf("text" to "finite")),
-      )),
+      body = WidgetNode(
+        "Wrapper",
+        children = listOf(
+          WidgetNode("StyledText", mapOf("text" to "finite")),
+        ),
+      ),
       transparent = true,
       dependencies = setOf("Wrapper"),
     )
     val reg = MapComponentRegistry(listOf(wrapper, child))
 
-    val expanded = tree(expandForPreview(
-      WidgetNode("Wrapper", children = listOf(WidgetNode("Child"))),
-      reg,
-    ))
+    val expanded = tree(
+      expandForPreview(
+        WidgetNode("Wrapper", children = listOf(WidgetNode("Child"))),
+        reg,
+      ),
+    )
 
     val nestedWrapper = expanded.children.single()
     assertEquals("Column", nestedWrapper.type)
@@ -201,8 +231,13 @@ class ComponentExpansionTest {
   @Test fun directCycleIsGuarded() {
     // A uses A (self-reference).
     val a = ComponentSpec(
-      "A", emptyList(), emptyList(), emptyMap(),
-      body = WidgetNode("A", emptyMap()), transparent = true, dependencies = setOf("A"),
+      "A",
+      emptyList(),
+      emptyList(),
+      emptyMap(),
+      body = WidgetNode("A", emptyMap()),
+      transparent = true,
+      dependencies = setOf("A"),
     )
     val reg = MapComponentRegistry(listOf(a))
     // top-level expand of A: body contains A -> nested expand sees A in stack -> Cycle chip node.
@@ -213,10 +248,24 @@ class ComponentExpansionTest {
   }
 
   @Test fun indirectCycleIsGuarded() {
-    val a = ComponentSpec("A", emptyList(), emptyList(), emptyMap(),
-      body = WidgetNode("B", emptyMap()), transparent = true, dependencies = setOf("B"))
-    val b = ComponentSpec("B", emptyList(), emptyList(), emptyMap(),
-      body = WidgetNode("A", emptyMap()), transparent = true, dependencies = setOf("A"))
+    val a = ComponentSpec(
+      "A",
+      emptyList(),
+      emptyList(),
+      emptyMap(),
+      body = WidgetNode("B", emptyMap()),
+      transparent = true,
+      dependencies = setOf("B"),
+    )
+    val b = ComponentSpec(
+      "B",
+      emptyList(),
+      emptyList(),
+      emptyMap(),
+      body = WidgetNode("A", emptyMap()),
+      transparent = true,
+      dependencies = setOf("A"),
+    )
     val reg = MapComponentRegistry(listOf(a, b))
     // Expand A -> body B -> body A(in stack [A,B]) -> cycle chip. No hang.
     val t = tree(expandForPreview(WidgetNode("A", emptyMap()), reg))
@@ -227,16 +276,26 @@ class ComponentExpansionTest {
   // ── compiled component preview: expandForPreview(…, compiled, …) ──
 
   private val pill = ComponentSpec(
-    "Pill", listOf(PropSpec("label", PropKind.Text, "Label")), emptyList(), mapOf("label" to "String"),
-    transparent = false, diagnostic = "body contains code outside the portal grammar (opaque)",
+    "Pill",
+    listOf(PropSpec("label", PropKind.Text, "Label")),
+    emptyList(),
+    mapOf("label" to "String"),
+    transparent = false,
+    diagnostic = "body contains code outside the portal grammar (opaque)",
   )
   private val wrap = ComponentSpec(
-    "Wrap", listOf(PropSpec("title", PropKind.Text, "Title")), emptyList(), mapOf("title" to "String"),
+    "Wrap",
+    listOf(PropSpec("title", PropKind.Text, "Title")),
+    emptyList(),
+    mapOf("title" to "String"),
     body = WidgetNode("Column", emptyMap(), listOf(WidgetNode("Pill", mapOf("label" to Bind("title"), "mod.Padding.allDp" to 4)))),
     dependencies = setOf("Pill"),
   )
   private val card = ComponentSpec(
-    "Card2", emptyList(), emptyList(), emptyMap(),
+    "Card2",
+    emptyList(),
+    emptyList(),
+    emptyMap(),
     slots = listOf(ComponentSlotSpec("content")),
     body = WidgetNode("Column", emptyMap(), listOf(WidgetNode("Slot", mapOf("name" to "content")))),
   )
@@ -246,8 +305,8 @@ class ComponentExpansionTest {
     val col = tree(expandForPreview(WidgetNode("Wrap", mapOf("title" to Bind("name"))), compiledRegistry, setOf("Pill")))
     val kept = col.children.single()
     assertEquals("Pill", kept.type)
-    assertEquals(Bind("name"), kept.props["label"])   // the outer argument, re-pointed at the screen binding
-    assertEquals(4, kept.props["mod.Padding.allDp"])   // the call's own modifiers ride along
+    assertEquals(Bind("name"), kept.props["label"]) // the outer argument, re-pointed at the screen binding
+    assertEquals(4, kept.props["mod.Padding.allDp"]) // the call's own modifiers ride along
   }
 
   @Test fun withoutAnAdapterTheNestedOpaqueCallIsStillAPlaceholder() {

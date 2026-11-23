@@ -1,8 +1,17 @@
 /*
- * The outline's model: what a row says about its node, which rows are visible
- * under collapsed containers (keyboard navigation follows them), and where a
- * drop or an insert lands (E16/E17: before, after or inside a row — not always
- * at the end of the drop target).
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.WidgetNode
@@ -12,6 +21,13 @@ import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.findNode
 import dev.keliver.portal.tokenValue
+
+/*
+ * The outline's model: what a row says about its node, which rows are visible
+ * under collapsed containers (keyboard navigation follows them), and where a
+ * drop or an insert lands (E16/E17: before, after or inside a row — not always
+ * at the end of the drop target).
+ */
 
 /** A short description of [node] for its outline row, or null when its type says it all. */
 internal fun outlineHint(node: WidgetNode): String? = when (node.type) {
@@ -100,7 +116,8 @@ internal fun canvasDropPlace(
     // Round 5 (L1): a box that STACKS its children always does — after its one child, a new widget
     // is drawn on top of it (a screen's root box: drawn over the top of the screen).
     val wrapped = kids.singleOrNull()?.takeIf { (kid, b) ->
-      accepts(kid) && kid.type !in PASS_THROUGH_EXCLUDED &&
+      accepts(kid) &&
+        kid.type !in PASS_THROUGH_EXCLUDED &&
         (node.type in STACKING_TYPES || box(node)?.let { it.contains(x, y) && it.pads(b, padding) } == true)
     }
     wrapped?.let { (kid, b) ->
@@ -109,7 +126,13 @@ internal fun canvasDropPlace(
       return canvasDropPlace(root, kid.id, x.coerceIn(b.left, b.right), y.coerceIn(b.top, b.bottom), box, accepts, padding)
     }
     val sideBySide = sideBySide(kids.map { it.second })
-    fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) lo - p else if (p > hi) p - hi else 0.0
+    fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) {
+      lo - p
+    } else if (p > hi) {
+      p - hi
+    } else {
+      0.0
+    }
     val (kid, b) = kids.minBy { (_, b) -> if (sideBySide) gap(b.left, b.right, x) else gap(b.top, b.bottom, y) }
     val before = if (sideBySide) x < (b.left + b.right) / 2 else y < (b.top + b.bottom) / 2
     return kid.id to if (before) DropZone.Before else DropZone.After
@@ -117,8 +140,11 @@ internal fun canvasDropPlace(
   if (hit == root.id) return hit to DropZone.Inside
   val b = box(node) ?: return hit to DropZone.Inside
   // In a row, before and after are left and right.
-  return hit to if (laidOutAcross(root, hit, box)) dropZone(x - b.left, b.right - b.left, accepts(node))
-    else dropZone(y - b.top, b.bottom - b.top, accepts(node))
+  return hit to if (laidOutAcross(root, hit, box)) {
+    dropZone(x - b.left, b.right - b.left, accepts(node))
+  } else {
+    dropZone(y - b.top, b.bottom - b.top, accepts(node))
+  }
 }
 
 /** Review 4 #8: the outline rows on either side of a deleted node (and its subtree), in reading order. */
@@ -132,7 +158,13 @@ internal fun placeAfterDelete(root: WidgetNode, collapsed: Set<Int>, id: Int): D
   if (id == root.id) return null
   val order = visibleOrder(root, collapsed)
   val i = order.indexOf(id).takeIf { it >= 0 } ?: return null
-  val gone = HashSet<Int>().also { ids -> fun add(n: WidgetNode) { ids += n.id; n.children.forEach(::add) }; root.findNode(id)?.let(::add) }
+  val gone = HashSet<Int>().also { ids ->
+    fun add(n: WidgetNode) {
+      ids += n.id
+      n.children.forEach(::add)
+    }
+    root.findNode(id)?.let(::add)
+  }
   return DeletedPlace(next = order.drop(i).firstOrNull { it !in gone }, previous = order.take(i).lastOrNull())
 }
 
@@ -166,12 +198,14 @@ internal fun instanceBoxes(rects: List<DropBox>): List<DropBox> {
   var merged = true
   while (merged) {
     merged = false
-    loop@ for (i in groups.indices) for (j in i + 1 until groups.size) {
-      if (overlaps(groups[i], groups[j])) {
-        groups[i] = groups[i] union groups[j]
-        groups.removeAt(j)
-        merged = true
-        break@loop
+    loop@ for (i in groups.indices) {
+      for (j in i + 1 until groups.size) {
+        if (overlaps(groups[i], groups[j])) {
+          groups[i] = groups[i] union groups[j]
+          groups.removeAt(j)
+          merged = true
+          break@loop
+        }
       }
     }
   }
