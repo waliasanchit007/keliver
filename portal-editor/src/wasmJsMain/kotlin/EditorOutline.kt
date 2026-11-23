@@ -100,7 +100,8 @@ internal fun canvasDropPlace(
     // Round 5 (L1): a box that STACKS its children always does — after its one child, a new widget
     // is drawn on top of it (a screen's root box: drawn over the top of the screen).
     val wrapped = kids.singleOrNull()?.takeIf { (kid, b) ->
-      accepts(kid) && kid.type !in PASS_THROUGH_EXCLUDED &&
+      accepts(kid) &&
+        kid.type !in PASS_THROUGH_EXCLUDED &&
         (node.type in STACKING_TYPES || box(node)?.let { it.contains(x, y) && it.pads(b, padding) } == true)
     }
     wrapped?.let { (kid, b) ->
@@ -109,7 +110,13 @@ internal fun canvasDropPlace(
       return canvasDropPlace(root, kid.id, x.coerceIn(b.left, b.right), y.coerceIn(b.top, b.bottom), box, accepts, padding)
     }
     val sideBySide = sideBySide(kids.map { it.second })
-    fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) lo - p else if (p > hi) p - hi else 0.0
+    fun gap(lo: Double, hi: Double, p: Double) = if (p < lo) {
+      lo - p
+    } else if (p > hi) {
+      p - hi
+    } else {
+      0.0
+    }
     val (kid, b) = kids.minBy { (_, b) -> if (sideBySide) gap(b.left, b.right, x) else gap(b.top, b.bottom, y) }
     val before = if (sideBySide) x < (b.left + b.right) / 2 else y < (b.top + b.bottom) / 2
     return kid.id to if (before) DropZone.Before else DropZone.After
@@ -117,8 +124,11 @@ internal fun canvasDropPlace(
   if (hit == root.id) return hit to DropZone.Inside
   val b = box(node) ?: return hit to DropZone.Inside
   // In a row, before and after are left and right.
-  return hit to if (laidOutAcross(root, hit, box)) dropZone(x - b.left, b.right - b.left, accepts(node))
-    else dropZone(y - b.top, b.bottom - b.top, accepts(node))
+  return hit to if (laidOutAcross(root, hit, box)) {
+    dropZone(x - b.left, b.right - b.left, accepts(node))
+  } else {
+    dropZone(y - b.top, b.bottom - b.top, accepts(node))
+  }
 }
 
 /** Review 4 #8: the outline rows on either side of a deleted node (and its subtree), in reading order. */
@@ -132,7 +142,13 @@ internal fun placeAfterDelete(root: WidgetNode, collapsed: Set<Int>, id: Int): D
   if (id == root.id) return null
   val order = visibleOrder(root, collapsed)
   val i = order.indexOf(id).takeIf { it >= 0 } ?: return null
-  val gone = HashSet<Int>().also { ids -> fun add(n: WidgetNode) { ids += n.id; n.children.forEach(::add) }; root.findNode(id)?.let(::add) }
+  val gone = HashSet<Int>().also { ids ->
+    fun add(n: WidgetNode) {
+      ids += n.id
+      n.children.forEach(::add)
+    }
+    root.findNode(id)?.let(::add)
+  }
   return DeletedPlace(next = order.drop(i).firstOrNull { it !in gone }, previous = order.take(i).lastOrNull())
 }
 
@@ -166,12 +182,14 @@ internal fun instanceBoxes(rects: List<DropBox>): List<DropBox> {
   var merged = true
   while (merged) {
     merged = false
-    loop@ for (i in groups.indices) for (j in i + 1 until groups.size) {
-      if (overlaps(groups[i], groups[j])) {
-        groups[i] = groups[i] union groups[j]
-        groups.removeAt(j)
-        merged = true
-        break@loop
+    loop@ for (i in groups.indices) {
+      for (j in i + 1 until groups.size) {
+        if (overlaps(groups[i], groups[j])) {
+          groups[i] = groups[i] union groups[j]
+          groups.removeAt(j)
+          merged = true
+          break@loop
+        }
       }
     }
   }

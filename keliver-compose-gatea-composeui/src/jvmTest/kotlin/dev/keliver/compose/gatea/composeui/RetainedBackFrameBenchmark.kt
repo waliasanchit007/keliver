@@ -179,7 +179,13 @@ class RetainedBackFrameBenchmark {
     val host = guestOnHost(tap, back) {
       KeliverRetainedStack(keys, KeliverNavRetention(HostFrame, depth = 1), onHostBack = { key -> keys = keys.subList(0, keys.indexOf(key) + 1) }) { key ->
         // Each screen is one column, as the prototype's entry content.
-        if (key == "list") ListScreen() else if (heavy) HeavyDetailScreen(items[3]) else DetailScreen(items[3])
+        if (key == "list") {
+          ListScreen()
+        } else if (heavy) {
+          HeavyDetailScreen(items[3])
+        } else {
+          DetailScreen(items[3])
+        }
       }
     }
     setContent {
@@ -206,7 +212,11 @@ class RetainedBackFrameBenchmark {
     }
     val frames = timer.frames.sorted()
     val line = "$label: median %.3f ms, p90 %.3f, min %.3f, max %.3f (n=%d)%s".format(
-      frames[frames.size / 2], frames[frames.size * 9 / 10], frames.first(), frames.last(), frames.size,
+      frames[frames.size / 2],
+      frames[frames.size * 9 / 10],
+      frames.first(),
+      frames.last(),
+      frames.size,
       if (measuredProperty == null) " [smoke run, no warm-up: not a measurement]" else "",
     )
     println(line)
@@ -474,7 +484,7 @@ class RetainedBackFrameBenchmark {
 
   @Suppress("ktlint:compose:lambda-param-event-trailing") // A benchmark fixture's button.
   @Composable
-  private fun Action(label: String, modifier: Modifier, onClick: () -> Unit) {
+  private fun Action(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(modifier.height(48.dp).padding(4.dp).background(ActionBg, RoundedCornerShape(8.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
       Text(label, color = Indigo, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }

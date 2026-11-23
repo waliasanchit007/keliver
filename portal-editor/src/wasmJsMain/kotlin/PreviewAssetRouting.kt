@@ -142,8 +142,11 @@ internal fun encodeUriComponent(s: String): String {
   for (b in s.encodeToByteArray()) {
     val c = (b.toInt() and 0xff)
     val ch = c.toChar()
-    if (c < 0x80 && (ch.isLetterOrDigit() || ch in "-_.!~*'()")) sb.append(ch)
-    else sb.append('%').append("0123456789ABCDEF"[c shr 4]).append("0123456789ABCDEF"[c and 0xf])
+    if (c < 0x80 && (ch.isLetterOrDigit() || ch in "-_.!~*'()")) {
+      sb.append(ch)
+    } else {
+      sb.append('%').append("0123456789ABCDEF"[c shr 4]).append("0123456789ABCDEF"[c and 0xf])
+    }
   }
   return sb.toString()
 }

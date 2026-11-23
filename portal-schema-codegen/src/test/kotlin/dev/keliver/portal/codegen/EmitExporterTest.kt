@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 import kotlin.test.Test
@@ -6,20 +21,28 @@ import kotlin.test.assertFalse
 
 class EmitExporterTest {
   private val text = WidgetPlan.Include(
-    name = "StyledText", composePackage = "dev.keliver.material.compose", category = "Material",
+    name = "StyledText",
+    composePackage = "dev.keliver.material.compose",
+    category = "Material",
     props = listOf(
       MappedProp("text", MappedKind.TEXT, required = true, defaultExpr = null),
       MappedProp("fontSize", MappedKind.INT, required = false, defaultExpr = "14"),
     ),
-    skippedProps = emptyList(), events = emptyList(), hasChildren = false,
+    skippedProps = emptyList(),
+    events = emptyList(),
+    hasChildren = false,
   )
   private val box = WidgetPlan.Include(
-    name = "StyledBox", composePackage = "dev.keliver.material.compose", category = "Material",
+    name = "StyledBox",
+    composePackage = "dev.keliver.material.compose",
+    category = "Material",
     props = listOf(
       MappedProp("width", MappedKind.CONSTRAINT, required = false, defaultExpr = "Constraint.Wrap"),
       MappedProp("gradientStops", MappedKind.FLOAT_LIST, required = false, defaultExpr = "emptyList()"),
     ),
-    skippedProps = emptyList(), events = emptyList(), hasChildren = true,
+    skippedProps = emptyList(),
+    events = emptyList(),
+    hasChildren = true,
   )
 
   @Test fun emitsExporterWithPerWidgetBranches() {
@@ -41,8 +64,12 @@ class EmitExporterTest {
   }
 
   @Test fun emitsModifierChainExport() {
-    val padding = ModPlan("Padding", "padding", "dev.keliver.material.compose",
-      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)))
+    val padding = ModPlan(
+      "Padding",
+      "padding",
+      "dev.keliver.material.compose",
+      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)),
+    )
     val src = emitExporter(listOf(text), listOf(padding))
     assertContains(src, "\"Padding\" to \"dev.keliver.material.compose.padding\"")
     assertContains(src, "private fun modifierExpr(node: WidgetNode, parent: String?, imports: MutableSet<String>): String?")
@@ -55,15 +82,27 @@ class EmitExporterTest {
   }
 
   @Test fun scopedModifiersExportWithoutAnImportButWithTheirArgTypes() {
-    val flex = ModPlan("Flex", "flex", "dev.keliver.layout.compose",
+    val flex = ModPlan(
+      "Flex",
+      "flex",
+      "dev.keliver.layout.compose",
       listOf(MappedProp("value", MappedKind.DOUBLE, required = true, defaultExpr = null)),
-      scopes = listOf("RowScope", "ColumnScope"))
-    val margin = ModPlan("Margin", "margin", "dev.keliver.layout.compose",
+      scopes = listOf("RowScope", "ColumnScope"),
+    )
+    val margin = ModPlan(
+      "Margin",
+      "margin",
+      "dev.keliver.layout.compose",
       listOf(MappedProp("margin", MappedKind.MARGIN, required = true, defaultExpr = null)),
-      scopes = listOf("RowScope", "ColumnScope", "BoxScope"))
-    val width = ModPlan("Width", "width", "dev.keliver.layout.compose",
+      scopes = listOf("RowScope", "ColumnScope", "BoxScope"),
+    )
+    val width = ModPlan(
+      "Width",
+      "width",
+      "dev.keliver.layout.compose",
       listOf(MappedProp("width", MappedKind.DP, required = true, defaultExpr = null)),
-      scopes = listOf("RowScope"))
+      scopes = listOf("RowScope"),
+    )
     val src = emitExporter(listOf(text), listOf(flex, margin, width))
     val imports = src.substringAfter("public val modifierImport").substringBefore("\n)\n")
     assertFalse("flex" in imports, imports)

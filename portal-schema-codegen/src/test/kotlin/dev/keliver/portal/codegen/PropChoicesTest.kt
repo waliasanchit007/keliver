@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 import java.io.File
@@ -84,14 +99,18 @@ class PropChoicesTest {
     val enums = mapOf(MappedKind.CONSTRAINT to listOf(ChoicePlan(0, "Wrap"), ChoicePlan(1, "Fill")))
     val docs = mapOf("W.align" to "0 start, 1 end.", "W.tintArgb" to "0 none, 1 some.")
     val plan = WidgetPlan.Include(
-      "W", "p", "Material",
+      "W",
+      "p",
+      "Material",
       listOf(
         MappedProp("align", MappedKind.INT, required = false, defaultExpr = "0"),
         MappedProp("tintArgb", MappedKind.INT, required = false, defaultExpr = "0"), // a colour: never choices
         MappedProp("width", MappedKind.CONSTRAINT, required = false, defaultExpr = "Constraint.Wrap"),
         MappedProp("size", MappedKind.INT, required = false, defaultExpr = "0"),
       ),
-      emptyList(), emptyList(), hasChildren = false,
+      emptyList(),
+      emptyList(),
+      hasChildren = false,
     ).withChoices(docs, enums) as WidgetPlan.Include
     assertEquals(listOf(2, 0, 2, 0), plan.props.map { it.choices.size })
     val src = emitCatalog(listOf(plan))

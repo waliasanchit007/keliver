@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.render
 
 import dev.keliver.Modifier
@@ -10,8 +25,8 @@ import dev.keliver.material.compose.StyledBox
 import dev.keliver.material.compose.StyledText
 import dev.keliver.material.compose.padding
 import dev.keliver.material.modifier.SelectionTag
-import dev.keliver.material.testing.KeliverMaterialTester
 import dev.keliver.material.testing.ButtonValue
+import dev.keliver.material.testing.KeliverMaterialTester
 import dev.keliver.material.testing.StyledBoxValue
 import dev.keliver.material.testing.StyledTextValue
 import dev.keliver.portal.Action
@@ -22,13 +37,13 @@ import dev.keliver.portal.Template
 import dev.keliver.portal.Token
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.placeholder
+import dev.keliver.portal.render.fixture.CompiledComponent as NamedCompiledComponent
 import dev.keliver.portal.render.fixture.ParityCompiledComponents
 import dev.keliver.portal.render.fixture.ParityOpaqueBadge
 import dev.keliver.portal.render.fixture.ParityOpaqueFrame
 import dev.keliver.portal.render.fixture.ParityOpaqueGap
 import dev.keliver.portal.render.fixture.ParityOpaqueMeter
 import dev.keliver.portal.render.fixture.`in`.ParityOpaqueKeywords
-import dev.keliver.portal.render.fixture.CompiledComponent as NamedCompiledComponent
 import dev.keliver.testing.WidgetValue
 import dev.keliver.testing.flatten
 import dev.keliver.ui.Margin
@@ -163,10 +178,12 @@ class CompiledComponentParityTest {
       setContentAndSnapshot {
         RenderNode(
           WidgetNode(
-            "Column", mapOf("width" to 1),
+            "Column",
+            mapOf("width" to 1),
             listOf(
               WidgetNode(
-                "Row", mapOf("width" to 1),
+                "Row",
+                mapOf("width" to 1),
                 listOf(
                   badge("label" to "a", "count" to 1, "mod.Flex.value" to 1.0, "mod.Margin.margin.start" to 4.0, "mod.Padding.allDp" to 2),
                   badge("label" to "b", "count" to 2, "mod.VerticalAlignment.alignment" to 2),
@@ -227,7 +244,8 @@ class CompiledComponentParityTest {
       setContentAndSnapshot {
         RenderNode(
           WidgetNode(
-            "Column", emptyMap(),
+            "Column",
+            emptyMap(),
             listOf(
               badge("label" to "x", "count" to "not a number"),
               WidgetNode("StyledText", mapOf("text" to "after")),

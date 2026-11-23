@@ -201,8 +201,11 @@ internal fun defaultValue(field: StateField, scenario: Scenario): String = when 
   // A text a condition tests (`isNotBlank()`): present when its role is on in this scenario.
   StateKind.Text -> if (field.source == StateSource.Condition && roleOf(field.name) !in scenario.on) "" else sampleText(field.name)
   StateKind.Int -> sampleColor(field.name)?.toString()
-    ?: if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) "3"
-    else sampleSize(field.name) ?: "1"
+    ?: if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) {
+      "3"
+    } else {
+      sampleSize(field.name) ?: "1"
+    }
   StateKind.Double -> "1.5"
   StateKind.Rows -> if (scenario == Scenario.Empty || scenario == Scenario.Loading) "0" else "3"
 }
@@ -218,6 +221,7 @@ internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario, values: Map<Str
   // flag's role is on in the scenario, else the else branch.
   val carried = carriedRoles(tree)
   fun isOn(field: String) = roleOf(field) in scenario.on || carried[field].orEmpty().any { it in scenario.on }
+
   // Review 4 #4: with the scenario's preview [values], a condition is decided as the canvas decides
   // it — compound (`!loading && !error`) and Empty/Null/Eq tests included.
   fun drawn(c: WidgetNode): Boolean {

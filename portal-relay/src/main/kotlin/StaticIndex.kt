@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.io.File
 import java.nio.channels.FileChannel
 import java.nio.file.Files
@@ -351,8 +366,11 @@ private fun noStricterThan(other: JsonObject, source: JsonObject): Boolean {
   // NF2: an entry serves only hosts of its engine, so only one for the same engine competes; its
   // engine constraint asks nothing more of those hosts.
   val otherGates = ((other["constraints"] as? JsonObject).orEmpty() - "engine")
-  return (other["constraints"] == null || other["constraints"] is JsonObject) && otherGates.isEmpty() &&
-    entryEngine(other) == entryEngine(source) && caps(source).containsAll(caps(other)) && wv(other) <= wv(source)
+  return (other["constraints"] == null || other["constraints"] is JsonObject) &&
+    otherGates.isEmpty() &&
+    entryEngine(other) == entryEngine(source) &&
+    caps(source).containsAll(caps(other)) &&
+    wv(other) <= wv(source)
 }
 
 /**
@@ -438,7 +456,7 @@ internal fun keyChangeProblem(bundlesDir: File, index: JsonObject, manifestJson:
   val version = (newest["version"] as? JsonPrimitive)?.intOrNull
   val previous = version?.let { File(File(bundlesDir, "v$it"), "manifest.zipline.json") }?.takeIf { it.isFile }
     ?: return "cannot tell which key signed the newest published bundle (sequence $sequence): its v<N>/manifest.zipline.json " +
-      "is not in ${bundlesDir}. Download every served bundles/v<N>/ first, or, if a change of signing key is meant, " +
+      "is not in $bundlesDir. Download every served bundles/v<N>/ first, or, if a change of signing key is meant, " +
       "publish again with --accept-key-change."
   val before = checkSignatures(previous.readText(), publicKeysText, authenticOnly = true).signers
   val now = checkSignatures(manifestJson, publicKeysText).signers
@@ -793,7 +811,8 @@ internal fun setRolloutStatic(outDir: File, sequence: Long, rollout: Int, channe
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), JsonObject(index + ("entries" to JsonArray(entries)))) + "\n")
     // Hosts on another channel also take stable's entry at this sequence (the same buckets).
     val stableTwin = entries.firstOrNull {
-      entryChannel(entry) != DEFAULT_CHANNEL && entryChannel(it) == DEFAULT_CHANNEL &&
+      entryChannel(entry) != DEFAULT_CHANNEL &&
+        entryChannel(it) == DEFAULT_CHANNEL &&
         (it["sequence"] as JsonPrimitive).longOrNull == sequence
     }
     val stableRollout = stableTwin?.let { ((it["constraints"] as? JsonObject)?.get("rollout") as? JsonPrimitive)?.intOrNull ?: 100 }
@@ -1086,8 +1105,13 @@ internal fun legacyLatest(bundlesDir: File, widgetVersion: Int, hostCaps: Set<St
       val signed = manifestText?.let { signedBridges(it) }
       // NF2: such a host runs DEFAULT_ENGINE, so never a bundle for another (or a malformed value).
       val engine = manifestText?.let { signedEngine(it) }
-      recorded <= widgetVersion && hostCaps.containsAll(required) && signed != null &&
-        signed.problem == null && signed.constraint == null &&
-        engine != null && engine.problem == null && engine.engine == DEFAULT_ENGINE
+      recorded <= widgetVersion &&
+        hostCaps.containsAll(required) &&
+        signed != null &&
+        signed.problem == null &&
+        signed.constraint == null &&
+        engine != null &&
+        engine.problem == null &&
+        engine.engine == DEFAULT_ENGINE
     }
     ?.maxByOrNull { it.name.removePrefix("v").toIntOrNull() ?: 0 }

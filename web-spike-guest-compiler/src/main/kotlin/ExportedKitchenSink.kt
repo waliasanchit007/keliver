@@ -1,11 +1,22 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 @file:Suppress("ktlint:compose:modifier-missing-check") // A spike's exported root screen: nothing places it.
 
 import androidx.compose.runtime.Composable
 import dev.keliver.Modifier
-import dev.keliver.layout.api.Constraint
-import dev.keliver.layout.api.CrossAxisAlignment
-import dev.keliver.layout.api.MainAxisAlignment
-import dev.keliver.layout.api.Overflow
 import dev.keliver.layout.compose.Box
 import dev.keliver.layout.compose.Column
 import dev.keliver.layout.compose.Row
@@ -69,43 +80,35 @@ import dev.keliver.material.compose.VerticalPager
 import dev.keliver.material.compose.animateContentSize
 import dev.keliver.material.compose.cornerRadius
 import dev.keliver.material.compose.padding
-import dev.keliver.ui.Dp
 
 @Composable
 fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
-  Column(
-  ) {
+  Column {
     AlertDialog(
       modifier = Modifier.animateContentSize().cornerRadius(4).padding(8),
       title = "New AlertDialog",
       text = "New AlertDialog",
     )
-    AnimatedBorder(
-    ) {
+    AnimatedBorder {
     }
-    AnimatedVisibility(
-    ) {
+    AnimatedVisibility {
     }
     AsyncImage(
       url = "New AsyncImage",
     )
-    Badge(
-    )
-    BottomAppBar(
-    ) {
+    Badge()
+    BottomAppBar {
     }
     BottomSheet(
       visible = false,
     ) {
     }
-    Box(
-    ) {
+    Box {
     }
     Button(
       text = "New Button",
     )
-    Card(
-    ) {
+    Card {
     }
     Checkbox(
       checked = false,
@@ -113,24 +116,18 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     Chip(
       label = "New Chip",
     )
-    CircularProgressIndicator(
-    )
-    Clickable(
-    ) {
+    CircularProgressIndicator()
+    Clickable {
     }
-    Column(
-    ) {
+    Column {
     }
-    Dialog(
-    ) {
+    Dialog {
     }
-    Divider(
-    )
+    Divider()
     ElevatedButton(
       text = "New ElevatedButton",
     )
-    ElevatedCard(
-    ) {
+    ElevatedCard {
     }
     ExtendedFloatingActionButton(
       text = "New ExtendedFloatingActionButton",
@@ -141,16 +138,12 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     FilterChip(
       label = "New FilterChip",
     )
-    FloatingActionButton(
-    )
-    FlowColumn(
-    ) {
+    FloatingActionButton()
+    FlowColumn {
     }
-    FlowRow(
-    ) {
+    FlowRow {
     }
-    HorizontalPager(
-    ) {
+    HorizontalPager {
     }
     IconButton(
       imageUrl = "New IconButton",
@@ -161,25 +154,19 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     InputChip(
       label = "New InputChip",
     )
-    LazyHorizontalGrid(
-    ) {
+    LazyHorizontalGrid {
     }
-    LazyVerticalGrid(
-    ) {
+    LazyVerticalGrid {
     }
-    LinearProgressIndicator(
-    )
-    NavigationBar(
-    ) {
+    LinearProgressIndicator()
+    NavigationBar {
     }
-    NavigationRail(
-    ) {
+    NavigationRail {
     }
     OutlinedButton(
       text = "New OutlinedButton",
     )
-    OutlinedCard(
-    ) {
+    OutlinedCard {
     }
     OutlinedTextField(
       text = "New OutlinedTextField",
@@ -187,23 +174,17 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     RadioButton(
       selected = false,
     )
-    Row(
-    ) {
+    Row {
     }
-    ScrollableColumn(
-    ) {
+    ScrollableColumn {
     }
-    Shimmer(
-    )
-    Slider(
-    )
+    Shimmer()
+    Slider()
     Snackbar(
       message = "New Snackbar",
     )
-    Spacer(
-    )
-    StyledBox(
-    ) {
+    Spacer()
+    StyledBox {
     }
     StyledText(
       text = "New StyledText",
@@ -211,8 +192,7 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     SuggestionChip(
       label = "New SuggestionChip",
     )
-    Surface(
-    ) {
+    Surface {
     }
     Switch(
       checked = false,
@@ -220,8 +200,7 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     Tab(
       text = "New Tab",
     )
-    TabRow(
-    ) {
+    TabRow {
     }
     Text(
       text = "New Text",
@@ -232,10 +211,8 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     TextField(
       text = "New TextField",
     )
-    TextInput(
-    )
-    Theme(
-    ) {
+    TextInput()
+    Theme {
     }
     Tooltip(
       text = "New Tooltip",
@@ -244,10 +221,8 @@ fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
     TopAppBar(
       title = "New TopAppBar",
     )
-    VerticalDivider(
-    )
-    VerticalPager(
-    ) {
+    VerticalDivider()
+    VerticalPager {
     }
     if (b.showThis) {
     }

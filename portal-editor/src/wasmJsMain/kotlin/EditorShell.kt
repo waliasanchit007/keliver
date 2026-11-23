@@ -104,8 +104,11 @@ internal fun componentStage(root: dev.keliver.portal.WidgetNode): dev.keliver.po
   )
 
 internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
-  val tagged = if (n.type in UNRENDERED_TYPES) n
-  else n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
+  val tagged = if (n.type in UNRENDERED_TYPES) {
+    n
+  } else {
+    n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
+  }
   return tagged.copy(children = tagged.children.map { selectionTagged(it) })
 }
 
@@ -117,8 +120,11 @@ internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.port
 internal fun tagWith(n: dev.keliver.portal.WidgetNode, handle: Int): dev.keliver.portal.WidgetNode {
   val sourceHandle = (n.props[COMPONENT_SOURCE_HANDLE_PROP] as? Int) ?: handle
   val cleanProps = n.props - COMPONENT_SOURCE_HANDLE_PROP
-  val tagged = if (n.type in UNRENDERED_TYPES) n
-  else n.copy(props = cleanProps + ("mod.SelectionTag.handle" to sourceHandle))
+  val tagged = if (n.type in UNRENDERED_TYPES) {
+    n
+  } else {
+    n.copy(props = cleanProps + ("mod.SelectionTag.handle" to sourceHandle))
+  }
   return tagged.copy(
     props = if (tagged.type in UNRENDERED_TYPES) cleanProps else tagged.props,
     children = tagged.children.map { tagWith(it, sourceHandle) },
@@ -169,7 +175,9 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
 private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
   override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable =
-    object : Cancellable { override fun cancel() {} }
+    object : Cancellable {
+      override fun cancel() {}
+    }
 }
 
 /**

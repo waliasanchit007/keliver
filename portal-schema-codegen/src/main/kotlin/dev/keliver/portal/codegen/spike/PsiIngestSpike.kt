@@ -94,7 +94,9 @@ fun main() {
   val disposable = Disposer.newDisposable()
   val t0 = System.nanoTime()
   val env = KotlinCoreEnvironment.createForProduction(
-    disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+    disposable,
+    CompilerConfiguration.create(),
+    EnvironmentConfigFiles.JVM_CONFIG_FILES,
   )
   val factory = KtPsiFactory(env.project)
   val tEnv = System.nanoTime()

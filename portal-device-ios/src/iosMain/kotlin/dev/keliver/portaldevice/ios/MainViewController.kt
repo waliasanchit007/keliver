@@ -23,10 +23,10 @@ import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
 import coil3.PlatformContext
-import dev.keliver.leaks.LeakDetector
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
+import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portaldevice.HostApi
@@ -37,6 +37,8 @@ import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
@@ -46,9 +48,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString
 import okio.ByteString.Companion.decodeHex
 import okio.ByteString.Companion.toByteString
@@ -59,19 +61,17 @@ import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSString
-import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLRequestUseProtocolCachePolicy
 import platform.Foundation.NSURLResponse
 import platform.Foundation.NSURLSession
+import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.addValue
 import platform.Foundation.dataTaskWithRequest
 import platform.Foundation.dataUsingEncoding
-import platform.Foundation.setValue
 import platform.Foundation.setHTTPBody
 import platform.Foundation.setHTTPMethod
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import platform.Foundation.setValue
 
 // The iOS simulator shares the Mac's network — localhost reaches the
 // portal-server (:8077) and the zipline dev server (:8080) directly.

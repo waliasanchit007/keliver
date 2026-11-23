@@ -1,8 +1,23 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.serialization.encodeToString
 
 class WireTest {
   @Test fun opBatchRoundTripsPolymorphically() {
@@ -22,7 +37,8 @@ class WireTest {
   @Test fun actionArgSerializesAndOldJsonStillDecodes() {
     // Phase 2: single-arg actions ride the wire; pre-arg documents must still decode.
     val node: DocNode = DocNode.Widget(
-      Handle(1), "Clickable",
+      Handle(1),
+      "Clickable",
       props = mapOf("onClick" to PropValue.Action("openNote", arg = "note.id")),
     )
     val json = DocJson.encodeToString(node)
@@ -42,7 +58,8 @@ class WireTest {
   @Test fun stringListLitRoundTripsAndOldJsonStillDecodes() {
     // P4 STRING_LIST ("ls"): options lists (DropdownMenu/SegmentedButtonRow).
     val node: DocNode = DocNode.Widget(
-      Handle(1), "SegmentedButtonRow",
+      Handle(1),
+      "SegmentedButtonRow",
       props = mapOf("options" to PropValue.Lit("ls", ls = listOf("Day", "Week", "Month"))),
     )
     val json = DocJson.encodeToString(node)
@@ -53,7 +70,8 @@ class WireTest {
 
   @Test fun docNodeRoundTrips() {
     val doc: DocNode = DocNode.Widget(
-      Handle(1), "Column",
+      Handle(1),
+      "Column",
       children = listOf(DocNode.RawCode(Handle(2), "if (b.loading) { }", kindHint = "condition")),
     )
     assertEquals(doc, DocJson.decodeFromString<DocNode>(DocJson.encodeToString(doc)))

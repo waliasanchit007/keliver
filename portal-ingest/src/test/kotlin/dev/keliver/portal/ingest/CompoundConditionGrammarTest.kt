@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.WidgetNode
@@ -11,14 +26,14 @@ import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
-import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
-import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
+import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
 
 /**
  * K6: equality terms (`b.kind == "card"`, `b.tier != C.Top`) and compound
@@ -165,17 +180,20 @@ class CompoundConditionGrammarTest {
     val color = child(d, 0).props["colorArgb"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "colorArgb", color.copy(whenFalse = lit(-16777216)))).doc),
-      "else C.White)", "else -16777216)",
+      "else C.White)",
+      "else -16777216)",
     )
     val onClick = child(d, 4).props["onClick"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 4).handle, "onClick", onClick.copy(whenTrue = PropValue.Action("go")))).doc),
-      "if (b.enabled && !b.busy) b::tap", "if (b.enabled && !b.busy) b::go",
+      "if (b.enabled && !b.busy) b::tap",
+      "if (b.enabled && !b.busy) b::go",
     )
     val start = child(d, 3).props["margin.start"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 3).handle, "margin.start", start.copy(whenTrue = lit(12.0)))).doc),
-      "!b.open) 16.dp else", "!b.open) 12.dp else",
+      "!b.open) 16.dp else",
+      "!b.open) 12.dp else",
     )
     // In a CRLF file too, the rest keeps its CRLF.
     val crlf = src.replace("\n", "\r\n")
@@ -196,16 +214,19 @@ class CompoundConditionGrammarTest {
     val color = child(d, 0).props["colorArgb"] as PropValue.Conditional
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "colorArgb", color.copy(operand = card))).doc),
-      "if (b.kind == \"card\" && b.open)", "if (b.kind == C.Card && b.open)",
+      "if (b.kind == \"card\" && b.open)",
+      "if (b.kind == C.Card && b.open)",
     )
     // Another shape (a term more, another join) rewrites the condition, and only it.
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "colorArgb", color.copy(more = color.more + CondTerm("busy", negate = true)))).doc),
-      "if (b.kind == \"card\" && b.open)", "if (b.kind == \"card\" && b.open && !b.busy)",
+      "if (b.kind == \"card\" && b.open)",
+      "if (b.kind == \"card\" && b.open && !b.busy)",
     )
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "colorArgb", color.copy(join = "or"))).doc),
-      "if (b.kind == \"card\" && b.open)", "if (b.kind == \"card\" || b.open)",
+      "if (b.kind == \"card\" && b.open)",
+      "if (b.kind == \"card\" || b.open)",
     )
   }
 
@@ -345,7 +366,8 @@ class CompoundConditionGrammarTest {
   @Test fun aNewConditionWithEveryFormIsInsertedAndReadsBack() {
     val d = doc()
     val node = DocNode.Widget(
-      Handle(0), "Condition",
+      Handle(0),
+      "Condition",
       mapOf("field" to lit("tier"), "test" to lit("eq"), "operand" to top, "field.1" to lit("open"), "join" to lit("or")),
       children = listOf(DocNode.Widget(Handle(0), "StyledText", mapOf("text" to lit("new")))),
     )

@@ -109,7 +109,10 @@ internal class SessionHistory(private val limit: Int = 200) {
   }
 
   /** Another screen (or project) was opened: its edits start a history of their own. */
-  fun clear() { undos.clear(); redos.clear() }
+  fun clear() {
+    undos.clear()
+    redos.clear()
+  }
 
   /** H2: this history as text, to keep across a reload: `undo` and `redo`, each a list of documents. */
   fun encode(): String = kotlinx.serialization.json.buildJsonObject {

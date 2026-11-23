@@ -20,8 +20,11 @@ internal var canvasZoom = 1.0
 
 /** The next zoom step above (or below, for [up] = false) [current]. */
 internal fun nextZoom(current: Double, up: Boolean): Double =
-  if (up) ZOOM_STEPS.firstOrNull { it > current + 1e-6 } ?: ZOOM_MAX
-  else ZOOM_STEPS.lastOrNull { it < current - 1e-6 } ?: ZOOM_MIN
+  if (up) {
+    ZOOM_STEPS.firstOrNull { it > current + 1e-6 } ?: ZOOM_MAX
+  } else {
+    ZOOM_STEPS.lastOrNull { it < current - 1e-6 } ?: ZOOM_MIN
+  }
 
 /** The largest zoom (at most 100%) at which a [w]×[h] frame fits in [availW]×[availH]. */
 /**

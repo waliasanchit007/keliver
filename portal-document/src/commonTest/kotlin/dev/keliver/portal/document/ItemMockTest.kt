@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.Action
@@ -13,10 +28,14 @@ import kotlin.test.assertEquals
  * portal-render has no JVM target and this module already depends on core).
  */
 class ItemMockTest {
-  private val row = WidgetNode("Clickable", mapOf("onClick" to Action("openNote", "note.id")), listOf(
-    WidgetNode("StyledText", mapOf("text" to Bind("note.title"), "fontSize" to 16)),
-    WidgetNode("StyledText", mapOf("text" to Bind("subtitle"))), // screen bind: untouched
-  ))
+  private val row = WidgetNode(
+    "Clickable",
+    mapOf("onClick" to Action("openNote", "note.id")),
+    listOf(
+      WidgetNode("StyledText", mapOf("text" to Bind("note.title"), "fontSize" to 16)),
+      WidgetNode("StyledText", mapOf("text" to Bind("subtitle"))), // screen bind: untouched
+    ),
+  )
 
   @Test fun resolvesPipeSeparatedRowValuesAndClamps() {
     val mocks = mapOf("note.title" to "First|Second")
@@ -39,10 +58,13 @@ class ItemMockTest {
   // P1-5: field-aware defaults — icon props must mock to VALID icon names
   // (never the ⓘ fallback), image fields to a real URL, money to a rupee value.
   @Test fun fieldAwareDefaultsForIconImageAndMoney() {
-    val li = WidgetNode("ListItem", mapOf(
-      "headline" to Bind("item.title"),
-      "leadingIcon" to Bind("item.icon"),
-    ))
+    val li = WidgetNode(
+      "ListItem",
+      mapOf(
+        "headline" to Bind("item.title"),
+        "leadingIcon" to Bind("item.icon"),
+      ),
+    )
     val r0 = resolveItemRow(li, "item", "items", 0) { null }
     assertEquals("Star", r0.props["leadingIcon"])
     assertEquals("Title 1", r0.props["headline"])
@@ -60,8 +82,11 @@ class ItemMockTest {
   }
 
   @Test fun nestedRepeatKeepsItsOwnScope() {
-    val nested = WidgetNode("Repeat", mapOf("items" to "tags", "item" to "tag"),
-      listOf(WidgetNode("StyledText", mapOf("text" to Bind("tag.name")))))
+    val nested = WidgetNode(
+      "Repeat",
+      mapOf("items" to "tags", "item" to "tag"),
+      listOf(WidgetNode("StyledText", mapOf("text" to Bind("tag.name")))),
+    )
     val out = resolveItemRow(WidgetNode("Column", emptyMap(), listOf(nested)), "note", "notes", 0) { null }
     assertEquals(Bind("tag.name"), out.children[0].children[0].props["text"])
   }

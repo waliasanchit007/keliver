@@ -1,52 +1,63 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column as FoundationColumn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card as M3Card
 import androidx.compose.material3.Checkbox as M3Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton as M3IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch as M3Switch
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text as M3Text
 import androidx.compose.material3.TextField as M3TextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
@@ -121,20 +132,48 @@ internal class ComposeUiStyledText : StyledText<@Composable (Modifier) -> Unit> 
       modifier = m,
     )
   }
-  override fun text(text: String) { this.text = text }
-  override fun fontSize(fontSize: Int) { this.fontSize = fontSize }
-  override fun bold(bold: Boolean) { this.bold = bold }
-  override fun colorArgb(colorArgb: Int) { this.colorArgb = colorArgb }
-  override fun align(align: Int) { this.align = align }
-  override fun maxLines(maxLines: Int) { this.maxLines = maxLines }
-  override fun overflow(overflow: Int) { this.overflow = overflow }
-  override fun lineHeightSp(lineHeightSp: Int) { this.lineHeightSp = lineHeightSp }
-  override fun letterSpacingX100(letterSpacingX100: Int) { this.letterSpacingX100 = letterSpacingX100 }
-  override fun italic(italic: Boolean) { this.italic = italic }
-  override fun underline(underline: Boolean) { this.underline = underline }
-  override fun strikethrough(strikethrough: Boolean) { this.strikethrough = strikethrough }
-  override fun weight(weight: Int) { this.weight = weight }
-  override fun colorRole(colorRole: Int) { this.colorRole = colorRole }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun fontSize(fontSize: Int) {
+    this.fontSize = fontSize
+  }
+  override fun bold(bold: Boolean) {
+    this.bold = bold
+  }
+  override fun colorArgb(colorArgb: Int) {
+    this.colorArgb = colorArgb
+  }
+  override fun align(align: Int) {
+    this.align = align
+  }
+  override fun maxLines(maxLines: Int) {
+    this.maxLines = maxLines
+  }
+  override fun overflow(overflow: Int) {
+    this.overflow = overflow
+  }
+  override fun lineHeightSp(lineHeightSp: Int) {
+    this.lineHeightSp = lineHeightSp
+  }
+  override fun letterSpacingX100(letterSpacingX100: Int) {
+    this.letterSpacingX100 = letterSpacingX100
+  }
+  override fun italic(italic: Boolean) {
+    this.italic = italic
+  }
+  override fun underline(underline: Boolean) {
+    this.underline = underline
+  }
+  override fun strikethrough(strikethrough: Boolean) {
+    this.strikethrough = strikethrough
+  }
+  override fun weight(weight: Int) {
+    this.weight = weight
+  }
+  override fun colorRole(colorRole: Int) {
+    this.colorRole = colorRole
+  }
 }
 
 internal class ComposeUiCard : Card<@Composable (Modifier) -> Unit> {
@@ -158,9 +197,15 @@ internal class ComposeUiSwitch : Switch<@Composable (Modifier) -> Unit> {
       modifier = m,
     )
   }
-  override fun checked(checked: Boolean) { this.checked = checked }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onCheckedChange(onCheckedChange: ((Boolean) -> Unit)?) { this.onCheckedChange = onCheckedChange }
+  override fun checked(checked: Boolean) {
+    this.checked = checked
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onCheckedChange(onCheckedChange: ((Boolean) -> Unit)?) {
+    this.onCheckedChange = onCheckedChange
+  }
 }
 
 internal class ComposeUiCheckbox : Checkbox<@Composable (Modifier) -> Unit> {
@@ -176,9 +221,15 @@ internal class ComposeUiCheckbox : Checkbox<@Composable (Modifier) -> Unit> {
       modifier = m,
     )
   }
-  override fun checked(checked: Boolean) { this.checked = checked }
-  override fun enabled(enabled: Boolean) { this.enabled = enabled }
-  override fun onCheckedChange(onCheckedChange: ((Boolean) -> Unit)?) { this.onCheckedChange = onCheckedChange }
+  override fun checked(checked: Boolean) {
+    this.checked = checked
+  }
+  override fun enabled(enabled: Boolean) {
+    this.enabled = enabled
+  }
+  override fun onCheckedChange(onCheckedChange: ((Boolean) -> Unit)?) {
+    this.onCheckedChange = onCheckedChange
+  }
 }
 
 internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
@@ -198,7 +249,10 @@ internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
     }
     M3TextField(
       value = local,
-      onValueChange = { local = it; onValueChange?.invoke(it.text) },
+      onValueChange = {
+        local = it
+        onValueChange?.invoke(it.text)
+      },
       // Aligned placeholders fill the field so the alignment shows; at the default (start) the
       // placeholder keeps its own width, as before, so it never widens an unsized field.
       placeholder = { M3Text(placeholderState, modifier = alignedPlaceholder(align), textAlign = fieldTextAlign(align)) },
@@ -207,10 +261,18 @@ internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
       modifier = m,
     )
   }
-  override fun text(text: String) { this.incoming = text }
-  override fun placeholder(placeholder: String) { this.placeholderState = placeholder }
-  override fun onValueChange(onValueChange: ((String) -> Unit)?) { this.onValueChange = onValueChange }
-  override fun align(align: Int) { this.align = align }
+  override fun text(text: String) {
+    this.incoming = text
+  }
+  override fun placeholder(placeholder: String) {
+    this.placeholderState = placeholder
+  }
+  override fun onValueChange(onValueChange: ((String) -> Unit)?) {
+    this.onValueChange = onValueChange
+  }
+  override fun align(align: Int) {
+    this.align = align
+  }
 }
 
 /**
@@ -232,7 +294,9 @@ internal class ComposeUiDivider : Divider<@Composable (Modifier) -> Unit> {
   override val value: @Composable (Modifier) -> Unit = { m ->
     HorizontalDivider(modifier = m, thickness = thickness.dp)
   }
-  override fun thickness(thickness: Int) { this.thickness = thickness }
+  override fun thickness(thickness: Int) {
+    this.thickness = thickness
+  }
 }
 
 internal class ComposeUiChip : Chip<@Composable (Modifier) -> Unit> {
@@ -246,8 +310,12 @@ internal class ComposeUiChip : Chip<@Composable (Modifier) -> Unit> {
       modifier = m,
     )
   }
-  override fun label(label: String) { this.label = label }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun label(label: String) {
+    this.label = label
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiIconButton(
@@ -261,8 +329,12 @@ internal class ComposeUiIconButton(
       CoilAsyncImage(model = imageUrl, imageLoader = imageLoader, contentDescription = null)
     }
   }
-  override fun imageUrl(imageUrl: String) { this.imageUrl = imageUrl }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun imageUrl(imageUrl: String) {
+    this.imageUrl = imageUrl
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiAsyncImage(
@@ -279,7 +351,11 @@ internal class ComposeUiAsyncImage(
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { incoming ->
     var m = incoming
-    if (fillWidth) m = m.fillMaxWidth() else if (widthDp > 0) m = m.width(widthDp.dp)
+    if (fillWidth) {
+      m = m.fillMaxWidth()
+    } else if (widthDp > 0) {
+      m = m.width(widthDp.dp)
+    }
     if (heightDp > 0) m = m.height(heightDp.dp)
     if (blurDp > 0) m = m.blur(blurDp.dp)
     CoilAsyncImage(
@@ -287,22 +363,42 @@ internal class ComposeUiAsyncImage(
       imageLoader = imageLoader,
       contentDescription = null,
       colorFilter = if (tintArgb != 0) ColorFilter.tint(Color(tintArgb)) else null,
-      contentScale = if (fillWidth) ContentScale.FillWidth else when (contentScale) {
-        1 -> ContentScale.Crop
-        2 -> ContentScale.FillBounds
-        else -> ContentScale.Fit
+      contentScale = if (fillWidth) {
+        ContentScale.FillWidth
+      } else {
+        when (contentScale) {
+          1 -> ContentScale.Crop
+          2 -> ContentScale.FillBounds
+          else -> ContentScale.Fit
+        }
       },
       modifier = onClick?.let { cb -> m.clickable { cb() } } ?: m,
     )
   }
-  override fun url(url: String) { this.url = url }
-  override fun contentScale(contentScale: Int) { this.contentScale = contentScale }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
-  override fun widthDp(widthDp: Int) { this.widthDp = widthDp }
-  override fun heightDp(heightDp: Int) { this.heightDp = heightDp }
-  override fun blurDp(blurDp: Int) { this.blurDp = blurDp }
-  override fun fillWidth(fillWidth: Boolean) { this.fillWidth = fillWidth }
-  override fun tintArgb(tintArgb: Int) { this.tintArgb = tintArgb }
+  override fun url(url: String) {
+    this.url = url
+  }
+  override fun contentScale(contentScale: Int) {
+    this.contentScale = contentScale
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
+  override fun widthDp(widthDp: Int) {
+    this.widthDp = widthDp
+  }
+  override fun heightDp(heightDp: Int) {
+    this.heightDp = heightDp
+  }
+  override fun blurDp(blurDp: Int) {
+    this.blurDp = blurDp
+  }
+  override fun fillWidth(fillWidth: Boolean) {
+    this.fillWidth = fillWidth
+  }
+  override fun tintArgb(tintArgb: Int) {
+    this.tintArgb = tintArgb
+  }
 }
 
 internal class ComposeUiScrollableColumn : ScrollableColumn<@Composable (Modifier) -> Unit> {
@@ -364,6 +460,7 @@ internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit
       }
     }
   }
+
   /**
    * The user dismissed the sheet (swipe, scrim, Back); Material reports it once the sheet has
    * slid out. The guest's [onDismiss] decides what happens next. With no [onDismiss] the sheet
@@ -375,7 +472,13 @@ internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit
     if (onDismiss != null) onDismiss() else visible = false
   }
 
-  override fun visible(visible: Boolean) { this.visible = visible }
-  override fun onDismiss(onDismiss: (() -> Unit)?) { this.onDismiss = onDismiss }
-  override fun contentPaddingDp(contentPaddingDp: Int) { this.contentPaddingDp = contentPaddingDp }
+  override fun visible(visible: Boolean) {
+    this.visible = visible
+  }
+  override fun onDismiss(onDismiss: (() -> Unit)?) {
+    this.onDismiss = onDismiss
+  }
+  override fun contentPaddingDp(contentPaddingDp: Int) {
+    this.contentPaddingDp = contentPaddingDp
+  }
 }

@@ -152,7 +152,10 @@ class PreviewAssets(
 
   private val threadIds = AtomicInteger()
   private val pool = ThreadPoolExecutor(
-    threads, threads, 30, TimeUnit.SECONDS,
+    threads,
+    threads,
+    30,
+    TimeUnit.SECONDS,
     ArrayBlockingQueue(queue),
     { r -> Thread(r, "preview-asset-${threadIds.incrementAndGet()}").apply { isDaemon = true } },
     ThreadPoolExecutor.AbortPolicy(),
@@ -356,7 +359,13 @@ class PreviewAssets(
 
   /** `host:port`, the port defaulted from the scheme: one host's http and https are told apart. */
   private fun hostKey(uri: URI): String {
-    val port = if (uri.port != -1) uri.port else if (uri.scheme.equals("https", ignoreCase = true)) 443 else 80
+    val port = if (uri.port != -1) {
+      uri.port
+    } else if (uri.scheme.equals("https", ignoreCase = true)) {
+      443
+    } else {
+      80
+    }
     return "${uri.host?.lowercase()}:$port"
   }
 
@@ -513,8 +522,11 @@ class PreviewAssets(
       val seen = HashSet<Throwable>()
       fun walk(t: Throwable?): Boolean {
         if (t == null || !seen.add(t)) return false
-        if (t is UnknownHostException || t is ConnectException || t is NoRouteToHostException ||
-          t is SocketTimeoutException || t is SSLHandshakeException
+        if (t is UnknownHostException ||
+          t is ConnectException ||
+          t is NoRouteToHostException ||
+          t is SocketTimeoutException ||
+          t is SSLHandshakeException
         ) {
           return true
         }

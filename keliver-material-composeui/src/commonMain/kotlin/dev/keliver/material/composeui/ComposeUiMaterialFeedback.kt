@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -48,12 +59,24 @@ internal class ComposeUiAlertDialog : AlertDialog<@Composable (Modifier) -> Unit
       text = { M3Text(text) },
     )
   }
-  override fun title(title: String) { this.title = title }
-  override fun text(text: String) { this.text = text }
-  override fun confirmText(confirmText: String) { this.confirmText = confirmText }
-  override fun dismissText(dismissText: String) { this.dismissText = dismissText }
-  override fun onConfirm(onConfirm: (() -> Unit)?) { this.onConfirm = onConfirm }
-  override fun onDismiss(onDismiss: (() -> Unit)?) { this.onDismiss = onDismiss }
+  override fun title(title: String) {
+    this.title = title
+  }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun confirmText(confirmText: String) {
+    this.confirmText = confirmText
+  }
+  override fun dismissText(dismissText: String) {
+    this.dismissText = dismissText
+  }
+  override fun onConfirm(onConfirm: (() -> Unit)?) {
+    this.onConfirm = onConfirm
+  }
+  override fun onDismiss(onDismiss: (() -> Unit)?) {
+    this.onDismiss = onDismiss
+  }
 }
 
 internal class ComposeUiDialog : Dialog<@Composable (Modifier) -> Unit> {
@@ -65,7 +88,9 @@ internal class ComposeUiDialog : Dialog<@Composable (Modifier) -> Unit> {
       (children as ComposeWidgetChildren).Render()
     }
   }
-  override fun onDismiss(onDismiss: (() -> Unit)?) { this.onDismiss = onDismiss }
+  override fun onDismiss(onDismiss: (() -> Unit)?) {
+    this.onDismiss = onDismiss
+  }
 }
 
 internal class ComposeUiSnackbar : Snackbar<@Composable (Modifier) -> Unit> {
@@ -74,7 +99,9 @@ internal class ComposeUiSnackbar : Snackbar<@Composable (Modifier) -> Unit> {
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3Snackbar(modifier = m) { M3Text(message) }
   }
-  override fun message(message: String) { this.message = message }
+  override fun message(message: String) {
+    this.message = message
+  }
 }
 
 internal class ComposeUiCircularProgressIndicator : CircularProgressIndicator<@Composable (Modifier) -> Unit> {
@@ -87,7 +114,9 @@ internal class ComposeUiCircularProgressIndicator : CircularProgressIndicator<@C
       M3CircularProgressIndicator(progress = { progress }, modifier = m)
     }
   }
-  override fun progress(progress: Float) { this.progress = progress }
+  override fun progress(progress: Float) {
+    this.progress = progress
+  }
 }
 
 internal class ComposeUiLinearProgressIndicator : LinearProgressIndicator<@Composable (Modifier) -> Unit> {
@@ -100,5 +129,7 @@ internal class ComposeUiLinearProgressIndicator : LinearProgressIndicator<@Compo
       M3LinearProgressIndicator(progress = { progress }, modifier = m)
     }
   }
-  override fun progress(progress: Float) { this.progress = progress }
+  override fun progress(progress: Float) {
+    this.progress = progress
+  }
 }

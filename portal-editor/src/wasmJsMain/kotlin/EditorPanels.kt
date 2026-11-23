@@ -34,7 +34,9 @@ internal fun storedWidth(side: PanelSide, stored: String?): Int =
   stored?.toIntOrNull()?.takeIf { it in PANEL_MIN_PX..PANEL_MAX_PX } ?: side.defaultPx
 
 private fun store(key: String): String? = runCatching { localStorage.getItem(key) }.getOrNull()
-private fun store(key: String, value: String) { runCatching { localStorage.setItem(key, value) } }
+private fun store(key: String, value: String) {
+  runCatching { localStorage.setItem(key, value) }
+}
 
 internal fun installPanelResizers() {
   PanelSide.entries.forEach(::installResizer)

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.MapComponentRegistry
@@ -235,11 +250,13 @@ class WriteBackTest {
     val rec = Recognizer.recognize("SlotsScreen.kt", slottedFile, componentRegistry)!!
     val doc = UiDocument("slots", rec.root, rec.contract, 0, 0)
     val card = (doc.root as DocNode.Widget).children.single() as DocNode.Widget
-    val target = doc.apply(DocOp.InsertNode(
-      parent = card.handle,
-      after = null,
-      node = DocNode.Widget(Handle(0), "StyledText", mapOf("text" to lit("Inside"))),
-    )).doc
+    val target = doc.apply(
+      DocOp.InsertNode(
+        parent = card.handle,
+        after = null,
+        node = DocNode.Widget(Handle(0), "StyledText", mapOf("text" to lit("Inside"))),
+      ),
+    ).doc
 
     val merged = WriteBack.merge(slottedFile, target, componentRegistry)
     assertNotNull(merged)
@@ -258,11 +275,13 @@ class WriteBackTest {
     val rec = Recognizer.recognize("SlotsScreen.kt", src, componentRegistry)!!
     val doc = UiDocument("slots", rec.root, rec.contract, 0, 0)
     val root = doc.root as DocNode.Widget
-    val target = doc.apply(DocOp.InsertNode(
-      parent = root.handle,
-      after = null,
-      node = DocNode.Widget(Handle(0), "SectionCard", mapOf("label" to lit("Account"))),
-    )).doc
+    val target = doc.apply(
+      DocOp.InsertNode(
+        parent = root.handle,
+        after = null,
+        node = DocNode.Widget(Handle(0), "SectionCard", mapOf("label" to lit("Account"))),
+      ),
+    ).doc
 
     val merged = WriteBack.merge(src, target, componentRegistry)
     assertNotNull(merged)

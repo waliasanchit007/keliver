@@ -105,8 +105,17 @@ internal fun eventControl(
           wire(n)
         }
       }
-      NO_ACTION -> { name = null; markInvalid(arg, null, err); showArg(); onSet(null, null) }
-      else -> { name = v; showArg(); wire(v) }
+      NO_ACTION -> {
+        name = null
+        markInvalid(arg, null, err)
+        showArg()
+        onSet(null, null)
+      }
+      else -> {
+        name = v
+        showArg()
+        wire(v)
+      }
     }
   })
   arg.addEventListener("change", { _ ->
@@ -149,8 +158,16 @@ private fun renderNewAction(slot: HTMLElement, contract: Contract, onConfirm: (S
   name.addEventListener("input", { _ -> check() })
   name.addEventListener("keydown", { ev ->
     val e = ev as KeyboardEvent
-    if (e.key == "Enter") { e.preventDefault(); e.stopPropagation(); submit() }
-    if (e.key == "Escape") { e.preventDefault(); e.stopPropagation(); Ui.clear(slot) }
+    if (e.key == "Enter") {
+      e.preventDefault()
+      e.stopPropagation()
+      submit()
+    }
+    if (e.key == "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      Ui.clear(slot)
+    }
   })
   confirm.addEventListener("click", { _ -> submit() })
   box.appendChild(Ui.el("div", "muted", "New action"))

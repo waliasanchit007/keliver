@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.CondTest
@@ -73,8 +88,11 @@ private class Latest(cur: Conditional) {
 
 /** The op setting wire key [key] (a prop, or "mod.X.p") of node [id] to [value]. */
 internal fun valueOp(id: Int, key: String, value: PropValue): DocOp =
-  if (key.startsWith("mod.")) DocOp.SetModifier(Handle(id.toLong()), key.removePrefix("mod."), value)
-  else DocOp.SetProp(Handle(id.toLong()), key, value)
+  if (key.startsWith("mod.")) {
+    DocOp.SetModifier(Handle(id.toLong()), key.removePrefix("mod."), value)
+  } else {
+    DocOp.SetProp(Handle(id.toLong()), key, value)
+  }
 
 /**
  * A conditional VALUE prop: the condition (field, test, negation), then each
@@ -281,7 +299,8 @@ private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: A
   // K4: a template branch — its text with {references}, validated before it is sent.
   if (value is dev.keliver.portal.Template) {
     return refValueEditor(
-      templateSource(value), multiline = false,
+      templateSource(value),
+      multiline = false,
       placeholder = "text with {field}, {◆C.Name}",
       parse = { parseTemplateSource(it, knownTokens(value)) },
     ) { v -> onChange(v) }.first

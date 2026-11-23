@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.render
 
 import androidx.compose.runtime.Composable
@@ -9,13 +24,13 @@ import dev.keliver.material.compose.Slider
 import dev.keliver.material.compose.StyledText
 import dev.keliver.material.compose.Theme
 import dev.keliver.material.testing.KeliverMaterialTester
+import dev.keliver.portal.Bind
 import dev.keliver.portal.COMPONENT_FORWARDS_MODIFIER_PROP
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.Expansion
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropSpec
-import dev.keliver.portal.Bind
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.expandForPreview
 import kotlin.test.AfterTest
@@ -125,7 +140,8 @@ class CanvasFidelityTest {
       setContentAndSnapshot {
         RenderNode(
           WidgetNode(
-            "Row", mapOf("width" to 1),
+            "Row",
+            mapOf("width" to 1),
             listOf(
               WidgetNode("InfoCard", mapOf("title" to "Left", "mod.Flex.value" to 1.0)),
               WidgetNode("StyledText", mapOf("text" to "right")),

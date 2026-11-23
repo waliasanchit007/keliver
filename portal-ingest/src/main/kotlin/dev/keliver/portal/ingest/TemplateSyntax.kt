@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.PropValue
@@ -95,7 +110,9 @@ internal object TemplateSyntax {
     if (parts.all { it.isLiteral }) return null
     return PropValue.Template(
       parts.map { p ->
-        if (p.isLiteral) lit(p.literal!!) else {
+        if (p.isLiteral) {
+          lit(p.literal!!)
+        } else {
           when (val v = ref(p.ref!!)) {
             is PropValue.Bind -> v
             is PropValue.Token -> v.takeIf { it.value.tag in TEMPLATE_TOKEN_TAGS } ?: return null
@@ -137,8 +154,11 @@ internal object TemplateSyntax {
     // A kept `$name` before the rewrite must not run into new text that continues an identifier.
     val prev = src.getOrNull(p - 1)
     val first = text.firstOrNull()
-    if (prev != null && !prev.isLiteral && !source.startsWith("\${", prev.start) &&
-      first != null && (first.isLetterOrDigit() || first == '_' || first.isHighSurrogate()) // U+10000+ letters are surrogate pairs
+    if (prev != null &&
+      !prev.isLiteral &&
+      !source.startsWith("\${", prev.start) &&
+      first != null &&
+      (first.isLetterOrDigit() || first == '_' || first.isHighSurrogate()) // U+10000+ letters are surrogate pairs
     ) {
       text = "\${" + prev.ref!!.text + "}" + text
       start = prev.start
@@ -173,8 +193,11 @@ internal object TemplateSyntax {
     if (parts.size != expected.size) return false
     return parts.indices.all { i ->
       val x = expected[i]
-      if (parts[i].isLiteral) x is PropValue.Lit && x.s == parts[i].literal
-      else x !is PropValue.Lit && spell(x) == parts[i].ref!!.text.trim()
+      if (parts[i].isLiteral) {
+        x is PropValue.Lit && x.s == parts[i].literal
+      } else {
+        x !is PropValue.Lit && spell(x) == parts[i].ref!!.text.trim()
+      }
     }
   }
 }

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 import dev.keliver.tooling.schema.FqType
@@ -72,12 +87,12 @@ internal fun mapEventParamType(t: FqType): String? = when (t.names.joinToString(
 
 sealed interface WidgetPlan {
   data class Include(
-    val name: String,               // simple name, == WidgetNode.type
-    val composePackage: String,     // e.g. dev.keliver.material.compose
-    val category: String,           // "Material" / "Layout"
+    val name: String, // simple name, == WidgetNode.type
+    val composePackage: String, // e.g. dev.keliver.material.compose
+    val category: String, // "Material" / "Layout"
     val props: List<MappedProp>,
     val skippedProps: List<String>, // unsupported-with-default, omitted from calls
-    val events: List<EventPlan>,    // nullable events, wired to Action props
+    val events: List<EventPlan>, // nullable events, wired to Action props
     val hasChildren: Boolean,
     /** The children lambda's receiver scope's simple name ("RowScope"), null when it has none. */
     val childScope: String? = null,
@@ -145,8 +160,8 @@ internal fun mainAxisDefault(e: String?): Int = when {
  * The parent WIDGET a scope belongs to is the scope name minus "Scope".
  */
 data class ModPlan(
-  val name: String,           // catalog/wire name, e.g. "Padding" (or "LayoutSize" after a collision rename)
-  val extensionName: String,  // e.g. "padding" — the generated Modifier extension
+  val name: String, // catalog/wire name, e.g. "Padding" (or "LayoutSize" after a collision rename)
+  val extensionName: String, // e.g. "padding" — the generated Modifier extension
   val composePackage: String, // where the extension (or its scope interfaces) lives
   val props: List<MappedProp>, // empty for object modifiers (flags)
   val scopes: List<String> = emptyList(), // e.g. ["RowScope", "ColumnScope"]; empty = unscoped

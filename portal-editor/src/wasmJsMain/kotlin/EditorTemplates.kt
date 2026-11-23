@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.Bind
 import dev.keliver.portal.ListOf
 import dev.keliver.portal.PropKind
@@ -8,9 +23,9 @@ import dev.keliver.portal.document.canonicalValue
 import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toPropValue
 import dev.keliver.portal.listElementType
-import dev.keliver.portal.tokenFits
-import dev.keliver.portal.templateTokenFits
 import dev.keliver.portal.mockedIntElement
+import dev.keliver.portal.templateTokenFits
+import dev.keliver.portal.tokenFits
 import org.w3c.dom.HTMLElement
 
 // K4: the properties panel for a string template and a list with references.
@@ -62,8 +77,14 @@ internal fun parseTemplateSource(text: String, known: Map<String, PropValue.Toke
   while (i < text.length) {
     val c = text[i]
     when {
-      c == '{' && text.startsWith("{{", i) -> { run.append('{'); i += 2 }
-      c == '}' && text.startsWith("}}", i) -> { run.append('}'); i += 2 }
+      c == '{' && text.startsWith("{{", i) -> {
+        run.append('{')
+        i += 2
+      }
+      c == '}' && text.startsWith("}}", i) -> {
+        run.append('}')
+        i += 2
+      }
       c == '}' -> return Parsed(null, "a lone } (write }} for a brace)")
       c == '{' -> {
         val close = text.indexOf('}', i + 1)
@@ -77,7 +98,10 @@ internal fun parseTemplateSource(text: String, known: Map<String, PropValue.Toke
         }
         i = close + 1
       }
-      else -> { run.append(c); i++ }
+      else -> {
+        run.append(c)
+        i++
+      }
     }
   }
   flush()
@@ -162,7 +186,10 @@ private fun listElements(text: String, sep: Char): Pair<List<List<ListChar>>?, S
         i += 2
         continue
       }
-      c == sep -> { out += cur; cur = mutableListOf() }
+      c == sep -> {
+        out += cur
+        cur = mutableListOf()
+      }
       else -> cur += ListChar(c, escaped = false)
     }
     i++
@@ -264,6 +291,7 @@ internal fun refValueEditor(
   }
   field.setAttribute("placeholder", placeholder)
   var committed = source
+
   /** Marks the field valid or not; the parsed value when valid. */
   fun check(): PropValue? {
     val p = parse(read())
@@ -276,6 +304,7 @@ internal fun refValueEditor(
     field.setAttribute("title", placeholder)
     return p.value
   }
+
   // E11: a keystroke only validates; the value is sent once — on Enter or
   // leaving the field — and never while it does not parse.
   fun commit() {
@@ -285,13 +314,23 @@ internal fun refValueEditor(
     committed = read()
     send(v)
   }
-  field.addEventListener("input", { _ -> check(); markPending(field, ::commit) })
+  field.addEventListener("input", { _ ->
+    check()
+    markPending(field, ::commit)
+  })
   field.addEventListener("change", { _ -> commit() })
-  commitKeys(field, newlineOnShiftEnter = multiline) { clearPending(field); write(committed); check() }
+  commitKeys(field, newlineOnShiftEnter = multiline) {
+    clearPending(field)
+    write(committed)
+    check()
+  }
   field.setAttribute("style", "border-color:var(--accent);")
   field.setAttribute("title", placeholder)
   // Append text (a picked token) and send.
-  return field to { more -> write(read() + more); commit() }
+  return field to { more ->
+    write(read() + more)
+    commit()
+  }
 }
 
 /**

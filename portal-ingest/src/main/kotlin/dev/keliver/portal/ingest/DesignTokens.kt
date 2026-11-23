@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.PropValue
@@ -159,6 +174,7 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
 
   private val memo = HashMap<TokenDecl, Any?>()
   private val evaluating = LinkedHashSet<TokenDecl>()
+
   @Suppress("ktlint:standard:property-naming") // A sentinel, named like a constant.
   private val NONE = Any()
 
@@ -187,8 +203,11 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
   fun usable(ref: String, importFq: String?, fileName: String): TokenEntry? = entries.firstOrNull { e ->
     val d = e.decl
     val sameFile = d.fileName == fileName
-    d.ref == ref && d.importFq == importFq && e.isLiteralKind &&
-      (!d.isPrivate || (d.owner == null && sameFile)) && (!d.ownerPrivate || sameFile)
+    d.ref == ref &&
+      d.importFq == importFq &&
+      e.isLiteralKind &&
+      (!d.isPrivate || (d.owner == null && sameFile)) &&
+      (!d.ownerPrivate || sameFile)
   }
 
   /** Structural equality of what resolution can observe — the relay re-ingests when this changes. */
@@ -260,16 +279,22 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
   enum class BindingCause {
     /** The file itself imports a different owner of the simple name (exactly or as an alias). */
     FILE_IMPORT,
+
     /** A token already in the document (its import not yet written back) claims the simple name. */
     DOCUMENT_IMPORT,
+
     /** An earlier token of the same batch claims the simple name. */
     BATCH,
+
     /** The composable's own parameter or local of that name binds first. */
     SHADOWED,
+
     /** The import would rebind a name the file uses (same package, star import, Kotlin default import). */
     REBINDS,
+
     /** The token is not one this file may use. */
     UNKNOWN,
+
     /** In this file's scope the reference would resolve to another declaration. */
     MISBOUND,
   }
@@ -285,7 +310,8 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     // other entry of scope.exact came from the document or this batch.
     val fileImported = scope.exact.keys.toSet()
     fun covered(fq: String) = scope.exact[fq.substringAfterLast('.')] == fq ||
-      fq.substringBeforeLast('.') in scope.stars || fq.substringBeforeLast('.') == scope.packageName
+      fq.substringBeforeLast('.') in scope.stars ||
+      fq.substringBeforeLast('.') == scope.packageName
     // Imports the document already implies (written back soon) count as present.
     for (fq in pending.sorted()) {
       if (!covered(fq) && !scope.exact.containsKey(fq.substringAfterLast('.'))) scope = scope.withImport(fq)
@@ -410,7 +436,12 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     is KtPrefixExpression -> {
       val v = eval(e.baseExpression, scope)
       when (e.operationToken) {
-        KtTokens.MINUS -> when (v) { is Int -> -v; is Long -> -v; is Double -> -v; else -> null }
+        KtTokens.MINUS -> when (v) {
+          is Int -> -v
+          is Long -> -v
+          is Double -> -v
+          else -> null
+        }
         KtTokens.PLUS -> v.takeIf { it is Int || it is Long || it is Double }
         KtTokens.EXCL -> (v as? Boolean)?.not()
         else -> null
@@ -433,8 +464,15 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
         // `0xFF1F1F1F.toInt()` — the ARGB idiom: Long.toInt() keeps the low 32 bits (two's complement).
         is KtCallExpression -> {
           val plain = sel.valueArguments.isEmpty() && sel.lambdaArguments.isEmpty() && sel.typeArgumentList == null
-          if (!plain || sel.calleeExpression?.text != "toInt") null
-          else when (val v = eval(recv, scope)) { is Long -> v.toInt(); is Int -> v; else -> null }
+          if (!plain || sel.calleeExpression?.text != "toInt") {
+            null
+          } else {
+            when (val v = eval(recv, scope)) {
+              is Long -> v.toInt()
+              is Int -> v
+              else -> null
+            }
+          }
         }
         is KtNameReferenceExpression -> (recv as? KtNameReferenceExpression)
           ?.let { qualified(it.getReferencedName(), sel.getReferencedName(), scope) }?.let(::valueOf)

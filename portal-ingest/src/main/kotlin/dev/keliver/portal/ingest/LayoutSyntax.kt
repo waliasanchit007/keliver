@@ -1,16 +1,31 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Cond
-import dev.keliver.portal.document.operands
-import dev.keliver.portal.document.toConditional
 import dev.keliver.portal.MARGIN_SIDES
 import dev.keliver.portal.ModifierSpec
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.cond
+import dev.keliver.portal.document.operands
 import dev.keliver.portal.document.toAny
-import org.jetbrains.kotlin.psi.KtIfExpression
+import dev.keliver.portal.document.toConditional
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.parseKotlinStringLiteral
+import org.jetbrains.kotlin.psi.KtIfExpression
 
 /** One argument of a call, with its trimmed text's offsets in the text it was parsed from. */
 internal data class SourceArg(val name: String?, val value: String, val start: Int, val end: Int)
@@ -29,8 +44,14 @@ internal fun splitArgs(inner: String, base: Int): List<SourceArg>? {
     when (val c = inner[i]) {
       '"' -> i = skipString(inner, i) ?: return null
       '(', '[', '{' -> depth++
-      ')', ']', '}' -> { depth--; if (depth < 0) return null }
-      ',' -> if (depth == 0) { pieces += start to i; start = i + 1 }
+      ')', ']', '}' -> {
+        depth--
+        if (depth < 0) return null
+      }
+      ',' -> if (depth == 0) {
+        pieces += start to i
+        start = i + 1
+      }
       else -> if (c == '/' && i + 1 < inner.length && (inner[i + 1] == '/' || inner[i + 1] == '*')) return null // comments are not grammar
     }
     i++
@@ -424,7 +445,11 @@ internal object ModifierChain {
     "Double" -> t.takeIf { Regex("^-?\\d+\\.\\d+$").matches(it) }?.let { PropValue.Lit("d", d = it.toDouble()) }
     "Float" -> t.takeIf { Regex("^-?\\d+(?:\\.\\d+)?[fF]$").matches(it) }
       ?.let { PropValue.Lit("d", d = it.dropLast(1).toDouble()) }
-    "Boolean" -> when (t) { "true" -> PropValue.Lit("b", b = true); "false" -> PropValue.Lit("b", b = false); else -> null }
+    "Boolean" -> when (t) {
+      "true" -> PropValue.Lit("b", b = true)
+      "false" -> PropValue.Lit("b", b = false)
+      else -> null
+    }
     "String" -> if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) parseKotlinStringLiteral(t)?.let { PropValue.Lit("s", s = it) } else null
     "Dp" -> MarginSyntax.parseDp(t)?.let { PropValue.Lit("d", d = it) }
     "CrossAxisAlignment" -> enumOrdinal(t, "CrossAxisAlignment", listOf("Start", "Center", "End", "Stretch"))
@@ -475,8 +500,13 @@ internal object ModifierChain {
         val newValue = new[argKeys.first()]
         val replacement = when {
           spec.argTypes.getOrNull(j) == "Margin" ->
-            (if (condText == null) MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds)
-            else MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds, condText)) ?: canonArg
+            (
+              if (condText == null) {
+                MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds)
+              } else {
+                MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds, condText)
+              }
+              ) ?: canonArg
           // A Dp keeps the author's spelling (`12.dp` stays `.dp`).
           newDp != null && IfSyntax.split(arg.value) == null -> MarginSyntax.dpLike(arg.value, newDp)
           // K3: only the changed part of a conditional argument.
@@ -515,7 +545,10 @@ internal object ModifierChain {
       when (t[i]) {
         '"' -> i = skipString(t, i) ?: return null
         '(' -> depth++
-        ')' -> { depth--; if (depth == 0) return i }
+        ')' -> {
+          depth--
+          if (depth == 0) return i
+        }
       }
       i++
     }

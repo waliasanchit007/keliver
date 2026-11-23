@@ -76,8 +76,16 @@ internal fun renderBindPicker(
     row.setAttribute("aria-label", "bind to $f")
     row.appendChild(Ui.el("span", "", "@ $f"))
     row.appendChild(Ui.el("span", "cat", type))
-    row.addEventListener("click", { _ -> Ui.clear(picker); onPick(f, false) })
-    row.addEventListener("keydown", { e -> if ((e as KeyboardEvent).key == "Enter") { Ui.clear(picker); onPick(f, false) } })
+    row.addEventListener("click", { _ ->
+      Ui.clear(picker)
+      onPick(f, false)
+    })
+    row.addEventListener("keydown", { e ->
+      if ((e as KeyboardEvent).key == "Enter") {
+        Ui.clear(picker)
+        onPick(f, false)
+      }
+    })
     list.appendChild(row)
   }
   val others = contract.fields.size - fields.size
@@ -120,8 +128,16 @@ internal fun renderBindPicker(
   name.addEventListener("input", { _ -> check() })
   name.addEventListener("keydown", { ev ->
     val e = ev as KeyboardEvent
-    if (e.key == "Enter") { e.preventDefault(); e.stopPropagation(); submit() }
-    if (e.key == "Escape") { e.preventDefault(); e.stopPropagation(); Ui.clear(picker) }
+    if (e.key == "Enter") {
+      e.preventDefault()
+      e.stopPropagation()
+      submit()
+    }
+    if (e.key == "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      Ui.clear(picker)
+    }
   })
   confirm.addEventListener("click", { _ -> submit() })
   newBtn.addEventListener("click", { _ ->

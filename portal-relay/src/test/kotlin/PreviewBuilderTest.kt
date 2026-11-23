@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -19,7 +34,9 @@ class PreviewBuilderTest {
       onBuild?.invoke()
       return if (results.isEmpty()) null else results.removeAt(0)
     }
-    override fun promote() { promotes.incrementAndGet() }
+    override fun promote() {
+      promotes.incrementAndGet()
+    }
   }
 
   private fun await(cond: () -> Boolean, ms: Long = 3000) {
@@ -48,7 +65,10 @@ class PreviewBuilderTest {
   @Test fun rapidTriggersCoalesceIntoOneBuild() {
     val runner = FakeRunner(mutableListOf(null))
     val b = PreviewBuilder(runner, debounceMs = 100)
-    repeat(5) { b.trigger(); Thread.sleep(10) } // all within the debounce window
+    repeat(5) {
+      b.trigger()
+      Thread.sleep(10)
+    } // all within the debounce window
     await({ b.status.state == "ok" })
     assertEquals(1, runner.builds.get(), "5 rapid triggers -> 1 build")
     assertEquals(1, runner.promotes.get())
@@ -77,16 +97,21 @@ class PreviewBuilderTest {
       val promotes = AtomicInteger(0)
       override fun build(cancelled: () -> Boolean): String? {
         val n = builds.incrementAndGet()
-        if (n == 1) { entered.countDown(); gate.await(3, TimeUnit.SECONDS) }
+        if (n == 1) {
+          entered.countDown()
+          gate.await(3, TimeUnit.SECONDS)
+        }
         return null
       }
-      override fun promote() { promotes.incrementAndGet() }
+      override fun promote() {
+        promotes.incrementAndGet()
+      }
     }
     val b = PreviewBuilder(runner, debounceMs = 30)
     b.trigger()
     assertTrue(entered.await(2, TimeUnit.SECONDS))
-    b.trigger()           // supersedes build 1 while it runs
-    gate.countDown()      // build 1 finishes AFTER being superseded -> stale, rejected
+    b.trigger() // supersedes build 1 while it runs
+    gate.countDown() // build 1 finishes AFTER being superseded -> stale, rejected
     await({ b.status.state == "ok" && runner.builds.get() == 2 })
     assertEquals(1, runner.promotes.get(), "only the latest build promotes")
     assertEquals(2, b.promotedId)

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal
 
 /**
@@ -51,6 +66,7 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
     // C1: component instance prop → the component's declared param kind.
     return components.spec(nodeType)?.props?.firstOrNull { it.name == propKey }?.kind
   }
+
   /** For an Action on a component instance event, the handler's param type. */
   fun componentEventParamType(nodeType: String, propKey: String): String? =
     components.spec(nodeType)?.events?.firstOrNull { it.name == propKey }?.paramType
@@ -88,32 +104,34 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
       } else {
         listOf(prop)
       }
-      for (value in values) when (value) {
-        // Item-scoped binds ("item.label") belong to the Repeat's item interface
-        // (collectLogicFields), NOT the screen contract — a dotted name here
-        // would emit invalid Kotlin (`val item.label: String`).
-        is Bind -> kindOf(n.type, key)?.let { k ->
-          if ('.' !in value.field && value.field !in fields) fields[value.field] = k
-        }
-        is Template -> referencedBinds(value).forEach { b -> if ('.' !in b.field) templateFields += b.field }
-        // K7: an arithmetic operand is an Int field (an Int used as a Dp too).
-        is Arith, is IntDp -> arithBinds(value).forEach { b ->
-          if ('.' !in b.field && b.field !in fields) fields[b.field] = PropKind.Int
-        }
-        // K4: a list element bound to a field is one element of the list's kind.
-        is ListOf -> value.items.filterIsInstance<Bind>().forEach { b ->
-          val k = if (value.kind == "ls") PropKind.Text else PropKind.Int
-          if ('.' !in b.field && b.field !in fields) fields[b.field] = k
-        }
-        is Action -> {
-          actions += value.name
-          when {
-            value.arg == "it" -> actionParams[value.name] =
-              eventParamType["${n.type}.$key"] ?: componentEventParamType(n.type, key) ?: "String"
-            value.arg != null -> actionParams[value.name] = literalArgType(value.arg)
+      for (value in values) {
+        when (value) {
+          // Item-scoped binds ("item.label") belong to the Repeat's item interface
+          // (collectLogicFields), NOT the screen contract — a dotted name here
+          // would emit invalid Kotlin (`val item.label: String`).
+          is Bind -> kindOf(n.type, key)?.let { k ->
+            if ('.' !in value.field && value.field !in fields) fields[value.field] = k
           }
+          is Template -> referencedBinds(value).forEach { b -> if ('.' !in b.field) templateFields += b.field }
+          // K7: an arithmetic operand is an Int field (an Int used as a Dp too).
+          is Arith, is IntDp -> arithBinds(value).forEach { b ->
+            if ('.' !in b.field && b.field !in fields) fields[b.field] = PropKind.Int
+          }
+          // K4: a list element bound to a field is one element of the list's kind.
+          is ListOf -> value.items.filterIsInstance<Bind>().forEach { b ->
+            val k = if (value.kind == "ls") PropKind.Text else PropKind.Int
+            if ('.' !in b.field && b.field !in fields) fields[b.field] = k
+          }
+          is Action -> {
+            actions += value.name
+            when {
+              value.arg == "it" -> actionParams[value.name] =
+                eventParamType["${n.type}.$key"] ?: componentEventParamType(n.type, key) ?: "String"
+              value.arg != null -> actionParams[value.name] = literalArgType(value.arg)
+            }
+          }
+          else -> {}
         }
-        else -> {}
       }
     }
     n.children.forEach(::walk)
@@ -146,8 +164,11 @@ public fun collectPreviewBindingKeys(tree: WidgetNode): Set<String> {
     if (node.type == "Condition") {
       // K6: every term's field.
       val c = condOf(node)
-      if (c != null) c.terms.forEach { keys += it.field }
-      else (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let(keys::add)
+      if (c != null) {
+        c.terms.forEach { keys += it.field }
+      } else {
+        (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let(keys::add)
+      }
     }
     // K3: a conditional value reads its condition's fields (K6: every term's) and its branches' binds.
     val values = node.props.values.flatMap { v ->

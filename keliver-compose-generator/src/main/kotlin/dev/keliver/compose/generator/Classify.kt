@@ -87,10 +87,11 @@ object TypeMap {
 
   const val LAZY_LIST_SCOPE = "androidx.compose.foundation.lazy.LazyListScope"
 
-  fun isMapped(t: TypeRef): Boolean = !t.isFunction && (
-    (t.args.isEmpty() && (t.fq in mirrored || t.fq in primitives || t.fq == IMAGE_MODEL || t.fq in opaque)) ||
-      (t.fq in generic && t.args.all { isMapped(it) || it.fq in genericArgs })
-    )
+  fun isMapped(t: TypeRef): Boolean = !t.isFunction &&
+    (
+      (t.args.isEmpty() && (t.fq in mirrored || t.fq in primitives || t.fq == IMAGE_MODEL || t.fq in opaque)) ||
+        (t.fq in generic && t.args.all { isMapped(it) || it.fq in genericArgs })
+      )
   fun isPrimitive(t: TypeRef): Boolean = t.fq in primitives
 
   /** Type arguments a generic wire type may carry that are not themselves sent (`IntSize`). */
@@ -154,8 +155,13 @@ fun classify(decl: DeclInfo, unsupportedDefault: (String) -> String? = { null })
     p.name == "modifier" && t.fq == MODIFIER -> ParamKind.MODIFIER
     t.isFunction && t.composable && t.functionParams.isEmpty() && t.functionReturn?.fq == "kotlin.Unit" && !t.nullable && !t.suspend ->
       ParamKind.SLOT
-    t.isFunction && !t.composable && !t.suspend && t.receiver?.fq == TypeMap.LAZY_LIST_SCOPE && t.functionParams.isEmpty() &&
-      t.functionReturn?.fq == "kotlin.Unit" && decl.kind == DeclKind.WIDGET -> ParamKind.LAZY
+    t.isFunction &&
+      !t.composable &&
+      !t.suspend &&
+      t.receiver?.fq == TypeMap.LAZY_LIST_SCOPE &&
+      t.functionParams.isEmpty() &&
+      t.functionReturn?.fq == "kotlin.Unit" &&
+      decl.kind == DeclKind.WIDGET -> ParamKind.LAZY
     t.isFunction &&
       !t.composable &&
       !t.suspend &&

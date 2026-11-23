@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.render
 
 import androidx.compose.runtime.mutableStateMapOf
@@ -5,22 +20,22 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import dev.keliver.portal.Action
 import dev.keliver.portal.Arith
 import dev.keliver.portal.Bind
-import dev.keliver.portal.IntDp
-import dev.keliver.portal.arithValue
 import dev.keliver.portal.Cond
+import dev.keliver.portal.IntDp
 import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
-import dev.keliver.portal.templateText
-import dev.keliver.portal.templateValueText
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.arithValue
 import dev.keliver.portal.chooseBranch
-import dev.keliver.portal.intList
-import dev.keliver.portal.strList
 import dev.keliver.portal.condOf
 import dev.keliver.portal.elseNode
-import dev.keliver.portal.thenChildren
-import dev.keliver.portal.resolveItemRow
+import dev.keliver.portal.intList
 import dev.keliver.portal.mockedIntElement
+import dev.keliver.portal.resolveItemRow
+import dev.keliver.portal.strList
+import dev.keliver.portal.templateText
+import dev.keliver.portal.templateValueText
+import dev.keliver.portal.thenChildren
 import dev.keliver.portal.tokenValue
 
 /**

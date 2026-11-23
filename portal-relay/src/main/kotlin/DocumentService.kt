@@ -4,6 +4,7 @@
  * debounced dual-write of the projected .kt (whole-file until M4 write-back).
  */
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
@@ -11,14 +12,11 @@ import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.OpAck
 import dev.keliver.portal.document.OpBatch
-import dev.keliver.portal.acceptsModifier
+import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.isClientOp
-import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toAny
-import dev.keliver.portal.document.toPropValue
 import dev.keliver.portal.document.toWidgetTree
-import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.ingest.TokenTable
 import dev.keliver.portal.propSourceType
 import dev.keliver.portal.tokenFits
@@ -130,12 +128,14 @@ class DocumentService(
 
     private fun jsonString(v: String): String = buildString {
       append('"')
-      for (c in v) when {
-        c == '"' -> append("\\\"")
-        c == '\\' -> append("\\\\")
-        c == '\n' -> append("\\n")
-        c < ' ' -> append("\\u%04x".format(c.code))
-        else -> append(c)
+      for (c in v) {
+        when {
+          c == '"' -> append("\\\"")
+          c == '\\' -> append("\\\\")
+          c == '\n' -> append("\\n")
+          c < ' ' -> append("\\u%04x".format(c.code))
+          else -> append(c)
+        }
       }
       append('"')
     }
@@ -147,6 +147,7 @@ class DocumentService(
 
   private val undoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
   private val redoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
+
   /** A browser listening on /doc-events: its stream, and how to close its connection. */
   private class Listener(val out: OutputStream, val close: () -> Unit)
   private val listeners = CopyOnWriteArrayList<Listener>()
@@ -200,8 +201,11 @@ class DocumentService(
     fun refuseLeaf(type: String, key: String, v: PropValue): String? {
       if (v !is PropValue.Token || !registry.isComponent(type)) return null
       val sourceType = propSourceType(type, key, registry)
-      return if (tokenFits(sourceType, v.value.toAny())) null
-      else "token ${v.ref} does not fit $type.$key (${sourceType ?: "not a scalar parameter"})"
+      return if (tokenFits(sourceType, v.value.toAny())) {
+        null
+      } else {
+        "token ${v.ref} does not fit $type.$key (${sourceType ?: "not a scalar parameter"})"
+      }
     }
     fun refuseToken(type: String, key: String, v: PropValue): String? =
       conditionalRefusal(registry, type, key, v) ?: templateRefusal(registry, type, key, v)
@@ -220,8 +224,11 @@ class DocumentService(
     }
     fun refuseMods(type: String, hasMods: Boolean): String? {
       if (!hasMods || !registry.isComponent(type)) return null
-      return if (registry.spec(type)?.acceptsModifier == true) null
-      else "component $type declares no `modifier: Modifier` parameter"
+      return if (registry.spec(type)?.acceptsModifier == true) {
+        null
+      } else {
+        "component $type declares no `modifier: Modifier` parameter"
+      }
     }
     fun walk(n: DocNode): String? = (n as? DocNode.Widget)?.let { w ->
       refuseMods(w.type, w.modifiers.isNotEmpty()) ?: w.children.firstNotNullOfOrNull(::walk)
@@ -370,11 +377,13 @@ class DocumentService(
     val components = components()
     val tokens = tokens()
     fun refusal(d: UiDocument, file: String?): String? = try {
-      when (val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
-        onDisk = file, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
-        fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
-        asComponent = asComponent,
-      )) {
+      when (
+        val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
+          onDisk = file, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
+          fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
+          asComponent = asComponent,
+        )
+      ) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> plan.reason
         else -> null
       }
@@ -482,8 +491,11 @@ class DocumentService(
     val onDisk = if (fresh.restored.isNotEmpty()) fileTextOrNull() else null
     if (onDisk != null) {
       table.bindingIssue(onDisk, tokenFileId, fresh.restored, fresh.keptImports)?.let { issue ->
-        return if (issue.cause == TokenTable.BindingCause.FILE_IMPORT) dropped(issue.message)
-        else OpAck(false, doc.version, "$verb blocked (step kept): ${issue.message}")
+        return if (issue.cause == TokenTable.BindingCause.FILE_IMPORT) {
+          dropped(issue.message)
+        } else {
+          OpAck(false, doc.version, "$verb blocked (step kept): ${issue.message}")
+        }
       }
     }
     // K4 §7a: a step write-back would refuse is never applied (it would block
@@ -566,7 +578,8 @@ class DocumentService(
     } else {
       val which = if (refused != null) "the change that could not be written" else "the editor's latest change, not yet written,"
       WriteBackStatus(
-        newDoc.version, "discarded",
+        newDoc.version,
+        "discarded",
         "$name was re-read ($why), so $which is not in the file and has been discarded: the editor now shows the file as it is — make the change again if you still want it",
       )
     }
@@ -698,11 +711,13 @@ class DocumentService(
       // F4: back at a document the file was already written or read as (an undo, a redo) — that text.
       val plan = if (known != null && onDisk != null && onDisk == baseText) {
         dev.keliver.portal.ingest.ScreenWriter.Write(known, dev.keliver.portal.ingest.ScreenWriter.How.SURGICAL)
-      } else dev.keliver.portal.ingest.ScreenWriter.plan(
-        onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
-        fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
-        asComponent = asComponent,
-      )
+      } else {
+        dev.keliver.portal.ingest.ScreenWriter.plan(
+          onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
+          fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
+          asComponent = asComponent,
+        )
+      }
       when (plan) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> {
           println("write-back REFUSED for $screenKey (v${doc.version}): ${plan.reason} — ${kotlinFile.name} left as it is")
@@ -736,9 +751,13 @@ class DocumentService(
     val until = "undo it (from the session that made it) or make it in code — until then no edit to this screen is written"
     val name = kotlinFile.name
     return WriteBackStatus(
-      version, "refused",
-      if (first == version) "this change could not be written to $name without losing code: $reason; $until"
-      else "this edit (v$version) is not written to $name either: an earlier change in this screen (v$first) can't be written without losing code — $reason; $until",
+      version,
+      "refused",
+      if (first == version) {
+        "this change could not be written to $name without losing code: $reason; $until"
+      } else {
+        "this edit (v$version) is not written to $name either: an earlier change in this screen (v$first) can't be written without losing code — $reason; $until"
+      },
     )
   }
 
@@ -789,7 +808,8 @@ class DocumentService(
     if (versionFailure != null) {
       println("write-back of $screenKey: ${kotlinFile.name} written, ${compiled.name} not: $versionFailure")
       return WriteBackStatus(
-        doc.version, how,
+        doc.version,
+        how,
         "written to ${kotlinFile.name} ($how); but ${compiled.name} (the version a device build compares) could not be written: $versionFailure",
       )
     }
@@ -809,7 +829,8 @@ class DocumentService(
     val rec = text?.let {
       runCatching { dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, it, components(), tokens(), asComponent) }.getOrNull()
     } ?: return WriteBackStatus(
-      doc.version, "refused",
+      doc.version,
+      "refused",
       "this change could not be written to ${kotlinFile.name}: $reason, and it does not read as a screen; it is left as it is",
     )
     println("write-back of $screenKey (v${doc.version}): $reason — ${kotlinFile.name} re-read, not written")
@@ -863,7 +884,12 @@ class DocumentService(
       return DocumentService(
         key, doc, { onChanged() }, kotlinFile, functionName, null, components, tokens, tokenFileId, tokensVersion, asComponent = true,
         componentsVersion = componentsVersion,
-      ).also { it.fileDoc = doc; it.fileText = text; it.readText = text; it.remember(doc, text) }
+      ).also {
+        it.fileDoc = doc
+        it.fileText = text
+        it.readText = text
+        it.remember(doc, text)
+      }
     }
 
     /** [root] with handles 1, 2, 3… in document order, and the next free handle. */
@@ -905,7 +931,12 @@ class DocumentService(
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = stampedVersion(kotlinFile), nextHandle = next)
           return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion = componentsVersion)
-            .also { it.fileDoc = doc; it.fileText = text; it.readText = text; it.remember(doc, text) } // the file IS this document
+            .also {
+              it.fileDoc = doc
+              it.fileText = text
+              it.readText = text
+              it.remember(doc, text)
+            } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }

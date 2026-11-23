@@ -35,7 +35,10 @@ class AndroidSqlHost(context: Context) : HostSqlDriver {
           trimmed.startsWith("INSERT", ignoreCase = true) -> if (stmt.executeInsert() >= 0) 1L else 0L
           trimmed.startsWith("UPDATE", ignoreCase = true) ||
             trimmed.startsWith("DELETE", ignoreCase = true) -> stmt.executeUpdateDelete().toLong()
-          else -> { stmt.execute(); 0L }
+          else -> {
+            stmt.execute()
+            0L
+          }
         }
         SqlRows(rowsAffected = affected)
       }

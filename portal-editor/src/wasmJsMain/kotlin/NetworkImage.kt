@@ -10,16 +10,16 @@
  */
 import coil3.ImageLoader
 import coil3.Uri
+import coil3.asImage
 import coil3.decode.DataSource
 import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
-import coil3.asImage
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.await
 import kotlin.js.Promise
+import kotlinx.coroutines.await
 import okio.Buffer
 import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Int8Array
@@ -131,7 +131,12 @@ internal val brokenImage: coil3.Image by lazy {
   val canvas = org.jetbrains.skia.Canvas(bitmap)
   val s = side.toFloat()
   canvas.clear(0x14E5534B)
-  val line = org.jetbrains.skia.Paint().apply { color = 0x66E5534B; strokeWidth = 2f; mode = org.jetbrains.skia.PaintMode.STROKE; isAntiAlias = true }
+  val line = org.jetbrains.skia.Paint().apply {
+    color = 0x66E5534B
+    strokeWidth = 2f
+    mode = org.jetbrains.skia.PaintMode.STROKE
+    isAntiAlias = true
+  }
   canvas.drawRect(org.jetbrains.skia.Rect.makeXYWH(1f, 1f, s - 2f, s - 2f), line)
   canvas.drawLine(0f, 0f, s, s, line)
   canvas.drawLine(s, 0f, 0f, s, line)

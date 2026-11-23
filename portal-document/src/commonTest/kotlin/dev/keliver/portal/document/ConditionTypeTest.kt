@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.Cond
@@ -9,16 +24,16 @@ import dev.keliver.portal.condOf
 import dev.keliver.portal.condOfTerms
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.serializeTree
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 
 /**
  * K6 review: a term's test fits its field's DECLARED type (a Boolean test a
@@ -79,7 +94,9 @@ class ConditionTypeTest {
     val unreadable = Contract(unlistedFieldsUnknown = "it extends a type declared in another file")
     val eq = PropValue.Conditional("kind", "eq", operand = lit("card"), whenTrue = lit("a"), whenFalse = lit("b"))
     val repeat = DocNode.Widget(
-      Handle(4), "Repeat", mapOf("items" to lit("rows"), "item" to lit("row")),
+      Handle(4),
+      "Repeat",
+      mapOf("items" to lit("rows"), "item" to lit("row")),
       children = listOf(text(5, PropValue.Conditional("row.kind", "eq", operand = lit("a"), whenTrue = lit("A"), whenFalse = lit("B")))),
     )
     val d = doc(text(2, eq), cond(6, Cond("kind", CondTest.Eq, operand = "card")), repeat, c = unreadable)
@@ -100,10 +117,18 @@ class ConditionTypeTest {
 
   // K6 review round 2: only a type KNOWN not to fit is refused; anything else is the compile's.
   @Test fun aDeclaredTypeNotKnownNotToFitTakesItsTest() {
-    val c = Contract(fields = mapOf(
-      "rowsI" to "ImmutableList<Row>", "rowsP" to "kotlinx.collections.immutable.PersistentList<Row>", "nums" to "IntArray",
-      "names" to "ArrayList<String>", "sb" to "StringBuilder", "flag" to "Flag", "count" to "Int", "tags" to "List<String>",
-    ))
+    val c = Contract(
+      fields = mapOf(
+        "rowsI" to "ImmutableList<Row>",
+        "rowsP" to "kotlinx.collections.immutable.PersistentList<Row>",
+        "nums" to "IntArray",
+        "names" to "ArrayList<String>",
+        "sb" to "StringBuilder",
+        "flag" to "Flag",
+        "count" to "Int",
+        "tags" to "List<String>",
+      ),
+    )
     val d = doc(text(2), c = c)
     fun set(field: String, test: String?) = DocOp.SetProp(Handle(2), "text", PropValue.Conditional(field, test, whenTrue = lit("a"), whenFalse = lit("b")))
     for ((field, test) in listOf("rowsI" to "empty", "rowsP" to "empty", "nums" to "empty", "names" to "empty", "sb" to "blank", "flag" to null)) {
@@ -141,7 +166,8 @@ class ConditionTypeTest {
     val d = doc(text(2), c = unreadable)
     val eqOne = PropValue.Conditional("kind", "eq", operand = lit(1), whenTrue = lit("A"), whenFalse = lit("B"))
     val column = DocNode.Widget(
-      Handle(0), "Column",
+      Handle(0),
+      "Column",
       children = listOf(
         cond(0, Cond("kind", CondTest.Eq, operand = 1)).copy(handle = Handle(0), children = emptyList()),
         DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to eqOne)),
@@ -149,7 +175,8 @@ class ConditionTypeTest {
     )
     assertNotNull(d.tryApply(DocOp.InsertNode(Handle(1), null, column)).error, "a Condition and a Text vouching for each other")
     val two = DocNode.Widget(
-      Handle(0), "Column",
+      Handle(0),
+      "Column",
       children = listOf(
         cond(0, Cond("kind", CondTest.Eq, operand = 1)).copy(handle = Handle(0), children = emptyList()),
         cond(0, Cond("kind", CondTest.Eq, negate = true, operand = 2)).copy(handle = Handle(0), children = emptyList()),

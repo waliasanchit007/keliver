@@ -14,7 +14,6 @@ import org.jetbrains.kotlin.CoreEnvironmentDeprecation
 import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.jetbrains.kotlin.com.intellij.core.CoreApplicationEnvironment
 import org.jetbrains.kotlin.com.intellij.lang.jvm.facade.JvmElementProvider
 import org.jetbrains.kotlin.com.intellij.mock.MockComponentManager
 import org.jetbrains.kotlin.com.intellij.openapi.extensions.ExtensionPoint
@@ -78,8 +77,10 @@ private fun enablePsiMutations(project: MockComponentManager) {
     }
   }
   ep("org.jetbrains.kotlin.com.intellij.treeCopyHandler", TreeCopyHandler::class.java)
-  ep("org.jetbrains.kotlin.com.intellij.psi.treeChangePreprocessor",
-    org.jetbrains.kotlin.com.intellij.psi.impl.PsiTreeChangePreprocessor::class.java)
+  ep(
+    "org.jetbrains.kotlin.com.intellij.psi.treeChangePreprocessor",
+    org.jetbrains.kotlin.com.intellij.psi.impl.PsiTreeChangePreprocessor::class.java,
+  )
   ep("org.jetbrains.kotlin.com.intellij.smartPointerAnchorProvider", SmartPointerAnchorProvider::class.java)
   ep("org.jetbrains.kotlin.com.intellij.jvm.elementProvider", JvmElementProvider::class.java)
 
@@ -99,7 +100,9 @@ private fun enablePsiMutations(project: MockComponentManager) {
 fun main() {
   val disposable = Disposer.newDisposable()
   val env = KotlinCoreEnvironment.createForProduction(
-    disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+    disposable,
+    CompilerConfiguration.create(),
+    EnvironmentConfigFiles.JVM_CONFIG_FILES,
   )
   enablePsiMutations(env.project as MockComponentManager)
   val factory = KtPsiFactory(env.project)

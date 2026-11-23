@@ -18,8 +18,15 @@ class IosSqlHost : HostSqlDriver {
     val s = sql.trim()
     return when {
       s.startsWith("CREATE TABLE", ignoreCase = true) -> SqlRows()
-      s.startsWith("INSERT", ignoreCase = true) -> { rows.add(args); SqlRows(rowsAffected = 1) }
-      s.startsWith("DELETE", ignoreCase = true) -> { val n = rows.size; rows.clear(); SqlRows(rowsAffected = n.toLong()) }
+      s.startsWith("INSERT", ignoreCase = true) -> {
+        rows.add(args)
+        SqlRows(rowsAffected = 1)
+      }
+      s.startsWith("DELETE", ignoreCase = true) -> {
+        val n = rows.size
+        rows.clear()
+        SqlRows(rowsAffected = n.toLong())
+      }
       s.startsWith("SELECT COUNT", ignoreCase = true) -> SqlRows(rows = listOf(SqlRow(listOf(rows.size.toString()))))
       s.startsWith("SELECT", ignoreCase = true) -> SqlRows(rows = rows.map { SqlRow(it) })
       else -> SqlRows()

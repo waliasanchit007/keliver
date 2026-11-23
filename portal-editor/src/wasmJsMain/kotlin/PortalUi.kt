@@ -305,6 +305,9 @@ internal object Ui {
         "border-radius:8px; padding:8px 14px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.4);",
     )
     document.body?.appendChild(t)
-    window.setTimeout({ t.remove(); null }, 2600)
+    window.setTimeout({
+      t.remove()
+      null
+    }, 2600)
   }
 }

@@ -68,16 +68,33 @@ fun main() {
 
 /** MCP tool result: text content (+isError steers the agent without failing the RPC). */
 fun toolText(text: String, isError: Boolean = false): JsonObject = buildJsonObject {
-  put("content", buildJsonArray {
-    add(buildJsonObject { put("type", "text"); put("text", text) })
-  })
+  put(
+    "content",
+    buildJsonArray {
+      add(
+        buildJsonObject {
+          put("type", "text")
+          put("text", text)
+        },
+      )
+    },
+  )
   if (isError) put("isError", true)
 }
 
 fun toolImage(base64Png: String): JsonObject = buildJsonObject {
-  put("content", buildJsonArray {
-    add(buildJsonObject { put("type", "image"); put("data", base64Png); put("mimeType", "image/png") })
-  })
+  put(
+    "content",
+    buildJsonArray {
+      add(
+        buildJsonObject {
+          put("type", "image")
+          put("data", base64Png)
+          put("mimeType", "image/png")
+        },
+      )
+    },
+  )
 }
 
 class Tool(
@@ -93,7 +110,12 @@ class Tool(
     putJsonObject("inputSchema") {
       put("type", "object")
       putJsonObject("properties") {
-        params.forEach { (p, d) -> putJsonObject(p) { put("type", "string"); put("description", d) } }
+        params.forEach { (p, d) ->
+          putJsonObject(p) {
+            put("type", "string")
+            put("description", d)
+          }
+        }
       }
       put("required", buildJsonArray { required.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
     }

@@ -41,10 +41,12 @@ public object PreviewCapabilities {
   public fun statusOf(cap: String, persona: PreviewPersona?): CapStatus =
     if (cap == HOST_HTTP_CAPABILITY) {
       httpStatus(persona)
-    } else persona?.fixtureStates()?.get(cap)?.let {
-      CapStatus(cap, real = true, note = "persona fixture: $it")
-    } ?: providers[cap]?.let { CapStatus(cap, real = true, note = "preview impl: $it") }
-      ?: CapStatus(cap, real = false, note = "no preview impl — stubbed (reduced fidelity)")
+    } else {
+      persona?.fixtureStates()?.get(cap)?.let {
+        CapStatus(cap, real = true, note = "persona fixture: $it")
+      } ?: providers[cap]?.let { CapStatus(cap, real = true, note = "preview impl: $it") }
+        ?: CapStatus(cap, real = false, note = "no preview impl — stubbed (reduced fidelity)")
+    }
 
   public fun report(required: List<String>): List<CapStatus> = required.map { statusOf(it) }
 
@@ -149,8 +151,14 @@ public class PreviewSqlHost {
     fun withRowid(): List<List<String?>> = rows.mapIndexed { i, r -> listOf((i + 1).toString()) + r }
     return when {
       s.startsWith("CREATE TABLE", ignoreCase = true) -> emptyList()
-      s.startsWith("INSERT", ignoreCase = true) -> { rows.add(args); emptyList() }
-      s.startsWith("DELETE", ignoreCase = true) -> { rows.clear(); emptyList() }
+      s.startsWith("INSERT", ignoreCase = true) -> {
+        rows.add(args)
+        emptyList()
+      }
+      s.startsWith("DELETE", ignoreCase = true) -> {
+        rows.clear()
+        emptyList()
+      }
       s.startsWith("SELECT COUNT", ignoreCase = true) -> listOf(listOf(rows.size.toString()))
       s.startsWith("SELECT", ignoreCase = true) && s.contains("WHERE rowid", ignoreCase = true) -> {
         val id = args.firstOrNull()?.toIntOrNull() ?: return emptyList()

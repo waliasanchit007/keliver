@@ -50,19 +50,27 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
     return buildJsonObject {
       put("total", records.size)
       put("installs", records.mapNotNull { it.str("installId") }.toSet().size)
-      put("bundles", buildJsonArray {
-        groups.entries.sortedWith(compareBy({ it.key.platform }, { it.key.channel }, { it.key.sequence ?: -1 })).forEach { (k, rs) ->
-          add(buildJsonObject {
-            put("platform", k.platform)
-            put("channel", k.channel)
-            put("sequence", k.sequence)
-            put("installs", rs.mapNotNull { it.str("installId") }.toSet().size)
-            put("outcomes", buildJsonObject {
-              rs.groupingBy { it.str("outcome") ?: "" }.eachCount().toSortedMap().forEach { (o, n) -> put(o, n) }
-            })
-          })
-        }
-      })
+      put(
+        "bundles",
+        buildJsonArray {
+          groups.entries.sortedWith(compareBy({ it.key.platform }, { it.key.channel }, { it.key.sequence ?: -1 })).forEach { (k, rs) ->
+            add(
+              buildJsonObject {
+                put("platform", k.platform)
+                put("channel", k.channel)
+                put("sequence", k.sequence)
+                put("installs", rs.mapNotNull { it.str("installId") }.toSet().size)
+                put(
+                  "outcomes",
+                  buildJsonObject {
+                    rs.groupingBy { it.str("outcome") ?: "" }.eachCount().toSortedMap().forEach { (o, n) -> put(o, n) }
+                  },
+                )
+              },
+            )
+          }
+        },
+      )
       put("recent", JsonArray(records.takeLast(recent).reversed()))
     }
   }
@@ -81,12 +89,14 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
       |<style>body{font:14px system-ui,sans-serif;margin:24px}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px;text-align:left}</style>
       |</head><body><h1>Host reports</h1><p>${s.num("total")} reports from ${s.num("installs")} installs.</p>
       |<table><tr><th>platform</th><th>channel</th><th>sequence</th><th>installs</th><th>outcomes</th></tr>$rows</table>
-      |</body></html>""".trimMargin()
+      |</body></html>
+    """.trimMargin()
   }
 
   companion object {
     const val MAX_LINES = 20_000
     private val KEYS = setOf("installId", "channel", "hostVersion", "sequence", "source", "outcome", "reason", "platform")
+
     // Every outcome and reason the hosts' reportReason (BundleIndex.kt) can send; HostReportsTest
     // holds the two together. screen-failed/exception (K1/K2) were missing until B4. WS6's crash
     // rollback adds crash-rollback (previous-good, newer-bundle, app-view) and set-aside.
@@ -117,12 +127,21 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
     fun register(server: HttpServer, reports: HostReports, wrap: (HttpExchange, () -> Unit) -> Unit) {
       server.createContext("/report") { ex ->
         wrap(ex) {
-          if (ex.requestMethod != "POST") { send(ex, 405, null); return@wrap }
+          if (ex.requestMethod != "POST") {
+            send(ex, 405, null)
+            return@wrap
+          }
           val bytes = ex.requestBody.readNBytes(4097)
-          if (bytes.size > 4096) { send(ex, 413, "{\"error\":\"a report is at most 4096 bytes\"}"); return@wrap }
+          if (bytes.size > 4096) {
+            send(ex, 413, "{\"error\":\"a report is at most 4096 bytes\"}")
+            return@wrap
+          }
           val refused = reports.accept(bytes.decodeToString())
-          if (refused == null) send(ex, 204, null)
-          else send(ex, refused.first, buildJsonObject { put("error", refused.second) }.toString())
+          if (refused == null) {
+            send(ex, 204, null)
+          } else {
+            send(ex, refused.first, buildJsonObject { put("error", refused.second) }.toString())
+          }
         }
       }
       server.createContext("/reports") { ex ->
@@ -137,7 +156,11 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
     }
 
     private fun send(ex: HttpExchange, code: Int, body: String?, contentType: String = "application/json") {
-      if (body == null) { ex.sendResponseHeaders(code, -1); ex.close(); return }
+      if (body == null) {
+        ex.sendResponseHeaders(code, -1)
+        ex.close()
+        return
+      }
       val bytes = body.encodeToByteArray()
       ex.responseHeaders.add("Content-Type", contentType)
       ex.sendResponseHeaders(code, bytes.size.toLong())
@@ -149,4 +172,3 @@ internal class HostReports(private val dir: File, private val maxLines: Int = MA
 private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
 private fun JsonObject.num(k: String): Long? = (this[k] as? JsonPrimitive)?.takeIf { !it.isString }?.longOrNull
 private fun JsonObject.isNumOrNull(k: String): Boolean = this[k].let { it is JsonNull || num(k) != null }
-

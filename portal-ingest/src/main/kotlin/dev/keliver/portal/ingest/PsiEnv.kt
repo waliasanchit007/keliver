@@ -34,7 +34,9 @@ object PsiEnv {
 
   private val env: KotlinCoreEnvironment by lazy {
     val e = KotlinCoreEnvironment.createForProduction(
-      disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+      disposable,
+      CompilerConfiguration.create(),
+      EnvironmentConfigFiles.JVM_CONFIG_FILES,
     )
     enablePsiMutations(e.project as MockComponentManager)
     HeadlessPsiMutations.install()

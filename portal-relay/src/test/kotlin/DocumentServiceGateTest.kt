@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropKind
@@ -23,17 +38,24 @@ class DocumentServiceGateTest {
   private val initial = UiDocument(
     "s",
     DocNode.Widget(
-      Handle(1), "Column",
+      Handle(1),
+      "Column",
       children = listOf(
-        DocNode.Widget(Handle(2), "Row", children = listOf(
-          DocNode.Widget(Handle(3), "StyledText", mapOf("text" to PropValue.Lit("s", s = "a")), modifiers = mapOf("Flex.value" to d(1.0))),
-          DocNode.Widget(Handle(4), "Plain", mapOf("title" to PropValue.Lit("s", s = "p"))),
-          DocNode.Widget(Handle(5), "Weighted", mapOf("title" to PropValue.Lit("s", s = "w"))),
-        )),
+        DocNode.Widget(
+          Handle(2),
+          "Row",
+          children = listOf(
+            DocNode.Widget(Handle(3), "StyledText", mapOf("text" to PropValue.Lit("s", s = "a")), modifiers = mapOf("Flex.value" to d(1.0))),
+            DocNode.Widget(Handle(4), "Plain", mapOf("title" to PropValue.Lit("s", s = "p"))),
+            DocNode.Widget(Handle(5), "Weighted", mapOf("title" to PropValue.Lit("s", s = "w"))),
+          ),
+        ),
         DocNode.Widget(Handle(6), "StyledBox"),
       ),
     ),
-    Contract(), 0, 7,
+    Contract(),
+    0,
+    7,
   )
 
   private fun component(name: String, withModifier: Boolean) = ComponentSpec(

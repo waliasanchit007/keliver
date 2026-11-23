@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
@@ -30,7 +41,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 internal object DiscardingCompiledProbe : CompiledComponentProbe {
   private val noBack = object : OnBackPressedDispatcher {
     override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable =
-      object : Cancellable { override fun cancel() {} }
+      object : Cancellable {
+        override fun cancel() {}
+      }
   }
 
   override fun failureOf(content: @Composable () -> Unit): Throwable? {
@@ -38,7 +51,9 @@ internal object DiscardingCompiledProbe : CompiledComponentProbe {
       hostVersion = guestRedwoodVersion,
       widgetSystemFactory = KeliverMaterialProtocolWidgetSystemFactory,
     )
-    guest.initChangesSink(object : ChangesSink { override fun sendChanges(changes: List<Change>) {} })
+    guest.initChangesSink(object : ChangesSink {
+      override fun sendChanges(changes: List<Change>) {}
+    })
     val job = Job()
     val composition = ProtocolRedwoodComposition(
       scope = CoroutineScope(job + BroadcastFrameClock()),
