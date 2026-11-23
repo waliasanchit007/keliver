@@ -52,8 +52,9 @@ run_case() {
   else
     bad "$label (rc=$rc, wanted $want${text:+ and \"$text\"}): $(tail -3 <<<"$out" | tr '\n' ' ')"
   fi
-  # Preflight never reaches Gradle, so nothing is staged.
-  [ ! -e "$d/build/portal-tools" ] || bad "$label: preflight staged $d/build/portal-tools"
+  # Preflight never reaches Gradle, so nothing is staged. Checked in fixtures only: a real
+  # checkout may hold an earlier build's directory (review of #294, L2).
+  [ "$d" = "$ROOT" ] || [ ! -e "$d/build/portal-tools" ] || bad "$label: preflight staged $d/build/portal-tools"
 }
 
 echo "=== the bundled host's engine must match the scaffolders' default line"
