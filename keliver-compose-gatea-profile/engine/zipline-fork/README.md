@@ -5,8 +5,8 @@ vendored QuickJS 2021-03-27 replaced by Bellard's **QuickJS 2026-06-04** (SHA-25
 `b376e839…70ad2a`), which brings BigInt, so Kotlin's `Long` can be compiled as a JS BigInt
 (`-Xes-long-as-bigint`). Why, and what it measured: `docs/GUEST_PROFILE.md`, "The engine, measured"
 and "NF2: the Zipline fork, step 1". Step 4 builds it for Maven Central as
-`dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below); nothing
-is published yet.
+`dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below). **Published
+2026-11-24:** `dev.keliver.zipline:*:1.28.0-keliver.1` (`zipline-fork.yml` run 45176623004).
 
 ## Licences
 
@@ -237,8 +237,10 @@ the build runs none. Add `-PziplineBytecodeCorpus=<dir of .js and .js.map>` to
 
 ## Publishing the fork (step 4)
 
-**Published on Maven Central 2026-11-24**: `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`,
-every file checked byte for byte against the build CI checked. The owner's decisions (2026-11-22): group
+**Published 2026-11-24:** `dev.keliver.zipline:*:1.28.0-keliver.1` (`zipline-fork.yml` run
+45176623004, uploaded in review mode on 2026-11-23). After the
+release the maintainer checked all 311 artifacts and 311 signatures on Maven Central against the
+run's SHA1SUMS manifest (sha1): every one matched. The owner's decisions (2026-11-22): group
 `dev.keliver.zipline`, upstream's artifact names, version `1.28.0-keliver.1`, and one engine,
 `quickjs-2026` (no app ever shipped on QuickJS 2021, so nothing publishes the old one).
 
@@ -472,22 +474,13 @@ of the three runs (2.4.21; 2.4.20; 2.4.20 forced) compiled JVM and JS and passed
 minor version (2.2, 2.3) was not tried: a Kotlin compiler plugin is built against one compiler, and
 Keliver 0.5.0's scaffolded apps will use 2.4.21 (draft #299's 0.5 line).
 
-## Keliver on the fork
+## Not yet
 
-In this order, because an app must never get the fork and upstream together (the capability
-conflict above would stop its build): the fork published (done 2026-11-24) → Keliver's version
-catalog and libraries at 0.5.0 on `dev.keliver.zipline`, with Long as BigInt by default in Keliver's build-support and templates (the owner, 2026-11-22: not
+Publishing (a manual run of the workflow), then Keliver on the fork, in this order, because an app
+must never get the fork and upstream together (the capability conflict above would stop its build):
+the fork published → Keliver's version catalog and libraries at 0.5.0 on `dev.keliver.zipline`,
+with Long as BigInt by default in Keliver's build-support and templates (the owner, 2026-11-22: not
 in the fork's plugin, which keeps upstream's behaviour) → the scaffolders write the fork's
 coordinates only for an app whose `appRuntime.keliverVersion` is 0.5.0 or later (one engine,
 `quickjs-2026`) → then a tools release. Also iOS on a phone (step 3 ran the simulator only), and
 the upstream offer. The plan and estimates are in `docs/GUEST_PROFILE.md`.
-
-The second and third steps are Keliver's side of the switch (#294): the catalog names
-`dev.keliver.zipline`, resolved from Maven Central like every other dependency, build-support links
-every Zipline guest with `-Xes-long-as-bigint` and refuses any `app.cash.zipline` module
-(`ZiplineFork.kt`), and the scaffolders choose the line with `scripts/keliver-runtime-line.sh`.
-
-On a Keliver build that is already on the fork, `use-release.init.gradle` and `use-fork.init.gradle`
-(which swap `app.cash.zipline` modules) change nothing, and `-PziplineForkRepo=none` no longer
-gives the 1.28.0 baseline (`-Pkeliver.allowUpstreamZipline` lets a build that names upstream's
-modules again through the guard).
