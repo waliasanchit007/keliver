@@ -5,8 +5,8 @@ vendored QuickJS 2021-03-27 replaced by Bellard's **QuickJS 2026-06-04** (SHA-25
 `b376e839…70ad2a`), which brings BigInt, so Kotlin's `Long` can be compiled as a JS BigInt
 (`-Xes-long-as-bigint`). Why, and what it measured: `docs/GUEST_PROFILE.md`, "The engine, measured"
 and "NF2: the Zipline fork, step 1". Step 4 builds it for Maven Central as
-`dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below); nothing
-is published yet.
+`dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below). **Published
+2026-11-24:** `dev.keliver.zipline:*:1.28.0-keliver.1` (`zipline-fork.yml` run 45176623004).
 
 ## Licences
 
@@ -237,8 +237,10 @@ the build runs none. Add `-PziplineBytecodeCorpus=<dir of .js and .js.map>` to
 
 ## Publishing the fork (step 4)
 
-**Published on Maven Central 2026-11-24**: `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1`,
-every file checked byte for byte against the build CI checked. The owner's decisions (2026-11-22): group
+**Published 2026-11-24:** `dev.keliver.zipline:<upstream name>:1.28.0-keliver.1` (`zipline-fork.yml` run
+45176623004, uploaded in review mode on 2026-11-23). After the
+release the maintainer checked all 311 artifacts and 311 signatures on Maven Central against the
+run's SHA1SUMS manifest (sha1): every one matched. The owner's decisions (2026-11-22): group
 `dev.keliver.zipline`, upstream's artifact names, version `1.28.0-keliver.1`, and one engine,
 `quickjs-2026` (no app ever shipped on QuickJS 2021, so nothing publishes the old one).
 

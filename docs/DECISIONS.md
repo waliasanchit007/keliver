@@ -2,7 +2,8 @@
 
 Finalized decisions with rationale. Each is **settled** — reopen only with new
 evidence, in a PR against this file. Newest architectural review: 2026-07-12
-(application-scale assessment against the first adopter app).
+(application-scale assessment against the first adopter app). Latest amendment:
+2026-11-24 (D6 and D9, after Gate B).
 
 ## Runtime & distribution
 
@@ -43,6 +44,30 @@ Condition, the three event shapes). Complex Kotlin is never parsed into the
 grammar — it runs: on devices always, in the browser via the live-presenter tier.
 Unrecognized code becomes an explicit RawCode node (loud, red in preview) rather
 than a wrong rendering. **Keep the grammar small**; variety belongs in components.
+*Amended 2026-11-24 (Gate B), for the Compose-generated guest API and the editor's
+ED0:* for a generated group (`dev.keliver.compose.*`), the grammar also reads
+Compose-shaped code. It reads **Compose values from a fixed table** (units such as
+`16.dp`, colours and theme references such as `MaterialTheme.colorScheme.primary`,
+shapes, text styles, alignments and arrangements, padding values, icons), matched by
+their spelling, not by their resolved type or import. It reads a **`Modifier` chain as
+an ordered list** of generated modifiers. A call is a generated widget only when the
+file's imports name it. In a file that imports a guest name, a call is RawCode with its
+reason when its resolution is not certain: two star imports that both give it, a
+`dev.keliver.compose.*` name the catalog does not generate, Compose's own API, or a
+declaration of the same file that shadows it. Any other callee keeps today's reading,
+so legacy widgets and project components still mix with generated ones. The table
+grows by entries, never by evaluating Kotlin. Today's schemas ingest as before. The
+core is unchanged: logic executes, it is not parsed, and unrecognized code stays an
+explicit RawCode node. **`for` loops are not part of the grammar:** a list is still read
+as a Repeat only from `items.forEach { x -> … }`, and a `for` loop stays RawCode. The
+spike's `for`-as-Repeat reading ([`ED0_SPIKE.md`](ED0_SPIKE.md) §5) is not included in
+this amendment and would need its own. Evidence: Gate A
+([`GATE_A_VERDICT.md`](GATE_A_VERDICT.md)), Gate B ([`GATE_B_RESULTS.md`](GATE_B_RESULTS.md))
+and the ED0 spike (#239, [`ED0_SPIKE.md`](ED0_SPIKE.md) §3: the Style B screen
+`ComposeFixtures.INBOX_SCREEN` ingests with 0 RawCode; Gate A's sample does too, but only
+with the spike's `for`-as-Repeat reading, which this amendment does not include; 16
+write-back round trips are byte-stable). Agreed by the owner with Gate B's verdict,
+2026-11-24.
 
 **D7. Preview fidelity is capability-scoped (M8).**
 Repositories/presenters always run REAL in preview; only the narrow capability
@@ -63,6 +88,15 @@ Components may expose one required trailing `@Composable () -> Unit` content
 slot, invoked once inside a grammar container; its children remain ordinary
 document nodes while the wrapper stays master-linked. Optional/defaulted slots
 and multiple named slots remain deferred rather than being inferred ambiguously.
+*Amended 2026-11-24 (Gate B), for the Compose-generated guest API and the editor's
+ED0:* a generated widget may have Material 3's **optional and several named slots**.
+This is a new way of filling today's document model (no new node kind;
+[`ED0_SPIKE.md`](ED0_SPIKE.md) §2): a Compose node stays a widget node, and a node whose widget has exactly one required
+slot keeps today's shape (the slot's statements are its children). Any other slot
+layout has one `slot:<name>` child per slot the call passes, in source order; an
+absent optional slot has none. Hand-written components keep the one-required-slot
+rule above. The core is unchanged: the grammar owns composition and layout. Evidence
+and the owner's agreement: as D6's amendment.
 
 ## App architecture (from the 2026-07-12 application-scale review)
 
