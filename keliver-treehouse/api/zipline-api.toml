@@ -32,6 +32,9 @@ functions = [
   # fun requestFrame(): kotlin.Unit
   "/TkBiP/u",
 
+  # val hostFeatures: kotlin.collections.List<kotlin.String>
+  "Jhg8ApbQ",
+
   # val hostProtocolVersion: dev.keliver.protocol.RedwoodVersion
   "wUGXIiy2",
 ]
