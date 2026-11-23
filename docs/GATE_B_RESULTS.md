@@ -5,6 +5,9 @@ Gate B of [`PLAN_2026-11.md`](PLAN_2026-11.md) §8, part by part. The design is
 [`GATE_A_VERDICT.md`](GATE_A_VERDICT.md). Each part adds its own section; the verdict comes when the
 parts are in.
 
+**Verdict: confirmed by the owner, 2026-11-24.** The generated API is built for real (PD2, WS2), and
+D6 and D9 are amended in [`DECISIONS.md`](DECISIONS.md).
+
 ## Phone checkpoint (iOS)
 
 Part c on an iPhone 13: the same comparison and first-frame timing as #243's simulator run
