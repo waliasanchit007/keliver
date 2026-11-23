@@ -58,10 +58,16 @@ declaration of the same file that shadows it. Any other callee keeps today's rea
 so legacy widgets and project components still mix with generated ones. The table
 grows by entries, never by evaluating Kotlin. Today's schemas ingest as before. The
 core is unchanged: logic executes, it is not parsed, and unrecognized code stays an
-explicit RawCode node. Evidence: Gate A ([`GATE_A_VERDICT.md`](GATE_A_VERDICT.md)),
-Gate B ([`GATE_B_RESULTS.md`](GATE_B_RESULTS.md)) and the ED0 spike (#239,
-[`ED0_SPIKE.md`](ED0_SPIKE.md): Gate A's sample ingests with 0 RawCode; 16 write-back
-round trips are byte-stable). Agreed by the owner with Gate B's verdict, 2026-11-24.
+explicit RawCode node. **`for` loops are not part of the grammar:** a list is still read
+as a Repeat only from `items.forEach { x -> … }`, and a `for` loop stays RawCode. The
+spike's `for`-as-Repeat reading ([`ED0_SPIKE.md`](ED0_SPIKE.md) §5) is not included in
+this amendment and would need its own. Evidence: Gate A
+([`GATE_A_VERDICT.md`](GATE_A_VERDICT.md)), Gate B ([`GATE_B_RESULTS.md`](GATE_B_RESULTS.md))
+and the ED0 spike (#239, [`ED0_SPIKE.md`](ED0_SPIKE.md) §3: the Style B screen
+`ComposeFixtures.INBOX_SCREEN` ingests with 0 RawCode; Gate A's sample does too, but only
+with the spike's `for`-as-Repeat reading, which this amendment does not include; 16
+write-back round trips are byte-stable). Agreed by the owner with Gate B's verdict,
+2026-11-24.
 
 **D7. Preview fidelity is capability-scoped (M8).**
 Repositories/presenters always run REAL in preview; only the narrow capability
@@ -80,13 +86,12 @@ grammar inside, portal can descend; opaque = props-only). The grammar owns
 composition/layout forever — if layout goes opaque, the visual-editing thesis dies.
 Components may expose one required trailing `@Composable () -> Unit` content
 slot, invoked once inside a grammar container; its children remain ordinary
-document nodes while the wrapper stays master-linked. For hand-written components,
-optional/defaulted slots and multiple named slots remain deferred rather than being
-inferred ambiguously.
+document nodes while the wrapper stays master-linked. Optional/defaulted slots
+and multiple named slots remain deferred rather than being inferred ambiguously.
 *Amended 2026-11-24 (Gate B), for the Compose-generated guest API and the editor's
 ED0:* a generated widget may have Material 3's **optional and several named slots**.
-This needs a change to the document model's shape ([`ED0_SPIKE.md`](ED0_SPIKE.md) §2):
-a Compose node stays a widget node, and a node whose widget has exactly one required
+This is a new way of filling today's document model (no new node kind;
+[`ED0_SPIKE.md`](ED0_SPIKE.md) §2): a Compose node stays a widget node, and a node whose widget has exactly one required
 slot keeps today's shape (the slot's statements are its children). Any other slot
 layout has one `slot:<name>` child per slot the call passes, in source order; an
 absent optional slot has none. Hand-written components keep the one-required-slot
