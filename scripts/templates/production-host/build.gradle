@@ -202,19 +202,18 @@ dependencies {
   implementation 'dev.keliver:keliver-http:@@KELIVER_VERSION@@'
   implementation '@@ZIPLINE_GROUP@@:zipline:@@ZIPLINE_VERSION@@'
   implementation '@@ZIPLINE_GROUP@@:zipline-loader:@@ZIPLINE_VERSION@@'
-  implementation 'com.squareup.okhttp3:okhttp:5.1.0'
+  implementation 'com.squareup.okhttp3:okhttp:@@OKHTTP_VERSION@@'
   implementation 'androidx.activity:activity-compose:1.10.1'
   implementation 'androidx.core:core-ktx:1.16.0'
   implementation 'androidx.browser:browser:1.8.0' // ExternalLinkPolicy: https opens in a Custom Tab
-  implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'
-  implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'
+  @@IMAGE_DEPENDENCIES@@
   implementation 'org.jetbrains.compose.runtime:runtime:@@COMPOSE_VERSION@@'
   implementation 'org.jetbrains.compose.foundation:foundation:@@COMPOSE_VERSION@@'
   implementation 'org.jetbrains.compose.material:material:@@COMPOSE_VERSION@@'
   implementation 'org.jetbrains.compose.ui:ui:@@COMPOSE_VERSION@@'
-  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:@@COROUTINES_VERSION@@'
   // The host kit's own checks: ./gradlew -p host-android testDebugUnitTest
   testImplementation 'junit:junit:4.13.2'
   testImplementation 'org.jetbrains.kotlin:kotlin-test-junit' // KeliverRouteTest, shared with the iOS host
-  testImplementation 'com.squareup.okhttp3:mockwebserver3:5.1.0'
+  testImplementation 'com.squareup.okhttp3:mockwebserver3:@@OKHTTP_VERSION@@'
 }

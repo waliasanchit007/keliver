@@ -186,6 +186,10 @@ AGP_VERSION="${KELIVER_HOST_AGP_VERSION:-$TOOLCHAIN_AGP}"
 for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$AGP_VERSION"; do
   [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
 done
+# Coil and its OkHttp fetcher: from the 0.5 line, keliver-image at this app's Keliver version, so
+# they are the versions Keliver's libraries resolve; before it, pinned as the templates always were.
+IMAGE_DEPENDENCIES="$(keliver_line_image_dependencies android "$KELIVER_VERSION")" \
+  || fail "keliver-runtime-line.sh has no image dependencies for Keliver $KELIVER_VERSION."
 # AGP 9 compiles Kotlin itself (built-in Kotlin) and refuses a module that applies
 # org.jetbrains.kotlin.android: there the plugin is only put on the classpath (apply false), which
 # pins the Kotlin Gradle plugin AGP compiles with to this line's Kotlin. Before AGP 9 it is applied.
@@ -561,17 +565,22 @@ subst() { # <src> <dst>
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$AGP_VERSION" "$CHANNEL" \
     "$DEBUG_LINK_SCHEME" "$ZIPLINE_GROUP" "$ZIPLINE_PLUGIN_ID" \
-    "$TOOLCHAIN_COMPILE_SDK" "$TOOLCHAIN_TARGET_SDK" "$TOOLCHAIN_JDK" "$KOTLIN_ANDROID_APPLY" "$EMBED_KOTLIN_PLUGIN" <<'PY'
-import sys
+    "$TOOLCHAIN_COMPILE_SDK" "$TOOLCHAIN_TARGET_SDK" "$TOOLCHAIN_JDK" "$KOTLIN_ANDROID_APPLY" "$EMBED_KOTLIN_PLUGIN" \
+    "$TOOLCHAIN_OKHTTP" "$TOOLCHAIN_COROUTINES" "$IMAGE_DEPENDENCIES" <<'PY'
+import re, sys
 src, dst, name, pkg, appid, server, api, kv, zv, ktv, cv, agp, channel, link_scheme, zg, zid, \
-    csdk, tsdk, jdk, kapply, ekplugin = sys.argv[1:22]
+    csdk, tsdk, jdk, kapply, ekplugin, okhttp, coroutines, image_deps = sys.argv[1:25]
 s = open(src, encoding='utf-8').read()
+# The image dependencies are one line each, at the placeholder's indent.
+s = re.sub(r'(?m)^([ \t]*)@@IMAGE_DEPENDENCIES@@$',
+           lambda m: '\n'.join(m.group(1) + d for d in image_deps.splitlines()), s)
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'APPLICATION_ID': appid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'AGP_VERSION': agp, 'CHANNEL': channel,
              'DEBUG_LINK_SCHEME': link_scheme, 'ZIPLINE_GROUP': zg, 'ZIPLINE_PLUGIN_ID': zid,
              'COMPILE_SDK': csdk, 'TARGET_SDK': tsdk, 'JDK': jdk,
-             'KOTLIN_ANDROID_APPLY': kapply, 'EMBED_KOTLIN_PLUGIN': ekplugin}.items():
+             'KOTLIN_ANDROID_APPLY': kapply, 'EMBED_KOTLIN_PLUGIN': ekplugin,
+             'OKHTTP_VERSION': okhttp, 'COROUTINES_VERSION': coroutines}.items():
     s = s.replace('@@' + k + '@@', v)
 assert '@@' not in s, 'unsubstituted placeholder in ' + src
 open(dst, 'w', encoding='utf-8').write(s)

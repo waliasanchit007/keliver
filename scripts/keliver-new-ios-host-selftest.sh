@@ -724,6 +724,18 @@ HF="$APPF/host-ios/build.gradle"
   && grep -q "implementation 'dev.keliver:keliver-treehouse-host:0.5.0'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
   && ok "NF2: an app on 0.5.0 gets an iOS host on Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries), Kotlin 2.4.20, Compose 1.12.2" \
   || bad "NF2: the iOS host of an app on 0.5.0 (rc=$rc): $(grep -hE 'zipline|kotlin.multiplatform|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
+# Coil, its Ktor fetcher and the Darwin engine: pinned on the 0.4 line as before; from keliver-image
+# at the app's version on the 0.5 line, so Ktor's client and its Darwin engine cannot split.
+grep -qx "        implementation 'io.coil-kt.coil3:coil-network-ktor3:3.3.0' // images over the network" "$H/build.gradle" \
+  && grep -qx "        implementation 'io.ktor:ktor-client-darwin:3.1.0'           // coil's network engine on iOS" "$H/build.gradle" \
+  && grep -qx "        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'" "$H/build.gradle" && ! grep -q 'keliver-image' "$H/build.gradle" \
+  && ok "0.4 line: Coil 3.3.0, Ktor's Darwin engine 3.1.0 and serialization 1.9.0 pinned (as before)" \
+  || bad "0.4 line: the iOS host's image dependencies changed: $(grep -hE 'coil|ktor|keliver-image|serialization-json' "$H/build.gradle" | tr -s ' ' | tr '\n' '|')"
+grep -q "^        implementation 'dev.keliver:keliver-image:0.5.0' //" "$HF" && ! grep -qE "io\.coil-kt|io\.ktor" "$HF" \
+  && grep -qx "        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0'" "$HF" \
+  && grep -qx "        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0'" "$HF" \
+  && ok "0.5 line: keliver-image (no Coil or Ktor pin), coroutines 1.11.0, serialization 1.13.0" \
+  || bad "0.5 line: the iOS host's image dependencies: $(grep -hE 'coil|ktor|keliver-image|coroutines|serialization-json' "$HF" | tr -s ' ' | tr '\n' '|')"
 
 grep -rqF -f "$PRIV" "$DISP"/demo*/host-ios 2>/dev/null && bad "the private key is in a scaffolded host" \
   || ok "the private key is in no scaffolded host"

@@ -744,29 +744,43 @@ for v in 0.5.0 0.5.1-SNAPSHOT; do
     keliver_require_isolated_store "$DISP" "$APPF" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
     ( cd "$APPF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" > /dev/null 2>&1 ) || bad "the fresh 0.5.0 scaffold failed"
   fi
-  grep -qx "  id 'com.android.application' version '9.3.1'" "$HF" \
+  grep -qx "  id 'com.android.application' version '9.3.3'" "$HF" \
     && grep -q "^  id 'org.jetbrains.kotlin.android' version '2.4.20' apply false //" "$HF" \
     && grep -qx '  compileSdk 37' "$HF" && grep -qx '    targetSdk 36' "$HF" && grep -qx 'kotlin { jvmToolchain(17) }' "$HF" \
-    && ok "0.5 line ($v): AGP 9.3.1 with built-in Kotlin (Kotlin's Android plugin only pins its version), compileSdk 37, targetSdk 36, JDK 17" \
+    && ok "0.5 line ($v): AGP 9.3.3 with built-in Kotlin (Kotlin's Android plugin only pins its version), compileSdk 37, targetSdk 36, JDK 17" \
     || bad "0.5 line ($v): $(grep -hE "com.android|kotlin.android|compileSdk|targetSdk" "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|')"
+  # Coil and its fetcher come from keliver-image at the app's version (never a pin that can split
+  # Coil's modules across versions); OkHttp and coroutines are the line's (Keliver's catalog).
+  grep -q "^  implementation 'dev.keliver:keliver-image:$v' //" "$HF" && ! grep -q 'io.coil-kt' "$HF" \
+    && grep -qx "  implementation 'com.squareup.okhttp3:okhttp:5.5.1'" "$HF" \
+    && grep -qx "  testImplementation 'com.squareup.okhttp3:mockwebserver3:5.5.1'" "$HF" \
+    && grep -qx "  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0'" "$HF" \
+    && ok "0.5 line ($v): keliver-image (no Coil pin), OkHttp and mockwebserver3 5.5.1, coroutines 1.11.0" \
+    || bad "0.5 line ($v): $(grep -hE "coil|keliver-image|okhttp|coroutines" "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|')"
 done
+grep -qx "  implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'" "$H/build.gradle" && grep -qx "  implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'" "$H/build.gradle" \
+  && grep -qx "  implementation 'com.squareup.okhttp3:okhttp:5.1.0'" "$H/build.gradle" && grep -qx "  testImplementation 'com.squareup.okhttp3:mockwebserver3:5.1.0'" "$H/build.gradle" \
+  && grep -qx "  implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'" "$L/build.gradle" && grep -qx "  implementation 'com.squareup.okhttp3:okhttp:5.1.0'" "$L/build.gradle" \
+  && ! grep -q 'keliver-image' "$H/build.gradle" "$L/build.gradle" \
+  && ok "0.4 line: Coil 3.3.0 and OkHttp 5.1.0 pinned, no keliver-image (host and library, as before)" \
+  || bad "0.4 line: the image dependencies changed: $(grep -hE "coil|keliver-image|okhttp" "$H/build.gradle" "$L/build.gradle" | tr -s ' ' | tr '\n' '|')"
 KELIVER_HOST_AGP_VERSION=8.12.0 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
 [ "$rc" = 0 ] && grep -qx "  id 'com.android.application' version '8.12.0'" "$DISP/fork-0-5-0/host-android/build.gradle" \
   && grep -qx "  id 'org.jetbrains.kotlin.android' version '2.4.20'" "$DISP/fork-0-5-0/host-android/build.gradle" \
   && ok "0.5 line with KELIVER_HOST_AGP_VERSION=8.12.0: Kotlin's Android plugin is applied again (what AGP 8 needs)" || bad "the AGP override on the 0.5 line (rc=$rc)"
-# The host builds with the app's wrapper: an app on 0.5.0 whose wrapper is older than AGP 9.3.1's
+# The host builds with the app's wrapper: an app on 0.5.0 whose wrapper is older than AGP 9.3.3's
 # floor (Gradle 9.5.0) is told what to set; one on the line's Gradle is not; a 0.4.1 app on 9.0.0 is not.
 WF="$DISP/fork-0-5-0-fresh"; rm -rf "$WF/host-android"
 bash "$ROOT/scripts/keliver-app-wrapper.sh" "$WF"
 out="$( cd "$WF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
-[ "$rc" = 0 ] && printf '%s' "$out" | grep -q "warning: this app's Gradle wrapper is Gradle 9.0.0; AGP 9.3.1 (Keliver 0.5.0) needs Gradle 9.5.0 or newer" \
-  && printf '%s' "$out" | grep -qF 'distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip' \
-  && printf '%s' "$out" | grep -q 'distributionSha256Sum=84fbba45c7f4c64abc77460e1c00f541e9f960e3c7ed2538f1ede19eacd873ae' \
-  && ok "0.5 line: an app wrapper on Gradle 9.0.0 is warned, with the lines to set (Gradle 9.7.0 and its sha256)" \
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q "warning: this app's Gradle wrapper is Gradle 9.0.0; AGP 9.3.3 (Keliver 0.5.0) needs Gradle 9.5.0 or newer" \
+  && printf '%s' "$out" | grep -qF 'distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.1-bin.zip' \
+  && printf '%s' "$out" | grep -q 'distributionSha256Sum=acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a' \
+  && ok "0.5 line: an app wrapper on Gradle 9.0.0 is warned, with the lines to set (Gradle 9.7.1 and its sha256)" \
   || bad "0.5 line: no warning about the app's Gradle 9.0.0 (rc=$rc): $(printf '%s' "$out" | grep -i gradle | head -2 | tr '\n' ' ')"
 rm -rf "$WF/host-android"; bash "$ROOT/scripts/keliver-app-wrapper.sh" "$WF" 0.5.0
 out="$( cd "$WF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
-[ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q "Gradle wrapper is Gradle" && ok "0.5 line: an app wrapper on the line's Gradle 9.7.0 is not warned" || bad "0.5 line: warned on Gradle 9.7.0 (rc=$rc)"
+[ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q "Gradle wrapper is Gradle" && ok "0.5 line: an app wrapper on the line's Gradle 9.7.1 is not warned" || bad "0.5 line: warned on Gradle 9.7.1 (rc=$rc)"
 A04="$DISP/old-wrapper"; mkdir -p "$A04/src/jsMain/kotlin/screens"
 cp "$APP/keliver.portal.json" "$APP/settings.gradle" "$A04/"; cp "$APP/src/jsMain/kotlin/screens/home.kt" "$A04/src/jsMain/kotlin/screens/"
 bash "$ROOT/scripts/keliver-app-wrapper.sh" "$A04"
@@ -789,8 +803,10 @@ LF="$EXF/keliver-host/build.gradle"
   || bad "NF2: --embed on 0.5.0 (rc=$rc): $(printf '%s' "$out" | grep warning | tr '\n' ' ')"
 ! grep -q "^  id 'org.jetbrains.kotlin.android'" "$LF" && grep -q "^  // Kotlin: AGP 9 compiles this module itself (built-in Kotlin)" "$LF" \
   && grep -qx '  compileSdk 37' "$LF" && grep -qx 'kotlin { jvmToolchain(17) }' "$LF" \
-  && printf '%s' "$out" | grep -q "note: Keliver 0.5.0's libraries need .* on AGP 9.1.0 or newer (Keliver builds with 9.3.1) and compileSdk 37" \
-  && ok "0.5 line: --embed applies no Kotlin plugin (the app's AGP 9 compiles Kotlin), compileSdk 37, and says the app needs AGP 9.1.0+" \
+  && printf '%s' "$out" | grep -q "note: Keliver 0.5.0's libraries need .* on AGP 9.1.0 or newer (Keliver builds with 9.3.3) and compileSdk 37" \
+  && grep -q "^  implementation 'dev.keliver:keliver-image:0.5.0' //" "$LF" && ! grep -q 'io.coil-kt' "$LF" \
+  && grep -qx "  implementation 'com.squareup.okhttp3:okhttp:5.5.1'" "$LF" \
+  && ok "0.5 line: --embed applies no Kotlin plugin (the app's AGP 9 compiles Kotlin), compileSdk 37, says the app needs AGP 9.1.0+, keliver-image and OkHttp 5.5.1" \
   || bad "0.5 line: --embed's toolchain: $(grep -hE "kotlin.android|Kotlin:|compileSdk" "$LF" | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | grep note: | head -1)"
 # The helper must sit beside the scaffolder (the tools bundle's bin/ carries it).
 NL="$DISP/noline"; mkdir -p "$NL"; cp "$SCAFFOLD" "$NL/"; cp -R "$(dirname "$SCAFFOLD")/templates" "$NL/" 2>/dev/null || cp -R "$(dirname "$SCAFFOLD")/../templates" "$NL/"

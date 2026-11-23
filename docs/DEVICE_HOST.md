@@ -135,20 +135,23 @@ line's output is byte-identical to what the scaffolders wrote before the table.
 | | 0.4 line (before 0.5.0) | 0.5 line (0.5.0 and later, pre-releases too) | why the 0.5 value |
 |---|---|---|---|
 | Zipline | `app.cash.zipline` 1.22.0 | `dev.keliver.zipline` 1.28.0-keliver.1 | the fork (NF2) |
-| Kotlin | 2.2.0 | 2.4.20 | Keliver's catalog at the fork switch |
+| Kotlin | 2.2.0 | 2.4.20 | Keliver's catalog (the newest column must match it: `keliver-runtime-line-selftest.sh`) |
 | Compose Multiplatform | 1.8.2 | 1.12.2 | the same |
-| AGP | 8.12.0 | 9.3.1 | androidx Compose UI, foundation and material 1.12.1 (what CMP 1.12.2 resolves to on Android) declare `minAndroidGradlePluginVersion=9.1.0` in their AAR metadata. 9.3.1 is what Keliver itself builds with. |
+| coroutines, serialization | 1.10.2, 1.9.0 | 1.11.0, 1.13.0 | the same |
+| OkHttp (and `mockwebserver3`) | 5.1.0 | 5.5.1 | the same; the Android hosts call OkHttp themselves |
+| Coil, its fetcher, Ktor's Darwin engine | Coil 3.3.0, Ktor 3.1.0, pinned | `dev.keliver:keliver-image` at the app's Keliver version | keliver-image brings Coil, its fetcher (OkHttp on Android, Ktor with the Darwin engine on iOS) and okio at the versions Keliver's libraries resolve. A pin would split them: Keliver 0.5.0 lifts `coil-core` to 3.6.3 while a pinned `coil-network-*` stays behind, and a Ktor client older than its engine fails only when the missing symbol is reached. |
+| AGP | 8.12.0 | 9.3.3 | androidx Compose UI, foundation and material 1.12.1 (what CMP 1.12.2 resolves to on Android) declare `minAndroidGradlePluginVersion=9.1.0` in their AAR metadata. 9.3.3 is what Keliver itself builds with (9.3.1 can dex an unverifiable class that crashes at launch). |
 | compileSdk | 35 | 37 | those AARs, and the fork's `zipline-android` and `zipline-loader-android`, declare `minCompileSdk=37` |
 | targetSdk | 35 | 36 | no library requires one; 36 is what Keliver's sample targets |
 | JDK | 17 | 17 | AGP 8 and 9 both run on 17 |
-| Gradle (app wrapper) | 9.0.0 | 9.7.0 | AGP 9.3.1 refuses Gradle older than 9.5.0 (8.12.0 needs 8.13). 9.7.0 is Keliver's own wrapper, and its sha256 comes from there. |
+| Gradle (app wrapper) | 9.0.0 | 9.7.1 | AGP 9.3 refuses Gradle older than 9.5.0 (8.12.0 needs 8.13). 9.7.1 is Keliver's own wrapper, and its sha256 comes from there. |
 
 What the 0.5 line changes in what is written:
 
-- **`keliver-init`** gives the app Gradle 9.7.0 (its `distributionUrl` and
+- **`keliver-init`** gives the app Gradle 9.7.1 (its `distributionUrl` and
   `distributionSha256Sum`). `host-android` builds with the app's wrapper
   (`./gradlew -p host-android`).
-- **The production host** gets AGP 9.3.1, compileSdk 37 and targetSdk 36.
+- **The production host** gets AGP 9.3.3, compileSdk 37 and targetSdk 36.
   AGP 9 compiles Kotlin itself (built-in Kotlin) and refuses a module that
   applies `org.jetbrains.kotlin.android`. So the host only puts that plugin on
   the classpath (`apply false`), which pins the Kotlin AGP compiles with to
@@ -161,6 +164,8 @@ What the 0.5 line changes in what is written:
   the scaffolder says the app needs AGP 9.1.0 or newer.
 - **The iOS host** and **the device target** take their Zipline, Kotlin and
   Compose from the same table. Neither has an AGP.
+- **Images:** the Android hosts (standalone and `--embed`) and the iOS host
+  depend on `keliver-image` instead of pinning Coil, its fetcher and Ktor.
 
 At runtime:
 

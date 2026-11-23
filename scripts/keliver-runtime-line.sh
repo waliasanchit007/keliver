@@ -26,21 +26,33 @@
 # (after keliver_zipline_line) points that file's distributionUrl and distributionSha256Sum at the
 # line's Gradle. On the 0.4 line it leaves templates/app-wrapper/wrapper.properties byte-identical.
 #
+#   keliver_line_image_dependencies <android|ios> <keliver version>
+# (after keliver_zipline_line) prints a host's image dependencies, one Gradle line each, for the
+# templates' @@IMAGE_DEPENDENCIES@@. Where the line's COIL is '-': keliver-image, which brings Coil,
+# its fetcher (OkHttp on Android; Ktor with the Darwin engine on iOS) and okio at the versions
+# Keliver's libraries use. Otherwise Coil at COIL (and on iOS Ktor's Darwin engine at KTOR).
+#
 #   keliver_version_at_least <have> <want>
 # true when version <have> is <want> or newer, by its numeric fields (9.7.0 >= 9.5.0, 8.13 < 9.0).
 
 # The toolchain of each line. Key, the 0.4 line (before 0.5.0), the 0.5 line (0.5.0 and later).
 # Evidence for the 0.5 line (measured 2026-11-22, docs/DEVICE_HOST.md, "Toolchain per line"):
-#  - AGP 9.3.1: androidx.compose.ui/foundation/material 1.12.1 (what Compose Multiplatform 1.12.2
-#    resolves to on Android) declare minAndroidGradlePluginVersion=9.1.0 in their AAR metadata; 9.3.1
-#    is the AGP Keliver 0.5.0 itself builds with (gradle/libs.versions.toml).
+#  - AGP 9.3.3: androidx.compose.ui/foundation/material 1.12.1 (what Compose Multiplatform 1.12.2
+#    resolves to on Android) declare minAndroidGradlePluginVersion=9.1.0 in their AAR metadata; 9.3.3
+#    is the AGP Keliver 0.5.0 itself builds with (gradle/libs.versions.toml; 9.3.1 can dex an
+#    unverifiable class that crashes at launch, PR #300).
 #  - compileSdk 37: those AARs, and the fork's zipline-android and zipline-loader-android, declare
 #    minCompileSdk=37. targetSdk is not required by any of them: 36, the level Keliver's sample targets.
-#  - Gradle 9.7.0: AGP 9.3.1 refuses a Gradle older than 9.5.0 (its VersionCheckPlugin's
-#    GRADLE_MIN_VERSION; 8.13 for AGP 8.12.0). 9.7.0 is Keliver's own wrapper, sha256 from it.
+#  - Gradle 9.7.1: AGP 9.3 refuses a Gradle older than 9.5.0 (its VersionCheckPlugin's
+#    GRADLE_MIN_VERSION; 8.13 for AGP 8.12.0). 9.7.1 is Keliver's own wrapper, sha256 from it.
 #  - JDK 17: unchanged (AGP 8 and 9 both run on 17; the host compiles for 17).
-#  - Kotlin, Compose Multiplatform, coroutines, serialization: Keliver's version catalog at the
-#    fork switch. ZIPLINE: the fork's RELEASE_VERSION.
+#  - Kotlin, Compose Multiplatform, coroutines, serialization, OkHttp: Keliver's version catalog.
+#    ZIPLINE: the fork's RELEASE_VERSION. keliver-runtime-line-selftest.sh fails when the newest
+#    column disagrees with this checkout's catalog or Gradle wrapper.
+#  - COIL and KTOR '-': the line's hosts take Coil, its network fetcher and (iOS) Ktor's Darwin
+#    engine from dev.keliver:keliver-image at the app's Keliver version, so they always match what
+#    Keliver's own libraries resolve (keliver_line_image_dependencies). The 0.4 line pins them, as
+#    its templates always did.
 # AGP_MIN is the oldest AGP the line's libraries accept (their AARs' minAndroidGradlePluginVersion;
 # '-': not measured for the 0.4 line), for an embedded host, whose AGP is the app's. GRADLE_MIN is the
 # line's AGP's own floor, for the warning about an app's older wrapper.
@@ -50,14 +62,17 @@ ZIPLINE        1.22.0    1.28.0-keliver.1
 KOTLIN         2.2.0     2.4.20
 COMPOSE        1.8.2     1.12.2
 COROUTINES     1.10.2    1.11.0
-SERIALIZATION  1.9.0     1.11.0
-AGP            8.12.0    9.3.1
+SERIALIZATION  1.9.0     1.13.0
+OKHTTP         5.1.0     5.5.1
+COIL           3.3.0     -
+KTOR           3.1.0     -
+AGP            8.12.0    9.3.3
 AGP_MIN        -         9.1.0
 COMPILE_SDK    35        37
 TARGET_SDK     35        36
 JDK            17        17
-GRADLE         9.0.0     9.7.0
-GRADLE_SHA256  8fad3d78296ca518113f3d29016617c7f9367dc005f932bd9d93bf45ba46072b 84fbba45c7f4c64abc77460e1c00f541e9f960e3c7ed2538f1ede19eacd873ae
+GRADLE         9.0.0     9.7.1
+GRADLE_SHA256  8fad3d78296ca518113f3d29016617c7f9367dc005f932bd9d93bf45ba46072b acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a
 GRADLE_MIN     8.13      9.5.0
 '
 # The first Keliver version built on the fork.
@@ -100,6 +115,30 @@ keliver_line_wrapper_properties() {
   sed -e "s#^distributionUrl=.*#distributionUrl=https\\\\://services.gradle.org/distributions/gradle-${TOOLCHAIN_GRADLE}-bin.zip#" \
       -e "s#^distributionSha256Sum=.*#distributionSha256Sum=${TOOLCHAIN_GRADLE_SHA256}#" "$f" > "$tmp" \
     && mv "$tmp" "$f" || { rm -f "$tmp"; return 1; }
+}
+
+keliver_line_image_dependencies() {
+  local platform="${1:-}" kv="${2:-}"
+  [ -n "${TOOLCHAIN_COIL:-}" ] && [ -n "$kv" ] || return 1
+  if [ "$TOOLCHAIN_COIL" = - ]; then
+    case "$platform" in
+      android) echo "implementation 'dev.keliver:keliver-image:$kv' // Coil and its OkHttp fetcher, at the versions Keliver's libraries use" ;;
+      ios) echo "implementation 'dev.keliver:keliver-image:$kv' // Coil, its Ktor fetcher and Ktor's Darwin engine, at Keliver's versions" ;;
+      *) return 1 ;;
+    esac
+    return 0
+  fi
+  case "$platform" in
+    android)
+      echo "implementation 'io.coil-kt.coil3:coil-compose-core:$TOOLCHAIN_COIL'"
+      echo "implementation 'io.coil-kt.coil3:coil-network-okhttp:$TOOLCHAIN_COIL'" ;;
+    ios)
+      [ -n "${TOOLCHAIN_KTOR:-}" ] && [ "$TOOLCHAIN_KTOR" != - ] || return 1
+      echo "implementation 'io.coil-kt.coil3:coil-compose-core:$TOOLCHAIN_COIL'"
+      echo "implementation 'io.coil-kt.coil3:coil-network-ktor3:$TOOLCHAIN_COIL' // images over the network"
+      echo "implementation 'io.ktor:ktor-client-darwin:$TOOLCHAIN_KTOR'           // coil's network engine on iOS" ;;
+    *) return 1 ;;
+  esac
 }
 
 keliver_version_at_least() {
