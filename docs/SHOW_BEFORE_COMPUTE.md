@@ -39,7 +39,7 @@ about 24 ms the first time (4 ms when warm). The guest's first composition of th
 the live host. Only the A12 can say whether this lands within native + 0.4 s (section 7).
 
 **(B) Pre-composed destinations: go to the B1 spike, with a lower expectation.** Changing a hidden
-detail's arguments is 3–8× cheaper than composing it fresh on the Mac. But on the A12 every guest
+detail's arguments is 2.6–7.5× cheaper than composing it fresh on the Mac. But on the A12 every guest
 step pays a large fixed cost. Even a detail that is already composed with the right item took
 80–85 ms (simple) and 131.5–140.5 ms (heavy) from the click to its first draw (series H).
 
@@ -360,7 +360,10 @@ back
 ```
 
 A kind that is not revealable (3.4) skips the host reveal. Then the click goes to the guest, which
-binds and shows the shell in one batch.
+binds the entry and shows it, with the item's data, in one batch.
+
+The host lays the shell out in the reveal's frame, as it lays the retained list out on a retained
+back (only the shown entry is measured, `Retained.kt:193–211`).
 
 ### 3.3 The effect lifecycle
 
