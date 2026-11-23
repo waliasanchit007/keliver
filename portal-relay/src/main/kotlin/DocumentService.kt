@@ -1,7 +1,17 @@
 /*
- * V2 M1 — the per-screen live Document engine (design §2): validate -> apply
- * -> bump version -> broadcast (SSE) -> project into the V1 draft store ->
- * debounced dual-write of the projected .kt (whole-file until M4 write-back).
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.acceptsModifier
@@ -27,6 +37,12 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+
+/*
+ * V2 M1 — the per-screen live Document engine (design §2): validate -> apply
+ * -> bump version -> broadcast (SSE) -> project into the V1 draft store ->
+ * debounced dual-write of the projected .kt (whole-file until M4 write-back).
+ */
 
 class DocumentService(
   private val screenKey: String,

@@ -1,4 +1,24 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import dev.keliver.capabilities.HOST_HTTP_CAPABILITY
+import dev.keliver.portal.render.PreviewPersona
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+/*
  * V2 M8 — capability-driven preview fidelity. The browser preview runs the
  * REAL logic path and auto-substitutes a PREVIEW IMPLEMENTATION for each host
  * capability it can (SQL -> in-memory). Capabilities with no preview impl
@@ -6,11 +26,6 @@
  * reduced-fidelity. So fidelity is an EMERGENT property of the app's
  * capability graph, not a separate "mock vs real" mode.
  */
-
-import dev.keliver.capabilities.HOST_HTTP_CAPABILITY
-import dev.keliver.portal.render.PreviewPersona
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @Serializable
 internal data class PreviewHttpFixtureDescriptor(

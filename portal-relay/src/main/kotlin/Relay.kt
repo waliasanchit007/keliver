@@ -1,4 +1,35 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
+import dev.keliver.portal.deserializeTree
+import dev.keliver.portal.document.DocJson
+import dev.keliver.portal.document.OpBatch
+import dev.keliver.portal.document.withoutArithmetic
+import dev.keliver.portal.document.withoutConditionals
+import dev.keliver.portal.document.withoutExtendedConditions
+import dev.keliver.portal.document.withoutLists
+import dev.keliver.portal.document.withoutTemplates
+import dev.keliver.portal.serializeTree
+import java.io.File
+import java.net.InetSocketAddress
+import java.security.MessageDigest
+import kotlinx.serialization.encodeToString
+
+/*
  * spike/keliver-web portal — the local-first PORTAL SERVER (P2).
  * Evolved from the M2 tree relay: a JDK HttpServer (still no deps) that now
  * persists projects/screens/drafts as files under ~/.keliver-portal/ so a
@@ -20,21 +51,6 @@
  * ~/.keliver-portal/active (two lines: project, screen). default/main auto-created.
  * Binds 0.0.0.0 so the emulator reaches it at 10.0.2.2:8077.
  */
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
-import dev.keliver.portal.deserializeTree
-import dev.keliver.portal.document.DocJson
-import dev.keliver.portal.document.OpBatch
-import dev.keliver.portal.document.withoutArithmetic
-import dev.keliver.portal.document.withoutConditionals
-import dev.keliver.portal.document.withoutExtendedConditions
-import dev.keliver.portal.document.withoutLists
-import dev.keliver.portal.document.withoutTemplates
-import dev.keliver.portal.serializeTree
-import java.io.File
-import java.net.InetSocketAddress
-import java.security.MessageDigest
-import kotlinx.serialization.encodeToString
 
 /**
  * The app repo checkout the portal serves (and the publish step compiles in).

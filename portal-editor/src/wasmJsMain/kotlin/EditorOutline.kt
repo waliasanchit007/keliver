@@ -1,8 +1,17 @@
 /*
- * The outline's model: what a row says about its node, which rows are visible
- * under collapsed containers (keyboard navigation follows them), and where a
- * drop or an insert lands (E16/E17: before, after or inside a row — not always
- * at the end of the drop target).
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.WidgetNode
@@ -12,6 +21,13 @@ import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.findNode
 import dev.keliver.portal.tokenValue
+
+/*
+ * The outline's model: what a row says about its node, which rows are visible
+ * under collapsed containers (keyboard navigation follows them), and where a
+ * drop or an insert lands (E16/E17: before, after or inside a row — not always
+ * at the end of the drop target).
+ */
 
 /** A short description of [node] for its outline row, or null when its type says it all. */
 internal fun outlineHint(node: WidgetNode): String? = when (node.type) {

@@ -1,8 +1,17 @@
 /*
- * spike/keliver-web portal sub-project B — the EXPORT VERIFIER.
- * Generates Exported.kt from the sample tree via exportKotlin(); compiling this
- * module then proves the generated Kotlin is valid guest source that uses the
- * keliver composables correctly. (Repurposed from the dead gate-3 screen.json tool.)
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
@@ -14,6 +23,13 @@ import dev.keliver.portal.sampleTree
 import dev.keliver.portal.serializeTree
 import dev.keliver.portal.widgetSpecs
 import java.io.File
+
+/*
+ * spike/keliver-web portal sub-project B — the EXPORT VERIFIER.
+ * Generates Exported.kt from the sample tree via exportKotlin(); compiling this
+ * module then proves the generated Kotlin is valid guest source that uses the
+ * keliver composables correctly. (Repurposed from the dead gate-3 screen.json tool.)
+ */
 
 private const val OUT = "/Users/sanchitwalia/AndroidStudioProjects/konduit/web-spike-guest-compiler/src/main/kotlin/Exported.kt"
 private const val SINK_OUT = "/Users/sanchitwalia/AndroidStudioProjects/konduit/web-spike-guest-compiler/src/main/kotlin/ExportedKitchenSink.kt"

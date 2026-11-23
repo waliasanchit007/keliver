@@ -1,4 +1,26 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import dev.keliver.portal.CondTest
+import dev.keliver.portal.ELSE_TYPE
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.ScreenContract
+import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.condOf
+
+/*
  * The State panel's model (E4/E6/E38): every value the canvas reads from the
  * screen's bindings — the fields its props are bound to, the fields its `if`
  * blocks test (which the derived contract does not list), and its lists' row
@@ -9,12 +31,6 @@
  * the field's name; what the user sets overrides them and is kept per screen
  * in this browser. Nothing here is written to the app's source.
  */
-import dev.keliver.portal.CondTest
-import dev.keliver.portal.ELSE_TYPE
-import dev.keliver.portal.PropKind
-import dev.keliver.portal.ScreenContract
-import dev.keliver.portal.WidgetNode
-import dev.keliver.portal.condOf
 
 /** How the State panel edits a value. */
 internal enum class StateKind { Bool, Text, Int, Double, Rows }

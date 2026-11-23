@@ -1,12 +1,27 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Why [name] cannot name a new [what] ("screen" / "project"), or null when it can.
+ *
  * E40: naming a new screen or project. A screen's name is its .kt file's and
  * its function's (`home` → `home.kt`, `HomeScreen`), so it must be one Kotlin
  * can read, and a name another screen already has (in any case: a macOS or
  * Windows file system does not tell `Home.kt` from `home.kt`) is refused
  * before anything is created.
  */
-
-/** Why [name] cannot name a new [what] ("screen" / "project"), or null when it can. */
 internal fun nameProblem(name: String, existing: Collection<String>, what: String): String? {
   val n = name.trim()
   return when {

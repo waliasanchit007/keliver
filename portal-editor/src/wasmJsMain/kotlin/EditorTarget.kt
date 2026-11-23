@@ -1,13 +1,29 @@
 /*
- * E14: opening a component to edit its insides. The editor edits one document
- * at a time — a screen, or a component opened from it (and a component opened
- * from that one) — and every document request names which. The path back is
- * the breadcrumb: the screen, then each component opened in turn.
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.WidgetNode
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+/*
+ * E14: opening a component to edit its insides. The editor edits one document
+ * at a time — a screen, or a component opened from it (and a component opened
+ * from that one) — and every document request names which. The path back is
+ * the breadcrumb: the screen, then each component opened in turn.
+ */
 
 /** The document the editor has open: [screen]'s, or the last of [components] opened from it. */
 internal data class EditTarget(val project: String, val screen: String, val components: List<String> = emptyList()) {

@@ -1,12 +1,20 @@
 /*
- * V2 SPIKE S2 — PSI subtree write-back (the platform's #1 engineering risk).
- * Proves: replace a widget call expression via KtPsiFactory on a fresh parse,
- * serialize the file, and everything OUTSIDE the touched node stays
- * byte-identical (comments, formatting, RawCode, imports).
- * Run: ./gradlew :portal-schema-codegen:runWriteBackSpike
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
 @file:OptIn(CoreEnvironmentDeprecation::class)
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
 
 package dev.keliver.portal.codegen.spike
 
@@ -33,6 +41,14 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+
+/*
+ * V2 SPIKE S2 — PSI subtree write-back (the platform's #1 engineering risk).
+ * Proves: replace a widget call expression via KtPsiFactory on a fresh parse,
+ * serialize the file, and everything OUTSIDE the touched node stays
+ * byte-identical (comments, formatting, RawCode, imports).
+ * Run: ./gradlew :portal-schema-codegen:runWriteBackSpike
+ */
 
 private val ORIGINAL = """
 package myapp.screens

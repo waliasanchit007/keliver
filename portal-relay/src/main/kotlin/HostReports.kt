@@ -1,15 +1,17 @@
 /*
- * W6: the relay as a report collector, for development. A production host
- * built with keliver.reportUrl / REPORT_URL = http(s)://<relay>/report POSTs one
- * JSON record per outcome; the relay keeps them under the store and shows
- * counts at GET /reports (JSON) and GET /reports/view (a page).
+ * Copyright (C) 2026 Keliver contributors.
  *
- * The record is exactly the hosts' eight fields (KeliverReport.toJson):
- * installId, channel, hostVersion, sequence, source, outcome, reason, platform.
- * Anything else is refused, the free-text detail included, so this collector
- * cannot become a place where error text with addresses or paths piles up.
- * Storage is bounded: past MAX_LINES records, new ones are refused (507) until
- * the file is removed.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
@@ -24,6 +26,20 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
+
+/*
+ * W6: the relay as a report collector, for development. A production host
+ * built with keliver.reportUrl / REPORT_URL = http(s)://<relay>/report POSTs one
+ * JSON record per outcome; the relay keeps them under the store and shows
+ * counts at GET /reports (JSON) and GET /reports/view (a page).
+ *
+ * The record is exactly the hosts' eight fields (KeliverReport.toJson):
+ * installId, channel, hostVersion, sequence, source, outcome, reason, platform.
+ * Anything else is refused, the free-text detail included, so this collector
+ * cannot become a place where error text with addresses or paths piles up.
+ * Storage is bounded: past MAX_LINES records, new ones are refused (507) until
+ * the file is removed.
+ */
 
 internal class HostReports(private val dir: File, private val maxLines: Int = MAX_LINES) {
   private val file get() = File(dir, "reports.jsonl")

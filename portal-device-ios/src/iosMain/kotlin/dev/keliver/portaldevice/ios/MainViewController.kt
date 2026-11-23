@@ -1,11 +1,17 @@
 /*
- * spike/keliver-web portal P5 — the iOS Treehouse HOST (peer of the Android
- * host). Two modes, chosen by a launch argument:
- *   (default) dev  — loads the interpreter guest from :8080 and binds HostApi
- *                    so it polls the portal-server draft (live editing).
- *   "prod"         — resolves the newest compatible PUBLISHED bundle from the
- *                    portal-server store and verifies its Ed25519 signature.
- * Template: sample/host-compose MainViewController (runtime-proven on iOS).
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -72,6 +78,16 @@ import platform.Foundation.dataUsingEncoding
 import platform.Foundation.setHTTPBody
 import platform.Foundation.setHTTPMethod
 import platform.Foundation.setValue
+
+/*
+ * spike/keliver-web portal P5 — the iOS Treehouse HOST (peer of the Android
+ * host). Two modes, chosen by a launch argument:
+ *   (default) dev  — loads the interpreter guest from :8080 and binds HostApi
+ *                    so it polls the portal-server draft (live editing).
+ *   "prod"         — resolves the newest compatible PUBLISHED bundle from the
+ *                    portal-server store and verifies its Ed25519 signature.
+ * Template: sample/host-compose MainViewController (runtime-proven on iOS).
+ */
 
 // The iOS simulator shares the Mac's network — localhost reaches the
 // portal-server (:8077) and the zipline dev server (:8080) directly.

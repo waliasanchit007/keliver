@@ -98,21 +98,25 @@ private fun Project.keliverVersion(): String =
 private val isCiEnvironment = System.getenv("CI") == "true"
 
 /**
- * Matches a file that gets the Keliver license header. Spotless applies (and checks) the header
- * only to such files; it normalizes line endings to `\n` before its steps run.
+ * Matches a file that gets the Keliver license header: every file that does NOT start with a
+ * Redwood-derived "Square, Inc." notice, which it keeps (Apache 2.0, section 4(c)). Spotless
+ * applies (and checks) the header only to such files; it normalizes line endings to `\n` before
+ * its steps run.
  *
- * Spotless replaces everything before the first `package `, `@file` or `import ` line with the
- * header, so it applies only where that text is a header or nothing:
- * - a file that starts with a Keliver contributors notice (the short form is made the full one);
- * - a file that starts with its first `package`, `import` or `@file` line (the header is added).
- *
- * Every other file keeps its opening text: a Redwood-derived "Square, Inc." notice (Apache 2.0,
- * section 4(c)), or a file's own documentation written above its package line, which Spotless
- * would otherwise delete (or, in a root-package file with no imports, fail on). ktlint still
- * formats those files.
+ * Spotless replaces everything before the first [KELIVER_HEADER_DELIMITER] line with the header,
+ * so a short Keliver notice is made the full one, and a comment written above the package line
+ * is replaced: a file's own documentation goes below its package/import block, or into the KDoc
+ * of its main declaration.
  */
 internal const val GETS_KELIVER_HEADER =
-  """(?m)\A(?:/\*\n \* Copyright \(C\) \d{4}(-\d{4})? Keliver contributors\.\n(?=[\s\S]*?^(package |@file|import ))|package |import |@file)"""
+  """\A(?!/\*\n \* Copyright \(C\) \d{4}(-\d{4})? Square, Inc\.\n)"""
+
+/**
+ * Where a Kotlin file's license header ends: its first `package`, `@file` or `import` line
+ * (Spotless's default), or, in a root-package file with none of them, the first KDoc. A file
+ * with neither fails `spotlessCheck` and `spotlessApply` ("Unable to find delimiter").
+ */
+internal const val KELIVER_HEADER_DELIMITER = """(package |@file|import |/\*\*)"""
 
 @Suppress("unused") // Invoked reflectively by Gradle.
 class RedwoodBuildPlugin : Plugin<Project> {
@@ -187,7 +191,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
               "ktlint_compose_mutable-state-autoboxing" to "disabled",
             ),
           )
-        it.licenseHeaderFile(licenseHeaderFile)
+        it.licenseHeaderFile(licenseHeaderFile, KELIVER_HEADER_DELIMITER)
           .onlyIfContentMatches(GETS_KELIVER_HEADER)
       }
     }

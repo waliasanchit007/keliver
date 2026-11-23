@@ -1,12 +1,17 @@
 /*
- * spike/keliver-web GATE 6 (Phase B) — network images (AsyncImage) on wasm.
+ * Copyright (C) 2026 Keliver contributors.
  *
- * Coil 3 needs a network Fetcher and ships only Ktor- and OkHttp-based ones —
- * neither has a usable wasm variant (Ktor-no-wasm is the same reason keliver-http
- * is excluded from wasm). So we fetch the image bytes with the BROWSER'S OWN
- * fetch() (CORS handled natively by the browser) and hand them to Coil, which
- * decodes them via the skiko codec already in the bundle. This is the
- * wasm-native networking path — no Ktor, no extra engine.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import coil3.ImageLoader
 import coil3.Uri
@@ -25,6 +30,17 @@ import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Int8Array
 import org.khronos.webgl.get
 import org.w3c.fetch.Response
+
+/*
+ * spike/keliver-web GATE 6 (Phase B) — network images (AsyncImage) on wasm.
+ *
+ * Coil 3 needs a network Fetcher and ships only Ktor- and OkHttp-based ones —
+ * neither has a usable wasm variant (Ktor-no-wasm is the same reason keliver-http
+ * is excluded from wasm). So we fetch the image bytes with the BROWSER'S OWN
+ * fetch() (CORS handled natively by the browser) and hand them to Coil, which
+ * decodes them via the skiko codec already in the bundle. This is the
+ * wasm-native networking path — no Ktor, no extra engine.
+ */
 
 /** A Coil [Fetcher] that loads http(s) images using the browser's native `fetch()`. */
 internal class BrowserFetchFetcher(

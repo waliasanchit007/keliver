@@ -1,8 +1,17 @@
 /*
- * Resizable, collapsible side panels. Each panel's inner edge is a splitter:
- * drag it to resize (within [PANEL_MIN_PX, PANEL_MAX_PX]), double-click it to
- * collapse the panel (or bring it back); a hidden panel shows a tab at the window's edge that
- * brings it back. Widths and collapsed state persist in this browser (localStorage), per side.
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import kotlinx.browser.document
 import kotlinx.browser.localStorage
@@ -10,6 +19,13 @@ import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.pointerevents.PointerEvent
+
+/*
+ * Resizable, collapsible side panels. Each panel's inner edge is a splitter:
+ * drag it to resize (within [PANEL_MIN_PX, PANEL_MAX_PX]), double-click it to
+ * collapse the panel (or bring it back); a hidden panel shows a tab at the window's edge that
+ * brings it back. Widths and collapsed state persist in this browser (localStorage), per side.
+ */
 
 internal const val PANEL_MIN_PX = 200
 internal const val PANEL_MAX_PX = 640

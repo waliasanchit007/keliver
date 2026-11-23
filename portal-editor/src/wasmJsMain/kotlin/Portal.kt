@@ -1,10 +1,17 @@
 /*
- * spike/keliver-web portal P2 — the redesigned EDITOR.
- * 3-pane dark chrome (Kotlin DOM on the Ui kit): left = project/screen +
- * searchable 60-widget palette + outline; center = live canvas in a device
- * frame; right = generated properties + modifiers + node ops. Undo/redo over
- * the immutable tree, autosaved drafts via portal-server (refresh-safe), and
- * the device keeps mirroring the active screen through GET /tree.
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
@@ -65,6 +72,15 @@ import org.w3c.dom.HTMLTextAreaElement
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.xhr.XMLHttpRequest
+
+/*
+ * spike/keliver-web portal P2 — the redesigned EDITOR.
+ * 3-pane dark chrome (Kotlin DOM on the Ui kit): left = project/screen +
+ * searchable 60-widget palette + outline; center = live canvas in a device
+ * frame; right = generated properties + modifiers + node ops. Undo/redo over
+ * the immutable tree, autosaved drafts via portal-server (refresh-safe), and
+ * the device keeps mirroring the active screen through GET /tree.
+ */
 
 // ---------------------------------------------------------------------------
 // State
