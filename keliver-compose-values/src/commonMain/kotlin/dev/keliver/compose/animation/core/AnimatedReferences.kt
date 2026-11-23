@@ -69,8 +69,11 @@ public class AnimatedRef(
   public val visibilityThreshold: Float? = null,
   public val label: String? = null,
 ) {
-  override fun equals(other: Any?): Boolean = other is AnimatedRef && other.id == id && other.spec == spec &&
-    other.visibilityThreshold == visibilityThreshold && other.label == label
+  override fun equals(other: Any?): Boolean = other is AnimatedRef &&
+    other.id == id &&
+    other.spec == spec &&
+    other.visibilityThreshold == visibilityThreshold &&
+    other.label == label
   override fun hashCode(): Int = id * 31 + (spec?.hashCode() ?: 0)
   override fun toString(): String = "AnimatedRef(id=$id, spec=$spec, label=$label)"
 }

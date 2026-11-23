@@ -161,11 +161,13 @@ object NodeEmitter {
     if (param == null || param == "b") return text
     val base = stmt.textRange.startOffset
     val refs = PsiTreeUtil.collectElementsOfType(stmt, KtNameReferenceExpression::class.java).filter { ref ->
-      ref.getReferencedName() == "b" && when (val p = ref.parent) {
-        is KtDotQualifiedExpression -> p.receiverExpression == ref
-        is KtCallableReferenceExpression -> p.receiverExpression == ref
-        else -> false
-      } && !shadowed(ref, stmt)
+      ref.getReferencedName() == "b" &&
+        when (val p = ref.parent) {
+          is KtDotQualifiedExpression -> p.receiverExpression == ref
+          is KtCallableReferenceExpression -> p.receiverExpression == ref
+          else -> false
+        } &&
+        !shadowed(ref, stmt)
     }
     // E14: in a component an action is its event parameter itself — `{ b.onTap() }` is `onTap`, as
     // its authors write it. A call `onTap()` would not compile for an optional (nullable) event.
