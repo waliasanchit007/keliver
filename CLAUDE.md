@@ -131,7 +131,8 @@ nothing is released until someone compares the Portal's deployment with the
 run's `zipline-fork-sha1-<tag>` artifact (the uploaded bundle's sha1 manifest,
 with the bundle) and presses Publish; Drop it unless every job is green, and
 whenever the upload step failed. Procedure: the fork's README, "Publishing the
-fork". Not yet published.
+fork". **Published 2026-11-24:** `dev.keliver.zipline:*:1.28.0-keliver.1` (run
+45176623004; every file on Maven Central checked byte for byte against the run's sha1 manifest).
 
 **Store identity** is a contract with one authority (`PortalConfig.storeDir()`)
 and one shell mirror (`scripts/keliver-store-path.sh`), written down in
