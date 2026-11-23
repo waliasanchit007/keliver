@@ -18,6 +18,8 @@
  * (`apply.sh qjs-android`) and run on a device or emulator over adb (`apply.sh check-bigint-device`).
  * It runs one script file with a global print(), and reports on stderr how the engine was built
  * for this ABI: NaN-boxed values (JS_NAN_BOXING, 32-bit ABIs) and the BigInt limb size.
+ * --memory-limit <bytes> sets the runtime's memory limit (JS_SetMemoryLimit), as qjs's option does;
+ * check-bigint-device runs ../zipline-fork/size-guards.js under one.
  * Exit status: 0 when the script ran, 1 when it threw, 2 when it could not start.
  */
 #include <stdio.h>
@@ -53,7 +55,19 @@ static char *read_file(const char *path, size_t *len) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) { fprintf(stderr, "usage: run-js <script.js>\n"); return 2; }
+  size_t memory_limit = 0;
+  if (argc == 4 && strcmp(argv[1], "--memory-limit") == 0) {
+    char *end;
+    unsigned long long n = strtoull(argv[2], &end, 10);
+    if (*argv[2] == '\0' || *end != '\0' || n == 0 || (unsigned long long) (size_t) n != n) {
+      fprintf(stderr, "run-js: bad --memory-limit %s\n", argv[2]);
+      return 2;
+    }
+    memory_limit = (size_t) n;
+    argv += 2;
+    argc -= 2;
+  }
+  if (argc != 2) { fprintf(stderr, "usage: run-js [--memory-limit <bytes>] <script.js>\n"); return 2; }
 #ifdef JS_NAN_BOXING
   const char *boxing = "yes";
 #else
@@ -68,6 +82,7 @@ int main(int argc, char **argv) {
 
   JSRuntime *rt = JS_NewRuntime();
   if (!rt) { fprintf(stderr, "run-js: JS_NewRuntime failed\n"); free(src); return 2; }
+  if (memory_limit != 0) JS_SetMemoryLimit(rt, memory_limit);
   JSContext *ctx = JS_NewContext(rt);
   if (!ctx) { fprintf(stderr, "run-js: JS_NewContext failed\n"); JS_FreeRuntime(rt); free(src); return 2; }
   JSValue global = JS_GetGlobalObject(ctx);
