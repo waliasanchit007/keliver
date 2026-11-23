@@ -1,3 +1,18 @@
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+--- a/gradle/libs.versions.toml
++++ b/gradle/libs.versions.toml
+@@ -1,8 +1,10 @@
++# Modified by the Keliver fork of Zipline, 2026: Kotlin 2.4.21, not 2.4.20, whose Kotlin/JS
++# production builds no longer minify member names (KT-89449); the compiler plugin is built against it.
+ [versions]
+ androidx-compose = "1.12.1"
+ compileSdk = "37"
+ jetty = "12.1.13"
+-kotlin = "2.4.20"
++kotlin = "2.4.21"
+ kotlinx-coroutines = "1.11.0"
+ kotlinx-serialization = "1.11.0"
+ okHttp = "5.3.2"
 diff --git a/zipline-android-ndk/src/main/CMakeLists.txt b/zipline-android-ndk/src/main/CMakeLists.txt
 index f3ffcb7..aa02e1c 100644
 --- a/zipline-android-ndk/src/main/CMakeLists.txt

@@ -1,5 +1,8 @@
 [versions]
-kotlin = "2.4.20"
+# Not 2.4.20: its Kotlin/JS production builds no longer minify member names (KT-89449), in every guest
+# bundle. Zipline 1.28.0 is built with 2.4.20 and its compiler plugin works under 2.4.21: the Zipline
+# fork's README, "Kotlin compatibility".
+kotlin = "2.4.21"
 kotlinx-browser = "0.3"
 kotlinx-coroutines = "1.11.0"
 # Not 1.12.x: 1.12.0 reworked the exceptions Json throws (a breaking change) and 1.13.0 reverts it.
@@ -112,7 +115,7 @@ coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.r
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 
-# The 9.3 line: Kotlin 2.4.20 lists 8.5.2-9.3.1 as fully supported (Gradle up to 9.7.0); 9.3.3 is a
+# The 9.3 line: Kotlin 2.4.20-2.4.21 list 8.5.2-9.3.1 as fully supported (Gradle up to 9.7.0); 9.3.3 is a
 # patch of 9.3.1 with R8/D8 fixes (bad dex that fails verification at launch, outliner VerifyError).
 androidGradlePlugin = { module = "com.android.tools.build:gradle", version = "9.3.3" }
 burst = { module = "app.cash.burst:burst", version.ref = "burst" }

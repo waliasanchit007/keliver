@@ -155,6 +155,12 @@ one Android app share the path, which Android's packaging would refuse) and `MET
     every build that applies it, a fixed group. It now names the CLI in the group it was built in
     (`BuildConfig.ziplineGroup`), so the fork's plugin runs the fork's compiler. Upstream's build is
     unchanged by it (its group is still `app.cash.zipline`).
+  - `gradle/libs.versions.toml`: **Kotlin 2.4.21**, not 1.28.0's 2.4.20, so the fork's compiler
+    plugin, Gradle plugin and runtime klibs are built with the Kotlin Keliver builds with. 2.4.20's
+    Kotlin/JS production builds no longer minify member names
+    ([KT-89449](https://youtrack.jetbrains.com/issue/KT-89449), fixed in 2.4.21), and the
+    release is immutable once published. Which app Kotlin works with which plugin build:
+    "Kotlin compatibility" below.
   - "Modified by the Keliver fork of Zipline, 2026" in every file it changes.
 
 ## Rebuilding it

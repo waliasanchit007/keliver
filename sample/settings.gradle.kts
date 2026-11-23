@@ -64,7 +64,7 @@ if (composePrototype) {
     versionCatalogs {
       create("libs") {
         from(files("gradle/libs.versions.toml"))
-        version("kotlin", "2.4.20")
+        version("kotlin", "2.4.21")
         version("ksp", "2.3.14")
         version("keliver", providers.gradleProperty("keliverVersion").getOrElse("0.0.0-gateb"))
         version("zipline", "1.28.0")
