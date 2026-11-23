@@ -3,7 +3,8 @@
 #
 # keliver-runtime-line.sh: SOURCED (never run) by the scaffolders keliver-init,
 # keliver-new-device-target.sh, keliver-new-production-host.sh and keliver-new-ios-host.sh, and by
-# keliver-app-wrapper.sh. It sits beside them: in a Keliver checkout's scripts/ and in the tools
+# keliver-app-wrapper.sh and keliver-new-editor.sh (which only checks the line: it supports the 0.4
+# line until the 0.5 editor ships). It sits beside them: in a Keliver checkout's scripts/ and in the tools
 # bundle's bin/.
 #
 # Which Zipline an app builds on follows its Keliver version (appRuntime.keliverVersion), never a

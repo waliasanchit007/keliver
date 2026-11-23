@@ -58,12 +58,12 @@
 # iosApp/Info-Debug.plist, docs/DEVICE_HOST.md); no other configuration has it.
 #
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
-# app's appRuntime.keliverVersion; without it, or when keliver.portal.json does
-# not parse, this refuses), KELIVER_HOST_ZIPLINE_VERSION,
-# KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION.
-# Zipline follows the Keliver version (keliver-runtime-line.sh): upstream
-# app.cash.zipline before 0.5.0, Keliver's fork dev.keliver.zipline from 0.5.0
-# (with its Kotlin and Compose as the defaults), never both.
+# app's appRuntime.keliverVersion; when keliver.portal.json cannot be read or
+# parsed, or names no appRuntime.keliverVersion, this refuses),
+# KELIVER_HOST_ZIPLINE_VERSION, KELIVER_HOST_KOTLIN_VERSION,
+# KELIVER_HOST_COMPOSE_VERSION. The defaults are the Keliver version's line in
+# keliver-runtime-line.sh's table: upstream app.cash.zipline before 0.5.0,
+# Keliver's fork dev.keliver.zipline from 0.5.0, never both.
 #
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
 # A rejected input leaves the app byte-identical.

@@ -127,9 +127,16 @@ from then on:
 The scaffolders write the toolchain that the app's Keliver version
 (`appRuntime.keliverVersion`) was built with. Each version has one line, and
 each line has one column in `scripts/keliver-runtime-line.sh` (the tools
-bundle's `bin/`). That table is the only place these versions live:
-`keliver-init`, the device target, the Android and iOS hosts and
-`keliver-app-wrapper.sh` all read it. Before 0.5.0 nothing changed: the 0.4
+bundle's `bin/`). For the scaffolders that write a toolchain, that table is
+the only place these versions live: `keliver-init`, the device target, the
+Android and iOS hosts and `keliver-app-wrapper.sh` all read it. The one
+exception is the editor (`keliver-new-editor.sh`): it still writes the 0.4
+line's Kotlin 2.2.0 and Compose 1.8.2 itself, so it reads the table only to
+find the app's line and **refuses** any line but 0.4 ("the editor supports 0.4
+apps until the 0.5 editor ships"). It has to take its versions from the table
+before the 0.5.0 libraries are released, whose release preflight builds an
+editor at the release version (`docs/PORTAL_TOOLS_RELEASE.md`, step 0).
+Before 0.5.0 nothing changed: the 0.4
 line's output is byte-identical to what the scaffolders wrote before the table,
 and the host selftests compare it with recorded sha256 manifests
 (`scripts/fixtures/host-0.4.1/`).

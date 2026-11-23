@@ -24,11 +24,22 @@ engine (the catalog's Zipline group) and scaffold default
 `scripts/build-portal-tools-selftest.sh <parent>` checks the refusal without
 Gradle (`KELIVER_TOOLS_PREFLIGHT_ONLY=1`). The order is:
 
+0. **The editor.** `keliver-new-editor.sh` still writes the 0.4 line's Kotlin
+   and Compose and refuses an app on any other line (`docs/DEVICE_HOST.md`,
+   "Toolchain per line"). Make it take its versions from
+   `keliver-runtime-line.sh`'s table and drop the refusal. This comes first
+   because the library release preflight (`keliver-release-preflight.sh`, run
+   by `publish-maven-central.yml`) scaffolds and builds an editor at the
+   release version against the staged candidate: that run is the 0.5 editor's
+   check, and it fails until the editor is on the 0.5 line.
 1. Release the 0.5.0 libraries (on the fork) to Maven Central.
 2. In the next tools release, move `keliver-init`'s default to that 0.5.x, and
    the pinned `mavenDependencyVersion` check in `portal-tools.yml` with it. The
    build then passes the check. (The build also refuses a sibling scaffolder
-   that falls back to a fixed version, so there is nothing else to move.)
+   that falls back to a fixed version.) A condition for moving the default:
+   the editor of step 0, built for a 0.5 app against the published
+   `portal-editor` 0.5.0. Without it a new app on the default could not get an
+   editor.
 
 Tools 0.3.18 and earlier stay as published: their hosts run QuickJS 2021 and
 their scaffolders wire 0.4.x, which is what a 0.4.x app keeps using.

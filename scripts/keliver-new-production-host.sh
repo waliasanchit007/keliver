@@ -63,12 +63,13 @@
 # build has no such link.
 #
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
-# app's appRuntime.keliverVersion; without it, or when keliver.portal.json does
-# not parse, this refuses), KELIVER_HOST_ZIPLINE_VERSION,
-# KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION, KELIVER_HOST_AGP_VERSION.
-# Zipline follows the Keliver version (keliver-runtime-line.sh): upstream
-# app.cash.zipline before 0.5.0, Keliver's fork dev.keliver.zipline from 0.5.0
-# (with its Kotlin and Compose as the defaults), never both.
+# app's appRuntime.keliverVersion; when keliver.portal.json cannot be read or
+# parsed, or names no appRuntime.keliverVersion, this refuses),
+# KELIVER_HOST_ZIPLINE_VERSION, KELIVER_HOST_KOTLIN_VERSION,
+# KELIVER_HOST_COMPOSE_VERSION, KELIVER_HOST_AGP_VERSION. The defaults are the
+# Keliver version's line in keliver-runtime-line.sh's table: upstream
+# app.cash.zipline before 0.5.0, Keliver's fork dev.keliver.zipline from 0.5.0,
+# never both.
 #
 # --embed prints the module's dependency floor (K3) beside the versions the
 # existing app declares, before writing anything: from

@@ -87,12 +87,13 @@ rm -f "$d"/scripts/*.bak
 run_case "a sibling scaffolder with a fixed default: refused" "$d" 1 "keliver-new-device-target.sh falls back to a fixed keliver version"
 
 echo "=== this checkout as it stands"
-expect_rc=0
+expect_rc=0 expect_text="matches"
 if grep -qE '^zipline[[:space:]]*=[[:space:]]*\{[[:space:]]*module[[:space:]]*=[[:space:]]*"dev\.keliver\.zipline:' "$ROOT/gradle/libs.versions.toml" \
   && grep -qE '^KELIVER_VERSION="\$\{KELIVER_VERSION:-0\.[0-4]\.' "$ROOT/scripts/keliver-init"; then
   expect_rc=1  # the fork catalog with a pre-0.5 scaffold default: what NF2's switch leaves until the tools release
+  expect_text="REFUSING to build"  # the refusal itself, not any exit 1 (an unbound variable exits 1 too)
 fi
-run_case "this checkout (expected rc $expect_rc)" "$ROOT" "$expect_rc"
+run_case "this checkout (expected rc $expect_rc, \"$expect_text\")" "$ROOT" "$expect_rc" "$expect_text"
 
 rm -rf "$RUN"
 echo "build-portal-tools-selftest: $pass passed, $fail failed"

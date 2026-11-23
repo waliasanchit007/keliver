@@ -890,7 +890,7 @@ out="$( cd "$APP" && "$NL/keliver-new-production-host.sh" --embed --into "$EXF" 
 
 echo "=== the 0.4 line, byte for byte (L2: scripts/fixtures/host-0.4.1/*.sha256)"
 # A 0.4.1 app's host and embedded module, every file's sha256, against the manifests recorded from
-# the scaffolders before the 0.5 line (tools 0.3.18's output): no template edit for a later line can
+# the scaffolders of 77fdf8f81 (scripts/fixtures/host-0.4.1/README.md): no template edit for a later line can
 # change what a 0.4.x app gets. KELIVER_HOST_MANIFEST_WRITE=1 rewrites them instead (only for a
 # deliberate change to the 0.4 line's output).
 MF="$ROOT/scripts/fixtures/host-0.4.1"

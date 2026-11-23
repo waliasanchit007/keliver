@@ -181,6 +181,15 @@ jobs:
       - name: Toolchain per Keliver line
         run: scripts/keliver-runtime-line-selftest.sh "$RUNNER_TEMP/runtime-line"
 
+      # keliver-new-device-target.sh and keliver-new-editor.sh: what they write
+      # for each line, and what they refuse (no appRuntime.keliverVersion, a
+      # version past the newest line, the editor on a line other than 0.4).
+      # Shell only (no --compile, which builds the generated guest); seconds.
+      - name: Device target and editor scaffolders (no compile)
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: scripts/keliver-new-device-target-selftest.sh
+
       # NF2: build-portal-tools.sh refuses a zip whose bundled host's engine and
       # whose scaffolders' default Keliver line differ (its checks only, no
       # Gradle). Shell only; a second.
@@ -424,7 +433,7 @@ jobs:
           set -euo pipefail
           if [ "$EVENT" != "pull_request" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           changed="$(git diff --name-only "$BASE" HEAD)"
-          if grep -Eq '^scripts/(templates/production-host[^/]*/|templates/app-wrapper/|keliver-app-wrapper\.sh$|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$|keliver-runtime-line\.sh$)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$' <<<"$changed"; then
+          if grep -Eq '^scripts/(templates/production-host[^/]*/|templates/app-wrapper/|keliver-app-wrapper\.sh$|keliver-new-production-host(-selftest)?\.sh$|keliver-test-isolation-guard\.sh$|keliver-store-path\.sh$|keliver-runtime-line\.sh$|fixtures/host-0\.4\.1/)|^(gradlew|gradle/wrapper/.*|\.github/workflows/ci\.yml)$' <<<"$changed"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

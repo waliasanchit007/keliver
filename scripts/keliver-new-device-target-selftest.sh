@@ -203,6 +203,29 @@ mkdir -p "$WORK/notanapp"
 out="$( cd "$WORK/notanapp" && env -u KELIVER_VERSION "$ED" Bare 2>&1 )"; rc=$?
 [ "$rc" = 1 ] && [[ "$out" == *"no keliver.portal.json here"*"or set KELIVER_VERSION"* ]] && [ ! -e "$WORK/notanapp/editor" ] \
   && ok "editor: no keliver.portal.json is refused (no fixed fallback version)" || bad "editor: no keliver.portal.json (exit $rc): $out"
+grep -q 'kotlin("multiplatform") version "2.2.0"' "$K1/editor/build.gradle.kts" && grep -q 'kotlin("plugin.compose") version "2.2.0"' "$K1/editor/build.gradle.kts" \
+  && grep -q 'id("org.jetbrains.compose") version "1.8.2"' "$K1/editor/build.gradle.kts" \
+  && ok "editor: a 0.4.1 app's editor builds on Kotlin 2.2.0 and Compose 1.8.2" || bad "editor: the 0.4.1 editor's toolchain: $(grep -E 'version "' "$K1/editor/build.gradle.kts" | tr -s ' ' | tr '\n' '|')"
+# M1 (review of #299): the editor still writes the 0.4 line's Kotlin and Compose, so it refuses an app
+# on any other line of keliver-runtime-line.sh's table (until the 0.5 editor ships), and a version
+# past the newest line as the other scaffolders do; message checked, nothing written.
+editor_refused() { # <label> <app version, or "env:<KELIVER_VERSION>"> <message fragment>
+  local label="$1" v="$2" want="$3" app out rc
+  app="$(KELIVER_VERSION=0.5.0 scaffold "Edref$((pass + fail))")"
+  if [ "${v#env:}" != "$v" ]; then
+    out="$( cd "$app" && KELIVER_VERSION="${v#env:}" "$ED" Edref 2>&1 )"; rc=$?
+  else
+    set_app_version "$app" "$v"
+    out="$( cd "$app" && env -u KELIVER_VERSION "$ED" Edref 2>&1 )"; rc=$?
+  fi
+  [ "$rc" = 1 ] && [[ "$out" == *"$want"* ]] && [ ! -e "$app/editor" ] \
+    && ok "editor: $label is refused, no editor/ written" || bad "editor: $label (exit $rc): $(printf '%s' "$out" | tail -1)"
+}
+editor_refused "an app on 0.5.0" 0.5.0 "Keliver 0.5.0 is on the 0.5 line; the editor supports 0.4 apps until the 0.5 editor ships"
+editor_refused "an app on 0.5.0-SNAPSHOT" 0.5.0-SNAPSHOT "Keliver 0.5.0-SNAPSHOT is on the 0.5 line; the editor supports 0.4 apps until the 0.5 editor ships"
+editor_refused "KELIVER_VERSION=0.5.3 over a 0.5.0 app" env:0.5.3 "the editor supports 0.4 apps until the 0.5 editor ships"
+editor_refused "an app on 1.0.0 (past the newest line)" 1.0.0 "knows Keliver lines up to 0.5; Keliver 1.0.0 needs a newer tools bundle"
+editor_refused "KELIVER_VERSION=1.0.0" env:1.0.0 "knows Keliver lines up to 0.5; Keliver 1.0.0 needs a newer tools bundle"
 
 # --- 7b2. NF2: the Zipline line follows the Keliver version ------------------
 # Before 0.5.0 upstream Zipline; from 0.5.0 (a pre-release too) Keliver's Zipline fork, with the
@@ -284,6 +307,10 @@ N2="$(scaffold Noline)"; before="$(fingerprint "$N2")"
 ( cd "$N2" && "$KP/bin/keliver-new-device-target.sh" >/dev/null 2>&1 ); rc=$?
 chk "NF2: no keliver-runtime-line.sh beside it is refused" 1 "$rc"
 [ "$(fingerprint "$N2")" = "$before" ] && ok "NF2: no keliver-runtime-line.sh: app unchanged" || bad "NF2: no keliver-runtime-line.sh: the app was changed"
+cp "$ROOT/scripts/keliver-new-editor.sh" "$KP/bin/"
+out="$( cd "$N2" && env -u KELIVER_VERSION "$KP/bin/keliver-new-editor.sh" Noline 2>&1 )"; rc=$?
+[ "$rc" = 1 ] && [[ "$out" == *"keliver-runtime-line.sh is missing beside this script"* ]] && [ ! -e "$N2/editor" ] \
+  && ok "editor: no keliver-runtime-line.sh beside it is refused, no editor/ written" || bad "editor: no keliver-runtime-line.sh beside it (exit $rc): $(printf '%s' "$out" | tail -1)"
 
 # --- 8. the generated output actually compiles -------------------------------
 if [ $DO_COMPILE = 1 ]; then

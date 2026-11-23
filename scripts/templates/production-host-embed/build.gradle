@@ -5,9 +5,9 @@
 //
 // Your app supplies the plugins (no versions are requested here, so yours
 // apply): Android, Kotlin @@KOTLIN_VERSION@@ with its Compose plugin, and the Zipline
-// plugin @@ZIPLINE_PLUGIN_ID@@ @@ZIPLINE_VERSION@@ (Keliver 0.4.x: app.cash.zipline 1.22.0
-// on Kotlin 2.2.0; from 0.5.0, Keliver's fork dev.keliver.zipline 1.28.0-keliver.1
-// on Kotlin 2.4.21, never both) — Zipline's compiler plugin rewrites
+// plugin @@ZIPLINE_PLUGIN_ID@@ @@ZIPLINE_VERSION@@ (the versions of this app's Keliver line, in
+// the tools bundle's bin/keliver-runtime-line.sh; never upstream's and Keliver's fork's
+// Zipline together) — Zipline's compiler plugin rewrites
 // zipline.take/bind and is tied to one Kotlin version.
 //
 // Production only: it loads only bundles whose manifest verifies against

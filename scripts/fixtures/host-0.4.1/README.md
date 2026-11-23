@@ -28,4 +28,8 @@ Changes since:
 - `android-embed.sha256`, `./build.gradle`: the template's comment about the 0.5
   line now says Kotlin 2.4.21 (#303 moved the line off 2.4.20). Comment only:
   every other file, and every other line of this one, is unchanged.
+- `android-embed.sha256`, `./build.gradle` again: that comment no longer names
+  any line's versions; it points to `keliver-runtime-line.sh`'s table instead
+  (review of #299, decision 2), so a later change to the table cannot touch
+  this manifest. Comment only, as before.
 - `ios-embed.sha256`: `gradlew` and `gradle-wrapper.jar` removed (see above).
