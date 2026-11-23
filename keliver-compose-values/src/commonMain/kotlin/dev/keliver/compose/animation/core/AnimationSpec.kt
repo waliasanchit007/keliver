@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Square, Inc.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -153,7 +153,9 @@ public class SpringSpec<T>(
   public val visibilityThreshold: T? = null,
 ) : FiniteAnimationSpec<T> {
   override fun equals(other: Any?): Boolean =
-    other is SpringSpec<*> && other.dampingRatio == dampingRatio && other.stiffness == stiffness &&
+    other is SpringSpec<*> &&
+      other.dampingRatio == dampingRatio &&
+      other.stiffness == stiffness &&
       other.visibilityThreshold == visibilityThreshold
   override fun hashCode(): Int = ((visibilityThreshold?.hashCode() ?: 0) * 31 + dampingRatio.hashCode()) * 31 + stiffness.hashCode()
 }

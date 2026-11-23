@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
@@ -5,9 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 /** K5: which canvas image URLs go through the relay's /preview-asset. */
 class PreviewAssetRoutingTest {
@@ -98,7 +113,10 @@ class PreviewAssetRoutingTest {
     assertEquals(2, gate.hostsInUse())
     // Another host's image still loads at once, on the third shared permit.
     val before = currentTime
-    val got = gate.load("https://img.example.com/x.png", relay) { delay(100); it }
+    val got = gate.load("https://img.example.com/x.png", relay) {
+      delay(100)
+      it
+    }
     assertEquals("$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%2Fx.png", got)
     assertEquals(100L, currentTime - before, "not held up by the ten stuck images")
     hang.complete("done")

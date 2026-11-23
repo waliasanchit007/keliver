@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal
 
 /**
@@ -21,15 +36,16 @@ public fun resolveItemRow(
 ): WidgetNode {
   if (node.type == "Repeat") return node
   fun resolved(field: String, key: String): String {
-      // Namespace row content by the LIST field ("accountItems.item.title") so
-      // several lists that reuse the same itemVar ("item") don't collide — the
-      // single-list dogfood never hit this, but real screens (the adopter app's Profile:
-      // account/security/support) do. Fall back to the un-namespaced key for
-      // editor per-item mocks and single-list back-compat.
-      val raw = mockOf("$itemsField.$field") ?: mockOf(field)
-      val rows = raw?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }
-      return if (rows.isNullOrEmpty()) defaultMock(field, key, node.type, index) else rows[minOf(index, rows.size - 1)]
+    // Namespace row content by the LIST field ("accountItems.item.title") so
+    // several lists that reuse the same itemVar ("item") don't collide — the
+    // single-list dogfood never hit this, but real screens (the adopter app's Profile:
+    // account/security/support) do. Fall back to the un-namespaced key for
+    // editor per-item mocks and single-list back-compat.
+    val raw = mockOf("$itemsField.$field") ?: mockOf(field)
+    val rows = raw?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }
+    return if (rows.isNullOrEmpty()) defaultMock(field, key, node.type, index) else rows[minOf(index, rows.size - 1)]
   }
+
   /** The row's mocked value of item field [field], or null when it has none. */
   fun rowValue(field: String): String? {
     val raw = mockOf("$itemsField.$field") ?: mockOf(field)

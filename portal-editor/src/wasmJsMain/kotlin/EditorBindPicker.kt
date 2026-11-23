@@ -1,12 +1,28 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import dev.keliver.portal.document.Contract
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.events.KeyboardEvent
+
+/*
  * E12: binding a prop to a field of the screen's contract. `@` never changes
  * the contract by itself: it opens a picker of the fields the screen's
  * Bindings interface already declares with the prop's type, and declaring a
  * NEW field is a separate, explicit step that says what it adds to the file.
  */
-import dev.keliver.portal.document.Contract
-import org.w3c.dom.HTMLElement
-import org.w3c.dom.events.KeyboardEvent
 
 /** Kotlin's hard keywords: not a field name (`val in: Int` does not compile). */
 internal val KOTLIN_KEYWORDS = setOf(
@@ -76,8 +92,16 @@ internal fun renderBindPicker(
     row.setAttribute("aria-label", "bind to $f")
     row.appendChild(Ui.el("span", "", "@ $f"))
     row.appendChild(Ui.el("span", "cat", type))
-    row.addEventListener("click", { _ -> Ui.clear(picker); onPick(f, false) })
-    row.addEventListener("keydown", { e -> if ((e as KeyboardEvent).key == "Enter") { Ui.clear(picker); onPick(f, false) } })
+    row.addEventListener("click", { _ ->
+      Ui.clear(picker)
+      onPick(f, false)
+    })
+    row.addEventListener("keydown", { e ->
+      if ((e as KeyboardEvent).key == "Enter") {
+        Ui.clear(picker)
+        onPick(f, false)
+      }
+    })
     list.appendChild(row)
   }
   val others = contract.fields.size - fields.size
@@ -120,8 +144,16 @@ internal fun renderBindPicker(
   name.addEventListener("input", { _ -> check() })
   name.addEventListener("keydown", { ev ->
     val e = ev as KeyboardEvent
-    if (e.key == "Enter") { e.preventDefault(); e.stopPropagation(); submit() }
-    if (e.key == "Escape") { e.preventDefault(); e.stopPropagation(); Ui.clear(picker) }
+    if (e.key == "Enter") {
+      e.preventDefault()
+      e.stopPropagation()
+      submit()
+    }
+    if (e.key == "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      Ui.clear(picker)
+    }
   })
   confirm.addEventListener("click", { _ -> submit() })
   newBtn.addEventListener("click", { _ ->

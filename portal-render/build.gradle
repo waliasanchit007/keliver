@@ -93,3 +93,13 @@ tasks.named('compileTestKotlinWasmJs').configure {
 tasks.named('compileTestKotlinJs').configure {
   dependsOn(generateParityFixtureSources)
 }
+
+// GeneratedRenderNode.kt is written by :portal-schema-codegen:generatePortalCode and compared
+// byte for byte by checkPortalCode: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/GeneratedRenderNode.kt")
+    }
+  }
+}

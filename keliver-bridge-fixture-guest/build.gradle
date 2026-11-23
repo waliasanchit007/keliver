@@ -9,7 +9,12 @@ kotlin {
   js {
     // The name of the JS module, unique within the repository.
     outputModuleName = 'keliver-bridge-fixture-guest'
-    browser()
+    // nodejs(), not browser(): the only consumer is keliver-bridge-fixture's RoundTripTest, which
+    // loads the DEVELOPMENT Zipline build. With browser(), a full `build` also ran the production
+    // webpack bundle, which reads build/js/packages/<module>; jsDevelopmentExecutableCompileSync
+    // writes the same directory, so the bundle depended on task order and Gradle failed it
+    // (implicit dependency). Nothing used the bundle; without a browser target there is none.
+    nodejs()
     binaries.executable()
   }
 

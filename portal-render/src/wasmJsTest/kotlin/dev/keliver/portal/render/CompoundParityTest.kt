@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.render
 
 import dev.keliver.material.testing.KeliverMaterialTester
@@ -57,15 +72,17 @@ class CompoundParityTest {
 
   @Test
   fun everyLiteralArgumentPicksTheBranchTheDeviceDoes() = runTest {
-    for (enabled in listOf(true, false)) for (loading in listOf(true, false)) {
-      for ((code, tier, round) in listOf(Triple("XY", 0, true), Triple("BD", -1, false), Triple("XY", 3, true), Triple("", -1, true))) {
-        for (label in listOf("L", "")) {
-          val compiled = KeliverMaterialTester {
-            setContentAndSnapshot { ParityCompound(label = label, enabled = enabled, loading = loading, code = code, tier = tier, round = round) }
+    for (enabled in listOf(true, false)) {
+      for (loading in listOf(true, false)) {
+        for ((code, tier, round) in listOf(Triple("XY", 0, true), Triple("BD", -1, false), Triple("XY", 3, true), Triple("", -1, true))) {
+          for (label in listOf("L", "")) {
+            val compiled = KeliverMaterialTester {
+              setContentAndSnapshot { ParityCompound(label = label, enabled = enabled, loading = loading, code = code, tier = tier, round = round) }
+            }
+            val tree = interpreted("label" to label, "enabled" to enabled, "loading" to loading, "code" to code, "tier" to tier, "round" to round)
+            val preview = KeliverMaterialTester { setContentAndSnapshot { RenderNode(tree) } }
+            assertEquals(compiled, preview, "label='$label' enabled=$enabled loading=$loading code=$code tier=$tier round=$round")
           }
-          val tree = interpreted("label" to label, "enabled" to enabled, "loading" to loading, "code" to code, "tier" to tier, "round" to round)
-          val preview = KeliverMaterialTester { setContentAndSnapshot { RenderNode(tree) } }
-          assertEquals(compiled, preview, "label='$label' enabled=$enabled loading=$loading code=$code tier=$tier round=$round")
         }
       }
     }

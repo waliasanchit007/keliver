@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Cond
@@ -112,8 +127,11 @@ internal class CondReader(
     dev.keliver.portal.termTypeMisfit(t.test, declared)?.let { return "`${t.field}` is $it" }
     if (!declared.endsWith("?")) return null
     val guarded = before.any { it.field == t.field && it.test == CondTest.Null && it.negate == (join == CondJoin.And) }
-    return if (guarded) null
-    else "`${t.field}` is declared $declared: it is read only after `${t.field} != null &&` (or `${t.field} == null ||`) in the same condition"
+    return if (guarded) {
+      null
+    } else {
+      "`${t.field}` is declared $declared: it is read only after `${t.field} != null &&` (or `${t.field} == null ||`) in the same condition"
+    }
   }
 
   /** One term — or, for a derived local, the condition it stands for. */
@@ -179,8 +197,11 @@ internal class CondReader(
     val f = field(left, itemScope)
     val rightField = field(rightText, itemScope)
     if (f == null) {
-      return if (rightField != null) CondRead.No("condition `$shown`: the field goes on the left (`$rightText == …`), its one spelling")
-      else outside(shown)
+      return if (rightField != null) {
+        CondRead.No("condition `$shown`: the field goes on the left (`$rightText == …`), its one spelling")
+      } else {
+        outside(shown)
+      }
     }
     if (rightField != null || isLocal(rightText, itemScope)) {
       return CondRead.No("condition `$shown` compares two fields; an equality compares a field with an Int, String or Boolean literal or design token")
@@ -196,8 +217,10 @@ internal class CondReader(
       return CondRead.No("condition `$shown`: `$left` is declared $declared — an equality on a nullable value is not grammar (only `== null` / `!= null`, on a component parameter)")
     }
     if (declared != null && declared != kind) {
-      return CondRead.No("condition `$shown`: `$left` is declared $declared, compared with ${if (kind == "Int") "an" else "a"} $kind" +
-        if (declared == "Double" || declared == "Float") " (a $declared is not compared: the device and the preview do not compare one alike)" else "")
+      return CondRead.No(
+        "condition `$shown`: `$left` is declared $declared, compared with ${if (kind == "Int") "an" else "a"} $kind" +
+          if (declared == "Double" || declared == "Float") " (a $declared is not compared: the device and the preview do not compare one alike)" else "",
+      )
     }
     return CondRead.Ok(Cond(f, CondTest.Eq, negate, operand.toTreeOperand()))
   }
@@ -228,7 +251,12 @@ internal class CondReader(
   }
 
   private fun kindOf(v: PropValue): String? = when (v) {
-    is PropValue.Lit -> when (v.tag) { "s" -> "String"; "i" -> "Int"; "b" -> "Boolean"; else -> null }
+    is PropValue.Lit -> when (v.tag) {
+      "s" -> "String"
+      "i" -> "Int"
+      "b" -> "Boolean"
+      else -> null
+    }
     is PropValue.Token -> kindOf(v.value)
     else -> null
   }

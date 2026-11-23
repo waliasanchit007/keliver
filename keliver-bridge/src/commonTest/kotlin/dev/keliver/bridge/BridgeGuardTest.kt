@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Square, Inc.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// Using CoroutineDispatcher as a context key needs this opt-in on Kotlin 2.4 / coroutines 1.11.
 @file:OptIn(ExperimentalStdlibApi::class)
+// Using CoroutineDispatcher as a context key needs this opt-in on Kotlin 2.4 / coroutines 1.11.
 
 package dev.keliver.bridge
 

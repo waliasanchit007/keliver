@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Arith
@@ -179,8 +194,10 @@ class ArithmeticGrammarTest {
     assertEquals(src.replace("(b.gap + 4).dp", "(b.gap + 6).dp"), merged(src, set(3, "width", PropValue.IntDp(a("+", b("gap"), lit(6))))))
     // A branch edit stays inside its branch.
     val c = w(d, 4).props["fontSize"] as PropValue.Conditional
-    assertEquals(src.replace("b.size - (b.delta - 3)", "b.size - (b.delta - 2)"),
-      merged(src, set(4, "fontSize", c.copy(whenTrue = a("-", b("size"), a("-", b("delta"), lit(2)))))))
+    assertEquals(
+      src.replace("b.size - (b.delta - 3)", "b.size - (b.delta - 2)"),
+      merged(src, set(4, "fontSize", c.copy(whenTrue = a("-", b("size"), a("-", b("delta"), lit(2)))))),
+    )
   }
 
   @Test fun anotherShapeOrAPlainValueRewritesTheArgumentAlone() {
@@ -190,8 +207,10 @@ class ArithmeticGrammarTest {
     assertEquals(src.replace("b.size * 2 / 5", "14"), merged(src, set(0, "fontSize", lit(14))))
     assertEquals(src.replace("b.size * 2 / 5", "b.size"), merged(src, set(0, "fontSize", b("size"))))
     // A Dp literal in place of an Int as a Dp keeps the author's Dp spelling.
-    assertEquals(src.replace("(b.gap + 4).dp", "6.dp").replace("Dp(b.gap.toDouble())", "Dp(2.0)"),
-      merged(src, d.apply(DocOp.SetProp(w(d, 3).handle, "width", lit(6.0))).doc.let { it.apply(DocOp.SetProp(w(d, 2).handle, "height", lit(2.0))).doc }))
+    assertEquals(
+      src.replace("(b.gap + 4).dp", "6.dp").replace("Dp(b.gap.toDouble())", "Dp(2.0)"),
+      merged(src, d.apply(DocOp.SetProp(w(d, 3).handle, "width", lit(6.0))).doc.let { it.apply(DocOp.SetProp(w(d, 2).handle, "height", lit(2.0))).doc }),
+    )
     // A Dp literal becoming an Int as a Dp: written canonically, imports added.
     val plain = src.replace("Spacer(width = (b.gap + 4).dp)", "Spacer(width = 4.dp)").replace("import dev.keliver.ui.dp\n", "")
       .replace("Spacer(height = Dp(b.gap.toDouble()))", "Spacer(height = Dp(2.0))")

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.Cond
@@ -11,11 +26,11 @@ import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.lit
-import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.events.Event
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.events.Event
 
 /** K3: the properties panel's conditional editors — what they show and the ops they send. */
 class EditorConditionalsTest {
@@ -63,7 +78,8 @@ class EditorConditionalsTest {
     val elseInput = inputs.item(1) as HTMLInputElement
     assertEquals("Closed", elseInput.value)
     elseInput.value = "Shut"
-    elseInput.dispatchEvent(Event("input")); elseInput.dispatchEvent(Event("change")) /* E11: committed */
+    elseInput.dispatchEvent(Event("input"))
+    elseInput.dispatchEvent(Event("change")) /* E11: committed */
     assertEquals(
       DocOp.SetProp(Handle(7), "text", PropValue.Conditional("open", whenTrue = lit("Open"), whenFalse = lit("Shut"))),
       sent.single(),
@@ -87,7 +103,11 @@ class EditorConditionalsTest {
     val sent = mutableListOf<DocOp>()
     val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), "Open", "Closed")) { op, _, _ -> sent += op }
     val inputs = row.querySelectorAll("input")
-    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let {
+      it.value = v
+      it.dispatchEvent(Event("input"))
+      it.dispatchEvent(Event("change"))
+    } // E11: committed
     type(0, "Yes")
     type(1, "No")
     assertEquals(
@@ -120,7 +140,11 @@ class EditorConditionalsTest {
       results += done
     }
     val inputs = row.querySelectorAll("input")
-    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let {
+      it.value = v
+      it.dispatchEvent(Event("input"))
+      it.dispatchEvent(Event("change"))
+    } // E11: committed
     type(0, "Yes")
     results.last()(true)
     type(1, "No")
@@ -149,20 +173,28 @@ class EditorConditionalsTest {
     val bound = row.querySelectorAll("input").item(0) as HTMLInputElement
     assertEquals("title", bound.value)
     bound.value = "  "
-    bound.dispatchEvent(Event("input")); bound.dispatchEvent(Event("change")) /* E11: committed */
+    bound.dispatchEvent(Event("input"))
+    bound.dispatchEvent(Event("change")) /* E11: committed */
     assertTrue(sent.isEmpty(), sent.toString())
     bound.value = "name"
-    bound.dispatchEvent(Event("input")); bound.dispatchEvent(Event("change")) /* E11: committed */
+    bound.dispatchEvent(Event("input"))
+    bound.dispatchEvent(Event("change")) /* E11: committed */
     assertEquals(DocOp.SetProp(Handle(7), "text", PropValue.Conditional("open", whenTrue = PropValue.Bind("name"), whenFalse = lit("-"))), sent.single())
   }
 
   @Test fun anElseBranchIsLookedThroughForTheScopeParent() {
     val tree = WidgetNode(
-      "Row", id = 1,
+      "Row",
+      id = 1,
       children = listOf(
-        WidgetNode("Condition", mapOf("field" to "x"), id = 2, children = listOf(
-          WidgetNode("Else", id = 3, children = listOf(WidgetNode("StyledText", id = 4))),
-        )),
+        WidgetNode(
+          "Condition",
+          mapOf("field" to "x"),
+          id = 2,
+          children = listOf(
+            WidgetNode("Else", id = 3, children = listOf(WidgetNode("StyledText", id = 4))),
+          ),
+        ),
       ),
     )
     assertEquals("Row", scopeParentType(tree, 4))

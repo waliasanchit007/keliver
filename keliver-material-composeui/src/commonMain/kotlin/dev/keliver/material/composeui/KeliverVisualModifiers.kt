@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -17,21 +28,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.node.ModifierNodeElement
-import androidx.compose.ui.node.GlobalPositionAwareModifierNode
-import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.node.GlobalPositionAwareModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
+import dev.keliver.Modifier as RedwoodModifier
 import dev.keliver.material.modifier.Alpha
 import dev.keliver.material.modifier.AnimateContentSize
 import dev.keliver.material.modifier.AspectRatio
@@ -52,8 +65,6 @@ import dev.keliver.material.modifier.Scale
 import dev.keliver.material.modifier.SelectionTag
 import dev.keliver.material.modifier.Shadow
 import dev.keliver.material.modifier.Size
-import androidx.compose.ui.layout.boundsInRoot
-import dev.keliver.Modifier as RedwoodModifier
 
 /**
  * Translates a widget's keliver [RedwoodModifier] chain into a real Compose
@@ -83,8 +94,10 @@ public fun Modifier.applyKeliverVisuals(keliver: RedwoodModifier): Modifier {
       is Border -> m.border(element.widthDp.dp, Color(element.colorArgb), shape)
       is CornerRadiusEach -> m.clip(
         RoundedCornerShape(
-          element.topStartDp.dp, element.topEndDp.dp,
-          element.bottomEndDp.dp, element.bottomStartDp.dp,
+          element.topStartDp.dp,
+          element.topEndDp.dp,
+          element.bottomEndDp.dp,
+          element.bottomStartDp.dp,
         ),
       )
       is Size -> {
@@ -125,7 +138,9 @@ private data class SelectionTagElement(val handle: Int) : ModifierNodeElement<Se
   }
 }
 
-private class SelectionTagNode(private var handle: Int) : Modifier.Node(), GlobalPositionAwareModifierNode {
+private class SelectionTagNode(private var handle: Int) :
+  Modifier.Node(),
+  GlobalPositionAwareModifierNode {
   override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
     // The full rect also off screen (boundsInRoot clips to what is visible, which is empty
     // below the fold), and the visible part separately: only that answers a click.

@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -26,10 +37,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import dev.keliver.Modifier as RedwoodModifier
+import dev.keliver.material.widget.StyledBox
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.ComposeWidgetChildren
-import dev.keliver.material.widget.StyledBox
-import dev.keliver.Modifier as RedwoodModifier
 
 internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   private var colorArgb by mutableStateOf(0)
@@ -66,8 +77,10 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
     if (fillWidth) m = m.fillMaxWidth()
     if (widthDp > 0) m = m.width(widthDp.dp)
     if (heightDp > 0) m = m.height(heightDp.dp)
-    val hasPerCorner = cornerTopStartDp >= 0 || cornerTopEndDp >= 0 ||
-      cornerBottomStartDp >= 0 || cornerBottomEndDp >= 0
+    val hasPerCorner = cornerTopStartDp >= 0 ||
+      cornerTopEndDp >= 0 ||
+      cornerBottomStartDp >= 0 ||
+      cornerBottomEndDp >= 0
     fun corner(v: Int) = (if (v >= 0) v else cornerRadiusDp).dp
     val shape = if (hasPerCorner) {
       RoundedCornerShape(corner(cornerTopStartDp), corner(cornerTopEndDp), corner(cornerBottomEndDp), corner(cornerBottomStartDp))
@@ -99,28 +112,72 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
     }
   }
 
-  override fun colorArgb(colorArgb: Int) { this.colorArgb = colorArgb }
-  override fun gradientStartArgb(gradientStartArgb: Int) { this.gradientStartArgb = gradientStartArgb }
-  override fun gradientEndArgb(gradientEndArgb: Int) { this.gradientEndArgb = gradientEndArgb }
-  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
-  override fun widthDp(widthDp: Int) { this.widthDp = widthDp }
-  override fun heightDp(heightDp: Int) { this.heightDp = heightDp }
-  override fun paddingDp(paddingDp: Int) { this.paddingDp = paddingDp }
-  override fun fillWidth(fillWidth: Boolean) { this.fillWidth = fillWidth }
-  override fun contentAlignment(contentAlignment: Int) { this.contentAlignment = contentAlignment }
-  override fun elevationDp(elevationDp: Int) { this.elevationDp = elevationDp }
-  override fun offsetYDp(offsetYDp: Int) { this.offsetYDp = offsetYDp }
-  override fun gradientVertical(gradientVertical: Boolean) { this.gradientVertical = gradientVertical }
-  override fun gradientColorsArgb(gradientColorsArgb: List<Int>) { this.gradientColorsArgb = gradientColorsArgb }
-  override fun gradientStops(gradientStops: List<Float>) { this.gradientStops = gradientStops }
-  override fun gradientDirection(gradientDirection: Int) { this.gradientDirection = gradientDirection }
-  override fun cornerTopStartDp(cornerTopStartDp: Int) { this.cornerTopStartDp = cornerTopStartDp }
-  override fun cornerTopEndDp(cornerTopEndDp: Int) { this.cornerTopEndDp = cornerTopEndDp }
-  override fun cornerBottomStartDp(cornerBottomStartDp: Int) { this.cornerBottomStartDp = cornerBottomStartDp }
-  override fun cornerBottomEndDp(cornerBottomEndDp: Int) { this.cornerBottomEndDp = cornerBottomEndDp }
-  override fun borderColorArgb(borderColorArgb: Int) { this.borderColorArgb = borderColorArgb }
-  override fun borderWidthDp(borderWidthDp: Int) { this.borderWidthDp = borderWidthDp }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun colorArgb(colorArgb: Int) {
+    this.colorArgb = colorArgb
+  }
+  override fun gradientStartArgb(gradientStartArgb: Int) {
+    this.gradientStartArgb = gradientStartArgb
+  }
+  override fun gradientEndArgb(gradientEndArgb: Int) {
+    this.gradientEndArgb = gradientEndArgb
+  }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) {
+    this.cornerRadiusDp = cornerRadiusDp
+  }
+  override fun widthDp(widthDp: Int) {
+    this.widthDp = widthDp
+  }
+  override fun heightDp(heightDp: Int) {
+    this.heightDp = heightDp
+  }
+  override fun paddingDp(paddingDp: Int) {
+    this.paddingDp = paddingDp
+  }
+  override fun fillWidth(fillWidth: Boolean) {
+    this.fillWidth = fillWidth
+  }
+  override fun contentAlignment(contentAlignment: Int) {
+    this.contentAlignment = contentAlignment
+  }
+  override fun elevationDp(elevationDp: Int) {
+    this.elevationDp = elevationDp
+  }
+  override fun offsetYDp(offsetYDp: Int) {
+    this.offsetYDp = offsetYDp
+  }
+  override fun gradientVertical(gradientVertical: Boolean) {
+    this.gradientVertical = gradientVertical
+  }
+  override fun gradientColorsArgb(gradientColorsArgb: List<Int>) {
+    this.gradientColorsArgb = gradientColorsArgb
+  }
+  override fun gradientStops(gradientStops: List<Float>) {
+    this.gradientStops = gradientStops
+  }
+  override fun gradientDirection(gradientDirection: Int) {
+    this.gradientDirection = gradientDirection
+  }
+  override fun cornerTopStartDp(cornerTopStartDp: Int) {
+    this.cornerTopStartDp = cornerTopStartDp
+  }
+  override fun cornerTopEndDp(cornerTopEndDp: Int) {
+    this.cornerTopEndDp = cornerTopEndDp
+  }
+  override fun cornerBottomStartDp(cornerBottomStartDp: Int) {
+    this.cornerBottomStartDp = cornerBottomStartDp
+  }
+  override fun cornerBottomEndDp(cornerBottomEndDp: Int) {
+    this.cornerBottomEndDp = cornerBottomEndDp
+  }
+  override fun borderColorArgb(borderColorArgb: Int) {
+    this.borderColorArgb = borderColorArgb
+  }
+  override fun borderWidthDp(borderWidthDp: Int) {
+    this.borderWidthDp = borderWidthDp
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 /**
@@ -132,10 +189,10 @@ internal fun buildGradient(colorsArgb: List<Int>, stops: List<Float>, direction:
   val colors = colorsArgb.map { Color(it) }
   val inf = Float.POSITIVE_INFINITY
   val (start, end) = when (direction) {
-    1 -> Offset(0f, 0f) to Offset(0f, inf)        // vertical T→B
-    2 -> Offset(0f, 0f) to Offset(inf, 0f)        // horizontal L→R
-    3 -> Offset(0f, inf) to Offset(inf, 0f)       // diagonal BL→TR
-    else -> Offset(0f, 0f) to Offset(inf, inf)    // diagonal TL→BR
+    1 -> Offset(0f, 0f) to Offset(0f, inf) // vertical T→B
+    2 -> Offset(0f, 0f) to Offset(inf, 0f) // horizontal L→R
+    3 -> Offset(0f, inf) to Offset(inf, 0f) // diagonal BL→TR
+    else -> Offset(0f, 0f) to Offset(inf, inf) // diagonal TL→BR
   }
   return if (stops.size == colors.size && stops.isNotEmpty()) {
     Brush.linearGradient(*Array(colors.size) { stops[it] to colors[it] }, start = start, end = end)

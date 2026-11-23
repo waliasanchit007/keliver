@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.ScreenContract
 import dev.keliver.portal.WidgetNode
@@ -13,10 +28,18 @@ import kotlin.test.assertTrue
  */
 class EditorStateTest {
   private fun cond(field: String, test: String? = null, vararg children: WidgetNode) =
-    WidgetNode("Condition", buildMap { put("field", field); if (test != null) put("test", test) }, children.toList())
+    WidgetNode(
+      "Condition",
+      buildMap {
+        put("field", field)
+        if (test != null) put("test", test)
+      },
+      children.toList(),
+    )
 
   private val tree = WidgetNode(
-    "Column", emptyMap(),
+    "Column",
+    emptyMap(),
     listOf(
       cond("loading", null, WidgetNode("Shimmer")),
       cond("showContent", null, WidgetNode("StyledText")),
@@ -104,7 +127,8 @@ class EditorStateTest {
 
   // F7: a section whose name reads as content but which holds the loading skeleton.
   private val sectioned = WidgetNode(
-    "Column", emptyMap(),
+    "Column",
+    emptyMap(),
     listOf(
       cond("showListSection", null, cond("isLoading", null, WidgetNode("Shimmer")), WidgetNode("Repeat", mapOf("items" to "rows"))),
       cond("showSummary", null, WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("hasError", null, WidgetNode("StyledText"))))),
@@ -149,8 +173,11 @@ class EditorStateTest {
 
   @Test fun aScenarioFindsItsBlockUnderACompoundCondition() {
     // Review 4 #4: if (!isLoading && !hasError) Content else { if (hasError) ErrorBanner }
-    val outer = WidgetNode("Condition", mapOf("field" to "isLoading", "negate" to true, "field.1" to "hasError", "negate.1" to true),
-      listOf(WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("hasError", null, WidgetNode("Banner"))))))
+    val outer = WidgetNode(
+      "Condition",
+      mapOf("field" to "isLoading", "negate" to true, "field.1" to "hasError", "negate.1" to true),
+      listOf(WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("hasError", null, WidgetNode("Banner"))))),
+    )
     val t = WidgetNode("Column", emptyMap(), listOf(outer))
     val error = mapOf("isLoading" to "false", "hasError" to "true")
     assertEquals("hasError", scenarioFocus(t, Scenario.Error, error)?.props?.get("field"), "the else branch is drawn: its error block")
@@ -159,9 +186,13 @@ class EditorStateTest {
 
   @Test fun aScenarioRevealsABlockInTheBranchItDraws() {
     // if (hasContent) Text else { if (isLoading) Shimmer }: Loading draws the else branch.
-    val t = WidgetNode("Column", emptyMap(), listOf(
-      cond("hasContent", null, WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("isLoading", null, WidgetNode("Shimmer"))))),
-    ))
+    val t = WidgetNode(
+      "Column",
+      emptyMap(),
+      listOf(
+        cond("hasContent", null, WidgetNode("StyledText"), WidgetNode("Else", emptyMap(), listOf(cond("isLoading", null, WidgetNode("Shimmer"))))),
+      ),
+    )
     assertEquals("isLoading", scenarioFocus(t, Scenario.Loading)?.props?.get("field"))
     assertEquals(null, scenarioFocus(t, Scenario.Error))
   }

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
@@ -77,8 +92,10 @@ class LayoutGrammarTest {
     assertEquals(
       mapOf(
         "Flex.value" to d(1.0),
-        "Margin.margin.start" to d(4.0), "Margin.margin.end" to d(4.0),
-        "Margin.margin.top" to d(4.0), "Margin.margin.bottom" to d(4.0),
+        "Margin.margin.start" to d(4.0),
+        "Margin.margin.end" to d(4.0),
+        "Margin.margin.top" to d(4.0),
+        "Margin.margin.bottom" to d(4.0),
       ),
       second.modifiers,
     )
@@ -124,16 +141,19 @@ class LayoutGrammarTest {
     assertEquals(d(16.0), row.props["margin.start"])
     assertEquals(d(0.0), row.props["margin.top"])
     // Mixed positional + named: not grammar -> the call stays RawCode.
-    val raw = root("""
+    val raw = root(
+      """
       Column {
         Row(margin = Margin(16.dp, top = 4.dp)) {}
       }
-    """)
+    """,
+    )
     assertIs<DocNode.RawCode>(raw.children.single())
   }
 
   @Test fun scopedModifierUnderAWrongParentStaysRawCode() {
-    val r = root("""
+    val r = root(
+      """
       Row {
         StyledText(text = "in row", modifier = Modifier.flex(1.0))
         StyledBox {
@@ -142,7 +162,8 @@ class LayoutGrammarTest {
         StyledText(text = "column-only", modifier = Modifier.horizontalAlignment(CrossAxisAlignment.Center))
         StyledText(text = "row ok", modifier = Modifier.verticalAlignment(CrossAxisAlignment.End))
       }
-    """)
+    """,
+    )
     val (inRow, box, colOnly, rowOk) = r.children
     assertEquals(mapOf("Flex.value" to d(1.0)), (inRow as DocNode.Widget).modifiers)
     assertIs<DocNode.RawCode>((box as DocNode.Widget).children.single()) // StyledBox gives no RowScope
@@ -154,41 +175,51 @@ class LayoutGrammarTest {
   }
 
   @Test fun logicNodesPassTheParentScopeThrough() {
-    val r = Recognizer.recognize("S.kt", screen("""
+    val r = Recognizer.recognize(
+      "S.kt",
+      screen(
+        """
       Row {
         if (b.show) {
           StyledText(text = "a", modifier = Modifier.flex(2.0))
         }
       }
-    """).replace("fun S()", "fun S(b: SBindings)"))!!.root
+    """,
+      ).replace("fun S()", "fun S(b: SBindings)"),
+    )!!.root
     val cond = r.children.single() as DocNode.Widget
     assertEquals("Condition", cond.type)
     assertEquals(mapOf("Flex.value" to d(2.0)), (cond.children.single() as DocNode.Widget).modifiers)
   }
 
   @Test fun sizeResolvesByScopeAndArgumentTypes() {
-    val r = root("""
+    val r = root(
+      """
       Row {
         StyledText(text = "a", modifier = Modifier.size(12, 12))
         StyledText(text = "b", modifier = Modifier.size(12.dp, Dp(14.0)))
       }
-    """)
+    """,
+    )
     val (a, b) = r.children.map { it as DocNode.Widget }
     assertEquals(mapOf("Size.widthDp" to PropValue.Lit("i", i = 12), "Size.heightDp" to PropValue.Lit("i", i = 12)), a.modifiers)
     assertEquals(mapOf("LayoutSize.width" to d(12.0), "LayoutSize.height" to d(14.0)), b.modifiers)
     // Outside a layout scope only material's size(Int, Int) exists.
-    val box = root("""
+    val box = root(
+      """
       StyledBox {
         StyledText(text = "a", modifier = Modifier.size(12, 12))
         StyledText(text = "b", modifier = Modifier.size(12.dp, 12.dp))
       }
-    """)
+    """,
+    )
     assertIs<DocNode.Widget>(box.children[0])
     assertIs<DocNode.RawCode>(box.children[1])
   }
 
   @Test fun modifierChainsWithNestedParensWhitespaceAndRepeats() {
-    val r = root("""
+    val r = root(
+      """
       Column {
         StyledText(
           text = "a",
@@ -200,7 +231,8 @@ class LayoutGrammarTest {
         StyledText(text = "b", modifier = Modifier.flex(1.0).flex(2.0))
         StyledText(text = "c", modifier = Modifier.flex(1))
       }
-    """)
+    """,
+    )
     val a = r.children[0] as DocNode.Widget
     assertEquals(PropValue.Lit("i", i = 8), a.modifiers["Padding.allDp"])
     assertEquals(d(4.0), a.modifiers["Margin.margin.end"])
@@ -212,11 +244,13 @@ class LayoutGrammarTest {
 
   @Test fun typedArgumentsRoundTripTheExportersOwnOutput() {
     // aspectRatio takes a Float: the exporter writes `1.5f`, which must re-ingest.
-    val r = root("""
+    val r = root(
+      """
       Column {
         StyledText(text = "a", modifier = Modifier.aspectRatio(1.5f).padding(2))
       }
-    """)
+    """,
+    )
     val a = r.children.single() as DocNode.Widget
     assertEquals(d(1.5), a.modifiers["AspectRatio.ratio"])
     val out = exportKotlin(UiDocument("_", r, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
@@ -247,7 +281,8 @@ class LayoutGrammarTest {
   @Test fun everyMarginShapeExportsItsShortestForm() {
     fun export(s: Double, e: Double, t: Double, b: Double): String {
       val row = DocNode.Widget(
-        dev.keliver.portal.document.Handle(1), "Row",
+        dev.keliver.portal.document.Handle(1),
+        "Row",
         props = mapOf("margin.start" to d(s), "margin.end" to d(e), "margin.top" to d(t), "margin.bottom" to d(b)),
       )
       val out = exportKotlin(UiDocument("_", row, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
@@ -359,7 +394,8 @@ class LayoutGrammarTest {
   // ── Review follow-ups ──────────────────────────────────────────────────
 
   @Test fun commentsBetweenChainLinksStayGrammar() {
-    val r = root("""
+    val r = root(
+      """
       Row {
         StyledText(
           text = "a",
@@ -368,17 +404,20 @@ class LayoutGrammarTest {
             .flex(1.0) /* end */,
         )
       }
-    """)
+    """,
+    )
     val a = r.children.single() as DocNode.Widget
     assertEquals(mapOf("Padding.allDp" to PropValue.Lit("i", i = 8), "Flex.value" to d(1.0)), a.modifiers)
   }
 
   @Test fun exportKeepsAuthorModifierOrder() {
-    val r = root("""
+    val r = root(
+      """
       Row {
         StyledText(text = "a", modifier = Modifier.margin(Margin(all = 4.dp)).padding(8).flex(1.0))
       }
-    """)
+    """,
+    )
     val out = exportKotlin(UiDocument("_", r, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
     assertTrue("modifier = Modifier.margin(Margin(all = 4.dp)).padding(8).flex(1.0)," in out, out)
   }
@@ -398,10 +437,16 @@ class LayoutGrammarTest {
     assertEquals("100000000000000000000.0", dev.keliver.portal.kotlinDoubleLiteral(1.0E20))
     assertEquals("0.0000001.dp", dev.keliver.portal.kotlinDpLiteral(1.0E-7))
     val row = DocNode.Widget(
-      dev.keliver.portal.document.Handle(1), "Row",
-      children = listOf(DocNode.Widget(dev.keliver.portal.document.Handle(2), "StyledText",
-        props = mapOf("text" to PropValue.Lit("s", s = "a")),
-        modifiers = mapOf("Flex.value" to d(1.0E-4), "Margin.margin.start" to d(1.0E-4)))),
+      dev.keliver.portal.document.Handle(1),
+      "Row",
+      children = listOf(
+        DocNode.Widget(
+          dev.keliver.portal.document.Handle(2),
+          "StyledText",
+          props = mapOf("text" to PropValue.Lit("s", s = "a")),
+          modifiers = mapOf("Flex.value" to d(1.0E-4), "Margin.margin.start" to d(1.0E-4)),
+        ),
+      ),
     )
     val out = exportKotlin(UiDocument("_", row, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
     assertFalse("E-" in out, out)
@@ -421,10 +466,17 @@ class LayoutGrammarTest {
     assertEquals("0.dp", MarginSyntax.dpLike("8.dp", -4.0))
     assertEquals("Dp(0.0)", MarginSyntax.dpLike("Dp(8.0)", -4.0))
     val raw = DocNode.Widget(
-      dev.keliver.portal.document.Handle(1), "Row",
+      dev.keliver.portal.document.Handle(1),
+      "Row",
       props = mapOf("margin.start" to d(-3.0)),
-      children = listOf(DocNode.Widget(dev.keliver.portal.document.Handle(2), "Spacer",
-        props = mapOf("width" to d(-2.0)), modifiers = mapOf("Width.width" to d(-1.0)))),
+      children = listOf(
+        DocNode.Widget(
+          dev.keliver.portal.document.Handle(2),
+          "Spacer",
+          props = mapOf("width" to d(-2.0)),
+          modifiers = mapOf("Width.width" to d(-1.0)),
+        ),
+      ),
     )
     val out = exportKotlin(UiDocument("_", raw, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
     assertFalse("-" in out.substringAfter("fun "), out)
@@ -434,15 +486,27 @@ class LayoutGrammarTest {
   @Test fun aScopedModifierUnderANonScopeParentIsNotExported() {
     // B1 safety net: a tree that bypassed the document still exports compiling code.
     val tree = DocNode.Widget(
-      dev.keliver.portal.document.Handle(1), "Column",
+      dev.keliver.portal.document.Handle(1),
+      "Column",
       children = listOf(
-        DocNode.Widget(dev.keliver.portal.document.Handle(2), "StyledBox", children = listOf(
-          DocNode.Widget(dev.keliver.portal.document.Handle(3), "StyledText",
-            props = mapOf("text" to PropValue.Lit("s", s = "x")),
-            modifiers = mapOf("Flex.value" to d(1.0), "Padding.allDp" to PropValue.Lit("i", i = 2))),
-        )),
-        DocNode.Widget(dev.keliver.portal.document.Handle(4), "StyledText",
-          props = mapOf("text" to PropValue.Lit("s", s = "y")), modifiers = mapOf("Flex.value" to d(2.0))),
+        DocNode.Widget(
+          dev.keliver.portal.document.Handle(2),
+          "StyledBox",
+          children = listOf(
+            DocNode.Widget(
+              dev.keliver.portal.document.Handle(3),
+              "StyledText",
+              props = mapOf("text" to PropValue.Lit("s", s = "x")),
+              modifiers = mapOf("Flex.value" to d(1.0), "Padding.allDp" to PropValue.Lit("i", i = 2)),
+            ),
+          ),
+        ),
+        DocNode.Widget(
+          dev.keliver.portal.document.Handle(4),
+          "StyledText",
+          props = mapOf("text" to PropValue.Lit("s", s = "y")),
+          modifiers = mapOf("Flex.value" to d(2.0)),
+        ),
       ),
       modifiers = mapOf("Flex.value" to d(3.0)), // root: no layout parent
     )
@@ -453,7 +517,8 @@ class LayoutGrammarTest {
   }
 
   @Test fun exportAfterMovingUnderANonScopeParentDropsTheModifier() {
-    val src = screen("""
+    val src = screen(
+      """
       Column {
         Row {
           StyledText(text = "a", modifier = Modifier.flex(1.0).padding(4))
@@ -461,7 +526,8 @@ class LayoutGrammarTest {
         StyledBox {
         }
       }
-    """)
+    """,
+    )
     val rec = Recognizer.recognize("S.kt", src)!!
     val doc = UiDocument("s", rec.root, rec.contract, 0, 0)
     val col = doc.root as DocNode.Widget
@@ -486,11 +552,13 @@ class LayoutGrammarTest {
   }
 
   @Test fun surgicalDpModifierEditKeepsTheDpSpelling() {
-    val src = "import dev.keliver.Modifier\nimport dev.keliver.ui.Dp\nimport dev.keliver.ui.dp\n" + screen("""
+    val src = "import dev.keliver.Modifier\nimport dev.keliver.ui.Dp\nimport dev.keliver.ui.dp\n" + screen(
+      """
       Row {
         StyledText(text = "a", modifier = Modifier.width(12.dp).height(Dp(10.0)))
       }
-    """)
+    """,
+    )
     val rec = Recognizer.recognize("S.kt", src)!!
     val doc = UiDocument("s", rec.root, rec.contract, 0, 0)
     val text = (doc.root as DocNode.Widget).children.single()
@@ -614,9 +682,16 @@ class LayoutGrammarTest {
       paramTypes = mapOf("weight" to "Double") + (if (withModifier) mapOf("modifier" to "Modifier") else emptyMap()),
     )
     val tree = DocNode.Widget(
-      dev.keliver.portal.document.Handle(1), "Row",
-      children = listOf(DocNode.Widget(dev.keliver.portal.document.Handle(2), "Tile",
-        props = mapOf("weight" to d(1.0E-4)), modifiers = mapOf("Flex.value" to d(1.0)))),
+      dev.keliver.portal.document.Handle(1),
+      "Row",
+      children = listOf(
+        DocNode.Widget(
+          dev.keliver.portal.document.Handle(2),
+          "Tile",
+          props = mapOf("weight" to d(1.0E-4)),
+          modifiers = mapOf("Flex.value" to d(1.0)),
+        ),
+      ),
     )
     val wire = UiDocument("_", tree, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree()
     val without = exportKotlin(wire, components = dev.keliver.portal.MapComponentRegistry(listOf(spec(false))))
@@ -630,11 +705,13 @@ class LayoutGrammarTest {
   }
 
   @Test fun layoutSizeExportImportsNoMaterialSize() {
-    val r = root("""
+    val r = root(
+      """
       Row {
         StyledText(text = "a", modifier = Modifier.size(12.dp, 12.dp))
       }
-    """)
+    """,
+    )
     val out = exportKotlin(UiDocument("_", r, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
     assertTrue("Modifier.size(Dp(12.0), Dp(12.0))" in out, out)
     assertFalse("import dev.keliver.material.compose.size" in out, out)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Square, Inc.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,6 +117,7 @@ public fun <R : Any> KeliverNavHost(
  * }) { route -> … }
  * ```
  */
+@Suppress("ktlint:compose:content-slot-reused") // A per-route factory, called per entry in its own state provider.
 @ExperimentalKeliverNavRetentionApi
 @Composable
 public fun <R : Any> KeliverNavHost(

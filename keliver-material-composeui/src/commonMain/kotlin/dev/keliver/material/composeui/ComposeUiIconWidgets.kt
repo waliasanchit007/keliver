@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -37,10 +48,18 @@ internal class ComposeUiIcon : Icon<@Composable (Modifier) -> Unit> {
       modifier = m.size(sizeDp.dp),
     )
   }
-  override fun name(name: String) { this.name = name }
-  override fun sizeDp(sizeDp: Int) { this.sizeDp = sizeDp }
-  override fun tintArgb(tintArgb: Int) { this.tintArgb = tintArgb }
-  override fun contentDescription(contentDescription: String) { this.contentDescription = contentDescription }
+  override fun name(name: String) {
+    this.name = name
+  }
+  override fun sizeDp(sizeDp: Int) {
+    this.sizeDp = sizeDp
+  }
+  override fun tintArgb(tintArgb: Int) {
+    this.tintArgb = tintArgb
+  }
+  override fun contentDescription(contentDescription: String) {
+    this.contentDescription = contentDescription
+  }
 }
 
 /** Batch 15: Material3 list row with name-based leading/trailing icons. */
@@ -58,21 +77,45 @@ internal class ComposeUiListItem : ListItem<@Composable (Modifier) -> Unit> {
       headlineContent = { M3Text(headline) },
       supportingContent = if (supporting.isEmpty()) null else ({ M3Text(supporting) }),
       overlineContent = if (overline.isEmpty()) null else ({ M3Text(overline) }),
-      leadingContent = if (leadingIcon.isEmpty()) null else ({
-        M3Icon(iconOrPlaceholder(leadingIcon), contentDescription = leadingIcon)
-      }),
-      trailingContent = if (trailingIcon.isEmpty()) null else ({
-        M3Icon(iconOrPlaceholder(trailingIcon), contentDescription = trailingIcon)
-      }),
+      leadingContent = if (leadingIcon.isEmpty()) {
+        null
+      } else {
+        (
+          {
+            M3Icon(iconOrPlaceholder(leadingIcon), contentDescription = leadingIcon)
+          }
+          )
+      },
+      trailingContent = if (trailingIcon.isEmpty()) {
+        null
+      } else {
+        (
+          {
+            M3Icon(iconOrPlaceholder(trailingIcon), contentDescription = trailingIcon)
+          }
+          )
+      },
       // P1-7: M3 ListItem wraps content under loose constraints (visible in the
       // editor canvas); a list row should always span its container.
       modifier = (if (click == null) m else m.clickable { click() }).fillMaxWidth(),
     )
   }
-  override fun headline(headline: String) { this.headline = headline }
-  override fun supporting(supporting: String) { this.supporting = supporting }
-  override fun overline(overline: String) { this.overline = overline }
-  override fun leadingIcon(leadingIcon: String) { this.leadingIcon = leadingIcon }
-  override fun trailingIcon(trailingIcon: String) { this.trailingIcon = trailingIcon }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun headline(headline: String) {
+    this.headline = headline
+  }
+  override fun supporting(supporting: String) {
+    this.supporting = supporting
+  }
+  override fun overline(overline: String) {
+    this.overline = overline
+  }
+  override fun leadingIcon(leadingIcon: String) {
+    this.leadingIcon = leadingIcon
+  }
+  override fun trailingIcon(trailingIcon: String) {
+    this.trailingIcon = trailingIcon
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }

@@ -40,6 +40,8 @@ dependencies {
   implementation(files(libs.class.superclass.protectionDomain.codeSource.location))
 
   lintChecks libs.androidx.gradlePluginLints
+
+  testImplementation libs.kotlin.test.junit
 }
 
 gradlePlugin {

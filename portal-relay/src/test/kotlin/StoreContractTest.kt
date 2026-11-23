@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -380,7 +395,10 @@ class StoreContractTest {
     // survive a box with no working java. Requiring the home here would refuse a
     // caller who has already said exactly which store to use.
     val r = viaScriptDiscovering(
-      app, shellHome, "exit 127", env = mapOf("PORTAL_STORE" to explicit.absolutePath),
+      app,
+      shellHome,
+      "exit 127",
+      env = mapOf("PORTAL_STORE" to explicit.absolutePath),
     )
     assertEquals(0, r.exit, "explicit store refused: ${r.err}")
     assertEquals(explicit.canonicalPath, File(r.out).canonicalPath)
@@ -390,8 +408,11 @@ class StoreContractTest {
     assertEquals(kotlin.canonicalPath, File(r.out).canonicalPath)
     // --default IS the home-derived step, so there it must still refuse.
     val dflt = viaScriptDiscovering(
-      app, shellHome, "exit 127",
-      env = mapOf("PORTAL_STORE" to explicit.absolutePath), args = listOf("--default"),
+      app,
+      shellHome,
+      "exit 127",
+      env = mapOf("PORTAL_STORE" to explicit.absolutePath),
+      args = listOf("--default"),
     )
     assertEquals(4, dflt.exit, "--default answered without a home: ${dflt.out}")
   }
@@ -403,7 +424,10 @@ class StoreContractTest {
     // A relative --home resolves against the CALLER's cwd inside python, which
     // is a different store per caller.
     val r = viaScriptDiscovering(
-      app, shellHome, "exit 127", args = listOf("--home", "relative/home"),
+      app,
+      shellHome,
+      "exit 127",
+      args = listOf("--home", "relative/home"),
     )
     assertEquals(2, r.exit, "a relative --home was accepted: ${r.out}")
     assertEquals("", r.out)
@@ -412,6 +436,10 @@ class StoreContractTest {
   private fun <T> withUserHome(home: File, block: () -> T): T {
     val previous = System.getProperty("user.home")
     System.setProperty("user.home", home.absolutePath)
-    try { return block() } finally { System.setProperty("user.home", previous) }
+    try {
+      return block()
+    } finally {
+      System.setProperty("user.home", previous)
+    }
   }
 }

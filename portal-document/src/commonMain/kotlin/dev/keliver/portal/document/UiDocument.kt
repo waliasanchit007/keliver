@@ -1,14 +1,28 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.CONDITION_JOIN_PROP
 import dev.keliver.portal.CondJoin
 import dev.keliver.portal.CondTest
-import dev.keliver.portal.conditionKey
-import dev.keliver.portal.isConditionKey
-import dev.keliver.portal.termTypeMisfit
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.LOGIC_NODE_TYPES
 import dev.keliver.portal.PropKind
+import dev.keliver.portal.conditionKey
+import dev.keliver.portal.isConditionKey
 import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.listElementType
@@ -16,6 +30,7 @@ import dev.keliver.portal.listKindOf
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.propSourceType
 import dev.keliver.portal.templateRefTypeFits
+import dev.keliver.portal.termTypeMisfit
 import dev.keliver.portal.tokenFits
 import dev.keliver.portal.tokenKindOf
 import dev.keliver.portal.widgetSpec
@@ -224,7 +239,8 @@ public data class UiDocument(
           val w = d.find(Handle(h)) as? DocNode.Widget ?: continue // gone since: skip
           val scope = scopeParentOf(d.root, Handle(h))
           val keep = entries.filter { (key, _) ->
-            key !in w.modifiers && // a concurrent edit set it since: theirs wins
+            key !in w.modifiers &&
+              // a concurrent edit set it since: theirs wins
               modifierSpecs.firstOrNull { it.name == key.substringBefore('.') }?.isValidUnder(scope) != false
           }
           if (keep.isEmpty()) continue
@@ -497,8 +513,11 @@ private fun conditionPropMisfit(nodeType: String, key: String, v: PropValue): St
     "negate" -> if (v is PropValue.Lit && v.tag == "b") null else "Condition.negate is a Boolean"
     // Empty while an editor's field is being retyped (exported as a placeholder until named).
     // Never dotted: `if (item.x) { … }` is not grammar (an item field is read by a conditional value).
-    "field" -> if (v is PropValue.Lit && v.tag == "s" && (v.s.isNullOrEmpty() || SCREEN_FIELD.matches(v.s))) null
-      else "Condition.field is a screen binding's name (an item field fits only a conditional value)"
+    "field" -> if (v is PropValue.Lit && v.tag == "s" && (v.s.isNullOrEmpty() || SCREEN_FIELD.matches(v.s))) {
+      null
+    } else {
+      "Condition.field is a screen binding's name (an item field fits only a conditional value)"
+    }
     else -> null
   }
 }
@@ -634,8 +653,18 @@ private fun conditionTypeMisfit(
       val tt = CondTest.fromWire(t.test) ?: continue
       when {
         tt == CondTest.Bool -> testedBoolean = true
-        tt == CondTest.Eq -> operandKind(t.operand)?.let { k -> if (k == "Boolean") testedBoolean = true else { eqTypes += k; notBoolean = true } }
-        else -> { notBoolean = true; if (tt == CondTest.Empty || tt == CondTest.Blank) testedText = true }
+        tt == CondTest.Eq -> operandKind(t.operand)?.let { k ->
+          if (k == "Boolean") {
+            testedBoolean = true
+          } else {
+            eqTypes += k
+            notBoolean = true
+          }
+        }
+        else -> {
+          notBoolean = true
+          if (tt == CondTest.Empty || tt == CondTest.Blank) testedText = true
+        }
       }
     }
   }
@@ -721,7 +750,12 @@ internal fun DocNode.Widget.conditionTerms(): List<DocTerm> {
 
 /** K6: the Kotlin type of an equality operand — "String", "Int" or "Boolean"; null for anything else. */
 private fun operandKind(op: PropValue?): String? = when (op) {
-  is PropValue.Lit -> when (op.tag) { "s" -> "String"; "i" -> "Int"; "b" -> "Boolean"; else -> null }
+  is PropValue.Lit -> when (op.tag) {
+    "s" -> "String"
+    "i" -> "Int"
+    "b" -> "Boolean"
+    else -> null
+  }
   is PropValue.Token -> operandKind(op.value)
   else -> null
 }
@@ -784,7 +818,7 @@ private fun conditionShapeMisfit(n: DocNode.Widget): String? {
     }
     if ('.' !in k) continue
     val i = k.substringAfter('.').toInt()
-    if (i >= terms.size) return "Condition.$k belongs to no term (a term ${i} needs `${conditionKey("field", i)}`, and every term before it)"
+    if (i >= terms.size) return "Condition.$k belongs to no term (a term $i needs `${conditionKey("field", i)}`, and every term before it)"
   }
   terms.forEachIndexed { i, t ->
     if (i > 0 && t.field.isEmpty()) return "Condition term $i needs a field"
@@ -873,7 +907,9 @@ private fun otherEqualities(root: DocNode, skip: Pair<Handle, String?>, excluded
       val item = (n.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item"
       val list = (n.props["items"] as? PropValue.Lit)?.s.orEmpty()
       items + (item to list)
-    } else items
+    } else {
+      items
+    }
     n.children.forEach { walk(it, inner) }
   }
   walk(root, emptyMap())
@@ -922,11 +958,13 @@ private fun conditionPropOpMisfit(w: DocNode.Widget, key: String, v: PropValue?)
   val index = if (key == CONDITION_JOIN_PROP) -1 else key.substringAfter('.', "0").toInt()
   val shape = "a compound or equality condition's shape is edited in code (or by replacing the Condition)"
   // K6 review: the join changes as a conditional value's does — set to "or" (`||`), removed for `&&`.
-  if (key == CONDITION_JOIN_PROP) return when {
-    terms.size < 2 -> "Condition.join joins two or more terms"
-    v == null -> null
-    v is PropValue.Lit && v.tag == "s" && v.s == CondJoin.Or.wire -> null
-    else -> "Condition.join is \"or\" (||), or absent (&&)"
+  if (key == CONDITION_JOIN_PROP) {
+    return when {
+      terms.size < 2 -> "Condition.join joins two or more terms"
+      v == null -> null
+      v is PropValue.Lit && v.tag == "s" && v.s == CondJoin.Or.wire -> null
+      else -> "Condition.join is \"or\" (||), or absent (&&)"
+    }
   }
   if (index >= terms.size) return "Condition.$key: $shape"
   val term = terms[index]
@@ -1061,8 +1099,11 @@ private fun refValueMisfit(nodeType: String, key: String, v: PropValue, contract
           fields[p.field]?.let { t -> if (!templateRefTypeFits(t)) return "template $where: ${refTypeWhy(p.field, t)}" }
         }
         is PropValue.Token -> if (p.value.tag !in TEMPLATE_TOKEN_TAGS) {
-          return if (p.value.tag == "d") "template $where: token ${p.ref} is a Double, which the device (Kotlin/JS) prints as \"1\" where the preview prints \"1.0\" (a template reads String, Int and Boolean tokens)"
-          else "template $where: token ${p.ref} is not a String, Int or Boolean"
+          return if (p.value.tag == "d") {
+            "template $where: token ${p.ref} is a Double, which the device (Kotlin/JS) prints as \"1\" where the preview prints \"1.0\" (a template reads String, Int and Boolean tokens)"
+          } else {
+            "template $where: token ${p.ref} is not a String, Int or Boolean"
+          }
         }
         else -> return "template $where: a part is text, a binding or a design token"
       }
@@ -1250,12 +1291,18 @@ private fun arithMisfit(nodeType: String, key: String, v: PropValue, contract: C
     }
   }
   fun operand(x: PropValue, divisor: Boolean): String? = when {
-    divisor -> if (x is PropValue.Lit && x.tag == "i" && x.i != null && x.i != 0 && x.i != Int.MIN_VALUE) null
-      else "$where: `/` and `%` divide only by a non-zero Int literal (Kotlin/JS and wasm do not fail alike on a zero divisor)"
+    divisor -> if (x is PropValue.Lit && x.tag == "i" && x.i != null && x.i != 0 && x.i != Int.MIN_VALUE) {
+      null
+    } else {
+      "$where: `/` and `%` divide only by a non-zero Int literal (Kotlin/JS and wasm do not fail alike on a zero divisor)"
+    }
     x is PropValue.Arith -> {
       val op = dev.keliver.portal.ArithOp.fromSymbol(x.op)
-      if (op == null) "$where: unknown operator '${x.op}' (+, -, *, / or %)"
-      else operand(x.left, divisor = false) ?: operand(x.right, divisor = op.divides)
+      if (op == null) {
+        "$where: unknown operator '${x.op}' (+, -, *, / or %)"
+      } else {
+        operand(x.left, divisor = false) ?: operand(x.right, divisor = op.divides)
+      }
     }
     x is PropValue.Lit -> when {
       x.tag != "i" || x.i == null -> "$where: a literal operand is an Int"
@@ -1402,7 +1449,9 @@ private fun intReads(root: DocNode, skip: Pair<Handle, String>, excluded: Handle
   val out = ArrayList<Pair<String, String?>>()
   fun walk(n: DocNode, items: Map<String, String>) {
     if (n !is DocNode.Widget || n.handle == excluded) return
-    fun add(field: String) { out += field to (if ('.' in field) items[field.substringBefore('.')] else null) }
+    fun add(field: String) {
+      out += field to (if ('.' in field) items[field.substringBefore('.')] else null)
+    }
     n.props.forEach { (k, v) ->
       if (skip == (n.handle to k)) return@forEach
       arithFields(v).forEach(::add)
@@ -1411,7 +1460,9 @@ private fun intReads(root: DocNode, skip: Pair<Handle, String>, excluded: Handle
       val item = (n.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item"
       val list = (n.props["items"] as? PropValue.Lit)?.s.orEmpty()
       items + (item to list)
-    } else items
+    } else {
+      items
+    }
     n.children.forEach { walk(it, inner) }
   }
   walk(root, emptyMap())

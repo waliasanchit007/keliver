@@ -1,8 +1,17 @@
 /*
- * spike/keliver-web portal M2 Option X — Android Treehouse HOST.
- * Loads the keliver-material guest bundle (unsigned, from the local serve task),
- * binds HostApi (OkHttp GET of the relay), and mounts TreehouseContent with the
- * published keliver-material renderers. Template: sample/host-android.
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -26,10 +35,10 @@ import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.asZiplineHttpClient
 import coil3.ImageLoader
-import dev.keliver.leaks.LeakDetector
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
+import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portaldevice.HostApi
@@ -45,16 +54,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.EmptySerializersModule
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.ByteString.Companion.decodeHex
 
+/*
+ * spike/keliver-web portal M2 Option X — Android Treehouse HOST.
+ * Loads the keliver-material guest bundle (unsigned, from the local serve task),
+ * binds HostApi (OkHttp GET of the relay), and mounts TreehouseContent with the
+ * published keliver-material renderers. Template: sample/host-android.
+ */
+
 private const val TAG = "PortalDevice"
+
 // The Zipline dev server (:guest:serveDevelopmentZipline) serves the bundle on 8080;
 // 10.0.2.2 is the emulator's alias for the host machine's localhost.
 private const val MANIFEST_URL = "http://10.0.2.2:8080/manifest.zipline.json"

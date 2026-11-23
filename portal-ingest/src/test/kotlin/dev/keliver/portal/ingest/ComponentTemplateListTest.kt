@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Bind
@@ -65,7 +80,10 @@ class ComponentTemplateListTest {
     // The device (Kotlin/JS) prints 1.0 as "1" and a null as "null"; the
     // preview prints "1.0" and nothing — no faithful preview, so not grammar.
     for ((param, use) in listOf(
-      "ratio: Double" to "§ratio", "nick: String?" to "§{nick}", "n: Int?" to "x §n", "ok: Boolean?" to "§ok",
+      "ratio: Double" to "§ratio",
+      "nick: String?" to "§{nick}",
+      "n: Int?" to "x §n",
+      "ok: Boolean?" to "§ok",
     )) {
       val kt = """
         package app.components
@@ -136,8 +154,12 @@ class ComponentTemplateListTest {
     val inst = (d.root as DocNode.Widget).children.single() as DocNode.Widget
     val out = assertNotNull(
       WriteBack.merge(
-        screenKt, d.apply(DocOp.SetProp(inst.handle, "label", PropValue.Template(listOf(lit("Hello "), PropValue.Bind("name"))))).doc,
-        registry, tokens, "app/screens/Home.kt", base = d,
+        screenKt,
+        d.apply(DocOp.SetProp(inst.handle, "label", PropValue.Template(listOf(lit("Hello "), PropValue.Bind("name"))))).doc,
+        registry,
+        tokens,
+        "app/screens/Home.kt",
+        base = d,
       ),
     )
     assertEquals(screenKt.replace("\"Hi \${b.name}\"", "\"Hello \${b.name}\""), out)

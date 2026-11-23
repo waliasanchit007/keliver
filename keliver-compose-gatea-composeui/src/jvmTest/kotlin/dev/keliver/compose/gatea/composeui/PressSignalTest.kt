@@ -25,11 +25,11 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.swipeUp
 import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import dev.keliver.compose.LocalHostFeatures
 import dev.keliver.compose.extras.PRESS_HOST_FEATURE as GUEST_PRESS_FEATURE

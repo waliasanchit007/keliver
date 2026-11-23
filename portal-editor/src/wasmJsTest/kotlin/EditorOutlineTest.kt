@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
@@ -63,9 +78,14 @@ class EditorOutlineTest {
   //    15 Row (y 500..560):  16 Text (x 0..100)   17 Text (x 200..300)
   private val page = n(10, "Box", n(11, "Column", n(12, "StyledText"), n(13, "Box"), n(14, "StyledText"), n(15, "Row", n(16, "StyledText"), n(17, "StyledText"))))
   private val boxes = mapOf(
-    10 to DropBox(0.0, 0.0, 400.0, 1000.0), 11 to DropBox(0.0, 0.0, 400.0, 1000.0),
-    12 to DropBox(0.0, 0.0, 400.0, 100.0), 13 to DropBox(0.0, 140.0, 400.0, 300.0), 14 to DropBox(0.0, 340.0, 400.0, 400.0),
-    15 to DropBox(0.0, 500.0, 400.0, 560.0), 16 to DropBox(0.0, 500.0, 100.0, 560.0), 17 to DropBox(200.0, 500.0, 300.0, 560.0),
+    10 to DropBox(0.0, 0.0, 400.0, 1000.0),
+    11 to DropBox(0.0, 0.0, 400.0, 1000.0),
+    12 to DropBox(0.0, 0.0, 400.0, 100.0),
+    13 to DropBox(0.0, 140.0, 400.0, 300.0),
+    14 to DropBox(0.0, 340.0, 400.0, 400.0),
+    15 to DropBox(0.0, 500.0, 400.0, 560.0),
+    16 to DropBox(0.0, 500.0, 100.0, 560.0),
+    17 to DropBox(200.0, 500.0, 300.0, 560.0),
   )
   private val pageAccepts = { node: WidgetNode -> node.type in setOf("Box", "Column", "Row") }
   private fun drop(hit: Int, x: Double, y: Double) = canvasDropPlace(page, hit, x, y, { boxes[it.id] }, pageAccepts)
@@ -107,8 +127,10 @@ class EditorOutlineTest {
       val top = r * 120.0
       listOf(DropBox(0.0, top, 300.0, top + 100), DropBox(10.0, top + 10, 200.0, top + 40), DropBox(10.0, top + 50, 250.0, top + 90))
     }
-    assertEquals(listOf(DropBox(0.0, 0.0, 300.0, 100.0), DropBox(0.0, 120.0, 300.0, 220.0), DropBox(0.0, 240.0, 300.0, 340.0)).map { listOf(it.left, it.top, it.right, it.bottom) },
-      instanceBoxes(rects.reversed()).map { listOf(it.left, it.top, it.right, it.bottom) })
+    assertEquals(
+      listOf(DropBox(0.0, 0.0, 300.0, 100.0), DropBox(0.0, 120.0, 300.0, 220.0), DropBox(0.0, 240.0, 300.0, 340.0)).map { listOf(it.left, it.top, it.right, it.bottom) },
+      instanceBoxes(rects.reversed()).map { listOf(it.left, it.top, it.right, it.bottom) },
+    )
     // Rows that only touch are separate; an empty rect draws nothing.
     assertEquals(2, instanceBoxes(listOf(DropBox(0.0, 0.0, 100.0, 50.0), DropBox(0.0, 50.0, 100.0, 100.0), DropBox(0.0, 0.0, 0.0, 0.0))).size)
   }
@@ -116,8 +138,12 @@ class EditorOutlineTest {
   @Test fun aDropInACardsPaddingLandsInItsColumnNotOverIt() {
     // 1 Box (card, 0..300 × 0..220) holding 2 Column (10..290 × 10..200): 3 Text (y 10..60), 4 Button (y 150..200).
     val card = n(1, "Box", n(2, "Column", n(3, "StyledText"), n(4, "Button")))
-    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 220.0), 2 to DropBox(10.0, 10.0, 290.0, 200.0),
-      3 to DropBox(10.0, 10.0, 290.0, 60.0), 4 to DropBox(10.0, 150.0, 290.0, 200.0))
+    val b = mapOf(
+      1 to DropBox(0.0, 0.0, 300.0, 220.0),
+      2 to DropBox(10.0, 10.0, 290.0, 200.0),
+      3 to DropBox(10.0, 10.0, 290.0, 60.0),
+      4 to DropBox(10.0, 150.0, 290.0, 200.0),
+    )
     val accepts = { node: WidgetNode -> node.type == "Box" || node.type == "Column" }
     assertEquals(4 to DropZone.After, canvasDropPlace(card, 1, 150.0, 212.0, { b[it.id] }, accepts), "below the last button, in the padding")
     assertEquals(3 to DropZone.Before, canvasDropPlace(card, 1, 150.0, 4.0, { b[it.id] }, accepts), "above the first text, in the padding")
@@ -127,8 +153,13 @@ class EditorOutlineTest {
     // Review 5: 1 Column (the screen, 0..300 × 0..780) holding only 2 Box (a card, 16..284 × 16..236)
     // around 3 Column (26..274 × 26..226): 4 Text, 5 Button.
     val page = n(1, "Column", n(2, "Box", n(3, "Column", n(4, "StyledText"), n(5, "Button"))))
-    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 780.0), 2 to DropBox(16.0, 16.0, 284.0, 236.0),
-      3 to DropBox(26.0, 26.0, 274.0, 226.0), 4 to DropBox(26.0, 26.0, 274.0, 76.0), 5 to DropBox(26.0, 176.0, 274.0, 226.0))
+    val b = mapOf(
+      1 to DropBox(0.0, 0.0, 300.0, 780.0),
+      2 to DropBox(16.0, 16.0, 284.0, 236.0),
+      3 to DropBox(26.0, 26.0, 274.0, 226.0),
+      4 to DropBox(26.0, 26.0, 274.0, 76.0),
+      5 to DropBox(26.0, 176.0, 274.0, 226.0),
+    )
     val accepts = { node: WidgetNode -> node.type == "Box" || node.type == "Column" }
     assertEquals(2 to DropZone.After, canvasDropPlace(page, 1, 150.0, 400.0, { b[it.id] }, accepts), "well below the card: after it")
     assertEquals(5 to DropZone.After, canvasDropPlace(page, 2, 150.0, 232.0, { b[it.id] }, accepts), "in the card's padding: still inside it")
@@ -163,8 +194,12 @@ class EditorOutlineTest {
     // Round 5 (L1): 1 StyledBox (the screen, 0..390 × 0..780) padding a short 2 Column (24..366 × 24..300):
     // 3 Text, 4 Button. A drop far below the content is no second child of the box (drawn over the top).
     val screen = n(1, "StyledBox", n(2, "Column", n(3, "StyledText"), n(4, "Button")))
-    val b = mapOf(1 to DropBox(0.0, 0.0, 390.0, 780.0), 2 to DropBox(24.0, 24.0, 366.0, 300.0),
-      3 to DropBox(24.0, 24.0, 366.0, 80.0), 4 to DropBox(24.0, 250.0, 366.0, 300.0))
+    val b = mapOf(
+      1 to DropBox(0.0, 0.0, 390.0, 780.0),
+      2 to DropBox(24.0, 24.0, 366.0, 300.0),
+      3 to DropBox(24.0, 24.0, 366.0, 80.0),
+      4 to DropBox(24.0, 250.0, 366.0, 300.0),
+    )
     val accepts = { node: WidgetNode -> node.type == "StyledBox" || node.type == "Column" }
     assertEquals(4 to DropZone.After, canvasDropPlace(screen, 1, 195.0, 600.0, { b[it.id] }, accepts))
   }
@@ -172,8 +207,12 @@ class EditorOutlineTest {
   @Test fun aDropInTheGapBetweenAListsRowsGoesBesideTheListNotIntoEveryRow() {
     // Round 5 (L3): 1 Column holding 2 Repeat whose row 3 Box is drawn twice (0..100, 120..220).
     val page = n(1, "Column", n(2, "Repeat", n(3, "Box", n(4, "StyledText"))))
-    val b = mapOf(1 to DropBox(0.0, 0.0, 300.0, 400.0), 2 to DropBox(0.0, 0.0, 300.0, 220.0), 3 to DropBox(0.0, 0.0, 300.0, 220.0),
-      4 to DropBox(10.0, 10.0, 290.0, 40.0))
+    val b = mapOf(
+      1 to DropBox(0.0, 0.0, 300.0, 400.0),
+      2 to DropBox(0.0, 0.0, 300.0, 220.0),
+      3 to DropBox(0.0, 0.0, 300.0, 220.0),
+      4 to DropBox(10.0, 10.0, 290.0, 40.0),
+    )
     val accepts = { node: WidgetNode -> node.type in setOf("Column", "Repeat", "Box") }
     assertEquals(2 to DropZone.After, canvasDropPlace(page, 1, 150.0, 110.0, { b[it.id] }, accepts), "the gap between the rows")
     assertEquals(4 to DropZone.After, canvasDropPlace(page, 3, 150.0, 60.0, { b[it.id] }, accepts), "a row's insides, hit, still take it")

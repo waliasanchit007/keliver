@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Square, Inc.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,9 +70,10 @@ data class HttpRecordingUpstream(
       "httpRecording upstream baseUrl must be an absolute HTTPS URL without user-info, query, or fragment"
     }
     val host = uri!!.host
-    val ipv4Literal = host.split('.').size == 4 && host.split('.').all {
-      it.toIntOrNull() in 0..255
-    }
+    val ipv4Literal = host.split('.').size == 4 &&
+      host.split('.').all {
+        it.toIntOrNull() in 0..255
+      }
     require(':' !in host && !ipv4Literal) {
       "httpRecording upstream baseUrl must use a DNS hostname, not an IP literal"
     }
@@ -477,7 +478,11 @@ internal fun <T> withStoreLock(
   block: () -> T,
 ): T {
   val lock = storeLockDir(repoDir)
-  if (!runCatching { lock.parentFile.mkdirs(); lock.parentFile.isDirectory }.getOrDefault(false)) {
+  if (!runCatching {
+      lock.parentFile.mkdirs()
+      lock.parentFile.isDirectory
+    }.getOrDefault(false)
+  ) {
     onUnavailable(lock, "${lock.parentFile} could not be created, so the store lock cannot be taken")
   }
   val deadline = System.currentTimeMillis() + waitMillis
@@ -532,10 +537,14 @@ internal fun <T> withStoreLock(
   // about who holds the lock. `.trim()` here would have called a
   // whitespace-padded marker ours when `lock_is_ours` would not.
   val marked = runCatching {
-    pidFile.writeText(me + "\n"); pidFile.readText().trimEnd('\n') == me
+    pidFile.writeText(me + "\n")
+    pidFile.readText().trimEnd('\n') == me
   }.getOrDefault(false)
   if (!marked) {
-    runCatching { pidFile.delete(); lock.delete() }
+    runCatching {
+      pidFile.delete()
+      lock.delete()
+    }
     onUnavailable(lock, "the holder marker in $lock could not be written")
   }
 
@@ -617,7 +626,7 @@ internal fun lockHolderState(
   // alone. Both sides now accept exactly [1-9][0-9]{0,9}.
   val text = recorded.orEmpty()
   if (text.isEmpty() || !text.all { it in '0'..'9' }) return HolderState.UNKNOWN
-  if (text[0] == '0') return HolderState.UNKNOWN     // our writer never emits one
+  if (text[0] == '0') return HolderState.UNKNOWN // our writer never emits one
   if (text.length > 10) return HolderState.UNKNOWN
   val pid = text.toLongOrNull() ?: return HolderState.UNKNOWN
   // A pid cannot exceed the platform's pid_t. Above that there is no process to

@@ -63,3 +63,13 @@ if (!(genericEditorRaw in ['true', 'false'])) {
   throw new GradleException("keliver: -Pkeliver.genericEditor=${genericEditorRaw} is not true or false.")
 }
 kotlin.sourceSets.wasmJsMain.kotlin.srcDir(genericEditorRaw == 'true' ? 'src/genericEditor/kotlin' : 'src/repoEditor/kotlin')
+
+// AppLibCompiledComponents.kt is written by the relay (keliver.portal.json compiledComponents) and
+// compared byte for byte by `:portal-relay:compiledComponentAdapters -Pcheck`: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/AppLibCompiledComponents.kt")
+    }
+  }
+}

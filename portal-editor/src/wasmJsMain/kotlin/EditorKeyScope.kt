@@ -1,12 +1,27 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Where the author last pointed or focused.
+ *
  * F1 (feedback round 1): a key that changes the tree — Delete/Backspace, ⌘D,
  * ⌘X, ⌘V — acts on the selection only when the author was last on the tree
  * (the canvas or the outline). A property field that is re-rendered away (a
  * refused write re-reads the document) leaves the keyboard on the page body;
  * a Backspace meant for that field must not then delete the selected node.
  */
-
-/** Where the author last pointed or focused. */
 internal enum class KeyScope { Tree, Elsewhere }
 
 /** The scope a pointer press or focus lands in: on the tree unless it is a field, or outside the canvas and outline. */

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.render
 
 import dev.keliver.layout.api.Constraint
@@ -72,11 +87,16 @@ class LayoutParityTest {
       setContentAndSnapshot {
         RenderNode(
           WidgetNode(
-            "Row", mapOf("width" to 1),
+            "Row",
+            mapOf("width" to 1),
             listOf(
-              WidgetNode("Condition", mapOf("field" to "show"), listOf(
-                WidgetNode("StyledText", mapOf("text" to Bind("show"), "mod.Flex.value" to 1.0)),
-              )),
+              WidgetNode(
+                "Condition",
+                mapOf("field" to "show"),
+                listOf(
+                  WidgetNode("StyledText", mapOf("text" to Bind("show"), "mod.Flex.value" to 1.0)),
+                ),
+              ),
               WidgetNode("SomeComponent"),
             ),
           ),

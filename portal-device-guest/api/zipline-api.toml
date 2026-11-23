@@ -1,0 +1,22 @@
+[dev.keliver.portaldevice.HostApi]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # suspend fun httpCall(kotlin.String): kotlin.String
+  "nBkbe7x3",
+]
+
+[dev.keliver.portaldevice.PortalPresenter]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # fun launch(): dev.keliver.treehouse.ZiplineTreehouseUi
+  "JXFo5wYy",
+
+  # val appLifecycle: dev.keliver.treehouse.AppLifecycle
+  "bJAof1WT",
+]

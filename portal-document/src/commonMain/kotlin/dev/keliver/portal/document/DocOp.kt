@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import kotlinx.serialization.Serializable
@@ -17,14 +32,23 @@ public data class OpEnvelope(
 @Serializable
 public sealed interface DocOp {
   @Serializable public data class InsertNode(val parent: Handle, val after: Handle?, val node: DocNode) : DocOp
+
   @Serializable public data class DeleteNode(val target: Handle) : DocOp
+
   @Serializable public data class MoveNode(val target: Handle, val newParent: Handle, val after: Handle?) : DocOp
+
   @Serializable public data class SetProp(val target: Handle, val name: String, val value: PropValue) : DocOp
+
   @Serializable public data class RemoveProp(val target: Handle, val name: String) : DocOp
+
   @Serializable public data class SetModifier(val target: Handle, val name: String, val value: PropValue) : DocOp
+
   @Serializable public data class RemoveModifier(val target: Handle, val name: String) : DocOp
+
   @Serializable public data class RenameId(val target: Handle, val id: String?) : DocOp
+
   @Serializable public data class ReplaceRaw(val target: Handle, val text: String) : DocOp
+
   @Serializable public data class ContractEdit(val contract: Contract) : DocOp
 }
 

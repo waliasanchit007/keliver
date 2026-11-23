@@ -16,6 +16,7 @@
 package dev.keliver.compose.gatea.composeui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.Interaction
@@ -28,7 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.ScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,9 +43,9 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -64,7 +64,7 @@ class PressHostTest {
   private fun Modifier.signal(): Modifier = pressSignal(Unit, onPress = { log += "press" }, onCancel = { log += "cancel" })
 
   @Composable
-  private fun Row(tag: String, modifier: Modifier) {
+  private fun Row(tag: String, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(80.dp).testTag(tag))
   }
 

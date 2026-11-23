@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
@@ -7,10 +22,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import dev.keliver.Modifier
 import dev.keliver.material.compose.StyledText
 import dev.keliver.material.modifier.SelectionTag
-import dev.keliver.portal.Action
 import dev.keliver.material.testing.KeliverMaterialTester
 import dev.keliver.material.testing.StyledBoxValue
 import dev.keliver.material.testing.StyledTextValue
+import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.EmptyComponentRegistry
@@ -81,7 +96,8 @@ class CompiledComponentEditorTest {
         RenderNode(
           selectionTagged(
             WidgetNode(
-              "Column", emptyMap(),
+              "Column",
+              emptyMap(),
               listOf(
                 WidgetNode("ParityOpaqueInitials", mapOf("name" to ""), id = 3),
                 WidgetNode("ParityOpaqueInitials", mapOf("name" to "ada"), id = 4),
@@ -130,7 +146,10 @@ class CompiledComponentEditorTest {
   /** An opaque component used INSIDE a transparent one draws compiled, tagged with the outer instance. */
   @Test fun anOpaqueComponentNestedInATransparentOneDrawsCompiled() = runTest {
     val outer = ComponentSpec(
-      "Outer", listOf(PropSpec("title", PropKind.Text, "Title")), emptyList(), mapOf("title" to "String"),
+      "Outer",
+      listOf(PropSpec("title", PropKind.Text, "Title")),
+      emptyList(),
+      mapOf("title" to "String"),
       body = WidgetNode("Column", emptyMap(), listOf(WidgetNode("ParityOpaqueBadge", mapOf("label" to Bind("title"), "count" to 1), id = 101)), id = 100),
       dependencies = setOf("ParityOpaqueBadge"),
     )
@@ -154,12 +173,20 @@ class CompiledComponentEditorTest {
   /** Precedence: a TRANSPARENT component keeps its editable grammar view even when an adapter exists. */
   @Test fun aTransparentComponentIsExpandedNotCompiled() = runTest {
     val leaf = ComponentSpec(
-      "ParityLeaf", listOf(PropSpec("label", PropKind.Text, "Label")), emptyList(), mapOf("label" to "String"),
+      "ParityLeaf",
+      listOf(PropSpec("label", PropKind.Text, "Label")),
+      emptyList(),
+      mapOf("label" to "String"),
       body = WidgetNode("StyledText", mapOf("text" to Bind("label"), "fontSize" to 99), id = 200),
     )
     setEditorComponents(MapComponentRegistry(listOf(leaf)))
     var called = 0
-    val spy = ParityCompiledComponents + ("ParityLeaf" to CompiledComponent { call -> called++; ParityCompiledComponents.getValue("ParityLeaf").bind(call) })
+    val spy = ParityCompiledComponents + (
+      "ParityLeaf" to CompiledComponent { call ->
+        called++
+        ParityCompiledComponents.getValue("ParityLeaf").bind(call)
+      }
+      )
     installComponentPreview(entry(spy))
     val values = KeliverMaterialTester {
       setContentAndSnapshot { RenderNode(selectionTagged(WidgetNode("ParityLeaf", mapOf("label" to "x"), id = 9))) }
@@ -246,7 +273,12 @@ class CompiledComponentEditorTest {
 
   @Test fun aCycleFlaggedComponentKeepsItsPlaceholder() = runTest {
     var called = 0
-    val spy = mapOf("Loop" to CompiledComponent { call -> called++; call.compose { StyledText(text = "loop") } })
+    val spy = mapOf(
+      "Loop" to CompiledComponent { call ->
+        called++
+        call.compose { StyledText(text = "loop") }
+      },
+    )
     setEditorComponents(
       MapComponentRegistry(
         listOf(ComponentSpec("Loop", emptyList(), emptyList(), emptyMap(), transparent = false, diagnostic = dev.keliver.portal.cycleDiagnostic("Loop"))),
@@ -268,11 +300,16 @@ private class SpyRegistry : SaveableStateRegistry {
   val consumed = mutableListOf<String>()
   val registered = mutableListOf<String>()
   override fun canBeSaved(value: Any): Boolean = true
-  override fun consumeRestored(key: String): Any? { consumed += key; return null }
+  override fun consumeRestored(key: String): Any? {
+    consumed += key
+    return null
+  }
   override fun performSave(): Map<String, List<Any?>> = emptyMap()
   override fun registerProvider(key: String, valueProvider: () -> Any?): SaveableStateRegistry.Entry {
     registered += key
-    return object : SaveableStateRegistry.Entry { override fun unregister() {} }
+    return object : SaveableStateRegistry.Entry {
+      override fun unregister() {}
+    }
   }
 }
 

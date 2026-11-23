@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.OpBatch
@@ -39,7 +54,9 @@ class UndoExactTextRelayTest {
     val f = dir.resolve("LabelPill.kt").apply { writeText(text) }
     val svc = assertNotNull(
       DocumentService.forComponent(
-        "default/component:LabelPill", f, "LabelPill",
+        "default/component:LabelPill",
+        f,
+        "LabelPill",
         components = { dev.keliver.portal.EmptyComponentRegistry },
         tokens = { dev.keliver.portal.ingest.TokenTable.EMPTY },
         tokenFileId = "app/components/LabelPill.kt",

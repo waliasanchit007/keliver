@@ -1,20 +1,35 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
-import dev.keliver.portal.document.Contract
-import dev.keliver.portal.document.DocNode
-import dev.keliver.portal.document.UiDocument
-import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.EmptyComponentRegistry
-import dev.keliver.portal.exportKotlin
+import dev.keliver.portal.document.Contract
+import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.Handle
+import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.toWidgetTree
+import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.modifierSpecs
+import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFunctionLiteral
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -118,7 +133,9 @@ object NodeEmitter {
     val file = PsiEnv.parse("Tmp.kt", exported)
     val fn = file.declarations.filterIsInstance<KtNamedFunction>().first { it.name == "Tmp" }
     val top = (fn.bodyExpression as KtBlockExpression).statements.first()
-    val stmt = if (!givesScope) top else {
+    val stmt = if (!givesScope) {
+      top
+    } else {
       ((top as KtCallExpression).lambdaArguments.first().getLambdaExpression()!!.bodyExpression as KtBlockExpression)
         .statements.first()
     }
@@ -144,15 +161,19 @@ object NodeEmitter {
     if (param == null || param == "b") return text
     val base = stmt.textRange.startOffset
     val refs = PsiTreeUtil.collectElementsOfType(stmt, KtNameReferenceExpression::class.java).filter { ref ->
-      ref.getReferencedName() == "b" && when (val p = ref.parent) {
-        is KtDotQualifiedExpression -> p.receiverExpression == ref
-        is KtCallableReferenceExpression -> p.receiverExpression == ref
-        else -> false
-      } && !shadowed(ref, stmt)
+      ref.getReferencedName() == "b" &&
+        when (val p = ref.parent) {
+          is KtDotQualifiedExpression -> p.receiverExpression == ref
+          is KtCallableReferenceExpression -> p.receiverExpression == ref
+          else -> false
+        } &&
+        !shadowed(ref, stmt)
     }
     // E14: in a component an action is its event parameter itself — `{ b.onTap() }` is `onTap`, as
     // its authors write it. A call `onTap()` would not compile for an optional (nullable) event.
-    val forwards = if (param != COMPONENT_PARAMS) emptyList() else
+    val forwards = if (param != COMPONENT_PARAMS) {
+      emptyList()
+    } else {
       PsiTreeUtil.collectElementsOfType(stmt, org.jetbrains.kotlin.psi.KtLambdaExpression::class.java).mapNotNull { lambda ->
         val only = lambda.bodyExpression?.statements?.singleOrNull() as? KtDotQualifiedExpression ?: return@mapNotNull null
         val call = only.selectorExpression as? org.jetbrains.kotlin.psi.KtCallExpression ?: return@mapNotNull null
@@ -162,6 +183,7 @@ object NodeEmitter {
         if (receiver.getReferencedName() != "b" || !forwardsItsParameter) return@mapNotNull null
         Triple(lambda.textRange.startOffset - base, lambda.textRange.endOffset - base, call.calleeExpression!!.text)
       }
+    }
     val renames = refs.filter { r -> forwards.none { (from, to, _) -> r.textRange.startOffset - base in from until to } }.map { ref ->
       val at = ref.textRange.startOffset - base
       // E14: a component's parameters are read by their bare names — `b.title` is `title`, `b::onTap` is `onTap`.
