@@ -831,7 +831,7 @@ do_diff() { # maintainers: regenerate patches/ from an edited clone (after `engi
   local f tmp; tmp="$(mktemp -d)"
   mkdir -p "$tmp/a" "$tmp/b"
   for f in $QJS_FILES; do cp "$s/$f" "$tmp/a/$f"; cp "$q/$f" "$tmp/b/$f"; done
-  (cd "$tmp" && diff -ru a b > "$out/quickjs-$QJS_VERSION-asuintn.patch") || true
+  (cd "$tmp" && diff -ru a b > "$out/quickjs-$QJS_VERSION-backports.patch") || true
   rm -rf "$tmp"
   # Zipline: everything else, against the tag. New files (tests) need git's intent-to-add.
   git -C "$zl" add -N .

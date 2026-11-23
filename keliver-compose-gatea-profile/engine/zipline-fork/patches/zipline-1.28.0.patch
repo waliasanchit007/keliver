@@ -2870,10 +2870,10 @@ index 0000000..82bcab6
 +}
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..25d8f57
+index 0000000..82a41ef
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,156 @@
+@@ -0,0 +1,298 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -2898,6 +2898,7 @@ index 0000000..25d8f57
 +import kotlin.test.assertEquals
 +import kotlin.test.assertNotEquals
 +import kotlin.test.assertNull
++import kotlin.test.assertTrue
 +
 +/**
 + * Keliver's fork (NF2): what QuickJS 2026-06-04 changes for Zipline. BigInt is in the engine, so
@@ -2976,19 +2977,160 @@ index 0000000..25d8f57
 +
 +  @Test fun asUintNAtTheSizeLimit() {
 +    // QuickJS caps a BigInt at 2^20 bits (Node at 2^30, so bigint-ops.js cannot compare this). A
-+    // negative value at a width of 2^20 or more needs one bit more than that: a RangeError, not a
-+    // crash or a truncated result. One bit narrower fits; a non-negative value is returned as is.
++    // negative value at a width of 2^20 or more needs one bit more than that. Upstream's asUintN
++    // (bellard/quickjs c17f7fc1db) returns it at exactly 2^20, one limb over the cap, and most
++    // operations on it may then be a RangeError (those that allocate through the capped path); wider
++    // is a RangeError at once. Never a crash or a wrong result. One bit narrower fits; a
++    // non-negative value is returned as is.
 +    assertEquals(1_048_575, quickJs.evaluate("BigInt.asUintN(2 ** 20 - 1, -1n).toString(2).length"))
-+    for (width in listOf("2 ** 20", "2 ** 30", "2 ** 53 - 1")) {
-+      assertEquals(
-+        "RangeError",
-+        quickJs.evaluate(
-+          "try { BigInt.asUintN($width, -1n); 'none' } catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
-+        ),
++    assertEquals(1_048_576, quickJs.evaluate("BigInt.asUintN(2 ** 20, -1n).toString(2).length"))
++    // Operations on that value: a RangeError or the right answer, whichever the engine's allocation
++    // gives (which one is not pinned), and the context still works afterwards.
++    for ((op, right) in listOf("x & 1n" to "1", "x >> 1048575n" to "1", "x % 7n" to "1", "-x < 0n" to "true")) {
++      val result = quickJs.evaluate(
++        "try { var x = BigInt.asUintN(2 ** 20, -1n); String($op) } " +
++          "catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
 +      )
++      assertTrue(result == right || result == "RangeError", "$op gave $result")
++    }
++    quickJs.evaluate("x = undefined")
++    quickJs.gc()
++    assertEquals("2", quickJs.evaluate("String(1n + 1n)"))
++    for (width in listOf("2 ** 20", "2 ** 20 + 1", "2 ** 30", "2 ** 53 - 1")) {
++      if (width != "2 ** 20") {
++        assertEquals(
++          "RangeError",
++          quickJs.evaluate(
++            "try { BigInt.asUintN($width, -1n); 'none' } catch (e) { e instanceof RangeError ? 'RangeError' : String(e) }",
++          ),
++        )
++      }
 +      assertEquals("12345", quickJs.evaluate("String(BigInt.asUintN($width, 12345n))"))
 +      assertEquals("-1", quickJs.evaluate("String(BigInt.asIntN($width, -1n))"))
 +    }
++  }
++
++  @Test fun bigIntUpstreamFixes() {
++    // bellard/quickjs fixes after 2026-06-04, backported. ef5c6e356c: with 64-bit limbs, -- on a
++    // BigInt that is not short added 2^32 - 1 (Long.MIN_VALUE - 1 gave -9223372032559808513).
++    assertEquals(
++      "true true true true",
++      quickJs.evaluate(
++        """
++        var a = -(2n**63n); a--;
++        var b = 2n**64n; b--;
++        var c = 0x1ffffffffffffffffffffff01n; --c;
++        var d = -(2n**64n); --d;
++        [a === -(2n**63n) - 1n, b === 2n**64n - 1n, c === 0x1ffffffffffffffffffffff00n,
++          d === -(2n**64n) - 1n].join(' ');
++        """.trimIndent(),
++      ),
++    )
++    // 7852f3a80f (#583): a negative BigInt against a negative float of another magnitude.
++    assertEquals(
++      "true true true true true",
++      quickJs.evaluate("[-10n < -1.5, -1n > -2.5, -(2n**70n) < -1e20, -0.5 > -1n, -2147483648 < -1n].join(' ')"),
++    )
++    // 0d9e58551a: a 64-bit store (JS_ToBigInt64), whichever limb size the host has.
++    assertEquals(
++      "-1 18446744073709551615 -9223372036854775808",
++      quickJs.evaluate(
++        "var t = new BigInt64Array(2), u = new BigUint64Array(1); t[0] = -1n; u[0] = -1n; t[1] = 2n**63n;" +
++          " [t[0], u[0], t[1]].join(' ')",
++      ),
++    )
++  }
++
++  /**
++   * Functions whose error paths were patched (bellard/quickjs 0943061: a double free in
++   * Promise.withResolvers when a property cannot be defined; 813636e: a detached or transferred
++   * ArrayBuffer's free function ran again when it was finalized). Those paths need an allocation
++   * failure or an external buffer, which a test cannot arrange here; this checks the reference
++   * counting on the paths every call takes, and that finalizing detached buffers is safe.
++   */
++  @Test fun backportedErrorPathsKeepTheirSuccessPaths() {
++    assertEquals(
++      "promise,resolve,reject true function function 1000",
++      quickJs.evaluate(
++        """
++        var kept = [];
++        for (var i = 0; i < 1000; i++) kept.push(Promise.withResolvers());
++        var r = kept[0];
++        [Object.keys(r).join(), r.promise instanceof Promise, typeof r.resolve, typeof r.reject,
++          kept.length].join(' ');
++        """.trimIndent(),
++      ),
++    )
++    quickJs.evaluate("kept = undefined; r = undefined")
++    quickJs.gc()
++
++    // ArrayBuffer.prototype.transfer detaches the original: through JS_DetachArrayBuffer at length
++    // 0, by moving the data at the same length, by reallocating at another length.
++    assertEquals(
++      "0 true true 7 16 0 true TypeError",
++      quickJs.evaluate(
++        """
++        var a = new ArrayBuffer(8); new Uint8Array(a)[0] = 7;
++        var b = a.transfer();
++        var c = b.transfer(16);
++        var c0 = new Uint8Array(c)[0], cLength = c.byteLength;
++        var d = c.transfer(0);
++        [a.byteLength, a.detached, b.detached, c0, cLength, d.byteLength, c.detached,
++          (function () { try { a.transfer(); return 'none'; } catch (e) { return e instanceof TypeError ? 'TypeError' : String(e); } })()
++        ].join(' ');
++        """.trimIndent(),
++      ),
++    )
++    quickJs.evaluate("a = b = c = d = c0 = cLength = undefined")
++    quickJs.gc()
++    assertEquals(
++      "7 4",
++      quickJs.evaluate(
++        "var e = new ArrayBuffer(4); new Uint8Array(e)[3] = 7; var f = e.transfer(); " +
++          "[new Uint8Array(f)[3], f.byteLength].join(' ')",
++      ),
++    )
++  }
++
++  /**
++   * Keliver's own guard, not in bellard/quickjs: a Proxy `ownKeys` trap's result sized the key table
++   * as 8 bytes times its `length`, which wrapped on a 32-bit host for lengths over 2^29 and wrote past
++   * the table. The engine now refuses more than 2^27 keys with a RangeError on every host, before
++   * allocating anything (unguarded, a 64-bit host allocated 4 GiB here and then threw a TypeError at
++   * the first missing element). Every path to the trap, and the context still works afterwards.
++   */
++  @Test fun proxyOwnKeysWithAHugeLengthThrows() {
++    quickJs.evaluate(
++      """
++      function huge(n) { return new Proxy({}, { ownKeys: function () { return { length: n, 0: 'a', 1: 'b' }; } }); }
++      function attempt(f) {
++        try { f(); return 'none'; } catch (e) { return (e instanceof RangeError ? 'RangeError ' : 'other ') + e.message; }
++      }
++      """.trimIndent(),
++    )
++    for (length in listOf("2 ** 29 + 1", "2 ** 32 - 1", "2 ** 27 + 1")) {
++      for (call in listOf("Reflect.ownKeys", "Object.keys", "Object.getOwnPropertyNames")) {
++        assertEquals(
++          "RangeError proxy: too many properties in ownKeys result (only 134217728 allowed)",
++          quickJs.evaluate("attempt(function () { $call(huge($length)); })"),
++          "$call with length $length",
++        )
++      }
++    }
++    // An ordinary result is unchanged, at a size well past any real object's key count.
++    assertEquals(
++      "1000 k0 k999",
++      quickJs.evaluate(
++        """
++        var names = []; for (var i = 0; i < 1000; i++) names.push('k' + i);
++        var keys = Reflect.ownKeys(new Proxy({}, { ownKeys: function () { return names; } }));
++        [keys.length, keys[0], keys[999]].join(' ');
++        """.trimIndent(),
++      ),
++    )
++    quickJs.evaluate("names = keys = undefined")
++    quickJs.gc()
++    assertEquals("2", quickJs.evaluate("String(1n + 1n)"))
 +  }
 +
 +  @Test fun bigIntsReturnAsLong() {

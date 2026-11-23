@@ -106,7 +106,7 @@ in $forkDir
 
 QuickJS $qjsVersion: Copyright (c) Fabrice Bellard and Charlie Gordon. Licensed under the MIT licence
 (META-INF/<module>/LICENSE-QuickJS.txt in this archive). Modified by Keliver contributors, 2026
-(patches/quickjs-$qjsVersion-asuintn.patch).
+(patches/quickjs-$qjsVersion-backports.patch).
 """
 }
 def addNotices = { File archive, String module ->
