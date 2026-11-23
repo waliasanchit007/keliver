@@ -22,19 +22,14 @@ TOOLS_VERSION="${1:-$(tr -d ' \n' < "$ROOT/build-support/portal-tools.version")}
 # them, and VERSION.json must describe what the bundle actually wires in.
 scaffold_default() { sed -nE 's/^KELIVER_VERSION="\$\{KELIVER_VERSION:-([^}]+)\}".*/\1/p' "$ROOT/scripts/$1" | head -1; }
 MAVEN_VERSION="$(scaffold_default keliver-init)"
-for s in keliver-new-editor.sh keliver-new-device-target.sh; do
-  v="$(scaffold_default "$s")"
-  [ -n "$MAVEN_VERSION" ] && [ "$v" = "$MAVEN_VERSION" ] || {
-    echo "build-portal-tools: scripts/$s wires keliver '${v:-?}' but keliver-init wires '${MAVEN_VERSION:-?}'; move them together" >&2
-    exit 1
-  }
-done
-# The host scaffolders have no fallback version: the app's Keliver version picks
-# its whole toolchain (keliver-runtime-line.sh), so an app whose
-# keliver.portal.json does not parse or names none is refused. A fixed fallback
-# coming back would silently give such an app one line's toolchain.
-for s in keliver-new-production-host.sh keliver-new-ios-host.sh; do
-  if grep -qE "(v\.strip\(\) else|except Exception: print\()[ ]*'[0-9]" "$ROOT/scripts/$s"; then
+[ -n "$MAVEN_VERSION" ] || { echo "build-portal-tools: scripts/keliver-init names no default keliver version" >&2; exit 1; }
+# Only keliver-init (which makes the app) has a default version. The scaffolders
+# that extend an app have none: the app's Keliver version picks its whole
+# toolchain (keliver-runtime-line.sh), so an app whose keliver.portal.json
+# cannot be read or parsed, or names none, is refused. A fixed fallback coming
+# back would silently give such an app one line's toolchain.
+for s in keliver-new-production-host.sh keliver-new-ios-host.sh keliver-new-device-target.sh keliver-new-editor.sh; do
+  if [ -n "$(scaffold_default "$s")" ] || grep -qE "(v\.strip\(\) else|except Exception: print\()[ ]*'[0-9]" "$ROOT/scripts/$s"; then
     echo "build-portal-tools: scripts/$s falls back to a fixed keliver version for an app that names none; it must refuse instead" >&2
     exit 1
   fi

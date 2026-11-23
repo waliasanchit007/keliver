@@ -33,7 +33,7 @@
 #                      app is edited: this prints the lines to add. Your app
 #                      supplies the plugins: Kotlin 2.2.0 with its Compose
 #                      plugin and app.cash.zipline 1.22.0 (Keliver 0.4.x);
-#                      from Keliver 0.5.0, Kotlin 2.4.20 and Keliver's Zipline
+#                      from Keliver 0.5.0, Kotlin 2.4.21 and Keliver's Zipline
 #                      fork, plugin dev.keliver.zipline 1.28.0-keliver.1.
 #                      The module applies Kotlin's Android plugin unless the
 #                      app's AGP compiles Kotlin itself (AGP 9, unless DIR's
@@ -170,7 +170,7 @@ PACKAGE="$ROOT_PKG.host"
 # proxy (KELIVER_DEVICE_PROXY_PORT) needs no change to the host.
 DEBUG_LINK_SCHEME="keliver-$(printf '%s' "$ROOT_PKG" | tr 'A-Z_' 'a-z-')"
 # The Keliver version the GUEST uses, so host and guest do not drift apart. It picks the whole
-# toolchain (keliver-runtime-line.sh), so a keliver.portal.json that does not parse, or names no
+# toolchain (keliver-runtime-line.sh), so a keliver.portal.json that cannot be read or parsed, or names no
 # appRuntime.keliverVersion, is refused rather than read as some default version.
 if [ -n "${KELIVER_HOST_KELIVER_VERSION:-}" ]; then
   KELIVER_VERSION="$KELIVER_HOST_KELIVER_VERSION"
@@ -179,7 +179,7 @@ else
 try:
     d = json.load(open(sys.argv[1], encoding='utf-8'))
 except Exception as e:
-    print('ERROR keliver.portal.json does not parse (%s: %s). Fix it, or set KELIVER_HOST_KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_HOST_KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
 v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
 if not isinstance(v, str) or not v.strip():
     print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks this host\'s Keliver libraries and toolchain. Add it (the version the app\'s guest uses, as keliver-init writes it), or set KELIVER_HOST_KELIVER_VERSION.'); sys.exit(3)

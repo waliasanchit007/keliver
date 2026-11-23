@@ -52,7 +52,7 @@ OLD=(KELIVER_LINE=0.4 KELIVER_ZIPLINE_FORK=false ZIPLINE_GROUP=app.cash.zipline 
   TOOLCHAIN_COMPOSE=1.8.2 TOOLCHAIN_AGP=8.12.0 TOOLCHAIN_COMPILE_SDK=35 TOOLCHAIN_TARGET_SDK=35 TOOLCHAIN_JDK=17
   TOOLCHAIN_GRADLE=9.0.0 TOOLCHAIN_GRADLE_MIN=8.13 TOOLCHAIN_AGP_MIN=-)
 OLD+=(TOOLCHAIN_COROUTINES=1.10.2 TOOLCHAIN_SERIALIZATION=1.9.0 TOOLCHAIN_OKHTTP=5.1.0 TOOLCHAIN_COIL=3.3.0 TOOLCHAIN_KTOR=3.1.0)
-NEW=(KELIVER_LINE=0.5 KELIVER_ZIPLINE_FORK=true ZIPLINE_GROUP=dev.keliver.zipline ZIPLINE_PLUGIN_ID=dev.keliver.zipline TOOLCHAIN_ZIPLINE=1.28.0-keliver.1 TOOLCHAIN_KOTLIN=2.4.20
+NEW=(KELIVER_LINE=0.5 KELIVER_ZIPLINE_FORK=true ZIPLINE_GROUP=dev.keliver.zipline ZIPLINE_PLUGIN_ID=dev.keliver.zipline TOOLCHAIN_ZIPLINE=1.28.0-keliver.1 TOOLCHAIN_KOTLIN=2.4.21
   TOOLCHAIN_COMPOSE=1.12.2 TOOLCHAIN_AGP=9.3.3 TOOLCHAIN_AGP_MIN=9.1.0 TOOLCHAIN_COMPILE_SDK=37 TOOLCHAIN_TARGET_SDK=36
   TOOLCHAIN_JDK=17 TOOLCHAIN_GRADLE=9.7.1 TOOLCHAIN_GRADLE_MIN=9.5.0
   TOOLCHAIN_GRADLE_SHA256=acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a
@@ -131,17 +131,23 @@ CATALOG="$ROOT/gradle/libs.versions.toml"; WRAPPER="$ROOT/gradle/wrapper/gradle-
 if [ -f "$CATALOG" ] && [ -f "$WRAPPER" ]; then
   cat_version() { sed -nE "s/^$1 = \"([^\"]+)\".*/\\1/p" "$CATALOG" | head -1; }
   cat_library() { sed -nE "s/^$1 = \\{ module = \"[^\"]+\", version = \"([^\"]+)\" \\}.*/\\1/p" "$CATALOG" | head -1; }
-  NEXT="$(sed -nE 's/^## Unreleased \(([0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*)\)[[:space:]]*$/\1/p' "$ROOT/CHANGELOG.md" 2>/dev/null | head -1)"
+  next_line_guard() { # <CHANGELOG.md>
+  NEXT="$(sed -nE 's/^## Unreleased \(([0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*)\)[[:space:]]*$/\1/p' "$1" 2>/dev/null | head -1)"
   NEXT_FROM="CHANGELOG.md's Unreleased heading"
+  # Said in every failure below when the heading is not there: the fallback is the LAST release, so a
+  # drift reported against its line may only mean the heading is missing (RELEASING.md, step 2).
+  NO_HEADING=""
   if [ -z "$NEXT" ]; then
     NEXT="$(sed -nE 's/^private const val KELIVER_VERSION = "([^"]+)".*/\1/p' "$ROOT/build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt" 2>/dev/null | head -1)"
     NEXT_FROM="KELIVER_VERSION in RedwoodBuildPlugin.kt"
+    NO_HEADING=" NOTE: CHANGELOG.md has no '## Unreleased (X.Y.Z)' heading this check can read (missing, or not worded exactly so), so it fell back to KELIVER_VERSION ${NEXT:-(unread)}, the last release. If the next release is on another line, restore the heading naming it (RELEASING.md, step 2) before changing the table."
+    echo "  note: no '## Unreleased (X.Y.Z)' heading in CHANGELOG.md; comparing Keliver ${NEXT:-(unread)}'s line (KELIVER_VERSION, the last release)"
   fi
   unset TOOLCHAIN_AGP
   if [ -n "$NEXT" ] && keliver_zipline_line "$NEXT" 2> "$RUN/next.err" && [ ! -s "$RUN/next.err" ]; then
     ok "this checkout builds Keliver $NEXT next ($NEXT_FROM): the table names its line, $KELIVER_LINE"
   else
-    bad "this checkout's next version '${NEXT:-unread}' ($NEXT_FROM) has no line in the table: ${KELIVER_LINE_ERROR:-$(cat "$RUN/next.err" 2>/dev/null)} Add its line's column (a released line's column does not change)."
+    bad "this checkout's next version '${NEXT:-unread}' ($NEXT_FROM) has no line in the table: ${KELIVER_LINE_ERROR:-$(cat "$RUN/next.err" 2>/dev/null)} Add its line's column (a released line's column does not change).$NO_HEADING"
   fi
   drift=""
   for pair in "KOTLIN=$(cat_version kotlin)" "COMPOSE=$(cat_version jbCompose)" \
@@ -153,7 +159,29 @@ if [ -f "$CATALOG" ] && [ -f "$WRAPPER" ]; then
     { [ -n "$want" ] && [ "$got" = "$want" ]; } || drift="$drift $k=$got (checkout: ${want:-unread})"
   done
   [ -z "$drift" ] && ok "the $KELIVER_LINE line's toolchain (Keliver $NEXT's) is this checkout's catalog and wrapper" \
-    || bad "the ${KELIVER_LINE:-?} line (Keliver ${NEXT:-?}'s) drifted from this checkout:$drift. If the next release is a new minor, add its column and name it in CHANGELOG.md's Unreleased heading; a released line's column does not change."
+    || bad "the ${KELIVER_LINE:-?} line (Keliver ${NEXT:-?}'s) drifted from this checkout:$drift. If the next release is a new minor, add its column and name it in CHANGELOG.md's Unreleased heading; a released line's column does not change.$NO_HEADING"
+  }
+  next_line_guard "$ROOT/CHANGELOG.md"
+  # L1 (review of #299): without the heading the guard compares the last release's line, and its
+  # failure says so and names the version it fell back to (here the heading is removed from a copy;
+  # the checkout's catalog is the 0.5 line's, so the fallback, 0.4.x, drifts).
+  grep -v '^## Unreleased (' "$ROOT/CHANGELOG.md" > "$RUN/CHANGELOG-removed.md"
+  sed 's/^## Unreleased (\(.*\))$/## Unreleased: \1/' "$ROOT/CHANGELOG.md" > "$RUN/CHANGELOG-reworded.md"
+  last="$(sed -nE 's/^private const val KELIVER_VERSION = "([^"]+)".*/\1/p' "$ROOT/build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt" | head -1)"
+  for variant in removed reworded; do
+    out="$(pass=0; fail=0; next_line_guard "$RUN/CHANGELOG-$variant.md"; echo "fails=$fail")"
+    if ! keliver_version_at_least "$last" 0.5.0 2>/dev/null; then
+      [[ "$out" == *"FAIL"*"NOTE: CHANGELOG.md has no '## Unreleased (X.Y.Z)' heading"*"fell back to KELIVER_VERSION $last, the last release"* ]] \
+        && [[ "$out" == *"note: no '## Unreleased (X.Y.Z)' heading"* ]] && [[ "$out" != *"fails=0" ]] \
+        && ok "a CHANGELOG with its Unreleased heading $variant: the guard fails, says the heading is missing and that it fell back to $last" \
+        || bad "a CHANGELOG with its Unreleased heading $variant: $out"
+    else
+      # After 0.5.0 is released the fallback is on the 0.5 line itself: only the note is required.
+      [[ "$out" == *"note: no '## Unreleased (X.Y.Z)' heading"*"$last"* ]] \
+        && ok "a CHANGELOG with its Unreleased heading $variant: the guard notes the fallback to $last" \
+        || bad "a CHANGELOG with its Unreleased heading $variant: $out"
+    fi
+  done
   # COIL/KTOR '-' means keliver-image brings them: it must, on each platform the hosts build.
   IMG="$ROOT/keliver-image/build.gradle"
   missing=""
@@ -220,8 +248,8 @@ done
 cmp -s "$TEMPLATE" "$RUN/init-0.4.1/gradle/wrapper/gradle-wrapper.properties" \
   && ok "keliver-init 0.4.1: the template's wrapper, byte-identical" || bad "keliver-init 0.4.1's wrapper"
 cmp -s "$W/b.properties" "$RUN/init-0.5.0/gradle/wrapper/gradle-wrapper.properties" \
-  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.20'" "$RUN/init-0.5.0/settings.gradle" \
-  && ok "keliver-init 0.5.0: Gradle 9.7.1 (the 0.5 line's AGP needs 9.5.0+) and Kotlin 2.4.20" || bad "keliver-init 0.5.0's wrapper or Kotlin"
+  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'" "$RUN/init-0.5.0/settings.gradle" \
+  && ok "keliver-init 0.5.0: Gradle 9.7.1 (the 0.5 line's AGP needs 9.5.0+) and Kotlin 2.4.21" || bad "keliver-init 0.5.0's wrapper or Kotlin"
 
 echo
 echo "runtime line: $pass passed, $fail failed   ($RUN)"

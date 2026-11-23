@@ -53,8 +53,8 @@ a staleness guard).
 - **Tests for codegen changes.** `keliver-tooling-codegen/src/test/` has
   fixture-based tests. Add a fixture that demonstrates the new behavior;
   golden-file the expected output.
-- **CHANGELOG entry.** Every PR adds a line under `[Unreleased]` in
-  `CHANGELOG.md`. Format: short summary + reference to the integration
+- **CHANGELOG entry.** Every PR adds a line under `## Unreleased (X.Y.Z)` in
+  `CHANGELOG.md` (keep that heading as it is: see RELEASING.md, step 2). Format: short summary + reference to the integration
   bug it closes (if any).
 - **Wire-format additivity.** New properties on existing `@Widget` /
   `@Modifier` classes must be additive (default values, new tags). Never

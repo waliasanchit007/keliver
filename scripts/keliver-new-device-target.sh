@@ -28,7 +28,7 @@
 set -euo pipefail
 
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
-KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}"
+KELIVER_VERSION="${KELIVER_VERSION:-}" # default: the app's appRuntime.keliverVersion, below (no fixed fallback)
 ZIPLINE_VERSION_GIVEN="${ZIPLINE_VERSION:+yes}"
 ZIPLINE_VERSION="${ZIPLINE_VERSION:-}" # default: the line's (keliver-runtime-line.sh), below
 SCREEN=""
@@ -50,14 +50,20 @@ APP="$(pwd)"
 
 # The Keliver version: the app's own (appRuntime.keliverVersion, which
 # keliver-init writes), so an app that stays on an older release does not get a
-# mix; KELIVER_VERSION overrides it; this bundle's version when neither is set.
+# mix; KELIVER_VERSION overrides it. It picks the whole toolchain
+# (keliver-runtime-line.sh), so a keliver.portal.json that cannot be read or
+# parsed, or names no appRuntime.keliverVersion, is refused (as the host
+# scaffolders refuse it) rather than read as some default version.
 if [ -z "$KELIVER_VERSION_GIVEN" ]; then
-  v="$(python3 -c 'import json,sys
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"]
-    print(v.strip() if isinstance(v, str) else "")
-except Exception: print("")' "$APP/keliver.portal.json")"
-  [ -n "$v" ] && KELIVER_VERSION="$v"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks the guest\'s Keliver libraries and toolchain. Add it (as keliver-init writes it), or set KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || { echo "error: ${KELIVER_VERSION#ERROR }" >&2; exit 1; }
 fi
 [[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] \
   || { echo "error: the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }

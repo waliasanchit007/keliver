@@ -3,9 +3,7 @@ d035cd8e485e464c94e27085e69b2ad7d99b8403ad920b9644fbd19f7a2a711a  ./EMBED.md
 30ad6f7ec97aceefd00730635d8502def7286911b0cc2fc6a3bb9d4aae787835  ./KeliverScreen.swift
 f605f151bd1ebe9b17966dc60adf23ad738d864192cfec3b5b421df92dfca0b9  ./build.gradle
 84e50bfdc17858aca6ecd30571338cc68feda704b0c778fbbcda3cbb7d93f7c7  ./gradle.properties
-7a9ce74cff467ca1bf60a4fcd9f05185acceda4d0f382434d393e17864262c5d  ./gradle/wrapper/gradle-wrapper.jar
 db86e18f20b9b7b115dc68f1693c5d073489f9de414d45dc410faef1d2080b6d  ./gradle/wrapper/gradle-wrapper.properties
-a5a5c199ba02189ae8c46a334223371a20599d9c298ef65e7540ede4a3f72d59  ./gradlew
 d1f3693dfcb8aa047ddf379d26a384cf9390a9d8f602a6bdc6da9e67bbd3ffca  ./settings.gradle
 d490c30eae957bb66113bfd5bd7672df4e1796f61b6a69d063770bab1a673a40  ./src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt
 59feb964d9f4084edb2056c8e1414177f5c864f5aad2e7ee1739da64f8643585  ./src/commonMain/kotlin/com/example/demo/host/KeliverRoute.kt

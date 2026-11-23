@@ -149,7 +149,7 @@ the version and its line in their summary.
 | | 0.4 line (before 0.5.0) | 0.5 line (0.5.x, pre-releases too) | why the 0.5 value |
 |---|---|---|---|
 | Zipline | `app.cash.zipline` 1.22.0 | `dev.keliver.zipline` 1.28.0-keliver.1 | the fork (NF2) |
-| Kotlin | 2.2.0 | 2.4.20 | Keliver's catalog (the column of the version this checkout builds next, CHANGELOG.md's "Unreleased (X.Y.Z)", must match it: `keliver-runtime-line-selftest.sh`) |
+| Kotlin | 2.2.0 | 2.4.21 | Keliver's catalog (not 2.4.20, whose Kotlin/JS production builds do not minify member names; the fork's README, "Kotlin compatibility") (the column of the version this checkout builds next, CHANGELOG.md's "Unreleased (X.Y.Z)", must match it: `keliver-runtime-line-selftest.sh`) |
 | Compose Multiplatform | 1.8.2 | 1.12.2 | the same |
 | coroutines, serialization | 1.10.2, 1.9.0 | 1.11.0, 1.13.0 | the same |
 | OkHttp (and `mockwebserver3`) | 5.1.0 | 5.5.1 | the same; the Android hosts call OkHttp themselves |
@@ -169,7 +169,7 @@ What the 0.5 line changes in what is written:
   AGP 9 compiles Kotlin itself (built-in Kotlin) and refuses a module that
   applies `org.jetbrains.kotlin.android`. So the host only puts that plugin on
   the classpath (`apply false`), which pins the Kotlin AGP compiles with to
-  2.4.20. `KELIVER_HOST_AGP_VERSION` set to an 8.x applies it again.
+  2.4.21. `KELIVER_HOST_AGP_VERSION` set to an 8.x applies it again.
   When the app's wrapper is older than the AGP's floor (an app made by an
   earlier `keliver-init`), the scaffolder warns and prints the two lines to set.
 - **`--embed`** follows the APP's AGP, which compiles the module: it reads that

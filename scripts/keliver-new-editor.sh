@@ -27,18 +27,25 @@
 # keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
 set -euo pipefail
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
-KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}"
+KELIVER_VERSION="${KELIVER_VERSION:-}" # default: the app's appRuntime.keliverVersion, below (no fixed fallback)
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
 # The app's own Keliver version (appRuntime.keliverVersion) unless
 # KELIVER_VERSION is set, so an app on an older release gets a matching editor.
-if [ -z "$KELIVER_VERSION_GIVEN" ] && [ -f "$APP/keliver.portal.json" ]; then
-  v="$(python3 -c 'import json,sys
+# A keliver.portal.json that is missing, cannot be read or parsed, or names no
+# appRuntime.keliverVersion is refused (as the device and host scaffolders
+# refuse it) rather than read as some default version.
+if [ -z "$KELIVER_VERSION_GIVEN" ]; then
+  [ -f "$APP/keliver.portal.json" ] || { echo "error: no keliver.portal.json here, so no Keliver version to build the editor against. Run from the app root, or set KELIVER_VERSION." >&2; exit 1; }
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"]
-    print(v.strip() if isinstance(v, str) else "")
-except Exception: print("")' "$APP/keliver.portal.json")"
-  [ -n "$v" ] && KELIVER_VERSION="$v"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks the editor\'s Keliver libraries. Add it (as keliver-init writes it), or set KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || { echo "error: ${KELIVER_VERSION#ERROR }" >&2; exit 1; }
 fi
 [[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] || { echo "the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
 NAME="${1:?usage: keliver-new-editor.sh <AppName> [srcDir...]}"

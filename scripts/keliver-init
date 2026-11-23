@@ -29,7 +29,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # The toolchain the Keliver version was built with: keliver-runtime-line.sh's table, one column per
-# line (the published 0.4.x line: Kotlin 2.2.0; from 0.5.0, Keliver's Zipline fork on Kotlin 2.4.20).
+# line (the published 0.4.x line: Kotlin 2.2.0; from 0.5.0, Keliver's Zipline fork on Kotlin 2.4.21).
 # keliver-new-device-target.sh and the host scaffolders read the same table.
 [ -f "$SCRIPT_DIR/keliver-runtime-line.sh" ] || { echo "keliver-runtime-line.sh is missing beside this script ($SCRIPT_DIR)"; exit 1; }
 # shellcheck source=keliver-runtime-line.sh

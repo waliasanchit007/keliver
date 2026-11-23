@@ -11,7 +11,7 @@
 #  - Before 0.5.0 (the 0.4.x libraries on Maven Central, built against it): upstream Zipline,
 #    app.cash.zipline 1.22.0 on Kotlin 2.2.0, QuickJS 2021.
 #  - The 0.5 line (a 0.5.0 pre-release too): Keliver's Zipline fork (NF2; docs/GUEST_PROFILE.md),
-#    dev.keliver.zipline 1.28.0-keliver.1, plugin id dev.keliver.zipline, on Kotlin 2.4.20, QuickJS
+#    dev.keliver.zipline 1.28.0-keliver.1, plugin id dev.keliver.zipline, on Kotlin 2.4.21, QuickJS
 #    2026: the one engine, quickjs-2026. Guests link Kotlin's Long as a JavaScript BigInt
 #    (-Xes-long-as-bigint), which only that engine runs.
 # The rest of an app's toolchain follows the same line: KELIVER_TOOLCHAIN below, the ONE table of
@@ -73,7 +73,7 @@ KELIVER_TOOLCHAIN='
 LINE           0.4       0.5
 ZIPLINE_GROUP  app.cash.zipline dev.keliver.zipline
 ZIPLINE        1.22.0    1.28.0-keliver.1
-KOTLIN         2.2.0     2.4.20
+KOTLIN         2.2.0     2.4.21
 COMPOSE        1.8.2     1.12.2
 COROUTINES     1.10.2    1.11.0
 SERIALIZATION  1.9.0     1.13.0

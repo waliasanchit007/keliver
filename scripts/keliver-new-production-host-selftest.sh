@@ -89,10 +89,10 @@ mv "$APP/keliver.portal.json" "$APP/k.json"
 refuses "outside an app root"              "no keliver.portal.json"   --bundle-server "$SERVER" --public-key-file "$KEY"
 mv "$APP/k.json" "$APP/keliver.portal.json"
 # L3 (review of #299): the app's Keliver version picks the whole toolchain, so a keliver.portal.json
-# that does not parse, or names none, is refused instead of read as 0.4.1.
+# that cannot be read or parsed, or names none, is refused instead of read as 0.4.1.
 cp "$APP/keliver.portal.json" "$DISP/portal.json.good"
 printf '{ "screensDir": "src/jsMain/kotlin/screens", \n' > "$APP/keliver.portal.json"
-refuses "a keliver.portal.json that does not parse (L3)" "keliver.portal.json does not parse" --bundle-server "$SERVER" --public-key-file "$KEY"
+refuses "a keliver.portal.json that does not parse (L3)" "keliver.portal.json cannot be read or parsed" --bundle-server "$SERVER" --public-key-file "$KEY"
 printf '{ "screensDir": "src/jsMain/kotlin/screens" }\n' > "$APP/keliver.portal.json"
 refuses "a keliver.portal.json without appRuntime (L3)" "names no appRuntime.keliverVersion" --bundle-server "$SERVER" --public-key-file "$KEY"
 printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "widgetVersion": 1, "keliverVersion": " " } }\n' > "$APP/keliver.portal.json"
@@ -731,9 +731,9 @@ for v in 0.5.0 0.5.1-SNAPSHOT; do
   HF="$APPF/host-android/build.gradle"
   [ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.1'$" "$HF" \
     && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$HF" && grep -q "implementation 'dev.keliver.zipline:zipline-loader:1.28.0-keliver.1'" "$HF" \
-    && grep -q "id 'org.jetbrains.kotlin.android' version '2.4.20'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
+    && grep -q "id 'org.jetbrains.kotlin.android' version '2.4.21'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
     && grep -q "implementation 'dev.keliver:keliver-treehouse-host:$v'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
-    && ok "NF2: an app on $v gets Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries) on Kotlin 2.4.20, Compose 1.12.2" \
+    && ok "NF2: an app on $v gets Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries) on Kotlin 2.4.21, Compose 1.12.2" \
     || bad "NF2: the host of an app on $v (rc=$rc): $(grep -hE 'zipline|kotlin.android|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
 done
 KELIVER_HOST_ZIPLINE_VERSION=1.28.0-keliver.9 KELIVER_HOST_KOTLIN_VERSION=2.4.99 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
@@ -746,7 +746,7 @@ out="$(KELIVER_HOST_KELIVER_VERSION=0.6.0-SNAPSHOT bash -c 'cd "$1" && rm -rf ho
 [ "$rc" = 0 ] && grep -qx "  id 'com.android.application' version '9.3.3'" "$DISP/fork-0-5-0/host-android/build.gradle" \
   && grep -q "implementation 'dev.keliver:keliver-treehouse-host:0.6.0-SNAPSHOT'" "$DISP/fork-0-5-0/host-android/build.gradle" \
   && printf '%s' "$out" | grep -q "^warning: Keliver 0.6.0-SNAPSHOT is past the newest line this tools bundle knows (0.5): it gets the 0.5 line's toolchain" \
-  && printf '%s' "$out" | grep -q "^  Keliver          0.6.0-SNAPSHOT (the 0.5 line: dev.keliver.zipline 1.28.0-keliver.1, Kotlin 2.4.20, AGP 9.3.3, compileSdk 37)$" \
+  && printf '%s' "$out" | grep -q "^  Keliver          0.6.0-SNAPSHOT (the 0.5 line: dev.keliver.zipline 1.28.0-keliver.1, Kotlin 2.4.21, AGP 9.3.3, compileSdk 37)$" \
   && ok "M1: Keliver 0.6.0-SNAPSHOT scaffolds on the 0.5 line, with a warning, and the summary says which line" \
   || bad "M1: 0.6.0-SNAPSHOT (rc=$rc): $(printf '%s' "$out" | grep -iE 'warning|Keliver  ' | head -2 | tr '\n' ' ')"
 
@@ -771,7 +771,7 @@ for v in 0.5.0 0.5.1-SNAPSHOT; do
     ( cd "$APPF" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" > /dev/null 2>&1 ) || bad "the fresh 0.5.0 scaffold failed"
   fi
   grep -qx "  id 'com.android.application' version '9.3.3'" "$HF" \
-    && grep -q "^  id 'org.jetbrains.kotlin.android' version '2.4.20' apply false //" "$HF" \
+    && grep -q "^  id 'org.jetbrains.kotlin.android' version '2.4.21' apply false //" "$HF" \
     && grep -qx '  compileSdk 37' "$HF" && grep -qx '    targetSdk 36' "$HF" && grep -qx 'kotlin { jvmToolchain(17) }' "$HF" \
     && ok "0.5 line ($v): AGP 9.3.3 with built-in Kotlin (Kotlin's Android plugin only pins its version), compileSdk 37, targetSdk 36, JDK 17" \
     || bad "0.5 line ($v): $(grep -hE "com.android|kotlin.android|compileSdk|targetSdk" "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|')"
@@ -792,7 +792,7 @@ grep -qx "  implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'" "$H/build
   || bad "0.4 line: the image dependencies changed: $(grep -hE "coil|keliver-image|okhttp" "$H/build.gradle" "$L/build.gradle" | tr -s ' ' | tr '\n' '|')"
 KELIVER_HOST_AGP_VERSION=8.12.0 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
 [ "$rc" = 0 ] && grep -qx "  id 'com.android.application' version '8.12.0'" "$DISP/fork-0-5-0/host-android/build.gradle" \
-  && grep -qx "  id 'org.jetbrains.kotlin.android' version '2.4.20'" "$DISP/fork-0-5-0/host-android/build.gradle" \
+  && grep -qx "  id 'org.jetbrains.kotlin.android' version '2.4.21'" "$DISP/fork-0-5-0/host-android/build.gradle" \
   && ok "0.5 line with KELIVER_HOST_AGP_VERSION=8.12.0: Kotlin's Android plugin is applied again (what AGP 8 needs)" || bad "the AGP override on the 0.5 line (rc=$rc)"
 # The host builds with the app's wrapper: an app on 0.5.0 whose wrapper is older than AGP 9.3.3's
 # floor (Gradle 9.5.0) is told what to set; one on the line's Gradle is not; a 0.4.1 app on 9.0.0 is not.
@@ -824,7 +824,7 @@ LF="$EXF/keliver-host/build.gradle"
   && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$LF" \
   && printf '%s' "$out" | grep -q "warning: no dev.keliver.zipline plugin found" \
   && printf '%s' "$out" | grep -q "names app.cash.zipline: Keliver 0.5.0 builds on Keliver's Zipline fork" \
-  && printf '%s' "$out" | grep -q "warning: no Kotlin 2.4.20 found" \
+  && printf '%s' "$out" | grep -q "warning: no Kotlin 2.4.21 found" \
   && ok "NF2: --embed on 0.5.0 writes the fork's plugin id and libraries, and warns about the app's app.cash.zipline and its Kotlin" \
   || bad "NF2: --embed on 0.5.0 (rc=$rc): $(printf '%s' "$out" | grep warning | tr '\n' ' ')"
 ! grep -q "^  id 'org.jetbrains.kotlin.android'" "$LF" && grep -q "^  // Kotlin: AGP 9 compiles this module itself (built-in Kotlin)" "$LF" \
@@ -835,7 +835,7 @@ LF="$EXF/keliver-host/build.gradle"
   && ok "0.5 line: --embed applies no Kotlin plugin (the app's AGP 9 compiles Kotlin), compileSdk 37, says the app needs AGP 9.1.0+, keliver-image and OkHttp 5.5.1" \
   || bad "0.5 line: --embed's toolchain: $(grep -hE "kotlin.android|Kotlin:|compileSdk" "$LF" | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | grep note: | head -1)"
 printf '%s' "$out" | grep -q "^  Kotlin plugin    none (AGP's built-in Kotlin), for AGP 9.3.3 (build.gradle)$" \
-  && printf '%s' "$out" | grep -q "^  Keliver          0.5.0 (the 0.5 line: dev.keliver.zipline 1.28.0-keliver.1, Kotlin 2.4.20, compileSdk 37)$" \
+  && printf '%s' "$out" | grep -q "^  Keliver          0.5.0 (the 0.5 line: dev.keliver.zipline 1.28.0-keliver.1, Kotlin 2.4.21, compileSdk 37)$" \
   && ! printf '%s' "$out" | grep -q "could not read .*AGP version" \
   && ok "L1: --embed read the app's AGP 9.3.3 from its build.gradle, and says so" || bad "L1: --embed's Kotlin plugin summary: $(printf '%s' "$out" | grep -E 'Kotlin plugin|Keliver  ' | tr '\n' ' ')"
 # L1 (review of #299): the Kotlin plugin line follows the APP's AGP and android.builtInKotlin, not

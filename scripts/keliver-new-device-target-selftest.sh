@@ -166,6 +166,44 @@ X="$(scaffold Badver)"; set_app_version "$X" 'x"y'; before="$(fingerprint "$X")"
 chk "a malformed appRuntime.keliverVersion is refused" 1 "$rc"
 [ "$(fingerprint "$X")" = "$before" ] && ok "the refused app is byte-identical" || bad "the refused app was changed"
 
+# --- 7b1. L3 (review of #299): no fixed fallback version ----------------------
+# The app's Keliver version picks the whole toolchain (keliver-runtime-line.sh), so the guest-side
+# scaffolders refuse a keliver.portal.json that cannot be read or parsed, or names no
+# appRuntime.keliverVersion, as the host scaffolders do; KELIVER_VERSION still overrides it.
+ED="$ROOT/scripts/keliver-new-editor.sh"
+portal_refused() { # <label> <portal.json content> <message fragment>
+  local label="$1" json="$2" want="$3" app out rc before
+  app="$(scaffold "Nover$((pass + fail))")"; printf '%s' "$json" > "$app/keliver.portal.json"; before="$(fingerprint "$app")"
+  out="$( cd "$app" && env -u KELIVER_VERSION "$DEV" 2>&1 )"; rc=$?
+  [ "$rc" = 1 ] && [[ "$out" == *"$want"* ]] && [[ "$out" == *"or set KELIVER_VERSION"* ]] && [ "$(fingerprint "$app")" = "$before" ] \
+    && ok "device target: $label is refused, byte-identical" || bad "device target: $label (exit $rc): $(printf '%s' "$out" | tail -1)"
+  out="$( cd "$app" && env -u KELIVER_VERSION "$ED" Nover 2>&1 )"; rc=$?
+  [ "$rc" = 1 ] && [[ "$out" == *"$want"* ]] && [ ! -e "$app/editor" ] \
+    && ok "editor: $label is refused, no editor/ written" || bad "editor: $label (exit $rc): $(printf '%s' "$out" | tail -1)"
+}
+portal_refused "a keliver.portal.json that does not parse" '{ "screensDir": ' "keliver.portal.json cannot be read or parsed (JSONDecodeError"
+portal_refused "a keliver.portal.json without appRuntime" '{ "screensDir": "src/jsMain/kotlin/screens" }' "names no appRuntime.keliverVersion"
+portal_refused "an appRuntime that is not an object" '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": "0.4.1" }' "names no appRuntime.keliverVersion"
+portal_refused "an empty appRuntime.keliverVersion" '{ "appRuntime": { "widgetVersion": 1, "keliverVersion": " " } }' "names no appRuntime.keliverVersion"
+portal_refused "a keliver.portal.json that is a JSON array" '[]' "names no appRuntime.keliverVersion"
+# KELIVER_VERSION overrides a broken file (the documented way out), for both.
+K1="$(scaffold Brokenok)"; printf '{ "screensDir": ' > "$K1/keliver.portal.json"
+( cd "$K1" && KELIVER_VERSION=0.4.1 "$DEV" >/dev/null 2>&1 ); rc=$?
+[ "$rc" = 0 ] && grep -q 'keliver-treehouse-guest:0\.4\.1' "$K1/build.gradle" \
+  && ok "device target: KELIVER_VERSION=0.4.1 scaffolds an app whose keliver.portal.json does not parse" || bad "device target: KELIVER_VERSION with a broken keliver.portal.json (exit $rc)"
+( cd "$K1" && KELIVER_VERSION=0.4.1 "$ED" Brokenok >/dev/null 2>&1 ); rc=$?
+[ "$rc" = 0 ] && grep -q 'dev.keliver:portal-editor:0.4.1' "$K1/editor/build.gradle.kts" \
+  && ok "editor: KELIVER_VERSION=0.4.1 scaffolds an app whose keliver.portal.json does not parse" || bad "editor: KELIVER_VERSION with a broken keliver.portal.json (exit $rc)"
+# The editor follows the app's version, and refuses outside an app root unless KELIVER_VERSION is set.
+K2="$(KELIVER_VERSION=0.3.3 scaffold Edolder)"
+( cd "$K2" && env -u KELIVER_VERSION "$ED" Edolder >/dev/null 2>&1 ); rc=$?
+[ "$rc" = 0 ] && grep -q 'dev.keliver:portal-editor:0.3.3' "$K2/editor/build.gradle.kts" \
+  && ok "editor: an app pinned to 0.3.3 gets a 0.3.3 editor" || bad "editor: the 0.3.3 app's editor (exit $rc)"
+mkdir -p "$WORK/notanapp"
+out="$( cd "$WORK/notanapp" && env -u KELIVER_VERSION "$ED" Bare 2>&1 )"; rc=$?
+[ "$rc" = 1 ] && [[ "$out" == *"no keliver.portal.json here"*"or set KELIVER_VERSION"* ]] && [ ! -e "$WORK/notanapp/editor" ] \
+  && ok "editor: no keliver.portal.json is refused (no fixed fallback version)" || bad "editor: no keliver.portal.json (exit $rc): $out"
+
 # --- 7b2. NF2: the Zipline line follows the Keliver version ------------------
 # Before 0.5.0 upstream Zipline; from 0.5.0 (a pre-release too) Keliver's Zipline fork, with the
 # guest's Long as a JavaScript BigInt; never both in one app.
@@ -189,8 +227,8 @@ for v in 0.5.0 0.5.0-SNAPSHOT 0.5.3; do
     && [ "$(nameds "$P/settings.gradle" 'app\.cash\.zipline')$(nameds "$P/build.gradle" 'app\.cash\.zipline')" = 00 ] \
     && [ "$(grep -c "compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')" "$P/build.gradle")" = 1 ] \
     && python3 -c 'import re,sys; b=open(sys.argv[1]).read(); m=re.search(r"\n(\s*)js \{\n(.*?)\n\1\}", b, re.S); sys.exit(0 if m and "binaries.executable()" in m.group(2) and "-Xes-long-as-bigint" in m.group(2) else 1)' "$P/build.gradle" \
-    && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.20'" "$P/settings.gradle"; then
-    ok "NF2: an app on $v gets Keliver's Zipline fork (plugin, library) and Long as BigInt in its js block, Kotlin 2.4.20"
+    && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'" "$P/settings.gradle"; then
+    ok "NF2: an app on $v gets Keliver's Zipline fork (plugin, library) and Long as BigInt in its js block, Kotlin 2.4.21"
   else
     bad "NF2: an app on $v (exit $rc): $(grep -hE "zipline|bigint|kotlin.multiplatform" "$P/settings.gradle" "$P/build.gradle" | tr -s ' ' | tr '\n' '|')"
   fi
