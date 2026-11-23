@@ -172,8 +172,15 @@ fun main() {
   val idempotent = file4.text == after
   println("test4 Idempotent self-replace: $idempotent")
 
-  val pass = prefixOk && suffixOk && replacedOk && rawStillExact && commentKept && inserted &&
-    deleted && restKept && idempotent
+  val pass = prefixOk &&
+    suffixOk &&
+    replacedOk &&
+    rawStillExact &&
+    commentKept &&
+    inserted &&
+    deleted &&
+    restKept &&
+    idempotent
   println("SPIKE ${if (pass) "PASS" else "FAIL"}")
   Disposer.dispose(disposable)
 }
