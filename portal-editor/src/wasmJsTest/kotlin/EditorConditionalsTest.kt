@@ -87,7 +87,7 @@ class EditorConditionalsTest {
     val sent = mutableListOf<DocOp>()
     val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), "Open", "Closed")) { op, _, _ -> sent += op }
     val inputs = row.querySelectorAll("input")
-    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) } // E11: committed
     type(0, "Yes")
     type(1, "No")
     assertEquals(
@@ -120,7 +120,7 @@ class EditorConditionalsTest {
       results += done
     }
     val inputs = row.querySelectorAll("input")
-    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) } // E11: committed
     type(0, "Yes")
     results.last()(true)
     type(1, "No")

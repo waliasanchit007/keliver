@@ -472,6 +472,7 @@ class RetainedBackFrameBenchmark {
     }
   }
 
+  @Suppress("ktlint:compose:lambda-param-event-trailing") // A benchmark fixture's button.
   @Composable
   private fun Action(label: String, modifier: Modifier, onClick: () -> Unit) {
     Box(modifier.height(48.dp).padding(4.dp).background(ActionBg, RoundedCornerShape(8.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {

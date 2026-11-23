@@ -41,7 +41,7 @@ class EditorCompoundConditionsTest {
     val inputs = row.querySelectorAll("input")
     // No field / negate editor: just the two branches.
     assertEquals(2, inputs.length)
-    (inputs.item(1) as HTMLInputElement).let { it.value = "Cash"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    (inputs.item(1) as HTMLInputElement).let { it.value = "Cash"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) } // E11: committed
     assertEquals(
       DocOp.SetProp(
         Handle(7), "text",

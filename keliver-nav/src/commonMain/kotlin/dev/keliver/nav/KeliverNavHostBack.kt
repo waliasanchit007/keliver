@@ -112,6 +112,7 @@ public interface KeliverNavHostFrame : KeliverNavFrame {
  * back from it. [onHostBack] null: the host never goes back on its own (every entry's `hostBack` is
  * false) and the container only hides.
  */
+@Suppress("ktlint:compose:content-trailing-lambda") // Internal, named arguments; optional parameters follow content.
 @OptIn(ExperimentalKeliverNavRetentionApi::class, ExperimentalKeliverBackApi::class)
 @Composable
 internal fun <T : Any> HostRetainedEntries(
@@ -221,6 +222,7 @@ internal fun <T : Any> HostRetainedEntries(
  * until it is shown, so the press that would leave it goes through the guest. [onTold] hears each
  * value sent.
  */
+@Suppress("ktlint:compose:parameter-naming") // onTold reports what the frame told the host; not an event.
 @OptIn(ExperimentalKeliverNavRetentionApi::class)
 @Composable
 private fun HostEntryFrame(

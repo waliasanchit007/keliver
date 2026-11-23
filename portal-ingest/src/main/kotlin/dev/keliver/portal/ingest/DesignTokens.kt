@@ -159,6 +159,7 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
 
   private val memo = HashMap<TokenDecl, Any?>()
   private val evaluating = LinkedHashSet<TokenDecl>()
+  @Suppress("ktlint:standard:property-naming") // A sentinel, named like a constant.
   private val NONE = Any()
 
   /** Every declaration with its value, in a stable order (package, owner, name). */

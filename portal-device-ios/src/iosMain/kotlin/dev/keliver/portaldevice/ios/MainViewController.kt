@@ -81,6 +81,7 @@ private const val PORTAL_SERVER = "http://localhost:8077"
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 private var cachedApp: TreehouseApp<PortalPresenter>? = null
 
+@Suppress("ktlint:standard:function-naming") // The name the Xcode shell calls; Compose Multiplatform's convention.
 public fun MainViewController() = ComposeUIViewController {
   val app = initializeTreehouseApp()
   val widgetSystem = remember {

@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:property-naming") // Fixture URLs and manifests, named like constants.
+
 import app.cash.zipline.loader.ZiplineHttpClient
 import hosttemplate.CRASH_ROLLBACK_OUTCOME
 import hosttemplate.CRASH_TO_APP_VIEW

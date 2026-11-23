@@ -24,3 +24,13 @@ kotlin {
     }
   }
 }
+
+// GeneratedCatalog.kt and GeneratedExporter.kt are written by :portal-schema-codegen:generatePortalCode
+// and compared byte for byte by checkPortalCode: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/GeneratedCatalog.kt", "src/**/GeneratedExporter.kt")
+    }
+  }
+}

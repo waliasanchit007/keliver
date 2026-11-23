@@ -229,6 +229,7 @@ public var compiledComponentProbe: CompiledComponentProbe? = null
  * device. When an argument cannot be decoded, or the probe sees the call
  * throw, [fallback] renders instead with the reason.
  */
+@Suppress("ktlint:compose:content-slot-reused") // fallback replaces the component, one failure at a time: no state to keep.
 @Composable
 public fun RenderCompiledComponent(
   node: WidgetNode,

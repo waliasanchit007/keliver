@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:compose:modifier-missing-check") // A spike's exported root screen: nothing places it.
+
 import androidx.compose.runtime.Composable
 import dev.keliver.Modifier
 import dev.keliver.layout.api.Constraint

@@ -117,6 +117,7 @@ public fun <R : Any> KeliverNavHost(
  * }) { route -> … }
  * ```
  */
+@Suppress("ktlint:compose:content-slot-reused") // A per-route factory, called per entry in its own state provider.
 @ExperimentalKeliverNavRetentionApi
 @Composable
 public fun <R : Any> KeliverNavHost(
