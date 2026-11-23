@@ -1,6 +1,6 @@
 diff -ru a/libunicode.c b/libunicode.c
---- a/libunicode.c	2026-11-23 04:37:05
-+++ b/libunicode.c	2026-11-23 04:37:05
+--- a/libunicode.c	2026-11-23 05:07:53
++++ b/libunicode.c	2026-11-23 05:07:53
 @@ -1390,7 +1390,9 @@
          cr_free(cr1);
          cr_free(cr2);
@@ -13,8 +13,8 @@ diff -ru a/libunicode.c b/libunicode.c
  
  #define M(id) (1U << UNICODE_GC_ ## id)
 diff -ru a/quickjs.c b/quickjs.c
---- a/quickjs.c	2026-11-23 04:37:05
-+++ b/quickjs.c	2026-11-23 04:37:05
+--- a/quickjs.c	2026-11-23 05:07:53
++++ b/quickjs.c	2026-11-23 05:07:53
 @@ -4546,6 +4546,8 @@
          *plen = str_new->len;
      return (const char *)str_new->u.str8;
@@ -458,21 +458,21 @@ diff -ru a/quickjs.c b/quickjs.c
          js_array_buffer_update_typed_arrays(abuf);
      }
      return res;
-@@ -58659,6 +58779,14 @@
-             memcpy(array, p->u.array.u.ptr, len * elt_size);
-             
-             /* array_idx is needed to have a stable sort */
+@@ -58651,6 +58771,14 @@
+             void *array;
+             size_t i, j;
+ 
 +            /* Keliver fork (NF2): not in bellard/quickjs. On a 32-bit host
-+               len * sizeof(array_idx[0]) wrapped for a 1-byte-element array
-+               of 2^30 or more elements (a 1 GiB buffer) */
++               len * sizeof(array_idx[0]) below wrapped for a 1-byte-element
++               array of 2^30 or more elements (a 1 GiB buffer). Checked before
++               anything is allocated. */
 +            if (js_size_overflows(len, sizeof(array_idx[0]))) {
-+                js_free(ctx, array);
 +                JS_ThrowOutOfMemory(ctx);
 +                return JS_EXCEPTION;
 +            }
-             array_idx = js_malloc(ctx, len * sizeof(array_idx[0]));
-             if (!array_idx) {
-                 js_free(ctx, array);
+             /* the array must be copied because the comparison
+                function may modify it */
+             array = js_malloc(ctx, len * elt_size);
 @@ -60843,8 +60971,11 @@
          goto fail;
      /* XXX: should use alias method in JSCFunctionListEntry */ //@@@
