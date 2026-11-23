@@ -164,7 +164,9 @@ where a script controls `n`, against `size_t` wrapping on a 32-bit host (armeabi
 `JSValue` and `JSPropertyEnum` are 8 bytes, so any `n` over 2^29 wraps to a few bytes and the
 loop that fills the table writes past it). Kotlin/JS output reaches none of them, and guest code
 is signed; they went in because the release is immutable (maintainer's decision, 2026-11-23).
-Found by reading the code; none of the wraps was reproduced on a 32-bit build.
+Found by reading the code. The `expand_fast_array` wrap was then reproduced on a 32-bit build (the
+`host32` job, below): the unpatched release crashes with SIGSEGV on `size-guards.js`, where the fork
+prints "out of memory" and goes on. The others were not reproduced.
 
 | Function | Trigger on a 32-bit host | Guard |
 |---|---|---|
