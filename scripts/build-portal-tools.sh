@@ -44,8 +44,14 @@ done
 [ -f "$ROOT/scripts/keliver-runtime-line.sh" ] || { echo "build-portal-tools: scripts/keliver-runtime-line.sh is missing" >&2; exit 1; }
 # shellcheck source=keliver-runtime-line.sh
 . "$ROOT/scripts/keliver-runtime-line.sh"
-keliver_zipline_line "$MAVEN_VERSION" || { echo "build-portal-tools: keliver-init's default '$MAVEN_VERSION' is not a version" >&2; exit 1; }
+keliver_zipline_line "$MAVEN_VERSION" \
+  || { echo "build-portal-tools: keliver-init's default '$MAVEN_VERSION': ${KELIVER_LINE_ERROR:-keliver-runtime-line.sh refused it}" >&2; exit 1; }
 SCAFFOLD_FORK="$KELIVER_ZIPLINE_FORK"
+# The first line on the fork, for the refusal below: the oldest line in the table whose Zipline is the fork.
+FORK_LINE=""
+for l in $KELIVER_LINES; do
+  if (keliver_zipline_line "$l.0" 2>/dev/null && [ "$KELIVER_ZIPLINE_FORK" = true ]); then FORK_LINE="$l"; break; fi
+done
 CATALOG_ZIPLINE="$(sed -nE 's/^zipline[[:space:]]*=[[:space:]]*\{[[:space:]]*module[[:space:]]*=[[:space:]]*"([^:"]+):zipline".*/\1/p' "$ROOT/gradle/libs.versions.toml" | head -1)"
 case "$CATALOG_ZIPLINE" in
   dev.keliver.zipline) HOST_FORK=true; HOST_ENGINE="QuickJS 2026 (Keliver's Zipline fork)" ;;
@@ -54,15 +60,16 @@ case "$CATALOG_ZIPLINE" in
 esac
 if [ "$HOST_FORK" != "$SCAFFOLD_FORK" ]; then
   if $HOST_FORK; then
-    scaffold_line="keliver $MAVEN_VERSION, upstream Zipline (QuickJS 2021 bytecode); the fork line starts at $KELIVER_FORK_SINCE"
+    scaffold_line="keliver $MAVEN_VERSION, upstream Zipline (QuickJS 2021 bytecode); the fork line is ${FORK_LINE:-missing from the table in keliver-runtime-line.sh}"
   else
     scaffold_line="keliver $MAVEN_VERSION, Keliver's Zipline fork (QuickJS 2026 bytecode)"
   fi
   {
     echo "build-portal-tools: REFUSING to build: the bundled development host would not run the apps this zip scaffolds."
     echo "  the host (built from this checkout, catalog group $CATALOG_ZIPLINE) runs $HOST_ENGINE;"
-    echo "  keliver-init and the other scaffolders wire, by default, $scaffold_line."
-    echo "  Move the scaffold default (KELIVER_VERSION in keliver-init and its siblings) to the host's line"
+    echo "  keliver-init wires a new app, by default, to $scaffold_line"
+    echo "  (the other scaffolders follow the app's own version)."
+    echo "  Move the scaffold default (KELIVER_VERSION in keliver-init) to the host's line"
     echo "  once those libraries are on Maven Central, or build from a commit whose Zipline matches it."
     echo "  See docs/PORTAL_TOOLS_RELEASE.md, \"Zipline line\"."
   } >&2

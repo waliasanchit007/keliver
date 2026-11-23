@@ -13,8 +13,10 @@ Since NF2 (PR #294) this checkout builds on Keliver's Zipline fork, so the
 bundled development host (`portal-device-android`, built from the checkout)
 runs only QuickJS 2026. It **no longer serves the 0.4 line**: a 0.4.x app
 compiles QuickJS 2021 bytecode (upstream Zipline 1.22.0), which that host
-cannot load. The scaffolders still default to 0.4.1 (`KELIVER_VERSION` in
-`keliver-init` and its siblings), because 0.5.0 is not on Maven Central yet.
+cannot load. `keliver-init` still makes a new app on 0.4.1 (its
+`KELIVER_VERSION` default), because 0.5.0 is not on Maven Central yet. It is the
+only scaffolder with a default: the others take the app's own
+`appRuntime.keliverVersion` and refuse an app that names none.
 
 So `scripts/build-portal-tools.sh` **refuses** to build a zip whose host
 engine (the catalog's Zipline group) and scaffold default
@@ -23,11 +25,10 @@ engine (the catalog's Zipline group) and scaffold default
 Gradle (`KELIVER_TOOLS_PREFLIGHT_ONLY=1`). The order is:
 
 1. Release the 0.5.0 libraries (on the fork) to Maven Central.
-2. In the next tools release, move the scaffold default to that 0.5.x in every
-   scaffolder (`keliver-init`, `keliver-new-editor.sh`,
-   `keliver-new-device-target.sh`, and the host scaffolders' fallback), and the
-   pinned `mavenDependencyVersion` check in `portal-tools.yml` with it. The
-   build then passes the check.
+2. In the next tools release, move `keliver-init`'s default to that 0.5.x, and
+   the pinned `mavenDependencyVersion` check in `portal-tools.yml` with it. The
+   build then passes the check. (The build also refuses a sibling scaffolder
+   that falls back to a fixed version, so there is nothing else to move.)
 
 Tools 0.3.18 and earlier stay as published: their hosts run QuickJS 2021 and
 their scaffolders wire 0.4.x, which is what a 0.4.x app keeps using.

@@ -779,7 +779,8 @@ development host no longer serves the 0.4 line:** it is built from the
 checkout, so from NF2 it runs only QuickJS 2026 and cannot load a 0.4.x app's
 guest (the development path has no engine check; the guest fails with QuickJS's
 own bytecode-version error). The tools zip that carries it therefore also moves
-its scaffolders' default to 0.5.x, in the first tools release after the 0.5.0
+`keliver-init`'s default to 0.5.x (the other scaffolders follow the app's own
+version), in the first tools release after the 0.5.0
 libraries release; until then `scripts/build-portal-tools.sh` refuses to build
 (`docs/PORTAL_TOOLS_RELEASE.md`, "Zipline line"). A 0.4.x app keeps the host
 of the tools release it was scaffolded with (0.3.18 or earlier). The machinery below

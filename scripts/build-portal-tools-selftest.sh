@@ -11,7 +11,9 @@
 #
 # Runs build-portal-tools.sh with KELIVER_TOOLS_PREFLIGHT_ONLY=1 (its checks, no Gradle) in fixture
 # copies of this checkout's scripts/, gradle/libs.versions.toml and build-support/portal-tools.version,
-# four ways (catalog group x scaffold default), plus this checkout as it stands.
+# four ways (catalog group x keliver-init's default), plus the refusals (an unknown group, no helper,
+# a default past the helper's newest line, a sibling scaffolder with a fixed default) and this
+# checkout as it stands.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PARENT="${1:?usage: build-portal-tools-selftest.sh <disposable-parent>}"
@@ -25,7 +27,9 @@ SCRIPTS=(build-portal-tools.sh keliver-runtime-line.sh keliver-init keliver-new-
   keliver-new-device-target.sh keliver-new-production-host.sh keliver-new-ios-host.sh)
 
 # fixture <name> <catalog group> <scaffold default>: a root whose catalog names <group> and whose
-# scaffolders all default to <scaffold default> (the same edit a tools release makes).
+# keliver-init defaults to <scaffold default> (the same edit a tools release makes). keliver-init is
+# the only scaffolder with a default: the others follow the app's own Keliver version, and
+# build-portal-tools.sh refuses a sibling that falls back to a fixed one.
 fixture() {
   local d="$RUN/$1" group="$2" v="$3" s
   mkdir -p "$d/scripts" "$d/gradle" "$d/build-support"
@@ -33,12 +37,9 @@ fixture() {
   cp "$ROOT/build-support/portal-tools.version" "$d/build-support/"
   sed -E "s/^(zipline(-[A-Za-z]+)?[[:space:]]*=[[:space:]]*\{[[:space:]]*module[[:space:]]*=[[:space:]]*\")[^:\"]+:/\1$group:/" \
     "$ROOT/gradle/libs.versions.toml" > "$d/gradle/libs.versions.toml"
-  for s in keliver-init keliver-new-editor.sh keliver-new-device-target.sh; do
-    sed -i.bak -E "s/^KELIVER_VERSION=\"\\\$\{KELIVER_VERSION:-[^}]+\}\"/KELIVER_VERSION=\"\${KELIVER_VERSION:-$v}\"/" "$d/scripts/$s"
-  done
-  for s in keliver-new-production-host.sh keliver-new-ios-host.sh; do
-    sed -i.bak -E "s/(v\.strip\(\) else |except Exception: print\()'[^']+'/\1'$v'/" "$d/scripts/$s"
-  done
+  sed -i.bak -E "s/^KELIVER_VERSION=\"\\\$\{KELIVER_VERSION:-[^}]+\}\"/KELIVER_VERSION=\"\${KELIVER_VERSION:-$v}\"/" "$d/scripts/keliver-init"
+  grep -qF "KELIVER_VERSION=\"\${KELIVER_VERSION:-$v}\"" "$d/scripts/keliver-init" \
+    || { echo "fixture $1: could not set keliver-init's default to $v" >&2; exit 1; }
   rm -f "$d"/scripts/*.bak
   echo "$d"
 }
@@ -62,6 +63,8 @@ run_case "fork host, scaffolders on 0.4.1: refused, naming both lines" \
   "$(fixture fork-041 dev.keliver.zipline 0.4.1)" 1 "REFUSING to build: the bundled development host would not run"
 run_case "fork host, scaffolders on 0.4.1: the message names QuickJS 2026 and keliver 0.4.1" \
   "$RUN/fork-041" 1 "runs QuickJS 2026 (Keliver's Zipline fork)"
+run_case "fork host, scaffolders on 0.4.1: the message names the fork's line from the table" \
+  "$RUN/fork-041" 1 "the fork line is 0.5"
 run_case "fork host, scaffolders on 0.5.0: built" \
   "$(fixture fork-050 dev.keliver.zipline 0.5.0)" 0 "matches"
 run_case "fork host, scaffolders on 0.5.0-rc1 (a pre-release is the fork line): built" \
@@ -74,6 +77,14 @@ d="$(fixture nogroup example.invalid 0.4.1)"
 run_case "a catalog Zipline group that is neither: refused" "$d" 1 "cannot tell which engine"
 d="$(fixture noline dev.keliver.zipline 0.5.0)"; rm "$d/scripts/keliver-runtime-line.sh"
 run_case "no keliver-runtime-line.sh: refused" "$d" 1 "keliver-runtime-line.sh is missing"
+# A default past the table's newest line: the helper's own reason, not an unbound variable.
+run_case "scaffolders on 0.9.0 (past the newest line): refused with the helper's reason" \
+  "$(fixture past dev.keliver.zipline 0.9.0)" 1 "needs a newer tools bundle"
+d="$(fixture sibling dev.keliver.zipline 0.5.0)"
+# shellcheck disable=SC2016 # the ${...} is the script's text, not this shell's
+sed -i.bak -E 's/^KELIVER_VERSION="\$\{KELIVER_VERSION:-\}"/KELIVER_VERSION="${KELIVER_VERSION:-0.5.0}"/' "$d/scripts/keliver-new-device-target.sh"
+rm -f "$d"/scripts/*.bak
+run_case "a sibling scaffolder with a fixed default: refused" "$d" 1 "keliver-new-device-target.sh falls back to a fixed keliver version"
 
 echo "=== this checkout as it stands"
 expect_rc=0
