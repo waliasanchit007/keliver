@@ -1,11 +1,17 @@
 /*
- * spike/keliver-web portal P5 — the iOS Treehouse HOST (peer of the Android
- * host). Two modes, chosen by a launch argument:
- *   (default) dev  — loads the interpreter guest from :8080 and binds HostApi
- *                    so it polls the portal-server draft (live editing).
- *   "prod"         — resolves the newest compatible PUBLISHED bundle from the
- *                    portal-server store and verifies its Ed25519 signature.
- * Template: sample/host-compose MainViewController (runtime-proven on iOS).
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -23,10 +29,10 @@ import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
 import coil3.PlatformContext
-import dev.keliver.leaks.LeakDetector
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
+import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portaldevice.HostApi
@@ -37,6 +43,8 @@ import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
@@ -46,9 +54,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString
 import okio.ByteString.Companion.decodeHex
 import okio.ByteString.Companion.toByteString
@@ -59,19 +67,27 @@ import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSString
-import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLRequestUseProtocolCachePolicy
 import platform.Foundation.NSURLResponse
 import platform.Foundation.NSURLSession
+import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.addValue
 import platform.Foundation.dataTaskWithRequest
 import platform.Foundation.dataUsingEncoding
-import platform.Foundation.setValue
 import platform.Foundation.setHTTPBody
 import platform.Foundation.setHTTPMethod
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import platform.Foundation.setValue
+
+/*
+ * spike/keliver-web portal P5 — the iOS Treehouse HOST (peer of the Android
+ * host). Two modes, chosen by a launch argument:
+ *   (default) dev  — loads the interpreter guest from :8080 and binds HostApi
+ *                    so it polls the portal-server draft (live editing).
+ *   "prod"         — resolves the newest compatible PUBLISHED bundle from the
+ *                    portal-server store and verifies its Ed25519 signature.
+ * Template: sample/host-compose MainViewController (runtime-proven on iOS).
+ */
 
 // The iOS simulator shares the Mac's network — localhost reaches the
 // portal-server (:8077) and the zipline dev server (:8080) directly.
@@ -81,6 +97,7 @@ private const val PORTAL_SERVER = "http://localhost:8077"
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 private var cachedApp: TreehouseApp<PortalPresenter>? = null
 
+@Suppress("ktlint:standard:function-naming") // The name the Xcode shell calls; Compose Multiplatform's convention.
 public fun MainViewController() = ComposeUIViewController {
   val app = initializeTreehouseApp()
   val widgetSystem = remember {

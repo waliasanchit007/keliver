@@ -1,11 +1,20 @@
 /*
- * V2 SPIKE S1 — headless PSI ingest.
- * Proves: KtFile PSI from source in a plain JVM (no IDE), recognizer-style
- * walk WITHOUT name resolution, RawCode spans byte-exact, <500ms warm.
- * Run: ./gradlew :portal-schema-codegen:runPsiSpike
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
 @file:OptIn(CoreEnvironmentDeprecation::class)
+// Kotlin 2.4 marks KotlinCoreEnvironment's API for rework (opt-in); this headless PSI use is unchanged.
 
 package dev.keliver.portal.codegen.spike
 
@@ -21,6 +30,13 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtLambdaArgument
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtPsiFactory
+
+/*
+ * V2 SPIKE S1 — headless PSI ingest.
+ * Proves: KtFile PSI from source in a plain JVM (no IDE), recognizer-style
+ * walk WITHOUT name resolution, RawCode spans byte-exact, <500ms warm.
+ * Run: ./gradlew :portal-schema-codegen:runPsiSpike
+ */
 
 private val SAMPLE_SCREEN = """
 package myapp.screens
@@ -94,7 +110,9 @@ fun main() {
   val disposable = Disposer.newDisposable()
   val t0 = System.nanoTime()
   val env = KotlinCoreEnvironment.createForProduction(
-    disposable, CompilerConfiguration.create(), EnvironmentConfigFiles.JVM_CONFIG_FILES,
+    disposable,
+    CompilerConfiguration.create(),
+    EnvironmentConfigFiles.JVM_CONFIG_FILES,
   )
   val factory = KtPsiFactory(env.project)
   val tEnv = System.nanoTime()

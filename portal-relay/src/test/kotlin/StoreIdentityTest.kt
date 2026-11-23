@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -25,7 +40,11 @@ class StoreIdentityTest {
   private fun <T> withUserHome(home: File, block: () -> T): T {
     val previous = System.getProperty("user.home")
     System.setProperty("user.home", home.absolutePath)
-    try { return block() } finally { System.setProperty("user.home", previous) }
+    try {
+      return block()
+    } finally {
+      System.setProperty("user.home", previous)
+    }
   }
 
   private fun app(parent: File, name: String): File =
@@ -37,8 +56,8 @@ class StoreIdentityTest {
   fun theSlugIsAsciiCollapsedAndTrimmed() {
     assertEquals("myapp", storeSlug("MyApp"))
     assertEquals("my.app_1-2", storeSlug("my.app_1-2"))
-    assertEquals("caf", storeSlug("café"))          // é is two UTF-8 bytes, both mapped, then collapsed
-    assertEquals("a-b", storeSlug("a   b"))         // a run of unsafe bytes is ONE dash
+    assertEquals("caf", storeSlug("café")) // é is two UTF-8 bytes, both mapped, then collapsed
+    assertEquals("a-b", storeSlug("a   b")) // a run of unsafe bytes is ONE dash
     assertEquals("app", storeSlug(""))
     assertEquals("app", storeSlug("---"))
     // A store directory must never be named "." or "..".

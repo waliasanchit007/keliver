@@ -1,10 +1,17 @@
 /*
- * spike/keliver-web portal P2 — the redesigned EDITOR.
- * 3-pane dark chrome (Kotlin DOM on the Ui kit): left = project/screen +
- * searchable 60-widget palette + outline; center = live canvas in a device
- * frame; right = generated properties + modifiers + node ops. Undo/redo over
- * the immutable tree, autosaved drafts via portal-server (refresh-safe), and
- * the device keeps mirroring the active screen through GET /tree.
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
@@ -12,22 +19,20 @@ import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.CondTest
 import dev.keliver.portal.Conditional
-import dev.keliver.portal.condOf
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.PropChoice
 import dev.keliver.portal.PropKind
-import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
 import dev.keliver.portal.Token
-import dev.keliver.portal.tokenValue
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.collectContract
 import dev.keliver.portal.collectPreviewBindingKeys
+import dev.keliver.portal.condOf
 import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
-import dev.keliver.portal.document.OpAck
 import dev.keliver.portal.document.OpBatch
 import dev.keliver.portal.document.OpEnvelope
 import dev.keliver.portal.document.PropValue
@@ -38,17 +43,16 @@ import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.editableProps
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
-import dev.keliver.portal.updateProps
-import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.isValidUnder
+import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.propSourceType
-import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
 import dev.keliver.portal.render.resolvePersona
-import dev.keliver.protocol.guest.guestRedwoodVersion
+import dev.keliver.portal.updateProps
 import dev.keliver.portal.widgetSpec
 import dev.keliver.portal.widgetSpecs
+import dev.keliver.protocol.guest.guestRedwoodVersion
 import kotlinx.browser.document
 import kotlinx.browser.localStorage
 import kotlinx.browser.window
@@ -69,6 +73,15 @@ import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.xhr.XMLHttpRequest
 
+/*
+ * spike/keliver-web portal P2 — the redesigned EDITOR.
+ * 3-pane dark chrome (Kotlin DOM on the Ui kit): left = project/screen +
+ * searchable 60-widget palette + outline; center = live canvas in a device
+ * frame; right = generated properties + modifiers + node ops. Undo/redo over
+ * the immutable tree, autosaved drafts via portal-server (refresh-safe), and
+ * the device keeps mirroring the active screen through GET /tree.
+ */
+
 // ---------------------------------------------------------------------------
 // State
 
@@ -79,11 +92,15 @@ private fun initialTree(): WidgetNode = WidgetNode(
     "gradientStops" to listOf(0.0f, 1.0f),
     "gradientDirection" to 3,
     "borderColorArgb" to 0xFFFFD9B0.toInt(),
-    "borderWidthDp" to 1, "cornerRadiusDp" to 12, "fillWidth" to true, "paddingDp" to 20,
+    "borderWidthDp" to 1,
+    "cornerRadiusDp" to 12,
+    "fillWidth" to true,
+    "paddingDp" to 20,
   ),
   listOf(
     WidgetNode(
-      "Column", emptyMap(),
+      "Column",
+      emptyMap(),
       listOf(
         WidgetNode("StyledText", mapOf("text" to "Welcome to the keliver portal", "fontSize" to 20, "bold" to true, "colorArgb" to 0xFF111111.toInt())),
         WidgetNode("Spacer", mapOf("height" to 8.0)),
@@ -100,7 +117,10 @@ internal val portalTree = mutableStateOf(initialTree())
 internal val canvasShowsComponent = mutableStateOf(false)
 
 private var selectedId: Int? = null
-  set(v) { field = v; deletedPlace = null } // a selection (or none, chosen) is where the arrows go on from
+  set(v) {
+    field = v
+    deletedPlace = null
+  } // a selection (or none, chosen) is where the arrows go on from
 internal var currentProject = "default"
 private var currentScreen = "main"
   set(v) {
@@ -133,6 +153,7 @@ private var componentsVersionSeen: Long = -1
 /** The `/components` text last applied: an unchanged registry does not redraw the canvas. */
 private var componentsJsonSeen: String? = null
 private var eventSource: EventSource? = null
+
 /** One queued edit: its ops, whether panels re-render after it, and who hears if the relay accepted it. */
 private class QueuedOps(val ops: List<DocOp>, val refreshPanels: Boolean, val onResult: ((Boolean) -> Unit)?, val target: EditTarget)
 private val opQueue = ArrayDeque<QueuedOps>()
@@ -197,24 +218,41 @@ private fun i(v: Int) = PropValue.Lit("i", i = v)
 /** The first thing a playground visitor sees: binds, mock rows, actions, Icon/ListItem. */
 private fun demoTemplate(): UiDocument = UiDocument(
   "playground",
-  w(1, "Column", children = listOf(
-    w(2, "StyledText", mapOf("text" to s("Field Notes"), "fontSize" to i(26), "bold" to PropValue.Lit("b", b = true))),
-    w(3, "StyledText", mapOf("text" to PropValue.Bind("subtitle"), "fontSize" to i(13))),
-    w(4, "TextField", mapOf(
-      "text" to PropValue.Bind("draft"),
-      "placeholder" to s("What did you notice?"),
-      "onValueChange" to PropValue.Action("onDraftChange", arg = "it"),
-    )),
-    w(5, "Button", mapOf("text" to s("Add note"), "onClick" to PropValue.Action("addNote"))),
-    w(6, "Repeat", mapOf("items" to s("notes"), "item" to s("note")), children = listOf(
-      w(7, "ListItem", mapOf(
-        "headline" to PropValue.Bind("note.title"),
-        "supporting" to PropValue.Bind("note.body"),
-        "leadingIcon" to s("Star"),
-        "onClick" to PropValue.Action("openNote", arg = "note.id"),
-      )),
-    )),
-  )),
+  w(
+    1,
+    "Column",
+    children = listOf(
+      w(2, "StyledText", mapOf("text" to s("Field Notes"), "fontSize" to i(26), "bold" to PropValue.Lit("b", b = true))),
+      w(3, "StyledText", mapOf("text" to PropValue.Bind("subtitle"), "fontSize" to i(13))),
+      w(
+        4,
+        "TextField",
+        mapOf(
+          "text" to PropValue.Bind("draft"),
+          "placeholder" to s("What did you notice?"),
+          "onValueChange" to PropValue.Action("onDraftChange", arg = "it"),
+        ),
+      ),
+      w(5, "Button", mapOf("text" to s("Add note"), "onClick" to PropValue.Action("addNote"))),
+      w(
+        6,
+        "Repeat",
+        mapOf("items" to s("notes"), "item" to s("note")),
+        children = listOf(
+          w(
+            7,
+            "ListItem",
+            mapOf(
+              "headline" to PropValue.Bind("note.title"),
+              "supporting" to PropValue.Bind("note.body"),
+              "leadingIcon" to s("Star"),
+              "onClick" to PropValue.Action("openNote", arg = "note.id"),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
   dev.keliver.portal.document.Contract(),
   version = 0,
   nextHandle = 20,
@@ -222,17 +260,25 @@ private fun demoTemplate(): UiDocument = UiDocument(
 
 private fun formTemplate(): UiDocument = UiDocument(
   "playground",
-  w(1, "Column", children = listOf(
-    w(2, "StyledText", mapOf("text" to s("Create account"), "fontSize" to i(24), "bold" to PropValue.Lit("b", b = true))),
-    w(3, "TextField", mapOf("text" to PropValue.Bind("email"), "placeholder" to s("Email"), "onValueChange" to PropValue.Action("onEmail", arg = "it"))),
-    w(4, "SegmentedButtonRow", mapOf(
-      "options" to PropValue.Lit("ls", ls = listOf("Free", "Pro", "Team")),
-      "selectedIndex" to i(0),
-      "onSelect" to PropValue.Action("onPlan", arg = "it"),
-    )),
-    w(5, "Checkbox", mapOf("checked" to PropValue.Lit("b", b = true))),
-    w(6, "Button", mapOf("text" to s("Sign up"), "onClick" to PropValue.Action("submit"))),
-  )),
+  w(
+    1,
+    "Column",
+    children = listOf(
+      w(2, "StyledText", mapOf("text" to s("Create account"), "fontSize" to i(24), "bold" to PropValue.Lit("b", b = true))),
+      w(3, "TextField", mapOf("text" to PropValue.Bind("email"), "placeholder" to s("Email"), "onValueChange" to PropValue.Action("onEmail", arg = "it"))),
+      w(
+        4,
+        "SegmentedButtonRow",
+        mapOf(
+          "options" to PropValue.Lit("ls", ls = listOf("Free", "Pro", "Team")),
+          "selectedIndex" to i(0),
+          "onSelect" to PropValue.Action("onPlan", arg = "it"),
+        ),
+      ),
+      w(5, "Checkbox", mapOf("checked" to PropValue.Lit("b", b = true))),
+      w(6, "Button", mapOf("text" to s("Sign up"), "onClick" to PropValue.Action("submit"))),
+    ),
+  ),
   dev.keliver.portal.document.Contract(),
   version = 0,
   nextHandle = 20,
@@ -240,14 +286,18 @@ private fun formTemplate(): UiDocument = UiDocument(
 
 private fun profileTemplate(): UiDocument = UiDocument(
   "playground",
-  w(1, "Column", children = listOf(
-    w(2, "Icon", mapOf("name" to s("AccountCircle"), "sizeDp" to i(64))),
-    w(3, "StyledText", mapOf("text" to PropValue.Bind("displayName"), "fontSize" to i(22), "bold" to PropValue.Lit("b", b = true))),
-    w(4, "Divider", emptyMap()),
-    w(5, "ListItem", mapOf("headline" to s("Notifications"), "leadingIcon" to s("Notifications"), "trailingIcon" to s("KeyboardArrowRight"))),
-    w(6, "ListItem", mapOf("headline" to s("Settings"), "leadingIcon" to s("Settings"), "trailingIcon" to s("KeyboardArrowRight"))),
-    w(7, "ListItem", mapOf("headline" to s("Sign out"), "leadingIcon" to s("ExitToApp"), "onClick" to PropValue.Action("signOut"))),
-  )),
+  w(
+    1,
+    "Column",
+    children = listOf(
+      w(2, "Icon", mapOf("name" to s("AccountCircle"), "sizeDp" to i(64))),
+      w(3, "StyledText", mapOf("text" to PropValue.Bind("displayName"), "fontSize" to i(22), "bold" to PropValue.Lit("b", b = true))),
+      w(4, "Divider", emptyMap()),
+      w(5, "ListItem", mapOf("headline" to s("Notifications"), "leadingIcon" to s("Notifications"), "trailingIcon" to s("KeyboardArrowRight"))),
+      w(6, "ListItem", mapOf("headline" to s("Settings"), "leadingIcon" to s("Settings"), "trailingIcon" to s("KeyboardArrowRight"))),
+      w(7, "ListItem", mapOf("headline" to s("Sign out"), "leadingIcon" to s("ExitToApp"), "onClick" to PropValue.Action("signOut"))),
+    ),
+  ),
   dev.keliver.portal.document.Contract(),
   version = 0,
   nextHandle = 20,
@@ -424,7 +474,10 @@ private fun pumpOps() {
       return
     }
     // A refusal that is still current keeps the pill "Not written" (settling never hides it).
-    pillAfterReply(reply, writeBackWarnings.showing).let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
+    pillAfterReply(reply, writeBackWarnings.showing).let {
+      saveDotEl.className = it.dot
+      saveTextEl.textContent = it.text
+    }
     when (reply) {
       is OpsReply.Accepted -> {
         changeHistoryOf(target) { it.edited(target) }
@@ -486,7 +539,10 @@ private var writeBackScreen = ""
  */
 private fun showWriteBack(n: WriteBackNotice?) {
   val warning = writeBackWarnings.next(n)
-  writeBackWarnings.pill?.let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
+  writeBackWarnings.pill?.let {
+    saveDotEl.className = it.dot
+    saveTextEl.textContent = it.text
+  }
   if (!writeBackWarnings.showing) {
     // A discard's banner stays until dismissed or a later write / read replaces it.
     if (n == null || n.written) {
@@ -504,7 +560,12 @@ private fun showWriteBack(n: WriteBackNotice?) {
       "border-radius:8px; padding:8px 12px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.4); display:flex; gap:10px;",
   )
   banner.appendChild(Ui.el("span", "", "⚠ $warning"))
-  banner.appendChild(Ui.button("×", "btn icon") { banner.remove(); if (writeBackBanner == banner) writeBackBanner = null })
+  banner.appendChild(
+    Ui.button("×", "btn icon") {
+      banner.remove()
+      if (writeBackBanner == banner) writeBackBanner = null
+    },
+  )
   kotlinx.browser.document.body?.appendChild(banner)
   writeBackBanner = banner
 }
@@ -536,7 +597,10 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     // Replies can arrive out of order: an older document never replaces a newer one (it would
     // roll the canvas back and send the next edit against a stale version).
     // Its continuation still runs (a resumed edit queue, an event subscription): a newer reply is in.
-    if (seq <= appliedSeq || seq <= staleUpTo) { cb?.invoke(); return@addEventListener }
+    if (seq <= appliedSeq || seq <= staleUpTo) {
+      cb?.invoke()
+      return@addEventListener
+    }
     if (xhr.status.toInt() == 404 && target.component != null) {
       // E14: a component whose body is edited in code (or that is gone) — say why, and go back.
       val why = Regex("\"error\":\"([^\"]*)\"").find(xhr.responseText)?.groupValues?.get(1) ?: "it cannot be opened"
@@ -567,12 +631,20 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
         pendingInsertPlace = null
         val siblings = portalTree.value.findNode(parent)?.children.orEmpty()
         val i = if (after == null) 0 else siblings.indexOfFirst { it.id == after } + 1
-        siblings.getOrNull(i)?.let { selectedId = it.id; revealWhenDrawn(it.id) } // H5: shown, even below the fold
+        siblings.getOrNull(i)?.let {
+          selectedId = it.id
+          revealWhenDrawn(it.id)
+        } // H5: shown, even below the fold
       }
       if (LiveEngine.isRunning) LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
       Snapshot.sendApplyNotifications()
       // A typed edit keeps the field being typed in; the outline's labels follow it.
-      if (refreshPanels) refresh() else { renderOutline(); makeUpPanels() }
+      if (refreshPanels) {
+        refresh()
+      } else {
+        renderOutline()
+        makeUpPanels()
+      }
       cb?.invoke()
     }
   })
@@ -591,7 +663,10 @@ private fun subscribeDocEvents() {
     writeBackBanner?.remove()
     writeBackBanner = null
     // The pill was the other screen's: start this one idle (its first event sets its own).
-    WriteBackWarnings.IDLE.let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
+    WriteBackWarnings.IDLE.let {
+      saveDotEl.className = it.dot
+      saveTextEl.textContent = it.text
+    }
   }
   eventSource = EventSource("$SERVER/doc-events?${target.query}").also { es ->
     es.onmessage = { ev ->
@@ -621,7 +696,10 @@ private fun subscribeDocEvents() {
     es.onerror = { _ ->
       // Server restart kills the stream; recreate after a beat (fresh subscribe).
       if (target == editTarget()) {
-        window.setTimeout({ if (eventSource == es) subscribeDocEvents(); null }, 2000)
+        window.setTimeout({
+          if (eventSource == es) subscribeDocEvents()
+          null
+        }, 2000)
       }
       null
     }
@@ -687,15 +765,33 @@ private fun historyKey() = historyKeyOf(currentProject, currentScreen)
  * screen's history, never the one open now.
  */
 private fun changeHistoryOf(target: EditTarget, change: (SessionHistory) -> Unit) {
-  if (target.project == currentProject && target.screen == currentScreen) { change(sessionHistory); saveHistory(); return }
+  if (target.project == currentProject && target.screen == currentScreen) {
+    change(sessionHistory)
+    saveHistory()
+    return
+  }
   // L2: the relay's copy of that screen's history (every browser's), else this browser's.
   val local = runCatching { localStorage.getItem(historyKeyOf(target.project, target.screen)) }.getOrNull()
-  fun apply(text: String?) = SessionHistory().apply { load(text) }.also { change(it); keepHistory(target.project, target.screen, it) }
-  if (playground) { apply(local); return }
+  fun apply(text: String?) = SessionHistory().apply { load(text) }.also {
+    change(it)
+    keepHistory(target.project, target.screen, it)
+  }
+  if (playground) {
+    apply(local)
+    return
+  }
   val xhr = XMLHttpRequest()
   xhr.open("GET", "$SERVER/history?project=${target.project}&screen=${target.screen}")
   // Review 7: a relay that keeps none (204) started since — its stacks are empty, this browser's copy stale.
-  xhr.addEventListener("load", { _ -> apply(when (xhr.status.toInt()) { 200 -> xhr.responseText; 204 -> null; else -> local }) })
+  xhr.addEventListener("load", { _ ->
+    apply(
+      when (xhr.status.toInt()) {
+        200 -> xhr.responseText
+        204 -> null
+        else -> local
+      },
+    )
+  })
   xhr.addEventListener("error", { _ -> apply(local) })
   xhr.send()
 }
@@ -748,6 +844,7 @@ private fun takeHistoryFromRelay() {
 private fun stepHistory(path: String, target: EditTarget, verb: String, done: (EditTarget) -> Unit) {
   val undo = path == "/undo"
   val nothing = "Nothing left to ${if (undo) "undo" else "redo"}"
+
   // Review 3: only a step the relay took moves the history. Review 4 #11: one it blocked but KEPT
   // stays the next step (said why); one it no longer has, or dropped, is gone (said so).
   fun settled(reply: StepReply, where: String?) = when (reply) {
@@ -762,8 +859,11 @@ private fun stepHistory(path: String, target: EditTarget, verb: String, done: (E
     serverPost(path) { text ->
       val reply = stepReplyOf(text)
       // Review 4 #3: said only while that document is still the one open.
-      if (reply !is StepReply.Stepped && target.key != editTarget().key) changeHistoryOf(target) { if (reply is StepReply.Gone) it.skipped(target, undo) }
-      else settled(reply, null)
+      if (reply !is StepReply.Stepped && target.key != editTarget().key) {
+        changeHistoryOf(target) { if (reply is StepReply.Gone) it.skipped(target, undo) }
+      } else {
+        settled(reply, null)
+      }
       refetchDoc(true)
     }
     return
@@ -777,7 +877,11 @@ private fun stepHistory(path: String, target: EditTarget, verb: String, done: (E
     settled(reply, where)
     if (reply is StepReply.Stepped) {
       Ui.toast("$verb your last edit, in $where")
-      fetchComponents { refresh(); canvasGeneration.value++; Snapshot.sendApplyNotifications() }
+      fetchComponents {
+        refresh()
+        canvasGeneration.value++
+        Snapshot.sendApplyNotifications()
+      }
     }
     updateUndoButtons()
   })
@@ -819,10 +923,16 @@ private fun updateUndoButtons() {
   }
   // G1: a step waiting in another document (a component edited, then left) is the next one.
   val here = editTarget()
-  if (sessionHistory.undoElsewhere(here)) set(undoBtn, null, "Undo your last edit, in ${sessionHistory.undoTarget(here).let { it.component ?: it.screen }}")
-  else set(undoBtn, undoDepth, "Undo")
-  if (sessionHistory.redoElsewhere(here)) set(redoBtn, null, "Redo, in ${sessionHistory.redoTarget(here).let { it.component ?: it.screen }}")
-  else set(redoBtn, redoDepth, "Redo")
+  if (sessionHistory.undoElsewhere(here)) {
+    set(undoBtn, null, "Undo your last edit, in ${sessionHistory.undoTarget(here).let { it.component ?: it.screen }}")
+  } else {
+    set(undoBtn, undoDepth, "Undo")
+  }
+  if (sessionHistory.redoElsewhere(here)) {
+    set(redoBtn, null, "Redo, in ${sessionHistory.redoTarget(here).let { it.component ?: it.screen }}")
+  } else {
+    set(redoBtn, redoDepth, "Redo")
+  }
 }
 
 /** Anchor for append-to-end inserts: the parent's last child handle (excluding [excludeId]). */
@@ -858,7 +968,10 @@ private fun paletteKind(type: String): String = editorComponents.spec(type)?.let
 
 private fun schedulePalettePreview(type: String, row: HTMLElement) {
   kotlinx.browser.window.clearTimeout(palettePreviewTimer)
-  palettePreviewTimer = kotlinx.browser.window.setTimeout({ showPalettePreview(type, row); null }, 180)
+  palettePreviewTimer = kotlinx.browser.window.setTimeout({
+    showPalettePreview(type, row)
+    null
+  }, 180)
 }
 
 private fun showPalettePreview(type: String, row: HTMLElement) {
@@ -978,10 +1091,18 @@ private fun confirmPublish() {
   val box = Ui.el("div", "modal")
   markDialog(box)
   box.appendChild(Ui.el("div", "modal-title", "Publish to devices?"))
-  box.appendChild(Ui.el("div", "muted", "Builds and signs project “$currentProject” (every screen, including “$currentScreen”) " +
-    "and stores it as the next bundle version. Devices running this app load it on their next update check."))
+  box.appendChild(
+    Ui.el(
+      "div",
+      "muted",
+      "Builds and signs project “$currentProject” (every screen, including “$currentScreen”) " +
+        "and stores it as the next bundle version. Devices running this app load it on their next update check.",
+    ),
+  )
   val actions = Ui.el("div", "modal-actions")
-  fun close() { back.remove() }
+  fun close() {
+    back.remove()
+  }
   val cancel = Ui.button("Cancel", "btn") { close() }
   val go = Ui.button("Publish", "btn primary") {}
   go.addEventListener("click", { _ ->
@@ -1004,7 +1125,10 @@ private fun markDialog(box: HTMLElement) {
   box.setAttribute("role", "dialog")
   box.setAttribute("aria-modal", "true")
   box.setAttribute("aria-labelledby", "modal-title")
-  kotlinx.browser.window.setTimeout({ (box.querySelector(".modal-title") as? HTMLElement)?.id = "modal-title"; null }, 0)
+  kotlinx.browser.window.setTimeout({
+    (box.querySelector(".modal-title") as? HTMLElement)?.id = "modal-title"
+    null
+  }, 0)
 }
 
 /**
@@ -1039,8 +1163,11 @@ private fun runPublish() {
     publishBtn.removeAttribute("disabled")
     setTopAction(publishBtn, "⬆ Publish", "to devices")
     val s = publishSummary(ok, text)
-    if (s.ok) showPublishCard(PublishCard.Done, "Published v${s.version}", "Devices running this app load it on their next update check", text)
-    else showPublishCard(PublishCard.Failed, "Not published", s.reason, text)
+    if (s.ok) {
+      showPublishCard(PublishCard.Done, "Published v${s.version}", "Devices running this app load it on their next update check", text)
+    } else {
+      showPublishCard(PublishCard.Failed, "Not published", s.reason, text)
+    }
     refreshDevicesChip()
   }
   xhr.addEventListener("load", { _ -> done(xhr.status.toInt() == 200, xhr.responseText) })
@@ -1064,16 +1191,23 @@ private fun showPublishCard(state: PublishCard, title: String, detail: String?, 
   detail?.let { body.appendChild(Ui.el("div", "pc-detail", it)) }
   card.appendChild(body)
   if (log != null) {
-    card.appendChild(Ui.button("Log", "btn mini") {
-      showExportText("Publish log", null, log, "publish.log")
-      exportOverlay.removeAttribute("style")
-    }.also { it.setAttribute("title", "The full build and signing output") })
+    card.appendChild(
+      Ui.button("Log", "btn mini") {
+        showExportText("Publish log", null, log, "publish.log")
+        exportOverlay.removeAttribute("style")
+      }.also { it.setAttribute("title", "The full build and signing output") },
+    )
   }
   if (state != PublishCard.Busy) card.appendChild(Ui.button("✕", "btn icon mini") { card.remove() }.also { it.setAttribute("title", "Close") })
   document.body?.appendChild(card)
   publishCardEl = card
   // A success goes by itself; a failure stays until it is read.
-  if (state == PublishCard.Done) kotlinx.browser.window.setTimeout({ if (publishCardEl === card) card.remove(); null }, 12_000)
+  if (state == PublishCard.Done) {
+    kotlinx.browser.window.setTimeout({
+      if (publishCardEl === card) card.remove()
+      null
+    }, 12_000)
+  }
 }
 
 private lateinit var devicesChip: HTMLElement
@@ -1140,7 +1274,8 @@ private fun buildTopbar() {
   // phone's default 412×915 dp next to the original presets.
   DEVICE_PRESETS.forEach { (name, dims) ->
     val o = document.createElement("option") as HTMLOptionElement
-    o.value = dims; o.textContent = "$name · ${dims.replace("x", "×")}"
+    o.value = dims
+    o.textContent = "$name · ${dims.replace("x", "×")}"
     preset.appendChild(o)
   }
   preset.value = localStorage.getItem("portal.preset") ?: "390x780"
@@ -1155,19 +1290,22 @@ private fun buildTopbar() {
   fun ensureOption(dims: String) {
     if ((0 until preset.options.length).none { (preset.options.item(it) as? HTMLOptionElement)?.value == dims }) {
       val o = document.createElement("option") as HTMLOptionElement
-      o.value = dims; o.textContent = "Custom · ${dims.replace("x", "×")}"
+      o.value = dims
+      o.textContent = "Custom · ${dims.replace("x", "×")}"
       preset.appendChild(o)
     }
     preset.value = dims
   }
   ensureOption(preset.value.ifEmpty { "390x780" }.let { v -> if (parsePreset(v) != null) v else "390x780" })
-  bar.appendChild(Ui.button("⟲", "btn icon") {
-    val (w, h) = currentFrameSize()
-    val rotated = "${h}x$w"
-    localStorage.setItem("portal.preset", rotated)
-    ensureOption(rotated)
-    applyFramePreset(rotated)
-  }.also { it.setAttribute("title", "Rotate the frame") })
+  bar.appendChild(
+    Ui.button("⟲", "btn icon") {
+      val (w, h) = currentFrameSize()
+      val rotated = "${h}x$w"
+      localStorage.setItem("portal.preset", rotated)
+      ensureOption(rotated)
+      applyFramePreset(rotated)
+    }.also { it.setAttribute("title", "Rotate the frame") },
+  )
 
   val savePill = Ui.el("span", "pill")
   saveDotEl = Ui.el("span", "dot")
@@ -1220,8 +1358,10 @@ private fun buildTopbar() {
     flowSel = sel
     sel.addEventListener("change", { _ -> syncLiveButton() })
     // #13 F3: open the derived nav-graph view (nodes = screens, edges = navs).
-    bar.appendChild(Ui.button("⛓", "btn icon") { showFlowGraph() }
-      .also { it.setAttribute("title", "Nav graph: the flow's screens + navigations (click a node to open it)") })
+    bar.appendChild(
+      Ui.button("⛓", "btn icon") { showFlowGraph() }
+        .also { it.setAttribute("title", "Nav graph: the flow's screens + navigations (click a node to open it)") },
+    )
   }
   // Owner, 25 Oct: each action says what it does — its name, and under it what it acts on.
   liveBtn = topAction("▶ Live", "run its logic", LIVE_TIP, "btn") { toggleLive() }
@@ -1235,8 +1375,13 @@ private fun buildTopbar() {
   bar.appendChild(buildChip)
 
   bar.appendChild(
-    topAction("</> Code", "this screen's .kt", "This screen's Kotlin file exactly as it is on disk — copy or download it. " +
-      "Your edits are written to it as you make them; nothing to export.", "btn") { showExport() },
+    topAction(
+      "</> Code",
+      "this screen's .kt",
+      "This screen's Kotlin file exactly as it is on disk — copy or download it. " +
+        "Your edits are written to it as you make them; nothing to export.",
+      "btn",
+    ) { showExport() },
   )
   bar.appendChild(Ui.el("span", "topbar-sep"))
   devicesChip = Ui.el("span", "devices-chip", "")
@@ -1249,12 +1394,22 @@ private fun buildTopbar() {
     devicesChip.addEventListener("keydown", { ev -> if ((ev as KeyboardEvent).key == "Enter") showDeviceLinks() })
   }
   bar.appendChild(devicesChip)
-  publishBtn = topAction("⬆ Publish", "to devices", "Build and sign every screen of this app and store it as the next bundle. " +
-    "Devices running the app load it on their next update check.", "btn primary") { confirmPublish() }
+  publishBtn = topAction(
+    "⬆ Publish",
+    "to devices",
+    "Build and sign every screen of this app and store it as the next bundle. " +
+      "Devices running the app load it on their next update check.",
+    "btn primary",
+  ) { confirmPublish() }
   bar.appendChild(publishBtn)
   refreshDevicesChip()
   // A phone that starts listening live (or stops) shows within 10 s.
-  if (!playground) window.setInterval({ refreshDevicesChip(); null }, 10_000)
+  if (!playground) {
+    window.setInterval({
+      refreshDevicesChip()
+      null
+    }, 10_000)
+  }
   // E41: the topbar is first in the tab order (it is first on screen), and says what it is.
   bar.setAttribute("role", "toolbar")
   bar.setAttribute("aria-label", "Editor")
@@ -1424,11 +1579,17 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     }, true)
   }
   host.addEventListener("mousemove", { ev ->
-    if (!selectMode) { hideOverlay(hoverOverlay); return@addEventListener }
+    if (!selectMode) {
+      hideOverlay(hoverOverlay)
+      return@addEventListener
+    }
     val me = ev as org.w3c.dom.events.MouseEvent
     val h = hitAt(me.clientX.toDouble(), me.clientY.toDouble())
-    if (h == null || h == selectedId) hideOverlay(hoverOverlay)
-    else positionOverlay(hoverOverlay, h, composePoint(me.clientX.toDouble(), me.clientY.toDouble()))
+    if (h == null || h == selectedId) {
+      hideOverlay(hoverOverlay)
+    } else {
+      positionOverlay(hoverOverlay, h, composePoint(me.clientX.toDouble(), me.clientY.toDouble()))
+    }
   })
   host.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
 
@@ -1455,7 +1616,10 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     return canvasDropPlace(tree, h, x, y, ::boxOf, ::acceptsChildrenNode, padding = 32.0 * dpr)
   }
   fun showDropMark(h: Int, zone: DropZone) {
-    val rect = portalTree.value.findNode(h)?.let(::boxOf) ?: run { dropLine.style.display = "none"; return }
+    val rect = portalTree.value.findNode(h)?.let(::boxOf) ?: run {
+      dropLine.style.display = "none"
+      return
+    }
     val dpr = kotlinx.browser.window.devicePixelRatio
     dropLine.style.display = "block"
     dropLine.style.left = "${rect.left / dpr}px"
@@ -1500,8 +1664,11 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
   kotlinx.browser.window.setInterval({
     if (selectMode) {
       val sel = selectedId
-      if (sel != null && portalTree.value.findNode(sel) != null) positionOverlay(selOverlay, sel)
-      else hideOverlay(selOverlay)
+      if (sel != null && portalTree.value.findNode(sel) != null) {
+        positionOverlay(selOverlay, sel)
+      } else {
+        hideOverlay(selOverlay)
+      }
     }
     null
   }, 120)
@@ -1540,8 +1707,16 @@ internal fun editTextInline(handle: Int) {
     val k = ev as KeyboardEvent
     // H1: the Enter that commits is this field's alone — reaching the editor's Enter (edit the
     // selection in place) reopened this box over the old text and left the panel showing it.
-    if (k.key == "Enter" && !k.shiftKey && !k.isComposing) { k.preventDefault(); k.stopPropagation(); finish(true) }
-    if (k.key == "Escape") { k.preventDefault(); k.stopPropagation(); finish(false) }
+    if (k.key == "Enter" && !k.shiftKey && !k.isComposing) {
+      k.preventDefault()
+      k.stopPropagation()
+      finish(true)
+    }
+    if (k.key == "Escape") {
+      k.preventDefault()
+      k.stopPropagation()
+      finish(false)
+    }
   })
   input.addEventListener("blur", { _ -> finish(true) })
   frame.appendChild(input)
@@ -1552,7 +1727,10 @@ internal fun editTextInline(handle: Int) {
 /** Select (click selects, the app does not see it) or Interact (the app gets the pointer). */
 internal fun setSelectMode(on: Boolean) {
   selectMode = on
-  if (!on) { hideOverlay(selOverlay); hideOverlay(hoverOverlay) }
+  if (!on) {
+    hideOverlay(selOverlay)
+    hideOverlay(hoverOverlay)
+  }
   canvasToolbarSync()
 }
 
@@ -1579,7 +1757,10 @@ internal fun revealOnCanvas(handle: Int) {
   scrollCanvasTo(rect)
   if (selectMode) {
     selOverlay.classList.remove("flash")
-    kotlinx.browser.window.setTimeout({ selOverlay.classList.add("flash"); null }, 10)
+    kotlinx.browser.window.setTimeout({
+      selOverlay.classList.add("flash")
+      null
+    }, 10)
   }
 }
 
@@ -1622,7 +1803,10 @@ private fun showOnCanvasWhenDrawn(
           // selection), and its timer hides only that outline — not one the author hovers by then.
           if (selectMode && handle != selectedId && target == editTarget()) {
             positionOverlay(hoverOverlay, handle)
-            kotlinx.browser.window.setTimeout({ if (hoverHandle == handle) hideOverlay(hoverOverlay); null }, 1500)
+            kotlinx.browser.window.setTimeout({
+              if (hoverHandle == handle) hideOverlay(hoverOverlay)
+              null
+            }, 1500)
           }
         }
       }
@@ -1652,20 +1836,28 @@ internal var canvasScroller: ((Float) -> Unit)? = null
 
 internal fun selectModeOn(): Boolean = selectMode
 
-internal fun canvasHintElement(el: HTMLElement) { canvasHint = el }
+internal fun canvasHintElement(el: HTMLElement) {
+  canvasHint = el
+}
 
 private fun showCanvasHint(text: String, millis: Int = 3500) {
   if (!::canvasHint.isInitialized) return
   canvasHint.textContent = text
   canvasHint.style.display = "block"
-  kotlinx.browser.window.setTimeout({ if (canvasHint.textContent == text) canvasHint.style.display = "none"; null }, millis)
+  kotlinx.browser.window.setTimeout({
+    if (canvasHint.textContent == text) canvasHint.style.display = "none"
+    null
+  }, millis)
 }
 
 /** The node the hover box outlines (null while it is hidden). */
 private var hoverHandle: Int? = null
 
 private fun positionOverlay(el: HTMLElement, handle: Int, at: Pair<Double, Double>? = null) {
-  val union = dev.keliver.material.composeui.SelectionRegistry.bounds[handle] ?: run { hideOverlay(el); return }
+  val union = dev.keliver.material.composeui.SelectionRegistry.bounds[handle] ?: run {
+    hideOverlay(el)
+    return
+  }
   if (el === hoverOverlay) hoverHandle = handle
   val dpr = kotlinx.browser.window.devicePixelRatio
   // F11: a node drawn several times (a list's rows) is outlined where it was clicked (or its first
@@ -1711,7 +1903,10 @@ private fun showInstanceGhosts(sel: HTMLElement, boxes: List<DropBox>) {
   }
   instanceGhosts.forEachIndexed { i, g ->
     val b = boxes.getOrNull(i)
-    if (b == null) { g.style.display = "none"; return@forEachIndexed }
+    if (b == null) {
+      g.style.display = "none"
+      return@forEachIndexed
+    }
     g.style.display = "block"
     g.style.left = "${b.left / dpr}px"
     g.style.top = "${b.top / dpr}px"
@@ -1766,11 +1961,16 @@ private fun installMockActionSink() {
 // ── M8: capability-driven live preview ──────────────────────────────────────
 
 private fun toggleLive() {
-  if (LiveEngine.request.value != null || liveOn()) disableLive()
-  else if (openComponents.isNotEmpty()) showCanvasHint("Live runs the screen's presenter — go back to “$currentScreen” to run it")
-  // Owner, 25 Oct: with nothing to run, Live said "on" and changed nothing. It says why instead.
-  else if (!liveAvailable()) showCanvasHint(liveUnavailableWhy(), millis = 9000)
-  else enableLive()
+  if (LiveEngine.request.value != null || liveOn()) {
+    disableLive()
+  } else if (openComponents.isNotEmpty()) {
+    showCanvasHint("Live runs the screen's presenter — go back to “$currentScreen” to run it")
+  } // Owner, 25 Oct: with nothing to run, Live said "on" and changed nothing. It says why instead.
+  else if (!liveAvailable()) {
+    showCanvasHint(liveUnavailableWhy(), millis = 9000)
+  } else {
+    enableLive()
+  }
 }
 
 /** Whether this editor build can run anything Live for the open screen: its presenter, or a flow chosen. */
@@ -1885,7 +2085,10 @@ private fun disableLive() {
   liveBtn.className = "btn top-action"
   syncLiveButton()
   renderMockFidelity()
-  inspectorEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "—")) }
+  inspectorEl.let {
+    Ui.clear(it)
+    it.appendChild(Ui.el("div", "muted", "—"))
+  }
   refresh()
   Snapshot.sendApplyNotifications()
 }
@@ -1911,7 +2114,8 @@ private fun appendImageFailures() {
   }
   fidelityEl.appendChild(
     Ui.el(
-      "div", "muted",
+      "div",
+      "muted",
       "Add ${hosts.keys.joinToString(", ") { "\"$it\"" }} to \"previewAssetHosts\" in keliver.portal.json and restart the relay: " +
         "it then serves those images to the canvas. The device loads them directly and is not affected.",
     ),
@@ -1951,14 +2155,27 @@ private fun renderFidelity(required: List<String>, livePresenter: String? = null
   val mocked = livePresenter == null
   if (required.isEmpty()) {
     fidelityEl.appendChild(
-      if (mocked) Ui.el("div", "muted", "No host capabilities required; the values are the State panel's")
-      else Ui.el("div", "", "✅ Full fidelity — no host capabilities required"),
+      if (mocked) {
+        Ui.el("div", "muted", "No host capabilities required; the values are the State panel's")
+      } else {
+        Ui.el("div", "", "✅ Full fidelity — no host capabilities required")
+      },
     )
     return
   }
   val report = PreviewCapabilities.report(required, persona)
   val full = report.all { it.real } && !mocked
-  val head = Ui.el("div", "", if (full) "✅ Full fidelity" else if (report.all { it.real }) "Host capabilities available; the values are the State panel's" else "⚠ Reduced fidelity")
+  val head = Ui.el(
+    "div",
+    "",
+    if (full) {
+      "✅ Full fidelity"
+    } else if (report.all { it.real }) {
+      "Host capabilities available; the values are the State panel's"
+    } else {
+      "⚠ Reduced fidelity"
+    },
+  )
   head.setAttribute("style", "color:" + (if (full) "var(--good)" else "var(--warn, #e0a030)") + "; font-weight:600; margin-bottom:4px;")
   fidelityEl.appendChild(head)
   report.forEach { c ->
@@ -2044,7 +2261,10 @@ private fun runtimeVersionRow(label: String, runtime: AppRuntimeMetadata): HTMLE
 private fun renderInspector() {
   Ui.clear(inspectorEl)
   val state = if (LiveEngine.isRunning) PreviewBindings.mocks.toMap() else emptyMap()
-  if (state.isEmpty()) { inspectorEl.appendChild(Ui.el("div", "muted", "no live bindings")); return }
+  if (state.isEmpty()) {
+    inspectorEl.appendChild(Ui.el("div", "muted", "no live bindings"))
+    return
+  }
   state.forEach { (k, v) ->
     inspectorEl.appendChild(Ui.el("div", "", "$k = \"$v\""))
   }
@@ -2142,7 +2362,8 @@ private fun showDeviceLinks() {
       links == null -> deviceBody.appendChild(Ui.el("div", "muted", "This relay has no device proxy (it predates it)."))
       links.isEmpty() -> deviceBody.appendChild(
         Ui.el(
-          "div", "muted",
+          "div",
+          "muted",
           "The device proxy is off. Start the relay with KELIVER_DEVICE_PROXY=loopback (the emulator) or " +
             "KELIVER_DEVICE_PROXY=all (a phone on this network): it serves GET /bundles/* only, on its own port, " +
             "so the relay's edit and publish endpoints stay on this machine.",
@@ -2151,15 +2372,19 @@ private fun showDeviceLinks() {
       else -> {
         deviceBody.appendChild(
           Ui.el(
-            "div", "muted",
+            "div",
+            "muted",
             "A debug host loads the newest PUBLISHED bundle from one of these (project $p, $s) — publish to send the " +
               "state you are editing. " +
               (
-                if (links.any { it.link != null }) "Open a QR code's link in a DEBUG build of this app: it asks, then " +
-                  "restarts on that server (a release build has no such link). The iPhone Camera app opens it; many " +
-                  "Android camera apps show it as text only, so on Android run the adb shell \"am start …\" command " +
-                  "below. Or point the host at the URL:"
-                else "Point the host at a URL, then restart the app:"
+                if (links.any { it.link != null }) {
+                  "Open a QR code's link in a DEBUG build of this app: it asks, then " +
+                    "restarts on that server (a release build has no such link). The iPhone Camera app opens it; many " +
+                    "Android camera apps show it as text only, so on Android run the adb shell \"am start …\" command " +
+                    "below. Or point the host at the URL:"
+                } else {
+                  "Point the host at a URL, then restart the app:"
+                }
                 ),
           ),
         )
@@ -2270,13 +2495,17 @@ private fun showFlowGraph() {
       val nodes = f["nodes"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
       val edges = f["edges"]?.jsonArray?.map { it.jsonObject } ?: emptyList()
 
-      flowGraphBody.appendChild(Ui.el("div", "", name).also {
-        it.setAttribute("style", "font-weight:600; margin:6px 0 4px;")
-      })
+      flowGraphBody.appendChild(
+        Ui.el("div", "", name).also {
+          it.setAttribute("style", "font-weight:600; margin:6px 0 4px;")
+        },
+      )
       // Nodes row: each node = an "open for edit" chip + a ▶ "walk from here".
-      val nodeRow = Ui.el("div", "row"); nodeRow.setAttribute("style", "flex-wrap:wrap; gap:8px; margin-bottom:6px;")
+      val nodeRow = Ui.el("div", "row")
+      nodeRow.setAttribute("style", "flex-wrap:wrap; gap:8px; margin-bottom:6px;")
       nodes.forEach { n ->
-        val group = Ui.el("div", "row"); group.setAttribute("style", "gap:0; align-items:stretch;")
+        val group = Ui.el("div", "row")
+        group.setAttribute("style", "gap:0; align-items:stretch;")
         val chip = Ui.button((if (n == start) "▶ " else "") + n, "btn") { openFlowNode(n) }
         val ring = if (n == currentScreen) "outline:2px solid var(--accent, #7a6cff);" else ""
         chip.setAttribute("style", "font-size:12px; padding:3px 10px; border-top-right-radius:0; border-bottom-right-radius:0; $ring")
@@ -2284,7 +2513,8 @@ private fun showFlowGraph() {
         val walk = Ui.button("▶", "btn primary") { walkFlowFrom(name, n) }
         walk.setAttribute("style", "font-size:11px; padding:3px 8px; border-top-left-radius:0; border-bottom-left-radius:0;")
         walk.setAttribute("title", "Walk the flow live starting at $n")
-        group.appendChild(chip); group.appendChild(walk)
+        group.appendChild(chip)
+        group.appendChild(walk)
         nodeRow.appendChild(group)
       }
       flowGraphBody.appendChild(nodeRow)
@@ -2332,8 +2562,14 @@ private var clipboardNode: WidgetNode? = null
 
 /** E36: hide the topmost open layer (modal, inline editor, picker, overlay); false when none is open. */
 private fun closeTopmostLayer(): Boolean {
-  (document.querySelector(".modal-back") as? HTMLElement)?.let { it.remove(); return true }
-  (document.querySelector(".inline-edit") as? HTMLElement)?.let { it.remove(); return true }
+  (document.querySelector(".modal-back") as? HTMLElement)?.let {
+    it.remove()
+    return true
+  }
+  (document.querySelector(".inline-edit") as? HTMLElement)?.let {
+    it.remove()
+    return true
+  }
   val pickers = document.querySelectorAll(".token-picker")
   val open = (0 until pickers.length).mapNotNull { pickers.item(it) as? HTMLElement }.filter { it.firstChild != null }
   if (open.isNotEmpty()) {
@@ -2341,7 +2577,10 @@ private fun closeTopmostLayer(): Boolean {
     return true
   }
   for (o in listOf(flowGraphOverlay, exportOverlay)) {
-    if (o.getAttribute("style") != "display:none;") { o.setAttribute("style", "display:none;"); return true }
+    if (o.getAttribute("style") != "display:none;") {
+      o.setAttribute("style", "display:none;")
+      return true
+    }
   }
   return false
 }
@@ -2412,8 +2651,14 @@ private var crumbsEl: HTMLElement? = null
 private fun renderCrumbs() {
   val target = editTarget()
   document.body?.classList?.toggle("editing-component", target.component != null)
-  if (target.component == null) { crumbsEl?.style?.display = "none"; return }
-  val bar = crumbsEl ?: Ui.el("div", "crumbs").also { crumbsEl = it; document.body?.appendChild(it) }
+  if (target.component == null) {
+    crumbsEl?.style?.display = "none"
+    return
+  }
+  val bar = crumbsEl ?: Ui.el("div", "crumbs").also {
+    crumbsEl = it
+    document.body?.appendChild(it)
+  }
   Ui.clear(bar)
   bar.style.display = "flex"
   target.crumbs.forEachIndexed { depth, label ->
@@ -2433,22 +2678,41 @@ private fun handleEditorKey(e: KeyboardEvent) {
   // F1: only from the canvas or outline — a field that went away leaves its keys on the page body.
   if (changesTheTree(e.key, mod) && !treeKeyAllowed(keyScope, e.repeat)) return
   val sel = selectedId?.let { tree.findNode(it) }
-  fun select(id: Int?) { if (id != null) { selectedId = id; refresh(); revealOnCanvas(id) } }
+  fun select(id: Int?) {
+    if (id != null) {
+      selectedId = id
+      refresh()
+      revealOnCanvas(id)
+    }
+  }
   when {
     e.key == "ArrowDown" || e.key == "ArrowUp" -> {
       val order = visibleOrder(tree, collapsedRows)
       // Review 4 #8: right after a delete, the arrows go on from where the deleted node was.
       val place = deletedPlace?.takeIf { sel == null }
       val resume = (if (e.key == "ArrowDown") place?.next ?: place?.previous else place?.previous ?: place?.next)?.takeIf { it in order }
-      if (resume != null) { select(resume); e.preventDefault(); return }
+      if (resume != null) {
+        select(resume)
+        e.preventDefault()
+        return
+      }
       val i = order.indexOf(sel?.id ?: -1)
       select(if (i < 0) order.firstOrNull() else order.getOrNull(if (e.key == "ArrowDown") i + 1 else i - 1) ?: order[i])
     }
     e.key == "ArrowLeft" && sel != null ->
-      if (sel.children.isNotEmpty() && sel.id !in collapsedRows) { collapsedRows += sel.id; renderOutline() }
-      else select(parentOf(tree, sel.id)?.id)
+      if (sel.children.isNotEmpty() && sel.id !in collapsedRows) {
+        collapsedRows += sel.id
+        renderOutline()
+      } else {
+        select(parentOf(tree, sel.id)?.id)
+      }
     e.key == "ArrowRight" && sel != null ->
-      if (sel.id in collapsedRows) { collapsedRows -= sel.id; renderOutline() } else select(sel.children.firstOrNull()?.id)
+      if (sel.id in collapsedRows) {
+        collapsedRows -= sel.id
+        renderOutline()
+      } else {
+        select(sel.children.firstOrNull()?.id)
+      }
     (e.key == "Delete" || e.key == "Backspace") && sel != null && sel.id != tree.id -> {
       // H3: nothing is selected after a delete — selecting the next node (then its parent) made a
       // few presses of Backspace delete whole sections.
@@ -2497,8 +2761,15 @@ private fun installKeyboard() {
     val typing = (document.activeElement as? HTMLElement)?.tagName?.lowercase() in setOf("input", "textarea", "select")
     if (e.key == "Escape") {
       // E36: Escape closes the topmost popover/overlay first, then deselects.
-      if (closeTopmostLayer()) { ev.preventDefault(); return@addEventListener }
-      if (!typing && selectedId != null) { selectedId = null; refresh(); return@addEventListener }
+      if (closeTopmostLayer()) {
+        ev.preventDefault()
+        return@addEventListener
+      }
+      if (!typing && selectedId != null) {
+        selectedId = null
+        refresh()
+        return@addEventListener
+      }
       // E14: with nothing selected, Escape steps out of an opened component.
       if (!typing && openComponents.isNotEmpty()) goToCrumb(openComponents.size - 1)
       return@addEventListener
@@ -2545,13 +2816,19 @@ private fun startPreviewBuildPoll() {
 private fun renderBuildChip(state: String, err: String?) {
   if (!::buildChip.isInitialized) return
   when (state) {
-    "building" -> { buildChip.textContent = "\u23f3 building preview\u2026"; buildChip.setAttribute("style", buildChipStyle("#8a6d3b")) }
+    "building" -> {
+      buildChip.textContent = "\u23f3 building preview\u2026"
+      buildChip.setAttribute("style", buildChipStyle("#8a6d3b"))
+    }
     "failed" -> {
       buildChip.textContent = "\u2715 preview build failed"
       buildChip.setAttribute("style", buildChipStyle("#a94442"))
       buildChip.setAttribute("title", err ?: "")
     }
-    "ok" -> { buildChip.textContent = "\u2713 preview up to date"; buildChip.setAttribute("style", buildChipStyle("#3c763d")) }
+    "ok" -> {
+      buildChip.textContent = "\u2713 preview up to date"
+      buildChip.setAttribute("style", buildChipStyle("#3c763d"))
+    }
     else -> buildChip.textContent = ""
   }
 }
@@ -2569,7 +2846,12 @@ private fun restoreSnapshotIfAny(): Boolean {
     val sel = o.getValue("selected").jsonPrimitive.content.toInt()
     if (sel >= 0) selectedId = sel
     val live = o.getValue("live").jsonPrimitive.content.toBoolean()
-    if (live) window.setTimeout({ enableLive(); null }, 800) // after the doc loads
+    if (live) {
+      window.setTimeout({
+        enableLive()
+        null
+      }, 800) // after the doc loads
+    }
     true
   }.getOrDefault(false)
 }
@@ -2642,7 +2924,10 @@ private fun loadPreviewAssetHosts() {
 
 /** C3: pull the active project's component registry (and, K2, its design tokens) for palette + preview. */
 private fun fetchComponents(then: (() -> Unit)? = null) {
-  if (playground) { then?.invoke(); return }
+  if (playground) {
+    then?.invoke()
+    return
+  }
   serverGet("/components?project=$currentProject") { txt ->
     setEditorComponents(parseComponents(txt))
     if (txt != componentsJsonSeen) {
@@ -2678,7 +2963,8 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
   Ui.clear(sel)
   names.forEach { name ->
     val o = document.createElement("option") as HTMLOptionElement
-    o.value = name; o.textContent = name
+    o.value = name
+    o.textContent = name
     sel.appendChild(o)
   }
   sel.value = current
@@ -2695,7 +2981,10 @@ private fun loadDraft(cb: (() -> Unit)? = null) {
   renderCrumbs()
   syncLiveButton()
   dropQueuedOps()
-  refetchDoc(true) { subscribeDocEvents(); cb?.invoke() }
+  refetchDoc(true) {
+    subscribeDocEvents()
+    cb?.invoke()
+  }
   updateUndoButtons()
 }
 
@@ -2747,9 +3036,13 @@ private fun promptCreate(project: Boolean) {
   box.appendChild(Ui.el("div", "modal-title", if (project) "New project" else "New screen in “$currentProject”"))
   box.appendChild(
     Ui.el(
-      "div", "muted",
-      if (project) "A project holds its own screens and components."
-      else "Creates screens/<name>.kt with a <Name>Screen function, and opens it.",
+      "div",
+      "muted",
+      if (project) {
+        "A project holds its own screens and components."
+      } else {
+        "Creates screens/<name>.kt with a <Name>Screen function, and opens it."
+      },
     ),
   )
   val input = Ui.input()
@@ -2760,7 +3053,9 @@ private fun promptCreate(project: Boolean) {
   val problem = Ui.el("div", "modal-problem")
   box.appendChild(problem)
   val actions = Ui.el("div", "modal-actions")
-  fun close() { back.remove() }
+  fun close() {
+    back.remove()
+  }
   val cancel = Ui.button("Cancel", "btn") { close() }
   val create = Ui.button("Create", "btn primary") {}
   fun check(): String? {
@@ -2789,11 +3084,14 @@ private fun promptCreate(project: Boolean) {
         currentProject = name
         currentScreen = "main"
         sendEmpty("$SERVER/active?project=$currentProject&screen=main", "POST")
-        reloadProjectList(); reloadScreenList(); loadDraft()
+        reloadProjectList()
+        reloadScreenList()
+        loadDraft()
       } else {
         currentScreen = name
         sendEmpty("$SERVER/active?project=$currentProject&screen=$currentScreen", "POST")
-        reloadScreenList(); loadDraft()
+        reloadScreenList()
+        loadDraft()
       }
     })
     xhr.addEventListener("error", { _ ->
@@ -2804,7 +3102,12 @@ private fun promptCreate(project: Boolean) {
     xhr.send(name)
   }
   input.addEventListener("input", { _ -> check() })
-  input.addEventListener("keydown", { ev -> if ((ev as KeyboardEvent).key == "Enter") { ev.preventDefault(); submit() } })
+  input.addEventListener("keydown", { ev ->
+    if ((ev as KeyboardEvent).key == "Enter") {
+      ev.preventDefault()
+      submit()
+    }
+  })
   create.addEventListener("click", { _ -> submit() })
   actions.appendChild(cancel)
   actions.appendChild(create)
@@ -2846,7 +3149,10 @@ private fun installPanelMakeUp() {
   for (end in listOf("pointerup", "pointercancel")) {
     document.addEventListener(end, { _ ->
       pointerPressed = false
-      kotlinx.browser.window.setTimeout({ makeUpPanels(); null }, 0) // after the click had its turn
+      kotlinx.browser.window.setTimeout({
+        makeUpPanels()
+        null
+      }, 0) // after the click had its turn
     }, true)
   }
 }
@@ -2854,7 +3160,11 @@ private fun installPanelMakeUp() {
 private fun refresh() {
   panelsStale = false
   val keep = focusedPanelField()
-  renderOutline(); renderProps(); renderMods(); renderOps(); renderBindings()
+  renderOutline()
+  renderProps()
+  renderMods()
+  renderOps()
+  renderBindings()
   keep?.restore()
 }
 
@@ -2897,7 +3207,10 @@ private fun renderPalette(filter: String) {
     row.appendChild(Ui.el("span", "t", type))
     if (tag != null) row.appendChild(Ui.el("span", "cat", tag))
     row.setAttribute("draggable", "true")
-    row.addEventListener("dragstart", { ev -> hidePalettePreview(); (ev as DragEvent).dataTransfer?.setData("text", "new:$type") })
+    row.addEventListener("dragstart", { ev ->
+      hidePalettePreview()
+      (ev as DragEvent).dataTransfer?.setData("text", "new:$type")
+    })
     row.addEventListener("click", { _ -> addToSelectedOrRoot(newNode(type)) })
     // Owner, 25 Oct: hovering a row shows what it adds, drawn by the canvas's own renderer.
     row.addEventListener("mouseenter", { _ -> schedulePalettePreview(type, row) })
@@ -2944,8 +3257,11 @@ private fun selectInsertedAt(place: Pair<Int, Int?>): (Boolean) -> Unit {
 
 /** Whether [node] can hold children in the editor (a container, an Else, a one-slot component). */
 private fun acceptsChildrenNode(node: WidgetNode): Boolean =
-  widgetSpec(node.type)?.acceptsChildren == true || node.type == ELSE_TYPE || node.type == "Condition" ||
-    node.type == "Repeat" || editorComponents.spec(node.type)?.slots?.size == 1
+  widgetSpec(node.type)?.acceptsChildren == true ||
+    node.type == ELSE_TYPE ||
+    node.type == "Condition" ||
+    node.type == "Repeat" ||
+    editorComponents.spec(node.type)?.slots?.size == 1
 
 private fun renderOutline() {
   // E41: keyboard focus stays on the outline when it is re-rendered (arrow keys move the selection).
@@ -2966,7 +3282,17 @@ private fun renderOutline() {
     r.setAttribute("aria-label", listOfNotNull(node.type, outlineHint(node)).joinToString(" "))
     r.tabIndex = if (node.id == focusable) 0 else -1
     r.setAttribute("style", "padding-left:${4 + depth * 14}px;")
-    val twisty = Ui.el("span", "twisty", if (node.children.isEmpty()) "" else if (node.id in collapsedRows) "▸" else "▾")
+    val twisty = Ui.el(
+      "span",
+      "twisty",
+      if (node.children.isEmpty()) {
+        ""
+      } else if (node.id in collapsedRows) {
+        "▸"
+      } else {
+        "▾"
+      },
+    )
     // Review 5: pressing the twisty only folds — it is no press of the row (J5 would select it).
     twisty.addEventListener("pointerdown", { ev -> ev.stopPropagation() })
     twisty.addEventListener("click", { ev ->
@@ -2977,7 +3303,10 @@ private fun renderOutline() {
     r.appendChild(twisty)
     r.appendChild(Ui.el("span", "t", node.type))
     outlineHint(node)?.let { r.appendChild(Ui.el("span", "hint", it)) }
-    r.addEventListener("click", { _ -> pressedRow = null; selectRow(node.id) })
+    r.addEventListener("click", { _ ->
+      pressedRow = null
+      selectRow(node.id)
+    })
     // J5: a press whose click never arrives — a field left by this press committed, and the
     // outline was redrawn under the pointer — still selects the row (see installOutlinePress).
     r.addEventListener("pointerdown", { ev -> if ((ev as org.w3c.dom.pointerevents.PointerEvent).button.toInt() == 0) pressedRow = node.id to r })
@@ -2985,17 +3314,28 @@ private fun renderOutline() {
     r.addEventListener("mouseenter", { _ -> if (selectMode && node.id != selectedId) positionOverlay(hoverOverlay, node.id) })
     r.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
     r.setAttribute("draggable", "true")
-    r.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "move:${node.id}"); ev.stopPropagation() })
+    r.addEventListener("dragstart", { ev ->
+      (ev as DragEvent).dataTransfer?.setData("text", "move:${node.id}")
+      ev.stopPropagation()
+    })
     // E16/E17: the row's top and bottom quarters drop before/after it; its middle, inside.
     fun zoneOf(ev: DragEvent): DropZone {
       val b = r.getBoundingClientRect()
       return dropZone(ev.clientY - b.top, b.height, acceptsChildrenNode(node))
     }
-    fun clearMarks() { listOf("drop-before", "drop-after", "droptarget").forEach { r.classList.remove(it) } }
+    fun clearMarks() {
+      listOf("drop-before", "drop-after", "droptarget").forEach { r.classList.remove(it) }
+    }
     r.addEventListener("dragover", { ev ->
       ev.preventDefault()
       clearMarks()
-      r.classList.add(when (zoneOf(ev as DragEvent)) { DropZone.Before -> "drop-before"; DropZone.After -> "drop-after"; DropZone.Inside -> "droptarget" })
+      r.classList.add(
+        when (zoneOf(ev as DragEvent)) {
+          DropZone.Before -> "drop-before"
+          DropZone.After -> "drop-after"
+          DropZone.Inside -> "droptarget"
+        },
+      )
     })
     r.addEventListener("dragleave", { _ -> clearMarks() })
     r.addEventListener("drop", { ev ->
@@ -3082,9 +3422,15 @@ private fun renderProps() {
   // C3: a component instance uses its SIGNATURE spec; internals are not shown.
   val comp = editorComponents.spec(node.type)
   if (comp != null) {
-    propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id} · component" +
-      (if (comp.slots.size == 1) " · content slot" else "") +
-      (if (!comp.transparent) " (opaque)" else "")))
+    propsEl.appendChild(
+      Ui.el(
+        "div",
+        "muted",
+        "${node.type} #${node.id} · component" +
+          (if (comp.slots.size == 1) " · content slot" else "") +
+          (if (!comp.transparent) " (opaque)" else ""),
+      ),
+    )
     // E14: its insides are edited in the component itself (every instance changes).
     propsEl.appendChild(
       Ui.button("Edit component ↗", "btn") { openComponent(node.type) }.also {
@@ -3107,10 +3453,12 @@ private fun renderProps() {
   // K6: an equality or compound Condition is shown, not edited (its shape is the code's).
   val readOnlyCond = if (node.type == "Condition") condOf(node)?.takeIf(::isReadOnlyCondition) else null
   if (readOnlyCond != null) {
-    propsEl.appendChild(Ui.el("div", "row").also { r ->
-      r.appendChild(Ui.el("span", "muted", "if"))
-      r.appendChild(Ui.el("code", "", conditionSource(readOnlyCond)))
-    })
+    propsEl.appendChild(
+      Ui.el("div", "row").also { r ->
+        r.appendChild(Ui.el("span", "muted", "if"))
+        r.appendChild(Ui.el("code", "", conditionSource(readOnlyCond)))
+      },
+    )
     propsEl.appendChild(Ui.el("div", "muted", "an equality or compound condition is edited in code"))
   }
   // E27: a Condition reads "Show when [field] [is true]": both chosen from lists, no free text.
@@ -3134,7 +3482,9 @@ private fun renderProps() {
     val choices = s.choices.ifEmpty {
       if (comp != null && s.kind == PropKind.Int) {
         forwardedChoices(comp, s.name, editorComponents, { t, p -> widgetSpec(t)?.props?.firstOrNull { it.name == p }?.choices.orEmpty() })
-      } else emptyList()
+      } else {
+        emptyList()
+      }
     }
     // An instance that leaves a parameter at its default shows that default (not the first choice).
     val defaulted = comp != null && s.name !in node.props && s.name in comp.defaults
@@ -3150,7 +3500,12 @@ private fun renderProps() {
     events.forEach { evName ->
       // K3: a conditional event — `if (b.enabled) b::tap else null`.
       (node.props[evName] as? Conditional)?.let { c ->
-        propsEl.appendChild(conditionalEventRow(node.id, evName, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() })
+        propsEl.appendChild(
+          conditionalEventRow(node.id, evName, c) { op, refresh, done ->
+            sendOps(listOf(op), refreshPanels = refresh, onResult = done)
+            renderBindings()
+          },
+        )
         return@forEach
       }
       // E28: the action from the contract's list (with its signature), full width; never free text.
@@ -3198,7 +3553,9 @@ private fun renderBindings() {
   val fields = stateFields(portalTree.value, contract)
   val key = "portal.state.${editTarget().key}"
   var state = decodeScreenState(runCatching { localStorage.getItem(key) }.getOrNull())
-  fun save() { runCatching { localStorage.setItem(key, encodeScreenState(state)) } }
+  fun save() {
+    runCatching { localStorage.setItem(key, encodeScreenState(state)) }
+  }
   fun apply() {
     if (LiveEngine.isRunning) return // Live feeds the real presenter's values
     val mocks = effectiveMocks(fields, state.scenario, state.values)
@@ -3228,16 +3585,20 @@ private fun renderBindings() {
         // A scenario resets what it decides: the flags. Texts and numbers the user typed stay.
         val flags = fields.filter { it.kind == StateKind.Bool || it.source != StateSource.Prop }.map { it.name }.toSet()
         state = ScreenState(sc, state.values - flags)
-        save(); renderBindings()
+        save()
+        renderBindings()
         // F7: show what the scenario is about, even below the fold (an error banner).
         scenarioFocus(portalTree.value, sc, effectiveMocks(fields, sc, state.values))?.let { n -> showOnCanvasWhenDrawn((n.children.firstOrNull() ?: n).id) }
       }
-      chip.setAttribute("title", "Preview the screen ${sc.label.lowercase()}: " + when (sc) {
-        Scenario.Loaded -> "content flags on, loading/error/empty off"
-        Scenario.Loading -> "loading flags on (and the sections that hold them); lists empty"
-        Scenario.Error -> "error flags on, with the content"
-        Scenario.Empty -> "empty flags on, with the content; lists empty"
-      } + " — read from the flags' names, not the app's logic")
+      chip.setAttribute(
+        "title",
+        "Preview the screen ${sc.label.lowercase()}: " + when (sc) {
+          Scenario.Loaded -> "content flags on, loading/error/empty off"
+          Scenario.Loading -> "loading flags on (and the sections that hold them); lists empty"
+          Scenario.Error -> "error flags on, with the content"
+          Scenario.Empty -> "empty flags on, with the content; lists empty"
+        } + " — read from the flags' names, not the app's logic",
+      )
       chips.appendChild(chip)
     }
     if (custom) chips.appendChild(Ui.el("span", "muted", "Custom").also { it.setAttribute("title", "A flag was set by hand; pick a scenario to reset the flags") })
@@ -3246,7 +3607,8 @@ private fun renderBindings() {
 
   fun setValue(field: String, value: String?) {
     state = state.copy(values = if (value == null) state.values - field else state.values + (field to value))
-    save(); apply()
+    save()
+    apply()
   }
 
   fun group(title: String, source: StateSource) {
@@ -3256,11 +3618,14 @@ private fun renderBindings() {
     inGroup.forEach { f ->
       val rowEl = Ui.el("div", "row")
       val lab = Ui.el("label", "", f.name)
-      lab.setAttribute("title", when (f.source) {
-        StateSource.Condition -> "Tested by an if block on this screen"
-        StateSource.Prop -> "${f.name}: ${kotlinTypeOf(contract.fields[f.name] ?: PropKind.Text)}"
-        StateSource.List -> "Rows in the preview (0-10)"
-      })
+      lab.setAttribute(
+        "title",
+        when (f.source) {
+          StateSource.Condition -> "Tested by an if block on this screen"
+          StateSource.Prop -> "${f.name}: ${kotlinTypeOf(contract.fields[f.name] ?: PropKind.Text)}"
+          StateSource.List -> "Rows in the preview (0-10)"
+        },
+      )
       rowEl.appendChild(lab)
       val default = defaultValue(f, state.scenario)
       val userSet = f.name in state.values
@@ -3295,7 +3660,10 @@ private fun renderBindings() {
         else -> {
           val input = Ui.input()
           input.setAttribute("type", if (f.kind == StateKind.Text) "text" else "number")
-          if (f.kind == StateKind.Rows) { input.setAttribute("min", "0"); input.setAttribute("max", "10") }
+          if (f.kind == StateKind.Rows) {
+            input.setAttribute("min", "0")
+            input.setAttribute("max", "10")
+          }
           if (f.kind == StateKind.Int) input.setAttribute("step", "1")
           input.setAttribute("placeholder", if (default.isEmpty()) "(empty)" else default)
           input.value = if (userSet) state.values.getValue(f.name) else ""
@@ -3313,7 +3681,10 @@ private fun renderBindings() {
         }
       }
       if (userSet) {
-        val reset = Ui.button("↺", "btn icon mini") { setValue(f.name, null); renderBindings() }
+        val reset = Ui.button("↺", "btn icon mini") {
+          setValue(f.name, null)
+          renderBindings()
+        }
         reset.setAttribute("title", "Back to the scenario's value")
         rowEl.appendChild(reset)
       }
@@ -3412,7 +3783,10 @@ private fun propRowInner(
 
   // K3: a conditional value: its condition and both branches, each edited in place.
   (props[key] as? Conditional)?.let { c ->
-    return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() }
+    return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh, done ->
+      sendOps(listOf(op), refreshPanels = refresh, onResult = done)
+      renderBindings()
+    }
   }
 
   // K7: an arithmetic value — read-only source; replaced whole by a value, or (@) a binding.
@@ -3501,7 +3875,8 @@ private fun propRowInner(
     return PropRow(label, PropRow.Layout.Compact)
       .control(
         numberField(
-          current, numberRule(nodeType, key, kind),
+          current,
+          numberRule(nodeType, key, kind),
           onPreview = { previewProp(nodeId, key, it) },
           onUnsetPreview = { previewUnset(nodeId, key) },
           onCommit = { editProp(nodeId, key, it) },
@@ -3564,7 +3939,8 @@ private const val DOC_FEATURES = "tokens=1&conditionals=1&extendedConditions=1&t
 /** K4: a template prop row — the template's text, and ◆ to insert a design token. */
 private fun templateRow(row: PropRow, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {
   val (field, append) = refValueEditor(
-    templateSource(t), multiline = true,
+    templateSource(t),
+    multiline = true,
     placeholder = "text with {field}, {item.x}, {◆C.Name}; {{ and }} are braces",
     parse = { parseTemplateSource(it, knownTokens(t)) },
   ) { v ->
@@ -3587,7 +3963,8 @@ private fun templateRow(row: PropRow, nodeId: Int, key: String, t: Template, pic
 private fun listRow(row: PropRow, nodeId: Int, key: String, value: Any?, kind: PropKind, picker: HTMLElement): HTMLElement {
   val strings = kind == PropKind.StringList
   val (field, append) = refValueEditor(
-    listSource(value, kind), multiline = false,
+    listSource(value, kind),
+    multiline = false,
     placeholder = if (strings) "a|b|◆C.Name|@field" else "16777215, #FF8800, ◆C.Name, @field",
     parse = { parseListSource(it, kind, knownTokens(value)) },
   ) { v ->
@@ -3599,8 +3976,22 @@ private fun listRow(row: PropRow, nodeId: Int, key: String, value: Any?, kind: P
   if (editorTokens.any { !it.ambiguous && fits(it) }) {
     row.action(
       Ui.button("◆", "btn icon") {
-        if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, fits, colours = true) { ref ->
-          append((if ((field as? HTMLInputElement)?.value.isNullOrBlank()) "" else if (strings) "|" else ", ") + "◆$ref")
+        if (picker.firstChild != null) {
+          Ui.clear(picker)
+        } else {
+          renderInsertTokenPicker(picker, fits, colours = true) { ref ->
+            append(
+              (
+                if ((field as? HTMLInputElement)?.value.isNullOrBlank()) {
+                  ""
+                } else if (strings) {
+                  "|"
+                } else {
+                  ", "
+                }
+                ) + "◆$ref",
+            )
+          }
         }
       }.also { it.setAttribute("title", "add a design token element") },
     )
@@ -3720,10 +4111,17 @@ private fun bindButton(
   bind: (String) -> PropValue = { PropValue.Bind(it) },
 ): HTMLElement =
   Ui.button(glyph, "btn icon") {
-    if (picker.firstChild != null) { Ui.clear(picker); return@button }
+    if (picker.firstChild != null) {
+      Ui.clear(picker)
+      return@button
+    }
     val component = editTarget().component
     renderBindPicker(
-      picker, docContract, kotlinTypeOf(kind), suggest = label, current = current,
+      picker,
+      docContract,
+      kotlinTypeOf(kind),
+      suggest = label,
+      current = current,
       owner = component ?: "the screen's Bindings",
       canDeclare = component == null,
     ) { field, _ -> sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, bind(field)))) }
@@ -3774,7 +4172,11 @@ private fun renderMods() {
     x.addEventListener("click", { _ -> remove() })
     x.addEventListener("keydown", { ev ->
       val k = (ev as KeyboardEvent).key
-      if (k == "Enter" || k == " ") { ev.preventDefault(); ev.stopPropagation(); remove() }
+      if (k == "Enter" || k == " ") {
+        ev.preventDefault()
+        ev.stopPropagation()
+        remove()
+      }
     })
     head.appendChild(x)
     chip.appendChild(head)
@@ -3798,7 +4200,8 @@ private fun renderMods() {
   val available = modifiersOfferedUnder(parentType).filter { it !in onNode }
   available.forEach { name ->
     val o = document.createElement("option") as HTMLOptionElement
-    o.value = name; o.textContent = name
+    o.value = name
+    o.textContent = name
     sel.appendChild(o)
   }
   addRow.appendChild(sel)
@@ -3841,9 +4244,11 @@ private fun renderOps() {
   row.appendChild(
     Ui.button("Duplicate", "btn") {
       val parentId = findParentId(portalTree.value, node.id) ?: portalTree.value.id
-      sendOps(listOf(
-        DocOp.InsertNode(Handle(parentId.toLong()), Handle(node.id.toLong()), deepCopy(node).toDocNode()),
-      ))
+      sendOps(
+        listOf(
+          DocOp.InsertNode(Handle(parentId.toLong()), Handle(node.id.toLong()), deepCopy(node).toDocNode()),
+        ),
+      )
     },
   )
   row.appendChild(
@@ -3874,4 +4279,3 @@ private fun literalOp(id: Int, name: String, value: Any?): DocOp =
   } else {
     DocOp.SetProp(Handle(id.toLong()), name, lit(value))
   }
-

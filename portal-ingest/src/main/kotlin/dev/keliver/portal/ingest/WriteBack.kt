@@ -1,10 +1,24 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.PropValue
-import dev.keliver.portal.document.condition
 import dev.keliver.portal.document.UiDocument
-import dev.keliver.portal.document.toWidgetTree
+import dev.keliver.portal.document.condition
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -211,8 +225,10 @@ object WriteBack {
     a is DocNode.Widget && b is DocNode.Widget ->
       a.type == b.type &&
         (if (a.type == "Condition") condKey(a) == condKey(b) else a.props == b.props) &&
-        sameModifiers(a.modifiers, b.modifiers) && a.explicitId == b.explicitId &&
-        a.children.size == b.children.size && a.children.indices.all { sameTree(a.children[it], b.children[it]) }
+        sameModifiers(a.modifiers, b.modifiers) &&
+        a.explicitId == b.explicitId &&
+        a.children.size == b.children.size &&
+        a.children.indices.all { sameTree(a.children[it], b.children[it]) }
     else -> false
   }
 
@@ -479,9 +495,13 @@ object WriteBack {
         // An argument whose value did not change keeps the author's text (`onClick = b::go` is not
         // re-spelled `{ b.go() }`), so an edit and its undo give the file back byte for byte.
         fun untouched(name: String): Boolean =
-          if (name == "modifier") sameModifiers(parsed.modifiers, target.modifiers)
-          else parsed.props[name] != null && parsed.props[name] == target.props[name] &&
-            (parsed.props.keys + target.props.keys).filter { it.startsWith("$name.") }.all { parsed.props[it] == target.props[it] }
+          if (name == "modifier") {
+            sameModifiers(parsed.modifiers, target.modifiers)
+          } else {
+            parsed.props[name] != null &&
+              parsed.props[name] == target.props[name] &&
+              (parsed.props.keys + target.props.keys).filter { it.startsWith("$name.") }.all { parsed.props[it] == target.props[it] }
+          }
         val newCall = factory.createExpression(keepArgumentOrder(oldList, callText, factory, ::untouched)) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
         oldList.replace(newList)
@@ -640,7 +660,13 @@ object WriteBack {
       }
     }
     return mergeChildren(
-      parsed.children.filterNot(isElse), target.children.filterNot(isElse), thenBlock, psi, factory, components, parentType,
+      parsed.children.filterNot(isElse),
+      target.children.filterNot(isElse),
+      thenBlock,
+      psi,
+      factory,
+      components,
+      parentType,
     )
   }
 
@@ -684,7 +710,10 @@ object WriteBack {
       var pi = -1
       for (i in parsedChildren.indices) {
         if (consumed[i]) continue
-        if (sameShape(parsedChildren[i], tc)) { pi = i; break }
+        if (sameShape(parsedChildren[i], tc)) {
+          pi = i
+          break
+        }
       }
       if (pi >= 0) {
         if (pi < lastParsed) return bail("children were reordered, and which node is which is not known (no base document)")
@@ -715,8 +744,11 @@ object WriteBack {
     var previous: KtExpression? = null
     for ((ti, tc) in targetChildren.withIndex()) {
       val pi = matchOf[ti]
-      previous = if (pi != null) psi[parsedChildren[pi].handle.v] ?: return bail("a kept node's statement was not found")
-      else insertStatement(block, tc, previous, factory, components, parentType) ?: return bail("a new ${label(tc)} could not be inserted")
+      previous = if (pi != null) {
+        psi[parsedChildren[pi].handle.v] ?: return bail("a kept node's statement was not found")
+      } else {
+        insertStatement(block, tc, previous, factory, components, parentType) ?: return bail("a new ${label(tc)} could not be inserted")
+      }
     }
     return true
   }
@@ -797,13 +829,21 @@ object WriteBack {
     if (idx.isEmpty()) return emptyList()
     val len = IntArray(idx.size) { 1 }
     val prev = IntArray(idx.size) { -1 }
-    for (j in idx.indices) for (i in 0 until j) {
-      if (matchOf[idx[i]]!! < matchOf[idx[j]]!! && len[i] + 1 > len[j]) { len[j] = len[i] + 1; prev[j] = i }
+    for (j in idx.indices) {
+      for (i in 0 until j) {
+        if (matchOf[idx[i]]!! < matchOf[idx[j]]!! && len[i] + 1 > len[j]) {
+          len[j] = len[i] + 1
+          prev[j] = i
+        }
+      }
     }
     var best = len.indices.maxByOrNull { len[it] }!!
     // maxByOrNull keeps the first maximum: prefer the run ending earliest.
     val out = ArrayList<Int>()
-    while (best >= 0) { out += idx[best]; best = prev[best] }
+    while (best >= 0) {
+      out += idx[best]
+      best = prev[best]
+    }
     return out.reversed()
   }
 
@@ -874,8 +914,10 @@ object WriteBack {
       if (lost) return null
       // Line starts inside a string or a comment are content, not indentation.
       val base = stmt.textRange.startOffset
-      val keep = (org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil.collectElementsOfType(stmt, org.jetbrains.kotlin.psi.KtStringTemplateExpression::class.java) +
-        org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil.collectElementsOfType(stmt, org.jetbrains.kotlin.com.intellij.psi.PsiComment::class.java))
+      val keep = (
+        org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil.collectElementsOfType(stmt, org.jetbrains.kotlin.psi.KtStringTemplateExpression::class.java) +
+          org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil.collectElementsOfType(stmt, org.jetbrains.kotlin.com.intellij.psi.PsiComment::class.java)
+        )
         .map { it.textRange.shiftLeft(base) }
       return MovedSource(
         text = stmt.text,
@@ -894,7 +936,10 @@ object WriteBack {
     fun walk(e: org.jetbrains.kotlin.com.intellij.psi.PsiElement) {
       if (e is KtExpression) out += e
       var c = e.firstChild
-      while (c != null) { walk(c); c = c.nextSibling }
+      while (c != null) {
+        walk(c)
+        c = c.nextSibling
+      }
     }
     walk(root)
     return out
@@ -1092,7 +1137,10 @@ object WriteBack {
       val ts = (ti until tEnd).filter { isCondition(targetChildren[it]) }
       val ps = (pi until pEnd).filter { !consumed[it] && isCondition(parsedChildren[it]) }
       if (ts.isNotEmpty() && ts.size == ps.size) {
-        ts.zip(ps).forEach { (t, p) -> matchOf[t] = p; consumed[p] = true }
+        ts.zip(ps).forEach { (t, p) ->
+          matchOf[t] = p
+          consumed[p] = true
+        }
       }
       ti = tEnd + 1
       pi = pEnd + 1
@@ -1212,11 +1260,17 @@ object WriteBack {
     // Lambda-body whitespace lives beside the body node in Kotlin PSI, not
     // necessarily beside its first statement, so walk to the preceding leaf.
     val previous = org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil.prevLeaf(inserted)
-    if (previous is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace) previous.replace(leading)
-    else block.addBefore(leading, inserted)
+    if (previous is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace) {
+      previous.replace(leading)
+    } else {
+      block.addBefore(leading, inserted)
+    }
     val next = inserted.nextSibling
-    if (next is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace) next.replace(trailing)
-    else block.addAfter(trailing, inserted)
+    if (next is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace) {
+      next.replace(trailing)
+    } else {
+      block.addAfter(trailing, inserted)
+    }
     return inserted as? KtExpression
   }
 
@@ -1265,36 +1319,40 @@ object WriteBack {
       val canonicalText = newByName[name]?.text
       val oldValue = parsed.props[name]
       val newValue = target.props[name]
-      val text = (if (name in margins) {
-        val sideKeys = dev.keliver.portal.MARGIN_SIDES.map { "$name.$it" }
-        MarginSyntax.surgical(oldExpr.text, sideValues(parsed.props, sideKeys), sideValues(target.props, sideKeys), conds.get(), ::condText)
-          ?: canonicalText
-      } else if (oldValue is dev.keliver.portal.document.PropValue.Conditional &&
-        newValue is dev.keliver.portal.document.PropValue.Conditional
-      ) {
-        // K3: only the changed part — the condition, or one branch.
-        ConditionalSyntax.surgical(oldExpr.text, oldValue, newValue, canonicalText, ::condText) ?: canonicalText
-      } else if ((oldValue is dev.keliver.portal.document.PropValue.Template || newValue is dev.keliver.portal.document.PropValue.Template) &&
-        TemplateSyntax.partsOf(oldValue) != null && TemplateSyntax.partsOf(newValue) != null
-      ) {
-        // K4: only the template parts that changed; the rest keeps its spelling.
-        TemplateSyntax.surgical(oldExpr.text, TemplateSyntax.partsOf(oldValue)!!, TemplateSyntax.partsOf(newValue)!!, ::refText) ?: canonicalText
-      } else if (dev.keliver.portal.document.isArithmetic(oldValue) && dev.keliver.portal.document.isArithmetic(newValue)) {
-        // K7: only the operands that changed, when the expression keeps its shape; else the whole value.
-        ArithSyntax.surgical(oldExpr.text, oldValue!!, newValue!!, ::refText) ?: canonicalText
-      } else if (oldValue is dev.keliver.portal.document.PropValue.IntDp && (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d != null) {
-        // K7: an Int used as a Dp replaced by a Dp literal keeps the author's Dp spelling.
-        MarginSyntax.dpLike(if (oldValue.form == null) "0.dp" else "Dp(0.0)", newValue.d!!)
-      } else if ((oldValue is dev.keliver.portal.document.PropValue.ListOf || newValue is dev.keliver.portal.document.PropValue.ListOf) &&
-        ListSyntax.itemsOf(oldValue) != null && ListSyntax.itemsOf(newValue) != null
-      ) {
-        // K4: only the list elements that changed (the list keeps its length), else the whole list.
-        ListSyntax.surgical(oldExpr.text, ListSyntax.itemsOf(oldValue)!!, ListSyntax.itemsOf(newValue)!!, ::refText) ?: canonicalText
-      } else {
-        // A Dp keeps the author's spelling (`16.dp` stays `.dp`, `Dp(16.0)` stays Dp()).
-        val v = (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d
-        if (v != null && MarginSyntax.parseDp(oldExpr.text) != null) MarginSyntax.dpLike(oldExpr.text, v) else canonicalText
-      }) ?: return false
+      val text = (
+        if (name in margins) {
+          val sideKeys = dev.keliver.portal.MARGIN_SIDES.map { "$name.$it" }
+          MarginSyntax.surgical(oldExpr.text, sideValues(parsed.props, sideKeys), sideValues(target.props, sideKeys), conds.get(), ::condText)
+            ?: canonicalText
+        } else if (oldValue is dev.keliver.portal.document.PropValue.Conditional &&
+          newValue is dev.keliver.portal.document.PropValue.Conditional
+        ) {
+          // K3: only the changed part — the condition, or one branch.
+          ConditionalSyntax.surgical(oldExpr.text, oldValue, newValue, canonicalText, ::condText) ?: canonicalText
+        } else if ((oldValue is dev.keliver.portal.document.PropValue.Template || newValue is dev.keliver.portal.document.PropValue.Template) &&
+          TemplateSyntax.partsOf(oldValue) != null &&
+          TemplateSyntax.partsOf(newValue) != null
+        ) {
+          // K4: only the template parts that changed; the rest keeps its spelling.
+          TemplateSyntax.surgical(oldExpr.text, TemplateSyntax.partsOf(oldValue)!!, TemplateSyntax.partsOf(newValue)!!, ::refText) ?: canonicalText
+        } else if (dev.keliver.portal.document.isArithmetic(oldValue) && dev.keliver.portal.document.isArithmetic(newValue)) {
+          // K7: only the operands that changed, when the expression keeps its shape; else the whole value.
+          ArithSyntax.surgical(oldExpr.text, oldValue!!, newValue!!, ::refText) ?: canonicalText
+        } else if (oldValue is dev.keliver.portal.document.PropValue.IntDp && (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d != null) {
+          // K7: an Int used as a Dp replaced by a Dp literal keeps the author's Dp spelling.
+          MarginSyntax.dpLike(if (oldValue.form == null) "0.dp" else "Dp(0.0)", newValue.d!!)
+        } else if ((oldValue is dev.keliver.portal.document.PropValue.ListOf || newValue is dev.keliver.portal.document.PropValue.ListOf) &&
+          ListSyntax.itemsOf(oldValue) != null &&
+          ListSyntax.itemsOf(newValue) != null
+        ) {
+          // K4: only the list elements that changed (the list keeps its length), else the whole list.
+          ListSyntax.surgical(oldExpr.text, ListSyntax.itemsOf(oldValue)!!, ListSyntax.itemsOf(newValue)!!, ::refText) ?: canonicalText
+        } else {
+          // A Dp keeps the author's spelling (`16.dp` stays `.dp`, `Dp(16.0)` stays Dp()).
+          val v = (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d
+          if (v != null && MarginSyntax.parseDp(oldExpr.text) != null) MarginSyntax.dpLike(oldExpr.text, v) else canonicalText
+        }
+        ) ?: return false
       edits += oldExpr to text
       imports += FragmentImports.value(text)
       // K2: a token written as its reference needs its declaring object (structural).
@@ -1306,7 +1364,14 @@ object WriteBack {
       // (its import is added below), so the target's own tokens resolve first.
       val tokens = targetTokens(target.modifiers.values, lookup.get())
       val text = ModifierChain.surgical(
-        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, tokens, conds.get(), ::condText,
+        oldExpr.text,
+        parsed.modifiers,
+        target.modifiers,
+        parentType,
+        newByName["modifier"]?.text,
+        tokens,
+        conds.get(),
+        ::condText,
       ) ?: return false
       edits += oldExpr to text
       imports += FragmentImports.chain(text, parentType, tokens, conds.get())

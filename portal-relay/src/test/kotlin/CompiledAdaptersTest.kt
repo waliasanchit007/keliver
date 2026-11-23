@@ -1,8 +1,23 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.ingest.CompiledAdapterGenerator
 import dev.keliver.portal.ingest.TokenTable
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
-import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -103,7 +118,10 @@ class CompiledAdaptersTest {
   @Test fun aFileTheGeneratorDidNotWriteIsNeverOverwritten() {
     // Before the fix: the relay overwrote whatever sat at `out`.
     val repo = repoWith("PriceTag.kt" to badge)
-    val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt").apply { parentFile.mkdirs(); writeText("// my own code\nval x = 1\n") }
+    val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt").apply {
+      parentFile.mkdirs()
+      writeText("// my own code\nval x = 1\n")
+    }
     val err = CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY)
     assertNotNull(err)
     assertTrue("refusing to overwrite" in err, err)
@@ -113,7 +131,10 @@ class CompiledAdaptersTest {
   @Test fun anOutPathThatIsASymbolicLinkIsRefused() {
     // Before the fix: written through the link (the target inside the repo was replaced).
     val repo = repoWith("PriceTag.kt" to badge)
-    val target = File(repo, "elsewhere/Target.kt").apply { parentFile.mkdirs(); writeText(CompiledAdapterGenerator.GENERATED_HEADER + "\n") }
+    val target = File(repo, "elsewhere/Target.kt").apply {
+      parentFile.mkdirs()
+      writeText(CompiledAdapterGenerator.GENERATED_HEADER + "\n")
+    }
     val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt").apply { parentFile.mkdirs() }
     Files.createSymbolicLink(out.toPath(), target.toPath())
     val err = CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY)

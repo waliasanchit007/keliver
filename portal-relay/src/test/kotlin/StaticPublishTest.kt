@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestSigner
 import hosttemplate.HostBridge
@@ -33,7 +48,9 @@ import okio.ByteString.Companion.toByteString
 class StaticPublishTest {
   private val tmp = Files.createTempDirectory("static-publish").toFile()
 
-  @AfterTest fun cleanUp() { tmp.deleteRecursively() }
+  @AfterTest fun cleanUp() {
+    tmp.deleteRecursively()
+  }
 
   private class Key(val publicHex: String, val signer: ManifestSigner)
 
@@ -61,7 +78,8 @@ class StaticPublishTest {
     }
     val json = """{"unsigned":{"signatures":{},"freshAtEpochMs":null,"baseUrl":null},
       |"modules":{${modules.entries.joinToString(",") { (m, sha) -> "\"./$m.js\":{\"url\":\"$m.zipline\",\"sha256\":\"$sha\",\"dependsOnIds\":[]}" }}},
-      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain"${metadata(seq, bridges)}}""".trimMargin().replace("\n", "")
+      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain"${metadata(seq, bridges)}}
+    """.trimMargin().replace("\n", "")
     val manifest = ZiplineManifest.decodeJson(json)
     File(dir, "manifest.zipline.json").writeText((by?.signer?.sign(manifest) ?: manifest).encodeJson())
     return dir
@@ -331,7 +349,8 @@ class StaticPublishTest {
     assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, _ -> error("built") })
     assertFalse(File(out).exists())
     val ok = KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path, "--init"), null) { dir, task, seq ->
-      built = listOf(dir.path, task, seq.toString()); 0
+      built = listOf(dir.path, task, seq.toString())
+      0
     }
     assertEquals(0, ok)
     assertEquals(listOf(appDir.absolutePath, ":compileDevelopmentExecutableKotlinJsZipline", "1"), built)
@@ -350,11 +369,15 @@ class StaticPublishTest {
     assertEquals(0, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), app.publicHex) { _, _, _ -> error("built") })
     // A build is asked for the next sequence, 3.
     var asked = 0L
-    assertEquals(0, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, seq ->
-      asked = seq
-      File(appDir, "build/zipline/Development").deleteRecursively()
-      output("cli3", seq = seq).copyRecursively(File(appDir, "build/zipline/Development")); 0
-    })
+    assertEquals(
+      0,
+      KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, seq ->
+        asked = seq
+        File(appDir, "build/zipline/Development").deleteRecursively()
+        output("cli3", seq = seq).copyRecursively(File(appDir, "build/zipline/Development"))
+        0
+      },
+    )
     assertEquals(3L, asked)
     assertEquals(3, File(out, "bundles").list()!!.count { it.startsWith("v") })
     // Usage.
@@ -487,9 +510,19 @@ class StaticPublishTest {
   fun theScratchCopyIsDeletedWhateverHappens() {
     twoPublished()
     var scratch: File? = null
-    assertFailsWith<BuildFailed> { republishStatic(site, 1, app.publicHex) { dir, _ -> scratch = dir; 1 } }
+    assertFailsWith<BuildFailed> {
+      republishStatic(site, 1, app.publicHex) { dir, _ ->
+        scratch = dir
+        1
+      }
+    }
     assertFalse(scratch!!.exists())
-    assertFailsWith<PublishRefused> { republishStatic(site, 1, app.publicHex) { dir, seq -> scratch = dir; resign(signFor = 1)(dir, seq) } }
+    assertFailsWith<PublishRefused> {
+      republishStatic(site, 1, app.publicHex) { dir, seq ->
+        scratch = dir
+        resign(signFor = 1)(dir, seq)
+      }
+    }
     assertFalse(scratch!!.exists())
   }
 
@@ -539,14 +572,25 @@ class StaticPublishTest {
     fun run(vararg a: String, resign: (File, File, Long) -> Int = noResign) =
       KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, app.publicHex, resign, noBuild)
     // Usage.
-    for (bad in listOf(listOf("--republish"), listOf("--republish", "x"), listOf("--republish", "0"),
-      listOf("--republish", "1", "--init"), listOf("--republish", "1", "--skip-build"))) {
+    for (bad in listOf(
+      listOf("--republish"),
+      listOf("--republish", "x"),
+      listOf("--republish", "0"),
+      listOf("--republish", "1", "--init"),
+      listOf("--republish", "1", "--skip-build"),
+    )) {
       assertEquals(2, run(*bad.toTypedArray()), bad.toString())
     }
     assertEquals(4, run("--republish", "9"))
     assertEquals(3, run("--republish", "1") { _, _, _ -> 1 })
     var asked: Triple<File, File, Long>? = null
-    assertEquals(0, run("--republish", "v1") { repo, dir, seq -> asked = Triple(repo, dir, seq); resign()(dir, seq) })
+    assertEquals(
+      0,
+      run("--republish", "v1") { repo, dir, seq ->
+        asked = Triple(repo, dir, seq)
+        resign()(dir, seq)
+      },
+    )
     assertEquals(appDir.absoluteFile, asked!!.first)
     assertEquals(3L, asked!!.third)
     assertEquals(listOf(1L, 2L, 3L), entries().map { it["sequence"]!!.jsonPrimitive.content.toLong() })
@@ -632,11 +676,19 @@ class StaticPublishTest {
     )
     publishStatic(output("one"), site, app.publicHex, init = true)
     publishStatic(output("two", seq = 2), site, app.publicHex, channel = "beta")
-    fun run(vararg a: String) = KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, app.publicHex,
-      { _, _, _ -> error("re-signed") }, { _, _, _ -> error("built") })
-    for (bad in listOf(listOf("--promote", "2"), listOf("--promote", "x", "--channel", "stable"),
-      listOf("--promote", "2", "--channel", "stable", "--init"), listOf("--promote", "2", "--channel", "stable", "--skip-build"),
-      listOf("--promote", "2", "--channel", "stable", "--republish", "1"))) {
+    fun run(vararg a: String) = KeliverPublish.run(
+      listOf(appDir.path, "--out", site.path) + a,
+      app.publicHex,
+      { _, _, _ -> error("re-signed") },
+      { _, _, _ -> error("built") },
+    )
+    for (bad in listOf(
+      listOf("--promote", "2"),
+      listOf("--promote", "x", "--channel", "stable"),
+      listOf("--promote", "2", "--channel", "stable", "--init"),
+      listOf("--promote", "2", "--channel", "stable", "--skip-build"),
+      listOf("--promote", "2", "--channel", "stable", "--republish", "1"),
+    )) {
       assertEquals(2, run(*bad.toTypedArray()), bad.toString())
     }
     assertEquals(4, run("--promote", "7", "--channel", "stable"))
@@ -765,13 +817,19 @@ class StaticPublishTest {
     )
     publishStatic(output("one"), site, app.publicHex, init = true)
     publishStatic(output("two", seq = 2), site, app.publicHex, constraints = Constraints(rollout = 0))
-    fun run(vararg a: String, key: String? = app.publicHex) = KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, key,
-      { _, _, _ -> error("re-signed") }, { _, _, _ -> error("built") })
-    for (bad in listOf(listOf("--rollout", "101"), listOf("--rollout", "x"), listOf("--min-host-version", "-1"),
+    fun run(vararg a: String, key: String? = app.publicHex) = KeliverPublish.run(
+      listOf(appDir.path, "--out", site.path) + a,
+      key,
+      { _, _, _ -> error("re-signed") },
+      { _, _, _ -> error("built") },
+    )
+    for (bad in listOf(
+      listOf("--rollout", "101"), listOf("--rollout", "x"), listOf("--min-host-version", "-1"),
       listOf("--min-host-version", "5", "--max-host-version", "4"), listOf("--set-rollout", "2"),
       listOf("--set-rollout", "2", "--rollout", "5", "--init"), listOf("--set-rollout", "2", "--rollout", "5", "--min-host-version", "1"),
       listOf("--set-rollout", "2", "--rollout", "5", "--skip-build"), listOf("--set-rollout", "2", "--rollout", "5", "--republish", "1"),
-      listOf("--set-rollout", "2", "--rollout", "5", "--promote", "2", "--channel", "beta"))) {
+      listOf("--set-rollout", "2", "--rollout", "5", "--promote", "2", "--channel", "beta"),
+    )) {
       assertEquals(2, run(*bad.toTypedArray()), bad.toString())
     }
     // --set-rollout needs no key at all.
@@ -840,10 +898,19 @@ class StaticPublishTest {
       """{"screensDir":"src/jsMain/kotlin/screens","publishTask":":compileDevelopmentExecutableKotlinJsZipline","publishOutput":"build/zipline/Development"}""",
     )
     publishStatic(output("one"), site, app.publicHex, init = true)
-    fun run(vararg a: String) = KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, null,
-      { _, _, _ -> error("re-signed") }, { _, _, _ -> error("built") })
-    for (bad in listOf(listOf("--set-start-policy"), listOf("--set-start-policy", "fast"), listOf("--set-start-policy", "parallel", "--rollout", "5"),
-      listOf("--set-start-policy", "parallel", "--init"), listOf("--set-start-policy", "parallel", "--republish", "1"))) {
+    fun run(vararg a: String) = KeliverPublish.run(
+      listOf(appDir.path, "--out", site.path) + a,
+      null,
+      { _, _, _ -> error("re-signed") },
+      { _, _, _ -> error("built") },
+    )
+    for (bad in listOf(
+      listOf("--set-start-policy"),
+      listOf("--set-start-policy", "fast"),
+      listOf("--set-start-policy", "parallel", "--rollout", "5"),
+      listOf("--set-start-policy", "parallel", "--init"),
+      listOf("--set-start-policy", "parallel", "--republish", "1"),
+    )) {
       assertEquals(2, run(*bad.toTypedArray()), bad.toString())
     }
     // No key needed.

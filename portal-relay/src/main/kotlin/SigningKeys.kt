@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -67,8 +82,12 @@ private val OWNER_ONLY_FILE: Set<PosixFilePermission> = PosixFilePermissions.fro
 private val OWNER_ONLY_DIR: Set<PosixFilePermission> = PosixFilePermissions.fromString("rwx------")
 private val PUBLIC_FILE: Set<PosixFilePermission> = PosixFilePermissions.fromString("rw-r--r--")
 private val GROUP_OR_OTHER: Set<PosixFilePermission> = setOf(
-  PosixFilePermission.GROUP_READ, PosixFilePermission.GROUP_WRITE, PosixFilePermission.GROUP_EXECUTE,
-  PosixFilePermission.OTHERS_READ, PosixFilePermission.OTHERS_WRITE, PosixFilePermission.OTHERS_EXECUTE,
+  PosixFilePermission.GROUP_READ,
+  PosixFilePermission.GROUP_WRITE,
+  PosixFilePermission.GROUP_EXECUTE,
+  PosixFilePermission.OTHERS_READ,
+  PosixFilePermission.OTHERS_WRITE,
+  PosixFilePermission.OTHERS_EXECUTE,
 )
 private val GROUP_OR_OTHER_WRITE: Set<PosixFilePermission> =
   setOf(PosixFilePermission.GROUP_WRITE, PosixFilePermission.OTHERS_WRITE)
@@ -397,6 +416,7 @@ private fun generate(keys: Path, createdDir: Boolean) {
         is KeyProtection.Incomplete -> error("unreachable: a single staged file is not an identity")
       }
       val kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair()
+
       // Zipline wants raw 32-byte Ed25519 keys as hex; the JDK wraps them in
       // PKCS#8/X.509, and the raw key is the last 32 bytes. Same bytes, same
       // format, as before U27: no trailing newline, and readers trim.

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 import kotlin.test.Test
@@ -8,29 +23,47 @@ import kotlin.test.assertTrue
 
 class EmitRenderNodeTest {
   private val text = WidgetPlan.Include(
-    name = "StyledText", composePackage = "dev.keliver.material.compose", category = "Material",
+    name = "StyledText",
+    composePackage = "dev.keliver.material.compose",
+    category = "Material",
     props = listOf(
       MappedProp("text", MappedKind.TEXT, required = true, defaultExpr = null),
       MappedProp("fontSize", MappedKind.INT, required = false, defaultExpr = "14"),
     ),
-    skippedProps = emptyList(), events = listOf(EventPlan("onLongPress", 0)), hasChildren = false,
+    skippedProps = emptyList(),
+    events = listOf(EventPlan("onLongPress", 0)),
+    hasChildren = false,
   )
   private val column = WidgetPlan.Include(
-    name = "Column", composePackage = "dev.keliver.layout.compose", category = "Layout",
+    name = "Column",
+    composePackage = "dev.keliver.layout.compose",
+    category = "Layout",
     props = listOf(
       MappedProp("width", MappedKind.CONSTRAINT, required = false, defaultExpr = "Constraint.Wrap"),
       MappedProp("horizontalAlignment", MappedKind.CROSS_AXIS, required = false, defaultExpr = "CrossAxisAlignment.Start"),
     ),
-    skippedProps = emptyList(), events = emptyList(), hasChildren = true, childScope = "ColumnScope",
+    skippedProps = emptyList(),
+    events = emptyList(),
+    hasChildren = true,
+    childScope = "ColumnScope",
   )
   private val card = WidgetPlan.Include(
-    name = "Card", composePackage = "dev.keliver.material.compose", category = "Material",
-    props = emptyList(), skippedProps = emptyList(), events = emptyList(), hasChildren = true,
+    name = "Card",
+    composePackage = "dev.keliver.material.compose",
+    category = "Material",
+    props = emptyList(),
+    skippedProps = emptyList(),
+    events = emptyList(),
+    hasChildren = true,
   )
   private val spacer = WidgetPlan.Include(
-    name = "Spacer", composePackage = "dev.keliver.layout.compose", category = "Layout",
+    name = "Spacer",
+    composePackage = "dev.keliver.layout.compose",
+    category = "Layout",
     props = listOf(MappedProp("height", MappedKind.DP, required = false, defaultExpr = "Dp(0.0)")),
-    skippedProps = emptyList(), events = emptyList(), hasChildren = false,
+    skippedProps = emptyList(),
+    events = emptyList(),
+    hasChildren = false,
   )
 
   @Test fun emitsBranchesGettersAndChildren() {
@@ -74,8 +107,12 @@ class EmitRenderNodeTest {
   }
 
   @Test fun emitsModifierChain() {
-    val padding = ModPlan("Padding", "padding", "dev.keliver.material.compose",
-      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)))
+    val padding = ModPlan(
+      "Padding",
+      "padding",
+      "dev.keliver.material.compose",
+      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)),
+    )
     val flag = ModPlan("AnimateContentSize", "animateContentSize", "dev.keliver.material.compose", emptyList())
     val src = emitRenderNode(listOf(text), listOf(padding, flag))
     assertContains(src, "import dev.keliver.Modifier")
@@ -89,14 +126,26 @@ class EmitRenderNodeTest {
   }
 
   @Test fun scopedModifiersApplyWithTheParentsReceiver() {
-    val padding = ModPlan("Padding", "padding", "dev.keliver.material.compose",
-      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)))
-    val flex = ModPlan("Flex", "flex", "dev.keliver.layout.compose",
+    val padding = ModPlan(
+      "Padding",
+      "padding",
+      "dev.keliver.material.compose",
+      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)),
+    )
+    val flex = ModPlan(
+      "Flex",
+      "flex",
+      "dev.keliver.layout.compose",
       listOf(MappedProp("value", MappedKind.DOUBLE, required = true, defaultExpr = null)),
-      scopes = listOf("RowScope", "ColumnScope"))
-    val margin = ModPlan("Margin", "margin", "dev.keliver.layout.compose",
+      scopes = listOf("RowScope", "ColumnScope"),
+    )
+    val margin = ModPlan(
+      "Margin",
+      "margin",
+      "dev.keliver.layout.compose",
       listOf(MappedProp("margin", MappedKind.MARGIN, required = true, defaultExpr = null)),
-      scopes = listOf("RowScope", "ColumnScope", "BoxScope"))
+      scopes = listOf("RowScope", "ColumnScope", "BoxScope"),
+    )
     val src = emitRenderNode(listOf(text), listOf(padding, flex, margin))
     assertContains(src, "import dev.keliver.layout.compose.RowScope")
     assertContains(src, "import dev.keliver.layout.compose.BoxScope")

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.WidgetNode
@@ -43,11 +58,15 @@ class EditorTargetTest {
   @Test fun anUndoReplySaysWhetherTheStepWasTakenKeptOrIsGone() {
     assertEquals(StepReply.Stepped, stepReplyOf("""{"ok":true,"version":4}"""))
     // Review 4 #11: blocked but kept — it stays the next step.
-    assertEquals(StepReply.Kept("undo blocked (step kept): C.Ink is not declared"),
-      stepReplyOf("""{"ok":false,"version":4,"error":"undo blocked (step kept): C.Ink is not declared"}"""))
+    assertEquals(
+      StepReply.Kept("undo blocked (step kept): C.Ink is not declared"),
+      stepReplyOf("""{"ok":false,"version":4,"error":"undo blocked (step kept): C.Ink is not declared"}"""),
+    )
     assertEquals(StepReply.Gone(null), stepReplyOf("""{"ok":false,"version":4,"error":"nothing to undo"}"""))
-    assertEquals(StepReply.Gone("undo failed (step dropped): no such node"),
-      stepReplyOf("""{"ok":false,"version":4,"error":"undo failed (step dropped): no such node"}"""))
+    assertEquals(
+      StepReply.Gone("undo failed (step dropped): no such node"),
+      stepReplyOf("""{"ok":false,"version":4,"error":"undo failed (step dropped): no such node"}"""),
+    )
     assertEquals(StepReply.Gone(null), stepReplyOf(null), "no readable reply")
   }
 
@@ -80,7 +99,8 @@ class SessionHistoryTest {
   @Test fun aNewEditClearsRedoAndAnEmptyHistoryUndoesTheOpenDocument() {
     val h = SessionHistory()
     assertEquals(home, h.undoTarget(home), "after a reload: the open document's own stack")
-    h.edited(card); h.undone(card)
+    h.edited(card)
+    h.undone(card)
     h.edited(home)
     assertFalse(h.redoElsewhere(home))
     assertEquals(home, h.redoTarget(home))
@@ -93,13 +113,16 @@ class SessionHistoryTest {
     h.skipped(card, undo = true)
     assertEquals(home, h.undoTarget(home), "a step the relay could not take is dropped, not redone")
     assertEquals(home, h.redoTarget(home))
-    h.edited(card); h.clear()
+    h.edited(card)
+    h.clear()
     assertEquals(home, h.undoTarget(home), "another screen starts over")
   }
 
   @Test fun theHistoryIsKeptAcrossAReload() {
     val h = SessionHistory()
-    h.edited(home); h.edited(home.open("Card").open("Row")); h.undone(home.open("Card").open("Row"))
+    h.edited(home)
+    h.edited(home.open("Card").open("Row"))
+    h.undone(home.open("Card").open("Row"))
     val back = SessionHistory().also { it.load(h.encode()) }
     assertEquals(home, back.undoTarget(home))
     assertEquals(home.open("Card").open("Row"), back.redoTarget(home))

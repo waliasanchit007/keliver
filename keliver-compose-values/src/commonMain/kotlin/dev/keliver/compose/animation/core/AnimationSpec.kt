@@ -153,7 +153,9 @@ public class SpringSpec<T>(
   public val visibilityThreshold: T? = null,
 ) : FiniteAnimationSpec<T> {
   override fun equals(other: Any?): Boolean =
-    other is SpringSpec<*> && other.dampingRatio == dampingRatio && other.stiffness == stiffness &&
+    other is SpringSpec<*> &&
+      other.dampingRatio == dampingRatio &&
+      other.stiffness == stiffness &&
       other.visibilityThreshold == visibilityThreshold
   override fun hashCode(): Int = ((visibilityThreshold?.hashCode() ?: 0) * 31 + dampingRatio.hashCode()) * 31 + stiffness.hashCode()
 }

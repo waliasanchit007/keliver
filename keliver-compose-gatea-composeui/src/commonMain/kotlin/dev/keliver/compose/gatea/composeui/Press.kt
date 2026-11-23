@@ -196,7 +196,8 @@ private data class PressScrollContainerElement(
 private class PressScrollContainerNode(
   var state: ScrollableState,
   var enabled: Boolean,
-) : Modifier.Node(), TraversableNode {
+) : Modifier.Node(),
+  TraversableNode {
   override val traverseKey: Any get() = PressScrollContainerKey
 }
 

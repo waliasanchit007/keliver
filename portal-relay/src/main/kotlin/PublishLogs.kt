@@ -1,4 +1,27 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.PosixFilePermissions
+
+/*
  * The full Gradle output of every relay publish. The /publish response carries
  * only its last 30 lines, so a failure whose cause was earlier (a Kotlin/JS
  * internal compiler error prints its stack trace first and a summary last) could
@@ -12,13 +35,6 @@
  * narrowed after. Nothing serves them (they are outside bundles/, the only
  * directory the relay serves), and the directory is reserved, never a project.
  */
-import java.io.File
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.PosixFilePermissions
 
 /** Relay-owned storage that sits beside the projects under the store root. Never a project. */
 internal val RESERVED_ROOT_DIRS = setOf("bundles", "keys", "kotlin", "reports", PublishLogs.DIR)

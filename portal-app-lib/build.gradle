@@ -49,3 +49,22 @@ kotlin {
     }
   }
 }
+
+// No spotless: this is the dogfood APP the portal edits, standing in for an adopter's app, whose
+// sources Keliver's style rules never see (sample/ is not checked either). The relay writes
+// screens/ and components/ (write-back keeps the author's layout, new files come in the
+// scaffolder's, Compiled_*.kt are generated), and logic/'s Style B presenters are capitalised
+// composables that return a model by design (docs/SCREEN_ARCHITECTURE.md), which the Compose
+// naming rule rejects. Keliver's own code here (jsMain's PublishedEntry) and the tests are checked.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude(
+        "src/commonMain/kotlin/screens/**",
+        "src/commonMain/kotlin/components/**",
+        "src/commonMain/kotlin/logic/**",
+        "src/commonMain/kotlin/flows/**",
+      )
+    }
+  }
+}

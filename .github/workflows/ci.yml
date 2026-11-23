@@ -199,11 +199,21 @@ jobs:
       # checkBaselineProfilePackaged (keliver-treehouse-host/build.gradle) is wired
       # to `check`, which CI does not run: named here so CI fails if the host's AAR
       # stops carrying its baseline profile.
+      # ziplineApiCheck (each module's api/zipline-api.toml: the guest<->host
+      # ZiplineService surface) and redwoodApiCheck (each schema's keliver-api.xml:
+      # widget and modifier tags) are on `check` too, and drifted there unseen
+      # until both were named here. Regenerate with ziplineApiDump / redwoodApiGenerate.
+      # spotlessCheck (format and license header) and the Gradle plugin's validatePlugins
+      # are on `check` as well, for the same reason. Fix the first with spotlessApply.
       - name: Test + API check
         run: >
           ./gradlew
           test
           apiCheck
+          ziplineApiCheck
+          redwoodApiCheck
+          spotlessCheck
+          :keliver-gradle-plugin:validatePlugins
           :keliver-treehouse-host:checkBaselineProfilePackaged
           -DRELEASE_SIGNING_ENABLED=false
 
@@ -263,7 +273,6 @@ jobs:
           :keliver-bridge-fixture:jvmTest
           :keliver-bridge-fixture:compileKotlinJs
           :keliver-bridge-fixture:compileKotlinIosSimulatorArm64
-          :keliver-bridge-fixture:ziplineApiCheck
           :keliver-http-fixtures:jvmTest
           :keliver-http-fixtures:jsTest
           :keliver-http-fixtures:wasmJsTest

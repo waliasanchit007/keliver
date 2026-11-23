@@ -1,21 +1,32 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.COMPONENT_FORWARDS_MODIFIER_PROP
-import dev.keliver.portal.Cond
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.ComponentSpec
-import dev.keliver.portal.EmptyComponentRegistry
+import dev.keliver.portal.Cond
 import dev.keliver.portal.ELSE_TYPE
+import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropSpec
 import dev.keliver.portal.RESERVED_COMPONENT_NAMES
 import dev.keliver.portal.WidgetNode
-import dev.keliver.portal.isColorParamName
-import dev.keliver.portal.isModifierType
-import dev.keliver.portal.listElementType
-import dev.keliver.portal.listKindOf
 import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.Handle
@@ -23,6 +34,10 @@ import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.toConditional
 import dev.keliver.portal.document.toWidgetTree
+import dev.keliver.portal.isColorParamName
+import dev.keliver.portal.isModifierType
+import dev.keliver.portal.listElementType
+import dev.keliver.portal.listKindOf
 import dev.keliver.portal.marginProps
 import dev.keliver.portal.propSourceType
 import dev.keliver.portal.tokenFits
@@ -30,6 +45,7 @@ import dev.keliver.portal.widgetSpec
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
@@ -40,8 +56,6 @@ import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
-import org.jetbrains.kotlin.psi.KtParameter
-import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
 import org.jetbrains.kotlin.psi.KtProperty
 
 /**
@@ -241,9 +255,19 @@ object Recognizer {
     val name = fn.name ?: return null
     if (name in RESERVED_COMPONENT_NAMES || widgetSpec(name) != null) {
       return RecognizedComponent(
-        ComponentSpec(name, emptyList(), emptyList(), emptyMap(),
-          diagnostic = "name '$name' collides with a reserved/primitive widget", transparent = false, packageName = pkg),
-        null, name, emptyMap(), file,
+        ComponentSpec(
+          name,
+          emptyList(),
+          emptyList(),
+          emptyMap(),
+          diagnostic = "name '$name' collides with a reserved/primitive widget",
+          transparent = false,
+          packageName = pkg,
+        ),
+        null,
+        name,
+        emptyMap(),
+        file,
       )
     }
 
@@ -299,38 +323,68 @@ object Recognizer {
 
     if (nullableSlots.isNotEmpty()) {
       return RecognizedComponent(
-        ComponentSpec(name, props, events, paramTypes, defaults = defaults,
+        ComponentSpec(
+          name,
+          props,
+          events,
+          paramTypes,
+          defaults = defaults,
           diagnostic = "nullable content slots are not supported (found: ${nullableSlots.joinToString()}): " +
             "declare a required `@Composable () -> Unit` slot, or keep the component opaque",
-          transparent = false, packageName = pkg),
-        null, name, emptyMap(), file,
+          transparent = false,
+          packageName = pkg,
+        ),
+        null,
+        name,
+        emptyMap(),
+        file,
       )
     }
 
     if (optionalSlots.isNotEmpty()) {
       return RecognizedComponent(
-        ComponentSpec(name, props, events, paramTypes, defaults = defaults,
+        ComponentSpec(
+          name,
+          props,
+          events,
+          paramTypes,
+          defaults = defaults,
           diagnostic = "optional content slots are not supported (found: ${optionalSlots.joinToString()})",
-          transparent = false, packageName = pkg),
-        null, name, emptyMap(), file,
+          transparent = false,
+          packageName = pkg,
+        ),
+        null,
+        name,
+        emptyMap(),
+        file,
       )
     }
 
     if (slots.size > 1) {
       return RecognizedComponent(
-        ComponentSpec(name, props, events, paramTypes, slots, defaults,
+        ComponentSpec(
+          name, props, events, paramTypes, slots, defaults,
           diagnostic = "multiple content slots are not supported (found: ${slots.joinToString { it.name }})",
-          transparent = false, packageName = pkg),
-        null, name, emptyMap(), file,
+          transparent = false, packageName = pkg,
+        ),
+        null,
+        name,
+        emptyMap(),
+        file,
       )
     }
 
     val body = fn.bodyExpression as? KtBlockExpression
     if (body == null) {
       return RecognizedComponent(
-        ComponentSpec(name, props, events, paramTypes, slots, defaults,
-          diagnostic = "component has no block body", transparent = false, packageName = pkg),
-        null, name, emptyMap(), file,
+        ComponentSpec(
+          name, props, events, paramTypes, slots, defaults,
+          diagnostic = "component has no block body", transparent = false, packageName = pkg,
+        ),
+        null,
+        name,
+        emptyMap(),
+        file,
       )
     }
     val acceptsModifier = paramTypes["modifier"]?.let(::isModifierType) == true
@@ -338,7 +392,10 @@ object Recognizer {
     // ED0: a List parameter is a binding a Repeat iterates (`for (tag in tags)`).
     if (compose != null) paramTypes.filter { (n, t) -> t.trim().startsWith("List<") && n !in eventParams }.keys.forEach { valueParams += it }
     val ctx = NameCtx.Component(
-      valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
+      valueParams,
+      eventParams,
+      slots.mapTo(linkedSetOf()) { it.name },
+      nullableParams,
       modifierParam = acceptsModifier,
       paramTypes = paramTypes,
     )
@@ -354,11 +411,15 @@ object Recognizer {
     val slotCalls = countSlotCalls(root)
     // K3: when code outside the grammar hides the slot call, say what that code
     // is — "invoked exactly once (found 0)" would blame the slot instead.
-    val invalidSlotUse = if (hasRaw) null else slots.singleOrNull()?.let { slot ->
-      when {
-        slotCalls != 1 -> "content slot '${slot.name}' must be invoked exactly once (found $slotCalls)"
-        root.type == "Slot" -> "content slot '${slot.name}' must be nested inside a grammar container"
-        else -> null
+    val invalidSlotUse = if (hasRaw) {
+      null
+    } else {
+      slots.singleOrNull()?.let { slot ->
+        when {
+          slotCalls != 1 -> "content slot '${slot.name}' must be invoked exactly once (found $slotCalls)"
+          root.type == "Slot" -> "content slot '${slot.name}' must be nested inside a grammar container"
+          else -> null
+        }
       }
     }
     val rawDiagnostic = "body contains code outside the portal grammar (opaque)" +
@@ -433,13 +494,16 @@ object Recognizer {
     private val compose: ComposeContext? = null,
   ) {
     private val componentNames = components.names()
+
     /**
      * K4: each item variable in scope → its item type's members (null when the
      * type is not declared in this file: its members' types are not read).
      */
     private val itemTypes = HashMap<String, MemberTypes?>()
+
     /** K4: why the last template was refused for a reference's type — the argument's RawCode reason. */
     private var templateWhy: String? = null
+
     /** K6: why the last condition read was not grammar — the argument's RawCode reason. */
     private var condWhy: String? = null
 
@@ -471,10 +535,14 @@ object Recognizer {
       CondReader(ctx, tokens, { f -> declaredType(PropValue.Bind(f)) }, known, pendingLocals, readOnly)
     private var temp = -1L
     val psiByHandle = mutableMapOf<Long, KtExpression>()
+
     /** K3: why each RawCode node is not grammar, in source order (component diagnostics). */
     val rawReasons = mutableListOf<String>()
     private fun nextTemp() = Handle(temp--)
-    private fun track(h: Handle, e: KtExpression): Handle { psiByHandle[h.v] = e; return h }
+    private fun track(h: Handle, e: KtExpression): Handle {
+      psiByHandle[h.v] = e
+      return h
+    }
 
     /** [expr] verbatim as RawCode, recording [reason]. */
     private fun raw(expr: KtExpression, reason: String): DocNode.RawCode {
@@ -523,10 +591,16 @@ object Recognizer {
           intLocal(p.initializer!!).let { (v, why) -> if (v != null) null.also { intLocals[name] = v } else "$shown is not a derived Int local: $why" }
         else -> when (val r = reader(readOnly = (locals.keys + intLocals.keys).toSet(), known = emptyMap()).read(p.initializer!!.text)) {
           is CondRead.Ok -> null.also { locals[name] = r.cond }
-          is CondRead.No -> if (p.typeReference != null) "$shown is not a derived Boolean local: ${r.why}"
-          else intLocal(p.initializer!!).let { (v, why) ->
-            if (v != null) null.also { intLocals[name] = v }
-            else "$shown is not a derived local: as a Boolean condition, ${r.why}; as an Int expression, $why"
+          is CondRead.No -> if (p.typeReference != null) {
+            "$shown is not a derived Boolean local: ${r.why}"
+          } else {
+            intLocal(p.initializer!!).let { (v, why) ->
+              if (v != null) {
+                null.also { intLocals[name] = v }
+              } else {
+                "$shown is not a derived local: as a Boolean condition, ${r.why}; as an Int expression, $why"
+              }
+            }
           }
         }
       }
@@ -549,8 +623,11 @@ object Recognizer {
         val thenNodes = thenStmts.map { statementToNode(it, itemScope, parentType) }
         // K3: `else { … }` is the Condition's last child, an Else node holding its statements.
         val elseNode = elseBlock?.let { block ->
-          DocNode.Widget(track(nextTemp(), block), ELSE_TYPE,
-            children = block.statements.map { statementToNode(it, itemScope, parentType) })
+          DocNode.Widget(
+            track(nextTemp(), block),
+            ELSE_TYPE,
+            children = block.statements.map { statementToNode(it, itemScope, parentType) },
+          )
         }
         return DocNode.Widget(handle, "Condition", props, children = thenNodes + listOfNotNull(elseNode))
       }
@@ -564,16 +641,22 @@ object Recognizer {
         } finally {
           if (had) itemTypes[itemVar] = outer else itemTypes.remove(itemVar)
         }
-        return DocNode.Widget(track(nextTemp(), expr), "Repeat",
+        return DocNode.Widget(
+          track(nextTemp(), expr),
+          "Repeat",
           mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
-          children = children)
+          children = children,
+        )
       }
       if (compose != null) composeStatement(expr, itemScope, parentType)?.let { return it }
 
       val call = expr as? KtCallExpression
       val type = call?.calleeExpression?.text
-      if (call != null && ctx is NameCtx.Component && type in ctx.slotParams &&
-        call.valueArguments.isEmpty() && call.lambdaArguments.isEmpty()
+      if (call != null &&
+        ctx is NameCtx.Component &&
+        type in ctx.slotParams &&
+        call.valueArguments.isEmpty() &&
+        call.lambdaArguments.isEmpty()
       ) {
         return DocNode.Widget(
           track(nextTemp(), expr),
@@ -677,9 +760,12 @@ object Recognizer {
         } finally {
           if (had) itemTypes[itemVar] = outer else itemTypes.remove(itemVar)
         }
-        return DocNode.Widget(track(nextTemp(), expr), "Repeat",
+        return DocNode.Widget(
+          track(nextTemp(), expr),
+          "Repeat",
           mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
-          children = children)
+          children = children,
+        )
       }
       val call = expr as? KtCallExpression ?: return null
       val simple = (call.calleeExpression as? org.jetbrains.kotlin.psi.KtNameReferenceExpression)?.getReferencedName() ?: return null
@@ -737,7 +823,8 @@ object Recognizer {
         slotArgs.map { (name, arg) ->
           val lambda = ComposeSyntax.lambdaOf(arg)!!
           DocNode.Widget(
-            track(nextTemp(), lambda), "slot:$name",
+            track(nextTemp(), lambda),
+            "slot:$name",
             children = lambda.bodyExpression?.statements.orEmpty().map { statementToNode(it, itemScope, "${e.type}/$name") },
           )
         }
@@ -880,8 +967,11 @@ object Recognizer {
         // Double/Float (`1` vs `1.0`) or a nullable value (`null` vs nothing).
         is PropValue.Bind -> {
           val type = declaredType(v)
-          if (dev.keliver.portal.templateRefTypeFits(type)) v
-          else null.also { templateWhy = refusedRefWhy(e.text.trim(), type!!) }
+          if (dev.keliver.portal.templateRefTypeFits(type)) {
+            v
+          } else {
+            null.also { templateWhy = refusedRefWhy(e.text.trim(), type!!) }
+          }
         }
         null -> tokens.lookup(e.text)
         else -> null
@@ -896,9 +986,10 @@ object Recognizer {
 
     /** K4: why a template does not read the reference spelled [ref], declared [type]. */
     private fun refusedRefWhy(ref: String, type: String): String = when {
-      type == UNKNOWN_TYPE -> "a template does not read `$ref`: " +
-        (screenUnknownWhy(ref) ?: "its type is not declared where ingest reads it (a property without a type, or inherited from a type in another file)") +
-        " — only a String, Int, Long or Boolean prints alike on the device and in the preview"
+      type == UNKNOWN_TYPE ->
+        "a template does not read `$ref`: " +
+          (screenUnknownWhy(ref) ?: "its type is not declared where ingest reads it (a property without a type, or inherited from a type in another file)") +
+          " — only a String, Int, Long or Boolean prints alike on the device and in the preview"
       else -> "a template does not read `$ref`, declared $type — only a String, Int, Long or Boolean prints alike on the device and in the preview"
     }
 
@@ -1025,16 +1116,21 @@ object Recognizer {
           val declared = declaredType(v)
           val unreadable = declared == UNKNOWN_TYPE || (declared == null && '.' in v.field)
           when {
-            unreadable && dp -> no("the type of `$shown` is not readable here (" +
-              (screenUnknownWhy(t) ?: "its type is not declared where ingest reads it") + "): an Int used as a Dp reads only a field declared Int")
+            unreadable && dp -> no(
+              "the type of `$shown` is not readable here (" +
+                (screenUnknownWhy(t) ?: "its type is not declared where ingest reads it") + "): an Int used as a Dp reads only a field declared Int",
+            )
             unreadable || declared == null -> ArithSyntax.Operand(v, null)
             plainType(declared) == "Int" -> ArithSyntax.Operand(v, null)
             else -> no("`$shown` is declared $declared, not an Int (only Int arithmetic is grammar: Kotlin computes a Long, a Double or a Float otherwise, and a nullable value does not compute)")
           }
         }
         null -> tokens.lookup(t)?.let { tok ->
-          if (tok.value.tag == "i") ArithSyntax.Operand(tok, null)
-          else no("design token ${tok.ref} is not an Int (an operand is an Int)")
+          if (tok.value.tag == "i") {
+            ArithSyntax.Operand(tok, null)
+          } else {
+            no("design token ${tok.ref} is not an Int (an operand is an Int)")
+          }
         } ?: no("`$shown` is not an Int operand (an Int literal, an Int binding or parameter, or an Int design token; a call or any other expression is not grammar)")
         else -> no("`$shown` is not an Int operand")
       }

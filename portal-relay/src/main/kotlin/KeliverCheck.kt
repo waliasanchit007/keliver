@@ -1,7 +1,21 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.ingest.Recognizer
-import dev.keliver.portal.ingest.TokenTable
 import java.io.File
 import kotlin.system.exitProcess
 import kotlinx.serialization.Serializable
@@ -72,8 +86,11 @@ object KeliverCheck {
     val tokens = CompiledAdapters.appTokens(appDir, config, project = "keliver-check")
     val fileId: (File) -> String = { Tokens.fileId(it, appDir) }
     val registry: ComponentRegistry =
-      if (componentsDir.isDirectory) Components.rebuild("keliver-check", componentsDir, tokens, fileId)
-      else dev.keliver.portal.EmptyComponentRegistry
+      if (componentsDir.isDirectory) {
+        Components.rebuild("keliver-check", componentsDir, tokens, fileId)
+      } else {
+        dev.keliver.portal.EmptyComponentRegistry
+      }
     val out = mutableListOf<Finding>()
     var screens = 0
     var components = 0
@@ -85,7 +102,8 @@ object KeliverCheck {
       val text = f.readText()
       val r = runCatching { Recognizer.recognize(fileId(f), text, registry, tokens) }
       r.exceptionOrNull()?.let {
-        out += Finding("editor", "error", "ingest failed: $it", rel); raw++
+        out += Finding("editor", "error", "ingest failed: $it", rel)
+        raw++
       }
       val rec = r.getOrNull() ?: continue
       screens++
@@ -102,7 +120,10 @@ object KeliverCheck {
         Recognizer.recognizeComponent(fileId(f), text, registry, tokens)?.spec to
           Recognizer.recognize(fileId(f), text, registry, tokens, asComponent = true)
       }
-      r.exceptionOrNull()?.let { out += Finding("editor", "error", "ingest failed: $it", rel); raw++ }
+      r.exceptionOrNull()?.let {
+        out += Finding("editor", "error", "ingest failed: $it", rel)
+        raw++
+      }
       val (spec, doc) = r.getOrNull() ?: continue
       if (spec == null) {
         // The relay skips such files silently (ComponentRegistryState: `?: continue`), so a helper
@@ -120,9 +141,13 @@ object KeliverCheck {
       // (DocumentService.forComponent), so that, like no body, is a box.
       if (doc == null || doc.screenName != spec.name || spec.diagnostic != null) {
         val why = spec.diagnostic
-          ?: if (doc == null) "the body is not recognized"
-          else "the file's first @Composable is ${doc.screenName}, not ${spec.name}"
-        out += Finding("editor", "error", "component ${spec.name} is opaque in the editor: $why", rel); raw++
+          ?: if (doc == null) {
+            "the body is not recognized"
+          } else {
+            "the file's first @Composable is ${doc.screenName}, not ${spec.name}"
+          }
+        out += Finding("editor", "error", "component ${spec.name} is opaque in the editor: $why", rel)
+        raw++
       }
     }
     out += if (raw == 0) {
@@ -134,8 +159,14 @@ object KeliverCheck {
   }
 
   private fun rawFinding(rel: String, line: Int?, node: DocNode.RawCode) =
-    Finding("editor", "error", "RawCode: the editor cannot edit this code", rel, line,
-      mapOf("text" to node.text.lineSequence().first().take(160), "kindHint" to node.kindHint))
+    Finding(
+      "editor",
+      "error",
+      "RawCode: the editor cannot edit this code",
+      rel,
+      line,
+      mapOf("text" to node.text.lineSequence().first().take(160), "kindHint" to node.kindHint),
+    )
 
   /**
    * Every RawCode node in [root] with its 1-based line in [source], in tree
@@ -155,8 +186,11 @@ object KeliverCheck {
     fun walk(n: DocNode) {
       when (n) {
         is DocNode.RawCode -> {
-          val at = if (n.text.isBlank()) null
-          else text.indexOf(n.text, cursor).takeIf { it >= 0 } ?: text.indexOf(n.text).takeIf { it >= 0 }
+          val at = if (n.text.isBlank()) {
+            null
+          } else {
+            text.indexOf(n.text, cursor).takeIf { it >= 0 } ?: text.indexOf(n.text).takeIf { it >= 0 }
+          }
           if (at != null) cursor = at + n.text.length
           out += n to at?.let { a -> 1 + text.substring(0, a).count { it == '\n' } }
         }
@@ -181,26 +215,53 @@ object KeliverCheck {
    */
   val RULES: List<Rule> = listOf(
     Rule("android", Regex("""^\s*import\s+android\."""), "Android platform API: the guest runs in QuickJS, not on Android"),
-    Rule("androidx", Regex("""^\s*import\s+androidx\.(?!compose\.runtime\.)"""),
-      "AndroidX is Android-only; a guest uses androidx.compose.runtime and Keliver widgets only"),
+    Rule(
+      "androidx",
+      Regex("""^\s*import\s+androidx\.(?!compose\.runtime\.)"""),
+      "AndroidX is Android-only; a guest uses androidx.compose.runtime and Keliver widgets only",
+    ),
     Rule("ios-platform", Regex("""^\s*import\s+platform\."""), "iOS/Kotlin-Native platform API: not available to a Kotlin/JS guest"),
-    Rule("java", Regex("""^\s*import\s+(java\.|javax\.(?!inject\.))"""), // javax.inject is di-reflection's
-      "JVM API (java.io, java.net, java.util.concurrent, reflection…): not on Kotlin/JS"),
-    Rule("jvm-reflection", Regex("""::class\.java\b|\.javaClass\b|Class\.forName\(|import\s+kotlin\.reflect\.(full|jvm)\."""),
-      "JVM reflection: not on Kotlin/JS"),
-    Rule("kotlin-jvm", Regex("""^\s*import\s+kotlin\.(jvm|io\.path|concurrent)\.|@Synchronized\b|\bsynchronized\s*\(|@JvmStatic\b"""),
-      "JVM-only Kotlin API"),
-    Rule("jvm-system", Regex("""\bSystem\.(getenv|getProperty|currentTimeMillis|nanoTime|exit)\b|\bThread\.|\bRuntime\.getRuntime"""),
-      "java.lang.System/Thread/Runtime: not on Kotlin/JS"),
+    Rule(
+      "java",
+      Regex("""^\s*import\s+(java\.|javax\.(?!inject\.))"""), // javax.inject is di-reflection's
+      "JVM API (java.io, java.net, java.util.concurrent, reflection…): not on Kotlin/JS",
+    ),
+    Rule(
+      "jvm-reflection",
+      Regex("""::class\.java\b|\.javaClass\b|Class\.forName\(|import\s+kotlin\.reflect\.(full|jvm)\."""),
+      "JVM reflection: not on Kotlin/JS",
+    ),
+    Rule(
+      "kotlin-jvm",
+      Regex("""^\s*import\s+kotlin\.(jvm|io\.path|concurrent)\.|@Synchronized\b|\bsynchronized\s*\(|@JvmStatic\b"""),
+      "JVM-only Kotlin API",
+    ),
+    Rule(
+      "jvm-system",
+      Regex("""\bSystem\.(getenv|getProperty|currentTimeMillis|nanoTime|exit)\b|\bThread\.|\bRuntime\.getRuntime"""),
+      "java.lang.System/Thread/Runtime: not on Kotlin/JS",
+    ),
     Rule("blocking", Regex("""\brunBlocking\b|\bDispatchers\.IO\b"""), "blocking coroutines API: not on Kotlin/JS"),
-    Rule("di-reflection", Regex("""^\s*import\s+(dagger\.|javax\.inject\.)"""),
-      "Hilt/Dagger need JVM reflection and annotation processing (SCREEN_ARCHITECTURE §5); wire the graph by hand"),
-    Rule("http-client", Regex("""^\s*import\s+(okhttp3\.|retrofit2\.|io\.ktor\.client\.)"""),
-      "networking is the host's (secrets stay native): call a host service, e.g. keliver-http"),
-    Rule("db-driver", Regex("""^\s*import\s+(app\.cash\.sqldelight\.driver\.|android\.database\.)"""),
-      "a database driver is the host's: take a capability interface (e.g. SqlDriver) instead"),
-    Rule("file-io", Regex("""^\s*import\s+okio\.(FileSystem|Path)\b|\bFileSystem\.SYSTEM\b"""),
-      "the guest has no file system: ask the host"),
+    Rule(
+      "di-reflection",
+      Regex("""^\s*import\s+(dagger\.|javax\.inject\.)"""),
+      "Hilt/Dagger need JVM reflection and annotation processing (SCREEN_ARCHITECTURE §5); wire the graph by hand",
+    ),
+    Rule(
+      "http-client",
+      Regex("""^\s*import\s+(okhttp3\.|retrofit2\.|io\.ktor\.client\.)"""),
+      "networking is the host's (secrets stay native): call a host service, e.g. keliver-http",
+    ),
+    Rule(
+      "db-driver",
+      Regex("""^\s*import\s+(app\.cash\.sqldelight\.driver\.|android\.database\.)"""),
+      "a database driver is the host's: take a capability interface (e.g. SqlDriver) instead",
+    ),
+    Rule(
+      "file-io",
+      Regex("""^\s*import\s+okio\.(FileSystem|Path)\b|\bFileSystem\.SYSTEM\b"""),
+      "the guest has no file system: ask the host",
+    ),
   )
 
   /** The guest's own source: screens, components, logic and flows dirs, recursively. */
@@ -217,8 +278,10 @@ object KeliverCheck {
       var inBlock = false
       f.readLines().forEachIndexed { i, raw ->
         val code = stripComments(raw, inBlock).also { inBlock = it.second }.first
-        for (rule in RULES) if (rule.regex.containsMatchIn(code)) {
-          out += Finding("api", "warning", rule.why, rel(appDir, f), i + 1, mapOf("rule" to rule.id, "text" to raw.trim().take(160)))
+        for (rule in RULES) {
+          if (rule.regex.containsMatchIn(code)) {
+            out += Finding("api", "warning", rule.why, rel(appDir, f), i + 1, mapOf("rule" to rule.id, "text" to raw.trim().take(160)))
+          }
         }
       }
     }
@@ -237,11 +300,28 @@ object KeliverCheck {
       val c = line[i]
       val next = line.getOrNull(i + 1)
       when {
-        inBlock -> if (c == '*' && next == '/') { inBlock = false; i++ }
-        inString -> { sb.append(c); if (c == '\\') { next?.let { sb.append(it) }; i++ } else if (c == '"') inString = false }
-        c == '"' -> { sb.append(c); inString = true }
+        inBlock -> if (c == '*' && next == '/') {
+          inBlock = false
+          i++
+        }
+        inString -> {
+          sb.append(c)
+          if (c == '\\') {
+            next?.let { sb.append(it) }
+            i++
+          } else if (c == '"') {
+            inString = false
+          }
+        }
+        c == '"' -> {
+          sb.append(c)
+          inString = true
+        }
         c == '/' && next == '/' -> return sb.toString() to false
-        c == '/' && next == '*' -> { inBlock = true; i++ }
+        c == '/' && next == '*' -> {
+          inBlock = true
+          i++
+        }
         else -> sb.append(c)
       }
       i++
@@ -276,13 +356,25 @@ object KeliverCheck {
       ?: return listOf(Finding("budget", "skip", "no check.bundleBudgetBytes in keliver.portal.json"))
     // A failed compile leaves the last good bundle behind: measuring it would pass a broken build.
     if (compile.result == "fail") {
-      return listOf(Finding("budget", "skip", "the compile failed in this run: the bundle in ${config.publishOutput} is stale",
-        extra = mapOf("budgetBytes" to budget)))
+      return listOf(
+        Finding(
+          "budget",
+          "skip",
+          "the compile failed in this run: the bundle in ${config.publishOutput} is stale",
+          extra = mapOf("budgetBytes" to budget),
+        ),
+      )
     }
     val dir = File(appDir, config.publishOutput)
     if (!dir.isDirectory) {
-      return listOf(Finding("budget", "error", "no built bundle at ${config.publishOutput} (run the compile check first)",
-        extra = mapOf("budgetBytes" to budget)))
+      return listOf(
+        Finding(
+          "budget",
+          "error",
+          "no built bundle at ${config.publishOutput} (run the compile check first)",
+          extra = mapOf("budgetBytes" to budget),
+        ),
+      )
     }
     val files = dir.walkTopDown().filter { it.isFile }.toList()
     val bytes = files.sumOf { it.length() }
@@ -297,8 +389,11 @@ object KeliverCheck {
     }
     val extra = mapOf("bytes" to bytes, "budgetBytes" to budget, "files" to files.size, "largest" to largest, "rebuilt" to rebuilt)
     return listOf(
-      if (bytes > budget) Finding("budget", "error", "bundle is $bytes B, over the budget of $budget B$note", config.publishOutput, extra = extra)
-      else Finding("budget", "pass", "bundle is $bytes B of a $budget B budget$note", config.publishOutput, extra = extra),
+      if (bytes > budget) {
+        Finding("budget", "error", "bundle is $bytes B, over the budget of $budget B$note", config.publishOutput, extra = extra)
+      } else {
+        Finding("budget", "pass", "bundle is $bytes B of a $budget B budget$note", config.publishOutput, extra = extra)
+      },
     )
   }
 
@@ -342,8 +437,10 @@ fun main(args: Array<String>) {
   while (i < args.size) {
     when (val a = args[i]) {
       "--only" -> only = (args.getOrNull(++i) ?: usage("--only needs a value")).split(',').filter { it.isNotBlank() }
-      "--compile-result" -> compileResult = (args.getOrNull(++i)?.takeIf { it == "pass" || it == "fail" }
-        ?: usage("--compile-result needs pass or fail"))
+      "--compile-result" -> compileResult = (
+        args.getOrNull(++i)?.takeIf { it == "pass" || it == "fail" }
+          ?: usage("--compile-result needs pass or fail")
+        )
       "--compile-started" -> compileStarted = (args.getOrNull(++i)?.toLongOrNull() ?: usage("--compile-started needs epoch seconds"))
       "--print-compile-task" -> printTask = true
       "-h", "--help" -> usage("help")

@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:compose:lambda-param-in-effect", "ktlint:compose:content-trailing-lambda")
+// LaunchedWhileVisible keeps LaunchedEffect's contract; internal RetainedEntries takes named arguments.
+// (A function-level suppression of lambda-param-in-effect is not honoured.)
+
 package dev.keliver.nav
 
 import androidx.compose.runtime.Composable

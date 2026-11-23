@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -148,7 +159,10 @@ class HostGapsTest {
 
   @Test fun outlinedTextFieldAlignsItsText() = runComposeUiTest {
     val start = ComposeUiOutlinedTextField().apply { text("42") }
-    val center = ComposeUiOutlinedTextField().apply { text("42"); align(1) }
+    val center = ComposeUiOutlinedTextField().apply {
+      text("42")
+      align(1)
+    }
     setContent {
       Column(Modifier.width(300.dp)) {
         start.value(Modifier.fillMaxWidth().testTag("start"))
@@ -161,14 +175,20 @@ class HostGapsTest {
   }
 
   @Test fun unsizedFieldKeepsItsWidthAtTheDefaultAlignment() = runComposeUiTest {
-    val field = ComposeUiOutlinedTextField().apply { text(""); placeholder("Amount") }
+    val field = ComposeUiOutlinedTextField().apply {
+      text("")
+      placeholder("Amount")
+    }
     setContent { Box(Modifier.width(1000.dp)) { field.value(Modifier.testTag("field")) } }
     val width = onNodeWithTag("field").getBoundsInRoot().let { it.right - it.left }
     assertTrue(width < 500.dp, "an unsized, start-aligned field grew to $width")
   }
 
   @Test fun unsizedTextFieldKeepsItsWidthAtTheDefaultAlignment() = runComposeUiTest {
-    val field = ComposeUiTextField().apply { text(""); placeholder("Amount") }
+    val field = ComposeUiTextField().apply {
+      text("")
+      placeholder("Amount")
+    }
     setContent { Box(Modifier.width(1000.dp)) { field.value(Modifier.testTag("field")) } }
     val width = onNodeWithTag("field").getBoundsInRoot().let { it.right - it.left }
     assertTrue(width < 500.dp, "an unsized, start-aligned field grew to $width")
@@ -176,7 +196,10 @@ class HostGapsTest {
 
   @Test fun textFieldAlignsItsText() = runComposeUiTest {
     val start = ComposeUiTextField().apply { text("42") }
-    val end = ComposeUiTextField().apply { text("42"); align(2) }
+    val end = ComposeUiTextField().apply {
+      text("42")
+      align(2)
+    }
     setContent {
       Column(Modifier.width(300.dp)) {
         start.value(Modifier.fillMaxWidth().testTag("start"))
@@ -247,4 +270,3 @@ private class Remembering(
     Box(m.width(100.dp).height(100.dp))
   }
 }
-

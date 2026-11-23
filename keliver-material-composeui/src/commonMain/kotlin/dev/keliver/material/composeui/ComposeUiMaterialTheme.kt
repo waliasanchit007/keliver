@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -16,10 +27,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import dev.keliver.Modifier as RedwoodModifier
 import dev.keliver.material.widget.Theme
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.ComposeWidgetChildren
-import dev.keliver.Modifier as RedwoodModifier
 
 /** Resolve a keliver color-role int to a Material3 scheme color (0 => Unspecified). */
 @Composable
@@ -82,19 +93,45 @@ internal class ComposeUiTheme : Theme<@Composable (Modifier) -> Unit> {
       Box(modifier = m) { (content as ComposeWidgetChildren).Render() }
     }
   }
-  override fun dark(dark: Boolean) { this.dark = dark }
-  override fun primaryArgb(primaryArgb: Int) { this.primaryArgb = primaryArgb }
-  override fun onPrimaryArgb(onPrimaryArgb: Int) { this.onPrimaryArgb = onPrimaryArgb }
-  override fun secondaryArgb(secondaryArgb: Int) { this.secondaryArgb = secondaryArgb }
-  override fun onSecondaryArgb(onSecondaryArgb: Int) { this.onSecondaryArgb = onSecondaryArgb }
-  override fun surfaceArgb(surfaceArgb: Int) { this.surfaceArgb = surfaceArgb }
-  override fun onSurfaceArgb(onSurfaceArgb: Int) { this.onSurfaceArgb = onSurfaceArgb }
-  override fun surfaceVariantArgb(surfaceVariantArgb: Int) { this.surfaceVariantArgb = surfaceVariantArgb }
-  override fun onSurfaceVariantArgb(onSurfaceVariantArgb: Int) { this.onSurfaceVariantArgb = onSurfaceVariantArgb }
-  override fun backgroundArgb(backgroundArgb: Int) { this.backgroundArgb = backgroundArgb }
-  override fun onBackgroundArgb(onBackgroundArgb: Int) { this.onBackgroundArgb = onBackgroundArgb }
-  override fun errorArgb(errorArgb: Int) { this.errorArgb = errorArgb }
-  override fun outlineArgb(outlineArgb: Int) { this.outlineArgb = outlineArgb }
+  override fun dark(dark: Boolean) {
+    this.dark = dark
+  }
+  override fun primaryArgb(primaryArgb: Int) {
+    this.primaryArgb = primaryArgb
+  }
+  override fun onPrimaryArgb(onPrimaryArgb: Int) {
+    this.onPrimaryArgb = onPrimaryArgb
+  }
+  override fun secondaryArgb(secondaryArgb: Int) {
+    this.secondaryArgb = secondaryArgb
+  }
+  override fun onSecondaryArgb(onSecondaryArgb: Int) {
+    this.onSecondaryArgb = onSecondaryArgb
+  }
+  override fun surfaceArgb(surfaceArgb: Int) {
+    this.surfaceArgb = surfaceArgb
+  }
+  override fun onSurfaceArgb(onSurfaceArgb: Int) {
+    this.onSurfaceArgb = onSurfaceArgb
+  }
+  override fun surfaceVariantArgb(surfaceVariantArgb: Int) {
+    this.surfaceVariantArgb = surfaceVariantArgb
+  }
+  override fun onSurfaceVariantArgb(onSurfaceVariantArgb: Int) {
+    this.onSurfaceVariantArgb = onSurfaceVariantArgb
+  }
+  override fun backgroundArgb(backgroundArgb: Int) {
+    this.backgroundArgb = backgroundArgb
+  }
+  override fun onBackgroundArgb(onBackgroundArgb: Int) {
+    this.onBackgroundArgb = onBackgroundArgb
+  }
+  override fun errorArgb(errorArgb: Int) {
+    this.errorArgb = errorArgb
+  }
+  override fun outlineArgb(outlineArgb: Int) {
+    this.outlineArgb = outlineArgb
+  }
 }
 
 /** Whether [this] is a dark scheme, judged by its background. */

@@ -1,0 +1,413 @@
+<schema version="1" type="dev.keliver.material.KeliverMaterial">
+  <widget tag="1" type="dev.keliver.material.TextInput">
+    <property tag="1" name="state" type="dev.keliver.material.api.TextFieldState" />
+    <property tag="2" name="hint" type="kotlin.String" />
+    <event tag="3" name="onChange" params="dev.keliver.material.api.TextFieldState" nullable="true" />
+  </widget>
+  <widget tag="2" type="dev.keliver.material.Text">
+    <property tag="1" name="text" type="kotlin.String" />
+  </widget>
+  <widget tag="3" type="dev.keliver.material.Image">
+    <property tag="1" name="url" type="kotlin.String" />
+    <event tag="2" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="4" type="dev.keliver.material.Button">
+    <property tag="1" name="text" type="kotlin.String?" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <property tag="4" name="containerArgb" type="kotlin.Int" />
+    <property tag="5" name="contentArgb" type="kotlin.Int" />
+    <property tag="6" name="cornerRadiusDp" type="kotlin.Int" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="5" type="dev.keliver.material.StyledText">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="fontSize" type="kotlin.Int" />
+    <property tag="3" name="bold" type="kotlin.Boolean" />
+    <property tag="4" name="colorArgb" type="kotlin.Int" />
+    <property tag="5" name="align" type="kotlin.Int" />
+    <property tag="6" name="maxLines" type="kotlin.Int" />
+    <property tag="7" name="overflow" type="kotlin.Int" />
+    <property tag="8" name="lineHeightSp" type="kotlin.Int" />
+    <property tag="9" name="letterSpacingX100" type="kotlin.Int" />
+    <property tag="10" name="italic" type="kotlin.Boolean" />
+    <property tag="11" name="underline" type="kotlin.Boolean" />
+    <property tag="12" name="strikethrough" type="kotlin.Boolean" />
+    <property tag="13" name="weight" type="kotlin.Int" />
+    <property tag="14" name="colorRole" type="kotlin.Int" />
+  </widget>
+  <widget tag="6" type="dev.keliver.material.Card">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="7" type="dev.keliver.material.Switch">
+    <property tag="1" name="checked" type="kotlin.Boolean" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onCheckedChange" params="kotlin.Boolean" nullable="true" />
+  </widget>
+  <widget tag="8" type="dev.keliver.material.Checkbox">
+    <property tag="1" name="checked" type="kotlin.Boolean" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onCheckedChange" params="kotlin.Boolean" nullable="true" />
+  </widget>
+  <widget tag="9" type="dev.keliver.material.TextField">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="placeholder" type="kotlin.String" />
+    <property tag="4" name="align" type="kotlin.Int" />
+    <event tag="3" name="onValueChange" params="kotlin.String" nullable="true" />
+  </widget>
+  <widget tag="10" type="dev.keliver.material.Divider">
+    <property tag="1" name="thickness" type="kotlin.Int" />
+  </widget>
+  <widget tag="11" type="dev.keliver.material.Chip">
+    <property tag="1" name="label" type="kotlin.String" />
+    <event tag="2" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="12" type="dev.keliver.material.IconButton">
+    <property tag="1" name="imageUrl" type="kotlin.String" />
+    <event tag="2" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="13" type="dev.keliver.material.AsyncImage">
+    <property tag="1" name="url" type="kotlin.String" />
+    <property tag="2" name="contentScale" type="kotlin.Int" />
+    <property tag="4" name="widthDp" type="kotlin.Int" />
+    <property tag="5" name="heightDp" type="kotlin.Int" />
+    <property tag="6" name="blurDp" type="kotlin.Int" />
+    <property tag="7" name="fillWidth" type="kotlin.Boolean" />
+    <property tag="8" name="tintArgb" type="kotlin.Int" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="14" type="dev.keliver.material.ScrollableColumn">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="15" type="dev.keliver.material.BottomSheet">
+    <property tag="1" name="visible" type="kotlin.Boolean" />
+    <property tag="3" name="contentPaddingDp" type="kotlin.Int" />
+    <event tag="2" name="onDismiss" nullable="true" />
+    <children tag="4" name="children" />
+  </widget>
+  <widget tag="16" type="dev.keliver.material.OutlinedButton">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <property tag="4" name="iconUrl" type="kotlin.String" />
+    <property tag="5" name="iconSizeDp" type="kotlin.Int" />
+    <property tag="6" name="containerArgb" type="kotlin.Int" />
+    <property tag="7" name="contentArgb" type="kotlin.Int" />
+    <property tag="8" name="borderArgb" type="kotlin.Int" />
+    <property tag="9" name="cornerRadiusDp" type="kotlin.Int" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="17" type="dev.keliver.material.TextButton">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="18" type="dev.keliver.material.ElevatedButton">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="19" type="dev.keliver.material.FilledTonalButton">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="20" type="dev.keliver.material.FloatingActionButton">
+    <property tag="1" name="text" type="kotlin.String" />
+    <event tag="2" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="21" type="dev.keliver.material.RadioButton">
+    <property tag="1" name="selected" type="kotlin.Boolean" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="22" type="dev.keliver.material.Slider">
+    <property tag="1" name="position" type="kotlin.Float" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onValueChange" params="kotlin.Float" nullable="true" />
+  </widget>
+  <widget tag="23" type="dev.keliver.material.OutlinedTextField">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="placeholder" type="kotlin.String" />
+    <property tag="4" name="label" type="kotlin.String" />
+    <property tag="5" name="leadingText" type="kotlin.String" />
+    <property tag="6" name="keyboardType" type="kotlin.Int" />
+    <property tag="7" name="singleLine" type="kotlin.Boolean" />
+    <property tag="8" name="maxLines" type="kotlin.Int" />
+    <property tag="9" name="isError" type="kotlin.Boolean" />
+    <property tag="10" name="supportingText" type="kotlin.String" />
+    <property tag="11" name="borderArgb" type="kotlin.Int" />
+    <property tag="12" name="cornerRadiusDp" type="kotlin.Int" />
+    <property tag="13" name="align" type="kotlin.Int" />
+    <event tag="3" name="onValueChange" params="kotlin.String" nullable="true" />
+  </widget>
+  <widget tag="24" type="dev.keliver.material.Surface">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="25" type="dev.keliver.material.ElevatedCard">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="26" type="dev.keliver.material.OutlinedCard">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="27" type="dev.keliver.material.FlowRow">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="28" type="dev.keliver.material.FlowColumn">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="29" type="dev.keliver.material.Scaffold">
+    <children tag="1" name="topBar" />
+    <children tag="2" name="content" />
+  </widget>
+  <widget tag="30" type="dev.keliver.material.TopAppBar">
+    <property tag="1" name="title" type="kotlin.String" />
+  </widget>
+  <widget tag="31" type="dev.keliver.material.BottomAppBar">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="32" type="dev.keliver.material.NavigationBar">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="33" type="dev.keliver.material.TabRow">
+    <property tag="1" name="selectedIndex" type="kotlin.Int" />
+    <children tag="2" name="tabs" />
+  </widget>
+  <widget tag="34" type="dev.keliver.material.Tab">
+    <property tag="1" name="text" type="kotlin.String" />
+    <property tag="2" name="selected" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="35" type="dev.keliver.material.AlertDialog">
+    <property tag="1" name="title" type="kotlin.String" />
+    <property tag="2" name="text" type="kotlin.String" />
+    <property tag="3" name="confirmText" type="kotlin.String" />
+    <property tag="4" name="dismissText" type="kotlin.String" />
+    <event tag="5" name="onConfirm" nullable="true" />
+    <event tag="6" name="onDismiss" nullable="true" />
+  </widget>
+  <widget tag="36" type="dev.keliver.material.Dialog">
+    <event tag="1" name="onDismiss" nullable="true" />
+    <children tag="2" name="children" />
+  </widget>
+  <widget tag="37" type="dev.keliver.material.Snackbar">
+    <property tag="1" name="message" type="kotlin.String" />
+  </widget>
+  <widget tag="38" type="dev.keliver.material.CircularProgressIndicator">
+    <property tag="1" name="progress" type="kotlin.Float" />
+  </widget>
+  <widget tag="39" type="dev.keliver.material.LinearProgressIndicator">
+    <property tag="1" name="progress" type="kotlin.Float" />
+  </widget>
+  <widget tag="40" type="dev.keliver.material.FilterChip">
+    <property tag="1" name="label" type="kotlin.String" />
+    <property tag="2" name="selected" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="41" type="dev.keliver.material.InputChip">
+    <property tag="1" name="label" type="kotlin.String" />
+    <property tag="2" name="selected" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="42" type="dev.keliver.material.SuggestionChip">
+    <property tag="1" name="label" type="kotlin.String" />
+    <event tag="2" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="43" type="dev.keliver.material.Badge">
+    <property tag="1" name="text" type="kotlin.String" />
+  </widget>
+  <widget tag="44" type="dev.keliver.material.NavigationRail">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="45" type="dev.keliver.material.VerticalDivider">
+    <property tag="1" name="thickness" type="kotlin.Int" />
+  </widget>
+  <widget tag="46" type="dev.keliver.material.ExtendedFloatingActionButton">
+    <property tag="1" name="text" type="kotlin.String" />
+    <event tag="2" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="47" type="dev.keliver.material.SegmentedButtonRow">
+    <property tag="1" name="options" type="kotlin.collections.List&lt;kotlin.String>" />
+    <property tag="2" name="selectedIndex" type="kotlin.Int" />
+    <event tag="3" name="onSelect" params="kotlin.Int" nullable="true" />
+  </widget>
+  <widget tag="48" type="dev.keliver.material.DropdownMenu">
+    <property tag="1" name="expanded" type="kotlin.Boolean" />
+    <property tag="2" name="options" type="kotlin.collections.List&lt;kotlin.String>" />
+    <event tag="3" name="onSelect" params="kotlin.Int" nullable="true" />
+    <event tag="4" name="onDismiss" nullable="true" />
+  </widget>
+  <widget tag="49" type="dev.keliver.material.LazyVerticalGrid">
+    <property tag="1" name="columns" type="kotlin.Int" />
+    <children tag="2" name="children" />
+  </widget>
+  <widget tag="50" type="dev.keliver.material.LazyHorizontalGrid">
+    <property tag="1" name="rows" type="kotlin.Int" />
+    <children tag="2" name="children" />
+  </widget>
+  <widget tag="51" type="dev.keliver.material.HorizontalPager">
+    <property tag="1" name="autoScrollMs" type="kotlin.Int" />
+    <property tag="2" name="showIndicator" type="kotlin.Boolean" />
+    <property tag="3" name="indicatorActiveArgb" type="kotlin.Int" />
+    <property tag="4" name="indicatorInactiveArgb" type="kotlin.Int" />
+    <property tag="5" name="contentPaddingDp" type="kotlin.Int" />
+    <children tag="6" name="children" />
+  </widget>
+  <widget tag="52" type="dev.keliver.material.VerticalPager">
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="53" type="dev.keliver.material.Tooltip">
+    <property tag="1" name="text" type="kotlin.String" />
+    <children tag="2" name="children" />
+  </widget>
+  <widget tag="54" type="dev.keliver.material.StyledBox">
+    <property tag="1" name="colorArgb" type="kotlin.Int" />
+    <property tag="2" name="gradientStartArgb" type="kotlin.Int" />
+    <property tag="3" name="gradientEndArgb" type="kotlin.Int" />
+    <property tag="4" name="cornerRadiusDp" type="kotlin.Int" />
+    <property tag="5" name="widthDp" type="kotlin.Int" />
+    <property tag="6" name="heightDp" type="kotlin.Int" />
+    <property tag="7" name="paddingDp" type="kotlin.Int" />
+    <property tag="8" name="fillWidth" type="kotlin.Boolean" />
+    <property tag="9" name="contentAlignment" type="kotlin.Int" />
+    <property tag="10" name="offsetYDp" type="kotlin.Int" />
+    <property tag="11" name="elevationDp" type="kotlin.Int" />
+    <property tag="12" name="borderColorArgb" type="kotlin.Int" />
+    <property tag="13" name="borderWidthDp" type="kotlin.Int" />
+    <property tag="15" name="gradientVertical" type="kotlin.Boolean" />
+    <property tag="16" name="gradientColorsArgb" type="kotlin.collections.List&lt;kotlin.Int>" />
+    <property tag="17" name="gradientStops" type="kotlin.collections.List&lt;kotlin.Float>" />
+    <property tag="18" name="gradientDirection" type="kotlin.Int" />
+    <property tag="19" name="cornerTopStartDp" type="kotlin.Int" />
+    <property tag="20" name="cornerTopEndDp" type="kotlin.Int" />
+    <property tag="21" name="cornerBottomStartDp" type="kotlin.Int" />
+    <property tag="22" name="cornerBottomEndDp" type="kotlin.Int" />
+    <event tag="14" name="onClick" nullable="true" />
+    <children tag="23" name="children" />
+  </widget>
+  <widget tag="55" type="dev.keliver.material.Shimmer">
+    <property tag="1" name="widthDp" type="kotlin.Int" />
+    <property tag="2" name="heightDp" type="kotlin.Int" />
+    <property tag="3" name="cornerRadiusDp" type="kotlin.Int" />
+  </widget>
+  <widget tag="56" type="dev.keliver.material.AnimatedVisibility">
+    <property tag="1" name="visible" type="kotlin.Boolean" />
+    <children tag="2" name="children" />
+  </widget>
+  <widget tag="57" type="dev.keliver.material.Theme">
+    <property tag="1" name="dark" type="kotlin.Boolean" />
+    <property tag="2" name="primaryArgb" type="kotlin.Int" />
+    <property tag="3" name="onPrimaryArgb" type="kotlin.Int" />
+    <property tag="4" name="secondaryArgb" type="kotlin.Int" />
+    <property tag="5" name="onSecondaryArgb" type="kotlin.Int" />
+    <property tag="6" name="surfaceArgb" type="kotlin.Int" />
+    <property tag="7" name="onSurfaceArgb" type="kotlin.Int" />
+    <property tag="8" name="surfaceVariantArgb" type="kotlin.Int" />
+    <property tag="9" name="onSurfaceVariantArgb" type="kotlin.Int" />
+    <property tag="10" name="backgroundArgb" type="kotlin.Int" />
+    <property tag="11" name="onBackgroundArgb" type="kotlin.Int" />
+    <property tag="12" name="errorArgb" type="kotlin.Int" />
+    <property tag="13" name="outlineArgb" type="kotlin.Int" />
+    <children tag="14" name="content" />
+  </widget>
+  <widget tag="58" type="dev.keliver.material.Clickable">
+    <event tag="1" name="onClick" nullable="true" />
+    <children tag="2" name="content" />
+  </widget>
+  <widget tag="59" type="dev.keliver.material.RichText">
+    <property tag="1" name="spans" type="kotlin.collections.List&lt;dev.keliver.material.api.TextSpan>" />
+    <property tag="2" name="fontSize" type="kotlin.Int" />
+    <property tag="3" name="bold" type="kotlin.Boolean" />
+    <property tag="4" name="align" type="kotlin.Int" />
+    <property tag="5" name="lineHeightSp" type="kotlin.Int" />
+    <property tag="6" name="maxLines" type="kotlin.Int" />
+    <property tag="7" name="colorArgb" type="kotlin.Int" />
+  </widget>
+  <widget tag="60" type="dev.keliver.material.AnimatedBorder">
+    <property tag="1" name="cornerRadiusDp" type="kotlin.Int" />
+    <property tag="2" name="strokeWidthDp" type="kotlin.Int" />
+    <property tag="3" name="baseColorArgb" type="kotlin.Int" />
+    <property tag="4" name="cometColorArgb" type="kotlin.Int" />
+    <property tag="5" name="durationMs" type="kotlin.Int" />
+    <property tag="6" name="segmentLenDp" type="kotlin.Int" />
+    <property tag="8" name="effect" type="kotlin.Int" />
+    <property tag="9" name="colorsArgb" type="kotlin.collections.List&lt;kotlin.Int>" />
+    <event tag="7" name="onClick" nullable="true" />
+    <children tag="10" name="children" />
+  </widget>
+  <widget tag="61" type="dev.keliver.material.Icon">
+    <property tag="1" name="name" type="kotlin.String" />
+    <property tag="2" name="sizeDp" type="kotlin.Int" />
+    <property tag="3" name="tintArgb" type="kotlin.Int" />
+    <property tag="4" name="contentDescription" type="kotlin.String" />
+  </widget>
+  <widget tag="62" type="dev.keliver.material.ListItem">
+    <property tag="1" name="headline" type="kotlin.String" />
+    <property tag="2" name="supporting" type="kotlin.String" />
+    <property tag="3" name="overline" type="kotlin.String" />
+    <property tag="4" name="leadingIcon" type="kotlin.String" />
+    <property tag="5" name="trailingIcon" type="kotlin.String" />
+    <event tag="6" name="onClick" nullable="true" />
+  </widget>
+  <modifier tag="-4543827" type="dev.keliver.material.Reuse" />
+  <modifier tag="60" type="dev.keliver.material.Background">
+    <property name="colorArgb" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="61" type="dev.keliver.material.CornerRadius">
+    <property name="radiusDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="62" type="dev.keliver.material.Padding">
+    <property name="allDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="63" type="dev.keliver.material.Border">
+    <property name="colorArgb" type="kotlin.Int" />
+    <property name="widthDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="64" type="dev.keliver.material.Shadow">
+    <property name="elevationDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="65" type="dev.keliver.material.Size">
+    <property name="heightDp" type="kotlin.Int" />
+    <property name="widthDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="66" type="dev.keliver.material.FillWidth" />
+  <modifier tag="67" type="dev.keliver.material.Offset">
+    <property name="xDp" type="kotlin.Int" />
+    <property name="yDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="68" type="dev.keliver.material.Blur">
+    <property name="radiusDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="69" type="dev.keliver.material.Alpha">
+    <property name="pct" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="70" type="dev.keliver.material.GradientBackground">
+    <property name="endArgb" type="kotlin.Int" />
+    <property name="startArgb" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="72" type="dev.keliver.material.CornerRadiusEach">
+    <property name="bottomEndDp" type="kotlin.Int" />
+    <property name="bottomStartDp" type="kotlin.Int" />
+    <property name="topEndDp" type="kotlin.Int" />
+    <property name="topStartDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="73" type="dev.keliver.material.PaddingEach">
+    <property name="bottomDp" type="kotlin.Int" />
+    <property name="endDp" type="kotlin.Int" />
+    <property name="startDp" type="kotlin.Int" />
+    <property name="topDp" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="74" type="dev.keliver.material.AspectRatio">
+    <property name="ratio" type="kotlin.Float" />
+  </modifier>
+  <modifier tag="75" type="dev.keliver.material.FillMaxHeight" />
+  <modifier tag="76" type="dev.keliver.material.FillMaxSize" />
+  <modifier tag="77" type="dev.keliver.material.Rotate">
+    <property name="degrees" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="78" type="dev.keliver.material.Scale">
+    <property name="percent" type="kotlin.Int" />
+  </modifier>
+  <modifier tag="79" type="dev.keliver.material.AnimateContentSize" />
+  <modifier tag="80" type="dev.keliver.material.SelectionTag">
+    <property name="handle" type="kotlin.Int" />
+  </modifier>
+</schema>

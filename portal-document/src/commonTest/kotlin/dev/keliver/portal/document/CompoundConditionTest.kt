@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.Bind
@@ -20,13 +35,13 @@ import dev.keliver.portal.expandForPreview
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.resolveItemRow
 import dev.keliver.portal.serializeTree
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.encodeToString
 
 /**
  * K6: equality terms (`x == <literal or token>`), compound conditions (terms
@@ -100,9 +115,11 @@ class CompoundConditionTest {
     val not = and.negated()
     assertEquals(CondJoin.Or, not.join)
     assertEquals("!enabled || loading", not.kotlin { it })
-    for (e in listOf(true, false)) for (l in listOf(true, false)) {
-      val v = mapOf("enabled" to e, "loading" to l)
-      assertEquals(!and.holdsIn(v), not.holdsIn(v), "enabled=$e loading=$l")
+    for (e in listOf(true, false)) {
+      for (l in listOf(true, false)) {
+        val v = mapOf("enabled" to e, "loading" to l)
+        assertEquals(!and.holdsIn(v), not.holdsIn(v), "enabled=$e loading=$l")
+      }
     }
     assertEquals(Cond("k", CondTest.Eq, negate = true, operand = "x"), Cond("k", CondTest.Eq, operand = "x").negated())
     assertEquals(and, not.negated())
@@ -121,8 +138,13 @@ class CompoundConditionTest {
   // ── wires ─────────────────────────────────────────────────────────────
 
   private val compound = PropValue.Conditional(
-    "kind", test = "eq", whenTrue = accentDoc, whenFalse = lit("-"), operand = lit("card"),
-    more = listOf(CondTerm("count", "eq", negate = true, operand = lit(0)), CondTerm("open")), join = "or",
+    "kind",
+    test = "eq",
+    whenTrue = accentDoc,
+    whenFalse = lit("-"),
+    operand = lit("card"),
+    more = listOf(CondTerm("count", "eq", negate = true, operand = lit(0)), CondTerm("open")),
+    join = "or",
   )
 
   @Test fun aK3ConditionalsJsonDecodesToTheIdenticalValueAndNewFieldsAreLeftOutWhenDefault() {
@@ -177,7 +199,8 @@ class CompoundConditionTest {
 
   @Test fun theExporterWritesEveryFormTypesEachFieldAndImportsAComparedToken() {
     val cond = DocNode.Widget(
-      Handle(3), "Condition",
+      Handle(3),
+      "Condition",
       conditionNodeProps(condOfTerms(listOf(Cond("ready"), Cond("tier", CondTest.Eq, operand = 2)))),
       children = listOf(text(4)),
     )
@@ -197,7 +220,9 @@ class CompoundConditionTest {
     assertTrue("  val code: String\n" in out && "  val flag: Boolean\n" in out, out)
     // Item fields an item-scoped compound condition reads are typed in the item interface.
     val repeat = DocNode.Widget(
-      Handle(2), "Repeat", mapOf("items" to lit("rows"), "item" to lit("row")),
+      Handle(2),
+      "Repeat",
+      mapOf("items" to lit("rows"), "item" to lit("row")),
       children = listOf(text(3, PropValue.Conditional("row.kind", test = "eq", operand = lit(4), whenTrue = lit("a"), whenFalse = lit("b"), more = listOf(CondTerm("busy", negate = true))))),
     )
     val items = exportKotlin(doc(repeat).toWidgetTree(), functionName = "Home")

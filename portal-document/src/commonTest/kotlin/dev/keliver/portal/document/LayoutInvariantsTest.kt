@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import kotlin.test.Test
@@ -13,18 +28,34 @@ class LayoutInvariantsTest {
   private val doc = UiDocument(
     "s",
     DocNode.Widget(
-      Handle(1), "Column",
+      Handle(1),
+      "Column",
       children = listOf(
-        DocNode.Widget(Handle(2), "Row", children = listOf(
-          DocNode.Widget(Handle(3), "Condition", mapOf("field" to PropValue.Lit("s", s = "show")), children = listOf(
-            DocNode.Widget(Handle(4), "StyledText", mapOf("text" to PropValue.Lit("s", s = "a")),
-              modifiers = mapOf("Flex.value" to d(1.0), "Padding.allDp" to PropValue.Lit("i", i = 2))),
-          )),
-        )),
+        DocNode.Widget(
+          Handle(2),
+          "Row",
+          children = listOf(
+            DocNode.Widget(
+              Handle(3),
+              "Condition",
+              mapOf("field" to PropValue.Lit("s", s = "show")),
+              children = listOf(
+                DocNode.Widget(
+                  Handle(4),
+                  "StyledText",
+                  mapOf("text" to PropValue.Lit("s", s = "a")),
+                  modifiers = mapOf("Flex.value" to d(1.0), "Padding.allDp" to PropValue.Lit("i", i = 2)),
+                ),
+              ),
+            ),
+          ),
+        ),
         DocNode.Widget(Handle(5), "StyledBox"),
       ),
     ),
-    Contract(), 0, 6,
+    Contract(),
+    0,
+    6,
   )
 
   private fun mods(d: UiDocument, h: Long) = (d.find(Handle(h)) as DocNode.Widget).modifiers
@@ -56,8 +87,12 @@ class LayoutInvariantsTest {
   }
 
   @Test fun insertedSubtreesAreSanitizedToo() {
-    val sub = DocNode.Widget(Handle(0), "StyledText", mapOf("text" to PropValue.Lit("s", s = "n")),
-      modifiers = mapOf("Flex.value" to d(1.0), "Width.width" to d(-3.0)))
+    val sub = DocNode.Widget(
+      Handle(0),
+      "StyledText",
+      mapOf("text" to PropValue.Lit("s", s = "n")),
+      modifiers = mapOf("Flex.value" to d(1.0), "Width.width" to d(-3.0)),
+    )
     val inBox = doc.apply(DocOp.InsertNode(Handle(5), null, sub)).doc
     val inserted = (inBox.find(Handle(5)) as DocNode.Widget).children.single() as DocNode.Widget
     assertEquals(emptyMap(), inserted.modifiers) // Width/Flex need a layout parent
@@ -81,8 +116,13 @@ class LayoutInvariantsTest {
 
   /** N-1: undo of a stripping move never re-inserts a snapshot over another session's edits. */
   @Test fun undoOfAStrippingMoveIsSafeAgainstAConcurrentSession() {
-    val withSibling = doc.apply(DocOp.InsertNode(Handle(3), Handle(4),
-      DocNode.Widget(Handle(0), "StyledText", mapOf("text" to PropValue.Lit("s", s = "y"))))).doc // handle 6
+    val withSibling = doc.apply(
+      DocOp.InsertNode(
+        Handle(3),
+        Handle(4),
+        DocNode.Widget(Handle(0), "StyledText", mapOf("text" to PropValue.Lit("s", s = "y"))),
+      ),
+    ).doc // handle 6
     // Session A: move the Condition (X=4 has flex) Row -> StyledBox; X is stripped.
     val a = withSibling.apply(DocOp.MoveNode(Handle(3), Handle(5), null))
     // Session B: moves X out of the Condition to the Column root, and edits the sibling inside it.

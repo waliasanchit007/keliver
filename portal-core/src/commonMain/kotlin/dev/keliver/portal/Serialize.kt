@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal
 
 import kotlinx.serialization.json.Json
@@ -65,11 +80,14 @@ private val JSON = Json { }
 private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
   if (v is Arith) {
     arithValue(v, ::wireOperand)?.let { put("i", it) }
-    put("arith", buildJsonObject {
-      put("op", v.op.symbol)
-      put("l", encodeValue(v.left))
-      put("r", encodeValue(v.right))
-    })
+    put(
+      "arith",
+      buildJsonObject {
+        put("op", v.op.symbol)
+        put("l", encodeValue(v.left))
+        put("r", encodeValue(v.right))
+      },
+    )
     return@buildJsonObject
   }
   if (v is IntDp) {
@@ -95,16 +113,19 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
     } else {
       // A bound element the preview mocked carries the mock (a String from the mock editor) —
       // a decimal or a colour (mockedIntElement); any other mock is left out. Unmocked: 0.
-      put("li", buildJsonArray {
-        v.items.forEach { e ->
-          when (val x = tokenValue(e)) {
-            is Int -> add(JsonPrimitive(x))
-            is String -> mockedIntElement(x)?.let { add(JsonPrimitive(it)) }
-            is Bind -> add(JsonPrimitive(0))
-            else -> {}
+      put(
+        "li",
+        buildJsonArray {
+          v.items.forEach { e ->
+            when (val x = tokenValue(e)) {
+              is Int -> add(JsonPrimitive(x))
+              is String -> mockedIntElement(x)?.let { add(JsonPrimitive(it)) }
+              is Bind -> add(JsonPrimitive(0))
+              else -> {}
+            }
           }
-        }
-      })
+        },
+      )
     }
     put("items", buildJsonArray { v.items.forEach { add(encodeValue(it)) } })
     return@buildJsonObject

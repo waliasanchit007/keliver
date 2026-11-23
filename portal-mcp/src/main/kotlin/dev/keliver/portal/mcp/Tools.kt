@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.mcp
 
 import dev.keliver.portal.document.DocJson
@@ -8,6 +23,12 @@ import dev.keliver.portal.document.condition
 import dev.keliver.portal.document.operands
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.widgetSpecs
+import java.io.File
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -15,12 +36,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import java.io.File
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.util.Base64
 
 object Tools {
   val server: String = System.getenv("PORTAL_SERVER") ?: "http://localhost:8077"
@@ -45,45 +60,72 @@ object Tools {
 
   private fun JsonObject.str(name: String, default: String? = null): String =
     this[name]?.jsonPrimitive?.content ?: default
-    ?: throw IllegalArgumentException("missing required argument '$name'")
+      ?: throw IllegalArgumentException("missing required argument '$name'")
 
   /** The generated catalog as machine-readable JSON — grounds agent generation. */
   private val catalogJson: String by lazy {
     buildJsonObject {
-      put("widgets", buildJsonArray {
-        widgetSpecs.forEach { w ->
-          add(buildJsonObject {
-            put("type", w.type)
-            put("category", w.category)
-            put("acceptsChildren", w.acceptsChildren)
-            put("props", buildJsonArray {
-              w.props.forEach { p ->
-                add(buildJsonObject { put("name", p.name); put("kind", p.kind.name); put("label", p.label) })
-              }
-            })
-            put("events", buildJsonArray { w.events.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-          })
-        }
-      })
-      put("modifiers", buildJsonArray {
-        modifierSpecs.forEach { m ->
-          add(buildJsonObject {
-            put("name", m.name)
-            // K1: scoped layout modifiers are valid only under these parent widget types.
-            if (m.scopes.isNotEmpty()) {
-              put("scopes", buildJsonArray { m.scopes.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-            }
-            // The source call: `Modifier.<extension>(<argTypes…>)` — e.g. LayoutSize is `size(Dp, Dp)`.
-            put("extension", m.extension)
-            put("argTypes", buildJsonArray { m.argTypes.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-            put("props", buildJsonArray {
-              m.props.forEach { p ->
-                add(buildJsonObject { put("name", p.name); put("kind", p.kind.name) })
-              }
-            })
-          })
-        }
-      })
+      put(
+        "widgets",
+        buildJsonArray {
+          widgetSpecs.forEach { w ->
+            add(
+              buildJsonObject {
+                put("type", w.type)
+                put("category", w.category)
+                put("acceptsChildren", w.acceptsChildren)
+                put(
+                  "props",
+                  buildJsonArray {
+                    w.props.forEach { p ->
+                      add(
+                        buildJsonObject {
+                          put("name", p.name)
+                          put("kind", p.kind.name)
+                          put("label", p.label)
+                        },
+                      )
+                    }
+                  },
+                )
+                put("events", buildJsonArray { w.events.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+              },
+            )
+          }
+        },
+      )
+      put(
+        "modifiers",
+        buildJsonArray {
+          modifierSpecs.forEach { m ->
+            add(
+              buildJsonObject {
+                put("name", m.name)
+                // K1: scoped layout modifiers are valid only under these parent widget types.
+                if (m.scopes.isNotEmpty()) {
+                  put("scopes", buildJsonArray { m.scopes.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+                }
+                // The source call: `Modifier.<extension>(<argTypes…>)` — e.g. LayoutSize is `size(Dp, Dp)`.
+                put("extension", m.extension)
+                put("argTypes", buildJsonArray { m.argTypes.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+                put(
+                  "props",
+                  buildJsonArray {
+                    m.props.forEach { p ->
+                      add(
+                        buildJsonObject {
+                          put("name", p.name)
+                          put("kind", p.kind.name)
+                        },
+                      )
+                    }
+                  },
+                )
+              },
+            )
+          }
+        },
+      )
       put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token|Conditional|Template|ListOf|Arith|IntDp>; Lit tags: s/i/d/b/li/lf/ls; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); Conditional = {field, test?, negate?, whenTrue?, whenFalse?, operand?, more?, join?} is `if (<condition>) whenTrue else whenFalse` on the screen binding `field` (or `item.x` inside a Repeat over `item`; test omitted = the Boolean itself, \"empty\"/\"blank\" = String isEmpty()/isBlank(), \"eq\" = `field == operand` where operand is a Lit s/i/b or a Token of a String, Int or Boolean kind — never a Double, a binding or Int.MIN_VALUE — and the field's type is the operand's; negate = `!`/isNot…/`!=`; a Boolean test never reads a field the screen uses as a list or text, unless the Bindings interface declares it Boolean; more = further terms [{field, test?, negate?, operand?}] joined by join: omitted = `&&`, \"or\" = `||` — never mixed, never nested), each branch a Lit/Bind/Action/Token of the prop's kind, an omitted branch = null (only on a nullable event or component parameter; at least one branch), never nested, never on a list prop; Template = {parts} is a String template (`\"Rating: ${'$'}{b.rating}\"`) and fits only a String prop or a component's String parameter (also as a Conditional branch): each part is a Lit s (text, its decoded value), a Bind (a screen field, or item.x inside a Repeat over item; never a field the Bindings interface declares Double, Float, nullable or without a type, nor an item field its item type declares Double or nullable, nor a field a Repeat iterates, nor one the screen's file cannot type — the document's contract.unlistedFieldsUnknown says why: no Bindings parameter, an interface not in the file or extending one declared elsewhere — bind such a field directly instead; on such a screen a binding or action of a field the file neither declares nor reads yet is refused too, since it may be inherited) or a Token of a String, Int or Boolean kind (never a Double: the device, Kotlin/JS, prints 1.0 as 1 where the preview prints 1.0, and a null as null where the preview prints nothing) — never an expression; the server stores it canonical (adjacent text merged, no reference left = a plain Lit); ListOf = {tag, items} is a list prop's value with references (`listOf(C.Start, -1)`): tag li (a List<Int> prop) or ls (a List<String> prop), each item a Lit of that kind (tag i/s), a Token of that kind or a Bind, never conditional, never on a component; Arith = {op, left, right} is Int arithmetic (`b.size * 2 / 5`): op one of + - * / %, each operand a Lit i (never -2147483648), a Token of an Int kind, a Bind of an Int field (a screen field the Bindings interface declares Int or does not declare, item.x inside a Repeat over item — whose type the screen cannot read, so only where the screen already reads it as an Int) or another Arith, the tree as Kotlin parses it (precedence, left associativity), / and % only by a non-zero Lit i; it fits an Int prop or a component's Int parameter (also as a Conditional branch), never a modifier argument, a template part, a list element or an operand; an Arith of literals only is stored as the Lit it computes (Kotlin's 32-bit Int arithmetic: overflow wraps, / truncates toward zero); IntDp = {value, form?} is an Int used as a Dp (`b.gap.dp`, form \"Dp\" = `Dp(b.gap.toDouble())`), value an Arith, an Int Bind or an Int Token, and fits only a widget's Dp prop (Spacer width/height; never a Margin side or a component parameter); a Condition node takes props field (a plain binding name)/test/negate/operand, its further terms as field.1/test.1/negate.1/operand.1, field.2/… and join (\"or\"; omitted = `&&`) — a compound or equality Condition is inserted whole, after which single ops change only a field, a negation, an operand or the join (SetProp join \"or\", RemoveProp for `&&`); a term is refused on a field whose declared type is known not to take it (a Boolean test on a number, String or collection, isEmpty() on a number or Boolean, isBlank() on a collection, anything nullable); an equality on a field whose type the screen cannot read (an item field, an interface declared elsewhere) only with the operand kind the screen already compares it with — and its last child may be one Else node (its else branch); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates); an op whose write-back to the screen's file would be refused is refused when it is made (its error gives the reason: make that change in code), as are undo/redo steps")
     }.toString()
   }
@@ -231,7 +273,8 @@ object Tools {
     ) { args -> toolText(get("/tokens?project=${args.str("project", "default")}")) },
 
     Tool(
-      "list_screens", "List screens in a project.",
+      "list_screens",
+      "List screens in a project.",
       mapOf("project" to "project name (default 'default')"),
     ) { args -> toolText(get("/screens?project=${args.str("project", "default")}")) },
 
@@ -270,7 +313,8 @@ object Tools {
     },
 
     Tool(
-      "undo", "Undo the agent session's last batch (server-side).",
+      "undo",
+      "Undo the agent session's last batch (server-side).",
       mapOf("project" to "project (default 'default')", "screen" to "screen (default 'main')"),
     ) { args ->
       val project = args.str("project", "default")
@@ -280,7 +324,8 @@ object Tools {
     },
 
     Tool(
-      "redo", "Redo the agent session's last undone batch.",
+      "redo",
+      "Redo the agent session's last undone batch.",
       mapOf("project" to "project (default 'default')", "screen" to "screen (default 'main')"),
     ) { args ->
       val project = args.str("project", "default")
@@ -305,8 +350,11 @@ object Tools {
         ?: return@Tool toolText("adb not found: set ANDROID_HOME (or ANDROID_SDK_ROOT), or put adb on PATH", isError = true)
       val bytes = proc.inputStream.readBytes()
       proc.waitFor()
-      if (bytes.size < 1000) toolText("no device or screencap failed", isError = true)
-      else toolImage(Base64.getEncoder().encodeToString(bytes))
+      if (bytes.size < 1000) {
+        toolText("no device or screencap failed", isError = true)
+      } else {
+        toolImage(Base64.getEncoder().encodeToString(bytes))
+      }
     },
   )
 }

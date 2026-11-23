@@ -25,6 +25,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * Fail the build if the sum of [bundleFiles] sizes exceeds [maxBytes].
@@ -57,6 +58,7 @@ import org.gradle.api.tasks.TaskAction
  * portability issues. It's also automatically hookable into `check`
  * so size regressions block PRs the same way test failures do.
  */
+@DisableCachingByDefault(because = "A check with no outputs; summing file sizes costs less than a cache lookup.")
 public abstract class BundleSizeBudgetTask : DefaultTask() {
 
   /**

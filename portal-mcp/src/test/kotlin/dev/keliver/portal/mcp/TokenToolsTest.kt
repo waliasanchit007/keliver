@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.mcp
 
 import dev.keliver.portal.document.Contract
@@ -23,13 +38,16 @@ class TokenToolsTest {
     val doc = UiDocument(
       "home",
       DocNode.Widget(
-        Handle(1), "Column",
+        Handle(1),
+        "Column",
         children = listOf(
           DocNode.Widget(Handle(2), "StyledText", props = mapOf("text" to lit("a"), "colorArgb" to ink)),
           DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to lit("b")), modifiers = mapOf("Background.colorArgb" to ink)),
         ),
       ),
-      Contract(), 0, 4,
+      Contract(),
+      0,
+      4,
     )
     assertEquals(
       listOf(

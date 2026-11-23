@@ -1,4 +1,26 @@
 /*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import dev.keliver.portal.CondTest
+import dev.keliver.portal.ELSE_TYPE
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.ScreenContract
+import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.condOf
+
+/*
  * The State panel's model (E4/E6/E38): every value the canvas reads from the
  * screen's bindings — the fields its props are bound to, the fields its `if`
  * blocks test (which the derived contract does not list), and its lists' row
@@ -9,12 +31,6 @@
  * the field's name; what the user sets overrides them and is kept per screen
  * in this browser. Nothing here is written to the app's source.
  */
-import dev.keliver.portal.CondTest
-import dev.keliver.portal.ELSE_TYPE
-import dev.keliver.portal.PropKind
-import dev.keliver.portal.ScreenContract
-import dev.keliver.portal.WidgetNode
-import dev.keliver.portal.condOf
 
 /** How the State panel edits a value. */
 internal enum class StateKind { Bool, Text, Int, Double, Rows }
@@ -201,8 +217,11 @@ internal fun defaultValue(field: StateField, scenario: Scenario): String = when 
   // A text a condition tests (`isNotBlank()`): present when its role is on in this scenario.
   StateKind.Text -> if (field.source == StateSource.Condition && roleOf(field.name) !in scenario.on) "" else sampleText(field.name)
   StateKind.Int -> sampleColor(field.name)?.toString()
-    ?: if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) "3"
-    else sampleSize(field.name) ?: "1"
+    ?: if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) {
+      "3"
+    } else {
+      sampleSize(field.name) ?: "1"
+    }
   StateKind.Double -> "1.5"
   StateKind.Rows -> if (scenario == Scenario.Empty || scenario == Scenario.Loading) "0" else "3"
 }
@@ -218,6 +237,7 @@ internal fun scenarioFocus(tree: WidgetNode, scenario: Scenario, values: Map<Str
   // flag's role is on in the scenario, else the else branch.
   val carried = carriedRoles(tree)
   fun isOn(field: String) = roleOf(field) in scenario.on || carried[field].orEmpty().any { it in scenario.on }
+
   // Review 4 #4: with the scenario's preview [values], a condition is decided as the canvas decides
   // it — compound (`!loading && !error`) and Empty/Null/Eq tests included.
   fun drawn(c: WidgetNode): Boolean {

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 import dev.keliver.tooling.schema.FqType
@@ -19,11 +34,15 @@ internal class Args(argv: Array<String>) {
 internal fun parseSchemas(args: Args): Pair<ProtocolSchemaSet, ProtocolSchemaSet> {
   val javaHome = File(System.getProperty("java.home"))
   val material = parseProtocolSchema(
-    javaHome, listOf(args.materialSources), args.classpath,
+    javaHome,
+    listOf(args.materialSources),
+    args.classpath,
     FqType(listOf("dev.keliver.material", "KeliverMaterial")),
   )
   val layout = parseProtocolSchema(
-    javaHome, listOf(args.layoutSources), args.classpath,
+    javaHome,
+    listOf(args.layoutSources),
+    args.classpath,
     FqType(listOf("dev.keliver.layout", "RedwoodLayout")),
   )
   return material to layout

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal
 
 /**
@@ -86,7 +101,13 @@ internal fun MutableSet<String>.addTokenImport(v: Any?, sourceType: String?) {
   // Boolean token prints into the String; never a Double — templateTokenFits);
   // a list writes each element token of its element kind.
   if (v is Template) {
-    v.parts.forEach { p -> if (p is Token) p.importFq?.let { add(it) } else if (p is Template) addTokenImport(p, sourceType) }
+    v.parts.forEach { p ->
+      if (p is Token) {
+        p.importFq?.let { add(it) }
+      } else if (p is Template) {
+        addTokenImport(p, sourceType)
+      }
+    }
     return
   }
   if (v is ListOf) {

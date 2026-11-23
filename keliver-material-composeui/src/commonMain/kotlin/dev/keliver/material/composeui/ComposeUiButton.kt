@@ -60,10 +60,22 @@ internal class ComposeUiButton : Button<@Composable (Modifier) -> Unit> {
     }
   }
 
-  override fun text(text: String?) { this.text = text ?: "" }
-  override fun enabled(enabled: Boolean) { this.isEnabled = enabled }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick ?: {} }
-  override fun containerArgb(containerArgb: Int) { this.containerArgb = containerArgb }
-  override fun contentArgb(contentArgb: Int) { this.contentArgb = contentArgb }
-  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
+  override fun text(text: String?) {
+    this.text = text ?: ""
+  }
+  override fun enabled(enabled: Boolean) {
+    this.isEnabled = enabled
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick ?: {}
+  }
+  override fun containerArgb(containerArgb: Int) {
+    this.containerArgb = containerArgb
+  }
+  override fun contentArgb(contentArgb: Int) {
+    this.contentArgb = contentArgb
+  }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) {
+    this.cornerRadiusDp = cornerRadiusDp
+  }
 }

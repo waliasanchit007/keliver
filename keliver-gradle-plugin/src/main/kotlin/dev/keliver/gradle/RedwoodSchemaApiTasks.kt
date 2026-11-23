@@ -30,6 +30,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
@@ -81,6 +82,7 @@ internal abstract class RedwoodSchemaApiCheckTask @Inject constructor(
   }
 }
 
+@DisableCachingByDefault(because = "Writes the tracked API file into the source tree; it must never come from a cache.")
 internal abstract class RedwoodSchemaApiGenerateTask @Inject constructor(
   private val workerExecutor: WorkerExecutor,
 ) : DefaultTask() {

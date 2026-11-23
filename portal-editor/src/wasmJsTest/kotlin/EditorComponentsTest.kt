@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.Bind
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.MapComponentRegistry
@@ -43,12 +58,17 @@ class EditorComponentsTest {
 
   @Test fun anIntParameterPassedToANamedWidgetPropertyTakesItsNamesAlsoThroughAnotherComponent() {
     val label = ComponentSpec(
-      "Label", listOf(PropSpec("text", PropKind.Text, "Text"), PropSpec("align", PropKind.Int, "Align"), PropSpec("size", PropKind.Int, "Size")),
-      emptyList(), emptyMap(),
+      "Label",
+      listOf(PropSpec("text", PropKind.Text, "Text"), PropSpec("align", PropKind.Int, "Align"), PropSpec("size", PropKind.Int, "Size")),
+      emptyList(),
+      emptyMap(),
       body = WidgetNode("StyledText", mapOf("text" to Bind("text"), "textAlign" to Bind("align"), "fontSize" to Bind("size"))),
     )
     val row = ComponentSpec(
-      "Row2", listOf(PropSpec("valueAlign", PropKind.Int, "Value align")), emptyList(), emptyMap(),
+      "Row2",
+      listOf(PropSpec("valueAlign", PropKind.Int, "Value align")),
+      emptyList(),
+      emptyMap(),
       body = WidgetNode("Column", emptyMap(), listOf(WidgetNode("Label", mapOf("text" to "x", "align" to Bind("valueAlign"))))),
     )
     val reg = MapComponentRegistry(listOf(label, row))

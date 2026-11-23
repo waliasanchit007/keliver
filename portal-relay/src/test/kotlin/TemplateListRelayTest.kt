@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropKind
@@ -135,7 +150,7 @@ class TemplateListRelayTest {
     file.writeText(home.replace("import app.components.C\n", "import x.C\n").replace(" \${C.Unit}", "").replace("listOf(C.Start, -1)", "listOf(1, -1)"))
     val svc = service(screens, components)
     val t = child(svc, 0).props["text"] as PropValue.Template
-    val err = svc.dryRun(batch(svc, DocOp.SetProp(child(svc, 0).handle, "text", t.copy(parts = t.parts + token("C.Unit", "")))) ).error
+    val err = svc.dryRun(batch(svc, DocOp.SetProp(child(svc, 0).handle, "text", t.copy(parts = t.parts + token("C.Unit", ""))))).error
     assertTrue(err != null && "imports a different C" in err, err)
     val err2 = svc.dryRun(batch(svc, DocOp.SetProp(child(svc, 1).handle, "gradientColorsArgb", PropValue.ListOf("li", listOf(token("C.End", 0)))))).error
     assertTrue(err2 != null && "imports a different C" in err2, err2)

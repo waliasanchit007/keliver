@@ -1,14 +1,25 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.portal.render
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
-import androidx.compose.runtime.currentCompositionLocalContext
 import dev.keliver.Modifier
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
@@ -86,53 +97,65 @@ public class CompiledCall internal constructor(
   public fun string(name: String, default: String): String = record(stringValue(name, default) ?: nullFor(name))
   public fun stringOrNull(name: String, default: String?): String? = record(stringValue(name, default))
   private fun stringValue(name: String, default: String?): String? =
-    if (!has(name)) default
-    else when (val v = resolved(name)) {
-      null -> null
-      is String -> v
-      is Bind -> PreviewBindings.mocks[v.field] ?: "{${v.field}}"
-      is Template -> PreviewBindings.text(v)
-      else -> mismatch(name, "String", v)
+    if (!has(name)) {
+      default
+    } else {
+      when (val v = resolved(name)) {
+        null -> null
+        is String -> v
+        is Bind -> PreviewBindings.mocks[v.field] ?: "{${v.field}}"
+        is Template -> PreviewBindings.text(v)
+        else -> mismatch(name, "String", v)
+      }
     }
 
   public fun int(name: String): Int = int(name, 0)
   public fun int(name: String, default: Int): Int = record(intValue(name, default) ?: nullFor(name))
   public fun intOrNull(name: String, default: Int?): Int? = record(intValue(name, default))
   private fun intValue(name: String, default: Int?): Int? =
-    if (!has(name)) default
-    else when (val v = resolved(name)) {
-      null -> null
-      is Int -> v
-      // A binding with no usable preview value keeps the default, as a widget property does.
-      is Bind -> PreviewBindings.mocks[v.field]?.toIntOrNull() ?: default
-      // K7: an arithmetic argument, computed as a widget property's is (unknown keeps the default).
-      is dev.keliver.portal.Arith -> PreviewBindings.intValueOf(v) ?: default
-      else -> mismatch(name, "Int", v)
+    if (!has(name)) {
+      default
+    } else {
+      when (val v = resolved(name)) {
+        null -> null
+        is Int -> v
+        // A binding with no usable preview value keeps the default, as a widget property does.
+        is Bind -> PreviewBindings.mocks[v.field]?.toIntOrNull() ?: default
+        // K7: an arithmetic argument, computed as a widget property's is (unknown keeps the default).
+        is dev.keliver.portal.Arith -> PreviewBindings.intValueOf(v) ?: default
+        else -> mismatch(name, "Int", v)
+      }
     }
 
   public fun bool(name: String): Boolean = bool(name, false)
   public fun bool(name: String, default: Boolean): Boolean = record(boolValue(name, default) ?: nullFor(name))
   public fun boolOrNull(name: String, default: Boolean?): Boolean? = record(boolValue(name, default))
   private fun boolValue(name: String, default: Boolean?): Boolean? =
-    if (!has(name)) default
-    else when (val v = resolved(name)) {
-      null -> null
-      is Boolean -> v
-      is Bind -> PreviewBindings.mocks[v.field]?.toBooleanStrictOrNull() ?: default
-      else -> mismatch(name, "Boolean", v)
+    if (!has(name)) {
+      default
+    } else {
+      when (val v = resolved(name)) {
+        null -> null
+        is Boolean -> v
+        is Bind -> PreviewBindings.mocks[v.field]?.toBooleanStrictOrNull() ?: default
+        else -> mismatch(name, "Boolean", v)
+      }
     }
 
   public fun double(name: String): Double = double(name, 0.0)
   public fun double(name: String, default: Double): Double = record(doubleValue(name, default) ?: nullFor(name))
   public fun doubleOrNull(name: String, default: Double?): Double? = record(doubleValue(name, default))
   private fun doubleValue(name: String, default: Double?): Double? =
-    if (!has(name)) default
-    else when (val v = resolved(name)) {
-      null -> null
-      is Double -> v
-      is Int -> v.toDouble()
-      is Bind -> PreviewBindings.mocks[v.field]?.toDoubleOrNull() ?: default
-      else -> mismatch(name, "Double", v)
+    if (!has(name)) {
+      default
+    } else {
+      when (val v = resolved(name)) {
+        null -> null
+        is Double -> v
+        is Int -> v.toDouble()
+        is Bind -> PreviewBindings.mocks[v.field]?.toDoubleOrNull() ?: default
+        else -> mismatch(name, "Double", v)
+      }
     }
 
   /**
@@ -229,6 +252,7 @@ public var compiledComponentProbe: CompiledComponentProbe? = null
  * device. When an argument cannot be decoded, or the probe sees the call
  * throw, [fallback] renders instead with the reason.
  */
+@Suppress("ktlint:compose:content-slot-reused") // fallback replaces the component, one failure at a time: no state to keep.
 @Composable
 public fun RenderCompiledComponent(
   node: WidgetNode,

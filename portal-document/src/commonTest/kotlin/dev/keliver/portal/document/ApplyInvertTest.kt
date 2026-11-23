@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import kotlin.test.Test
@@ -7,10 +22,14 @@ import kotlin.test.assertNull
 
 class ApplyInvertTest {
   private fun doc(): UiDocument {
-    val root = DocNode.Widget(Handle(1), "Column", children = listOf(
-      DocNode.Widget(Handle(2), "StyledText", mapOf("text" to lit("hi"))),
-      DocNode.Widget(Handle(3), "Button", mapOf("text" to lit("Buy"))),
-    ))
+    val root = DocNode.Widget(
+      Handle(1),
+      "Column",
+      children = listOf(
+        DocNode.Widget(Handle(2), "StyledText", mapOf("text" to lit("hi"))),
+        DocNode.Widget(Handle(3), "Button", mapOf("text" to lit("Buy"))),
+      ),
+    )
     return UiDocument(screen = "main", root = root, contract = Contract(), version = 0, nextHandle = 10)
   }
 
@@ -62,10 +81,12 @@ class ApplyInvertTest {
 
   @Test fun batchIsAtomicWithSingleInverse() {
     val d = doc()
-    val bad = d.applyBatch(listOf(
-      DocOp.SetProp(Handle(2), "text", lit("A")),
-      DocOp.DeleteNode(Handle(99)),
-    ))
+    val bad = d.applyBatch(
+      listOf(
+        DocOp.SetProp(Handle(2), "text", lit("A")),
+        DocOp.DeleteNode(Handle(99)),
+      ),
+    )
     assertNull(bad.result)
     val ok = d.applyBatch(listOf(DocOp.SetProp(Handle(2), "text", lit("A")), DocOp.DeleteNode(Handle(3))))
     val undone = ok.result!!.doc.replay(ok.result!!.inverseBatch)

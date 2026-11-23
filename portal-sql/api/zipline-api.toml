@@ -1,0 +1,12 @@
+[dev.keliver.portal.sql.HostSqlDriver]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # suspend fun execute(kotlin.String, kotlin.collections.List<kotlin.String>): dev.keliver.portal.sql.SqlRows
+  "LADyxkap",
+
+  # suspend fun executeBatch(kotlin.collections.List<dev.keliver.portal.sql.SqlStatement>): dev.keliver.portal.sql.SqlRows
+  "TBeX4KEX",
+]

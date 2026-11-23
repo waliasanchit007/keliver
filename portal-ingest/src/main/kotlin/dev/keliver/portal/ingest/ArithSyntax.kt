@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.ArithOp
@@ -140,8 +155,10 @@ internal object ArithSyntax {
       if (op.divides) {
         val d = intLiteral(rightExpr)
         if (d == null || d == 0) {
-          return ArithRead.No("`${x.text.oneLine()}`: `${op.symbol}` divides only by a non-zero Int literal " +
-            "(Kotlin/JS and Kotlin/wasm do not fail alike on a zero divisor, so the portal never divides by a value it cannot see)")
+          return ArithRead.No(
+            "`${x.text.oneLine()}`: `${op.symbol}` divides only by a non-zero Int literal " +
+              "(Kotlin/JS and Kotlin/wasm do not fail alike on a zero divisor, so the portal never divides by a value it cannot see)",
+          )
         }
         return ArithRead.Ok(PropValue.Arith(op.symbol, l, PropValue.Lit("i", i = d)))
       }

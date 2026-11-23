@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Bind
@@ -5,6 +20,7 @@ import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
 import dev.keliver.portal.Token
 import dev.keliver.portal.collectContract
+import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.PropValue
@@ -13,7 +29,6 @@ import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.document.withoutLists
 import dev.keliver.portal.document.withoutTemplates
-import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.intList
 import dev.keliver.portal.serializeTree
@@ -180,22 +195,26 @@ class TemplateListGrammarTest {
     val t = child(d, 0).props["text"] as PropValue.Template
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "text", t.copy(parts = listOf(lit("Score: ")) + t.parts.drop(1)))).doc),
-      "\"Rating: \${b.rating}", "\"Score: \${b.rating}",
+      "\"Rating: \${b.rating}",
+      "\"Score: \${b.rating}",
     )
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 0).handle, "text", t.copy(parts = t.parts.take(3) + PropValue.Bind("count")))).doc),
-      "/\${C.Max}\")", "/\${b.count}\")",
+      "/\${C.Max}\")",
+      "/\${b.count}\")",
     )
     // The escapes around an unchanged part keep their spelling.
     val e = child(d, 3).props["text"] as PropValue.Template
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 3).handle, "text", e.copy(parts = e.parts.take(2) + lit("?")))).doc),
-      "\${C.Brand}\${'$'}!\")", "\${C.Brand}?\")",
+      "\${C.Brand}\${'$'}!\")",
+      "\${C.Brand}?\")",
     )
     // A text segment with characters that need escaping is written escaped.
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 1).handle, "text", PropValue.Template(listOf(lit("\"\$\" "), PropValue.Bind("city"))))).doc),
-      "\", \${b.city}\"", "\"\\\"\\\$\\\" \${b.city}\"",
+      "\", \${b.city}\"",
+      "\"\\\"\\\$\\\" \${b.city}\"",
     )
   }
 
@@ -211,15 +230,21 @@ class TemplateListGrammarTest {
     assertEquals(text, WriteBack.merge(text, d, tokens = withTop, fileName = file, base = d))
     // New text right after `$top` that would continue the name: the reference is braced.
     val edited = WriteBack.merge(
-      text, d.apply(DocOp.SetProp(child(d, 2).handle, "text", t.copy(parts = listOf(t.parts[0], lit("items")))) ).doc,
-      tokens = withTop, fileName = file, base = d,
+      text,
+      d.apply(DocOp.SetProp(child(d, 2).handle, "text", t.copy(parts = listOf(t.parts[0], lit("items"))))).doc,
+      tokens = withTop,
+      fileName = file,
+      base = d,
     )
     assertEquals(text.replace("\"\$top items\"", "\"\${top}items\""), edited)
     // A letter outside the BMP (U+20000, a surrogate pair) continues the name too.
     val cjk = "\uD840\uDC00"
     val edited2 = WriteBack.merge(
-      text, d.apply(DocOp.SetProp(child(d, 2).handle, "text", t.copy(parts = listOf(t.parts[0], lit(cjk))))).doc,
-      tokens = withTop, fileName = file, base = d,
+      text,
+      d.apply(DocOp.SetProp(child(d, 2).handle, "text", t.copy(parts = listOf(t.parts[0], lit(cjk))))).doc,
+      tokens = withTop,
+      fileName = file,
+      base = d,
     )
     assertEquals(text.replace("\"\$top items\"", "\"\${top}$cjk\""), edited2)
     // …in the surgical rewrite itself, not only in the canonical fallback.
@@ -244,12 +269,14 @@ class TemplateListGrammarTest {
     val g = child(d, 4).props["gradientColorsArgb"] as PropValue.ListOf
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 4).handle, "gradientColorsArgb", g.copy(items = listOf(g.items[0], lit(-1))))).doc),
-      "listOf(C.Start, C.End)", "listOf(C.Start, -1)",
+      "listOf(C.Start, C.End)",
+      "listOf(C.Start, -1)",
     )
     val o = child(d, 5).props["options"] as PropValue.ListOf
     assertOnly(
       merge(d.apply(DocOp.SetProp(child(d, 5).handle, "options", o.copy(items = listOf(lit("Any"), o.items[1], o.items[2])))).doc),
-      "listOf(\"All\", C.Brand", "listOf(\"Any\", C.Brand",
+      "listOf(\"All\", C.Brand",
+      "listOf(\"Any\", C.Brand",
     )
     // A literal list gains a token element: only that element is rewritten.
     val fromLiteral = src.replace("listOf(C.Start, C.End)", "listOf(-1, -2)")

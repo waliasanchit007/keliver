@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
@@ -55,8 +70,14 @@ class StoreLockTest {
       withStoreLock(
         app,
         waitMillis = waitMillis,
-        onBusy = { refusal = "busy"; throw Refused() },
-        onUnavailable = { _, why -> refusal = "unavailable: $why"; throw Refused() },
+        onBusy = {
+          refusal = "busy"
+          throw Refused()
+        },
+        onUnavailable = { _, why ->
+          refusal = "unavailable: $why"
+          throw Refused()
+        },
         afterFailedCreate = afterFailedCreate,
       ) { block() }
     } catch (_: Refused) {
@@ -75,8 +96,14 @@ class StoreLockTest {
       withStoreLock(
         app,
         waitMillis = waitMillis,
-        onBusy = { refusal = "busy"; throw Refused() },
-        onUnavailable = { _, why -> refusal = "unavailable: $why"; throw Refused() },
+        onBusy = {
+          refusal = "busy"
+          throw Refused()
+        },
+        onUnavailable = { _, why ->
+          refusal = "unavailable: $why"
+          throw Refused()
+        },
         afterAcquire = afterAcquire,
       ) { block() }
     } catch (_: Refused) {
@@ -123,7 +150,7 @@ class StoreLockTest {
   // is uncertainty and must leave the lock alone.
 
   /** The pid of a process that certainly exists but this one may not signal. */
-  private fun otherUsersLivePid(): String = "1"   // init/launchd, root-owned
+  private fun otherUsersLivePid(): String = "1" // init/launchd, root-owned
 
   @Test
   fun onlyAPositivelyAbsentProcessIsGone() {
@@ -138,8 +165,10 @@ class StoreLockTest {
   fun aMarkerThatIsNotAPidIsUnknownNotGone() {
     // Padding is not laundered away: " 7 " is not the pid 7, it is a marker
     // this implementation does not recognise — which is what the shell says.
-    for (bad in listOf("", "   ", "xx", "12x", "-1", "0", "007", "1 2",
-                       " 1", "1 ", "\t1", "1\r", "  7  ", "+7")) {
+    for (bad in listOf(
+      "", "   ", "xx", "12x", "-1", "0", "007", "1 2",
+      " 1", "1 ", "\t1", "1\r", "  7  ", "+7",
+    )) {
       assertEquals(HolderState.UNKNOWN, lockHolderState(bad), "for marker '$bad'")
     }
     assertEquals(HolderState.UNKNOWN, lockHolderState(null))
@@ -177,8 +206,11 @@ class StoreLockTest {
       assertFalse(claimStaleLock(lock), "marker '$marker' must not be claimable")
       assertEquals(null, attempt(a, waitMillis = 200) { "ran" }, "marker '$marker' must not be acquirable")
       assertTrue(lock.exists(), "marker '$marker': the lock must still be there")
-      assertEquals(before, lock.listFiles()!!.associate { it.name to it.readText() },
-        "marker '$marker': the lock's contents must be untouched")
+      assertEquals(
+        before,
+        lock.listFiles()!!.associate { it.name to it.readText() },
+        "marker '$marker': the lock's contents must be untouched",
+      )
     }
   }
 
@@ -193,7 +225,11 @@ class StoreLockTest {
 
     fun viaShell(marker: String, inspector: String?): String {
       val pb = ProcessBuilder(
-        "bash", script.absolutePath, appDir.absolutePath, "--holder-state", marker,
+        "bash",
+        script.absolutePath,
+        appDir.absolutePath,
+        "--holder-state",
+        marker,
       )
       inspector?.let { pb.environment()["KELIVER_LOCK_INSPECTOR"] = it }
       // stdout ONLY. The script warns on stderr when PORTAL_STORE is set — a
@@ -223,7 +259,8 @@ class StoreLockTest {
     for (m in listOf(deadPid().toString(), otherUsersLivePid())) {
       assertEquals("UNKNOWN", viaShell(m, "none"), "shell with no inspector, marker '$m'")
       assertEquals(
-        HolderState.UNKNOWN, lockHolderState(m, selfVisible = false),
+        HolderState.UNKNOWN,
+        lockHolderState(m, selfVisible = false),
         "JVM with no inspector, marker '$m'",
       )
     }
@@ -383,7 +420,10 @@ class StoreLockTest {
           lock.delete()
         }
       },
-    ) { ran = true; "ok" }
+    ) {
+      ran = true
+      "ok"
+    }
     assertTrue(released, "the seam must have fired — otherwise this proves nothing")
     assertEquals("ok", out, "it must acquire on the retry, refusal was: $refusal")
     assertTrue(ran)

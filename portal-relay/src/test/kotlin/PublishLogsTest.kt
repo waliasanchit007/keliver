@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -53,7 +68,10 @@ class PublishLogsTest {
   @Test
   fun otherFilesInTheDirectoryAreLeftAlone() {
     val store = dir()
-    val other = File(store, "${PublishLogs.DIR}/notes.txt").apply { parentFile.mkdirs(); writeText("mine") }
+    val other = File(store, "${PublishLogs.DIR}/notes.txt").apply {
+      parentFile.mkdirs()
+      writeText("mine")
+    }
     repeat(PublishLogs.KEEP + 1) { i -> PublishLogs.save(store, sequence = i + 1, output = "", nowMillis = 1000L + i) }
     assertTrue(other.isFile)
   }

@@ -98,12 +98,25 @@ private fun Project.keliverVersion(): String =
 private val isCiEnvironment = System.getenv("CI") == "true"
 
 /**
- * Matches a file that does NOT start with a Redwood-derived "Square, Inc." notice. Spotless
- * applies (and checks) the Keliver header only to such files; Spotless normalizes line endings
- * to `\n` before its steps run.
+ * Matches a file that gets the Keliver license header: every file that does NOT start with a
+ * Redwood-derived "Square, Inc." notice, which it keeps (Apache 2.0, section 4(c)). Spotless
+ * applies (and checks) the header only to such files; it normalizes line endings to `\n` before
+ * its steps run.
+ *
+ * Spotless replaces everything before the first [KELIVER_HEADER_DELIMITER] line with the header,
+ * so a short Keliver notice is made the full one, and a comment written above the package line
+ * is replaced: a file's own documentation goes below its package/import block, or into the KDoc
+ * of its main declaration.
  */
-internal const val NOT_A_REDWOOD_HEADER =
+internal const val GETS_KELIVER_HEADER =
   """\A(?!/\*\n \* Copyright \(C\) \d{4}(-\d{4})? Square, Inc\.\n)"""
+
+/**
+ * Where a Kotlin file's license header ends: its first `package`, `@file` or `import` line
+ * (Spotless's default), or, in a root-package file with none of them, the first KDoc. A file
+ * with neither fails `spotlessCheck` and `spotlessApply` ("Unable to find delimiter").
+ */
+internal const val KELIVER_HEADER_DELIMITER = """(package |@file|import |/\*\*)"""
 
 @Suppress("unused") // Invoked reflectively by Gradle.
 class RedwoodBuildPlugin : Plugin<Project> {
@@ -144,7 +157,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
           it.target("build-support/keliver-settings/src/**/*.java")
           it.googleJavaFormat(libs.googleJavaFormat.get().version)
           it.licenseHeaderFile(licenseHeaderFile)
-            .onlyIfContentMatches(NOT_A_REDWOOD_HEADER)
+            .onlyIfContentMatches(GETS_KELIVER_HEADER)
         }
       }
 
@@ -172,10 +185,14 @@ class RedwoodBuildPlugin : Plugin<Project> {
               "ktlint_standard_function-expression-body" to "disabled",
               "ktlint_function_naming_ignore_when_annotated_with" to "Composable",
               "ktlint_compose_compositionlocal-allowlist" to "disabled",
+              // mutableStateOf(0) -> mutableIntStateOf(0) is a performance change to the host
+              // renderers' widget state (about 85 properties in keliver-material-composeui),
+              // to be made and measured on its own, not as a lint fix.
+              "ktlint_compose_mutable-state-autoboxing" to "disabled",
             ),
           )
-        it.licenseHeaderFile(licenseHeaderFile)
-          .onlyIfContentMatches(NOT_A_REDWOOD_HEADER)
+        it.licenseHeaderFile(licenseHeaderFile, KELIVER_HEADER_DELIMITER)
+          .onlyIfContentMatches(GETS_KELIVER_HEADER)
       }
     }
   }

@@ -22,6 +22,7 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * Reject `ZiplineService` interface methods with function-typed
@@ -47,6 +48,7 @@ import org.gradle.api.tasks.TaskAction
  * canonical workaround (a callback `ZiplineService` like
  * `SnackbarResultCallback`).
  */
+@DisableCachingByDefault(because = "A check with no outputs; a source scan costs less than a cache lookup.")
 public abstract class ValidateZiplineServiceShapesTask : DefaultTask() {
 
   /**

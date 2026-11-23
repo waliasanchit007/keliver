@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.ComponentRegistry
@@ -115,12 +130,16 @@ object ScreenWriter {
   ): Plan {
     val tree = doc.toWidgetTree()
     val what = if (asComponent) "component" else "screen"
+
     // Every text written is read back — after the Bindings pass — as the document.
     fun readsBack(text: String): String? {
       val back = runCatching { Recognizer.recognize(fileName, text, components, tokens, asComponent) }.getOrNull()
         ?: return "it does not read as a $what"
-      return if (WriteBack.sameTree(back.root, doc.root)) null
-      else WriteBack.firstDifference(back.root, doc.root) ?: "it reads back differently"
+      return if (WriteBack.sameTree(back.root, doc.root)) {
+        null
+      } else {
+        WriteBack.firstDifference(back.root, doc.root) ?: "it reads back differently"
+      }
     }
     if (onDisk == null) {
       if (asComponent) return Refuse("the component's file is gone")
@@ -147,9 +166,12 @@ object ScreenWriter {
     // the current tables (same shape, same handles). Another text is an
     // external change unless it still reads as the base (a comment-only edit).
     val fileBase = if (baseText != null && LineEndings.toLf(baseText) == lf) {
-      if (WriteBack.sameTree(asIs.root, base.root)) base
-      else rehandled(asIs.root, base.root)?.let { base.copy(root = it) }
-        ?: return Reread("a component or design token the $what uses changed since it was last read")
+      if (WriteBack.sameTree(asIs.root, base.root)) {
+        base
+      } else {
+        rehandled(asIs.root, base.root)?.let { base.copy(root = it) }
+          ?: return Reread("a component or design token the $what uses changed since it was last read")
+      }
     } else {
       if (!WriteBack.sameTree(asIs.root, base.root)) return Reread("the file changed since it was last read")
       base

@@ -1,18 +1,33 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.RESERVED_COMPONENT_NAMES
 import dev.keliver.portal.isModifierType
 import dev.keliver.portal.kotlinStringLiteral
 import dev.keliver.portal.widgetSpec
-import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
-import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtFunctionType
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtNullableType
+import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 
@@ -246,11 +261,16 @@ object CompiledAdapterGenerator {
           args += "modifier = call.modifier"
         }
         fnType != null && isComposableType(typeRef, fnType) -> {
-          val plainSlot = !nullable && default == null && fnType.parameters.isEmpty() &&
-            fnType.receiverTypeReference == null && fnType.returnTypeReference?.text == "Unit"
+          val plainSlot = !nullable &&
+            default == null &&
+            fnType.parameters.isEmpty() &&
+            fnType.receiverTypeReference == null &&
+            fnType.returnTypeReference?.text == "Unit"
           if (plainSlot) {
             slots++
-            val l = local(); decode += "val $l = call.content()"; args += "$arg = $l"
+            val l = local()
+            decode += "val $l = call.content()"
+            args += "$arg = $l"
           } else {
             omitOr("is a content slot the portal does not support")?.let { return it }
           }
@@ -323,7 +343,7 @@ object CompiledAdapterGenerator {
     base == "Int" && v is Int -> v.toString()
     base == "Boolean" && v is Boolean -> v.toString()
     base == "Double" && v is Double -> v.toString().let { if ('.' in it || 'E' in it) it else "$it.0" }
-    base == "Double" && v is Int -> "${v}.0"
+    base == "Double" && v is Int -> "$v.0"
     else -> null
   }
 

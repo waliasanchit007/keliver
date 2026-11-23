@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 @file:OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 
@@ -18,12 +29,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid as M3LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid as M3LazyVerticalGrid
@@ -31,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager as M3HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager as M3VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text as M3Text
@@ -38,11 +44,15 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import dev.keliver.Modifier as RedwoodModifier
 import dev.keliver.material.widget.HorizontalPager
 import dev.keliver.material.widget.LazyHorizontalGrid
@@ -51,6 +61,7 @@ import dev.keliver.material.widget.Tooltip
 import dev.keliver.material.widget.VerticalPager
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.ComposeWidgetChildren
+import kotlinx.coroutines.delay
 
 internal class ComposeUiLazyVerticalGrid : LazyVerticalGrid<@Composable (Modifier) -> Unit> {
   private var columns by mutableStateOf(2)
@@ -62,7 +73,9 @@ internal class ComposeUiLazyVerticalGrid : LazyVerticalGrid<@Composable (Modifie
       items(kids.widgets.size) { index -> kids.widgets[index].let { w -> key(w) { w.value(Modifier) } } }
     }
   }
-  override fun columns(columns: Int) { this.columns = columns }
+  override fun columns(columns: Int) {
+    this.columns = columns
+  }
 }
 
 internal class ComposeUiLazyHorizontalGrid : LazyHorizontalGrid<@Composable (Modifier) -> Unit> {
@@ -75,7 +88,9 @@ internal class ComposeUiLazyHorizontalGrid : LazyHorizontalGrid<@Composable (Mod
       items(kids.widgets.size) { index -> kids.widgets[index].let { w -> key(w) { w.value(Modifier) } } }
     }
   }
-  override fun rows(rows: Int) { this.rows = rows }
+  override fun rows(rows: Int) {
+    this.rows = rows
+  }
 }
 
 internal class ComposeUiHorizontalPager : HorizontalPager<@Composable (Modifier) -> Unit> {
@@ -124,11 +139,21 @@ internal class ComposeUiHorizontalPager : HorizontalPager<@Composable (Modifier)
       }
     }
   }
-  override fun autoScrollMs(autoScrollMs: Int) { this.autoScrollMs = autoScrollMs }
-  override fun showIndicator(showIndicator: Boolean) { this.showIndicator = showIndicator }
-  override fun indicatorActiveArgb(indicatorActiveArgb: Int) { this.indicatorActiveArgb = indicatorActiveArgb }
-  override fun indicatorInactiveArgb(indicatorInactiveArgb: Int) { this.indicatorInactiveArgb = indicatorInactiveArgb }
-  override fun contentPaddingDp(contentPaddingDp: Int) { this.contentPaddingDp = contentPaddingDp }
+  override fun autoScrollMs(autoScrollMs: Int) {
+    this.autoScrollMs = autoScrollMs
+  }
+  override fun showIndicator(showIndicator: Boolean) {
+    this.showIndicator = showIndicator
+  }
+  override fun indicatorActiveArgb(indicatorActiveArgb: Int) {
+    this.indicatorActiveArgb = indicatorActiveArgb
+  }
+  override fun indicatorInactiveArgb(indicatorInactiveArgb: Int) {
+    this.indicatorInactiveArgb = indicatorInactiveArgb
+  }
+  override fun contentPaddingDp(contentPaddingDp: Int) {
+    this.contentPaddingDp = contentPaddingDp
+  }
 }
 
 internal class ComposeUiVerticalPager : VerticalPager<@Composable (Modifier) -> Unit> {
@@ -155,5 +180,7 @@ internal class ComposeUiTooltip : Tooltip<@Composable (Modifier) -> Unit> {
       modifier = m,
     ) { (children as ComposeWidgetChildren).Render() }
   }
-  override fun text(text: String) { this.text = text }
+  override fun text(text: String) {
+    this.text = text
+  }
 }

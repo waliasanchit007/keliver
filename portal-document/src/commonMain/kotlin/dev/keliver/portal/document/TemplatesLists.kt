@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.templateValueText
@@ -91,8 +106,11 @@ public fun PropValue.Conditional.operands(): List<PropValue> = listOfNotNull(ope
 
 /** K6: [this] with [f] applied to each equality operand ([operands]); the branches unchanged. */
 public fun PropValue.Conditional.mapOperands(f: (PropValue) -> PropValue): PropValue.Conditional =
-  if (operand == null && more.none { it.operand != null }) this
-  else copy(operand = operand?.let(f), more = more.map { t -> t.operand?.let { t.copy(operand = f(it)) } ?: t })
+  if (operand == null && more.none { it.operand != null }) {
+    this
+  } else {
+    copy(operand = operand?.let(f), more = more.map { t -> t.operand?.let { t.copy(operand = f(it)) } ?: t })
+  }
 
 /**
  * A template's text with what the document knows: literal parts, token
@@ -111,21 +129,27 @@ public fun PropValue.Template.text(): String = parts.joinToString("") { p ->
 
 /** A list's resolved literal: token elements their values, a binding 0 (an Int list) or its `{field}` placeholder. */
 public fun PropValue.ListOf.resolved(): PropValue.Lit = when (tag) {
-  "ls" -> PropValue.Lit("ls", ls = items.map { e ->
-    when (e) {
-      is PropValue.Lit -> e.s ?: templateValueText(e.toAny()).orEmpty()
-      is PropValue.Token -> templateValueText(e.value.toAny()).orEmpty()
-      is PropValue.Bind -> "{${e.field}}"
-      else -> ""
-    }
-  })
-  else -> PropValue.Lit("li", li = items.map { e ->
-    when (e) {
-      is PropValue.Lit -> e.i ?: 0
-      is PropValue.Token -> e.value.i ?: 0
-      else -> 0
-    }
-  })
+  "ls" -> PropValue.Lit(
+    "ls",
+    ls = items.map { e ->
+      when (e) {
+        is PropValue.Lit -> e.s ?: templateValueText(e.toAny()).orEmpty()
+        is PropValue.Token -> templateValueText(e.value.toAny()).orEmpty()
+        is PropValue.Bind -> "{${e.field}}"
+        else -> ""
+      }
+    },
+  )
+  else -> PropValue.Lit(
+    "li",
+    li = items.map { e ->
+      when (e) {
+        is PropValue.Lit -> e.i ?: 0
+        is PropValue.Token -> e.value.i ?: 0
+        else -> 0
+      }
+    },
+  )
 }
 
 private fun UiDocument.mapValues(f: (PropValue) -> PropValue): UiDocument {

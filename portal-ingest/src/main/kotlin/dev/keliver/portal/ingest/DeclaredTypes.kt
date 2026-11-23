@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.ingest
 
 import org.jetbrains.kotlin.psi.KtClass
@@ -138,8 +153,10 @@ internal class ScreenBindings(val iface: KtClass?, val why: String?)
 private sealed interface Named {
   /** [decl], declared in the file; [shown] is how the parameter writes it. */
   class InFile(val decl: KtClassOrObject, val shown: String) : Named
+
   /** Not declared in the file: [shown] and [detail] (the reason's tail); [simple] is its last segment. */
   class Elsewhere(val shown: String, val simple: String, val qualified: Boolean, val detail: String) : Named
+
   /** Not a name ingest reads ([detail] says what it is instead). */
   class Unreadable(val shown: String, val detail: String) : Named
 }
@@ -150,8 +167,11 @@ internal fun screenBindings(fn: KtNamedFunction, file: KtFile): ScreenBindings {
   return when (named) {
     is Named.InFile -> {
       val cls = named.decl as? KtClass
-      if (cls != null && cls.isInterface()) ScreenBindings(cls, null)
-      else ScreenBindings(null, "the screen takes ${named.shown}, which this file declares, but not as an interface")
+      if (cls != null && cls.isInterface()) {
+        ScreenBindings(cls, null)
+      } else {
+        ScreenBindings(null, "the screen takes ${named.shown}, which this file declares, but not as an interface")
+      }
     }
     is Named.Elsewhere -> {
       val all = file.declarations.filterIsInstance<KtClass>().filter { it.isInterface() && it.name?.endsWith("Bindings") == true }
@@ -190,8 +210,11 @@ private fun nameOf(ref: KtTypeReference?, file: KtFile, aliases: MutableSet<Stri
   val segs = segmentsOf(ref)
   val text = ref?.typeElement?.text ?: ref?.text ?: "?"
   if (segs == null) {
-    return if (via == null) Named.Unreadable("`$text`", "which is not an interface")
-    else Named.Unreadable(via, "a typealias of `$text`, which is not an interface")
+    return if (via == null) {
+      Named.Unreadable("`$text`", "which is not an interface")
+    } else {
+      Named.Unreadable(via, "a typealias of `$text`, which is not an interface")
+    }
   }
   val dotted = segs.joinToString(".")
   val shown = via ?: "`$dotted`"
@@ -227,7 +250,9 @@ private fun nameOf(ref: KtTypeReference?, file: KtFile, aliases: MutableSet<Stri
   for (i in 1 until path.size) {
     cur = cur.declarations.filterIsInstance<KtClassOrObject>().firstOrNull { it.name == path[i] }
       ?: return Named.Elsewhere(
-        shown, path.last(), qualified = true,
+        shown,
+        path.last(),
+        qualified = true,
         detail = "$aliasNote is not found: `${path.take(i).joinToString(".")}` in this file declares no `${path[i]}`",
       )
   }

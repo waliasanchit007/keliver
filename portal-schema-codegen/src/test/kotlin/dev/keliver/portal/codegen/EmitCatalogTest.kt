@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 import kotlin.test.Test
@@ -5,17 +20,26 @@ import kotlin.test.assertContains
 
 class EmitCatalogTest {
   private val text = WidgetPlan.Include(
-    name = "StyledText", composePackage = "dev.keliver.material.compose", category = "Material",
+    name = "StyledText",
+    composePackage = "dev.keliver.material.compose",
+    category = "Material",
     props = listOf(
       MappedProp("text", MappedKind.TEXT, required = true, defaultExpr = null),
       MappedProp("fontSize", MappedKind.INT, required = false, defaultExpr = "14"),
       MappedProp("colorArgb", MappedKind.INT, required = false, defaultExpr = "0"),
     ),
-    skippedProps = emptyList(), events = emptyList(), hasChildren = false,
+    skippedProps = emptyList(),
+    events = emptyList(),
+    hasChildren = false,
   )
   private val card = WidgetPlan.Include(
-    name = "Card", composePackage = "dev.keliver.material.compose", category = "Material",
-    props = emptyList(), skippedProps = emptyList(), events = emptyList(), hasChildren = true,
+    name = "Card",
+    composePackage = "dev.keliver.material.compose",
+    category = "Material",
+    props = emptyList(),
+    skippedProps = emptyList(),
+    events = emptyList(),
+    hasChildren = true,
   )
 
   @Test fun emitsWidgetSpecsAndCompatFunction() {
@@ -31,8 +55,11 @@ class EmitCatalogTest {
   }
 
   @Test fun marginIsCataloguedAsFourDoubleSides() {
-    val row = card.copy(name = "Row", category = "Layout",
-      props = listOf(MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero")))
+    val row = card.copy(
+      name = "Row",
+      category = "Layout",
+      props = listOf(MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero")),
+    )
     val src = emitCatalog(listOf(row))
     for (side in listOf("start", "end", "top", "bottom")) {
       assertContains(src, "PropSpec(\"margin.$side\", PropKind.Double, \"Margin $side\")")
@@ -40,14 +67,25 @@ class EmitCatalogTest {
   }
 
   @Test fun scopedModifierSpecsCarryScopesExtensionAndArgTypes() {
-    val size = ModPlan("Size", "size", "dev.keliver.material.compose", listOf(
-      MappedProp("widthDp", MappedKind.INT, required = true, defaultExpr = null),
-      MappedProp("heightDp", MappedKind.INT, required = true, defaultExpr = null),
-    ))
-    val layoutSize = ModPlan("Size", "size", "dev.keliver.layout.compose", listOf(
-      MappedProp("width", MappedKind.DP, required = true, defaultExpr = null),
-      MappedProp("height", MappedKind.DP, required = true, defaultExpr = null),
-    ), scopes = listOf("RowScope", "ColumnScope", "BoxScope"))
+    val size = ModPlan(
+      "Size",
+      "size",
+      "dev.keliver.material.compose",
+      listOf(
+        MappedProp("widthDp", MappedKind.INT, required = true, defaultExpr = null),
+        MappedProp("heightDp", MappedKind.INT, required = true, defaultExpr = null),
+      ),
+    )
+    val layoutSize = ModPlan(
+      "Size",
+      "size",
+      "dev.keliver.layout.compose",
+      listOf(
+        MappedProp("width", MappedKind.DP, required = true, defaultExpr = null),
+        MappedProp("height", MappedKind.DP, required = true, defaultExpr = null),
+      ),
+      scopes = listOf("RowScope", "ColumnScope", "BoxScope"),
+    )
     val mods = disambiguateModifiers(listOf(size, layoutSize))
     val src = emitCatalog(emptyList(), mods)
     assertContains(src, "ModifierSpec(\"Size\", listOf(PropSpec(\"widthDp\", PropKind.Int, \"Width dp\"), PropSpec(\"heightDp\", PropKind.Int, \"Height dp\")), argTypes = listOf(\"Int\", \"Int\")),")
@@ -60,10 +98,14 @@ class EmitCatalogTest {
   }
 
   @Test fun everyWidgetPropRecordsItsSourceTypeForDesignTokens() {
-    val row = card.copy(name = "Row", category = "Layout", props = listOf(
-      MappedProp("width", MappedKind.CONSTRAINT, required = false, defaultExpr = "Constraint.Wrap"),
-      MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero"),
-    ))
+    val row = card.copy(
+      name = "Row",
+      category = "Layout",
+      props = listOf(
+        MappedProp("width", MappedKind.CONSTRAINT, required = false, defaultExpr = "Constraint.Wrap"),
+        MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero"),
+      ),
+    )
     val src = emitCatalog(listOf(text, row))
     // K2: a token fits only a plain literal of its own type — the catalog says which.
     assertContains(src, "internal val widgetPropSourceTypes: Map<String, String> = mapOf(")

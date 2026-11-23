@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 @file:OptIn(ExperimentalMaterial3Api::class)
 
@@ -47,7 +58,9 @@ internal class ComposeUiTopAppBar : TopAppBar<@Composable (Modifier) -> Unit> {
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3TopAppBar(title = { M3Text(title) }, modifier = m)
   }
-  override fun title(title: String) { this.title = title }
+  override fun title(title: String) {
+    this.title = title
+  }
 }
 
 internal class ComposeUiBottomAppBar : BottomAppBar<@Composable (Modifier) -> Unit> {
@@ -75,7 +88,9 @@ internal class ComposeUiTabRow : TabRow<@Composable (Modifier) -> Unit> {
       (tabs as ComposeWidgetChildren).Render()
     }
   }
-  override fun selectedIndex(selectedIndex: Int) { this.selectedIndex = selectedIndex }
+  override fun selectedIndex(selectedIndex: Int) {
+    this.selectedIndex = selectedIndex
+  }
 }
 
 internal class ComposeUiTab : Tab<@Composable (Modifier) -> Unit> {
@@ -91,7 +106,13 @@ internal class ComposeUiTab : Tab<@Composable (Modifier) -> Unit> {
       modifier = m,
     )
   }
-  override fun text(text: String) { this.text = text }
-  override fun selected(selected: Boolean) { this.selected = selected }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun text(text: String) {
+    this.text = text
+  }
+  override fun selected(selected: Boolean) {
+    this.selected = selected
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }

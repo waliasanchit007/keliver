@@ -1,11 +1,26 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import hosttemplate.BridgeBindRecorder
 import hosttemplate.DeclaredBridge
 import hosttemplate.HostBridge
 import hosttemplate.HostFacts
 import hosttemplate.KeliverBridgeBinding
-import hosttemplate.bindAppBridges
 import hosttemplate.ManifestPinningHttpClient
 import hosttemplate.NeededBridge
+import hosttemplate.bindAppBridges
 import hosttemplate.bridgeProblem
 import hosttemplate.manifestBridgeProblem
 import hosttemplate.manifestBridges
@@ -39,7 +54,8 @@ class BridgeGateTest {
   private fun entry(sequence: Long, bridges: String?) =
     """{"sequence":$sequence,"version":$sequence,"widgetVersion":1,"capabilities":[],
       |"manifest":"v$sequence/manifest.zipline.json","manifestSha256":"$sha"
-      |${if (bridges != null) ",\"constraints\":{\"bridges\":$bridges}" else ""}}""".trimMargin()
+      |${if (bridges != null) ",\"constraints\":{\"bridges\":$bridges}" else ""}}
+    """.trimMargin()
 
   private fun index(vararg entries: String) = """{"format":1,"entries":[${entries.joinToString(",")}]}"""
 
@@ -65,10 +81,16 @@ class BridgeGateTest {
   fun aMalformedBridgesConstraintAdmitsNobody() {
     val served = mapOf("ShopActions" to HostBridge(5, shape))
     for (
-      bad in listOf(
-        "\"x\"", "[]", """{"ShopActions":2}""", """{"ShopActions":{"min":"2"}}""", """{"ShopActions":{"min":0}}""",
-        """{"ShopActions":{"min":2,"shape":"short"}}""", """{"ShopActions":{"min":2,"extra":1}}""", """{"Shop Actions":{"min":1}}""",
-      )
+    bad in listOf(
+      "\"x\"",
+      "[]",
+      """{"ShopActions":2}""",
+      """{"ShopActions":{"min":"2"}}""",
+      """{"ShopActions":{"min":0}}""",
+      """{"ShopActions":{"min":2,"shape":"short"}}""",
+      """{"ShopActions":{"min":2,"extra":1}}""",
+      """{"Shop Actions":{"min":1}}""",
+    )
     ) {
       assertEquals(1L, pick(served, entry(1, null), entry(2, bad)), bad)
     }
@@ -142,7 +164,8 @@ class BridgeGateTest {
         // The constraint the publisher writes admits exactly a host serving what the manifest says.
         val served = host.mapValues { (_, n) -> HostBridge(n.min, n.shape) }
         val e = """{"sequence":1,"version":1,"widgetVersion":1,"capabilities":[],"manifest":"v1/manifest.zipline.json",
-          |"manifestSha256":"$sha"${publisher.constraint?.let { ",\"constraints\":$it" } ?: ""}}""".trimMargin()
+          |"manifestSha256":"$sha"${publisher.constraint?.let { ",\"constraints\":$it" } ?: ""}}
+        """.trimMargin()
         assertEquals(1L, pickFromIndex(index(e), emptyList(), facts = facts(served)).getOrThrow().sequence, value)
       }
     }
@@ -225,8 +248,14 @@ class BridgeGateTest {
       "nothing" to {},
       "another name" to { it.bound("B") },
       "a host service" to { it.bound("HostHttp") },
-      "its name twice" to { it.bound("A"); it.bound("A") },
-      "its name and another" to { it.bound("A"); it.bound("HostSqlDriver") },
+      "its name twice" to {
+        it.bound("A")
+        it.bound("A")
+      },
+      "its name and another" to {
+        it.bound("A")
+        it.bound("HostSqlDriver")
+      },
     )) {
       val e = bindAll(binding("A", action)).first
       assertTrue(e is IllegalStateException && e.message!!.startsWith("bridge bind failed: A bound ["), "$what: $e")
@@ -255,7 +284,10 @@ class BridgeGateTest {
     val recorder = BridgeBindRecorder()
     val cancelled = kotlinx.coroutines.CancellationException("stop")
     val e = runCatching {
-      bindAppBridges(listOf(KeliverBridgeBinding("A", 1, null) {}), recorder, {}, { true }) { recorder.bound("A"); throw cancelled }
+      bindAppBridges(listOf(KeliverBridgeBinding("A", 1, null) {}), recorder, {}, { true }) {
+        recorder.bound("A")
+        throw cancelled
+      }
     }.exceptionOrNull()
     assertTrue(e === cancelled, "$e")
     recorder.bound("late")
@@ -294,6 +326,8 @@ class BridgeGateTest {
       "bridge bind failed: Verifier: java.net.ConnectException",
       "bridge bind failed: SignatureCheck bound [] (it must bind SignatureCheck, once)",
       "bridge bind failed: A: SocketTimeoutException",
-    )) assertEquals("bridge-bind", reportReason("not-loaded", d), d)
+    )) {
+      assertEquals("bridge-bind", reportReason("not-loaded", d), d)
+    }
   }
 }

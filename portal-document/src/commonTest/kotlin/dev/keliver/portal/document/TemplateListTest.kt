@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.Bind
@@ -7,12 +22,12 @@ import dev.keliver.portal.Token
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.encodeToString
 
 /** K4: templates and lists with references through the document, both wires and the exporter. */
 class TemplateListTest {
@@ -101,7 +116,8 @@ class TemplateListTest {
       "t",
       DocNode.Widget(Handle(1), "Column", children = listOf(text(2), box(3), DocNode.Widget(Handle(4), "SegmentedButtonRow"))),
       Contract(fields = mapOf("score" to "Double", "ratio" to "Float", "nick" to "String?", "n" to "Int", "big" to "Long", "on" to "Boolean", "s" to "String", "qn" to "kotlin.Int", "qs" to "kotlin.String")),
-      0, 10,
+      0,
+      10,
     )
     assertTrue("Double" in refused(d, DocOp.SetProp(Handle(2), "text", PropValue.Template(listOf(lit("x "), ratio)))))
     assertTrue("Double" in refused(d, DocOp.SetProp(Handle(2), "text", PropValue.Conditional("on", whenTrue = PropValue.Template(listOf(ratio)), whenFalse = lit("-")))))
@@ -168,14 +184,19 @@ class TemplateListTest {
     val onText = PropValue.Template(listOf(lit("on: "), PropValue.Bind("on")))
     fun d(fields: Map<String, String>) = UiDocument(
       "t",
-      DocNode.Widget(Handle(1), "Column", children = listOf(
-        DocNode.Widget(Handle(2), "Condition", props = mapOf("field" to lit("on")), children = listOf(text(5))),
-        DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to onText)),
-        box(4),
-        text(6),
-      )),
+      DocNode.Widget(
+        Handle(1),
+        "Column",
+        children = listOf(
+          DocNode.Widget(Handle(2), "Condition", props = mapOf("field" to lit("on")), children = listOf(text(5))),
+          DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to onText)),
+          box(4),
+          text(6),
+        ),
+      ),
       Contract(fields = fields),
-      0, 10,
+      0,
+      10,
     )
     val newCondition = DocNode.Widget(Handle(0), "Condition", props = mapOf("field" to lit("on")), children = listOf(text(0)))
     val selfReading = PropValue.Conditional("on", whenTrue = onText, whenFalse = lit("-"))

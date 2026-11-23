@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.material.composeui
 
@@ -10,61 +21,61 @@ import coil3.ImageLoader
 import dev.keliver.layout.composeui.ComposeUiRedwoodLayoutWidgetFactory
 import dev.keliver.lazylayout.composeui.ComposeUiRedwoodLazyLayoutWidgetFactory
 import dev.keliver.material.modifier.Reuse
+import dev.keliver.material.widget.AlertDialog
 import dev.keliver.material.widget.AsyncImage
+import dev.keliver.material.widget.Badge
+import dev.keliver.material.widget.BottomAppBar
 import dev.keliver.material.widget.BottomSheet
 import dev.keliver.material.widget.Button
 import dev.keliver.material.widget.Card
 import dev.keliver.material.widget.Checkbox
 import dev.keliver.material.widget.Chip
-import dev.keliver.material.widget.Divider
-import dev.keliver.material.widget.IconButton
-import dev.keliver.material.widget.Image
-import dev.keliver.material.widget.KeliverMaterialWidgetFactory
-import dev.keliver.material.widget.KeliverMaterialWidgetSystem
-import dev.keliver.material.widget.ScrollableColumn
-import dev.keliver.material.widget.StyledText
-import dev.keliver.material.widget.Switch
-import dev.keliver.material.widget.Text
-import dev.keliver.material.widget.TextField
-import dev.keliver.material.widget.TextInput
-import dev.keliver.material.widget.ElevatedButton
-import dev.keliver.material.widget.FilledTonalButton
-import dev.keliver.material.widget.FloatingActionButton
-import dev.keliver.material.widget.OutlinedButton
-import dev.keliver.material.widget.OutlinedTextField
-import dev.keliver.material.widget.RadioButton
-import dev.keliver.material.widget.Slider
-import dev.keliver.material.widget.TextButton
-import dev.keliver.material.widget.ElevatedCard
-import dev.keliver.material.widget.FlowColumn
-import dev.keliver.material.widget.FlowRow
-import dev.keliver.material.widget.OutlinedCard
-import dev.keliver.material.widget.Surface
-import dev.keliver.material.widget.BottomAppBar
-import dev.keliver.material.widget.NavigationBar
-import dev.keliver.material.widget.Scaffold
-import dev.keliver.material.widget.Tab
-import dev.keliver.material.widget.TabRow
-import dev.keliver.material.widget.TopAppBar
-import dev.keliver.material.widget.AlertDialog
 import dev.keliver.material.widget.CircularProgressIndicator
 import dev.keliver.material.widget.Dialog
-import dev.keliver.material.widget.LinearProgressIndicator
-import dev.keliver.material.widget.Snackbar
-import dev.keliver.material.widget.Badge
-import dev.keliver.material.widget.FilterChip
-import dev.keliver.material.widget.InputChip
-import dev.keliver.material.widget.SuggestionChip
+import dev.keliver.material.widget.Divider
 import dev.keliver.material.widget.DropdownMenu
+import dev.keliver.material.widget.ElevatedButton
+import dev.keliver.material.widget.ElevatedCard
 import dev.keliver.material.widget.ExtendedFloatingActionButton
-import dev.keliver.material.widget.NavigationRail
-import dev.keliver.material.widget.SegmentedButtonRow
-import dev.keliver.material.widget.VerticalDivider
+import dev.keliver.material.widget.FilledTonalButton
+import dev.keliver.material.widget.FilterChip
+import dev.keliver.material.widget.FloatingActionButton
+import dev.keliver.material.widget.FlowColumn
+import dev.keliver.material.widget.FlowRow
 import dev.keliver.material.widget.HorizontalPager
+import dev.keliver.material.widget.IconButton
+import dev.keliver.material.widget.Image
+import dev.keliver.material.widget.InputChip
+import dev.keliver.material.widget.KeliverMaterialWidgetFactory
+import dev.keliver.material.widget.KeliverMaterialWidgetSystem
 import dev.keliver.material.widget.LazyHorizontalGrid
 import dev.keliver.material.widget.LazyVerticalGrid
+import dev.keliver.material.widget.LinearProgressIndicator
+import dev.keliver.material.widget.NavigationBar
+import dev.keliver.material.widget.NavigationRail
+import dev.keliver.material.widget.OutlinedButton
+import dev.keliver.material.widget.OutlinedCard
+import dev.keliver.material.widget.OutlinedTextField
+import dev.keliver.material.widget.RadioButton
+import dev.keliver.material.widget.Scaffold
+import dev.keliver.material.widget.ScrollableColumn
+import dev.keliver.material.widget.SegmentedButtonRow
+import dev.keliver.material.widget.Slider
+import dev.keliver.material.widget.Snackbar
 import dev.keliver.material.widget.StyledBox
+import dev.keliver.material.widget.StyledText
+import dev.keliver.material.widget.SuggestionChip
+import dev.keliver.material.widget.Surface
+import dev.keliver.material.widget.Switch
+import dev.keliver.material.widget.Tab
+import dev.keliver.material.widget.TabRow
+import dev.keliver.material.widget.Text
+import dev.keliver.material.widget.TextButton
+import dev.keliver.material.widget.TextField
+import dev.keliver.material.widget.TextInput
 import dev.keliver.material.widget.Tooltip
+import dev.keliver.material.widget.TopAppBar
+import dev.keliver.material.widget.VerticalDivider
 import dev.keliver.material.widget.VerticalPager
 
 public class ComposeUiKeliverMaterialWidgetFactory(

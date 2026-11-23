@@ -1,6 +1,17 @@
 /*
  * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 @file:OptIn(ExperimentalMaterial3Api::class)
 
@@ -36,9 +47,15 @@ internal class ComposeUiFilterChip : FilterChip<@Composable (Modifier) -> Unit> 
       modifier = m,
     )
   }
-  override fun label(label: String) { this.label = label }
-  override fun selected(selected: Boolean) { this.selected = selected }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun label(label: String) {
+    this.label = label
+  }
+  override fun selected(selected: Boolean) {
+    this.selected = selected
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiInputChip : InputChip<@Composable (Modifier) -> Unit> {
@@ -54,9 +71,15 @@ internal class ComposeUiInputChip : InputChip<@Composable (Modifier) -> Unit> {
       modifier = m,
     )
   }
-  override fun label(label: String) { this.label = label }
-  override fun selected(selected: Boolean) { this.selected = selected }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun label(label: String) {
+    this.label = label
+  }
+  override fun selected(selected: Boolean) {
+    this.selected = selected
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiSuggestionChip : SuggestionChip<@Composable (Modifier) -> Unit> {
@@ -70,8 +93,12 @@ internal class ComposeUiSuggestionChip : SuggestionChip<@Composable (Modifier) -
       modifier = m,
     )
   }
-  override fun label(label: String) { this.label = label }
-  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun label(label: String) {
+    this.label = label
+  }
+  override fun onClick(onClick: (() -> Unit)?) {
+    this.onClick = onClick
+  }
 }
 
 internal class ComposeUiBadge : Badge<@Composable (Modifier) -> Unit> {
@@ -80,5 +107,7 @@ internal class ComposeUiBadge : Badge<@Composable (Modifier) -> Unit> {
   override val value: @Composable (Modifier) -> Unit = { m ->
     if (text.isEmpty()) M3Badge(modifier = m) else M3Badge(modifier = m) { M3Text(text) }
   }
-  override fun text(text: String) { this.text = text }
+  override fun text(text: String) {
+    this.text = text
+  }
 }

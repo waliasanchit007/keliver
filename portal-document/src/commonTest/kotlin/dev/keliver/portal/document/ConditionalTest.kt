@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.document
 
 import dev.keliver.portal.Action
@@ -8,12 +23,12 @@ import dev.keliver.portal.Token
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.encodeToString
 
 /** K3: conditional values and else branches through the document, both wires and the exporter. */
 class ConditionalTest {
@@ -28,7 +43,8 @@ class ConditionalTest {
 
   @Test fun aConditionalRoundTripsOnTheDocumentWire() {
     val node: DocNode = DocNode.Widget(
-      Handle(2), "Button",
+      Handle(2),
+      "Button",
       props = mapOf("text" to PropValue.Conditional("note", test = "blank", negate = true, whenTrue = lit("A"), whenFalse = PropValue.Bind("note")), "onClick" to onClick),
     )
     val json = DocJson.encodeToString(node)
@@ -62,7 +78,9 @@ class ConditionalTest {
 
   @Test fun theExporterWritesEachBranchAndTheElseBlock() {
     val cond = DocNode.Widget(
-      Handle(3), "Condition", mapOf("field" to lit("note"), "test" to lit("empty"), "negate" to lit(true)),
+      Handle(3),
+      "Condition",
+      mapOf("field" to lit("note"), "test" to lit("empty"), "negate" to lit(true)),
       children = listOf(text(4), DocNode.Widget(Handle(5), "Else", children = listOf(text(6)))),
     )
     val d = doc(DocNode.Widget(Handle(2), "Button", props = mapOf("text" to lit("Go"), "containerArgb" to color, "onClick" to onClick)), cond)
@@ -157,15 +175,20 @@ class ConditionalTest {
   // Review S2: an emptiness test reads a List as well as a String — it never retypes a Repeat's list.
   @Test fun anEmptinessTestKeepsARepeatsListType() {
     val repeat = DocNode.Widget(
-      Handle(2), "Repeat", mapOf("items" to lit("items"), "item" to lit("item")),
+      Handle(2),
+      "Repeat",
+      mapOf("items" to lit("items"), "item" to lit("item")),
       children = listOf(DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to PropValue.Bind("item.title")))),
     )
     val emptyText = DocNode.Widget(
-      Handle(4), "StyledText",
+      Handle(4),
+      "StyledText",
       props = mapOf("text" to PropValue.Conditional("items", test = "empty", whenTrue = lit("none"), whenFalse = lit("some"))),
     )
     val emptyIf = DocNode.Widget(
-      Handle(5), "Condition", mapOf("field" to lit("items"), "test" to lit("empty")),
+      Handle(5),
+      "Condition",
+      mapOf("field" to lit("items"), "test" to lit("empty")),
       children = listOf(text(6)),
     )
     // Every order of the Repeat and the tests reads the same type.
@@ -182,7 +205,9 @@ class ConditionalTest {
   // Review S3: an op never creates a condition that cannot compile (or would re-ingest as RawCode).
   @Test fun aConditionThatCouldNotCompileIsRefusedWhereverItComesFrom() {
     val repeat = DocNode.Widget(
-      Handle(2), "Repeat", mapOf("items" to lit("items"), "item" to lit("item")),
+      Handle(2),
+      "Repeat",
+      mapOf("items" to lit("items"), "item" to lit("item")),
       children = listOf(DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to PropValue.Bind("item.title")))),
     )
     val d = doc(repeat, DocNode.Widget(Handle(4), "StyledText", props = mapOf("text" to PropValue.Bind("title"))), DocNode.Widget(Handle(5), "Condition", mapOf("field" to lit("open"))))

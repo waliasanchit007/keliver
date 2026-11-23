@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Keliver contributors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.keliver.portal.codegen
 
 import kotlin.test.Test
@@ -10,21 +25,26 @@ class PropModelTest {
     planWidget(composePackage = "dev.keliver.material.compose", category = "Material", widget = w)
 
   @Test fun allSupportedKindsMap() {
-    val w = FakeWidget(fq("dev.keliver.material", "Thing"), listOf(
-      FakeProperty("text", fq("kotlin", "String")),
-      FakeProperty("count", fq("kotlin", "Int"), defaultExpression = "14"),
-      FakeProperty("on", fq("kotlin", "Boolean"), defaultExpression = "false"),
-      FakeProperty("ratio", fq("kotlin", "Double"), defaultExpression = "0.0"),
-      FakeProperty("pos", fq("kotlin", "Float"), defaultExpression = "0f"),
-      FakeProperty("colors", fq("kotlin.collections", "List", params = listOf(fq("kotlin", "Int"))), defaultExpression = "emptyList()"),
-      FakeProperty("stops", fq("kotlin.collections", "List", params = listOf(fq("kotlin", "Float"))), defaultExpression = "emptyList()"),
-      FakeProperty("height", fq("dev.keliver.ui", "Dp"), defaultExpression = "Dp(0.0)"),
-      FakeProperty("width", fq("dev.keliver.layout.api", "Constraint"), defaultExpression = "Constraint.Wrap"),
-    ))
+    val w = FakeWidget(
+      fq("dev.keliver.material", "Thing"),
+      listOf(
+        FakeProperty("text", fq("kotlin", "String")),
+        FakeProperty("count", fq("kotlin", "Int"), defaultExpression = "14"),
+        FakeProperty("on", fq("kotlin", "Boolean"), defaultExpression = "false"),
+        FakeProperty("ratio", fq("kotlin", "Double"), defaultExpression = "0.0"),
+        FakeProperty("pos", fq("kotlin", "Float"), defaultExpression = "0f"),
+        FakeProperty("colors", fq("kotlin.collections", "List", params = listOf(fq("kotlin", "Int"))), defaultExpression = "emptyList()"),
+        FakeProperty("stops", fq("kotlin.collections", "List", params = listOf(fq("kotlin", "Float"))), defaultExpression = "emptyList()"),
+        FakeProperty("height", fq("dev.keliver.ui", "Dp"), defaultExpression = "Dp(0.0)"),
+        FakeProperty("width", fq("dev.keliver.layout.api", "Constraint"), defaultExpression = "Constraint.Wrap"),
+      ),
+    )
     val inc = assertIs<WidgetPlan.Include>(plan(w))
     assertEquals(
-      listOf(MappedKind.TEXT, MappedKind.INT, MappedKind.BOOL, MappedKind.DOUBLE, MappedKind.FLOAT,
-        MappedKind.INT_LIST, MappedKind.FLOAT_LIST, MappedKind.DP, MappedKind.CONSTRAINT),
+      listOf(
+        MappedKind.TEXT, MappedKind.INT, MappedKind.BOOL, MappedKind.DOUBLE, MappedKind.FLOAT,
+        MappedKind.INT_LIST, MappedKind.FLOAT_LIST, MappedKind.DP, MappedKind.CONSTRAINT,
+      ),
       inc.props.map { it.kind },
     )
     assertTrue(inc.props.first { it.name == "text" }.required)
@@ -32,18 +52,24 @@ class PropModelTest {
   }
 
   @Test fun requiredUnsupportedPropExcludesWidget() {
-    val w = FakeWidget(fq("dev.keliver.material", "RichText"), listOf(
-      FakeProperty("spans", fq("kotlin.collections", "List", params = listOf(fq("dev.keliver.material.api", "TextSpan")))),
-    ))
+    val w = FakeWidget(
+      fq("dev.keliver.material", "RichText"),
+      listOf(
+        FakeProperty("spans", fq("kotlin.collections", "List", params = listOf(fq("dev.keliver.material.api", "TextSpan")))),
+      ),
+    )
     val ex = assertIs<WidgetPlan.Exclude>(plan(w))
     assertTrue(ex.reason.contains("spans"))
   }
 
   @Test fun optionalUnsupportedPropIsSkippedNotFatal() {
-    val w = FakeWidget(fq("dev.keliver.material", "TextInput"), listOf(
-      FakeProperty("state", fq("dev.keliver.material.api", "TextFieldState"), defaultExpression = "TextFieldState()"),
-      FakeProperty("hint", fq("kotlin", "String"), defaultExpression = "\"\""),
-    ))
+    val w = FakeWidget(
+      fq("dev.keliver.material", "TextInput"),
+      listOf(
+        FakeProperty("state", fq("dev.keliver.material.api", "TextFieldState"), defaultExpression = "TextFieldState()"),
+        FakeProperty("hint", fq("kotlin", "String"), defaultExpression = "\"\""),
+      ),
+    )
     val inc = assertIs<WidgetPlan.Include>(plan(w))
     assertEquals(listOf("hint"), inc.props.map { it.name })
     assertEquals(listOf("state"), inc.skippedProps)
@@ -53,43 +79,57 @@ class PropModelTest {
     val one = FakeWidget(fq("dev.keliver.material", "Card"), listOf(FakeChildren("children")))
     assertTrue(assertIs<WidgetPlan.Include>(plan(one)).hasChildren)
 
-    val two = FakeWidget(fq("dev.keliver.material", "Scaffold"),
-      listOf(FakeChildren("topBar"), FakeChildren("content")))
+    val two = FakeWidget(
+      fq("dev.keliver.material", "Scaffold"),
+      listOf(FakeChildren("topBar"), FakeChildren("content")),
+    )
     assertIs<WidgetPlan.Exclude>(plan(two))
 
-    val ev = FakeWidget(fq("dev.keliver.material", "Button"), listOf(
-      FakeProperty("text", fq("kotlin", "String")),
-      FakeEvent("onClick", isNullable = true),
-    ))
+    val ev = FakeWidget(
+      fq("dev.keliver.material", "Button"),
+      listOf(
+        FakeProperty("text", fq("kotlin", "String")),
+        FakeEvent("onClick", isNullable = true),
+      ),
+    )
     val inc = assertIs<WidgetPlan.Include>(plan(ev))
     assertEquals(listOf(EventPlan("onClick", 0)), inc.events)
 
-    val evReq = FakeWidget(fq("dev.keliver.material", "Weird"),
-      listOf(FakeEvent("onThing", isNullable = false, defaultExpression = null)))
+    val evReq = FakeWidget(
+      fq("dev.keliver.material", "Weird"),
+      listOf(FakeEvent("onThing", isNullable = false, defaultExpression = null)),
+    )
     assertIs<WidgetPlan.Exclude>(plan(evReq))
 
     // K3 review B3: a catalog event is nullable (a conditional event may have a `null` branch);
     // a non-nullable event with a default is left out of calls like an unsupported optional prop.
-    val evDefault = FakeWidget(fq("dev.keliver.material", "Pager"), listOf(
-      FakeEvent("onTurn", isNullable = false, defaultExpression = "{}"),
-      FakeEvent("onClick", isNullable = true),
-    ))
+    val evDefault = FakeWidget(
+      fq("dev.keliver.material", "Pager"),
+      listOf(
+        FakeEvent("onTurn", isNullable = false, defaultExpression = "{}"),
+        FakeEvent("onClick", isNullable = true),
+      ),
+    )
     val withDefault = assertIs<WidgetPlan.Include>(plan(evDefault))
     assertEquals(listOf(EventPlan("onClick", 0)), withDefault.events)
     assertEquals(listOf("onTurn"), withDefault.skippedProps)
   }
 
   @Test fun modifierPlanning() {
-    val padding = FakeModifier(fq("dev.keliver.material", "Padding"),
-      properties = listOf(FakeModifierProperty("allDp", fq("kotlin", "Int"))))
+    val padding = FakeModifier(
+      fq("dev.keliver.material", "Padding"),
+      properties = listOf(FakeModifierProperty("allDp", fq("kotlin", "Int"))),
+    )
     val plan = planModifier("dev.keliver.material.compose", padding)!!
     assertEquals("padding", plan.extensionName)
     assertEquals(listOf("allDp"), plan.props.map { it.name })
 
     // K1: scoped (layout) modifiers are planned, carrying their scopes.
-    val scoped = FakeModifier(fq("dev.keliver.layout", "Margin"),
+    val scoped = FakeModifier(
+      fq("dev.keliver.layout", "Margin"),
       scopes = listOf(fq("dev.keliver.layout", "RowScope"), fq("dev.keliver.layout", "BoxScope")),
-      properties = listOf(FakeModifierProperty("margin", fq("dev.keliver.ui", "Margin"))))
+      properties = listOf(FakeModifierProperty("margin", fq("dev.keliver.ui", "Margin"))),
+    )
     val scopedPlan = planModifier("dev.keliver.layout.compose", scoped)!!
     assertEquals(listOf("RowScope", "BoxScope"), scopedPlan.scopes)
     assertEquals(listOf("Row", "Box"), scopedPlan.parentTypes)
@@ -99,33 +139,51 @@ class PropModelTest {
     val flag = FakeModifier(fq("dev.keliver.material", "AnimateContentSize"))
     assertEquals("animateContentSize", planModifier("dev.keliver.material.compose", flag)!!.extensionName)
 
-    val unsupported = FakeModifier(fq("dev.keliver.material", "Weird"),
-      properties = listOf(FakeModifierProperty("thing", fq("dev.keliver.material.api", "TextSpan"))))
+    val unsupported = FakeModifier(
+      fq("dev.keliver.material", "Weird"),
+      properties = listOf(FakeModifierProperty("thing", fq("dev.keliver.material.api", "TextSpan"))),
+    )
     assertEquals(null, planModifier("dev.keliver.material.compose", unsupported))
   }
 
   @Test fun scopedNameCollisionIsRenamedButKeepsItsExtension() {
-    val material = FakeModifier(fq("dev.keliver.material", "Size"), properties = listOf(
-      FakeModifierProperty("widthDp", fq("kotlin", "Int")), FakeModifierProperty("heightDp", fq("kotlin", "Int"))))
-    val layout = FakeModifier(fq("dev.keliver.layout", "Size"), scopes = listOf(fq("dev.keliver.layout", "RowScope")),
-      properties = listOf(FakeModifierProperty("width", fq("dev.keliver.ui", "Dp")), FakeModifierProperty("height", fq("dev.keliver.ui", "Dp"))))
-    val flex = FakeModifier(fq("dev.keliver.layout", "Flex"), scopes = listOf(fq("dev.keliver.layout", "RowScope")),
-      properties = listOf(FakeModifierProperty("value", fq("kotlin", "Double"))))
-    val plans = disambiguateModifiers(listOfNotNull(
-      planModifier("dev.keliver.material.compose", material),
-      planModifier("dev.keliver.layout.compose", layout),
-      planModifier("dev.keliver.layout.compose", flex),
-    ))
+    val material = FakeModifier(
+      fq("dev.keliver.material", "Size"),
+      properties = listOf(
+        FakeModifierProperty("widthDp", fq("kotlin", "Int")),
+        FakeModifierProperty("heightDp", fq("kotlin", "Int")),
+      ),
+    )
+    val layout = FakeModifier(
+      fq("dev.keliver.layout", "Size"),
+      scopes = listOf(fq("dev.keliver.layout", "RowScope")),
+      properties = listOf(FakeModifierProperty("width", fq("dev.keliver.ui", "Dp")), FakeModifierProperty("height", fq("dev.keliver.ui", "Dp"))),
+    )
+    val flex = FakeModifier(
+      fq("dev.keliver.layout", "Flex"),
+      scopes = listOf(fq("dev.keliver.layout", "RowScope")),
+      properties = listOf(FakeModifierProperty("value", fq("kotlin", "Double"))),
+    )
+    val plans = disambiguateModifiers(
+      listOfNotNull(
+        planModifier("dev.keliver.material.compose", material),
+        planModifier("dev.keliver.layout.compose", layout),
+        planModifier("dev.keliver.layout.compose", flex),
+      ),
+    )
     assertEquals(listOf("Size", "LayoutSize", "Flex"), plans.map { it.name })
     assertEquals(listOf("size", "size", "flex"), plans.map { it.extensionName })
   }
 
   @Test fun marginTypeMapsAndLayoutChildrenScopeIsKept() {
     assertEquals(MappedKind.MARGIN, mapType(fq("dev.keliver.ui", "Margin")))
-    val row = FakeWidget(fq("dev.keliver.layout", "Row"), listOf(
-      FakeProperty("margin", fq("dev.keliver.ui", "Margin"), defaultExpression = "Margin.Zero"),
-      FakeChildren("children", scope = fq("dev.keliver.layout", "RowScope")),
-    ))
+    val row = FakeWidget(
+      fq("dev.keliver.layout", "Row"),
+      listOf(
+        FakeProperty("margin", fq("dev.keliver.ui", "Margin"), defaultExpression = "Margin.Zero"),
+        FakeChildren("children", scope = fq("dev.keliver.layout", "RowScope")),
+      ),
+    )
     val inc = assertIs<WidgetPlan.Include>(planWidget("dev.keliver.layout.compose", "Layout", row))
     assertEquals(listOf("margin"), inc.props.map { it.name })
     assertEquals(emptyList(), inc.skippedProps)
