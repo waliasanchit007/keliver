@@ -21,37 +21,98 @@ TEMPLATE="$ROOT/scripts/templates/app-wrapper/wrapper.properties"
 . "$ROOT/scripts/keliver-runtime-line.sh"
 
 echo "=== the table"
-rows=0; malformed=""
-while read -r key old new extra; do
-  [ -n "$key" ] || continue
+[ "$KELIVER_LINES" = "0.4 0.5" ] && ok "the lines, oldest first: $KELIVER_LINES" || bad "the lines: '$KELIVER_LINES' (want '0.4 0.5')"
+read -r -a LINES <<< "$KELIVER_LINES"
+rows=0; malformed=""; sorted=true
+for i in "${!LINES[@]}"; do
+  [[ "${LINES[$i]}" =~ ^[0-9]+\.[0-9]+$ ]] || malformed="$malformed line:${LINES[$i]}"
+  [ "$i" -eq 0 ] || keliver_version_at_least "${LINES[$i]}" "${LINES[$((i - 1))]}.1" || sorted=false
+done
+while read -r -a fields; do
+  [ "${#fields[@]}" -gt 0 ] || continue
   rows=$((rows + 1))
-  { [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] && [ -n "$old" ] && [ -n "$new" ] && [ -z "$extra" ]; } || malformed="$malformed $key"
+  { [[ "${fields[0]}" =~ ^[A-Z][A-Z0-9_]*$ ]] && [ "${#fields[@]}" -eq $((${#LINES[@]} + 1)) ]; } || malformed="$malformed ${fields[0]}"
 done <<< "$KELIVER_TOOLCHAIN"
-[ "$rows" -ge 12 ] && [ -z "$malformed" ] && ok "$rows keys, each with one value per line" || bad "the table: $rows rows, malformed:$malformed"
+[ "$rows" -ge 14 ] && [ -z "$malformed" ] && $sorted && ok "$rows rows (LINE and one per key), each with one value per line, lines ascending" \
+  || bad "the table: $rows rows, sorted=$sorted, malformed:$malformed"
 
 expect() { # <label> <version> <KEY=value>...
-  local label="$1" v="$2" kv k want got wrong=""; shift 2
-  unset TOOLCHAIN_AGP KELIVER_ZIPLINE_FORK
-  keliver_zipline_line "$v" || { bad "$label: $v is refused"; return; }
+  local label="$1" v="$2" kv k want got wrong="" err; shift 2
+  unset TOOLCHAIN_AGP KELIVER_ZIPLINE_FORK KELIVER_LINE
+  err="$RUN/expect.err"
+  keliver_zipline_line "$v" 2> "$err" || { bad "$label: $v is refused ($KELIVER_LINE_ERROR)"; return; }
+  [ -s "$err" ] && wrong=" a warning: $(head -1 "$err")"
   for kv in "$@"; do
     k="${kv%%=*}"; want="${kv#*=}"; got="$(eval "printf '%s' \"\${$k:-}\"")"
     [ "$got" = "$want" ] || wrong="$wrong $k=$got (want $want)"
   done
   [ -z "$wrong" ] && ok "$label" || bad "$label:$wrong"
 }
-OLD=(KELIVER_ZIPLINE_FORK=false ZIPLINE_GROUP=app.cash.zipline TOOLCHAIN_ZIPLINE=1.22.0 TOOLCHAIN_KOTLIN=2.2.0
+OLD=(KELIVER_LINE=0.4 KELIVER_ZIPLINE_FORK=false ZIPLINE_GROUP=app.cash.zipline ZIPLINE_PLUGIN_ID=app.cash.zipline TOOLCHAIN_ZIPLINE=1.22.0 TOOLCHAIN_KOTLIN=2.2.0
   TOOLCHAIN_COMPOSE=1.8.2 TOOLCHAIN_AGP=8.12.0 TOOLCHAIN_COMPILE_SDK=35 TOOLCHAIN_TARGET_SDK=35 TOOLCHAIN_JDK=17
   TOOLCHAIN_GRADLE=9.0.0 TOOLCHAIN_GRADLE_MIN=8.13 TOOLCHAIN_AGP_MIN=-)
 OLD+=(TOOLCHAIN_COROUTINES=1.10.2 TOOLCHAIN_SERIALIZATION=1.9.0 TOOLCHAIN_OKHTTP=5.1.0 TOOLCHAIN_COIL=3.3.0 TOOLCHAIN_KTOR=3.1.0)
-NEW=(KELIVER_ZIPLINE_FORK=true ZIPLINE_GROUP=dev.keliver.zipline TOOLCHAIN_ZIPLINE=1.28.0-keliver.1 TOOLCHAIN_KOTLIN=2.4.20
+NEW=(KELIVER_LINE=0.5 KELIVER_ZIPLINE_FORK=true ZIPLINE_GROUP=dev.keliver.zipline ZIPLINE_PLUGIN_ID=dev.keliver.zipline TOOLCHAIN_ZIPLINE=1.28.0-keliver.1 TOOLCHAIN_KOTLIN=2.4.20
   TOOLCHAIN_COMPOSE=1.12.2 TOOLCHAIN_AGP=9.3.3 TOOLCHAIN_AGP_MIN=9.1.0 TOOLCHAIN_COMPILE_SDK=37 TOOLCHAIN_TARGET_SDK=36
   TOOLCHAIN_JDK=17 TOOLCHAIN_GRADLE=9.7.1 TOOLCHAIN_GRADLE_MIN=9.5.0
   TOOLCHAIN_GRADLE_SHA256=acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a
   TOOLCHAIN_COROUTINES=1.11.0 TOOLCHAIN_SERIALIZATION=1.13.0 TOOLCHAIN_OKHTTP=5.5.1 TOOLCHAIN_COIL=- TOOLCHAIN_KTOR=-)
-for v in 0.4.1 0.3.18 0.4.99-SNAPSHOT; do expect "$v: the 0.4 line (upstream Zipline, AGP 8.12.0, compileSdk 35, Gradle 9.0.0, Coil 3.3.0)" "$v" "${OLD[@]}"; done
-for v in 0.5.0 0.5.0-SNAPSHOT 0.5.1 1.0.0; do expect "$v: the 0.5 line (the fork, AGP 9.3.3, compileSdk 37, Gradle 9.7.1, Coil from keliver-image)" "$v" "${NEW[@]}"; done
-unset TOOLCHAIN_AGP
-keliver_zipline_line "0.5" && bad "a version without a patch is accepted" || { [ -z "${TOOLCHAIN_AGP:-}" ] && ok "a version without a patch is refused, and nothing is set" || bad "a refused version set TOOLCHAIN_AGP"; }
+for v in 0.4.1 0.3.18 0.4.99-SNAPSHOT 0.0.1; do expect "$v: the 0.4 line (upstream Zipline, AGP 8.12.0, compileSdk 35, Gradle 9.0.0, Coil 3.3.0)" "$v" "${OLD[@]}"; done
+for v in 0.5.0 0.5.0-SNAPSHOT 0.5.0-rc1 0.5.1 0.5.99; do expect "$v: the 0.5 line (the fork, AGP 9.3.3, compileSdk 37, Gradle 9.7.1, Coil from keliver-image)" "$v" "${NEW[@]}"; done
+
+refused() { # <label> <version> <message fragment>
+  local label="$1" v="$2" want="$3"
+  unset TOOLCHAIN_AGP KELIVER_LINE KELIVER_ZIPLINE_FORK ZIPLINE_GROUP
+  if keliver_zipline_line "$v" 2> "$RUN/refused.err"; then
+    bad "$label: $v is accepted (line ${KELIVER_LINE:-?})"
+  elif [ -n "${TOOLCHAIN_AGP:-}${KELIVER_LINE:-}${KELIVER_ZIPLINE_FORK:-}${ZIPLINE_GROUP:-}" ]; then
+    bad "$label: refused, but set TOOLCHAIN_AGP=${TOOLCHAIN_AGP:-} KELIVER_LINE=${KELIVER_LINE:-}"
+  elif [[ "$KELIVER_LINE_ERROR" != *"$want"* ]]; then
+    bad "$label: the message is '$KELIVER_LINE_ERROR' (want '$want')"
+  else
+    ok "$label: refused, nothing set (\"$KELIVER_LINE_ERROR\")"
+  fi
+}
+refused "a version without a patch" 0.5 "does not start with <major>.<minor>.<patch>"
+refused "not a version" x "does not start with"
+# M1 (review of #299): a version past the newest line is not given the newest line's toolchain.
+PAST="this tools bundle knows Keliver lines up to 0.5; Keliver"
+refused "1.0.0, past the newest line" 1.0.0 "$PAST 1.0.0 needs a newer tools bundle"
+refused "0.6.0, the next line's release" 0.6.0 "$PAST 0.6.0 needs a newer tools bundle"
+refused "0.6.0-rc1, the next line's pre-release (not a SNAPSHOT)" 0.6.0-rc1 "$PAST 0.6.0-rc1"
+refused "0.7.0-SNAPSHOT, two lines ahead" 0.7.0-SNAPSHOT "$PAST 0.7.0-SNAPSHOT"
+refused "1.0.0-SNAPSHOT, the next major" 1.0.0-SNAPSHOT "$PAST 1.0.0-SNAPSHOT"
+# The one exception: a SNAPSHOT of the next minor (a checkout built before its line is added)
+# takes the newest line, and says so on stderr.
+unset TOOLCHAIN_AGP KELIVER_LINE
+if keliver_zipline_line 0.6.0-SNAPSHOT 2> "$RUN/snapshot.err"; then
+  grep -qx "warning: Keliver 0.6.0-SNAPSHOT is past the newest line this tools bundle knows (0.5): it gets the 0.5 line's toolchain. Scaffold again with a tools bundle that knows 0.6 before releasing it." "$RUN/snapshot.err" \
+    && [ "$KELIVER_LINE" = 0.5 ] && [ "$TOOLCHAIN_AGP" = 9.3.3 ] && [ "$KELIVER_LINE_WARNING" = "$(cat "$RUN/snapshot.err")" ] \
+    && ok "0.6.0-SNAPSHOT: the 0.5 line, with a warning on stderr" || bad "0.6.0-SNAPSHOT: line ${KELIVER_LINE:-?}, stderr: $(cat "$RUN/snapshot.err")"
+else
+  bad "0.6.0-SNAPSHOT is refused: $KELIVER_LINE_ERROR"
+fi
+out="$(KELIVER_VERSION=0.6.1-SNAPSHOT bash -c '. "$1"; keliver_zipline_line 0.6.1-SNAPSHOT' _ "$ROOT/scripts/keliver-runtime-line.sh" 2>&1 >/dev/null)"
+[[ "$out" == "warning: Keliver 0.6.1-SNAPSHOT is past the newest line"* ]] && ok "a later SNAPSHOT of the next minor (0.6.1-SNAPSHOT) also passes with the warning" || bad "0.6.1-SNAPSHOT: $out"
+# The scaffolders print the refusal and stop.
+out="$(bash "$ROOT/scripts/keliver-app-wrapper.sh" "$RUN/aw-past" 1.0.0 2>&1)"; rc=$?
+[ "$rc" != 0 ] && [[ "$out" == *"knows Keliver lines up to 0.5; Keliver 1.0.0 needs a newer tools bundle"* ]] && [ ! -e "$RUN/aw-past/gradle/wrapper/gradle-wrapper.properties" ] \
+  && ok "keliver-app-wrapper.sh 1.0.0: refused with the line message" || bad "keliver-app-wrapper.sh 1.0.0 (rc=$rc): $out"
+
+# Lines are general: a third column is picked by <major>.<minor>, and the past-the-newest rule
+# follows the newest (a copy of the table with an invented 0.6 column).
+(
+  KELIVER_TOOLCHAIN="$(sed -E -e 's/^(LINE[[:space:]].*)$/\1 0.6/' -e 's/^(ZIPLINE_GROUP[[:space:]].*)$/\1 dev.keliver.zipline/' -e 't' \
+    -e 's/^([A-Z][A-Z0-9_]*[[:space:]].*[^[:space:]])$/\1 x6/' <<< "$KELIVER_TOOLCHAIN")"
+  KELIVER_LINES="0.4 0.5 0.6"
+  r=""
+  keliver_zipline_line 0.6.2 2>/dev/null && [ "$KELIVER_LINE" = 0.6 ] && [ "$TOOLCHAIN_AGP" = x6 ] || r="$r 0.6.2"
+  keliver_zipline_line 0.5.3 2>/dev/null && [ "$KELIVER_LINE" = 0.5 ] && [ "$TOOLCHAIN_AGP" = 9.3.3 ] || r="$r 0.5.3"
+  keliver_zipline_line 0.3.0 2>/dev/null && [ "$KELIVER_LINE" = 0.4 ] && [ "$TOOLCHAIN_AGP" = 8.12.0 ] || r="$r 0.3.0"
+  keliver_zipline_line 0.7.0-SNAPSHOT 2>/dev/null && [ "$KELIVER_LINE" = 0.6 ] || r="$r 0.7.0-SNAPSHOT"
+  keliver_zipline_line 0.7.0 2>/dev/null && r="$r 0.7.0(accepted)"
+  [ -z "$r" ]
+) && ok "a three-line table: 0.6.2 -> 0.6, 0.5.3 -> 0.5, 0.3.0 -> 0.4, 0.7.0-SNAPSHOT -> 0.6, 0.7.0 refused" || bad "a three-line table picks the wrong lines"
 
 # The table's 0.4 Gradle is the template's: the two cannot drift apart.
 keliver_zipline_line 0.4.1
@@ -59,14 +120,29 @@ grep -qx "distributionUrl=https\\\\://services.gradle.org/distributions/gradle-$
   && grep -qx "distributionSha256Sum=$TOOLCHAIN_GRADLE_SHA256" "$TEMPLATE" \
   && ok "the 0.4 line's Gradle and sha256 are templates/app-wrapper/wrapper.properties'" || bad "the 0.4 line's Gradle is not the template's"
 
-# The newest column is this checkout's own toolchain (what its libraries are built with): it moves
-# with gradle/libs.versions.toml and the Gradle wrapper, or this fails. Only in a checkout (the tools
-# bundle carries neither file).
+# The column of the version this checkout builds next is this checkout's own toolchain (what its
+# libraries are built with): it moves with gradle/libs.versions.toml and the Gradle wrapper, or this
+# fails. That version is CHANGELOG.md's "## Unreleased (X.Y.Z)" (KELIVER_VERSION in
+# RedwoodBuildPlugin.kt is the last release until the release bumps it), else KELIVER_VERSION. Its
+# line must be one the table names (no SNAPSHOT warning): a toolchain bump for the next minor adds
+# that line's column and leaves released columns alone. Only in a checkout (the tools bundle carries
+# none of these files).
 CATALOG="$ROOT/gradle/libs.versions.toml"; WRAPPER="$ROOT/gradle/wrapper/gradle-wrapper.properties"
 if [ -f "$CATALOG" ] && [ -f "$WRAPPER" ]; then
   cat_version() { sed -nE "s/^$1 = \"([^\"]+)\".*/\\1/p" "$CATALOG" | head -1; }
   cat_library() { sed -nE "s/^$1 = \\{ module = \"[^\"]+\", version = \"([^\"]+)\" \\}.*/\\1/p" "$CATALOG" | head -1; }
-  keliver_zipline_line 99.0.0
+  NEXT="$(sed -nE 's/^## Unreleased \(([0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*)\)[[:space:]]*$/\1/p' "$ROOT/CHANGELOG.md" 2>/dev/null | head -1)"
+  NEXT_FROM="CHANGELOG.md's Unreleased heading"
+  if [ -z "$NEXT" ]; then
+    NEXT="$(sed -nE 's/^private const val KELIVER_VERSION = "([^"]+)".*/\1/p' "$ROOT/build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt" 2>/dev/null | head -1)"
+    NEXT_FROM="KELIVER_VERSION in RedwoodBuildPlugin.kt"
+  fi
+  unset TOOLCHAIN_AGP
+  if [ -n "$NEXT" ] && keliver_zipline_line "$NEXT" 2> "$RUN/next.err" && [ ! -s "$RUN/next.err" ]; then
+    ok "this checkout builds Keliver $NEXT next ($NEXT_FROM): the table names its line, $KELIVER_LINE"
+  else
+    bad "this checkout's next version '${NEXT:-unread}' ($NEXT_FROM) has no line in the table: ${KELIVER_LINE_ERROR:-$(cat "$RUN/next.err" 2>/dev/null)} Add its line's column (a released line's column does not change)."
+  fi
   drift=""
   for pair in "KOTLIN=$(cat_version kotlin)" "COMPOSE=$(cat_version jbCompose)" \
       "COROUTINES=$(cat_version kotlinx-coroutines)" "SERIALIZATION=$(cat_version kotlinx-serialization)" \
@@ -76,7 +152,8 @@ if [ -f "$CATALOG" ] && [ -f "$WRAPPER" ]; then
     k="${pair%%=*}"; want="${pair#*=}"; got="$(eval "printf '%s' \"\${TOOLCHAIN_$k:-}\"")"
     { [ -n "$want" ] && [ "$got" = "$want" ]; } || drift="$drift $k=$got (checkout: ${want:-unread})"
   done
-  [ -z "$drift" ] && ok "the newest line's toolchain is this checkout's catalog and wrapper" || bad "the newest line drifted from this checkout:$drift"
+  [ -z "$drift" ] && ok "the $KELIVER_LINE line's toolchain (Keliver $NEXT's) is this checkout's catalog and wrapper" \
+    || bad "the ${KELIVER_LINE:-?} line (Keliver ${NEXT:-?}'s) drifted from this checkout:$drift. If the next release is a new minor, add its column and name it in CHANGELOG.md's Unreleased heading; a released line's column does not change."
   # COIL/KTOR '-' means keliver-image brings them: it must, on each platform the hosts build.
   IMG="$ROOT/keliver-image/build.gradle"
   missing=""
@@ -85,7 +162,7 @@ if [ -f "$CATALOG" ] && [ -f "$WRAPPER" ]; then
   done
   [ -z "$missing" ] && ok "keliver-image exports Coil, okio, the OkHttp fetcher and the Ktor fetcher with the Darwin engine" || bad "keliver-image does not export:$missing"
 else
-  echo "  (no catalog here: the newest line's checkout comparison is skipped)"
+  echo "  (no catalog here: the next release's line is not compared with a checkout)"
 fi
 
 echo "=== keliver_line_image_dependencies"

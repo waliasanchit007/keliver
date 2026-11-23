@@ -58,7 +58,8 @@
 # iosApp/Info-Debug.plist, docs/DEVICE_HOST.md); no other configuration has it.
 #
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
-# app's appRuntime.keliverVersion, else 0.4.1), KELIVER_HOST_ZIPLINE_VERSION,
+# app's appRuntime.keliverVersion; without it, or when keliver.portal.json does
+# not parse, this refuses), KELIVER_HOST_ZIPLINE_VERSION,
 # KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION.
 # Zipline follows the Keliver version (keliver-runtime-line.sh): upstream
 # app.cash.zipline before 0.5.0, Keliver's fork dev.keliver.zipline from 0.5.0
@@ -89,7 +90,7 @@ while [ $# -gt 0 ]; do
     --embed)           EMBED=true; shift ;;
     --into)            need "$1" $#; INTO="$2"; shift 2 ;;
     --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,68p' "$SELF"; exit 0 ;;
+    -h|--help)         sed -n '2,69p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -161,19 +162,29 @@ PACKAGE="$ROOT_PKG.host"
 # (the same rule as keliver-new-production-host.sh). Any port from 1024 up, so moving the proxy
 # (KELIVER_DEVICE_PROXY_PORT) needs no change to the host.
 DEBUG_LINK_SCHEME="keliver-$(printf '%s' "$ROOT_PKG" | tr 'A-Z_' 'a-z-')"
-# The Keliver version the GUEST uses, so host and guest do not drift apart.
-KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
+# The Keliver version the GUEST uses, so host and guest do not drift apart. It picks the whole
+# toolchain (keliver-runtime-line.sh), so a keliver.portal.json that does not parse, or names no
+# appRuntime.keliverVersion, is refused rather than read as some default version.
+if [ -n "${KELIVER_HOST_KELIVER_VERSION:-}" ]; then
+  KELIVER_VERSION="$KELIVER_HOST_KELIVER_VERSION"
+else
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))['appRuntime']['keliverVersion']
-    print(v if isinstance(v, str) and v.strip() else '0.4.1')
-except Exception: print('0.4.1')" "$APP/keliver.portal.json")}"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json does not parse (%s: %s). Fix it, or set KELIVER_HOST_KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks this host\'s Keliver libraries and toolchain. Add it (the version the app\'s guest uses, as keliver-init writes it), or set KELIVER_HOST_KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || fail "${KELIVER_VERSION#ERROR }"
+fi
 [[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
 # NF2: Keliver 0.5.0 and later build on Keliver's Zipline fork (QuickJS 2026), its group, plugin id
 # and toolchain; earlier versions keep upstream Zipline, which their libraries were built against.
 [ -f "$HERE/keliver-runtime-line.sh" ] || fail "keliver-runtime-line.sh is missing beside this script ($HERE)."
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
-keliver_zipline_line "$KELIVER_VERSION" || fail "the Keliver version '$KELIVER_VERSION' does not start with <major>.<minor>.<patch>."
+keliver_zipline_line "$KELIVER_VERSION" || fail "$KELIVER_LINE_ERROR"
 # The line's toolchain (keliver-runtime-line.sh's table), each overridable.
 ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
 KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$TOOLCHAIN_KOTLIN}"
@@ -374,6 +385,7 @@ trap - EXIT
 
 if $EMBED; then
   echo "created $MODULE/ in $INTO — this app's Keliver host framework (KeliverHost), for your Xcode app"
+  echo "  Keliver          $KELIVER_VERSION (the $KELIVER_LINE line: $ZIPLINE_GROUP $ZIPLINE_VERSION, Kotlin $KOTLIN_VERSION, Compose $COMPOSE_VERSION)"
   echo "  package          $PACKAGE"
   echo "  bundle server    $BUNDLE_SERVER"
   echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable)')"
@@ -389,6 +401,7 @@ if $EMBED; then
 fi
 
 echo "created host-ios/ — this app's production iOS host"
+echo "  Keliver          $KELIVER_VERSION (the $KELIVER_LINE line: $ZIPLINE_GROUP $ZIPLINE_VERSION, Kotlin $KOTLIN_VERSION, Compose $COMPOSE_VERSION)"
 echo "  package          $PACKAGE"
 echo "  app              $PRODUCT_NAME ($APPLICATION_ID)"
 echo "  bundle server    $BUNDLE_SERVER"

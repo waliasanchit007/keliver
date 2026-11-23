@@ -412,7 +412,7 @@ run nosrc "$NOSRC"
 # --- an app with no host-ios/: scaffolded for this relay --------------------------------
 NEW="$RUN/new"; STORE="$RUN/store"
 mkdir -p "$NEW/src/jsMain/kotlin/screens" "$STORE/keys" "$RUN/home"
-printf '{"port": %s}\n' "$PORT" > "$NEW/keliver.portal.json"
+printf '{"port": %s, "appRuntime": {"keliverVersion": "0.4.1", "widgetVersion": 1}}\n' "$PORT" > "$NEW/keliver.portal.json"
 printf "rootProject.name = 'demo'\n" > "$NEW/settings.gradle"
 printf 'package com.example.demo.screens\n\nfun HomeScreen() {}\n' > "$NEW/src/jsMain/kotlin/screens/home.kt"
 printf '#!/bin/sh\nexit 0\n' > "$NEW/gradlew"; chmod +x "$NEW/gradlew"

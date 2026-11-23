@@ -174,7 +174,13 @@ grep -q "id 'app.cash.zipline' version '1.22.0'" "$A/settings.gradle" && grep -q
   && [ "$(nameds "$A/settings.gradle" 'dev\.keliver\.zipline')$(nameds "$A/build.gradle" 'dev\.keliver\.zipline')" = 00 ] \
   && ! grep -q -- '-Xes-long-as-bigint' "$A/build.gradle" \
   && ok "NF2: an app on 0.4.1 keeps upstream Zipline 1.22.0, without Long as BigInt" || bad "NF2: the 0.4.1 app's Zipline changed"
-for v in 0.5.0 0.5.0-SNAPSHOT 1.0.0; do
+# A version past the newest line this bundle knows (keliver-runtime-line.sh) is refused, not given
+# the 0.5 line's toolchain (M1, review of #299); keliver-init refuses it the same way.
+F="$(KELIVER_VERSION=0.5.0 scaffold Past)"; set_app_version "$F" 1.0.0; before="$(fingerprint "$F")"
+out="$( cd "$F" && env -u KELIVER_VERSION "$DEV" 2>&1 )"; rc=$?
+[ "$rc" != 0 ] && printf '%s' "$out" | grep -q "knows Keliver lines up to 0.5; Keliver 1.0.0 needs a newer tools bundle" && [ "$(fingerprint "$F")" = "$before" ] \
+  && ok "NF2: an app on 1.0.0 (past the newest line) is refused, byte-identical" || bad "NF2: an app on 1.0.0 (exit $rc): $(printf '%s' "$out" | tail -1)"
+for v in 0.5.0 0.5.0-SNAPSHOT 0.5.3; do
   P="$(KELIVER_VERSION=$v scaffold "Fork${v//[.-]/}")"
   ( cd "$P" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
   if [ "$rc" = 0 ] && grep -q "id 'dev.keliver.zipline' version '1.28.0-keliver.1'" "$P/settings.gradle" \

@@ -76,7 +76,7 @@ HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 [ -f "$HERE/keliver-runtime-line.sh" ] || { echo "error: keliver-runtime-line.sh is missing beside this script ($HERE)" >&2; exit 1; }
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
-keliver_zipline_line "$KELIVER_VERSION" || { echo "error: the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
+keliver_zipline_line "$KELIVER_VERSION" || { echo "error: $KELIVER_LINE_ERROR" >&2; exit 1; }
 [ -n "$ZIPLINE_VERSION_GIVEN" ] || ZIPLINE_VERSION="$TOOLCHAIN_ZIPLINE"
 GUEST_TIMING=""
 for t in "$HERE/templates/guest/KeliverTiming.kt" "$HERE/../templates/guest/KeliverTiming.kt"; do

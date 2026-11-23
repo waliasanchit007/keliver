@@ -34,7 +34,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -f "$SCRIPT_DIR/keliver-runtime-line.sh" ] || { echo "keliver-runtime-line.sh is missing beside this script ($SCRIPT_DIR)"; exit 1; }
 # shellcheck source=keliver-runtime-line.sh
 . "$SCRIPT_DIR/keliver-runtime-line.sh"
-keliver_zipline_line "$KELIVER_VERSION" || { echo "KELIVER_VERSION '$KELIVER_VERSION' is not a version (<major>.<minor>.<patch>)"; exit 1; }
+keliver_zipline_line "$KELIVER_VERSION" || { echo "KELIVER_VERSION: $KELIVER_LINE_ERROR"; exit 1; }
 KOTLIN_VERSION="$TOOLCHAIN_KOTLIN"
 COMPOSE_VERSION="$TOOLCHAIN_COMPOSE"
 COROUTINES_VERSION="$TOOLCHAIN_COROUTINES"

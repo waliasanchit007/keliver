@@ -130,12 +130,26 @@ each line has one column in `scripts/keliver-runtime-line.sh` (the tools
 bundle's `bin/`). That table is the only place these versions live:
 `keliver-init`, the device target, the Android and iOS hosts and
 `keliver-app-wrapper.sh` all read it. Before 0.5.0 nothing changed: the 0.4
-line's output is byte-identical to what the scaffolders wrote before the table.
+line's output is byte-identical to what the scaffolders wrote before the table,
+and the host selftests compare it with recorded sha256 manifests
+(`scripts/fixtures/host-0.4.1/`).
 
-| | 0.4 line (before 0.5.0) | 0.5 line (0.5.0 and later, pre-releases too) | why the 0.5 value |
+The lines are named (0.4, 0.5): a version takes the newest line whose
+`<major>.<minor>` is not newer than its own (0.3.x takes 0.4). A version past
+the newest line the bundle knows is **refused** ("this tools bundle knows
+Keliver lines up to 0.5; Keliver 0.6.0 needs a newer tools bundle"), because
+the bundle cannot know that line's toolchain. The one exception is a
+`-SNAPSHOT` of the next minor (0.6.0-SNAPSHOT), which a checkout builds before
+its line exists: it gets the newest line, with a warning. A released line's
+column never changes; a new toolchain is a new column. The scaffolders refuse
+a `keliver.portal.json` that does not parse or names no
+`appRuntime.keliverVersion` (or set `KELIVER_HOST_KELIVER_VERSION`), and print
+the version and its line in their summary.
+
+| | 0.4 line (before 0.5.0) | 0.5 line (0.5.x, pre-releases too) | why the 0.5 value |
 |---|---|---|---|
 | Zipline | `app.cash.zipline` 1.22.0 | `dev.keliver.zipline` 1.28.0-keliver.1 | the fork (NF2) |
-| Kotlin | 2.2.0 | 2.4.20 | Keliver's catalog (the newest column must match it: `keliver-runtime-line-selftest.sh`) |
+| Kotlin | 2.2.0 | 2.4.20 | Keliver's catalog (the column of the version this checkout builds next, CHANGELOG.md's "Unreleased (X.Y.Z)", must match it: `keliver-runtime-line-selftest.sh`) |
 | Compose Multiplatform | 1.8.2 | 1.12.2 | the same |
 | coroutines, serialization | 1.10.2, 1.9.0 | 1.11.0, 1.13.0 | the same |
 | OkHttp (and `mockwebserver3`) | 5.1.0 | 5.5.1 | the same; the Android hosts call OkHttp themselves |
@@ -158,10 +172,16 @@ What the 0.5 line changes in what is written:
   2.4.20. `KELIVER_HOST_AGP_VERSION` set to an 8.x applies it again.
   When the app's wrapper is older than the AGP's floor (an app made by an
   earlier `keliver-init`), the scaffolder warns and prints the two lines to set.
-- **`--embed`** applies no Kotlin plugin, because the app's AGP 9 compiles the
-  module. An app that sets `android.builtInKotlin=false` adds
-  `id 'org.jetbrains.kotlin.android'` back. The module gets compileSdk 37, and
-  the scaffolder says the app needs AGP 9.1.0 or newer.
+- **`--embed`** follows the APP's AGP, which compiles the module: it reads that
+  AGP from the app's settings, root build file or version catalog, and
+  `android.builtInKotlin` from its `gradle.properties`. On AGP 9 with built-in
+  Kotlin (the default) the module applies no Kotlin plugin; on AGP 8, or with
+  `android.builtInKotlin=false`, it applies `org.jetbrains.kotlin.android`.
+  When the app's AGP cannot be read, the line's is assumed and the scaffolder
+  says to check the module's plugins. This holds on the 0.4 line too: a 0.4.1
+  host embedded into an AGP 9 app no longer applies the plugin AGP 9 refuses.
+  The module gets compileSdk 37, and the scaffolder says the app needs AGP
+  9.1.0 or newer.
 - **The iOS host** and **the device target** take their Zipline, Kotlin and
   Compose from the same table. Neither has an AGP.
 - **Images:** the Android hosts (standalone and `--embed`) and the iOS host

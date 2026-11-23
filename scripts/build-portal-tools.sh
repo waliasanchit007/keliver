@@ -29,14 +29,15 @@ for s in keliver-new-editor.sh keliver-new-device-target.sh; do
     exit 1
   }
 done
-# The host scaffolders' fallback (an app whose keliver.portal.json names no
-# version) must be the same version.
+# The host scaffolders have no fallback version: the app's Keliver version picks
+# its whole toolchain (keliver-runtime-line.sh), so an app whose
+# keliver.portal.json does not parse or names none is refused. A fixed fallback
+# coming back would silently give such an app one line's toolchain.
 for s in keliver-new-production-host.sh keliver-new-ios-host.sh; do
-  v="$(sed -nE "s/.*(v\.strip\(\) else|except Exception: print\()[ ]*'([^']+)'.*/\2/p" "$ROOT/scripts/$s" | sort -u)"
-  [ "$v" = "$MAVEN_VERSION" ] || {
-    echo "build-portal-tools: scripts/$s falls back to keliver '$(echo $v)' but keliver-init wires '$MAVEN_VERSION'; move them together" >&2
+  if grep -qE "(v\.strip\(\) else|except Exception: print\()[ ]*'[0-9]" "$ROOT/scripts/$s"; then
+    echo "build-portal-tools: scripts/$s falls back to a fixed keliver version for an app that names none; it must refuse instead" >&2
     exit 1
-  }
+  fi
 done
 SOURCE_COMMIT="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
 SOURCE_DIRTY="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"

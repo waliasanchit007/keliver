@@ -31,8 +31,8 @@ Move it together with the templates' pins, never with the repo's wrapper.
 This file is the **0.4 line's** wrapper (apps before Keliver 0.5.0). The Gradle
 of each line, with its sha256, is in `scripts/keliver-runtime-line.sh`'s table,
 and `scripts/keliver-runtime-line-selftest.sh` fails if this file's Gradle
-differs from that table's 0.4 column. An app on 0.5.0 or later gets the 0.5
-line's Gradle (9.7.0, which AGP 9.3.1 needs) instead.
+differs from that table's 0.4 column. An app on a later line gets that line's
+Gradle instead (the 0.5 line: 9.7.1, since its AGP 9.3.3 needs 9.5.0 or newer).
 `keliver-init` and `keliver-app-wrapper.sh <dir> <keliver version>` rewrite the
 two `distribution*` lines with `keliver_line_wrapper_properties`; for the 0.4
 line they leave this file byte-identical (docs/DEVICE_HOST.md, "Toolchain per line").

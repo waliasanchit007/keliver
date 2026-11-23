@@ -18,6 +18,12 @@ DEST="${1:?usage: $0 <dir> [keliver version]}"
 VERSION="${2:-}"
 PROPS="$ROOT/scripts/templates/app-wrapper/wrapper.properties"
 [ -f "$PROPS" ] || { echo "keliver-app-wrapper: $PROPS is missing" >&2; exit 1; }
+# The version's line first: a version this bundle has no line for writes nothing.
+if [ -n "$VERSION" ]; then
+  # shellcheck source=keliver-runtime-line.sh
+  . "$ROOT/scripts/keliver-runtime-line.sh"
+  keliver_zipline_line "$VERSION" || { echo "keliver-app-wrapper: $KELIVER_LINE_ERROR" >&2; exit 1; }
+fi
 mkdir -p "$DEST/gradle/wrapper"
 cp "$ROOT/gradlew" "$DEST/gradlew"
 [ -f "$ROOT/gradlew.bat" ] && cp "$ROOT/gradlew.bat" "$DEST/gradlew.bat"
@@ -25,9 +31,6 @@ cp "$ROOT/gradle/wrapper/gradle-wrapper.jar" "$DEST/gradle/wrapper/gradle-wrappe
 cp "$PROPS" "$DEST/gradle/wrapper/gradle-wrapper.properties"
 chmod 755 "$DEST/gradlew"
 if [ -n "$VERSION" ]; then
-  # shellcheck source=keliver-runtime-line.sh
-  . "$ROOT/scripts/keliver-runtime-line.sh"
-  keliver_zipline_line "$VERSION" || { echo "keliver-app-wrapper: '$VERSION' is not a version" >&2; exit 1; }
   keliver_line_wrapper_properties "$DEST/gradle/wrapper/gradle-wrapper.properties" \
     || { echo "keliver-app-wrapper: could not write Gradle $TOOLCHAIN_GRADLE" >&2; exit 1; }
 fi
