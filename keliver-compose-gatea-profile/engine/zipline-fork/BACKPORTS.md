@@ -172,14 +172,16 @@ prints "out of memory" and goes on. The others were not reproduced.
 |---|---|---|
 | `js_proxy_get_own_property_names` | an `ownKeys` trap returning `{ length: 2 ** 29 + 1 }` (`Reflect.ownKeys`, `Object.keys`, `for…in`, …). Upstream's e25861c limits the length to 2^31 - 1, which does not prevent the wrap | a RangeError for a length over `JS_PROXY_OWNKEYS_MAX` (2^27) **on every host**, before allocating: 2^27 keys is a 1 GiB table, and the duplicate-key check after it is quadratic, so no result near that size ever finished anyway. Unguarded, a 64-bit host allocated 4 GiB for that length before failing. Tested on the JVM (`proxyOwnKeysWithAHugeLengthThrows`) |
 | `JS_GetOwnPropertyNamesInternal` | any object with over 2^29 own keys, its count limited to 2^31 - 1 only: a typed array (`Object.keys(new Uint8Array(2 ** 29))`, a 512 MiB buffer) or another fast array, or a String object (`Object.getOwnPropertyNames(new String(s))` with `s` over 2^29 characters; strings go to 2^30 - 1) | the existing out-of-memory exit when the table cannot be addressed, on the total count; no change on 64-bit |
-| `expand_fast_array` | `Array.prototype.toReversed.call({ length: 2 ** 29 + 1 })`, and `toSorted`, `toSpliced` and `with` (`js_allocate_fast_array` takes any length up to 2^31 - 1) | out of memory when the array cannot be addressed; no change on 64-bit. Run on a device by `size-guards.js` (below) |
+| `expand_fast_array` | `Array.prototype.toReversed.call({ length: 2 ** 29 + 1 })`, and `toSorted`, `toSpliced` and `with` (`js_allocate_fast_array` takes any length up to 2^31 - 1) | out of memory when the array cannot be addressed; no change on 64-bit. Run by `size-guards.js` (below) on every fork workflow run, in CI's `host32` job (a 32-bit build, against the unpatched control), and on a device by hand |
 | `js_typed_array_sort` (with a comparator) | `new Uint8Array(2 ** 30).sort(f)`: the index table is 4 bytes per element | out of memory when the table cannot be addressed, checked before the copy of the array is allocated; no change on 64-bit |
 
 **Where they run.** The Proxy cap is tested on every host (above). The 32-bit wraps need a 32-bit
 host: `size-guards.js` (`toReversed`, `toSorted`, `toSpliced` and `with` on `{ length: 2 ** 29 + 1 }`,
-under a 64 MiB memory limit) must print `size-guards.expected`, "InternalError: out of memory" on
-each line, on every build. On a 32-bit host that line comes from the guard, and the unpatched
-release, the control, must print something else (it writes past an 8-byte table; a crash counts).
+under a 64 MiB memory limit, each case in its own process) must print `size-guards.expected`,
+"InternalError: out of memory" on each line, on every build. On a 32-bit host that line comes from
+the guard, and the unpatched release, the control, must print something else on every case (it
+writes past an 8-byte table; a crash counts). One process per case is what makes the control prove
+each line: run together, the control's crash on `toReversed` ended the process before the others.
 That runs on every fork workflow run, in the `host32` job: `apply.sh qjs32host` builds qjs on Linux
 with QuickJS's `CONFIG_M32` (`gcc -m32`, gcc-multilib), patched and unpatched, every file compiled
 with a static assert that `size_t` is 4 bytes, and `apply.sh check-bigint32` runs `size-guards.js`

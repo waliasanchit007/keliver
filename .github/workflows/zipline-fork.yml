@@ -266,9 +266,10 @@ jobs:
   # The fork's 32-bit size guards on a real 32-bit build (size_t is 4 bytes, as on armeabi-v7a and
   # x86), which no other job has: qjs from the patched engine and the unpatched release with
   # QuickJS's CONFIG_M32 (gcc -m32, gcc-multilib), each file compiled with a static assert that
-  # size_t is 4 bytes. bigint-ops.js must match Node; size-guards.js must print
-  # size-guards.expected on the patched build (only the guard can) and must not on the unpatched
-  # one (a crash there counts as "differs"). Minutes on ubuntu-latest, in parallel with fork.
+  # size_t is 4 bytes. bigint-ops.js must match Node; size-guards.js, one process per case, must
+  # print each case's size-guards.expected lines on the patched build (only the guard can) and must
+  # not on the unpatched one, on any case (a crash there counts as "differs"). Minutes on
+  # ubuntu-latest, in parallel with fork.
   host32:
     name: 32-bit host build, size guards and BigInt
     needs: guard

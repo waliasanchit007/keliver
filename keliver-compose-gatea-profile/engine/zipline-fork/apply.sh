@@ -11,15 +11,18 @@
 #                             zipline/src/jvmMain/resources/jni; --warnings builds with -Wall, not -w
 #   apply.sh qjs     <work>   build the patched engine's command-line qjs twice: 64-bit BigInt limbs and
 #                             32-bit limbs (as on a 32-bit host such as armeabi-v7a), for check-bigint
-#   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and both qjs builds; fail on any difference;
-#                             and size-guards.js on every build, which must print size-guards.expected
+#   apply.sh check-bigint <work>   run ../bigint-ops.js in Node and the qjs builds: the patched ones must
+#                             match and exit 0, the unpatched ones must not match; and size-guards.js on
+#                             every build and run-js, one process per case, each of which must print its
+#                             size-guards.expected lines (the patched ones exiting 0)
 #   apply.sh qjs32host <work>   Linux x86-64 with gcc-multilib (CI's host32 job): qjs for a 32-bit host
 #                             (QuickJS's CONFIG_M32: gcc -m32, 4-byte size_t, NaN-boxing, 32-bit limbs),
 #                             the patched engine and the unpatched release; every file compiled with a
 #                             static assert that size_t is 4 bytes, and the executables checked as ELF 32-bit
 #   apply.sh check-bigint32 <work>   after qjs32host: bigint-ops.js against Node (the patched build must
-#                             match, the control must not), and size-guards.js: the patched build must
-#                             print size-guards.expected (only the guard can), the control must not
+#                             match and exit 0, the control must not match), and size-guards.js, one
+#                             process per case: on each, the patched build must print the case's
+#                             size-guards.expected lines and exit 0 (only the guard can), the control must not
 #   apply.sh android <work>   build the Android AAR (zipline-android-ndk: Zipline's CMake and release
 #                             flags, -fwrapv) for arm64-v8a, armeabi-v7a, x86_64 and x86 with the NDK, and
 #                             check each ABI's libquickjs.so is in it, built with those flags, and (64-bit
@@ -30,9 +33,10 @@
 #   apply.sh check-bigint-device <work> [serial]   run ../bigint-ops.js on a device or emulator over adb
 #                             (serial, else ANDROID_SERIAL) for every ABI it supports; on a 32-bit ABI
 #                             this exercises NaN-boxed values (JS_NAN_BOXING) and 32-bit limbs; both
-#                             builds must start, and the fork's must exit 0; then size-guards.js,
-#                             whose expected lines the fork's build must print on every ABI and the
-#                             unpatched release must not on a 32-bit ABI (as check-bigint32 in CI)
+#                             builds must start, and the fork's must exit 0; then size-guards.js, one
+#                             process per case, whose expected lines the fork's build must print on every
+#                             ABI and the unpatched release must not, on any case, on a 32-bit ABI (as
+#                             check-bigint32 in CI)
 #   apply.sh ios     <work>   step 3: build the iOS targets (iosArm64, iosSimulatorArm64) with Zipline's own
 #                             build: cklib's QuickJS bitcode (checks each compile line has Zipline's flags
 #                             and -fwrapv), the patched nativeMain and quickjs.def, and the test executables
@@ -275,8 +279,46 @@ bounded() { # <seconds> <stdout> <stderr, or the stdout file again> <command...>
   fi
 }
 
+size_guards_split() { # <dir>: size-guards.js and size-guards.expected cut into one script and one
+  # expected file per case (each expected line but "after", and "after"), the names in sg_cases, so
+  # each case runs in its own process: a crash in the control on one case cannot hide the next.
+  local dir="$1" c
+  mkdir -p "$dir"
+  sg_cases="$(sed -n 's/^\([A-Za-z]*\): .*/\1/p' "$here/size-guards.expected" | grep -vx after || true)"
+  [ -n "$sg_cases" ] || { echo "size-guards.expected names no case" >&2; return 1; }
+  for c in $sg_cases; do
+    { echo "var SIZE_GUARDS_CASE = '$c';"; cat "$here/size-guards.js"; } > "$dir/size-guards-$c.js"
+    grep -E "^($c|after): " "$here/size-guards.expected" > "$dir/size-guards-$c.expected"
+  done
+}
+
+size_guards_judge() { # <tag> <label> <want> <expected> <output .txt> <rc> <why it matches>: one
+  # case's outcome. <want>: "patched", the fork's build, which must print the expected lines and exit
+  # 0; "differ", the control where only the guard gives those lines (a 32-bit host; a crash or a
+  # timeout counts as differing); "match", the control where the memory limit gives them (the Mac's
+  # 64-bit builds); "note", only reported (a 64-bit ABI). Returns 1 on a failure.
+  local tag="$1" label="$2" want="$3" exp="$4" got="$5" rc="$6" why="$7" d="${5%.txt}.diff" e="${5%.txt}.err"
+  if diff -u "$exp" "$got" > "$d"; then
+    case "$want" in
+      differ) echo "$tag: $label matches its expected lines: the control did not fail, so the guard is not what makes the fork pass" >&2; return 1 ;;
+      patched) echo "$tag: $label matches its expected lines, exit ${rc:-?} ($why)"
+               [ "$rc" = 0 ] || { echo "$tag: $label exited ${rc:-?}" >&2; return 1; } ;;
+      *) echo "$tag: $label matches its expected lines, exit ${rc:-?} ($why)" ;;
+    esac
+    return 0
+  fi
+  case "$want" in
+    differ) echo "$tag: $label differs from its expected lines, exit ${rc:-?}, as expected (no guard)"; return 0 ;;
+    note) echo "$tag: $label: NOTE differs from its expected lines on a 64-bit ABI, exit ${rc:-?} ($d)"; return 0 ;;
+  esac
+  echo "$tag: $label differs from its expected lines, exit ${rc:-?} ($d)" >&2
+  head -10 "$d" | sed 's/^/  /' >&2
+  [ -f "$e" ] && head -3 "$e" | sed 's/^/  stderr: /' >&2
+  return 1
+}
+
 check_ops() { # <out dir> <check name> <build name>...: ../bigint-ops.js in Node and in each build's qjs;
-  # a patched build must match Node, the unpatched control must not. Returns 1 on a failure.
+  # a patched build must match Node and exit 0, the unpatched control must not match. Returns 1 on a failure.
   local ops="$here/../bigint-ops.js" out="$1" tag="$2" name fail=0 lines; shift 2
   mkdir -p "$out"
   node "$ops" > "$out/node.txt"
@@ -284,61 +326,57 @@ check_ops() { # <out dir> <check name> <build name>...: ../bigint-ops.js in Node
   for name in "$@"; do
     bounded 60 "$out/$name.txt" "$out/$name.txt" "$work/build/$name/qjs" "$ops"
     if diff -u "$out/node.txt" "$out/$name.txt" > "$out/$name.diff"; then
-      echo "$tag: $name matches Node on all $lines lines"
+      echo "$tag: $name matches Node on all $lines lines, exit $rc"
       case "$name" in *unpatched) echo "$tag: the control did not fail; the check is too weak" >&2; fail=1 ;; esac
     else
       echo "$tag: $name differs from Node on $(grep -c '^-[^-]' "$out/$name.diff") of $lines lines, exit $rc ($out/$name.diff)"
       case "$name" in *unpatched) ;; *) fail=1 ;; esac
     fi
+    # The fork's build must also exit cleanly (a crash after the last line would not show in the diff).
+    case "$name" in *unpatched) ;; *) [ "$rc" = 0 ] || { echo "$tag: $name exited $rc" >&2; fail=1; } ;; esac
   done
   return $fail
 }
 
 do_check_bigint32() { # after qjs32host: bigint-ops.js against Node, and size-guards.js, where only the guard passes
-  local out="$work/bigint-check32" name fail=0
+  local out="$work/bigint-check32" sg="$work/bigint-check32/size-guards" name c want fail=0
   check_ops "$out" check-bigint32 qjs32 qjs32-unpatched || fail=1
-  # size-guards.js under the memory limit: with a 4-byte size_t each length overflows the
-  # allocation size, so the patched build prints size-guards.expected only through the guard, and
-  # the unpatched release must not print it (it may crash: a signal counts as "differs").
-  for name in qjs32 qjs32-unpatched; do
-    bounded 120 "$out/$name-size-guards.txt" "$out/$name-size-guards.err" \
-      "$work/build/$name/qjs" --memory-limit "$SIZE_GUARDS_LIMIT" "$here/size-guards.js"
-    if diff -u "$here/size-guards.expected" "$out/$name-size-guards.txt" > "$out/$name-size-guards.diff"; then
-      case "$name" in
-        *unpatched) echo "check-bigint32: $name size-guards.js matches size-guards.expected: the control did not fail, so the guard is not what makes the fork pass" >&2; fail=1 ;;
-        *) echo "check-bigint32: $name size-guards.js matches size-guards.expected, exit $rc (32-bit host: the guard)"
-           [ "$rc" = 0 ] || { echo "check-bigint32: $name size-guards.js exited $rc" >&2; fail=1; } ;;
-      esac
-    else
-      case "$name" in
-        *unpatched) echo "check-bigint32: $name size-guards.js differs from size-guards.expected, exit $rc, as expected (no guard)" ;;
-        *) echo "check-bigint32: $name size-guards.js differs from size-guards.expected, exit $rc ($out/$name-size-guards.diff)" >&2; fail=1 ;;
-      esac
-      head -20 "$out/$name-size-guards.diff" | sed 's/^/  /'
-      head -5 "$out/$name-size-guards.err" | sed 's/^/  stderr: /'
-    fi
+  # size-guards.js under the memory limit, each case in its own process: with a 4-byte size_t each
+  # length overflows the allocation size, so the patched build prints the case's line only through
+  # the guard, and the unpatched release must not print it on any case (a crash counts as "differs").
+  size_guards_split "$sg" || return 1
+  for c in $sg_cases; do
+    for name in qjs32 qjs32-unpatched; do
+      case "$name" in *unpatched) want=differ ;; *) want=patched ;; esac
+      bounded 120 "$out/$name-size-guards-$c.txt" "$out/$name-size-guards-$c.err" \
+        "$work/build/$name/qjs" --memory-limit "$SIZE_GUARDS_LIMIT" "$sg/size-guards-$c.js"
+      size_guards_judge check-bigint32 "$name size-guards.js $c" "$want" "$sg/size-guards-$c.expected" \
+        "$out/$name-size-guards-$c.txt" "$rc" "32-bit host: the guard" || fail=1
+    done
   done
   return $fail
 }
 
 do_check_bigint() {
-  local out="$work/bigint-check" name fail=0
+  local out="$work/bigint-check" sg="$work/bigint-check/size-guards" name c want exe fail=0
   check_ops "$out" check-bigint qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched || fail=1
-  # size-guards.js, the fork's 32-bit size guards, under a memory limit: on this 64-bit Mac every
-  # build, patched or not, must print size-guards.expected (each 4 GiB table fails on the limit, as
-  # "out of memory"). The 32-bit case, where only the guard gives that line, is check-bigint32's
-  # (a 32-bit Linux build in CI) and check-bigint-device's.
-  # Also through run-js (the same option), the runner check-bigint-device uses.
-  local exe
-  for name in qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched run-js; do
-    exe="$work/build/$name/qjs"; [ "$name" = run-js ] && exe="$work/build/run-js/run-js"
-    bounded 60 "$out/$name-size-guards.txt" "$out/$name-size-guards.err" \
-      "$exe" --memory-limit "$SIZE_GUARDS_LIMIT" "$here/size-guards.js"
-    if diff -u "$here/size-guards.expected" "$out/$name-size-guards.txt" > "$out/$name-size-guards.diff"; then
-      echo "check-bigint: $name size-guards.js matches size-guards.expected: out of memory, then the context still works (64-bit: the memory limit)"
-    else
-      echo "check-bigint: $name size-guards.js differs from size-guards.expected ($out/$name-size-guards.diff; stderr: $(head -3 "$out/$name-size-guards.err" | tr '\n' ' '))" >&2; fail=1
-    fi
+  # size-guards.js, the fork's 32-bit size guards, under a memory limit, each case in its own
+  # process: on this 64-bit Mac every build, patched or not, must print the case's line (each 4 GiB
+  # table fails on the limit, as "out of memory"), and the patched builds must exit 0. The 32-bit
+  # case, where only the guard gives that line, is check-bigint32's (a 32-bit Linux build in CI)
+  # and check-bigint-device's. Also through run-js (the same option), the runner
+  # check-bigint-device uses.
+  mkdir -p "$out"
+  size_guards_split "$sg" || return 1
+  for c in $sg_cases; do
+    for name in qjs64 qjs32limb qjs64-unpatched qjs32limb-unpatched run-js; do
+      exe="$work/build/$name/qjs"; [ "$name" = run-js ] && exe="$work/build/run-js/run-js"
+      case "$name" in *unpatched) want=match ;; *) want=patched ;; esac
+      bounded 60 "$out/$name-size-guards-$c.txt" "$out/$name-size-guards-$c.err" \
+        "$exe" --memory-limit "$SIZE_GUARDS_LIMIT" "$sg/size-guards-$c.js"
+      size_guards_judge check-bigint "$name size-guards.js $c" "$want" "$sg/size-guards-$c.expected" \
+        "$out/$name-size-guards-$c.txt" "$rc" "64-bit: the memory limit" || fail=1
+    done
   done
   return $fail
 }
@@ -484,7 +522,11 @@ do_check_bigint_device() {
   trap dev_cleanup EXIT
   "${adb[@]}" shell "rm -rf $dir && mkdir -p $dir" >/dev/null
   "${adb[@]}" push "$ops" "$dir/bigint-ops.js" >/dev/null # a failed push stops the script
-  "${adb[@]}" push "$here/size-guards.js" "$dir/size-guards.js" >/dev/null
+  local sg="$out/size-guards" c want
+  size_guards_split "$sg" || exit 1
+  for c in $sg_cases; do
+    "${adb[@]}" push "$sg/size-guards-$c.js" "$dir/size-guards-$c.js" >/dev/null
+  done
   for abi in $ANDROID_ABIS; do
     case ",$abis," in *",$abi,"*) ;; *) echo "check-bigint-device: $abi: not supported by $serial, not run"; continue ;; esac
     for name in run-js run-js-unpatched; do
@@ -512,32 +554,23 @@ do_check_bigint_device() {
       # The fork's build must also exit cleanly (an exception after the last line would not show in the diff).
       case "$name" in *unpatched) ;; *) [ "$rc" = 0 ] || { echo "check-bigint-device: $abi $name exited ${rc:-?}" >&2; fail=1; } ;; esac
     done
-    # size-guards.js under the memory limit (its header comment): the fork's build prints
-    # size-guards.expected on every ABI. On a 32-bit ABI only the guard gives those lines (the
-    # unpatched release wraps the size and writes past an 8-byte table: it must differ, the control);
-    # on a 64-bit ABI the 4 GiB tables fail on the limit, patched or not.
-    local bits
-    case "$abi" in armeabi-v7a|x86) bits=32 ;; *) bits=64 ;; esac
-    for name in run-js run-js-unpatched; do
-      "${adb[@]}" shell "cd $dir && timeout 120 ./$abi-$name --memory-limit $SIZE_GUARDS_LIMIT size-guards.js 2> $abi-$name-sg.err; echo \$? > $abi-$name-sg.rc" \
-        > "$out/$abi-$name-size-guards.txt" || true
-      rc="$("${adb[@]}" shell cat "$dir/$abi-$name-sg.rc" 2>/dev/null | tr -d '\r\n')" || true
-      tr -d '\r' < "$out/$abi-$name-size-guards.txt" > "$out/$abi-$name-size-guards.tmp" && mv "$out/$abi-$name-size-guards.tmp" "$out/$abi-$name-size-guards.txt"
-      if diff -u "$here/size-guards.expected" "$out/$abi-$name-size-guards.txt" > "$out/$abi-$name-size-guards.diff"; then
-        case "$name/$bits" in
-          *unpatched/32) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected: the control did not fail" >&2; fail=1 ;;
-          *unpatched/64) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected (64-bit: the memory limit, as expected)" ;;
-          */32) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected, exit $rc (32-bit: the guard)" ;;
-          *) echo "check-bigint-device: $abi $name size-guards.js matches size-guards.expected, exit $rc (64-bit: the memory limit)" ;;
-        esac
-      else
-        case "$name/$bits" in
-          *unpatched/32) echo "check-bigint-device: $abi $name size-guards.js differs from size-guards.expected, exit ${rc:-?}, as expected (no guard on a 32-bit ABI)" ;;
-          *unpatched/64) echo "check-bigint-device: $abi $name size-guards.js: NOTE differs from size-guards.expected on a 64-bit ABI, exit ${rc:-?} ($out/$abi-$name-size-guards.diff)" ;;
-          *) echo "check-bigint-device: $abi $name size-guards.js differs from size-guards.expected, exit ${rc:-?} ($out/$abi-$name-size-guards.diff)" >&2; fail=1 ;;
-        esac
-      fi
-      case "$name" in *unpatched) ;; *) [ "$rc" = 0 ] || { echo "check-bigint-device: $abi $name size-guards.js exited ${rc:-?}" >&2; fail=1; } ;; esac
+    # size-guards.js under the memory limit (its header comment), each case in its own process: the
+    # fork's build prints each case's line on every ABI and exits 0. On a 32-bit ABI only the guard
+    # gives those lines (the unpatched release wraps the size and writes past an 8-byte table: it
+    # must differ on every case, the control); on a 64-bit ABI the 4 GiB tables fail on the limit,
+    # patched or not.
+    local bits why
+    case "$abi" in armeabi-v7a|x86) bits=32 why="32-bit: the guard" ;; *) bits=64 why="64-bit: the memory limit" ;; esac
+    for c in $sg_cases; do
+      for name in run-js run-js-unpatched; do
+        case "$name/$bits" in *unpatched/32) want=differ ;; *unpatched/64) want=note ;; *) want=patched ;; esac
+        "${adb[@]}" shell "cd $dir && timeout 120 ./$abi-$name --memory-limit $SIZE_GUARDS_LIMIT size-guards-$c.js 2> $abi-$name-sg.err; echo \$? > $abi-$name-sg.rc" \
+          < /dev/null > "$out/$abi-$name-size-guards-$c.txt" || true
+        rc="$("${adb[@]}" shell cat "$dir/$abi-$name-sg.rc" < /dev/null 2>/dev/null | tr -d '\r\n')" || true
+        tr -d '\r' < "$out/$abi-$name-size-guards-$c.txt" > "$out/$abi-$name-size-guards-$c.tmp" && mv "$out/$abi-$name-size-guards-$c.tmp" "$out/$abi-$name-size-guards-$c.txt"
+        size_guards_judge check-bigint-device "$abi $name size-guards.js $c" "$want" "$sg/size-guards-$c.expected" \
+          "$out/$abi-$name-size-guards-$c.txt" "$rc" "$why" || fail=1
+      done
     done
     ran=$((ran + 1))
     case "$abi" in armeabi-v7a|x86) ran32=$((ran32 + 1)) ;; esac
