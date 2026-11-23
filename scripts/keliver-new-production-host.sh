@@ -268,19 +268,24 @@ PY
     fi
   fi
   [[ "$EMBED_AGP" =~ $VERSION_RE ]] || fail "the existing app's AGP version is not a version: '$EMBED_AGP'."
+  EMBED_NEW_DSL=""
   if [ -f "$INTO/gradle.properties" ]; then
     EMBED_BUILTIN_KOTLIN="$(sed -nE 's/^[[:space:]]*android\.builtInKotlin[[:space:]]*[=:][[:space:]]*([A-Za-z]+)[[:space:]]*$/\1/p' "$INTO/gradle.properties" | tail -1 | tr 'A-Z' 'a-z')"
+    EMBED_NEW_DSL="$(sed -nE 's/^[[:space:]]*android\.newDsl[[:space:]]*[=:][[:space:]]*([A-Za-z]+)[[:space:]]*$/\1/p' "$INTO/gradle.properties" | tail -1 | tr 'A-Z' 'a-z')"
   fi
   if [ "${EMBED_AGP%%.*}" -ge 9 ] 2>/dev/null; then
     if [ "$EMBED_BUILTIN_KOTLIN" = false ]; then
       EMBED_KOTLIN_PLUGIN="  id 'org.jetbrains.kotlin.android' // this app sets android.builtInKotlin=false: its AGP $EMBED_AGP does not compile Kotlin"
+      # Measured on AGP 9.3.3: the plugin is refused under AGP 9's new DSL, which is on by default.
+      [ "$EMBED_NEW_DSL" = false ] || EMBED_KOTLIN_NOTE="warning: $INTO sets android.builtInKotlin=false but not android.newDsl=false: AGP $EMBED_AGP refuses org.jetbrains.kotlin.android (which this module, like the app's own modules, then applies) under its new DSL. Set android.newDsl=false in its gradle.properties, or drop android.builtInKotlin=false."
     else
       EMBED_KOTLIN_PLUGIN="  // Kotlin: AGP 9 compiles this module itself (built-in Kotlin). An app that sets
   // android.builtInKotlin=false applies id 'org.jetbrains.kotlin.android' here instead."
     fi
   fi
   if [ -z "$EMBED_AGP_FROM" ]; then
-    EMBED_KOTLIN_NOTE="note: could not read $INTO's AGP version (its settings, root build file and gradle/libs.versions.toml name none); the module's Kotlin plugin line assumes AGP $EMBED_AGP, the line's. On AGP 9 with built-in Kotlin (the default) it must not apply org.jetbrains.kotlin.android; on AGP 8, or with android.builtInKotlin=false, it must: check $MODULE/build.gradle's plugins."
+    EMBED_KOTLIN_NOTE="${EMBED_KOTLIN_NOTE:+$EMBED_KOTLIN_NOTE
+}note: could not read $INTO's AGP version (its settings, root build file and gradle/libs.versions.toml name none); the module's Kotlin plugin line assumes AGP $EMBED_AGP, the line's. On AGP 9 with built-in Kotlin (the default) it must not apply org.jetbrains.kotlin.android; on AGP 8, or with android.builtInKotlin=false, it must: check $MODULE/build.gradle's plugins."
   fi
 fi
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"

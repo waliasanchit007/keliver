@@ -853,10 +853,16 @@ embed_kotlin() {
   elif grep -q "^  // Kotlin: AGP 9 compiles this module itself (built-in Kotlin)" "$lf"; then got=builtin
   else got=none; fi
   [ "$rc" = 0 ] && [ "$got" = "$want" ] && ok "L1: --embed, $label: $want" || bad "L1: --embed, $label: rc=$rc, got $got (want $want) $(printf '%s' "$out" | grep -E 'Kotlin plugin' | tr '\n' ' ')"
+  # AGP 9 refuses Kotlin's Android plugin unless android.newDsl=false too (measured on 9.3.3).
+  local newdsl_warned=no; printf '%s' "$out" | grep -q "^warning: .* sets android.builtInKotlin=false but not android.newDsl=false" && newdsl_warned=yes
+  case "$want|$props" in
+    builtin-false\|*newDsl=false*|builtin\|*|applied\|*) [ "$newdsl_warned" = no ] || bad "L1: --embed, $label: warned about android.newDsl" ;;
+    builtin-false\|*) [ "$newdsl_warned" = yes ] && ok "L1: --embed, $label: warns that AGP 9 also needs android.newDsl=false" || bad "L1: --embed, $label: no android.newDsl warning" ;;
+  esac
   rm -rf "$d"
 }
 F05="$DISP/fork-0-5-0-fresh"
-embed_kotlin "0.5.0 into AGP 9.3.3 (catalog), builtInKotlin=false" "$F05" "android.builtInKotlin=false\n" gradle/libs.versions.toml \
+embed_kotlin "0.5.0 into AGP 9.3.3 (catalog), builtInKotlin=false" "$F05" "android.builtInKotlin=false\nandroid.newDsl=false\n" gradle/libs.versions.toml \
   '[versions]\nagp = "9.3.3"\n[plugins]\nandroid-application = { id = "com.android.application", version.ref = "agp" }\n' builtin-false
 embed_kotlin "0.5.0 into AGP 9.3.3 (settings), builtInKotlin = true" "$F05" "android.builtInKotlin = true\n" settings.gradle \
   "plugins { id 'com.android.application' version '9.3.3' apply false }\n" builtin
