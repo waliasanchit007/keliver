@@ -6,8 +6,10 @@ name: Nightly full build
 # that gap let 51 task failures pile up on main unseen. A red run here is that drift showing up
 # within a day. Owner decision 2026-11-23.
 #
-# A failed scheduled run is emailed to whoever last changed the cron line, and is listed under
-# Actions. Fix it on main like any other red build.
+# A failed scheduled run is listed under Actions and notifies the user who last changed the cron
+# line (or who last re-enabled the workflow), by email only if their Actions notification settings
+# allow it. GitHub silently disables schedules in a public repository after 60 days without
+# activity. Fix a red run on main like any other red build.
 
 on:
   schedule:
@@ -16,6 +18,11 @@ on:
 
 permissions:
   contents: read
+
+# The same Gradle memory and daemon settings as ci.yml: this graph is larger (it adds every
+# assemble task, the iOS release framework links and Android lint).
+env:
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
 
 concurrency:
   group: nightly-full-build
@@ -26,9 +33,12 @@ jobs:
     name: build apiCheck (full graph)
     # Only on the main repository: a fork's copy of this schedule does nothing.
     if: github.repository == 'waliasanchit007/keliver'
-    runs-on: ${{ vars.CI_RUNNER || 'macos-latest' }}
+    # Always a hosted runner: up to four hours a night would tie up the self-hosted Mac, which
+    # also drops off on battery.
+    runs-on: macos-latest
     # ci.yml's build job takes 85-100 minutes for a narrower task list; the whole graph measured
-    # 12 minutes warm on the owner's Mac but is cold here. 240 is a ceiling, not an estimate.
+    # 12 minutes warm on the owner's Mac but is cold here. 240 is a ceiling, not an estimate: it is
+    # set from the first dispatched run after merge.
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
@@ -50,11 +60,13 @@ jobs:
           --continue
           -DRELEASE_SIGNING_ENABLED=false
 
-      - name: Test reports (on failure)
-        if: failure()
+      - name: Reports (on failure or timeout)
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-test-reports
-          path: '**/build/reports/tests/**'
+          name: nightly-reports
+          path: |
+            **/build/reports/tests/**
+            **/build/reports/lint-results*
           if-no-files-found: ignore
           retention-days: 14
