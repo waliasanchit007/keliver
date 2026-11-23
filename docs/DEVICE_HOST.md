@@ -709,7 +709,15 @@ neither loads the other's. **One engine** (the owner, 2026-11-22): from Keliver
 every bundle is compiled for `quickjs-2026` and published once; no app ever
 shipped on QuickJS 2021, so nothing is published for it. The scaffolders write
 the fork only for an app on Keliver 0.5.0 or later (an app on 0.4.x keeps
-upstream Zipline 1.22.0, whose bundles name no engine). The machinery below
+upstream Zipline 1.22.0, whose bundles name no engine). **The bundled
+development host no longer serves the 0.4 line:** it is built from the
+checkout, so from NF2 it runs only QuickJS 2026 and cannot load a 0.4.x app's
+guest (the development path has no engine check; the guest fails with QuickJS's
+own bytecode-version error). The tools zip that carries it therefore also moves
+its scaffolders' default to 0.5.x, in the first tools release after the 0.5.0
+libraries release; until then `scripts/build-portal-tools.sh` refuses to build
+(`docs/PORTAL_TOOLS_RELEASE.md`, "Zipline line"). A 0.4.x app keeps the host
+of the tools release it was scaffolded with (0.3.18 or earlier). The machinery below
 also serves several engines, and each host only ever receives the bundle its
 engine loads (D2):
 - **Naming.** An engine is `quickjs-2021` (the default: every bundle from

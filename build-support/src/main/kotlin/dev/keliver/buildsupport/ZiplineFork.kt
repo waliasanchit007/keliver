@@ -37,8 +37,14 @@ internal const val LONG_AS_BIGINT_FLAG = "-Xes-long-as-bigint"
 /** `-Pkeliver.longAsBigInt=false` links guests with Kotlin/JS's emulated Long again (measurement). */
 private const val LONG_AS_BIGINT_PROPERTY = "keliver.longAsBigInt"
 
-/** `-Pkeliver.allowUpstreamZipline` skips [refuseUpstreamZipline] (a baseline measurement only). */
+/**
+ * `-Pkeliver.allowUpstreamZipline` (or `=true`) skips [refuseUpstreamZipline] (a baseline
+ * measurement only); `=false` keeps the check, as `-Pkeliver.longAsBigInt=false` is read.
+ */
 private const val ALLOW_UPSTREAM_PROPERTY = "keliver.allowUpstreamZipline"
+
+/** Whether the value of `-Pkeliver.allowUpstreamZipline` (null when absent) skips the check. */
+internal fun allowsUpstreamZipline(value: String?): Boolean = value != null && value.trim() != "false"
 
 /**
  * Every Zipline guest (a project applying the Zipline plugin) links its Kotlin/JS executables,
@@ -77,7 +83,7 @@ internal fun Project.configureZiplineGuestLongAsBigInt() {
  * comes first.
  */
 internal fun Project.refuseUpstreamZipline() {
-  if (providers.gradleProperty(ALLOW_UPSTREAM_PROPERTY).isPresent) return
+  if (allowsUpstreamZipline(providers.gradleProperty(ALLOW_UPSTREAM_PROPERTY).orNull)) return
   val owner = path
   configurations.configureEach { configuration -> refuseUpstreamZiplineIn(configuration, "project $owner") }
   // The build script's classpath (the Zipline Gradle plugin among it) is resolved before any plugin
