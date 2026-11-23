@@ -2870,10 +2870,10 @@ index 0000000..82bcab6
 +}
 diff --git a/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
 new file mode 100644
-index 0000000..82a41ef
+index 0000000..28fb06e
 --- /dev/null
 +++ b/zipline/src/hostTest/kotlin/app/cash/zipline/QuickJs2026Test.kt
-@@ -0,0 +1,298 @@
+@@ -0,0 +1,309 @@
 +/*
 + * Copyright (C) 2026 Keliver contributors
 + *
@@ -3098,6 +3098,10 @@ index 0000000..82a41ef
 +   * the table. The engine now refuses more than 2^27 keys with a RangeError on every host, before
 +   * allocating anything (unguarded, a 64-bit host allocated 4 GiB here and then threw a TypeError at
 +   * the first missing element). Every path to the trap, and the context still works afterwards.
++   *
++   * The huge lengths run under a 64 MiB memory limit: were the guard lost, the engine would zero a
++   * table of up to 32 GiB on the test host; under the limit that fails at once as "other out of
++   * memory", which the assertion reports.
 +   */
 +  @Test fun proxyOwnKeysWithAHugeLengthThrows() {
 +    quickJs.evaluate(
@@ -3108,15 +3112,22 @@ index 0000000..82a41ef
 +      }
 +      """.trimIndent(),
 +    )
-+    for (length in listOf("2 ** 29 + 1", "2 ** 32 - 1", "2 ** 27 + 1")) {
-+      for (call in listOf("Reflect.ownKeys", "Object.keys", "Object.getOwnPropertyNames")) {
-+        assertEquals(
-+          "RangeError proxy: too many properties in ownKeys result (only 134217728 allowed)",
-+          quickJs.evaluate("attempt(function () { $call(huge($length)); })"),
-+          "$call with length $length",
-+        )
++    val memoryLimit = quickJs.memoryLimit
++    quickJs.memoryLimit = 64L * 1024L * 1024L
++    try {
++      for (length in listOf("2 ** 29 + 1", "2 ** 32 - 1", "2 ** 27 + 1")) {
++        for (call in listOf("Reflect.ownKeys", "Object.keys", "Object.getOwnPropertyNames")) {
++          assertEquals(
++            "RangeError proxy: too many properties in ownKeys result (only 134217728 allowed)",
++            quickJs.evaluate("attempt(function () { $call(huge($length)); })"),
++            "$call with length $length",
++          )
++        }
 +      }
++    } finally {
++      quickJs.memoryLimit = memoryLimit
 +    }
++    assertEquals(-1L, quickJs.memoryLimit)
 +    // An ordinary result is unchanged, at a size well past any real object's key count.
 +    assertEquals(
 +      "1000 k0 k999",
