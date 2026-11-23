@@ -3106,6 +3106,8 @@ traced frame-timeline present was matched for 4 of the 6 guest traces only.
 
 ## Flutter on the A12, 2026-11-22
 
+> **Kotlin 2.4.20 (noted 2026-11-23).** The Keliver guest was linked with Kotlin 2.4.20, whose production builds were not minified (KT-89449; on the three-way guest the `.zipline` bundle was 4.4% larger and Mac code load about 3% slower, #303). These numbers are re-measured at the next phone checkpoint; they are kept as measured.
+
 The owner's question: **is Keliver faster than Flutter?** Flutter can be added to an existing app
 (add-to-app); it was set aside earlier for the size it adds. Over the air Flutter needs Shorebird: on
 Android a patch replaces the compiled Dart library, so a patched screen runs ahead-of-time compiled,
