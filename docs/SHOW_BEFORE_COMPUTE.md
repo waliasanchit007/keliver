@@ -1,6 +1,6 @@
 # NF5: show before compute (design)
 
-Status: **design, revision 5. No production code.** Written 2026-11-24 for WS7 of
+Status: **design, revision 5; section 11 decided by the owner 2026-11-24. No production code.** Written 2026-11-24 for WS7 of
 [`PLAN_2026-11.md`](PLAN_2026-11.md). The owner chose this step on 2026-11-24, on one condition:
 "it has to be executed perfectly". Revision 2 answered the first independent review (verdict: needs
 rework). Revision 3 answered the second (needs rework, scoped to (B)): (B)'s reveal became a
@@ -1615,8 +1615,14 @@ frames by route, 2.10) need no change.
 
 ## 11. Decisions for the owner
 
+**Decided by the owner on 2026-11-24** ("go with b, ok, yes"): decision 7 is **(b), the split**, with
+round 3's three conditions; decision 8 is **as recommended**; decisions 1–6 and 9–17 are **yes, as
+recommended**. Every recommendation below is therefore the decision. Revision 5's R0 queries ran
+cleanly on the emulator the same day (qc 12/12 on all four arms), so (B) now waits only on R0
+(A12, 2026-11-25) and R1.
+
 Each: the question; my recommendation, with the second review's answer where it gave one; the
-cost. **Decision 7 is needed first**, before B0 or B1.
+cost.
 
 1. **Does a cached `Whole` frame count as "the list's data" for the cold-start bar?**
    *Recommendation:* yes, within the screen's `maxAge`, with A-3 (guest took over) reported beside
