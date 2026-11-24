@@ -81,7 +81,7 @@ PY
 echo "=== 2. the report, before anything is written"
 APP="$DISP/guest"; EX="$DISP/older"; STORE="$DISP/store"
 mkdir -p "$APP/src/jsMain/kotlin/screens" "$STORE/keys" "$DISP/home"
-printf '{ "screensDir": "src/jsMain/kotlin/screens" }\n' > "$APP/keliver.portal.json"
+printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "keliverVersion": "0.4.1", "widgetVersion": 1 } }\n' > "$APP/keliver.portal.json"
 printf 'package dev.keliver.floor.screens\n\nfun HomeScreen() {}\n' > "$APP/src/jsMain/kotlin/screens/home.kt"
 printf '%s\n' "$(printf 'ab%.0s' $(seq 1 32))" > "$STORE/keys/ed25519.pub"
 cp -R "$ROOT/scripts/fixtures/embed-older-compose" "$EX"

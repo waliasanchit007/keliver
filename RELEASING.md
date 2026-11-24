@@ -7,8 +7,17 @@ other.
 
 1. Bump `KELIVER_VERSION` in
    `build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt`.
-2. Move `CHANGELOG.md`'s `[Unreleased]` entries under a `Keliver X.Y.Z - <date>`
-   heading.
+2. In `CHANGELOG.md`, rename the `## Unreleased (X.Y.Z)` heading to
+   `## Keliver X.Y.Z - <date>`, and open a new, empty `## Unreleased (A.B.C)`
+   above it that names the **next** version (the next patch, or the next minor
+   when the next release will break consumers or change the toolchain). Write
+   that heading exactly so: `scripts/keliver-runtime-line-selftest.sh` reads it to
+   pick the line in `scripts/keliver-runtime-line.sh` whose toolchain must match
+   this checkout's catalog and wrapper. Without it, the check falls back to
+   `KELIVER_VERSION` (the last release) and says so in its failure. When the plan
+   for the next release changes (a patch becomes a minor), change the heading in
+   the same PR. There is one unreleased section: an older bare `## [Unreleased]`
+   heading is folded into it, not kept beside it.
 3. Pre-gate locally:
    `./gradlew publishToMavenLocal -PkeliverVersion=X.Y.Z -DRELEASE_SIGNING_ENABLED=false`
    and `apiCheck`.

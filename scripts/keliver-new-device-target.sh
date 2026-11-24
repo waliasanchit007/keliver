@@ -28,9 +28,9 @@
 set -euo pipefail
 
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
-KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}"
+KELIVER_VERSION="${KELIVER_VERSION:-}" # default: the app's appRuntime.keliverVersion, below (no fixed fallback)
 ZIPLINE_VERSION_GIVEN="${ZIPLINE_VERSION:+yes}"
-ZIPLINE_VERSION="${ZIPLINE_VERSION:-1.22.0}"
+ZIPLINE_VERSION="${ZIPLINE_VERSION:-}" # default: the line's (keliver-runtime-line.sh), below
 SCREEN=""
 PRESENTER=""
 while [ $# -gt 0 ]; do
@@ -50,14 +50,20 @@ APP="$(pwd)"
 
 # The Keliver version: the app's own (appRuntime.keliverVersion, which
 # keliver-init writes), so an app that stays on an older release does not get a
-# mix; KELIVER_VERSION overrides it; this bundle's version when neither is set.
+# mix; KELIVER_VERSION overrides it. It picks the whole toolchain
+# (keliver-runtime-line.sh), so a keliver.portal.json that cannot be read or
+# parsed, or names no appRuntime.keliverVersion, is refused (as the host
+# scaffolders refuse it) rather than read as some default version.
 if [ -z "$KELIVER_VERSION_GIVEN" ]; then
-  v="$(python3 -c 'import json,sys
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"]
-    print(v.strip() if isinstance(v, str) else "")
-except Exception: print("")' "$APP/keliver.portal.json")"
-  [ -n "$v" ] && KELIVER_VERSION="$v"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks the guest\'s Keliver libraries and toolchain. Add it (as keliver-init writes it), or set KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || { echo "error: ${KELIVER_VERSION#ERROR }" >&2; exit 1; }
 fi
 [[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] \
   || { echo "error: the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
@@ -76,10 +82,8 @@ HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 [ -f "$HERE/keliver-runtime-line.sh" ] || { echo "error: keliver-runtime-line.sh is missing beside this script ($HERE)" >&2; exit 1; }
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
-keliver_zipline_line "$KELIVER_VERSION" || { echo "error: the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
-if $KELIVER_ZIPLINE_FORK && [ -z "$ZIPLINE_VERSION_GIVEN" ]; then
-  ZIPLINE_VERSION="$FORK_ZIPLINE_VERSION"
-fi
+keliver_zipline_line "$KELIVER_VERSION" || { echo "error: $KELIVER_LINE_ERROR" >&2; exit 1; }
+[ -n "$ZIPLINE_VERSION_GIVEN" ] || ZIPLINE_VERSION="$TOOLCHAIN_ZIPLINE"
 GUEST_TIMING=""
 for t in "$HERE/templates/guest/KeliverTiming.kt" "$HERE/../templates/guest/KeliverTiming.kt"; do
   [ -f "$t" ] && { GUEST_TIMING="$t"; break; }

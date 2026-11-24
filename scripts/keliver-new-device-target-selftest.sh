@@ -166,6 +166,67 @@ X="$(scaffold Badver)"; set_app_version "$X" 'x"y'; before="$(fingerprint "$X")"
 chk "a malformed appRuntime.keliverVersion is refused" 1 "$rc"
 [ "$(fingerprint "$X")" = "$before" ] && ok "the refused app is byte-identical" || bad "the refused app was changed"
 
+# --- 7b1. L3 (review of #299): no fixed fallback version ----------------------
+# The app's Keliver version picks the whole toolchain (keliver-runtime-line.sh), so the guest-side
+# scaffolders refuse a keliver.portal.json that cannot be read or parsed, or names no
+# appRuntime.keliverVersion, as the host scaffolders do; KELIVER_VERSION still overrides it.
+ED="$ROOT/scripts/keliver-new-editor.sh"
+portal_refused() { # <label> <portal.json content> <message fragment>
+  local label="$1" json="$2" want="$3" app out rc before
+  app="$(scaffold "Nover$((pass + fail))")"; printf '%s' "$json" > "$app/keliver.portal.json"; before="$(fingerprint "$app")"
+  out="$( cd "$app" && env -u KELIVER_VERSION "$DEV" 2>&1 )"; rc=$?
+  [ "$rc" = 1 ] && [[ "$out" == *"$want"* ]] && [[ "$out" == *"or set KELIVER_VERSION"* ]] && [ "$(fingerprint "$app")" = "$before" ] \
+    && ok "device target: $label is refused, byte-identical" || bad "device target: $label (exit $rc): $(printf '%s' "$out" | tail -1)"
+  out="$( cd "$app" && env -u KELIVER_VERSION "$ED" Nover 2>&1 )"; rc=$?
+  [ "$rc" = 1 ] && [[ "$out" == *"$want"* ]] && [ ! -e "$app/editor" ] \
+    && ok "editor: $label is refused, no editor/ written" || bad "editor: $label (exit $rc): $(printf '%s' "$out" | tail -1)"
+}
+portal_refused "a keliver.portal.json that does not parse" '{ "screensDir": ' "keliver.portal.json cannot be read or parsed (JSONDecodeError"
+portal_refused "a keliver.portal.json without appRuntime" '{ "screensDir": "src/jsMain/kotlin/screens" }' "names no appRuntime.keliverVersion"
+portal_refused "an appRuntime that is not an object" '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": "0.4.1" }' "names no appRuntime.keliverVersion"
+portal_refused "an empty appRuntime.keliverVersion" '{ "appRuntime": { "widgetVersion": 1, "keliverVersion": " " } }' "names no appRuntime.keliverVersion"
+portal_refused "a keliver.portal.json that is a JSON array" '[]' "names no appRuntime.keliverVersion"
+# KELIVER_VERSION overrides a broken file (the documented way out), for both.
+K1="$(scaffold Brokenok)"; printf '{ "screensDir": ' > "$K1/keliver.portal.json"
+( cd "$K1" && KELIVER_VERSION=0.4.1 "$DEV" >/dev/null 2>&1 ); rc=$?
+[ "$rc" = 0 ] && grep -q 'keliver-treehouse-guest:0\.4\.1' "$K1/build.gradle" \
+  && ok "device target: KELIVER_VERSION=0.4.1 scaffolds an app whose keliver.portal.json does not parse" || bad "device target: KELIVER_VERSION with a broken keliver.portal.json (exit $rc)"
+( cd "$K1" && KELIVER_VERSION=0.4.1 "$ED" Brokenok >/dev/null 2>&1 ); rc=$?
+[ "$rc" = 0 ] && grep -q 'dev.keliver:portal-editor:0.4.1' "$K1/editor/build.gradle.kts" \
+  && ok "editor: KELIVER_VERSION=0.4.1 scaffolds an app whose keliver.portal.json does not parse" || bad "editor: KELIVER_VERSION with a broken keliver.portal.json (exit $rc)"
+# The editor follows the app's version, and refuses outside an app root unless KELIVER_VERSION is set.
+K2="$(KELIVER_VERSION=0.3.3 scaffold Edolder)"
+( cd "$K2" && env -u KELIVER_VERSION "$ED" Edolder >/dev/null 2>&1 ); rc=$?
+[ "$rc" = 0 ] && grep -q 'dev.keliver:portal-editor:0.3.3' "$K2/editor/build.gradle.kts" \
+  && ok "editor: an app pinned to 0.3.3 gets a 0.3.3 editor" || bad "editor: the 0.3.3 app's editor (exit $rc)"
+mkdir -p "$WORK/notanapp"
+out="$( cd "$WORK/notanapp" && env -u KELIVER_VERSION "$ED" Bare 2>&1 )"; rc=$?
+[ "$rc" = 1 ] && [[ "$out" == *"no keliver.portal.json here"*"or set KELIVER_VERSION"* ]] && [ ! -e "$WORK/notanapp/editor" ] \
+  && ok "editor: no keliver.portal.json is refused (no fixed fallback version)" || bad "editor: no keliver.portal.json (exit $rc): $out"
+grep -q 'kotlin("multiplatform") version "2.2.0"' "$K1/editor/build.gradle.kts" && grep -q 'kotlin("plugin.compose") version "2.2.0"' "$K1/editor/build.gradle.kts" \
+  && grep -q 'id("org.jetbrains.compose") version "1.8.2"' "$K1/editor/build.gradle.kts" \
+  && ok "editor: a 0.4.1 app's editor builds on Kotlin 2.2.0 and Compose 1.8.2" || bad "editor: the 0.4.1 editor's toolchain: $(grep -E 'version "' "$K1/editor/build.gradle.kts" | tr -s ' ' | tr '\n' '|')"
+# M1 (review of #299): the editor still writes the 0.4 line's Kotlin and Compose, so it refuses an app
+# on any other line of keliver-runtime-line.sh's table (until the 0.5 editor ships), and a version
+# past the newest line as the other scaffolders do; message checked, nothing written.
+editor_refused() { # <label> <app version, or "env:<KELIVER_VERSION>"> <message fragment>
+  local label="$1" v="$2" want="$3" app out rc
+  app="$(KELIVER_VERSION=0.5.0 scaffold "Edref$((pass + fail))")"
+  if [ "${v#env:}" != "$v" ]; then
+    out="$( cd "$app" && KELIVER_VERSION="${v#env:}" "$ED" Edref 2>&1 )"; rc=$?
+  else
+    set_app_version "$app" "$v"
+    out="$( cd "$app" && env -u KELIVER_VERSION "$ED" Edref 2>&1 )"; rc=$?
+  fi
+  [ "$rc" = 1 ] && [[ "$out" == *"$want"* ]] && [ ! -e "$app/editor" ] \
+    && ok "editor: $label is refused, no editor/ written" || bad "editor: $label (exit $rc): $(printf '%s' "$out" | tail -1)"
+}
+editor_refused "an app on 0.5.0" 0.5.0 "Keliver 0.5.0 is on the 0.5 line; the editor supports 0.4 apps until the 0.5 editor ships"
+editor_refused "an app on 0.5.0-SNAPSHOT" 0.5.0-SNAPSHOT "Keliver 0.5.0-SNAPSHOT is on the 0.5 line; the editor supports 0.4 apps until the 0.5 editor ships"
+editor_refused "KELIVER_VERSION=0.5.3 over a 0.5.0 app" env:0.5.3 "the editor supports 0.4 apps until the 0.5 editor ships"
+editor_refused "an app on 1.0.0 (past the newest line)" 1.0.0 "knows Keliver lines up to 0.5; Keliver 1.0.0 needs a newer tools bundle"
+editor_refused "KELIVER_VERSION=1.0.0" env:1.0.0 "knows Keliver lines up to 0.5; Keliver 1.0.0 needs a newer tools bundle"
+
 # --- 7b2. NF2: the Zipline line follows the Keliver version ------------------
 # Before 0.5.0 upstream Zipline; from 0.5.0 (a pre-release too) Keliver's Zipline fork, with the
 # guest's Long as a JavaScript BigInt; never both in one app.
@@ -174,7 +235,13 @@ grep -q "id 'app.cash.zipline' version '1.22.0'" "$A/settings.gradle" && grep -q
   && [ "$(nameds "$A/settings.gradle" 'dev\.keliver\.zipline')$(nameds "$A/build.gradle" 'dev\.keliver\.zipline')" = 00 ] \
   && ! grep -q -- '-Xes-long-as-bigint' "$A/build.gradle" \
   && ok "NF2: an app on 0.4.1 keeps upstream Zipline 1.22.0, without Long as BigInt" || bad "NF2: the 0.4.1 app's Zipline changed"
-for v in 0.5.0 0.5.0-SNAPSHOT 1.0.0; do
+# A version past the newest line this bundle knows (keliver-runtime-line.sh) is refused, not given
+# the 0.5 line's toolchain (M1, review of #299); keliver-init refuses it the same way.
+F="$(KELIVER_VERSION=0.5.0 scaffold Past)"; set_app_version "$F" 1.0.0; before="$(fingerprint "$F")"
+out="$( cd "$F" && env -u KELIVER_VERSION "$DEV" 2>&1 )"; rc=$?
+[ "$rc" != 0 ] && printf '%s' "$out" | grep -q "knows Keliver lines up to 0.5; Keliver 1.0.0 needs a newer tools bundle" && [ "$(fingerprint "$F")" = "$before" ] \
+  && ok "NF2: an app on 1.0.0 (past the newest line) is refused, byte-identical" || bad "NF2: an app on 1.0.0 (exit $rc): $(printf '%s' "$out" | tail -1)"
+for v in 0.5.0 0.5.0-SNAPSHOT 0.5.3; do
   P="$(KELIVER_VERSION=$v scaffold "Fork${v//[.-]/}")"
   ( cd "$P" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
   if [ "$rc" = 0 ] && grep -q "id 'dev.keliver.zipline' version '1.28.0-keliver.1'" "$P/settings.gradle" \
@@ -240,6 +307,10 @@ N2="$(scaffold Noline)"; before="$(fingerprint "$N2")"
 ( cd "$N2" && "$KP/bin/keliver-new-device-target.sh" >/dev/null 2>&1 ); rc=$?
 chk "NF2: no keliver-runtime-line.sh beside it is refused" 1 "$rc"
 [ "$(fingerprint "$N2")" = "$before" ] && ok "NF2: no keliver-runtime-line.sh: app unchanged" || bad "NF2: no keliver-runtime-line.sh: the app was changed"
+cp "$ROOT/scripts/keliver-new-editor.sh" "$KP/bin/"
+out="$( cd "$N2" && env -u KELIVER_VERSION "$KP/bin/keliver-new-editor.sh" Noline 2>&1 )"; rc=$?
+[ "$rc" = 1 ] && [[ "$out" == *"keliver-runtime-line.sh is missing beside this script"* ]] && [ ! -e "$N2/editor" ] \
+  && ok "editor: no keliver-runtime-line.sh beside it is refused, no editor/ written" || bad "editor: no keliver-runtime-line.sh beside it (exit $rc): $(printf '%s' "$out" | tail -1)"
 
 # --- 8. the generated output actually compiles -------------------------------
 if [ $DO_COMPILE = 1 ]; then

@@ -7,8 +7,6 @@
 > its own line (`docs/RELEASE_NOTES_TOOLS_*.md`). Compatibility policy:
 > `docs/API_STABILITY.md`.
 
-## [Unreleased]
-
 ## Unreleased (0.5.0)
 
 Built with Kotlin 2.4.21 and Zipline 1.28.0 (#222, #303), AGP 9.3.3, Gradle 9.7.1 and Compose

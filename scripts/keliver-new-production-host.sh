@@ -35,6 +35,10 @@
 #                      plugin and app.cash.zipline 1.22.0 (Keliver 0.4.x);
 #                      from Keliver 0.5.0, Kotlin 2.4.21 and Keliver's Zipline
 #                      fork, plugin dev.keliver.zipline 1.28.0-keliver.1.
+#                      The module applies Kotlin's Android plugin unless the
+#                      app's AGP compiles Kotlin itself (AGP 9, unless DIR's
+#                      gradle.properties sets android.builtInKotlin=false);
+#                      the app's AGP is read from DIR's build files.
 #   --public-key-file  default: keys/ed25519.pub in this app's portal store,
 #                      found by keliver-store-path.sh. The key is copied into
 #                      the module (it is public and belongs in git), so building
@@ -59,11 +63,13 @@
 # build has no such link.
 #
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
-# app's appRuntime.keliverVersion, else 0.4.1), KELIVER_HOST_ZIPLINE_VERSION,
-# KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION, KELIVER_HOST_AGP_VERSION.
-# Zipline follows the Keliver version (keliver-runtime-line.sh): upstream
-# app.cash.zipline before 0.5.0, Keliver's fork dev.keliver.zipline from 0.5.0
-# (with its Kotlin and Compose as the defaults), never both.
+# app's appRuntime.keliverVersion; when keliver.portal.json cannot be read or
+# parsed, or names no appRuntime.keliverVersion, this refuses),
+# KELIVER_HOST_ZIPLINE_VERSION, KELIVER_HOST_KOTLIN_VERSION,
+# KELIVER_HOST_COMPOSE_VERSION, KELIVER_HOST_AGP_VERSION. The defaults are the
+# Keliver version's line in keliver-runtime-line.sh's table: upstream
+# app.cash.zipline before 0.5.0, Keliver's fork dev.keliver.zipline from 0.5.0,
+# never both.
 #
 # --embed prints the module's dependency floor (K3) beside the versions the
 # existing app declares, before writing anything: from
@@ -74,12 +80,9 @@
 # A rejected input leaves the app byte-identical.
 set -euo pipefail
 
-# Prefixed on purpose: KOTLIN_VERSION and friends are common on CI images, and
-# an unrelated one silently changed the generated build.
-ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-1.22.0}"
-KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-2.2.0}"
-COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-1.8.2}"
-AGP_VERSION="${KELIVER_HOST_AGP_VERSION:-8.12.0}"
+# The versions come from keliver-runtime-line.sh's table for the app's line (below). The overrides
+# are prefixed on purpose: KOTLIN_VERSION and friends are common on CI images, and an unrelated one
+# silently changed the generated build.
 # Resolve a symlinked invocation to the real script, so the templates are found.
 SELF="${BASH_SOURCE[0]}"
 while [ -L "$SELF" ]; do
@@ -100,7 +103,7 @@ while [ $# -gt 0 ]; do
     --embed)           EMBED=true; shift ;;
     --into)            need "$1" $#; INTO="$2"; shift 2 ;;
     --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,74p' "$SELF"; exit 0 ;;
+    -h|--help)         sed -n '2,79p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -145,9 +148,6 @@ API_RE='^https?://[][A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
 [ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $API_RE ]] || fail "--api-base-url must be an http:// or https:// URL of plain ASCII (got '$API_BASE_URL')."
 [[ "$CHANNEL" =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]] || fail "--channel must be lower-case letters, digits and '-', at most 32 (got '$CHANNEL')."
 VERSION_RE='^[0-9A-Za-z.+-]+$'
-for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$AGP_VERSION"; do
-  [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
-done
 
 # The app's package: every screen declares <root>.screens (the keliver-init
 # layout, the same rule keliver-new-device-target.sh uses).
@@ -170,23 +170,124 @@ PACKAGE="$ROOT_PKG.host"
 # relay's GET /device-proxy uses for the editor's QR code. Any port from 1024 up, so moving the
 # proxy (KELIVER_DEVICE_PROXY_PORT) needs no change to the host.
 DEBUG_LINK_SCHEME="keliver-$(printf '%s' "$ROOT_PKG" | tr 'A-Z_' 'a-z-')"
-# The Keliver version the GUEST uses, so host and guest do not drift apart.
-KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
+# The Keliver version the GUEST uses, so host and guest do not drift apart. It picks the whole
+# toolchain (keliver-runtime-line.sh), so a keliver.portal.json that cannot be read or parsed, or names no
+# appRuntime.keliverVersion, is refused rather than read as some default version.
+if [ -n "${KELIVER_HOST_KELIVER_VERSION:-}" ]; then
+  KELIVER_VERSION="$KELIVER_HOST_KELIVER_VERSION"
+else
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))['appRuntime']['keliverVersion']
-    print(v if isinstance(v, str) and v.strip() else '0.4.1')
-except Exception: print('0.4.1')" "$APP/keliver.portal.json")}"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_HOST_KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks this host\'s Keliver libraries and toolchain. Add it (the version the app\'s guest uses, as keliver-init writes it), or set KELIVER_HOST_KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || fail "${KELIVER_VERSION#ERROR }"
+fi
 [[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
 # NF2: Keliver 0.5.0 and later build on Keliver's Zipline fork (QuickJS 2026), its group, plugin id
 # and toolchain; earlier versions keep upstream Zipline, which their libraries were built against.
 [ -f "$HERE/keliver-runtime-line.sh" ] || fail "keliver-runtime-line.sh is missing beside this script ($HERE)."
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
-keliver_zipline_line "$KELIVER_VERSION" || fail "the Keliver version '$KELIVER_VERSION' does not start with <major>.<minor>.<patch>."
-if $KELIVER_ZIPLINE_FORK; then
-  ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$FORK_ZIPLINE_VERSION}"
-  KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$FORK_KOTLIN_VERSION}"
-  COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$FORK_COMPOSE_VERSION}"
+keliver_zipline_line "$KELIVER_VERSION" || fail "$KELIVER_LINE_ERROR"
+# The line's toolchain (keliver-runtime-line.sh's table): its Zipline, Kotlin, Compose and AGP
+# (overridable), and its compileSdk, targetSdk and JDK.
+ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
+KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$TOOLCHAIN_KOTLIN}"
+COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$TOOLCHAIN_COMPOSE}"
+AGP_VERSION="${KELIVER_HOST_AGP_VERSION:-$TOOLCHAIN_AGP}"
+for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$AGP_VERSION"; do
+  [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
+done
+# Coil and its OkHttp fetcher: from the 0.5 line, keliver-image at this app's Keliver version, so
+# they are the versions Keliver's libraries resolve; before it, pinned as the templates always were.
+IMAGE_DEPENDENCIES="$(keliver_line_image_dependencies android "$KELIVER_VERSION")" \
+  || fail "keliver-runtime-line.sh has no image dependencies for Keliver $KELIVER_VERSION."
+# AGP 9 compiles Kotlin itself (built-in Kotlin) and refuses a module that applies
+# org.jetbrains.kotlin.android: there the plugin is only put on the classpath (apply false), which
+# pins the Kotlin Gradle plugin AGP compiles with to this line's Kotlin. Before AGP 9 it is applied.
+# An embedded host leaves Kotlin to the app's AGP the same way. Empty on the 0.4 line, so its
+# output stays what it was.
+KOTLIN_ANDROID_APPLY=""
+EMBED_KOTLIN_PLUGIN="  id 'org.jetbrains.kotlin.android'"
+if [ "${AGP_VERSION%%.*}" -ge 9 ] 2>/dev/null; then
+  KOTLIN_ANDROID_APPLY=" apply false // AGP 9 compiles Kotlin (built-in Kotlin); this pins its Kotlin"
+fi
+# An embedded module is compiled by the APP's AGP, not the line's: it applies Kotlin's Android
+# plugin unless that AGP compiles Kotlin itself, which AGP 9 does unless the app's gradle.properties
+# sets android.builtInKotlin=false (AGP 9 refuses the plugin otherwise; AGP 8 needs it). The app's
+# AGP is read from its settings, root build file or version catalog; when none of them names it,
+# the line's AGP is assumed (or KELIVER_HOST_AGP_VERSION, which always wins), and said so.
+EMBED_AGP=""; EMBED_AGP_FROM=""; EMBED_BUILTIN_KOTLIN=""; EMBED_KOTLIN_NOTE=""
+if $EMBED; then
+  if [ -n "${KELIVER_HOST_AGP_VERSION:-}" ]; then
+    EMBED_AGP="$KELIVER_HOST_AGP_VERSION"; EMBED_AGP_FROM="KELIVER_HOST_AGP_VERSION"
+  else
+    # A function, not a here-document inside $( ): bash 3.2 misparses this Python's quotes there.
+    agp_of_app() {
+      python3 - "$1" <<'PY'
+import os, re, sys
+into = sys.argv[1]
+def read(rel):
+    try: return open(os.path.join(into, rel), encoding='utf-8', errors='replace').read()
+    except OSError: return ''
+ID = r"""['"]com\.android\.(?:application|library)['"]"""
+for rel in ('settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts'):
+    t = read(rel)
+    m = re.search(r'id\s*\(?\s*' + ID + r"""\s*\)?\s*version\s*\(?\s*['"]([0-9][\w.+-]*)['"]""", t) \
+        or re.search(r"""['"]com\.android\.tools\.build:gradle:([0-9][\w.+-]*)['"]""", t)
+    if m:
+        print('%s %s' % (m.group(1), rel)); sys.exit(0)
+t = read('gradle/libs.versions.toml')
+versions, section = {}, None
+for line in t.splitlines():
+    line = line.split('#', 1)[0].strip()
+    s = re.fullmatch(r'\[([\w.-]+)\]', line)
+    if s: section = s.group(1); continue
+    m = re.fullmatch(r'([\w.-]+)\s*=\s*(.+)', line)
+    if not m: continue
+    key, val = m.group(1), m.group(2)
+    if section == 'versions':
+        q = re.fullmatch(r"""["']([^"']+)["']""", val)
+        if q: versions[key] = q.group(1)
+    elif re.search(r"""(?:id\s*=\s*|module\s*=\s*)["']com\.android\.(?:application|library|tools\.build:gradle)["']""", val):
+        ref = re.search(r"""version\.ref\s*=\s*["']([^"']+)["']""", val)
+        ver = re.search(r"""\bversion\s*=\s*["']([^"']+)["']""", val)
+        v = versions.get(ref.group(1)) if ref else (ver.group(1) if ver else None)
+        if v and re.match(r'[0-9]', v):
+            print('%s gradle/libs.versions.toml' % v); sys.exit(0)
+PY
+    }
+    EMBED_AGP="$(agp_of_app "$INTO")" || EMBED_AGP=""
+    if [ -n "$EMBED_AGP" ]; then
+      EMBED_AGP_FROM="${EMBED_AGP#* }"; EMBED_AGP="${EMBED_AGP%% *}"
+    else
+      EMBED_AGP="$AGP_VERSION"; EMBED_AGP_FROM=""
+    fi
+  fi
+  [[ "$EMBED_AGP" =~ $VERSION_RE ]] || fail "the existing app's AGP version is not a version: '$EMBED_AGP'."
+  EMBED_NEW_DSL=""
+  if [ -f "$INTO/gradle.properties" ]; then
+    EMBED_BUILTIN_KOTLIN="$(sed -nE 's/^[[:space:]]*android\.builtInKotlin[[:space:]]*[=:][[:space:]]*([A-Za-z]+)[[:space:]]*$/\1/p' "$INTO/gradle.properties" | tail -1 | tr 'A-Z' 'a-z')"
+    EMBED_NEW_DSL="$(sed -nE 's/^[[:space:]]*android\.newDsl[[:space:]]*[=:][[:space:]]*([A-Za-z]+)[[:space:]]*$/\1/p' "$INTO/gradle.properties" | tail -1 | tr 'A-Z' 'a-z')"
+  fi
+  if [ "${EMBED_AGP%%.*}" -ge 9 ] 2>/dev/null; then
+    if [ "$EMBED_BUILTIN_KOTLIN" = false ]; then
+      EMBED_KOTLIN_PLUGIN="  id 'org.jetbrains.kotlin.android' // this app sets android.builtInKotlin=false: its AGP $EMBED_AGP does not compile Kotlin"
+      # Measured on AGP 9.3.3: the plugin is refused under AGP 9's new DSL, which is on by default.
+      [ "$EMBED_NEW_DSL" = false ] || EMBED_KOTLIN_NOTE="warning: $INTO sets android.builtInKotlin=false but not android.newDsl=false: AGP $EMBED_AGP refuses org.jetbrains.kotlin.android (which this module, like the app's own modules, then applies) under its new DSL. Set android.newDsl=false in its gradle.properties, or drop android.builtInKotlin=false."
+    else
+      EMBED_KOTLIN_PLUGIN="  // Kotlin: AGP 9 compiles this module itself (built-in Kotlin). An app that sets
+  // android.builtInKotlin=false applies id 'org.jetbrains.kotlin.android' here instead."
+    fi
+  fi
+  if [ -z "$EMBED_AGP_FROM" ]; then
+    EMBED_KOTLIN_NOTE="${EMBED_KOTLIN_NOTE:+$EMBED_KOTLIN_NOTE
+}note: could not read $INTO's AGP version (its settings, root build file and gradle/libs.versions.toml name none); the module's Kotlin plugin line assumes AGP $EMBED_AGP, the line's. On AGP 9 with built-in Kotlin (the default) it must not apply org.jetbrains.kotlin.android; on AGP 8, or with android.builtInKotlin=false, it must: check $MODULE/build.gradle's plugins."
+  fi
 fi
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$'
@@ -550,14 +651,23 @@ subst() { # <src> <dst>
   mkdir -p "$(dirname "$2")"
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$AGP_VERSION" "$CHANNEL" \
-    "$DEBUG_LINK_SCHEME" "$ZIPLINE_GROUP" "$ZIPLINE_PLUGIN_ID" <<'PY'
-import sys
-src, dst, name, pkg, appid, server, api, kv, zv, ktv, cv, agp, channel, link_scheme, zg, zid = sys.argv[1:17]
+    "$DEBUG_LINK_SCHEME" "$ZIPLINE_GROUP" "$ZIPLINE_PLUGIN_ID" \
+    "$TOOLCHAIN_COMPILE_SDK" "$TOOLCHAIN_TARGET_SDK" "$TOOLCHAIN_JDK" "$KOTLIN_ANDROID_APPLY" "$EMBED_KOTLIN_PLUGIN" \
+    "$TOOLCHAIN_OKHTTP" "$TOOLCHAIN_COROUTINES" "$IMAGE_DEPENDENCIES" <<'PY'
+import re, sys
+src, dst, name, pkg, appid, server, api, kv, zv, ktv, cv, agp, channel, link_scheme, zg, zid, \
+    csdk, tsdk, jdk, kapply, ekplugin, okhttp, coroutines, image_deps = sys.argv[1:25]
 s = open(src, encoding='utf-8').read()
+# The image dependencies are one line each, at the placeholder's indent.
+s = re.sub(r'(?m)^([ \t]*)@@IMAGE_DEPENDENCIES@@$',
+           lambda m: '\n'.join(m.group(1) + d for d in image_deps.splitlines()), s)
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'APPLICATION_ID': appid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'AGP_VERSION': agp, 'CHANNEL': channel,
-             'DEBUG_LINK_SCHEME': link_scheme, 'ZIPLINE_GROUP': zg, 'ZIPLINE_PLUGIN_ID': zid}.items():
+             'DEBUG_LINK_SCHEME': link_scheme, 'ZIPLINE_GROUP': zg, 'ZIPLINE_PLUGIN_ID': zid,
+             'COMPILE_SDK': csdk, 'TARGET_SDK': tsdk, 'JDK': jdk,
+             'KOTLIN_ANDROID_APPLY': kapply, 'EMBED_KOTLIN_PLUGIN': ekplugin,
+             'OKHTTP_VERSION': okhttp, 'COROUTINES_VERSION': coroutines}.items():
     s = s.replace('@@' + k + '@@', v)
 assert '@@' not in s, 'unsubstituted placeholder in ' + src
 open(dst, 'w', encoding='utf-8').write(s)
@@ -627,7 +737,17 @@ if $EMBED; then
   fi
   found 'kotlin\.plugin\.compose|plugin-compose|compose-compiler' || echo "warning: no Kotlin Compose compiler plugin found in $INTO's build: the library needs org.jetbrains.kotlin.plugin.compose." >&2
   found "${KOTLIN_VERSION//./\\.}([^0-9]|\$)" || echo "warning: no Kotlin $KOTLIN_VERSION found in $INTO's build: Zipline $ZIPLINE_VERSION's compiler plugin needs Kotlin $KOTLIN_VERSION." >&2
+  if [ "$TOOLCHAIN_AGP_MIN" != - ]; then
+    echo "note: Keliver $KELIVER_VERSION's libraries need $INTO on AGP $TOOLCHAIN_AGP_MIN or newer (Keliver builds with $TOOLCHAIN_AGP) and compileSdk $TOOLCHAIN_COMPILE_SDK (this module's); AGP $AGP_VERSION's own floor is Gradle $TOOLCHAIN_GRADLE_MIN." >&2
+  fi
+  [ -z "$EMBED_KOTLIN_NOTE" ] || echo "$EMBED_KOTLIN_NOTE" >&2
   echo "created $MODULE/ in $INTO — this app's Keliver host, as a library module"
+  echo "  Keliver          $KELIVER_VERSION (the $KELIVER_LINE line: $ZIPLINE_GROUP $ZIPLINE_VERSION, Kotlin $KOTLIN_VERSION, compileSdk $TOOLCHAIN_COMPILE_SDK)"
+  case "$EMBED_KOTLIN_PLUGIN" in "  id "*) kp="org.jetbrains.kotlin.android applied" ;; *) kp="none (AGP's built-in Kotlin)" ;; esac
+  # (No quote inside ${...:-...} here: bash 3.2 reads one there as opening a string.)
+  agp_from="$EMBED_AGP_FROM"; [ -n "$agp_from" ] || agp_from="assumed: the line's"
+  builtin_note=""; [ -z "$EMBED_BUILTIN_KOTLIN" ] || builtin_note=", android.builtInKotlin=$EMBED_BUILTIN_KOTLIN"
+  echo "  Kotlin plugin    $kp, for AGP $EMBED_AGP ($agp_from)$builtin_note"
   echo "  package          $PACKAGE"
   echo "  bundle server    $BUNDLE_SERVER"
   echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable)')"
@@ -646,7 +766,21 @@ if $EMBED; then
   exit 0
 fi
 
+# host-android builds with this app's Gradle wrapper (./gradlew -p host-android): say so when that
+# Gradle is older than the line's AGP accepts (an app keliver-init made before its line's toolchain).
+WRAPPER_PROPS="$APP/gradle/wrapper/gradle-wrapper.properties"
+if [ -z "${KELIVER_HOST_AGP_VERSION:-}" ] && [ -f "$WRAPPER_PROPS" ]; then
+  APP_GRADLE="$(sed -nE 's#^distributionUrl=.*gradle-([0-9][0-9A-Za-z.+-]*)-(bin|all)\.zip.*#\1#p' "$WRAPPER_PROPS" | head -1)"
+  if [ -n "$APP_GRADLE" ] && ! keliver_version_at_least "$APP_GRADLE" "$TOOLCHAIN_GRADLE_MIN"; then
+    echo "warning: this app's Gradle wrapper is Gradle $APP_GRADLE; AGP $AGP_VERSION (Keliver $KELIVER_VERSION) needs Gradle $TOOLCHAIN_GRADLE_MIN or newer." >&2
+    echo "         In gradle/wrapper/gradle-wrapper.properties set" >&2
+    echo "           distributionUrl=https\\://services.gradle.org/distributions/gradle-$TOOLCHAIN_GRADLE-bin.zip" >&2
+    echo "           distributionSha256Sum=$TOOLCHAIN_GRADLE_SHA256" >&2
+  fi
+fi
+
 echo "created host-android/ — this app's production Android host"
+echo "  Keliver          $KELIVER_VERSION (the $KELIVER_LINE line: $ZIPLINE_GROUP $ZIPLINE_VERSION, Kotlin $KOTLIN_VERSION, AGP $AGP_VERSION, compileSdk $TOOLCHAIN_COMPILE_SDK)"
 echo "  package          $PACKAGE"
 echo "  application id   $APPLICATION_ID"
 echo "  bundle server    $BUNDLE_SERVER"
