@@ -1,12 +1,14 @@
 # MS4 plan: the 0.5.0 build
 
-**Status: draft, revision 2, 2026-11-24.** The delivery plan for MS4 of
+**Status: draft, revision 3, 2026-11-24.** The delivery plan for MS4 of
 [`PLAN_2026-11.md`](PLAN_2026-11.md) (section 8's MS4 row, section 9's Track B). It orders the work. It
 decides nothing that [`DECISIONS.md`](DECISIONS.md) or the plan of record decide. Section 6 lists what
 the owner still has to decide, and what the maintainer has decided. Records stay in
-[`DELIVERY_PLAN.md`](DELIVERY_PLAN.md). Revision 2 answers the first review (H1–H3, M1–M7, Lows 1–6):
+[`DELIVERY_PLAN.md`](DELIVERY_PLAN.md). Revision 2 answered the first review (H1–H3, M1–M7, Lows 1–6):
 NF5 is in 0.5.0, the lanes are re-planned with NF5 starting now, and the order where NF5 and MS4 meet is
-fixed (section 2.2).
+fixed (section 2.2). Revision 3 answers the re-review (M1–M4, Lows 1–4): who edits the generated configs
+and locks, the prototype's lock and NF5's measurements, MS4-36's scope, and staffing as an owner
+question (Q16).
 
 **Binding inputs.**
 - **PD4 (the owner, 2026-11-24):** **one** 0.5.0 libraries release carries:
@@ -29,7 +31,8 @@ fixed (section 2.2).
 - milestones **MS4a–MS4f**;
 - pull requests **MS4-01…MS4-40**;
 - candidate checks **C1–C16**;
-- owner questions **Q1–Q15**: Q4, Q6 and Q12 are now maintainer decisions, and Q13 is a "confirm";
+- owner questions **Q1–Q16**: Q4, Q6 and Q12 are now maintainer decisions, Q13 is a "confirm", Q7 is
+  contingent, and Q16 (staffing) is new in revision 3;
 - lanes **L1**, **L2** and **A**. Revision 1 called L1 and L2 "B1" and "B2". They are renamed because
   NF5 has its own steps B0–B5.
 
@@ -97,7 +100,8 @@ Sizes are working days for one agent, review included, CI excluded.
 
 **Three lanes, three agents:**
 - **L1**: the generator and codegen. Track B's agent.
-- **L2**: runtime, values, host, editor, harness and bridges. A **dedicated second MS4 agent**.
+- **L2**: runtime, values, host, editor, harness and bridges. A **dedicated second MS4 agent**, which
+  is the owner's call (Q16); section 2.3 gives the plan without it.
 - **A**: Track A's agent. It runs NF5 from day 0 and takes three MS4 PRs after NF5's B5.
 
 Revision 1 assumed that Track A would be free during NF5's design review. That review is done, and NF5's
@@ -112,7 +116,7 @@ by MS4-40, after NF5's B1 closes (section 2.2).
 | PR | Scope | Days | Gate / test | Needs | Lane |
 |---|---|---|---|---|---|
 | MS4-35 | **Reference-app harness against a local Maven repository.** On the PR route, this checkout's libraries are published to a disposable local Maven repository (never `~/.m2`), and the reference app's hosts and guest build against it. This is a third, labelled route beside published-only and repo-scaffold. Today the PR route takes the libraries from Maven Central, so no library change can be checked there | 3 | `reference-app.yml` (emulator) and `ios-host.yml` (simulator) green on the new route, on a PR that changes a library: a marker in `keliver-treehouse-host` shows in the device log. The route is named in the results | none | L2 |
-| MS4-01 | **The product groups generated beside the prototype** (Q1, Q14): the group configs, the generated root schema and the product modules under their real names. The generator and `keliver-compose-values` keep their names (Q15). **Every `keliver-compose-gatea-*` module and `sample/` stay where they are**, built and regenerated but otherwise frozen, because NF5 measures with them (section 2.2) | 3 | `checkComposeApi` for both the prototype and the product groups. The product modules' copies of `SameSourceTest` and `HostCompatibilityTest` pass with the prototype's counts. `redwoodApiCheck` | Q1, Q14, #308 merged | L1 |
+| MS4-01 | **The product groups generated beside the prototype** (Q1, Q14): the group configs, the generated root schema and the product modules under their real names. The generator and `keliver-compose-values` keep their names (Q15). **Every `keliver-compose-gatea-*` module and `sample/` stay where they are**, because NF5 measures with them. They are not frozen: generator and values changes regenerate and recompile them, and the prototype's lock may be reset (section 2.2) | 3 | `checkComposeApi` for both the prototype and the product groups. The product modules' copies of `SameSourceTest` and `HostCompatibilityTest` pass with the prototype's counts. `redwoodApiCheck` | Q1, Q14, #308 merged | L1 |
 | MS4-02 | **Copy** the NF1 host pieces (`LazyRuntime`, placeholders, retained host back, one state per widget, press timing) verbatim into the product host module. The prototype keeps its copy for NF5's measurements until MS4-40. Fixes go to the product copy. **This is the production container NF5's B0 needs** | 2 | `LazyScrollTest`, `RetainedHostBackTest`, `OneStatePerWidgetTest` and `PressHostTest` pass unchanged in the product module, on JVM and the iOS simulator | MS4-01 | L2 |
 | MS4-03 | Absent groups, and legacy optional: `keliver-tooling-codegen`'s host factory accepts a missing dependency group, and its widgets report as unknown (#244 decision 3). The generated root no longer requires the legacy `keliver-material` | 3 | A host built without legacy and Coil renders a generated-only tree, and unknown tags are reported once. The release APK and the iOS app without the legacy renderers are measured (Q11's baseline) | MS4-01 | L1 |
 | MS4-04 | `schema-mismatch` reports instead of silent drops (design §12, "inside the gate"): a library `EventListener` hook, plus template wiring. The wiring builds on NF5's H0, which is the one place a template declares what it implements. It adds no second list | 2 | An unknown widget, modifier or property is reported once per tag, and the relay's `/report` accepts the reason. On MS4-35's route, an emulator run of a test bundle with one unknown tag gives one report | MS4-03, NF5's H0, MS4-35 | L2 |
@@ -125,8 +129,8 @@ by MS4-40, after NF5's B1 closes (section 2.2).
 | PR | Scope | Days | Gate / test | Needs | Lane |
 |---|---|---|---|---|---|
 | MS4-07 | Include lists by package, plus a **generic error stub** for every public declaration of an included package that is not generated (design §11, §19). Curated messages for `Layout`, `SubcomposeLayout`, `Modifier.layout`, `pointerInput`, `detect*Gestures`, Android locals, resources, `AndroidView`. Keliver-only API is generated behind the Q10 opt-ins | 4 | A compile-fail test per curated stub, with the message text asserted. No "unresolved reference" for any public name in an included package (scan test) | MS4-06 | L1 |
-| MS4-08 | Default case 3 (presence split, design §5) and nullable-modifier parameters (§19) | 2 | The generator's golden tests; a same-source sample per case | MS4-06 | L1 |
-| MS4-09 | Nullable optional slots (the "present" flag) and slots with parameters (§9): host-measured values as events, guest-data slots and placeholder children. **It generates what its own tests use:** <br>- `Scaffold` (top bar, FAB slot, content with `PaddingValues`); <br>- `FloatingActionButton`; <br>- `BoxWithConstraints`; <br>- `AnimatedContent` (one overload, default transition); <br>- `ListItem`; <br>- `BasicTextField`'s value overload with `decorationBox`. <br>MS4-16, MS4-18 and MS4-20 complete those families | 5 | Same-source samples, 0 differing pixels: `Scaffold` with a top bar and a FAB; `BoxWithConstraints`; `ListItem` with and without its optional slots; a decorated field | MS4-07 | L1 |
+| MS4-08 | Default case 3 (presence split, design §5) and nullable-modifier parameters (§19). The split changes the wire of existing entries, so the prototype is regenerated with a **reset lock** (section 2.2's prototype rule; one of the 3 days) | 3 | The generator's golden tests; a same-source sample per case; the prototype's tests green on the reset lock | MS4-06 | L1 |
+| MS4-09 | Nullable optional slots (the "present" flag) and slots with parameters (§9): host-measured values as events, guest-data slots and placeholder children. **It generates what its own tests use:** <br>- `Scaffold` (top bar, FAB slot, content with `PaddingValues`); <br>- `FloatingActionButton`; <br>- `BoxWithConstraints`; <br>- `AnimatedContent` (one overload, default transition); <br>- `ListItem`; <br>- `BasicTextField`'s value overload with `decorationBox`. <br>MS4-16, MS4-18 and MS4-20 complete those families. The "present" flag changes the wire of existing slot entries, so the prototype is regenerated with a **reset lock** (section 2.2; one of the 6 days) | 6 | Same-source samples, 0 differing pixels: `Scaffold` with a top bar and a FAB; `BoxWithConstraints`; `ListItem` with and without its optional slots; a decorated field. The prototype's tests green on the reset lock | MS4-07 | L1 |
 | MS4-10 | Editor metadata for every group (kinds, defaults as text, KDoc, slots, opt-ins), and `portal-schema-codegen`'s `MappedKind` additions | 2 | `checkPortalCode` fresh; a catalog snapshot test | MS4-07 | L1 |
 | MS4-11 | App components, opt-in (Q8): an annotation on an app's multiplatform composable. The generator runs as a `keliver-gradle-plugin` task in the app's build, with its lock in the app's repository and group tags from 100 | 6 | A fixture app exports two components (one with a slot); same-source pixels; the append-only check in the app's build; a non-multiplatform component refused with a reason | MS4-10, Q8, Q15 | L1 |
 
@@ -139,7 +143,7 @@ section 1, and the corpus covers 100% of lock entries.
 | MS4-13 | The codecs left (design §6): full `TextStyle`/`SpanStyle`, `AnnotatedString`, `Brush` kinds, `FontFamily` (host-registered names), path-built `ImageVector`, `Painter` kinds, `BorderStroke` factories | 4 | Round-trip tests (guest encode, host decode) on jvm, js, wasm and iOS; corpus samples | MS4-06 | L2 |
 | MS4-14 | The theme snapshot for guest reads (§7), plus the generated groups in #290's host baseline profile | 3 | A guest reading `colorScheme.primary.luminance()` sees the host's value. A dark-mode switch recomposes nothing in the guest. The profile rules list the new packages | MS4-13 | L2 |
 | MS4-15 | **Foundation's host-owned state objects**, as `LazyListState` today: `ScrollState` commands, `LazyGridState`, `LazyStaggeredGridState`, `PagerState`, `TextFieldState` (with `BasicTextField(state)`) and interaction sources | 6 | Per object: the commands and fields round-trip (guest to host, host to guest), with a host fake for those whose widgets come in MS4-38; a process-death restore test. `ScrollState` and `TextFieldState` on corpus samples | MS4-07 | L2 |
-| MS4-38 | Lazy grids (`LazyVerticalGrid`, `LazyHorizontalGrid`), staggered grids, and `HorizontalPager`/`VerticalPager`, on MS4-15's states. NF1's lazy-window prediction for grids | 3 | Corpus samples; `LazyScrollTest`'s cases for grids; same-source swipe frames for the pagers | MS4-12, MS4-15 | L1 |
+| MS4-38 | Lazy grids (`LazyVerticalGrid`, `LazyHorizontalGrid`), staggered grids, and `HorizontalPager`/`VerticalPager`, on MS4-15's states. NF1's lazy-window prediction for grids | 3 | Corpus samples; `LazyScrollTest`'s cases for grids; same-source swipe frames for the pagers | MS4-02 (NF1's lazy-window prediction lives in the copied `LazyRuntime`), MS4-12, MS4-15 | L1 |
 | MS4-39 | **Material 3's host-owned state objects**: `SheetState`, `DrawerState`, `SnackbarHostState`, `DatePickerState`, `TimePickerState`, `TopAppBarState` (with the scroll behaviours' nested-scroll connection), `TooltipState`, `SwipeToDismissBoxState` | 5 | Per object: the commands round-trip and a process-death restore test, with host fakes (their widgets come in MS4-18) | MS4-15 | L2 |
 | MS4-16 | Material 3, part 1: text, buttons (all kinds), surfaces, cards, chips, list items, dividers, badges, progress indicators | 4 | Corpus samples; lock append | MS4-09, MS4-13 | L1 |
 | MS4-17 | Material 3, part 2: inputs (`TextField`/`OutlinedTextField` on `TextFieldState`, checkbox, switch, radio, slider, segmented buttons) | 5 | Corpus samples. A typing round-trip on the emulator, on MS4-35's route | MS4-15, MS4-16, MS4-35 | L1 |
@@ -148,7 +152,7 @@ section 1, and the corpus covers 100% of lock entries.
 | MS4-20 | Animation complete (§10): `AnimatedContent` (all overloads), `Crossfade`, `updateTransition`, `rememberInfiniteTransition`, `keyframes`/`repeatable`/`infiniteRepeatable`, `animateItem` specs, animated references on widget parameters. Guest reads per Q3 | 5 | Frame-by-frame same-source tests on JVM and the iOS simulator; 0 change batches while host animations run | MS4-09, Q3 | A (after NF5's B5) |
 | MS4-21 | The guest-clock `Animatable` behind an opt-in at ERROR level (maintainer decision, was Q4). Untracked animated values (`1f - alpha`) are reported to the mismatch channel in debug builds | 1 | A compile-fail test without the opt-in; a debug report test | MS4-01 | L1 |
 | MS4-22 | `Canvas`, `drawBehind`, `drawWithContent`, `graphicsLayer {}`: commands recorded in the guest and replayed on the host; `size` from the host after layout. **Scheduled early** (L2, days 20–27), so that a slip shows while there is time (Q7) | 7 | Same-source pixels for paths, arcs, text and gradients. A layer-phase read in `graphicsLayer` is an error stub | MS4-13 | L2 |
-| MS4-36 | **NF5's frame rules for the generated groups** (review H2). The generator classifies every generated property for NF5's A1 rules (`@Replayable`, `@Scrolls`, `@NeverCached`, `@BlocksFrameWhenTrue`, `@StyleToken`, `@NotData`) and emits them on the generated schemas. So `keliver-tooling-codegen` writes their `FrameRules`, in strict mode, as for the legacy schemas. The generated host gains NF5's A3c hooks: <br>- `ScrollOrigin` on `LazyColumn`/`LazyRow`, the grids, `verticalScroll`/`horizontalScroll` and the pagers; <br>- `TextLines` on `Text`/`BasicText`; <br>- text fields replayed empty (NF5's decision 14). <br>Every coverage PR after it classifies its own properties: strict mode fails the build otherwise | 4 | **NF5's A4b pixel test on the corpus:** 0 differing pixels, replayed against live, on JVM and the iOS simulator. Per scroller, a scroll of one pixel blocks the write. The review list is empty | NF5's A1, A3c and A4b; MS4-02, MS4-05, MS4-38 | L2 |
+| MS4-36 | **NF5's frame rules for the generated groups** (review H2). The generator classifies every generated property for NF5's A1 rules (`@Replayable`, `@Scrolls`, `@NeverCached`, `@BlocksFrameWhenTrue`, `@StyleToken`, `@NotData`) and emits them on the generated schemas. So `keliver-tooling-codegen` writes their `FrameRules`, in strict mode, as for the legacy schemas. The generated host gains **NF5's A4a hooks on A3c's interfaces**, as A4a adds them to the legacy widgets: <br>- `ScrollOrigin` on `LazyColumn`/`LazyRow`, the grids, `verticalScroll`/`horizontalScroll` and the pagers; <br>- `TextLines` on `Text`/`BasicText`; <br>- text fields replayed empty (NF5's decision 14); <br>- replay snapping for `AnimatedVisibility` and `animateContentSize`; <br>- the pagers' auto-advance waiting for `LocalContentShown`; <br>- the extras classified: `Shimmer` excluded (NF5 2.4), `LazyItem`, and `Retained`/`RetainedEntry`. <br>Every coverage PR after it classifies its own properties: strict mode fails the build otherwise | 5 | **NF5's A4b pixel test on the corpus:** 0 differing pixels, replayed against live, on JVM and the iOS simulator. **I4's height-equality test** (A4a's) for every generated text-bearing widget and property, so a generated `Text` keeps its height at the hand-off. Per scroller, a scroll of one pixel blocks the write. Snapped animations and a held auto-advance shown in host tests. The review list is empty | NF5's A1, A3c, A4a and A4b; MS4-02, MS4-05, MS4-38 | L2 |
 
 **MS4d. Gate, bridges and MS6's library pieces.** Exit: D2 covers the generated groups and app
 components, and WS3's library half is done.
@@ -178,8 +182,10 @@ components, and WS3's library half is done.
 C1–C16, are run and written up in one report; then the owner's go (MS5 publishes). It waits for every
 MS4 PR **and NF5's A6 and B5**. 3 days, plus device sessions.
 
-**Totals:** about **147 MS4 agent-days**. By milestone: MS4a 20, MS4b 19, MS4c 58, MS4d 18, MS4e 29,
-MS4f 3. Revision 1 had 126. The 21 added days:
+**Totals:** about **150 MS4 agent-days**. By milestone: MS4a 20, MS4b 21, MS4c 59, MS4d 18, MS4e 29,
+MS4f 3. Revision 1 had 126; revision 2 had 147. Revision 3 adds 3 days: MS4-08 and MS4-09 one each for
+the prototype's upkeep (re-review M2), and MS4-36 one for A4a's snapping, auto-advance, extras and I4
+height test (re-review M3). Revision 2's 21 added days:
 - MS4-35, the local-Maven harness (M2);
 - MS4-36, NF5's rules for the generated groups (H2);
 - MS4-37, finding 8 (M5);
@@ -195,7 +201,7 @@ NF5, by this plan's estimate, is about **57 agent-days** on Track A:
 - (A): A1 3, A2 2, A3a–c 9, A4a–b 8, A5 3, A6 2;
 - (B): R1 2, B1 6, B0 3, B2 6, B3 2, B4 6, B5 3.
 
-Together that is about 204 agent-days before the go.
+Together that is about 207 agent-days before the go.
 
 ### 2.2 Two tracks: where NF5 and MS4 meet
 
@@ -211,12 +217,13 @@ Decision 7 is already answered, (b).
 
 | Shared area | NF5 touches | MS4 touches | Rule |
 |---|---|---|---|
-| The prototype modules: `keliver-compose-gatea-composeui` (with its dependencies, the other `gatea-*` modules), `keliver-compose-gatea-profile`, `sample/` (the three-way bench) | #308 adds `CachedFrameReplayBenchmark` (composeui), `Nf5Stack.kt` and `QuickJsProfile.kt` (profile) and the bench's `variedDetail` (sample). R1 adds a bench arm. NF5's B1 is a spike "against the prototype" on gate A's container and the guest profile | MS4-01 and MS4-02 add the product modules; MS4-40 retires the prototype | **The measurement modules are not moved or renamed until NF5's B1 closes.** MS4-01 and MS4-02 **copy rather than move**, so MS4-01 moves nothing at all. "The rest" it could have moved is only the generator and `keliver-compose-values`, which keep their names (Q15); the other `gatea-*` modules are the composeui module's own dependencies, so they stay with it. Copying is possible because the generator takes one config per group, so the product groups are generated beside `gatea` while the prototype keeps building. Neither waits for B1. The cost is two generated copies and the prototype's tests (and its iOS link) in CI from about day 3 to day 48. NF5's B1 runs on the prototype's container, as NF5 plans. MS4-40 moves NF5's measurement code onto the product modules after B1 and A6, and before B5 (L2, days 45–48), agreed with Track A. A generator change regenerates the prototype too (`checkComposeApi`); NF5's measurements compare within one build |
+| The prototype modules: `keliver-compose-gatea-composeui` (with its dependencies, the other `gatea-*` modules), `keliver-compose-gatea-profile`, `sample/` (the three-way bench) | #308 adds `CachedFrameReplayBenchmark` (composeui), `Nf5Stack.kt` and `QuickJsProfile.kt` (profile) and the bench's `variedDetail` (sample). R1 adds a bench arm. NF5's B1 is a spike "against the prototype" on gate A's container and the guest profile | MS4-01 and MS4-02 add the product modules; MS4-40 retires the prototype | **The measurement modules are not moved or renamed until NF5's B1 closes.** MS4-01 and MS4-02 **copy rather than move**, so MS4-01 moves nothing at all. "The rest" it could have moved is only the generator and `keliver-compose-values`, which keep their names (Q15); the other `gatea-*` modules are the composeui module's own dependencies, so they stay with it. Copying is possible because the generator takes one config per group, so the product groups are generated beside `gatea` while the prototype keeps building. Neither waits for B1. The cost is two generated copies and the prototype's tests (and its iOS link) in CI from about day 3 to day 48. NF5's B1 runs on the prototype's container, as NF5 plans. MS4-40 moves NF5's measurement code onto the product modules after B1 and A6, and before B5 (L2, days 45–48), agreed with Track A. <br>**The prototype is kept, not frozen** (re-review M2). The generator and `keliver-compose-values` keep changing under it (MS4-07…-09 on L1; MS4-13, -14, -15 and -39 on L2), so every such change regenerates and recompiles it (`checkComposeApi`), during NF5's R1 (days 2–4), B1 (9–15) and A6 (35–37). Two rules: <br>- **The prototype's lock may be reset** when a generator change requires it. `gatea.lock.json` was never published, so no device holds its tags. MS4-08's presence split and MS4-09's "present" flag change the wire of existing entries, so each resets it, and says so in its body. The product locks stay append-only from MS4-06 on. <br>- **Every NF5 measurement (R1, B1, A6) records the commit it was built from**, in its result. A comparison never crosses a regeneration: both arms of a before/after pair are built from one commit, or the baseline is re-run on the later one. <br>The upkeep costs L1 about 2 days (one each in MS4-08 and MS4-09); the values PRs on L2 keep the prototype compiling within their own estimates |
+| The generated groups' configs and locks (`<group>.json`, `<group>.lock.json`) and the generator's classification (re-review M1) | NF5's **B0**: `retainedContainer@2` changes the `Retained`/`RetainedEntry` extras (today in `gatea.json:120`, in the product core group from MS4-01), so it edits the **product group's config and lock** (days 37–40). **B4** does too, if `reveal@1` touches the schema (days 48–54). Track A names this in those PRs' bodies | L1's generator PRs; L2's MS4-13, -15 (`BasicTextField(state)`), -22, -36 and -39; Track A's MS4-20 | **The same rule as the API dumps:** merge `origin/main`, take its lock, then regenerate (`generateComposeApi` in its own Gradle call, then the tests). The branch's new entries are appended after `main`'s, and their tags may change, which is free until the freeze (Q2). **Never hand-merge a lock or a generated file.** Only one lane owns the generator's code at a time (L1); the others add config entries and classifications |
 | The production container | NF5's **B0** builds the retained container's entry states and `retainedContainer@2` "in NF1's production container" | **MS4-02** puts NF1's container in the product host module | **MS4-02 is a named prerequisite of NF5's B0** (MS4-02 ends on day 11, B0 starts on day 37) |
 | `keliver-nav` | NF5's B1 (spike), then B2–B4: held effects, parked pops, kinds, the reveal | MS4-27 (wasmJs), MS4-28 (registry) | **MS4-27 and MS4-28 land before NF5's B1 starts** (L2, days 3–9; B1 from day 9). From B1 on, Track A owns `keliver-nav`, and no MS4 PR edits it |
 | `keliver-tooling-codegen` and the `keliver-schema` annotations (review H2) | NF5's **A1**: the frame-rule annotations, `FrameRules` and strict mode | **MS4-03** (absent groups in the host factory); **MS4-36** (the generated schemas carry A1's annotations) | A1 (Track A, days 4–7) and MS4-03 (L1, days 3–6) overlap. They edit different outputs of the module (A1 adds `FrameRules`; MS4-03 changes the host factory). Whichever merges second merges `origin/main` and reruns the codegen tests, and neither renames shared code. MS4-36 starts after A1, A3c and A4b |
 | Host features and templates (`scripts/templates/*/BundleIndex.kt`, `HostConfig`) and `keliver-treehouse-host` (review M7) | **H0**: host feature names as constants in one place, which templates declare. A3a–c, A5 (the start table, storage, the off switch), B3, B4 | MS4-04 (mismatch reports), MS4-23 (the compose gate's levels in both templates' lookup and load) | **H0 comes first** (Track A, days 0–2). MS4-04's template wiring and MS4-23's `constraints.compose` build on H0's constants: a template declares its group levels there, and `admits` reads that declaration. **There is no second list.** MS4-23 (days 48–54) lands after NF5's cold-start code (A5, days 32–35). The gate's changes stay in `BundleIndex.kt`'s constraint and manifest checks, and NF5's stay in the start path. Each names the other's PR in its body |
-| The protocol | NF5's A2: `FrameCacheTags` in `keliver-protocol` (lock test); B0: `retainedContainer@2`; B4: `reveal@1` | MS4-01 and MS4-06: product tags, free until the freeze | NF5's protocol changes are additive, under their own lock tests and host features. They do not wait for the generated groups' lock, and the generated groups' lock does not wait for them. **The generated lock freezes at the `v0.5.0` tag (Q2), and NF5's A2, B0 and B4 land before the candidate**, so 0.5.0 carries both. A stored frame is keyed by the release (sequence, manifest sha256, module digest), so a tag change before the freeze never replays a stale tree |
+| The protocol | NF5's A2: `FrameCacheTags` in `keliver-protocol` (lock test); B0: `retainedContainer@2`; B4: `reveal@1` | MS4-01 and MS4-06: product tags, free until the freeze | NF5's protocol changes are additive, under their own lock tests and host features. A2's `FrameCacheTags` does not touch the generated groups' lock. **B0's `retainedContainer@2` (and B4's `reveal@1`, if it touches the schema) does**: it lands in the product group's config and lock under the row above, and is a Track A edit of the product group's extras. **The generated lock freezes at the `v0.5.0` tag (Q2), and NF5's A2, B0 and B4 land before the candidate**, so 0.5.0 carries both. A stored frame is keyed by the release (sequence, manifest sha256, module digest), so a tag change before the freeze never replays a stale tree |
 | The reference-app workflows | H0's and A5's gates | MS4-04, -17, -23, -32; C7, C8 | Library changes are checked on **MS4-35's route** (L2, days 0–3). H0's workflow gate runs on that route once it merges |
 | API dumps (`keliver-nav.api`, `keliver-treehouse-host.api`, `keliver-protocol.api`, klib dumps) | New experimental API | New API | Merge `origin/main`, then run `apiDump`. Never hand-merge a dump |
 | Phone sessions | R0 (2026-11-25), R1, A6 (A-1…A-8), B5 (B-1…B-10) | The candidate's A12 and iPhone runs (C11, C14, C15) | One session at a time (PD7). MS4f's runs share NF5's next scheduled session where the timing allows |
@@ -228,33 +235,54 @@ is 2026-11-25):
 
 | Lane | Agent | PRs in order (start–end day) | Load | Ends |
 |---|---|---|---|---|
-| L1 | Track B's agent | MS4-01 (0–3), 03 (3–6), 06 (6–7), 07 (7–11), 09 (11–16), 10 (16–18), 08 (18–20), 12 (20–23), 16 (23–27), 11 (27–33), 19 (33–35), 38 (35–38), 17 (38–43), 18 (43–49), 31 (49–55), 32 (55–58), 37 (58–59), 26 (59–61), 21 (61–62), 34 (62–65) | 65 | day 65 |
-| L2 | a dedicated second MS4 agent | MS4-35 (0–3), 27 (3–5), 28 (5–9), 02 (9–11), 05 (11–14), 04 (14–16), 13 (16–20), 22 (20–27), 15 (27–33), 39 (33–38), 14 (38–41), 29 (41–45), 40 (45–48), 23 (48–54), 36 (54–58), 30 (58–66), 33 (66–70) | 70 | day 70 |
+| L1 | Track B's agent | MS4-01 (0–3), 03 (3–6), 06 (6–7), 07 (7–11), 09 (11–17), 10 (17–19), 08 (19–22), 12 (22–25), 16 (25–29), 11 (29–35), 19 (35–37), 38 (37–40), 17 (40–45), 18 (45–51), 31 (51–57), 32 (57–60), 37 (60–61), 26 (61–63), 21 (63–64), 34 (64–67) | 67 | day 67 |
+| L2 | a dedicated second MS4 agent (Q16) | MS4-35 (0–3), 27 (3–5), 28 (5–9), 02 (9–11), 05 (11–14), 04 (14–16), 13 (16–20), 22 (20–27), 15 (27–33), 39 (33–38), 14 (38–41), 29 (41–45), 40 (45–48), 23 (48–54), 36 (54–59), 30 (59–67), 33 (67–71) | 71 | day 71 |
 | A | Track A's agent | NF5: H0 (0–2), R1 (2–4), A1 (4–7), A2 (7–9), B1 (9–15), A3a (15–18), A3b (18–21), A3c (21–24), A4a (24–28), A4b (28–32), A5 (32–35), A6 (35–37), B0 (37–40), B2 (40–46), B3 (46–48), B4 (48–54), B5 (54–57); then MS4-20 (57–62), 24 (62–63), 25 (63–66) | 57 + 9 | day 66 |
-| MS4f | any | the candidate (70–73) | 3 | day 73 |
+| MS4f | any | the candidate (71–74) | 3 | day 74 |
+
+The tightest "Needs": MS4-34 starts on day 64, after MS4-20 (day 62) and MS4-36 (day 59); MS4-36 starts
+on day 54, after A4b (day 32) and MS4-38 (day 40); MS4-40 runs days 45–48, after B1 (day 15) and A6
+(day 37) and before B5 (day 54); MS4-27 and MS4-28 end on day 9, when B1 starts; MS4-02 ends on day 11,
+and B0 starts on day 37.
 
 **The binding constraint is lane load, not the dependency path** (review M1). In revision 1, lane B1's 59
 days bound the plan, not its 44-day critical path, and even that assumed a second agent who was mostly
 free. In this revision:
-- L1 holds 65 days and cannot be split: every PR in it edits the generator and the lock, one after
-  another.
-- L2 (70 days) and Track A's tail (9 days) take everything that can move.
-- So the floor is the total, about 204 agent-days over three agents, or about 68 days.
+- L1 holds 67 days. Its spine is serial: the **generator-feature chain MS4-07 → 09 → 16 → 17 → 18**,
+  where each PR builds on the generator features of the one before (re-review M1). It is not lock
+  ownership that keeps them together: the generated configs and locks are edited by L2 and Track A too,
+  under section 2.2's rule. The PRs around the chain sit on L1 where the lanes balance.
+- L2 (71 days) and Track A's tail (9 days) take everything that can move.
+- So the floor is the total, about 207 agent-days over three agents, or about 69 days.
 
-The dependency critical path is about 44 days: MS4-01 → 06 → 07 → 09 → 16 → 17 → 18 → 31 → 32 → 33 →
-MS4f. NF5's longest chain, from R1 through NF5's B1, B0 and B2–B5, is shorter (about 32 days). So
-neither one sets the date.
+The dependency critical path is about 45 days: MS4-01 → 06 → 07 → 09 → 16 → 17 → 18 → 31 → 32 → 33 →
+MS4f. NF5's longest chain, R1 → NF5's B1 → B0 → B2 → B3 → B4 → B5, is shorter: 28 days, or 30 with H0.
+So neither one sets the date.
 
 **Duration:**
-- **Three agents** (L1, L2 and Track A, as above): the candidate opens on about **day 70** and is
-  written up by day 73. That is about 15 weeks of working days. Allow **16–17 weeks**, which is mid- to
+- **Three agents** (L1, L2 and Track A, as above): the candidate opens on about **day 71** and is
+  written up by day 74. That is about 15 weeks of working days. Allow **16–17 weeks**, which is mid- to
   late March 2027, for review rounds, a shared machine's CI queue, the phone sessions (R1, A6, B5, the
   candidate) and the owner's answers.
-- **Without a dedicated second MS4 agent** (Track B's agent alone on MS4, Track A joining after NF5's
-  B5): at least 102 days for 204 agent-days over two agents. Allow about **22–24 weeks**.
-- **If Track A does not join after NF5:** MS4 alone is about 147 days, about **30 weeks**.
+- **Without a dedicated second MS4 agent** (Q16 answered no: Track B's agent alone on MS4, Track A
+  joining after NF5's B5): at least 104 days for 207 agent-days over two agents. Allow about
+  **22–24 weeks**.
+- **If Track A does not join after NF5 either:** MS4 alone is about 150 days, about **30 weeks**.
+
+**NF5's ordering rules without L2** (re-review Low 3). In both smaller cases, **Track B's agent** takes
+L2's NF5-facing PRs, and NF5's dates hold:
+- MS4-27 and MS4-28 first (days 0–6), so they land before NF5's B1 on day 9. L1's chain then starts on
+  day 6, and every L1 date moves 6 days later;
+- MS4-02 right after MS4-01 (about days 9–11, well before B0 on day 37);
+- MS4-35 before MS4-04, the first PR checked on its route;
+- MS4-40 inside the window after A6 (day 37) and before B5 (day 54).
+
+In the two-agent case, Track A takes MS4-20, -24 and -25 after B5 as above, and then whatever of L2 is
+left. If Track B's agent cannot start on MS4-27 on day 0, Track A does MS4-27 and MS4-28 before B1
+instead, and NF5's B1 and everything after it move 6 days later.
 
 **What the schedule assumes:**
+- Q16 is answered yes by day 0 (section 6), so L2 starts on day 0.
 - Q1 and Q14 are answered by day 0, and Q2 by day 6 (section 6). If Q1 or Q14 is late, L1
   takes MS4-24 and MS4-25 first (4 days, no dependencies; they move from Track A's tail), and the plan
   slips by any wait beyond that.
@@ -314,10 +342,10 @@ switching to the fork for 0.5.0 apps.
 | Compile and link time | The iOS test link alone is 14.7 min on a 3-core runner (#243). Until MS4-40, the prototype's and the product's tests both link | Adopters consume published klibs (they do not compile our generated code). C10 measures the iOS host link against a threshold. #243's path filter | Split the generated host module per group, so a host links only what it uses; Kotlin/Native release link caching on CI |
 | Compose version coupling | The generator reads the CMP 1.12.2 and material3 1.9.0 jars; copied default expressions depend on them; `checkComposeApi` fails on a bump (design §20) | 0.5.x supports CMP 1.12.x only, declared in the Gradle metadata (Q9). A nightly job builds the groups against the next CMP. Hidden overloads keep their tags across a bump (§3) | A Compose minor bump is a Keliver minor release with regenerated groups; an app on a newer Compose waits for it |
 | The API surface committed to | The wire (lock tags) lives on devices for as long as bundles do. The guest stubs follow Compose. The mirrors and host-state commands are Keliver's own | Freeze only the lock at 0.5.0 (Q2). Keliver-only API (extras, app components, host-state commands, nav retention) goes behind `@Experimental…` opt-ins (Q10); mirrors' internals are non-public | The pre-1.0 policy ([`API_STABILITY.md`](API_STABILITY.md)) allows breaking guest-source API in 0.x. The wire cannot break, so a mistake becomes a hidden entry with a new tag |
-| Scope: WS2 in full plus NF5 is about 204 agent-days | Section 2.3 | Three agents. Coverage is config once each category exists (state objects, slot parameters, recording). `Canvas` recording, the most novel category, is scheduled early (MS4-22, days 20–27) | Q7: only if a category is late does the owner decide whether to amend PD4. PD4 stands until then |
+| Scope: WS2 in full plus NF5 is about 207 agent-days | Section 2.3 | Three agents (Q16). Coverage is config once each category exists (state objects, slot parameters, recording). `Canvas` recording, the most novel category, is scheduled early (MS4-22, days 20–27) | Q7: only if a category is late does the owner decide whether to amend PD4. PD4 stands until then |
 | NF5 and MS4 collide | Section 2.2 | Area ownership, the order (H0 first; MS4-27/28 before NF5's B1; MS4-02 before NF5's B0; MS4-23 after A5), and the prototype copied rather than moved | NF5's protocol changes are additive under their own lock tests and host features, and land before the candidate; the generated lock freezes at the tag (Q2) either way |
 | NF5 (B)'s gates miss | NF5's appendix B expects B-1 at 120–150 ms against about 100, and B-2 at 225–275 against 150 or less | R0 and R1 first; decision 7's split (b) | The owner rules on the parked fallbacks (PLAN section 12) with NF5's evidence; the candidate waits for that ruling (C15) |
-| The prototype and product copies drift | MS4-02 copies NF1's host pieces | Fixes go to the product copy only; the prototype is frozen except for NF5's measurement code | MS4-40 retires the prototype by day 48 |
+| The prototype and product copies drift | MS4-02 copies NF1's host pieces; generator and values changes regenerate the prototype under NF5's measurements | Fixes go to the product copy only. The prototype changes only by regeneration (its lock may be reset) and by NF5's measurement code; each NF5 measurement records its commit and never compares across a regeneration (section 2.2) | MS4-40 retires the prototype by day 48 |
 | Old 0.4 bundles | One engine since NF2: every 0.5 bundle is `quickjs-2026`, and hosts take only their engine's bundles (#275) | None needed: the 0.4 wire is not served to 0.5 hosts, so MS4 may reset tags before the freeze | — |
 
 ## 6. Decisions
@@ -330,15 +358,16 @@ switching to the fork for 0.5.0 apps.
 |---|---|---|---|---|
 | Q1 | The group layout: which groups, and which root? | A generated root with the legacy `keliver-material` an optional dependency. Groups: compose core (foundation-layout, foundation, ui, material3, animation, extras), `icons-core`, `icons-extended` (opt-in), `coil` (optional) | A codegen change for absent groups (3 days). Legacy tags move under an offset (moot: 0.4 bundles never reach 0.5 hosts) | **MS4-01, day 0**, and everything after it |
 | Q14 | **Maven Central artifact names of the generated group modules.** They are permanent once published; Q1 names the groups, not the artifacts | `dev.keliver:keliver-compose-<group>-<role>`, with the roles the prototype has (`-schema`, `-widget`, `-modifiers`, `-compose`, `-protocol-guest`, `-protocol-host`, `-composeui`); e.g. `keliver-compose-material3-composeui`, `keliver-compose-icons-core-compose` | Long names. A layout change after publishing means new artifacts and a relocation | **MS4-01, day 0** |
-| Q15 | **Artifact names of the shared modules**: the values runtime and the generator (which Q8 publishes for adopters' builds) | Keep `dev.keliver:keliver-compose-values` and `dev.keliver:keliver-compose-generator`; the app-components task lives in the existing `keliver-gradle-plugin` | None now; permanent once published | MS4-11, day 27; C2 |
+| Q16 | **Staffing: a dedicated second MS4 agent for about 15 weeks?** It is the owner's resource, and the biggest single input to the date | **Yes: three agents** (L1 on Track B's agent, L2 on a dedicated second MS4 agent, Track A on NF5 and then MS4-20, -24 and -25). It is the only plan near 16–17 weeks | One more agent for about 71 working days. Without it, 22–24 weeks; without Track A's tail either, about 30 (section 2.3) | **L2 from day 0**: MS4-35, MS4-27 and MS4-28 (days 0–9), and through MS4-27 and -28 **NF5's B1 on day 9**. If the answer is no, Track B's agent does MS4-27 and -28 first and L1 moves 6 days later (section 2.3) |
+| Q15 | **Artifact names of the shared modules**: the values runtime and the generator (which Q8 publishes for adopters' builds) | Keep `dev.keliver:keliver-compose-values` and `dev.keliver:keliver-compose-generator`; the app-components task lives in the existing `keliver-gradle-plugin` | None now; permanent once published | MS4-11, day 29; C2 |
 | Q2 | When does the lock become append-only for good? | Fresh product locks at level 1 now; free changes until the candidate; frozen at the `v0.5.0` tag | The prototype's lock fixtures are retired with the prototype (MS4-40) | **MS4-06, day 6** (on the critical path) |
-| Q10 | Which generated API is stable in 0.5.0? | Compose mirrors stable; Keliver-only API experimental (opt-in) | Opt-in annotations in adopters' code | MS4-07, day 7. Until answered, Keliver-only API is generated as experimental, which is the recommendation |
-| Q8 | App components: generated in the adopter's build? | Yes, a `keliver-gradle-plugin` task, with the lock in the app's repository | 6 days; the plugin gains the generator's classpath | MS4-11, day 27 (and so MS4-23) |
+| Q10 | Which generated API is stable in 0.5.0? | Compose mirrors stable; Keliver-only API experimental (opt-in) | Opt-in annotations in adopters' code | **The freeze at the candidate (C2), day 71.** Nothing before it: MS4-07 (day 7) generates Keliver-only API as experimental, which is the recommendation, and a "no" only drops opt-ins before the freeze |
+| Q8 | App components: generated in the adopter's build? | Yes, a `keliver-gradle-plugin` task, with the lock in the app's repository | 6 days; the plugin gains the generator's classpath | MS4-11, day 29 (and so MS4-23) |
 | Q5 | Gate granularity: the whole group level, or the levels actually used? | The whole level in 0.5.0 (simple, refuses more, and no older hosts exist), with the app components' level beside it | Coarser refusals once 0.5.x hosts age | MS4-23, day 48 |
-| Q13 | **Confirm:** the migration tool (MS4-31) stays in 0.5.0, as PLAN section 8 and WS2 already include it | Confirm. It ports `sample/`, the reference app and MS7's 13 private screens, and its rules double as the agent guide's "legacy to Compose" table | 6 days | MS4-31, day 49, only if the answer is no |
+| Q13 | **Confirm:** the migration tool (MS4-31) stays in 0.5.0, as PLAN section 8 and WS2 already include it | Confirm. It ports `sample/`, the reference app and MS7's 13 private screens, and its rules double as the agent guide's "legacy to Compose" table | 6 days | Nothing if confirmed. **If no:** MS4-31 (day 51) is dropped, and MS4-32 (day 57) ports `sample/` and the reference app by hand: about 4 more days on MS4-32 (net about 2 fewer on L1), and MS7's 13 private screens are then ported by hand too |
 | Q3 | Guest reads of animated values: tagging or a read log? | A read log, with a debug check for unconsumed reads | 3–4 days; tagging's tests rewritten | MS4-20, day 57 |
-| Q7 | **An amendment of PD4, only if needed:** if one per-frame category (`Canvas` recording) misses, may 0.5.0 ship it as an error stub that names an app component, and add it in 0.5.1? That would cut "WS2 in full", which PD4 requires | **No amendment now.** MS4-22 is scheduled early (days 20–27), so a slip shows by about day 40 with a month of margin. The maintainer brings the amendment, with the evidence, only then | None unless it happens; if it does, a guest that draws waits for 0.5.1 | Nothing now; the go, only in the slip case |
-| Q9 | The Compose range for 0.5.x | CMP 1.12.x only, declared; the next CMP built nightly | Apps cannot move to CMP 1.13 before Keliver 0.6 | MS4-34 (the adopter notes), day 62; the candidate |
+| Q7 | **Contingent; no answer needed now.** An amendment of PD4, only if needed: if one per-frame category (`Canvas` recording) misses, may 0.5.0 ship it as an error stub that names an app component, and add it in 0.5.1? That would cut "WS2 in full", which PD4 requires | **No amendment now.** MS4-22 is scheduled early (days 20–27), so a slip shows by about day 40 with a month of margin. The maintainer brings the amendment, with the evidence, only then | None unless it happens; if it does, a guest that draws waits for 0.5.1 | Nothing now; the go, only in the slip case |
+| Q9 | The Compose range for 0.5.x | CMP 1.12.x only, declared; the next CMP built nightly | Apps cannot move to CMP 1.13 before Keliver 0.6 | MS4-34 (the adopter notes), day 64; the candidate |
 | Q11 | The size budget for C9 | APK increase at most +2.5 MB; bundle at most 2.5 MB in total; iOS app increase at most +3 MB (not yet measured: MS4-03 measures it first, and the plan comes back to you if that first measurement is already over) | A budget that may force the group split earlier | C9 at the candidate; MS4-03's measurement, day 3 |
 
 ### 6.2 Decided by the maintainer (were owner questions in revision 1)
@@ -347,8 +376,7 @@ switching to the fork for 0.5.0 apps.
 |---|---|---|
 | Q4 | The guest-clock `Animatable` sits behind an **opt-in at ERROR** (MS4-21) | 2.8 values/s on the A12 is not an animation; one day; it is reversible (it can be relaxed to a warning) |
 | Q6 | The iOS same-source test runs **path-filtered on PRs, and in full nightly** (#243 option (b)) | It is a CI-cost call. A regression outside the filter shows the next morning, and the candidate runs it in full (C4) |
-| Q12 | Track A does **not** take MS4's `keliver-nav` PRs: it is on NF5 from day 0. **L2 takes MS4-27 and MS4-28 first**, merged before NF5's B1, and Track A owns `keliver-nav` from B1 on. Track A takes MS4-20, -24 and -25 after NF5's B5 | NF5 (A) starts now, so Track A has no review window to spare (review M1) |
-| (new) | **Staffing: three agents** (L1, L2 and Track A) | It is the only plan near 16–17 weeks. Two agents take 22–24 weeks (section 2.3) |
+| Q12 | Track A does **not** take MS4's `keliver-nav` PRs: it is on NF5 from day 0. **L2 takes MS4-27 and MS4-28 first**, merged before NF5's B1, and Track A owns `keliver-nav` from B1 on. Track A takes MS4-20, -24 and -25 after NF5's B5 | NF5 (A) starts now, so Track A has no review window to spare (review M1). Who takes MS4-27 and -28 if Q16 is no: section 2.3 |
 
 Recorded owner decisions this plan follows, and does not re-ask:
 - NF5 (A) and (B) are in 0.5.0, so the candidate waits for both (2026-11-24);
