@@ -110,6 +110,34 @@ class SourceReader(sourceJars: List<File>) {
     return null
   }
 
+  /**
+   * Spike (docs/COMPOSE_GENERIC_MECHANISMS.md): the default expressions of any declaration by
+   * parameter name, with its file's imports. [owner] is null (top level), a class or interface
+   * (`DrawScope`, with [name] `<init>` for a constructor), or a companion (`Brush.Companion`).
+   */
+  fun defaultsOf(pkg: String, owner: String?, name: String, paramNames: List<String>, paramTypes: List<TypeRef>? = null): Pair<Map<String, String?>, Map<String, String>>? {
+    // Same names are not enough: a hidden overload (TextStyle's) can share them with other types.
+    fun same(ps: List<org.jetbrains.kotlin.psi.KtParameter>) = ps.map { it.name } == paramNames &&
+      (paramTypes == null || ps.zip(paramTypes).all { (kp, t) -> kp.typeReference?.text?.let { txt -> sameType(txt, t) && txt.trim().endsWith("?") == t.nullable } ?: true })
+    for (file in parsedFiles(pkg)) {
+      val params: List<org.jetbrains.kotlin.psi.KtParameter>? = if (owner == null) {
+        file.declarations.filterIsInstance<KtNamedFunction>().firstOrNull { f -> f.name == name && same(f.valueParameters) }?.valueParameters
+      } else {
+        val cls = file.collectDescendantsOfType<KtClassOrObject>().firstOrNull { it.name == owner.substringBefore(".Companion") } ?: continue
+        when {
+          owner.endsWith(".Companion") -> cls.companionObjects.firstOrNull()?.declarations?.filterIsInstance<KtNamedFunction>()
+            ?.firstOrNull { f -> f.name == name && same(f.valueParameters) }?.valueParameters
+          name == "<init>" -> (listOfNotNull(cls.primaryConstructor) + cls.secondaryConstructors)
+            .firstOrNull { c -> same(c.valueParameters) }?.valueParameters
+          else -> cls.declarations.filterIsInstance<KtNamedFunction>()
+            .firstOrNull { f -> f.name == name && same(f.valueParameters) }?.valueParameters
+        }
+      }
+      if (params != null) return params.associate { it.name!! to it.defaultValue?.text?.replace(Regex("\\s+"), " ") } to imports(file)
+    }
+    return null
+  }
+
   private fun imports(file: KtFile): Map<String, String> = file.importDirectives.mapNotNull { d ->
     val fq = d.importedFqName?.asString() ?: return@mapNotNull null
     (d.aliasName ?: fq.substringAfterLast('.')) to fq

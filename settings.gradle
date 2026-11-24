@@ -72,6 +72,8 @@ include ':keliver-compose-gatea-compose'
 include ':keliver-compose-gatea-protocol-guest'
 include ':keliver-compose-gatea-protocol-host'
 include ':keliver-compose-gatea-composeui'
+// Spike (docs/COMPOSE_GENERIC_MECHANISMS.md): generic generator mechanisms; JVM only, never published.
+include ':keliver-compose-generic-spike'
 // Gate B part c: the same-source samples as a signed guest bundle and a Kotlin-only iOS simulator
 // app that loads it. Only with -Pkeliver.gatebIos (scripts/keliver-gateb-ios-sim.sh), so CI's
 // full graph neither links the app nor compiles the bundle.

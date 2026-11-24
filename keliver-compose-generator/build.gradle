@@ -47,6 +47,9 @@ dependencies {
     composeApi it
     composeSources "$it:sources@jar"
   }
+  // Spike (docs/COMPOSE_GENERIC_MECHANISMS.md): the call records read TextStyle's default
+  // expressions from ui-text's sources. Sources only: the API inputs are unchanged.
+  composeSources "${desktopOf(libs.jetbrains.compose.ui.asProvider(), 'ui-text')}:sources@jar"
 }
 
 // Recorded in the generated files' header, so a regeneration's diff names the Compose it read.
@@ -85,6 +88,23 @@ tasks.named('test') {
     systemProperty 'keliver.composeApi', configurations.composeApi.asPath
     systemProperty 'keliver.composeSources', configurations.composeSources.asPath
   }
+}
+
+// Spike (docs/COMPOSE_GENERIC_MECHANISMS.md): call records, a remote object and a recorded scope,
+// generated into keliver-compose-generic-spike. Not part of checkComposeApi.
+def genericSpikeArgs = { List extra ->
+  [
+    '--classpath', configurations.composeApi.asPath,
+    '--sources', configurations.composeSources.asPath,
+    '--out', rootProject.file('keliver-compose-generic-spike/src/main/kotlin').absolutePath,
+  ] + extra
+}
+tasks.register('generateGenericSpike', JavaExec) {
+  group = 'build'
+  description = 'Regenerate the generic-mechanisms spike module from Compose'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.compose.generator.GenericSpikeMain'
+  args = genericSpikeArgs([])
 }
 
 tasks.register('checkComposeApi', JavaExec) {
