@@ -59,7 +59,9 @@ on:
   pull_request:
     paths:
       - "scripts/keliver-new-ios-host.sh"
+      - "scripts/keliver-runtime-line.sh"
       - "scripts/keliver-new-ios-host-selftest.sh"
+      - "scripts/fixtures/host-0.4.1/**"
       - "scripts/templates/ios-host/**"
       - "scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt"
       - "scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt"
@@ -88,7 +90,9 @@ on:
     branches: [main]
     paths:
       - "scripts/keliver-new-ios-host.sh"
+      - "scripts/keliver-runtime-line.sh"
       - "scripts/keliver-new-ios-host-selftest.sh"
+      - "scripts/fixtures/host-0.4.1/**"
       - "scripts/templates/ios-host/**"
       - "scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt"
       - "scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt"

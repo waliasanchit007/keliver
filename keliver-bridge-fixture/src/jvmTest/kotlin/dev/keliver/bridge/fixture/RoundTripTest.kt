@@ -175,6 +175,28 @@ class RoundTripTest {
     assertTrue(synchronized(logged) { logged.any { "token=secret" in it } }, "and in the host's log: $logged")
   }
 
+  /**
+   * NF2: the guest is linked with Kotlin's Long as a JavaScript BigInt (build-support's default for
+   * every Zipline guest) and runs on the fork's engine: emulated, `jsTypeOf` would be "object".
+   */
+  @Test fun guestLongsAreBigIntsOnTheForksEngine() {
+    val unused = object : ShopActions {
+      override suspend fun openRoute(route: String): Boolean = error("unused")
+      override suspend fun share(text: String, url: String?) = error("unused")
+      override suspend fun pickAddress(request: AddressRequest): AddressResult = error("unused")
+      override suspend fun findCoupon(code: String): String? = error("unused")
+      override fun track(event: String, properties: Map<String, String>) = Unit
+    }
+    val answers = roundTrip(
+      { zipline, main ->
+        ShopActionsBridge.bind(zipline, unused, main)
+        WaitsBridge.bind(zipline, waitForever, main)
+      },
+      "longKind",
+    )
+    assertEquals(listOf("ok bigint 8000000000000000007 7"), answers)
+  }
+
   @Test fun swiftStyleCallbacksAnswerOnTheMainContext() {
     val threads = java.util.Collections.synchronizedMap(mutableMapOf<String, Thread>())
     fun on(what: String) {

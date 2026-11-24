@@ -27,6 +27,18 @@ if [ "${KELIVER_USE_MAVEN_LOCAL:-0}" = "1" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The toolchain the Keliver version was built with: keliver-runtime-line.sh's table, one column per
+# line (the published 0.4.x line: Kotlin 2.2.0; from 0.5.0, Keliver's Zipline fork on Kotlin 2.4.21).
+# keliver-new-device-target.sh and the host scaffolders read the same table.
+[ -f "$SCRIPT_DIR/keliver-runtime-line.sh" ] || { echo "keliver-runtime-line.sh is missing beside this script ($SCRIPT_DIR)"; exit 1; }
+# shellcheck source=keliver-runtime-line.sh
+. "$SCRIPT_DIR/keliver-runtime-line.sh"
+keliver_zipline_line "$KELIVER_VERSION" || { echo "KELIVER_VERSION: $KELIVER_LINE_ERROR"; exit 1; }
+KOTLIN_VERSION="$TOOLCHAIN_KOTLIN"
+COMPOSE_VERSION="$TOOLCHAIN_COMPOSE"
+COROUTINES_VERSION="$TOOLCHAIN_COROUTINES"
+SERIALIZATION_VERSION="$TOOLCHAIN_SERIALIZATION"
 # The gradle wrapper ships beside this script in the tools bundle (../wrapper),
 # or lives at the repo root when run from a keliver checkout.
 WRAPPER=""
@@ -41,10 +53,10 @@ cat > "$DIR/settings.gradle" <<EOF
 pluginManagement {
   repositories { ${MAVEN_LOCAL}gradlePluginPortal(); mavenCentral(); google() }
   plugins {
-    id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0'
-    id 'org.jetbrains.compose' version '1.8.2'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.0'
+    id 'org.jetbrains.kotlin.multiplatform' version '${KOTLIN_VERSION}'
+    id 'org.jetbrains.kotlin.plugin.compose' version '${KOTLIN_VERSION}'
+    id 'org.jetbrains.compose' version '${COMPOSE_VERSION}'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '${KOTLIN_VERSION}'
   }
 }
 dependencyResolutionManagement {
@@ -81,9 +93,9 @@ kotlin {
         api 'dev.keliver:keliver-material-compose:${KELIVER_VERSION}'   // StyledText/Button/Icon/ListItem/…
         api 'dev.keliver:keliver-layout-compose:${KELIVER_VERSION}'     // Column/Row/Spacer
         api 'dev.keliver:portal-sql:${KELIVER_VERSION}'                 // HostSqlDriver data layer
-        implementation 'org.jetbrains.compose.runtime:runtime:1.8.2'
-        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
-        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+        implementation 'org.jetbrains.compose.runtime:runtime:${COMPOSE_VERSION}'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:${COROUTINES_VERSION}'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:${SERIALIZATION_VERSION}'
       }
     }
   }
@@ -221,6 +233,13 @@ if [ -n "$WRAPPER" ]; then
   # (scripts/templates/app-wrapper). The tools bundle's wrapper/ is already it.
   if [ -f "$SCRIPT_DIR/templates/app-wrapper/wrapper.properties" ]; then
     cp "$SCRIPT_DIR/templates/app-wrapper/wrapper.properties" "$DIR/gradle/wrapper/gradle-wrapper.properties"
+  fi
+  # And the Gradle this app's line runs on (keliver-runtime-line.sh): the 0.5 line's AGP, which the
+  # host scaffolders write and which builds with this wrapper, needs a newer one. On the 0.4 line the
+  # file stays as copied.
+  if [ -f "$DIR/gradle/wrapper/gradle-wrapper.properties" ]; then
+    keliver_line_wrapper_properties "$DIR/gradle/wrapper/gradle-wrapper.properties" \
+      || { echo "could not set this app's Gradle wrapper to Gradle $TOOLCHAIN_GRADLE"; exit 1; }
   fi
   chmod +x "$DIR/gradlew" 2>/dev/null || true
 fi

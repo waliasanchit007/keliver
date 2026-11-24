@@ -33,7 +33,7 @@ snapshot() { ( cd "$1" && find . -type f ! -path './.gradle/*' -print0 | sort -z
 
 APP="$DISP/demo"
 mkdir -p "$APP/src/jsMain/kotlin/screens" "$APP/src/jsMain/kotlin/logic"
-printf '{ "screensDir": "src/jsMain/kotlin/screens" }\n' > "$APP/keliver.portal.json"
+printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "keliverVersion": "0.4.1", "widgetVersion": 1 } }\n' > "$APP/keliver.portal.json"
 printf "rootProject.name = 'demo'\n" > "$APP/settings.gradle"
 printf 'package com.example.demo.screens\n\nfun HomeScreen() {}\n' > "$APP/src/jsMain/kotlin/screens/home.kt"
 # The Gradle the template's Kotlin runs on, not this repo's (templates/app-wrapper).
@@ -92,6 +92,15 @@ mv "$APP/gw" "$APP/gradlew"
 mv "$APP/keliver.portal.json" "$APP/k.json"
 refuses "outside an app root"              "no keliver.portal.json"   --bundle-server "$SERVER" --public-key-file "$KEY"
 mv "$APP/k.json" "$APP/keliver.portal.json"
+# L3 (review of #299): a keliver.portal.json that cannot be read or parsed, or names no Keliver version, is
+# refused instead of read as 0.4.1; M1: a version past the newest known line is refused.
+cp "$APP/keliver.portal.json" "$DISP/portal.json.good"
+printf '{ "screensDir": \n' > "$APP/keliver.portal.json"
+refuses "a keliver.portal.json that does not parse (L3)" "keliver.portal.json cannot be read or parsed" --bundle-server "$SERVER" --public-key-file "$KEY"
+printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "widgetVersion": 1 } }\n' > "$APP/keliver.portal.json"
+refuses "a keliver.portal.json without appRuntime.keliverVersion (L3)" "names no appRuntime.keliverVersion" --bundle-server "$SERVER" --public-key-file "$KEY"
+cp "$DISP/portal.json.good" "$APP/keliver.portal.json"
+KELIVER_HOST_KELIVER_VERSION=0.6.0 refuses "Keliver 0.6.0, past the newest known line (M1)" "knows Keliver lines up to 0.5; Keliver 0.6.0 needs a newer tools bundle" --bundle-server "$SERVER" --public-key-file "$KEY"
 printf 'package elsewhere\n\nfun OtherScreen() {}\n' > "$APP/src/jsMain/kotlin/screens/other.kt"
 refuses "screens in two packages"          "must all declare one"     --bundle-server "$SERVER" --public-key-file "$KEY"
 rm "$APP/src/jsMain/kotlin/screens/other.kt"
@@ -100,6 +109,8 @@ echo "=== a successful scaffold (the key from the store, by default)"
 out="$( cd "$APP" && "$SCAFFOLD" --bundle-server "$SERVER" --api-base-url "https://api.example.com/v1" 2>&1 )"; rc=$?
 [ "$rc" = 0 ] && ok "scaffolded (exit 0)" || { bad "scaffold failed: $out"; }
 printf '%s' "$out" | grep -q "matches this app's store" && ok "the key was checked against this app's store" || bad "no store match in: $out"
+printf '%s' "$out" | grep -q "^  Keliver          0.4.1 (the 0.4 line: app.cash.zipline 1.22.0, Kotlin 2.2.0, Compose 1.8.2)$" \
+  && ok "L3: the summary names the app's Keliver version and its line" || bad "L3: no Keliver line in the summary: $(printf '%s' "$out" | head -3 | tr '\n' ' ')"
 H="$APP/host-ios"
 K="$H/src/iosMain/kotlin/com/example/demo/host"
 missing=0
@@ -706,6 +717,76 @@ PY
     ( cd "$APP" && ./gradlew -p host-ios --stop > /dev/null 2>&1 )
   fi
 fi
+
+echo "=== NF2: the Zipline line follows the app's Keliver version (keliver-runtime-line.sh)"
+grep -q "^  id 'app.cash.zipline' version '1.22.0'$" "$H/build.gradle" && grep -q "implementation 'app.cash.zipline:zipline:1.22.0'" "$H/build.gradle" \
+  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'" "$H/build.gradle" && ! grep -q 'dev\.keliver\.zipline' "$H/build.gradle" \
+  && ok "NF2: a 0.4.1 app's iOS host keeps upstream Zipline 1.22.0 on Kotlin 2.2.0" || bad "NF2: the 0.4.1 app's iOS host changed its Zipline"
+APPF="$DISP/demo-fork"; mkdir -p "$APPF/src/jsMain/kotlin/screens"
+printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "keliverVersion": "0.5.0", "widgetVersion": 1 } }\n' > "$APPF/keliver.portal.json"
+cp "$APP/settings.gradle" "$APPF/"; cp "$APP/src/jsMain/kotlin/screens/home.kt" "$APPF/src/jsMain/kotlin/screens/"
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$APPF"
+keliver_require_isolated_store "$DISP" "$APPF" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
+out="$( cd "$APPF" && "$SCAFFOLD" --bundle-server https://bundles.example --public-key-file "$KEY" 2>&1 )"; rc=$?
+HF="$APPF/host-ios/build.gradle"
+[ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.1'$" "$HF" \
+  && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$HF" && grep -q "implementation 'dev.keliver.zipline:zipline-loader:1.28.0-keliver.1'" "$HF" \
+  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
+  && grep -q "implementation 'dev.keliver:keliver-treehouse-host:0.5.0'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
+  && ok "NF2: an app on 0.5.0 gets an iOS host on Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries), Kotlin 2.4.21, Compose 1.12.2" \
+  || bad "NF2: the iOS host of an app on 0.5.0 (rc=$rc): $(grep -hE 'zipline|kotlin.multiplatform|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
+# Coil, its Ktor fetcher and the Darwin engine: pinned on the 0.4 line as before; from keliver-image
+# at the app's version on the 0.5 line, so Ktor's client and its Darwin engine cannot split.
+grep -qx "        implementation 'io.coil-kt.coil3:coil-network-ktor3:3.3.0' // images over the network" "$H/build.gradle" \
+  && grep -qx "        implementation 'io.ktor:ktor-client-darwin:3.1.0'           // coil's network engine on iOS" "$H/build.gradle" \
+  && grep -qx "        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'" "$H/build.gradle" && ! grep -q 'keliver-image' "$H/build.gradle" \
+  && ok "0.4 line: Coil 3.3.0, Ktor's Darwin engine 3.1.0 and serialization 1.9.0 pinned (as before)" \
+  || bad "0.4 line: the iOS host's image dependencies changed: $(grep -hE 'coil|ktor|keliver-image|serialization-json' "$H/build.gradle" | tr -s ' ' | tr '\n' '|')"
+grep -q "^        implementation 'dev.keliver:keliver-image:0.5.0' //" "$HF" && ! grep -qE "io\.coil-kt|io\.ktor" "$HF" \
+  && grep -qx "        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0'" "$HF" \
+  && grep -qx "        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0'" "$HF" \
+  && ok "0.5 line: keliver-image (no Coil or Ktor pin), coroutines 1.11.0, serialization 1.13.0" \
+  || bad "0.5 line: the iOS host's image dependencies: $(grep -hE 'coil|ktor|keliver-image|coroutines|serialization-json' "$HF" | tr -s ' ' | tr '\n' '|')"
+
+echo "=== the 0.4 line, byte for byte (L2: scripts/fixtures/host-0.4.1/*.sha256)"
+# A 0.4.1 app's iOS host and embedded framework module, every file's sha256, against the manifests
+# recorded from the scaffolders before the 0.5 line. KELIVER_HOST_MANIFEST_WRITE=1 rewrites them
+# instead (only for a deliberate change to the 0.4 line's output).
+MF="$ROOT/scripts/fixtures/host-0.4.1"
+# Not hashed: the Gradle wrapper's script and jar, which --embed copies from the app (here this
+# checkout's own, by keliver-app-wrapper.sh) and which change with every wrapper bump. They are
+# checked below as copies of the app's. Its gradle-wrapper.properties is the scaffolders' template,
+# so it stays hashed.
+manifest() {
+  ( cd "$1" && find . -type f ! -path './.gradle/*' ! -path ./gradlew ! -path ./gradlew.bat ! -path ./gradle/wrapper/gradle-wrapper.jar \
+    | LC_ALL=C sort | while IFS= read -r f; do shasum -a 256 "$f"; done )
+}
+check_manifest() { # <label> <dir> <manifest file>
+  local got; got="$(manifest "$2")"
+  if [ "${KELIVER_HOST_MANIFEST_WRITE:-0}" = 1 ]; then
+    mkdir -p "$(dirname "$3")"; printf '%s\n' "$got" > "$3"; echo "  (wrote $3: $(printf '%s\n' "$got" | wc -l | tr -d ' ') files)"
+  elif [ ! -f "$3" ]; then
+    bad "$1: no manifest $3"
+  elif [ "$got" = "$(cat "$3")" ]; then
+    ok "$1: $(printf '%s\n' "$got" | wc -l | tr -d ' ') files, byte-identical to $(basename "$3")"
+  else
+    bad "$1 differs from $(basename "$3"): $(diff <(cat "$3") <(printf '%s\n' "$got") | grep '^[<>]' | head -4 | tr '\n' ' ')"
+  fi
+}
+A41="$DISP/line-0.4.1"; mkdir -p "$A41/src/jsMain/kotlin/screens" "$DISP/line-0.4.1-existing/MyApp.xcodeproj"
+cp "$DISP/portal.json.good" "$A41/keliver.portal.json"; cp "$APP/settings.gradle" "$A41/"; cp "$APP/src/jsMain/kotlin/screens/home.kt" "$A41/src/jsMain/kotlin/screens/"
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$A41" > /dev/null
+printf 'PRODUCT_NAME = "MyApp";\n' > "$DISP/line-0.4.1-existing/MyApp.xcodeproj/project.pbxproj"
+keliver_require_isolated_store "$DISP" "$A41" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
+( cd "$A41" && "$SCAFFOLD" --bundle-server https://bundles.example --api-base-url "https://api.example.com/v1" --public-key-file "$KEY" > /dev/null 2>&1 ) \
+  && check_manifest "0.4.1, the iOS host" "$A41/host-ios" "$MF/ios.sha256" || bad "0.4.1: the iOS scaffold failed"
+( cd "$A41" && "$SCAFFOLD" --embed --into "$DISP/line-0.4.1-existing" --bundle-server https://bundles.example --channel beta --public-key-file "$KEY" > /dev/null 2>&1 ) \
+  && check_manifest "0.4.1, the iOS --embed" "$DISP/line-0.4.1-existing/keliver-host-ios" "$MF/ios-embed.sha256" || bad "0.4.1: the iOS --embed scaffold failed"
+E41="$DISP/line-0.4.1-existing/keliver-host-ios"
+cmp -s "$A41/gradlew" "$E41/gradlew" && cmp -s "$A41/gradle/wrapper/gradle-wrapper.jar" "$E41/gradle/wrapper/gradle-wrapper.jar" && [ -x "$E41/gradlew" ] \
+  && ok "0.4.1, the iOS --embed: gradlew and gradle-wrapper.jar are the app's (not hashed: they follow the wrapper)" \
+  || bad "0.4.1, the iOS --embed: gradlew or gradle-wrapper.jar is not a copy of the app's"
+rm -rf "$A41" "$DISP/line-0.4.1-existing"
 
 grep -rqF -f "$PRIV" "$DISP"/demo*/host-ios 2>/dev/null && bad "the private key is in a scaffolded host" \
   || ok "the private key is in no scaffolded host"

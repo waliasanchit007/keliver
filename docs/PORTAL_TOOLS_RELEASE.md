@@ -7,6 +7,43 @@ The tools line and the library line are independent. `portal-tools-vX.Y.Z` fires
 listens on, so a tools release cannot publish a library. Bumping one to name the
 other is wrong.
 
+## Zipline line (NF2): the next tools release moves the scaffold default to 0.5.x
+
+Since NF2 (PR #294) this checkout builds on Keliver's Zipline fork, so the
+bundled development host (`portal-device-android`, built from the checkout)
+runs only QuickJS 2026. It **no longer serves the 0.4 line**: a 0.4.x app
+compiles QuickJS 2021 bytecode (upstream Zipline 1.22.0), which that host
+cannot load. `keliver-init` still makes a new app on 0.4.1 (its
+`KELIVER_VERSION` default), because 0.5.0 is not on Maven Central yet. It is the
+only scaffolder with a default: the others take the app's own
+`appRuntime.keliverVersion` and refuse an app that names none.
+
+So `scripts/build-portal-tools.sh` **refuses** to build a zip whose host
+engine (the catalog's Zipline group) and scaffold default
+(`keliver-runtime-line.sh`) are on different lines, and names both;
+`scripts/build-portal-tools-selftest.sh <parent>` checks the refusal without
+Gradle (`KELIVER_TOOLS_PREFLIGHT_ONLY=1`). The order is:
+
+0. **The editor.** `keliver-new-editor.sh` still writes the 0.4 line's Kotlin
+   and Compose and refuses an app on any other line (`docs/DEVICE_HOST.md`,
+   "Toolchain per line"). Make it take its versions from
+   `keliver-runtime-line.sh`'s table and drop the refusal. This comes first
+   because the library release preflight (`keliver-release-preflight.sh`, run
+   by `publish-maven-central.yml`) scaffolds and builds an editor at the
+   release version against the staged candidate: that run is the 0.5 editor's
+   check, and it fails until the editor is on the 0.5 line.
+1. Release the 0.5.0 libraries (on the fork) to Maven Central.
+2. In the next tools release, move `keliver-init`'s default to that 0.5.x, and
+   the pinned `mavenDependencyVersion` check in `portal-tools.yml` with it. The
+   build then passes the check. (The build also refuses a sibling scaffolder
+   that falls back to a fixed version.) A condition for moving the default:
+   the editor of step 0, built for a 0.5 app against the published
+   `portal-editor` 0.5.0. Without it a new app on the default could not get an
+   editor.
+
+Tools 0.3.18 and earlier stay as published: their hosts run QuickJS 2021 and
+their scaffolders wire 0.4.x, which is what a 0.4.x app keeps using.
+
 ## Why the asset is uploaded by hand
 
 A tools bundle is built by CI, then verified by CI: the adopter acceptance, the

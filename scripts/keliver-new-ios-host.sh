@@ -58,16 +58,18 @@
 # iosApp/Info-Debug.plist, docs/DEVICE_HOST.md); no other configuration has it.
 #
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
-# app's appRuntime.keliverVersion, else 0.4.1), KELIVER_HOST_ZIPLINE_VERSION,
-# KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION.
+# app's appRuntime.keliverVersion; when keliver.portal.json cannot be read or
+# parsed, or names no appRuntime.keliverVersion, this refuses),
+# KELIVER_HOST_ZIPLINE_VERSION, KELIVER_HOST_KOTLIN_VERSION,
+# KELIVER_HOST_COMPOSE_VERSION. The defaults are the Keliver version's line in
+# keliver-runtime-line.sh's table: upstream app.cash.zipline before 0.5.0,
+# Keliver's fork dev.keliver.zipline from 0.5.0, never both.
 #
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
 # A rejected input leaves the app byte-identical.
 set -euo pipefail
 
-ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-1.22.0}"
-KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-2.2.0}"
-COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-1.8.2}"
+# The versions come from keliver-runtime-line.sh's table for the app's line (below).
 # Resolve a symlinked invocation to the real script, so the templates are found.
 SELF="${BASH_SOURCE[0]}"
 while [ -L "$SELF" ]; do
@@ -88,7 +90,7 @@ while [ $# -gt 0 ]; do
     --embed)           EMBED=true; shift ;;
     --into)            need "$1" $#; INTO="$2"; shift 2 ;;
     --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,65p' "$SELF"; exit 0 ;;
+    -h|--help)         sed -n '2,69p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -137,9 +139,6 @@ URL_RULE="an http:// or https:// URL: plain ASCII, a host name or [IPv6] (no use
 [ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $URL_RE ]] || fail "--api-base-url must be $URL_RULE (got '$API_BASE_URL')."
 [[ "$CHANNEL" =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]] || fail "--channel must be lower-case letters, digits and '-', at most 32 (got '$CHANNEL')."
 VERSION_RE='^[0-9A-Za-z.+-]+$'
-for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION"; do
-  [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
-done
 
 # The app's package: every screen declares <root>.screens (the keliver-init
 # layout, the same rule keliver-new-device-target.sh uses).
@@ -163,13 +162,41 @@ PACKAGE="$ROOT_PKG.host"
 # (the same rule as keliver-new-production-host.sh). Any port from 1024 up, so moving the proxy
 # (KELIVER_DEVICE_PROXY_PORT) needs no change to the host.
 DEBUG_LINK_SCHEME="keliver-$(printf '%s' "$ROOT_PKG" | tr 'A-Z_' 'a-z-')"
-# The Keliver version the GUEST uses, so host and guest do not drift apart.
-KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
+# The Keliver version the GUEST uses, so host and guest do not drift apart. It picks the whole
+# toolchain (keliver-runtime-line.sh), so a keliver.portal.json that cannot be read or parsed, or names no
+# appRuntime.keliverVersion, is refused rather than read as some default version.
+if [ -n "${KELIVER_HOST_KELIVER_VERSION:-}" ]; then
+  KELIVER_VERSION="$KELIVER_HOST_KELIVER_VERSION"
+else
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))['appRuntime']['keliverVersion']
-    print(v if isinstance(v, str) and v.strip() else '0.4.1')
-except Exception: print('0.4.1')" "$APP/keliver.portal.json")}"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_HOST_KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks this host\'s Keliver libraries and toolchain. Add it (the version the app\'s guest uses, as keliver-init writes it), or set KELIVER_HOST_KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || fail "${KELIVER_VERSION#ERROR }"
+fi
 [[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
+# NF2: Keliver 0.5.0 and later build on Keliver's Zipline fork (QuickJS 2026), its group, plugin id
+# and toolchain; earlier versions keep upstream Zipline, which their libraries were built against.
+[ -f "$HERE/keliver-runtime-line.sh" ] || fail "keliver-runtime-line.sh is missing beside this script ($HERE)."
+# shellcheck source=keliver-runtime-line.sh
+. "$HERE/keliver-runtime-line.sh"
+keliver_zipline_line "$KELIVER_VERSION" || fail "$KELIVER_LINE_ERROR"
+# The line's toolchain (keliver-runtime-line.sh's table), each overridable.
+ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
+KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$TOOLCHAIN_KOTLIN}"
+COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$TOOLCHAIN_COMPOSE}"
+for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION"; do
+  [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
+done
+# Coil, its Ktor fetcher and Ktor's Darwin engine: from the 0.5 line, keliver-image at this app's
+# Keliver version, so they are the versions Keliver's libraries resolve (a Kotlin/Native host with a
+# mismatched Ktor fails only when the missing symbol is reached); before it, pinned as always.
+IMAGE_DEPENDENCIES="$(keliver_line_image_dependencies ios "$KELIVER_VERSION")" \
+  || fail "keliver-runtime-line.sh has no image dependencies for Keliver $KELIVER_VERSION."
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[A-Za-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)+$'
 [[ "$APPLICATION_ID" =~ $ID_RE ]] || fail "--bundle-id must look like com.example.app (got '$APPLICATION_ID')."
@@ -267,12 +294,19 @@ subst() { # <src> <dst>
   mkdir -p "$(dirname "$2")"
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$KEY_HEX" "$PRODUCT_NAME" \
-    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" "$DEBUG_LINK_SCHEME" "$ATS_DEBUG_BLOCK" <<'PY'
-import sys
-src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel, link_scheme, ats_debug = sys.argv[1:19]
+    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" "$DEBUG_LINK_SCHEME" "$ATS_DEBUG_BLOCK" "$ZIPLINE_GROUP" "$ZIPLINE_PLUGIN_ID" \
+    "$TOOLCHAIN_COROUTINES" "$TOOLCHAIN_SERIALIZATION" "$IMAGE_DEPENDENCIES" <<'PY'
+import re, sys
+src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel, link_scheme, ats_debug, zg, zid, \
+    coroutines, serialization, image_deps = sys.argv[1:24]
 s = open(src, encoding='utf-8').read()
+# The image dependencies are one line each, at the placeholder's indent.
+s = re.sub(r'(?m)^([ \t]*)@@IMAGE_DEPENDENCIES@@$',
+           lambda m: '\n'.join(m.group(1) + d for d in image_deps.splitlines()), s)
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'BUNDLE_ID': bid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
+             'ZIPLINE_GROUP': zg, 'ZIPLINE_PLUGIN_ID': zid,
+             'COROUTINES_VERSION': coroutines, 'SERIALIZATION_VERSION': serialization,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'KEY_HEX': key.lower(),
              'PRODUCT_NAME': product, 'PKG_PATH': pkgpath, 'CHANNEL': channel,
              'DEBUG_LINK_SCHEME': link_scheme,
@@ -351,6 +385,7 @@ trap - EXIT
 
 if $EMBED; then
   echo "created $MODULE/ in $INTO — this app's Keliver host framework (KeliverHost), for your Xcode app"
+  echo "  Keliver          $KELIVER_VERSION (the $KELIVER_LINE line: $ZIPLINE_GROUP $ZIPLINE_VERSION, Kotlin $KOTLIN_VERSION, Compose $COMPOSE_VERSION)"
   echo "  package          $PACKAGE"
   echo "  bundle server    $BUNDLE_SERVER"
   echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable)')"
@@ -366,6 +401,7 @@ if $EMBED; then
 fi
 
 echo "created host-ios/ — this app's production iOS host"
+echo "  Keliver          $KELIVER_VERSION (the $KELIVER_LINE line: $ZIPLINE_GROUP $ZIPLINE_VERSION, Kotlin $KOTLIN_VERSION, Compose $COMPOSE_VERSION)"
 echo "  package          $PACKAGE"
 echo "  app              $PRODUCT_NAME ($APPLICATION_ID)"
 echo "  bundle server    $BUNDLE_SERVER"

@@ -1,0 +1,34 @@
+// The nightly full build in shards (nightly-full-build.yml). One hosted runner took more than four
+// hours for the whole graph's `build apiCheck` (run 45264597107, 2026-11-23). This init script adds a
+// root task `nightlyShard` that runs `build` and `apiCheck` for one share of the projects:
+//   ./gradlew -I .github/nightly/shard.init.gradle nightlyShard -PnightlyShards=4 -PnightlyShard=<0..3>
+// Projects are sorted by path and cut into contiguous ranges, so a family's modules mostly land in one
+// shard and shared upstream modules compile in fewer shards. Every project with a `build` task is in
+// exactly one shard; `-PnightlyShardList` prints the assignment. Both properties are required for
+// `nightlyShard`, and an empty shard fails: a mistyped property never builds the whole graph or nothing.
+gradle.projectsEvaluated { g ->
+  // Included builds (build-support, keliver-settings) see this script too: only the main build shards.
+  if (g.parent != null) return
+  def root = g.rootProject
+  def wanted = g.startParameter.taskNames.any { it == 'nightlyShard' || it == ':nightlyShard' }
+  def nP = root.findProperty('nightlyShards'), iP = root.findProperty('nightlyShard')
+  if (wanted && (nP == null || iP == null)) throw new GradleException('nightlyShard needs -PnightlyShards and -PnightlyShard')
+  int n = (nP ?: '1') as int
+  int i = (iP ?: '0') as int
+  if (n < 1 || i < 0 || i >= n) throw new GradleException("nightlyShard $i of $n")
+  def ps = root.allprojects.findAll { it.tasks.findByName('build') != null }.sort { it.path }
+  int size = Math.ceil(ps.size() / (double) n) as int
+  def mine = ps.drop(i * size).take(size)
+  if (wanted && mine.isEmpty()) throw new GradleException("nightlyShard $i of $n has no projects (${ps.size()} in all): use fewer shards")
+  if (root.hasProperty('nightlyShardList')) {
+    ps.eachWithIndex { p, k -> println("nightly-shard ${(k / size) as int} ${p.path}") }
+  }
+  root.tasks.register('nightlyShard') { t ->
+    t.group = 'verification'
+    t.description = "build + apiCheck for nightly shard $i of $n (${mine.size()} projects)"
+    mine.each { p ->
+      t.dependsOn(p.tasks.named('build'))
+      if (p.tasks.findByName('apiCheck') != null) t.dependsOn(p.tasks.named('apiCheck'))
+    }
+  }
+}

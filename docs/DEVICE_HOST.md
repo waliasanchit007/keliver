@@ -122,6 +122,78 @@ from then on:
   a store it cannot tell them apart: pass only `ed25519.pub`. It never opens
   `ed25519.priv`.
 
+### Toolchain per line
+
+The scaffolders write the toolchain that the app's Keliver version
+(`appRuntime.keliverVersion`) was built with. Each version has one line, and
+each line has one column in `scripts/keliver-runtime-line.sh` (the tools
+bundle's `bin/`). For the scaffolders that write a toolchain, that table is
+the only place these versions live: `keliver-init`, the device target, the
+Android and iOS hosts and `keliver-app-wrapper.sh` all read it. The one
+exception is the editor (`keliver-new-editor.sh`): it still writes the 0.4
+line's Kotlin 2.2.0 and Compose 1.8.2 itself, so it reads the table only to
+find the app's line and **refuses** any line but 0.4 ("the editor supports 0.4
+apps until the 0.5 editor ships"). It has to take its versions from the table
+before the 0.5.0 libraries are released, whose release preflight builds an
+editor at the release version (`docs/PORTAL_TOOLS_RELEASE.md`, step 0).
+Before 0.5.0 nothing changed: the 0.4
+line's output is byte-identical to what the scaffolders wrote before the table,
+and the host selftests compare it with recorded sha256 manifests
+(`scripts/fixtures/host-0.4.1/`).
+
+The lines are named (0.4, 0.5): a version takes the newest line whose
+`<major>.<minor>` is not newer than its own (0.3.x takes 0.4). A version past
+the newest line the bundle knows is **refused** ("this tools bundle knows
+Keliver lines up to 0.5; Keliver 0.6.0 needs a newer tools bundle"), because
+the bundle cannot know that line's toolchain. The one exception is a
+`-SNAPSHOT` of the next minor (0.6.0-SNAPSHOT), which a checkout builds before
+its line exists: it gets the newest line, with a warning. A released line's
+column never changes; a new toolchain is a new column. The scaffolders refuse
+a `keliver.portal.json` that does not parse or names no
+`appRuntime.keliverVersion` (or set `KELIVER_HOST_KELIVER_VERSION`), and print
+the version and its line in their summary.
+
+| | 0.4 line (before 0.5.0) | 0.5 line (0.5.x, pre-releases too) | why the 0.5 value |
+|---|---|---|---|
+| Zipline | `app.cash.zipline` 1.22.0 | `dev.keliver.zipline` 1.28.0-keliver.1 | the fork (NF2) |
+| Kotlin | 2.2.0 | 2.4.21 | Keliver's catalog (not 2.4.20, whose Kotlin/JS production builds do not minify member names; the fork's README, "Kotlin compatibility") (the column of the version this checkout builds next, CHANGELOG.md's "Unreleased (X.Y.Z)", must match it: `keliver-runtime-line-selftest.sh`) |
+| Compose Multiplatform | 1.8.2 | 1.12.2 | the same |
+| coroutines, serialization | 1.10.2, 1.9.0 | 1.11.0, 1.13.0 | the same |
+| OkHttp (and `mockwebserver3`) | 5.1.0 | 5.5.1 | the same; the Android hosts call OkHttp themselves |
+| Coil, its fetcher, Ktor's Darwin engine | Coil 3.3.0, Ktor 3.1.0, pinned | `dev.keliver:keliver-image` at the app's Keliver version | keliver-image brings Coil, its fetcher (OkHttp on Android, Ktor with the Darwin engine on iOS) and okio at the versions Keliver's libraries resolve. A pin would split them: Keliver 0.5.0 lifts `coil-core` to 3.6.3 while a pinned `coil-network-*` stays behind, and a Ktor client older than its engine fails only when the missing symbol is reached. |
+| AGP | 8.12.0 | 9.3.3 | androidx Compose UI, foundation and material 1.12.1 (what CMP 1.12.2 resolves to on Android) declare `minAndroidGradlePluginVersion=9.1.0` in their AAR metadata. 9.3.3 is what Keliver itself builds with (9.3.1 can dex an unverifiable class that crashes at launch). |
+| compileSdk | 35 | 37 | those AARs, and the fork's `zipline-android` and `zipline-loader-android`, declare `minCompileSdk=37` |
+| targetSdk | 35 | 36 | no library requires one; 36 is what Keliver's sample targets |
+| JDK | 17 | 17 | AGP 8 and 9 both run on 17 |
+| Gradle (app wrapper) | 9.0.0 | 9.7.1 | AGP 9.3 refuses Gradle older than 9.5.0 (8.12.0 needs 8.13). 9.7.1 is Keliver's own wrapper, and its sha256 comes from there. |
+
+What the 0.5 line changes in what is written:
+
+- **`keliver-init`** gives the app Gradle 9.7.1 (its `distributionUrl` and
+  `distributionSha256Sum`). `host-android` builds with the app's wrapper
+  (`./gradlew -p host-android`).
+- **The production host** gets AGP 9.3.3, compileSdk 37 and targetSdk 36.
+  AGP 9 compiles Kotlin itself (built-in Kotlin) and refuses a module that
+  applies `org.jetbrains.kotlin.android`. So the host only puts that plugin on
+  the classpath (`apply false`), which pins the Kotlin AGP compiles with to
+  2.4.21. `KELIVER_HOST_AGP_VERSION` set to an 8.x applies it again.
+  When the app's wrapper is older than the AGP's floor (an app made by an
+  earlier `keliver-init`), the scaffolder warns and prints the two lines to set.
+- **`--embed`** follows the APP's AGP, which compiles the module: it reads that
+  AGP from the app's settings, root build file or version catalog, and
+  `android.builtInKotlin` from its `gradle.properties`. On AGP 9 with built-in
+  Kotlin (the default) the module applies no Kotlin plugin; on AGP 8, or with
+  `android.builtInKotlin=false`, it applies `org.jetbrains.kotlin.android`.
+  When the app's AGP cannot be read, the line's is assumed and the scaffolder
+  says to check the module's plugins. This holds on the 0.4 line too: a 0.4.1
+  host embedded into an AGP 9 app no longer applies the plugin AGP 9 refuses.
+  The module gets compileSdk 37, and the scaffolder says the app needs AGP
+  9.1.0 or newer.
+- **The iOS host** and **the device target** take their Zipline, Kotlin and
+  Compose from the same table. Neither has an AGP.
+- **Images:** the Android hosts (standalone and `--embed`) and the iOS host
+  depend on `keliver-image` instead of pinning Coil, its fetcher and Ktor.
+
 At runtime:
 
 | embedded key | what happens |
@@ -704,8 +776,23 @@ default one.
 **Engines** (NF2, both hosts; docs/GUEST_PROFILE.md, "NF2: the Zipline fork").
 QuickJS bytecode loads only on the engine that compiled it: Zipline 1.28.0's
 QuickJS 2021 writes version 1, the NF2 fork's QuickJS 2026 version 5, and
-neither loads the other's. So during a transition one release is published once
-per engine, and each host only ever receives the one its engine loads (D2):
+neither loads the other's. **One engine** (the owner, 2026-11-22): from Keliver
+0.5.0 every app builds on Keliver's Zipline fork (`dev.keliver.zipline`), so
+every bundle is compiled for `quickjs-2026` and published once; no app ever
+shipped on QuickJS 2021, so nothing is published for it. The scaffolders write
+the fork only for an app on Keliver 0.5.0 or later (an app on 0.4.x keeps
+upstream Zipline 1.22.0, whose bundles name no engine). **The bundled
+development host no longer serves the 0.4 line:** it is built from the
+checkout, so from NF2 it runs only QuickJS 2026 and cannot load a 0.4.x app's
+guest (the development path has no engine check; the guest fails with QuickJS's
+own bytecode-version error). The tools zip that carries it therefore also moves
+`keliver-init`'s default to 0.5.x (the other scaffolders follow the app's own
+version), in the first tools release after the 0.5.0
+libraries release; until then `scripts/build-portal-tools.sh` refuses to build
+(`docs/PORTAL_TOOLS_RELEASE.md`, "Zipline line"). A 0.4.x app keeps the host
+of the tools release it was scaffolded with (0.3.18 or earlier). The machinery below
+also serves several engines, and each host only ever receives the bundle its
+engine loads (D2):
 - **Naming.** An engine is `quickjs-2021` (the default: every bundle from
   before NF2) or `quickjs-2026`. A host names its own from the QuickJS its
   Zipline links (`QuickJs.version`, a constant of the build); a QuickJS release
@@ -719,9 +806,10 @@ per engine, and each host only ever receives the one its engine loads (D2):
   kept when the bytecode bears it out. Mixed versions, an unknown version, or a
   `keliver.engine` the bytecode does not bear out fail the build; the publisher
   and the hosts apply the same rule.
-- **Publishing.** `engineTargets` in `keliver.portal.json`
-  (`[{"publishTask": …, "publishOutput": …}]`) names the extra builds, for example
-  a second guest module that applies the fork's Zipline Gradle plugin.
+- **Publishing.** An app on the fork publishes its one build, whose entries carry
+  the `engine` constraint `quickjs-2026`. `engineTargets` in `keliver.portal.json`
+  (`[{"publishTask": …, "publishOutput": …}]`) names extra builds for other
+  engines; with one engine nothing needs it.
   `keliver-publish` builds `publishTask` and then each target, all for one
   sequence, checks every module's bytecode against its signed engine, and
   writes a `v<N>/` and an index entry per engine at that sequence; an entry for

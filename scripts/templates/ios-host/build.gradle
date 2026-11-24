@@ -10,7 +10,8 @@ plugins {
   id 'org.jetbrains.kotlin.multiplatform' version '@@KOTLIN_VERSION@@'
   id 'org.jetbrains.kotlin.plugin.compose' version '@@KOTLIN_VERSION@@'
   id 'org.jetbrains.compose' version '@@COMPOSE_VERSION@@'
-  id 'app.cash.zipline' version '@@ZIPLINE_VERSION@@' // IR rewrite of zipline.take/bind
+  // IR rewrite of zipline.take/bind. From Keliver 0.5.0, Keliver's Zipline fork (QuickJS 2026).
+  id '@@ZIPLINE_PLUGIN_ID@@' version '@@ZIPLINE_VERSION@@'
 }
 
 // HostConfig.kt holds the embedded PUBLIC key(s) and the servers. It was written
@@ -191,8 +192,8 @@ kotlin {
         implementation 'dev.keliver:keliver-material-protocol-host-web:@@KELIVER_VERSION@@'
         implementation 'dev.keliver:portal-sql:@@KELIVER_VERSION@@'
         implementation 'dev.keliver:keliver-http:@@KELIVER_VERSION@@'
-        implementation 'app.cash.zipline:zipline:@@ZIPLINE_VERSION@@'
-        implementation 'app.cash.zipline:zipline-loader:@@ZIPLINE_VERSION@@'
+        implementation '@@ZIPLINE_GROUP@@:zipline:@@ZIPLINE_VERSION@@'
+        implementation '@@ZIPLINE_GROUP@@:zipline-loader:@@ZIPLINE_VERSION@@'
         implementation 'org.jetbrains.compose.runtime:runtime:@@COMPOSE_VERSION@@'
         implementation 'org.jetbrains.compose.foundation:foundation:@@COMPOSE_VERSION@@'
         implementation 'org.jetbrains.compose.ui:ui:@@COMPOSE_VERSION@@'
@@ -200,11 +201,9 @@ kotlin {
         // 1.8.2 brings this version; declared so the host does not rely on that. With a newer
         // Compose (KELIVER_HOST_COMPOSE_VERSION), Gradle takes the newer lifecycle it brings.
         implementation 'org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.8.4'
-        implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'
-        implementation 'io.coil-kt.coil3:coil-network-ktor3:3.3.0' // images over the network
-        implementation 'io.ktor:ktor-client-darwin:3.1.0'           // coil's network engine on iOS
-        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
-        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+        @@IMAGE_DEPENDENCIES@@
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:@@COROUTINES_VERSION@@'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:@@SERIALIZATION_VERSION@@'
       }
     }
   }

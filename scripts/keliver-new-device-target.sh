@@ -28,8 +28,9 @@
 set -euo pipefail
 
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
-KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}"
-ZIPLINE_VERSION="${ZIPLINE_VERSION:-1.22.0}"
+KELIVER_VERSION="${KELIVER_VERSION:-}" # default: the app's appRuntime.keliverVersion, below (no fixed fallback)
+ZIPLINE_VERSION_GIVEN="${ZIPLINE_VERSION:+yes}"
+ZIPLINE_VERSION="${ZIPLINE_VERSION:-}" # default: the line's (keliver-runtime-line.sh), below
 SCREEN=""
 PRESENTER=""
 while [ $# -gt 0 ]; do
@@ -49,14 +50,20 @@ APP="$(pwd)"
 
 # The Keliver version: the app's own (appRuntime.keliverVersion, which
 # keliver-init writes), so an app that stays on an older release does not get a
-# mix; KELIVER_VERSION overrides it; this bundle's version when neither is set.
+# mix; KELIVER_VERSION overrides it. It picks the whole toolchain
+# (keliver-runtime-line.sh), so a keliver.portal.json that cannot be read or
+# parsed, or names no appRuntime.keliverVersion, is refused (as the host
+# scaffolders refuse it) rather than read as some default version.
 if [ -z "$KELIVER_VERSION_GIVEN" ]; then
-  v="$(python3 -c 'import json,sys
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"]
-    print(v.strip() if isinstance(v, str) else "")
-except Exception: print("")' "$APP/keliver.portal.json")"
-  [ -n "$v" ] && KELIVER_VERSION="$v"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks the guest\'s Keliver libraries and toolchain. Add it (as keliver-init writes it), or set KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || { echo "error: ${KELIVER_VERSION#ERROR }" >&2; exit 1; }
 fi
 [[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] \
   || { echo "error: the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
@@ -68,6 +75,15 @@ while [ -L "$SELF" ]; do
   link="$(readlink "$SELF")"; case "$link" in /*) SELF="$link" ;; *) SELF="$(dirname "$SELF")/$link" ;; esac
 done
 HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
+
+# NF2: Keliver 0.5.0 and later build on Keliver's Zipline fork (QuickJS 2026): its group and plugin
+# id, and the guest links Kotlin's Long as a JavaScript BigInt (-Xes-long-as-bigint), which only
+# the fork's engine runs. Earlier versions keep upstream Zipline (keliver-runtime-line.sh).
+[ -f "$HERE/keliver-runtime-line.sh" ] || { echo "error: keliver-runtime-line.sh is missing beside this script ($HERE)" >&2; exit 1; }
+# shellcheck source=keliver-runtime-line.sh
+. "$HERE/keliver-runtime-line.sh"
+keliver_zipline_line "$KELIVER_VERSION" || { echo "error: $KELIVER_LINE_ERROR" >&2; exit 1; }
+[ -n "$ZIPLINE_VERSION_GIVEN" ] || ZIPLINE_VERSION="$TOOLCHAIN_ZIPLINE"
 GUEST_TIMING=""
 for t in "$HERE/templates/guest/KeliverTiming.kt" "$HERE/../templates/guest/KeliverTiming.kt"; do
   [ -f "$t" ] && { GUEST_TIMING="$t"; break; }
@@ -79,10 +95,10 @@ done
 # with `grep -m1` across several files silently produced filename-prefixed
 # garbage (and paired an arbitrary screen with an arbitrary presenter).
 # ---------------------------------------------------------------------------
-PLAN="$(python3 - "$APP" "$SCREEN" "$PRESENTER" "$KELIVER_VERSION" "$ZIPLINE_VERSION" <<'PY'
+PLAN="$(python3 - "$APP" "$SCREEN" "$PRESENTER" "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$ZIPLINE_PLUGIN_ID" <<'PY'
 import os, re, sys, json, glob
 
-app, want_screen, want_presenter, kv, zv = sys.argv[1:6]
+app, want_screen, want_presenter, kv, zv, zid = sys.argv[1:7]
 
 def fail(msg):
     print("ERROR " + msg)
@@ -149,11 +165,25 @@ if presenter_pkg != root_pkg + '.logic':
 settings = open(os.path.join(app, 'settings.gradle'), encoding='utf-8').read()
 build    = open(os.path.join(app, 'build.gradle'), encoding='utf-8').read()
 
-if 'app.cash.zipline' not in settings:
+# NF2: one Zipline. The other line's group in the app's build would put both on one classpath,
+# which Gradle refuses (the fork declares the capabilities of upstream Zipline).
+# A plugin id or a coordinate group in quotes, not a class name such as
+# app.cash.zipline.gradle.ZiplineCompileTask (the signing block). No apostrophe in this heredoc:
+# bash 3.2 misreads one inside a command substitution.
+def names(text, ident):
+    return re.search(r"[\x22\x27]" + re.escape(ident) + r"[\x22\x27:]", text) is not None
+
+other = 'app.cash.zipline' if zid == 'dev.keliver.zipline' else 'dev.keliver.zipline'
+for fname, text in (('settings.gradle', settings), ('build.gradle', build)):
+    if names(text, other):
+        fail(f"{fname} names {other}, but Keliver {kv} builds on {zid} "
+             "(the Keliver Zipline fork from 0.5.0, upstream Zipline before): replace it, same artifact names, then run this again")
+
+if not names(settings, zid):
     if not re.search(r"\n(\s*)id 'org\.jetbrains\.compose' version '[^']+'", settings):
         fail("settings.gradle has no `id 'org.jetbrains.compose' version '...'` line to anchor the zipline plugin version")
 
-if 'app.cash.zipline' not in build:
+if not names(build, zid):
     if not re.search(r"\nplugins \{.*?\n\}", build, re.S):
         fail("build.gradle has no `plugins { ... }` block")
 if 'binaries.executable' not in build:
@@ -186,31 +216,41 @@ echo "    screen:    $SCREEN   ($SCREEN_FILE)"
 echo "    presenter: $PRESENTER   ($PRESENTER_FILE)"
 
 # ---- apply: build files first (validated above), then the entry point ------
-python3 - "$APP" "$KELIVER_VERSION" "$ZIPLINE_VERSION" <<'PY'
+python3 - "$APP" "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$ZIPLINE_GROUP" "$ZIPLINE_PLUGIN_ID" "$KELIVER_ZIPLINE_FORK" <<'PY'
 import re, sys, os
-app, kv, zv = sys.argv[1:4]
+app, kv, zv, zg, zid, fork = sys.argv[1:7]
+fork = fork == 'true'
 
-sp = os.path.join(app, 'settings.gradle'); s = open(sp, encoding='utf-8').read()
-if 'app.cash.zipline' not in s:
+def names(text, ident):
+    return re.search(r"[\x22\x27]" + re.escape(ident) + r"[\x22\x27:]", text) is not None
+
+sp =os.path.join(app, 'settings.gradle'); s = open(sp, encoding='utf-8').read()
+if not names(s, zid):
     s = re.sub(r"(\n(\s*)id 'org\.jetbrains\.compose' version '[^']+')",
-               r"\1\n\2id 'app.cash.zipline' version '" + zv + "'", s, count=1)
+               r"\1\n\2id '" + zid + "' version '" + zv + "'", s, count=1)
     open(sp, 'w', encoding='utf-8').write(s)
 
 bp = os.path.join(app, 'build.gradle'); b = open(bp, encoding='utf-8').read()
-if 'app.cash.zipline' not in b:
+if not names(b, zid):
     # anchor on the block's closing brace, not on any particular plugin id
     m = re.search(r"\nplugins \{.*?\n\}", b, re.S)
     block = m.group(0)
-    b = b.replace(block, block[:-1] + "  id 'app.cash.zipline'\n}", 1)
+    b = b.replace(block, block[:-1] + "  id '" + zid + "'\n}", 1)
+# NF2, Keliver's Zipline fork only: Kotlin's Long as a JavaScript BigInt, which QuickJS 2021 cannot run.
+bigint = ("// Long as a JavaScript BigInt: only Keliver's Zipline fork (QuickJS 2026) runs it\n",
+          "compilerOptions.freeCompilerArgs.add('-Xes-long-as-bigint')\n") if fork else None
 if 'binaries.executable' not in b:
+    extra = ''.join("\\1  " + line for line in bigint) if bigint else ''
     b = re.sub(r"\n(\s*)js \{ browser\(\) \}",
-               "\n\\1js {\n\\1  browser()\n\\1  // required for the Zipline bundle + serveDevelopmentZipline\n\\1  binaries.executable()\n\\1}", b, count=1)
+               "\n\\1js {\n\\1  browser()\n\\1  // required for the Zipline bundle + serveDevelopmentZipline\n\\1  binaries.executable()\n" + extra + "\\1}", b, count=1)
+elif bigint and '-Xes-long-as-bigint' not in b:
+    b = re.sub(r"(\n(\s*)binaries\.executable\(\)[^\n]*\n)", lambda m: m.group(1) + ''.join(m.group(2) + line for line in bigint), b, count=1)
 if 'keliver-treehouse-guest' not in b:
     dep = ("        // device path: render this app's screens on the generic keliver host\n"
            f"        api 'dev.keliver:keliver-treehouse-guest:{kv}'\n"
            f"        api 'dev.keliver:keliver-treehouse-guest-compose:{kv}'\n"
            f"        implementation 'dev.keliver:keliver-material-protocol-guest-web:{kv}'\n"
-           f"        implementation 'app.cash.zipline:zipline:{zv}'\n")
+           f"        implementation '{zg}:zipline:{zv}'\n")
     b = re.sub(r"(\n\s*implementation 'org\.jetbrains\.compose\.runtime:runtime:[^']+'\n)",
                r"\1" + dep, b, count=1)
 open(bp, 'w', encoding='utf-8').write(b)

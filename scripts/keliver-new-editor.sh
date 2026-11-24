@@ -24,23 +24,46 @@
 # Normal adopters resolve exclusively from Maven Central.
 #
 # Requires: the app on the SAME Kotlin/Compose/Gradle versions as the consumed
-# keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
+# keliver artifacts. Only the 0.4 line is supported (Kotlin 2.2.0 / Compose 1.8.2 /
+# Gradle 9.0.0 verified); an app on another line of keliver-runtime-line.sh's
+# table is refused until the 0.5 editor ships (docs/DEVICE_HOST.md).
 set -euo pipefail
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
-KELIVER_VERSION="${KELIVER_VERSION:-0.4.1}"
+KELIVER_VERSION="${KELIVER_VERSION:-}" # default: the app's appRuntime.keliverVersion, below (no fixed fallback)
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
 # The app's own Keliver version (appRuntime.keliverVersion) unless
 # KELIVER_VERSION is set, so an app on an older release gets a matching editor.
-if [ -z "$KELIVER_VERSION_GIVEN" ] && [ -f "$APP/keliver.portal.json" ]; then
-  v="$(python3 -c 'import json,sys
+# A keliver.portal.json that is missing, cannot be read or parsed, or names no
+# appRuntime.keliverVersion is refused (as the device and host scaffolders
+# refuse it) rather than read as some default version.
+if [ -z "$KELIVER_VERSION_GIVEN" ]; then
+  [ -f "$APP/keliver.portal.json" ] || { echo "error: no keliver.portal.json here, so no Keliver version to build the editor against. Run from the app root, or set KELIVER_VERSION." >&2; exit 1; }
+  KELIVER_VERSION="$(python3 -c "import json,sys
 try:
-    v = json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"]
-    print(v.strip() if isinstance(v, str) else "")
-except Exception: print("")' "$APP/keliver.portal.json")"
-  [ -n "$v" ] && KELIVER_VERSION="$v"
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e:
+    print('ERROR keliver.portal.json cannot be read or parsed (%s: %s). Fix it, or set KELIVER_VERSION.' % (type(e).__name__, e)); sys.exit(3)
+v = d.get('appRuntime', {}).get('keliverVersion') if isinstance(d, dict) and isinstance(d.get('appRuntime'), dict) else None
+if not isinstance(v, str) or not v.strip():
+    print('ERROR keliver.portal.json names no appRuntime.keliverVersion, which picks the editor\'s Keliver libraries. Add it (as keliver-init writes it), or set KELIVER_VERSION.'); sys.exit(3)
+print(v.strip())" "$APP/keliver.portal.json")" || { echo "error: ${KELIVER_VERSION#ERROR }" >&2; exit 1; }
 fi
 [[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] || { echo "the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
+# The version's line (keliver-runtime-line.sh): a version past the newest line this bundle knows is
+# refused there. The editor's own Kotlin and Compose are still the 0.4 line's (below), not the table's:
+# a 0.5 editor needs portal-editor 0.5.0 on Maven Central to be checked against. Until it ships, any
+# other line is refused here, because Kotlin 2.2.0 cannot read the newer libraries' metadata.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -f "$HERE/keliver-runtime-line.sh" ] || { echo "error: keliver-runtime-line.sh is missing beside this script ($HERE)" >&2; exit 1; }
+# shellcheck source=keliver-runtime-line.sh
+. "$HERE/keliver-runtime-line.sh"
+keliver_zipline_line "$KELIVER_VERSION" || { echo "error: $KELIVER_LINE_ERROR" >&2; exit 1; }
+EDITOR_LINE=0.4 EDITOR_KOTLIN=2.2.0 EDITOR_COMPOSE=1.8.2
+if [ "$KELIVER_LINE" != "$EDITOR_LINE" ]; then
+  echo "error: Keliver $KELIVER_VERSION is on the $KELIVER_LINE line; the editor supports $EDITOR_LINE apps until the $KELIVER_LINE editor ships (it builds on Kotlin $EDITOR_KOTLIN and Compose $EDITOR_COMPOSE, which cannot compile against $KELIVER_LINE libraries). See docs/DEVICE_HOST.md, \"Toolchain per line\"." >&2
+  exit 1
+fi
 NAME="${1:?usage: keliver-new-editor.sh <AppName> [srcDir...]}"
 shift || true
 SRC_DIRS=("$@")
@@ -114,9 +137,9 @@ cat > "$APP/editor/build.gradle.kts" <<EOF
  *         point it at your relay with ?relay=<port> (default 8077).
  */
 plugins {
-  kotlin("multiplatform") version "2.2.0"
-  kotlin("plugin.compose") version "2.2.0"
-  id("org.jetbrains.compose") version "1.8.2"
+  kotlin("multiplatform") version "$EDITOR_KOTLIN"
+  kotlin("plugin.compose") version "$EDITOR_KOTLIN"
+  id("org.jetbrains.compose") version "$EDITOR_COMPOSE"
 }
 
 kotlin {

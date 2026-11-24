@@ -27,7 +27,7 @@ Any change to @Widget / @Modifier / serialized service types?
 
 ## Checklist
 
-- [ ] CHANGELOG.md `[Unreleased]` section updated (short summary +
+- [ ] CHANGELOG.md `Unreleased (X.Y.Z)` section updated (short summary +
       issue / KNOWN_BUGS reference).
 - [ ] `./gradlew :keliver-tooling-codegen:test` passes (if codegen
       touched — added a fixture demonstrating the new behavior).
