@@ -4,6 +4,7 @@ data_sources { config { name: "linux.ftrace" target_buffer: 0 ftrace_config {
   ftrace_events: "sched/sched_switch"
   ftrace_events: "sched/sched_waking"
   ftrace_events: "sched/sched_wakeup"
+  ftrace_events: "sched/sched_blocked_reason"
   ftrace_events: "power/cpu_frequency"
   ftrace_events: "power/gpu_frequency"
   ftrace_events: "power/suspend_resume"
