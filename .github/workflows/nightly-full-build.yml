@@ -1,10 +1,10 @@
 name: Nightly full build
 
-# The whole graph's `build apiCheck` on main, once a night, in four parallel shards. ci.yml runs a chosen list of tasks on
-# every pull request (tests, API checks, spotlessCheck, validatePlugins, the generated-code
-# guards); `build` also runs `check` and every assemble task, which ci.yml does not. Before #302
-# that gap let 51 task failures pile up on main unseen. A red run here is that drift showing up
-# within a day. Owner decision 2026-11-23.
+# The whole graph's `build apiCheck` on main, once a night, in four parallel shards. ci.yml runs a
+# chosen list of tasks on every pull request (tests, API checks, spotlessCheck, validatePlugins, the
+# generated-code guards); `build` also runs `check` and every assemble task, which ci.yml does not.
+# Before #302 that gap let 51 task failures pile up on main unseen. A red run here is that drift
+# showing up within a day. Owner decision 2026-11-23.
 #
 # A failed scheduled run is listed under Actions and notifies the user who last changed the cron
 # line (or who last re-enabled the workflow), by email only if their Actions notification settings
@@ -30,21 +30,25 @@ concurrency:
 
 jobs:
   build:
-    name: build apiCheck (shard ${{ matrix.shard }} of 4)
+    name: build apiCheck (shard ${{ strategy.job-index }} of ${{ strategy.job-total }})
     # Only on the main repository: a fork's copy of this schedule does nothing.
     if: github.repository == 'waliasanchit007/keliver'
     # Always hosted runners: hours a night would tie up the self-hosted Mac, which also drops off on
     # battery.
     runs-on: macos-latest
-    # The whole graph on one runner did not finish in 240 minutes (run 45264597107, 2026-11-23: no
-    # task failed in the 3.5 hours it logged, and it never reached the release framework links).
-    # Four shards (.github/nightly/shard.init.gradle) run in parallel. The first sharded run
-    # (45302672562, 2026-11-24) ran every project's build and took 5-17 minutes per shard, warm from
-    # ci.yml's cache; 90 leaves room for a cold cache.
+    # The whole graph on one runner did not finish in 240 minutes (run 45264597107, 2026-11-23): no
+    # task failed in the 3.5 hours it logged, then 35 minutes passed with no output. Open question:
+    # a stall (its log stopped in portal-document's wasm browser tests, which pass locally in 25 s)
+    # or memory pressure at -Xmx6g on the whole graph; the shards' work totals about 45 minutes, so it
+    # was not throughput. Four shards (.github/nightly/shard.init.gradle) run in parallel: the first
+    # sharded run (45302672562, 2026-11-24) ran every project's build in 3-16 minutes of Gradle time
+    # per shard. 90 leaves room for a cold cache and catches a stall if one comes back. Shards may
+    # queue for hosted macOS runners behind ci.yml and ios-host; the timeout counts from job start.
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
+        # The shard count is the number of entries here (strategy.job-total), nowhere else.
         shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
@@ -64,8 +68,8 @@ jobs:
           ./gradlew
           -I .github/nightly/shard.init.gradle
           nightlyShard
-          -PnightlyShards=4
-          -PnightlyShard=${{ matrix.shard }}
+          -PnightlyShards=${{ strategy.job-total }}
+          -PnightlyShard=${{ strategy.job-index }}
           --continue
           -DRELEASE_SIGNING_ENABLED=false
 
