@@ -109,6 +109,23 @@ private object NoMarks : ThreewayMarks {
   override fun composed(screen: String, seq: Int) = Unit
 }
 
+/** NF5 (`heavy=1`): [NoMarks] with the heavy detail (102 widgets) instead of the simple one. */
+private object HeavyMarks : ThreewayMarks {
+  override val heavyDetail: Boolean get() = true
+  override fun now(): Long = 0L
+  override fun mark(seq: Int, name: String, atMillis: Long) = Unit
+  override fun composed(screen: String, seq: Int) = Unit
+}
+
+/** NF5 (`heavy=2`): the heavy detail whose structure depends on the item (`variedDetail`). */
+private object VariedHeavyMarks : ThreewayMarks {
+  override val heavyDetail: Boolean get() = true
+  override val variedDetail: Boolean get() = true
+  override fun now(): Long = 0L
+  override fun mark(seq: Int, name: String, atMillis: Long) = Unit
+  override fun composed(screen: String, seq: Int) = Unit
+}
+
 internal class StepResult(
   val kind: String,
   val ms: Double,
@@ -140,8 +157,20 @@ internal class ProfileRun(
    * a `viewport` step reports `0..rows-1` to every list created since the last report.
    */
   private val viewportRows: Int = 0,
+  /** NF5's measurement (`nf5=fresh|rebind|shown`, Nf5Stack.kt); null: not an NF5 run. */
+  nf5: Nf5Stack.Variant? = null,
+  /** NF5: the heavy detail (`heavy=1`). */
+  private val heavy: Boolean = false,
+  /** NF5: the heavy detail, its structure depending on the item (`heavy=2`). */
+  private val varied: Boolean = false,
 ) {
   private val preparedStack = if (prepared >= 0) PreparedThreewayStack(prepared) else null
+  private val nf5Stack = nf5?.let(::Nf5Stack)
+  private val nf5Variant = nf5
+
+  /** NF5: the last batch's wire JSON (the `wire` command), so the JVM can replay the list screen. */
+  var lastWire: String = ""
+    private set
   private val reported = HashSet<Int>()
   private val dispatcher = ManualDispatcher()
   private val clock = BroadcastFrameClock()
@@ -164,6 +193,7 @@ internal class ProfileRun(
       val start = now()
       val s = JSON.stringify(changes)
       stringifyMs += now() - start
+      lastWire = s
       bytes += s.length
       hash = 31 * hash + s.hashCode()
     },
@@ -242,16 +272,22 @@ internal class ProfileRun(
   fun first(): StepResult {
     reset()
     val start = now()
-    val stack = preparedStack ?: if (retain) RetainedThreewayStack else null
+    val stack = nf5Stack ?: preparedStack ?: if (retain) RetainedThreewayStack else null
     // NF3 (`press=1`): a host that declares the press signal, and the app's binding for it.
     val features = if (press) setOf(PRESS_HOST_FEATURE) else emptySet()
     val signal = if (press) GateAPress else null
     composition.setContent {
       CompositionLocalProvider(LocalHostFeatures provides features, LocalKeliverNavPress provides signal) {
-        ThreewayApp(api, NoMarks, stack)
+        ThreewayApp(api, if (varied) VariedHeavyMarks else if (heavy) HeavyMarks else NoMarks, stack)
       }
     }
     settle()
+    // NF5: the kind-keyed slot is then composed, hidden, with an item no row of the window opens.
+    // After the list's rows, so the driver's clickables stay in order (the rows, then the detail's).
+    if (nf5Stack != null && nf5Variant != Nf5Stack.Variant.FRESH) {
+      nf5Stack.prepare(page.items.last())
+      settle()
+    }
     return result("first", start)
   }
 
@@ -302,6 +338,20 @@ internal class ProfileRun(
     return result("cancel", start)
   }
 
+  /**
+   * NF5 (`nf5=shown`): before the tap, the hidden detail slot takes row [row]'s item (the same
+   * instance the row's click passes), so the tap that follows only shows it.
+   */
+  fun nf5Prepare(row: Int): StepResult {
+    check(screen == "list")
+    val stack = checkNotNull(nf5Stack) { "nf5prepare needs nf5=" }
+    reset()
+    val start = now()
+    stack.prepare(page.items[row])
+    settle()
+    return result("nf5prepare", start)
+  }
+
   /** Sends row [row]'s modifier event [handle] (live clickables: Load 20, Load 1,000, the rows). */
   private fun rowEvent(row: Int, handle: Int) {
     adapter.clickables.retainAll { adapter.isLive(it) }
@@ -350,7 +400,8 @@ internal class ProfileRun(
     check(screen == "detail")
     reset()
     val start = now()
-    click(adapter.clickables.count { adapter.isLive(it) } - 1)
+    // The heavy detail (NF5's `heavy=1`) records three more after Back: its Call, Email, Cancel.
+    click(adapter.clickables.count { adapter.isLive(it) } - 1 - if (heavy) 3 else 0)
     settle()
     screen = "list"
     return result("back", start)
@@ -478,6 +529,9 @@ private fun command(c: String): String {
       current = ProfileRun(
         encodingOf(a["mode"] ?: "kotlinx"), a["timeCalls"] == "1", (a["items"] ?: "20").toInt(), a["retain"] == "1",
         nf3.prepared, nf3.press, nf3.viewportRows,
+        nf5 = a["nf5"]?.let { Nf5Stack.Variant.valueOf(it.uppercase()) },
+        heavy = a["heavy"] == "1" || a["heavy"] == "2",
+        varied = a["heavy"] == "2",
       )
       "{}"
     }
@@ -489,6 +543,9 @@ private fun command(c: String): String {
     "open" -> current!!.open(arg.toInt()).toJson()
     "back" -> current!!.back().toJson()
     "reload" -> current!!.reload().toJson()
+    "nf5prepare" -> current!!.nf5Prepare(arg.toInt()).toJson()
+    // NF5: the last batch's wire JSON (after `first`: the list screen's first batch).
+    "wire" -> current!!.lastWire
     "counts" -> current?.adapter?.counts() ?: "{}"
     "close" -> {
       current?.close()

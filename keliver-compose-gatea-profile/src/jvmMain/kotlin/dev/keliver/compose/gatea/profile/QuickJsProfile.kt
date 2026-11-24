@@ -29,6 +29,8 @@ import kotlinx.coroutines.runBlocking
  * viewport report after a list is created, timed as its own step), `sized=0` (no viewport-sized
  * first window).
  * `cycles=N` instead runs the memory-growth readings (`memoryCycles`; with `gcEvery`, `probeEvals`).
+ * NF5: `nf5=fresh+rebind+shown` (with `heavy=0+1`) instead runs [nf5Runs], the go/no-go for
+ * pre-composed destinations (docs/SHOW_BEFORE_COMPUTE.md, appendix).
  */
 fun main(args: Array<String>) {
   val bundle = File(args[0])
@@ -51,6 +53,19 @@ fun main(args: Array<String>) {
   val manifest = ZiplineManifest.decodeJson(File(bundle, "manifest.zipline.json").readText())
   val executor = Executors.newSingleThreadExecutor()
   val dispatcher = executor.asCoroutineDispatcher()
+  val nf5 = a["nf5"]
+  if (nf5 != null) {
+    // NF5's go/no-go (docs/SHOW_BEFORE_COMPUTE.md, appendix): `nf5=fresh+rebind+shown`, `heavy=0+1`.
+    try {
+      runBlocking(dispatcher) {
+        nf5Runs(bundle, manifest, dispatcher, nf5.split('+'), (a["heavy"] ?: "0").split('+'), warmup, iterations, items, File(out, "$label.jsonl"))
+      }
+    } finally {
+      dispatcher.close()
+      executor.shutdown()
+    }
+    return
+  }
   val cycles = a["cycles"]?.toInt()
   if (cycles != null) {
     // Memory growth per navigation (docs/GUEST_PROFILE.md): one line per open/back cycle.
@@ -346,6 +361,109 @@ private fun memoryCycles(
   } finally {
     zipline.close()
   }
+}
+
+/**
+ * NF5's go/no-go (docs/SHOW_BEFORE_COMPUTE.md, appendix): for each variant (Nf5Stack.kt) and detail
+ * weight, a fresh guest shows the list, then [warmup] + [iterations] open/back pairs on rows 0–4
+ * (`shown` adds the timed `nf5prepare` step before each open). Wall time per step on the JVM's
+ * clock (the harness's `evaluate` included) and the guest's own time (`ms`, without the batch's
+ * JSON.stringify), median and p90; the last open's batch (creates, properties, modifiers,
+ * structural changes, bytes). After the first variant's `first`, the list screen's first batch is
+ * written as `<label>-list-wire.json` (the cached-frame replay's input).
+ */
+private fun nf5Runs(
+  bundle: File,
+  manifest: ZiplineManifest,
+  dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+  variants: List<String>,
+  heavies: List<String>,
+  warmup: Int,
+  iterations: Int,
+  items: Int,
+  file: File,
+) {
+  val lines = ArrayList<String>()
+  var wireWritten = false
+  for (heavy in heavies) {
+    for (variant in variants) {
+      val zipline = Zipline.create(dispatcher)
+      try {
+        val quickJs = zipline.quickJs
+        for ((id, module) in manifest.modules) {
+          val ziplineFile = ZiplineFile.read(Buffer().write(File(bundle, module.url).readBytes()))
+          zipline.loadJsModule(ziplineFile.quickjsBytecode.toByteArray(), id)
+        }
+        if (quickJs.evaluate("typeof globalThis.guestProfile") != "function") {
+          quickJs.evaluate("require('${manifest.mainModuleId}').${manifest.mainFunction}()", "QuickJsProfile.kt")
+        }
+        fun cmd(c: String): String = quickJs.evaluate("globalThis.guestProfile('$c')", "QuickJsProfile.kt") as String
+        cmd("init:mode=kotlinx,items=$items,nf5=$variant,heavy=$heavy")
+        var t = System.nanoTime()
+        val first = cmd("first")
+        val firstMs = (System.nanoTime() - t) / 1e6
+        if (!wireWritten) {
+          File(file.parentFile, file.nameWithoutExtension + "-list-wire.json").writeText(cmd("wire"))
+          wireWritten = true
+        }
+        val wall = mutableMapOf<String, MutableList<Double>>()
+        val guest = mutableMapOf<String, MutableList<Double>>()
+        val last = mutableMapOf<String, String>()
+        fun step(kind: String, c: String, measured: Boolean) {
+          t = System.nanoTime()
+          val r = cmd(c)
+          val ms = (System.nanoTime() - t) / 1e6
+          last[kind] = r
+          if (measured) {
+            wall.getOrPut(kind) { ArrayList() } += ms
+            guest.getOrPut(kind) { ArrayList() } += guestMs(r)
+          }
+        }
+        // The step that gives the detail its item must send that item's title: a wrong click (the
+        // driver's clickables out of order) would otherwise time a step that opens nothing.
+        fun checkTitle(i: Int) {
+          val title = "Order #${1000 + i % 5}"
+          check(title in cmd("wire")) { "nf5=$variant heavy=$heavy step $i: the batch does not show $title" }
+        }
+        repeat(warmup + iterations) { i ->
+          val measured = i >= warmup
+          if (variant == "shown") {
+            step("prepare", "nf5prepare:${i % 5}", measured)
+            checkTitle(i)
+          }
+          step("open", "open:${i % 5}", measured)
+          if (variant != "shown") checkTitle(i)
+          step("back", "back", measured)
+          for (k in listOf("open", "back")) {
+            check(Regex("\"bytes\":([0-9]+)").find(last[k]!!)!!.groupValues[1].toInt() > 0) { "nf5=$variant heavy=$heavy step $i: $k sent nothing" }
+          }
+        }
+        cmd("close")
+        val summary = wall.keys.sorted().joinToString(",") { k ->
+          """"$k":{"n":${wall[k]!!.size},"wallMedianMs":${median(wall[k]!!).r()},"wallP90Ms":${p90(wall[k]!!).r()},""" +
+            """"guestMedianMs":${median(guest[k]!!).r()},"guestP90Ms":${p90(guest[k]!!).r()},"last":${last[k]}}"""
+        }
+        val line = """{"nf5":"$variant","heavy":$heavy,"engine":"${QuickJs.version}","warmup":$warmup,"iterations":$iterations,""" +
+          """"firstWallMs":${firstMs.r()},"first":$first,$summary}"""
+        lines += line
+        println("QUICKJS_NF5 $line")
+        println(
+          "QJS NF5 variant=$variant heavy=$heavy " + wall.keys.sorted().joinToString(" ") { k ->
+            "$k=${median(wall[k]!!).r()}/p90 ${p90(wall[k]!!).r()} (guest ${median(guest[k]!!).r()}/p90 ${p90(guest[k]!!).r()}; " +
+              "creates ${createsOf(last[k]!!)} bytes ${Regex("\"bytes\":([0-9]+)").find(last[k]!!)?.groupValues?.get(1)})"
+          } + " first=${firstMs.r()}",
+        )
+      } finally {
+        zipline.close()
+      }
+    }
+  }
+  file.writeText(lines.joinToString("\n", postfix = "\n"))
+}
+
+private fun p90(xs: List<Double>): Double {
+  val s = xs.sorted()
+  return s[minOf(s.size - 1, kotlin.math.ceil(0.9 * s.size).toInt() - 1)]
 }
 
 /** `reload=1`: also time the reload step (off by default; see GuestProfileMain.kt's `reload`). */
