@@ -1,0 +1,29 @@
+// The nightly full build in shards (nightly-full-build.yml). One hosted runner took more than four
+// hours for the whole graph's `build apiCheck` (run 45264597107, 2026-11-23). This init script adds a
+// root task `nightlyShard` that runs `build` and `apiCheck` for one share of the projects:
+//   ./gradlew -I .github/nightly/shard.init.gradle nightlyShard -PnightlyShards=4 -PnightlyShard=<0..3>
+// Projects are sorted by path and cut into contiguous ranges, so a family (keliver-layout-*) lands in
+// one shard and its shared upstream modules compile in as few shards as possible. Every project with
+// a `build` task is in exactly one shard; `-PnightlyShardList` prints the assignment.
+gradle.projectsEvaluated { g ->
+  // Included builds (build-support, keliver-settings) see this script too: only the main build shards.
+  if (g.parent != null) return
+  def root = g.rootProject
+  int n = (root.findProperty('nightlyShards') ?: '1') as int
+  int i = (root.findProperty('nightlyShard') ?: '0') as int
+  if (n < 1 || i < 0 || i >= n) throw new GradleException("nightlyShard $i of $n")
+  def ps = root.allprojects.findAll { it.tasks.findByName('build') != null }.sort { it.path }
+  int size = Math.ceil(ps.size() / (double) n) as int
+  def mine = ps.drop(i * size).take(size)
+  if (root.hasProperty('nightlyShardList')) {
+    ps.eachWithIndex { p, k -> println("nightly-shard ${(k / size) as int} ${p.path}") }
+  }
+  root.tasks.register('nightlyShard') { t ->
+    t.group = 'verification'
+    t.description = "build + apiCheck for nightly shard $i of $n (${mine.size()} projects)"
+    mine.each { p ->
+      t.dependsOn(p.tasks.named('build'))
+      if (p.tasks.findByName('apiCheck') != null) t.dependsOn(p.tasks.named('apiCheck'))
+    }
+  }
+}
