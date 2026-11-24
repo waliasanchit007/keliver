@@ -1,0 +1,2 @@
+ext.realGuestVariant = 'ui'
+apply from: rootProject.file('keliver-compose-realguest-spike/variant.gradle')

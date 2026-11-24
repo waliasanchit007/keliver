@@ -1,0 +1,2 @@
+ext.realGuestVariant = 'graphics'
+apply from: rootProject.file('keliver-compose-realguest-spike/variant.gradle')

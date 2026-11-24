@@ -1,0 +1,35 @@
+// Research spike (eff-guest, 2026-11-24): loads every variant guest's production Zipline bundle into
+// the fork's QuickJS (dev.keliver.zipline, the engine the phones run) and runs its cases. Writes a
+// JSON report per variant to -PrealGuestOut (default build/realguest). Only with
+// -Pkeliver.realGuestSpike; never published.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+
+dependencies {
+  testImplementation libs.zipline
+  testImplementation libs.zipline.loader
+  testImplementation libs.kotlinx.coroutines.core
+  testImplementation libs.junit
+  testImplementation libs.kotlin.test.junit
+}
+
+def variants = ['base', 'unit', 'graphics', 'text', 'ui', 'foundation', 'skia', 'anim', 'all', 'mirror']
+def only = providers.gradleProperty('realGuestVariants').map { it.split(',') as List }.getOrElse(variants)
+def outDir = providers.gradleProperty('realGuestOut').getOrElse(layout.buildDirectory.dir('realguest').get().asFile.path)
+
+tasks.named('test', Test) {
+  // Every run measures: never up to date, never from the cache.
+  outputs.upToDateWhen { false }
+  testLogging { showStandardStreams = true; exceptionFormat = 'full' }
+  maxHeapSize = '1g'
+  def dirs = [:]
+  only.each { v ->
+    def p = project(":realguest-$v")
+    dependsOn("${p.path}:compileProductionExecutableKotlinJsZipline")
+    dirs[v] = p.layout.buildDirectory.get().asFile
+  }
+  systemProperty('realguest.variants', only.join(','))
+  systemProperty('realguest.out', outDir)
+  doFirst {
+    dirs.each { v, d -> systemProperty("realguest.build.$v", d.absolutePath) }
+  }
+}

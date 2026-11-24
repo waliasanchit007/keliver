@@ -1,0 +1,2 @@
+ext.realGuestVariant = 'anim'
+apply from: rootProject.file('keliver-compose-realguest-spike/variant.gradle')

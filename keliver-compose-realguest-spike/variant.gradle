@@ -1,0 +1,123 @@
+// Research spike (eff-guest, 2026-11-24): one Zipline guest per variant, each linking a subset of the
+// REAL Compose Multiplatform artifacts on Kotlin/JS. Applied by variants/<name>/build.gradle, which
+// sets `realGuestVariant`. Only with -Pkeliver.realGuestSpike (settings.gradle); never published.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'app.cash.zipline'
+
+def variant = project.ext.realGuestVariant
+def spikeDir = rootProject.file('keliver-compose-realguest-spike')
+def cmp = libs.versions.jbCompose.get()
+
+// Case files per set, and the artifacts each set adds.
+def setDeps = [
+  unit      : ["org.jetbrains.compose.ui:ui-unit:$cmp", "org.jetbrains.compose.ui:ui-geometry:$cmp", "org.jetbrains.compose.ui:ui-util:$cmp"],
+  graphics  : ["org.jetbrains.compose.ui:ui-graphics:$cmp"],
+  text      : ["org.jetbrains.compose.ui:ui-text:$cmp"],
+  ui        : ["org.jetbrains.compose.ui:ui:$cmp"],
+  foundation: ["org.jetbrains.compose.foundation:foundation-layout:$cmp", "org.jetbrains.compose.foundation:foundation:$cmp"],
+  anim      : ["org.jetbrains.compose.animation:animation-core:$cmp"],
+  skia      : [],
+  codec     : [],
+  mirror    : [project(':keliver-compose-values')],
+]
+// Cumulative variants measure what each artifact adds; `skia` adds the cases whose JS implementation
+// is Skia's; `all` is every value and animation case without them.
+def variantSets = [
+  base      : [],
+  unit      : ['unit'],
+  graphics  : ['unit', 'graphics'],
+  text      : ['unit', 'graphics', 'text'],
+  ui        : ['unit', 'graphics', 'text', 'ui'],
+  foundation: ['unit', 'graphics', 'text', 'ui', 'foundation'],
+  skia      : ['unit', 'graphics', 'text', 'ui', 'foundation', 'skia'],
+  anim      : ['anim'],
+  all       : ['unit', 'graphics', 'text', 'ui', 'foundation', 'anim', 'codec'],
+  // Today's hand-written mirrors (keliver-compose-values): their bytes and the guest Animatable's cost.
+  mirror    : ['mirror'],
+]
+def sets = variantSets[variant]
+if (sets == null) throw new GradleException("unknown realGuestVariant $variant")
+
+def genDir = layout.buildDirectory.dir('generated/realguest')
+def generateCases = tasks.register('generateRealGuestCases') {
+  def out = genDir
+  def setNames = sets
+  inputs.property('sets', setNames)
+  outputs.dir(out)
+  doLast {
+    def f = new File(out.get().asFile, 'dev/keliver/realguest/RegisteredCases.kt')
+    f.parentFile.mkdirs()
+    f.text = "package dev.keliver.realguest\n\nfun registeredCases(): List<Case> = emptyList<Case>()" +
+      setNames.collect { " + ${it}Cases()" }.join('') + "\n"
+  }
+}
+
+kotlin {
+  js {
+    outputModuleName = "realguest-$variant"
+    nodejs()
+    binaries.executable()
+  }
+  sourceSets {
+    jsMain {
+      kotlin.srcDir(new File(spikeDir, 'src/jsShared/kotlin'))
+      sets.each { kotlin.srcDir(new File(spikeDir, "src/$it/kotlin")) }
+      kotlin.srcDir(generateCases)
+      dependencies {
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.kotlinx.coroutines.core
+        sets.each { s -> setDeps[s].each { implementation it } }
+      }
+    }
+  }
+}
+
+zipline {
+  apiTracking = false
+}
+
+// Finding 1 (see the findings file): when skiko-kjs survives dead-code elimination it imports Skia's
+// wasm loader, `./skiko.mjs`, which is not a Kotlin module, so the Zipline compiler cannot order the
+// modules and fails. To see what happens AFTER that (module init, first use), the production JS is
+// patched to import a stub instead: `skikoApi` is a Proxy whose every member is a function that
+// throws "skiko call <name>". With -PrealGuestNoSkikoStub the bundle is left as the compiler wrote it.
+def productionJs = layout.buildDirectory.dir('compileSync/js/main/productionExecutable/kotlin')
+def stubSkiko = !providers.gradleProperty('realGuestNoSkikoStub').present
+tasks.named('compileProductionExecutableKotlinJsZipline') {
+  def dir = productionJs
+  doFirst {
+    if (!stubSkiko) return
+    def d = dir.get().asFile
+    def patched = []
+    d.listFiles().findAll { it.name.endsWith('.js') && it.name != 'skiko-stub.js' }.each { f ->
+      def t = f.text
+      if (t.contains("'./skiko.mjs'")) {
+        f.text = t.replace("'./skiko.mjs'", "'./skiko-stub.js'")
+        patched << f.name
+      }
+    }
+    if (patched) {
+      new File(d, 'skiko-stub.js').text = '''(function (factory) {
+  if (typeof define === 'function' && define.amd) define(['exports'], factory);
+  else if (typeof exports === 'object') factory(module.exports);
+  else globalThis['./skiko-stub.js'] = factory({});
+}(function (_) {
+  'use strict';
+  globalThis.__skikoTouched = [];
+  _.skikoApi = new Proxy({}, {
+    get: function (target, name) {
+      if (typeof name !== 'string' || name === 'then') return undefined;
+      globalThis.__skikoTouched.push('get:' + name);
+      return function () {
+        globalThis.__skikoTouched.push('call:' + name);
+        throw new Error('skiko call ' + name + ' (no Skia in the guest)');
+      };
+    }
+  });
+  return _;
+}));
+'''
+      logger.lifecycle("realguest: ${project.name}: skiko.mjs replaced by a throwing stub in ${patched}")
+    }
+  }
+}

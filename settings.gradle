@@ -84,6 +84,16 @@ if (providers.gradleProperty('keliver.gatebIos').present) {
 if (providers.gradleProperty('keliver.guestProfile').present) {
   include ':keliver-compose-gatea-profile'
 }
+// Research spike (eff-guest, 2026-11-24): the real Compose Multiplatform value and animation artifacts
+// in a Zipline guest, loaded into QuickJS. Only with -Pkeliver.realGuestSpike; never published.
+if (providers.gradleProperty('keliver.realGuestSpike').present) {
+  ['base', 'unit', 'graphics', 'text', 'ui', 'foundation', 'skia', 'anim', 'all', 'mirror'].each { v ->
+    include ":realguest-$v"
+    project(":realguest-$v").projectDir = file("keliver-compose-realguest-spike/variants/$v")
+  }
+  include ':realguest-harness'
+  project(':realguest-harness').projectDir = file('keliver-compose-realguest-spike/harness')
+}
 include ':keliver-composeui'
 include ':keliver-gradle-plugin'
 
