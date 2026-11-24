@@ -17,8 +17,10 @@ package dev.keliver.spike.host
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -82,6 +84,7 @@ public interface RemoteDispatcher<S> {
  */
 @Composable
 public fun <S> RemoteHost(wire: JsonObject, state: S, dispatcher: RemoteDispatcher<S>, report: (JsonObject) -> Unit) {
+  val currentReport by rememberUpdatedState(report)
   val started = remember { mutableSetOf<Int>() }
   for (c in wire["cmd"]?.jsonArray.orEmpty()) {
     val cmd = c.jsonArray
@@ -90,13 +93,13 @@ public fun <S> RemoteHost(wire: JsonObject, state: S, dispatcher: RemoteDispatch
       LaunchedEffect(seq) {
         if (!started.add(seq)) return@LaunchedEffect
         dispatcher.invoke(state, cmd[1].jsonPrimitive.content, cmd[2].jsonObject)
-        report(buildJsonObject { put("done", JsonArray(listOf(JsonPrimitive(seq)))) })
+        currentReport(buildJsonObject { put("done", JsonArray(listOf(JsonPrimitive(seq)))) })
       }
     }
   }
   val observed = wire["obs"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
   LaunchedEffect(observed) {
     snapshotFlow { observed.associateWith { dispatcher.read(state, it) } }
-      .collect { report(buildJsonObject { put("f", JsonObject(it)) }) }
+      .collect { currentReport(buildJsonObject { put("f", JsonObject(it)) }) }
   }
 }

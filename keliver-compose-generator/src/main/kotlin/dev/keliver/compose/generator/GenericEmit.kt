@@ -17,7 +17,6 @@ package dev.keliver.compose.generator
 
 import java.io.File
 import kotlin.metadata.ClassKind
-import kotlin.metadata.KmClass
 import kotlin.metadata.KmClassifier
 import kotlin.metadata.KmType
 import kotlin.metadata.KmValueParameter
@@ -149,7 +148,8 @@ class GenericEmitter(private val index: GenericIndex, private val src: SourceRea
     val head = spec.substringBefore('(')
     val paramSpecs = if ('(' in spec) spec.substringAfter('(').removeSuffix(")").split(',').map { it.trim() }.filter { it.isNotEmpty() } else null
     val names = paramSpecs?.map { it.substringBefore(':') }
-    fun matches(ps: List<KmValueParameter>) = names != null && ps.map { it.name } == names &&
+    fun matches(ps: List<KmValueParameter>) = names != null &&
+      ps.map { it.name } == names &&
       paramSpecs.zip(ps).all { (s, p) -> ':' !in s || fqOf(p.type)?.substringAfterLast('.') == s.substringAfter(':') }
     if ('#' !in head) {
       // A top-level factory: `androidx.compose.foundation.shape.RoundedCornerShape(size:Dp)`.
@@ -191,13 +191,15 @@ class GenericEmitter(private val index: GenericIndex, private val src: SourceRea
   fun callRecords(specs: List<String>): Pair<Map<String, String>, String> {
     val producers = specs.map(::resolveProducer)
     mirrored = producers.flatMap { p -> listOf(p.returns) + index.allSupertypes(p.returns).filter { it.startsWith("androidx.") && index.classes[it]?.visibility == Visibility.PUBLIC } }.toSet()
-    for (p in producers) if (!p.isProperty) {
-      val typeOwner = p.typeOwner()
-      val pkg = if (typeOwner == null) p.id.substringBefore('(').substringBeforeLast('.') else packageOf(typeOwner)
-      val owner = typeOwner?.removePrefix("$pkg.")?.let { if (p.ownerFq!!.endsWith(".Companion")) "$it.Companion" else it }
-      val (d, imp) = src.defaultsOf(pkg, owner, p.name, p.params.map { it.name }, p.params.map { it.type.toRef() }) ?: error("${p.id}: not found in the sources")
-      p.defaults = d
-      p.imports = imp
+    for (p in producers) {
+      if (!p.isProperty) {
+        val typeOwner = p.typeOwner()
+        val pkg = if (typeOwner == null) p.id.substringBefore('(').substringBeforeLast('.') else packageOf(typeOwner)
+        val owner = typeOwner?.removePrefix("$pkg.")?.let { if (p.ownerFq!!.endsWith(".Companion")) "$it.Companion" else it }
+        val (d, imp) = src.defaultsOf(pkg, owner, p.name, p.params.map { it.name }, p.params.map { it.type.toRef() }) ?: error("${p.id}: not found in the sources")
+        p.defaults = d
+        p.imports = imp
+      }
     }
 
     val guest = linkedMapOf<String, StringBuilder>()
@@ -224,7 +226,7 @@ class GenericEmitter(private val index: GenericIndex, private val src: SourceRea
         if (inherited) continue
         val ctorBacked = k.constructors.any { c -> c.valueParameters.any { it.name == prop.name } }
         val why = if (ctorBacked) "constructor-backed: readable once literal defaults are copied (design §5 case 1)" else "computed by Compose on the host"
-        out.appendLine("  @Deprecated(\"Keliver: `${name}.${prop.name}` is not readable in the guest: this value is a recorded call ($why).\", level = DeprecationLevel.ERROR)")
+        out.appendLine("  @Deprecated(\"Keliver: `$name.${prop.name}` is not readable in the guest: this value is a recorded call ($why).\", level = DeprecationLevel.ERROR)")
         out.appendLine("  public val ${prop.name}: Nothing get() = error(\"call-recorded\")")
       }
       val companion = producers.filter { it.ownerFq == "$fq.Companion" }
@@ -416,7 +418,13 @@ class GenericEmitter(private val index: GenericIndex, private val src: SourceRea
         if (!seen.add("p:" + p.name)) continue
         val t = p.returnType
         if (supported(t) && (fqOf(t) in primitives)) {
-          val zero = when (fqOf(t)) { "kotlin.Int" -> "0"; "kotlin.Float" -> "0f"; "kotlin.Boolean" -> "false"; "kotlin.Long" -> "0L"; else -> "\"\"" }
+          val zero = when (fqOf(t)) {
+            "kotlin.Int" -> "0"
+            "kotlin.Float" -> "0f"
+            "kotlin.Boolean" -> "false"
+            "kotlin.Long" -> "0L"
+            else -> "\"\""
+          }
           g.appendLine("  /** The host's `${p.name}`, as last reported (observed from the first read; at most once a frame). */")
           g.appendLine("  public val ${p.name}: ${guestType(t)} get() = remote.read(\"${p.name}\")?.jsonPrimitive?.${primitives.getValue(fqOf(t)!!)} ?: $zero")
           reads += "      \"${p.name}\" -> JsonPrimitive(state.${p.name})"

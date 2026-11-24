@@ -77,19 +77,21 @@ class GenericSurveyTest {
     val catOfType = mutableMapOf<String, GenericSurvey.Cat>()
     val paramCats = mutableMapOf<GenericSurvey.Cat, Int>()
     var modifierParams = 0
-    for ((_, f) in surface) for (p in f.valueParameters) {
-      val c = survey.category(p.type)
-      paramCats.merge(c, 1, Int::plus)
-      val t = survey.typeText(p.type)
-      // A Modifier parameter is a chain: the existing modifier mechanism, not a value codec.
-      if (t == "Modifier") {
-        paramCats.merge(c, -1, Int::plus)
-        modifierParams++
-        continue
-      }
-      if (c != GenericSurvey.Cat.FUNCTION && c != GenericSurvey.Cat.PRIMITIVE) {
-        typeUse.merge(t, 1, Int::plus)
-        catOfType[t] = c
+    for ((_, f) in surface) {
+      for (p in f.valueParameters) {
+        val c = survey.category(p.type)
+        paramCats.merge(c, 1, Int::plus)
+        val t = survey.typeText(p.type)
+        // A Modifier parameter is a chain: the existing modifier mechanism, not a value codec.
+        if (t == "Modifier") {
+          paramCats.merge(c, -1, Int::plus)
+          modifierParams++
+          continue
+        }
+        if (c != GenericSurvey.Cat.FUNCTION && c != GenericSurvey.Cat.PRIMITIVE) {
+          typeUse.merge(t, 1, Int::plus)
+          catOfType[t] = c
+        }
       }
     }
     line("# Generic mechanisms: coverage from metadata")

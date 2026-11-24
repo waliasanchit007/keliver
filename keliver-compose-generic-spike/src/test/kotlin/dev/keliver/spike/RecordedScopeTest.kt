@@ -91,9 +91,13 @@ class RecordedScopeTest {
     assertEquals(100, guest.width)
     var differing = 0
     val where = mutableListOf<String>()
-    for (x in 0 until guest.width) for (y in 0 until guest.height) if (guest[x, y] != native[x, y]) {
-      differing++
-      if (where.size < 10) where += "($x,$y) ${guest[x, y]} vs ${native[x, y]}"
+    for (x in 0 until guest.width) {
+      for (y in 0 until guest.height) {
+        if (guest[x, y] != native[x, y]) {
+          differing++
+          if (where.size < 10) where += "($x,$y) ${guest[x, y]} vs ${native[x, y]}"
+        }
+      }
     }
     if (differing > 0) println("differing: $where")
     assertEquals(0, differing, "differing pixels")
