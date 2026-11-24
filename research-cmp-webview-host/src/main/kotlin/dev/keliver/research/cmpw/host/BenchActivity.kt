@@ -121,10 +121,12 @@ class BenchActivity : ComponentActivity() {
     }
     web = w
     val dir = if (form.startsWith("cmpj")) "cmpj" else "cmpw"
+    // `--ez a11y false`: turns off CMP web's semantics mirror in the DOM (wasmJs; on by default).
+    val query = "n=$rows" + if (intent.hasExtra("a11y")) "&a11y=${if (intent.getBooleanExtra("a11y", true)) 1 else 0}" else ""
     val url = if (form.endsWith("-http")) {
-      "http://127.0.0.1:${AssetServer.start(assets)}/$dir/index.html?n=$rows"
+      "http://127.0.0.1:${AssetServer.start(assets)}/$dir/index.html?$query"
     } else {
-      "https://$ASSET_HOST/$dir/index.html?n=$rows"
+      "https://$ASSET_HOST/$dir/index.html?$query"
     }
     Log.i(TAG, "form=$form url=$url webview=${WebView.getCurrentWebViewPackage()?.versionName}")
     w.loadUrl(url)

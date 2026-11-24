@@ -26,11 +26,18 @@ private fun kpoint(name: String): Unit = js("window.kpoint(name)")
 /** The page's `?n=` (the list's length), 50 without it. */
 private fun rowCount(): Int = js("parseInt(new URLSearchParams(window.location.search).get('n') || '50')")
 
+/**
+ * CMP web's semantics → DOM (ARIA) mirror, for screen readers: on by default (CMP 1.9+), off with
+ * the page's `?a11y=0`. Chromium builds its accessibility tree only while a screen reader is on.
+ */
+private fun a11yParam(): Boolean = js("new URLSearchParams(window.location.search).get('a11y') !== '0'")
+
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
   kpoint("kotlinMain")
   val count = rowCount()
-  ComposeViewport {
+  val a11y = a11yParam()
+  ComposeViewport(configure = { isA11YEnabled = a11y }) {
     CmpApp(count) { name, seq -> kmark(name, seq) }
   }
 }
