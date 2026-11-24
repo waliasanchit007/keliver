@@ -1,0 +1,66 @@
+// Research only (efficiency review C2, branch research/cmp-webview): one Android app, two ways to
+// show the same screens (research-cmp-webview's commonMain):
+//   form=native            the screens compiled into this app (AndroidX Compose);
+//   form=cmpw / cmpj       the Compose Multiplatform web build (wasmJs / js) from the APK's assets
+//                          in a WebView (served by shouldInterceptRequest);
+//   form=cmpw-http / -http the same files from a loopback HTTP server with cache headers, so
+//                          Chromium's HTTP cache and code cache apply (an over-the-air cache).
+// Never published.
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+android {
+  namespace 'dev.keliver.research.cmpw.host'
+
+  defaultConfig {
+    applicationId 'dev.keliver.research.cmpw'
+    versionCode 1
+    versionName '1.0'
+  }
+
+  buildFeatures {
+    compose true
+  }
+
+  buildTypes {
+    // Release-shaped like the three-way benchmark's APK: not debuggable, not minified, debug key.
+    bench {
+      initWith release
+      debuggable false
+      minifyEnabled false
+      signingConfig signingConfigs.debug
+      matchingFallbacks = ['release']
+    }
+  }
+
+  // Files in an over-the-air cache are stored as they are: no APK compression on the web build.
+  androidResources {
+    noCompress += ['wasm', 'js', 'mjs', 'html', 'ttf']
+  }
+
+  sourceSets {
+    main {
+      java.srcDirs += '../research-cmp-webview/src/commonMain/kotlin'
+      assets.srcDirs += "$buildDir/cmpAssets"
+    }
+  }
+}
+
+def web = project(':research-cmp-webview')
+def copyCmpAssets = tasks.register('copyCmpAssets', Sync) {
+  dependsOn ':research-cmp-webview:wasmJsBrowserDistribution', ':research-cmp-webview:jsBrowserDistribution'
+  into layout.buildDirectory.dir('cmpAssets')
+  from(web.layout.buildDirectory.dir('dist/wasmJs/productionExecutable')) { into 'cmpw' }
+  from(web.layout.buildDirectory.dir('dist/js/productionExecutable')) { into 'cmpj' }
+}
+preBuild.dependsOn copyCmpAssets
+
+dependencies {
+  implementation libs.androidx.activity.compose
+  implementation libs.jetbrains.compose.runtime
+  implementation libs.jetbrains.compose.foundation
+  implementation libs.jetbrains.compose.ui
+  implementation libs.jetbrains.compose.material3
+  implementation libs.jetbrains.compose.material.icons.core
+}

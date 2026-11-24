@@ -1,0 +1,38 @@
+// Research only (efficiency review C2, branch research/cmp-webview): the screens as a Compose
+// Multiplatform web app, in both web targets (wasmJs needs WasmGC; js is the fallback for older
+// WebViews). The same commonMain is compiled natively by :research-cmp-webview-host. Never published.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.compose'
+
+kotlin {
+  wasmJs {
+    outputModuleName = 'cmpw'
+    browser {
+      commonWebpackConfig {
+        outputFileName = 'cmpw.js'
+      }
+    }
+    binaries.executable()
+  }
+  js {
+    outputModuleName = 'cmpj'
+    browser {
+      commonWebpackConfig {
+        outputFileName = 'cmpj.js'
+      }
+    }
+    binaries.executable()
+  }
+  sourceSets {
+    commonMain {
+      dependencies {
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.ui
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+      }
+    }
+  }
+}

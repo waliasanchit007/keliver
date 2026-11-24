@@ -84,6 +84,12 @@ if (providers.gradleProperty('keliver.gatebIos').present) {
 if (providers.gradleProperty('keliver.guestProfile').present) {
   include ':keliver-compose-gatea-profile'
 }
+// Research only (branch research/cmp-webview): a Compose Multiplatform web app in a WebView, against
+// the same screens compiled natively. Only with -Pkeliver.cmpWebview; never published.
+if (providers.gradleProperty('keliver.cmpWebview').present) {
+  include ':research-cmp-webview'
+  include ':research-cmp-webview-host'
+}
 include ':keliver-composeui'
 include ':keliver-gradle-plugin'
 
