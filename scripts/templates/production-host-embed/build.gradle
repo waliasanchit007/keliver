@@ -5,9 +5,9 @@
 //
 // Your app supplies the plugins (no versions are requested here, so yours
 // apply): Android, Kotlin @@KOTLIN_VERSION@@ with its Compose plugin, and the Zipline
-// plugin @@ZIPLINE_PLUGIN_ID@@ @@ZIPLINE_VERSION@@ (Keliver 0.4.x: app.cash.zipline 1.22.0
-// on Kotlin 2.2.0; from 0.5.0, Keliver's fork dev.keliver.zipline 1.28.0-keliver.1
-// on Kotlin 2.4.21, never both) — Zipline's compiler plugin rewrites
+// plugin @@ZIPLINE_PLUGIN_ID@@ @@ZIPLINE_VERSION@@ (the versions of this app's Keliver line, in
+// the tools bundle's bin/keliver-runtime-line.sh; never upstream's and Keliver's fork's
+// Zipline together) — Zipline's compiler plugin rewrites
 // zipline.take/bind and is tied to one Kotlin version.
 //
 // Production only: it loads only bundles whose manifest verifies against
@@ -15,7 +15,7 @@
 // on the device before anything is fetched).
 plugins {
   id 'com.android.library'
-  id 'org.jetbrains.kotlin.android'
+@@EMBED_KOTLIN_PLUGIN@@
   id 'org.jetbrains.kotlin.plugin.compose'
   id '@@ZIPLINE_PLUGIN_ID@@' // IR rewrite of zipline.take/bind
 }
@@ -87,7 +87,7 @@ def portalKeysOk = portalKeyLines.size() in 1..2 && portalKeyLines.every { it ==
 
 android {
   namespace '@@PACKAGE@@'
-  compileSdk 35
+  compileSdk @@COMPILE_SDK@@
   defaultConfig {
     minSdk 23
     consumerProguardFiles 'consumer-rules.pro'
@@ -110,9 +110,9 @@ android {
     benchmark { initWith release }
   }
   buildFeatures { compose true; buildConfig true }
-  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_@@JDK@@; targetCompatibility JavaVersion.VERSION_@@JDK@@ }
 }
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(@@JDK@@) }
 
 // Timing marks (M0) are compiled into the debug and benchmark build types only
 // (src/timing/); every other build type, release among them, gets the no-op
@@ -174,16 +174,15 @@ dependencies {
   implementation 'dev.keliver:keliver-http:@@KELIVER_VERSION@@'
   implementation '@@ZIPLINE_GROUP@@:zipline:@@ZIPLINE_VERSION@@'
   implementation '@@ZIPLINE_GROUP@@:zipline-loader:@@ZIPLINE_VERSION@@'
-  implementation 'com.squareup.okhttp3:okhttp:5.1.0'
+  implementation 'com.squareup.okhttp3:okhttp:@@OKHTTP_VERSION@@'
   // api: your app's screens use KeliverScreen (Compose) or KeliverView.
   api 'androidx.activity:activity-compose:1.10.1'
   implementation 'androidx.core:core-ktx:1.16.0'
   implementation 'androidx.browser:browser:1.8.0' // ExternalLinkPolicy: https opens in a Custom Tab
-  implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'
-  implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'
+  @@IMAGE_DEPENDENCIES@@
   api 'org.jetbrains.compose.runtime:runtime:@@COMPOSE_VERSION@@'
   implementation 'org.jetbrains.compose.foundation:foundation:@@COMPOSE_VERSION@@'
   implementation 'org.jetbrains.compose.material:material:@@COMPOSE_VERSION@@'
   api 'org.jetbrains.compose.ui:ui:@@COMPOSE_VERSION@@'
-  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:@@COROUTINES_VERSION@@'
 }

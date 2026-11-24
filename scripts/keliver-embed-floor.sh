@@ -37,19 +37,24 @@ SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
 # store lookup never reaches a real one.
 APP="$WORK/app"; EX="$WORK/probe"
 mkdir -p "$APP/src/jsMain/kotlin/screens" "$WORK/store" "$WORK/home" "$EX"
-printf '{ "screensDir": "src/jsMain/kotlin/screens" }\n' > "$APP/keliver.portal.json"
+# The app names Keliver 0.4.1, the version the tools bundle's scaffolders wire in (the scaffolder
+# refuses an app that names none); KELIVER_HOST_KELIVER_VERSION overrides it, as it does there.
+printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "keliverVersion": "0.4.1", "widgetVersion": 1 } }\n' > "$APP/keliver.portal.json"
 printf 'package dev.keliver.floor.screens\n\nfun HomeScreen() {}\n' > "$APP/src/jsMain/kotlin/screens/home.kt"
 printf '%s\n' "$(printf '00%.0s' $(seq 1 32))" > "$WORK/placeholder.pub"
 
 # The probe: an existing app with nothing of its own, declaring the plugins
-# the embed asks the app for (the versions the scaffolder's defaults name).
-eval "$(sed -nE 's/^(ZIPLINE_VERSION|KOTLIN_VERSION|AGP_VERSION|COMPOSE_VERSION)="\$\{KELIVER_HOST_[A-Z_]+:-([0-9A-Za-z.+-]+)\}"$/\1=\2/p' "$SCAFFOLD")"
-[ -n "${ZIPLINE_VERSION:-}" ] && [ -n "${KOTLIN_VERSION:-}" ] && [ -n "${AGP_VERSION:-}" ] && [ -n "${COMPOSE_VERSION:-}" ] \
-  || fail "could not read the plugin versions from $SCAFFOLD."
-ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$ZIPLINE_VERSION}"
-KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$KOTLIN_VERSION}"
-AGP_VERSION="${KELIVER_HOST_AGP_VERSION:-$AGP_VERSION}"
-COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$COMPOSE_VERSION}"
+# the embed asks the app for: the versions the scaffolder takes from keliver-runtime-line.sh's table
+# (beside it) for this app's Keliver version.
+LINE="$(dirname "$SCAFFOLD")/keliver-runtime-line.sh"
+[ -f "$LINE" ] || fail "keliver-runtime-line.sh is missing beside $SCAFFOLD."
+# shellcheck source=keliver-runtime-line.sh
+. "$LINE"
+keliver_zipline_line "${KELIVER_HOST_KELIVER_VERSION:-0.4.1}" || fail "KELIVER_HOST_KELIVER_VERSION: $KELIVER_LINE_ERROR"
+ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
+KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$TOOLCHAIN_KOTLIN}"
+AGP_VERSION="${KELIVER_HOST_AGP_VERSION:-$TOOLCHAIN_AGP}"
+COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$TOOLCHAIN_COMPOSE}"
 cat > "$EX/settings.gradle" <<EOF
 pluginManagement {
   repositories { gradlePluginPortal(); google(); mavenCentral() }

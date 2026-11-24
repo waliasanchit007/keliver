@@ -28,23 +28,17 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# The toolchain the Keliver version was built with (the published 0.4.x line: Kotlin 2.2.0). From
-# 0.5.0 Keliver builds on its Zipline fork with Kotlin 2.4.21 (keliver-runtime-line.sh, which
-# keliver-new-device-target.sh also reads when it adds Zipline to this app).
-KOTLIN_VERSION=2.2.0
-COMPOSE_VERSION=1.8.2
-COROUTINES_VERSION=1.10.2
-SERIALIZATION_VERSION=1.9.0
+# The toolchain the Keliver version was built with: keliver-runtime-line.sh's table, one column per
+# line (the published 0.4.x line: Kotlin 2.2.0; from 0.5.0, Keliver's Zipline fork on Kotlin 2.4.21).
+# keliver-new-device-target.sh and the host scaffolders read the same table.
 [ -f "$SCRIPT_DIR/keliver-runtime-line.sh" ] || { echo "keliver-runtime-line.sh is missing beside this script ($SCRIPT_DIR)"; exit 1; }
 # shellcheck source=keliver-runtime-line.sh
 . "$SCRIPT_DIR/keliver-runtime-line.sh"
-keliver_zipline_line "$KELIVER_VERSION" || { echo "KELIVER_VERSION '$KELIVER_VERSION' is not a version (<major>.<minor>.<patch>)"; exit 1; }
-if $KELIVER_ZIPLINE_FORK; then
-  KOTLIN_VERSION="$FORK_KOTLIN_VERSION"
-  COMPOSE_VERSION="$FORK_COMPOSE_VERSION"
-  COROUTINES_VERSION="$FORK_COROUTINES_VERSION"
-  SERIALIZATION_VERSION="$FORK_SERIALIZATION_VERSION"
-fi
+keliver_zipline_line "$KELIVER_VERSION" || { echo "KELIVER_VERSION: $KELIVER_LINE_ERROR"; exit 1; }
+KOTLIN_VERSION="$TOOLCHAIN_KOTLIN"
+COMPOSE_VERSION="$TOOLCHAIN_COMPOSE"
+COROUTINES_VERSION="$TOOLCHAIN_COROUTINES"
+SERIALIZATION_VERSION="$TOOLCHAIN_SERIALIZATION"
 # The gradle wrapper ships beside this script in the tools bundle (../wrapper),
 # or lives at the repo root when run from a keliver checkout.
 WRAPPER=""
@@ -239,6 +233,13 @@ if [ -n "$WRAPPER" ]; then
   # (scripts/templates/app-wrapper). The tools bundle's wrapper/ is already it.
   if [ -f "$SCRIPT_DIR/templates/app-wrapper/wrapper.properties" ]; then
     cp "$SCRIPT_DIR/templates/app-wrapper/wrapper.properties" "$DIR/gradle/wrapper/gradle-wrapper.properties"
+  fi
+  # And the Gradle this app's line runs on (keliver-runtime-line.sh): the 0.5 line's AGP, which the
+  # host scaffolders write and which builds with this wrapper, needs a newer one. On the 0.4 line the
+  # file stays as copied.
+  if [ -f "$DIR/gradle/wrapper/gradle-wrapper.properties" ]; then
+    keliver_line_wrapper_properties "$DIR/gradle/wrapper/gradle-wrapper.properties" \
+      || { echo "could not set this app's Gradle wrapper to Gradle $TOOLCHAIN_GRADLE"; exit 1; }
   fi
   chmod +x "$DIR/gradlew" 2>/dev/null || true
 fi
