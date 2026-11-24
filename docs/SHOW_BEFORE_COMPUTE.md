@@ -634,7 +634,7 @@ nothing: the reveal no longer depends on "the guest's next batch".
 |---|---|---|
 | `Revealed(t)` | the shell, **inert** (below) | `Bind(t)` for the revealed entry → `Binding(t)`; `Decline(t)`, or `Bind(t)` for another entry (M2) → hidden, when what replaces it is effective (below); back, the shell's back button or `REVEAL_LIMIT` → `Cancelled(t)` |
 | `Binding(t)` | the shell, still inert, **whatever `Pending` says** (round 4, N1: below) | the entry's state `Shown` and its content at the same epoch are both applied (I14) → **live**, in that frame, and `revealLive(t)` is sent; back or `REVEAL_LIMIT` → `Cancelled(t)` |
-| `Cancelled(t)` | **the entry that was shown at the tap** (the list), whatever the guest declares `Shown` meanwhile (M1) | `cancelAcked ≥ t` **and**, for **every** entry the ack lists, that entry's effective epoch is at least its `e_ack` (round 4, N2; round 5, M2). The ack carries one `e_ack` per entry the cancel left in the container: the revealed entry, and each entry t's click pushed that the cancel parked; an entry the cancel disposed is not listed and needs nothing more. An entry's `e_ack` is its epoch as declared right after the cancel (round 5, L1): the pop's epoch, or the current one when the cancel found nothing to undo. It stays the right bound if the ack reaches the host a batch before that state, and if a later click in the ack's batch declares a newer epoch (the condition is `≥`). Until then the host ignores every answer for `t`: the same rule as the retained back's `backHandled` counter (`Retained.kt:120–139`). **Any `Shown` after that is a new navigation**, drawn by the ordinary rules (I14). `CANCEL_LIMIT` releases the held back but does not end it (below) |
+| `Cancelled(t)` | **the entry that was shown at the tap** (the list), whatever the guest declares `Shown` meanwhile (M1) | `cancelAcked ≥ t` **and**, for **every** entry the ack lists, that entry's effective epoch is at least its `e_ack`, **or the entry is no longer in the container** (round 4, N2; round 5, M2; round 6, L-c). The ack carries one `e_ack` per entry the cancel left in the container: the revealed entry, and each entry t's click pushed that the cancel parked; an entry the cancel disposed is not listed and needs nothing more. An entry's `e_ack` is its epoch as declared right after the cancel (round 5, L1): the pop's epoch, or the current one when the cancel found nothing to undo. It stays the right bound if the ack reaches the host a batch before that state, and if a later click in the ack's batch declares a newer epoch (the condition is `≥`). Until then the host ignores every answer for `t`: the same rule as the retained back's `backHandled` counter (`Retained.kt:120–139`). **Any `Shown` after that is a new navigation**, drawn by the ordinary rules (I14). `CANCEL_LIMIT` releases the held back but does not end it (below) |
 
 **A reveal overrides `Pending` (round 4, N1).** While the host holds `Revealed(t)` or `Binding(t)`
 for an entry, it draws that entry, inert, whatever `Pending` says: **its current content, inert**
@@ -660,8 +660,8 @@ then item 8, with a normal gesture counted as `nav.cancelTimeout`. With `e_ack`,
 once the host has applied what the guest declared up to the cancel; item 8's `(Shown, e+3)` is a new
 navigation, `Pending` until its content lands, and then drawn in its content's frame. If item 8's
 click is in the ack's own batch, `e_ack` is still e+2 (the epoch right after the cancel, L1), the
-host applies e+3 with it, so `Cancelled` ends in that batch's frame and item 8 is drawn in the frame
-its content is applied: no extra frame either way.
+host applies e+3 with it, so `Cancelled` ends, and item 8 is drawn, in the frame item 8's content is
+applied (a batch later if its content lags: `Pending` until then): no extra frame either way.
 
 **If the revealed entry disappears** while `Revealed` or `Binding` (M2: the guest dropped it on
 memory pressure or in the background, reset its navigation on a logout, or the click bound a fresh
@@ -701,7 +701,8 @@ shows, with no frame of the shell after its removal.
   composition's back dispatcher (round 5, M1).** The holder outlives the view (M6), but its
   `onDispose` runs with the old activity's composition and removes the callback there; so when an
   activity is recreated during `Revealed`, `Binding` or `Cancelled` (a held back, or not yet past
-  `CANCEL_LIMIT`), the new composition's entry re-adds it, as the last-added callback, and back stays
+  `CANCEL_LIMIT`), the new composition's entry re-adds it, as the last-added callback (the re-add runs in a
+  post-composition effect, after the composition's other back callbacks are registered), and back stays
   the host's (I13).
   It is removed: when the entry goes live (in that frame; the retained back, NF1,
   takes over), when a decline takes effect, when `Cancelled` ends or reaches `CANCEL_LIMIT`, when the container leaves the
@@ -2291,7 +2292,7 @@ its `c` and `d` would measure NF3's press, not (B).
   `P_allW_r30`, the bound with all of W removed.
 - **Reachable in principle:** P ≤ 100 ms and G ≤ 25 ms.
 - **Not reachable by (B):** `P_allW_r12` > 100 (even with every wait removed), or G ≥ 40 ms.
-- **In between:** reported to the owner with decision 7.
+- **In between:** reported to the owner (decision 7 is decided, (b); the fallbacks for data-in-hand kinds come to the owner then).
 
 Also reported: the press-on arm beside the idle arm (the difference is what the press's preparation
 costs the click); `d_running_fast` and `d_running_slow`, the parts of G on the fast cluster (on the
