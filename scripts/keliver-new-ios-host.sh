@@ -60,6 +60,9 @@
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
 # app's appRuntime.keliverVersion, else 0.4.1), KELIVER_HOST_ZIPLINE_VERSION,
 # KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION.
+# Zipline follows the Keliver version (keliver-runtime-line.sh): upstream
+# app.cash.zipline before 0.5.0, Keliver's fork dev.keliver.zipline from 0.5.0
+# (with its Kotlin and Compose as the defaults), never both.
 #
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
 # A rejected input leaves the app byte-identical.
@@ -88,7 +91,7 @@ while [ $# -gt 0 ]; do
     --embed)           EMBED=true; shift ;;
     --into)            need "$1" $#; INTO="$2"; shift 2 ;;
     --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,65p' "$SELF"; exit 0 ;;
+    -h|--help)         sed -n '2,68p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -170,6 +173,17 @@ try:
     print(v if isinstance(v, str) and v.strip() else '0.4.1')
 except Exception: print('0.4.1')" "$APP/keliver.portal.json")}"
 [[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
+# NF2: Keliver 0.5.0 and later build on Keliver's Zipline fork (QuickJS 2026), its group, plugin id
+# and toolchain; earlier versions keep upstream Zipline, which their libraries were built against.
+[ -f "$HERE/keliver-runtime-line.sh" ] || fail "keliver-runtime-line.sh is missing beside this script ($HERE)."
+# shellcheck source=keliver-runtime-line.sh
+. "$HERE/keliver-runtime-line.sh"
+keliver_zipline_line "$KELIVER_VERSION" || fail "the Keliver version '$KELIVER_VERSION' does not start with <major>.<minor>.<patch>."
+if $KELIVER_ZIPLINE_FORK; then
+  ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$FORK_ZIPLINE_VERSION}"
+  KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$FORK_KOTLIN_VERSION}"
+  COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-$FORK_COMPOSE_VERSION}"
+fi
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[A-Za-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)+$'
 [[ "$APPLICATION_ID" =~ $ID_RE ]] || fail "--bundle-id must look like com.example.app (got '$APPLICATION_ID')."
@@ -267,12 +281,13 @@ subst() { # <src> <dst>
   mkdir -p "$(dirname "$2")"
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$KEY_HEX" "$PRODUCT_NAME" \
-    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" "$DEBUG_LINK_SCHEME" "$ATS_DEBUG_BLOCK" <<'PY'
+    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" "$DEBUG_LINK_SCHEME" "$ATS_DEBUG_BLOCK" "$ZIPLINE_GROUP" "$ZIPLINE_PLUGIN_ID" <<'PY'
 import sys
-src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel, link_scheme, ats_debug = sys.argv[1:19]
+src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel, link_scheme, ats_debug, zg, zid = sys.argv[1:21]
 s = open(src, encoding='utf-8').read()
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'BUNDLE_ID': bid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
+             'ZIPLINE_GROUP': zg, 'ZIPLINE_PLUGIN_ID': zid,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'KEY_HEX': key.lower(),
              'PRODUCT_NAME': product, 'PKG_PATH': pkgpath, 'CHANNEL': channel,
              'DEBUG_LINK_SCHEME': link_scheme,

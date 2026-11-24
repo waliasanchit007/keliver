@@ -7,6 +7,31 @@ The tools line and the library line are independent. `portal-tools-vX.Y.Z` fires
 listens on, so a tools release cannot publish a library. Bumping one to name the
 other is wrong.
 
+## Zipline line (NF2): the next tools release moves the scaffold default to 0.5.x
+
+Since NF2 (PR #294) this checkout builds on Keliver's Zipline fork, so the
+bundled development host (`portal-device-android`, built from the checkout)
+runs only QuickJS 2026. It **no longer serves the 0.4 line**: a 0.4.x app
+compiles QuickJS 2021 bytecode (upstream Zipline 1.22.0), which that host
+cannot load. The scaffolders still default to 0.4.1 (`KELIVER_VERSION` in
+`keliver-init` and its siblings), because 0.5.0 is not on Maven Central yet.
+
+So `scripts/build-portal-tools.sh` **refuses** to build a zip whose host
+engine (the catalog's Zipline group) and scaffold default
+(`keliver-runtime-line.sh`) are on different lines, and names both;
+`scripts/build-portal-tools-selftest.sh <parent>` checks the refusal without
+Gradle (`KELIVER_TOOLS_PREFLIGHT_ONLY=1`). The order is:
+
+1. Release the 0.5.0 libraries (on the fork) to Maven Central.
+2. In the next tools release, move the scaffold default to that 0.5.x in every
+   scaffolder (`keliver-init`, `keliver-new-editor.sh`,
+   `keliver-new-device-target.sh`, and the host scaffolders' fallback), and the
+   pinned `mavenDependencyVersion` check in `portal-tools.yml` with it. The
+   build then passes the check.
+
+Tools 0.3.18 and earlier stay as published: their hosts run QuickJS 2021 and
+their scaffolders wire 0.4.x, which is what a 0.4.x app keeps using.
+
 ## Why the asset is uploaded by hand
 
 A tools bundle is built by CI, then verified by CI: the adopter acceptance, the

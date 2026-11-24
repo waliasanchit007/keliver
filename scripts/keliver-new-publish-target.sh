@@ -123,7 +123,8 @@ def strip_comments(src):
 
 build = open(os.path.join(app, 'build.gradle'), encoding='utf-8').read()
 code = strip_comments(build)
-if not re.search(r"""id\s*\(?\s*['"]app\.cash\.zipline['"]""", code):
+# Upstream Zipline's plugin (Keliver 0.4.x), or Keliver's Zipline fork's (NF2, from 0.5.0).
+if not re.search(r"""id\s*\(?\s*['"](app\.cash|dev\.keliver)\.zipline['"]""", code):
     fail("build.gradle does not apply the Zipline plugin. Run keliver-new-device-target.sh first: "
          "publishing compiles the bundle the device path serves.")
 if 'binaries.executable()' not in code:

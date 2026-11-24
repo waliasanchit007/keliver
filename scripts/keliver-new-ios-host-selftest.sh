@@ -707,6 +707,24 @@ PY
   fi
 fi
 
+echo "=== NF2: the Zipline line follows the app's Keliver version (keliver-runtime-line.sh)"
+grep -q "^  id 'app.cash.zipline' version '1.22.0'$" "$H/build.gradle" && grep -q "implementation 'app.cash.zipline:zipline:1.22.0'" "$H/build.gradle" \
+  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'" "$H/build.gradle" && ! grep -q 'dev\.keliver\.zipline' "$H/build.gradle" \
+  && ok "NF2: a 0.4.1 app's iOS host keeps upstream Zipline 1.22.0 on Kotlin 2.2.0" || bad "NF2: the 0.4.1 app's iOS host changed its Zipline"
+APPF="$DISP/demo-fork"; mkdir -p "$APPF/src/jsMain/kotlin/screens"
+printf '{ "screensDir": "src/jsMain/kotlin/screens", "appRuntime": { "keliverVersion": "0.5.0", "widgetVersion": 1 } }\n' > "$APPF/keliver.portal.json"
+cp "$APP/settings.gradle" "$APPF/"; cp "$APP/src/jsMain/kotlin/screens/home.kt" "$APPF/src/jsMain/kotlin/screens/"
+bash "$ROOT/scripts/keliver-app-wrapper.sh" "$APPF"
+keliver_require_isolated_store "$DISP" "$APPF" > /dev/null || { echo "isolation guard refused" >&2; exit 2; }
+out="$( cd "$APPF" && "$SCAFFOLD" --bundle-server https://bundles.example --public-key-file "$KEY" 2>&1 )"; rc=$?
+HF="$APPF/host-ios/build.gradle"
+[ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.1'$" "$HF" \
+  && grep -q "implementation 'dev.keliver.zipline:zipline:1.28.0-keliver.1'" "$HF" && grep -q "implementation 'dev.keliver.zipline:zipline-loader:1.28.0-keliver.1'" "$HF" \
+  && grep -q "id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'" "$HF" && grep -q "id 'org.jetbrains.compose' version '1.12.2'" "$HF" \
+  && grep -q "implementation 'dev.keliver:keliver-treehouse-host:0.5.0'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
+  && ok "NF2: an app on 0.5.0 gets an iOS host on Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries), Kotlin 2.4.21, Compose 1.12.2" \
+  || bad "NF2: the iOS host of an app on 0.5.0 (rc=$rc): $(grep -hE 'zipline|kotlin.multiplatform|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
+
 grep -rqF -f "$PRIV" "$DISP"/demo*/host-ios 2>/dev/null && bad "the private key is in a scaffolded host" \
   || ok "the private key is in no scaffolded host"
 

@@ -58,6 +58,10 @@ private class GuestDriver(
       } catch (e: ZiplineException) {
         "raw ${e.message}"
       }
+      // NF2: build-support links every guest with Kotlin's Long as a JavaScript BigInt
+      // (-Xes-long-as-bigint), which only the fork's engine (QuickJS 2026) runs. From the step's
+      // length, so the compiler cannot fold it; past 2^53, where a JavaScript number loses digits.
+      "longKind" -> (step.length.toLong() * 1_000_000_000_000_000_000L + 7L).let { "ok ${jsTypeOf(it)} $it ${it % 1_000L}" }
       else -> "unknown step $step"
     }
   } catch (e: BridgeCallFailed) {

@@ -38,6 +38,43 @@ for s in keliver-new-production-host.sh keliver-new-ios-host.sh; do
     exit 1
   }
 done
+# NF2: the bundled development host (portal-device-android) is built from THIS checkout, so it runs
+# this checkout's Zipline: the fork's QuickJS 2026 when the version catalog names dev.keliver.zipline,
+# upstream's QuickJS 2021 when it names app.cash.zipline. The two engines' bytecode is not
+# interchangeable and the development path has no engine check, so an app the scaffolders wire by
+# default must be on the same line (keliver-runtime-line.sh), or the zip's own host cannot load the
+# guests its own keliver-init scaffolds. The scaffold default moves to 0.5.x in the tools release
+# after the 0.5.0 libraries release (docs/PORTAL_TOOLS_RELEASE.md, "Zipline line").
+[ -f "$ROOT/scripts/keliver-runtime-line.sh" ] || { echo "build-portal-tools: scripts/keliver-runtime-line.sh is missing" >&2; exit 1; }
+# shellcheck source=keliver-runtime-line.sh
+. "$ROOT/scripts/keliver-runtime-line.sh"
+keliver_zipline_line "$MAVEN_VERSION" || { echo "build-portal-tools: keliver-init's default '$MAVEN_VERSION' is not a version" >&2; exit 1; }
+SCAFFOLD_FORK="$KELIVER_ZIPLINE_FORK"
+CATALOG_ZIPLINE="$(sed -nE 's/^zipline[[:space:]]*=[[:space:]]*\{[[:space:]]*module[[:space:]]*=[[:space:]]*"([^:"]+):zipline".*/\1/p' "$ROOT/gradle/libs.versions.toml" | head -1)"
+case "$CATALOG_ZIPLINE" in
+  dev.keliver.zipline) HOST_FORK=true; HOST_ENGINE="QuickJS 2026 (Keliver's Zipline fork)" ;;
+  app.cash.zipline) HOST_FORK=false; HOST_ENGINE="QuickJS 2021 (upstream Zipline)" ;;
+  *) echo "build-portal-tools: gradle/libs.versions.toml's zipline names group '${CATALOG_ZIPLINE:-?}'; cannot tell which engine the bundled host runs" >&2; exit 1 ;;
+esac
+if [ "$HOST_FORK" != "$SCAFFOLD_FORK" ]; then
+  if $HOST_FORK; then
+    scaffold_line="keliver $MAVEN_VERSION, upstream Zipline (QuickJS 2021 bytecode); the fork line starts at $KELIVER_FORK_SINCE"
+  else
+    scaffold_line="keliver $MAVEN_VERSION, Keliver's Zipline fork (QuickJS 2026 bytecode)"
+  fi
+  {
+    echo "build-portal-tools: REFUSING to build: the bundled development host would not run the apps this zip scaffolds."
+    echo "  the host (built from this checkout, catalog group $CATALOG_ZIPLINE) runs $HOST_ENGINE;"
+    echo "  keliver-init and the other scaffolders wire, by default, $scaffold_line."
+    echo "  Move the scaffold default (KELIVER_VERSION in keliver-init and its siblings) to the host's line"
+    echo "  once those libraries are on Maven Central, or build from a commit whose Zipline matches it."
+    echo "  See docs/PORTAL_TOOLS_RELEASE.md, \"Zipline line\"."
+  } >&2
+  exit 1
+fi
+echo "==> zipline line: the bundled host runs $HOST_ENGINE; the scaffolders' default keliver $MAVEN_VERSION matches"
+# KELIVER_TOOLS_PREFLIGHT_ONLY=1: stop after the checks above (no Gradle); what the selftest runs.
+[ "${KELIVER_TOOLS_PREFLIGHT_ONLY:-0}" = "1" ] && { echo "==> preflight only (KELIVER_TOOLS_PREFLIGHT_ONLY=1): stopping before the build"; exit 0; }
 SOURCE_COMMIT="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
 SOURCE_DIRTY="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
 VERSION="$TOOLS_VERSION"
@@ -83,6 +120,9 @@ cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/kelive
    scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh \
    scripts/keliver-new-production-host.sh scripts/keliver-new-publish-target.sh \
    scripts/keliver-new-ios-host.sh scripts/keliver-run-android.sh scripts/keliver-run-ios.sh "$STAGE/bin/"
+# NF2: sourced by keliver-init and those scaffolders (which Zipline an app's Keliver version needs);
+# not a command, so not executable.
+cp scripts/keliver-runtime-line.sh "$STAGE/bin/"
 # The production-host scaffolder's templates: an Android module's SOURCE, with
 # no key in it — the key is copied from the adopter's own store when they run
 # the scaffolder. It finds them at bin/../templates.

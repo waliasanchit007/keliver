@@ -1,12 +1,18 @@
 name: Kotlin Compatibility Matrix
 
-# Weekly informational job: try building Keliver against multiple Kotlin
-# versions to catch IR/FIR plugin breakage early. Failures are NOT blocking.
-# When this fails, file an issue and document in docs/UPGRADING_KOTLIN.md.
+# Informational job: build Keliver against a Kotlin NEWER than the pin, to catch IR/FIR plugin
+# breakage early (Keliver's own compiler plugins, and the Zipline fork's compiler plugin under a
+# newer compiler). Failures are NOT blocking. When this fails, file an issue and document in
+# docs/UPGRADING_KOTLIN.md.
+#
+# PAUSED (NF2, PR #294): the only leg left is the pin itself, which repeats ci.yml's build and
+# tests nothing new, so the weekly schedule is off; workflow_dispatch still runs it. The schedule
+# comes back with a leg for the next newer Kotlin (a 2.4.x after 2.4.21, or a 2.5 pre-release),
+# which runs the fork's compiler plugin under that compiler:
+#   schedule:
+#     - cron: '0 9 * * 1'  # Mondays 09:00 UTC
 
 on:
-  schedule:
-    - cron: '0 9 * * 1'  # Mondays 09:00 UTC
   workflow_dispatch: {}
 
 env:
@@ -19,9 +25,13 @@ jobs:
     continue-on-error: true  # informational only
     strategy:
       fail-fast: false
+      # No leg below the pin: the Keliver fork of Zipline's Gradle plugin is built with Kotlin
+      # 2.4.21 and requires that kotlin-gradle-plugin, so Gradle lifts an older -PkotlinVersion to
+      # 2.4.21 and such a leg would only rebuild the pin (the fork's README, "Kotlin
+      # compatibility"). Add newer Kotlin versions here when they ship (a higher version wins),
+      # and restore the schedule above with the first one.
       matrix:
         kotlin:
-          - "2.4.20"  # what Zipline 1.28.0 is built on
           - "2.4.21"  # current pin (sanity check)
 
     steps:

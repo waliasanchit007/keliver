@@ -10,6 +10,8 @@
       matchPackageNames: [
         'androidx.compose.compiler{/,}**',
         'app.cash.zipline{/,}**',
+        // Keliver's Zipline fork (NF2): its versions follow upstream's Zipline plus `-keliver.N`.
+        'dev.keliver.zipline{/,}**',
         'com.google.devtools.ksp{/,}**',
         'dev.drewhamilton.poko{/,}**',
         'org.jetbrains.compose.compiler{/,}**',
