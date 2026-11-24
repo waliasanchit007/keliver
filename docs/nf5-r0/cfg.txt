@@ -17,6 +17,7 @@ data_sources { config { name: "linux.ftrace" target_buffer: 0 ftrace_config {
   atrace_categories: "power"
   atrace_apps: "dev.keliver.sample"
   compact_sched { enabled: true }
+  symbolize_ksyms: true
   buffer_size_kb: 8192
   drain_period_ms: 1000
 } } }

@@ -1794,7 +1794,7 @@ compiled it on 2026-11-24 (appendix D, "Dry run").
 | R0-2 the rule needs mechanisms the trace cannot give | Fixed: `cfg.txt` adds `sched/sched_blocked_reason`; `measure.sql` splits `d_other` into S and D, q3 lists the blocked functions, and `c` into `c1` (E's end → the main thread's frame callback) and `c2` (callback → F) |
 | R0-3 W counted `c_zl_running` | Fixed: W = (c − c_zl_running) + d_runnable + d_other, in `measure.sql` and q2 |
 | R0-4 the reachable rule still lands above the target | Fixed: section 7 and appendix D. The rule is a projection from the UP (native's reference): the arm's median UP → present, minus the waits with a named mechanism, plus the rebind's 14 ms, at or under 100; q2 prints the bound with all of W removed (`P_allW_r12`, `P_allW_r30`) |
-| R0-5 none of it has ever run | Fixed: run end to end on the emulator (appendix D, "Dry run"): the build, install, push, all four arms, every query. It found and fixed four errors (the grouping gap, a LIKE that returns the wrong row in trace_processor v45, the check's start point, the two events at the UP) |
+| R0-5 none of it has ever run | Fixed: run end to end on the emulator (appendix D, "Dry run"): the build, install, push, all four arms, every query, by the session's literal command list. It found and fixed six errors (the grouping gap, a LIKE that returns the wrong row in trace_processor v45, the two events at the UP, the check's start point, a check that compared two runs, now `qc.sql` with a `pass` flag, and q3's empty `blocked_function`: `symbolize_ksyms`, plus the waking thread). All four arms pass qc, 12 of 12. Minimum Android version: 12 |
 | R0-6 one stray call shifts every open | Fixed: `<arm>.opengroups.txt`, the open groups' numbers from q0a, replaces the default in the prelude (`analyse.sh`) |
 | Decision 7 | Folded in with its three conditions: `dataArrives` with `assertDataArrival`; R1's bar = B-1f's; +100 ms recorded as the owner's choice; data-in-hand destinations still judged on data |
 | Decision 12 | Folded in: the emulator dry run before R0, done |
@@ -2070,7 +2070,7 @@ Perfetto trace, and splits the floor step (click → composed for a detail alrea
 right item: 57.5 ms simple, 111–114.5 heavy) into its parts. Nothing in the bench changes: every
 option it uses is on main (`x=prepared`, `press`, `heavy`, `trace` and `--ei hold`;
 `ThreewayActivity.kt:192, 413`, `Main.kt:64–69`). The files are in [`docs/nf5-r0/`](nf5-r0/). They
-were run end to end on an emulator on 2026-11-24, which found and fixed five errors ("Dry run",
+were run end to end on an emulator on 2026-11-24, which found and fixed six errors ("Dry run",
 below).
 
 **What is measured.** `x=trace` adds a trace section for every call into or out of the guest
@@ -2131,7 +2131,11 @@ The session's exact command list, with this machine's notes, is kept beside the 
 **0. The phone.** The Galaxy A12, over adb. Record its Android version first
 (`adb shell getprop ro.build.version.release`): **the frame timeline (`j`, and so `total` and the
 projection) needs Android 12 or later** (`android.surfaceflinger.frametimeline` and
-`actual_frame_timeline_slice` came with Android 12). On Android 11 or earlier, `j` and `total` are
+`actual_frame_timeline_slice` came with Android 12; every record of this A12, e.g.
+THREE_WAY_BENCHMARK.md's, says Android 12). The rest is older (`perfetto --txt -c -`, sched, atrace,
+the app's sections: Android 10; `sched_blocked_reason` is an Android kernel tracepoint, and if the
+phone's kernel lacks it q3's `blocked_function` is empty, not an error); the trace processor is the
+benchmarks APK's and does not depend on the phone's version. On Android 11 or earlier, `j` and `total` are
 empty: report `total` to the frame's end instead (a + … + i) and say so beside the rule. Record
 uptime, battery and charger, temperature, thermal status and CPU idle before the run (the script
 records them per arm, with the Android version). On battery, as series H, unless the session says
@@ -2182,16 +2186,15 @@ adb shell mkdir -p $D
 unzip -p sample/benchmarks/build/outputs/apk/benchmark/benchmarks-benchmark.apk \
   assets/trace_processor_shell_aarch64 > <scratch>/tp
 adb push <scratch>/tp $D/trace_processor_shell && adb shell chmod 755 $D/trace_processor_shell
-adb push docs/nf5-r0/cfg.txt docs/nf5-r0/run.sh docs/nf5-r0/analyse.sh docs/nf5-r0/prelude.sql \
-  docs/nf5-r0/q0a.sql docs/nf5-r0/q0b.sql docs/nf5-r0/measure.sql docs/nf5-r0/q1.sql \
-  docs/nf5-r0/q2.sql docs/nf5-r0/q3.sql $D/
+adb push docs/nf5-r0/. $D/        # the 12 files of docs/nf5-r0
 ```
 
 **4. The screen and the arms.** The three-way app's guest form (`-e form guest`), with its own
 fixture (`--ez localApi true`): its list, and the detail opened from a row, simple and heavy.
 `bench=nav`, 14 opens and backs, the first 2 dropped, times from the DOWN.
 [`run.sh`](nf5-r0/run.sh) runs, each in a fresh process under its own trace
-([`cfg.txt`](nf5-r0/cfg.txt): the NF0 config, sched with `sched_blocked_reason`, frequency, atrace
+([`cfg.txt`](nf5-r0/cfg.txt): the NF0 config, sched with `sched_blocked_reason` and kernel
+symbols, frequency, atrace
 `gfx view input am wm dalvik power`, the app's sections, the frame timeline):
 
 | Arm | `-e x` | Hold | Trace | Series H's numbers to compare (untraced) |
@@ -2212,19 +2215,30 @@ adb shell '(nohup sh /data/local/tmp/nf5floor/run.sh < /dev/null > /data/local/t
 # about 5 minutes; done when /data/local/tmp/nf5floor/done.txt exists. run.sh <arm> runs one arm.
 ```
 
+If the phone's Perfetto rejects `symbolize_ksyms` (no trace, or a tiny one, and the error in
+`log.txt`), delete that line from the phone's `cfg.txt` and run again: only q3's kernel function is
+lost.
+
 **5. Check the runs.** Each `<arm>.results.txt` has 14 opens, 14 backs and `{"done":true}`, no
 timeout. For the three series H arms, medians of `click` and `composed − click` within 15% of
 series H's (tracing adds a section per message); if not, say so beside every number. For the idle
 arm, `click` is the hold plus a few ms.
 
 **6. Query, on the phone** (`analyse.sh`; each query is the prelude plus that one query, in its
-own `trace_processor_shell`: only a file's last statement prints), for each arm `L`:
+own `trace_processor_shell`: only a file's last statement prints). All four arms, detached (about 20
+minutes on the A12), into `analyse-all.txt`, then `analyse-done.txt`:
+
+```
+adb shell '(nohup sh /data/local/tmp/nf5floor/analyse.sh all < /dev/null > /dev/null 2>&1 &)'
+```
+
+One arm `L` again, after a correction:
 
 ```
 adb shell sh /data/local/tmp/nf5floor/analyse.sh $L groups     # q0a, q0b
-# put the UP message's exact name, as q0b prints it (with "msg "), into $D/$L.upname.txt; if q0a's
+# if q0b's UP is not upname.txt's name, put its exact name (with "msg ") into $D/$L.upname.txt; if q0a's
 # open groups are not the default (below), put their numbers, comma-separated, in $D/$L.opengroups.txt
-adb shell sh /data/local/tmp/nf5floor/analyse.sh $L measure    # q1, q2, q3, and the results' check
+adb shell sh /data/local/tmp/nf5floor/analyse.sh $L measure    # q1, q2, q3, qc
 ```
 
 - [`q0a.sql`](nf5-r0/q0a.sql): the tap groups (a new group after 550 ms without a guest call: the
@@ -2237,15 +2251,20 @@ adb shell sh /data/local/tmp/nf5floor/analyse.sh $L measure    # q1, q2, q3, and
 - [`q0b.sql`](nf5-r0/q0b.sql): the main thread's messages in the 200 ms before E, for opens 3–5.
   The driver's UP is the same `ThreewayActivity$$ExternalSyntheticLambda…` message in each, a few
   ms before E (the dry run's build: `msg dev.keliver.sample.host.threeway.ThreewayActivity$$ExternalSyntheticLambda5`,
-  1.2–3.1 ms before E; R8 numbers the lambda, so a rebuild may change it).
+  1–5 ms before E, 21–44 on the heavy arm; R8 numbers the lambda, so a rebuilt APK may change it).
 - [`measure.sql`](nf5-r0/measure.sql) and [`q1.sql`](nf5-r0/q1.sql): one row per open, the columns
-  above. `analyse.sh` then prints the results file's `composed − click` per open: at least 10 of
-  opens 3–14 within `check_lo`–`check_hi` ±1 ms, or the identification is wrong.
+  above. `measure` uses `<arm>.upname.txt` if present, else [`upname.txt`](nf5-r0/upname.txt) (the
+  dry run's name), and says which.
+- [`qc.sql`](nf5-r0/qc.sql): the identity check. `analyse.sh` turns the results file's
+  `composed − click` per open into a table; `pass` = at least 10 of opens 3–14 within
+  `check_lo` − 1 … `check_hi` + 1. If 0, the opens or the UP are misidentified: nothing else of that
+  arm is read until it passes.
 - [`q2.sql`](nf5-r0/q2.sql): the medians over opens 3–14, with `W_waits` and the projection's
   bounds. If `d_running_fast` equals `d_running` everywhere, or is 0, the `cpufreq` track did not
   separate the clusters: report `d_running` alone.
-- [`q3.sql`](nf5-r0/q3.sql): what the Zipline thread blocked in during d, by state and kernel
-  function.
+- [`q3.sql`](nf5-r0/q3.sql): what the Zipline thread blocked in during d, by state, the kernel
+  function (D states, with kernel symbols), I/O or not, and the thread that woke it (for a plain
+  sleep, the mechanism: a lock or a message from that thread). Empty when `d_other` is 0.
 
 **7. Keep everything, then clean the phone.** Pull `/data/local/tmp/nf5floor` and the four traces
 (`/data/misc/perfetto-traces/nf5-*.pftrace`, 20–45 MB each) to the session's scratch directory, so
@@ -2258,4 +2277,89 @@ document's section 0.
 
 ### Dry run, 2026-11-24 (emulator)
 
-DRYRUN
+**Where.** The AVD `keliver_a12_api35`: arm64, Android 15 (API 35), 4 cores, 60 Hz, on the Mac. Its
+numbers are **not results**: an emulator on a fast host, with no cluster split and almost no
+scheduling noise. The run shows only that the pipeline works, from the build to the table.
+
+**Build** (step 1's commands, unchanged, from `316abd41a`'s code; 05:32–05:39, 7 minutes): the
+sample, including revision 2's `Main.kt` line, compiled. `host-android-benchmark.apk` 26,057,387
+bytes, sha256 `8bd7ecef…c7ee76243`; `benchmarks-benchmark.apk` 42,678,434 bytes, `c501a560…ed8415`;
+`lib/arm64-v8a/libquickjs.so` 2,618,992 bytes in both the APK and the fork's AAR. The trace processor
+from the benchmarks APK's assets, `ae2f18ff…68a0e7d`, is Perfetto v45.
+
+**Run.** The session's command list (`keliver-scratch/nf5/a12-floor-trace.md`, steps 0 and 2–7,
+with the emulator's serial) was run literally, in order: install and compile, push, the four arms
+(`run.sh`, about 5 minutes), the check, `analyse.sh all`, pull, clean. Every arm: 14 opens, 14 backs,
+`done`, no timeout; a trace of 18–31 MB. Every query ran on every arm. q0a: after the start group, 28
+groups alternating open and back with `is_open` on each open, and the counts appendix D expects (press
+on: 3 events, 2 frames, 2 `composed`; press off: 1, 1, 1; a back: 1, 1, 1), so the default open
+groups were right and no override was needed. The UP was
+`ThreewayActivity$$ExternalSyntheticLambda5` in all four arms, 1–5 ms before E (heavy-on: 21–44
+ms, the click waiting behind the press's preparation). **qc: pass, 12 of
+12 opens on every arm.** The emulator has a `cpufreq` track per CPU, all at one frequency, so
+`d_running_fast` = `d_running` (as step 6 says to report it).
+
+**The table it produced** (q2, medians over opens 3–14, ms; emulator, not results):
+
+| Column | simple-on-idle | simple-on | simple-off | heavy-on |
+|---|---|---|---|---|
+| a UP → E0 | 1.0 | 2.6 | 1.7 | 32.1 |
+| b the event(s) | 2.2 | 1.4 | 3.8 | 0.6 |
+| c E → F | 7.9 | 10.1 | 6.2 | 12.9 |
+| c1 E → frame callback | 7.6 | 9.8 | 5.3 | 11.3 |
+| c2 callback → F | 0.2 | 0.3 | 0.4 | 1.2 |
+| c_zl_run | 1.1 | 0.9 | 3.3 | 0.7 |
+| d F → C | 6.3 | 4.4 | 28.3 | 5.6 |
+| d_running (G) | 6.1 | 4.3 | 27.7 | 5.5 |
+| d_runnable | 0.1 | 0.0 | 1.3 | 0.0 |
+| d_other | 0.0 | 0.0 | 0.0 | 0.0 |
+| **W** | 7.0 | 9.5 | 6.1 | 12.2 |
+| e C → sent | 1.1 | 0.9 | 2.4 | 0.6 |
+| f, g sent → apply; apply | 0.1, 0.1 | 0.1, 0.1 | 0.1, 0.2 | 0.1, 0.1 |
+| h apply → doFrame | 8.6 | 10.0 | 5.3 | 9.2 |
+| i the frame (layout) | 1.6 (0.2) | 1.3 (0.1) | 2.6 (1.1) | 1.1 (0.1) |
+| j frame → presented | 2.7 | 2.4 | 2.0 | 1.4 |
+| **total** UP → presented | 31.5 | 34.4 | 60.8 | 60.9 |
+| P_allW_r12, P_allW_r30 | 38.2, 60.2 | 38.7, 60.7 | 61.5, 83.5 | 64.5, 86.5 |
+
+What the run already shows about the method, not about the A12: `c1` is most of W on every arm (the
+click's work ends, then the guest waits for the next vsync's frame callback); between E and F the
+Zipline thread runs the click's own coroutine (`zl:runJob`, which requests the frame), counted in
+`c_zl_run`; with the press on and a 100 ms hold, the heavy arm's click waits 32 ms in `a` behind the
+press's preparation on the Zipline thread, as series H's 488 ms click did on the A12. That is the
+reason the rule's arm is the idle one.
+
+**What broke, and the fixes** (six; all in `docs/nf5-r0/` now):
+1. **The tap groups.** A 300 ms gap split every idle-arm open in two (the press's preparation ends
+   long before the UP of a 400 ms hold). Now 550 ms: the driver waits 700 ms before each tap, a hold
+   is at most 400.
+2. **LIKE in trace_processor v45.** On a perfetto table with `ORDER BY … LIMIT`, a LIKE returned a
+   row that does not match (`Choreographer#onVsync` for `'Choreographer#doFrame%'`). Every name
+   pattern is a GLOB now.
+3. **Two events at the UP** with the press on: the click, then the press's release. E (the last
+   before F) and E0 (the first after the UP) are both kept; `b` covers both, `n_ev` counts them.
+4. **The check's start point.** Measured from E's start, 3 of 12 opens missed by 1.1–2 ms, the
+   length of the event before E; `check_hi` runs from E0.
+5. **The check compared two runs.** A first pass analysed one run's trace and then ran the arms again,
+   so the results file and the trace came from different runs, and the check failed for reasons
+   that looked like the SQL. The check is now a query, `qc.sql`, with a `pass` flag, built from the
+   same arm's results file in the same `analyse.sh` call; `analyse.sh all` runs after the arms.
+6. **q3 could not name a mechanism.** The trace had 11,448 `sched_blocked_reason` events but no
+   `blocked_function`: naming the caller needs kernel symbols. `cfg.txt` adds `symbolize_ksyms`, and
+   q3 adds the waking thread (`sched_waking`), the mechanism of a plain sleep (S), which
+   `sched_blocked_reason` (D states only) never covers. trace_processor v45 keeps the waker on the
+   runnable state after the sleep, not on the sleep, and q3 reads it there. The heavy arm, run again
+   with both: 11,060 thread states named, the Zipline thread's sleeps attributed to their wakers
+   (mostly the main thread), qc 12 of 12 again; the table above is the first run's. The emulator is a
+   userdebug build. On the A12's user build Perfetto may not be able to read the kernel's symbols;
+   then `blocked_function` stays empty, and q3 still gives the state, I/O and the waker.
+
+Also changed for the session: [`upname.txt`](nf5-r0/upname.txt) holds the UP's name (each arm's
+`measure` says which name it used; an arm's own file overrides it), and `analyse.sh all` runs every
+query of every arm detached.
+
+**Minimum Android version: 12** (API 31), for the frame timeline (step 0). The A12's records say
+Android 12; the session checks it first.
+
+**Cleaned afterwards:** `/data/local/tmp/nf5floor` and `/data/misc/perfetto-traces/nf5-*` on the
+emulator, after pulling them to the scratch directory. The app stays installed.
