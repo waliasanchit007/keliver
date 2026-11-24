@@ -1,0 +1,97 @@
+// Research spike (stone U1, eff-samples, 2026-11-25): AndroidX's own Compose samples as same-source
+// corpus input. Included only with -Pkeliver.googleSamples=<dir> (settings.gradle), where <dir> holds
+// the AndroidX samples at the commits matching the pinned Compose (see README.md here). Never
+// published, never in CI.
+//
+// Two copies of the same sources:
+// - jvm: the ORIGINAL sources against real Compose Multiplatform 1.12.2 / material3 1.9.0 (desktop).
+//   A sample that fails here uses Android-only API (or API CMP does not ship): out of scope.
+// - js: the sources with the same-source import rewrite (androidx.compose.* -> dev.keliver.compose.*,
+//   except androidx.compose.runtime.*), against the generated Gate A/B guest API.
+// Both compiles are expected to FAIL: their diagnostics are the data (analyze.py classifies them).
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+def samplesDir = providers.gradleProperty('keliver.googleSamples').map { new File(it) }
+
+// The modules whose samples are read, by their path under the AndroidX checkout.
+def sampleModules = [
+  'compose/material3/material3/samples',
+  'compose/foundation/foundation/samples',
+  'compose/foundation/foundation-layout/samples',
+  'compose/animation/animation/samples',
+  'compose/animation/animation-core/samples',
+  'compose/ui/ui/samples',
+]
+
+def nativeOut = layout.buildDirectory.dir('google-samples/native')
+def guestOut = layout.buildDirectory.dir('google-samples/guest')
+
+// The same-source rewrite, as SameSourceFilesTest states it: only `androidx.compose.` prefixes
+// change, and `androidx.compose.runtime.` (the real runtime runs in the guest) does not.
+// One addition, tracked per sample by analyze.py: AndroidX's foundation, animation and ui samples
+// use Material 2 (`androidx.compose.material.Text`, `Button`, …), which the guest does not mirror,
+// so their M2 imports are swapped to Material 3 (Text/Button/Icon/Surface have the same shape).
+def rewrite = { String text ->
+  text.replaceAll(/androidx\.compose\.material\.(?!icons\.)/, 'androidx.compose.material3.')
+    .replaceAll(/androidx\.compose\.(?!runtime\.)/, 'dev.keliver.compose.')
+}
+
+// <dir>/m3 is the material3 checkout (its own release commit), <dir>/fdn the Compose core one.
+def checkouts = ['m3', 'fdn']
+
+def copyNative = tasks.register('googleSamplesNative', Sync) {
+  into(nativeOut)
+  checkouts.each { c ->
+    sampleModules.each { m ->
+      from(samplesDir.map { new File(it, "$c/$m/src/main/java") }) { include '**/*.kt' }
+    }
+  }
+}
+def copyGuest = tasks.register('googleSamplesGuest', Sync) {
+  into(guestOut)
+  // The filter closure is not a task input: bump this when the rewrite changes.
+  inputs.property('rewriteVersion', 2)
+  checkouts.each { c ->
+    sampleModules.each { m ->
+      from(samplesDir.map { new File(it, "$c/$m/src/main/java") }) { include '**/*.kt' }
+    }
+  }
+  filter { String line -> rewrite(line) }
+}
+
+kotlin {
+  jvm()
+  js {
+    nodejs()
+  }
+
+  sourceSets {
+    commonMain {
+      dependencies {
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.jetbrains.compose.runtime.saveable
+      }
+    }
+    jvmMain {
+      kotlin.srcDir(copyNative)
+      dependencies {
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.animation
+        implementation libs.jetbrains.compose.material3
+        // AndroidX's foundation/animation/ui samples are written with Material 2.
+        implementation libs.jetbrains.compose.material
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.jetbrains.compose.ui
+        implementation libs.jetbrains.compose.ui.tooling.preview
+      }
+    }
+    jsMain {
+      kotlin.srcDir(copyGuest)
+      dependencies {
+        implementation projects.keliverComposeGateaCompose
+      }
+    }
+  }
+}

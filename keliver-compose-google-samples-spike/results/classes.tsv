@@ -1,0 +1,696 @@
+module	sample	class	why
+ui	AlignmentLineSample	NEVER	custom layout (measure in guest)
+ui	AlphaSample	COMPILES	
+ui	AndroidViewSample	ANDROID	
+ui	AndroidViewWithReleaseSample	ANDROID	
+ui	ReusableAndroidViewInLazyColumnSample	ANDROID	
+ui	AndroidDrawableInDrawScopeSample	ANDROID	
+ui	AutofillableTextFieldWithAutofillModifier	NOPR	semantics
+ui	AutofillableTextFieldWithContentTypeSemantics	NOPR	semantics
+ui	AutofillableTextFieldWithFillableDataSemantics	NOPR	semantics
+ui	BlurSample	MS4	G1; MS4-12
+ui	ImageBlurSample	ANDROID	
+ui	ComposeViewContextPrewarmSample	ANDROID	
+ui	ComposeViewContextUnattachedSample	ANDROID	
+ui	DialogSample	MS4	MS4-18
+ui	DialogFromServiceSample	ANDROID	
+ui	DrawWithCacheModifierSample	MS4	G1; G3; MS4-13
+ui	DrawWithCacheModifierStateParameterSample	MS4	G1; G3; MS4-13
+ui	DrawWithCacheContentSample	MS4	G1; G1/G3; G3; MS4-12; MS4-13
+ui	DrawModifierNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	KeyEventSample	NEVER	guest pointer code (pointerInput)
+ui	KeyEventTypeSample	NEVER	guest pointer code (pointerInput)
+ui	KeyEventIsAltPressedSample	NEVER	guest pointer code (pointerInput)
+ui	KeyEventIsCtrlPressedSample	NEVER	guest pointer code (pointerInput)
+ui	KeyEventIsMetaPressedSample	NEVER	guest pointer code (pointerInput)
+ui	KeyEventIsShiftPressedSample	NEVER	guest pointer code (pointerInput)
+ui	RotaryEventSample	NOPR	focus
+ui	PreRotaryEventSample	NOPR	focus
+ui	FocusableSample	NOPR	focus
+ui	FocusableSampleUsingLowerLevelFocusTarget	NOPR	focus
+ui	CaptureFocusSample	NOPR	focus
+ui	RestoreFocusSample	NOPR	focus
+ui	FocusRestorerSample	NOPR	focus
+ui	FocusRestorerCustomFallbackSample	NOPR	focus
+ui	RequestFocusSample	NOPR	focus
+ui	ClearFocusSample	NEVER	host locals / layout coordinates read synchronously
+ui	MoveFocusSample	NEVER	host locals / layout coordinates read synchronously
+ui	CreateFocusRequesterRefsSample	NOPR	focus
+ui	CustomFocusOrderSample	NOPR	focus
+ui	FocusPropertiesSample	NOPR	focus
+ui	CancelFocusMoveSample	NOPR	focus
+ui	CustomFocusEnterSample	NOPR	focus
+ui	CustomFocusExitSample	NOPR	focus
+ui	InspectableModifierSample	NEVER	Modifier.Node API (guest node code)
+ui	InspectorInfoInComposedModifierSample	NEVER	Modifier.Node API (guest node code)
+ui	InspectorInfoInComposedModifierWithArgumentsSample	NEVER	Modifier.Node API (guest node code)
+ui	ChangeOpacity	MS4	G3
+ui	AnimateFadeIn	MS4	G3; MS4-12
+ui	CompositingStrategyModulateAlpha	MS4	G1/G3; G3
+ui	CompositingStrategyOffscreenLayerOutsets	MS4	G1; G1/G3; G3; MS4-13
+ui	LayoutUsage	NEVER	custom layout (measure in guest)
+ui	LayoutWithProvidedIntrinsicsUsage	NEVER	custom layout (measure in guest)
+ui	LayoutTagChildrenUsage	NEVER	custom layout (measure in guest)
+ui	LayoutModifierSample	NEVER	custom layout (measure in guest)
+ui	LayoutModifierNodeSample	NEVER	Modifier.Node API (guest node code); custom layout (measure in guest)
+ui	ConvenienceLayoutModifierSample	NEVER	custom layout (measure in guest)
+ui	LayoutWithMultipleContentsUsage	NEVER	custom layout (measure in guest)
+ui	approachLayoutSample	NEVER	custom layout (measure in guest)
+ui	LookaheadLayoutCoordinatesSample	NEVER	Modifier.Node API (guest node code); custom layout (measure in guest); host locals / layout coordinates read synchronously
+ui	animateContentSizeAfterLookaheadPass	NEVER	custom layout (measure in guest)
+ui	MediaQuerySample	EXP	media queries (ExperimentalMediaQueryApi)
+ui	FoldableAwareSample	EXP	media queries (ExperimentalMediaQueryApi)
+ui	AdaptiveButtonSample	EXP	Style (1.12, ExperimentalFoundationStyleApi); media queries (ExperimentalMediaQueryApi)
+ui	AdaptiveStylesSample	EXP	Style (1.12, ExperimentalFoundationStyleApi); media queries (ExperimentalMediaQueryApi)
+ui	MediaQueryModifierNodeSample	NEVER	Modifier.Node API (guest node code); custom layout (measure in guest)
+ui	MeshGradientPainterSample	MS4	G1/G3; MS4-13
+ui	CompositionLocalConsumingModifierSample	NEVER	Modifier.Node API (guest node code)
+ui	CompositionLocalConsumingModifierObserverNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	ModifierLocalParentChildCommunicationWithinLayoutNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	ModifierLocalChildParentCommunicationWithinLayoutNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	ModifierLocalParentChildCommunicationInterLayoutNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	ModifierLocalChildParentCommunicationInterLayoutNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	ModifierUsageSample	COMPILES	
+ui	ModifierFactorySample	MS4	MS4-16..18/12 (overloads, parameters)
+ui	ModifierParameterSample	COMPILES	
+ui	SubcomponentModifierSample	COMPILES	
+ui	DelegatedNodeSampleExplicit	NEVER	Modifier.Node API (guest node code); guest pointer code (pointerInput)
+ui	DelegatedNodeSampleImplicit	NEVER	Modifier.Node API (guest node code); guest pointer code (pointerInput)
+ui	LazyDelegationExample	NEVER	Modifier.Node API (guest node code); guest pointer code (pointerInput); host locals / layout coordinates read synchronously
+ui	ConditionalDelegationExample	NEVER	Modifier.Node API (guest node code); host locals / layout coordinates read synchronously
+ui	DelegateInAttachSample	NEVER	Modifier.Node API (guest node code); host locals / layout coordinates read synchronously
+ui	ModifierNodeElementSample	NEVER	Modifier.Node API (guest node code)
+ui	SemanticsModifierNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	PointerInputModifierNodeSample	NEVER	Modifier.Node API (guest node code); guest pointer code (pointerInput)
+ui	LayoutAwareModifierNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	GlobalPositionAwareModifierNodeSample	NEVER	Modifier.Node API (guest node code); host locals / layout coordinates read synchronously
+ui	JustReadingOrProvidingModifierLocalNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	ModifierNodeResetSample	NEVER	Modifier.Node API (guest node code)
+ui	ModifierNodeCoroutineScopeSample	NEVER	Modifier.Node API (guest node code)
+ui	ComposeInCooperatingViewNestedScrollInteropSample	ANDROID	
+ui	ViewInComposeNestedScrollInteropSample	ANDROID	
+ui	NestedScrollConnectionSample	NEVER	host locals / layout coordinates read synchronously
+ui	NestedScrollDispatcherSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+ui	OnGloballyPositioned	NEVER	host locals / layout coordinates read synchronously
+ui	OnPlaced	NEVER	Modifier.Node API (guest node code)
+ui	OnSizeChangedSample	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+ui	PainterModifierSample	MS4	G3; MS4-13
+ui	PainterResourceSample	ANDROID	
+ui	PlacementScopeCoordinatesSample	ANDROID	
+ui	platformTextInputModifierNodeSample	NEVER	Modifier.Node API (guest node code)
+ui	InterceptPlatformTextInputSample	ANDROID	
+ui	disableSoftKeyboardSample	NEVER	host locals / layout coordinates read synchronously
+ui	PointerIconSample	NEVER	guest pointer code (pointerInput)
+ui	StylusHoverIconSample	NEVER	guest pointer code (pointerInput)
+ui	keyedPointerInputModifier	NEVER	guest pointer code (pointerInput)
+ui	rememberedUpdatedParameterPointerInputModifier	NEVER	guest pointer code (pointerInput)
+ui	PointerEventMotionEventSample	ANDROID	
+ui	PopupSample	MS4	MS4-18
+ui	PopupWithPositionProviderSample	NEVER	custom layout (measure in guest)
+ui	PopupFromServiceSample	ANDROID	
+ui	RotateSample	COMPILES	
+ui	RulerProducerUsage	NEVER	custom layout (measure in guest)
+ui	RulerConsumerUsage	NEVER	custom layout (measure in guest)
+ui	DerivedVerticalRulerUsage	NEVER	custom layout (measure in guest)
+ui	DerivedHorizontalRulerUsage	NEVER	custom layout (measure in guest)
+ui	ProvideRulerOnlyWhenUsed	ANDROID	
+ui	ScaleUniformSample	COMPILES	
+ui	ScaleNonUniformSample	MS4	MS4-16..18/12 (overloads, parameters)
+ui	SetFrameRateCategorySample	ANDROID	
+ui	SetFrameRateSample	ANDROID	
+ui	ShadowSample	COMPILES	
+ui	DropShadowSample	MS4	G1; MS4-12
+ui	InnerShadowSample	MS4	G1; MS4-12
+ui	SoftwareKeyboardControllerSample	NEVER	host locals / layout coordinates read synchronously
+ui	InteractionSoundSamples	ANDROID	
+ui	SubcomposeLayoutSample	NEVER	custom layout (measure in guest)
+ui	traverseAncestorsWithKeyDemo	NEVER	Modifier.Node API (guest node code)
+ui	traverseAncestorsDemo	NEVER	Modifier.Node API (guest node code)
+ui	traverseChildrenWithKeyDemo	NEVER	Modifier.Node API (guest node code)
+ui	traverseChildrenDemo	NEVER	Modifier.Node API (guest node code)
+ui	traverseDescendantsWithKeyDemo	NEVER	Modifier.Node API (guest node code)
+ui	traverseDescendantsDemo	NEVER	Modifier.Node API (guest node code)
+ui	OnVisibilityChangedAutoplaySample	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+ui	OnVisibilityChangedAutoplayWithViewportSample	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+ui	OnVisibilityChangedDurationLoggingSample	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+ui	OnFirstVisibleImpressionLoggingSample	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+ui	OnFirstVisibleImpressionLoggingWithViewportSample	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+ui	WindowInsetsRulersSample	NEVER	custom layout (measure in guest)
+ui	SourceAndTargetInsetsSample	NEVER	custom layout (measure in guest)
+ui	InsetsRulersAlphaSample	NEVER	custom layout (measure in guest)
+ui	MaximumSample	NEVER	custom layout (measure in guest)
+ui	ZIndexModifierSample	MS4	MS4-12
+animation-core	AnimatableAnimateToGenericsType	NEVER	guest pointer code (pointerInput)
+animation-core	AnimatableDecayAndAnimateToSample	NEVER	Modifier.Node API (guest node code); guest pointer code (pointerInput)
+animation-core	AnimatableAnimationResultSample	MS4	MS4-13; MS4-20; MS4-21
+animation-core	AnimatableFadeIn	NEVER	Modifier.Node API (guest node code)
+animation-core	DeferredTargetAnimationSample	NEVER	custom layout (measure in guest)
+animation-core	AlphaAnimationSample	MS4	G3; MS4-12
+animation-core	ArbitraryValueTypeTransitionSample	MS4	MS4-20
+animation-core	DpAnimationSample	MS4	MS4-12
+animation-core	AnimateOffsetSample	MS4	MS4-13; MS4-20
+animation-core	InfiniteProgressIndicator	MS4	G3; MS4-20
+animation-core	OffsetArcAnimationSpec	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+animation-core	OffsetKeyframesWithArcsBuilder	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+animation-core	InfiniteTransitionSample	MS4	G3; MS4-19; MS4-20
+animation-core	InfiniteTransitionAnimateValueSample	MS4	MS4-20
+animation-core	FloatKeyframesBuilder	MS4	MS4-20
+animation-core	FloatKeyframesBuilderInline	MS4	MS4-20
+animation-core	KeyframesBuilderWithEasing	MS4	MS4-20
+animation-core	KeyframesBuilderForPosition	MS4	MS4-13; MS4-20
+animation-core	KeyframesSpecBaseConfig	MS4	MS4-20
+animation-core	KeyframesSpecBaseConfig	MS4	MS4-20
+animation-core	KeyframesBuilderForOffsetWithSplines	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+animation-core	KeyframesBuilderForIntOffsetWithSplines	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+animation-core	KeyframesBuilderForDpOffsetWithSplines	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+animation-core	PeriodicKeyframesWithSplines	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+animation-core	PathEasingSample	MS4	G3; MS4-20
+animation-core	animateToOnAnimationState	MS4	MS4-20; MS4-21
+animation-core	suspendAnimateFloatVariant	MS4	G3; MS4-19; MS4-20; MS4-21
+animation-core	GestureAnimationSample	NEVER	guest pointer code (pointerInput)
+animation-core	AnimateFloatSample	MS4	G3; MS4-20
+animation-core	InitialStateSample	MS4	G3; MS4-20
+animation-core	DoubleTapToLikeSample	NEVER	guest pointer code (pointerInput)
+animation-core	CreateChildTransitionSample	MS4	MS4-12; MS4-20
+animation-core	TransitionStateIsIdleSample	MS4	MS4-20
+animation-core	SeekingAnimationSample	ANDROID	
+animation-core	SeekToSample	ANDROID	
+animation-core	SnapToSample	MS4	MS4-20; MS4-21
+animation-core	DeferredTransitionSample	EXP	deferred transitions (ExperimentalDeferredTransitionApi)
+animation	AnimateBounds_animateOnContentChange	NEVER	custom layout (measure in guest)
+animation	AnimateBounds_withLayoutModifier	NEVER	custom layout (measure in guest)
+animation	AnimateBounds_inFlowRowSample	NEVER	custom layout (measure in guest)
+animation	AnimateBounds_usingKeyframes	NEVER	custom layout (measure in guest)
+animation	AnimateBounds_withMovableContent	NEVER	custom layout (measure in guest)
+animation	AnimateIncrementDecrementSample	MS4	MS4-20
+animation	SimpleAnimatedContentSample	MS4	MS4-20
+animation	AnimatedContentTransitionSpecSample	MS4	MS4-20
+animation	TransitionExtensionAnimatedContentSample	MS4	MS4-20
+animation	SlideIntoContainerSample	MS4	MS4-20
+animation	AnimatedContentVeil	MS4	MS4-20
+animation	DeferredAnimatedContentSample	EXP	deferred transitions (ExperimentalDeferredTransitionApi)
+animation	ColorAnimationSample	MS4	MS4-16..18/12 (overloads, parameters)
+animation	AnimatableColor	COMPILES	
+animation	HorizontalTransitionSample	MS4	MS4-12
+animation	SlideTransition	MS4	MS4-12; MS4-20
+animation	FadeTransition	MS4	MS4-12
+animation	FullyLoadedTransition	MS4	G1; MS4-12
+animation	AnimatedVisibilityWithBooleanVisibleParamNoReceiver	MS4	MS4-20
+animation	AnimatedFloatingActionButton	MS4	MS4-12; MS4-18; MS4-19
+animation	SlideInOutSample	MS4	MS4-12; MS4-20
+animation	ExpandShrinkVerticallySample	MS4	MS4-12
+animation	ExpandInShrinkOutSample	MS4	MS4-12
+animation	ColumnAnimatedVisibilitySample	MS4	MS4-12
+animation	AVScopeAnimateEnterExit	MS4	G3; MS4-18; MS4-19; MS4-20
+animation	AddAnimatedVisibilityToGenericTransitionSample	MS4	MS4-20
+animation	AnimatedVisibilityLazyColumnSample	MS4	MS4-12; MS4-20
+animation	AVColumnScopeWithMutableTransitionState	MS4	MS4-20
+animation	AnimateEnterExitPartialContent	MS4	MS4-12; MS4-20
+animation	AnimatedVisibilityVeil	MS4	MS4-20
+animation	ScaledEnterExit	MS4	G1
+animation	DeferredAnimatedVisibilitySample	EXP	deferred transitions (ExperimentalDeferredTransitionApi)
+animation	AnimateContent	MS4	MS4-12
+animation	CrossfadeSample	MS4	MS4-20
+animation	LookaheadAnimationVisualDebuggingSample	NOPR	shared elements (C7: in no PR)
+animation	CustomizedLookaheadAnimationVisualDebuggingSample	NOPR	shared elements (C7: in no PR)
+animation	NestedSharedBoundsSample	NOPR	shared elements (C7: in no PR)
+animation	SharedElementWithMovableContentSample	ANDROID	
+animation	SharedElementWithFABInOverlaySample	ANDROID	
+animation	SharedElementInAnimatedContentSample	ANDROID	
+animation	SharedElementClipRevealSample	NOPR	shared elements (C7: in no PR)
+animation	DynamicallyEnabledSharedElementInPagerSample	NEVER	host locals / layout coordinates read synchronously
+animation	SharedContentConfigSample	NOPR	shared elements (C7: in no PR)
+animation	DynamicallyEnableSharedElementsSample	NOPR	shared elements (C7: in no PR)
+animation	SharedBoundsSample	ANDROID	
+animation	ListToDetailSample	ANDROID	
+animation	SharedElementWithFlingSample	ANDROID	
+animation	GestureAnimationSample	NEVER	guest pointer code (pointerInput)
+animation	InfiniteTransitionSample	MS4	G3; MS4-19; MS4-20
+foundation-layout	SimpleAspectRatio	MS4	MS4-12
+foundation-layout	SimpleBox	COMPILES	
+foundation-layout	BoxWithConstraintsSample	MS4	MS4-09
+foundation-layout	SimpleColumn	COMPILES	
+foundation-layout	SimpleAlignInColumn	COMPILES	
+foundation-layout	SimpleRelativeToSiblings	MS4	MS4-16..18/12 (overloads, parameters)
+foundation-layout	SimpleRelativeToSiblingsInColumn	NEVER	custom layout (measure in guest)
+foundation-layout	ContextualFlowColMaxLineDynamicSeeMore	MS4	MS4-12
+foundation-layout	ContextualFlowColumn_ItemPosition	MS4	MS4-12
+foundation-layout	ContextualFlowRowMaxLineDynamicSeeMore	MS4	MS4-12
+foundation-layout	ContextualFlowRow_ItemPosition	MS4	MS4-12
+foundation-layout	SimpleFlexBox	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxConfigReusableSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxConfigResponsiveSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexConfigScopeSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxConstraintsSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxDirectionSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxWrapSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxJustifyContentSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxAlignItemsSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxAlignItemsBaselineSample	NEVER	custom layout (measure in guest)
+foundation-layout	FlexBoxAlignItemsCustomBaselineSample	NEVER	custom layout (measure in guest)
+foundation-layout	FlexBoxAlignContentSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxRowGapSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxColumnGapSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxGapSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxGapDifferentSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxScopeSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexModifierWithConfigSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexModifierWithLambdaSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBasisDpSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBasisPercentSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexConfigSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexAlignSelfSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexAlignSelfBaselineSample	NEVER	custom layout (measure in guest)
+foundation-layout	FlexAlignSelfCustomBaselineSample	NEVER	custom layout (measure in guest)
+foundation-layout	FlexOrderSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexGrowSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexShrinkSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBasisSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexBoxConfigCombineSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	FlexConfigCombineSample	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+foundation-layout	SimpleFlowColumn	MS4	MS4-12
+foundation-layout	SimpleFlowColumnMaxLinesWithSeeMore	MS4	MS4-12
+foundation-layout	SimpleFlowColumnMaxLinesDynamicSeeMore	MS4	MS4-12
+foundation-layout	SimpleFlowColumn_EqualWidth	MS4	MS4-12
+foundation-layout	SimpleFlowRow	MS4	MS4-12
+foundation-layout	SimpleFlowRowMaxLinesWithSeeMore	MS4	MS4 (prototype stub:  'overflow': a androidx.compose.foundation.layout.Fl); MS4-12
+foundation-layout	SimpleFlowRowMaxLinesDynamicSeeMore	NEVER	custom layout (measure in guest); host locals / layout coordinates read synchronously
+foundation-layout	SimpleFlowRow_EqualHeight	MS4	MS4-12
+foundation-layout	SimpleGrid	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridWithSpanningItems	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridWithAutoPlacement	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridConfigurationDslSample	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridWithConstraints	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridWithLazyList	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridWithNamedAreas	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridWithAreaRanges	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	GridWithOneDimensionalAreas	EXP	Grid (1.12, ExperimentalGridApi)
+foundation-layout	SameWidthBoxes	MS4	MS4-12
+foundation-layout	MatchParentDividerForText	MS4	MS4-12
+foundation-layout	SameWidthTextBoxes	MS4	MS4-12
+foundation-layout	MatchParentDividerForAspectRatio	MS4	MS4-12
+foundation-layout	OffsetModifier	MS4	MS4-12
+foundation-layout	AbsoluteOffsetModifier	MS4	MS4-12
+foundation-layout	OffsetPxModifier	MS4	MS4-16..18/12 (overloads, parameters)
+foundation-layout	AbsoluteOffsetPxModifier	MS4	MS4-12
+foundation-layout	PaddingModifier	COMPILES	
+foundation-layout	SymmetricPaddingModifier	COMPILES	
+foundation-layout	PaddingAllModifier	COMPILES	
+foundation-layout	PaddingValuesModifier	COMPILES	
+foundation-layout	AbsolutePaddingModifier	MS4	MS4-12
+foundation-layout	PaddingFromSample	NEVER	custom layout (measure in guest); host locals / layout coordinates read synchronously
+foundation-layout	PaddingFromBaselineSampleDp	MS4	MS4-12
+foundation-layout	PaddingFromBaselineSampleTextUnit	MS4	MS4-12
+foundation-layout	SimpleRow	COMPILES	
+foundation-layout	SimpleAlignInRow	COMPILES	
+foundation-layout	SimpleAlignByInRow	MS4	MS4-12
+foundation-layout	SimpleRequiredSizeModifier	MS4	MS4-12
+foundation-layout	SimpleRequiredWidthModifier	MS4	MS4-12
+foundation-layout	SimpleRequiredHeightModifier	MS4	MS4-12
+foundation-layout	SimpleSizeModifier	COMPILES	
+foundation-layout	SimpleSizeModifierWithDpSize	MS4	MS4-13
+foundation-layout	SimpleWidthModifier	MS4	MS4-12
+foundation-layout	SimpleHeightModifier	MS4	MS4-12
+foundation-layout	SimpleFillWidthModifier	COMPILES	
+foundation-layout	FillHalfWidthModifier	MS4	MS4-12
+foundation-layout	SimpleFillHeightModifier	COMPILES	
+foundation-layout	FillHalfHeightModifier	MS4	MS4-12
+foundation-layout	SimpleFillModifier	COMPILES	
+foundation-layout	FillHalfSizeModifier	MS4	MS4-12
+foundation-layout	SimpleWrapContentAlignedModifier	MS4	MS4-12
+foundation-layout	SimpleWrapContentVerticallyAlignedModifier	MS4	MS4-12
+foundation-layout	SimpleWrapContentHorizontallyAlignedModifier	MS4	MS4-12
+foundation-layout	DefaultMinSizeSample	MS4	MS4-12
+foundation-layout	SpacerExample	COMPILES	
+foundation-layout	VisibleModifierSample	MS4	MS4-12
+foundation-layout	windowInsetsNestedScrollDemo	ANDROID	
+foundation-layout	captionBarPaddingSample	ANDROID	
+foundation-layout	systemBarsPaddingSample	ANDROID	
+foundation-layout	displayCutoutPaddingSample	ANDROID	
+foundation-layout	statusBarsAndNavigationBarsPaddingSample	ANDROID	
+foundation-layout	imePaddingSample	ANDROID	
+foundation-layout	waterfallPaddingSample	ANDROID	
+foundation-layout	systemGesturesPaddingSample	ANDROID	
+foundation-layout	mandatorySystemGesturesPaddingSample	ANDROID	
+foundation-layout	safeDrawingPaddingSample	ANDROID	
+foundation-layout	safeGesturesPaddingSample	ANDROID	
+foundation-layout	safeContentPaddingSample	ANDROID	
+foundation-layout	insetsPaddingSample	ANDROID	
+foundation-layout	consumedInsetsPaddingSample	ANDROID	
+foundation-layout	insetsInt	ANDROID	
+foundation-layout	insetsDp	ANDROID	
+foundation-layout	paddingValuesSample	ANDROID	
+foundation-layout	consumedInsetsSample	ANDROID	
+foundation-layout	withConsumedInsetsSample	ANDROID	
+foundation-layout	recalculateWindowInsetsSample	MS4	MS4-12; MS4-18
+foundation-layout	consumeWindowInsetsWithPaddingSample	MS4	MS4-18
+foundation-layout	unconsumedWindowInsetsWithPaddingSample	MS4	MS4-12; MS4-18
+foundation-layout	FitInsideOutsideExample	NEVER	custom layout (measure in guest)
+foundation-layout	insetsStartWidthSample	ANDROID	
+foundation-layout	insetsTopHeightSample	ANDROID	
+foundation-layout	insetsEndWidthSample	ANDROID	
+foundation-layout	insetsBottomHeightSample	ANDROID	
+foundation	AnchoredDraggableDynamicAnchorsSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored); size/position callbacks (onSizeChanged, onGloballyPositioned)
+foundation	AndroidExternalSurfaceColors	ANDROID	
+foundation	AndroidEmbeddedExternalSurfaceColors	ANDROID	
+foundation	BackgroundTextMeasurementSample	ANDROID	
+foundation	BasicMarqueeSample	MS4	MS4-12
+foundation	BasicFocusableMarqueeSample	NOPR	focus
+foundation	BasicMarqueeWithFadedEdgesSample	MS4	G1; G1/G3; G3; MS4-12; MS4-13
+foundation	BasicTextFieldSample	MS4	MS4-15
+foundation	BasicTextFieldWithStringSample	MS4	MS4-15
+foundation	PlaceholderBasicTextFieldSample	MS4	MS4-15
+foundation	TextFieldWithIconSample	MS4	MS4-15; MS4-19
+foundation	CreditCardSample	MS4	G1; MS4-12; MS4-15
+foundation	BasicTextFieldStateCompleteSample	MS4	MS4-15; MS4-19
+foundation	BasicTextFieldTextDerivedStateSample	MS4	MS4-15
+foundation	BasicTextFieldStateEditSample	MS4	G1; MS4-15
+foundation	BasicTextFieldCustomInputTransformationSample	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldOutputTransformationSample	ANDROID	
+foundation	BasicTextFieldAnnotatedOutputTransformationSample	ANDROID	
+foundation	BasicTextFieldInputTransformationByValueReplaceSample	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldInputTransformationByValueChooseSample	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldInputTransformationChainingSample	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldInputTransformationMaxLengthCustom	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldChangeIterationSample	UNMAPPED	androidx.compose.foundation.text.input.forEachChange
+foundation	BasicTextFieldChangeReverseIterationSample	UNMAPPED	androidx.compose.foundation.text.input.forEachChangeReversed
+foundation	BasicTextFieldTrackedRangeTextRangeSetterSample	MS4	G1; MS4-15
+foundation	BasicTextFieldTextValuesSample	MS4	MS4-15
+foundation	BasicTextFieldUndoSample	MS4	MS4-15; MS4-19
+foundation	BasicTextFieldDecoratorSample	MS4	MS4-15; MS4-19
+foundation	TextFieldStateApplyOutputTransformation	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldTrackedRangeSample	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldTrackedRangeToggleBoldSample	NEVER	per-keystroke guest code (#312: outside the mechanism)
+foundation	BasicTextFieldTrackedRangePropertiesSample	MS4	G1; MS4-15
+foundation	BasicTextFieldWithValueOnValueChangeSample	MS4	G1; MS4-15
+foundation	BorderSample	COMPILES	
+foundation	BorderSampleWithBrush	MS4	G1
+foundation	BorderSampleWithDataClass	COMPILES	
+foundation	BorderSampleWithDynamicData	MS4	G1
+foundation	BringIntoViewSample	NOPR	focus; gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	BringPartOfComposableIntoViewSample	NEVER	host locals / layout coordinates read synchronously
+foundation	CanvasSample	MS4	G3; MS4-13
+foundation	CanvasPieChartSample	MS4	G3; MS4-13
+foundation	ClickableSample	COMPILES	
+foundation	ClickableText	ANDROID	
+foundation	LongClickableText	NEVER	guest pointer code (pointerInput)
+foundation	AppendComponentsToTextContextMenu	ANDROID	
+foundation	AddFilterToTextContextMenu	NEVER	guest pointer code (pointerInput)
+foundation	AppendItemToTextContextMenuAndroid	ANDROID	
+foundation	FilterProcessTextItemsInTextContextMenu	ANDROID	
+foundation	DarkThemeSample	MS4	MS4-14
+foundation	TextDragAndDropSourceSample	ANDROID	
+foundation	TextDragAndDropTargetSample	ANDROID	
+foundation	DragAndDropSourceWithColoredDragShadowSample	ANDROID	
+foundation	AwaitHorizontalDragOrCancellationSample	NEVER	guest pointer code (pointerInput)
+foundation	HorizontalDragSample	NEVER	guest pointer code (pointerInput)
+foundation	DetectHorizontalDragGesturesSample	NEVER	guest pointer code (pointerInput)
+foundation	AwaitVerticalDragOrCancellationSample	NEVER	guest pointer code (pointerInput)
+foundation	VerticalDragSample	NEVER	guest pointer code (pointerInput)
+foundation	DetectVerticalDragGesturesSample	NEVER	guest pointer code (pointerInput)
+foundation	AwaitDragOrCancellationSample	NEVER	guest pointer code (pointerInput)
+foundation	DragSample	NEVER	guest pointer code (pointerInput)
+foundation	DetectDragGesturesSample	NEVER	guest pointer code (pointerInput)
+foundation	DetectDragWithLongPressGesturesSample	NEVER	guest pointer code (pointerInput)
+foundation	Draggable2DSample	NEVER	host locals / layout coordinates read synchronously
+foundation	DraggableSample	NEVER	host locals / layout coordinates read synchronously
+foundation	DrawBackgroundColor	COMPILES	
+foundation	DrawBackgroundShapedBrush	MS4	G1
+foundation	FocusableSample	NOPR	focus
+foundation	FocusGroupSample	NOPR	focus
+foundation	FocusableFocusGroupSample	MS4	MS4-12; MS4-15
+foundation	HandwritingDetectorSample	ANDROID	
+foundation	HoverableSample	MS4	MS4-12; MS4-15
+foundation	ImageSample	MS4	G1/G3; G3; MS4-13
+foundation	BitmapPainterSubsectionSample	MS4	G1/G3; G3; MS4-13
+foundation	BitmapPainterSample	MS4	G3; MS4-13
+foundation	IndicationSample	NOPR	custom Indication (guest implementation)
+foundation	InlineTextContentSample	NOPR	AnnotatedString inline content (C7: in no PR)
+foundation	SimpleInteractionSourceSample	NOPR	custom Indication (guest implementation); gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	InteractionSourceFlowSample	NOPR	custom Indication (guest implementation); gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	LazyColumnSample	COMPILES	
+foundation	LazyRowSample	COMPILES	
+foundation	StickyHeaderListSample	MS4	MS4 (prototype stub:  sticky headers are not in the generated API yet (Ga)
+foundation	StickyHeaderGridSample	MS4	MS4-38
+foundation	StickyHeaderHeaderIndexSample	MS4	MS4 (prototype stub:  sticky headers are not in the generated API yet (Ga); MS4-12
+foundation	AnimateItemSample	COMPILES	
+foundation	UsingListScrollPositionForSideEffectSample	COMPILES	
+foundation	UsingListScrollPositionInCompositionSample	COMPILES	
+foundation	UsingListLayoutInfoForSideEffectSample	MS4	MS4-16..18/12 (overloads, parameters)
+foundation	ScrollToTopButton	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	LazyVerticalGridSample	MS4	MS4-12; MS4-38
+foundation	LazyVerticalGridSpanSample	MS4	MS4-12; MS4-38
+foundation	LazyHorizontalGridSample	MS4	MS4-12; MS4-38
+foundation	LazyHorizontalGridSpanSample	MS4	MS4-12; MS4-38
+foundation	UsingGridScrollPositionForSideEffectSample	MS4	MS4-15
+foundation	UsingGridScrollPositionInCompositionSample	MS4	MS4-15
+foundation	UsingGridLayoutInfoForSideEffectSample	MS4	MS4-15
+foundation	GridAnimateItemSample	MS4	MS4-20; MS4-38
+foundation	ScrollToTopButton	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	LazyLayoutPrefetchStateSample	NEVER	custom layout (measure in guest)
+foundation	LazyLayoutSample	NEVER	custom layout (measure in guest)
+foundation	LazyLayoutItemProviderSample	NEVER	custom layout (measure in guest)
+foundation	LazyLayoutScrollableSample	NEVER	custom layout (measure in guest)
+foundation	LazyVerticalStaggeredGridSample	MS4	MS4-12; MS4-38
+foundation	LazyVerticalStaggeredGridSpanSample	MS4	MS4-12; MS4-38
+foundation	LazyHorizontalStaggeredGridSample	MS4	MS4-12; MS4-38
+foundation	LazyHorizontalStaggeredGridSpanSample	MS4	MS4-12; MS4-38
+foundation	StaggeredGridAnimateItemSample	MS4	MS4-20; MS4-38
+foundation	LazyStaggeredGridCustomScrollUsingLazyLayoutScrollScopeSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	MagnifierSample	ANDROID	
+foundation	mutatorMutexStateObject	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	mutatorMutexStateObjectWithReceiver	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	OverscrollSample	NEVER	Modifier.Node API (guest node code); custom layout (measure in guest)
+foundation	OverscrollWithDraggable_Before	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	OverscrollWithDraggable_After	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	OverscrollRenderedOnTopOfLazyListDecorations	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	SimpleHorizontalPagerSample	MS4	MS4-12; MS4-15; MS4-38
+foundation	SimpleVerticalPagerSample	MS4	MS4-12; MS4-15; MS4-38
+foundation	PagerWithStateSample	MS4	MS4-12; MS4-15; MS4-38
+foundation	PagerCustomAnimateScrollToPage	MS4	MS4-12; MS4-15; MS4-21; MS4-38
+foundation	CustomPageSizeSample	NEVER	host locals / layout coordinates read synchronously
+foundation	ObservingStateChangesInPagerStateSample	MS4	MS4-12; MS4-13; MS4-15; MS4-38
+foundation	AnimateScrollPageSample	MS4	MS4-12; MS4-15; MS4-38
+foundation	ScrollToPageSample	MS4	MS4-12; MS4-15; MS4-38
+foundation	HorizontalPagerWithScrollableContent	NEVER	host locals / layout coordinates read synchronously
+foundation	UsingPagerLayoutInfoForSideEffectSample	MS4	MS4-15
+foundation	PagerCustomScrollUsingLazyLayoutScrollScopeSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	DeterminateProgressSemanticsSample	MS4	MS4-12
+foundation	IndeterminateProgressSemanticsSample	MS4	MS4-12
+foundation	ReceiveContentBasicSample	ANDROID	
+foundation	ReceiveContentFullSample	ANDROID	
+foundation	Scrollable2DSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	ScrollableAreaSample	NEVER	custom layout (measure in guest)
+foundation	ScrollableSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	CanScrollSample	MS4	G3; MS4-12; MS4-19
+foundation	FocusScrollingInLazyRowSample	NOPR	focus
+foundation	HorizontalScrollSample	MS4	G1
+foundation	VerticalScrollExample	MS4	G1; MS4-12
+foundation	ControlledScrollableRowSample	MS4	MS4-15
+foundation	SelectableSample	MS4	MS4-12
+foundation	SelectionSample	MS4	MS4-12
+foundation	SelectAllSample	NOPR	text selection state (1.12)
+foundation	DisableSelectionSample	MS4	MS4-12
+foundation	SelectionStateSample	NOPR	text selection state (1.12)
+foundation	SelectQuerySample	NOPR	text selection state (1.12)
+foundation	SelectThirdTextSample	NOPR	text selection state (1.12)
+foundation	ExtendSelectionSample	NOPR	text selection state (1.12)
+foundation	SnapFlingBehaviorSimpleSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	SnapFlingBehaviorCustomizedSample	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+foundation	SnapFlingBehaviorSnapPosition	NEVER	host locals / layout coordinates read synchronously
+foundation	SimpleStyleSample	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+foundation	StyleStateSample	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+foundation	StyleAnimationSample	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+foundation	StyleStateKeySample	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+foundation	AwaitLongPressOrCancellationSample	NEVER	guest pointer code (pointerInput)
+foundation	TextAutoSizeBasicTextSample	MS4	MS4-12
+foundation	CustomTextAutoSizeSample	NEVER	custom layout (measure in guest)
+foundation	ToggleableSample	MS4	MS4-12
+foundation	TriStateToggleableSample	MS4	G1; MS4-12
+foundation	DetectTransformGestures	NEVER	guest pointer code (pointerInput)
+foundation	CalculateRotation	NEVER	guest pointer code (pointerInput)
+foundation	CalculateZoom	NEVER	guest pointer code (pointerInput)
+foundation	CalculatePan	NEVER	guest pointer code (pointerInput)
+foundation	CalculateCentroidSize	NEVER	guest pointer code (pointerInput)
+foundation	TransformableSample	NEVER	guest pointer code (pointerInput)
+foundation	TransformableSampleInsideScroll	NEVER	guest pointer code (pointerInput)
+foundation	TransformableAnimateBySample	NEVER	guest pointer code (pointerInput)
+material3	AlertDialogSample	MS4	MS4-18
+material3	AlertDialogWithIconSample	MS4	MS4-18; MS4-19
+material3	BasicAlertDialogSample	MS4	MS4-12; MS4-18
+material3	SimpleTopAppBar	MS4	MS4-09; MS4-18; MS4-19; MS4-39
+material3	SimpleTopAppBarWithAdaptiveActions	ANDROID	
+material3	SimpleCenterAlignedTopAppBar	MS4	MS4-09; MS4-18; MS4-19; MS4-39
+material3	PinnedTopAppBar	MS4	MS4 (prototype stub:  'windowInsets': its default: `TopAppBarDefaults.win); MS4-09; MS4-18; MS4-19; MS4-39
+material3	ExitUntilCollapsedMediumTopAppBar	MS4	MS4-09; MS4-18; MS4-19; MS4-39
+material3	ExitUntilCollapsedLargeTopAppBar	MS4	MS4-09; MS4-18; MS4-19; MS4-39
+material3	SimpleBottomAppBar	MS4	MS4-18; MS4-19; MS4-39
+material3	BottomAppBarWithFAB	MS4	MS4-18; MS4-19; MS4-39
+material3	ExitAlwaysBottomAppBar	MS4	MS4-09; MS4-18; MS4-19; MS4-39
+material3	NavigationBarItemWithBadge	NOPR	semantics
+material3	ModalBottomSheetSample	MS4	MS4-12; MS4-16; MS4-17; MS4-18; MS4-19; MS4-39
+material3	SimpleBottomSheetScaffoldSample	MS4	MS4-18; MS4-39
+material3	ButtonSample	COMPILES	
+material3	ElevatedButtonSample	MS4	MS4-16
+material3	FilledTonalButtonSample	MS4	MS4-16
+material3	OutlinedButtonSample	COMPILES	
+material3	TextButtonSample	COMPILES	
+material3	ButtonWithIconSample	MS4	MS4-19
+material3	CardSample	COMPILES	
+material3	ClickableCardSample	COMPILES	
+material3	ElevatedCardSample	MS4	MS4-16
+material3	ClickableElevatedCardSample	MS4	MS4-16
+material3	OutlinedCardSample	MS4	MS4-16
+material3	ClickableOutlinedCardSample	MS4	MS4-16
+material3	HorizontalMultiBrowseCarouselSample	ANDROID	
+material3	HorizontalUncontainedCarouselSample	ANDROID	
+material3	HorizontalCenteredHeroCarouselSample	ANDROID	
+material3	FadingHorizontalMultiBrowseCarouselSample	ANDROID	
+material3	CarouselWithShowAllButtonSample	ANDROID	
+material3	CheckboxSample	MS4	MS4-17
+material3	CheckboxWithTextSample	MS4	MS4-12; MS4-17
+material3	CheckboxRoundedStrokesSample	NEVER	host locals / layout coordinates read synchronously
+material3	TriStateCheckboxSample	MS4	G1; MS4-12; MS4-17
+material3	TriStateCheckboxRoundedStrokesSample	NEVER	host locals / layout coordinates read synchronously
+material3	AssistChipSample	MS4	MS4-16; MS4-19
+material3	ElevatedAssistChipSample	MS4	MS4-16; MS4-19
+material3	FilterChipSample	MS4	MS4-16; MS4-19
+material3	ElevatedFilterChipSample	MS4	MS4-16; MS4-19
+material3	FilterChipWithLeadingIconSample	MS4	MS4-16; MS4-19
+material3	InputChipSample	MS4	MS4-16
+material3	InputChipWithAvatarSample	MS4	MS4-16; MS4-19
+material3	SuggestionChipSample	MS4	MS4-16
+material3	ElevatedSuggestionChipSample	MS4	MS4-16
+material3	ChipGroupSingleLineSample	MS4	MS4-16; MS4-18; MS4-19
+material3	ChipGroupReflowSample	MS4	MS4-12; MS4-16; MS4-19; trivial (pure-Kotlin ui-util: keep the real library, do not rename)
+material3	DatePickerSample	MS4	MS4-18; MS4-39
+material3	DatePickerApi26Sample	ANDROID	
+material3	DatePickerDialogSample	ANDROID	
+material3	DatePickerWithDateSelectableDatesSample	ANDROID	
+material3	DateInputSample	MS4	MS4-18; MS4-39
+material3	DateRangePickerSample	MS4	MS4-12; MS4-18; MS4-39
+material3	DateRangePickerApi26Sample	ANDROID	
+material3	DatePickerCustomLocaleSample	ANDROID	
+material3	DatePickerCustomLocaleApi26Sample	ANDROID	
+material3	VerticalDragHandleSample	ANDROID	
+material3	ModalNavigationDrawerSample	MS4	MS4-18; MS4-19; MS4-39
+material3	PermanentNavigationDrawerSample	MS4	MS4-18; MS4-19
+material3	DismissibleNavigationDrawerSample	MS4	MS4-18; MS4-19; MS4-39
+material3	ExposedDropdownMenuSample	MS4	MS4-15; MS4-17; MS4-18
+material3	EditableExposedDropdownMenuSample	MS4	G1; MS4-12; MS4-15; MS4-17; MS4-18
+material3	MultiAutocompleteExposedDropdownMenuSample	MS4	G1; MS4-12; MS4-15; MS4-17; MS4-18
+material3	FloatingActionButtonSample	MS4	MS4-18; MS4-19
+material3	SmallFloatingActionButtonSample	MS4	MS4-18; MS4-19
+material3	LargeFloatingActionButtonSample	MS4	MS4-18; MS4-19
+material3	ExtendedFloatingActionButtonTextSample	MS4	MS4-18
+material3	ExtendedFloatingActionButtonSample	MS4	MS4-18; MS4-19
+material3	AnimatedExtendedFloatingActionButtonSample	MS4	MS4-09; MS4-18; MS4-19
+material3	IconButtonSample	MS4	MS4-19
+material3	TintedIconButtonSample	MS4	MS4-19
+material3	IconToggleButtonSample	MS4	MS4-16; MS4-19
+material3	FilledIconButtonSample	MS4	MS4-16; MS4-19
+material3	FilledIconToggleButtonSample	MS4	MS4-16; MS4-19
+material3	FilledTonalIconButtonSample	MS4	MS4-16; MS4-19
+material3	FilledTonalIconToggleButtonSample	MS4	MS4-16; MS4-19
+material3	OutlinedIconButtonSample	MS4	MS4-16; MS4-19
+material3	OutlinedIconToggleButtonSample	MS4	MS4-16; MS4-19
+material3	MinimumInteractiveComponentSizeSample	MS4	MS4-16
+material3	MinimumInteractiveComponentSizeCheckboxRowSample	MS4	MS4-12; MS4-16; MS4-17
+material3	OneLineListItem	MS4	MS4-16; MS4-19
+material3	TwoLineListItem	MS4	MS4-16; MS4-19
+material3	ThreeLineListItemWithOverlineAndSupporting	MS4	MS4-16; MS4-19
+material3	ThreeLineListItemWithExtendedSupporting	MS4	MS4-16; MS4-19
+material3	MenuSample	MS4	MS4-12; MS4-18; MS4-19
+material3	MenuWithScrollStateSample	MS4	MS4-12; MS4-18; MS4-19
+material3	ShortNavigationBarSample	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+material3	ShortNavigationBarWithHorizontalItemsSample	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+material3	NavigationBarSample	MS4	MS4-18; MS4-19
+material3	WideNavigationRailResponsiveSample	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator); semantics
+material3	ModalWideNavigationRailSample	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator); semantics
+material3	DismissibleModalWideNavigationRailSample	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+material3	WideNavigationRailCollapsedSample	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+material3	WideNavigationRailExpandedSample	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+material3	NavigationRailSample	MS4	MS4-18; MS4-19
+material3	LinearProgressIndicatorSample	MS4	MS4-12; MS4-16; MS4-17
+material3	IndeterminateLinearProgressIndicatorSample	MS4	MS4-16
+material3	CircularProgressIndicatorSample	MS4	MS4-12; MS4-16; MS4-17
+material3	IndeterminateCircularProgressIndicatorSample	MS4	MS4-16
+material3	PullToRefreshSample	MS4	MS4-09; MS4-16; MS4-18; MS4-19; MS4-39
+material3	PullToRefreshViewModelSample	ANDROID	
+material3	PullToRefreshScalingSample	MS4	G3; MS4-09; MS4-16; MS4-18; MS4-19; MS4-39
+material3	PullToRefreshLinearProgressIndicatorSample	MS4	MS4-09; MS4-16; MS4-18; MS4-19; MS4-39
+material3	PullToRefreshSampleCustomState	MS4	MS4-09; MS4-16; MS4-18; MS4-19; MS4-39
+material3	RadioButtonSample	NOPR	semantics
+material3	RadioGroupSample	MS4	MS4-12; MS4-17
+material3	SimpleScaffoldWithTopBar	MS4	MS4-09; MS4-18; MS4-19
+material3	ScaffoldWithSimpleSnackbar	MS4	MS4-09; MS4-12; MS4-18; MS4-39
+material3	ScaffoldWithIndefiniteSnackbar	MS4	MS4-09; MS4-12; MS4-18; MS4-39
+material3	ScaffoldWithCustomSnackbar	MS4	MS4-09; MS4-12; MS4-16..18 (unlisted M3 name); MS4-18; MS4-39
+material3	ScaffoldWithCoroutinesSnackbar	MS4	MS4-09; MS4-12; MS4-18; MS4-39
+material3	ScaffoldWithMultilineSnackbar	MS4	MS4-09; MS4-12; MS4-18; MS4-39
+material3	SimpleSearchBarSample	MS4	MS4-15; MS4-16; MS4-18; MS4-19; MS4-39
+material3	FullScreenSearchBarScaffoldSample	MS4	MS4-09; MS4-15; MS4-16; MS4-18; MS4-19; MS4-39
+material3	DockedSearchBarScaffoldSample	MS4	MS4-09; MS4-15; MS4-16; MS4-18; MS4-19; MS4-39
+material3	SegmentedButtonSingleSelectSample	MS4	MS4-17
+material3	SegmentedButtonMultiSelectSample	MS4	MS4-17; MS4-19
+material3	SliderSample	MS4	MS4-17
+material3	StepsSliderSample	MS4	MS4-17
+material3	SliderWithCustomThumbSample	MS4	MS4-12; MS4-16..18 (unlisted M3 name); MS4-17; MS4-18; MS4-19
+material3	SliderWithCustomTrackAndThumbSample	MS4	MS4-17
+material3	RangeSliderSample	MS4	MS4-17
+material3	StepRangeSliderSample	MS4	MS4-17
+material3	RangeSliderWithCustomComponents	MS4	MS4-12; MS4-16..18 (unlisted M3 name); MS4-17; MS4-18
+material3	SurfaceSample	COMPILES	
+material3	ClickableSurfaceSample	COMPILES	
+material3	SelectableSurfaceSample	MS4	MS4-16..18/12 (overloads, parameters)
+material3	ToggleableSurfaceSample	MS4	MS4-16..18/12 (overloads, parameters)
+material3	SwipeToDismissListItems	MS4	MS4-16; MS4-18; MS4-39
+material3	SwitchSample	NOPR	semantics
+material3	SwitchWithThumbIconSample	NOPR	semantics
+material3	PrimaryTextTabs	MS4	MS4-18
+material3	SecondaryTextTabs	MS4	MS4-18
+material3	TextTabs	MS4	MS4-18
+material3	FancyTabs	MS4	MS4-18
+material3	FancyIndicatorTabs	MS4	MS4-18
+material3	FancyIndicatorContainerTabs	MS4	MS4-18
+material3	FancyIndicator	COMPILES	
+material3	FancyAnimatedIndicatorWithModifier	NEVER	custom layout (measure in guest)
+material3	FancyTab	MS4	MS4-18
+material3	SimpleTextFieldSample	MS4	MS4-15; MS4-17
+material3	SimpleOutlinedTextFieldSample	MS4	MS4-15; MS4-17
+material3	TextFieldWithTransformations	ANDROID	
+material3	TextFieldWithIcons	MS4	MS4-15; MS4-17; MS4-19
+material3	TextFieldWithPlaceholder	MS4	MS4-15; MS4-16..18 (unlisted M3 name); MS4-17
+material3	TextFieldWithPrefixAndSuffix	MS4	MS4-15; MS4-16..18 (unlisted M3 name); MS4-17
+material3	TextFieldWithErrorState	NOPR	semantics
+material3	TextFieldWithSupportingText	MS4	MS4-15; MS4-17
+material3	PasswordTextField	MS4	G1; MS4-15; MS4-17; MS4-19
+material3	TextFieldWithInitialValueAndSelection	MS4	G1; MS4-15; MS4-17
+material3	OutlinedTextFieldWithInitialValueAndSelection	MS4	G1; MS4-15; MS4-17
+material3	DenseTextFieldContentPadding	MS4	MS4-12; MS4-15; MS4-17
+material3	TextFieldWithHideKeyboardOnImeAction	NEVER	host locals / layout coordinates read synchronously
+material3	CustomTextFieldUsingDecorator	MS4	G1; MS4-15; MS4-17
+material3	CustomOutlinedTextFieldUsingDecorator	MS4	G1; MS4-15; MS4-17
+material3	CustomTextFieldBasedOnDecorationBox	MS4	G1; MS4-15; MS4-17
+material3	CustomOutlinedTextFieldBasedOnDecorationBox	MS4	G1; MS4-15; MS4-17
+material3	TextWithLinks	MS4	G1; MS4-15
+material3	MaterialThemeSample	ANDROID	
+material3	ThemeColorSample	MS4	MS4-12
+material3	ThemeTextStyleSample	COMPILES	
+material3	ThemeShapeSample	COMPILES	
+material3	TimePickerSample	MS4	MS4-16..18 (unlisted M3 name); MS4-18; MS4-39
+material3	TimeInputSample	MS4	MS4-16..18 (unlisted M3 name); MS4-18; MS4-39
+material3	TimePickerSwitchableSample	ANDROID	
+material3	PlainTooltipSample	MS4	MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithManualInvocationSample	MS4	MS4-12; MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithCaret	MS4	MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithCaretBelowAnchor	MS4	MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithCaretLeftOfAnchor	MS4	MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithCaretRightOfAnchor	MS4	MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithCaretStartOfAnchor	MS4	MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithCaretEndOfAnchor	MS4	MS4-18; MS4-19; MS4-39
+material3	PlainTooltipWithCustomCaret	MS4	MS4-13; MS4-18; MS4-19; MS4-39
+material3	RichTooltipSample	MS4	MS4-18; MS4-39
+material3	RichTooltipWithManualInvocationSample	MS4	MS4-12; MS4-18; MS4-39
+material3	RichTooltipWithCaretSample	MS4	MS4-18; MS4-39
+material3	RichTooltipWithCustomCaretSample	MS4	MS4-13; MS4-18; MS4-39

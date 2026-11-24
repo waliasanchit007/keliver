@@ -1,0 +1,818 @@
+samples	name	package	class	bucket
+477	Modifier	androidx.compose.ui	HAVE	in the prototype
+334	dp	androidx.compose.ui.unit	HAVE	in the prototype
+313	Text	androidx.compose.material3	HAVE	in the prototype
+290	Box	androidx.compose.foundation.layout	HAVE	in the prototype
+284	Color	androidx.compose.ui.graphics	HAVE	in the prototype
+225	background	androidx.compose.foundation	HAVE	in the prototype
+163	Preview	androidx.compose.ui.tooling.preview	HAVE	in the prototype
+152	size	androidx.compose.foundation.layout	HAVE	in the prototype
+141	padding	androidx.compose.foundation.layout	HAVE	in the prototype
+137	Alignment	androidx.compose.ui	HAVE	in the prototype
+133	Column	androidx.compose.foundation.layout	HAVE	in the prototype
+125	fillMaxSize	androidx.compose.foundation.layout	HAVE	in the prototype
+107	fillMaxWidth	androidx.compose.foundation.layout	HAVE	in the prototype
+92	height	androidx.compose.foundation.layout	HAVE	in the prototype
+91	Icons	androidx.compose.material.icons	HAVE	in the prototype
+90	Icon	androidx.compose.material3	HAVE	in the prototype
+74	width	androidx.compose.foundation.layout	HAVE	in the prototype
+59	Button	androidx.compose.material3	HAVE	in the prototype
+58	Row	androidx.compose.foundation.layout	HAVE	in the prototype
+45	ExperimentalMaterial3Api	androidx.compose.material3	HAVE	in the prototype
+42	clickable	androidx.compose.foundation	HAVE	in the prototype
+41	Favorite	androidx.compose.material.icons.filled	MS4	MS4-19
+41	sp	androidx.compose.ui.unit	HAVE	in the prototype
+39	Offset	androidx.compose.ui.geometry	MS4	MS4-13
+39	IconButton	androidx.compose.material3	HAVE	in the prototype
+38	border	androidx.compose.foundation	HAVE	in the prototype
+38	Arrangement	androidx.compose.foundation.layout	HAVE	in the prototype
+31	MaterialTheme	androidx.compose.material3	HAVE	in the prototype
+31	IntOffset	androidx.compose.ui.unit	HAVE	in the prototype
+31	LazyColumn	androidx.compose.foundation.lazy	HAVE	in the prototype
+31	ExperimentalFlexBoxApi	androidx.compose.foundation.layout	HAVE	in the prototype
+31	FlexBox	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+30	rememberTextFieldState	androidx.compose.foundation.text.input	MS4	MS4-15
+30	Spacer	androidx.compose.foundation.layout	HAVE	in the prototype
+30	wrapContentSize	androidx.compose.foundation.layout	MS4	MS4-12
+29	offset	androidx.compose.foundation.layout	HAVE	in the prototype
+27	pointerInput	androidx.compose.ui.input.pointer	HAVE	in the prototype
+26	rememberScrollState	androidx.compose.foundation	HAVE	in the prototype
+26	graphicsLayer	androidx.compose.ui.graphics	MS4	G3
+26	tween	androidx.compose.animation.core	HAVE	in the prototype
+25	BasicTextField	androidx.compose.foundation.text	MS4	MS4-15
+25	TooltipAnchorPosition	androidx.compose.material3	MS4	MS4-18
+25	TooltipBox	androidx.compose.material3	MS4	MS4-18
+25	TooltipDefaults	androidx.compose.material3	MS4	MS4-18
+25	rememberTooltipState	androidx.compose.material3	MS4	MS4-39
+23	RoundedCornerShape	androidx.compose.foundation.shape	HAVE	in the prototype
+23	PlainTooltip	androidx.compose.material3	MS4	MS4-18
+22	TextField	androidx.compose.material3	MS4	MS4-17
+20	focusable	androidx.compose.foundation	MS4	MS4-12
+20	requiredHeight	androidx.compose.foundation.layout	MS4	MS4-12
+20	AnimatedVisibility	androidx.compose.animation	HAVE	in the prototype
+19	Constraints	androidx.compose.ui.unit	MS4	MS4-09
+19	Scaffold	androidx.compose.material3	HAVE	in the prototype
+18	items	androidx.compose.foundation.lazy	HAVE	in the prototype
+17	layout	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+17	FlexDirection	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+16	verticalScroll	androidx.compose.foundation	HAVE	in the prototype
+16	IntSize	androidx.compose.ui.unit	HAVE	in the prototype
+16	fillMaxHeight	androidx.compose.foundation.layout	HAVE	in the prototype
+16	MutableInteractionSource	androidx.compose.foundation.interaction	HAVE	in the prototype
+16	aspectRatio	androidx.compose.foundation.layout	MS4	MS4-12
+15	onSizeChanged	androidx.compose.ui.layout	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+15	TextFieldLineLimits	androidx.compose.foundation.text.input	MS4	MS4-15
+14	Size	androidx.compose.ui.geometry	MS4	MS4-13
+14	spring	androidx.compose.animation.core	HAVE	in the prototype
+14	ExperimentalLayoutApi	androidx.compose.foundation.layout	HAVE	in the prototype
+14	wrapContentHeight	androidx.compose.foundation.layout	MS4	MS4-12
+14	FlexBoxConfig	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+13	FocusRequester	androidx.compose.ui.focus	NOPR	focus
+13	focusRequester	androidx.compose.ui.focus	NOPR	focus
+13	TextAlign	androidx.compose.ui.text.style	HAVE	in the prototype
+13	awaitFirstDown	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+13	TextFieldState	androidx.compose.foundation.text.input	MS4	MS4-15
+13	Star	androidx.compose.material.icons.filled	MS4	MS4-19
+13	ListItem	androidx.compose.material3	MS4	MS4-16
+12	Animatable	androidx.compose.animation.core	HAVE	in the prototype
+12	TopAppBar	androidx.compose.material3	HAVE	in the prototype
+12	rememberPagerState	androidx.compose.foundation.pager	MS4	MS4-15
+12	FlexConfig	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+12	TextButton	androidx.compose.material3	HAVE	in the prototype
+12	Add	androidx.compose.material.icons.filled	MS4	MS4-19
+11	ModifierNodeElement	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+11	horizontalScroll	androidx.compose.foundation	HAVE	in the prototype
+11	Orientation	androidx.compose.foundation.gestures	MS4	G1
+11	DropdownMenuItem	androidx.compose.material3	MS4	MS4-18
+11	animateFloat	androidx.compose.animation.core	MS4	MS4-20
+11	fadeIn	androidx.compose.animation	HAVE	in the prototype
+11	fadeOut	androidx.compose.animation	HAVE	in the prototype
+11	FontWeight	androidx.compose.ui.text.font	HAVE	in the prototype
+11	TextRange	androidx.compose.ui.text	MS4	G1
+11	awaitEachGesture	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+11	rememberLazyListState	androidx.compose.foundation.lazy	HAVE	in the prototype
+10	Layout	androidx.compose.ui.layout	HAVE	in the prototype
+10	Brush	androidx.compose.ui.graphics	HAVE	in the prototype
+10	TextStyle	androidx.compose.ui.text	HAVE	in the prototype
+10	LazyRow	androidx.compose.foundation.lazy	HAVE	in the prototype
+10	Dp	androidx.compose.ui.unit	HAVE	in the prototype
+10	HorizontalPager	androidx.compose.foundation.pager	MS4	MS4-38
+10	TextOverflow	androidx.compose.ui.text.style	HAVE	in the prototype
+9	semantics	androidx.compose.ui.semantics	NOPR	semantics
+9	InspectorInfo	androidx.compose.ui.platform	NEVER	Modifier.Node API (guest node code)
+9	VectorConverter	androidx.compose.animation.core	HAVE	in the prototype
+9	LocalDensity	androidx.compose.ui.platform	NEVER	host locals / layout coordinates read synchronously
+9	nestedScroll	androidx.compose.ui.input.nestedscroll	MS4	MS4-18
+9	detectTapGestures	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+9	BasicText	androidx.compose.foundation.text	MS4	MS4-12
+9	keyframes	androidx.compose.animation.core	MS4	MS4-20
+9	ExperimentalAnimationApi	androidx.compose.animation	HAVE	in the prototype
+9	LocalTextStyle	androidx.compose.material3	HAVE	in the prototype
+9	FlexWrap	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+9	ExperimentalGridApi	androidx.compose.foundation.layout	HAVE	in the prototype
+9	Grid	androidx.compose.foundation.layout	EXP	Grid (1.12, ExperimentalGridApi)
+9	Menu	androidx.compose.material.icons.filled	MS4	MS4-19
+9	Checkbox	androidx.compose.material3	MS4	MS4-17
+9	ExtendedFloatingActionButton	androidx.compose.material3	MS4	MS4-18
+9	Lock	androidx.compose.material.icons.outlined	MS4	MS4-19
+9	FavoriteBorder	androidx.compose.material.icons.outlined	MS4	MS4-19
+9	Home	androidx.compose.material.icons.outlined	MS4	MS4-19
+9	StarBorder	androidx.compose.material.icons.outlined	MS4	MS4-19
+8	clip	androidx.compose.ui.draw	HAVE	in the prototype
+8	SelectionContainer	androidx.compose.foundation.text.selection	MS4	MS4-12
+8	BorderStroke	androidx.compose.foundation	HAVE	in the prototype
+8	RectangleShape	androidx.compose.ui.graphics	HAVE	in the prototype
+8	ExposedDropdownMenuBox	androidx.compose.material3	MS4	MS4-18
+8	ExposedDropdownMenuDefaults	androidx.compose.material3	MS4	MS4-18
+8	Surface	androidx.compose.material3	HAVE	in the prototype
+8	wrapContentWidth	androidx.compose.foundation.layout	MS4	MS4-12
+8	SnackbarHost	androidx.compose.material3	MS4	MS4-18
+8	SnackbarHostState	androidx.compose.material3	MS4	MS4-39
+7	SolidColor	androidx.compose.ui.graphics	MS4	G1
+7	requiredSize	androidx.compose.foundation.layout	MS4	MS4-12
+7	composed	androidx.compose.ui	NEVER	Modifier.Node API (guest node code)
+7	Measurable	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+7	MeasureResult	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+7	LookaheadScope	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+7	PaddingValues	androidx.compose.foundation.layout	HAVE	in the prototype
+7	scale	androidx.compose.ui.draw	HAVE	in the prototype
+7	Spring	androidx.compose.animation.core	HAVE	in the prototype
+7	positionChange	androidx.compose.ui.input.pointer	NEVER	guest pointer code (pointerInput)
+7	rememberTransition	androidx.compose.animation.core	MS4	MS4-20
+7	AnimatedContent	androidx.compose.animation	MS4	MS4-20
+7	togetherWith	androidx.compose.animation	MS4	MS4-20
+7	toSize	androidx.compose.ui.unit	UNMAPPED	androidx.compose.ui.unit.toSize
+7	GridCells	androidx.compose.foundation.lazy.grid	MS4	MS4-38
+7	Tab	androidx.compose.material3	MS4	MS4-18
+6	CircleShape	androidx.compose.foundation.shape	HAVE	in the prototype
+6	onKeyEvent	androidx.compose.ui.input.key	NEVER	guest pointer code (pointerInput)
+6	onFocusChanged	androidx.compose.ui.focus	NOPR	focus
+6	focusProperties	androidx.compose.ui.focus	NOPR	focus
+6	AnimationVector2D	androidx.compose.animation.core	HAVE	in the prototype
+6	LayoutCoordinates	androidx.compose.ui.layout	NEVER	host locals / layout coordinates read synchronously
+6	clipToBounds	androidx.compose.ui.draw	MS4	MS4-12
+6	size	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+6	draggable	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+6	rememberDraggableState	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+6	TraversableNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+6	infiniteRepeatable	androidx.compose.animation.core	MS4	MS4-20
+6	LinearEasing	androidx.compose.animation.core	HAVE	in the prototype
+6	animateColor	androidx.compose.animation	MS4	MS4-20
+6	updateTransition	androidx.compose.animation.core	MS4	MS4-20
+6	MutableTransitionState	androidx.compose.animation.core	MS4	MS4-20
+6	animateDp	androidx.compose.animation.core	MS4	MS4-20
+6	FlowRow	androidx.compose.foundation.layout	HAVE	in the prototype
+6	TransformOrigin	androidx.compose.ui.graphics	MS4	G1
+6	expandVertically	androidx.compose.animation	HAVE	in the prototype
+6	SharedTransitionLayout	androidx.compose.animation	NOPR	shared elements (C7: in no PR)
+6	FlexAlignSelf	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+6	setTextAndPlaceCursorAtEnd	androidx.compose.foundation.text.input	MS4	MS4-15
+6	InputTransformation	androidx.compose.foundation.text.input	NEVER	per-keystroke guest code (#312: outside the mechanism)
+6	items	androidx.compose.foundation.lazy.grid	MS4	MS4-38
+6	StaggeredGridCells	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-38
+6	items	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-38
+6	toggleable	androidx.compose.foundation.selection	MS4	MS4-12
+6	Role	androidx.compose.ui.semantics	HAVE	in the prototype
+6	Slider	androidx.compose.material3	MS4	MS4-17
+5	Image	androidx.compose.foundation	HAVE	in the prototype
+5	ContentDrawScope	androidx.compose.ui.graphics.drawscope	MS4	G3
+5	key	androidx.compose.ui.input.key	NEVER	guest pointer code (pointerInput)
+5	Canvas	androidx.compose.foundation	MS4	G3
+5	MeasureScope	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+5	Style	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+5	styleable	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+5	modifierLocalOf	androidx.compose.ui.modifier	NEVER	Modifier.Node API (guest node code)
+5	DelegatingNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+5	SemanticsPropertyReceiver	androidx.compose.ui.semantics	NOPR	semantics
+5	NestedScrollSource	androidx.compose.ui.input.nestedscroll	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+5	ExperimentalMaterialApi	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+5	RepeatMode	androidx.compose.animation.core	MS4	MS4-20
+5	LinearOutSlowInEasing	androidx.compose.animation.core	HAVE	in the prototype
+5	keyframesWithSpline	androidx.compose.animation.core	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+5	Card	androidx.compose.material3	HAVE	in the prototype
+5	animateBounds	androidx.compose.animation	NOPR	shared elements (C7: in no PR)
+5	Rect	androidx.compose.ui.geometry	MS4	MS4-13
+5	shrinkVertically	androidx.compose.animation	HAVE	in the prototype
+5	FloatingActionButton	androidx.compose.material3	MS4	MS4-18
+5	SharedTransitionScope	androidx.compose.animation	NOPR	shared elements (C7: in no PR)
+5	AnnotatedString	androidx.compose.ui.text	MS4	G1
+5	delete	androidx.compose.foundation.text.input	MS4	MS4-15
+5	insert	androidx.compose.foundation.text.input	MS4	MS4-15
+5	rememberSelectionState	androidx.compose.foundation.text.selection	NOPR	text selection state (1.12)
+5	FilterChipDefaults	androidx.compose.material3	MS4	MS4-16
+5	HorizontalDivider	androidx.compose.material3	HAVE	in the prototype
+5	MoreVert	androidx.compose.material.icons.filled	MS4	MS4-19
+5	WideNavigationRailItem	androidx.compose.material3	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+5	Snackbar	androidx.compose.material3	MS4	MS4-18
+4	DrawModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+4	Key	androidx.compose.ui.input.key	NEVER	guest pointer code (pointerInput)
+4	Black	androidx.compose.ui.graphics.Color.Companion	HAVE	in the prototype
+4	focusTarget	androidx.compose.ui.focus	NOPR	focus
+4	offset	androidx.compose.ui.unit	MS4	MS4-12
+4	Placeable	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+4	mediaQuery	androidx.compose.ui	EXP	media queries (ExperimentalMediaQueryApi)
+4	DpSize	androidx.compose.ui.unit	MS4	MS4-13
+4	modifierLocalConsumer	androidx.compose.ui.modifier	NEVER	Modifier.Node API (guest node code)
+4	modifierLocalProvider	androidx.compose.ui.modifier	NEVER	Modifier.Node API (guest node code)
+4	PointerEvent	androidx.compose.ui.input.pointer	NEVER	guest pointer code (pointerInput)
+4	PointerEventPass	androidx.compose.ui.input.pointer	NEVER	guest pointer code (pointerInput)
+4	PointerInputModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+4	SemanticsModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+4	GlobalPositionAwareModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+4	WindowInsetsRulers	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+4	rememberInfiniteTransition	androidx.compose.animation.core	MS4	MS4-20
+4	ExperimentalAnimationSpecApi	androidx.compose.animation.core	HAVE	in the prototype
+4	animate	androidx.compose.animation.core	MS4	MS4-21
+4	Transition	androidx.compose.animation.core	MS4	MS4-20
+4	heightIn	androidx.compose.foundation.layout	MS4	MS4-12
+4	slideInVertically	androidx.compose.animation	HAVE	in the prototype
+4	CutCornerShape	androidx.compose.foundation.shape	HAVE	in the prototype
+4	FirstBaseline	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+4	FlexBasis	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+4	FlowColumn	androidx.compose.foundation.layout	MS4	MS4-12
+4	columns	androidx.compose.foundation.layout	MS4	MS4-12
+4	IntrinsicSize	androidx.compose.foundation.layout	MS4	MS4-12
+4	substring	androidx.compose.ui.text	MS4	G1
+4	SpanStyle	androidx.compose.ui.text	MS4	G1
+4	TileMode	androidx.compose.ui.graphics	MS4	G1
+4	buildAnnotatedString	androidx.compose.ui.text	MS4	G1
+4	LazyVerticalGrid	androidx.compose.foundation.lazy.grid	MS4	MS4-38
+4	rememberLazyGridState	androidx.compose.foundation.lazy.grid	MS4	MS4-15
+4	LazyLayoutItemProvider	androidx.compose.foundation.lazy.layout	NEVER	custom layout (measure in guest)
+4	contentDescription	androidx.compose.ui.semantics	NOPR	semantics
+4	ListItemDefaults	androidx.compose.material3	MS4	MS4-16
+4	rememberWideNavigationRailState	androidx.compose.material3	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+4	Refresh	androidx.compose.material.icons.filled	MS4	MS4-19
+4	SecondaryTabRow	androidx.compose.material3	MS4	MS4-18
+4	Info	androidx.compose.material.icons.filled	HAVE	in the prototype
+4	RichTooltip	androidx.compose.material3	MS4	MS4-18
+3	ContentType	androidx.compose.ui.autofill	NOPR	semantics
+3	contentType	androidx.compose.ui.semantics	NOPR	semantics
+3	drawWithCache	androidx.compose.ui.draw	MS4	G3
+3	Switch	androidx.compose.material3	MS4	MS4-17
+3	Green	androidx.compose.ui.graphics.Color.Companion	HAVE	in the prototype
+3	debugInspectorInfo	androidx.compose.ui.platform	NEVER	Modifier.Node API (guest node code)
+3	drawBehind	androidx.compose.ui.draw	MS4	G3
+3	LayoutModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+3	DeferredTargetAnimation	androidx.compose.animation.core	EXP	deferred transitions (ExperimentalDeferredTransitionApi)
+3	round	androidx.compose.ui.unit	UNMAPPED	androidx.compose.ui.unit.round
+3	hovered	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+3	pressed	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+3	CompositionLocalConsumerModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+3	onClick	androidx.compose.ui.semantics	NOPR	semantics
+3	NestedScrollConnection	androidx.compose.ui.input.nestedscroll	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+3	HorizontalRuler	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+3	KeyboardOptions	androidx.compose.foundation.text	MS4	G1
+3	traverseAncestors	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+3	traverseChildren	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+3	onVisibilityChanged	androidx.compose.ui.layout	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+3	animateFloatAsState	androidx.compose.animation.core	HAVE	in the prototype
+3	KeyframesSpec	androidx.compose.animation.core	MS4	MS4-20
+3	FastOutSlowInEasing	androidx.compose.animation.core	HAVE	in the prototype
+3	ExperimentalTransitionApi	androidx.compose.animation.core	HAVE	in the prototype
+3	DeferredTransitionState	androidx.compose.animation.core	EXP	deferred transitions (ExperimentalDeferredTransitionApi)
+3	ExperimentalDeferredTransitionApi	androidx.compose.animation.core	HAVE	in the prototype
+3	SizeTransform	androidx.compose.animation	MS4	MS4-20
+3	slideOutVertically	androidx.compose.animation	HAVE	in the prototype
+3	ExitTransition	androidx.compose.animation	HAVE	in the prototype
+3	slideInHorizontally	androidx.compose.animation	MS4	MS4-20
+3	slideOutHorizontally	androidx.compose.animation	MS4	MS4-20
+3	animateColorAsState	androidx.compose.animation	HAVE	in the prototype
+3	scaleOut	androidx.compose.animation	HAVE	in the prototype
+3	SharedContentState	androidx.compose.animation.SharedTransitionScope	NOPR	shared elements (C7: in no PR)
+3	FlexAlignItems	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+3	rows	androidx.compose.foundation.layout	MS4	MS4-12
+3	requiredWidth	androidx.compose.foundation.layout	MS4	MS4-12
+3	sizeIn	androidx.compose.foundation.layout	MS4	MS4-12
+3	basicMarquee	androidx.compose.foundation	MS4	MS4-12
+3	VisualTransformation	androidx.compose.ui.text.input	MS4	G1
+3	Clear	androidx.compose.material.icons.filled	MS4	MS4-19
+3	ExpandPolicy	androidx.compose.foundation.text.input	MS4	G1
+3	LocalIndication	androidx.compose.foundation	NOPR	custom Indication (guest implementation)
+3	indication	androidx.compose.foundation	NOPR	custom Indication (guest implementation)
+3	LazyHorizontalGrid	androidx.compose.foundation.lazy.grid	MS4	MS4-38
+3	LazyLayout	androidx.compose.foundation.lazy.layout	NEVER	custom layout (measure in guest)
+3	rememberScrollableState	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+3	scrollable	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+3	LazyVerticalStaggeredGrid	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-38
+3	LazyHorizontalStaggeredGrid	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-38
+3	overscroll	androidx.compose.foundation	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+3	rememberSnapFlingBehavior	androidx.compose.foundation.gestures.snapping	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+3	rememberUpdatedStyleState	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+3	ToggleableState	androidx.compose.ui.state	MS4	G1
+3	triStateToggleable	androidx.compose.foundation.selection	MS4	MS4-12
+3	center	androidx.compose.ui.geometry	MS4	MS4-13
+3	isSpecified	androidx.compose.ui.geometry	UNMAPPED	androidx.compose.ui.geometry.isSpecified
+3	rememberTransformableState	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+3	transformable	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+3	TopAppBarDefaults	androidx.compose.material3	HAVE	in the prototype
+3	BottomAppBar	androidx.compose.material3	MS4	MS4-18
+3	Check	androidx.compose.material.icons.filled	MS4	MS4-19
+3	FloatingActionButtonDefaults	androidx.compose.material3	MS4	MS4-18
+3	FabPosition	androidx.compose.material3	HAVE	in the prototype
+3	OutlinedTextField	androidx.compose.material3	MS4	MS4-17
+3	OutlinedButton	androidx.compose.material3	HAVE	in the prototype
+3	ButtonDefaults	androidx.compose.material3	HAVE	in the prototype
+3	OutlinedCard	androidx.compose.material3	MS4	MS4-16
+3	Stroke	androidx.compose.ui.graphics.drawscope	MS4	G1
+3	AssistChip	androidx.compose.material3	MS4	MS4-16
+3	Done	androidx.compose.material.icons.filled	MS4	MS4-19
+3	FilterChip	androidx.compose.material3	MS4	MS4-16
+3	DropdownMenu	androidx.compose.material3	MS4	MS4-18
+3	AccountCircle	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Bookmarks	androidx.compose.material.icons.filled	MS4	MS4-19
+3	CalendarMonth	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Dashboard	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Email	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Group	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Headphones	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Image	androidx.compose.material.icons.filled	MS4	MS4-19
+3	JoinFull	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Keyboard	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Laptop	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Map	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Navigation	androidx.compose.material.icons.filled	MS4	MS4-19
+3	NavigationDrawerItem	androidx.compose.material3	MS4	MS4-18
+3	Outbox	androidx.compose.material.icons.filled	MS4	MS4-19
+3	PushPin	androidx.compose.material.icons.filled	MS4	MS4-19
+3	QrCode	androidx.compose.material.icons.filled	MS4	MS4-19
+3	Radio	androidx.compose.material.icons.filled	MS4	MS4-19
+3	ExposedDropdownMenuAnchorType	androidx.compose.material3	MS4	MS4-18
+3	WideNavigationRail	androidx.compose.material3	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+3	WideNavigationRailValue	androidx.compose.material3	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+3	LinearProgressIndicator	androidx.compose.material3	MS4	MS4-16
+3	rememberPullToRefreshState	androidx.compose.material3.pulltorefresh	MS4	MS4-39
+3	ArrowBack	androidx.compose.material.icons.automirrored.filled	HAVE	in the prototype
+3	Search	androidx.compose.material.icons.filled	HAVE	in the prototype
+3	SearchBarDefaults	androidx.compose.material3	MS4	MS4-18
+3	SearchBarValue	androidx.compose.material3	MS4	MS4-39
+3	rememberSearchBarState	androidx.compose.material3	MS4	MS4-39
+3	RangeSlider	androidx.compose.material3	MS4	MS4-17
+3	rememberRangeSliderState	androidx.compose.material3	MS4	MS4-17
+2	BlendMode	androidx.compose.ui.graphics	HAVE	in the prototype
+2	rememberVectorPainter	androidx.compose.ui.graphics.vector	HAVE	in the prototype
+2	CenterHorizontally	androidx.compose.ui.Alignment.Companion	HAVE	in the prototype
+2	White	androidx.compose.ui.graphics.Color.Companion	HAVE	in the prototype
+2	onRotaryScrollEvent	androidx.compose.ui.input.rotary	UNMAPPED	androidx.compose.ui.input.rotary.onRotaryScrollEvent
+2	scrollBy	androidx.compose.foundation.gestures	MS4	MS4-15
+2	Red	androidx.compose.ui.graphics.Color.Companion	HAVE	in the prototype
+2	focusRestorer	androidx.compose.ui.focus	NOPR	focus
+2	LocalFocusManager	androidx.compose.ui.platform	NEVER	host locals / layout coordinates read synchronously
+2	CompositingStrategy	androidx.compose.ui.graphics	MS4	G1/G3
+2	inset	androidx.compose.ui.graphics.drawscope	MS4	G3
+2	approachLayout	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+2	ViewingDistance	androidx.compose.ui.UiMediaScope	UNMAPPED	androidx.compose.ui.UiMediaScope.ViewingDistance
+2	PointerPrecision	androidx.compose.ui.UiMediaScope	UNMAPPED	androidx.compose.ui.UiMediaScope.PointerPrecision
+2	constrainHeight	androidx.compose.ui.unit	UNMAPPED	androidx.compose.ui.unit.constrainHeight
+2	constrainWidth	androidx.compose.ui.unit	UNMAPPED	androidx.compose.ui.unit.constrainWidth
+2	paint	androidx.compose.ui.draw	MS4	MS4-13
+2	currentValueOf	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+2	LayoutDirection	androidx.compose.ui.unit	MS4	G1
+2	LayoutAwareModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+2	positionInRoot	androidx.compose.ui.layout	NEVER	host locals / layout coordinates read synchronously
+2	positionInWindow	androidx.compose.ui.layout	NEVER	host locals / layout coordinates read synchronously
+2	onPlaced	androidx.compose.ui.layout	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+2	DrawScope	androidx.compose.ui.graphics.drawscope	HAVE	in the prototype
+2	Painter	androidx.compose.ui.graphics.painter	HAVE	in the prototype
+2	PointerIcon	androidx.compose.ui.input.pointer	NEVER	guest pointer code (pointerInput)
+2	Popup	androidx.compose.ui.window	MS4	MS4-18
+2	BoxScope	androidx.compose.foundation.layout	HAVE	in the prototype
+2	WindowInsets	androidx.compose.foundation.layout	HAVE	in the prototype
+2	shadow	androidx.compose.ui.draw	HAVE	in the prototype
+2	Shadow	androidx.compose.ui.graphics.shadow	MS4	G1
+2	ImeAction	androidx.compose.ui.text.input	MS4	G1
+2	LocalSoftwareKeyboardController	androidx.compose.ui.platform	NEVER	host locals / layout coordinates read synchronously
+2	TraverseDescendantsAction	androidx.compose.ui.node.TraversableNode.Companion	NEVER	Modifier.Node API (guest node code)
+2	traverseDescendants	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+2	LayoutBoundsHolder	androidx.compose.ui.layout	UNMAPPED	androidx.compose.ui.layout.LayoutBoundsHolder
+2	layoutBounds	androidx.compose.ui.layout	UNMAPPED	androidx.compose.ui.layout.layoutBounds
+2	onFirstVisible	androidx.compose.ui.layout	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+2	zIndex	androidx.compose.ui	MS4	MS4-12
+2	verticalDrag	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+2	animateIntOffsetAsState	androidx.compose.animation.core	MS4	MS4-20
+2	ArcAbove	androidx.compose.animation.core.ArcMode.Companion	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+2	DpOffset	androidx.compose.ui.unit	MS4	MS4-13
+2	KeyframesSpecBaseConfig	androidx.compose.animation.core	MS4	MS4-20
+2	snap	androidx.compose.animation.core	HAVE	in the prototype
+2	widthIn	androidx.compose.foundation.layout	MS4	MS4-12
+2	VisibilityThreshold	androidx.compose.animation.core	HAVE	in the prototype
+2	animateContentSize	androidx.compose.animation	HAVE	in the prototype
+2	AnimatedContentTransitionScope	androidx.compose.animation	MS4	MS4-20
+2	ContentTransform	androidx.compose.animation	MS4	MS4-20
+2	unveilIn	androidx.compose.animation	MS4	MS4-20
+2	veilOut	androidx.compose.animation	MS4	MS4-20
+2	scaleIn	androidx.compose.animation	HAVE	in the prototype
+2	EnterExitState	androidx.compose.animation	MS4	MS4-20
+2	expandIn	androidx.compose.animation	HAVE	in the prototype
+2	shrinkOut	androidx.compose.animation	HAVE	in the prototype
+2	ExperimentalLookaheadAnimationVisualDebugApi	androidx.compose.animation	HAVE	in the prototype
+2	LookaheadAnimationVisualDebugging	androidx.compose.animation	MS4	MS4-20
+2	SpaceEvenly	androidx.compose.foundation.layout.Arrangement.Absolute	MS4	MS4-12
+2	Density	androidx.compose.ui.unit	NEVER	host locals / layout coordinates read synchronously
+2	PageSize	androidx.compose.foundation.pager	MS4	MS4-38
+2	SnapPosition	androidx.compose.foundation.gestures.snapping	UNMAPPED	androidx.compose.foundation.gestures.snapping.SnapPosition
+2	ContextualFlowColumn	androidx.compose.foundation.layout	MS4	MS4-12
+2	ContextualFlowRow	androidx.compose.foundation.layout	MS4	MS4-12
+2	AlignmentLine	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+2	FlowColumnOverflow	androidx.compose.foundation.layout	MS4	MS4-12
+2	FlowRowOverflow	androidx.compose.foundation.layout	HAVE	in the prototype
+2	TextLayoutResult	androidx.compose.ui.text	HAVE	in the prototype
+2	Fixed	androidx.compose.foundation.layout.GridTrackSize.Companion	EXP	Grid (1.12, ExperimentalGridApi)
+2	absoluteOffset	androidx.compose.foundation.layout	MS4	MS4-12
+2	paddingFromBaseline	androidx.compose.foundation.layout	MS4	MS4-12
+2	recalculateWindowInsets	androidx.compose.foundation.layout	MS4	MS4-12
+2	consumeWindowInsets	androidx.compose.foundation.layout	MS4	MS4-18
+2	safeContentPadding	androidx.compose.foundation.layout	MS4	MS4-18
+2	drawWithContent	androidx.compose.ui.draw	MS4	G3
+2	TextFieldValue	androidx.compose.ui.text.input	MS4	MS4-15
+2	MailOutline	androidx.compose.material.icons.filled	MS4	MS4-19
+2	byValue	androidx.compose.foundation.text.input	NEVER	per-keystroke guest code (#312: outside the mechanism)
+2	OutputTransformation	androidx.compose.foundation.text.input	NEVER	per-keystroke guest code (#312: outside the mechanism)
+2	TextFieldBuffer	androidx.compose.foundation.text.input	NEVER	per-keystroke guest code (#312: outside the mechanism)
+2	BringIntoViewRequester	androidx.compose.foundation.relocation	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+2	bringIntoViewRequester	androidx.compose.foundation.relocation	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+2	awaitHorizontalTouchSlopOrCancellation	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+2	awaitVerticalTouchSlopOrCancellation	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.awaitVerticalTouchSlopOrCancellation
+2	awaitTouchSlopOrCancellation	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+2	collectIsFocusedAsState	androidx.compose.foundation.interaction	MS4	MS4-15
+2	Canvas	androidx.compose.ui.graphics	MS4	G3
+2	ImageBitmap	androidx.compose.ui.graphics	MS4	G1/G3
+2	Paint	androidx.compose.ui.graphics	MS4	G1/G3
+2	itemsIndexed	androidx.compose.foundation.lazy	HAVE	in the prototype
+2	LazyListState	androidx.compose.foundation.lazy	HAVE	in the prototype
+2	LazyLayoutScrollScope	androidx.compose.foundation.lazy.layout	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+2	itemsIndexed	androidx.compose.foundation.lazy.grid	MS4	MS4-38
+2	GridItemSpan	androidx.compose.foundation.lazy.grid	MS4	MS4-38
+2	fastRoundToInt	androidx.compose.ui.util	UNMAPPED	androidx.compose.ui.util.fastRoundToInt
+2	itemsIndexed	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-38
+2	StaggeredGridItemSpan	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-38
+2	MutatorMutex	androidx.compose.foundation	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+2	Velocity	androidx.compose.ui.unit	UNMAPPED	androidx.compose.ui.unit.Velocity
+2	rememberOverscrollEffect	androidx.compose.foundation	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+2	PagerState	androidx.compose.foundation.pager	MS4	MS4-15
+2	progressSemantics	androidx.compose.foundation	MS4	MS4-12
+2	ExperimentalFoundationApi	androidx.compose.foundation	HAVE	in the prototype
+2	selectable	androidx.compose.foundation.selection	MS4	MS4-12
+2	SnapLayoutInfoProvider	androidx.compose.foundation.gestures.snapping	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+2	disabled	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+2	TextAutoSize	androidx.compose.foundation.text	HAVE	in the prototype
+2	animateZoomBy	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.animateZoomBy
+2	AlertDialog	androidx.compose.material3	MS4	MS4-18
+2	BottomAppBarDefaults	androidx.compose.material3	MS4	MS4-18
+2	Edit	androidx.compose.material.icons.filled	MS4	MS4-19
+2	NavigationBar	androidx.compose.material3	MS4	MS4-18
+2	NavigationBarItem	androidx.compose.material3	MS4	MS4-18
+2	ElevatedCard	androidx.compose.material3	MS4	MS4-16
+2	CheckboxDefaults	androidx.compose.material3	MS4	MS4-17
+2	StrokeCap	androidx.compose.ui.graphics	MS4	G1
+2	StrokeJoin	androidx.compose.ui.graphics	MS4	G1
+2	TriStateCheckbox	androidx.compose.material3	MS4	MS4-17
+2	AssistChipDefaults	androidx.compose.material3	MS4	MS4-16
+2	Settings	androidx.compose.material.icons.filled	MS4	MS4-19
+2	InputChip	androidx.compose.material3	MS4	MS4-16
+2	Tune	androidx.compose.material.icons.filled	MS4	MS4-19
+2	DatePicker	androidx.compose.material3	MS4	MS4-18
+2	rememberDatePickerState	androidx.compose.material3	MS4	MS4-39
+2	DrawerValue	androidx.compose.material3	MS4	MS4-39
+2	rememberDrawerState	androidx.compose.material3	MS4	MS4-39
+2	TextDecoration	androidx.compose.ui.text.style	HAVE	in the prototype
+2	withStyle	androidx.compose.ui.text	MS4	G1
+2	minimumInteractiveComponentSize	androidx.compose.material3	MS4	MS4-16
+2	Edit	androidx.compose.material.icons.outlined	MS4	MS4-19
+2	ShortNavigationBar	androidx.compose.material3	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+2	ShortNavigationBarItem	androidx.compose.material3	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+2	MenuOpen	androidx.compose.material.icons.automirrored.filled	MS4	MS4-19
+2	stateDescription	androidx.compose.ui.semantics	NOPR	semantics
+2	ModalWideNavigationRail	androidx.compose.material3	NOPR	M3 1.4 additions not in MS4-16..18 (carousel, wide rail, loading indicator)
+2	ProgressIndicatorDefaults	androidx.compose.material3	MS4	MS4-16
+2	CircularProgressIndicator	androidx.compose.material3	MS4	MS4-16
+2	PullToRefreshBox	androidx.compose.material3.pulltorefresh	MS4	MS4-18
+2	pullToRefresh	androidx.compose.material3.pulltorefresh	MS4	MS4-18
+2	RadioButton	androidx.compose.material3	MS4	MS4-17
+2	selectableGroup	androidx.compose.foundation.selection	MS4	MS4-12
+2	SnackbarDuration	androidx.compose.material3	MS4	MS4-18
+2	ExpandedFullScreenSearchBar	androidx.compose.material3	MS4	MS4-18
+2	TopSearchBar	androidx.compose.material3	MS4	MS4-18
+2	SegmentedButton	androidx.compose.material3	MS4	MS4-17
+2	SegmentedButtonDefaults	androidx.compose.material3	MS4	MS4-17
+2	rememberSliderState	androidx.compose.material3	MS4	MS4-17
+2	Label	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+2	SliderDefaults	androidx.compose.material3	MS4	MS4-17
+2	PrimaryTabRow	androidx.compose.material3	MS4	MS4-18
+2	TextFieldLabelPosition	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+2	TextFieldDefaults	androidx.compose.material3	MS4	MS4-17
+2	OutlinedTextFieldDefaults	androidx.compose.material3	MS4	MS4-17
+2	TimePickerDialog	androidx.compose.material3	MS4	MS4-18
+2	TimePickerDialogDefaults	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+2	TimePickerDisplayMode	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+2	rememberTimePickerState	androidx.compose.material3	MS4	MS4-39
+1	HorizontalAlignmentLine	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	alpha	androidx.compose.ui.draw	HAVE	in the prototype
+1	FillableData	androidx.compose.ui.autofill	UNMAPPED	androidx.compose.ui.autofill.FillableData
+1	createFromText	androidx.compose.ui.autofill	UNMAPPED	androidx.compose.ui.autofill.createFromText
+1	fillableData	androidx.compose.ui.semantics	NOPR	semantics
+1	onFillData	androidx.compose.ui.semantics	NOPR	semantics
+1	BlurredEdgeTreatment	androidx.compose.ui.draw	MS4	G1
+1	blur	androidx.compose.ui.draw	MS4	MS4-12
+1	Dialog	androidx.compose.ui.window	MS4	MS4-18
+1	Path	androidx.compose.ui.graphics.vector	MS4	G3
+1	PathData	androidx.compose.ui.graphics.vector	MS4	G1/G3
+1	onPreviewKeyEvent	androidx.compose.ui.input.key	NEVER	guest pointer code (pointerInput)
+1	KeyDown	androidx.compose.ui.input.key.KeyEventType.Companion	UNMAPPED	androidx.compose.ui.input.key.KeyEventType.Companion.KeyDown
+1	KeyUp	androidx.compose.ui.input.key.KeyEventType.Companion	UNMAPPED	androidx.compose.ui.input.key.KeyEventType.Companion.KeyUp
+1	Unknown	androidx.compose.ui.input.key.KeyEventType.Companion	UNMAPPED	androidx.compose.ui.input.key.KeyEventType.Companion.Unknown
+1	type	androidx.compose.ui.input.key	NEVER	guest pointer code (pointerInput)
+1	isAltPressed	androidx.compose.ui.input.key	UNMAPPED	androidx.compose.ui.input.key.isAltPressed
+1	isCtrlPressed	androidx.compose.ui.input.key	UNMAPPED	androidx.compose.ui.input.key.isCtrlPressed
+1	isMetaPressed	androidx.compose.ui.input.key	UNMAPPED	androidx.compose.ui.input.key.isMetaPressed
+1	isShiftPressed	androidx.compose.ui.input.key	UNMAPPED	androidx.compose.ui.input.key.isShiftPressed
+1	CenterVertically	androidx.compose.ui.Alignment.Companion	HAVE	in the prototype
+1	darkColors	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+1	onPreRotaryScrollEvent	androidx.compose.ui.input.rotary	UNMAPPED	androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
+1	Transparent	androidx.compose.ui.graphics.Color.Companion	HAVE	in the prototype
+1	FocusDirection	androidx.compose.ui.focus	NOPR	focus
+1	LocalInputModeManager	androidx.compose.ui.platform	UNMAPPED	androidx.compose.ui.platform.LocalInputModeManager
+1	Touch	androidx.compose.ui.input.InputMode.Companion	UNMAPPED	androidx.compose.ui.input.InputMode.Companion.Touch
+1	Cancel	androidx.compose.ui.focus.FocusRequester.Companion	NOPR	focus
+1	inspectable	androidx.compose.ui.platform	NEVER	Modifier.Node API (guest node code)
+1	LayerOutsets	androidx.compose.ui.graphics	MS4	G1/G3
+1	IntrinsicMeasurable	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	IntrinsicMeasureScope	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	MeasurePolicy	androidx.compose.ui.layout	HAVE	in the prototype
+1	layoutId	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	LayoutModifier	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	ApproachLayoutModifierNode	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	ApproachMeasureScope	androidx.compose.ui.layout	UNMAPPED	androidx.compose.ui.layout.ApproachMeasureScope
+1	derivedMediaQuery	androidx.compose.ui	UNMAPPED	androidx.compose.ui.derivedMediaQuery
+1	Posture	androidx.compose.ui.UiMediaScope	UNMAPPED	androidx.compose.ui.UiMediaScope.Posture
+1	ExperimentalFoundationStyleApi	androidx.compose.foundation.style	HAVE	in the prototype
+1	MutableStyleState	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+1	MeshGradientPainter	androidx.compose.ui.graphics	MS4	G1/G3
+1	ObserverModifierNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+1	observeReads	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+1	requireLayoutDirection	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+1	heading	androidx.compose.ui.semantics	NOPR	semantics
+1	ExperimentalComposeUiApi	androidx.compose.ui	HAVE	in the prototype
+1	ModifierLocalModifierNode	androidx.compose.ui.modifier	NEVER	Modifier.Node API (guest node code)
+1	modifierLocalMapOf	androidx.compose.ui.modifier	UNMAPPED	androidx.compose.ui.modifier.modifierLocalMapOf
+1	NestedScrollDispatcher	androidx.compose.ui.input.nestedscroll	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	onGloballyPositioned	androidx.compose.ui.layout	NOPR	size/position callbacks (onSizeChanged, onGloballyPositioned)
+1	StiffnessMediumLow	androidx.compose.animation.core.Spring	HAVE	in the prototype
+1	positionInParent	androidx.compose.ui.layout	UNMAPPED	androidx.compose.ui.layout.positionInParent
+1	FocusEventModifierNode	androidx.compose.ui.focus	NOPR	focus
+1	FocusState	androidx.compose.ui.focus	NOPR	focus
+1	PlatformTextInputMethodRequest	androidx.compose.ui.platform	UNMAPPED	androidx.compose.ui.platform.PlatformTextInputMethodRequest
+1	PlatformTextInputModifierNode	androidx.compose.ui.platform	UNMAPPED	androidx.compose.ui.platform.PlatformTextInputModifierNode
+1	PlatformTextInputSession	androidx.compose.ui.platform	UNMAPPED	androidx.compose.ui.platform.PlatformTextInputSession
+1	establishTextInputSession	androidx.compose.ui.platform	UNMAPPED	androidx.compose.ui.platform.establishTextInputSession
+1	InterceptPlatformTextInput	androidx.compose.ui.platform	NEVER	host locals / layout coordinates read synchronously
+1	pointerHoverIcon	androidx.compose.ui.input.pointer	NEVER	guest pointer code (pointerInput)
+1	stylusHoverIcon	androidx.compose.ui.input.pointer	NEVER	guest pointer code (pointerInput)
+1	IntRect	androidx.compose.ui.unit	MS4	MS4-13
+1	PopupPositionProvider	androidx.compose.ui.window	NEVER	custom layout (measure in guest)
+1	rotate	androidx.compose.ui.draw	HAVE	in the prototype
+1	safeContent	androidx.compose.foundation.layout	MS4	MS4-12
+1	VerticalRuler	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	dropShadow	androidx.compose.ui.draw	MS4	MS4-12
+1	innerShadow	androidx.compose.ui.draw	MS4	MS4-12
+1	KeyboardActions	androidx.compose.foundation.text	MS4	G1
+1	SubcomposeLayout	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	Shape	androidx.compose.ui.graphics	HAVE	in the prototype
+1	drawOutline	androidx.compose.ui.graphics	MS4	G1/G3
+1	invalidateDraw	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+1	VelocityTracker	androidx.compose.ui.input.pointer.util	NEVER	guest pointer code (pointerInput)
+1	calculateTargetValue	androidx.compose.animation.core	MS4	MS4-20
+1	splineBasedDecay	androidx.compose.animation	MS4	MS4-20
+1	AnimationEndReason	androidx.compose.animation.core	HAVE	in the prototype
+1	exponentialDecay	androidx.compose.animation.core	MS4	MS4-20
+1	TwoWayConverter	androidx.compose.animation.core	HAVE	in the prototype
+1	animateValueAsState	androidx.compose.animation.core	MS4	MS4-20
+1	animateDpAsState	androidx.compose.animation.core	HAVE	in the prototype
+1	animateOffsetAsState	androidx.compose.animation.core	MS4	MS4-20
+1	StartOffset	androidx.compose.animation.core	MS4	MS4-20
+1	StartOffsetType	androidx.compose.animation.core	MS4	MS4-20
+1	ArcAnimationSpec	androidx.compose.animation.core	EXP	keyframesWithSpline / arc (ExperimentalAnimationSpecApi)
+1	FastOutLinearInEasing	androidx.compose.animation.core	HAVE	in the prototype
+1	animateValue	androidx.compose.animation.core	MS4	MS4-20
+1	ColorFilter	androidx.compose.ui.graphics	HAVE	in the prototype
+1	Path	androidx.compose.ui.graphics	MS4	G3
+1	PathEasing	androidx.compose.animation.core	MS4	MS4-20
+1	AnimationState	androidx.compose.animation.core	MS4	MS4-20
+1	animateTo	androidx.compose.animation.core	MS4	MS4-21
+1	isFinished	androidx.compose.animation.core	MS4	MS4-20
+1	createChildTransition	androidx.compose.animation.core	MS4	MS4-20
+1	SeekableTransitionState	androidx.compose.animation.core	MS4	MS4-20
+1	BoundsTransform	androidx.compose.animation	NOPR	shared elements (C7: in no PR)
+1	fastForEach	androidx.compose.ui.util	MS4	trivial (pure-Kotlin ui-util: keep the real library, do not rename)
+1	SlideDirection	androidx.compose.animation.AnimatedContentTransitionScope	MS4	MS4-20
+1	DeferredAnimatedContent	androidx.compose.animation	MS4	MS4-20
+1	MutableContentTransform	androidx.compose.animation	MS4	MS4-20
+1	Animatable	androidx.compose.animation	HAVE	in the prototype
+1	AnimationSpec	androidx.compose.animation.core	HAVE	in the prototype
+1	expandHorizontally	androidx.compose.animation	HAVE	in the prototype
+1	shrinkHorizontally	androidx.compose.animation	HAVE	in the prototype
+1	ColumnScope	androidx.compose.foundation.layout	HAVE	in the prototype
+1	slideIn	androidx.compose.animation	MS4	MS4-20
+1	slideOut	androidx.compose.animation	MS4	MS4-20
+1	AnimatedVisibilityScope	androidx.compose.animation	HAVE	in the prototype
+1	DeferredAnimatedVisibility	androidx.compose.animation	MS4	MS4-20
+1	MutableTransform	androidx.compose.animation	MS4	MS4-20
+1	Crossfade	androidx.compose.animation	MS4	MS4-20
+1	CustomizedLookaheadAnimationVisualDebugging	androidx.compose.animation	MS4	MS4-20
+1	Create	androidx.compose.material.icons.outlined	MS4	MS4-19
+1	EnterTransition	androidx.compose.animation	HAVE	in the prototype
+1	Favorite	androidx.compose.material.icons.outlined	MS4	MS4-19
+1	Share	androidx.compose.material.icons.outlined	MS4	MS4-19
+1	requiredHeightIn	androidx.compose.foundation.layout	MS4	MS4-12
+1	PagerDefaults	androidx.compose.foundation.pager	MS4	MS4-38
+1	PagerSnapDistance	androidx.compose.foundation.pager	UNMAPPED	androidx.compose.foundation.pager.PagerSnapDistance
+1	lookaheadScopeCoordinates	androidx.compose.ui.layout	UNMAPPED	androidx.compose.ui.layout.lookaheadScopeCoordinates
+1	BoxWithConstraints	androidx.compose.foundation.layout	MS4	MS4-09
+1	VerticalAlignmentLine	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	ContextualFlowColumnOverflow	androidx.compose.foundation.layout	MS4	MS4-12
+1	ContextualFlowColumnOverflowScope	androidx.compose.foundation.layout	MS4	MS4-12
+1	ContextualFlowRowOverflow	androidx.compose.foundation.layout	MS4	MS4-12
+1	ContextualFlowRowOverflowScope	androidx.compose.foundation.layout	MS4	MS4-12
+1	FlexJustifyContent	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+1	FlexAlignContent	androidx.compose.foundation.layout	EXP	FlexBox (1.12, ExperimentalFlexBoxApi)
+1	LastBaseline	androidx.compose.ui.layout	NEVER	custom layout (measure in guest)
+1	FlowColumnOverflowScope	androidx.compose.foundation.layout	MS4	MS4-12
+1	FlowRowOverflowScope	androidx.compose.foundation.layout	MS4	MS4-12
+1	drawText	androidx.compose.ui.text	NEVER	host locals / layout coordinates read synchronously
+1	rememberTextMeasurer	androidx.compose.ui.text	NEVER	host locals / layout coordinates read synchronously
+1	GridTrackSize	androidx.compose.foundation.layout	EXP	Grid (1.12, ExperimentalGridApi)
+1	GridFlow	androidx.compose.foundation.layout	MS4	MS4-12
+1	absolutePadding	androidx.compose.foundation.layout	MS4	MS4-12
+1	paddingFrom	androidx.compose.foundation.layout	MS4	MS4-12
+1	defaultMinSize	androidx.compose.foundation.layout	MS4	MS4-12
+1	requiredSizeIn	androidx.compose.foundation.layout	MS4	MS4-12
+1	visible	androidx.compose.foundation.layout	MS4	MS4-12
+1	safeDrawingPadding	androidx.compose.foundation.layout	MS4	MS4-18
+1	NavigationBars	androidx.compose.ui.layout.WindowInsetsRulers.Companion	NEVER	custom layout (measure in guest)
+1	SafeContent	androidx.compose.ui.layout.WindowInsetsRulers.Companion	NEVER	custom layout (measure in guest)
+1	StatusBars	androidx.compose.ui.layout.WindowInsetsRulers.Companion	NEVER	custom layout (measure in guest)
+1	fitInside	androidx.compose.foundation.layout	MS4	MS4-12
+1	fitOutside	androidx.compose.foundation.layout	MS4	MS4-12
+1	AnchoredDraggableState	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	DraggableAnchors	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	anchoredDraggable	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	MarqueeAnimationMode	androidx.compose.foundation	UNMAPPED	androidx.compose.foundation.MarqueeAnimationMode
+1	MarqueeSpacing	androidx.compose.foundation	MS4	G1
+1	KeyboardType	androidx.compose.ui.text.input	MS4	G1
+1	OffsetMapping	androidx.compose.ui.text.input	MS4	G1
+1	TransformedText	androidx.compose.ui.text.input	MS4	G1
+1	then	androidx.compose.foundation.text.input	NEVER	per-keystroke guest code (#312: outside the mechanism)
+1	maxLength	androidx.compose.foundation.text.input	NEVER	per-keystroke guest code (#312: outside the mechanism)
+1	forEachChange	androidx.compose.foundation.text.input	UNMAPPED	androidx.compose.foundation.text.input.forEachChange
+1	forEachChangeReversed	androidx.compose.foundation.text.input	UNMAPPED	androidx.compose.foundation.text.input.forEachChangeReversed
+1	toTextFieldBuffer	androidx.compose.foundation.text.input	UNMAPPED	androidx.compose.foundation.text.input.toTextFieldBuffer
+1	filterTextContextMenuComponents	androidx.compose.foundation.text.contextmenu.modifier	UNMAPPED	androidx.compose.foundation.text.contextmenu.modifier.filterTextContextMenuComponents
+1	isSystemInDarkTheme	androidx.compose.foundation	MS4	MS4-14
+1	awaitHorizontalDragOrCancellation	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.awaitHorizontalDragOrCancellation
+1	horizontalDrag	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+1	detectHorizontalDragGestures	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+1	awaitVerticalDragOrCancellation	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.awaitVerticalDragOrCancellation
+1	detectVerticalDragGestures	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+1	awaitDragOrCancellation	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+1	drag	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+1	detectDragGestures	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+1	detectDragGesturesAfterLongPress	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+1	draggable2D	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	rememberDraggable2DState	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	focusGroup	androidx.compose.foundation	NOPR	focus
+1	collectIsHoveredAsState	androidx.compose.foundation.interaction	MS4	MS4-15
+1	hoverable	androidx.compose.foundation	MS4	MS4-12
+1	BitmapPainter	androidx.compose.ui.graphics.painter	MS4	G1/G3
+1	InlineTextContent	androidx.compose.foundation.text	NOPR	AnnotatedString inline content (C7: in no PR)
+1	Placeholder	androidx.compose.ui.text	MS4	G1
+1	PlaceholderVerticalAlign	androidx.compose.ui.text	MS4	G1
+1	appendInlineContent	androidx.compose.foundation.text	NOPR	AnnotatedString inline content (C7: in no PR)
+1	em	androidx.compose.ui.unit	HAVE	in the prototype
+1	collectIsDraggedAsState	androidx.compose.foundation.interaction	MS4	MS4-15
+1	collectIsPressedAsState	androidx.compose.foundation.interaction	MS4	MS4-15
+1	DragInteraction	androidx.compose.foundation.interaction	MS4	MS4-15
+1	Interaction	androidx.compose.foundation.interaction	MS4	MS4-15
+1	PressInteraction	androidx.compose.foundation.interaction	MS4	MS4-15
+1	LazyGridState	androidx.compose.foundation.lazy.grid	MS4	MS4-15
+1	LazyLayoutPrefetchState	androidx.compose.foundation.lazy.layout	MS4	MS4-38
+1	LazyLayoutMeasureScope	androidx.compose.foundation.lazy.layout	MS4	MS4-38
+1	LazyLayoutScrollScope	androidx.compose.foundation.lazy.staggeredgrid	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	LazyStaggeredGridState	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-15
+1	rememberLazyStaggeredGridState	androidx.compose.foundation.lazy.staggeredgrid	MS4	MS4-15
+1	DelegatableNode	androidx.compose.ui.node	NEVER	Modifier.Node API (guest node code)
+1	OverscrollEffect	androidx.compose.foundation	HAVE	in the prototype
+1	withoutVisualEffect	androidx.compose.foundation	UNMAPPED	androidx.compose.foundation.withoutVisualEffect
+1	VerticalPager	androidx.compose.foundation.pager	MS4	MS4-38
+1	LazyLayoutScrollScope	androidx.compose.foundation.pager	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	rememberScrollable2DState	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	scrollable2D	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	MutatePriority	androidx.compose.foundation	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	ScrollScope	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.ScrollScope
+1	ScrollableState	androidx.compose.foundation.gestures	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	fastCoerceIn	androidx.compose.ui.util	UNMAPPED	androidx.compose.ui.util.fastCoerceIn
+1	scrollableArea	androidx.compose.foundation	NOPR	gesture state with guest callbacks (draggable/scrollable/anchored)
+1	KeyboardArrowDown	androidx.compose.material.icons.filled	MS4	MS4-19
+1	KeyboardArrowUp	androidx.compose.material.icons.filled	MS4	MS4-19
+1	BringIntoViewSpec	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.BringIntoViewSpec
+1	LocalBringIntoViewSpec	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+1	animateScrollBy	androidx.compose.foundation.gestures	MS4	MS4-15
+1	DisableSelection	androidx.compose.foundation.text.selection	MS4	MS4-12
+1	animate	androidx.compose.foundation.style	MS4	MS4-21
+1	CustomStyle	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+1	StyleScope	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+1	StyleStateKey	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+1	state	androidx.compose.foundation.style	EXP	Style (1.12, ExperimentalFoundationStyleApi)
+1	awaitLongPressOrCancellation	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+1	TextAutoSizeLayoutScope	androidx.compose.foundation.text.modifiers	NEVER	custom layout (measure in guest)
+1	TextUnit	androidx.compose.ui.unit	HAVE	in the prototype
+1	detectTransformGestures	androidx.compose.foundation.gestures	NEVER	guest pointer code (pointerInput)
+1	calculateRotation	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.calculateRotation
+1	calculateZoom	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.calculateZoom
+1	calculatePan	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.calculatePan
+1	calculateCentroid	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.calculateCentroid
+1	calculateCentroidSize	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.calculateCentroidSize
+1	animateBy	androidx.compose.foundation.gestures	UNMAPPED	androidx.compose.foundation.gestures.animateBy
+1	AlertDialogDefaults	androidx.compose.material3	MS4	MS4-18
+1	BasicAlertDialog	androidx.compose.material3	MS4	MS4-18
+1	CenterAlignedTopAppBar	androidx.compose.material3	MS4	MS4-18
+1	Star	androidx.compose.material.icons.outlined	MS4	MS4-19
+1	MediumTopAppBar	androidx.compose.material3	MS4	MS4-18
+1	LargeTopAppBar	androidx.compose.material3	MS4	MS4-18
+1	Badge	androidx.compose.material3	MS4	MS4-16
+1	BadgedBox	androidx.compose.material3	MS4	MS4-16
+1	ModalBottomSheet	androidx.compose.material3	MS4	MS4-18
+1	rememberModalBottomSheetState	androidx.compose.material3	MS4	MS4-39
+1	BottomSheetScaffold	androidx.compose.material3	MS4	MS4-18
+1	rememberBottomSheetScaffoldState	androidx.compose.material3	MS4	MS4-39
+1	ElevatedButton	androidx.compose.material3	MS4	MS4-16
+1	FilledTonalButton	androidx.compose.material3	MS4	MS4-16
+1	ElevatedAssistChip	androidx.compose.material3	MS4	MS4-16
+1	ElevatedFilterChip	androidx.compose.material3	MS4	MS4-16
+1	Home	androidx.compose.material.icons.filled	MS4	MS4-19
+1	InputChipDefaults	androidx.compose.material3	MS4	MS4-16
+1	Person	androidx.compose.material.icons.filled	MS4	MS4-19
+1	SuggestionChip	androidx.compose.material3	MS4	MS4-16
+1	ElevatedSuggestionChip	androidx.compose.material3	MS4	MS4-16
+1	ArrowDropDown	androidx.compose.material.icons.filled	MS4	MS4-19
+1	ArrowRight	androidx.compose.material.icons.automirrored.filled	MS4	MS4-19
+1	VerticalDivider	androidx.compose.material3	MS4	MS4-16
+1	fastForEachIndexed	androidx.compose.ui.util	MS4	trivial (pure-Kotlin ui-util: keep the real library, do not rename)
+1	DisplayMode	androidx.compose.material3	MS4	MS4-18
+1	Close	androidx.compose.material.icons.filled	HAVE	in the prototype
+1	DatePickerDefaults	androidx.compose.material3	MS4	MS4-18
+1	DateRangePicker	androidx.compose.material3	MS4	MS4-18
+1	rememberDateRangePickerState	androidx.compose.material3	MS4	MS4-39
+1	ModalDrawerSheet	androidx.compose.material3	MS4	MS4-18
+1	ModalNavigationDrawer	androidx.compose.material3	MS4	MS4-18
+1	NavigationDrawerItemDefaults	androidx.compose.material3	MS4	MS4-18
+1	PermanentDrawerSheet	androidx.compose.material3	MS4	MS4-18
+1	PermanentNavigationDrawer	androidx.compose.material3	MS4	MS4-18
+1	DismissibleDrawerSheet	androidx.compose.material3	MS4	MS4-18
+1	DismissibleNavigationDrawer	androidx.compose.material3	MS4	MS4-18
+1	SmallFloatingActionButton	androidx.compose.material3	MS4	MS4-18
+1	LargeFloatingActionButton	androidx.compose.material3	MS4	MS4-18
+1	IconToggleButton	androidx.compose.material3	MS4	MS4-16
+1	FilledIconButton	androidx.compose.material3	MS4	MS4-16
+1	FilledIconToggleButton	androidx.compose.material3	MS4	MS4-16
+1	FilledTonalIconButton	androidx.compose.material3	MS4	MS4-16
+1	FilledTonalIconToggleButton	androidx.compose.material3	MS4	MS4-16
+1	OutlinedIconButton	androidx.compose.material3	MS4	MS4-16
+1	OutlinedIconToggleButton	androidx.compose.material3	MS4	MS4-16
+1	Email	androidx.compose.material.icons.outlined	MS4	MS4-19
+1	Settings	androidx.compose.material.icons.outlined	MS4	MS4-19
+1	NavigationItemIconPosition	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+1	ShortNavigationBarArrangement	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+1	NavigationRail	androidx.compose.material3	MS4	MS4-18
+1	NavigationRailItem	androidx.compose.material3	MS4	MS4-18
+1	PullToRefreshDefaults	androidx.compose.material3.pulltorefresh	MS4	MS4-18
+1	PullToRefreshState	androidx.compose.material3.pulltorefresh	MS4	MS4-39
+1	SnackbarVisuals	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+1	SnackbarResult	androidx.compose.material3	MS4	MS4-18
+1	SearchBar	androidx.compose.material3	MS4	MS4-18
+1	ExpandedDockedSearchBar	androidx.compose.material3	MS4	MS4-18
+1	SingleChoiceSegmentedButtonRow	androidx.compose.material3	MS4	MS4-17
+1	BookmarkBorder	androidx.compose.material.icons.filled	MS4	MS4-19
+1	MultiChoiceSegmentedButtonRow	androidx.compose.material3	MS4	MS4-17
+1	StarBorder	androidx.compose.material.icons.filled	MS4	MS4-19
+1	TrendingUp	androidx.compose.material.icons.automirrored.filled	HAVE	in the prototype
+1	SwipeToDismissBox	androidx.compose.material3	MS4	MS4-18
+1	SwipeToDismissBoxValue	androidx.compose.material3	MS4	MS4-18
+1	rememberSwipeToDismissBoxState	androidx.compose.material3	MS4	MS4-39
+1	SwitchDefaults	androidx.compose.material3	MS4	MS4-17
+1	AnimationVector1D	androidx.compose.animation.core	HAVE	in the prototype
+1	CornerRadius	androidx.compose.ui.geometry	UNMAPPED	androidx.compose.ui.geometry.CornerRadius
+1	TabIndicatorScope	androidx.compose.material3	MS4	MS4-16..18 (unlisted M3 name)
+1	TabPosition	androidx.compose.material3	MS4	MS4-18
+1	clearText	androidx.compose.foundation.text.input	MS4	MS4-15
+1	clearAndSetSemantics	androidx.compose.ui.semantics	NOPR	semantics
+1	error	androidx.compose.ui.semantics	NOPR	semantics
+1	maxTextLength	androidx.compose.ui.semantics	NOPR	semantics
+1	SecureTextField	androidx.compose.material3	MS4	MS4-17
+1	TextObfuscationMode	androidx.compose.foundation.text.input	MS4	G1
+1	Visibility	androidx.compose.material.icons.filled	MS4	MS4-19
+1	VisibilityOff	androidx.compose.material.icons.filled	MS4	MS4-19
+1	LinkAnnotation	androidx.compose.ui.text	MS4	G1
+1	withLink	androidx.compose.ui.text	MS4	G1
+1	TimePicker	androidx.compose.material3	MS4	MS4-18
+1	TimeInput	androidx.compose.material3	MS4	MS4-18
+1	AddCircle	androidx.compose.material.icons.filled	MS4	MS4-19

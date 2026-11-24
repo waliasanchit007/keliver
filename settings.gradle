@@ -84,6 +84,11 @@ if (providers.gradleProperty('keliver.gatebIos').present) {
 if (providers.gradleProperty('keliver.guestProfile').present) {
   include ':keliver-compose-gatea-profile'
 }
+// Research spike (stone U1): AndroidX's Compose samples compiled as guest code. Only with
+// -Pkeliver.googleSamples=<AndroidX samples checkout>; never in CI, never published.
+if (providers.gradleProperty('keliver.googleSamples').present) {
+  include ':keliver-compose-google-samples-spike'
+}
 include ':keliver-composeui'
 include ':keliver-gradle-plugin'
 
