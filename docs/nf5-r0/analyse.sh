@@ -1,8 +1,10 @@
 #!/system/bin/sh
 # NF5 R0: the queries for one arm, ON THE PHONE, with the trace_processor_shell next to this file.
 #   sh analyse.sh <arm> groups   q0a (the tap groups) and q0b (the main thread's messages before E)
-#   sh analyse.sh <arm> measure  q1 (per open), q2 (medians, W, the projection), q3 (what d_other
-#                                 blocked on), qc (the identity check against the results file)
+#   sh analyse.sh <arm> measure  q1 (per open), q2 (medians, W, the projection; on simple-on-idle
+#                                 over the opens idle at the UP; then each CPU's maximum frequency),
+#                                 q3 (what d_other blocked on), qc (the identity check against the
+#                                 results file, and how many opens were idle at the UP)
 #   sh analyse.sh all            groups and measure for the four arms, into analyse-all.txt, then
 #                                 analyse-done.txt (about 20 minutes on the A12); run it detached:
 #     adb shell '(nohup sh /data/local/tmp/nf5floor/analyse.sh all < /dev/null > /dev/null 2>&1 &)'
@@ -37,7 +39,9 @@ case "$what" in
     U=$L.upname.txt; [ -s $U ] || U=upname.txt
     [ -s $U ] || { echo "analyse.sh: put the UP message's name from $L.q0b.txt into $L.upname.txt" >&2; exit 1; }
     echo "== $L UP message: $(cat $U) (from $U)"
-    sed "s|UPNAME|$(cat $U)|" measure.sql > $L.m.sql
+    # IDLEONLY: q2's medians on the rule's arm use only the opens idle at the UP (R-L1).
+    I=0; [ "$L" = simple-on-idle ] && I=1
+    sed -e "s|UPNAME|$(cat $U)|" -e "s|IDLEONLY|$I|" measure.sql > $L.m.sql
     # The bench's own click -> composed per open (whole ms, the guest's clock), as a table for qc.
     grep '"bench":"open"' $L.results.txt | while read -r line; do
       i=$(echo "$line" | sed 's/.*"i":\([0-9]*\).*/\1/'); c=$(echo "$line" | sed 's/.*"click":\([0-9]*\).*/\1/')
