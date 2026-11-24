@@ -37,10 +37,11 @@ jobs:
     # battery.
     runs-on: macos-latest
     # The whole graph on one runner did not finish in 240 minutes (run 45264597107, 2026-11-23: no
-    # task failed in the 3.5 hours it logged). Four shards (.github/nightly/shard.init.gradle) run in
-    # parallel; each compiles its own projects' upstream modules again, so the total is more than a
-    # quarter. 180 is a ceiling, set again from the first sharded run.
-    timeout-minutes: 180
+    # task failed in the 3.5 hours it logged, and it never reached the release framework links).
+    # Four shards (.github/nightly/shard.init.gradle) run in parallel. The first sharded run
+    # (45302672562, 2026-11-24) ran every project's build and took 5-17 minutes per shard, warm from
+    # ci.yml's cache; 90 leaves room for a cold cache.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
