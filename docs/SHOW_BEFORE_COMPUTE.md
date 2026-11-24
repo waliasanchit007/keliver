@@ -1,6 +1,6 @@
 # NF5: show before compute (design)
 
-Status: **design, revision 5; section 11 decided by the owner 2026-11-24. No production code.** Written 2026-11-24 for WS7 of
+Status: **design, revision 6; section 11 decided by the owner 2026-11-24. No production code.** Written 2026-11-24 for WS7 of
 [`PLAN_2026-11.md`](PLAN_2026-11.md). The owner chose this step on 2026-11-24, on one condition:
 "it has to be executed perfectly". Revision 2 answered the first independent review (verdict: needs
 rework). Revision 3 answered the second (needs rework, scoped to (B)): (B)'s reveal became a
@@ -15,7 +15,12 @@ new design round; R0 ready**): a reveal overrides `Pending`, `Cancelled` ends on
 `CANCEL_LIMIT` releases only the back, the reveal's back callback is owned by a container-level
 holder from the click on (3.2, I12 to I14), and R0's rule counts all of the guest's running time in
 G, on any cluster, and only the opens whose guest was idle at the UP (section 7, appendix D).
-[Appendix A](#appendix-a-review-response) answers every finding of the four rounds, one line each.
+Revision 6 answers the fifth, a final check of revision 5 (**fix first**, no new design round, R0
+not affected): the back-callback holder re-adds the current callback when it enters a new
+composition (activity recreation), the cancel's ack carries an `e_ack` for every entry it left in
+the container, defined once as the epoch right after the cancel, and an entry under a reveal draws
+its current content, inert, with the content-first order's own frames in I14 (3.2, 3.5, I12 to I14).
+[Appendix A](#appendix-a-review-response) answers every finding of the five rounds, one line each.
 
 NF5 has two halves:
 - **(A) Cached first frame.** On a cold start the host draws, from storage, the first screen as the
@@ -77,8 +82,9 @@ press on the A12). The guest then answers the tap explicitly: it binds the shell
 declines it (3.2).
 
 **Before any (B) PR** (section 9):
-1. **Decision 7, what "open" means for the bar** (section 11). It is needed now, not after B5: the
-   arithmetic above already says the (B) gates fail with data.
+1. **Decision 7, what "open" means for the bar** (section 11): **decided by the owner on
+   2026-11-24, (b), the split**, with round 3's three conditions. It was needed before B5 because
+   the arithmetic above already says the (B) gates fail with data. (B) now waits only on R0 and R1.
 2. **R0, the A12 trace of one floor step** (appendix D; tomorrow's phone session, 2026-11-25),
    on a new arm whose click reaches an idle guest, as (B)'s will. It says how much of the step is
    waiting that a host or runtime change could remove, and projects the simple open from the
@@ -605,9 +611,11 @@ the stack still holds what t's click pushed on top of the recorded one (a bound 
 pushed by an `otherKind` click), it restores the recorded stack: it pops what the click pushed,
 without a result, parking or disposing each entry as a pop does (3.3). Otherwise (nothing was
 pushed; a back already popped it; or t is a token this guest never saw, a guest started after a
-reload or a code swap) it changes nothing. Either way it then sets `cancelAcked = t`, with `e_ack`,
-the revealed entry's epoch as it now declares it (round 4, N2: the host's `Cancelled` ends on it,
-below). So a cancel
+reload or a code swap) it changes nothing. Either way it then sets `cancelAcked = t`, with an
+`e_ack` for **every entry the cancel left in the container**: the revealed entry, and any entry t's
+click pushed that the cancel parked rather than disposed (round 4, N2; round 5, M2: the host's
+`Cancelled` ends on them, below). **One definition (round 5, L1): an entry's `e_ack` is its epoch as
+keliver-nav declared it right after the cancel**, whatever travels in the same batch. So a cancel
 can never pop an entry that t did not push, and a second back that reached the guest first does
 not make the cancel pop the list. Unit tests in keliver-nav: cancel after a bind; after an
 `otherKind` push; after a guest-side back already popped the detail; for an unknown token; each
@@ -626,18 +634,22 @@ nothing: the reveal no longer depends on "the guest's next batch".
 |---|---|---|
 | `Revealed(t)` | the shell, **inert** (below) | `Bind(t)` for the revealed entry → `Binding(t)`; `Decline(t)`, or `Bind(t)` for another entry (M2) → hidden, when what replaces it is effective (below); back, the shell's back button or `REVEAL_LIMIT` → `Cancelled(t)` |
 | `Binding(t)` | the shell, still inert, **whatever `Pending` says** (round 4, N1: below) | the entry's state `Shown` and its content at the same epoch are both applied (I14) → **live**, in that frame, and `revealLive(t)` is sent; back or `REVEAL_LIMIT` → `Cancelled(t)` |
-| `Cancelled(t)` | **the entry that was shown at the tap** (the list), whatever the guest declares `Shown` meanwhile (M1) | `cancelAcked ≥ t` **and** the revealed entry's effective epoch is at least `e_ack`, the epoch declared in the ack's batch (round 4, N2). The ack carries it: `e_ack` is the entry's epoch as keliver-nav declared it after the cancel (the pop's epoch, or the current one when the cancel found nothing to undo), which is the epoch the ack's batch declares when the two travel together, and still the right one if the ack reaches the host a batch before that state. The same holds for any entry t's click pushed that stays in the container; an entry the cancel removed needs nothing more. Until then the host ignores every answer for `t`: the same rule as the retained back's `backHandled` counter (`Retained.kt:120–139`). **Any `Shown` after that is a new navigation**, drawn by the ordinary rules (I14). `CANCEL_LIMIT` releases the held back but does not end it (below) |
+| `Cancelled(t)` | **the entry that was shown at the tap** (the list), whatever the guest declares `Shown` meanwhile (M1) | `cancelAcked ≥ t` **and**, for **every** entry the ack lists, that entry's effective epoch is at least its `e_ack` (round 4, N2; round 5, M2). The ack carries one `e_ack` per entry the cancel left in the container: the revealed entry, and each entry t's click pushed that the cancel parked; an entry the cancel disposed is not listed and needs nothing more. An entry's `e_ack` is its epoch as declared right after the cancel (round 5, L1): the pop's epoch, or the current one when the cancel found nothing to undo. It stays the right bound if the ack reaches the host a batch before that state, and if a later click in the ack's batch declares a newer epoch (the condition is `≥`). Until then the host ignores every answer for `t`: the same rule as the retained back's `backHandled` counter (`Retained.kt:120–139`). **Any `Shown` after that is a new navigation**, drawn by the ordinary rules (I14). `CANCEL_LIMIT` releases the held back but does not end it (below) |
 
 **A reveal overrides `Pending` (round 4, N1).** While the host holds `Revealed(t)` or `Binding(t)`
-for an entry, it draws that entry, inert, whatever `Pending` says: its last effective content (the
-shell). `Pending` (I14) governs only entries not under a reveal. On the reveal's main path the bind's
+for an entry, it draws that entry, inert, whatever `Pending` says: **its current content, inert**
+(round 5, M3: the shell until the bind's content is applied, then that content). `Pending` (I14)
+governs only entries not under a reveal. On the reveal's main path the bind's
 `(Shown, e+1)` comes from the main composition and its content a batch later from the
 sub-composition, so the entry is `Pending` for that batch; without this rule it would go shell →
-list → detail. In the other order (the bound content first, its state a batch later) the host keeps
-drawing the entry inert, now with the content t's bind composed, until the state makes it live. In
-both orders the entry goes live in the frame in which state and content agree. Host test (I14):
-the bind's state one batch before its content, and the reverse: the shell, then the live detail,
-and no frame shows the list in the shell's place.
+list → detail. In the other order (the bound content first, its state a batch later) the content
+root is one widget tree, so applying e+1's changes replaces the shell: the host draws the entry
+inert, now with the content t's bind composed, until the state makes it live. In both orders the
+entry goes live in the frame in which state and content agree. Host test (I14), the two orders with
+their own frames: **state first**: the shell (inert) until the content lands, then the live detail
+in that frame; **content first**: the shell, then the bound content inert from the frame the content
+is applied, then live in the frame its state is applied. In neither does any frame show the list in
+the shell's place.
 
 **Why `Cancelled` ends on the ack's epoch, not on "not `Shown`" (round 4, N2).** Back, then a
 re-tap on item 8 within 50 ms: while `Cancelled`, the re-tap takes the non-revealing path, and the
@@ -647,8 +659,9 @@ then never held, and `Cancelled` lasted until `CANCEL_LIMIT`: the list drawn and
 then item 8, with a normal gesture counted as `nav.cancelTimeout`. With `e_ack`, `Cancelled` ends
 once the host has applied what the guest declared up to the cancel; item 8's `(Shown, e+3)` is a new
 navigation, `Pending` until its content lands, and then drawn in its content's frame. If item 8's
-click is in the ack's own batch, `e_ack` is item 8's epoch, and `Cancelled` ends in the frame item 8's
-content is applied: the same frame.
+click is in the ack's own batch, `e_ack` is still e+2 (the epoch right after the cancel, L1), the
+host applies e+3 with it, so `Cancelled` ends in that batch's frame and item 8 is drawn in the frame
+its content is applied: no extra frame either way.
 
 **If the revealed entry disappears** while `Revealed` or `Binding` (M2: the guest dropped it on
 memory pressure or in the background, reset its navigation on a logout, or the click bound a fresh
@@ -684,6 +697,12 @@ shows, with no frame of the shell after its removal.
   So the callback has an owner from its first moment, and can never outlive the container or the
   code. (Revision 4 held it in a `DisposableEffect` keyed on the token: between the click and the
   composition that ran that effect nothing owned it, and a code swap in that window leaked it.)
+  **On entering a composition, the holder adds the current reveal callback, if any, to that
+  composition's back dispatcher (round 5, M1).** The holder outlives the view (M6), but its
+  `onDispose` runs with the old activity's composition and removes the callback there; so when an
+  activity is recreated during `Revealed`, `Binding` or `Cancelled` (a held back, or not yet past
+  `CANCEL_LIMIT`), the new composition's entry re-adds it, as the last-added callback, and back stays
+  the host's (I13).
   It is removed: when the entry goes live (in that frame; the retained back, NF1,
   takes over), when a decline takes effect, when `Cancelled` ends or reaches `CANCEL_LIMIT`, when the container leaves the
   composition (the content is unbound or crashes, or the view is detached and its composition
@@ -704,7 +723,12 @@ shows, with no frame of the shell after its removal.
   hidden detail, and the later cancel finds nothing to undo. The user's back is then used up
   without a visible change. That is the bounded cost of a guest stalled for more than 1 s, and it
   is counted. The guest's token-scoped cancel makes any back that reaches it first safe in the same
-  way.
+  way. **What bounds `Cancelled` itself (round 5, L2): nothing but a crash or a code swap.** A guest
+  that stays alive and never acks leaves the container on the list for good, and every later
+  navigation in it is ignored, with back released to the guest; the case is counted by
+  `nav.cancelTimeout(kind)` at the limit, so it is visible in release telemetry. That was chosen
+  over drawing what t pushed (the review's first option), because the latter shows a detail the
+  user backed out of.
 - **`REVEAL_LIMIT` covers tap → live (H3; proposed 1 s, decision 2),** over `Revealed` and
   `Binding` together: a `Bind` whose content never arrives (a stalled sub-composition, a root
   without `ContentEpoch`, a long GC in a varied rebind) is bounded too. The indicator is cosmetic:
@@ -723,7 +747,10 @@ shows, with no frame of the shell after its removal.
   token, the held back) live with `TreehouseAppContent`, beside the content's binding, not in the
   renderer's view, so they survive the view being rebound to a new activity; they are reset on a
   code swap. In `Cancelled`, the new view therefore draws the list, not the guest's still-`Shown`
-  detail. Host test: recreate the activity in each state; the new view draws what the old one did.
+  detail. Host test: recreate the activity in each state; the new view draws what the old one did,
+  and a back after the recreation is the host's (round 5, M1): in `Revealed` and `Binding` it
+  enters `Cancelled(t)`, in `Cancelled` before `CANCEL_LIMIT` it is held, and in none of these does
+  it reach the guest or the activity.
 - **After a decline** the shell goes in the same frame as what replaces it appears: for
   `noNavigation` and `cancelled`, the list, in the frame the decline is applied; for `otherKind`
   (and a `Bind` of another entry, M2), the other destination, in the frame it becomes effective
@@ -934,9 +961,9 @@ fails its generated tests.
 |---|---|---|
 | The retained container in the production widget system (NF1's production step) | keliver-material's host widgets, templates | B0 |
 | **An explicit entry state** on the container's entries, guest-declared: `Shown`, `Retained`, `Prepared`, each with its `epoch`. The host never places or draws a `Prepared` entry, and never makes it a back target; `goBack` skips it. Today the container protects hidden entries by their order alone (`shownIndex` is `lastIndex`, `goBack` takes `index - 1`, `Retained.kt:130–165`). Host feature `keliver.nav.retainedContainer@2` | the container's schema (a protocol change, covered by the schema lock) and its renderer | B0 |
-| **State applied only with its content (I14).** The host's effective state of an entry is its newest declared `(state, epoch)`, and it takes effect only when that epoch equals the `ContentEpoch` of the entry's applied content root. **While the two differ, the entry is `Pending`** (H1): never drawn, hit-tested, focused, revealed or used as a back target, and the container shows the nearest drawable entry below it. It never falls back to an earlier `Shown`: a guest that coalesced epoch e+2 into e+3 leaves the entry `Pending` until e+3's content arrives, not showing e+1's. **Except under a reveal** (round 4, N1): while the host holds `Revealed(t)` or `Binding(t)` for the entry, it draws it, inert, with its last effective content (the shell), whatever `Pending` says; `Pending` governs only entries not under a reveal | the container's renderer | B0 |
+| **State applied only with its content (I14).** The host's effective state of an entry is its newest declared `(state, epoch)`, and it takes effect only when that epoch equals the `ContentEpoch` of the entry's applied content root. **While the two differ, the entry is `Pending`** (H1): never drawn, hit-tested, focused, revealed or used as a back target, and the container shows the nearest drawable entry below it. It never falls back to an earlier `Shown`: a guest that coalesced epoch e+2 into e+3 leaves the entry `Pending` until e+3's content arrives, not showing e+1's. **Except under a reveal** (round 4, N1): while the host holds `Revealed(t)` or `Binding(t)` for the entry, it draws it with its current content, inert (the shell until the bind's content is applied, then that content; round 5, M3), whatever `Pending` says; `Pending` governs only entries not under a reveal | the container's renderer | B0 |
 | **Prepared entries measured while idle** (3.2, M5): measured with the container's constraints, not placed | the container's renderer | B0 |
-| **The reveal**, host feature `keliver.nav.reveal@1` (requires `@2`): the host-only states `Revealed`, `Binding`, `Cancelled` (3.2), kept with `TreehouseAppContent` and reset on a code swap (M6); one outstanding token at a time, and pointer events below the revealed entry consumed (H4); the one-task `sendEvents(reveal, click)` from the generated click dispatch and `LocalRevealTarget` (M3); the reveal's own back callback, added in the click handler and registered in the same call with a container-level holder kept with `TreehouseAppContent`, whose `onDispose` removes it (round 4, N4); the held back while `Cancelled`, released at `CANCEL_LIMIT` while what t pushed stays hidden until the ack (H2, N3); `revealBack()`; inert shell with the `revealIndicator` slot; `REVEAL_LIMIT` from tap to live and `CANCEL_LIMIT`, both paused while stopped; the accessibility of 3.2; the declined, timed-out and skipped counts | the container's renderer, `keliver-treehouse-host` (`UiEventSink.sendEvents`, `TreehouseAppContent`), the host codegen of click events | B4 (prototyped in B1) |
+| **The reveal**, host feature `keliver.nav.reveal@1` (requires `@2`): the host-only states `Revealed`, `Binding`, `Cancelled` (3.2), kept with `TreehouseAppContent` and reset on a code swap (M6); one outstanding token at a time, and pointer events below the revealed entry consumed (H4); the one-task `sendEvents(reveal, click)` from the generated click dispatch and `LocalRevealTarget` (M3); the reveal's own back callback, added in the click handler and registered in the same call with a container-level holder kept with `TreehouseAppContent`, whose `onDispose` removes it (round 4, N4) and whose entry into a new composition re-adds the current one (round 5, M1); the ack's `e_ack` per entry left in the container (round 5, M2); the held back while `Cancelled`, released at `CANCEL_LIMIT` while what t pushed stays hidden until the ack (H2, N3); `revealBack()`; inert shell with the `revealIndicator` slot; `REVEAL_LIMIT` from tap to live and `CANCEL_LIMIT`, both paused while stopped; the accessibility of 3.2; the declined, timed-out and skipped counts | the container's renderer, `keliver-treehouse-host` (`UiEventSink.sendEvents`, `TreehouseAppContent`), the host codegen of click events | B4 (prototyped in B1) |
 | **Park and dispose counts** (3.3, M6): `nav.parked(kind)`, `nav.disposed(kind, leaked)` | the container's renderer, `KeliverHost`'s listener (templates) | B2 |
 | Two host signals with events to the guest: "user input active" (a touch is down or a fling runs) and "memory pressure" (Android `onTrimMemory` at `RUNNING_LOW` or above; iOS `didReceiveMemoryWarning`) | templates, host features | B3 |
 
@@ -975,7 +1002,7 @@ It does not change:
   the per-token answers, the token-scoped cancel after the click, the back callback's lifetime and
   the held back while `Cancelled` and its release at `CANCEL_LIMIT`, `REVEAL_LIMIT` from tap to
   live, one token at a time, the epoch rule with `Pending` (and the reveal's override of it, N1),
-  `Cancelled`'s end on `e_ack` (N2), and the host tests of I12, I13 and I14 against the guest profile's stack.
+  `Cancelled`'s end on each listed entry's `e_ack` (N2, M2), the holder across recreation (M1), and the host tests of I12, I13 and I14 against the guest profile's stack.
 - **A slice budget in A12 milliseconds**, stated before the spike: at most 8 ms of guest work per
   slice on the A12 (about 0.3–0.7 ms on the Mac at ratios of 12–30).
 - **A hidden entry recomposes when what it reads changes.** The three-way detail reads the app's
@@ -1232,7 +1259,11 @@ same: `Binding` ends at 1.0 s in `Cancelled`, H3); one whose answer arrives at 0
 indicator's window (handled: the entry goes live); one whose click does not navigate
 (`Decline(noNavigation)`, the list in that frame); one whose answer comes after `REVEAL_LIMIT`
 (ignored; the guest's stack ends `[List]`); one that never acks a cancel (the held back is
-re-dispatched and the callback removed at `CANCEL_LIMIT`); **one stalled for 2 s after the click,
+re-dispatched and the callback removed at `CANCEL_LIMIT`, and `nav.cancelTimeout` counted; after
+the limit, 10 s on the fake clock, every frame still draws the list, no frame contains a node of
+what t pushed, a later back reaches the guest's callback, and a later navigation declared by the
+guest is not drawn: round 5, L2, the bound being only a crash or a code swap, each tested to end
+`Cancelled` in its frame); **one stalled for 2 s after the click,
 with back at 20 ms and again at 300 ms** (round 4, N3): at 1.0 s the callback is removed, the
 held back is re-dispatched as a back on the list (the guest's last reported back state is
 disabled, so the activity's fallback receives it) and `nav.cancelTimeout` is counted; the guest's
@@ -1258,7 +1289,8 @@ bind (3.2).
 **Enforced:** the protocol of 3.2 (the generated click dispatch, one token at a time, the one-task
 send, the back callback registered in the click handler with the container-level holder, the held
 back while `Cancelled` and its release at `CANCEL_LIMIT`, the token-scoped cancel, `Cancelled` held
-until `cancelAcked ≥ t` and the revealed entry's effective epoch reaches the ack's batch's `e_ack`).
+until `cancelAcked ≥ t` and every entry the ack lists has reached its `e_ack`; the holder re-adding
+the current callback when it enters a new composition, round 5, M1).
 **Tested** (host tests, JVM Compose UI with a fake clock and a scripted guest on keliver-nav, whose
 bind batch comes 150 ms after the click; each can fail):
 - **the guest killed at 50 ms after the tap, and the code swapped at 50 ms** (H2): the reveal's
@@ -1280,9 +1312,14 @@ bind batch comes 150 ms after the click; each can fail):
 - **non-clicks** (M3): a scroll that cancels the press, a long press, a disabled row, a trailing
   button: no reveal;
 - **`Decline(otherKind)` then back before the login is effective** (M1): the list stays drawn, the
-  login never appears, the guest's stack ends `[List]`;
+  login never appears, the guest's stack ends `[List]`. Run with the login non-rebindable (the cancel
+  disposes it) and with it a rebindable entry of another kind (the cancel parks it, and the ack
+  lists it with its `e_ack`, round 5, M2), each also **with the ack forced a batch before the park's
+  `(Prepared, e+1)`**: `Cancelled` holds until the parked entry's state and content are applied, and
+  no frame after the back contains a node of the login;
 - **the revealed entry removed, and a bind of another entry of the same kind** (M2), as in 3.2;
-- **activity recreation in each state** (M6), as in 3.2;
+- **activity recreation in each state** (M6), as in 3.2, with a back after each recreation: the
+  host's, never the guest's or the activity's (round 5, M1);
 - **back at 0, 20, 80 and 200 ms after the tap** (0: in the tap's own frame, before the reveal has
   drawn; 200: after the bind made the entry live, so the retained back takes it): each ends on the
   list, the guest's stack is `[List]`, the activity received no back, and no frame after the back
@@ -1313,18 +1350,23 @@ only when its content root's `ContentEpoch` equals the epoch; **until then the e
 not drawn, hit-tested, focused, revealed or a back target, with the nearest drawable entry below it
 shown. It never falls back to an earlier `Shown` (round 3, H1: falling back re-showed item 7's
 detail, live, under item 8's tap). **Under a reveal, `Pending` does not apply** (round 4, N1):
-while the host holds `Revealed(t)` or `Binding(t)` for an entry, it draws that entry, inert, with
-its last effective content (the shell), whatever `Pending` says, and the entry goes live only when
-state and content agree. `Cancelled(t)` ends only when `cancelAcked ≥ t` and the revealed entry's
-effective epoch is at least `e_ack`, the epoch declared in the ack's batch, which the ack carries
-(round 4, N2),
+while the host holds `Revealed(t)` or `Binding(t)` for an entry, it draws that entry with its
+current content, inert (round 5, M3: the shell until the bind's content is applied, then that
+content), whatever `Pending` says, and the entry goes live only when state and content agree.
+`Cancelled(t)` ends only when `cancelAcked ≥ t` and every entry the ack lists (the revealed entry
+and each entry t's click pushed that the cancel parked) has an effective epoch of at least its
+`e_ack`, its epoch as declared right after the cancel, which the ack carries (round 4, N2; round 5,
+M2 and L1),
 so the parked content arriving a batch after the ack cannot flash the detail, and a `Shown` after
 that, a new navigation, does not keep `Cancelled` alive. A tap finds a revealable entry only in an
 effective `Prepared` state. **Tested:**
 - **the bind's state one batch before its content** (round 4, N1): a reveal; `Bind(t)` with
   `(Shown, e+1)` in one batch, the content at e+1 in the next. Every frame from the tap shows the
   shell, inert, until the content's frame, which shows the live detail; no frame shows the list in
-  the shell's place. And the reverse order (the content first): the same frames;
+  the shell's place. **And the reverse order (the content first), with its own frames** (round 5,
+  M3): the shell, inert, until the content's frame; from that frame the bound content, inert (taps
+  consumed, the indicator's rules unchanged); live in the frame its `(Shown, e+1)` is applied; no
+  frame shows the list;
 - **the state first, with the content coalesced** (H1, scenario A): item 7 shown at e+1; back (the
   retained back shows the list); the guest's `(Prepared, e+2)` and `backHandled` arrive; the
   parked content skips e+2 and comes as e+3 a batch later. Between those batches the entry is
@@ -1428,7 +1470,7 @@ body:   a SnapshotChangeList as the bridge's JSON, gzip-compressed
 | A recording condition fails at the `ready` edge (2.3) | the recorder | nothing visible; the previous frame stays | `cachedFrame.writeSkipped(reason)` |
 | (B) The guest does not answer a reveal, or answers `Bind` but its content never arrives | `REVEAL_LIMIT`, from the tap to live | the shell, with the indicator from `REVEAL_LIMIT` − 300 ms, then the list | `nav.revealTimeout(kind, state)`; `cancelReveal` sent |
 | (B) The guest declines a reveal | its answer | the list, or the other destination, in that frame | `nav.revealDeclined(kind, reason)` |
-| (B) The guest never acknowledges a cancel | `CANCEL_LIMIT` | the list; a held back is delivered at the limit, and what t pushed stays hidden until the ack (N3) | `nav.cancelTimeout(kind)` |
+| (B) The guest never acknowledges a cancel | `CANCEL_LIMIT` | the list; a held back is delivered at the limit, and what t pushed stays hidden until the ack (N3). Nothing but a crash or a code swap bounds `Cancelled` after that: a guest alive that never acks leaves the container on the list (round 5, L2) | `nav.cancelTimeout(kind)` |
 | (B) The guest crashes, or the code swaps, during a reveal | the content's crash or code-swap path | as today for a crash or a swap; the reveal's back callback is removed with the container | the reveal state is reset |
 | (B) The revealed entry disappears before the answer | the container's renderer | the list, in that frame; back still the host's until the token is answered | none |
 | (B) A tap on a `revealsPrepared` row cannot reveal | the click dispatch | the non-revealing path | `nav.revealSkipped(kind, reason)` |
@@ -1489,7 +1531,8 @@ Arms of the three-way bench (`bench=nav`, simple and `heavy`, BigInt, press off)
 - All arms on keliver-nav itself, not the profile's stand-in stack, and on the reference app's
   Style B screen for B-9.
 
-How each open is judged depends on decision 7 (section 11), which is made before B0.
+How each open is judged depends on decision 7 (section 11), decided by the owner on 2026-11-24:
+(b), the split.
 
 | Gate | Measure | Pass |
 |---|---|---|
@@ -1547,9 +1590,10 @@ exactly. It is not in the first ship.
 The halves share a first PR (H0) and some pieces: (A)'s fold prunes (B)'s and NF1's hidden entries;
 (B)'s idle policy uses (A)'s `ready` when present; (B)'s equivalence test uses (A)'s fold. So the
 order matters: H0, then (A); for (B), first the steps that say whether it is worth building
-(decision 7, R0, R1), then B1, then the production PRs once NF1's production container exists
-(B0). The review of sections 3.2 and 3.5 that revision 3 asked for was round 3: (B) approved after
-fixes, which revision 4 makes, with no fourth design round needed.
+(decision 7, decided on 2026-11-24; R0, R1), then B1, then the production PRs once NF1's
+production container exists (B0). The review of sections 3.2 and 3.5 that revision 3 asked for was
+round 3: (B) approved after fixes, made in revision 4 and checked in rounds 4 and 5 (revisions 5
+and 6), with no new design round needed.
 
 **H0 and (A)**, approved by the second review after this revision's fixes:
 
@@ -1566,11 +1610,12 @@ fixes, which revision 4 makes, with no fourth design round needed.
 | **A5** | templates (Android, iOS), docs | the start table on `StartChoice.mode` (and option (c) if decision 8 takes it), the `codeLoadSuccess` check, `session()` and `accounts = NONE`, storage dirs, the off switch from the index, adopter docs (what `Shell` does not hide, I2) | template tests (start table; backup exclusion; fail closed) | reference-app and ios-host workflows |
 | **A6** | sample, benchmarks | the bench's `x=cachedframe`, both marks, the throttled lookup; the iOS simulator arm | — | **A-1 to A-8**; the owner reads them before (A) is on by default |
 
-**(B)**, in this order. Its PRs wait for the first three steps (the review is done):
+**(B)**, in this order. Its PRs wait for R0 and R1 (decision 7 was decided on 2026-11-24, and the
+review is done):
 
 | Step or PR | Module(s) | What | Tests | Gate |
 |---|---|---|---|---|
-| **D7** | — | the owner decides what "open" means for the bar (decision 7) | — | before B0 and B1 |
+| **D7** | — | done: the owner decided what "open" means for the bar on 2026-11-24, (b), the split (decision 7) | — | — |
 | **R0** | none (a phone session) | the floor step under Perfetto (appendix D), 2026-11-25; its files dry-run end to end on an emulator on 2026-11-24 (decision 12) | — | appendix D's rule: is the simple target reachable? |
 | **R1** | sample (bench only, prototype) | the reveal-only arm (section 7) | — | R1's bar (section 7), B-1f's |
 | **Review** | this document | done: round 3 reviewed 3.2, 3.5, I4b, I13 and I14; (B) approved after fixes, made in revision 4 | — | — |
@@ -1888,8 +1933,10 @@ compiled it on 2026-11-24 (appendix D, "Dry run").
 
 Verdict: **(B) approved after fixes** (N1, N2; N3 and N4 as one-line rules), rule changes with no
 new design round; **R0 ready** once R-M1 is written into the rule. Every round-3 row was found done.
-10 rows here: **10 fixed** as the maintainer scoped them. R-L2 to R-L4 (the session's command list
-and scratch copies, not this document) are left to the session: see the PR's "Decisions needed".
+10 rows here: **8 fixed** as the maintainer scoped them (corrected in revision 6, round 5's L4: the
+R-L2 to R-L4 row is not in the revision and the verdict row is agreed). R-L2 to R-L4 (the session's
+command list and scratch copies, not this document) are left to the session: see the PR's
+"Decisions needed".
 
 | Finding | Response |
 |---|---|
@@ -1903,6 +1950,24 @@ and scratch copies, not this document) are left to the session: see the PR's "De
 | R-L1 nothing checks the guest was idle at the UP | Fixed: appendix D, `measure.sql`, q1, q2, qc, `analyse.sh`. Column `idle` = the UP − the end of the last `zl:*` slice that began before it; on `simple-on-idle` an open counts only if `idle` > 0 (q2's medians use only those; qc prints `idle` and the count); fewer than 10 of 12: the rule is not applied |
 | R-L2, R-L3, R-L4 (the session's command list, a stale scratch copy, the install's fallback) | Not in this revision: they concern the session's scratch files, not this document; listed for the session |
 | (B) verdict, R0 verdict | Agreed |
+
+### Round 5: the final check of revision 5, answered in revision 6
+
+Verdict: **fix first** (M1 to M3 are one rule or test each, no new design round; R0 not affected).
+N3, N4 (apart from M1), the two nits, R-M1, R-L1, the idle arm's 10 of 12, the SQL and section 11's
+note were checked and found sound. 9 rows here: **8 fixed**, the verdict agreed.
+
+| Finding | Response |
+|---|---|
+| M1 the holder's `onDispose` removes the callback on activity recreation, and nothing re-adds it | Fixed: 3.2 (the callback's lifetime, M6), 3.5, I13. On entering a composition the holder adds the current reveal callback, if any, to that composition's back dispatcher. M6's test also checks that a back after the recreation is the host's in every state |
+| M2 `e_ack` covers only the revealed entry, but `Cancelled` also waits on entries t's click pushed | Fixed: 3.2 (the guest's cancel, the `Cancelled` row), 3.5, I13, I14. The ack carries an `e_ack` for every entry the cancel left in the container (the revealed entry and each parked entry t pushed); `Cancelled` ends when each listed entry reaches its own. Test (I13): `otherKind` then back, with the other destination non-rebindable and rebindable, each also with the ack forced a batch early |
+| M3 "its last effective content (the shell)" contradicts the content-first order | Fixed: 3.2, the 3.5 row, I14: "its current content, inert" (the shell until the bind's content is applied, then that content). Test (I14): the content-first order has its own frames: the shell, then the bound content inert, then live in the frame its state is applied; never the list |
+| L1 two definitions of `e_ack` | Fixed: 3.2, I14. One definition: an entry's epoch as declared right after the cancel; the re-tap paragraph rewritten to use it (item 8 in the ack's batch: `e_ack` stays e+2, the condition is `≥`) |
+| L2 nothing bounds `Cancelled` once `CANCEL_LIMIT` only releases the back | Fixed: 3.2, I12, section 6. Named: nothing but a crash or a code swap, counted by `nav.cancelTimeout`. I12's "never acks" test says what is drawn after the limit (the list, nothing t pushed, later navigation not drawn, back to the guest) |
+| L3 decision 7 still described as open | Fixed: section 0's steps, section 7, section 9 (the intro, the (B) table's lead and the D7 row): decided by the owner on 2026-11-24, (b), the split; "revision 4 makes" reworded |
+| L4 round 4's count | Fixed: 8 fixed, not 10 |
+| L5 q2's CPU rows put kHz in `median_ms` | Fixed: appendix D says which column and that `n` is empty on those rows |
+| Verdict (fix first; R0 may go ahead on the SQL and appendix D as they stand) | Agreed |
 
 ## Appendix B: the A12 estimate for (B)
 
@@ -2380,7 +2445,9 @@ adb shell sh /data/local/tmp/nf5floor/analyse.sh $L measure    # q1, q2, q3, qc
 - [`q2.sql`](nf5-r0/q2.sql): the medians over opens 3–14 (on `simple-on-idle`, over those with
   `idle` > 0), with `W_waits` and the projection's bounds, then one row per CPU (round 4, R-M1):
   `cpuN fast`, `cpuN slow` or `cpuN unknown`, with the highest frequency the trace's `cpufreq`
-  track recorded for it, in kHz (empty for `unknown`: no `cpufreq` track for that CPU). `fast` marks
+  track recorded for it, in kHz (empty for `unknown`: no `cpufreq` track for that CPU). **On these
+  rows the kHz print in the `median_ms` column and `n` is empty** (one result set, so the columns
+  are shared; round 5, L5): read `cpu4 fast | 2304000 |` as 2.3 GHz, not as milliseconds. `fast` marks
   `cpu_fast`'s CPUs, those whose recorded maximum is the trace's highest. **Reading
   `d_running_fast`, by those rows, not by the numbers alone:**
   - the rows show two or more different maxima (the A12: 2.3 and 1.8 GHz), so the clusters were
