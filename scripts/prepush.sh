@@ -110,7 +110,7 @@ fi
 
 # 4. what CI will run beyond this
 step "CI jobs this change triggers (not run here)"
-grep -Eq '^(scripts/keliver-new-ios-host|scripts/templates/(ios-host|publish/)|reference/inventory/ci/(ios\.sh|ocr\.swift|w[2358]/|m0/)|reference/inventory/app/src/jsMain/kotlin/device/|reference/embed/ios/|scripts/keliver-publish|portal-relay/src/main/kotlin/(StaticIndex|KeliverPublish|PublishSignature|KeyRotation)\.kt|\.github/workflows/ios-host\.yml)' <<<"$changed" \
+grep -Eq '^(scripts/keliver-new-ios-host|scripts/templates/(ios-host|publish/|production-host/src/line-)|reference/inventory/ci/(ios\.sh|ocr\.swift|w[2358]/|m0/)|reference/inventory/app/src/jsMain/kotlin/device/|reference/embed/ios/|scripts/keliver-publish|portal-relay/src/main/kotlin/(StaticIndex|KeliverPublish|PublishSignature|KeyRotation)\.kt|\.github/workflows/ios-host\.yml)' <<<"$changed" \
   && echo "  ios-host (simulator)"
 grep -Eq '^(reference/|scripts/templates/(production-host|publish)|scripts/keliver-(new-production-host|new-publish-target|publish|run-android)|portal-relay/src/main/kotlin/(StaticIndex|KeliverPublish|PublishSignature|KeyRotation)\.kt|\.github/workflows/reference-app\.yml)' <<<"$changed" \
   && echo "  reference-app (emulator)"

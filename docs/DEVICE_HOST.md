@@ -320,10 +320,14 @@ What the swap does and does not promise:
   blank or partly drawn. A route change during the hidden window rebinds the new content, which
   then comes to the front before its first changes (rare).
 - The hidden content is out of reach: unseen, not hit by touches, hidden from screen readers, and
-  unfocusable (a hardware keyboard or D-pad does not move into it). On Android, though, the hidden
-  guest's back handlers register with the activity at once, and a later handler wins: a back press
-  during the swap window goes to the new app's enabled root `BackHandler`, if it has one. iOS
-  hands guest back handlers to no system dispatcher, so it has no such case.
+  unfocusable (a hardware keyboard or D-pad does not move into it). From the 0.5 line it is out of
+  reach of back too (NF5 H0): the host passes `TreehouseContent(backEnabled = false)` for it, so its
+  guest's back handlers are registered with the activity disabled until it is shown, and a back
+  press during the swap window goes to the app on show. On the 0.4 line (whose `TreehouseContent`
+  has no such gate) the hidden guest's back handlers register with the activity at once, and a
+  later handler wins: a back press during the swap window goes to the new app's enabled root
+  `BackHandler`, if it has one. iOS hands guest back handlers to no system dispatcher, so it has no
+  such case on either line.
 
 Set it with `keliver.startPolicy` in `gradle.properties` (Android; `KeliverConfig(startPolicy = …)`
 in code) or `START_POLICY` in `HostConfig.kt` (iOS), to `network-first`, `parallel` or

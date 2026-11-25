@@ -46,7 +46,6 @@ import dev.keliver.treehouse.Crashed
 import dev.keliver.treehouse.DynamicContentWidgetFactory
 import dev.keliver.treehouse.Loading
 import dev.keliver.treehouse.TreehouseContentSource
-import dev.keliver.treehouse.composeui.TreehouseContent
 
 /**
  * Shows [host]: [loading] while it looks up and loads, then the guest's screen.
@@ -211,16 +210,17 @@ private fun AppContent(
       if (!failureWidgets.loadingShown) latestFirstChanges()
     }
   }
-  // Hidden: out of keyboard and D-pad reach too (focus does not move into it). Not out of reach of
-  // the back button: the guest's enabled root BackHandler registers with the activity at once, so
-  // a back press in the short swap window goes to the new app (docs/DEVICE_HOST.md).
+  // Hidden: out of keyboard and D-pad reach too (focus does not move into it), and out of reach of
+  // the back button: its guest's back handlers are registered disabled until it is shown, so a back
+  // press in the short swap window goes to the app on show (NF5 H0; from the 0.5 line, KeliverLine.kt).
   androidx.compose.foundation.layout.Box(if (hidden) Modifier.fillMaxSize().unfocusable() else Modifier.fillMaxSize()) {
-    TreehouseContent(
+    KeliverTreehouseContent(
       treehouseApp = app,
       widgetSystem = widgetSystem,
       contentSource = contentSource,
       modifier = if (hidden) Modifier.fillMaxSize().graphicsLayer { alpha = 0f }.clearAndSetSemantics { } else Modifier.fillMaxSize(),
       dynamicContentWidgetFactory = failureWidgets,
+      backEnabled = !hidden,
     )
     // Unseen, and out of reach: a touch that falls through the app on top stops here.
     if (hidden) Spacer(Modifier.matchParentSize().pointerInput(Unit) { blockTouches() })

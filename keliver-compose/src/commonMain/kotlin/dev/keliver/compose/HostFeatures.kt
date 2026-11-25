@@ -20,8 +20,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
  * The optional features the host this composition is shown on says it has, by name (for example
- * keliver-nav's retained container, `"keliver.nav.retainedContainer@1"`, or gate A's press signal,
- * `"keliver.press@1"`). The guest reads it at run
+ * keliver-nav's retained container, [KeliverHostFeatures.NAV_RETAINED_CONTAINER_1], or gate A's
+ * press signal, [KeliverHostFeatures.PRESS_1]; Keliver's names are all in [KeliverHostFeatures]).
+ * The guest reads it at run
  * time to use a feature only on a host that has it, so one bundle runs on older and newer hosts (D2).
  *
  * A Treehouse guest gets the set its host's `TreehouseApp.Spec.hostFeatures` declares. A host built

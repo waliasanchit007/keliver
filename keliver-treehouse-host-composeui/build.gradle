@@ -23,6 +23,15 @@ kotlin {
         implementation libs.androidx.activity.compose
       }
     }
+    // TreehouseContent's back gate (NF5 H0), with Compose UI headless on the desktop JVM.
+    jvmTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.assertk
+        implementation libs.jetbrains.compose.ui.test
+        implementation rootProject.ext.skikoHostRuntime()
+      }
+    }
   }
 }
 

@@ -185,6 +185,11 @@ fi
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
 keliver_zipline_line "$KELIVER_VERSION" || fail "$KELIVER_LINE_ERROR"
+# NF5 H0: what the line's libraries have that older ones do not (host features, TreehouseContent's
+# back gate) is in one file per line, the Android host's src/line-<line>/kotlin/KeliverLine.kt (one
+# source for both hosts); every other file of the host is the same Kotlin on every line.
+LINE_GLUE="$(dirname "$TEMPLATES")/production-host/src/line-$KELIVER_LINE/kotlin/KeliverLine.kt"
+[ -f "$LINE_GLUE" ] || fail "these templates have no host file for the $KELIVER_LINE line ($LINE_GLUE)."
 # The line's toolchain (keliver-runtime-line.sh's table), each overridable.
 ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
 KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$TOOLCHAIN_KOTLIN}"
@@ -346,6 +351,8 @@ fi
 for f in "$TEMPLATES"/src/iosMain/kotlin/*.kt; do
   subst "$f" "$STAGE/src/iosMain/kotlin/$PKG_PATH/$(basename "$f")"
 done
+# NF5 H0: the app's line's KeliverLine.kt (checked above).
+subst "$LINE_GLUE" "$STAGE/src/iosMain/kotlin/$PKG_PATH/KeliverLine.kt"
 # Pure Kotlin shared with the JVM target that runs its checks (K2: RequestPolicy), and the
 # simulator tests of HostHttp (B2: iosTest).
 for set in commonMain jvmTest iosTest; do

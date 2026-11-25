@@ -9,6 +9,7 @@ b984d2f4ab97ef48fb2999fc8f3a910e2215bd8e159f3b2b7b03c66aaf4178ca  ./iosApp/Info.
 922fb83637fa0f05a5a98e7c5650d03bd28ac98c06bc9a05ce60712a49b3a723  ./iosApp/iOSApp.swift
 d1f3693dfcb8aa047ddf379d26a384cf9390a9d8f602a6bdc6da9e67bbd3ffca  ./settings.gradle
 d490c30eae957bb66113bfd5bd7672df4e1796f61b6a69d063770bab1a673a40  ./src/commonMain/kotlin/com/example/demo/host/CrashRollback.kt
+ad09659b913d384224ecfd361926baaec68365fe261603b92243fc1ddcd24bda  ./src/commonMain/kotlin/com/example/demo/host/HostFeatures.kt
 59feb964d9f4084edb2056c8e1414177f5c864f5aad2e7ee1739da64f8643585  ./src/commonMain/kotlin/com/example/demo/host/KeliverRoute.kt
 f497b502ce8ca1851896c0de410887577c6d840c237d977a1e80f184e89057f4  ./src/commonMain/kotlin/com/example/demo/host/RequestPolicy.kt
 0ba5dd86ffc82007fae6ed453b7e7723338da49c80b491643ab87fd6a2bd094a  ./src/commonMain/kotlin/com/example/demo/host/StartPolicy.kt
@@ -24,10 +25,12 @@ a9d23d63d06c5a855e8c96e25dfda66f6705dbdd7e352b4a02f1df7cfb69062d  ./src/iosMain/
 d49af96bd55252eac27c3f9e730d15f237ef8773682a280e775118e9531a1147  ./src/iosMain/kotlin/com/example/demo/host/HostPrefetch.kt
 20936d94caafe652524a58b471ba66bad601834a11fdafa25713914b6ae7c836  ./src/iosMain/kotlin/com/example/demo/host/IosHttp.kt
 fed38b62a7486070f86fedd8e569829a94af4f277c80d788dd764944587e683b  ./src/iosMain/kotlin/com/example/demo/host/IosSqlHost.kt
+31f8154806a0cd71df51a9370e90bb1294ea17772a0b76237dab7f6c7254ce9f  ./src/iosMain/kotlin/com/example/demo/host/KeliverLine.kt
 6a0dec49e48417739172f71e390dd018dea6fba0b1a86f2fa3276b5ec0109942  ./src/iosMain/kotlin/com/example/demo/host/KeliverScreenHost.kt
-323a490c1747f2e99093bb58d46c6708bc5e2be75edfdf3fc0bf9f2f07df0602  ./src/iosMain/kotlin/com/example/demo/host/MainViewController.kt
+4515b0882d18c9a209c4ae387055290a6ce2d3a9fb7a20dc39aa3ea0ef252b9c  ./src/iosMain/kotlin/com/example/demo/host/MainViewController.kt
 01aff706e8a5f8667c09ace7cfb30b6ea0562f375d37377ca58d139385bea2a4  ./src/iosMain/kotlin/com/example/demo/host/Origins.kt
 4f26879e225d29762060c931644d7a34076331917d19bb9c7512cbbe3a2b869c  ./src/iosMain/kotlin/com/example/demo/host/ProductionTrust.kt
+ece8cc69f913789b15dd5e214dc7abb321ee4f5c473effb9640e6077f0268aed  ./src/iosMain/kotlin/com/example/demo/host/ReleaseIdentity.kt
 b60794824e50e5739af0829f820f5cd42d18ed19ab7fcec1098f044e20b83317  ./src/iosMain/kotlin/com/example/demo/host/UiStart.kt
 4a0367d10878806757f4d27e44befd03f4dde3e678a3847c3c002eecd0a54842  ./src/iosTest/kotlin/com/example/demo/host/AppHeadersHostHttpTest.kt
 033982937dc0b2c828de85a6f8501835682da0102da4d4de5ecaf72825136fb0  ./src/iosTest/kotlin/com/example/demo/host/HostPrefetchRaceTest.kt
@@ -37,6 +40,7 @@ b60794824e50e5739af0829f820f5cd42d18ed19ab7fcec1098f044e20b83317  ./src/iosMain/
 f69832ba78d524b60fb2df3a72a2d51fece8d396eef359978ca4a37605794159  ./src/jvmTest/kotlin/com/example/demo/host/CrashRollbackTest.kt
 cb9e986b7d3f5504b0b87daa2068395e8541b658bd23fa6344b6dae7f9872682  ./src/jvmTest/kotlin/com/example/demo/host/DebugBundleLink.kt
 e792de3e150656927931a8c86b98e1c3bd91b826849de21972dbee79a3ad3bec  ./src/jvmTest/kotlin/com/example/demo/host/DebugBundleLinkTest.kt
+eb5205871f2d49c80080a898269fc0c4a55a2018a47e5f38bdeccc08ed93ac2b  ./src/jvmTest/kotlin/com/example/demo/host/HostFeaturesTest.kt
 1b36f644a119b1db8761e73fb4148bb0ce0f6322ec9804f4527d13eb62434fb8  ./src/jvmTest/kotlin/com/example/demo/host/KeliverRouteTest.kt
 4510976ebfb1fd1ecb5cfb6a448728a37ac0ae53e680a91df23bbf8f55c1cb80  ./src/jvmTest/kotlin/com/example/demo/host/RequestPolicyTest.kt
 6148c1b96d76f505124144d5e78a3d1708391cf7f7e6b02d66af1e31584a1af6  ./src/jvmTest/kotlin/com/example/demo/host/StartPolicyTest.kt

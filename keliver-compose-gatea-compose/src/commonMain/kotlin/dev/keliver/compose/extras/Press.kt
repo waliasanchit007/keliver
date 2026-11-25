@@ -22,9 +22,10 @@ import dev.keliver.compose.ui.Modifier
 /**
  * The host feature of the press signal ([pressSignal]): a host that declares it renders the
  * modifier and sends its events. Check it (`dev.keliver.compose.LocalHostFeatures`) before sending
- * the modifier; keliver-nav's `prepareOnPress` does.
+ * the modifier; keliver-nav's `prepareOnPress` does. The name is `KeliverHostFeatures.PRESS_1`.
  */
-public const val PRESS_HOST_FEATURE: String = "keliver.press@1"
+@OptIn(dev.keliver.compose.ExperimentalKeliverHostFeaturesApi::class)
+public const val PRESS_HOST_FEATURE: String = dev.keliver.compose.KeliverHostFeatures.PRESS_1
 
 /**
  * A Keliver extra, not Compose API: the host's press signal. [onPress] runs when a finger goes down

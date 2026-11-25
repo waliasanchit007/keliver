@@ -119,7 +119,7 @@ for f in settings.gradle build.gradle gradle.properties .gitignore src/nativeInt
          Configuration/Config.xcconfig; do
   [ -f "$H/$f" ] || { bad "missing $f"; missing=1; }
 done
-for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt HostPrefetch.kt UiStart.kt; do
+for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt HostPrefetch.kt UiStart.kt ReleaseIdentity.kt KeliverLine.kt; do
   [ -f "$K/$f" ] || { bad "missing $K/$f"; missing=1; }
 done
 [ "$missing" = 0 ] && ok "every expected file is there"
@@ -331,6 +331,21 @@ if [ -n "$PH" ] && [ -f "$DT" ]; then
     && sed -n "/<<'HOSTKIT'$/,/^HOSTKIT$/p" "$DT" | sed '1d;$d' | cmp -s - "$K/KeliverScreenHost.kt" \
     && ok "host kit: KeliverRoute (and its test) and KeliverScreenHost are the Android host's and the guest's, byte for byte" \
     || bad "host kit: KeliverRoute, its test or KeliverScreenHost differs from the Android host's or the guest's"
+  # NF5 H0: the Android host's HostFeatures.kt (and its test), ReleaseIdentity.kt and the line's
+  # KeliverLine.kt, byte for byte (this app is on 0.4: that line's copy, no host features, no back
+  # gate); the swap's hidden app with backEnabled = false; the last good record with the release's
+  # sequence and module digest, written through with synchronize().
+  sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/HostFeatures.kt" | cmp -s - "$KC/HostFeatures.kt" \
+    && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/test/kotlin/HostFeaturesTest.kt" | cmp -s - "$H/src/jvmTest/kotlin/com/example/demo/host/HostFeaturesTest.kt" \
+    && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/main/kotlin/ReleaseIdentity.kt" | cmp -s - "$K/ReleaseIdentity.kt" \
+    && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/line-0.4/kotlin/KeliverLine.kt" | cmp -s - "$K/KeliverLine.kt" \
+    && grep -q '  val spec = object : KeliverSpec<PortalPresenter>() {' "$V" && ! grep -q 'TreehouseApp.Spec<' "$V" \
+    && grep -q '        backEnabled = !hidden,' "$V" && ! grep -q 'composeui.TreehouseContent' "$V" \
+    && grep -q '      manifestUrl?.let { onLoaded(it, release) }' "$V" \
+    && grep -q 'defaults.setObject(release.moduleDigest, forKey = lastGoodModuleDigestKey(trust))' "$V" \
+    && grep -q "if (!defaults.synchronize()) log(\"the last good bundle's record was not written" "$V" \
+    && ok "NF5 H0: HostFeatures.kt (and its test), ReleaseIdentity.kt and the 0.4 line's KeliverLine.kt are the Android host's; the swap's hidden app with backEnabled = false; the last good record with the release's identity, written through" \
+    || bad "NF5 H0: host features, ReleaseIdentity.kt, the line's KeliverLine.kt, the hidden app's back or the last good record"
 else
   bad "host kit: the Android templates or keliver-new-device-target.sh are not beside $SCAFFOLD"
 fi
@@ -579,7 +594,7 @@ grep -q 'Keliver.shared.viewController(safeArea: safeArea, onUnavailable: onUnav
 grep -q 'CHANNEL: String = "beta"' "$LK/HostConfig.kt" && grep -q 'BUNDLE_SERVER: String = "https://bundles.example.com"' "$LK/HostConfig.kt" \
   && ok "the settings are in HostConfig.kt, as for the standalone host" || bad "HostConfig.kt"
 [ "$(cat "$EX/MyApp.xcodeproj/project.pbxproj")" = 'PRODUCT_NAME = "MyApp";' ] && ok "--embed edited no file of the existing app" || bad "--embed changed the existing project"
-same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt HostPrefetch.kt UiStart.kt; do
+same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt BundleEvents.kt Bridges.kt HostPrefetch.kt UiStart.kt ReleaseIdentity.kt KeliverLine.kt; do
   cmp -s "$LK/$f" "$K/$f" || { same=0; bad "$f differs between the embedded framework and the standalone host"; }
 done
 [ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the embedded framework and the standalone host"
@@ -735,6 +750,12 @@ HF="$APPF/host-ios/build.gradle"
   && grep -q "implementation 'dev.keliver:keliver-treehouse-host:0.5.0'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
   && ok "NF2: an app on 0.5.0 gets an iOS host on Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries), Kotlin 2.4.21, Compose 1.12.2" \
   || bad "NF2: the iOS host of an app on 0.5.0 (rc=$rc): $(grep -hE 'zipline|kotlin.multiplatform|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
+# NF5 H0: the 0.5 line's KeliverLine.kt (the Android host's): host features handed over, the back gate passed through.
+KF="$APPF/host-ios/src/iosMain/kotlin/com/example/demo/host/KeliverLine.kt"
+[ -n "$PH" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PH/src/line-0.5/kotlin/KeliverLine.kt" | cmp -s - "$KF" \
+  && grep -q '^internal const val KELIVER_LINE = "0.5"$' "$KF" && grep -q '    get() = HostFeatures.implemented' "$KF" \
+  && ok "NF5 H0: an app on 0.5.0 gets the 0.5 line's KeliverLine.kt in its iOS host" \
+  || bad "NF5 H0: the iOS host's KeliverLine.kt of an app on 0.5.0"
 # Coil, its Ktor fetcher and the Darwin engine: pinned on the 0.4 line as before; from keliver-image
 # at the app's version on the 0.5 line, so Ktor's client and its Darwin engine cannot split.
 grep -qx "        implementation 'io.coil-kt.coil3:coil-network-ktor3:3.3.0' // images over the network" "$H/build.gradle" \

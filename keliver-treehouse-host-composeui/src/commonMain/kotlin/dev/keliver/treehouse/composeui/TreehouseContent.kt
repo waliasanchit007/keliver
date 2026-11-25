@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import dev.keliver.compose.ExperimentalKeliverBackApi
 import dev.keliver.composeui.safeAreaInsets
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.DynamicContentWidgetFactory
@@ -59,7 +61,69 @@ public fun <A : AppService> TreehouseContent(
   dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> =
     EmptyDynamicContentWidgetFactory,
 ) {
-  val onBackPressedDispatcher = platformOnBackPressedDispatcher()
+  TreehouseContent(
+    treehouseApp = treehouseApp,
+    widgetSystem = widgetSystem,
+    contentSource = contentSource,
+    modifier = modifier,
+    dynamicContentWidgetFactory = dynamicContentWidgetFactory,
+    backEnabled = true,
+    platformBackDispatcher = platformOnBackPressedDispatcher(),
+  )
+}
+
+/**
+ * [TreehouseContent], with its guest's back handlers behind a gate. While [backEnabled] is false
+ * every back callback this content's guest registers (a `BackHandler`, keliver-nav's) is registered
+ * with the platform DISABLED: a back press goes past this content, to the content shown on top of
+ * it or to the activity, and reaches no guest. When it turns true, each callback is enabled again
+ * exactly when the guest has it enabled, in the order the guest registered them.
+ *
+ * Pass false for content composed hidden, beneath the content on show: an app loaded in the
+ * background that replaces the one on show only once its first changes arrive (the host templates'
+ * update swap), or, from NF5's (A), the live content beneath a cached first frame. Composed with
+ * true it behaves exactly as the overload without [backEnabled].
+ *
+ * On iOS a guest never receives back (Treehouse's iOS dispatcher registers nothing), so there the
+ * gate changes nothing.
+ */
+@ExperimentalKeliverBackApi
+@Composable
+public fun <A : AppService> TreehouseContent(
+  treehouseApp: TreehouseApp<A>,
+  widgetSystem: WidgetSystem<@Composable (Modifier) -> Unit>,
+  contentSource: TreehouseContentSource<A>,
+  backEnabled: Boolean,
+  modifier: Modifier = Modifier,
+  dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> =
+    EmptyDynamicContentWidgetFactory,
+) {
+  TreehouseContent(
+    treehouseApp = treehouseApp,
+    widgetSystem = widgetSystem,
+    contentSource = contentSource,
+    modifier = modifier,
+    dynamicContentWidgetFactory = dynamicContentWidgetFactory,
+    backEnabled = backEnabled,
+    platformBackDispatcher = platformOnBackPressedDispatcher(),
+  )
+}
+
+/** Both overloads; tests pass their own [platformBackDispatcher]. */
+@Composable
+internal fun <A : AppService> TreehouseContent(
+  treehouseApp: TreehouseApp<A>,
+  widgetSystem: WidgetSystem<@Composable (Modifier) -> Unit>,
+  contentSource: TreehouseContentSource<A>,
+  dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit>,
+  backEnabled: Boolean,
+  platformBackDispatcher: OnBackPressedDispatcher,
+  modifier: Modifier = Modifier,
+) {
+  // Created with the view below (one per widget system), so the view's guest always registers
+  // through the gate this composition opens and closes.
+  val onBackPressedDispatcher = remember(widgetSystem) { BackGate(platformBackDispatcher, open = backEnabled) }
+  SideEffect { onBackPressedDispatcher.open = backEnabled }
 
   var viewportSize: Size? by remember { mutableStateOf(null) }
   val density = LocalDensity.current
