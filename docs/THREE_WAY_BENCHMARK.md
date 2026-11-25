@@ -3749,6 +3749,182 @@ files. What changed:
   main not excluded from BigInt's gain (L4); which recipe built which APK (L5). The possible prestart
   double load (L6) is a follow-up above.
 
+## NF5 R0: the floor step under Perfetto (A12, 2026-11-26)
+
+NF5's R0 ([`SHOW_BEFORE_COMPUTE.md`, appendix D](SHOW_BEFORE_COMPUTE.md#appendix-d-the-floor-step-under-perfetto-r0-a12)),
+a day after its planned date. It reran series H's three arms and one new arm, `simple-on-idle`, each
+in a fresh process under a Perfetto trace. It then split the floor step (click → composed, for a
+detail already composed with the right item) into its parts, and applied the rule fixed in advance
+to the new arm. The session followed its command list (steps 0–7) as written. The queries are
+[`docs/nf5-r0/`](nf5-r0/), unchanged. Three diagnostic queries written during the session are in
+[`docs/nf5-r0/a12-2026-11-26/`](nf5-r0/a12-2026-11-26/); `analyse.sh` does not run them.
+
+**Verdict: reachable in principle**, with a small margin. The rule was applied to `simple-on-idle`'s
+opens 3–14; all 12 were idle at the UP.
+- G = 22.4 ms, under the limit of 25.
+- W = 8.1 ms, and every part of it has a named mechanism.
+- P = 65.0 ms on q2's printed `total` (59.1). That `total` is too short in 9 of the 12 opens
+  (below). Measured to the frame that actually drew the detail, `total` is 82.0 and **P = 87.9 ms**,
+  under 100.
+- At a ratio of 30 (+36 instead of +14), P is 87.0 printed and 109.9 corrected.
+- The margins are 2.6 ms on G and 12.1 ms on P. The pre-run prediction was G ≈ 21.
+
+**Build.** The dry run's APKs, kept in the session's scratch directory, matched their sha256 at
+04:00 and again before the install:
+- `host-android-benchmark.apk`: 26,057,387 bytes, `8bd7ecef…c7ee76243`;
+- the trace processor: `ae2f18ff…68a0e7d`, Perfetto v45.
+
+The APK was built from `316abd41a`'s code: the three-way sample as on main, with `Long` as BigInt,
+on the fork's engine built locally as `1.28.0-q20260604` through `use-fork.init.gradle`. Main itself
+now resolves the published `dev.keliver.zipline:*:1.28.0-keliver.1` (#294, merged after that
+commit). The two engines were not compared in this session. Install: `install -r -d`, then
+profileinstaller's broadcast (result 1), then `speed-profile`.
+
+**Phone state.** The Galaxy A12, Android 12 (API 31), 04:41–04:46 IST. Up 4 d 2 h 29 min – 2 h 33 min.
+**Plugged in and charging (AC), 50% → 52%, unlike series H (on battery, 87%)**: the owner was asleep
+and the phone could not be unplugged. The session waited from 25% (04:00) until it read 50% (04:41)
+before the first arm. Temperature 34.6 °C (series H: 25.6–25.7), thermal status 0, CPU idle 96–97%
+(`top`, before each arm), load average 20.4–20.9.
+
+**The runs (step 5).** Every arm had 14 opens, 14 backs, `done` and no timeout; the traces were
+14.0–20.0 MB. Against series H, per-iteration medians over opens 3–14:
+
+| Arm | `click` | `composed − click` |
+|---|---|---|
+| simple-on | 191 (H: 198.5–201) | 55.5 (H: 57.5–58) |
+| simple-off | 112 (H: 113) | 113 (H: 112–116.5) |
+| heavy-on | 496 (H: 488.5–494) | 120 (H: 111–114.5) |
+
+All are within 15%; heavy-on's `composed − click` is the farthest, at +5% to +8%. The idle arm:
+`click` 412 (the 400 ms hold + 12), click → composed 42, click → drawn 56.
+
+**The checks (step 6).**
+- **q0a**: after the start group come 28 groups alternating open and back, with `is_open` on every
+  open. The event, frame and `composed` counts are those appendix D expects: press on 3, 2, 2; press
+  off 1, 1, 1; a back 1, 1, 1. No override was needed.
+- **q0b**: the UP is `ThreewayActivity$$ExternalSyntheticLambda5` in every arm (`upname.txt`). It
+  comes 3–10 ms before E on the idle and press-off arms. On the press-on arms the click waits behind
+  the preparation.
+- **qc**: passes on every arm, 12 of 12 opens. On the idle arm 12 of 12 opens were idle at the UP,
+  207–224 ms after the guest's last call.
+- **The CPUs**: the cpufreq rows show two maxima, 2.301 GHz on cpu0–3 (`fast`) and 1.8 GHz on
+  cpu4–7, so the clusters were separated. `d_running_fast` = `d_running` on every arm: the guest
+  composed only on the fast cluster.
+- **q3**: empty on every arm, because `d_other` was 0 in every open: the Zipline thread never
+  blocked while composing. Perfetto accepted `symbolize_ksyms`, but whether this user build gives
+  it kernel symbols was not exercised.
+
+**The table** (q2: medians over opens 3–14, ms):
+
+| Column | simple-on-idle | simple-on | simple-off | heavy-on |
+|---|---|---|---|---|
+| idle at the UP | 210.9 | −84.1 | 814.2 | −387.9 |
+| a UP → E0 | 4.9 | 84.5 | 4.8 | 388.3 |
+| b the event(s) | 7.7 | 5.1 | 5.2 | 5.9 |
+| c E → F | 15.1 | 28.2 | 16.9 | 74.3 |
+| c1 E → frame callback | 14.2 | 27.3 | 15.4 | 73.8 |
+| c2 callback → F | 0.8 | 1.0 | 1.2 | 0.8 |
+| c_zl_run | 6.6 | 7.6 | 4.7 | 8.4 |
+| d F → C | 22.4 | 24.8 | 95.8 | 43.6 |
+| **d_running (G)**; of it fast, slow | **22.4**; 22.4, 0 | 24.8; 24.8, 0 | 95.8; 95.8, 0 | 43.6; 43.6, 0 |
+| d_runnable | 0.0 | 0.0 | 0.0 | 0.0 |
+| d_other | 0.0 | 0.0 | 0.0 | 0.0 |
+| **W** | **8.1** | 21.1 | 10.3 | 66.2 |
+| e C → sent | 5.9 | 6.8 | 14.9 | 5.6 |
+| f, g sent → apply; apply | 1.0, 1.3 | 0.7, 0.9 | 0.8, 5.0 | 0.7, 1.0 |
+| h apply → doFrame | 1.7 | 5.1 | 1.4 | 13.4 |
+| i the frame (layout) | 8.7 (1.2) | 6.7 (1.1) | 28.2 (15.3) | 9.4 (1.1) |
+| j frame → the row's end | −10.5 | 6.2 | −5.4 (n = 8) | 9.5 |
+| **total** UP → the row's end (q2) | **59.1** | 169.6 | 164.2 (n = 8) | 546.7 |
+| total to the frame that drew the detail (`frame-end.sql`) | **82.0** | 172.1 | not derived | 545.9 |
+| P_allW_r12, P_allW_r30 (q2) | 65.0, 87.0 | 162.7, 184.7 | 166.8, 188.8 (n = 8) | 498.6, 520.6 |
+
+**What `total` measures, and where q2's is wrong.** The traces show two things that the emulator's
+dry run did not.
+1. **The row's end is the app's frame end, not the display's present.** The end of the app's actual
+   frame-timeline row comes 0.6–1.8 ms after the RenderThread's `queueBuffer` for that frame (idle
+   arm, opens 4 and 8). The SurfaceFlinger display frame the row points to (`display_frame_token`)
+   ends about 45 ms after it. This was checked on one valid row, open 4's: relative to the apply,
+   the row ends at 19.7 ms, and the display frame runs from 32.6 to 65.3 ms. So appendix D's `j` and `total` run to the frame's end
+   (its buffer queued), as the targets' "frame end" does, not to light on the screen.
+   Series I and K read "present" from the same row: their "presented" is probably this frame end
+   too. That was not re-checked.
+2. **In 9 of the idle arm's 12 opens, `measure.sql` matched a frame that did not draw the detail.**
+   It takes the first `doFrame` after the apply, and that vsync's row. Inferred from the trace:
+   - **What runs at the UP.** After a 400 ms hold, the press's ripple is still animating on the
+     RenderThread: there are `RenderNodeAnimator` and `RippleHostView` messages, and the
+     RenderThread queues a buffer at every vsync with no frame on the main thread. In these opens
+     the detail's frame collides with that animation.
+   - **The matched row is zero-length.** Its end equals its start, so `j` is negative.
+   - **The detail is drawn elsewhere.** The RenderThread's draw of the new content (`DrawFrames`,
+     6.5–16.5 ms long) ran one vsync later in 3 opens. In 3 more it waited 22 ms behind the
+     animation's `queueBuffer` in the same vsync. In the other 3 it ran at the normal time, but its
+     row was still zero-length.
+
+   [`frame-end.sql`](nf5-r0/a12-2026-11-26/frame-end.sql) measures to the frame that drew instead:
+   - **Which frame.** It takes the first `DrawFrames` of at least 2 ms from the matched `doFrame`
+     on, and the end of the `queueBuffer` inside it.
+   - **The idle arm.** Per open, UP → that end is 65.5–98.6 ms, median **82.0**, against q2's 59.1.
+     The 3 opens with a usable row agree with q2 within 2.6 ms.
+   - **The other arms.** In 5 of simple-on's 12 opens the next vsync drew too, adding 12–15 ms to
+     each (median 172.1 against 169.6); in 1 of heavy-on's, 17.5 ms. Simple-off has no row at all
+     for 4 opens, and the supplement does not work there: in 4 of its opens 3–14 no `DrawFrames` of
+     2 ms or more follows before the next tap. Its frame-end columns (h to total) are not reliable; its guest columns
+     (a to d, W) are.
+
+**The rule, applied to `simple-on-idle`.**
+- **Count.** 12 of 12 opens were idle at the UP (206.9–223.9 ms after the last guest call), which
+  is at least 10, so the rule applies.
+- **G** = `d_running` = **22.4 ms**, all of it on the 2.301 GHz cluster.
+- **W** = **8.1 ms**. Every part of it has a named mechanism:
+  - **c1** (median 14.2, E's end → the main thread's frame callback). The guest's frame tick is a
+    Choreographer frame callback (`AndroidChoreographerFrameClock`), so after the click the guest
+    waits for the next vsync on the main thread. Meanwhile the Zipline thread runs the click's own
+    coroutine for 6.6 ms (`c_zl_run`, not counted in W). The change that would remove it is in the
+    runtime: a frame clock that runs the guest's next frame right after an input event instead of at
+    the next vsync.
+  - **c2** (0.8): the hop from that callback to the Zipline thread. It goes with c1.
+  - **d_runnable and d_other** are 0.0: the guest was neither preempted nor blocked while it
+    composed. There is nothing to name.
+  - So **W_named = 8.1**.
+- **P = T − W_named + 14**, at a ratio of 30 (+36) in brackets:
+
+  | T | P | P_allW_r12, per open |
+  |---|---|---|
+  | q2's, 59.1 | **65.0** (87.0) | 65.0 |
+  | the frame that drew the detail, 82.0 | **87.9** (109.9) | 87.4 |
+
+- **Reachable in principle** (P ≤ 100 and G ≤ 25): **yes, on both T's.** Not reachable
+  (`P_allW_r12` > 100, or G ≥ 40): no.
+
+**Also reported** (appendix D):
+- **The press's preparation costs the click.** On simple-on the click waits 84.5 ms in `a` behind
+  the preparation. c1 doubles, to 27.3 against the idle arm's 14.2, and W is 21.1 against 8.1. The
+  prediction was W of about 30–36 on the press-on arm and less on the idle arm: the direction was
+  right and the size too high.
+- **Press off against press on.** W is 10.3 against 21.1. Simple-off's G of 95.8 is the detail
+  composed fresh at the click; with the press it is 24.8, the prepared detail recomposing.
+- **The heavy arm, for B1's slice budget.** G = 43.6 ms. W = 66.2, nearly all of it c1 (73.8): the
+  frame callback comes 74 ms after the click's event ends. Inferred: the main thread is busy with the
+  press's prepared heavy detail. Its 8–11 ms `sendChanges` apply message comes just before E (q0b),
+  but the window was not split further, and the mechanism is not named.
+- **Outside W, on the idle arm.** The ripple collision (above) puts 15–40 ms on 9 of 12 opens'
+  frame end. It is a host mechanism, and the rule does not subtract it. It matters to (B): the
+  reveal's shell would be drawn while the press's ripple is running (R1).
+
+**Kept** in the session's scratch directory (`keliver-scratch/nf5/r0/`; not in the repository): the
+four traces, the phone's directory (every query's output, results and state files) and the session
+log. Their sha256:
+
+| Trace | sha256 |
+|---|---|
+| `nf5-simple-on-idle.pftrace` | `03c555d7…86c75c9f` |
+| `nf5-simple-on.pftrace` | `532d322b…0587aa38` |
+| `nf5-simple-off.pftrace` | `41ccdc03…3b0a8356` |
+| `nf5-heavy-on.pftrace` | `348b1f60…3138237a` |
+
+They were then deleted from the phone, with `/data/local/tmp/nf5floor`.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle

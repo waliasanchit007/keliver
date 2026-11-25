@@ -84,13 +84,29 @@ declines it (3.2).
 **Before any (B) PR** (section 9):
 1. **Decision 7, what "open" means for the bar** (section 11): **decided by the owner on
    2026-11-24, (b), the split**, with round 3's three conditions. It was needed before B5 because
-   the arithmetic above already says the (B) gates fail with data. (B) now waits only on R0 and R1.
+   the arithmetic above already says the (B) gates fail with data. (B) now waits only on R1 (R0 ran
+   on 2026-11-26, below).
 2. **R0, the A12 trace of one floor step** (appendix D; tomorrow's phone session, 2026-11-25),
    on a new arm whose click reaches an idle guest, as (B)'s will. It says how much of the step is
    waiting that a host or runtime change could remove, and projects the simple open from the
    finger lifting: reachable only if the projection is at most 100 ms with the guest composing for
    at most 25. If not, the simple target is out of reach too. Its scripts and queries were run end
    to end on an emulator on 2026-11-24, which also compiled the sample's `Main.kt` change.
+   **Run on the A12 on 2026-11-26. Verdict: reachable in principle, with a small margin**
+   ([`THREE_WAY_BENCHMARK.md`, "NF5 R0"](THREE_WAY_BENCHMARK.md#nf5-r0-the-floor-step-under-perfetto-a12-2026-11-26)).
+   All 12 opens were idle at the UP.
+   - **G = 22.4 ms**: the guest composing, all of it on the fast cluster.
+   - **W = 8.1 ms**, all of it named. c1, 14.2 ms of which 6.6 ms is the Zipline thread's own work:
+     the guest's frame tick waits for the next vsync on the main thread. c2, 0.8 ms: the hop back to
+     the Zipline thread. d_runnable and d_other are 0.
+   - **P = 87.9 ms** with T measured to the frame that actually drew the detail (82.0 ms). On q2's
+     printed T (59.1), P = 65.0. q2's T is too short in 9 of 12 opens: the press's ripple, still
+     animating on the RenderThread after the 400 ms hold, moves the detail's frame, and the matched
+     frame-timeline row is zero-length. At a ratio of 30, P = 109.9 (87.0 printed).
+   - **The margins**: 2.6 ms on G, 12.1 ms on P.
+   - **On this phone, `total` is to the frame's end**, not the display's present (appendix D, "The
+     A12 run").
+   - **The heavy arm's G** (for B1's slice budget): 43.6 ms.
 3. **R1, a reveal-only arm on the A12**: the shell's first frame on the pixels, with and without
    measuring the shell while idle (3.5).
 
@@ -2563,3 +2579,23 @@ Android 12; the session checks it first.
 
 **Cleaned afterwards:** `/data/local/tmp/nf5floor` and `/data/misc/perfetto-traces/nf5-*` on the
 emulator, after pulling them to the scratch directory. The app stays installed.
+
+### The A12 run, 2026-11-26
+
+Run from the command list as written, with the dry run's APKs (sha256 matched), plugged in and
+charging, unlike series H. The verdict is in section 0; the tables, the phone state and the checks
+are in [`THREE_WAY_BENCHMARK.md`, "NF5 R0"](THREE_WAY_BENCHMARK.md#nf5-r0-the-floor-step-under-perfetto-a12-2026-11-26).
+
+The run passed every check (q0a, q0b, qc 12 of 12 on every arm; the clusters separated). It also
+showed two things about the frame columns that the emulator did not, for whoever reuses these
+queries (R1, A6):
+- **On the A12, the end of the app's actual frame-timeline row is the frame's end**: about its
+  `queueBuffer`, about 45 ms before the end of SurfaceFlinger's display frame. It is not the
+  display's present. `j` and `total` measure to it.
+- **`measure.sql`'s frame (the first `doFrame` after the apply) is not always the one that drew the
+  detail.** When the press's ripple is animating on the RenderThread, the detail's draw moves one
+  vsync later, or waits behind the animation's buffer, and the matched row is zero-length (`j` < 0).
+  This happened in 9 of the idle arm's 12 opens. [`a12-2026-11-26/frame-end.sql`](nf5-r0/a12-2026-11-26/frame-end.sql)
+  measures to the first `DrawFrames` of at least 2 ms instead. It fails on the press-off arm, where
+  4 opens have no row. A later revision of `measure.sql` should take the drawing frame from the
+  RenderThread.
