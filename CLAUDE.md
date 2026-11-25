@@ -33,7 +33,11 @@ them visually in a web portal that round-trips to the .kt files in git.
   Maven Central, and `keliver-publish` comes from the zip too. On a pull request
   the same harness scaffolds from this checkout's `scripts/` instead
   (`KELIVER_SCAFFOLD_FROM=repo`, labelled in the results), because there the
-  templates are the change under review. Either way the CI harness (`ci/`, the
+  templates are the change under review. A pull request also runs a third,
+  `local-maven` leg (MS4-35, `reference/inventory/ci/local-maven`): this
+  checkout's LIBRARIES are published into a disposable local Maven repository and
+  the app, its Android host and its iOS host build against them (P1–P7 only for
+  now), so a library change shows on the reference app. Either way the CI harness (`ci/`, the
   isolation guard) and the app's recorded overlay files (`hand-edits.diff`) are
   this checkout's. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).

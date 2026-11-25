@@ -38,6 +38,31 @@ apart from the CI harness.**
 * **The CI harness** is this repository's: `ci/*.sh`, `ci/drive.py`, and the
   isolation guard (`scripts/keliver-test-isolation-guard.sh` and the
   `keliver-store-path.sh` it calls), which are not in the tools bundle.
+* **A third route, local-maven (MS4-35), checks a LIBRARY change.** The two
+  routes above take the libraries from Maven Central at the app's own version
+  (0.3.3), so no change to a Keliver library can show on them. On a pull request
+  `reference-app.yml` and `ios-host.yml` also run a `local-maven` leg (the
+  matrix's `libraries`; by hand, the `libraries` input):
+  - `ci/local-maven/publish.sh` publishes this checkout's libraries that the app
+    and its hosts use (35 modules: the ones the app's `build.gradle` and the host
+    templates name, plus `keliver-image`, and what their published variants depend
+    on), unsigned and without Dokka, only the publications the platform needs,
+    into a fresh directory in the runner's temp space (never `~/.m2`), at
+    `<next version>-local.<commit>`: `0.5.0-local.<commit>` on today's `main`;
+  - `ci/local-maven/route.sh` moves the bootstrapped app to that version and its
+    line (Kotlin 2.4.21, Compose 1.12.2, the Zipline fork, `-Xes-long-as-bigint`,
+    Gradle 9.7.1, from `keliver-runtime-line.sh`), and makes the app and the
+    scaffolded hosts resolve `dev.keliver` **only** from that repository (Gradle's
+    `exclusiveContent`), so a module the route did not publish fails the build;
+  - the hosts are scaffolded by this checkout's `scripts/`, build against it, and
+    run P1–P7 on the emulator and the simulator. `keliver-treehouse-host` logs one
+    line naming its build when a host creates its `TreehouseApp.Factory`
+    (`keliver-treehouse-host <version>`: logcat tag `Keliver` at debug level on
+    Android, standard output on iOS); P2 fails without this checkout's version.
+  The rows after P7, the development route (the zip's generic host is on the 0.4
+  line) and W2 (`reference/embed/android` is on AGP 8.12) stay on the central leg
+  for now, listed as SKIP; MS4-32 ports the app. Each results file has a `ROUTE`
+  line, and `route.txt` names the route.
 
 Source and reproduction: [`reference/inventory/`](../reference/inventory) —
 `bootstrap.sh` recreates the app from the public release; CI runs it end to end

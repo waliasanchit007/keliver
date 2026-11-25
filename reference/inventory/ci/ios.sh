@@ -42,6 +42,15 @@
 # here reads, prints or copies a private key; the app's signing block is the
 # only reader, on each publish (the U31-fixed block from 0.3.7 on: the key is
 # never on a command line, in a log or in .gradle/).
+#
+# Routes (route.txt and the ROUTE line of ios.results name the one taken), as
+# prepare.sh has them: the scaffolders are the zip's (KELIVER_SCAFFOLD_FROM=zip)
+# or this checkout's (repo), the libraries Maven Central's at the app's version.
+# With KELIVER_LOCAL_MAVEN set (local-maven, ci/local-maven/route.sh) the
+# libraries are THIS checkout's, published there by ci/local-maven/publish.sh:
+# the app moves to their version and line, the guest and the iOS host build
+# against them, P2 also checks that the host printed this checkout's
+# keliver-treehouse-host version, and the rows after P7 are skipped.
 set -uo pipefail
 
 TOOLS_VERSION=0.3.18
@@ -66,6 +75,27 @@ out="$(bash "$HERE/start-lines-test.sh" 2>&1)" && ok "harness: $out" || bad "har
 
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
+# The route: whose scaffolders, and whose libraries (see the header).
+LIBRARIES=central
+if [ -n "${KELIVER_LOCAL_MAVEN:-}" ]; then
+  # shellcheck source=local-maven/route.sh
+  . "$HERE/local-maven/route.sh"
+  lm_load || { bad "local-maven: $LM_ERROR"; exit 1; }
+  [ "${KELIVER_SCAFFOLD_FROM:-zip}" = repo ] \
+    || { bad "local-maven: the route scaffolds with this checkout's scripts/ (KELIVER_SCAFFOLD_FROM=repo), not ${KELIVER_SCAFFOLD_FROM:-zip}"; exit 1; }
+  out="$(bash "$HERE/local-maven/route-test.sh" 2>&1)" && ok "harness: $out" || { bad "harness: $out"; exit 1; }
+  LIBRARIES=local-maven
+  ROUTE="$(lm_route_label)"
+  LIBS_FROM="the local repository's $KELIVER_LOCAL_VERSION"
+else
+  case "${KELIVER_SCAFFOLD_FROM:-zip}" in
+    repo) ROUTE="repo-scaffold: this checkout's scripts/; the libraries from Maven Central, at the app's version" ;;
+    *)    ROUTE="published-only: the tools zip's scaffolders; the libraries from Maven Central, at the app's version" ;;
+  esac
+  LIBS_FROM="Maven Central"
+fi
+echo "ROUTE $ROUTE" >> "$EV/ios.results"; echo "$ROUTE" > "$EV/route.txt"
+echo "==> route: $ROUTE"
 # The relay's port: KELIVER_RELAY_PORT, 8077 by default (hosted CI), as
 # prepare.sh has it. Another one on a machine whose :8077 is someone else's
 # portal (a self-hosted runner); the editor follows at port + 19. It goes into
@@ -112,12 +142,21 @@ APP="$WORK/inventory"
   # The files the scaffolders cannot produce (bootstrap.sh's overlay).
   for f in keliver.portal.json build.gradle settings.gradle \
            src/jsMain/kotlin/device/Main.kt src/jsMain/kotlin/device/KeliverTiming.kt; do cp "$REF/app/$f" "$f"; done
+  # local-maven: onto this checkout's libraries, their version and line (route.sh).
+  if [ "$LIBRARIES" = local-maven ]; then
+    lm_move_app "$APP" || { echo "local-maven: the app could not be moved onto Keliver $KELIVER_LOCAL_VERSION: $LM_ERROR"; exit 1; }
+    echo "local-maven: the app is on Keliver $KELIVER_LOCAL_VERSION, dev.keliver only from $KELIVER_LOCAL_MAVEN"
+  fi
   "$KP/keliver-new-publish-target.sh"
   python3 -c 'import json,sys; p=sys.argv[1]; c=json.load(open(p)); c["port"]=int(sys.argv[2]); open(p,"w").write(json.dumps(c,indent=2)+"\n")' \
     keliver.portal.json "$RELAY_PORT"
   git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $LABEL"
 ) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $LABEL" \
   || { bad "recreating the app failed"; tail -20 "$EV/app.log"; exit 1; }
+if [ "$LIBRARIES" = local-maven ]; then
+  cp "$APP/settings.gradle" "$EV/local-maven-app-settings.gradle"; cp "$APP/build.gradle" "$EV/local-maven-app-build.gradle"
+  ok "local-maven: the app is on Keliver $KELIVER_LOCAL_VERSION (the $KELIVER_LINE line: Kotlin $TOOLCHAIN_KOTLIN, $ZIPLINE_GROUP $TOOLCHAIN_ZIPLINE, Gradle $TOOLCHAIN_GRADLE), dev.keliver only from $KELIVER_LOCAL_MAVEN"
+fi
 
 # --- 2. a relay for this app, isolated -----------------------------------------
 # shellcheck source=/dev/null
@@ -172,6 +211,11 @@ esac
 ( cd "$APP" && "$IOS_SCAFFOLD" --bundle-server http://localhost:$RELAY_PORT --bundle-id "$BID" ) \
   > "$EV/ios-host-scaffold.log" 2>&1 && ok "P1: keliver-new-ios-host.sh ($WHICH) scaffolded host-ios/" \
   || { bad "P1: the iOS host was not scaffolded"; cat "$EV/ios-host-scaffold.log"; exit 1; }
+if [ "$LIBRARIES" = local-maven ]; then
+  lm_add_repository "$APP/host-ios/settings.gradle" \
+    && ok "local-maven: host-ios/settings.gradle resolves dev.keliver only from $KELIVER_LOCAL_MAVEN" \
+    || { bad "local-maven: host-ios/settings.gradle: $LM_ERROR"; exit 1; }
+fi
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 grep -q "PORTAL_PUBLIC_KEY_HEX: String = \"$PUB\"" "$CFG" \
   && ok "P1: HostConfig.kt embeds this app's public key (${PUB:0:8}…)" || bad "P1: the embedded key is not this app's"
@@ -185,11 +229,17 @@ sed -i '' 's|UPDATES: String = ""|UPDATES: String = "next-launch"|' "$CFG"
 ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
     -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
     CODE_SIGNING_ALLOWED=NO build ) > "$EV/xcodebuild.log" 2>&1 \
-  && ok "P1: xcodebuild built the host from Maven Central" \
+  && ok "P1: xcodebuild built the host from $LIBS_FROM" \
   || { bad "P1: xcodebuild failed"; grep -E '^e: |error:' "$EV/xcodebuild.log" | head -20; exit 1; }
 APPB="$(find "$WORK/dd/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
 ( cd "$APP/host-ios" && ../gradlew -q dependencies --configuration iosSimulatorArm64CompileKlibraries ) > "$EV/host-dependencies.txt" 2>&1
-grep -oE 'dev\.keliver:[a-z0-9-]+:[0-9.]+' "$EV/host-dependencies.txt" | sort -u > "$EV/host-keliver-artifacts.txt"
+if [ "$LIBRARIES" = local-maven ]; then
+  lm_check_artifacts "$EV/host-dependencies.txt" "$EV/host-keliver-artifacts.txt" \
+    && ok "local-maven: all $(grep -c . "$EV/host-keliver-artifacts.txt") dev.keliver artifacts of the host are $KELIVER_LOCAL_VERSION" \
+    || bad "local-maven: the host's dev.keliver artifacts: $LM_ERROR"
+else
+  grep -oE 'dev\.keliver:[a-z0-9-]+:[0-9.]+' "$EV/host-dependencies.txt" | sort -u > "$EV/host-keliver-artifacts.txt"
+fi
 echo "    $(wc -l < "$EV/host-keliver-artifacts.txt" | tr -d ' ') dev.keliver artifacts: $(cut -d: -f3 "$EV/host-keliver-artifacts.txt" | sort -u | tr '\n' ' ')"
 
 # A simulator of our own: the newest iOS runtime, an iPhone it supports.
@@ -298,6 +348,15 @@ fi
 grep -q "codeLoadFailed" "$C" && bad "P2: a load failed (U28 would be an empty-URL failure): $(grep codeLoadFailed "$C" | head -1)" \
   || ok "P2: no failed load, so no empty-URL attempt (U28 absent)"
 reads P2-v1 Inventory && ok "P2: the screen reads 'Inventory'" || bad "P2: 'Inventory' is not on the screen"
+# local-maven: the host runs THIS checkout's keliver-treehouse-host, which names its build on
+# standard output: the library change reached the simulator.
+if [ "$LIBRARIES" = local-maven ]; then
+  # -F, not a whole line: println writes the text and the newline apart, so another thread's
+  # output can land between them (ConsoleLine.kt in the host template).
+  tr -d '\r' < "$C" | grep -qF "keliver-treehouse-host $KELIVER_LOCAL_VERSION" \
+    && ok "local-maven: the host printed '$(lm_marker)' (this checkout's library)" \
+    || bad "local-maven: no '$(lm_marker)' line on the host's console: $(grep -m2 'keliver-treehouse-host' "$C" | tr '\n' ' ')"
+fi
 
 # --- P3 -------------------------------------------------------------------------
 # A launch of its own, its console kept while the UI test taps (launch() would close it
@@ -402,6 +461,17 @@ cache_start_after_failed_lookup "$C" && ok "P7: the lookup failed and the host s
   || bad "P7: it did not start from the cache"
 grep -q "codeLoadSuccess" "$C" && ok "P7: code loaded offline (codeLoadSuccess), verified with this app's key" || bad "P7: no load offline"
 reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || bad "P7: 'Stockroom' is not on the screen"
+
+# local-maven: the rows after P7 stay on the other two routes for now (MS4-32 ports the reference
+# app; MS4-04, -17 and -23 add their own rows to this route). Listed, never counted as passes.
+if [ "$LIBRARIES" = local-maven ]; then
+  echo "SKIP W3, W2, W5, WS6, M0 and W8: not on the local-maven route yet; the repo-scaffold job runs them" >> "$EV/ios.results"
+  echo "  SKIP  W3, W2, W5, WS6, M0 and W8: not on the local-maven route yet; the repo-scaffold job runs them"
+  for f in "$EV"/*.png; do echo "$(basename "$f"): $(python3 "$HERE/shot.py" "$f")"; done > "$EV/shots.results"
+  [ -s "$EV/ios.retries" ] && echo "ios: $(grep -c . "$EV/ios.retries") launch(es) printed nothing and were relaunched (ios.retries):" && cat "$EV/ios.retries"
+  echo "ios: passed $pass, failed $fail"
+  [ "$fail" -eq 0 ]; exit $?
+fi
 
 # shellcheck source=w3/ios-static.sh
 . "$HERE/w3/ios-static.sh"

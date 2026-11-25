@@ -28,4 +28,10 @@ internal interface TreehousePlatform {
   fun newDispatchers(
     applicationName: String,
   ): TreehouseDispatchers
+
+  /**
+   * Writes [line] to the platform's log at debug level: logcat (tag `Keliver`) on Android, standard
+   * output on iOS. By default (a platform for tests) it writes nothing.
+   */
+  fun logDebug(line: String) {}
 }

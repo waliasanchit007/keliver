@@ -22,6 +22,15 @@
 #    hand, and this checkout's scripts/ otherwise (pull requests, pushes to main,
 #    the nightly run; KELIVER_SCAFFOLD_FROM).
 #      Screens are read by macOS Vision.
+# 3. The same, on the local-maven route (MS4-35, the matrix's `libraries`): on a
+#    pull request the OTA job also runs with THIS checkout's libraries, published
+#    into a fresh repository in the runner's temp space (never ~/.m2;
+#    reference/inventory/ci/local-maven). The app moves to their version and
+#    line, its guest and the iOS host build against them, P1-P7 run, and P2
+#    checks that the host printed this checkout's keliver-treehouse-host
+#    version. The rows after P7 stay on the central leg (Maven Central) for now.
+#    A run started by hand picks one leg (input `libraries`). Each results file
+#    names its route.
 #
 # Read-only: no secrets, no publishing. The keys are disposable and generated
 # inside the run. A workflow can't be dispatched until it is on the default
@@ -119,7 +128,15 @@ on:
       - ".github/workflows/ios-host.yml"
   schedule:
     - cron: "37 1 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      # local-maven: check a branch's LIBRARY change on the iOS host by hand (a
+      # pull request runs both legs of the OTA job).
+      libraries:
+        description: "central (the published-only proof), or local-maven: this checkout's libraries, from a local Maven repository"
+        type: choice
+        options: [central, local-maven]
+        default: central
 permissions:
   contents: read
 concurrency:
@@ -211,6 +228,12 @@ jobs:
           retention-days: 30
 
   ios-host:
+    # The central leg keeps the job's name (ios-host); the other is named for its route.
+    name: ${{ matrix.libraries == 'local-maven' && 'ios-host (local-maven)' || 'ios-host' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        libraries: ${{ fromJSON(github.event_name == 'pull_request' && '["central","local-maven"]' || (github.event_name == 'workflow_dispatch' && inputs.libraries == 'local-maven') && '["local-maven"]' || '["central"]') }}
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.IOS_RUNNER || 'macos-15' }}
     # Observed 99-175 minutes with M0 and T2 (runner speed varies: one run took
     # 366, and run 42691755854 was cut off at 200 minutes, every phase about 1.6x
@@ -225,8 +248,9 @@ jobs:
       # tests ITS OWN scripts/ (repo): template changes are what it changes.
       # A run started by hand (workflow_dispatch) uses only the published zip's
       # bin/ (zip): the published-only proof of the release pinned below.
-      # Everything else always comes from the published zip.
-      KELIVER_SCAFFOLD_FROM: ${{ github.event_name == 'workflow_dispatch' && 'zip' || 'repo' }}
+      # Everything else always comes from the published zip. The local-maven
+      # leg always scaffolds with this checkout's scripts/.
+      KELIVER_SCAFFOLD_FROM: ${{ (github.event_name == 'workflow_dispatch' && matrix.libraries != 'local-maven') && 'zip' || 'repo' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -235,6 +259,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # local-maven: route.sh's own cases first (no Gradle, no network).
+      - name: local-maven — the route's self-test
+        if: matrix.libraries == 'local-maven'
+        run: bash reference/inventory/ci/local-maven/route-test.sh
 
       # T2 (m0/ios-timing.sh) on a pull request only when it touches what T2
       # checks: the host's Kotlin (timing, no-timing, the debug link (ED3: its
@@ -275,8 +303,10 @@ jobs:
             ~/ci-cache/gradle-home/wrapper
           key: ios-host-${{ runner.os }}-${{ hashFiles('scripts/templates/ios-host/build.gradle', 'scripts/templates/ios-host/settings.gradle', 'scripts/templates/ios-host/gradle.properties', 'reference/inventory/bootstrap.sh') }}
           restore-keys: ios-host-${{ runner.os }}-
+      # local-maven: in a run started by hand too, so the publish and the app's
+      # builds (whose user.home the harness moves) share one Gradle home and Konan dir.
       - name: Use the cache
-        if: runner.environment == 'github-hosted' && github.event_name != 'workflow_dispatch'
+        if: runner.environment == 'github-hosted' && (github.event_name != 'workflow_dispatch' || matrix.libraries == 'local-maven')
         run: |
           mkdir -p "$HOME/ci-cache/gradle-home" "$HOME/ci-cache/konan"
           echo "GRADLE_USER_HOME=$HOME/ci-cache/gradle-home" >> "$GITHUB_ENV"
@@ -330,6 +360,24 @@ jobs:
           unzip -p keliver-portal-tools-0.3.18.zip 'keliver-portal-tools-0.3.18/VERSION.json' \
             | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == '878311ae9a42611aa5fbd49c20c2d5436fe16d49'"
 
+      # local-maven: the modules the app and its hosts use (and what they depend
+      # on; the iOS simulator's and the guest's publications), unsigned, into a
+      # fresh directory; ios.sh then takes the route from KELIVER_LOCAL_MAVEN. How
+      # long it took is in the summary. Under the machine's lock on a self-hosted runner.
+      - name: local-maven — publish this checkout's libraries into a local Maven repository
+        if: matrix.libraries == 'local-maven'
+        env:
+          SELF_HOSTED: ${{ runner.environment == 'self-hosted' }}
+        run: |
+          # No -u: an empty LOCK is an unbound array to bash 3.2.
+          set -eo pipefail
+          LOCK=(); if [ "$SELF_HOSTED" = true ] && [ -x "$(cat "$HOME/.keliver-ci/lock-cmd" 2>/dev/null)" ]; then LOCK=("$(cat "$HOME/.keliver-ci/lock-cmd")" "ci:ios-host-local-maven-publish"); fi
+          m2="$RUNNER_TEMP/keliver-local-maven"
+          "${LOCK[@]}" bash reference/inventory/ci/local-maven/publish.sh "$m2" ios "$GITHUB_WORKSPACE/ios-evidence"
+          echo "KELIVER_LOCAL_MAVEN=$m2" >> "$GITHUB_ENV"
+          { echo "### local-maven: this checkout's libraries (iOS)"; echo; echo '```'
+            cat "$GITHUB_WORKSPACE/ios-evidence/local-maven-publish.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
       - name: iOS production OTA on the simulator — P1–P7
         env:
           SELF_HOSTED: ${{ runner.environment == 'self-hosted' }}
@@ -356,7 +404,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-host-evidence-${{ github.run_id }}
+          name: ios-host${{ matrix.libraries == 'local-maven' && '-local-maven' || '' }}-evidence-${{ github.run_id }}
           path: ios-evidence/
           if-no-files-found: warn
           retention-days: 30

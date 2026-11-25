@@ -15,6 +15,9 @@
 #   6b. WS6, crash rollback (ci/ws6/android-crash.sh): C1-C8
 #   7. M0, timing marks (ci/m0/android-timing.sh): T1-T2
 #   8. W8, a signing-key rotation (ci/w8/android-rotation.sh): K1-K8
+# On the local-maven route (prepare.sh's; ci/local-maven/route.sh) the libraries are this
+# checkout's: 1 and D3 are skipped (the generic development host is on the 0.4 line), 3 also
+# checks that the host logged this checkout's keliver-treehouse-host version, and 4-8 are skipped.
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #
@@ -38,8 +41,12 @@ EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
 SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
-unset RELAY_PORT   # only the work dir says which port its app was built for
-. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, W3_BRIDGED, DEVICE_KIND, HOST_ADDR, RELAY_PORT
+unset RELAY_PORT LIBRARIES LOCAL_VERSION   # only the work dir says which port and libraries its app was built for
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, W3_BRIDGED, DEVICE_KIND, HOST_ADDR, RELAY_PORT, LIBRARIES, LOCAL_VERSION
+# prepare.sh's route: the libraries from Maven Central, or (local-maven) this checkout's at
+# LOCAL_VERSION, whose keliver-treehouse-host logs one line naming that version when a host starts
+# (HostBuild.kt). A work dir from before the route has no LIBRARIES line: Maven Central.
+LIBRARIES="${LIBRARIES:-central}"
 # W7: what prepare.sh built the hosts for (KELIVER_DEVICE there). A work dir
 # from before W7 has neither line: it was built for the emulator.
 DEVICE_KIND="${DEVICE_KIND:-emulator}"; HOST_ADDR="${HOST_ADDR:-10.0.2.2}"
@@ -62,6 +69,8 @@ sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else sha
 # shellcheck source=start-lines.sh
 . "$HERE/start-lines.sh"  # took_release, cache_start_after_failed_lookup, lookups_in: either start policy
 : > "$EV/device.results"
+# The route prepare.sh took (its route.txt), named in these results too.
+[ -f "$EV/route.txt" ] && echo "ROUTE $(cat "$EV/route.txt")" >> "$EV/device.results"
 out="$(bash "$HERE/start-lines-test.sh" 2>&1)" && ok "harness: $out" || bad "harness: $out"
 drive(){ python3 "$HERE/drive.py" "$SERIAL" "$EV" "$@"; }
 # drive.py's exit status is its failure count; fold its checks into ours.
@@ -198,7 +207,13 @@ fi
 echo "--- 1. development route (generic host from the tools bundle)"
 # The generic development host has http://10.0.2.2:8080 compiled in (portal-
 # device-android), so on a phone it cannot reach this machine: not run there.
-DEV_ROUTE=1; [ "$DEVICE_KIND" = physical ] && DEV_ROUTE=0
+DEV_ROUTE=1; NO_DEV_WHY="the generic development host reaches only 10.0.2.2 (an emulator's address); physical-device route"
+[ "$DEVICE_KIND" = physical ] && DEV_ROUTE=0
+# local-maven: that host is the tools zip's, built on the 0.4 line (upstream Zipline, QuickJS 2021);
+# this guest is on the 0.5 line (the fork, Long as a BigInt). Production (section 3) runs it on
+# this checkout's libraries instead.
+[ "$LIBRARIES" = local-maven ] && DEV_ROUTE=0 \
+  && NO_DEV_WHY="the tools zip's generic development host is on the 0.4 line and this guest on the 0.5 line (local-maven route); section 3 runs it on this checkout's host"
 if [ "$DEV_ROUTE" = 1 ]; then
 adb -s "$SERIAL" uninstall "$PKGID" >/dev/null 2>&1 || true
 "$KP/keliver-install-device-host.sh" --serial "$SERIAL" > "$EV/install-dev-host.log" 2>&1 \
@@ -210,7 +225,7 @@ grep -q "mode=dev" "$EV/logcat-dev-1.txt" && ok "the generic host entered the de
 drive dev Inventory E; fold "E1-E10 on the development route" $?
 shot E-end
 else
-  skip "E1-E10: the generic development host reaches only 10.0.2.2 (an emulator's address); physical-device route"
+  skip "E1-E10: $NO_DEV_WHY"
 fi
 
 # --- 2. D14: edit through the relay, rebuild, observe ------------------------
@@ -251,6 +266,8 @@ shot D3-stockroom
 # on the rebuilt bundle, with the new title.
 drive dev Stockroom D3E; fold "D3: E1-E10 unchanged after the edit" $?
 serve_down
+elif [ "$LIBRARIES" = local-maven ]; then
+  skip "D3: shown on the development host ($NO_DEV_WHY); P4 below shows the edit, signed, in production"
 else
   skip "D3: shown on the development host, which a phone cannot reach (P4 below shows the edit, signed, in production)"
 fi
@@ -289,6 +306,13 @@ grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
   && ok "P2: production verifies with this app's key (${PUB:0:8}…)" || bad "P2: no verification with this app's key in the log"
 grep -q "$HOST_TAG: refusing to load" "$EV/logcat-prod-v1.txt" && bad "P2: the production host refused to load" || ok "P2: the production host did not refuse"
 grep -q "$HOST_TAG: codeLoadSuccess" "$EV/logcat-prod-v1.txt" && ok "P2: the signed v1 loaded (codeLoadSuccess)" || bad "P2: v1 did not load"
+# local-maven: the host runs THIS checkout's keliver-treehouse-host, which names its build in the
+# log (tag Keliver, debug): the library change reached the device.
+if [ "$LIBRARIES" = local-maven ]; then
+  grep -E " D Keliver *: " "$EV/logcat-prod-v1.txt" | tr -d '\r' | grep -qx ".* D Keliver *: keliver-treehouse-host ${LOCAL_VERSION:-?}" \
+    && ok "local-maven: the host logged 'keliver-treehouse-host $LOCAL_VERSION' (this checkout's library, logcat tag Keliver)" \
+    || bad "local-maven: no 'keliver-treehouse-host ${LOCAL_VERSION:-?}' line (tag Keliver) in the production host's log: $(grep -E ' Keliver *: ' "$EV/logcat-prod-v1.txt" | head -2 | tr '\n' ' ')"
+fi
 drive title Inventory P2; fold "P2: v1 shows Inventory in production" $?
 drive prod Inventory P3; fold "P3: repeated actions run from the signed bundle" $?
 
@@ -366,6 +390,14 @@ grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
   && ok "P7: with the relay down, code loaded (codeLoadSuccess) in the host that verifies with this app's key" \
   || bad "P7: no load offline"
 drive title Stockroom P7; fold "P7: Stockroom offline" $?
+
+# local-maven: prepare.sh built only the production host; the rows after P7 stay on the other two
+# routes for now (prepare.results lists them).
+if [ "$LIBRARIES" = local-maven ]; then
+  skip "W3, W2, W5, WS6, M0, W8 and A1: not on the local-maven route yet (prepare.sh built none of their hosts); the repo-scaffold job runs them"
+  echo "device: passed $pass, failed $fail"
+  [ "$fail" -eq 0 ]; exit $?
+fi
 
 # shellcheck source=w3/android-static.sh
 . "$HERE/w3/android-static.sh"
