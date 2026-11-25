@@ -249,6 +249,15 @@ jobs:
           disable-animations: true
           script: KELIVER_SHOTS_MUST_BE_VALID=${{ (inputs.emulator_target || 'google_apis') == 'google_apis' && '1' || '0' }} bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
 
+      # A job's log is readable only once every job of the run has ended; an
+      # annotation shows as soon as this one does (gh run view).
+      - name: On failure, the failed rows as an annotation
+        if: failure()
+        env:
+          LEG: ${{ matrix.libraries }}
+        run: |
+          bash reference/inventory/ci/annotate-failures.sh "$GITHUB_WORKSPACE/evidence" "reference-app, $LEG leg"
+
       - name: Save Gradle downloads
         if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

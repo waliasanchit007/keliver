@@ -389,6 +389,15 @@ jobs:
           "${LOCK[@]}" bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
             "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.18.zip"
 
+      # A job's log is readable only once every job of the run has ended; an
+      # annotation shows as soon as this one does (gh run view).
+      - name: On failure, the failed rows as an annotation
+        if: failure()
+        env:
+          LEG: ${{ matrix.libraries }}
+        run: |
+          bash reference/inventory/ci/annotate-failures.sh "$GITHUB_WORKSPACE/ios-evidence" "ios-host, $LEG leg"
+
       - name: Save the Kotlin/Native toolchain and Gradle downloads
         if: runner.environment == 'github-hosted' && github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
