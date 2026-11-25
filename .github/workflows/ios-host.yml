@@ -262,7 +262,10 @@ jobs:
       # local-maven: route.sh's own cases first (no Gradle, no network).
       - name: local-maven — the route's self-test
         if: matrix.libraries == 'local-maven'
-        run: bash reference/inventory/ci/local-maven/route-test.sh
+        run: |
+          out="$(bash reference/inventory/ci/local-maven/route-test.sh 2>&1)" \
+            || { echo "::error title=local-maven route-test::$out"; exit 1; }
+          echo "$out"
 
       # T2 (m0/ios-timing.sh) on a pull request only when it touches what T2
       # checks: the host's Kotlin (timing, no-timing, the debug link (ED3: its

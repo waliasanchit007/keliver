@@ -149,7 +149,10 @@ jobs:
       # broken harness fails in seconds rather than after the publish.
       - name: local-maven — the route's self-test
         if: matrix.libraries == 'local-maven'
-        run: bash reference/inventory/ci/local-maven/route-test.sh
+        run: |
+          out="$(bash reference/inventory/ci/local-maven/route-test.sh 2>&1)" \
+            || { echo "::error title=local-maven route-test::$out"; exit 1; }
+          echo "$out"
       # Gradle's downloads only (dependencies and the wrapper), never build
       # outputs. A restore that hangs (ci.yml's build job saw that on Linux with
       # a whole Gradle home) is cut at 10 minutes and the run goes on cold. A run

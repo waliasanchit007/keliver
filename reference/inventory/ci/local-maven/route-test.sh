@@ -64,7 +64,8 @@ for f in "$S" "$B" "$A/keliver.portal.json"; do cp "$f" "$f.once"; done
 lm_move_app "$A" && cmp -s "$S" "$S.once" && cmp -s "$B" "$B.once" && cmp -s "$A/keliver.portal.json" "$A/keliver.portal.json.once" \
   && case_ok || case_bad "a second lm_move_app changed the app ($LM_ERROR)"
 # The route's publish wiring (lm_publish_target) takes the moved app: the fork's plugin, a signing block.
-A3="$T/app3"; mkdir -p "$A3"; cp "$S" "$B" "$A/keliver.portal.json" "$A3/"
+A3="$T/app3"; mkdir -p "$A3/src/jsMain/kotlin/device"; cp "$S" "$B" "$A/keliver.portal.json" "$A3/"
+cp "$REF/app/src/jsMain/kotlin/device/Main.kt" "$A3/src/jsMain/kotlin/device/"   # the bundle's entry point, which it requires
 if ( cd "$A3" && "$(lm_publish_target)" ) > "$T/publish-target.log" 2>&1; then case_ok
 else case_bad "lm_publish_target refused the moved app: $(grep -v '^$' "$T/publish-target.log" | head -2 | tr '\n' ' ')"; fi
 has "$A3/build.gradle" "ZiplineCompileTask" && has "$A3/keliver.portal.json" '"publishTask"' && case_ok \
