@@ -1,0 +1,24 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-root-widget>
+abstract interface <#A: kotlin/Any> dev.keliver.compose.root.widget/KeliverComposeWidgetFactory // dev.keliver.compose.root.widget/KeliverComposeWidgetFactory|null[0]
+
+final class <#A: kotlin/Any> dev.keliver.compose.root.widget/KeliverComposeWidgetSystem : dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactoryOwner<#A>, dev.keliver.compose.root.widget/KeliverComposeWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem|null[0]
+    constructor <init>(dev.keliver.compose.root.widget/KeliverComposeWidgetFactory<#A>, dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A>) // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.<init>|<init>(dev.keliver.compose.root.widget.KeliverComposeWidgetFactory<1:0>;dev.keliver.compose.core.widget.KeliverComposeCoreWidgetFactory<1:0>){}[0]
+
+    final val KeliverCompose // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverCompose|{}KeliverCompose[0]
+        final fun <get-KeliverCompose>(): dev.keliver.compose.root.widget/KeliverComposeWidgetFactory<#A> // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverCompose.<get-KeliverCompose>|<get-KeliverCompose>(){}[0]
+    final val KeliverComposeCore // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCore|{}KeliverComposeCore[0]
+        final fun <get-KeliverComposeCore>(): dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A> // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCore.<get-KeliverComposeCore>|<get-KeliverComposeCore>(){}[0]
+
+    final fun apply(#A, dev.keliver/Modifier.UnscopedElement) // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.apply|apply(1:0;dev.keliver.Modifier.UnscopedElement){}[0]
+
+    final object Companion { // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.Companion|null[0]
+        final fun <#A2: kotlin/Any> allChildren(dev.keliver.widget/Widget<#A2>): kotlin.collections/List<dev.keliver.widget/Widget<#A2>> // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.Companion.allChildren|allChildren(dev.keliver.widget.Widget<0:0>){0§<kotlin.Any>}[0]
+    }
+}

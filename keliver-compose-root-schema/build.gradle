@@ -1,0 +1,29 @@
+// The product's generated root schema (docs/MS4_PLAN.md, MS4-01): no widgets of its own, and each
+// generated group as a Redwood dependency at its own tag (keliver-compose-generator/root.json).
+// src/main/kotlin/…/Generated.kt is written by :keliver-compose-generator:generateComposeApi. The
+// root has no legacy schema dependency: legacy keliver-material is not part of the generated root.
+import static dev.keliver.buildsupport.TargetGroup.Tooling
+
+redwoodBuild {
+  targets(Tooling)
+  publishing()
+}
+
+apply plugin: 'dev.keliver.schema'
+
+dependencies {
+  api projects.keliverComposeCoreSchema
+}
+
+redwoodSchema {
+  type = 'dev.keliver.compose.root.KeliverCompose'
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

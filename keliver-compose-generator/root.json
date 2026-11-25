@@ -1,0 +1,8 @@
+{
+  "group": "root",
+  "schemaPackage": "dev.keliver.compose.root",
+  "schemaName": "KeliverCompose",
+  "dependencies": [
+    {"tag": 10, "type": "dev.keliver.compose.core.KeliverComposeCore"}
+  ]
+}

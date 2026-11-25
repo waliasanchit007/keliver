@@ -1,0 +1,15 @@
+public abstract interface class dev/keliver/compose/root/widget/KeliverComposeWidgetFactory {
+}
+
+public final class dev/keliver/compose/root/widget/KeliverComposeWidgetSystem : dev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactoryOwner, dev/keliver/compose/root/widget/KeliverComposeWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
+	public static final field Companion Ldev/keliver/compose/root/widget/KeliverComposeWidgetSystem$Companion;
+	public fun <init> (Ldev/keliver/compose/root/widget/KeliverComposeWidgetFactory;Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;)V
+	public fun apply (Ljava/lang/Object;Ldev/keliver/Modifier$UnscopedElement;)V
+	public fun getKeliverCompose ()Ldev/keliver/compose/root/widget/KeliverComposeWidgetFactory;
+	public fun getKeliverComposeCore ()Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;
+}
+
+public final class dev/keliver/compose/root/widget/KeliverComposeWidgetSystem$Companion {
+	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+

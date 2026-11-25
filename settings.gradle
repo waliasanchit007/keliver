@@ -72,6 +72,17 @@ include ':keliver-compose-gatea-compose'
 include ':keliver-compose-gatea-protocol-guest'
 include ':keliver-compose-gatea-protocol-host'
 include ':keliver-compose-gatea-composeui'
+// The product's generated groups (docs/MS4_PLAN.md, MS4-01), generated beside the prototype above:
+// the root schema, which lists the groups, and the core group.
+include ':keliver-compose-root-schema'
+include ':keliver-compose-root-widget'
+include ':keliver-compose-root-protocol-guest'
+include ':keliver-compose-root-protocol-host'
+include ':keliver-compose-core-schema'
+include ':keliver-compose-core-widget'
+include ':keliver-compose-core-modifiers'
+include ':keliver-compose-core-compose'
+include ':keliver-compose-core-composeui'
 // Gate B part c: the same-source samples as a signed guest bundle and a Kotlin-only iOS simulator
 // app that loads it. Only with -Pkeliver.gatebIos (scripts/keliver-gateb-ios-sim.sh), so CI's
 // full graph neither links the app nor compiles the bundle.

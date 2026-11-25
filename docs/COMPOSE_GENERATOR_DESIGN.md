@@ -330,6 +330,21 @@ one naming its category. First entries:
   app size and decides.
 - **Migration:** a tool that rewrites legacy calls (`Background(colorArgb)` to
   `Modifier.background(Color(…))`) is MS4's.
+- **The product's layout, as built (MS4-01, [`MS4_PLAN.md`](MS4_PLAN.md)).** It differs from the
+  table above:
+  - **A generated root.** `KeliverCompose` (`keliver-compose-generator/root.json`) has no widgets
+    of its own. Each group is a dependency at its own tag, and the protocol modules are the root's.
+    The root has **no legacy schema**: a tree cannot mix legacy and generated widgets, and a
+    legacy screen stays on the legacy root.
+  - **One core group** (dependency tag 10). `core.json` covers foundation-layout, foundation, ui,
+    material3, animation and the extras (Q1). For now it also holds coil and the icons; MS4-03
+    and MS4-19 move them out.
+  - **The core group owns `keliver-compose-values`.** It writes the `*Defaults` mirrors, and its
+    lock holds their factory tags. The prototype (`gatea`), generated beside it until MS4-40, reads
+    those tags (`--factories-lock`) and writes no values.
+  - **Modules and artifacts:** `keliver-compose-<group>-<role>` (Q14). The root's roles are
+    `-schema`, `-widget`, `-protocol-guest` and `-protocol-host`. The core group's roles are
+    `-schema`, `-widget`, `-modifiers`, `-compose` and `-composeui`.
 
 ## 15. A worked example
 

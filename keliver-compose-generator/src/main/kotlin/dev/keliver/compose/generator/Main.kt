@@ -66,7 +66,7 @@ class Output(
 /** The package of the editor canvas's generated interpreter (ED0, docs/ED0_SPIKE.md). */
 const val EDITOR_RENDER_PACKAGE = "dev.keliver.portal.compose.render"
 
-fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List<File>): Output {
+fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List<File>, factoryOwner: Lock? = null): Output {
   val api = ApiReader(classpath)
   val src = SourceReader(sources)
   val decls = config.declarations.map { api.find(it).also(src::complete) }
@@ -89,7 +89,7 @@ fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List
       "${config.group}.json (keep this line: old guests still send its tag). Visible overloads now:\n    " + visible.joinToString("\n    ")
   }
   if (orphans.isNotEmpty()) error(orphans.joinToString("\n"))
-  val lock = LockBuilder(oldLock)
+  val lock = LockBuilder(oldLock, factoryOwner)
   val plans = plan(config, decls, lock, defaults) + errorDecls.map { (d, message) -> Plan.ErrorStub(d, classify(d), "Keliver: $message") }
   val factories = planFactories(config, defaults, lock)
   val e = Emitter(config, plans, factories, defaults, api::supertypes)
@@ -100,19 +100,34 @@ fun main(argv: Array<String>) {
   val args = argv.toList()
   fun arg(name: String) = args[args.indexOf(name) + 1]
   val check = "--check" in args
+  if ("--root" in args) return root(File(arg("--root")), File(arg("--out-schema")), check)
   val config = loadConfig(File(arg("--config"))).also { it.input = if ("--input" in args) arg("--input") else null }
   val lockFile = File(arg("--lock"))
-  val oldLock = if (lockFile.exists()) lockJson.decodeFromString(Lock.serializer(), lockFile.readText()) else Lock(config.group)
+  fun readLock(file: File) = lockJson.decodeFromString(Lock.serializer(), file.readText())
+  val oldLock = when {
+    lockFile.exists() -> readLock(lockFile)
+    // A new group's first lock may start from another group's (MS4-01: the product's core group
+    // starts with the prototype's tags, until MS4-06 gives the product fresh locks). Read only
+    // when the group has no lock yet; after that the group's own lock is the one appended to.
+    "--seed-lock" in args -> readLock(File(arg("--seed-lock"))).copy(group = config.group)
+    else -> Lock(config.group)
+  }
+  require(oldLock.group == config.group) { "$lockFile is group ${oldLock.group}, the config is group ${config.group}" }
+  // The group that writes keliver-compose-values owns the factory tags; another group reads them.
+  val factoryOwner = if ("--factories-lock" in args) readLock(File(arg("--factories-lock"))) else null
+  require(factoryOwner == null || "--out-values" !in args) { "--factories-lock: only the group that owns the factory tags writes keliver-compose-values" }
   val classpath = arg("--classpath").split(File.pathSeparator).map(::File)
   val sources = arg("--sources").split(File.pathSeparator).map(::File)
-  val out = generate(config, oldLock, classpath, sources)
+  val out = generate(config, oldLock, classpath, sources, factoryOwner)
 
+  // Each output root is one group's own (the values root is the owner group's), so the stale check
+  // below never deletes another group's files.
   val roots = listOf(
     File(arg("--out-schema")) to out.schema,
     File(arg("--out-guest")) to out.guest,
     File(arg("--out-host")) to out.host,
-    File(arg("--out-values")) to out.values,
-  ) + (if ("--out-editor-render" in args) listOf(File(arg("--out-editor-render")) to out.editorRender) else emptyList())
+  ) + (if ("--out-values" in args) listOf(File(arg("--out-values")) to out.values) else emptyList()) +
+    (if ("--out-editor-render" in args) listOf(File(arg("--out-editor-render")) to out.editorRender) else emptyList())
   val expected = buildMap {
     for ((root, files) in roots) for ((path, text) in files) put(File(root, path), text)
     put(File(arg("--out-editor")), out.editor)

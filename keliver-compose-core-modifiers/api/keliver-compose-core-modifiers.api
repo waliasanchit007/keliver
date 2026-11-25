@@ -1,0 +1,180 @@
+public abstract interface class dev/keliver/compose/core/modifier/ExtraAnimated : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getParam ()Ljava/lang/String;
+	public abstract fun getRef ()Ldev/keliver/compose/animation/core/AnimatedRef;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/ExtraPress : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getOnCancel ()I
+	public abstract fun getOnPress ()I
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenAlpha1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getAlpha ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenAnimateContentSize1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getAnimationSpec ()Ldev/keliver/compose/animation/core/AnimationSpecWire;
+	public abstract fun getAnimationSpecIsDefault ()Z
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenAnimateContentSize2 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getAlignment ()Ldev/keliver/compose/ui/Alignment;
+	public abstract fun getAnimationSpec ()Ldev/keliver/compose/animation/core/AnimationSpecWire;
+	public abstract fun getAnimationSpecIsDefault ()Z
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenBackground1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getColor-G4xQfSE ()J
+	public abstract fun getShape ()Ldev/keliver/compose/ui/graphics/Shape;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenBorder1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getColor-G4xQfSE ()J
+	public abstract fun getShape ()Ldev/keliver/compose/ui/graphics/Shape;
+	public abstract fun getWidth-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenBorder2 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getBorder ()Ldev/keliver/compose/foundation/BorderStroke;
+	public abstract fun getShape ()Ldev/keliver/compose/ui/graphics/Shape;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenBoxScopeAlign1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getAlignment ()Ldev/keliver/compose/ui/Alignment;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenBoxScopeMatchParentSize1 : dev/keliver/Modifier$ScopedElement {
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenClickable1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getEnabled ()Z
+	public abstract fun getOnClick ()I
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenClickable2 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getEnabled ()Z
+	public abstract fun getOnClick ()I
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenClip1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getShape ()Ldev/keliver/compose/ui/graphics/Shape;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenColumnScopeAlign1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getAlignment ()Ldev/keliver/compose/ui/Alignment$Horizontal;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenColumnScopeWeight1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getFill ()Z
+	public abstract fun getWeight ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenFillMaxHeight1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getFraction ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenFillMaxSize1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getFraction ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenFillMaxWidth1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getFraction ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenHeight1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getHeight-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenHorizontalScroll1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getEnabled ()Z
+	public abstract fun getReverseScrolling ()Z
+	public abstract fun getState ()Ldev/keliver/compose/foundation/ScrollState;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenLazyItemScopeAnimateItem1 : dev/keliver/Modifier$ScopedElement {
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenLazyItemScopeFillParentMaxHeight1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getFraction ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenLazyItemScopeFillParentMaxSize1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getFraction ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenLazyItemScopeFillParentMaxWidth1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getFraction ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenOffset1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getX-2cwfqtY ()F
+	public abstract fun getY-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenPadding1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getAll-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenPadding2 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getHorizontal-2cwfqtY ()F
+	public abstract fun getVertical-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenPadding3 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getBottom-2cwfqtY ()F
+	public abstract fun getEnd-2cwfqtY ()F
+	public abstract fun getStart-2cwfqtY ()F
+	public abstract fun getTop-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenPadding4 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getPaddingValues ()Ldev/keliver/compose/foundation/layout/PaddingValues;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenRotate1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getDegrees ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenRowScopeAlign1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getAlignment ()Ldev/keliver/compose/ui/Alignment$Vertical;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenRowScopeWeight1 : dev/keliver/Modifier$ScopedElement {
+	public abstract fun getFill ()Z
+	public abstract fun getWeight ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenScale1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getScale ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenShadow1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getAmbientColor-G4xQfSE ()J
+	public abstract fun getAmbientColorIsDefault ()Z
+	public abstract fun getClip ()Z
+	public abstract fun getClipIsDefault ()Z
+	public abstract fun getElevation-2cwfqtY ()F
+	public abstract fun getShape ()Ldev/keliver/compose/ui/graphics/Shape;
+	public abstract fun getSpotColor-G4xQfSE ()J
+	public abstract fun getSpotColorIsDefault ()Z
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenSize1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getSize-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenSize2 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getHeight-2cwfqtY ()F
+	public abstract fun getWidth-2cwfqtY ()F
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenVerticalScroll1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getEnabled ()Z
+	public abstract fun getReverseScrolling ()Z
+	public abstract fun getState ()Ldev/keliver/compose/foundation/ScrollState;
+}
+
+public abstract interface class dev/keliver/compose/core/modifier/GenWidth1 : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getWidth-2cwfqtY ()F
+}
+

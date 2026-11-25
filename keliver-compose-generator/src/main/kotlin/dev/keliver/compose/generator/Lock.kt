@@ -78,7 +78,16 @@ val lockJson = Json {
 /** The tag reserved on every generated widget for the modifier-event channel (§8). */
 const val MODIFIER_EVENT_TAG = 1000
 
-class LockBuilder(private val old: Lock) {
+class LockBuilder(
+  private val old: Lock,
+  /**
+   * The lock of the group that owns `keliver-compose-values` (MS4-01: the product's `core`), when
+   * this group does not. The values module's `*Defaults` stubs send that lock's factory tags, so a
+   * group generated beside the owner (the prototype) reads its factory tags from there and appends
+   * none of its own; its own lock's factories are kept as they are.
+   */
+  private val factoryOwner: Lock? = null,
+) {
   private val widgets = old.widgets.toMutableMap()
   private val modifiers = old.modifiers.toMutableMap()
   private val factories = old.factories.toMutableMap()
@@ -88,6 +97,14 @@ class LockBuilder(private val old: Lock) {
 
   /** A `*Defaults` factory overload's entry (tag 0 is the explicit-null marker, so tags start at 1). */
   fun factory(decl: DeclInfo, wire: List<String>): LockEntry {
+    if (factoryOwner != null) {
+      val owned = factoryOwner.factories[decl.key]
+        ?: error("${decl.key}: not in the ${factoryOwner.group} lock, which owns the factory tags; generate group ${factoryOwner.group} first")
+      require(owned.wire == null || owned.wire.keys == wire.toSet()) {
+        "${decl.key}: the ${factoryOwner.group} lock sends ${owned.wire?.keys}, this group would send $wire"
+      }
+      return owned
+    }
     factories[decl.key]?.let { existing ->
       val oldWire = existing.wire ?: wire.associateWith { existing.since }
       val newWire = wire.filter { it !in oldWire }

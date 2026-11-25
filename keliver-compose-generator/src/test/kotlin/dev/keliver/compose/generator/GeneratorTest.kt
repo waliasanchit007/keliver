@@ -159,6 +159,87 @@ class GeneratorTest {
     assertTrue(checkAppendOnly(lock, lock.copy(factories = emptyMap())).isNotEmpty(), "a removed factory is refused")
   }
 
+  @Test fun aGroupBesideTheValuesOwnerReadsItsFactoryTags() {
+    // MS4-01: core writes keliver-compose-values, so the `*Defaults` stubs send core's factory tags;
+    // the prototype, generated beside it, decodes with those tags and appends no factory of its own.
+    val f1 = DeclInfo("x", "androidx.compose.material3", "buttonColors", "ButtonDefaults", null, emptyList(), TypeRef("androidx.compose.material3.ButtonColors"), false)
+    val f2 = f1.copy(params = listOf(ParamInfo("containerColor", TypeRef("androidx.compose.ui.graphics.Color"), true)))
+    val owner = LockBuilder(Lock("core")).apply {
+      factory(f2, listOf("containerColor"))
+      factory(f1, emptyList())
+    }.build()
+    val own = Lock("gatea", level = 3)
+    val beside = LockBuilder(own, factoryOwner = owner)
+    assertEquals(owner.factories.getValue(f1.key), beside.factory(f1, emptyList()))
+    assertEquals(2, beside.factory(f1, emptyList()).tag, "the owner's tag, not the next free one of this group")
+    val built = beside.build()
+    assertEquals(own, built, "nothing appended to this group's own lock")
+    // A factory the owner has not generated is an error, not a fresh tag that the values do not send.
+    val unknown = f1.copy(name = "textButtonColors")
+    val message = runCatching { LockBuilder(own, factoryOwner = owner).factory(unknown, emptyList()) }.exceptionOrNull()?.message.orEmpty()
+    assertTrue("generate group core first" in message, message)
+    // So is a different wire shape: the guest's call record and the host's decoding would disagree.
+    val reshaped = runCatching { LockBuilder(own, factoryOwner = owner).factory(f2, emptyList()) }.exceptionOrNull()?.message.orEmpty()
+    assertTrue("the core lock sends" in reshaped, reshaped)
+  }
+
+  @Test fun eachGroupsFilesNameItsOwnConfig() {
+    assertTrue("keliver-compose-generator/core.json" in header("core"))
+    assertTrue("keliver-compose-generator/gatea.json" in header("gatea"))
+    // keliver-compose-values is written by core, the group that owns its factory tags.
+    val values = File("../keliver-compose-values/src/commonMain/kotlin/dev/keliver/compose/material3/GeneratedDefaults.kt").readText()
+    assertTrue(values.startsWith(header("core")), values.lineSequence().take(2).joinToString("\n"))
+  }
+
+  @Test fun theProductCoreGroupIsGeneratedBesideThePrototype() {
+    // MS4-01: every prototype declaration is in core, so the prototype keeps building on core's values.
+    val core = loadConfig(File("core.json"))
+    val gatea = loadConfig(File("gatea.json"))
+    assertEquals("core", core.group)
+    assertEquals("dev.keliver.compose.core", core.schemaPackage)
+    assertEquals(emptyList(), gatea.declarations - core.declarations.toSet(), "prototype declarations missing from core")
+    assertEquals(emptyList(), gatea.errors.map { it.first } - core.errors.map { it.first }.toSet())
+    assertEquals(gatea.extras, core.extras)
+    assertEquals(gatea.extraModifiers, core.extraModifiers)
+    // The product's group has no legacy schema dependency (the prototype has layout, lazy layout and material).
+    assertEquals(emptyList(), core.dependencies, "core depends on no legacy schema")
+    assertTrue(gatea.dependencies.any { it.second == "dev.keliver.material.KeliverMaterial" })
+  }
+
+  @Test fun theProductCoreLockStartedFromThePrototypes() {
+    // Until MS4-06's fresh product locks, core's lock is the prototype's (seeded with --seed-lock), and
+    // only appends to it: same tags, names and levels, so the copied tests assert the same tags.
+    val gatea = lockJson.decodeFromString(Lock.serializer(), File("gatea.lock.json").readText())
+    val core = lockJson.decodeFromString(Lock.serializer(), File("core.lock.json").readText())
+    assertEquals("core", core.group)
+    assertEquals(emptyList(), checkAppendOnly(gatea.copy(group = "core"), core))
+  }
+
+  @Test fun theRootListsTheProductGroupsAndNoLegacySchema() {
+    val root = loadRootConfig(File("root.json"))
+    val (path, text) = rootSchema(root)
+    assertEquals("dev/keliver/compose/root/Generated.kt", path)
+    assertTrue("  members = [],\n" in text, text)
+    assertTrue("    Dependency(10, dev.keliver.compose.core.KeliverComposeCore::class),\n" in text, text)
+    assertTrue("public interface KeliverCompose\n" in text, text)
+    for (legacy in listOf("dev.keliver.material.", "dev.keliver.layout.", "dev.keliver.lazylayout.")) {
+      assertFalse(legacy in text, "the generated root depends on $legacy")
+    }
+    assertEquals(text, File("../keliver-compose-root-schema/src/main/kotlin/$path").readText(), "the checked-in root is stale")
+  }
+
+  @Test fun aRootRefusesADependencyTagUsedTwice() {
+    val file = File.createTempFile("root", ".json").apply {
+      deleteOnExit()
+      writeText(
+        """{"group": "root", "schemaPackage": "p", "schemaName": "R", "dependencies": [""" +
+          """{"tag": 10, "type": "a.A"}, {"tag": 10, "type": "b.B"}]}""",
+      )
+    }
+    val message = runCatching { loadRootConfig(file) }.exceptionOrNull()?.message.orEmpty()
+    assertTrue("used twice" in message, message)
+  }
+
   @Test fun aHiddenOverloadKeepsItsEntryAndCallsItsSuccessor() {
     val old = widgetDecl("Text", "text" to false, "maxLines" to true)
     val lock = LockBuilder(Lock("g")).apply { widget(old) }.build()

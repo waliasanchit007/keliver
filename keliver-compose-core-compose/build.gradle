@@ -1,0 +1,51 @@
+// The product's generated core group (docs/MS4_PLAN.md, MS4-01): the guest API.
+// src/commonMain/kotlin/dev/keliver/**/Generated.kt are the generated stubs (Compose's signatures in
+// dev.keliver.compose.*); the internal composables come from the Redwood generator; the extras, the
+// lazy-list DSL and the modifier-event and animated-reference helpers are hand-written (copied from
+// the prototype, keliver-compose-gatea-compose, which keeps its own until MS4-40).
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  // wasmJs: the editor's canvas calls these stubs in the browser (ED0).
+  targets(Common + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'dev.keliver.generator.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeCoreWidget
+        // The lazy lists' guest window (LazyDsl.kt) reuses the legacy lazy layout's loading strategy.
+        // A library dependency only: the generated root has no legacy schema. MS4-03's follow-up.
+        api projects.keliverLazylayoutCompose
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        // ViewportSizedCompositionTest: rememberLazyWindow in a real composition.
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeCoreSchema
+  type = 'dev.keliver.compose.core.KeliverComposeCore'
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}
