@@ -146,8 +146,11 @@ APP="$WORK/inventory"
   if [ "$LIBRARIES" = local-maven ]; then
     lm_move_app "$APP" || { echo "local-maven: the app could not be moved onto Keliver $KELIVER_LOCAL_VERSION: $LM_ERROR"; exit 1; }
     echo "local-maven: the app is on Keliver $KELIVER_LOCAL_VERSION, dev.keliver only from $KELIVER_LOCAL_MAVEN"
+    # This checkout's publish wiring: the 0.3.18 zip's knows only upstream Zipline's plugin.
+    "$(lm_publish_target)"
+  else
+    "$KP/keliver-new-publish-target.sh"
   fi
-  "$KP/keliver-new-publish-target.sh"
   python3 -c 'import json,sys; p=sys.argv[1]; c=json.load(open(p)); c["port"]=int(sys.argv[2]); open(p,"w").write(json.dumps(c,indent=2)+"\n")' \
     keliver.portal.json "$RELAY_PORT"
   git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $LABEL"

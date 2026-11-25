@@ -63,6 +63,13 @@ has "$A/gradle/wrapper/gradle-wrapper.properties" "gradle-$TOOLCHAIN_GRADLE-bin.
 for f in "$S" "$B" "$A/keliver.portal.json"; do cp "$f" "$f.once"; done
 lm_move_app "$A" && cmp -s "$S" "$S.once" && cmp -s "$B" "$B.once" && cmp -s "$A/keliver.portal.json" "$A/keliver.portal.json.once" \
   && case_ok || case_bad "a second lm_move_app changed the app ($LM_ERROR)"
+# The route's publish wiring (lm_publish_target) takes the moved app: the fork's plugin, a signing block.
+A3="$T/app3"; mkdir -p "$A3"; cp "$S" "$B" "$A/keliver.portal.json" "$A3/"
+if ( cd "$A3" && "$(lm_publish_target)" ) > "$T/publish-target.log" 2>&1; then case_ok
+else case_bad "lm_publish_target refused the moved app: $(grep -v '^$' "$T/publish-target.log" | head -2 | tr '\n' ' ')"; fi
+has "$A3/build.gradle" "ZiplineCompileTask" && has "$A3/keliver.portal.json" '"publishTask"' && case_ok \
+  || case_bad "lm_publish_target wrote no signing block or publishTask"
+
 # An app without one of the anchors is refused, with the reason.
 sed "/kotlinx-coroutines-core/d" "$REF/app/build.gradle" > "$T/b.gradle"
 A2="$T/app2"; mkdir -p "$A2/gradle/wrapper"; cp "$REF/app/settings.gradle" "$REF/app/keliver.portal.json" "$A2/"; cp "$T/b.gradle" "$A2/build.gradle"

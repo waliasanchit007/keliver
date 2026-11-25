@@ -145,8 +145,12 @@ fi
 
 # publishTask/publishOutput and the signing block. The bootstrap no longer
 # overlays a hand-written block; this is the scaffolder an adopter would run.
-( cd "$APP" && "$KP/keliver-new-publish-target.sh" ) > "$EV/publish-target.log" 2>&1 \
-  && ok "publishing wired by the zip's bin/keliver-new-publish-target.sh" \
+# local-maven: this checkout's (lm_publish_target); the 0.3.18 zip's knows only
+# upstream Zipline's plugin and refuses an app on the fork.
+PUB_TARGET="$KP/keliver-new-publish-target.sh"; PUB_TARGET_WHICH="the zip's bin/"
+if [ "$LIBRARIES" = local-maven ]; then PUB_TARGET="$(lm_publish_target)"; PUB_TARGET_WHICH="this checkout's scripts/ (local-maven)"; fi
+( cd "$APP" && "$PUB_TARGET" ) > "$EV/publish-target.log" 2>&1 \
+  && ok "publishing wired by $PUB_TARGET_WHICH keliver-new-publish-target.sh" \
   || { bad "keliver-new-publish-target.sh failed"; cat "$EV/publish-target.log"; exit 1; }
 cp "$APP/build.gradle" "$EV/app-build.gradle"
 # Committed, as an adopter would: D2 asserts that a layout edit changes exactly

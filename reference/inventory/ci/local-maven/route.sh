@@ -20,6 +20,7 @@
 #   lm_route_label                  one line naming the route, for the results
 #   lm_marker                       the line keliver-treehouse-host logs when a host starts
 #                                   (HostBuild.kt): what the device checks look for
+#   lm_publish_target               the publish wiring's scaffolder on this route (this checkout's)
 #   lm_move_app <app-dir>           moves a bootstrapped app onto KELIVER_LOCAL_VERSION and its line,
 #                                   dev.keliver from the local repository only; 1 with LM_ERROR set
 #   lm_add_repository <settings.gradle>
@@ -55,6 +56,13 @@ lm_route_label() {
 
 lm_marker() {
   echo "keliver-treehouse-host $KELIVER_LOCAL_VERSION"
+}
+
+# The publish wiring's scaffolder on this route: this checkout's. The published 0.3.18 zip's
+# keliver-new-publish-target.sh accepts only upstream Zipline's plugin (app.cash.zipline) and
+# refuses an app on the fork's line.
+lm_publish_target() {
+  echo "$LM_REPO/scripts/keliver-new-publish-target.sh"
 }
 
 lm_move_app() {
