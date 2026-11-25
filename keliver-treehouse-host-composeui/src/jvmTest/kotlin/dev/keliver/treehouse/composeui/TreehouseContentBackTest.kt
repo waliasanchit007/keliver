@@ -16,6 +16,8 @@
 package dev.keliver.treehouse.composeui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +30,7 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import dev.keliver.Modifier as RedwoodModifier
+import dev.keliver.compose.ExperimentalKeliverBackApi
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.Content
 import dev.keliver.treehouse.TreehouseApp
@@ -48,7 +51,7 @@ import kotlinx.coroutines.flow.StateFlow
  * The guests here register their handlers as Treehouse does for a real guest: on the dispatcher of
  * the view the content binds to (TreehouseAppContent.addOnBackPressedCallback).
  */
-@OptIn(ExperimentalTestApi::class)
+@OptIn(ExperimentalTestApi::class, ExperimentalKeliverBackApi::class)
 class TreehouseContentBackTest {
   private val platform = FakePlatformBackDispatcher()
 
@@ -123,28 +126,28 @@ class TreehouseContentBackTest {
     assertThat(platform.received).containsExactly("guest")
   }
 
-  @androidx.compose.runtime.Composable
+  @Composable
   private fun Content(app: FakeApp, backEnabled: Boolean) {
-    TreehouseContent(
-      treehouseApp = app,
-      widgetSystem = NoWidgets,
-      contentSource = { error("the fake content never asks for a UI") },
-      modifier = Modifier,
-      dynamicContentWidgetFactory = EmptyDynamicContentWidgetFactory,
-      backEnabled = backEnabled,
-      platformBackDispatcher = platform,
-    )
+    // The public overload, on a desktop "activity" whose back dispatcher behaves as Android's.
+    CompositionLocalProvider(LocalDesktopBackDispatcher provides platform) {
+      TreehouseContent(
+        treehouseApp = app,
+        widgetSystem = NoWidgets,
+        contentSource = { error("the fake content never asks for a UI") },
+        backEnabled = backEnabled,
+      )
+    }
   }
 }
 
-private interface FakeAppService : AppService
+internal interface FakeAppService : AppService
 
-private object NoWidgets : WidgetSystem<@androidx.compose.runtime.Composable (Modifier) -> Unit> {
-  override fun apply(value: @androidx.compose.runtime.Composable (Modifier) -> Unit, element: RedwoodModifier.UnscopedElement) = Unit
+internal object NoWidgets : WidgetSystem<@Composable (Modifier) -> Unit> {
+  override fun apply(value: @Composable (Modifier) -> Unit, element: RedwoodModifier.UnscopedElement) = Unit
 }
 
 /** A Treehouse app whose one guest registers a back handler when the test says so. */
-private class FakeApp(
+internal class FakeApp(
   private val guestName: String,
   private val received: MutableList<String>,
 ) : TreehouseApp<FakeAppService>() {

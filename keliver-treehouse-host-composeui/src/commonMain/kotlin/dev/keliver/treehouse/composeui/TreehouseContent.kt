@@ -61,14 +61,13 @@ public fun <A : AppService> TreehouseContent(
   dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> =
     EmptyDynamicContentWidgetFactory,
 ) {
-  TreehouseContent(
+  GatedTreehouseContent(
     treehouseApp = treehouseApp,
     widgetSystem = widgetSystem,
     contentSource = contentSource,
+    backEnabled = true,
     modifier = modifier,
     dynamicContentWidgetFactory = dynamicContentWidgetFactory,
-    backEnabled = true,
-    platformBackDispatcher = platformOnBackPressedDispatcher(),
   )
 }
 
@@ -98,28 +97,27 @@ public fun <A : AppService> TreehouseContent(
   dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> =
     EmptyDynamicContentWidgetFactory,
 ) {
-  TreehouseContent(
+  GatedTreehouseContent(
     treehouseApp = treehouseApp,
     widgetSystem = widgetSystem,
     contentSource = contentSource,
+    backEnabled = backEnabled,
     modifier = modifier,
     dynamicContentWidgetFactory = dynamicContentWidgetFactory,
-    backEnabled = backEnabled,
-    platformBackDispatcher = platformOnBackPressedDispatcher(),
   )
 }
 
-/** Both overloads; tests pass their own [platformBackDispatcher]. */
+/** Both overloads: the content, its guest's back handlers registered through a [BackGate]. */
 @Composable
-internal fun <A : AppService> TreehouseContent(
+private fun <A : AppService> GatedTreehouseContent(
   treehouseApp: TreehouseApp<A>,
   widgetSystem: WidgetSystem<@Composable (Modifier) -> Unit>,
   contentSource: TreehouseContentSource<A>,
-  dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit>,
   backEnabled: Boolean,
-  platformBackDispatcher: OnBackPressedDispatcher,
-  modifier: Modifier = Modifier,
+  modifier: Modifier,
+  dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit>,
 ) {
+  val platformBackDispatcher = platformOnBackPressedDispatcher()
   // Created with the view below (one per widget system), so the view's guest always registers
   // through the gate this composition opens and closes.
   val onBackPressedDispatcher = remember(widgetSystem) { BackGate(platformBackDispatcher, open = backEnabled) }

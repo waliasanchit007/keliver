@@ -33,14 +33,23 @@ Changes since:
   (review of #299, decision 2), so a later change to the table cannot touch
   this manifest. Comment only, as before.
 - `ios-embed.sha256`: `gradlew` and `gradle-wrapper.jar` removed (see above).
-- All four, deliberately (NF5 H0, docs/SHOW_BEFORE_COMPUTE.md section 9): every host now takes
-  what a line's libraries add over older ones from one file per line,
-  `production-host/src/line-<line>/kotlin/KeliverLine.kt`, and a 0.4.x app's host gets the 0.4
-  line's copy, which behaves as before (no host features, `TreehouseContent` without a back gate).
-  New in every host: `HostFeatures.kt` (the host features it declares: none) and, in the hosts
-  with JVM tests, `HostFeaturesTest.kt`; `ReleaseIdentity.kt` (and `ReleaseIdentityTest.kt` on
-  Android). Changed: `KeliverHost.kt` / `MainViewController.kt` (the spec's base class; the last
-  good bundle's record also carries the loaded release's sequence and module digest, and is
-  written with `commit()` on Android, `synchronize()` on iOS) and `KeliverScreen.kt` (the update
-  swap's hidden app passes `backEnabled = false`, which the 0.4 line's copy ignores). The one
-  behaviour change on the 0.4 line is that record.
+- All four, deliberately (NF5 H0, docs/SHOW_BEFORE_COMPUTE.md section 9). Why the 0.4 line's
+  output moves for a 0.5 change: the host Kotlin is one source for every line, and H0 adds the
+  seam that keeps the 0.5 libraries' API out of it from now on: one file per line,
+  `production-host/src/line-<line>/kotlin/KeliverLine.kt`. Calling through that seam changes the
+  shared files once, on every line. The alternative, keeping the 0.4 output byte-identical, needs
+  per-line blocks inside `KeliverHost.kt`, `KeliverScreen.kt` and `MainViewController.kt`, which
+  every NF5 host PR after this one (A5's start table, session, off switch) would have to extend.
+  What a 0.4.x app's host gets now:
+  - new: `KeliverLine.kt`, the 0.4 line's copy (no host features handed to Treehouse,
+    `TreehouseContent` called as before, without a back gate); `HostFeatures.kt` (none
+    declared) and `HostFeaturesTest.kt` (in the hosts with JVM tests); `ReleaseIdentity.kt` (and
+    `ReleaseIdentityTest.kt` on Android);
+  - changed: `KeliverHost.kt` and `MainViewController.kt` (the spec's base class is
+    `KeliverSpec`; the last good bundle's record also carries the loaded release's sequence and
+    module digest, and is written with `commit()` on Android and `synchronize()` on iOS, as the
+    crash ledger already is) and `KeliverScreen.kt` (the update swap calls
+    `KeliverTreehouseContent(backEnabled = !hidden)`, which the 0.4 copy ignores).
+  The one behaviour change on the 0.4 line is that record: two more keys, nothing on 0.4 reads
+  them, and it is written through before the load is reported. The reference-app and ios-host
+  workflows build and run this output on a pull request.

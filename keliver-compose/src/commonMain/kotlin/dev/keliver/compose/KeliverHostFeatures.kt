@@ -24,7 +24,9 @@ package dev.keliver.compose
  * newer level is a new name, and a host that implements it declares the older levels it still
  * serves as well.
  *
- * Adding a feature: one constant, and its line in [requirements].
+ * Adding a feature: its constant here and its row in [requirements], side by side (a JVM test fails
+ * when either is missing). A host template that implements it then adds the name to its one
+ * declaration, `HostFeatures.kt` (scripts/templates/production-host and ios-host).
  */
 @ExperimentalKeliverHostFeaturesApi
 public object KeliverHostFeatures {
@@ -41,8 +43,10 @@ public object KeliverHostFeatures {
   public const val PRESS_1: String = "keliver.press@1"
 
   /**
-   * Every feature Keliver defines, each with the features it requires: a host that declares a
-   * feature without all of them is treated as not declaring it ([missingRequirements]).
+   * Every feature Keliver defines, each with the features it requires (as `keliver.nav.reveal@1`
+   * will require `keliver.nav.retainedContainer@2`). A host that declares a feature without all of
+   * them is to be treated as not declaring it (docs/SHOW_BEFORE_COMPUTE.md 3.2), and Keliver's
+   * template tests fail such a declaration ([missingRequirements]).
    */
   public val requirements: Map<String, Set<String>> = mapOf(
     NAV_RETAINED_CONTAINER_1 to emptySet(),

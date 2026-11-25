@@ -16,7 +16,6 @@
 package dev.keliver.compose
 
 import assertk.assertThat
-import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
@@ -29,14 +28,6 @@ class KeliverHostFeaturesTest {
     for (name in KeliverHostFeatures.all) {
       assertThat(Regex("""keliver(\.[a-z][A-Za-z0-9]*)+@[1-9][0-9]*""").matches(name), name).isTrue()
     }
-  }
-
-  @Test
-  fun theConstantsAreTheList() {
-    assertThat(KeliverHostFeatures.all).containsExactlyInAnyOrder(
-      KeliverHostFeatures.NAV_RETAINED_CONTAINER_1,
-      KeliverHostFeatures.PRESS_1,
-    )
   }
 
   @Test

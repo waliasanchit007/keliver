@@ -7,6 +7,19 @@ redwoodBuild {
 
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
+// NF5 H0: the production host templates' line file (scripts/templates/production-host/src/line-*/)
+// for the line this checkout's libraries are on, and the host features the templates declare,
+// compiled into the JVM tests against those libraries. So a template change that does not compile
+// against this TreehouseContent or TreehouseApp.Spec fails here, and HostTemplateLineTest runs the
+// templates' own hidden-content call. (The 0.4 line's copy builds against the published 0.4.x
+// libraries, in the reference-app and ios-host workflows.)
+def hostTemplateLineSource = tasks.register('hostTemplateLineSource', Copy) {
+  from(rootProject.file('scripts/templates/production-host/src/line-0.5/kotlin/KeliverLine.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/main/kotlin/HostFeatures.kt'))
+  filter { line -> line.replace('@@PACKAGE@@', 'hosttemplate') }
+  into layout.buildDirectory.dir('generated/hostTemplateLine/kotlin')
+}
+
 kotlin {
   sourceSets {
     commonMain {
@@ -25,6 +38,7 @@ kotlin {
     }
     // TreehouseContent's back gate (NF5 H0), with Compose UI headless on the desktop JVM.
     jvmTest {
+      kotlin.srcDir(hostTemplateLineSource)
       dependencies {
         implementation libs.kotlin.test
         implementation libs.assertk

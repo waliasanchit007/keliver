@@ -136,10 +136,30 @@ find the app's line and **refuses** any line but 0.4 ("the editor supports 0.4
 apps until the 0.5 editor ships"). It has to take its versions from the table
 before the 0.5.0 libraries are released, whose release preflight builds an
 editor at the release version (`docs/PORTAL_TOOLS_RELEASE.md`, step 0).
-Before 0.5.0 nothing changed: the 0.4
-line's output is byte-identical to what the scaffolders wrote before the table,
+Before 0.5.0 the table changed nothing: the 0.4
+line's output was byte-identical to what the scaffolders wrote before the table,
 and the host selftests compare it with recorded sha256 manifests
-(`scripts/fixtures/host-0.4.1/`).
+(`scripts/fixtures/host-0.4.1/`). A deliberate change to it rewrites them, and
+their README says why (so far: comments, and NF5 H0's line file and last good
+record, below).
+
+**What a line's libraries add, in one file per line.** The host Kotlin is the
+same on every line except `KeliverLine.kt`, which the scaffolders copy from
+`templates/production-host/src/line-<line>/kotlin/` into both hosts. It holds
+what needs that line's libraries: the 0.5 line's copy hands Treehouse the host
+features the host declares and passes `TreehouseContent`'s back gate through;
+the 0.4 line's copy does neither, as 0.4.x hosts never did. Keliver's build
+compiles the newest line's copy against its own libraries
+(`keliver-treehouse-host-composeui`'s JVM tests); the 0.4 copy is built by the
+reference-app and ios-host workflows against the published 0.4.x libraries.
+
+**Host features.** A host declares the optional features it implements in one
+place, `HostFeatures.kt` (byte-identical in the Android and iOS hosts; none
+today), with the names Keliver defines in `dev.keliver.compose.KeliverHostFeatures`.
+A guest uses a feature only where its host declares it (D2). The host's
+`HostFeaturesTest` holds the declaration to what the host implements, and
+Keliver's `HostFeaturesTemplateTest` (portal-relay) holds each name to
+Keliver's list and to what each feature requires.
 
 The lines are named (0.4, 0.5): a version takes the newest line whose
 `<major>.<minor>` is not newer than its own (0.3.x takes 0.4). A version past
