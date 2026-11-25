@@ -1,6 +1,9 @@
 # MS4 plan: the 0.5.0 build
 
-**Status: draft, revision 3, 2026-11-24.** The delivery plan for MS4 of
+**Status: draft, revision 4, 2026-11-26 (first pass; sections 0–5 not yet revised).** Revision 4 folds
+in the owner's answers of 2026-11-26 (Q1, Q2, Q14 as recommended; Q16 three agents; per-frame lambdas
+(c) with (b); the uncovered stable Compose API in 0.5.0; no second Mac now; the engine settled; the
+legacy library, section 6.1) and the efficiency review of 2026-11-25. The delivery plan for MS4 of
 [`PLAN_2026-11.md`](PLAN_2026-11.md) (section 8's MS4 row, section 9's Track B). It orders the work. It
 decides nothing that [`DECISIONS.md`](DECISIONS.md) or the plan of record decide. Section 6 lists what
 the owner still has to decide, and what the maintainer has decided. Records stay in
