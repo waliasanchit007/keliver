@@ -1,8 +1,9 @@
 -- Diagnostic (A12 session, 2026-11-26; not part of the rule's files; run as frame-end.sql is, after
 -- the arm's prelude and measure): the app's actual frame timeline rows around opens 3-5's apply,
 -- with their display frame and SurfaceFlinger's row for it (its end = the display frame's
--- present), ms relative to the apply's start. It shows that the app row's end is the app's frame
--- end (about its queueBuffer), not the display's present.
+-- present), ms relative to the apply's start. It shows that the app row's end is the frame's buffer
+-- queued (about its queueBuffer), not the display's present. Its output was not kept; rerun it on
+-- the kept trace.
 create perfetto table sfu as select upid from process where name glob '*surfaceflinger*';
 select h.i, f.name as vsync, round((f.ts - h.a_ts) / 1e6, 1) as app_start, round(f.dur / 1e6, 1) as app_dur,
   f.display_frame_token as dft, f.layer_name, f.present_type,

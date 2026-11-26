@@ -3,12 +3,15 @@
 # --output-format=frames, 180x400 RGB888, one record per composited frame); per arm one fresh
 # process, then 9 rounds of: a quick tap on a list row (opens the detail), the detail's header Back,
 # Load 20 (native Compose's own button in both forms), 2.5 s apart. Then the frame diffs and the
-# queries, on the phone. Guest = NF5 R0's install (the fork, Long as BigInt). Runs ON the phone:
+# queries, on the phone. Guest = NF5 R0's install (the fork, Long as BigInt). arm() stops below 30%
+# battery off the charger, as checkpoint 2's px.sh did (restored after the run; the run was on the
+# charger, where it passes). Runs ON the phone:
 #   adb shell '(nohup sh /data/local/tmp/ref1126/k.sh < /dev/null > /dev/null 2>&1 &)'
 . /data/local/tmp/ref1126/lib.sh
 rm -f $D/k-done.txt
 arm() {
   label=$1; n=$2; shift 2
+  batteryok || { echo "STOP battery $(date +%H:%M:%S)" >> $LOG; exit 3; }
   input keyevent KEYCODE_WAKEUP
   state "$label"
   echo "START $label $(date +%H:%M:%S) $*" >> $LOG

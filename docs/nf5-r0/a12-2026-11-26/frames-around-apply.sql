@@ -2,7 +2,8 @@
 -- the arm's prelude and measure): around opens 3, 4, 5, 6 and 8's apply (host.a_ts), the main
 -- thread's doFrames, the RenderThread's DrawFrames/queueBuffer, and the app's actual and expected
 -- frame timeline rows, ms relative to the apply's start. It shows which row measure.sql matched
--- when j < 0 (a zero-length one) and which frame drew the detail.
+-- when j < 0 (a zero-length one) and which frame drew the detail. Its output was not kept; rerun it
+-- on the kept trace.
 create perfetto table dg as
 select h.i, 'df' as kind, round((d.ts - h.a_ts) / 1e6, 1) as rel_start, round((d.ts + d.dur - h.a_ts) / 1e6, 1) as rel_end,
   d.name as name, null as present_type, null as jank, case when d.ts = h.df_ts then 'MATCHED' else '' end as note

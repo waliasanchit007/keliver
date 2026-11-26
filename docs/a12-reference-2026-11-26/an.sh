@@ -2,7 +2,8 @@
 #   sh an.sh nav <file>...    open/back, i > 2 (the bench's warm-up of 2 dropped): drawn, click,
 #                             composed - click, drawn - click per iteration; back's firstDraw when present
 #   sh an.sh cold <file>...   each file's first "cold" line dropped (unmeasured launch); the marks
-# Prints: median / p90 / min-max, then every value (per-iteration data).
+# Prints: median / p90 / min-max, then every value (per-iteration data). an.txt is the 2026-11-26
+# run's output, from before dataFrameEnd was added here (its values are in THREE_WAY_BENCHMARK.md).
 st() { sort -n | awk '{a[NR]=$1} END { if (NR == 0) { print "-"; exit }
   m = (NR % 2) ? a[(NR + 1) / 2] : (a[NR / 2] + a[NR / 2 + 1]) / 2
   p = int(NR * 0.9 + 0.999999); if (p < 1) p = 1
@@ -30,7 +31,7 @@ case $mode in
   cold)
     tmp=/data/local/tmp/ref1126/an.tmp
     for x in "$@"; do grep '"cold"' $x | sed 's/^[0-9]* //' | tail -n +2; done > $tmp
-    for k in dataDrawn firstDraw codeLoadStart codeLoadSuccess composed; do
+    for k in dataDrawn dataFrameEnd firstDraw codeLoadStart codeLoadSuccess composed; do
       echo "  $k: $(f $k < $tmp | st)"
     done
     echo "  request->response: $(d request response < $tmp | st)"

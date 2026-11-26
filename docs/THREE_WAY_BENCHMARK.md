@@ -3755,19 +3755,55 @@ NF5's R0 ([`SHOW_BEFORE_COMPUTE.md`, appendix D](SHOW_BEFORE_COMPUTE.md#appendix
 a day after its planned date. It reran series H's three arms and one new arm, `simple-on-idle`, each
 in a fresh process under a Perfetto trace. It then split the floor step (click → composed, for a
 detail already composed with the right item) into its parts, and applied the rule fixed in advance
-to the new arm. The session followed its command list (steps 0–7) as written. The queries are
+to the new arm. The session followed its command list (steps 0–7) as written, except the power
+state: it ran on the charger, where step 0 says on battery (caveat 3, below). The queries are
 [`docs/nf5-r0/`](nf5-r0/), unchanged. Three diagnostic queries written during the session are in
 [`docs/nf5-r0/a12-2026-11-26/`](nf5-r0/a12-2026-11-26/); `analyse.sh` does not run them.
 
-**Verdict: reachable in principle**, with a small margin. The rule was applied to `simple-on-idle`'s
-opens 3–14; all 12 were idle at the UP.
+**Verdict: reachable in principle**, with a small margin and the three caveats below it. The rule
+was applied to `simple-on-idle`'s opens 3–14; all 12 were idle at the UP.
 - G = 22.4 ms, under the limit of 25.
-- W = 8.1 ms, and every part of it has a named mechanism.
+- W = 8.1 ms, the median of the per-open values, and every part of it has a named mechanism.
 - P = 65.0 ms on q2's printed `total` (59.1). That `total` is too short in 9 of the 12 opens
   (below). Measured to the frame that actually drew the detail, `total` is 82.0 and **P = 87.9 ms**,
   under 100.
 - At a ratio of 30 (+36 instead of +14), P is 87.0 printed and 109.9 corrected.
 - The margins are 2.6 ms on G and 12.1 ms on P. The pre-run prediction was G ≈ 21.
+
+**The caveats beside the verdict** (added after the review of the record; no measured number
+changed):
+1. **Which "frame end".** Appendix D wrote T as UP → "presented". But the 100 ms target, and
+   native's 28 ms that it is set against, are **frame end**: the end of the main thread's work for
+   the frame that shows the content (the bench's `frameEnd`, "Method" above; SHOW_BEFORE_COMPUTE
+   section 1, "All are frame end"). Native's 28 ms is not measured to the display, so the
+   like-for-like T is a frame end too. The idle arm's trace gives three readings of T (medians over
+   opens 3–14, ms):
+
+   | T runs to | T | P (ratio 12) | Verdict |
+   |---|---|---|---|
+   | the main thread's frame end, as the targets and native's 28 ms (per open, `total − j`: the end of the `doFrame` after the apply) | 71.2 | about 77.1 | reachable |
+   | **the frame's buffer queued** (`frame-end.sql`, below): **the one recorded** | **82.0** | **87.9** | reachable |
+   | the display, "presented" (appendix D's pre-registered word): SurfaceFlinger's display frame ends about 45 ms after the buffer, in the one open checked | about 127 | about 133 | **not reachable** |
+
+   87.9 is recorded because it is the most conservative of the frame-end readings: the RenderThread
+   queues the buffer after the main thread's work ends. On the "presented" reading the verdict is
+   the opposite. The target was not set on that reading, so the owner confirms which reading R0 uses.
+2. **The margin is less than one frame** (inferred from the per-open columns and the 60 Hz
+   vsync, not measured). P's 12.1 ms margin is smaller than one frame (16.7 ms), and the app draws
+   only at vsyncs. In all 12 opens the apply came 1.1–3.5 ms (`h`) before the `doFrame` that drew
+   it, and `h` + W stays under 16.7 ms (at most 13.8), so removing W moves no open's frame. The
+   rebind's 14 ms is more than `h` + W in every open, so every open would slip one vsync. Quantized
+   to vsyncs, P ≈ 82.0 + 16.7 ≈ 98.7, a margin of about 1.3 ms; at a ratio of 30, about 115. For
+   the same reason **the frame-clock change named for c1 (below) would not, alone, bring the simple
+   open's frame forward on the A12**: the guest's chain from the frame tick to the apply (c2 + d + e
+   + f + g, about 31 ms) is just under two frames, and starting it W earlier moves the apply earlier
+   within the same vsync period, so the same `doFrame` draws it. This matters for R1 and for (B): on
+   this phone a change shortens the open only if it moves the apply across a vsync.
+3. **The charger.** Appendix D's step 0 says on battery, as series H. The run was on the charger
+   (below), so it deviates there. On series H's three arms the guest's step (`composed − click`)
+   on the charger is within −4% to +8% of series H's on battery (step 5's table). If the charger
+   made the guest up to 4% faster, G on battery would be about 23.4, still under 25. That is
+   inferred from series H's arms: the idle arm was not run on battery.
 
 **Build.** The dry run's APKs, kept in the session's scratch directory, matched their sha256 at
 04:00 and again before the install:
@@ -3841,14 +3877,19 @@ All are within 15%; heavy-on's `composed − click` is the farthest, at +5% to +
 
 **What `total` measures, and where q2's is wrong.** The traces show two things that the emulator's
 dry run did not.
-1. **The row's end is the app's frame end, not the display's present.** The end of the app's actual
-   frame-timeline row comes 0.6–1.8 ms after the RenderThread's `queueBuffer` for that frame (idle
-   arm, opens 4 and 8). The SurfaceFlinger display frame the row points to (`display_frame_token`)
-   ends about 45 ms after it. This was checked on one valid row, open 4's: relative to the apply,
-   the row ends at 19.7 ms, and the display frame runs from 32.6 to 65.3 ms. So appendix D's `j` and `total` run to the frame's end
-   (its buffer queued), as the targets' "frame end" does, not to light on the screen.
-   Series I and K read "present" from the same row: their "presented" is probably this frame end
-   too. That was not re-checked.
+1. **The row's end is the frame's buffer queued, not the display's present.** The end of the app's
+   actual frame-timeline row comes 0.6–1.8 ms after the RenderThread's `queueBuffer` for that frame
+   (idle arm, opens 4 and 8). The SurfaceFlinger display frame the row points to
+   (`display_frame_token`) ends later. That was checked on one valid row only, open 4's, while the
+   press's ripple was animating: relative to the apply, the row ends at 19.7 ms, and the display
+   frame runs from 32.6 to 65.3 ms, about 45 ms after the row. Other opens, and frames without the
+   ripple, were not checked. So appendix D's `j` and `total` run to the buffer queued: later than
+   the targets' frame end (the main thread's, caveat 1 above), and earlier than light on the screen.
+   Series I reads "present" from the same row (its query takes the end of the app's actual
+   frame-timeline row), so its "presented" is probably this buffer-queued end too; that was not
+   re-checked. Series K's headline numbers, and the C11 reference's K below, do not use that row:
+   `q-px.sql` takes the end of SurfaceFlinger's display frame that spans the recorder's buffer. Only
+   its `app_first_present` column reads the app's row.
 2. **In 9 of the idle arm's 12 opens, `measure.sql` matched a frame that did not draw the detail.**
    It takes the first `doFrame` after the apply, and that vsync's row. Inferred from the trace:
    - **What runs at the UP.** After a 400 ms hold, the press's ripple is still animating on the
@@ -3892,10 +3933,13 @@ dry run did not.
   | T | P | P_allW_r12, per open |
   |---|---|---|
   | q2's, 59.1 | **65.0** (87.0) | 65.0 |
-  | the frame that drew the detail, 82.0 | **87.9** (109.9) | 87.4 |
+  | the frame that drew the detail (its buffer queued), 82.0 | **87.9** (109.9) | 87.4 |
 
 - **Reachable in principle** (P ≤ 100 and G ≤ 25): **yes, on both T's.** Not reachable
   (`P_allW_r12` > 100, or G ≥ 40): no.
+- **With the caveats above:** reachable on both frame-end readings of T (P about 77.1 and 87.9),
+  with a margin under one frame once quantized to vsyncs (about 98.7); not reachable on the
+  display's "presented" reading (about 133).
 
 **Also reported** (appendix D):
 - **The press's preparation costs the click.** On simple-on the click waits 84.5 ms in `a` behind
@@ -3908,13 +3952,15 @@ dry run did not.
   frame callback comes 74 ms after the click's event ends. Inferred: the main thread is busy with the
   press's prepared heavy detail. Its 8–11 ms `sendChanges` apply message comes just before E (q0b),
   but the window was not split further, and the mechanism is not named.
-- **Outside W, on the idle arm.** The ripple collision (above) puts 15–40 ms on 9 of 12 opens'
-  frame end. It is a host mechanism, and the rule does not subtract it. It matters to (B): the
-  reveal's shell would be drawn while the press's ripple is running (R1).
+- **Outside W, on the idle arm.** In 9 of 12 opens the ripple collision (above) puts the detail's
+  buffer 15–40 ms after q2's `total`. It is a host mechanism, and the rule does not subtract it. It
+  matters to (B): the reveal's shell would be drawn while the press's ripple is running (R1).
 
 **Kept** in the session's scratch directory (`keliver-scratch/nf5/r0/`; not in the repository): the
-four traces, the phone's directory (every query's output, results and state files) and the session
-log. Their sha256:
+four traces, the phone's directory (the output of every `analyse.sh` query and of `frame-end.sql`
+on each arm, the results and state files) and the session log. The two diagnostic queries'
+outputs (`frames-around-apply.sql`, `row-vs-display.sql`) were not kept; they can be regenerated
+from the kept idle-arm trace. The traces' sha256:
 
 | Trace | sha256 |
 |---|---|
@@ -3938,7 +3984,16 @@ checkpoint 2's harness and method:
 
 The phone scripts are checkpoint 2's, copied, in
 [`docs/a12-reference-2026-11-26/`](a12-reference-2026-11-26/). The run order is in `lib.sh`, and
-`an.sh` gives the medians, on the phone. The C11 run should use the same scripts.
+`an.sh` gives the medians, on the phone. Its output for this run,
+[`an.txt`](a12-reference-2026-11-26/an.txt), lists every iteration's value (sorted) for G, H and
+the retained back. K's per-touch values are in the tables below. The C11 run should use the same
+scripts.
+
+Three script changes came after the run, from its review. `k.sh`'s `arm()` regained the
+battery-level check of checkpoint 2's `px.sh` (it stops below 30% off the charger; this run was on
+the charger, where it passes). `lib.sh` lost checkpoint 2's unused `taps()`. `an.sh` now prints `dataFrameEnd`, so
+`an.txt`, written before that, has no frame-end line; G's "Its frame end" column comes from the
+raw results files (each launch's value is listed below the table).
 
 **Build.** The same install as NF5 R0 (above): the three-way sample's benchmark build from
 `316abd41a`'s code, on the fork's engine built locally as `1.28.0-q20260604`, with `Long` as BigInt.
@@ -3948,9 +4003,10 @@ code: nothing of MS4 had merged.
 **Phone state.** 05:02–05:22 IST, up 4 d 2 h 50 min – 3 h 10 min. **Plugged in and charging, 62% →
 73%, unlike checkpoint 2 (on battery, 83–90%).** Temperature 34.4–34.6 °C (checkpoint 2:
 25.5–25.8). Thermal status 0, CPU idle 95–99% before each arm, load average 20.6–22.5.
-- **The charger matters.** Native was faster than in checkpoint 2: data drawn 508 against 618 on a
-  cold start, first frame 296 against 378.5. The C11 run must be on the charger too, or this
-  reference must be re-run on battery. Comparisons across power states are not valid.
+- **The power state differs from checkpoint 2's.** Native was faster than in checkpoint 2: data
+  drawn 508 against 618 on a cold start, first frame 296 against 378.5. Whether the charger caused
+  that is not separated (G, below). The C11 run must be on the charger too, or this reference must
+  be re-run on battery. Comparisons across power states are not valid.
 - **Iterations.** G: two rounds of 1 unmeasured and 4 measured launches, so 8 per arm. H and the
   retained back: two rounds of 14 iterations, the first 2 dropped, so 24 per arm. K: 9 rounds, the
   first dropped, so 8 per touch.
@@ -3971,11 +4027,17 @@ Data drawn, each launch (sorted): native 500, 501, 504, 507, 509, 510, 512, 513;
 1,558, 1,563, 1,566, 1,571, 1,573, 1,583, 1,593; `prestart,prefetch` 1,362, 1,364, 1,366, 1,366,
 1,371, 1,372, 1,388, 1,391.
 
+Its frame end (`dataFrameEnd`), each launch (sorted; from the raw results files): native 576, 580,
+580, 581, 585, 587, 587, 589; as shipped 1,635, 1,641, 1,649, 1,650, 1,660, 1,665, 1,666, 1,677;
+`prestart,prefetch` 1,445, 1,449, 1,449, 1,452, 1,455, 1,457, 1,472, 1,474.
+
 Against series G (checkpoint 2, on battery): native 618, as shipped 2,143 (+1,525), `prestart,
-prefetch` 1,866 (+1,248). Native's 110 ms is most likely the charger. The guest gained more (−574.5
-as shipped), in the code load (309 → 740, against 486.5 → 1,106.5) and in composed → drawn (84.5
-against 241.5). Those are the steps NF4's host baseline profile acts on ("NF4: composed to drawn",
-above), merged since. The charger and the code changes since `338a02f81` are not separated here.
+prefetch` 1,866 (+1,248). Native gained 110 ms. This run changed the power state (and the phone's
+temperature) and the build together, so the data does not say how much of it is the charger. The
+guest gained more (−574.5 as shipped), in the code load (309 → 740, against 486.5 → 1,106.5) and in
+composed → drawn (84.5 against 241.5). Those are the steps NF4's host baseline profile acts on
+("NF4: composed to drawn", above), merged since. The charger and the code changes since `338a02f81`
+are not separated here.
 
 ### H: open and back (header back)
 

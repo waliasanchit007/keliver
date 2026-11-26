@@ -11,7 +11,9 @@
 -- Here: R = the first RenderThread `DrawFrames <vsync>` that starts at or after the matched doFrame
 -- and lasts >= 2 ms (the draw of the new content); Q = the end of the first `queueBuffer` that starts
 -- inside R (the buffer with the detail queued); row_end = that vsync's app actual frame-timeline
--- row's end when its dur > 0. T_q = Q - UP (frame end, as the bench's other frame-end numbers).
+-- row's end when its dur > 0. T_q = Q - UP: to the frame's buffer queued, later than the bench's
+-- main-thread frame end and earlier than the display's present (THREE_WAY_BENCHMARK.md, "NF5 R0",
+-- caveat 1).
 create perfetto table rt_th as
 select utid from thread where upid in (select upid from app_upid) and name = 'RenderThread';
 create perfetto table rt_sl as

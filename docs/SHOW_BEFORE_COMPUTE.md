@@ -86,26 +86,41 @@ declines it (3.2).
    2026-11-24, (b), the split**, with round 3's three conditions. It was needed before B5 because
    the arithmetic above already says the (B) gates fail with data. (B) now waits only on R1 (R0 ran
    on 2026-11-26, below).
-2. **R0, the A12 trace of one floor step** (appendix D; tomorrow's phone session, 2026-11-25),
-   on a new arm whose click reaches an idle guest, as (B)'s will. It says how much of the step is
-   waiting that a host or runtime change could remove, and projects the simple open from the
-   finger lifting: reachable only if the projection is at most 100 ms with the guest composing for
-   at most 25. If not, the simple target is out of reach too. Its scripts and queries were run end
+2. **R0, the A12 trace of one floor step** (appendix D; planned for 2026-11-25, run on
+   2026-11-26), on a new arm whose click reaches an idle guest, as (B)'s will. It says how much of
+   the step is waiting that a host or runtime change could remove, and projects the simple open from
+   the finger lifting: reachable only if the projection is at most 100 ms with the guest composing
+   for at most 25. If not, the simple target is out of reach too. Its scripts and queries were run end
    to end on an emulator on 2026-11-24, which also compiled the sample's `Main.kt` change.
-   **Run on the A12 on 2026-11-26. Verdict: reachable in principle, with a small margin**
-   ([`THREE_WAY_BENCHMARK.md`, "NF5 R0"](THREE_WAY_BENCHMARK.md#nf5-r0-the-floor-step-under-perfetto-a12-2026-11-26)).
+   **Run on the A12 on 2026-11-26. Verdict: reachable in principle, with a small margin and three
+   caveats** ([`THREE_WAY_BENCHMARK.md`, "NF5 R0"](THREE_WAY_BENCHMARK.md#nf5-r0-the-floor-step-under-perfetto-a12-2026-11-26)).
    All 12 opens were idle at the UP.
    - **G = 22.4 ms**: the guest composing, all of it on the fast cluster.
-   - **W = 8.1 ms**, all of it named. c1, 14.2 ms of which 6.6 ms is the Zipline thread's own work:
-     the guest's frame tick waits for the next vsync on the main thread. c2, 0.8 ms: the hop back to
-     the Zipline thread. d_runnable and d_other are 0.
-   - **P = 87.9 ms** with T measured to the frame that actually drew the detail (82.0 ms). On q2's
-     printed T (59.1), P = 65.0. q2's T is too short in 9 of 12 opens: the press's ripple, still
-     animating on the RenderThread after the 400 ms hold, moves the detail's frame, and the matched
-     frame-timeline row is zero-length. At a ratio of 30, P = 109.9 (87.0 printed).
+   - **W = 8.1 ms**, all of it named. It is the median of the per-open values; the column medians
+     do not add up to it (c 15.1 − c_zl_run 6.6 = 8.5). c1, median 14.2 ms, of which the Zipline
+     thread's own work (`c_zl_run`, median 6.6) is not a wait: the guest's frame tick waits for the
+     next vsync on the main thread. c2, 0.8 ms: the hop back to the Zipline thread. d_runnable and
+     d_other are 0.
+   - **P = 87.9 ms** with T measured to the frame that actually drew the detail, to its buffer
+     queued (82.0 ms). On q2's printed T (59.1), P = 65.0. q2's T is too short in 9 of 12 opens:
+     the press's ripple, still animating on the RenderThread after the 400 ms hold, moves the
+     detail's frame, and the matched frame-timeline row is zero-length. At a ratio of 30, P = 109.9
+     (87.0 printed).
    - **The margins**: 2.6 ms on G, 12.1 ms on P.
-   - **On this phone, `total` is to the frame's end**, not the display's present (appendix D, "The
-     A12 run").
+   - **Caveat 1, which "frame end".** The targets and native's 28 ms are frame end: the end of the
+     main thread's work for the frame (section 1). That is the like-for-like reading, because
+     native's 28 ms is not measured to the display. T has three readings: the main thread's frame
+     end (71.2, P about 77.1); the frame's buffer queued (82.0, **P = 87.9, the one recorded**, the
+     most conservative of the frame-end readings); and on the display, appendix D's pre-registered
+     "presented" (about 45 ms later in the one open checked, P about 133, which would make the
+     verdict **not reachable**). The owner confirms the reading.
+   - **Caveat 2, the margin is less than one frame.** The app draws only at vsyncs, 16.7 ms apart.
+     Quantized to them, P ≈ 98.7, a margin of about 1.3 ms (about 115 at a ratio of 30). Removing
+     W moves no open's frame, so the frame-clock change named for c1 would not, alone, bring the
+     simple open's frame forward on the A12. This matters for R1 and (B).
+   - **Caveat 3, the charger.** The run was on the charger; appendix D says on battery. Series H's
+     guest step on the charger is within −4% to +8% of battery, so G on battery is about 23.4 at
+     most, still under 25 (inferred; the idle arm was not run on battery).
    - **The heavy arm's G** (for B1's slice budget): 43.6 ms.
 3. **R1, a reveal-only arm on the A12**: the shell's first frame on the pixels, with and without
    measuring the shell while idle (3.5).
@@ -1531,6 +1546,10 @@ A-1 counts for the bar.
 | **R0** | **The A12 trace of one floor step** (appendix D): series H's arms (the detail already composed with the right item; click → composed 57.5 ms simple, 111–114.5 heavy) and a new **idle arm** (the same detail, the finger held 400 ms so that the press's preparation has finished and the click reaches an idle guest, as (B)'s will), under Perfetto with `x=trace`, decomposed into the hop to the Zipline thread, the guest's event, the wait for its next frame tick (to the main thread's frame callback, then back), the guest running, preempted or blocked (and on what), the batch to the main thread, the frame and the present. Dry-run end to end on an emulator on 2026-11-24 (appendix D); on the A12 on 2026-11-25 | **The rule is a projection, on the idle arm, from the finger lifting** (the reference of native's 28 ms; the bench's own times start at the DOWN): P = the arm's median UP → present − the waits with a named mechanism that a host or runtime change could remove + the rebind's extra guest work (14 ms at a ratio of 12). **Reachable in principle** if P ≤ 100 ms **and** the Zipline thread runs for at most 25 ms of click → composed (on any CPU, at any frequency: running on the slow cluster or down-clocked counts in G, never in W; round 4, R-M1). Only opens whose guest was idle at the UP count (round 4, R-L1). **Not reachable by (B)** if P > 100 even with every wait removed, or the Zipline thread runs 40 ms or more. Between: reported to the owner with decision 7. The press-on arm is reported beside it. Heavy is out of reach either way (its floor step alone is 111–114.5 ms) |
 | **R1** | **A reveal-only arm** on the prototype (gate A's container in the three-way bench, a small bench PR): the host shows a hidden, already composed detail on the click without asking the guest, with and without measuring it while idle (3.2). Perfetto on the phone, as series C: tap → the reveal's first draw and its frame presented; and click → composed with the reveal on and off | **B-1f's bar, on the same arm** (round 3, M5): the shell's first draw within native's first draw + 16.7 ms (about 45 ms from the tap), simple and heavy. **Native's first draw is that of the native arm of the same detail** (round 4, M5's nit): `-e form native -e bench nav`, and with `-e x heavy` for heavy (the commands of THREE_WAY_BENCHMARK.md's "How to run it"), run in the same session and build, whose first draw is the detail with its data in hand. R1 runs on simple and heavy, so `native,detailfetch` (B-1f's comparison, whose first draw is native's skeleton) does not exist yet; B-1f compares with it later, on `detailfetch`; with the idle measure, the reveal's `Record View#draw()` under 10 ms. **Also reported: click → composed with the reveal on and off**: the reveal's frame takes the main thread when the guest's frame tick needs it (the tick is a Choreographer callback, `AndroidChoreographerFrameClock.kt:31–36`), so it may add to the floor step, which appendix B assumes it does not. If either misses, the shell's first layout is the cost to cut before B4 |
 
+R0's G is appendix D's, which governs: G = `d_running`, the Zipline thread's running time inside
+F → C (the recomposition). The click's event and `c_zl_run` run inside click → composed but are not
+in G. R0 ran on the A12 on 2026-11-26 (section 0).
+
 ### (B) Open
 
 Arms of the three-way bench (`bench=nav`, simple and `heavy`, BigInt, press off), against
@@ -2245,8 +2264,9 @@ the rows and checks every open's batch for the opened item's title.
 
 ## Appendix D: the floor step under Perfetto (R0, A12)
 
-For the phone session of 2026-11-25. Required before any (B) PR (section 9). It reruns series H's
-arms ([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md), "Series H"), and one new arm, under a
+Written for the phone session of 2026-11-25; run on 2026-11-26 ("The A12 run", below). Required
+before any (B) PR (section 9). It reruns series H's arms
+([`THREE_WAY_BENCHMARK.md`](THREE_WAY_BENCHMARK.md), "Series H"), and one new arm, under a
 Perfetto trace, and splits the floor step (click → composed for a detail already composed with the
 right item: 57.5 ms simple, 111–114.5 heavy) into its parts. Nothing in the bench changes: every
 option it uses is on main (`x=prepared`, `press`, `heavy`, `trace` and `--ei hold`;
@@ -2582,16 +2602,22 @@ emulator, after pulling them to the scratch directory. The app stays installed.
 
 ### The A12 run, 2026-11-26
 
-Run from the command list as written, with the dry run's APKs (sha256 matched), plugged in and
-charging, unlike series H. The verdict is in section 0; the tables, the phone state and the checks
-are in [`THREE_WAY_BENCHMARK.md`, "NF5 R0"](THREE_WAY_BENCHMARK.md#nf5-r0-the-floor-step-under-perfetto-a12-2026-11-26).
+Run from the command list as written, except the power state, with the dry run's APKs (sha256
+matched): plugged in and charging, where step 0 says on battery as series H. The verdict and its
+three caveats are in section 0; the tables, the phone state and the checks are in
+[`THREE_WAY_BENCHMARK.md`, "NF5 R0"](THREE_WAY_BENCHMARK.md#nf5-r0-the-floor-step-under-perfetto-a12-2026-11-26).
 
 The run passed every check (q0a, q0b, qc 12 of 12 on every arm; the clusters separated). It also
 showed two things about the frame columns that the emulator did not, for whoever reuses these
 queries (R1, A6):
-- **On the A12, the end of the app's actual frame-timeline row is the frame's end**: about its
-  `queueBuffer`, about 45 ms before the end of SurfaceFlinger's display frame. It is not the
-  display's present. `j` and `total` measure to it.
+- **On the A12, the end of the app's actual frame-timeline row is the frame's buffer queued**
+  (about its `queueBuffer`). It is neither the targets' frame end (the end of the main thread's
+  work, earlier) nor the display's present (later). `j` and `total` measure to it, though the
+  table above calls them "presented". In the one open checked (open 4, while the press's ripple
+  was animating), SurfaceFlinger's display frame ended about 45 ms after the row; other opens were
+  not checked. R0 records T to the buffer queued: frame end is the like-for-like reading for the
+  targets and native's 28 ms, and the buffer queued is the most conservative frame-end reading
+  (section 0, caveat 1).
 - **`measure.sql`'s frame (the first `doFrame` after the apply) is not always the one that drew the
   detail.** When the press's ripple is animating on the RenderThread, the detail's draw moves one
   vsync later, or waits behind the animation's buffer, and the matched row is zero-length (`j` < 0).
