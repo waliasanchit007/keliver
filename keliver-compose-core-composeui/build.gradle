@@ -32,8 +32,10 @@ kotlin {
         implementation libs.jetbrains.compose.ui
       }
     }
-    // The same-source samples, harness and pixel tests (SameSourceTest), shared by the JVM and the
-    // iOS simulator. Not commonTest: Android unit tests and JS/wasm would compile them.
+    // The same-source samples, harness and pixel tests (SameSourceTest), and NF1's host tests
+    // (LazyScrollTest; OneStatePerWidgetTest and PressHostTest, which are JVM-only in the
+    // prototype), shared by the JVM and the iOS simulator. Not commonTest: Android unit tests and
+    // JS/wasm would compile them.
     sameSourceTest {
       dependsOn commonTest
       dependencies {

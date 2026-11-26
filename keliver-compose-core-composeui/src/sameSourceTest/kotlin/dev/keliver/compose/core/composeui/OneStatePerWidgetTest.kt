@@ -38,7 +38,8 @@ import kotlin.test.assertTrue
  * composition.
  *
  * The product's copy (docs/MS4_PLAN.md, MS4-02) of the prototype's test, on the core group's
- * generated renderers.
+ * generated renderers. The prototype runs it on the JVM only; here it is shared by the JVM and the
+ * iOS simulator.
  */
 @OptIn(ExperimentalTestApi::class)
 class OneStatePerWidgetTest {

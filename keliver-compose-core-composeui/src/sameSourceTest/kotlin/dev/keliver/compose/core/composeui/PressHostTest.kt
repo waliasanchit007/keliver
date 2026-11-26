@@ -56,7 +56,8 @@ import kotlin.test.assertTrue
  * order relative to the clickable's own callbacks, and that it changes nothing the clickable does
  * (its interactions, which drive the ripple). [log] is what a guest would receive, in order.
  *
- * The product's copy (docs/MS4_PLAN.md, MS4-02) of the prototype's test.
+ * The product's copy (docs/MS4_PLAN.md, MS4-02) of the prototype's test. The prototype runs it on
+ * the JVM only; here it is shared by the JVM and the iOS simulator.
  */
 @OptIn(ExperimentalTestApi::class, ExperimentalFoundationApi::class)
 class PressHostTest {
