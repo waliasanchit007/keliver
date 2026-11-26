@@ -67,16 +67,21 @@ if (composePrototype) {
     defaultLibrariesExtensionName = "defaultLibs"
     versionCatalogs {
       create("libs") {
-        from(files("gradle/libs.versions.toml"))
+        // NF2: main's stack builds on Keliver's Zipline fork (QuickJS 2026): same artifact names and
+        // packages, another group, and the plugin id dev.keliver.zipline (pluginManagement above).
+        // The fork's group goes into a copy of the TOML: a library or plugin alias declared here AND
+        // in the imported TOML resolves to the TOML's entry (Gradle applies the import last and logs
+        // "Duplicate entry ... is replaced"), so `library("zipline", "dev.keliver.zipline", ...)`
+        // here left `app.cash.zipline` at the fork's version, which does not exist (found by NF5 R1's
+        // build, 2026-11-26). An explicit version() does win over the TOML's.
+        val catalog = file("build/prototype-catalog/libs.versions.toml")
+        catalog.parentFile.mkdirs()
+        catalog.writeText(file("gradle/libs.versions.toml").readText().replace("\"app.cash.zipline", "\"dev.keliver.zipline"))
+        from(files(catalog))
         version("kotlin", "2.4.21")
         version("ksp", "2.3.14")
         version("keliver", providers.gradleProperty("keliverVersion").getOrElse("0.0.0-gateb"))
-        // NF2: main's stack builds on Keliver's Zipline fork (QuickJS 2026): same artifact names and
-        // packages, another group, and the plugin id dev.keliver.zipline (pluginManagement above).
         version("zipline", "1.28.0-keliver.1")
-        library("zipline", "dev.keliver.zipline", "zipline").versionRef("zipline")
-        library("zipline-loader", "dev.keliver.zipline", "zipline-loader").versionRef("zipline")
-        plugin("zipline", "dev.keliver.zipline").versionRef("zipline")
         version("composeMultiplatform", "1.12.2")
         // main's Android artifacts require compileSdk 37 (AAR metadata).
         version("android-compileSdk", "37")

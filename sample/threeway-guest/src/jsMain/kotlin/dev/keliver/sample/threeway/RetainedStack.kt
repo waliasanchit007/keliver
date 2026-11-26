@@ -71,7 +71,7 @@ internal object RetainedThreewayStack : ThreewayStack {
   private val retention = KeliverNavRetention(GateAFrame, depth = 1)
 
   @Composable
-  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+  override fun Show(keys: List<Any>, next: Any?, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
     // System back through the guest (the round trip host back removes).
     BackHandler(enabled = keys.size > 1) { onBack() }
     KeliverRetainedStack(keys, retention, content)
@@ -114,7 +114,7 @@ internal object RetainedHostThreewayStack : ThreewayStack {
   private val retention = KeliverNavRetention(GateAHostFrame, depth = 1)
 
   @Composable
-  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+  override fun Show(keys: List<Any>, next: Any?, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
     BackHandler(enabled = keys.size > 1) { onBack() }
     KeliverRetainedStack(keys, retention, onHostBack = { onBack() }, content = content)
   }
@@ -134,7 +134,7 @@ internal object PressPreparedThreewayStack : ThreewayStack {
   private val preparation = KeliverNavPreparation<Any>()
 
   @Composable
-  override fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
+  override fun Show(keys: List<Any>, next: Any?, onBack: () -> Unit, content: @Composable (Any) -> Unit) {
     BackHandler(enabled = keys.size > 1) { onBack() }
     KeliverPreparedStack(keys, preparation, GateAFrame, depth = 1, content = content)
   }
