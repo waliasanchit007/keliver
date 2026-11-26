@@ -16,14 +16,24 @@
 package dev.keliver.treehouse.composeui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import dev.keliver.ui.Cancellable
 import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 
+/**
+ * The desktop has no system back. Tests provide a dispatcher that behaves as Android's does, so
+ * [TreehouseContent]'s back gate is tested through its public API.
+ */
+internal val LocalDesktopBackDispatcher: ProvidableCompositionLocal<OnBackPressedDispatcher?> =
+  staticCompositionLocalOf { null }
+
 @Composable
 internal actual fun platformOnBackPressedDispatcher(): OnBackPressedDispatcher {
-  return remember {
+  val provided = LocalDesktopBackDispatcher.current
+  val none = remember {
     object : OnBackPressedDispatcher {
       override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable =
         object : Cancellable {
@@ -31,4 +41,5 @@ internal actual fun platformOnBackPressedDispatcher(): OnBackPressedDispatcher {
         }
     }
   }
+  return provided ?: none
 }

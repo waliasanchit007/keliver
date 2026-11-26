@@ -15,6 +15,16 @@ public final class dev/keliver/compose/HostFeaturesKt {
 	public static final fun getLocalHostFeatures ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
 
+public final class dev/keliver/compose/KeliverHostFeatures {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/compose/KeliverHostFeatures;
+	public static final field NAV_RETAINED_CONTAINER_1 Ljava/lang/String;
+	public static final field PRESS_1 Ljava/lang/String;
+	public final fun getAll ()Ljava/util/Set;
+	public final fun getRequirements ()Ljava/util/Map;
+	public final fun missingRequirements (Ljava/util/Set;)Ljava/util/Map;
+}
+
 public abstract interface class dev/keliver/compose/RedwoodComposition {
 	public abstract fun cancel ()V
 	public abstract fun setContent (Lkotlin/jvm/functions/Function2;)V

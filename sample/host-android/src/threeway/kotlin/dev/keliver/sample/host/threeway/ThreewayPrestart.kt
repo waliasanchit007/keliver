@@ -16,6 +16,7 @@ import android.util.Log
 import app.cash.zipline.Zipline
 import app.cash.zipline.loader.ManifestVerifier
 import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.KeliverHostFeatures
 import dev.keliver.compose.gatea.protocol.host.KeliverComposeGateAHostProtocol
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
@@ -55,8 +56,6 @@ import okio.ByteString.Companion.decodeHex
 internal object ThreewayGuest {
   private const val PREFS = "threeway-nf4"
   private const val MANIFEST_URL = "https://threeway.invalid/manifest.zipline.json"
-  /** Gate A's press signal's host feature (`PRESS_HOST_FEATURE` in keliver-compose-gatea-compose, a guest module). */
-  private const val PRESS_HOST_FEATURE = "keliver.press@1"
   private const val SAMPLE_SIGNING_PUBLIC_KEY = "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
 
   /** The process's marks and the guest's host services: one per process, so a prestarted guest can use them. */
@@ -158,7 +157,7 @@ internal object ThreewayGuest {
       // declares it). Read when the app starts: [experiments] is set before.
       @OptIn(ExperimentalKeliverHostFeaturesApi::class)
       override val hostFeatures: Set<String>
-        get() = if ("press" in experiments.split(',').map { it.trim() }) setOf(PRESS_HOST_FEATURE) else emptySet()
+        get() = if ("press" in experiments.split(',').map { it.trim() }) setOf(KeliverHostFeatures.PRESS_1) else emptySet()
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<ThreewayAppService>, zipline: Zipline) {
         zipline.bind<HostHttpProvider>("HostHttp", BenchHostHttp(ThreewayHttp.okHttp, recorder, prefetch))

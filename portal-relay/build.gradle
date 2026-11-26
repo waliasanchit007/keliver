@@ -51,6 +51,8 @@ dependencies {
   testImplementation libs.kotlin.test.junit
   // ED3: decode the relay's own QR codes with an independent decoder. Test-only.
   testImplementation 'com.google.zxing:core:3.5.3'
+  // NF5 H0: Keliver's host feature names (KeliverHostFeatures), which the host templates declare.
+  testImplementation projects.keliverCompose
 }
 
 // W3: keliver-publish, the relay's publish without the relay. Its start script
@@ -93,10 +95,32 @@ def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   // DeviceProxyTest holds the relay's links to what that check accepts.
   from(rootProject.file('scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt'))
   from(rootProject.file('scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt'))
+  // NF5 H0: the host features of the line this checkout builds (what the code above reads as
+  // HostFeatures.implemented), the release identity of the last good record, and their tests.
+  from(rootProject.file('scripts/templates/production-host/src/line-0.5/kotlin/HostFeatures.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/test/kotlin/HostFeaturesTest.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/main/kotlin/ReleaseIdentity.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/test/kotlin/ReleaseIdentityTest.kt'))
   filter { line -> line.replace('@@PACKAGE@@', 'hosttemplate') }
   into layout.buildDirectory.dir('generated/hostTemplate/kotlin')
 }
 sourceSets.test.kotlin.srcDir(hostTemplateTestSource)
+// NF5 H0: every Keliver line's host features (scripts/templates/production-host/src/line-<line>/
+// kotlin/HostFeatures.kt), each in its own package (hostline_0_4, …), so HostFeaturesTemplateTest
+// holds each line's declaration to Keliver's names (keliver-compose's KeliverHostFeatures) and to
+// what its line's libraries serve. A line added to keliver-runtime-line.sh's table fails that test
+// until it is listed here.
+def hostLineTestSource = tasks.register('hostLineTestSource', Copy) {
+  ['0.4', '0.5'].each { line ->
+    def pkg = 'hostline_' + line.replace('.', '_')
+    from(rootProject.file("scripts/templates/production-host/src/line-$line/kotlin/HostFeatures.kt")) {
+      filter { text -> text.replace('@@PACKAGE@@', pkg) }
+      into pkg
+    }
+  }
+  into layout.buildDirectory.dir('generated/hostLines/kotlin')
+}
+sourceSets.test.kotlin.srcDir(hostLineTestSource)
 // NF2: the index reader tools 0.3.18 shipped to hosts (the template's BundleIndex.kt at 878311ae,
 // byte for byte: EngineGateTest checks its git blob id), so the test that hosts from before NF2
 // take only the default engine's bundle runs their real constraint check.

@@ -187,6 +187,10 @@ private fun lastGoodKey(cacheName: String) = "lastGoodManifestUrl-$cacheName"
 private fun lastGoodShaKey(cacheName: String) = "lastGoodManifestSha256-$cacheName"
 /** NF2: the engine of the host that loaded that last good bundle (absent: quickjs-2021, every host before NF2). */
 private fun lastGoodEngineKey(cacheName: String) = "lastGoodEngine-$cacheName"
+/** NF5 H0: the signed sequence of that last good bundle, from its own load (absent: none recorded, or none signed). */
+private fun lastGoodSequenceKey(cacheName: String) = "lastGoodSequence-$cacheName"
+/** NF5 H0: the digest of that last good bundle's modules, from its own load (ReleaseIdentity.kt; absent: none recorded). */
+private fun lastGoodModuleDigestKey(cacheName: String) = "lastGoodModuleDigest-$cacheName"
 /** One Zipline cache per key, and one rollback floor and last-good URL with it. */
 private fun cacheNameFor(publicKeyHex: String) = "keliver-production-${publicKeyHex.lowercase().take(16)}"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
@@ -1419,7 +1423,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // apps loading at once never mix their binds).
     val bridgeBinds = BridgeBindRecorder()
     lateinit var app: TreehouseApp<PortalPresenter>
-    val spec = object : TreehouseApp.Spec<PortalPresenter>() {
+    // KeliverSpec (KeliverLine.kt): from the 0.5 line it hands the guest this host's features (HostFeatures.kt).
+    val spec = object : KeliverSpec<PortalPresenter>() {
       override val name = "keliver-production"
       override val manifestUrl = flow
       override val serializersModule = EmptySerializersModule()
@@ -1564,13 +1569,19 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             Log.d(TAG, "update skipped: ${p.url} is the running manifest")
           }
         },
-        onLoaded = { url ->
+        onLoaded = { url, release ->
           // With the sha256 of the very manifest bytes Zipline verified and loaded (none served: none kept).
           val sha256 = ziplineHttp.servedSha256(url)
-          // NF2: with the engine that loaded it (one edit, so written together).
-          prefs.edit().putString(lastGoodKey(cacheName), url).putString(lastGoodEngineKey(cacheName), hostEngine)
+          // NF2: with the engine that loaded it; NF5 H0: with the release's identity as this load saw it
+          // (its sequence and module digest, ReleaseIdentity.kt). One edit, so written together, and
+          // committed before this returns, as the crash ledger is: a record lost to a kill would name
+          // the previous release (docs/SHOW_BEFORE_COMPUTE.md 2.8).
+          val written = prefs.edit().putString(lastGoodKey(cacheName), url).putString(lastGoodEngineKey(cacheName), hostEngine)
             .apply { if (sha256 != null) putString(lastGoodShaKey(cacheName), sha256) else remove(lastGoodShaKey(cacheName)) }
-            .apply()
+            .apply { if (release.sequence != null) putLong(lastGoodSequenceKey(cacheName), release.sequence) else remove(lastGoodSequenceKey(cacheName)) }
+            .putString(lastGoodModuleDigestKey(cacheName), release.moduleDigest)
+            .commit()
+          if (!written) Log.w(TAG, "the last good bundle's record was not written (sequence ${release.sequence ?: "none"})")
         },
         onSequence = { sequence ->
           val floor = prefs.floor(floorNames)
@@ -2007,7 +2018,8 @@ private class LoggingEventListenerFactory(
   private val onReady: (Long?) -> Unit,
   private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
   private val onSkipped: () -> Unit,
-  private val onLoaded: (String) -> Unit,
+  /** A load from the network succeeded: its manifest URL, and the release it loaded (NF5 H0). */
+  private val onLoaded: (manifestUrl: String, release: LoadedRelease) -> Unit,
   private val onSequence: (Long) -> Unit,
   /** [count] counts the failure (once) and says what that did; call it when the app is the host's. */
   private val onFailed: (reason: String, count: () -> CrashStep) -> Unit,
@@ -2028,7 +2040,7 @@ private class LoggingEventListener(
   private val onReady: (Long?) -> Unit,
   private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
   private val onSkipped: () -> Unit,
-  private val onLoaded: (String) -> Unit,
+  private val onLoaded: (manifestUrl: String, release: LoadedRelease) -> Unit,
   private val onSequence: (Long) -> Unit,
   private val onFailed: (String, () -> CrashStep) -> Unit,
   private val onUncaught: (CrashStep) -> Unit,
@@ -2089,8 +2101,10 @@ private class LoggingEventListener(
     KeliverTiming.memory("code", zipline) // the memory profile (M5), in debug and benchmark builds only
     // The host's app: before this returns. A held app's when it shows, on the main thread, where it
     // is dropped: a dropped app raises no floor and names no last good bundle.
+    // NF5 H0: the release as this load saw it, from the manifest it verified (ReleaseIdentity.kt).
+    val release = loadedRelease(manifest)
     fence.run {
-      manifestUrl?.let(onLoaded)
+      manifestUrl?.let { onLoaded(it, release) }
       sequence?.let(onSequence)
     }
   }
