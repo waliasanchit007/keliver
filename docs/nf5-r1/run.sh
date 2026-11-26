@@ -49,6 +49,9 @@ run() {
     simple-reveal) arm simple-reveal guest r1prep,reveal,trace 60 ;;
     # The same detail without the reveal: the guest's click shows it (click -> composed, reveal off).
     simple-off) arm simple-off guest r1prep,trace 60 ;;
+    # The A/B's control, not in ARMS (README, "What the run shows"): the reveal's click listener
+    # installed, but the click reveals nothing (listenonly), so the guest's click shows the detail.
+    simple-listen) arm simple-listen guest r1prep,reveal,listenonly,trace 60 ;;
     heavy-reveal-idle) arm heavy-reveal-idle guest heavy,r1prep,reveal,idlemeasure,trace 75 ;;
     heavy-reveal) arm heavy-reveal guest heavy,r1prep,reveal,trace 75 ;;
     heavy-off) arm heavy-off guest heavy,r1prep,trace 75 ;;

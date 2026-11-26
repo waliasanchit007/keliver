@@ -33,6 +33,12 @@ internal class R1Reveal(
   override val revealOnClick: Boolean,
   override val measurePrepared: Boolean,
   private val trace: Boolean,
+  /**
+   * False with `listenonly`, the A/B's control (README, "What the run shows"): the container keeps
+   * its click listener (with `reveal`), but no entry is revealable, so a click reveals nothing and
+   * the guest's own click shows the detail, as without the reveal.
+   */
+  private val revealable: Boolean = true,
 ) : RetainedReveal {
   private val marks = LinkedHashMap<String, Long>()
 
@@ -41,7 +47,7 @@ internal class R1Reveal(
 
   override fun isPrepared(key: String): Boolean = R1Keys.isPrepared(key)
 
-  override fun isRevealable(key: String): Boolean = R1Keys.isRevealable(key)
+  override fun isRevealable(key: String): Boolean = revealable && R1Keys.isRevealable(key)
 
   /** The window's OnDrawListener: every frame's draw starts here, before its views record. */
   fun onWindowDraw(atMillis: Long) {
@@ -75,7 +81,10 @@ internal class R1Reveal(
   }
 
   companion object {
-    /** The policy for the run's experiments (`r1prep`, with `reveal`, `idlemeasure`, `trace`); null without `r1prep`. */
+    /**
+     * The policy for the run's experiments (`r1prep`, with `reveal`, `idlemeasure`, `listenonly`,
+     * `trace`); null without `r1prep`.
+     */
     fun forExperiments(experiments: Set<String>): R1Reveal? =
       if ("r1prep" !in experiments) {
         null
@@ -84,6 +93,7 @@ internal class R1Reveal(
           revealOnClick = "reveal" in experiments,
           measurePrepared = "idlemeasure" in experiments,
           trace = "trace" in experiments,
+          revealable = "listenonly" !in experiments,
         )
       }
   }
