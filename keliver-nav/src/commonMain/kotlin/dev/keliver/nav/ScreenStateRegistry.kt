@@ -36,7 +36,8 @@ public class ScreenStateRegistry(
   public val entries: List<ScreenStateEntry>,
   /**
    * By screen: why a `@ScreenState` function there is not in [entries] (a private function, a
-   * route that is not a literal call, a repeated name). The same text `GET /states` reports.
+   * body that is not one `NamedState(…)` call, a repeated name). The same text `GET /states`
+   * reports.
    */
   public val problems: Map<String, List<String>> = emptyMap(),
 ) {
