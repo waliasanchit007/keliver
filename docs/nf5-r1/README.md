@@ -104,7 +104,11 @@ fails again it is reported as it is, with no verdict.
 - the guest's own detail drawn (`drawn`) on each guest arm.
 - the reveal frame's readings beside native's frame: `f_end`, the main thread's frame end;
   `q_drew`, the buffer queued by the draw that drew it (and `q_r0`, R0's rule for it);
-  `row_end`, the app's frame-timeline row; `sf_end`, the display frame.
+  `row_end`, the app's frame-timeline row; `sf_end`, the display frame; and in how many opens the
+  frame's own vsync queued the buffer (`drew_own`).
+- bar 1 read on the buffer queued instead of the first draw: the reveal's `q_drew` against native's
+  `q_drew` + 16.7 ms ("within" or "beyond"). The dry run (below) is why: there, the reveal's own
+  frame queued no buffer, and the next frame showed it.
 
 Prediction (written before any phone run): the reveal's first draw 13–30 ms after the UP, as the
 retained back's first draw on the A12 (13–17 ms after the press, appendix B); `Record View#draw()`
@@ -268,4 +272,87 @@ reveal off and on). Put the verdict in SHOW_BEFORE_COMPUTE.md's section 0, in it
 
 ## Dry run, 2026-11-26 (emulator)
 
-DRYRUN
+**Where.** The AVD `keliver_a12_api35` (arm64, Android 15, 4 cores, 60 Hz), headless, on the Mac,
+as R0's dry run. Its numbers are **not results**: a fast host, no cluster split, almost no
+scheduling noise. The run shows only that the pipeline works, from the build to the bar.
+
+**Build** (step 1's commands, through the agents' scratch wrappers): the prototype published to a
+scratch repository from `760b0de73` (6 min), and the sample's benchmark APK built from `ea0c1d69c`
+(1 min). The two commits differ only in `sample/`, and the APK holds no file that changed after
+`ea0c1d69c`. `host-android-benchmark.apk` is 26,078,079 bytes, sha256
+`a03ccfa490c245e704cf3c68551cb1023227054c1b612aaabd69013350929f3a`; `lib/arm64-v8a/libquickjs.so` is
+2,618,992 bytes. The trace processor was R0's copy, sha256 `ae2f18ff…68a0e7d`.
+
+**Run.** Steps 2–7, in order: install and compile, push, the eight arms (`run.sh`, 10:27–10:37), the
+check, `analyse.sh all` (about a minute on the emulator), pull, clean. Every arm: 14 opens, `done`, no
+timeout; traces of 77–147 MB. Every query ran on every arm. Validity, every arm: `count.opens` 14;
+on the four reveal arms `count.reveal` 12 of 12, and the bench's `revealed` on every open; `nextHit` 1
+on every open of the six guest arms; the identity check passed 12 of 12 on each guest arm (`n/a` on
+native). One smoke arm (`simple-reveal-idle`) ran first, and the fixes below came from it.
+
+**What the bar printed** (medians over opens 3–14, ms from the UP; emulator, not results):
+
+| | native | reveal + idle measure | reveal | off |
+|---|---|---|---|---|
+| **simple** first draw (`drawn`; `revealDrawn`) | 2 | 1 | 1 | |
+| `Record View#draw()` of that frame (`rec_ms`), of it measure and layout (`ml_ms`) | 0.7 (0.6) | 0.4 (0.1) | 0.8 (0.6) | |
+| its buffer queued (`q_drew`); by its own vsync (`drew_own`) | 3.6; 12 of 12 | 10.5; 0 of 12 | 10.3; 0 of 12 | |
+| its display frame end (`sf_end`) | 17.4 | 25.7 | 26.0 | |
+| click → composed, bench (trace `ec`) | | 7.5 (8.1) | 8 (7.9) | 9 (8.8) |
+| the guest's live detail drawn (`drawn`) | | 23 | 23 | 22.5 |
+| **heavy** first draw | 2 | 1 | 1 | |
+| `rec_ms` (`ml_ms`) | 2.1 (1.7) | 0.6 (0.2) | 1.4 (1.0) | |
+| `q_drew`; `drew_own` | 5.0; 12 of 12 | 10.6; 0 of 12 | 10.1; 1 of 12 | |
+| click → composed, bench (trace) | | 10 (10.6) | 9.5 (9.8) | 10.5 (11.0) |
+| the guest's live detail drawn | | 23 | 23 | 23.5 |
+
+Bars 1 and 2 printed MET on all four reveal arms (on an emulator: no verdict); the buffer-queued
+reading printed "within" on all four. The full output is `analyse-all.txt` in the dry run's pulled
+directory (not committed). Its `bar` section predates the last `analyse.sh` change (the `drew_own`
+counts and the buffer-queued line); `analyse.sh bar` was rerun on the emulator after it, on the same
+queries' output, and the table above is that rerun.
+
+**What the run shows about the method, not about the A12:**
+- **The first frame after the UP is late on both sides.** The driver's tap blocks the main thread for
+  40 ms, so the frame after the UP starts 0.4–0.8 ms after it, a vsync late (`resynced to … in
+  20–30 ms`). The same holds for native and for the reveal, so the first-draw comparison stays like
+  for like.
+- **The reveal's own frame queued no buffer** in 47 of 48 reveal opens (`drew_own`). Its RenderThread
+  draw was dropped, and the next frame queued the reveal about 10 ms after the UP, where native's own
+  frame queued at 3.6–5.0. In opens 3–5 of every reveal arm, q3 shows a RenderThread-only
+  `queueBuffer` 5–9 ms before the UP, during the tap's blocked 40 ms: the swap chain was stuffed when
+  the reveal's frame came. That buffer is not in `simple-off` (the same guest and policy, no
+  reveal) or in native. The cause is not established. Inferred: something the reveal arms do on the
+  DOWN starts a RenderThread animation that the others start later (a press ripple, R0's mechanism).
+  **The first-draw mark does not see this, and the buffer-queued reading does**, which is why `bar`
+  prints both. The phone session reads q3 for it.
+- **The idle measure moves the reveal's layout out of its frame** even here: measure and layout inside
+  the reveal's `Record View#draw()`, 0.1–0.2 ms with it against 0.6–1.0 without.
+- **The guest form keeps drawing a frame per vsync for about 140 ms after an open** (`simple-off`
+  too), where native stops after its frame. That is the guest form's, not the reveal's.
+- **R0's rule (`q_r0`) fails on short draws:** on native, whose draws take under 2 ms here, it read
+  the first long draw about 755 ms later.
+
+**What broke, and the fixes** (all in this directory or the PR's code now):
+1. **The sample did not build on main's prototype stack.** Its catalog override for the published
+   Zipline fork (`dev.keliver.zipline:*:1.28.0-keliver.1`) declared the `zipline` library and plugin
+   aliases in settings as well as in the imported TOML, and the TOML's entry wins. So Gradle asked
+   for `app.cash.zipline` at the fork's version, which does not exist. CI does not build the sample,
+   so nothing had caught it. `sample/settings.gradle.kts` now imports a copy of the TOML with the
+   fork's group.
+2. **A hidden detail's `composed` report would have hidden the back's** (found reading the code
+   before the run). The guest host keeps one report per change batch, the last. The parked detail
+   recomposes in the back's batch (its counter changes), so the back would have timed out. A hidden
+   detail now does not report (`LocalDetailHidden`).
+3. **The wrong doFrame.** On Android 13 or later a late frame has a nested `Choreographer#doFrame -
+   resynced to <id> in <ms>` slice with the same start. The prelude took it, and with it a vsync id
+   that has no `DrawFrames` and no frame-timeline row (`q_same`, `row_end` and `sf_end` came out
+   empty). It now takes the frame's own `Choreographer#doFrame <id>`.
+4. **R0's "first DrawFrames of at least 2 ms" passed over the draw that queued the buffer.** In open 3
+   of the first run, the reveal's own `DrawFrames` took 1.7 ms and queued the buffer at 5.4 ms; R0's
+   rule read the next one, at 38.0 ms. `q_drew` now takes the first draw that queues a buffer, and
+   R0's rule is kept beside it as `q_r0`.
+5. **Vsync ids are tokens, not counts.** The first run's `drew_lag` (the difference of two ids) read
+   21–50 for draws one frame apart. It is now `drew_own`: 1 when the doFrame's own vsync drew it.
+6. **Empty marks shifted the columns** of the bench's per-open table (found before the run): a
+   native line has no `revealed`, and awk collapses empty fields. Missing marks now print `-`.

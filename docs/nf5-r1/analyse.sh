@@ -91,11 +91,16 @@ bar() {
         "its Record View#draw() (trace reveal.rec_ms) = $rec: bar 2 (< 10) $v2"
       echo "   $a: reveal's frame: main-thread end $(tmed $a reveal.f_end), buffer queued $(tmed $a reveal.q_drew)" \
         "(R0's rule $(tmed $a reveal.q_r0)), row end $(tmed $a reveal.row_end), display frame end $(tmed $a reveal.sf_end);" \
-        "trace opens with a reveal $(tmed $a count.reveal) of 12"
+        "trace opens with a reveal $(tmed $a count.reveal) of 12; queued by its own vsync $(tmed $a count.reveal.drew_own)"
+      # Reported, not judged: bar 1 read on the buffer queued instead of the first draw.
+      qr=$(tmed $a reveal.q_drew); qn=$(tmed native-$s drawn.q_drew)
+      echo "   $a: on the buffer queued (reported, not judged): $qr against native's $qn + 16.7:" \
+        "$(awk -v r="$qr" -v n="$qn" 'BEGIN { if (r == "" || n == "") print "no data"; else if (r + 0 <= n + 16.7) print "within"; else print "beyond" }')"
     done
     echo "   native-$s frame: main-thread end $(tmed native-$s drawn.f_end), buffer queued $(tmed native-$s drawn.q_drew)" \
       "(R0's rule $(tmed native-$s drawn.q_r0)), row end $(tmed native-$s drawn.row_end), display frame end" \
-      "$(tmed native-$s drawn.sf_end), Record View#draw() $(tmed native-$s drawn.rec_ms)"
+      "$(tmed native-$s drawn.sf_end), Record View#draw() $(tmed native-$s drawn.rec_ms);" \
+      "queued by its own vsync $(tmed native-$s count.drawn.drew_own)"
     echo "   click -> composed (bench composed_click; trace guest.ec), reveal off / on / on with the idle measure:" \
       "$(bmed $s-off composed_click) / $(bmed $s-reveal composed_click) / $(bmed $s-reveal-idle composed_click);" \
       "trace $(tmed $s-off guest.ec) / $(tmed $s-reveal guest.ec) / $(tmed $s-reveal-idle guest.ec)"
