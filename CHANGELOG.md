@@ -175,10 +175,11 @@ New:
 - keliver-treehouse-host-composeui: `TreehouseContent(…, backEnabled)` (experimental,
   `@ExperimentalKeliverBackApi`). While it is false, no back press reaches the content's guest
   (#316).
-- Host templates: each Keliver line's `HostFeatures.kt` declares the host features a host
-  implements (none yet; none ever on the 0.4 line). In an update swap, the hidden app no longer
-  receives back (0.5 line). The last good bundle's record carries the release's sequence and
-  module digest and is written through (#316).
+- `keliver-treehouse-host` logs one line naming its version when a `TreehouseApp.Factory` is
+  created (`keliver-treehouse-host 0.5.0`; logcat tag `Keliver` on Android, standard output on
+  iOS), so a device log shows which Keliver a host runs (#315).
+- `keliver-nav` is also published for wasmJs (browser), so a Kotlin/Wasm editor can depend on it
+  (ED2's prerequisite). Its js and jvm artifacts are unchanged (MS4-27, #318).
 
 Changed:
 
@@ -202,23 +203,6 @@ Changed:
   the guest's composed → frame end from 365 to 223.5 ms. It costs about 1.7 MB of compiled code on the phone
   (THREE_WAY_BENCHMARK.md, "NF4: composed to drawn") (#286). An app can leave it out (see the tools bundle's
   `keliver.hostBaselineProfile`, below) (#290).
-- A new app on Keliver 0.5.x is scaffolded with the toolchain the 0.5.0 libraries need: Kotlin
-  2.4.21, AGP 9.3.3 with built-in Kotlin, compileSdk 37, targetSdk 36, and Gradle 9.7.1 in its
-  wrapper. The production host warns when an existing app's Gradle wrapper is older than its AGP
-  accepts, and prints the lines to change (#299).
-- On 0.5.x, the Android and iOS hosts get Coil, its network fetcher and (iOS) Ktor's Darwin engine
-  through `dev.keliver:keliver-image` at your Keliver version, so they match Keliver's libraries
-  (#299).
-- `--embed` applies Kotlin's Android plugin according to your app's own AGP and
-  `android.builtInKotlin` (#299).
-- The host scaffolders, `keliver-new-device-target.sh` and `keliver-new-editor.sh` take your app's
-  `appRuntime.keliverVersion` from `keliver.portal.json`. If that file cannot be read or names no
-  version, they stop and say so (`KELIVER_VERSION`, or `KELIVER_HOST_KELIVER_VERSION` for the
-  hosts, overrides). The hosts print the version and line they chose (#299).
-- A Keliver version newer than any line your tools bundle knows is refused: get a newer tools
-  bundle (#299).
-- `keliver-new-editor.sh` supports apps on the 0.4 line only, for now: it refuses an app on 0.5.x
-  with a message, instead of writing an editor that cannot build (#299).
 
 Fixed:
 
@@ -261,9 +245,26 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   or class, a qualified or foreign `NamedState`, an unimported annotation) instead of
   skipping them, matches the annotation by import, full name or same-file typealias, and
   re-parses only changed screen files (#233).
-- Apps that `keliver-init` creates get the bundle's own Gradle 9.0.0 wrapper
-  (`scripts/templates/app-wrapper`), the version the scaffolders' AGP 8.12.0 needs, not the
-  repository's Gradle (#234).
+- On the 0.4 line, apps that `keliver-init` creates get the bundle's own Gradle 9.0.0 wrapper
+  (`scripts/templates/app-wrapper`), the version the 0.4 line's AGP 8.12.0 needs, not the
+  repository's Gradle (#234). Apps on 0.5.x get Gradle 9.7.1 and AGP 9.3.3 (next item, #299).
+- A new app on Keliver 0.5.x is scaffolded with the toolchain the 0.5.0 libraries need: Kotlin
+  2.4.21, AGP 9.3.3 with built-in Kotlin, compileSdk 37, targetSdk 36, and Gradle 9.7.1 in its
+  wrapper. The production host warns when an existing app's Gradle wrapper is older than its AGP
+  accepts, and prints the lines to change (#299).
+- On 0.5.x, the Android and iOS hosts get Coil, its network fetcher and (iOS) Ktor's Darwin engine
+  through `dev.keliver:keliver-image` at your Keliver version, so they match Keliver's libraries
+  (#299).
+- `--embed` applies Kotlin's Android plugin according to your app's own AGP and
+  `android.builtInKotlin` (#299).
+- The host scaffolders, `keliver-new-device-target.sh` and `keliver-new-editor.sh` take your app's
+  `appRuntime.keliverVersion` from `keliver.portal.json`. If that file cannot be read or names no
+  version, they stop and say so (`KELIVER_VERSION`, or `KELIVER_HOST_KELIVER_VERSION` for the
+  hosts, overrides). The hosts print the version and line they chose (#299).
+- A Keliver version newer than any line your tools bundle knows is refused: get a newer tools
+  bundle (#299).
+- `keliver-new-editor.sh` supports apps on the 0.4 line only, for now: it refuses an app on 0.5.x
+  with a message, instead of writing an editor that cannot build (#299).
 - Production hosts (Android and iOS templates): crash rollback (WS6). A bundle that fails on
   one install `crashThreshold` times (default 2) before proving healthy (10 s on show) is set
   aside until a newer one is published. Its code failing to load counts, but a download
@@ -315,6 +316,10 @@ Tools bundle (its own release line; in the next tools release, not in 0.5.0):
   out of the app (AGP's `optimization.baselineProfile.ignoreFrom`, AGP 8.2 or later); on by default. An app not on
   the template adds the `ignoreFrom` line to its app module itself (`docs/DEVICE_HOST.md`, "Baseline profiles")
   (#290).
+- Host templates: each Keliver line's `HostFeatures.kt` declares the host features a host
+  implements (none yet; none ever on the 0.4 line). In an update swap, the hidden app no longer
+  receives back (0.5 line). The last good bundle's record carries the release's sequence and
+  module digest and is written through (#316).
 - In the repository, not the bundle: `scripts/keliver-nf4-ios-sim.sh` measures NF4's cold start on an iOS
   simulator with a running guest (start at the first screen or in `init()`, each with and without a prefetch)
   (#281).
