@@ -104,6 +104,71 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
+      # Kotlin/Native's compiler caches for the iOS simulator test links (MS4-52). Every debug
+      # test executable links against a static cache of each external library it uses (Compose,
+      # skiko, Ktor, Coil, kotlinx, the Zipline fork …). A fresh runner has no ~/.konan, so each
+      # run built all of them again before linking: the prototype's linkDebugTestIosSimulatorArm64
+      # took about 11 minutes in #319's run, against seconds with warm caches. setup-gradle keeps
+      # the Gradle home only, so these two directories are kept here: user-pl (one directory per
+      # external library) and system (the stdlib's). Project modules are never cached there.
+      # Each library's cache lives in <library>/<fingerprint>/, the fingerprint hashing the
+      # klib's bytes and its transitive dependencies' (never paths or times), so a cache restored
+      # through restore-keys after a catalog change is safe: a changed library misses and gets a
+      # new directory beside the old one. Kotlin's version is in the key and in the path, so a
+      # Kotlin upgrade starts again from nothing. Restoring before Gradle provisions Kotlin/Native
+      # is fine: without its provisioned.ok marker the Kotlin plugin unpacks the distribution over
+      # the directory (it warns "Kotlin/Native bundle directory … is not empty") and deletes
+      # nothing. Restored here, saved from main only (the save step after the iOS tests), so pull
+      # requests read main's entry and add none of their own. A self-hosted Mac keeps its own
+      # ~/.konan, so only hosted runners use this.
+      - name: Kotlin/Native cache location
+        id: kn
+        if: runner.environment == 'github-hosted'
+        run: |
+          set -euo pipefail
+          # The [versions] table's `kotlin = "…"` line, and only the first one.
+          kotlin="$(sed -nE '/^\[versions\]/,/^\[/{s/^kotlin = "([^"]+)"$/\1/p;}' gradle/libs.versions.toml | head -n1)"
+          case "$(uname -m)" in arm64) host=macos-aarch64 ;; x86_64) host=macos-x86_64 ;; *) host= ;; esac
+          if [ -z "$kotlin" ] || [ -z "$host" ]; then
+            echo "::warning::no Kotlin/Native cache: Kotlin version '$kotlin', host '$(uname -m)'"
+            exit 0
+          fi
+          echo "kotlin=$kotlin" >> "$GITHUB_OUTPUT"
+          echo "dir=${KONAN_DATA_DIR:-$HOME/.konan}/kotlin-native-prebuilt-$host-$kotlin/klib/cache" >> "$GITHUB_OUTPUT"
+      # The restore-key applies on main too. Gradle's build cache (setup-gradle restores main's)
+      # serves every link task whose inputs did not change, and Kotlin/Native builds caches only
+      # for the links that run (#322's warm re-run took all six simulator links FROM-CACHE).
+      # Without the restore-key, a main run after a catalog change would start empty and save only
+      # the caches of the links it ran; pull requests would then hit that entry exactly and
+      # rebuild the rest on every run until the next catalog change. The cost: fingerprints the
+      # catalog no longer uses are carried forward until a Kotlin upgrade starts a new key.
+      - name: Kotlin/Native compiler caches (iOS simulator), restore
+        id: kn-restore
+        if: steps.kn.outputs.dir != ''
+        uses: actions/cache/restore@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-user-pl
+            ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-system
+          key: kn-caches-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: kn-caches-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-
+      # A restore that did not finish may leave half-written files: the step timed out or failed
+      # (outcome failure; continue-on-error makes its conclusion success), or the archive failed
+      # to unpack, which actions/cache only warns about and reports as a miss (no
+      # cache-matched-key). The library caches' metadata identifies a cache, not whether its
+      # files are complete, so an incomplete one could fail a link. Remove both directories; the
+      # links then build them as on a cold runner. On a plain miss there is nothing to remove.
+      - name: Kotlin/Native compiler caches, clear an incomplete restore
+        if: steps.kn-restore.outcome == 'failure' || (steps.kn-restore.outcome == 'success' && steps.kn-restore.outputs.cache-matched-key == '')
+        env:
+          DIR: ${{ steps.kn.outputs.dir }}
+        run: |
+          set -euo pipefail
+          : "${DIR:?}"
+          rm -rf "$DIR/ios_simulator_arm64-gSTATIC-user-pl" "$DIR/ios_simulator_arm64-gSTATIC-system"
+
       - name: Build + publishToMavenLocal (no signing)
         run: >
           ./gradlew
@@ -311,6 +376,25 @@ jobs:
           :keliver-compose-core-composeui:iosSimulatorArm64Test
           :keliver-image:iosSimulatorArm64Test
           -DRELEASE_SIGNING_ENABLED=false
+
+      # Save the Kotlin/Native caches restored before the build (see there): from main only, so
+      # pull requests read main's entry and never add their own, and only when the exact key
+      # missed (the pattern reference-app.yml and ios-host.yml use). It runs once every step up to
+      # here passed. It sits right after the last step that links for the iOS simulator, not at
+      # the end of the job: the steps below run JS, wasm and JVM tests only and never touch these
+      # directories, so the caches are final here, and a later failure or the job's timeout
+      # (main's run takes 85-100 minutes) does not throw away a set that cost a cold link to
+      # build. A new step that links for the simulator goes above this one.
+      - name: Kotlin/Native compiler caches (iOS simulator), save from main
+        if: steps.kn.outputs.dir != '' && github.ref == 'refs/heads/main' && steps.kn-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-user-pl
+            ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-system
+          key: ${{ steps.kn-restore.outputs.cache-primary-key }}
 
       # Every library's Kotlin/JS and wasm tests. Linking a test EXECUTABLE is the only place a
       # klib ABI mismatch shows up (coroutines 1.9.0 against the Kotlin 2.4 stdlib broke
