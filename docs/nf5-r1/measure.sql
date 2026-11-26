@@ -8,11 +8,18 @@
 -- readings, all printed:
 --   f_end   the main thread's frame end (the doFrame's end): the targets' "frame end", like native's
 --           28 ms (SHOW_BEFORE_COMPUTE section 1);
---   q_drew  the buffer queued by the RenderThread draw that drew it: the first `DrawFrames` from
---           the doFrame on that queues a buffer, the end of its first `queueBuffer`; drew_own, 1 when
---           that DrawFrames is the doFrame's own vsync's, 0 when a later frame's (vsync ids are
---           tokens, not counts: they step by more than 1 per vsync). A DrawFrames that queues
---           nothing (R0: under 1 ms, the ripple's vsync; the dry run: a late frame's) is passed over;
+--   q_drew  the buffer that first showed it: the end of the first buffer the RenderThread queued
+--           (an outermost `queueBuffer`) from the start of the doFrame's own `DrawFrames <vsync>` on
+--           (that DrawFrames syncs the frame's content to the RenderThread even when it draws
+--           nothing; without one, from the doFrame's end). q_src names the draw that queued it:
+--           `own`, the doFrame's own DrawFrames; `draw`, a later frame's DrawFrames; `rt`, a
+--           RenderThread-only frame (HWUI's own frame for its animations, `dispatchFrameCallbacks`,
+--           with no DrawFrames: when HWUI skips a frame's draw because the RenderThread already drew
+--           for that vsync, its own next frame draws the synced content). drew_own is 1 for `own`,
+--           0 otherwise (vsync ids are tokens, not counts: they step by more than 1 per vsync).
+--           A DrawFrames that queues nothing (R0: under 1 ms; the dry run: the skipped frame) is
+--           passed over. Fix session 5: q_drew read DrawFrames only, and so passed over R0's A12
+--           frames, where RenderThread-only frames queued every buffer for 60 ms (README);
 --   q_same  the same for the doFrame's own `DrawFrames <vsync>` (empty when it queued nothing);
 --   q_r0    R0's rule (frame-end.sql, the reading R0 recorded): the first `DrawFrames` of at least
 --           2 ms from the doFrame on. It differs from q_drew when the draw that queued the buffer
@@ -46,12 +53,33 @@ create perfetto table vper as
 select avg(d) as p from evd
 where d >= (select min(d) from evd where d > 5000000) and d < 1.5 * (select min(d) from evd where d > 5000000);
 
--- The RenderThread's draws, each with the end of its first queueBuffer (null: it queued none).
+-- The RenderThread's DrawFrames and queueBuffer slices (rtp), and its top-level slices (rt0: a draw,
+-- `DrawFrames <vsync>`, or `dispatchFrameCallbacks` for HWUI's own animation frames).
+create perfetto table rtp as
+select id, ts, dur, depth, name from rt_sl where name glob 'DrawFrame*' or name = 'queueBuffer';
+
+create perfetto table rt0 as select id, ts, dur, name from rt_sl where depth = 0;
+
+-- Every buffer the RenderThread queued: the outermost queueBuffer, with the vsync of the DrawFrames
+-- around it (null: a RenderThread-only frame) and the length of the top-level slice around it (its draw).
+create perfetto table rtq as
+select b.id, b.ts, b.ts + b.dur as q_end,
+  (select cast(substr(d.name, 12) as int) from rtp d where d.name glob 'DrawFrames [0-9]*'
+     and d.ts <= b.ts and d.ts + d.dur >= b.ts + b.dur limit 1) as vsync,
+  (select t.dur from rt0 t where t.ts <= b.ts and t.ts + t.dur >= b.ts + b.dur limit 1) as top_dur
+from rtp b where b.name = 'queueBuffer'
+  and not exists (select 1 from rtp p where p.name = 'queueBuffer' and p.depth < b.depth
+    and p.ts <= b.ts and p.ts + p.dur >= b.ts + b.dur);
+
+-- The RenderThread-only buffers (q4).
+create perfetto table rto as select ts, q_end as e from rtq where vsync is null;
+
+-- The RenderThread's DrawFrames, each with the end of its first queueBuffer (null: it queued none).
 create perfetto table rtd as
 select d.id, d.ts, d.dur, cast(substr(d.name, 12) as int) as vsync,
-  (select b.ts + b.dur from rt_sl b where b.name = 'queueBuffer' and b.ts >= d.ts and b.ts < d.ts + d.dur
+  (select b.ts + b.dur from rtp b where b.name = 'queueBuffer' and b.ts >= d.ts and b.ts < d.ts + d.dur
      order by b.ts limit 1) as q_end
-from rt_sl d where d.name glob 'DrawFrames [0-9]*';
+from rtp d where d.name glob 'DrawFrames [0-9]*';
 
 create perfetto table rd as
 select r.i, r.kind, r.u_ts, r.m_ts, r.f_ts, r.f_dur, r.vsync,
@@ -59,7 +87,7 @@ select r.i, r.kind, r.u_ts, r.m_ts, r.f_ts, r.f_dur, r.vsync,
   (select coalesce(max(x.dur), 0) from main_sl x where x.name glob '*measureAndLayout*'
      and x.ts >= rec.ts and x.ts < rec.ts + rec.dur) as ml_dur,
   ds.dur as ds_dur, ds.q_end as qs_end,
-  dw.vsync as dw_vsync, dw.dur as dw_dur, dw.q_end as qw_end,
+  qw.id as qw_id, qw.vsync as dw_vsync, qw.top_dur as dw_dur, qw.q_end as qw_end,
   d0.q_end as q0_end,
   (select max(v.ts) from ev v where v.ts <= r.u_ts) as g0,
   (select max(a.ts + a.dur) from actual_frame_timeline_slice a where a.upid in (select upid from app_upid)
@@ -72,7 +100,7 @@ from fr r
 left join main_sl rec on rec.id = (select x.id from main_sl x where x.name = 'Record View#draw()'
   and x.ts >= r.f_ts and x.ts < r.f_ts + r.f_dur and x.ts + x.dur >= r.m_ts order by x.ts limit 1)
 left join rtd ds on ds.id = (select x.id from rtd x where x.vsync = r.vsync order by x.ts limit 1)
-left join rtd dw on dw.id = (select x.id from rtd x where x.ts >= r.f_ts and x.q_end is not null
+left join rtq qw on qw.id = (select x.id from rtq x where x.ts >= coalesce(ds.ts, r.f_ts + r.f_dur)
   order by x.ts limit 1)
 left join rtd d0 on d0.id = (select x.id from rtd x where x.ts >= r.f_ts and x.dur >= 2000000
   order by x.ts limit 1);
@@ -107,7 +135,9 @@ select o.i, k.kind,
   r.rec_dur / 1e6 as rec_ms, r.ml_dur / 1e6 as ml_ms,
   (r.qs_end - o.u_ts) / 1e6 as q_same, r.ds_dur / 1e6 as ds_ms,
   (r.qw_end - o.u_ts) / 1e6 as q_drew, r.dw_dur / 1e6 as dw_ms,
-  case when r.dw_vsync is null then null when r.dw_vsync = r.vsync then 1 else 0 end as drew_own,
+  case when r.qw_id is null then null when r.dw_vsync = r.vsync then 1 else 0 end as drew_own,
+  case when r.qw_id is null then null when r.dw_vsync = r.vsync then 'own'
+    when r.dw_vsync is null then 'rt' else 'draw' end as q_src,
   (r.q0_end - o.u_ts) / 1e6 as q_r0,
   (r.row_end - o.u_ts) / 1e6 as row_end,
   (r.sf_end - o.u_ts) / 1e6 as sf_end,

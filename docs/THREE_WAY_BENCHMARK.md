@@ -3909,9 +3909,13 @@ dry run did not.
      The 3 opens with a usable row agree with q2 within 2.6 ms.
    - **The other arms.** In 5 of simple-on's 12 opens the next vsync drew too, adding 12–15 ms to
      each (median 172.1 against 169.6); in 1 of heavy-on's, 17.5 ms. Simple-off has no row at all
-     for 4 opens, and the supplement does not work there: in 4 of its opens 3–14 no `DrawFrames` of
-     2 ms or more follows before the next tap. Its frame-end columns (h to total) are not reliable; its guest columns
-     (a to d, W) are.
+     for 4 opens, and the supplement does not work there: in 4 of its opens 3–14 (5, 7, 8 and 10)
+     it read a `DrawFrames` 754–758 ms after the frame, after the next tap. Its frame-end columns (h to total) are not reliable; its guest columns
+     (a to d, W) are. *Corrected 2026-11-26 (NF5 R1's review, checked on the kept trace):* the cause is
+     the rule, not a missing draw. In those 4 opens the `DrawFrames` after the frame took 0.4–0.7 ms
+     and queued nothing, and every buffer of the next 60 ms was queued by the RenderThread's own
+     animation frames (`dispatchFrameCallbacks`, 5.5–8.4 ms, no `DrawFrames`), which the rule never
+     reads. NF5 R1's `q_drew` reads them ([`nf5-r1/measure.sql`](nf5-r1/measure.sql)).
 
 **The rule, applied to `simple-on-idle`.**
 - **Count.** 12 of 12 opens were idle at the UP (206.9–223.9 ms after the last guest call), which

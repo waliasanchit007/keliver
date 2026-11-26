@@ -124,25 +124,36 @@ q4count() {
     END { printf "q4, all %d opens: a RenderThread-only buffer in the 200 ms before the DOWN in %d, in the tap'"'"'s hold in %d; the first frame after the UP queued no buffer in %d\n", n, p, h, z }'
 }
 
+# bar [noripple]: the bar from the arms' files. With an argument X, from the arms named <arm>-X (the
+# ripple controls, step 4b): a diagnostic beside the pre-registered verdict, never a verdict itself.
+# Arms without a results file (the reveal arm without the idle measure, the off arm) print "not run".
 bar() {
-  echo "== bar (pre-registered, docs/nf5-r1/README.md; bar 1 read on both readings, the maintainer's ruling of"
-  echo "   2026-11-26, which the owner may still change before the run): medians over opens 3-14, ms from the UP"
+  X=${1:+-$1}
+  if [ -z "$X" ]; then
+    echo "== bar (pre-registered, docs/nf5-r1/README.md; bar 1 read on both readings, the maintainer's ruling of"
+    echo "   2026-11-26, which the owner may still change before the run): medians over opens 3-14, ms from the UP"
+  else
+    echo "== bar on the arms named *$X (README, step 4b): a DIAGNOSTIC beside the pre-registered verdict above,"
+    echo "   not a verdict: medians over opens 3-14, ms from the UP"
+  fi
   R1OK=1; R1VALID=1
   for s in simple heavy; do
-    validity native-$s native; nok=$OK
-    nd=$(bmed native-$s drawn); nq=$(tmed native-$s drawn.q_drew); nv=$(tmed native-$s drawn.q_vs)
-    echo "-- $s: native-$s: $VAL"
-    echo "   native-$s: first draw (drawn) $nd (n=$(bn native-$s drawn)); buffer queued (drawn.q_drew) $nq;" \
-      "q_vs (vsyncs, UP -> its buffer) median $nv; $(q4count native-$s)"
-    echo "   native-$s frame: main-thread end $(tmed native-$s drawn.f_end), R0's rule $(tmed native-$s drawn.q_r0)," \
-      "row end $(tmed native-$s drawn.row_end), display frame end $(tmed native-$s drawn.sf_end)," \
-      "Record View#draw() $(tmed native-$s drawn.rec_ms); queued by its own vsync $(tmed native-$s count.drawn.drew_own) of 12"
-    for a in $s-reveal-idle $s-reveal; do
+    NA=native-$s$X
+    validity $NA native; nok=$OK
+    nd=$(bmed $NA drawn); nq=$(tmed $NA drawn.q_drew); nv=$(tmed $NA drawn.q_vs)
+    echo "-- $s: $NA: $VAL"
+    echo "   $NA: first draw (drawn) $nd (n=$(bn $NA drawn)); buffer queued (drawn.q_drew) $nq;" \
+      "q_vs (vsyncs, UP -> its buffer) median $nv; $(q4count $NA)"
+    echo "   $NA frame: main-thread end $(tmed $NA drawn.f_end), R0's rule $(tmed $NA drawn.q_r0)," \
+      "row end $(tmed $NA drawn.row_end), display frame end $(tmed $NA drawn.sf_end)," \
+      "Record View#draw() $(tmed $NA drawn.rec_ms); queued by its own vsync $(tmed $NA count.drawn.drew_own) of 12"
+    for a in $s-reveal-idle$X $s-reveal$X; do
+      if [ "$a" = $s-reveal$X ] && [ ! -f $a.results.txt ]; then echo "   $a: not run"; continue; fi
       validity $a reveal; aok=$OK
       rd=$(bmed $a revealDrawn); rq=$(tmed $a reveal.q_drew); rec=$(tmed $a reveal.rec_ms)
       ia=$(within "$rd" "$nd"); ib=$(within "$rq" "$nq")
       if [ "$aok" != 1 ] || [ "$nok" != 1 ]; then
-        v1="INVALID (no verdict: $( [ "$aok" != 1 ] && echo "$a" ) $( [ "$nok" != 1 ] && echo "native-$s" ) does not count)"
+        v1="INVALID (no verdict: $( [ "$aok" != 1 ] && echo "$a" ) $( [ "$nok" != 1 ] && echo "$NA" ) does not count)"
         v2=INVALID
       else
         if [ "$ia" = "no data" ] || [ "$ib" = "no data" ]; then v1="no data"
@@ -155,7 +166,7 @@ bar() {
       echo "   $a: $VAL"
       echo "   $a: bar 1 $v1: (a) first draw (revealDrawn) $rd <= native's $nd + 16.7: $ia;" \
         "(b) buffer queued (reveal.q_drew) $rq <= native's $nq + 16.7: $ib"
-      if [ "$a" = $s-reveal-idle ]; then
+      if [ "$a" = $s-reveal-idle$X ]; then
         echo "   $a: bar 2 $v2: the reveal's Record View#draw() (reveal.rec_ms) $rec < 10"
         { [ "$v1" = MET ] && [ "$v2" = MET ]; } || R1OK=0
         [ "$aok" = 1 ] && [ "$nok" = 1 ] || R1VALID=0
@@ -170,31 +181,43 @@ bar() {
           else printf "   %s: per open, in vsyncs: the reveal'"'"'s buffer queued no later than the vsync after native'"'"'s own (q_vs <= %g + 1) in %d of %d opens; q_vs, opens 3-14:%s\n", a, nv, k, n, all }'
       echo "   $a: reveal's frame: main-thread end $(tmed $a reveal.f_end), R0's rule $(tmed $a reveal.q_r0)," \
         "row end $(tmed $a reveal.row_end), display frame end $(tmed $a reveal.sf_end);" \
-        "queued by its own vsync $(tmed $a count.reveal.drew_own) of 12; $(q4count $a)"
+        "queued by its own vsync $(tmed $a count.reveal.drew_own) of 12, by a RenderThread-only frame" \
+        "$(tmed $a count.reveal.q_rt) (q_src); $(q4count $a)"
     done
-    validity $s-off off
-    echo "   $s-off: $VAL; $(q4count $s-off)"
+    if [ -f $s-off$X.results.txt ]; then
+      validity $s-off$X off
+      echo "   $s-off$X: $VAL; $(q4count $s-off$X)"
+    else echo "   $s-off$X: not run"; fi
     echo "   click -> composed (bench composed_click; trace guest.ec), reveal off / on / on with the idle measure:" \
-      "$(bmed $s-off composed_click) / $(bmed $s-reveal composed_click) / $(bmed $s-reveal-idle composed_click);" \
-      "trace $(tmed $s-off guest.ec) / $(tmed $s-reveal guest.ec) / $(tmed $s-reveal-idle guest.ec)"
-    echo "   the guest's detail drawn (bench drawn), off / on / idle: $(bmed $s-off drawn) / $(bmed $s-reveal drawn) / $(bmed $s-reveal-idle drawn)"
+      "$(bmed $s-off$X composed_click) / $(bmed $s-reveal$X composed_click) / $(bmed $s-reveal-idle$X composed_click);" \
+      "trace $(tmed $s-off$X guest.ec) / $(tmed $s-reveal$X guest.ec) / $(tmed $s-reveal-idle$X guest.ec)"
+    echo "   the guest's detail drawn (bench drawn), off / on / idle:" \
+      "$(bmed $s-off$X drawn) / $(bmed $s-reveal$X drawn) / $(bmed $s-reveal-idle$X drawn)"
   done
-  if [ "$R1VALID" != 1 ]; then echo "-- R1: NO VERDICT (an arm the verdict rests on does not count; README: rerun it once)"
-  elif [ "$R1OK" = 1 ]; then echo "-- R1: PASSES (simple-reveal-idle and heavy-reveal-idle each meet bars 1 and 2)"
-  else echo "-- R1: DOES NOT PASS (simple-reveal-idle or heavy-reveal-idle misses bar 1 or bar 2)"; fi
-  echo "   The arms without the idle measure say whether that measure is needed (README)."
+  if [ -n "$X" ]; then L="-- with *$X (diagnostic, not R1's verdict):"; else L="-- R1:"; fi
+  if [ "$R1VALID" != 1 ]; then echo "$L NO VERDICT (an arm the verdict rests on does not count; README: rerun it once)"
+  elif [ "$R1OK" = 1 ]; then echo "$L PASSES (simple-reveal-idle$X and heavy-reveal-idle$X each meet bars 1 and 2)"
+  else echo "$L DOES NOT PASS (simple-reveal-idle$X or heavy-reveal-idle$X misses bar 1 or bar 2)"; fi
+  [ -z "$X" ] && echo "   The arms without the idle measure say whether that measure is needed (README)."
 }
 
 arm() { bench $1; q $1 q1 && check $1; q $1 q2; q $1 q3; q $1 q4; }
 
 case "$1" in
   all)
+    # ARMS, then any other arm that ran (the ripple controls, step 4b; the A/B's controls), then the
+    # bar, and the noripple diagnostic when its native arm ran.
     rm -f analyse-done.txt
-    for a in $ARMS; do arm $a; done > analyse-all.txt 2>&1
+    { for a in $ARMS; do arm $a; done
+      for f in *.results.txt; do
+        a=${f%.results.txt}
+        case " $ARMS " in *" $a "*) ;; *) [ -f /data/misc/perfetto-traces/nf5r1-$a.pftrace ] && arm $a ;; esac
+      done; } > analyse-all.txt 2>&1
     bar >> analyse-all.txt 2>&1
+    [ -f native-simple-noripple.results.txt ] && bar noripple >> analyse-all.txt 2>&1
     echo done > analyse-done.txt ;;
-  bar) bar ;;
-  "") echo "analyse.sh: <arm>|bar|all" >&2; exit 2 ;;
+  bar) bar "$2" ;;
+  "") echo "analyse.sh: <arm>|bar [noripple]|all" >&2; exit 2 ;;
   *)
     [ -f $1.results.txt ] || { echo "analyse.sh: no $1.results.txt" >&2; exit 1; }
     [ -f /data/misc/perfetto-traces/nf5r1-$1.pftrace ] || { echo "analyse.sh: no trace for $1" >&2; exit 1; }

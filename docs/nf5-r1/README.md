@@ -5,7 +5,7 @@ section 0 item 3 and section 7, "(B) Before any (B) PR: R0 and R1"; R1's row the
 **The question:** when the host shows a hidden, already composed detail on the click, before the
 guest runs, how soon is it on the screen, and is that within one frame of native? This directory
 holds the phone session's scripts and queries, laid out as R0's ([`../nf5-r0/`](../nf5-r0/)). Every
-step below was run end to end on an emulator on 2026-11-26 ("Dry run", at the end). Nothing here
+step below was run end to end on an emulator on 2026-11-26 ("Dry runs", at the end). Nothing here
 has been run on a phone.
 
 ## The arm
@@ -66,6 +66,19 @@ Native's arms are those of section 7's R1 row (`-e form native -e bench nav`, an
 their first draw is the detail with its data in hand. They run in the same session and build as the
 reveal arms; each native arm runs just before its size's guest arms.
 
+**Not in the eight (`run.sh <arm> ...`):** the controls of the emulator's A/B ("What the run shows").
+`noripple` replaces the theme's press ripple with an indication that draws nothing (`NoIndication`),
+on both forms; `listenonly` keeps the reveal's click listener but makes nothing revealable.
+
+| Arm | `-e form` | `-e x` | Trace | Use |
+|---|---|---|---|---|
+| `native-simple-noripple` | `native` | `noripple,trace` | 50 s | step 4b |
+| `simple-reveal-idle-noripple` | `guest` | `r1prep,reveal,idlemeasure,noripple,trace` | 60 s | step 4b |
+| `native-heavy-noripple` | `native` | `heavy,noripple,trace` | 50 s | step 4b |
+| `heavy-reveal-idle-noripple` | `guest` | `heavy,r1prep,reveal,idlemeasure,noripple,trace` | 75 s | step 4b |
+| `simple-reveal-noripple`, `simple-off-noripple` | `guest` | `r1prep,reveal,noripple,trace`; `r1prep,noripple,trace` | 60 s | the A/B |
+| `simple-listen` | `guest` | `r1prep,reveal,listenonly,trace` | 60 s | the A/B |
+
 ## The bar, fixed before the run
 
 From section 7's R1 row (B-1f's bar on the same arm, round 3's M5), medians over opens 3–14, ms
@@ -94,7 +107,7 @@ The first-draw mark is the start of the window's draw of the frame that drew the
 thread for 40 ms, so on both sides that mark lands in the first frame after the UP: (a) only checks
 that the reveal fired in that frame. It cannot see whether that frame put anything on the screen.
 The dry run found that it did not: in 47 of 48 reveal opens the reveal's own frame queued no buffer,
-and the next frame showed it ("Dry run", below). (b) sees that, and it is the reading R0 recorded.
+and the next frame showed it ("Dry runs", below). (b) sees that, and it is the reading R0 recorded.
 Compose measures, lays out and records inside `Record View#draw()`, after the first-draw mark, so bar
 2 bounds what (a) leaves out.
 
@@ -162,8 +175,8 @@ and name the reading):
 | `f_start`, `f_end` | that doFrame's start and end: `f_end` is the main thread's frame end |
 | `rec_ms`, `ml_ms` | its `Record View#draw()` (for `reveal`, the one that holds the marker), and Compose's measure and layout inside it |
 | `q_same`, `ds_ms` | the end of the first `queueBuffer` in the RenderThread's `DrawFrames <its vsync>` (empty when that draw queued nothing), and that DrawFrames' length |
-| `q_drew`, `dw_ms`, `drew_own` | **the buffer queued by the draw that drew it**: the first `DrawFrames` from the doFrame on that queues a buffer, the end of that `queueBuffer`; its length; 1 when it is the doFrame's own vsync's, 0 when a later frame's. `count.<kind>.drew_own` in q2 counts the 1s |
-| `q_r0` | R0's rule (`frame-end.sql`): the first `DrawFrames` of at least 2 ms from the doFrame on. It passes over a short draw that did queue the buffer, so it can read a later frame (the dry run, below) |
+| `q_drew`, `dw_ms`, `drew_own`, `q_src` | **the buffer that first showed it**: the end of the first buffer the RenderThread queued (an outermost `queueBuffer`) from the start of the doFrame's own `DrawFrames <vsync>` on (that DrawFrames syncs the frame's content even when it draws nothing); the length of the draw that queued it; 1 when that draw is the doFrame's own DrawFrames; and which draw it was: `own`, `draw` (a later frame's DrawFrames) or `rt` (a RenderThread-only frame: HWUI's own frame for its animations, which draws the synced content when HWUI skipped the frame's own draw). `count.<kind>.drew_own` and `count.<kind>.q_rt` in q2 count them |
+| `q_r0` | R0's rule (`frame-end.sql`): the first `DrawFrames` of at least 2 ms from the doFrame on. It passes over short draws and RenderThread-only frames, so it can read a frame hundreds of ms later (native, and R0's simple-off on the A12: "What the run shows") |
 | `row_end` | the end of the app's actual frame-timeline row for the vsync, when not zero-length |
 | `sf_end` | the end of SurfaceFlinger's display frame that row points to |
 | `q_vs` | `q_drew` in vsyncs: how many of the app's vsyncs fell between the UP and that buffer's queueing (the grid: the app's expected frame-timeline starts; the period: `vsync.period_ms` in q2) |
@@ -228,11 +241,9 @@ unzip -l sample/host-android/build/outputs/apk/benchmark/host-android-benchmark.
 
 Record the commit, the APK's size and sha256, and `lib/arm64-v8a/libquickjs.so`'s size (2,618,992
 bytes: the published fork `dev.keliver.zipline:*:1.28.0-keliver.1`, with Long as BigInt, the
-sample's default). The prototype is published to a scratch repository, never `~/.m2`. The dry run's
-APK (below) may be used instead, only if its sha256 is the one recorded there; then the commits
-recorded are its own (`ea0c1d69c`, the prototype from `760b0de73`), not this PR's head. The head
-later merged main's library changes (none in the prototype, the sample or the bench), so a build
-from it is a different APK with the same arm.
+sample's default). The prototype is published to a scratch repository, never `~/.m2`. Build from
+this PR's head: the dry runs' APKs (below) come from earlier commits, and the first has neither
+`listenonly` nor `noripple`.
 
 **The trace processor** is the one in the benchmarks APK's assets
 (`assets/trace_processor_shell_aarch64`, Perfetto v45, as R0's): `(cd sample && ./gradlew
@@ -265,20 +276,34 @@ adb -s SERIAL shell '(nohup sh /data/local/tmp/nf5r1/run.sh < /dev/null > /data/
 ```
 
 Done when `adb -s SERIAL shell cat /data/local/tmp/nf5r1/done.txt` prints `done`; if it prints
-`stopped: battery …`, see step 0. `run.sh <arm>` runs one arm. If Perfetto rejects `symbolize_ksyms` (no trace, or a tiny one, and the error in
+`stopped: battery …`, see step 0. `run.sh <arm> ...` runs those arms. If Perfetto rejects `symbolize_ksyms` (no trace, or a tiny one, and the error in
 `log.txt`), delete that line from the phone's `cfg.txt` and run again (R0's note; R1 does not use
 the kernel symbols).
+
+**4b. The ripple controls** (about 5 minutes; **recommended, and the maintainer's call**: "Decisions"
+in the PR). The emulator's A/B found that the theme's press ripple keeps a RenderThread animation
+running in every guest arm, and that it takes the vsync of the first frame after the driver's tap
+("What the run shows"). These four arms are the two judged arms and their natives without it; `bar
+noripple` reads them as a diagnostic, never as R1's verdict:
+
+```
+adb -s SERIAL shell '(nohup sh /data/local/tmp/nf5r1/run.sh native-simple-noripple simple-reveal-idle-noripple native-heavy-noripple heavy-reveal-idle-noripple < /dev/null > /data/local/tmp/nf5r1/log-4b.txt 2>&1 &)'
+```
+
+Done when `done.txt` prints `done` again.
 
 **5. Check the runs.**
 
 ```
-adb -s SERIAL shell cat /data/local/tmp/nf5r1/log.txt
+adb -s SERIAL shell cat /data/local/tmp/nf5r1/log.txt /data/local/tmp/nf5r1/log-4b.txt
 adb -s SERIAL shell 'cd /data/local/tmp/nf5r1 && grep -c "\"bench\":\"open\"" *.results.txt && grep -c "\"done\":true" *.results.txt; grep -l timeout *.results.txt; ls -la /data/misc/perfetto-traces/'
 ```
 
-Each results file: 14 opens, `{"done":true}`, no timeout; eight `nf5r1-*.pftrace`.
+Each results file: 14 opens, `{"done":true}`, no timeout; eight `nf5r1-*.pftrace` (twelve with step 4b).
 
-**6. Query, on the phone** (about 25 minutes on the A12, detached):
+**6. Query, on the phone** (about 25 minutes on the A12 for the eight arms, about 40 with step 4b;
+detached). `analyse.sh all` reads every arm that ran, then prints the bar, then `bar noripple` when
+step 4b ran:
 
 ```
 adb -s SERIAL shell '(nohup sh /data/local/tmp/nf5r1/analyse.sh all < /dev/null > /dev/null 2>&1 &)'
@@ -290,14 +315,17 @@ the bar. Read each arm's validity (the bar prints it; "When an arm counts") befo
 numbers. Then read q4 for **every open of every arm** (native and off too), and q3 for every open
 where q4 shows a RenderThread-only buffer in the hold or a first frame after the UP that queued
 nothing: the reveal's doFrame, its `DrawFrames`, and whether a RenderThread-only frame took that
-vsync and pushed the reveal's buffer a vsync later.
+vsync and pushed the reveal's buffer a vsync later. Read `q_src` beside `q_drew` (q1, and
+`count.reveal.q_rt`): on the A12 a skipped frame's content may first reach the screen in a
+RenderThread-only frame, as it did in R0's simple-off.
 
 **7. Keep everything, then clean the phone.**
 
 ```
 mkdir -p N/r1
 adb -s SERIAL pull /data/local/tmp/nf5r1 N/r1/
-for a in native-simple simple-reveal-idle simple-reveal simple-off native-heavy heavy-reveal-idle heavy-reveal heavy-off; do
+for a in native-simple simple-reveal-idle simple-reveal simple-off native-heavy heavy-reveal-idle heavy-reveal heavy-off \
+    native-simple-noripple simple-reveal-idle-noripple native-heavy-noripple heavy-reveal-idle-noripple; do
   adb -s SERIAL pull /data/misc/perfetto-traces/nf5r1-$a.pftrace N/r1/; done
 adb -s SERIAL shell rm -rf /data/local/tmp/nf5r1
 adb -s SERIAL shell 'rm -f /data/misc/perfetto-traces/nf5r1-*'
@@ -309,62 +337,109 @@ Record each trace's sha256. The app stays installed.
 each arm's validity, the bar's table, the frame readings beside native's, click → composed with the
 reveal off and on). Put the verdict in SHOW_BEFORE_COMPUTE.md's section 0, in its own PR.
 
-## Dry run, 2026-11-26 (emulator)
+## Dry runs, 2026-11-26 (emulator)
 
 **Where.** The AVD `keliver_a12_api35` (arm64, Android 15, 4 cores, 60 Hz), headless, on the Mac,
 as R0's dry run. Its numbers are **not results**: a fast host, no cluster split, almost no
 scheduling noise. The run shows only that the pipeline works, from the build to the bar.
 
-**Build** (step 1's commands, through the agents' scratch wrappers): the prototype published to a
-scratch repository from `760b0de73` (6 min), and the sample's benchmark APK built from `ea0c1d69c`
-(1 min). The two commits differ only in `sample/`, and the APK holds no file that changed after
-`ea0c1d69c`. `host-android-benchmark.apk` is 26,078,079 bytes, sha256
-`a03ccfa490c245e704cf3c68551cb1023227054c1b612aaabd69013350929f3a`; `lib/arm64-v8a/libquickjs.so` is
-2,618,992 bytes. The trace processor was R0's copy, sha256 `ae2f18ff…68a0e7d`.
+**The first dry run** (sessions 1–3, 10:27–10:37): the prototype published from `760b0de73`, the APK
+built from `ea0c1d69c` (26,078,079 bytes, sha256 `a03ccfa4…29f3a`), the eight arms and every query,
+end to end. The fixes below (1–6) came from it. It found the lost frame ("What the run shows") but not
+its cause, and its queries are superseded.
 
-**Run.** Steps 2–7, in order: install and compile, push, the eight arms (`run.sh`, 10:27–10:37), the
-check, `analyse.sh all` (about a minute on the emulator), pull, clean. Every arm: 14 opens, `done`, no
-timeout; traces of 77–147 MB. Every query ran on every arm. Validity, every arm: `count.opens` 14;
-on the four reveal arms `count.reveal` 12 of 12, and the bench's `revealed` on every open; `nextHit` 1
-on every open of the six guest arms; the identity check passed 12 of 12 on each guest arm (`n/a` on
-native). One smoke arm (`simple-reveal-idle`) ran first, and the fixes below came from it.
+**The second dry run** (fix session 5, on the merged head; this section's numbers):
+- **Build.** The prototype published to a scratch repository from `1ed97a00f` (the PR's head after
+  merging main, 5 min 56 s). The sample's benchmark APK from that head (`1ed97a00f`'s sample, 26,078,075
+  bytes, sha256 `2ba95671…3f3610`) built, and was not installed: two bench flags followed. The APK
+  that ran the eight arms and `simple-listen` came from `81c41108f` (the head plus `listenonly`; sha256
+  `aca0f7d9…7e02`); the one that ran the six `noripple` arms from `d66a2157a` (plus `noripple`; sha256
+  `90f3fe03…4164`). `lib/arm64-v8a/libquickjs.so` was 2,618,992 bytes in each. The trace processor was
+  R0's copy.
+- **Run.** Steps 2–7: the eight arms and `simple-listen` (23:33–23:44), then the six `noripple` arms
+  (23:57–00:11), each arm 14 opens, `done`, no timeout; then `analyse.sh all` over all fifteen with this
+  directory's queries (about 3 minutes on the emulator; no query failed), pull, clean. Validity: every
+  arm counted (`bar` printed "valid" on each: `count.opens` 14; `count.reveal` and the bench's
+  reveals 12 of 12 on every reveal arm; lowest `nextHit` 1; the identity check 12 of 12).
 
 **What the bar printed** (medians over opens 3–14, ms from the UP; emulator, not results):
 
 | | native | reveal + idle measure | reveal | off |
 |---|---|---|---|---|
-| **simple** first draw (`drawn`; `revealDrawn`) | 2 | 1 | 1 | |
-| `Record View#draw()` of that frame (`rec_ms`), of it measure and layout (`ml_ms`) | 0.7 (0.6) | 0.4 (0.1) | 0.8 (0.6) | |
-| its buffer queued (`q_drew`); by its own vsync (`drew_own`) | 3.6; 12 of 12 | 10.5; 0 of 12 | 10.3; 0 of 12 | |
-| its display frame end (`sf_end`) | 17.4 | 25.7 | 26.0 | |
-| click → composed, bench (trace `ec`) | | 7.5 (8.1) | 8 (7.9) | 9 (8.8) |
-| the guest's live detail drawn (`drawn`) | | 23 | 23 | 22.5 |
-| **heavy** first draw | 2 | 1 | 1 | |
-| `rec_ms` (`ml_ms`) | 2.1 (1.7) | 0.6 (0.2) | 1.4 (1.0) | |
-| `q_drew`; `drew_own` | 5.0; 12 of 12 | 10.6; 0 of 12 | 10.1; 1 of 12 | |
-| click → composed, bench (trace) | | 10 (10.6) | 9.5 (9.8) | 10.5 (11.0) |
-| the guest's live detail drawn | | 23 | 23 | 23.5 |
+| **simple** first draw (`drawn`; `revealDrawn`) | 1.5 | 1 | 2 | |
+| `Record View#draw()` of that frame (`rec_ms`), of it measure and layout (`ml_ms`) | 0.8 | 0.4 (0.1) | 1.3 | |
+| its buffer (`q_drew`); by its own draw (`drew_own`); by a RenderThread-only frame (`q_rt`) | 3.8; 12; 0 | 9.8; 0; 1 | 10.2; 5; 1 | |
+| per open: buffer by the vsync after native's own (`q_vs` ≤ native's + 1) | | 11 of 12 | 11 of 12 | |
+| its display frame end (`sf_end`) | 19.1 | 26.0 | 26.7 | |
+| click → composed, bench (trace `ec`) | | 7.5 (8.1) | 9 (9.9) | 9.5 (9.7) |
+| **heavy** first draw | 1.5 | 1 | 1 | |
+| `rec_ms` (`ml_ms`) | 2.0 | 0.7 (0.2) | 1.3 | |
+| `q_drew`; `drew_own`; `q_rt` | 4.8; 12; 0 | 9.9; 0; 2 | 9.9; 1; 2 | |
+| per open, by the vsync after native's own | | 12 of 12 | 12 of 12 | |
+| click → composed, bench (trace) | | 10 (10.3) | 10 (10.7) | 10.5 (10.8) |
 
-Bars 1 and 2 printed MET on all four reveal arms (on an emulator: no verdict); the buffer-queued
-reading printed "within" on all four. The full output is `analyse-all.txt` in the dry run's pulled
-directory (not committed). Its `bar` section predates the last `analyse.sh` change (the `drew_own`
-counts and the buffer-queued line); `analyse.sh bar` was rerun on the emulator after it, on the same
-queries' output, and the table above is that rerun.
+`bar` printed bar 1 MET on (a) and (b) and bar 2 MET on both idle arms, and "R1: PASSES". On an
+emulator that is no verdict: it shows that every line prints. With the ripple off (`bar noripple`,
+step 4b's arms), the reveal's own frame queued its buffer in 12 of 12 opens on both sizes: `q_drew`
+2.8 (simple) and 2.5 (heavy), against native's 3.9 and 4.7. The full output is `analyse-all.txt` in the
+pulled directory (not committed).
 
 **What the run shows about the method, not about the A12:**
 - **The first frame after the UP is late on both sides.** The driver's tap blocks the main thread for
   40 ms, so the frame after the UP starts 0.4–0.8 ms after it, a vsync late (`resynced to … in
   20–30 ms`). The same holds for native and for the reveal, so the first-draw comparison stays like
   for like.
-- **The reveal's own frame queued no buffer** in 47 of 48 reveal opens (`drew_own`). Its RenderThread
-  draw was dropped, and the next frame queued the reveal about 10 ms after the UP, where native's own
-  frame queued at 3.6–5.0. In opens 3–5 of every reveal arm, q3 shows a RenderThread-only
-  `queueBuffer` 5–9 ms before the UP, during the tap's blocked 40 ms: the swap chain was stuffed when
-  the reveal's frame came. That buffer is not in `simple-off` (the same guest and policy, no
-  reveal) or in native. The cause is not established. Inferred: something the reveal arms do on the
-  DOWN starts a RenderThread animation that the others start later (a press ripple, R0's mechanism).
-  **The first-draw mark does not see this, and the buffer-queued reading does**, which is why `bar`
-  prints both. The phone session reads q3 for it.
+- **The reveal's own frame often queued no buffer** (first dry run: 47 of 48 reveal opens; second: the
+  idle arms 0 of 12 by their own draw). HWUI skipped its draw, and the next frame queued the reveal
+  about 10 ms after the UP, where native's own frame queued at 3.8–4.8. **The first-draw mark does not
+  see this, and the buffer reading does**, which is why bar 1 reads both.
+- **The A/B (review M2): the cause is the theme's press ripple and the driver, not the reveal's
+  listener.** q4 counts, per open, RenderThread-only buffers (HWUI's own animation frames,
+  `dispatchFrameCallbacks` → `prepareAndDraw`, no `DrawFrames`) in the tap's 40 ms hold, and whether
+  the first frame after the UP queued a buffer. All 14 opens of each arm:
+
+  | Arm | RenderThread-only buffer in the hold | first frame after the UP queued none |
+  |---|---|---|
+  | `native-simple`, `native-heavy` | 0, 0 | 0, 0 |
+  | `simple-off`, `heavy-off` (no reveal) | 7, 7 (opens 7–10 and 12–14) | 5, 7 |
+  | `simple-listen` (the listener, no reveal) | 7 (the same opens) | 7 |
+  | `simple-reveal`, `simple-reveal-idle` | 13, 13 (every open but the first) | 8, 12 |
+  | `heavy-reveal`, `heavy-reveal-idle` | 13, 13 | 12, 12 |
+  | every `noripple` arm (six: native, reveal, idle, off) | 0 | 0 |
+
+  - Over the seven guest arms with the ripple (98 opens), the first frame after the UP queued its
+    buffer in 25 of the 25 opens with no RenderThread-only buffer in the hold. It queued none in 63 of
+    the 73 that had one.
+  - `simple-listen` matches `simple-off` open for open, so the listener (`revealOnClickInput`) plays
+    no part.
+  - With `noripple` the animation is gone from every open, and the reveal's own frame queued its
+    buffer in 12 of 12 opens: 2.8 ms (simple) and 2.5 ms (heavy) after the UP, against native's 3.9
+    and 4.7.
+  - **The mechanism, from the trace.** The guest arms run a RenderThread animation (the main thread
+    shows `RenderNodeAnimator` and `RippleHostView` messages) from the first open until about 7 s
+    after the last tap: RenderThread-only buffers in 20 of the run's 21 seconds in `simple-off`, 540
+    of them. Native has neither. During the hold the main thread sleeps, so the RenderThread draws its
+    own frame at each vsync. The first frame after the UP then comes for a vsync the RenderThread has
+    already drawn, and HWUI skips its draw ("Dropped Frame"). The frame's content still syncs, and the
+    next frame draws it, about one vsync later.
+  - **Inferred, not shown:** the animation is the ripple of the tapped row or of the back button,
+    left running in an entry the retained container hid (hidden entries stay composed; native's
+    navigation removes them). It runs more often with the reveal (13 against 7 opens) because the
+    reveal hides the list in the frame after the click, before its row's ripple is drawn.
+  - **What it means for the A12.** On the phone the driver also blocks the main thread through the
+    hold, so the same loss will probably show in bar 1's reading (b), one vsync late (16.7 ms there,
+    about 6 ms here). With a real finger the main thread is free, so the frame would not come late.
+    But HWUI waits only about a quarter of a vsync for a main-thread frame before drawing its own
+    animation frame. So a reveal frame longer than that may still lose its vsync while such an
+    animation runs; that is inferred from the trace's `queue mFrameCallbackTask to run after 3.91ms`,
+    not measured. Step 4b's ripple controls measure the reveal without the animation, beside the
+    pre-registered arms.
+- **R0's simple-off on the A12 shows the same mechanism.** Checked on R0's kept trace: in its opens
+  5, 7, 8 and 10 the `DrawFrames` after the frame took 0.4–0.7 ms and queued nothing, and every buffer
+  of the next 60 ms came from the RenderThread's own frames (`dispatchFrameCallbacks`, 5.5–8.4 ms).
+  So `q_drew` now reads the first buffer of any kind after the frame's sync (`q_src` says which). It
+  had read `DrawFrames` only, and so would have passed over a reveal first shown by a RenderThread
+  frame on the A12. On the emulator that happened in 1–2 opens per reveal arm.
 - **The idle measure moves the reveal's layout out of its frame** even here: measure and layout inside
   the reveal's `Record View#draw()`, 0.1–0.2 ms with it against 0.6–1.0 without.
 - **The guest form keeps drawing a frame per vsync for about 140 ms after an open** (`simple-off`
@@ -395,3 +470,8 @@ queries' output, and the table above is that rerun.
    21–50 for draws one frame apart. It is now `drew_own`: 1 when the doFrame's own vsync drew it.
 6. **Empty marks shifted the columns** of the bench's per-open table (found before the run): a
    native line has no `revealed`, and awk collapses empty fields. Missing marks now print `-`.
+7. **`q_drew` read `DrawFrames` only** (fix session 5, from R0's A12 trace): a buffer queued by a
+   RenderThread-only frame was passed over. It now reads every buffer from the frame's own sync on.
+8. **q3 looked at opens 3–5 only, from 10 ms before the UP** (review M2): the RenderThread-only
+   buffers in `simple-off` came in opens 7–10 and 12–14, so the first dry run did not see them there.
+   q3 now covers every open from its DOWN, and q4 counts it.

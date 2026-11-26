@@ -5,7 +5,9 @@
 -- trace (`count.opens`, 14 expected), opens 3-14 with a reveal (`count.reveal`), with the
 -- reveal's frame ticking the guest (`count.k_reveal`), and per kind the opens whose buffer was
 -- queued by the frame's own vsync (`count.<kind>.drew_own`, in the median column, with how many had a
--- draw in the n column), and the app's vsync period that `q_vs` counts with (`vsync.period_ms`). A median of an even n is the mean of the two middle values, as R0's q2.
+-- buffer in the n column) and by a RenderThread-only frame (`count.<kind>.q_rt`, measure.sql's
+-- q_src), and the app's vsync period that `q_vs` counts with (`vsync.period_ms`). A median of an
+-- even n is the mean of the two middle values, as R0's q2.
 create perfetto table qq as select * from q where i > 2;
 
 create perfetto table lng as
@@ -39,5 +41,7 @@ select col, median, n from (
   union all
   select 2, 'count.k_reveal', (select count(*) from qq where kind = 'drawn' and k_reveal = 1), null
   union all
-  select 2, 'count.' || kind || '.drew_own', sum(drew_own), count(drew_own) from qq group by kind)
+  select 2, 'count.' || kind || '.drew_own', sum(drew_own), count(drew_own) from qq group by kind
+  union all
+  select 2, 'count.' || kind || '.q_rt', sum(case when q_src = 'rt' then 1 else 0 end), count(q_src) from qq group by kind)
 order by grp, col;

@@ -3,7 +3,7 @@
 # process under its own Perfetto trace (docs/nf5-r1/README.md). Runs ON THE PHONE:
 #   adb shell '(nohup sh /data/local/tmp/nf5r1/run.sh < /dev/null > /data/local/tmp/nf5r1/log.txt 2>&1 &)'
 # then poll for /data/local/tmp/nf5r1/done.txt (about 10 minutes): `done`, or `stopped: battery ...`
-# when the battery stop ended the run before an arm (exit 3). `run.sh <arm>` runs one arm.
+# when the battery stop ended the run before an arm (exit 3). `run.sh <arm> ...` runs those arms.
 # Every am/pm call names dev.keliver.sample; nothing changes a setting.
 D=/data/local/tmp/nf5r1
 P=dev.keliver.sample
@@ -49,21 +49,27 @@ run() {
     simple-reveal) arm simple-reveal guest r1prep,reveal,trace 60 ;;
     # The same detail without the reveal: the guest's click shows it (click -> composed, reveal off).
     simple-off) arm simple-off guest r1prep,trace 60 ;;
-    # The A/B's control, not in ARMS (README, "What the run shows"): the reveal's click listener
-    # installed, but the click reveals nothing (listenonly), so the guest's click shows the detail.
-    simple-listen) arm simple-listen guest r1prep,reveal,listenonly,trace 60 ;;
-    # The same without the press indication (noripple; not in ARMS): whether the theme's ripple is
-    # the RenderThread animation that takes the first frame's vsync after the blocking tap.
-    simple-reveal-noripple) arm simple-reveal-noripple guest r1prep,reveal,noripple,trace 60 ;;
-    simple-off-noripple) arm simple-off-noripple guest r1prep,noripple,trace 60 ;;
     heavy-reveal-idle) arm heavy-reveal-idle guest heavy,r1prep,reveal,idlemeasure,trace 75 ;;
     heavy-reveal) arm heavy-reveal guest heavy,r1prep,reveal,trace 75 ;;
     heavy-off) arm heavy-off guest heavy,r1prep,trace 75 ;;
+    # Not in ARMS: the controls of the emulator's A/B (README, "What the run shows").
+    # listenonly: the reveal's click listener installed, but the click reveals nothing.
+    simple-listen) arm simple-listen guest r1prep,reveal,listenonly,trace 60 ;;
+    # noripple: no press indication (the theme's ripple keeps a RenderThread animation running in
+    # the guest arms, which takes the vsync of the first frame after the blocking tap). The four
+    # judged-arm pairs are step 4b's ripple controls; simple-reveal and simple-off were the A/B's.
+    native-simple-noripple) arm native-simple-noripple native noripple,trace 50 ;;
+    simple-reveal-idle-noripple) arm simple-reveal-idle-noripple guest r1prep,reveal,idlemeasure,noripple,trace 60 ;;
+    native-heavy-noripple) arm native-heavy-noripple native heavy,noripple,trace 50 ;;
+    heavy-reveal-idle-noripple) arm heavy-reveal-idle-noripple guest heavy,r1prep,reveal,idlemeasure,noripple,trace 75 ;;
+    simple-reveal-noripple) arm simple-reveal-noripple guest r1prep,reveal,noripple,trace 60 ;;
+    simple-off-noripple) arm simple-off-noripple guest r1prep,noripple,trace 60 ;;
     *) echo "run.sh: unknown arm $1" >&2; return 2 ;;
   esac
 }
 rm -f $D/done.txt
-if [ -n "$1" ]; then run "$1"; else
+# `run.sh` runs ARMS; `run.sh <arm> ...` runs those arms, in order.
+if [ -n "$1" ]; then for a in "$@"; do run "$a"; done; else
   for a in $ARMS; do run $a; done
 fi
 echo done > $D/done.txt

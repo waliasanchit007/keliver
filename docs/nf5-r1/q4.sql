@@ -11,15 +11,9 @@
 --   f1_row    its actual frame-timeline row's present type
 --   q_first   the first buffer queued by a DrawFrames that starts at or after the UP (its end)
 --   rt_post   RenderThread-only buffers in the 50 ms after the UP
--- A RenderThread-only buffer is an outermost queueBuffer with no DrawFrames around it (a RenderThread
--- animation's frame: no main-thread frame synced it).
-create perfetto table rtp as
-select id, ts, dur, depth, name from rt_sl where name glob 'DrawFrame*' or name = 'queueBuffer';
-
-create perfetto table rto as
-select b.ts, b.ts + b.dur as e from rtp b
-where b.name = 'queueBuffer'
-  and not exists (select 1 from rtp p where p.depth < b.depth and p.ts <= b.ts and p.ts + p.dur >= b.ts + b.dur);
+-- A RenderThread-only buffer (measure.sql's rto) is an outermost queueBuffer with no DrawFrames
+-- around it: HWUI's own frame for its animations (`dispatchFrameCallbacks`), which no main-thread
+-- frame synced.
 
 create perfetto table o4 as
 select o.i, o.u_ts,
