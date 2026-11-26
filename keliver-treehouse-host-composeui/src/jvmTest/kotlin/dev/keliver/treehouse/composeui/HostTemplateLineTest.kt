@@ -35,7 +35,8 @@ import kotlin.test.Test
 import kotlinx.coroutines.flow.flowOf
 
 /**
- * NF5 H0: the host templates' own code for this checkout's line (KeliverLine.kt, HostFeatures.kt;
+ * NF5 H0: the host templates' own code for this checkout's line (its files in
+ * scripts/templates/production-host/src/line-0.5/kotlin/, KeliverLine.kt and HostFeatures.kt;
  * compiled in by this module's build.gradle), against this checkout's TreehouseContent and
  * TreehouseApp.Spec.
  */

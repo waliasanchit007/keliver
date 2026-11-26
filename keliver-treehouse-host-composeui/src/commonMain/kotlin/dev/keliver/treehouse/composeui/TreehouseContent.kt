@@ -114,8 +114,8 @@ private fun <A : AppService> GatedTreehouseContent(
   widgetSystem: WidgetSystem<@Composable (Modifier) -> Unit>,
   contentSource: TreehouseContentSource<A>,
   backEnabled: Boolean,
-  modifier: Modifier,
   dynamicContentWidgetFactory: DynamicContentWidgetFactory<@Composable (Modifier) -> Unit>,
+  modifier: Modifier = Modifier,
 ) {
   val platformBackDispatcher = platformOnBackPressedDispatcher()
   // Created with the view below (one per widget system), so the view's guest always registers

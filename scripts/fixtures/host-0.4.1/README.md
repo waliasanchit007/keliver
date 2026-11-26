@@ -41,10 +41,12 @@ Changes since:
   per-line blocks inside `KeliverHost.kt`, `KeliverScreen.kt` and `MainViewController.kt`, which
   every NF5 host PR after this one (A5's start table, session, off switch) would have to extend.
   What a 0.4.x app's host gets now:
-  - new: `KeliverLine.kt`, the 0.4 line's copy (no host features handed to Treehouse,
-    `TreehouseContent` called as before, without a back gate); `HostFeatures.kt` (none
-    declared) and `HostFeaturesTest.kt` (in the hosts with JVM tests); `ReleaseIdentity.kt` (and
-    `ReleaseIdentityTest.kt` on Android);
+  - new: the 0.4 line's own files, `KeliverLine.kt` (no host features handed to Treehouse,
+    `TreehouseContent` called as before, without a back gate) and `HostFeatures.kt` (declares
+    none, `emptySet()`); `HostFeaturesTest.kt` (in the hosts with JVM tests; it checks the form
+    of the names only); `ReleaseIdentity.kt` (and `ReleaseIdentityTest.kt` on Android). The iOS
+    host takes `HostFeatures.kt`, `HostFeaturesTest.kt` and `ReleaseIdentity.kt` from the
+    Android templates, as it takes `KeliverLine.kt`; the iOS templates keep no copies;
   - changed: `KeliverHost.kt` and `MainViewController.kt` (the spec's base class is
     `KeliverSpec`; the last good bundle's record also carries the loaded release's sequence and
     module digest, and is written with `commit()` on Android and `synchronize()` on iOS, as the
@@ -53,3 +55,8 @@ Changes since:
   The one behaviour change on the 0.4 line is that record: two more keys, nothing on 0.4 reads
   them, and it is written through before the load is reported. The reference-app and ios-host
   workflows build and run this output on a pull request.
+  The host features are declared per line (review of #316, M2): a feature declared later goes
+  into `line-0.5/kotlin/HostFeatures.kt` only, so it changes none of these manifests. Rewritten
+  once more in that review round, for `HostFeatures.kt` and `HostFeaturesTest.kt` (above),
+  `KeliverLine.kt` (its header names the line's two files) and `KeliverScreen.kt` (a comment that
+  now says what back does on each line).

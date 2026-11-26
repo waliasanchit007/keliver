@@ -210,9 +210,11 @@ private fun AppContent(
       if (!failureWidgets.loadingShown) latestFirstChanges()
     }
   }
-  // Hidden: out of keyboard and D-pad reach too (focus does not move into it), and out of reach of
-  // the back button: its guest's back handlers are registered disabled until it is shown, so a back
-  // press in the short swap window goes to the app on show (NF5 H0; from the 0.5 line, KeliverLine.kt).
+  // Hidden: out of keyboard and D-pad reach too (focus does not move into it). The back button
+  // depends on the line (KeliverLine.kt): from 0.5 its guest's back handlers are registered disabled
+  // until it is shown, so a back press in the short swap window goes to the app on show (NF5 H0); on
+  // the 0.4 line they register with the activity at once, and such a press goes to the new app
+  // (docs/DEVICE_HOST.md).
   androidx.compose.foundation.layout.Box(if (hidden) Modifier.fillMaxSize().unfocusable() else Modifier.fillMaxSize()) {
     KeliverTreehouseContent(
       treehouseApp = app,

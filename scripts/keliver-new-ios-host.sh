@@ -185,11 +185,18 @@ fi
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
 keliver_zipline_line "$KELIVER_VERSION" || fail "$KELIVER_LINE_ERROR"
-# NF5 H0: what the line's libraries have that older ones do not (host features, TreehouseContent's
-# back gate) is in one file per line, the Android host's src/line-<line>/kotlin/KeliverLine.kt (one
-# source for both hosts); every other file of the host is the same Kotlin on every line.
-LINE_GLUE="$(dirname "$TEMPLATES")/production-host/src/line-$KELIVER_LINE/kotlin/KeliverLine.kt"
-[ -f "$LINE_GLUE" ] || fail "these templates have no host file for the $KELIVER_LINE line ($LINE_GLUE)."
+# NF5 H0: what the line's libraries have that older ones do not is in the line's own files, the
+# Android host's src/line-<line>/kotlin/ (one source for both hosts): KeliverLine.kt (host features
+# handed to Treehouse, TreehouseContent's back gate) and HostFeatures.kt (the host features the host
+# implements, none on the 0.4 line). Every other file of the host is the same Kotlin on every line.
+# The last good record's release identity and the host features' test are the Android host's files
+# too.
+PH_SRC="$(dirname "$TEMPLATES")/production-host/src"
+LINE_SRC="$PH_SRC/line-$KELIVER_LINE/kotlin"
+[ -f "$LINE_SRC/KeliverLine.kt" ] && [ -f "$LINE_SRC/HostFeatures.kt" ] \
+  || fail "these templates have no host files for the $KELIVER_LINE line ($LINE_SRC)."
+[ -f "$PH_SRC/main/kotlin/ReleaseIdentity.kt" ] && [ -f "$PH_SRC/test/kotlin/HostFeaturesTest.kt" ] \
+  || fail "the Android host's templates are missing ($PH_SRC)."
 # The line's toolchain (keliver-runtime-line.sh's table), each overridable.
 ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
 KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-$TOOLCHAIN_KOTLIN}"
@@ -351,8 +358,9 @@ fi
 for f in "$TEMPLATES"/src/iosMain/kotlin/*.kt; do
   subst "$f" "$STAGE/src/iosMain/kotlin/$PKG_PATH/$(basename "$f")"
 done
-# NF5 H0: the app's line's KeliverLine.kt (checked above).
-subst "$LINE_GLUE" "$STAGE/src/iosMain/kotlin/$PKG_PATH/KeliverLine.kt"
+# NF5 H0: the app's line's KeliverLine.kt, and the release identity (checked above).
+subst "$LINE_SRC/KeliverLine.kt" "$STAGE/src/iosMain/kotlin/$PKG_PATH/KeliverLine.kt"
+subst "$PH_SRC/main/kotlin/ReleaseIdentity.kt" "$STAGE/src/iosMain/kotlin/$PKG_PATH/ReleaseIdentity.kt"
 # Pure Kotlin shared with the JVM target that runs its checks (K2: RequestPolicy), and the
 # simulator tests of HostHttp (B2: iosTest).
 for set in commonMain jvmTest iosTest; do
@@ -360,6 +368,9 @@ for set in commonMain jvmTest iosTest; do
     subst "$f" "$STAGE/src/$set/kotlin/$PKG_PATH/$(basename "$f")"
   done
 done
+# NF5 H0: the line's host features (pure Kotlin) and their test (checked above).
+subst "$LINE_SRC/HostFeatures.kt" "$STAGE/src/commonMain/kotlin/$PKG_PATH/HostFeatures.kt"
+subst "$PH_SRC/test/kotlin/HostFeaturesTest.kt" "$STAGE/src/jvmTest/kotlin/$PKG_PATH/HostFeaturesTest.kt"
 # Timing marks (M0), the guest frame profile (M4) and the memory profile (M5): the real ones when Xcode's KELIVER_TIMING
 # is YES (Debug, Benchmark), a no-op otherwise.
 for set in timing notiming debuglink nodebuglink; do

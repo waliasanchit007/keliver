@@ -1,9 +1,9 @@
 /*
  * What this host's Keliver line has that an older line's libraries do not: the 0.4 line (and the
  * 0.3.x libraries, which build as 0.4 does). The scaffolders (keliver-new-production-host.sh,
- * keliver-new-ios-host.sh) copy the file of the app's line (appRuntime.keliverVersion,
- * keliver-runtime-line.sh), so every other file of the host is the same Kotlin on every line. The
- * Android and iOS hosts ship the same file.
+ * keliver-new-ios-host.sh) copy the files of the app's line (this one and HostFeatures.kt;
+ * appRuntime.keliverVersion, keliver-runtime-line.sh), so every other file of the host is the same
+ * Kotlin on every line. The Android and iOS hosts ship the same file.
  */
 package @@PACKAGE@@
 
@@ -21,7 +21,7 @@ internal const val KELIVER_LINE = "0.4"
 
 /**
  * The host's Treehouse spec. The 0.4 line's Treehouse has no host features: its guests see none,
- * whatever HostFeatures.kt declares (from 0.5 the spec hands them over).
+ * and this line's HostFeatures.kt declares none (from 0.5 the spec hands them over).
  */
 internal abstract class KeliverSpec<A : AppService> : TreehouseApp.Spec<A>()
 

@@ -1,8 +1,9 @@
 /*
  * What this host's Keliver line has that an older line's libraries do not: the 0.5 line. The
- * scaffolders (keliver-new-production-host.sh, keliver-new-ios-host.sh) copy the file of the app's
- * line (appRuntime.keliverVersion, keliver-runtime-line.sh), so every other file of the host is the
- * same Kotlin on every line. The Android and iOS hosts ship the same file.
+ * scaffolders (keliver-new-production-host.sh, keliver-new-ios-host.sh) copy the files of the app's
+ * line (this one and HostFeatures.kt; appRuntime.keliverVersion, keliver-runtime-line.sh), so every
+ * other file of the host is the same Kotlin on every line. The Android and iOS hosts ship the same
+ * file.
  */
 @file:OptIn(ExperimentalKeliverBackApi::class, ExperimentalKeliverHostFeaturesApi::class)
 
@@ -22,7 +23,7 @@ import dev.keliver.widget.WidgetSystem
 /** The Keliver line this host was scaffolded for. */
 internal const val KELIVER_LINE = "0.5"
 
-/** The host's Treehouse spec: it hands the guest the host features this host implements (HostFeatures.kt). */
+/** The host's Treehouse spec: it hands the guest the host features this host implements (this line's HostFeatures.kt). */
 internal abstract class KeliverSpec<A : AppService> : TreehouseApp.Spec<A>() {
   override val hostFeatures: Set<String>
     get() = HostFeatures.implemented

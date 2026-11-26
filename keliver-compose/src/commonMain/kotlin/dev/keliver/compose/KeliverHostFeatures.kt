@@ -22,11 +22,14 @@ package dev.keliver.compose
  *
  * A name is `<feature>@<level>`. A host declares a level only when it implements all of it; a
  * newer level is a new name, and a host that implements it declares the older levels it still
- * serves as well.
+ * serves as well. Names outside `keliver.` are an app's own features, declared beside Keliver's in
+ * the same set; Keliver neither defines nor checks them.
  *
  * Adding a feature: its constant here and its row in [requirements], side by side (a JVM test fails
- * when either is missing). A host template that implements it then adds the name to its one
- * declaration, `HostFeatures.kt` (scripts/templates/production-host and ios-host).
+ * when either is missing). Once the host templates implement it, the name goes into the declaration
+ * of the Keliver line that has it, `src/line-<line>/kotlin/HostFeatures.kt` in
+ * scripts/templates/production-host (one file for the Android and iOS hosts; the 0.4 line's
+ * declares none).
  */
 @ExperimentalKeliverHostFeaturesApi
 public object KeliverHostFeatures {

@@ -193,11 +193,13 @@ fi
 # shellcheck source=keliver-runtime-line.sh
 . "$HERE/keliver-runtime-line.sh"
 keliver_zipline_line "$KELIVER_VERSION" || fail "$KELIVER_LINE_ERROR"
-# NF5 H0: what the line's libraries have that older ones do not (host features, TreehouseContent's
-# back gate) is in one file per line, src/line-<line>/kotlin/KeliverLine.kt; every other file of the
-# host is the same Kotlin on every line.
-LINE_GLUE="$TEMPLATES/src/line-$KELIVER_LINE/kotlin/KeliverLine.kt"
-[ -f "$LINE_GLUE" ] || fail "these templates have no host file for the $KELIVER_LINE line ($LINE_GLUE)."
+# NF5 H0: what the line's libraries have that older ones do not is in the line's own files,
+# src/line-<line>/kotlin/: KeliverLine.kt (host features handed to Treehouse, TreehouseContent's back
+# gate) and HostFeatures.kt (the host features the host implements, none on the 0.4 line). Every
+# other file of the host is the same Kotlin on every line.
+LINE_SRC="$TEMPLATES/src/line-$KELIVER_LINE/kotlin"
+[ -f "$LINE_SRC/KeliverLine.kt" ] && [ -f "$LINE_SRC/HostFeatures.kt" ] \
+  || fail "these templates have no host files for the $KELIVER_LINE line ($LINE_SRC)."
 # The line's toolchain (keliver-runtime-line.sh's table): its Zipline, Kotlin, Compose and AGP
 # (overridable), and its compileSdk, targetSdk and JDK.
 ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-$TOOLCHAIN_ZIPLINE}"
@@ -700,8 +702,10 @@ for f in "$TEMPLATES"/src/main/kotlin/*.kt; do
   if $EMBED; then case "$(basename "$f")" in HostApp.kt|MainActivity.kt) continue ;; esac; fi
   subst "$f" "$STAGE/src/main/kotlin/$PKG_PATH/$(basename "$f")"
 done
-# NF5 H0: the app's line's KeliverLine.kt (checked above).
-subst "$LINE_GLUE" "$STAGE/src/main/kotlin/$PKG_PATH/KeliverLine.kt"
+# NF5 H0: the app's line's files (checked above).
+for f in KeliverLine.kt HostFeatures.kt; do
+  subst "$LINE_SRC/$f" "$STAGE/src/main/kotlin/$PKG_PATH/$f"
+done
 # ED3: the debug link, in the debug source set only (its activity, its check and its intent
 # filter): a release build compiles and merges none of it. The library's debug variant is the
 # one an app's debug build uses.

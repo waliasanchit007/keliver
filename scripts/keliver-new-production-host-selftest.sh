@@ -491,9 +491,9 @@ SP="${M%/*}/StartPolicy.kt"
   && grep -q 'fun indexStartPolicy(indexJson: String, channel: String = DEFAULT_CHANNEL): String?' "${M%/*}/BundleIndex.kt" \
   && ok "start policy: keliver.startPolicy (parallel by default), the index's override from the next start (unless refused), logged at each start; parallel's cached app fenced and closed when dropped; updates after a cache start in a new app; a replaced app's late close is not reported as uncaught" \
   || bad "start policy: not wired"
-# NF5 H0: the host features the host implements, declared in one place (HostFeatures.kt, held to
-# them by HostFeaturesTest) and handed to Treehouse only by the line's own KeliverLine.kt (this app
-# is on 0.4: that line's copy, with no host features and no back gate); the hidden app of an update
+# NF5 H0: the host features the host implements, declared in one place per line (the line's
+# HostFeatures.kt) and handed to Treehouse only by the line's own KeliverLine.kt (this app is on
+# 0.4: that line's copies, with no host features and no back gate); the hidden app of an update
 # swap gets backEnabled = false; the last good bundle's record carries the release as its load saw
 # it (sequence and module digest, ReleaseIdentity.kt), in one edit written with commit().
 PHL=""
@@ -503,14 +503,16 @@ done
 K="${M%/*}"
 [ -n "$PHL" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHL/src/line-0.4/kotlin/KeliverLine.kt" | cmp -s - "$K/KeliverLine.kt" \
   && grep -q '^internal const val KELIVER_LINE = "0.4"$' "$K/KeliverLine.kt" && ! grep -q 'hostFeatures' "$K/KeliverLine.kt" \
-  && [ -f "$K/HostFeatures.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/HostFeaturesTest.kt" ] \
+  && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHL/src/line-0.4/kotlin/HostFeatures.kt" | cmp -s - "$K/HostFeatures.kt" \
+  && grep -q '^  val implemented: Set<String> = emptySet()$' "$K/HostFeatures.kt" \
+  && [ -f "$H/src/test/kotlin/com/example/demo/host/HostFeaturesTest.kt" ] \
   && [ -f "$K/ReleaseIdentity.kt" ] && [ -f "$H/src/test/kotlin/com/example/demo/host/ReleaseIdentityTest.kt" ] \
   && grep -q '    val spec = object : KeliverSpec<PortalPresenter>() {' "$M" && ! grep -q 'TreehouseApp.Spec<' "$M" \
   && grep -q '      backEnabled = !hidden,' "$K/KeliverScreen.kt" && ! grep -q 'composeui.TreehouseContent' "$K/KeliverScreen.kt" \
   && grep -q '    val release = loadedRelease(manifest)' "$M" && grep -q '      manifestUrl?.let { onLoaded(it, release) }' "$M" \
   && grep -A1 '            .putString(lastGoodModuleDigestKey(cacheName), release.moduleDigest)' "$M" | grep -q '^            .commit()$' \
   && grep -q 'putLong(lastGoodSequenceKey(cacheName), release.sequence)' "$M" \
-  && ok "NF5 H0: host features declared in HostFeatures.kt (and its test), handed over by the 0.4 line's KeliverLine.kt; the swap's hidden app with backEnabled = false; the last good record with the release's sequence and module digest, committed" \
+  && ok "NF5 H0: the 0.4 line's KeliverLine.kt and HostFeatures.kt (none declared, none handed over), with the host features' test; the swap's hidden app with backEnabled = false; the last good record with the release's sequence and module digest, committed" \
   || bad "NF5 H0: host features, the line's KeliverLine.kt, the hidden app's back or the last good record"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
@@ -756,14 +758,15 @@ for v in 0.5.0 0.5.1-SNAPSHOT; do
     && grep -q "implementation 'dev.keliver:keliver-treehouse-host:$v'" "$HF" && ! grep -qE "['\"]app\.cash\.zipline['\":]" "$HF" \
     && ok "NF2: an app on $v gets Keliver's Zipline fork (plugin dev.keliver.zipline, its libraries) on Kotlin 2.4.21, Compose 1.12.2" \
     || bad "NF2: the host of an app on $v (rc=$rc): $(grep -hE 'zipline|kotlin.android|org.jetbrains.compose' "$HF" 2>/dev/null | tr -s ' ' | tr '\n' '|') $(printf '%s' "$out" | tail -2 | tr '\n' ' ')"
-  # NF5 H0: the 0.5 line's KeliverLine.kt hands Treehouse the declared host features and passes
-  # TreehouseContent's back gate through.
+  # NF5 H0: the 0.5 line's KeliverLine.kt hands Treehouse the host features that line's
+  # HostFeatures.kt declares, and passes TreehouseContent's back gate through.
   KF="$APPF/host-android/src/main/kotlin/com/example/demo/host/KeliverLine.kt"
   [ -n "$PHL" ] && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHL/src/line-0.5/kotlin/KeliverLine.kt" | cmp -s - "$KF" \
     && grep -q '^internal const val KELIVER_LINE = "0.5"$' "$KF" && grep -q '    get() = HostFeatures.implemented' "$KF" \
     && grep -q '    backEnabled = backEnabled,' "$KF" \
-    && ok "NF5 H0: an app on $v gets the 0.5 line's KeliverLine.kt (host features handed over, the back gate passed through)" \
-    || bad "NF5 H0: the KeliverLine.kt of an app on $v"
+    && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHL/src/line-0.5/kotlin/HostFeatures.kt" | cmp -s - "${KF%/*}/HostFeatures.kt" \
+    && ok "NF5 H0: an app on $v gets the 0.5 line's KeliverLine.kt and HostFeatures.kt (host features handed over, the back gate passed through)" \
+    || bad "NF5 H0: the KeliverLine.kt or HostFeatures.kt of an app on $v"
 done
 KELIVER_HOST_ZIPLINE_VERSION=1.28.0-keliver.9 KELIVER_HOST_KOTLIN_VERSION=2.4.99 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
 [ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.9'$" "$DISP/fork-0-5-0/host-android/build.gradle" \

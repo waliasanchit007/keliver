@@ -19,7 +19,6 @@ import dev.keliver.ui.Cancellable
 import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 import kotlin.concurrent.Volatile
-import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -34,6 +33,11 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * Treehouse adds callbacks and changes their enabled state on its Zipline thread, while [open]
  * changes on the UI thread. Each change is followed by a [GatedCallback.sync] under one lock, so the
  * last sync sees every change before it and the platform's callback ends in agreement with both.
+ * That holds only once the platform listens to the callback: a platform wrapper (Android's) reads
+ * a callback's enabled state as it registers it and attaches its listener after, and a change in
+ * between would be lost. So a callback is registered with [delegate] before anything can change it
+ * (it starts disabled, and neither [open] nor its guest reaches it yet), and only then joined to
+ * both and synced.
  */
 @OptIn(ExperimentalAtomicApi::class)
 internal class BackGate(
@@ -42,8 +46,13 @@ internal class BackGate(
 ) : OnBackPressedDispatcher {
   private val gated = AtomicReference(emptyList<GatedCallback>())
 
-  /** Held for a few reads and one write; never while calling back into the guest. */
-  private val busy = AtomicBoolean(false)
+  /**
+   * Held while one callback's enabled state is decided and written to [delegate]'s callback. That
+   * write runs the platform's listener (on Android, androidx's enabled-callbacks update, which can
+   * make a binder call from API 33), so a thread that waits for it blocks rather than spins. Never
+   * held while calling into the guest.
+   */
+  private val lock = BackGateLock()
 
   @Volatile
   var open: Boolean = open
@@ -55,11 +64,14 @@ internal class BackGate(
 
   override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable {
     val callback = GatedCallback(onBackPressedCallback)
+    // 1. With the platform first: it reads the callback's state (disabled) and attaches its
+    //    listener while nothing else can change that state.
+    val registration = delegate.addCallback(callback)
+    // 2. Then the guest's changes reach it, and (once it is in the list) [open]'s do.
     onBackPressedCallback.enabledChangedCallback = callback.onGuestChanged
     update { it + callback }
-    // Once it is in the list an [open] change reaches it; this sync covers any change before.
+    // 3. This sync covers any change before those two.
     callback.sync()
-    val registration = delegate.addCallback(callback)
     return object : Cancellable {
       override fun cancel() {
         update { it - callback }
@@ -78,17 +90,6 @@ internal class BackGate(
     }
   }
 
-  private inline fun <T> locked(block: () -> T): T {
-    while (!busy.compareAndSet(expectedValue = false, newValue = true)) {
-      // Another thread is syncing a callback: a few reads and a write.
-    }
-    try {
-      return block()
-    } finally {
-      busy.store(false)
-    }
-  }
-
   /** What [delegate] holds for [guest]: enabled only while the gate is open and [guest] is enabled. */
   private inner class GatedCallback(
     private val guest: OnBackPressedCallback,
@@ -99,7 +100,7 @@ internal class BackGate(
     private fun wanted() = open && guest.isEnabled
 
     fun sync() {
-      locked {
+      lock.withLock {
         val want = wanted()
         if (isEnabled != want) isEnabled = want
       }
@@ -109,5 +110,20 @@ internal class BackGate(
       // A press the platform routed here before the gate closed still never reaches the guest.
       if (wanted()) guest.handleOnBackPressed()
     }
+  }
+}
+
+/** A mutual-exclusion lock that blocks a waiting thread: the platform's own. */
+internal expect class BackGateLock() {
+  fun lock()
+  fun unlock()
+}
+
+internal inline fun <T> BackGateLock.withLock(block: () -> T): T {
+  lock()
+  try {
+    return block()
+  } finally {
+    unlock()
   }
 }

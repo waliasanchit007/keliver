@@ -134,6 +134,78 @@ class BackGateTest {
     assertThat(platform.received).containsExactly("activity")
   }
 
+  /**
+   * Review of #316, M1: the swap shows the hidden app (the UI thread opens its gate) just as its
+   * guest registers a handler (the Zipline thread). The gate opens after Android's wrapper read the
+   * callback's state and before it listens: the platform must still end enabled.
+   */
+  @Test
+  fun aGateOpenedWhileTheWrapperRegistersTheCallbackStillReachesThePlatform() {
+    val android = FakeAndroidBackDispatcher()
+    val gate = BackGate(android, open = false)
+    android.betweenReadAndListen = { gate.open = true }
+
+    gate.addCallback(GuestBackHandler("guest", enabled = true, android.received))
+    android.back()
+
+    assertThat(android.registered.single().isEnabled).isTrue()
+    assertThat(android.received).containsExactly("guest")
+  }
+
+  /** M1's other direction: a stale enabled platform callback would swallow every press. */
+  @Test
+  fun aGateClosedWhileTheWrapperRegistersTheCallbackStillReachesThePlatform() {
+    val android = FakeAndroidBackDispatcher()
+    val gate = BackGate(android, open = true)
+    android.betweenReadAndListen = { gate.open = false }
+
+    gate.addCallback(GuestBackHandler("guest", enabled = true, android.received))
+    android.back()
+
+    assertThat(android.registered.single().isEnabled).isFalse()
+    assertThat(android.received).containsExactly("activity")
+  }
+
+  /** The guest enables its handler in the same window (its own `BackHandler(enabled)` changing). */
+  @Test
+  fun aGuestChangeWhileTheWrapperRegistersTheCallbackStillReachesThePlatform() {
+    val android = FakeAndroidBackDispatcher()
+    val gate = BackGate(android, open = true)
+    val guest = GuestBackHandler("guest", enabled = false, android.received)
+    android.betweenReadAndListen = { guest.isEnabled = true }
+
+    gate.addCallback(guest)
+    android.back()
+
+    assertThat(android.registered.single().isEnabled).isTrue()
+    assertThat(android.received).containsExactly("guest")
+  }
+
+  /** As above, with real threads: the guest registers and toggles while the UI thread flips the gate. */
+  @Test
+  fun theWrappersCallbacksAgreeWithTheGateAndTheGuestsWhileTheyRegister() {
+    repeat(200) { round ->
+      val android = FakeAndroidBackDispatcher()
+      val gate = BackGate(android, open = round % 2 == 0)
+      android.betweenReadAndListen = { Thread.yield() }
+      val guests = List(20) { GuestBackHandler("guest $it", enabled = (round + it) % 3 == 0, android.received) }
+      val zipline = thread {
+        for (guest in guests) {
+          gate.addCallback(guest)
+          guest.isEnabled = !guest.isEnabled
+        }
+      }
+      val ui = thread { repeat(200) { gate.open = !gate.open } }
+      zipline.join()
+      ui.join()
+      // One thread registered them, in order: the platform holds them in the same order.
+      assertThat(android.registered.size).isEqualTo(guests.size)
+      for ((platformCallback, guest) in android.registered.zip(guests)) {
+        assertThat(platformCallback.isEnabled, "round $round, ${guest.name}").isEqualTo(gate.open && guest.isEnabled)
+      }
+    }
+  }
+
   /** Treehouse changes a guest's callbacks on its Zipline thread while the UI thread opens the gate. */
   @Test
   fun theLastWriteAgreesWithTheGateAndTheGuestAcrossThreads() {
