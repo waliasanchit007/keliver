@@ -5,6 +5,7 @@
 package dev.keliver.sample.threeway
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,7 +76,10 @@ internal object RevealThreewayStack : ThreewayStack {
           prepared -> R1Keys.PREPARED
           else -> R1Keys.PARKED
         }
-        ExtraRetainedEntry(key = key, hostBack = false, modifier = Fill) { content(item) }
+        // A hidden detail does not report `composed` (LocalDetailHidden): only the shown one does.
+        ExtraRetainedEntry(key = key, hostBack = false, modifier = Fill) {
+          CompositionLocalProvider(LocalDetailHidden provides (shown == null)) { content(item) }
+        }
       }
     }
   }

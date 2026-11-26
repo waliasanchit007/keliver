@@ -7,6 +7,7 @@ package dev.keliver.sample.threeway
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,6 +92,14 @@ interface ThreewayStack {
 
 /** The list's key in a [ThreewayStack] (a detail's key is its [Item]). */
 private object ListKey
+
+/**
+ * NF5 R1 (`r1prep`): true inside a detail that a stack keeps composed and hidden ahead of its open.
+ * Such a detail does not report `composed`: the guest host keeps one report per change batch, the
+ * last, so a hidden detail recomposed in a back's batch would hide the list's report. Dynamic, so a
+ * change recomposes only the detail's reader, never the whole detail.
+ */
+val LocalDetailHidden = compositionLocalOf { false }
 
 /**
  * The app: the list (loads 20 items at start), the two reload actions (20 or 1,000 items, each a
@@ -282,8 +291,9 @@ private fun StatusChip(status: String) {
 
 @Composable
 private fun DetailScreen(item: Item, nav: Int, marks: ThreewayMarks, onBack: () -> Unit) {
+  val hidden = LocalDetailHidden.current
   DisposableEffect(item.id, nav) {
-    marks.composed("detail", NAV_BASE + nav)
+    if (!hidden) marks.composed("detail", NAV_BASE + nav)
     onDispose {}
   }
   Header(item.title, onBack = onBack)
@@ -308,8 +318,9 @@ private fun DetailScreen(item: Item, nav: Int, marks: ThreewayMarks, onBack: () 
  */
 @Composable
 private fun HeavyDetailScreen(item: Item, nav: Int, marks: ThreewayMarks, onBack: () -> Unit) {
+  val hidden = LocalDetailHidden.current
   DisposableEffect(item.id, nav) {
-    marks.composed("detail", NAV_BASE + nav)
+    if (!hidden) marks.composed("detail", NAV_BASE + nav)
     onDispose {}
   }
   Header(item.title, onBack = onBack)
