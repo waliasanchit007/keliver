@@ -1,0 +1,30 @@
+// The product's generated core group (docs/MS4_PLAN.md, MS4-01): its Redwood schema. Group `core` is
+// Compose's foundation-layout, foundation, ui, material3 and animation packages plus Keliver's extras.
+// src/main/kotlin/…/Generated.kt and core.editor.json are written by
+// :keliver-compose-generator:generateComposeApi (from core.json and core.lock.json); Extras.kt is
+// hand-written. Unlike the prototype's, the group has no legacy schema dependency.
+import static dev.keliver.buildsupport.TargetGroup.Tooling
+
+redwoodBuild {
+  targets(Tooling)
+  publishing()
+}
+
+apply plugin: 'dev.keliver.schema'
+
+dependencies {
+  api projects.keliverComposeValues
+}
+
+redwoodSchema {
+  type = 'dev.keliver.compose.core.KeliverComposeCore'
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

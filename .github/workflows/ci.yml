@@ -142,8 +142,9 @@ jobs:
           :portal-schema-codegen:checkPortalCode
           -DRELEASE_SIGNING_ENABLED=false
 
-      # Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md): the generated group's checked-in
-      # sources and lock must match a fresh generation from Compose, and the lock may only grow.
+      # The generated groups (docs/COMPOSE_GENERATOR_DESIGN.md): the product's root and core group
+      # (docs/MS4_PLAN.md, MS4-01) and the Gate A/B prototype beside them. Each group's checked-in
+      # sources and lock must match a fresh generation from Compose, and each lock may only grow.
       # Regenerate with `./gradlew :keliver-compose-generator:generateComposeApi` and commit.
       # portal-compose-render is the ED0 spike's canvas (docs/ED0_SPIKE.md): its golden document
       # is what portal-ingest reads from Gate A's sample, so an ingest change that moves it fails here.
@@ -154,6 +155,8 @@ jobs:
           :keliver-compose-generator:test
           :keliver-compose-values:jvmTest
           :keliver-compose-values:jsTest
+          :keliver-compose-core-compose:jvmTest
+          :keliver-compose-core-composeui:jvmTest
           :keliver-compose-gatea-compose:jvmTest
           :keliver-compose-gatea-composeui:jvmTest
           :portal-compose-render:jvmTest
@@ -269,7 +272,8 @@ jobs:
       # the first guest-to-host round trip through it (B5b).
       # keliver-compose-gatea-composeui's iOS test is Gate B part c's same-source pixel test
       # (SameSourceTest, shared with its jvmTest): native Compose against the generated guest
-      # through the real protocol, 0 differing pixels, on the simulator.
+      # through the real protocol, 0 differing pixels, on the simulator. keliver-compose-core-composeui
+      # runs the product's copy (MS4-01); the prototype's goes with the prototype (MS4-40).
       # keliver-http-fixtures (the HTTP fixture matcher) has no Android target, so no `test`
       # task: it and the debug replay provider built on it (item 5, S2) run here, by name, on
       # every target they have. List them once; the JS and wasm step below leaves them out.
@@ -302,6 +306,7 @@ jobs:
           :keliver-http-replay-debug:jsTest
           :keliver-http-replay-debug:iosSimulatorArm64Test
           :keliver-compose-gatea-composeui:iosSimulatorArm64Test
+          :keliver-compose-core-composeui:iosSimulatorArm64Test
           :keliver-image:iosSimulatorArm64Test
           -DRELEASE_SIGNING_ENABLED=false
 
@@ -315,6 +320,7 @@ jobs:
           ./gradlew --continue
           :keliver-bridge-annotations:jsTest :keliver-bridge-fixture:jsTest
           :keliver-bridge-fixture-guest:jsTest :keliver-capabilities:jsTest :keliver-compose:jsTest
+          :keliver-compose-core-compose:jsTest
           :keliver-composeui:jsTest :keliver-console:jsTest :keliver-guest:jsTest :keliver-http:jsTest
           :keliver-http-annotations:jsTest :keliver-layout-api:jsTest :keliver-layout-compose:jsTest
           :keliver-layout-composeui:jsTest :keliver-layout-modifiers:jsTest
@@ -336,6 +342,7 @@ jobs:
           :portal-core:jsTest :portal-device-guest:jsTest
           :portal-flow:jsTest :portal-published-guest:jsTest :portal-sql:jsTest :portal-sql-spike:jsTest
           :portal-app-lib:jsTest
+          :keliver-compose-core-compose:wasmJsTest
           :keliver-capabilities:wasmJsTest :keliver-compose:wasmJsTest :keliver-composeui:wasmJsTest
           :keliver-layout-api:wasmJsTest :keliver-layout-compose:wasmJsTest
           :keliver-layout-composeui:wasmJsTest :keliver-layout-modifiers:wasmJsTest

@@ -1,0 +1,27 @@
+// The product's generated root (docs/MS4_PLAN.md, MS4-01): its widget system, which takes one factory
+// per generated group.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common + WasmJs.Browser) // wasmJs: the editor canvas (ED0)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeCoreWidget
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeRootSchema
+  type = 'dev.keliver.compose.root.KeliverCompose'
+}

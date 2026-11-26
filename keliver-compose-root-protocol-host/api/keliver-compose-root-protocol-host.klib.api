@@ -1,0 +1,21 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-root-protocol-host>
+final class dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol : dev.keliver.protocol.host/GeneratedHostProtocol { // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol|null[0]
+    final val json // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.json.<get-json>|<get-json>(){}[0]
+    final val mismatchHandler // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.mismatchHandler|{}mismatchHandler[0]
+        final fun <get-mismatchHandler>(): dev.keliver.protocol.host/ProtocolMismatchHandler // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.mismatchHandler.<get-mismatchHandler>|<get-mismatchHandler>(){}[0]
+
+    final fun createModifier(dev.keliver.protocol/ModifierElement): dev.keliver/Modifier // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.createModifier|createModifier(dev.keliver.protocol.ModifierElement){}[0]
+    final fun widget(dev.keliver.protocol/WidgetTag): dev.keliver.protocol.host/WidgetHostProtocol? // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.widget|widget(dev.keliver.protocol.WidgetTag){}[0]
+
+    final object Factory : dev.keliver.protocol.host/HostProtocol.Factory { // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.Factory|null[0]
+        final fun create(kotlinx.serialization.json/Json, dev.keliver.protocol.host/ProtocolMismatchHandler): dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol // dev.keliver.compose.root.protocol.host/KeliverComposeHostProtocol.Factory.create|create(kotlinx.serialization.json.Json;dev.keliver.protocol.host.ProtocolMismatchHandler){}[0]
+    }
+}

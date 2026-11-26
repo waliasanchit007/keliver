@@ -1,16 +1,15 @@
-// Gate A prototype (docs/COMPOSE_GENERATOR_DESIGN.md §4, §6): the guest's mirrors of Compose's value
-// types (Dp, Color, Shape, TextStyle, Alignment, …) with their wire codecs, written by hand once, and
-// (GeneratedDefaults.kt, Gate B) the `*Defaults` objects and factory-made types the generator mirrors.
-// Published only with -PkeliverComposePrototype (never by a normal release).
+// The guest's mirrors of Compose's value types (docs/COMPOSE_GENERATOR_DESIGN.md §4, §6: Dp, Color,
+// Shape, TextStyle, Alignment, …) with their wire codecs, written by hand once, and (GeneratedDefaults.kt)
+// the `*Defaults` objects and factory-made types the generator mirrors. Shared by the product's
+// generated groups and the prototype; written by the product's core group (MS4-01), whose lock owns the
+// factory tags. Published (Q15: the name stays dev.keliver:keliver-compose-values).
 import dev.keliver.buildsupport.WasmJs
 import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   // wasmJs: the editor's canvas (ED0 spike, docs/ED0_SPIKE.md) decodes values with these codecs.
   targets(Common + WasmJs.Browser)
-  // Prototype only (no API dump, no explicitApi history): local Maven at most. NEVER pass
-  // -PkeliverComposePrototype to the Central publish workflow (publish-maven-central.yml).
-  if (rootProject.hasProperty('keliverComposePrototype')) publishing()
+  publishing()
 }
 
 apply plugin: 'org.jetbrains.kotlin.multiplatform'

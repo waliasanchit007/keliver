@@ -1,0 +1,393 @@
+public abstract interface class dev/keliver/compose/core/widget/ExtraLazyItem : dev/keliver/widget/Widget {
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun key (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/ExtraRetained : dev/keliver/widget/Widget {
+	public abstract fun backHandled (I)V
+	public abstract fun getEntries ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun onBack (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/ExtraRetainedEntry : dev/keliver/widget/Widget {
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun hostBack (Z)V
+	public abstract fun key (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/ExtraShimmer : dev/keliver/widget/Widget {
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenAnimatedVisibility1 : dev/keliver/widget/Widget {
+	public abstract fun enter (Ldev/keliver/compose/animation/EnterTransition;)V
+	public abstract fun exit (Ldev/keliver/compose/animation/ExitTransition;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun visible (Z)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenAsyncImage1 : dev/keliver/widget/Widget {
+	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
+	public abstract fun alpha (Ljava/lang/Float;)V
+	public abstract fun clipToBounds (Z)V
+	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
+	public abstract fun filterQuality-8lTfoU4 (Ldev/keliver/compose/ui/graphics/FilterQuality;)V
+	public abstract fun model (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenAsyncImage2 : dev/keliver/widget/Widget {
+	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
+	public abstract fun alpha (Ljava/lang/Float;)V
+	public abstract fun clipToBounds (Z)V
+	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
+	public abstract fun error (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
+	public abstract fun filterQuality-8lTfoU4 (Ldev/keliver/compose/ui/graphics/FilterQuality;)V
+	public abstract fun model (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun placeholder (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenBox1 : dev/keliver/widget/Widget {
+	public abstract fun contentAlignment (Ldev/keliver/compose/ui/Alignment;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun propagateMinConstraints (Z)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenBox2 : dev/keliver/widget/Widget {
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenButton1 : dev/keliver/widget/Widget {
+	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
+	public abstract fun colors (Ldev/keliver/compose/material3/ButtonColors;)V
+	public abstract fun contentPadding (Ldev/keliver/compose/foundation/layout/PaddingValues;)V
+	public abstract fun elevation (Ldev/keliver/compose/material3/ButtonElevation;)V
+	public abstract fun enabled (Z)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenCard1 : dev/keliver/widget/Widget {
+	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
+	public abstract fun colors (Ldev/keliver/compose/material3/CardColors;)V
+	public abstract fun elevation (Ldev/keliver/compose/material3/CardElevation;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenCard2 : dev/keliver/widget/Widget {
+	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
+	public abstract fun colors (Ldev/keliver/compose/material3/CardColors;)V
+	public abstract fun elevation (Ldev/keliver/compose/material3/CardElevation;)V
+	public abstract fun enabled (Z)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenColumn1 : dev/keliver/widget/Widget {
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun horizontalAlignment (Ldev/keliver/compose/ui/Alignment$Horizontal;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun verticalArrangement (Ldev/keliver/compose/foundation/layout/Arrangement$Vertical;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenColumnScopeAnimatedVisibility1 : dev/keliver/widget/Widget {
+	public abstract fun enter (Ldev/keliver/compose/animation/EnterTransition;)V
+	public abstract fun exit (Ldev/keliver/compose/animation/ExitTransition;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun visible (Z)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenFlowRow1 : dev/keliver/widget/Widget {
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun horizontalArrangement (Ldev/keliver/compose/foundation/layout/Arrangement$Horizontal;)V
+	public abstract fun itemVerticalAlignment (Ldev/keliver/compose/ui/Alignment$Vertical;)V
+	public abstract fun maxItemsInEachRow (I)V
+	public abstract fun maxLines (I)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun verticalArrangement (Ldev/keliver/compose/foundation/layout/Arrangement$Vertical;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenHorizontalDivider1 : dev/keliver/widget/Widget {
+	public abstract fun color-v9PK9Ao (Ldev/keliver/compose/ui/graphics/Color;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun thickness-WSn74bM (Ldev/keliver/compose/ui/unit/Dp;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenIcon1 : dev/keliver/widget/Widget {
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun imageVector (Ldev/keliver/compose/ui/graphics/vector/ImageVector;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun tint-v9PK9Ao (Ldev/keliver/compose/ui/graphics/Color;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenIcon2 : dev/keliver/widget/Widget {
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun painter (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
+	public abstract fun tint-v9PK9Ao (Ldev/keliver/compose/ui/graphics/Color;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenIconButton1 : dev/keliver/widget/Widget {
+	public abstract fun colors (Ldev/keliver/compose/material3/IconButtonColors;)V
+	public abstract fun enabled (Z)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenImage1 : dev/keliver/widget/Widget {
+	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
+	public abstract fun alpha (Ljava/lang/Float;)V
+	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun painter (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenImage2 : dev/keliver/widget/Widget {
+	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
+	public abstract fun alpha (Ljava/lang/Float;)V
+	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
+	public abstract fun imageVector (Ldev/keliver/compose/ui/graphics/vector/ImageVector;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenLazyColumn1 : dev/keliver/widget/Widget {
+	public abstract fun contentAfter (I)V
+	public abstract fun contentBefore (I)V
+	public abstract fun contentPadding (Ldev/keliver/compose/foundation/layout/PaddingValues;)V
+	public abstract fun contentViewport (Lkotlin/jvm/functions/Function3;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun horizontalAlignment (Ldev/keliver/compose/ui/Alignment$Horizontal;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun reverseLayout (Z)V
+	public abstract fun state (Ldev/keliver/compose/foundation/lazy/LazyListStateWire;)V
+	public abstract fun userScrollEnabled (Z)V
+	public abstract fun verticalArrangement (Ldev/keliver/compose/foundation/layout/Arrangement$Vertical;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenLazyRow1 : dev/keliver/widget/Widget {
+	public abstract fun contentAfter (I)V
+	public abstract fun contentBefore (I)V
+	public abstract fun contentPadding (Ldev/keliver/compose/foundation/layout/PaddingValues;)V
+	public abstract fun contentViewport (Lkotlin/jvm/functions/Function3;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun horizontalArrangement (Ldev/keliver/compose/foundation/layout/Arrangement$Horizontal;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun reverseLayout (Z)V
+	public abstract fun state (Ldev/keliver/compose/foundation/lazy/LazyListStateWire;)V
+	public abstract fun userScrollEnabled (Z)V
+	public abstract fun verticalAlignment (Ldev/keliver/compose/ui/Alignment$Vertical;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenOutlinedButton1 : dev/keliver/widget/Widget {
+	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
+	public abstract fun colors (Ldev/keliver/compose/material3/ButtonColors;)V
+	public abstract fun contentPadding (Ldev/keliver/compose/foundation/layout/PaddingValues;)V
+	public abstract fun elevation (Ldev/keliver/compose/material3/ButtonElevation;)V
+	public abstract fun enabled (Z)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenRow1 : dev/keliver/widget/Widget {
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun horizontalArrangement (Ldev/keliver/compose/foundation/layout/Arrangement$Horizontal;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun verticalAlignment (Ldev/keliver/compose/ui/Alignment$Vertical;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenRowScopeAnimatedVisibility1 : dev/keliver/widget/Widget {
+	public abstract fun enter (Ldev/keliver/compose/animation/EnterTransition;)V
+	public abstract fun exit (Ldev/keliver/compose/animation/ExitTransition;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun visible (Z)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenSpacer1 : dev/keliver/widget/Widget {
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenSurface1 : dev/keliver/widget/Widget {
+	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
+	public abstract fun color-v9PK9Ao (Ldev/keliver/compose/ui/graphics/Color;)V
+	public abstract fun contentColor-v9PK9Ao (Ldev/keliver/compose/ui/graphics/Color;)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun shadowElevation-Gh-9aM4 (F)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+	public abstract fun tonalElevation-Gh-9aM4 (F)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenSurface2 : dev/keliver/widget/Widget {
+	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
+	public abstract fun color-v9PK9Ao (Ldev/keliver/compose/ui/graphics/Color;)V
+	public abstract fun contentColor-v9PK9Ao (Ldev/keliver/compose/ui/graphics/Color;)V
+	public abstract fun enabled (Z)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun shadowElevation-Gh-9aM4 (F)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+	public abstract fun tonalElevation-Gh-9aM4 (F)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenText1 : dev/keliver/widget/Widget {
+	public abstract fun color-s8iZJM4 (J)V
+	public abstract fun fontFamily (Ldev/keliver/compose/ui/text/font/FontFamily;)V
+	public abstract fun fontSize-P9ZER6I (J)V
+	public abstract fun fontStyle-pfpqKb4 (Ldev/keliver/compose/ui/text/font/FontStyle;)V
+	public abstract fun fontWeight (Ldev/keliver/compose/ui/text/font/FontWeight;)V
+	public abstract fun letterSpacing-P9ZER6I (J)V
+	public abstract fun lineHeight-P9ZER6I (J)V
+	public abstract fun maxLines (I)V
+	public abstract fun minLines (I)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun overflow-Q4kaCsI (I)V
+	public abstract fun softWrap (Z)V
+	public abstract fun style (Ldev/keliver/compose/ui/text/TextStyle;)V
+	public abstract fun text (Ljava/lang/String;)V
+	public abstract fun textAlign-9IWnRnw (Ldev/keliver/compose/ui/text/style/TextAlign;)V
+	public abstract fun textDecoration (Ldev/keliver/compose/ui/text/style/TextDecoration;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenText2 : dev/keliver/widget/Widget {
+	public abstract fun color-s8iZJM4 (J)V
+	public abstract fun fontFamily (Ldev/keliver/compose/ui/text/font/FontFamily;)V
+	public abstract fun fontSize-P9ZER6I (J)V
+	public abstract fun fontStyle-pfpqKb4 (Ldev/keliver/compose/ui/text/font/FontStyle;)V
+	public abstract fun fontWeight (Ldev/keliver/compose/ui/text/font/FontWeight;)V
+	public abstract fun letterSpacing-P9ZER6I (J)V
+	public abstract fun lineHeight-P9ZER6I (J)V
+	public abstract fun maxLines (I)V
+	public abstract fun minLines (I)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun overflow-Q4kaCsI (I)V
+	public abstract fun softWrap (Z)V
+	public abstract fun style (Ldev/keliver/compose/ui/text/TextStyle;)V
+	public abstract fun text (Ljava/lang/String;)V
+	public abstract fun textAlign-9IWnRnw (Ldev/keliver/compose/ui/text/style/TextAlign;)V
+	public abstract fun textDecoration (Ldev/keliver/compose/ui/text/style/TextDecoration;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenTextButton1 : dev/keliver/widget/Widget {
+	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
+	public abstract fun colors (Ldev/keliver/compose/material3/ButtonColors;)V
+	public abstract fun contentPadding (Ldev/keliver/compose/foundation/layout/PaddingValues;)V
+	public abstract fun elevation (Ldev/keliver/compose/material3/ButtonElevation;)V
+	public abstract fun enabled (Z)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun shape (Ldev/keliver/compose/ui/graphics/Shape;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/GenTopAppBar1 : dev/keliver/widget/Widget {
+	public abstract fun colors (Ldev/keliver/compose/material3/TopAppBarColors;)V
+	public abstract fun expandedHeight-WSn74bM (Ldev/keliver/compose/ui/unit/Dp;)V
+	public abstract fun getActions ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun getNavigationIcon ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun getTitle ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory {
+	public abstract fun ExtraAnimated (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/ExtraAnimated;)V
+	public abstract fun ExtraLazyItem ()Ldev/keliver/compose/core/widget/ExtraLazyItem;
+	public abstract fun ExtraPress (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/ExtraPress;)V
+	public abstract fun ExtraRetained ()Ldev/keliver/compose/core/widget/ExtraRetained;
+	public abstract fun ExtraRetainedEntry ()Ldev/keliver/compose/core/widget/ExtraRetainedEntry;
+	public abstract fun ExtraShimmer ()Ldev/keliver/compose/core/widget/ExtraShimmer;
+	public abstract fun GenAlpha1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenAlpha1;)V
+	public abstract fun GenAnimateContentSize1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenAnimateContentSize1;)V
+	public abstract fun GenAnimateContentSize2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenAnimateContentSize2;)V
+	public abstract fun GenAnimatedVisibility1 ()Ldev/keliver/compose/core/widget/GenAnimatedVisibility1;
+	public abstract fun GenAsyncImage1 ()Ldev/keliver/compose/core/widget/GenAsyncImage1;
+	public abstract fun GenAsyncImage2 ()Ldev/keliver/compose/core/widget/GenAsyncImage2;
+	public abstract fun GenBackground1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBackground1;)V
+	public abstract fun GenBorder1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBorder1;)V
+	public abstract fun GenBorder2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBorder2;)V
+	public abstract fun GenBox1 ()Ldev/keliver/compose/core/widget/GenBox1;
+	public abstract fun GenBox2 ()Ldev/keliver/compose/core/widget/GenBox2;
+	public abstract fun GenButton1 ()Ldev/keliver/compose/core/widget/GenButton1;
+	public abstract fun GenCard1 ()Ldev/keliver/compose/core/widget/GenCard1;
+	public abstract fun GenCard2 ()Ldev/keliver/compose/core/widget/GenCard2;
+	public abstract fun GenClickable1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClickable1;)V
+	public abstract fun GenClickable2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClickable2;)V
+	public abstract fun GenClip1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClip1;)V
+	public abstract fun GenColumn1 ()Ldev/keliver/compose/core/widget/GenColumn1;
+	public abstract fun GenColumnScopeAnimatedVisibility1 ()Ldev/keliver/compose/core/widget/GenColumnScopeAnimatedVisibility1;
+	public abstract fun GenFillMaxHeight1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenFillMaxHeight1;)V
+	public abstract fun GenFillMaxSize1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenFillMaxSize1;)V
+	public abstract fun GenFillMaxWidth1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenFillMaxWidth1;)V
+	public abstract fun GenFlowRow1 ()Ldev/keliver/compose/core/widget/GenFlowRow1;
+	public abstract fun GenHeight1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenHeight1;)V
+	public abstract fun GenHorizontalDivider1 ()Ldev/keliver/compose/core/widget/GenHorizontalDivider1;
+	public abstract fun GenHorizontalScroll1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenHorizontalScroll1;)V
+	public abstract fun GenIcon1 ()Ldev/keliver/compose/core/widget/GenIcon1;
+	public abstract fun GenIcon2 ()Ldev/keliver/compose/core/widget/GenIcon2;
+	public abstract fun GenIconButton1 ()Ldev/keliver/compose/core/widget/GenIconButton1;
+	public abstract fun GenImage1 ()Ldev/keliver/compose/core/widget/GenImage1;
+	public abstract fun GenImage2 ()Ldev/keliver/compose/core/widget/GenImage2;
+	public abstract fun GenLazyColumn1 ()Ldev/keliver/compose/core/widget/GenLazyColumn1;
+	public abstract fun GenLazyRow1 ()Ldev/keliver/compose/core/widget/GenLazyRow1;
+	public abstract fun GenOffset1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenOffset1;)V
+	public abstract fun GenOutlinedButton1 ()Ldev/keliver/compose/core/widget/GenOutlinedButton1;
+	public abstract fun GenPadding1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenPadding1;)V
+	public abstract fun GenPadding2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenPadding2;)V
+	public abstract fun GenPadding3 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenPadding3;)V
+	public abstract fun GenPadding4 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenPadding4;)V
+	public abstract fun GenRotate1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenRotate1;)V
+	public abstract fun GenRow1 ()Ldev/keliver/compose/core/widget/GenRow1;
+	public abstract fun GenRowScopeAnimatedVisibility1 ()Ldev/keliver/compose/core/widget/GenRowScopeAnimatedVisibility1;
+	public abstract fun GenScale1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenScale1;)V
+	public abstract fun GenShadow1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenShadow1;)V
+	public abstract fun GenSize1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenSize1;)V
+	public abstract fun GenSize2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenSize2;)V
+	public abstract fun GenSpacer1 ()Ldev/keliver/compose/core/widget/GenSpacer1;
+	public abstract fun GenSurface1 ()Ldev/keliver/compose/core/widget/GenSurface1;
+	public abstract fun GenSurface2 ()Ldev/keliver/compose/core/widget/GenSurface2;
+	public abstract fun GenText1 ()Ldev/keliver/compose/core/widget/GenText1;
+	public abstract fun GenText2 ()Ldev/keliver/compose/core/widget/GenText2;
+	public abstract fun GenTextButton1 ()Ldev/keliver/compose/core/widget/GenTextButton1;
+	public abstract fun GenTopAppBar1 ()Ldev/keliver/compose/core/widget/GenTopAppBar1;
+	public abstract fun GenVerticalScroll1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V
+	public abstract fun GenWidth1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenWidth1;)V
+}
+
+public final class dev/keliver/compose/core/widget/KeliverComposeCoreWidgetSystem : dev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
+	public static final field Companion Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetSystem$Companion;
+	public fun <init> (Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;)V
+	public fun apply (Ljava/lang/Object;Ldev/keliver/Modifier$UnscopedElement;)V
+	public fun getKeliverComposeCore ()Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;
+}
+
+public final class dev/keliver/compose/core/widget/KeliverComposeCoreWidgetSystem$Companion {
+	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+

@@ -1,0 +1,28 @@
+// The product's generated core group (docs/MS4_PLAN.md, MS4-01): the host widget interfaces, from the
+// schema by keliver-tooling-codegen.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common + WasmJs.Browser) // wasmJs: the editor canvas (ED0)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeValues
+        api projects.keliverComposeCoreModifiers
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeCoreSchema
+  type = 'dev.keliver.compose.core.KeliverComposeCore'
+}
