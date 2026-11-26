@@ -3909,9 +3909,13 @@ dry run did not.
      The 3 opens with a usable row agree with q2 within 2.6 ms.
    - **The other arms.** In 5 of simple-on's 12 opens the next vsync drew too, adding 12–15 ms to
      each (median 172.1 against 169.6); in 1 of heavy-on's, 17.5 ms. Simple-off has no row at all
-     for 4 opens, and the supplement does not work there: in 4 of its opens 3–14 no `DrawFrames` of
-     2 ms or more follows before the next tap. Its frame-end columns (h to total) are not reliable; its guest columns
-     (a to d, W) are.
+     for 4 opens, and the supplement does not work there: in 4 of its opens 3–14 (5, 7, 8 and 10)
+     it read a `DrawFrames` 754–758 ms after the frame, after the next tap. Its frame-end columns (h to total) are not reliable; its guest columns
+     (a to d, W) are. *Corrected 2026-11-26 (NF5 R1's review, checked on the kept trace):* the cause is
+     the rule, not a missing draw. In those 4 opens the `DrawFrames` after the frame took 0.4–0.7 ms
+     and queued nothing, and every buffer of the next 60 ms was queued by the RenderThread's own
+     animation frames (`dispatchFrameCallbacks`, 5.5–8.4 ms, no `DrawFrames`), which the rule never
+     reads. NF5 R1's `q_drew` reads them ([`nf5-r1/measure.sql`](nf5-r1/measure.sql)).
 
 **The rule, applied to `simple-on-idle`.**
 - **Count.** 12 of 12 opens were idle at the UP (206.9–223.9 ms after the last guest call), which
@@ -4245,6 +4249,13 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #                            guest's GateAPress provided: a touch-down on a row composes its detail
 #   --ei hold 100            taps hold the finger down 100 ms without blocking the main thread, and the
 #                            series' times are from the DOWN (the press series; see "A12 checkpoint")
+#   -e x r1prep              guest (NF5 R1, docs/nf5-r1/): the list and detail in the host's retained
+#                            container; the next open's detail is composed and hidden 300 ms after a back
+#   -e x r1prep,reveal       the same; the host shows the hidden detail on the click, before the guest
+#                            runs (the reveal; its marks: revealed, revealDrawn, revealRecorded, revealLive)
+#   -e x r1prep,reveal,idlemeasure   the same; the hidden detail is measured whenever it changes, while idle
+#   -e x trace               also: the driver's own sections, `bench:up <step> <i>` at each UP and
+#                            `bench:drawn <screen> <seq>` in the draw the bench takes as `drawn`
 # Every process logs one {"cold":"<form>",...} line when the list's data is first drawn: its marks in ms
 # from the process start (see "Cold start (NF0)"), logged as the data frame's main-thread work ends
 # (its `dataFrameEnd` mark; `drawn`/`dataDrawn` fire as that frame starts drawing: see "NF4: composed to drawn").
