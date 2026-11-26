@@ -38,6 +38,15 @@ internal class IosTreehousePlatform : TreehousePlatform {
 
   override fun newDispatchers(applicationName: String): TreehouseDispatchers =
     IosTreehouseDispatchers(applicationName)
+
+  /**
+   * Standard output, as Zipline's own lines on iOS: a simulator's console (`xcrun simctl launch
+   * --console-pty`) and Xcode show it. Not `NSLog("%@", line)`, which crashes with a Kotlin string
+   * argument (sample/TESTING.md, iOS-#3).
+   */
+  override fun logDebug(line: String) {
+    println(line)
+  }
 }
 
 /**

@@ -21,6 +21,16 @@
 # reads it on each publish; the W8 rows (ci/w8/) also write both disposable
 # private keys into one owner-only signing key file under <work-dir>/w8, as a CI
 # secret holds them during a rotation, never into the evidence directory.
+#
+# Routes (route.txt and the ROUTE line of prepare.results name the one taken): the scaffolders are
+# the tools zip's (KELIVER_SCAFFOLD_FROM=zip, published-only) or this checkout's (repo,
+# repo-scaffold), and the libraries come from Maven Central at the app's own version. With
+# KELIVER_LOCAL_MAVEN set (local-maven, ci/local-maven/route.sh), the libraries are THIS checkout's,
+# published by ci/local-maven/publish.sh into that repository: the app moves to their version and
+# line, and its guest and production host build against them; the publish wiring and the relay are
+# this checkout's too (the 0.3.18 zip's predate the fork's line). That route runs sections 1-5 (the
+# app, the relay, D1, a signed v1 and the production host); the rows after them stay on the other
+# two routes for now, and are listed as SKIP.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -34,11 +44,35 @@ WORK="$(cd "$WORK" && pwd -P)"; EV="$(cd "$EV" && pwd -P)"
 pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); echo "PASS $1" >> "$EV/prepare.results"; }
 bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); echo "FAIL $1" >> "$EV/prepare.results"; }
+# Not run on this route, and why; never counted as a pass.
+skip(){ printf '  SKIP  %s\n' "$1"; echo "SKIP $1" >> "$EV/prepare.results"; }
 sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 : > "$EV/prepare.results"
 
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
+
+# The route: whose scaffolders, and whose libraries (see the header).
+LIBRARIES=central
+if [ -n "${KELIVER_LOCAL_MAVEN:-}" ]; then
+  # shellcheck source=local-maven/route.sh
+  . "$HERE/local-maven/route.sh"
+  lm_load || { bad "local-maven: $LM_ERROR"; exit 1; }
+  [ "${KELIVER_SCAFFOLD_FROM:-zip}" = repo ] \
+    || { bad "local-maven: the route scaffolds with this checkout's scripts/ (KELIVER_SCAFFOLD_FROM=repo), not ${KELIVER_SCAFFOLD_FROM:-zip}"; exit 1; }
+  out="$(bash "$HERE/local-maven/route-test.sh" 2>&1)" && ok "harness: $out" || { bad "harness: $out"; exit 1; }
+  LIBRARIES=local-maven
+  ROUTE="$(lm_route_label)"
+  LIBS_FROM="the local repository's $KELIVER_LOCAL_VERSION"
+else
+  case "${KELIVER_SCAFFOLD_FROM:-zip}" in
+    repo) ROUTE="repo-scaffold: this checkout's scripts/; the libraries from Maven Central, at the app's version" ;;
+    *)    ROUTE="published-only: the tools zip's scaffolders; the libraries from Maven Central, at the app's version" ;;
+  esac
+  LIBS_FROM="Maven Central"
+fi
+echo "ROUTE $ROUTE" >> "$EV/prepare.results"; echo "$ROUTE" > "$EV/route.txt"
+echo "==> route: $ROUTE"
 
 # W7: the device the hosts are built for. emulator (the default; CI): it reaches
 # this machine as 10.0.2.2, and ci/w3/android-ca.sh puts the throwaway CA in its
@@ -83,7 +117,32 @@ APP="$WORK/boot/inventory"
 export KP="$(ls -d "$WORK"/boot/tools/keliver-portal-tools-*/bin)"
 cp "$APP/hand-edits.diff" "$EV/hand-edits.diff"
 echo "APP=$APP" > "$WORK/env"; echo "KP=$KP" >> "$WORK/env"
-{ echo "DEVICE_KIND=$DEVICE_KIND"; echo "HOST_ADDR=$HOST_ADDR"; echo "RELAY_PORT=$RELAY_PORT"; } >> "$WORK/env"
+{ echo "DEVICE_KIND=$DEVICE_KIND"; echo "HOST_ADDR=$HOST_ADDR"; echo "RELAY_PORT=$RELAY_PORT"; echo "LIBRARIES=$LIBRARIES"; } >> "$WORK/env"
+# local-maven: the app moves onto this checkout's libraries, committed so the D2 edit below still
+# changes exactly one tracked file. local-maven-app.diff is that move.
+if [ "$LIBRARIES" = local-maven ]; then
+  if lm_move_app "$APP"; then
+    ( cd "$APP" && git diff > "$EV/local-maven-app.diff" \
+        && git add keliver.portal.json settings.gradle build.gradle gradle/wrapper/gradle-wrapper.properties \
+        && git -c user.name=prepare -c user.email=prepare@invalid commit -qm "local-maven: Keliver $KELIVER_LOCAL_VERSION" ) \
+      && ok "local-maven: the app is on Keliver $KELIVER_LOCAL_VERSION (the $KELIVER_LINE line: Kotlin $TOOLCHAIN_KOTLIN, $ZIPLINE_GROUP $TOOLCHAIN_ZIPLINE, Gradle $TOOLCHAIN_GRADLE), dev.keliver only from $KELIVER_LOCAL_MAVEN (local-maven-app.diff)" \
+      || { bad "local-maven: the moved app could not be committed"; exit 1; }
+  else
+    bad "local-maven: the app could not be moved onto Keliver $KELIVER_LOCAL_VERSION: $LM_ERROR"; exit 1
+  fi
+  echo "LOCAL_VERSION=$KELIVER_LOCAL_VERSION" >> "$WORK/env"
+fi
+# The relay: the zip's, or on the local-maven route this checkout's (lm_relay_kit: the published
+# one writes no engine into its index, and a host on the fork's line would load nothing).
+PORTAL="$KP/keliver-portal"
+if [ "$LIBRARIES" = local-maven ]; then
+  lm_relay_kit "$WORK/relay-kit" "$EV/local-maven-relay-build.log" \
+    && PORTAL="$WORK/relay-kit/bin/keliver-portal" \
+    && ok "local-maven: the relay is this checkout's (keliver-portal and portal-relay), which names each bundle's engine in its index" \
+    || { bad "local-maven: $LM_ERROR"; tail -20 "$EV/local-maven-relay-build.log"; exit 1; }
+fi
+echo "PORTAL=$PORTAL" >> "$WORK/env"
+APP_KV="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"])' "$APP/keliver.portal.json")"
 if [ "$RELAY_PORT" != 8077 ]; then
   python3 -c 'import json,sys; p=sys.argv[1]; c=json.load(open(p)); c["port"]=int(sys.argv[2]); open(p,"w").write(json.dumps(c,indent=2)+"\n")' \
     "$APP/keliver.portal.json" "$RELAY_PORT" \
@@ -92,13 +151,25 @@ if [ "$RELAY_PORT" != 8077 ]; then
 fi
 
 ( cd "$APP" && ./gradlew compileKotlinJs --console=plain ) > "$EV/compile.log" 2>&1 \
-  && ok "compile: ./gradlew compileKotlinJs against Maven Central 0.3.3" \
+  && ok "compile: ./gradlew compileKotlinJs against $LIBS_FROM (Keliver $APP_KV)" \
   || { bad "compile failed"; tail -30 "$EV/compile.log"; exit 1; }
+# local-maven: where every Keliver artifact of the GUEST came from, as for the host below.
+if [ "$LIBRARIES" = local-maven ]; then
+  ( cd "$APP" && ./gradlew --console=plain -q dependencies --configuration jsRuntimeClasspath ) \
+    > "$EV/guest-dependencies.txt" 2>&1
+  lm_check_artifacts "$EV/guest-dependencies.txt" "$EV/guest-keliver-artifacts.txt" \
+    && ok "local-maven: all $(grep -c . "$EV/guest-keliver-artifacts.txt") dev.keliver artifacts of the guest (jsRuntimeClasspath) are $KELIVER_LOCAL_VERSION" \
+    || bad "local-maven: the guest's dev.keliver artifacts (jsRuntimeClasspath): $LM_ERROR"
+fi
 
 # publishTask/publishOutput and the signing block. The bootstrap no longer
 # overlays a hand-written block; this is the scaffolder an adopter would run.
-( cd "$APP" && "$KP/keliver-new-publish-target.sh" ) > "$EV/publish-target.log" 2>&1 \
-  && ok "publishing wired by the zip's bin/keliver-new-publish-target.sh" \
+# local-maven: this checkout's (lm_publish_target); the 0.3.18 zip's knows only
+# upstream Zipline's plugin and refuses an app on the fork.
+PUB_TARGET="$KP/keliver-new-publish-target.sh"; PUB_TARGET_WHICH="the zip's bin/"
+if [ "$LIBRARIES" = local-maven ]; then PUB_TARGET="$(lm_publish_target)"; PUB_TARGET_WHICH="this checkout's scripts/ (local-maven)"; fi
+( cd "$APP" && "$PUB_TARGET" ) > "$EV/publish-target.log" 2>&1 \
+  && ok "publishing wired by $PUB_TARGET_WHICH keliver-new-publish-target.sh" \
   || { bad "keliver-new-publish-target.sh failed"; cat "$EV/publish-target.log"; exit 1; }
 cp "$APP/build.gradle" "$EV/app-build.gradle"
 # Committed, as an adopter would: D2 asserts that a layout edit changes exactly
@@ -121,11 +192,11 @@ portal_up(){  # $1 = app dir, $2 = log
   local free=0
   for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" || { free=1; break; }; sleep 2; done
   [ "$free" = 1 ] || { bad ":$RELAY_PORT already answers: a relay this run did not start (stop it, or set another KELIVER_RELAY_PORT)"; echo "prepare: passed $pass, failed $fail"; exit 1; }
-  ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
+  ( cd "$1" && nohup "$PORTAL" --no-editor-build . > "$2" 2>&1 & )
   for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" && return 0; sleep 3; done
   return 1
 }
-portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 2; }
+portal_down(){ ( cd "$1" && "$PORTAL" stop . >/dev/null 2>&1 ); sleep 2; }
 
 portal_up "$APP" "$EV/relay-prepare.log" && ok "the relay for this app answered on :$RELAY_PORT" \
   || { bad "the relay never answered"; tail -30 "$EV/relay-prepare.log"; exit 1; }
@@ -194,6 +265,11 @@ esac
   && ok "P1: keliver-new-production-host.sh ($PROD_WHICH) scaffolded host-android/" \
   || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
 sed 's/^/    /' "$EV/host-scaffold.log"
+if [ "$LIBRARIES" = local-maven ]; then
+  lm_add_repository "$APP/host-android/settings.gradle" \
+    && ok "local-maven: host-android/settings.gradle resolves dev.keliver only from $KELIVER_LOCAL_MAVEN" \
+    || { bad "local-maven: host-android/settings.gradle: $LM_ERROR"; exit 1; }
+fi
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"
 # W6 (V2): it reports to the relay. A template without keliver.reportUrl
 # (tools 0.3.8 candidate 2 and earlier) ignores the property.
@@ -201,12 +277,18 @@ printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android
 # while the app runs to show only after a relaunch (a template from tools 0.3.10
 # on leaves keliver.updates empty, which a debug build takes as on-resume).
 ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.reportUrl="http://$HOST_ADDR:$RELAY_PORT/report" ) > "$EV/host-build.log" 2>&1 \
-  && ok "P1: the scaffolded host built from Maven Central" \
+  && ok "P1: the scaffolded host built from $LIBS_FROM" \
   || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
 # Where every Keliver artifact in that build came from.
 ( cd "$APP" && ./gradlew --console=plain -q -p host-android dependencies --configuration debugRuntimeClasspath ) \
   > "$EV/host-dependencies.txt" 2>&1
-grep -oE 'dev\.keliver:[a-z0-9-]+:[0-9.]+' "$EV/host-dependencies.txt" | sort -u > "$EV/host-keliver-artifacts.txt"
+if [ "$LIBRARIES" = local-maven ]; then
+  lm_check_artifacts "$EV/host-dependencies.txt" "$EV/host-keliver-artifacts.txt" \
+    && ok "local-maven: all $(grep -c . "$EV/host-keliver-artifacts.txt") dev.keliver artifacts of the host are $KELIVER_LOCAL_VERSION" \
+    || bad "local-maven: the host's dev.keliver artifacts: $LM_ERROR"
+else
+  grep -oE 'dev\.keliver:[a-z0-9-]+:[0-9.]+' "$EV/host-dependencies.txt" | sort -u > "$EV/host-keliver-artifacts.txt"
+fi
 echo "    $(wc -l < "$EV/host-keliver-artifacts.txt" | tr -d ' ') dev.keliver artifacts, all $(cut -d: -f3 "$EV/host-keliver-artifacts.txt" | sort -u | tr '\n' ' ')"
 APK="$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)"
 cp "$APK" "$EV/production-host.apk"
@@ -217,6 +299,16 @@ EMB="$(unzip -p "$EV/production-host.apk" assets/keliver/portal_ed25519.pub 2>/d
   || bad "P1: the embedded key (${EMB:0:16}) is not this app's (${PUB:0:16})"
 echo "PROD_ID=$PROD_ID" >> "$WORK/env"
 echo "APK=$EV/production-host.apk" >> "$WORK/env"
+
+# local-maven: the rows after P1 stay on the other two routes for now (MS4-32 ports the reference
+# app; MS4-04, -17 and -23 add their own rows here). Listed, never counted as passes.
+if [ "$LIBRARIES" = local-maven ]; then
+  skip "W3, W5, U0, T0 and W8 (the static route's, update, timing and rotation builds): not on the local-maven route yet; the repo-scaffold job runs them"
+  skip "W2 (the embedded host): reference/embed/android is on the 0.4 line (AGP 8.12, upstream Zipline), and this route's libraries need AGP $TOOLCHAIN_AGP_MIN or newer (the $KELIVER_LINE line builds with AGP $TOOLCHAIN_AGP)"
+  skip "the development bundle: the development route's generic host (the tools zip's) is on the 0.4 line"
+  echo "prepare: passed $pass, failed $fail"
+  [ "$fail" -eq 0 ]; exit $?
+fi
 
 # --- 6. W3 inputs: keliver-publish, a throwaway CA, the host for HTTPS -------
 # The static route (ci/w3/android-static.sh, run by device.sh) needs no relay:
