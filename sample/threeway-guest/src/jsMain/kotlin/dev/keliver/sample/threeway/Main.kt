@@ -60,7 +60,10 @@ private class ThreewayAppServiceImpl : ThreewayAppService {
         // `retain` (NF1): the list stays composed under the detail (RetainedStack.kt); `retainhost`:
         // the same in the host's retained container, whose system back the host shows itself.
         // `prepared` (NF3): keliver-nav's prepared stack; with `press`, the host's press signal too.
+        // `r1prep` (NF5 R1): the next open's detail prepared in the host's container (RevealStack.kt);
+        // the host's `reveal` and `idlemeasure` act on it, and the guest ignores them.
         val stack = when {
+          "r1prep" in experiments -> RevealThreewayStack
           "prepared" in experiments -> PressPreparedThreewayStack
           "retainhost" in experiments -> RetainedHostThreewayStack
           "retain" in experiments -> RetainedThreewayStack

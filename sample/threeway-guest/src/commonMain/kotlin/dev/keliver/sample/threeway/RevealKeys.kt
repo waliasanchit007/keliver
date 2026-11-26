@@ -5,9 +5,10 @@
 package dev.keliver.sample.threeway
 
 /**
- * NF5 R1 (docs/nf5-r1/README.md), benchmark-only: the keys the guest's `r1prep` stack gives the
- * entries of gate A's retained container, which the host's reveal policy reads. The detail's one
- * entry changes key; the entry itself, and its composition, stay.
+ * NF5 R1 (docs/nf5-r1/README.md), benchmark-only: the keys the guest's `r1prep` stack
+ * (RevealStack.kt) gives the entries of gate A's retained container, which the host's reveal policy
+ * (the sample host's `R1Reveal`) reads. The detail's one entry changes key; the entry itself, and
+ * its composition, stay.
  */
 public object R1Keys {
   /** The list's entry. */
@@ -25,5 +26,6 @@ public object R1Keys {
   /** Hidden by the stack's order: never shown unless the host reveals it. */
   public fun isPrepared(key: String): Boolean = key == PREPARED || key == PARKED
 
+  /** May be revealed by the host on a click. */
   public fun isRevealable(key: String): Boolean = key == PREPARED
 }

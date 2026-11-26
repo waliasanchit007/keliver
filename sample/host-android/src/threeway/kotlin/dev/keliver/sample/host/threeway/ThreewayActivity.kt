@@ -51,6 +51,7 @@ import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
 import dev.keliver.compose.gatea.composeui.LocalHostBackDispatcher
+import dev.keliver.compose.gatea.composeui.LocalRetainedReveal
 import dev.keliver.compose.gatea.composeui.keliverComposeGateAWidgetSystem
 import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
@@ -127,6 +128,16 @@ class ThreewayActivity : ComponentActivity() {
   /** The guest form's app (for reading QuickJS's memory on its thread); null in the other forms. */
   private var guestApp: TreehouseApp<ThreewayAppService>? = null
 
+  /** NF5 R1 (`r1prep`): the host's reveal policy for the guest's retained container; null otherwise. */
+  private var r1Reveal: R1Reveal? = null
+
+  /**
+   * `x=trace`: the driver's own trace sections, so a Perfetto trace names its steps: `bench:down
+   * <step> <i>` and `bench:up <step> <i>` around each synthetic DOWN and UP (the UP's start is the
+   * tap's time), and `bench:drawn <screen> <seq>` in the window draw that the bench takes as `drawn`.
+   */
+  private val traceMarks: Boolean get() = "trace" in experimentSet
+
   /**
    * Guest only: QuickJS's memory is read before each tap and after each drawn result, and at the
    * end of each series (`mem`, or any GC threshold experiment). The reads run on the Zipline thread
@@ -202,6 +213,13 @@ class ThreewayActivity : ComponentActivity() {
     }
     // The fixture API served by this app instead of the Mac (LocalFixture), before any form starts.
     if (intent.getBooleanExtra("localApi", false)) LocalFixture.start()
+    // NF5 R1 (`r1prep`, guest only): the reveal policy, and every window draw's start for its marks.
+    if (form == "guest") {
+      R1Reveal.forExperiments(experimentSet)?.let { reveal ->
+        r1Reveal = reveal
+        window.decorView.viewTreeObserver.addOnDrawListener { reveal.onWindowDraw(System.currentTimeMillis()) }
+      }
+    }
     // WARNING: benchmark-only (as GatebActivity): keep the screen on and draw over a locked phone's
     // lock screen (it does not unlock it), only when the caller asks with `--ez overLockScreen true`.
     if (intent.getBooleanExtra("overLockScreen", false)) {
@@ -314,7 +332,8 @@ class ThreewayActivity : ComponentActivity() {
           // NF1 `retainhost`: the guest's retained container goes back on the host, through the
           // activity's dispatcher (where the guest's BackHandlers are too). Unused by other forms.
           val hostBack = remember { AndroidHostBackDispatcher(onBackPressedDispatcher) }
-          CompositionLocalProvider(LocalHostBackDispatcher provides hostBack) {
+          // NF5 R1 `r1prep`: the reveal policy (R1Reveal); null, the container's default, otherwise.
+          CompositionLocalProvider(LocalHostBackDispatcher provides hostBack, LocalRetainedReveal provides r1Reveal) {
             TreehouseContent(treehouseApp = app, widgetSystem = widgetSystem, contentSource = contentSource, modifier = Modifier.fillMaxSize())
           }
         }
@@ -374,6 +393,10 @@ class ThreewayActivity : ComponentActivity() {
         if (fired) return
         fired = true
         recorder.mark(seq, "drawn", System.currentTimeMillis())
+        if (traceMarks) {
+          Trace.beginSection("bench:drawn $screen $seq")
+          Trace.endSection()
+        }
         // A draw listener cannot remove itself during onDraw.
         main.post { decor.viewTreeObserver.removeOnDrawListener(this) }
         if (firstContent && screen == "data") {
@@ -435,21 +458,26 @@ class ThreewayActivity : ComponentActivity() {
           log("""{"form":"$form","bench":"$bench","i":$i,"timeout":true}""")
           main.postDelayed({ next() }, pause)
         }
-        val tap = press?.invoke() ?: if (hold > 0) heldTap(xDp, yDp, hold) else tap(xDp, yDp)
+        // NF5 R1: the reveal's marks belong to the step whose tap follows (any earlier ones are dropped).
+        r1Reveal?.takeMarks()
+        val label = "$bench $i"
+        val tap = press?.invoke() ?: if (hold > 0) heldTap(xDp, yDp, hold, label) else tap(xDp, yDp, label)
         // A system back (`sysback`): also the press's first draw, which shows the list when the host
         // goes back on its own (`retainhost`) and is the guest's frame otherwise.
         fun pressExtra(): Map<String, Long> =
           if (press != null && firstDrawAfterPress > 0) mapOf("firstDraw" to firstDrawAfterPress - tap) else emptyMap()
+        // The step's marks: the recorder's for its navigation, and the host reveal's (NF5 R1), if any.
+        fun stepMarks(seq: Int): Map<String, Long> = recorder.take(seq) + r1Reveal?.takeMarks().orEmpty()
         waiter = { screen, seq ->
           if (accept(screen, seq) && (screen == "data" || seq > lastNav)) {
             waiter = null
             main.removeCallbacks(timeout)
             if (screen == "data") lastData = seq else lastNav = seq
             if (before == null) {
-              log(result(bench, i, tap, seq, extra = pressExtra()))
+              log(result(bench, i, tap, seq, marks = stepMarks(seq), extra = pressExtra()))
               main.postDelayed({ next() }, pause)
             } else {
-              val marks = recorder.take(seq)
+              val marks = stepMarks(seq)
               readQuickJsMemory { after ->
                 log(result(bench, i, tap, seq, marks, memory(before, after) + pressExtra()))
                 main.postDelayed({ next() }, pause)
@@ -653,8 +681,11 @@ class ThreewayActivity : ComponentActivity() {
     return content.width / resources.displayMetrics.density
   }
 
-  /** Taps at ([xDp], [yDp]) of the content view; returns the time the UP was dispatched (epoch ms). */
-  private fun tap(xDp: Float, yDp: Float): Long {
+  /**
+   * Taps at ([xDp], [yDp]) of the content view; returns the time the UP was dispatched (epoch ms).
+   * [label] names the step in the trace sections (`x=trace`).
+   */
+  private fun tap(xDp: Float, yDp: Float, label: String): Long {
     val content = findViewById<View>(android.R.id.content)
     val location = IntArray(2)
     content.getLocationInWindow(location)
@@ -662,10 +693,10 @@ class ThreewayActivity : ComponentActivity() {
     val x = location[0] + xDp * density
     val y = location[1] + yDp * density
     val downTime = SystemClock.uptimeMillis()
-    dispatch(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0))
+    dispatch(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0), "bench:down $label")
     SystemClock.sleep(TAP_HOLD_MILLIS)
     val upAt = System.currentTimeMillis()
-    dispatch(MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0))
+    dispatch(MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0), "bench:up $label")
     return upAt
   }
 
@@ -674,7 +705,7 @@ class ThreewayActivity : ComponentActivity() {
    * host's press signal and the guest's work during the press run as under a real finger. Returns the
    * time the DOWN was dispatched (epoch ms): the series' times are from the touch-down.
    */
-  private fun heldTap(xDp: Float, yDp: Float, holdMillis: Long): Long {
+  private fun heldTap(xDp: Float, yDp: Float, holdMillis: Long, label: String): Long {
     val content = findViewById<View>(android.R.id.content)
     val location = IntArray(2)
     content.getLocationInWindow(location)
@@ -683,14 +714,22 @@ class ThreewayActivity : ComponentActivity() {
     val y = location[1] + yDp * density
     val downTime = SystemClock.uptimeMillis()
     val downAt = System.currentTimeMillis()
-    dispatch(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0))
-    main.postDelayed({ dispatch(MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0)) }, holdMillis)
+    dispatch(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0), "bench:down $label")
+    main.postDelayed({
+      dispatch(MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0), "bench:up $label")
+    }, holdMillis)
     return downAt
   }
 
-  private fun dispatch(event: MotionEvent) {
+  /** Dispatches [event] to the window; with `x=trace`, inside a trace section named [section]. */
+  private fun dispatch(event: MotionEvent, section: String) {
     event.source = InputDevice.SOURCE_TOUCHSCREEN
-    window.decorView.dispatchTouchEvent(event)
+    if (traceMarks) Trace.beginSection(section)
+    try {
+      window.decorView.dispatchTouchEvent(event)
+    } finally {
+      if (traceMarks) Trace.endSection()
+    }
     event.recycle()
   }
 

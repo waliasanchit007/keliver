@@ -67,11 +67,19 @@ private fun chipColors(status: String): Pair<Color, Color> = when (status) {
 
 /**
  * How the app stacks its screens: [keys] bottom to top, the last one shown, each composed by
- * [content]. [onBack] goes back one screen (the stack calls it for a system back press).
+ * [content]. [onBack] goes back one screen (the stack calls it for a system back press). [next] is
+ * the key the next open will show (NF5 R1: the [Item] of the row the bench's driver taps next), or
+ * null; only a stack that [preparesNext] uses it.
  */
 interface ThreewayStack {
   @Composable
-  fun Show(keys: List<Any>, onBack: () -> Unit, content: @Composable (Any) -> Unit)
+  fun Show(keys: List<Any>, next: Any?, onBack: () -> Unit, content: @Composable (Any) -> Unit)
+
+  /**
+   * NF5 R1 (`r1prep`): whether this stack composes [Show]'s `next` ahead of its open, hidden. The
+   * app then records per open whether the open's item was that one (`n_nextHit`, 1 or 0).
+   */
+  val preparesNext: Boolean get() = false
 
   /**
    * NF3: what a list row adds so a press on it prepares the screen it opens ([key], the row's
@@ -126,9 +134,13 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks, stack: ThreewayStack? = 
     // The `retain` experiment (NF1): the list stays composed under the detail, so back shows it
     // without composing it, and its "composed" mark for a back is made here instead of in ListScreen.
     val item = selected
+    // NF5 R1: the row the bench's driver taps next. Open i taps row (i - 1) % 5, and nav counts the
+    // opens and the backs, so before open i it is 2 (i - 1). Null until the list has its data.
+    fun nextOpen(): Item? = page?.items?.getOrNull((nav / 2) % 5)
     val open: (Item) -> Unit = remember {
       { opened ->
         marks.mark(NAV_BASE + nav + 1, "click")
+        if (stack.preparesNext) marks.mark(NAV_BASE + nav + 1, "n_nextHit", if (opened == nextOpen()) 1L else 0L)
         frameMark(NAV_BASE + nav + 1)
         nav += 1
         selected = opened
@@ -146,7 +158,7 @@ fun ThreewayApp(api: ThreewayApi, marks: ThreewayMarks, stack: ThreewayStack? = 
       if (nav > 0 && item == null) marks.composed("list", NAV_BASE + nav)
       onDispose {}
     }
-    stack.Show(if (item == null) listOf(ListKey) else listOf(ListKey, item), back) { key ->
+    stack.Show(if (item == null) listOf(ListKey) else listOf(ListKey, item), nextOpen(), back) { key ->
       Column(Modifier.fillMaxSize().background(Color.White)) {
         if (key == ListKey) {
           ListScreen(page = page, nav = 0, marks = marks, onLoad = load, onOpen = open, stack = stack)
