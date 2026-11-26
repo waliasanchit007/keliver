@@ -9,17 +9,21 @@
 
 ## Unreleased (0.5.0)
 
-Built with Kotlin 2.4.21 and Zipline 1.28.0 (#222, #303), AGP 9.3.3, Gradle 9.7.1 and Compose
-Multiplatform 1.12.2 (#234, #300). An app on 0.5.0 needs:
+Built with Kotlin 2.4.21 and the Keliver fork of Zipline 1.28.0 (`dev.keliver.zipline`
+1.28.0-keliver.1; #222, #303, #294), AGP 9.3.3, Gradle 9.7.1 and Compose Multiplatform 1.12.2
+(#234, #300). An app on 0.5.0 needs:
 
-- **Kotlin 2.4 or later**: the libraries are Kotlin 2.4 klibs. Zipline comes in as **1.28**.
+- **Kotlin 2.4 or later**: the libraries are Kotlin 2.4 klibs. Zipline comes in as **the
+  Keliver fork of Zipline 1.28.0 (`dev.keliver.zipline` 1.28.0-keliver.1)**: same artifact names
+  and packages, Gradle plugin id `dev.keliver.zipline`. Use it instead of `app.cash.zipline`, never
+  both: the fork's modules declare upstream's capabilities, so Gradle refuses a classpath with both
+  (#294).
   Build guests with **Kotlin 2.4.21** or later: 2.4.20's Kotlin/JS production links did not
   minify member names (KT-89449). On one guest (the three-way screens) 2.4.21 is 4.4% smaller
   (2.7% gzipped) in the `.zipline` bundle; with 2.4.20, code load was about 3% slower on the Mac
   JVM harness (#303).
-- Zipline's Gradle plugin (upstream's and the Keliver fork's) raises the app's Kotlin Gradle
-  plugin to the Kotlin it was built with (the fork: 2.4.21) when both resolve on the same build
-  classpath (#303).
+- The Keliver fork of Zipline's Gradle plugin is built with Kotlin 2.4.21: on a build classpath
+  with an older Kotlin Gradle plugin, Gradle raises it to 2.4.21 (#303).
 - set **minSdk 23** for every Android artifact (AndroidX Compose 1.11 and later, and
   Zipline 1.28, need it).
 - set **compileSdk 37** if it depends on a Compose module or the treehouse/Zipline modules:
@@ -39,6 +43,18 @@ Multiplatform 1.12.2 (#234, #300). An app on 0.5.0 needs:
   `org.jetbrains.kotlin.android` or `kotlin.multiplatform`'s `androidTarget()`: on AGP 9 set
   `android.builtInKotlin=false` and `android.newDsl=false` (as Keliver's own build does) until it
   learns AGP 9's built-in Kotlin and `com.android.kotlin.multiplatform.library` (#234).
+
+Also on 0.5.0, not requirements:
+
+- **Recommended:** link guests with Kotlin's `Long` as a JavaScript BigInt (`-Xes-long-as-bigint`
+  on the `js` executable). On the fork's engine it removes emulated `Long`, which was 38% of the
+  guest's time in its hottest path (docs/GUEST_PROFILE.md). The scaffolders set it for a 0.5.0
+  guest, and Keliver's own guests use it by default. A guest linked without it still runs (#294).
+- One engine, `quickjs-2026`: bundles compiled by the fork load only on the fork's engine, and
+  their signed index entries name it (#294).
+- The tools zip's bundled development host runs only QuickJS 2026 from the first tools release
+  after 0.5.0, and that release's scaffolders default to 0.5.x. An app on 0.4.x keeps tools
+  0.3.18's host (#294).
 
 Every multiplatform library's Gradle module metadata carries a constraint raising
 kotlinx-coroutines-core to **1.11.0**. Compose runtime 1.11 still asks for 1.9.0, a
@@ -145,6 +161,24 @@ New:
   that adds baseline-profile rules for a schema's generated host code (host protocol, widget and modifier packages
   of the schema and its dependencies), from the codegen's new `--host-baseline-profile` output
   (`docs/DEVICE_HOST.md`, "Baseline profiles") (#290).
+- New (experimental): the Compose-generated API's product modules (#313).
+  - `keliver-compose-root-schema`, `-widget`, `-protocol-guest` and `-protocol-host`: the
+    generated root `KeliverCompose`.
+  - `keliver-compose-core-schema`, `-widget`, `-modifiers`, `-compose` and `-composeui`: its
+    `core` group (Compose's foundation-layout, foundation, ui, material3 and animation, and
+    Keliver's extras), with `keliverComposeWidgetSystem()` for Compose UI hosts.
+  - `keliver-compose-values` is published for the first time.
+  - The generated root has no legacy (`keliver-material`) schema. Tags and the wire may change
+    until the 0.5.0 lock freeze.
+- keliver-compose: `KeliverHostFeatures` (experimental, `@ExperimentalKeliverHostFeaturesApi`),
+  the names of Keliver's host features and what each requires (`missingRequirements`) (#316).
+- keliver-treehouse-host-composeui: `TreehouseContent(…, backEnabled)` (experimental,
+  `@ExperimentalKeliverBackApi`). While it is false, no back press reaches the content's guest
+  (#316).
+- Host templates: each Keliver line's `HostFeatures.kt` declares the host features a host
+  implements (none yet; none ever on the 0.4 line). In an update swap, the hidden app no longer
+  receives back (0.5 line). The last good bundle's record carries the release's sequence and
+  module digest and is written through (#316).
 
 Changed:
 
@@ -168,6 +202,23 @@ Changed:
   the guest's composed → frame end from 365 to 223.5 ms. It costs about 1.7 MB of compiled code on the phone
   (THREE_WAY_BENCHMARK.md, "NF4: composed to drawn") (#286). An app can leave it out (see the tools bundle's
   `keliver.hostBaselineProfile`, below) (#290).
+- A new app on Keliver 0.5.x is scaffolded with the toolchain the 0.5.0 libraries need: Kotlin
+  2.4.21, AGP 9.3.3 with built-in Kotlin, compileSdk 37, targetSdk 36, and Gradle 9.7.1 in its
+  wrapper. The production host warns when an existing app's Gradle wrapper is older than its AGP
+  accepts, and prints the lines to change (#299).
+- On 0.5.x, the Android and iOS hosts get Coil, its network fetcher and (iOS) Ktor's Darwin engine
+  through `dev.keliver:keliver-image` at your Keliver version, so they match Keliver's libraries
+  (#299).
+- `--embed` applies Kotlin's Android plugin according to your app's own AGP and
+  `android.builtInKotlin` (#299).
+- The host scaffolders, `keliver-new-device-target.sh` and `keliver-new-editor.sh` take your app's
+  `appRuntime.keliverVersion` from `keliver.portal.json`. If that file cannot be read or names no
+  version, they stop and say so (`KELIVER_VERSION`, or `KELIVER_HOST_KELIVER_VERSION` for the
+  hosts, overrides). The hosts print the version and line they chose (#299).
+- A Keliver version newer than any line your tools bundle knows is refused: get a newer tools
+  bundle (#299).
+- `keliver-new-editor.sh` supports apps on the 0.4 line only, for now: it refuses an app on 0.5.x
+  with a message, instead of writing an editor that cannot build (#299).
 
 Fixed:
 
