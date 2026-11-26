@@ -13,15 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import dev.keliver.portal.ingest.ScreenStateRecognizer
 import dev.keliver.portal.ingest.ScreenStateRegistryGenerator
 import java.io.File
+import java.lang.reflect.Modifier
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** MS4-28: the app's generated `@ScreenState` registry, as the relay and the check write and read it. */
 class ScreenStateRegistryFileTest {
@@ -138,10 +145,146 @@ class ScreenStateRegistryFileTest {
   }
 
   @Test fun theBlockIsValidated() {
-    assertFailsWith<IllegalArgumentException> { ScreenStateRegistryConfig(out = "States.java") }
-    assertFailsWith<IllegalArgumentException> { ScreenStateRegistryConfig(out = "S.kt", valName = "app states") }
+    assertFailsWith<IllegalArgumentException> { ScreenStateRegistryConfig(out = "States.java", packageName = "app") }
+    assertFailsWith<IllegalArgumentException> { ScreenStateRegistryConfig(out = "S.kt", packageName = "app", valName = "app states") }
     assertFailsWith<IllegalArgumentException> { ScreenStateRegistryConfig(out = "S.kt", packageName = "app..gen") }
-    assertEquals("AppScreenStates", ScreenStateRegistryConfig(out = "S.kt").valName)
+    assertEquals("AppScreenStates", ScreenStateRegistryConfig(out = "S.kt", packageName = "app").valName)
+  }
+
+  /** Review L5: no default root package; a block without one is a config error that names the field. */
+  @Test fun thePackageIsRequired() {
+    val blank = assertFailsWith<IllegalArgumentException> { ScreenStateRegistryConfig(out = "S.kt", packageName = " ") }
+    assertEquals("screenStateRegistry.packageName is required: the generated registry's package (for example \"app.generated\")", blank.message)
+    val missing = assertFails { loadPortalConfig(app("""{"screensDir": "screens", "screenStateRegistry": {"out": "gen/S.kt"}}""")) }
+    assertTrue("packageName" in missing.message.orEmpty() && "required" in missing.message.orEmpty(), missing.message)
+  }
+
+  /** Review M1: the command every generated header (and the docs) names is a class with a main, and the Gradle task runs it. */
+  @Test fun theCommandTheHeaderNamesExists() {
+    val main = Class.forName(ScreenStateRegistryFile.COMMAND).getMethod("main", Array<String>::class.java)
+    assertTrue(Modifier.isStatic(main.modifiers))
+    assertEquals("ScreenStateRegistryKt", ScreenStateRegistryFile.COMMAND)
+    assertTrue("`ScreenStateRegistryKt <app-dir> --check`" in ScreenStateRegistryFile.REGENERATE_HINT)
+    assertTrue("mainClass = 'ScreenStateRegistryKt'" in File(repoRoot, "portal-relay/build.gradle").readText())
+    assertTrue("`ScreenStateRegistryKt <app-dir> --check`" in File(repoRoot, "docs/PORTAL_USAGE.md").readText())
+  }
+
+  /**
+   * Review L1: a state the generated call could not compile against (`@Composable`, a return type
+   * other than NamedState, a possible opt-in marker) is the same problem in `GET /states` and in
+   * the registry, and has no entry.
+   */
+  @Test fun aStateTheRegistryCannotCallIsTheSameProblemInGetStates() {
+    val dir = app()
+    File(dir, "screens/cart.kt").writeText(
+      "package app.screens\n\nimport androidx.compose.runtime.Composable\nimport app.flags.ExperimentalCheckout\n" +
+        "import dev.keliver.nav.NamedState\nimport dev.keliver.nav.ScreenState\n\n" +
+        "@ScreenState(\"drawn\") @Composable fun drawn() = NamedState(route = Route.Home, fixtures = \"d\")\n" +
+        "@ScreenState(\"any\") fun asAny(): Any = NamedState(route = Route.Home, fixtures = \"a\")\n" +
+        "@ScreenState(\"marked\") @ExperimentalCheckout fun marked() = NamedState(route = Route.Home, fixtures = \"m\")\n",
+    )
+    val config = loadPortalConfig(dir)
+    val states = ScreenStatesIndex().forDir(File(dir, "screens"))
+    val gen = assertNotNull(ScreenStateRegistryFile.generate(dir, config))
+    assertEquals(states, gen.screens)
+
+    // What GET /states answers for the screen.
+    val cart = Json.parseToJsonElement(ScreenStatesIndex.toJson(states)).jsonObject["screens"]!!.jsonObject["cart"]!!.jsonObject
+    assertEquals(0, cart["states"]!!.jsonArray.size)
+    val problems = cart["problems"]!!.jsonArray.map { it.jsonPrimitive.content }
+    val starts = listOf(
+      "drawn: a state function must not be @Composable",
+      "asAny: a state function must return NamedState",
+      "marked: @ExperimentalCheckout on a state function",
+    )
+    assertEquals(starts.size, problems.size, problems.toString())
+    starts.zip(problems).forEach { (start, problem) -> assertTrue(problem.startsWith(start), problem) }
+    assertEquals(problems.map { "cart: $it" }, gen.problems)
+
+    // The written registry: the same problems, no call to any of them, and it compiles as the rest.
+    assertNull(ScreenStateRegistryFile.emit(dir, config))
+    val source = File(dir, "gen/AppStates.kt").readText()
+    assertTrue("{ home__signedIn() }" in source, source)
+    listOf("drawn", "asAny", "marked").forEach { assertTrue("cart__$it" !in source, it) }
+    problems.forEach { assertTrue("      \"$it\",\n" in source, it) }
+  }
+
+  /**
+   * Review L2: a screen file the relay can't read (or the recognizer fails on) is a "cannot read …"
+   * problem in the registry exactly as in `GET /states`, not a failed write.
+   */
+  @Test fun anUnreadableScreenFileIsAProblemInTheRegistryAsInGetStates() {
+    val dir = app()
+    val cart = File(dir, "screens/cart.kt").apply { writeText(screen("cart-empty", "cartEmpty", "empty")) }
+    val config = loadPortalConfig(dir)
+    val failing = ScreenStatesIndex { name, source -> if (name == "cart.kt") error("boom") else ScreenStateRecognizer.recognize(name, source) }
+    assertNull(ScreenStateRegistryFile.emit(dir, config, failing))
+    assertEquals(failing.forDir(File(dir, "screens")), assertNotNull(ScreenStateRegistryFile.generate(dir, config, failing)).screens)
+    val source = File(dir, "gen/AppStates.kt").readText()
+    assertTrue("{ home__signedIn() }" in source && "cart__cartEmpty" !in source, source)
+    assertTrue("  problems = mapOf(\n    \"cart\" to listOf(\n      \"cannot read cart.kt: boom\",\n    ),\n  ),\n" in source, source)
+
+    // A file without read permission, through the real index (skipped where permissions don't
+    // apply, as for root).
+    if (cart.setReadable(false) && !cart.canRead()) {
+      try {
+        val states = ScreenStatesIndex().forDir(File(dir, "screens"))
+        assertTrue(states.getValue("cart").problems.single().startsWith("cannot read cart.kt: "), states.toString())
+        assertNull(ScreenStateRegistryFile.emit(dir, config))
+        assertEquals(states, assertNotNull(ScreenStateRegistryFile.generate(dir, config)).screens)
+      } finally {
+        cart.setReadable(true)
+      }
+    }
+  }
+
+  /** Review L3: a block the relay will never act on (no previewBuildTask) is a startup warning, as compiled components' is. */
+  @Test fun aBlockWithoutAPreviewBuildIsAStartupWarning() {
+    val warning = assertNotNull(ScreenStateRegistryFile.configWarning(loadPortalConfig(app())))
+    assertEquals(
+      "portal-server: keliver.portal.json sets screenStateRegistry but no previewBuildTask — this relay will not write " +
+        "gen/AppStates.kt; run `ScreenStateRegistryKt <app-dir>` after changing a @ScreenState, and " +
+        "`ScreenStateRegistryKt <app-dir> --check` in CI",
+      warning,
+    )
+    val building = app(CONFIG.replace("{\"screensDir\"", "{\"previewBuildTask\": \":app:jsBrowserDistribution\", \"screensDir\""))
+    assertNull(ScreenStateRegistryFile.configWarning(loadPortalConfig(building)))
+    assertNull(ScreenStateRegistryFile.configWarning(loadPortalConfig(app("""{"screensDir": "screens"}"""))))
+  }
+
+  /**
+   * Review L4: every directory the relay watches (recursively) is refused as the target, not only
+   * the screens directory: a write there would start another preview build, and the components or
+   * tokens scan would read the file as one of theirs.
+   */
+  @Test fun theRegistryCannotGoInAnyDirectoryTheRelayWatches() {
+    val dirs = """"screensDir": "screens", "componentsDir": "ui/components", "flowsDir": "ui/flows", """ +
+      """"tokensDirs": ["ui/tokens"], "logicDirs": ["logic", "shared/logic"]"""
+    val targets = listOf(
+      "screens" to "screens/AppStates.kt",
+      "components" to "ui/components/AppStates.kt",
+      "flows" to "ui/flows/AppStates.kt",
+      "tokens" to "ui/tokens/deep/AppStates.kt",
+      "logic" to "shared/logic/gen/AppStates.kt",
+    )
+    for ((kind, target) in targets) {
+      val dir = app(CONFIG.replace("gen/AppStates.kt", target).replace("\"screensDir\": \"screens\"", dirs))
+      val config = loadPortalConfig(dir)
+      val problem = assertNotNull(ScreenStateRegistryFile.emit(dir, config), kind)
+      assertTrue("must not be in the $kind directory" in problem && "the relay watches it" in problem, problem)
+      assertTrue(!File(dir, target).exists(), kind)
+      assertEquals(problem, ScreenStateRegistryFile.check(dir, config), kind)
+    }
+
+    // The defaults: components, flows and logic beside the screens directory.
+    for (kind in listOf("components", "flows", "logic")) {
+      val dir = app(CONFIG.replace("gen/AppStates.kt", "$kind/AppStates.kt"))
+      val problem = assertNotNull(ScreenStateRegistryFile.emit(dir, loadPortalConfig(dir)), kind)
+      assertTrue("must not be in the $kind directory ($kind)" in problem, problem)
+    }
+    // A directory beside them is fine.
+    val beside = app(CONFIG.replace("gen/AppStates.kt", "generated/AppStates.kt").replace("\"screensDir\": \"screens\"", dirs))
+    assertNull(ScreenStateRegistryFile.emit(beside, loadPortalConfig(beside)))
   }
 
   private companion object {

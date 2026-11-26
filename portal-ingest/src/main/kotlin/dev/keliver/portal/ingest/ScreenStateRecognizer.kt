@@ -87,8 +87,11 @@ data class ScreenStates(
  * lists them without running code); the body is a `NamedState(...)` call
  * (also written `dev.keliver.nav.NamedState(...)`), as an expression body or a
  * single `return`; the function is top-level, takes no parameters, receiver or
- * type parameters, and is neither private nor `suspend` (the generated registry,
- * [ScreenStateRegistryGenerator], calls it from another file). A declaration
+ * type parameters, is neither private, `suspend` nor `@Composable`, declares no
+ * return type but `NamedState`, and carries no annotation but `@ScreenState`,
+ * `@Suppress`, `@OptIn`, `@JvmName`, `@JsName` and `@Throws` (any other might
+ * be an opt-in marker): the generated registry, [ScreenStateRegistryGenerator],
+ * calls it from another file, outside composition. A declaration
  * outside that shape — a state inside an object or a class included — is not a
  * state and is reported in [ScreenStates.problems], never skipped silently, as
  * is a repeated name (the first declaration wins). The portal's `GET /states`
@@ -141,6 +144,14 @@ object ScreenStateRecognizer {
     return ScreenStates(states, problems, file.packageFqName.asString())
   }
 
+  /**
+   * A screen file that could not be read or recognized ([error]): no states and one problem, the
+   * same for `GET /states` and the generated registry, which then lists the screen's problem
+   * rather than failing to be written.
+   */
+  fun unreadable(fileName: String, error: Throwable): ScreenStates =
+    ScreenStates(emptyList(), listOf("cannot read $fileName: ${error.message ?: error::class.simpleName}"))
+
   private sealed interface Read {
     data class Ok(val spec: ScreenStateSpec) : Read
     data class Bad(val why: String) : Read
@@ -159,6 +170,7 @@ object ScreenStateRecognizer {
       return Read.Bad("a state function must not be private (the generated registry calls it from another file)")
     }
     if (fn.hasModifier(KtTokens.SUSPEND_KEYWORD)) return Read.Bad("a state function must not be suspend")
+    annotationProblem(ann, fn, scope)?.let { return Read.Bad(it) }
     val body = when (val b = fn.bodyExpression) {
       is KtBlockExpression -> (b.statements.singleOrNull() as? KtReturnExpression)?.returnedExpression
       else -> b
@@ -167,12 +179,57 @@ object ScreenStateRecognizer {
       is Call.Ok -> c.call
       is Call.Bad -> return Read.Bad(c.why)
     }
+    returnTypeProblem(fn, scope)?.let { return Read.Bad(it) }
     val args = call.valueArguments
     val route = arg(args, "route", 0) ?: return Read.Bad("$STATE_CLASS has no route")
     val fixtures = str(arg(args, "fixtures", 1))
       ?: return Read.Bad("$STATE_CLASS fixtures must be a plain string literal")
     if (fixtures.isBlank()) return Read.Bad("$STATE_CLASS fixtures is empty")
     return Read.Ok(ScreenStateSpec(name, fnName, route.text, routeType(route), fixtures))
+  }
+
+  /**
+   * Annotations the generated registry's call is fine with, beside `@ScreenState`: none of them
+   * asks a caller to opt in or changes how the function is called. Any other one might be an
+   * opt-in marker (`@RequiresOptIn`), which a parse can't tell from any other annotation, so it is
+   * reported rather than generated into a call that doesn't compile.
+   */
+  private val CALLABLE_ANNOTATIONS = listOf("kotlin.Suppress", "kotlin.OptIn", "kotlin.jvm.JvmName", "kotlin.js.JsName", "kotlin.Throws", "kotlin.jvm.Throws")
+
+  /** Why an annotation on the state function stops the generated registry from calling it, or null. */
+  private fun annotationProblem(ann: KtAnnotationEntry, fn: KtNamedFunction, scope: ImportScope): String? {
+    for (entry in fn.annotationEntries) {
+      if (entry == ann || scope.annotation(entry) == Binding.Ours) continue
+      val written = compact(entry.typeReference?.text ?: continue)
+      val simple = written.substringAfterLast('.')
+      if (simple == "Composable") {
+        return "a state function must not be @Composable (the generated registry calls it outside composition)"
+      }
+      val callable = if ('.' in written) {
+        written in CALLABLE_ANNOTATIONS
+      } else {
+        // A default import (kotlin.*), unless the file binds the name to something else.
+        CALLABLE_ANNOTATIONS.any { it.substringAfterLast('.') == written && scope.bindingOf(written, it) != Binding.Elsewhere }
+      }
+      if (!callable) {
+        return "@$written on a state function: the generated registry calls the function and can't tell whether " +
+          "@$written asks its callers to opt in; beside @$ANNOTATION only @Suppress, @OptIn, @JvmName, @JsName " +
+          "and @Throws are allowed (to use an opt-in API inside the function, opt in there with @OptIn(…::class))"
+      }
+    }
+    return null
+  }
+
+  /**
+   * Why the state function's declared return type is not one the generated registry can return as
+   * a `NamedState<*>`, or null (no declared type: the body is a `NamedState(…)` call).
+   */
+  private fun returnTypeProblem(fn: KtNamedFunction, scope: ImportScope): String? {
+    val written = compact(fn.typeReference?.text ?: return null)
+    val base = written.substringBefore('<')
+    val ok = !written.endsWith("?") &&
+      (base == STATE_CLASS_FQ || ('.' !in base && scope.bindingOf(base, STATE_CLASS_FQ) == Binding.Ours))
+    return if (ok) null else "a state function must return $STATE_CLASS (the generated registry calls it as one), not `$written`"
   }
 
   private sealed interface Call {

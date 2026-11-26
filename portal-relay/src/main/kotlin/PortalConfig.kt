@@ -174,20 +174,24 @@ data class CompiledComponentsConfig(
 /**
  * MS4-28: the app's generated `@ScreenState` registry (`dev.keliver.nav.ScreenStateRegistry`).
  * [out] is a `.kt` path relative to the repo (it must stay inside it), in the module that
- * compiles the screens, so `internal` state functions can be called, and outside the screens
- * directory, which would list it as a screen; [packageName] its package ("" = the root
- * package); [valName] the registry's name.
+ * compiles the screens, so `internal` state functions can be called, and outside every directory
+ * the relay watches (screens, components, flows, tokens, logic); [packageName] its package,
+ * required (a public registry in the root package would clash with any other); [valName] the
+ * registry's name.
  */
 @Serializable
 data class ScreenStateRegistryConfig(
   val out: String,
-  val packageName: String = "",
+  val packageName: String,
   val valName: String = "AppScreenStates",
 ) {
   init {
     require(out.endsWith(".kt")) { "screenStateRegistry.out must be a .kt file: $out" }
     require(valName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*"))) { "screenStateRegistry.valName must be a Kotlin identifier: $valName" }
-    require(packageName.isEmpty() || packageName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*"))) {
+    require(packageName.isNotBlank()) {
+      "screenStateRegistry.packageName is required: the generated registry's package (for example \"app.generated\")"
+    }
+    require(packageName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*"))) {
       "screenStateRegistry.packageName must be a Kotlin package name: $packageName"
     }
   }

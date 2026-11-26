@@ -70,8 +70,9 @@ class ScreenStatesIndex(
     // Attributes are read before the text: a write in between leaves an entry the next
     // request sees as changed, never a stale one that looks current.
     val states = runCatching { recognize(file.name, file.readText()) }.getOrElse {
-      // Not kept: a read that failed is tried again next time.
-      return ScreenStates(emptyList(), listOf("cannot read ${file.name}: ${it.message}"))
+      // Not kept: a read that failed is tried again next time. The generated registry lists the
+      // same problem (MS4-28).
+      return ScreenStateRecognizer.unreadable(file.name, it)
     }
     parsed[key] = Parsed(attrs.lastModifiedTime(), attrs.size(), attrs.fileKey(), states)
     return states

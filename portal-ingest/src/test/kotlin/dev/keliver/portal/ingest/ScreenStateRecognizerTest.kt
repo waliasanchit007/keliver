@@ -147,6 +147,71 @@ class ScreenStateRecognizerTest {
     assertEquals("app.screens", r.packageName)
   }
 
+  /**
+   * MS4-28 review (L1): a `@Composable` state, a declared return type other than `NamedState`,
+   * and an annotation that may ask callers to opt in would each make the generated registry's call
+   * fail to compile, so each is a problem, not a state.
+   */
+  @Test fun aStateTheGeneratedCallCannotCompileAgainstIsReported() {
+    val src = """
+      package app.screens
+
+      import androidx.compose.runtime.Composable
+      import dev.keliver.nav.NamedState
+      import dev.keliver.nav.ScreenState
+      import app.flags.ExperimentalCheckout
+
+      @ScreenState("drawn") @Composable fun drawn() = NamedState(route = Home, fixtures = "d")
+      @ScreenState("any") fun asAny(): Any = NamedState(route = Home, fixtures = "a")
+      @ScreenState("nullable") fun nullable(): NamedState<Route>? = NamedState(route = Home, fixtures = "n")
+      @ScreenState("marked") @ExperimentalCheckout fun marked() = NamedState(route = Home, fixtures = "m")
+      @ScreenState("deprecated") @Deprecated("gone") fun old() = NamedState(route = Home, fixtures = "o")
+
+      @Suppress("unused") @OptIn(ExperimentalCheckout::class) @JvmName("typedState")
+      @ScreenState("typed") fun typed(): NamedState<Route> = NamedState(route = Home, fixtures = "t")
+      @ScreenState("qualified") fun qualified(): dev.keliver.nav.NamedState<*> = NamedState(route = Home, fixtures = "q")
+    """.trimIndent()
+    val r = ScreenStateRecognizer.recognize("S.kt", src)
+    assertEquals(listOf("typed", "qualified"), r.states.map { it.name })
+    fun optIn(a: String) =
+      "@$a on a state function: the generated registry calls the function and can't tell whether @$a asks its " +
+        "callers to opt in; beside @ScreenState only @Suppress, @OptIn, @JvmName, @JsName and @Throws are allowed " +
+        "(to use an opt-in API inside the function, opt in there with @OptIn(…::class))"
+    assertEquals(
+      listOf(
+        "drawn: a state function must not be @Composable (the generated registry calls it outside composition)",
+        "asAny: a state function must return NamedState (the generated registry calls it as one), not `Any`",
+        "nullable: a state function must return NamedState (the generated registry calls it as one), not `NamedState<Route>?`",
+        "marked: " + optIn("ExperimentalCheckout"),
+        "old: " + optIn("Deprecated"),
+      ),
+      r.problems,
+    )
+  }
+
+  @Test fun aNamedStateTypeFromAnotherPackageIsNotOurs() {
+    val src = """
+      package app.screens
+
+      import dev.keliver.nav.ScreenState
+      import app.legacy.NamedState
+
+      @ScreenState("x") fun x(): NamedState<Route> = dev.keliver.nav.NamedState(route = Home, fixtures = "x")
+    """.trimIndent()
+    assertEquals(
+      listOf("x: a state function must return NamedState (the generated registry calls it as one), not `NamedState<Route>`"),
+      ScreenStateRecognizer.recognize("S.kt", src).problems,
+    )
+  }
+
+  /** The text both `GET /states` and the generated registry give a screen file they could not read. */
+  @Test fun anUnreadableFileIsOneProblem() {
+    assertEquals(
+      ScreenStates(emptyList(), listOf("cannot read S.kt: boom")),
+      ScreenStateRecognizer.unreadable("S.kt", IllegalStateException("boom")),
+    )
+  }
+
   @Test fun aFileWithoutStatesHasNone() {
     assertEquals(ScreenStates(emptyList()), ScreenStateRecognizer.recognize("S.kt", "fun x() = 1\n"))
   }

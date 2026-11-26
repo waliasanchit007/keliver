@@ -39,12 +39,18 @@ object ScreenStateRegistryGenerator {
     val problems: List<String> get() = screens.flatMap { (screen, s) -> s.problems.map { "$screen: $it" } }
   }
 
-  /** The screens [files] declare, by screen name, exactly as the portal's `GET /states` lists them. */
+  /**
+   * The screens [files] declare, by screen name, exactly as the portal's `GET /states` lists them
+   * (a file the recognizer fails on is a screen with one "cannot read …" problem, as there).
+   */
   fun read(files: List<SourceFile>): Map<String, ScreenStates> =
     files
       .filter { it.name.endsWith(".kt") }
       .sortedBy { it.name }
-      .associate { it.name.removeSuffix(".kt") to ScreenStateRecognizer.recognize(it.name, it.text) }
+      .associate {
+        it.name.removeSuffix(".kt") to
+          runCatching { ScreenStateRecognizer.recognize(it.name, it.text) }.getOrElse { e -> ScreenStateRecognizer.unreadable(it.name, e) }
+      }
       .filterValues { it.states.isNotEmpty() || it.problems.isNotEmpty() }
 
   /**
@@ -52,18 +58,25 @@ object ScreenStateRegistryGenerator {
    * ("" for the root package). [regenerateHint] is the header's second line: how to write the
    * file again.
    */
-  fun generate(files: List<SourceFile>, packageName: String, valName: String, regenerateHint: String): Output {
+  fun generate(files: List<SourceFile>, packageName: String, valName: String, regenerateHint: String): Output =
+    generate(read(files), packageName, valName, regenerateHint)
+
+  /**
+   * The registry for [screens] as already read, by screen name in the screens directory's
+   * file-name order (the relay passes what its `GET /states` index read, so the two cannot
+   * differ); otherwise as the other overload.
+   */
+  fun generate(screens: Map<String, ScreenStates>, packageName: String, valName: String, regenerateHint: String): Output {
     require(valName.matches(IDENTIFIER)) { "valName must be a Kotlin identifier: $valName" }
     require(packageName.isEmpty() || packageName.split('.').all { it.matches(IDENTIFIER) }) {
       "packageName must be a Kotlin package name: $packageName"
     }
-    val screens = read(files)
 
     // One aliased import per state function: two screens may declare functions of the same
     // name in different packages, and an alias can't be shadowed by a name in this file.
     val aliases = HashSet<String>()
     val imports = sortedSetOf(
-      "dev.keliver.nav.ExperimentalKeliverScreenStateApi",
+      "dev.keliver.nav.ExperimentalKeliverNavScreenStateApi",
       "dev.keliver.nav.ScreenStateRegistry",
     )
     val entries = StringBuilder()
@@ -101,7 +114,7 @@ object ScreenStateRegistryGenerator {
       appendLine(" * Every `@ScreenState` of the app's screens: the same states, in the same order and with the")
       appendLine(" * same problems, as the portal's `GET /states` lists from the same files.")
       appendLine(" */")
-      appendLine("@ExperimentalKeliverScreenStateApi")
+      appendLine("@ExperimentalKeliverNavScreenStateApi")
       appendLine("public val $valName: ScreenStateRegistry = ScreenStateRegistry(")
       if (entries.isEmpty()) {
         appendLine("  entries = emptyList(),")
