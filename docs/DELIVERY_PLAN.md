@@ -1064,14 +1064,19 @@ their required checks pass (Standing constraints, below).
   - MS4-02, NF1's host tests in the product host module (#320);
   - MS4-27, `keliver-nav` on wasmJs (#318).
 - **Open:**
-  - plan revision 4 with this records fold (#314, fixes after its re-review; the candidate around
-    day 79.25, plan on early-to-mid April 2027);
+  - plan revision 4 with this records fold (#314, fixes after review-314c; the candidate around
+    day 79.25, written up about Friday 19 March 2027, plan on early April 2027);
+  - #321, NF5's R1, the reveal-only bench arm (`bench/nf5-r1`; review-321 asked for fixes, and a fix
+    session is running);
+  - #322, MS4-52's `ci.yml` Kotlin/Native cache (`ci/kn-cache`; review-322 asked for two small fixes,
+    due after the warm re-run is measured);
   - #312, the generic-mechanisms spike (parked: closed unmerged when G0, MS4-41, merges).
 - **In progress:**
   - L1: MS4-03 (the widget system moves to `keliver-compose-root-composeui`, absent groups; NF1's
     tests stay in core, review-320 Low 2);
-  - Track A: NF5's R1, the reveal-only bench arm (`bench/nf5-r1`; its PR next);
-  - L2: MS4-28, the `@ScreenState` registry, which can start now that MS4-02 has merged.
+  - L2: MS4-28, the `@ScreenState` registry. Its dependency is MS4-27 (#318, merged); MS4-02's merge
+    only freed the lane;
+  - Track A: R1's fixes on #321.
 - **Next:**
   - Track A: R1 on the A12, then A1 (on the prototype's generated widgets if the owner confirms
     Q17 (iii); without an answer it builds first what every answer needs).
