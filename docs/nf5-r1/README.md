@@ -195,7 +195,10 @@ unzip -l sample/host-android/build/outputs/apk/benchmark/host-android-benchmark.
 Record the commit, the APK's size and sha256, and `lib/arm64-v8a/libquickjs.so`'s size (2,618,992
 bytes: the published fork `dev.keliver.zipline:*:1.28.0-keliver.1`, with Long as BigInt, the
 sample's default). The prototype is published to a scratch repository, never `~/.m2`. The dry run's
-APK (below) may be used instead if its sha256 matches and this PR's code has not changed since.
+APK (below) may be used instead, only if its sha256 is the one recorded there; then the commits
+recorded are its own (`ea0c1d69c`, the prototype from `760b0de73`), not this PR's head. The head
+later merged main's library changes (none in the prototype, the sample or the bench), so a build
+from it is a different APK with the same arm.
 
 **The trace processor** is the one in the benchmarks APK's assets
 (`assets/trace_processor_shell_aarch64`, Perfetto v45, as R0's): `(cd sample && ./gradlew
