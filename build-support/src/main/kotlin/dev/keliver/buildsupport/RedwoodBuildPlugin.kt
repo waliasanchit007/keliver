@@ -484,6 +484,9 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
       TreehouseGuest -> {
         project.applyKotlinMultiplatform {
           js().nodejs()
+          // Opt-in, for guest libraries the browser editor also loads (keliver-nav, ED2). Never on a
+          // Zipline-dependent module: Zipline has no wasm target.
+          modifiedGroup[WasmJs]?.applyTo(this)
           jvm() // For easier testing.
         }
       }

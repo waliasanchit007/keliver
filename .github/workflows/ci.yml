@@ -348,7 +348,8 @@ jobs:
           :keliver-material-composeui:wasmJsTest
           :keliver-material-modifiers:wasmJsTest :keliver-material-protocol-guest-web:wasmJsTest
           :keliver-material-protocol-host-web:wasmJsTest :keliver-material-testing:wasmJsTest
-          :keliver-material-widget:wasmJsTest :keliver-protocol:wasmJsTest :keliver-protocol-guest:wasmJsTest
+          :keliver-material-widget:wasmJsTest :keliver-nav:wasmJsTest :keliver-protocol:wasmJsTest
+          :keliver-protocol-guest:wasmJsTest
           :keliver-protocol-host:wasmJsTest :keliver-runtime:wasmJsTest :keliver-snapshot-testing:wasmJsTest
           :keliver-testing:wasmJsTest :keliver-ui-basic-api:wasmJsTest :keliver-ui-basic-compose:wasmJsTest
           :keliver-ui-basic-composeui:wasmJsTest :keliver-ui-basic-modifiers:wasmJsTest
