@@ -1,0 +1,27 @@
+// The product's generated root (docs/MS4_PLAN.md, MS4-01): the host's protocol for every group.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common + WasmJs.Browser) // wasmJs: the editor canvas (ED0)
+  publishing()
+}
+
+apply plugin: 'dev.keliver.generator.protocol.host'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeRootWidget
+        api projects.keliverComposeCoreModifiers
+        implementation projects.keliverProtocolHost
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeRootSchema
+  type = 'dev.keliver.compose.root.KeliverCompose'
+}

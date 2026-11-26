@@ -1,0 +1,101 @@
+// The product's generated core group (docs/MS4_PLAN.md, MS4-01): the host renderers on Compose UI.
+// src/commonMain/…/Generated.kt is generated (each renderer calls the real Compose function); the
+// runtime (children, converters, animated references, lazy lists, press, the retained container) and
+// the extras' renderers are hand-written, copied from the prototype (keliver-compose-gatea-composeui,
+// which keeps its own copy for NF5's measurements until MS4-40). Fixes go to this copy.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
+
+redwoodBuild {
+  // wasmJs: the editor canvas draws with these renderers in the browser (ED0).
+  targets(ToolkitComposeUi + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeCoreWidget
+        // keliverComposeWidgetSystem(): the generated root's widget system.
+        api projects.keliverComposeRootWidget
+        implementation projects.keliverWidgetComposeui
+        implementation libs.jetbrains.compose.foundation
+        // Animated references and AnimatedVisibility call the real animation API.
+        implementation libs.jetbrains.compose.animation
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.coil.compose.full
+        implementation libs.jetbrains.compose.ui
+      }
+    }
+    // The same-source samples, harness and pixel tests (SameSourceTest), shared by the JVM and the
+    // iOS simulator. Not commonTest: Android unit tests and JS/wasm would compile them.
+    sameSourceTest {
+      dependsOn commonTest
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.jetbrains.compose.ui.test
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.coil.compose.full
+        implementation projects.keliverComposeCoreCompose
+        implementation projects.keliverComposeRootProtocolGuest
+        implementation projects.keliverComposeRootProtocolHost
+        implementation projects.keliverProtocolGuest
+        implementation projects.keliverProtocolHost
+        implementation projects.keliverCompose
+        implementation projects.keliverLeakDetector
+      }
+    }
+    iosTest {
+      dependsOn sameSourceTest
+    }
+    jvmTest {
+      dependsOn sameSourceTest
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.jetbrains.compose.ui.test
+        implementation rootProject.ext.skikoHostRuntime()
+        implementation projects.keliverComposeCoreCompose
+        implementation projects.keliverComposeRootProtocolGuest
+        implementation projects.keliverComposeRootProtocolHost
+        implementation projects.keliverProtocolGuest
+        implementation projects.keliverProtocolHost
+        implementation projects.keliverCompose
+        implementation projects.keliverLeakDetector
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.keliver.compose.core.composeui'
+}
+
+// The iOS same-source run writes its captures (native, guest, diff) beside the JVM ones. simctl
+// passes SIMCTL_CHILD_* variables to the test process without the prefix.
+// -Pkeliver.iosTestDevice=<udid> runs on that (shut down) simulator instead of Kotlin's default device.
+def iosTestDevice = providers.gradleProperty('keliver.iosTestDevice')
+tasks.withType(org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest).configureEach {
+  def out = layout.buildDirectory.dir("gate-ios/${name}").get().asFile
+  environment('SIMCTL_CHILD_GATE_IOS_ARTIFACTS', out.absolutePath)
+  if (iosTestDevice.present) device.set(iosTestDevice.get())
+  doFirst { out.mkdirs() }
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

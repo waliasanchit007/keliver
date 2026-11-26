@@ -1,0 +1,251 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-core-modifiers>
+abstract interface dev.keliver.compose.core.modifier/ExtraAnimated : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/ExtraAnimated|null[0]
+    abstract val param // dev.keliver.compose.core.modifier/ExtraAnimated.param|{}param[0]
+        abstract fun <get-param>(): kotlin/String // dev.keliver.compose.core.modifier/ExtraAnimated.param.<get-param>|<get-param>(){}[0]
+    abstract val ref // dev.keliver.compose.core.modifier/ExtraAnimated.ref|{}ref[0]
+        abstract fun <get-ref>(): dev.keliver.compose.animation.core/AnimatedRef // dev.keliver.compose.core.modifier/ExtraAnimated.ref.<get-ref>|<get-ref>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/ExtraPress : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/ExtraPress|null[0]
+    abstract val onCancel // dev.keliver.compose.core.modifier/ExtraPress.onCancel|{}onCancel[0]
+        abstract fun <get-onCancel>(): kotlin/Int // dev.keliver.compose.core.modifier/ExtraPress.onCancel.<get-onCancel>|<get-onCancel>(){}[0]
+    abstract val onPress // dev.keliver.compose.core.modifier/ExtraPress.onPress|{}onPress[0]
+        abstract fun <get-onPress>(): kotlin/Int // dev.keliver.compose.core.modifier/ExtraPress.onPress.<get-onPress>|<get-onPress>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenAlpha1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenAlpha1|null[0]
+    abstract val alpha // dev.keliver.compose.core.modifier/GenAlpha1.alpha|{}alpha[0]
+        abstract fun <get-alpha>(): kotlin/Float // dev.keliver.compose.core.modifier/GenAlpha1.alpha.<get-alpha>|<get-alpha>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenAnimateContentSize1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenAnimateContentSize1|null[0]
+    abstract val animationSpec // dev.keliver.compose.core.modifier/GenAnimateContentSize1.animationSpec|{}animationSpec[0]
+        abstract fun <get-animationSpec>(): dev.keliver.compose.animation.core/AnimationSpecWire // dev.keliver.compose.core.modifier/GenAnimateContentSize1.animationSpec.<get-animationSpec>|<get-animationSpec>(){}[0]
+    abstract val animationSpecIsDefault // dev.keliver.compose.core.modifier/GenAnimateContentSize1.animationSpecIsDefault|{}animationSpecIsDefault[0]
+        abstract fun <get-animationSpecIsDefault>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenAnimateContentSize1.animationSpecIsDefault.<get-animationSpecIsDefault>|<get-animationSpecIsDefault>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenAnimateContentSize2 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenAnimateContentSize2|null[0]
+    abstract val alignment // dev.keliver.compose.core.modifier/GenAnimateContentSize2.alignment|{}alignment[0]
+        abstract fun <get-alignment>(): dev.keliver.compose.ui/Alignment // dev.keliver.compose.core.modifier/GenAnimateContentSize2.alignment.<get-alignment>|<get-alignment>(){}[0]
+    abstract val animationSpec // dev.keliver.compose.core.modifier/GenAnimateContentSize2.animationSpec|{}animationSpec[0]
+        abstract fun <get-animationSpec>(): dev.keliver.compose.animation.core/AnimationSpecWire // dev.keliver.compose.core.modifier/GenAnimateContentSize2.animationSpec.<get-animationSpec>|<get-animationSpec>(){}[0]
+    abstract val animationSpecIsDefault // dev.keliver.compose.core.modifier/GenAnimateContentSize2.animationSpecIsDefault|{}animationSpecIsDefault[0]
+        abstract fun <get-animationSpecIsDefault>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenAnimateContentSize2.animationSpecIsDefault.<get-animationSpecIsDefault>|<get-animationSpecIsDefault>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenBackground1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenBackground1|null[0]
+    abstract val color // dev.keliver.compose.core.modifier/GenBackground1.color|{}color[0]
+        abstract fun <get-color>(): dev.keliver.compose.ui.graphics/Color // dev.keliver.compose.core.modifier/GenBackground1.color.<get-color>|<get-color>(){}[0]
+    abstract val shape // dev.keliver.compose.core.modifier/GenBackground1.shape|{}shape[0]
+        abstract fun <get-shape>(): dev.keliver.compose.ui.graphics/Shape // dev.keliver.compose.core.modifier/GenBackground1.shape.<get-shape>|<get-shape>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenBorder1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenBorder1|null[0]
+    abstract val color // dev.keliver.compose.core.modifier/GenBorder1.color|{}color[0]
+        abstract fun <get-color>(): dev.keliver.compose.ui.graphics/Color // dev.keliver.compose.core.modifier/GenBorder1.color.<get-color>|<get-color>(){}[0]
+    abstract val shape // dev.keliver.compose.core.modifier/GenBorder1.shape|{}shape[0]
+        abstract fun <get-shape>(): dev.keliver.compose.ui.graphics/Shape // dev.keliver.compose.core.modifier/GenBorder1.shape.<get-shape>|<get-shape>(){}[0]
+    abstract val width // dev.keliver.compose.core.modifier/GenBorder1.width|{}width[0]
+        abstract fun <get-width>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenBorder1.width.<get-width>|<get-width>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenBorder2 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenBorder2|null[0]
+    abstract val border // dev.keliver.compose.core.modifier/GenBorder2.border|{}border[0]
+        abstract fun <get-border>(): dev.keliver.compose.foundation/BorderStroke // dev.keliver.compose.core.modifier/GenBorder2.border.<get-border>|<get-border>(){}[0]
+    abstract val shape // dev.keliver.compose.core.modifier/GenBorder2.shape|{}shape[0]
+        abstract fun <get-shape>(): dev.keliver.compose.ui.graphics/Shape // dev.keliver.compose.core.modifier/GenBorder2.shape.<get-shape>|<get-shape>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenBoxScopeAlign1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenBoxScopeAlign1|null[0]
+    abstract val alignment // dev.keliver.compose.core.modifier/GenBoxScopeAlign1.alignment|{}alignment[0]
+        abstract fun <get-alignment>(): dev.keliver.compose.ui/Alignment // dev.keliver.compose.core.modifier/GenBoxScopeAlign1.alignment.<get-alignment>|<get-alignment>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenBoxScopeMatchParentSize1 : dev.keliver/Modifier.ScopedElement // dev.keliver.compose.core.modifier/GenBoxScopeMatchParentSize1|null[0]
+
+abstract interface dev.keliver.compose.core.modifier/GenClickable1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenClickable1|null[0]
+    abstract val enabled // dev.keliver.compose.core.modifier/GenClickable1.enabled|{}enabled[0]
+        abstract fun <get-enabled>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenClickable1.enabled.<get-enabled>|<get-enabled>(){}[0]
+    abstract val onClick // dev.keliver.compose.core.modifier/GenClickable1.onClick|{}onClick[0]
+        abstract fun <get-onClick>(): kotlin/Int // dev.keliver.compose.core.modifier/GenClickable1.onClick.<get-onClick>|<get-onClick>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenClickable2 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenClickable2|null[0]
+    abstract val enabled // dev.keliver.compose.core.modifier/GenClickable2.enabled|{}enabled[0]
+        abstract fun <get-enabled>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenClickable2.enabled.<get-enabled>|<get-enabled>(){}[0]
+    abstract val onClick // dev.keliver.compose.core.modifier/GenClickable2.onClick|{}onClick[0]
+        abstract fun <get-onClick>(): kotlin/Int // dev.keliver.compose.core.modifier/GenClickable2.onClick.<get-onClick>|<get-onClick>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenClip1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenClip1|null[0]
+    abstract val shape // dev.keliver.compose.core.modifier/GenClip1.shape|{}shape[0]
+        abstract fun <get-shape>(): dev.keliver.compose.ui.graphics/Shape // dev.keliver.compose.core.modifier/GenClip1.shape.<get-shape>|<get-shape>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenColumnScopeAlign1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenColumnScopeAlign1|null[0]
+    abstract val alignment // dev.keliver.compose.core.modifier/GenColumnScopeAlign1.alignment|{}alignment[0]
+        abstract fun <get-alignment>(): dev.keliver.compose.ui/Alignment.Horizontal // dev.keliver.compose.core.modifier/GenColumnScopeAlign1.alignment.<get-alignment>|<get-alignment>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenColumnScopeWeight1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenColumnScopeWeight1|null[0]
+    abstract val fill // dev.keliver.compose.core.modifier/GenColumnScopeWeight1.fill|{}fill[0]
+        abstract fun <get-fill>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenColumnScopeWeight1.fill.<get-fill>|<get-fill>(){}[0]
+    abstract val weight // dev.keliver.compose.core.modifier/GenColumnScopeWeight1.weight|{}weight[0]
+        abstract fun <get-weight>(): kotlin/Float // dev.keliver.compose.core.modifier/GenColumnScopeWeight1.weight.<get-weight>|<get-weight>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenFillMaxHeight1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenFillMaxHeight1|null[0]
+    abstract val fraction // dev.keliver.compose.core.modifier/GenFillMaxHeight1.fraction|{}fraction[0]
+        abstract fun <get-fraction>(): kotlin/Float // dev.keliver.compose.core.modifier/GenFillMaxHeight1.fraction.<get-fraction>|<get-fraction>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenFillMaxSize1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenFillMaxSize1|null[0]
+    abstract val fraction // dev.keliver.compose.core.modifier/GenFillMaxSize1.fraction|{}fraction[0]
+        abstract fun <get-fraction>(): kotlin/Float // dev.keliver.compose.core.modifier/GenFillMaxSize1.fraction.<get-fraction>|<get-fraction>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenFillMaxWidth1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenFillMaxWidth1|null[0]
+    abstract val fraction // dev.keliver.compose.core.modifier/GenFillMaxWidth1.fraction|{}fraction[0]
+        abstract fun <get-fraction>(): kotlin/Float // dev.keliver.compose.core.modifier/GenFillMaxWidth1.fraction.<get-fraction>|<get-fraction>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenHeight1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenHeight1|null[0]
+    abstract val height // dev.keliver.compose.core.modifier/GenHeight1.height|{}height[0]
+        abstract fun <get-height>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenHeight1.height.<get-height>|<get-height>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenHorizontalScroll1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenHorizontalScroll1|null[0]
+    abstract val enabled // dev.keliver.compose.core.modifier/GenHorizontalScroll1.enabled|{}enabled[0]
+        abstract fun <get-enabled>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenHorizontalScroll1.enabled.<get-enabled>|<get-enabled>(){}[0]
+    abstract val reverseScrolling // dev.keliver.compose.core.modifier/GenHorizontalScroll1.reverseScrolling|{}reverseScrolling[0]
+        abstract fun <get-reverseScrolling>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenHorizontalScroll1.reverseScrolling.<get-reverseScrolling>|<get-reverseScrolling>(){}[0]
+    abstract val state // dev.keliver.compose.core.modifier/GenHorizontalScroll1.state|{}state[0]
+        abstract fun <get-state>(): dev.keliver.compose.foundation/ScrollState // dev.keliver.compose.core.modifier/GenHorizontalScroll1.state.<get-state>|<get-state>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenLazyItemScopeAnimateItem1 : dev.keliver/Modifier.ScopedElement // dev.keliver.compose.core.modifier/GenLazyItemScopeAnimateItem1|null[0]
+
+abstract interface dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxHeight1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxHeight1|null[0]
+    abstract val fraction // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxHeight1.fraction|{}fraction[0]
+        abstract fun <get-fraction>(): kotlin/Float // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxHeight1.fraction.<get-fraction>|<get-fraction>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxSize1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxSize1|null[0]
+    abstract val fraction // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxSize1.fraction|{}fraction[0]
+        abstract fun <get-fraction>(): kotlin/Float // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxSize1.fraction.<get-fraction>|<get-fraction>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxWidth1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxWidth1|null[0]
+    abstract val fraction // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxWidth1.fraction|{}fraction[0]
+        abstract fun <get-fraction>(): kotlin/Float // dev.keliver.compose.core.modifier/GenLazyItemScopeFillParentMaxWidth1.fraction.<get-fraction>|<get-fraction>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenOffset1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenOffset1|null[0]
+    abstract val x // dev.keliver.compose.core.modifier/GenOffset1.x|{}x[0]
+        abstract fun <get-x>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenOffset1.x.<get-x>|<get-x>(){}[0]
+    abstract val y // dev.keliver.compose.core.modifier/GenOffset1.y|{}y[0]
+        abstract fun <get-y>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenOffset1.y.<get-y>|<get-y>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenPadding1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenPadding1|null[0]
+    abstract val all // dev.keliver.compose.core.modifier/GenPadding1.all|{}all[0]
+        abstract fun <get-all>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenPadding1.all.<get-all>|<get-all>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenPadding2 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenPadding2|null[0]
+    abstract val horizontal // dev.keliver.compose.core.modifier/GenPadding2.horizontal|{}horizontal[0]
+        abstract fun <get-horizontal>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenPadding2.horizontal.<get-horizontal>|<get-horizontal>(){}[0]
+    abstract val vertical // dev.keliver.compose.core.modifier/GenPadding2.vertical|{}vertical[0]
+        abstract fun <get-vertical>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenPadding2.vertical.<get-vertical>|<get-vertical>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenPadding3 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenPadding3|null[0]
+    abstract val bottom // dev.keliver.compose.core.modifier/GenPadding3.bottom|{}bottom[0]
+        abstract fun <get-bottom>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenPadding3.bottom.<get-bottom>|<get-bottom>(){}[0]
+    abstract val end // dev.keliver.compose.core.modifier/GenPadding3.end|{}end[0]
+        abstract fun <get-end>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenPadding3.end.<get-end>|<get-end>(){}[0]
+    abstract val start // dev.keliver.compose.core.modifier/GenPadding3.start|{}start[0]
+        abstract fun <get-start>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenPadding3.start.<get-start>|<get-start>(){}[0]
+    abstract val top // dev.keliver.compose.core.modifier/GenPadding3.top|{}top[0]
+        abstract fun <get-top>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenPadding3.top.<get-top>|<get-top>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenPadding4 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenPadding4|null[0]
+    abstract val paddingValues // dev.keliver.compose.core.modifier/GenPadding4.paddingValues|{}paddingValues[0]
+        abstract fun <get-paddingValues>(): dev.keliver.compose.foundation.layout/PaddingValues // dev.keliver.compose.core.modifier/GenPadding4.paddingValues.<get-paddingValues>|<get-paddingValues>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenRotate1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenRotate1|null[0]
+    abstract val degrees // dev.keliver.compose.core.modifier/GenRotate1.degrees|{}degrees[0]
+        abstract fun <get-degrees>(): kotlin/Float // dev.keliver.compose.core.modifier/GenRotate1.degrees.<get-degrees>|<get-degrees>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenRowScopeAlign1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenRowScopeAlign1|null[0]
+    abstract val alignment // dev.keliver.compose.core.modifier/GenRowScopeAlign1.alignment|{}alignment[0]
+        abstract fun <get-alignment>(): dev.keliver.compose.ui/Alignment.Vertical // dev.keliver.compose.core.modifier/GenRowScopeAlign1.alignment.<get-alignment>|<get-alignment>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenRowScopeWeight1 : dev.keliver/Modifier.ScopedElement { // dev.keliver.compose.core.modifier/GenRowScopeWeight1|null[0]
+    abstract val fill // dev.keliver.compose.core.modifier/GenRowScopeWeight1.fill|{}fill[0]
+        abstract fun <get-fill>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenRowScopeWeight1.fill.<get-fill>|<get-fill>(){}[0]
+    abstract val weight // dev.keliver.compose.core.modifier/GenRowScopeWeight1.weight|{}weight[0]
+        abstract fun <get-weight>(): kotlin/Float // dev.keliver.compose.core.modifier/GenRowScopeWeight1.weight.<get-weight>|<get-weight>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenScale1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenScale1|null[0]
+    abstract val scale // dev.keliver.compose.core.modifier/GenScale1.scale|{}scale[0]
+        abstract fun <get-scale>(): kotlin/Float // dev.keliver.compose.core.modifier/GenScale1.scale.<get-scale>|<get-scale>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenShadow1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenShadow1|null[0]
+    abstract val ambientColor // dev.keliver.compose.core.modifier/GenShadow1.ambientColor|{}ambientColor[0]
+        abstract fun <get-ambientColor>(): dev.keliver.compose.ui.graphics/Color // dev.keliver.compose.core.modifier/GenShadow1.ambientColor.<get-ambientColor>|<get-ambientColor>(){}[0]
+    abstract val ambientColorIsDefault // dev.keliver.compose.core.modifier/GenShadow1.ambientColorIsDefault|{}ambientColorIsDefault[0]
+        abstract fun <get-ambientColorIsDefault>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenShadow1.ambientColorIsDefault.<get-ambientColorIsDefault>|<get-ambientColorIsDefault>(){}[0]
+    abstract val clip // dev.keliver.compose.core.modifier/GenShadow1.clip|{}clip[0]
+        abstract fun <get-clip>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenShadow1.clip.<get-clip>|<get-clip>(){}[0]
+    abstract val clipIsDefault // dev.keliver.compose.core.modifier/GenShadow1.clipIsDefault|{}clipIsDefault[0]
+        abstract fun <get-clipIsDefault>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenShadow1.clipIsDefault.<get-clipIsDefault>|<get-clipIsDefault>(){}[0]
+    abstract val elevation // dev.keliver.compose.core.modifier/GenShadow1.elevation|{}elevation[0]
+        abstract fun <get-elevation>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenShadow1.elevation.<get-elevation>|<get-elevation>(){}[0]
+    abstract val shape // dev.keliver.compose.core.modifier/GenShadow1.shape|{}shape[0]
+        abstract fun <get-shape>(): dev.keliver.compose.ui.graphics/Shape // dev.keliver.compose.core.modifier/GenShadow1.shape.<get-shape>|<get-shape>(){}[0]
+    abstract val spotColor // dev.keliver.compose.core.modifier/GenShadow1.spotColor|{}spotColor[0]
+        abstract fun <get-spotColor>(): dev.keliver.compose.ui.graphics/Color // dev.keliver.compose.core.modifier/GenShadow1.spotColor.<get-spotColor>|<get-spotColor>(){}[0]
+    abstract val spotColorIsDefault // dev.keliver.compose.core.modifier/GenShadow1.spotColorIsDefault|{}spotColorIsDefault[0]
+        abstract fun <get-spotColorIsDefault>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenShadow1.spotColorIsDefault.<get-spotColorIsDefault>|<get-spotColorIsDefault>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenSize1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenSize1|null[0]
+    abstract val size // dev.keliver.compose.core.modifier/GenSize1.size|{}size[0]
+        abstract fun <get-size>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenSize1.size.<get-size>|<get-size>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenSize2 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenSize2|null[0]
+    abstract val height // dev.keliver.compose.core.modifier/GenSize2.height|{}height[0]
+        abstract fun <get-height>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenSize2.height.<get-height>|<get-height>(){}[0]
+    abstract val width // dev.keliver.compose.core.modifier/GenSize2.width|{}width[0]
+        abstract fun <get-width>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenSize2.width.<get-width>|<get-width>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenVerticalScroll1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenVerticalScroll1|null[0]
+    abstract val enabled // dev.keliver.compose.core.modifier/GenVerticalScroll1.enabled|{}enabled[0]
+        abstract fun <get-enabled>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenVerticalScroll1.enabled.<get-enabled>|<get-enabled>(){}[0]
+    abstract val reverseScrolling // dev.keliver.compose.core.modifier/GenVerticalScroll1.reverseScrolling|{}reverseScrolling[0]
+        abstract fun <get-reverseScrolling>(): kotlin/Boolean // dev.keliver.compose.core.modifier/GenVerticalScroll1.reverseScrolling.<get-reverseScrolling>|<get-reverseScrolling>(){}[0]
+    abstract val state // dev.keliver.compose.core.modifier/GenVerticalScroll1.state|{}state[0]
+        abstract fun <get-state>(): dev.keliver.compose.foundation/ScrollState // dev.keliver.compose.core.modifier/GenVerticalScroll1.state.<get-state>|<get-state>(){}[0]
+}
+
+abstract interface dev.keliver.compose.core.modifier/GenWidth1 : dev.keliver/Modifier.UnscopedElement { // dev.keliver.compose.core.modifier/GenWidth1|null[0]
+    abstract val width // dev.keliver.compose.core.modifier/GenWidth1.width|{}width[0]
+        abstract fun <get-width>(): dev.keliver.compose.ui.unit/Dp // dev.keliver.compose.core.modifier/GenWidth1.width.<get-width>|<get-width>(){}[0]
+}

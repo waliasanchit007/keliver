@@ -1,0 +1,446 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-core-widget>
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/ExtraLazyItem : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/ExtraLazyItem|null[0]
+    abstract val content // dev.keliver.compose.core.widget/ExtraLazyItem.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/ExtraLazyItem.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun key(kotlin/String?) // dev.keliver.compose.core.widget/ExtraLazyItem.key|key(kotlin.String?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/ExtraRetained : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/ExtraRetained|null[0]
+    abstract val entries // dev.keliver.compose.core.widget/ExtraRetained.entries|{}entries[0]
+        abstract fun <get-entries>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/ExtraRetained.entries.<get-entries>|<get-entries>(){}[0]
+
+    abstract fun backHandled(kotlin/Int) // dev.keliver.compose.core.widget/ExtraRetained.backHandled|backHandled(kotlin.Int){}[0]
+    abstract fun onBack(kotlin/Function1<kotlin/String, kotlin/Unit>) // dev.keliver.compose.core.widget/ExtraRetained.onBack|onBack(kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/ExtraRetainedEntry : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/ExtraRetainedEntry|null[0]
+    abstract val content // dev.keliver.compose.core.widget/ExtraRetainedEntry.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/ExtraRetainedEntry.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun hostBack(kotlin/Boolean) // dev.keliver.compose.core.widget/ExtraRetainedEntry.hostBack|hostBack(kotlin.Boolean){}[0]
+    abstract fun key(kotlin/String) // dev.keliver.compose.core.widget/ExtraRetainedEntry.key|key(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/ExtraShimmer : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/ExtraShimmer|null[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/ExtraShimmer.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape) // dev.keliver.compose.core.widget/ExtraShimmer.shape|shape(dev.keliver.compose.ui.graphics.Shape){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenAnimatedVisibility1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenAnimatedVisibility1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenAnimatedVisibility1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenAnimatedVisibility1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun enter(dev.keliver.compose.animation/EnterTransition?) // dev.keliver.compose.core.widget/GenAnimatedVisibility1.enter|enter(dev.keliver.compose.animation.EnterTransition?){}[0]
+    abstract fun exit(dev.keliver.compose.animation/ExitTransition?) // dev.keliver.compose.core.widget/GenAnimatedVisibility1.exit|exit(dev.keliver.compose.animation.ExitTransition?){}[0]
+    abstract fun label(kotlin/String?) // dev.keliver.compose.core.widget/GenAnimatedVisibility1.label|label(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenAnimatedVisibility1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun visible(kotlin/Boolean) // dev.keliver.compose.core.widget/GenAnimatedVisibility1.visible|visible(kotlin.Boolean){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenAsyncImage1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenAsyncImage1|null[0]
+    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.core.widget/GenAsyncImage1.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
+    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.core.widget/GenAsyncImage1.alpha|alpha(kotlin.Float?){}[0]
+    abstract fun clipToBounds(kotlin/Boolean) // dev.keliver.compose.core.widget/GenAsyncImage1.clipToBounds|clipToBounds(kotlin.Boolean){}[0]
+    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.core.widget/GenAsyncImage1.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage1.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.core.widget/GenAsyncImage1.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
+    abstract fun filterQuality(dev.keliver.compose.ui.graphics/FilterQuality?) // dev.keliver.compose.core.widget/GenAsyncImage1.filterQuality|filterQuality(dev.keliver.compose.ui.graphics.FilterQuality?){}[0]
+    abstract fun model(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage1.model|model(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenAsyncImage1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenAsyncImage2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenAsyncImage2|null[0]
+    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.core.widget/GenAsyncImage2.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
+    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.core.widget/GenAsyncImage2.alpha|alpha(kotlin.Float?){}[0]
+    abstract fun clipToBounds(kotlin/Boolean) // dev.keliver.compose.core.widget/GenAsyncImage2.clipToBounds|clipToBounds(kotlin.Boolean){}[0]
+    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.core.widget/GenAsyncImage2.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage2.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.core.widget/GenAsyncImage2.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
+    abstract fun error(dev.keliver.compose.ui.graphics.painter/Painter?) // dev.keliver.compose.core.widget/GenAsyncImage2.error|error(dev.keliver.compose.ui.graphics.painter.Painter?){}[0]
+    abstract fun filterQuality(dev.keliver.compose.ui.graphics/FilterQuality?) // dev.keliver.compose.core.widget/GenAsyncImage2.filterQuality|filterQuality(dev.keliver.compose.ui.graphics.FilterQuality?){}[0]
+    abstract fun model(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage2.model|model(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenAsyncImage2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun placeholder(dev.keliver.compose.ui.graphics.painter/Painter?) // dev.keliver.compose.core.widget/GenAsyncImage2.placeholder|placeholder(dev.keliver.compose.ui.graphics.painter.Painter?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenBox1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenBox1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenBox1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenBox1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun contentAlignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.core.widget/GenBox1.contentAlignment|contentAlignment(dev.keliver.compose.ui.Alignment){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenBox1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun propagateMinConstraints(kotlin/Boolean) // dev.keliver.compose.core.widget/GenBox1.propagateMinConstraints|propagateMinConstraints(kotlin.Boolean){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenBox2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenBox2|null[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenBox2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenButton1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenButton1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenButton1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenButton1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun border(dev.keliver.compose.foundation/BorderStroke?) // dev.keliver.compose.core.widget/GenButton1.border|border(dev.keliver.compose.foundation.BorderStroke?){}[0]
+    abstract fun colors(dev.keliver.compose.material3/ButtonColors?) // dev.keliver.compose.core.widget/GenButton1.colors|colors(dev.keliver.compose.material3.ButtonColors?){}[0]
+    abstract fun contentPadding(dev.keliver.compose.foundation.layout/PaddingValues?) // dev.keliver.compose.core.widget/GenButton1.contentPadding|contentPadding(dev.keliver.compose.foundation.layout.PaddingValues?){}[0]
+    abstract fun elevation(dev.keliver.compose.material3/ButtonElevation?) // dev.keliver.compose.core.widget/GenButton1.elevation|elevation(dev.keliver.compose.material3.ButtonElevation?){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenButton1.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenButton1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.compose.core.widget/GenButton1.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape?) // dev.keliver.compose.core.widget/GenButton1.shape|shape(dev.keliver.compose.ui.graphics.Shape?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenCard1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenCard1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenCard1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenCard1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun border(dev.keliver.compose.foundation/BorderStroke?) // dev.keliver.compose.core.widget/GenCard1.border|border(dev.keliver.compose.foundation.BorderStroke?){}[0]
+    abstract fun colors(dev.keliver.compose.material3/CardColors?) // dev.keliver.compose.core.widget/GenCard1.colors|colors(dev.keliver.compose.material3.CardColors?){}[0]
+    abstract fun elevation(dev.keliver.compose.material3/CardElevation?) // dev.keliver.compose.core.widget/GenCard1.elevation|elevation(dev.keliver.compose.material3.CardElevation?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenCard1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape?) // dev.keliver.compose.core.widget/GenCard1.shape|shape(dev.keliver.compose.ui.graphics.Shape?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenCard2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenCard2|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenCard2.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenCard2.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun border(dev.keliver.compose.foundation/BorderStroke?) // dev.keliver.compose.core.widget/GenCard2.border|border(dev.keliver.compose.foundation.BorderStroke?){}[0]
+    abstract fun colors(dev.keliver.compose.material3/CardColors?) // dev.keliver.compose.core.widget/GenCard2.colors|colors(dev.keliver.compose.material3.CardColors?){}[0]
+    abstract fun elevation(dev.keliver.compose.material3/CardElevation?) // dev.keliver.compose.core.widget/GenCard2.elevation|elevation(dev.keliver.compose.material3.CardElevation?){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenCard2.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenCard2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.compose.core.widget/GenCard2.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape?) // dev.keliver.compose.core.widget/GenCard2.shape|shape(dev.keliver.compose.ui.graphics.Shape?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenColumn1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenColumn1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenColumn1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenColumn1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun horizontalAlignment(dev.keliver.compose.ui/Alignment.Horizontal) // dev.keliver.compose.core.widget/GenColumn1.horizontalAlignment|horizontalAlignment(dev.keliver.compose.ui.Alignment.Horizontal){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenColumn1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun verticalArrangement(dev.keliver.compose.foundation.layout/Arrangement.Vertical) // dev.keliver.compose.core.widget/GenColumn1.verticalArrangement|verticalArrangement(dev.keliver.compose.foundation.layout.Arrangement.Vertical){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun enter(dev.keliver.compose.animation/EnterTransition?) // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1.enter|enter(dev.keliver.compose.animation.EnterTransition?){}[0]
+    abstract fun exit(dev.keliver.compose.animation/ExitTransition?) // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1.exit|exit(dev.keliver.compose.animation.ExitTransition?){}[0]
+    abstract fun label(kotlin/String?) // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1.label|label(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun visible(kotlin/Boolean) // dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1.visible|visible(kotlin.Boolean){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenFlowRow1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenFlowRow1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenFlowRow1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenFlowRow1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun horizontalArrangement(dev.keliver.compose.foundation.layout/Arrangement.Horizontal) // dev.keliver.compose.core.widget/GenFlowRow1.horizontalArrangement|horizontalArrangement(dev.keliver.compose.foundation.layout.Arrangement.Horizontal){}[0]
+    abstract fun itemVerticalAlignment(dev.keliver.compose.ui/Alignment.Vertical) // dev.keliver.compose.core.widget/GenFlowRow1.itemVerticalAlignment|itemVerticalAlignment(dev.keliver.compose.ui.Alignment.Vertical){}[0]
+    abstract fun maxItemsInEachRow(kotlin/Int) // dev.keliver.compose.core.widget/GenFlowRow1.maxItemsInEachRow|maxItemsInEachRow(kotlin.Int){}[0]
+    abstract fun maxLines(kotlin/Int) // dev.keliver.compose.core.widget/GenFlowRow1.maxLines|maxLines(kotlin.Int){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenFlowRow1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun verticalArrangement(dev.keliver.compose.foundation.layout/Arrangement.Vertical) // dev.keliver.compose.core.widget/GenFlowRow1.verticalArrangement|verticalArrangement(dev.keliver.compose.foundation.layout.Arrangement.Vertical){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenHorizontalDivider1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenHorizontalDivider1|null[0]
+    abstract fun color(dev.keliver.compose.ui.graphics/Color?) // dev.keliver.compose.core.widget/GenHorizontalDivider1.color|color(dev.keliver.compose.ui.graphics.Color?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenHorizontalDivider1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun thickness(dev.keliver.compose.ui.unit/Dp?) // dev.keliver.compose.core.widget/GenHorizontalDivider1.thickness|thickness(dev.keliver.compose.ui.unit.Dp?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenIcon1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenIcon1|null[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenIcon1.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun imageVector(dev.keliver.compose.ui.graphics.vector/ImageVector) // dev.keliver.compose.core.widget/GenIcon1.imageVector|imageVector(dev.keliver.compose.ui.graphics.vector.ImageVector){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenIcon1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun tint(dev.keliver.compose.ui.graphics/Color?) // dev.keliver.compose.core.widget/GenIcon1.tint|tint(dev.keliver.compose.ui.graphics.Color?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenIcon2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenIcon2|null[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenIcon2.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenIcon2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun painter(dev.keliver.compose.ui.graphics.painter/Painter) // dev.keliver.compose.core.widget/GenIcon2.painter|painter(dev.keliver.compose.ui.graphics.painter.Painter){}[0]
+    abstract fun tint(dev.keliver.compose.ui.graphics/Color?) // dev.keliver.compose.core.widget/GenIcon2.tint|tint(dev.keliver.compose.ui.graphics.Color?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenIconButton1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenIconButton1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenIconButton1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenIconButton1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun colors(dev.keliver.compose.material3/IconButtonColors?) // dev.keliver.compose.core.widget/GenIconButton1.colors|colors(dev.keliver.compose.material3.IconButtonColors?){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenIconButton1.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenIconButton1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.compose.core.widget/GenIconButton1.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape?) // dev.keliver.compose.core.widget/GenIconButton1.shape|shape(dev.keliver.compose.ui.graphics.Shape?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenImage1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenImage1|null[0]
+    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.core.widget/GenImage1.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
+    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.core.widget/GenImage1.alpha|alpha(kotlin.Float?){}[0]
+    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.core.widget/GenImage1.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenImage1.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.core.widget/GenImage1.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenImage1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun painter(dev.keliver.compose.ui.graphics.painter/Painter) // dev.keliver.compose.core.widget/GenImage1.painter|painter(dev.keliver.compose.ui.graphics.painter.Painter){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenImage2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenImage2|null[0]
+    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.core.widget/GenImage2.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
+    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.core.widget/GenImage2.alpha|alpha(kotlin.Float?){}[0]
+    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.core.widget/GenImage2.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenImage2.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.core.widget/GenImage2.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
+    abstract fun imageVector(dev.keliver.compose.ui.graphics.vector/ImageVector) // dev.keliver.compose.core.widget/GenImage2.imageVector|imageVector(dev.keliver.compose.ui.graphics.vector.ImageVector){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenImage2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenLazyColumn1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenLazyColumn1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenLazyColumn1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenLazyColumn1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun contentAfter(kotlin/Int) // dev.keliver.compose.core.widget/GenLazyColumn1.contentAfter|contentAfter(kotlin.Int){}[0]
+    abstract fun contentBefore(kotlin/Int) // dev.keliver.compose.core.widget/GenLazyColumn1.contentBefore|contentBefore(kotlin.Int){}[0]
+    abstract fun contentPadding(dev.keliver.compose.foundation.layout/PaddingValues?) // dev.keliver.compose.core.widget/GenLazyColumn1.contentPadding|contentPadding(dev.keliver.compose.foundation.layout.PaddingValues?){}[0]
+    abstract fun contentViewport(kotlin/Function3<kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenLazyColumn1.contentViewport|contentViewport(kotlin.Function3<kotlin.Int,kotlin.Int,kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun horizontalAlignment(dev.keliver.compose.ui/Alignment.Horizontal) // dev.keliver.compose.core.widget/GenLazyColumn1.horizontalAlignment|horizontalAlignment(dev.keliver.compose.ui.Alignment.Horizontal){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenLazyColumn1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun reverseLayout(kotlin/Boolean) // dev.keliver.compose.core.widget/GenLazyColumn1.reverseLayout|reverseLayout(kotlin.Boolean){}[0]
+    abstract fun state(dev.keliver.compose.foundation.lazy/LazyListStateWire) // dev.keliver.compose.core.widget/GenLazyColumn1.state|state(dev.keliver.compose.foundation.lazy.LazyListStateWire){}[0]
+    abstract fun userScrollEnabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenLazyColumn1.userScrollEnabled|userScrollEnabled(kotlin.Boolean){}[0]
+    abstract fun verticalArrangement(dev.keliver.compose.foundation.layout/Arrangement.Vertical?) // dev.keliver.compose.core.widget/GenLazyColumn1.verticalArrangement|verticalArrangement(dev.keliver.compose.foundation.layout.Arrangement.Vertical?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenLazyRow1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenLazyRow1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenLazyRow1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenLazyRow1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun contentAfter(kotlin/Int) // dev.keliver.compose.core.widget/GenLazyRow1.contentAfter|contentAfter(kotlin.Int){}[0]
+    abstract fun contentBefore(kotlin/Int) // dev.keliver.compose.core.widget/GenLazyRow1.contentBefore|contentBefore(kotlin.Int){}[0]
+    abstract fun contentPadding(dev.keliver.compose.foundation.layout/PaddingValues?) // dev.keliver.compose.core.widget/GenLazyRow1.contentPadding|contentPadding(dev.keliver.compose.foundation.layout.PaddingValues?){}[0]
+    abstract fun contentViewport(kotlin/Function3<kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenLazyRow1.contentViewport|contentViewport(kotlin.Function3<kotlin.Int,kotlin.Int,kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun horizontalArrangement(dev.keliver.compose.foundation.layout/Arrangement.Horizontal?) // dev.keliver.compose.core.widget/GenLazyRow1.horizontalArrangement|horizontalArrangement(dev.keliver.compose.foundation.layout.Arrangement.Horizontal?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenLazyRow1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun reverseLayout(kotlin/Boolean) // dev.keliver.compose.core.widget/GenLazyRow1.reverseLayout|reverseLayout(kotlin.Boolean){}[0]
+    abstract fun state(dev.keliver.compose.foundation.lazy/LazyListStateWire) // dev.keliver.compose.core.widget/GenLazyRow1.state|state(dev.keliver.compose.foundation.lazy.LazyListStateWire){}[0]
+    abstract fun userScrollEnabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenLazyRow1.userScrollEnabled|userScrollEnabled(kotlin.Boolean){}[0]
+    abstract fun verticalAlignment(dev.keliver.compose.ui/Alignment.Vertical) // dev.keliver.compose.core.widget/GenLazyRow1.verticalAlignment|verticalAlignment(dev.keliver.compose.ui.Alignment.Vertical){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenOutlinedButton1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenOutlinedButton1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenOutlinedButton1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenOutlinedButton1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun border(dev.keliver.compose.foundation/BorderStroke?) // dev.keliver.compose.core.widget/GenOutlinedButton1.border|border(dev.keliver.compose.foundation.BorderStroke?){}[0]
+    abstract fun colors(dev.keliver.compose.material3/ButtonColors?) // dev.keliver.compose.core.widget/GenOutlinedButton1.colors|colors(dev.keliver.compose.material3.ButtonColors?){}[0]
+    abstract fun contentPadding(dev.keliver.compose.foundation.layout/PaddingValues?) // dev.keliver.compose.core.widget/GenOutlinedButton1.contentPadding|contentPadding(dev.keliver.compose.foundation.layout.PaddingValues?){}[0]
+    abstract fun elevation(dev.keliver.compose.material3/ButtonElevation?) // dev.keliver.compose.core.widget/GenOutlinedButton1.elevation|elevation(dev.keliver.compose.material3.ButtonElevation?){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenOutlinedButton1.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenOutlinedButton1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.compose.core.widget/GenOutlinedButton1.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape?) // dev.keliver.compose.core.widget/GenOutlinedButton1.shape|shape(dev.keliver.compose.ui.graphics.Shape?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenRow1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenRow1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenRow1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenRow1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun horizontalArrangement(dev.keliver.compose.foundation.layout/Arrangement.Horizontal) // dev.keliver.compose.core.widget/GenRow1.horizontalArrangement|horizontalArrangement(dev.keliver.compose.foundation.layout.Arrangement.Horizontal){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenRow1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun verticalAlignment(dev.keliver.compose.ui/Alignment.Vertical) // dev.keliver.compose.core.widget/GenRow1.verticalAlignment|verticalAlignment(dev.keliver.compose.ui.Alignment.Vertical){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun enter(dev.keliver.compose.animation/EnterTransition?) // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1.enter|enter(dev.keliver.compose.animation.EnterTransition?){}[0]
+    abstract fun exit(dev.keliver.compose.animation/ExitTransition?) // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1.exit|exit(dev.keliver.compose.animation.ExitTransition?){}[0]
+    abstract fun label(kotlin/String?) // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1.label|label(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun visible(kotlin/Boolean) // dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1.visible|visible(kotlin.Boolean){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenSpacer1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenSpacer1|null[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenSpacer1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenSurface1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenSurface1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenSurface1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenSurface1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun border(dev.keliver.compose.foundation/BorderStroke?) // dev.keliver.compose.core.widget/GenSurface1.border|border(dev.keliver.compose.foundation.BorderStroke?){}[0]
+    abstract fun color(dev.keliver.compose.ui.graphics/Color?) // dev.keliver.compose.core.widget/GenSurface1.color|color(dev.keliver.compose.ui.graphics.Color?){}[0]
+    abstract fun contentColor(dev.keliver.compose.ui.graphics/Color?) // dev.keliver.compose.core.widget/GenSurface1.contentColor|contentColor(dev.keliver.compose.ui.graphics.Color?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenSurface1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun shadowElevation(dev.keliver.compose.ui.unit/Dp) // dev.keliver.compose.core.widget/GenSurface1.shadowElevation|shadowElevation(dev.keliver.compose.ui.unit.Dp){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape) // dev.keliver.compose.core.widget/GenSurface1.shape|shape(dev.keliver.compose.ui.graphics.Shape){}[0]
+    abstract fun tonalElevation(dev.keliver.compose.ui.unit/Dp) // dev.keliver.compose.core.widget/GenSurface1.tonalElevation|tonalElevation(dev.keliver.compose.ui.unit.Dp){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenSurface2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenSurface2|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenSurface2.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenSurface2.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun border(dev.keliver.compose.foundation/BorderStroke?) // dev.keliver.compose.core.widget/GenSurface2.border|border(dev.keliver.compose.foundation.BorderStroke?){}[0]
+    abstract fun color(dev.keliver.compose.ui.graphics/Color?) // dev.keliver.compose.core.widget/GenSurface2.color|color(dev.keliver.compose.ui.graphics.Color?){}[0]
+    abstract fun contentColor(dev.keliver.compose.ui.graphics/Color?) // dev.keliver.compose.core.widget/GenSurface2.contentColor|contentColor(dev.keliver.compose.ui.graphics.Color?){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenSurface2.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenSurface2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.compose.core.widget/GenSurface2.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun shadowElevation(dev.keliver.compose.ui.unit/Dp) // dev.keliver.compose.core.widget/GenSurface2.shadowElevation|shadowElevation(dev.keliver.compose.ui.unit.Dp){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape) // dev.keliver.compose.core.widget/GenSurface2.shape|shape(dev.keliver.compose.ui.graphics.Shape){}[0]
+    abstract fun tonalElevation(dev.keliver.compose.ui.unit/Dp) // dev.keliver.compose.core.widget/GenSurface2.tonalElevation|tonalElevation(dev.keliver.compose.ui.unit.Dp){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenText1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenText1|null[0]
+    abstract fun color(dev.keliver.compose.ui.graphics/Color) // dev.keliver.compose.core.widget/GenText1.color|color(dev.keliver.compose.ui.graphics.Color){}[0]
+    abstract fun fontFamily(dev.keliver.compose.ui.text.font/FontFamily?) // dev.keliver.compose.core.widget/GenText1.fontFamily|fontFamily(dev.keliver.compose.ui.text.font.FontFamily?){}[0]
+    abstract fun fontSize(dev.keliver.compose.ui.unit/TextUnit) // dev.keliver.compose.core.widget/GenText1.fontSize|fontSize(dev.keliver.compose.ui.unit.TextUnit){}[0]
+    abstract fun fontStyle(dev.keliver.compose.ui.text.font/FontStyle?) // dev.keliver.compose.core.widget/GenText1.fontStyle|fontStyle(dev.keliver.compose.ui.text.font.FontStyle?){}[0]
+    abstract fun fontWeight(dev.keliver.compose.ui.text.font/FontWeight?) // dev.keliver.compose.core.widget/GenText1.fontWeight|fontWeight(dev.keliver.compose.ui.text.font.FontWeight?){}[0]
+    abstract fun letterSpacing(dev.keliver.compose.ui.unit/TextUnit) // dev.keliver.compose.core.widget/GenText1.letterSpacing|letterSpacing(dev.keliver.compose.ui.unit.TextUnit){}[0]
+    abstract fun lineHeight(dev.keliver.compose.ui.unit/TextUnit) // dev.keliver.compose.core.widget/GenText1.lineHeight|lineHeight(dev.keliver.compose.ui.unit.TextUnit){}[0]
+    abstract fun maxLines(kotlin/Int) // dev.keliver.compose.core.widget/GenText1.maxLines|maxLines(kotlin.Int){}[0]
+    abstract fun minLines(kotlin/Int) // dev.keliver.compose.core.widget/GenText1.minLines|minLines(kotlin.Int){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenText1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun overflow(dev.keliver.compose.ui.text.style/TextOverflow) // dev.keliver.compose.core.widget/GenText1.overflow|overflow(dev.keliver.compose.ui.text.style.TextOverflow){}[0]
+    abstract fun softWrap(kotlin/Boolean) // dev.keliver.compose.core.widget/GenText1.softWrap|softWrap(kotlin.Boolean){}[0]
+    abstract fun style(dev.keliver.compose.ui.text/TextStyle?) // dev.keliver.compose.core.widget/GenText1.style|style(dev.keliver.compose.ui.text.TextStyle?){}[0]
+    abstract fun text(kotlin/String) // dev.keliver.compose.core.widget/GenText1.text|text(kotlin.String){}[0]
+    abstract fun textAlign(dev.keliver.compose.ui.text.style/TextAlign?) // dev.keliver.compose.core.widget/GenText1.textAlign|textAlign(dev.keliver.compose.ui.text.style.TextAlign?){}[0]
+    abstract fun textDecoration(dev.keliver.compose.ui.text.style/TextDecoration?) // dev.keliver.compose.core.widget/GenText1.textDecoration|textDecoration(dev.keliver.compose.ui.text.style.TextDecoration?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenText2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenText2|null[0]
+    abstract fun color(dev.keliver.compose.ui.graphics/Color) // dev.keliver.compose.core.widget/GenText2.color|color(dev.keliver.compose.ui.graphics.Color){}[0]
+    abstract fun fontFamily(dev.keliver.compose.ui.text.font/FontFamily?) // dev.keliver.compose.core.widget/GenText2.fontFamily|fontFamily(dev.keliver.compose.ui.text.font.FontFamily?){}[0]
+    abstract fun fontSize(dev.keliver.compose.ui.unit/TextUnit) // dev.keliver.compose.core.widget/GenText2.fontSize|fontSize(dev.keliver.compose.ui.unit.TextUnit){}[0]
+    abstract fun fontStyle(dev.keliver.compose.ui.text.font/FontStyle?) // dev.keliver.compose.core.widget/GenText2.fontStyle|fontStyle(dev.keliver.compose.ui.text.font.FontStyle?){}[0]
+    abstract fun fontWeight(dev.keliver.compose.ui.text.font/FontWeight?) // dev.keliver.compose.core.widget/GenText2.fontWeight|fontWeight(dev.keliver.compose.ui.text.font.FontWeight?){}[0]
+    abstract fun letterSpacing(dev.keliver.compose.ui.unit/TextUnit) // dev.keliver.compose.core.widget/GenText2.letterSpacing|letterSpacing(dev.keliver.compose.ui.unit.TextUnit){}[0]
+    abstract fun lineHeight(dev.keliver.compose.ui.unit/TextUnit) // dev.keliver.compose.core.widget/GenText2.lineHeight|lineHeight(dev.keliver.compose.ui.unit.TextUnit){}[0]
+    abstract fun maxLines(kotlin/Int) // dev.keliver.compose.core.widget/GenText2.maxLines|maxLines(kotlin.Int){}[0]
+    abstract fun minLines(kotlin/Int) // dev.keliver.compose.core.widget/GenText2.minLines|minLines(kotlin.Int){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenText2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun overflow(dev.keliver.compose.ui.text.style/TextOverflow) // dev.keliver.compose.core.widget/GenText2.overflow|overflow(dev.keliver.compose.ui.text.style.TextOverflow){}[0]
+    abstract fun softWrap(kotlin/Boolean) // dev.keliver.compose.core.widget/GenText2.softWrap|softWrap(kotlin.Boolean){}[0]
+    abstract fun style(dev.keliver.compose.ui.text/TextStyle?) // dev.keliver.compose.core.widget/GenText2.style|style(dev.keliver.compose.ui.text.TextStyle?){}[0]
+    abstract fun text(kotlin/String) // dev.keliver.compose.core.widget/GenText2.text|text(kotlin.String){}[0]
+    abstract fun textAlign(dev.keliver.compose.ui.text.style/TextAlign?) // dev.keliver.compose.core.widget/GenText2.textAlign|textAlign(dev.keliver.compose.ui.text.style.TextAlign?){}[0]
+    abstract fun textDecoration(dev.keliver.compose.ui.text.style/TextDecoration?) // dev.keliver.compose.core.widget/GenText2.textDecoration|textDecoration(dev.keliver.compose.ui.text.style.TextDecoration?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenTextButton1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenTextButton1|null[0]
+    abstract val content // dev.keliver.compose.core.widget/GenTextButton1.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenTextButton1.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun border(dev.keliver.compose.foundation/BorderStroke?) // dev.keliver.compose.core.widget/GenTextButton1.border|border(dev.keliver.compose.foundation.BorderStroke?){}[0]
+    abstract fun colors(dev.keliver.compose.material3/ButtonColors?) // dev.keliver.compose.core.widget/GenTextButton1.colors|colors(dev.keliver.compose.material3.ButtonColors?){}[0]
+    abstract fun contentPadding(dev.keliver.compose.foundation.layout/PaddingValues?) // dev.keliver.compose.core.widget/GenTextButton1.contentPadding|contentPadding(dev.keliver.compose.foundation.layout.PaddingValues?){}[0]
+    abstract fun elevation(dev.keliver.compose.material3/ButtonElevation?) // dev.keliver.compose.core.widget/GenTextButton1.elevation|elevation(dev.keliver.compose.material3.ButtonElevation?){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.compose.core.widget/GenTextButton1.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenTextButton1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.compose.core.widget/GenTextButton1.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun shape(dev.keliver.compose.ui.graphics/Shape?) // dev.keliver.compose.core.widget/GenTextButton1.shape|shape(dev.keliver.compose.ui.graphics.Shape?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenTopAppBar1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenTopAppBar1|null[0]
+    abstract val actions // dev.keliver.compose.core.widget/GenTopAppBar1.actions|{}actions[0]
+        abstract fun <get-actions>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenTopAppBar1.actions.<get-actions>|<get-actions>(){}[0]
+    abstract val navigationIcon // dev.keliver.compose.core.widget/GenTopAppBar1.navigationIcon|{}navigationIcon[0]
+        abstract fun <get-navigationIcon>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenTopAppBar1.navigationIcon.<get-navigationIcon>|<get-navigationIcon>(){}[0]
+    abstract val title // dev.keliver.compose.core.widget/GenTopAppBar1.title|{}title[0]
+        abstract fun <get-title>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenTopAppBar1.title.<get-title>|<get-title>(){}[0]
+
+    abstract fun colors(dev.keliver.compose.material3/TopAppBarColors?) // dev.keliver.compose.core.widget/GenTopAppBar1.colors|colors(dev.keliver.compose.material3.TopAppBarColors?){}[0]
+    abstract fun expandedHeight(dev.keliver.compose.ui.unit/Dp?) // dev.keliver.compose.core.widget/GenTopAppBar1.expandedHeight|expandedHeight(dev.keliver.compose.ui.unit.Dp?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenTopAppBar1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory { // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory|null[0]
+    abstract fun ExtraAnimated(#A, dev.keliver.compose.core.modifier/ExtraAnimated) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.ExtraAnimated|ExtraAnimated(1:0;dev.keliver.compose.core.modifier.ExtraAnimated){}[0]
+    abstract fun ExtraLazyItem(): dev.keliver.compose.core.widget/ExtraLazyItem<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.ExtraLazyItem|ExtraLazyItem(){}[0]
+    abstract fun ExtraPress(#A, dev.keliver.compose.core.modifier/ExtraPress) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.ExtraPress|ExtraPress(1:0;dev.keliver.compose.core.modifier.ExtraPress){}[0]
+    abstract fun ExtraRetained(): dev.keliver.compose.core.widget/ExtraRetained<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.ExtraRetained|ExtraRetained(){}[0]
+    abstract fun ExtraRetainedEntry(): dev.keliver.compose.core.widget/ExtraRetainedEntry<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.ExtraRetainedEntry|ExtraRetainedEntry(){}[0]
+    abstract fun ExtraShimmer(): dev.keliver.compose.core.widget/ExtraShimmer<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.ExtraShimmer|ExtraShimmer(){}[0]
+    abstract fun GenAlpha1(#A, dev.keliver.compose.core.modifier/GenAlpha1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAlpha1|GenAlpha1(1:0;dev.keliver.compose.core.modifier.GenAlpha1){}[0]
+    abstract fun GenAnimateContentSize1(#A, dev.keliver.compose.core.modifier/GenAnimateContentSize1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAnimateContentSize1|GenAnimateContentSize1(1:0;dev.keliver.compose.core.modifier.GenAnimateContentSize1){}[0]
+    abstract fun GenAnimateContentSize2(#A, dev.keliver.compose.core.modifier/GenAnimateContentSize2) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAnimateContentSize2|GenAnimateContentSize2(1:0;dev.keliver.compose.core.modifier.GenAnimateContentSize2){}[0]
+    abstract fun GenAnimatedVisibility1(): dev.keliver.compose.core.widget/GenAnimatedVisibility1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAnimatedVisibility1|GenAnimatedVisibility1(){}[0]
+    abstract fun GenAsyncImage1(): dev.keliver.compose.core.widget/GenAsyncImage1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAsyncImage1|GenAsyncImage1(){}[0]
+    abstract fun GenAsyncImage2(): dev.keliver.compose.core.widget/GenAsyncImage2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAsyncImage2|GenAsyncImage2(){}[0]
+    abstract fun GenBackground1(#A, dev.keliver.compose.core.modifier/GenBackground1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBackground1|GenBackground1(1:0;dev.keliver.compose.core.modifier.GenBackground1){}[0]
+    abstract fun GenBorder1(#A, dev.keliver.compose.core.modifier/GenBorder1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBorder1|GenBorder1(1:0;dev.keliver.compose.core.modifier.GenBorder1){}[0]
+    abstract fun GenBorder2(#A, dev.keliver.compose.core.modifier/GenBorder2) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBorder2|GenBorder2(1:0;dev.keliver.compose.core.modifier.GenBorder2){}[0]
+    abstract fun GenBox1(): dev.keliver.compose.core.widget/GenBox1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBox1|GenBox1(){}[0]
+    abstract fun GenBox2(): dev.keliver.compose.core.widget/GenBox2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBox2|GenBox2(){}[0]
+    abstract fun GenButton1(): dev.keliver.compose.core.widget/GenButton1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenButton1|GenButton1(){}[0]
+    abstract fun GenCard1(): dev.keliver.compose.core.widget/GenCard1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenCard1|GenCard1(){}[0]
+    abstract fun GenCard2(): dev.keliver.compose.core.widget/GenCard2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenCard2|GenCard2(){}[0]
+    abstract fun GenClickable1(#A, dev.keliver.compose.core.modifier/GenClickable1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenClickable1|GenClickable1(1:0;dev.keliver.compose.core.modifier.GenClickable1){}[0]
+    abstract fun GenClickable2(#A, dev.keliver.compose.core.modifier/GenClickable2) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenClickable2|GenClickable2(1:0;dev.keliver.compose.core.modifier.GenClickable2){}[0]
+    abstract fun GenClip1(#A, dev.keliver.compose.core.modifier/GenClip1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenClip1|GenClip1(1:0;dev.keliver.compose.core.modifier.GenClip1){}[0]
+    abstract fun GenColumn1(): dev.keliver.compose.core.widget/GenColumn1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenColumn1|GenColumn1(){}[0]
+    abstract fun GenColumnScopeAnimatedVisibility1(): dev.keliver.compose.core.widget/GenColumnScopeAnimatedVisibility1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenColumnScopeAnimatedVisibility1|GenColumnScopeAnimatedVisibility1(){}[0]
+    abstract fun GenFillMaxHeight1(#A, dev.keliver.compose.core.modifier/GenFillMaxHeight1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenFillMaxHeight1|GenFillMaxHeight1(1:0;dev.keliver.compose.core.modifier.GenFillMaxHeight1){}[0]
+    abstract fun GenFillMaxSize1(#A, dev.keliver.compose.core.modifier/GenFillMaxSize1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenFillMaxSize1|GenFillMaxSize1(1:0;dev.keliver.compose.core.modifier.GenFillMaxSize1){}[0]
+    abstract fun GenFillMaxWidth1(#A, dev.keliver.compose.core.modifier/GenFillMaxWidth1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenFillMaxWidth1|GenFillMaxWidth1(1:0;dev.keliver.compose.core.modifier.GenFillMaxWidth1){}[0]
+    abstract fun GenFlowRow1(): dev.keliver.compose.core.widget/GenFlowRow1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenFlowRow1|GenFlowRow1(){}[0]
+    abstract fun GenHeight1(#A, dev.keliver.compose.core.modifier/GenHeight1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenHeight1|GenHeight1(1:0;dev.keliver.compose.core.modifier.GenHeight1){}[0]
+    abstract fun GenHorizontalDivider1(): dev.keliver.compose.core.widget/GenHorizontalDivider1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenHorizontalDivider1|GenHorizontalDivider1(){}[0]
+    abstract fun GenHorizontalScroll1(#A, dev.keliver.compose.core.modifier/GenHorizontalScroll1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenHorizontalScroll1|GenHorizontalScroll1(1:0;dev.keliver.compose.core.modifier.GenHorizontalScroll1){}[0]
+    abstract fun GenIcon1(): dev.keliver.compose.core.widget/GenIcon1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenIcon1|GenIcon1(){}[0]
+    abstract fun GenIcon2(): dev.keliver.compose.core.widget/GenIcon2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenIcon2|GenIcon2(){}[0]
+    abstract fun GenIconButton1(): dev.keliver.compose.core.widget/GenIconButton1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenIconButton1|GenIconButton1(){}[0]
+    abstract fun GenImage1(): dev.keliver.compose.core.widget/GenImage1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenImage1|GenImage1(){}[0]
+    abstract fun GenImage2(): dev.keliver.compose.core.widget/GenImage2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenImage2|GenImage2(){}[0]
+    abstract fun GenLazyColumn1(): dev.keliver.compose.core.widget/GenLazyColumn1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenLazyColumn1|GenLazyColumn1(){}[0]
+    abstract fun GenLazyRow1(): dev.keliver.compose.core.widget/GenLazyRow1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenLazyRow1|GenLazyRow1(){}[0]
+    abstract fun GenOffset1(#A, dev.keliver.compose.core.modifier/GenOffset1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenOffset1|GenOffset1(1:0;dev.keliver.compose.core.modifier.GenOffset1){}[0]
+    abstract fun GenOutlinedButton1(): dev.keliver.compose.core.widget/GenOutlinedButton1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenOutlinedButton1|GenOutlinedButton1(){}[0]
+    abstract fun GenPadding1(#A, dev.keliver.compose.core.modifier/GenPadding1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenPadding1|GenPadding1(1:0;dev.keliver.compose.core.modifier.GenPadding1){}[0]
+    abstract fun GenPadding2(#A, dev.keliver.compose.core.modifier/GenPadding2) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenPadding2|GenPadding2(1:0;dev.keliver.compose.core.modifier.GenPadding2){}[0]
+    abstract fun GenPadding3(#A, dev.keliver.compose.core.modifier/GenPadding3) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenPadding3|GenPadding3(1:0;dev.keliver.compose.core.modifier.GenPadding3){}[0]
+    abstract fun GenPadding4(#A, dev.keliver.compose.core.modifier/GenPadding4) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenPadding4|GenPadding4(1:0;dev.keliver.compose.core.modifier.GenPadding4){}[0]
+    abstract fun GenRotate1(#A, dev.keliver.compose.core.modifier/GenRotate1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenRotate1|GenRotate1(1:0;dev.keliver.compose.core.modifier.GenRotate1){}[0]
+    abstract fun GenRow1(): dev.keliver.compose.core.widget/GenRow1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenRow1|GenRow1(){}[0]
+    abstract fun GenRowScopeAnimatedVisibility1(): dev.keliver.compose.core.widget/GenRowScopeAnimatedVisibility1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenRowScopeAnimatedVisibility1|GenRowScopeAnimatedVisibility1(){}[0]
+    abstract fun GenScale1(#A, dev.keliver.compose.core.modifier/GenScale1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenScale1|GenScale1(1:0;dev.keliver.compose.core.modifier.GenScale1){}[0]
+    abstract fun GenShadow1(#A, dev.keliver.compose.core.modifier/GenShadow1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenShadow1|GenShadow1(1:0;dev.keliver.compose.core.modifier.GenShadow1){}[0]
+    abstract fun GenSize1(#A, dev.keliver.compose.core.modifier/GenSize1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenSize1|GenSize1(1:0;dev.keliver.compose.core.modifier.GenSize1){}[0]
+    abstract fun GenSize2(#A, dev.keliver.compose.core.modifier/GenSize2) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenSize2|GenSize2(1:0;dev.keliver.compose.core.modifier.GenSize2){}[0]
+    abstract fun GenSpacer1(): dev.keliver.compose.core.widget/GenSpacer1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenSpacer1|GenSpacer1(){}[0]
+    abstract fun GenSurface1(): dev.keliver.compose.core.widget/GenSurface1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenSurface1|GenSurface1(){}[0]
+    abstract fun GenSurface2(): dev.keliver.compose.core.widget/GenSurface2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenSurface2|GenSurface2(){}[0]
+    abstract fun GenText1(): dev.keliver.compose.core.widget/GenText1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenText1|GenText1(){}[0]
+    abstract fun GenText2(): dev.keliver.compose.core.widget/GenText2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenText2|GenText2(){}[0]
+    abstract fun GenTextButton1(): dev.keliver.compose.core.widget/GenTextButton1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenTextButton1|GenTextButton1(){}[0]
+    abstract fun GenTopAppBar1(): dev.keliver.compose.core.widget/GenTopAppBar1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenTopAppBar1|GenTopAppBar1(){}[0]
+    abstract fun GenVerticalScroll1(#A, dev.keliver.compose.core.modifier/GenVerticalScroll1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenVerticalScroll1|GenVerticalScroll1(1:0;dev.keliver.compose.core.modifier.GenVerticalScroll1){}[0]
+    abstract fun GenWidth1(#A, dev.keliver.compose.core.modifier/GenWidth1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenWidth1|GenWidth1(1:0;dev.keliver.compose.core.modifier.GenWidth1){}[0]
+}
+
+final class <#A: kotlin/Any> dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem : dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem|null[0]
+    constructor <init>(dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A>) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem.<init>|<init>(dev.keliver.compose.core.widget.KeliverComposeCoreWidgetFactory<1:0>){}[0]
+
+    final val KeliverComposeCore // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem.KeliverComposeCore|{}KeliverComposeCore[0]
+        final fun <get-KeliverComposeCore>(): dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem.KeliverComposeCore.<get-KeliverComposeCore>|<get-KeliverComposeCore>(){}[0]
+
+    final fun apply(#A, dev.keliver/Modifier.UnscopedElement) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem.apply|apply(1:0;dev.keliver.Modifier.UnscopedElement){}[0]
+
+    final object Companion { // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem.Companion|null[0]
+        final fun <#A2: kotlin/Any> allChildren(dev.keliver.widget/Widget<#A2>): kotlin.collections/List<dev.keliver.widget/Widget<#A2>> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetSystem.Companion.allChildren|allChildren(dev.keliver.widget.Widget<0:0>){0§<kotlin.Any>}[0]
+    }
+}
