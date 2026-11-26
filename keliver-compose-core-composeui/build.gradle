@@ -19,8 +19,8 @@ kotlin {
     commonMain {
       dependencies {
         api projects.keliverComposeCoreWidget
-        // keliverComposeWidgetSystem(): the generated root's widget system.
-        api projects.keliverComposeRootWidget
+        // No root here: keliverComposeWidgetSystem() is keliver-compose-root-composeui's, so a
+        // group's host module never depends on another group's (review of #313, M1).
         implementation projects.keliverWidgetComposeui
         implementation libs.jetbrains.compose.foundation
         // Animated references and AnimatedVisibility call the real animation API.
@@ -48,6 +48,9 @@ kotlin {
         implementation libs.jetbrains.compose.material.icons.extended
         implementation libs.coil.compose.full
         implementation projects.keliverComposeCoreCompose
+        // The tests' own root system (TestRoot.kt): the root's widget system with core's renderers.
+        // On the test classpath only, so core's main code never depends on the root.
+        implementation projects.keliverComposeRootWidget
         implementation projects.keliverComposeRootProtocolGuest
         implementation projects.keliverComposeRootProtocolHost
         implementation projects.keliverProtocolGuest
@@ -67,6 +70,7 @@ kotlin {
         implementation libs.jetbrains.compose.ui.test
         implementation rootProject.ext.skikoHostRuntime()
         implementation projects.keliverComposeCoreCompose
+        implementation projects.keliverComposeRootWidget
         implementation projects.keliverComposeRootProtocolGuest
         implementation projects.keliverComposeRootProtocolHost
         implementation projects.keliverProtocolGuest

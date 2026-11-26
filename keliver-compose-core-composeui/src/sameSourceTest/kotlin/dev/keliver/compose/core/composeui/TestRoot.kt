@@ -21,14 +21,14 @@ import dev.keliver.compose.root.widget.KeliverComposeWidgetFactory
 import dev.keliver.compose.root.widget.KeliverComposeWidgetSystem
 
 /**
- * The generated root's widget system on Compose UI: the core group's generated renderers. Unlike the
- * prototype's, it takes no legacy keliver-material system: the generated root does not depend on the
- * legacy schemas (docs/MS4_PLAN.md, MS4-01 and MS4-03).
+ * The generated root's widget system with only this group's renderers: the tests' own, so core's
+ * tests never depend on keliver-compose-root-composeui, which depends on core (MS4-03).
+ * keliverComposeWidgetSystem() there is the one a host uses.
  */
-public fun keliverComposeWidgetSystem(): KeliverComposeWidgetSystem<@Composable (Modifier) -> Unit> = KeliverComposeWidgetSystem(
-  KeliverCompose = RootWidgetFactory,
+internal fun coreWidgetSystem(): KeliverComposeWidgetSystem<@Composable (Modifier) -> Unit> = KeliverComposeWidgetSystem(
+  KeliverCompose = TestRootWidgetFactory,
   KeliverComposeCore = ComposeUiKeliverComposeCoreWidgetFactory(),
 )
 
 /** The root has no widgets of its own: each group is a dependency. */
-private object RootWidgetFactory : KeliverComposeWidgetFactory<@Composable (Modifier) -> Unit>
+private object TestRootWidgetFactory : KeliverComposeWidgetFactory<@Composable (Modifier) -> Unit>
