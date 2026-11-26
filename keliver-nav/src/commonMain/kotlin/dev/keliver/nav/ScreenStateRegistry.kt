@@ -30,7 +30,7 @@ package dev.keliver.nav
  * [NamedState.route] the way the app opens any route (D8: routes are data). The device route that
  * does this from a link is planned (docs/PLAN_2026-11.md ED3).
  */
-@ExperimentalKeliverScreenStateApi
+@ExperimentalKeliverNavScreenStateApi
 public class ScreenStateRegistry(
   /** Every state, by screen file name and then in source order. */
   public val entries: List<ScreenStateEntry>,
@@ -75,6 +75,7 @@ public class ScreenStateRegistry(
    *
    * @throws UnknownScreenStateException when there is no such state.
    * @throws MissingScreenStateFixturesException when [fixtureSets] lacks the state's set.
+   * @throws StaleScreenStateRegistryException when the registry is older than the screen file.
    */
   public fun open(screen: String, name: String, fixtureSets: Collection<String>): NamedState<*> =
     get(screen, name).open(fixtureSets)
@@ -89,7 +90,7 @@ public class ScreenStateRegistry(
  * The fields other than [state] are read from source by the generator and are what the portal
  * lists, so a host can show and filter states without running app code.
  */
-@ExperimentalKeliverScreenStateApi
+@ExperimentalKeliverNavScreenStateApi
 public class ScreenStateEntry(
   /** The screen: its file's name without `.kt`, as `GET /states` names it. */
   public val screen: String,
@@ -97,7 +98,10 @@ public class ScreenStateEntry(
   public val name: String,
   /** The name of the function that declares the state. */
   public val function: String,
-  /** The route argument as written in source, for showing; [state] gives the value. */
+  /**
+   * The route argument as written in source, for showing (`GET /states` calls this text `route`);
+   * [state] gives the value.
+   */
   public val routeSource: String,
   /**
    * The route's class as written (`ItemDetail` for `ItemDetail(id = "x")`, `Route.Home` for
@@ -118,25 +122,23 @@ public class ScreenStateEntry(
    * Runs the declaring function: the route the screen opens with, and its fixture set. Each call
    * runs it again, so a route is never shared between two openings.
    *
-   * @throws IllegalStateException when the function names a fixture set other than [fixtures]:
-   *   the registry is older than the screen file, and must be regenerated.
+   * @throws StaleScreenStateRegistryException when the function names a fixture set other than
+   *   [fixtures]: the registry is older than the screen file, and must be regenerated.
    */
   public fun state(): NamedState<*> {
     val state = declaration()
-    check(state.fixtures == fixtures) {
-      "$screen/$name: $function() replays '${state.fixtures}' but the registry says '$fixtures'; " +
-        "the registry is older than the screen file: regenerate it"
-    }
+    if (state.fixtures != fixtures) throw StaleScreenStateRegistryException(this, state.fixtures)
     return state
   }
 
   /**
    * [state], once the host has the state's fixture set: [fixtureSets] are the ids of the sets the
-   * host can replay (a debug host's embedded sets, the relay's `httpFixturesDir`). A state whose
-   * set is missing fails here, by name, before its presenter runs, rather than as a replay miss
-   * the presenter might swallow.
+   * host can replay (a debug host's valid, unexpired sets; the relay's `httpFixturesDir`). A state
+   * whose set is missing fails here, by name, before its presenter runs, rather than as a replay
+   * miss the presenter might swallow.
    *
    * @throws MissingScreenStateFixturesException when [fixtures] is not in [fixtureSets].
+   * @throws StaleScreenStateRegistryException as [state] does.
    */
   public fun open(fixtureSets: Collection<String>): NamedState<*> {
     if (fixtures !in fixtureSets) throw MissingScreenStateFixturesException(this, fixtureSets)
@@ -147,37 +149,66 @@ public class ScreenStateEntry(
     "ScreenStateEntry(screen=$screen, name=$name, function=$function, route=$routeSource, fixtures=$fixtures)"
 }
 
-/** A [ScreenStateRegistry] lookup for a state it does not have. */
-@ExperimentalKeliverScreenStateApi
-public class UnknownScreenStateException internal constructor(
+/**
+ * Why a named state could not be opened: the state is unknown ([UnknownScreenStateException]),
+ * the host lacks its fixture set ([MissingScreenStateFixturesException]), or the registry is
+ * older than the screen file ([StaleScreenStateRegistryException]). A host catches this one type
+ * and shows the message; the subtypes say which case it was. Each names the [screen] and
+ * [state] asked for.
+ */
+@ExperimentalKeliverNavScreenStateApi
+public sealed class ScreenStateException(
   /** The screen asked for. */
   public val screen: String,
   /** The state asked for. */
   public val state: String,
+  message: String,
+) : RuntimeException(message)
+
+/** A [ScreenStateRegistry] lookup for a state it does not have. */
+@ExperimentalKeliverNavScreenStateApi
+public class UnknownScreenStateException internal constructor(
+  screen: String,
+  state: String,
   registry: ScreenStateRegistry,
-) : NoSuchElementException(unknownMessage(screen, state, registry))
+) : ScreenStateException(screen, state, unknownMessage(screen, state, registry))
 
 /** A state opened on a host that does not have its fixture set ([ScreenStateEntry.open]). */
-@ExperimentalKeliverScreenStateApi
+@ExperimentalKeliverNavScreenStateApi
 public class MissingScreenStateFixturesException internal constructor(
   entry: ScreenStateEntry,
   available: Collection<String>,
-) : IllegalStateException(
+) : ScreenStateException(
+  entry.screen,
+  entry.name,
   "${entry.screen}/${entry.name} replays fixture set '${entry.fixtures}', which this host does not have " +
     "(it has ${available.sorted().ifEmpty { listOf("none") }.joinToString()}); record it, " +
     "or add ${entry.fixtures}.json to the app's HTTP fixtures",
 ) {
-  /** The state's screen. */
-  public val screen: String = entry.screen
-
-  /** The state's name. */
-  public val state: String = entry.name
-
   /** The fixture set the state replays. */
   public val fixtures: String = entry.fixtures
 }
 
-@OptIn(ExperimentalKeliverScreenStateApi::class)
+/**
+ * A state whose declaring function no longer returns what the registry says ([ScreenStateEntry.state]):
+ * the screen file changed and the registry was not regenerated.
+ */
+@ExperimentalKeliverNavScreenStateApi
+public class StaleScreenStateRegistryException internal constructor(
+  entry: ScreenStateEntry,
+  /** The fixture set the declaring function returns now. */
+  public val declaredFixtures: String,
+) : ScreenStateException(
+  entry.screen,
+  entry.name,
+  "${entry.screen}/${entry.name}: ${entry.function}() replays '$declaredFixtures' but the registry says " +
+    "'${entry.fixtures}'; the registry is older than the screen file: regenerate it",
+) {
+  /** The fixture set the registry lists for the state. */
+  public val registryFixtures: String = entry.fixtures
+}
+
+@OptIn(ExperimentalKeliverNavScreenStateApi::class)
 private fun unknownMessage(screen: String, state: String, registry: ScreenStateRegistry): String {
   val states = registry.states(screen)
   return if (states.isEmpty()) {

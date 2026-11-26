@@ -10,8 +10,8 @@ open annotation class dev.keliver.nav/ExperimentalKeliverNavRetentionApi : kotli
     constructor <init>() // dev.keliver.nav/ExperimentalKeliverNavRetentionApi.<init>|<init>(){}[0]
 }
 
-open annotation class dev.keliver.nav/ExperimentalKeliverScreenStateApi : kotlin/Annotation { // dev.keliver.nav/ExperimentalKeliverScreenStateApi|null[0]
-    constructor <init>() // dev.keliver.nav/ExperimentalKeliverScreenStateApi.<init>|<init>(){}[0]
+open annotation class dev.keliver.nav/ExperimentalKeliverNavScreenStateApi : kotlin/Annotation { // dev.keliver.nav/ExperimentalKeliverNavScreenStateApi|null[0]
+    constructor <init>() // dev.keliver.nav/ExperimentalKeliverNavScreenStateApi.<init>|<init>(){}[0]
 }
 
 open annotation class dev.keliver.nav/ScreenState : kotlin/Annotation { // dev.keliver.nav/ScreenState|null[0]
@@ -156,13 +156,9 @@ final class dev.keliver.nav/KeliverNavRetention { // dev.keliver.nav/KeliverNavR
     }
 }
 
-final class dev.keliver.nav/MissingScreenStateFixturesException : kotlin/IllegalStateException { // dev.keliver.nav/MissingScreenStateFixturesException|null[0]
+final class dev.keliver.nav/MissingScreenStateFixturesException : dev.keliver.nav/ScreenStateException { // dev.keliver.nav/MissingScreenStateFixturesException|null[0]
     final val fixtures // dev.keliver.nav/MissingScreenStateFixturesException.fixtures|{}fixtures[0]
         final fun <get-fixtures>(): kotlin/String // dev.keliver.nav/MissingScreenStateFixturesException.fixtures.<get-fixtures>|<get-fixtures>(){}[0]
-    final val screen // dev.keliver.nav/MissingScreenStateFixturesException.screen|{}screen[0]
-        final fun <get-screen>(): kotlin/String // dev.keliver.nav/MissingScreenStateFixturesException.screen.<get-screen>|<get-screen>(){}[0]
-    final val state // dev.keliver.nav/MissingScreenStateFixturesException.state|{}state[0]
-        final fun <get-state>(): kotlin/String // dev.keliver.nav/MissingScreenStateFixturesException.state.<get-state>|<get-state>(){}[0]
 }
 
 final class dev.keliver.nav/ScreenStateEntry { // dev.keliver.nav/ScreenStateEntry|null[0]
@@ -203,11 +199,20 @@ final class dev.keliver.nav/ScreenStateRegistry { // dev.keliver.nav/ScreenState
     final fun toString(): kotlin/String // dev.keliver.nav/ScreenStateRegistry.toString|toString(){}[0]
 }
 
-final class dev.keliver.nav/UnknownScreenStateException : kotlin/NoSuchElementException { // dev.keliver.nav/UnknownScreenStateException|null[0]
-    final val screen // dev.keliver.nav/UnknownScreenStateException.screen|{}screen[0]
-        final fun <get-screen>(): kotlin/String // dev.keliver.nav/UnknownScreenStateException.screen.<get-screen>|<get-screen>(){}[0]
-    final val state // dev.keliver.nav/UnknownScreenStateException.state|{}state[0]
-        final fun <get-state>(): kotlin/String // dev.keliver.nav/UnknownScreenStateException.state.<get-state>|<get-state>(){}[0]
+final class dev.keliver.nav/StaleScreenStateRegistryException : dev.keliver.nav/ScreenStateException { // dev.keliver.nav/StaleScreenStateRegistryException|null[0]
+    final val declaredFixtures // dev.keliver.nav/StaleScreenStateRegistryException.declaredFixtures|{}declaredFixtures[0]
+        final fun <get-declaredFixtures>(): kotlin/String // dev.keliver.nav/StaleScreenStateRegistryException.declaredFixtures.<get-declaredFixtures>|<get-declaredFixtures>(){}[0]
+    final val registryFixtures // dev.keliver.nav/StaleScreenStateRegistryException.registryFixtures|{}registryFixtures[0]
+        final fun <get-registryFixtures>(): kotlin/String // dev.keliver.nav/StaleScreenStateRegistryException.registryFixtures.<get-registryFixtures>|<get-registryFixtures>(){}[0]
+}
+
+final class dev.keliver.nav/UnknownScreenStateException : dev.keliver.nav/ScreenStateException // dev.keliver.nav/UnknownScreenStateException|null[0]
+
+sealed class dev.keliver.nav/ScreenStateException : kotlin/RuntimeException { // dev.keliver.nav/ScreenStateException|null[0]
+    final val screen // dev.keliver.nav/ScreenStateException.screen|{}screen[0]
+        final fun <get-screen>(): kotlin/String // dev.keliver.nav/ScreenStateException.screen.<get-screen>|<get-screen>(){}[0]
+    final val state // dev.keliver.nav/ScreenStateException.state|{}state[0]
+        final fun <get-state>(): kotlin/String // dev.keliver.nav/ScreenStateException.state.<get-state>|<get-state>(){}[0]
 }
 
 final val dev.keliver.nav/LocalKeliverNavController // dev.keliver.nav/LocalKeliverNavController|{}LocalKeliverNavController[0]
@@ -224,7 +229,9 @@ final val dev.keliver.nav/dev_keliver_nav_KeliverNavRetention$stableprop // dev.
 final val dev.keliver.nav/dev_keliver_nav_MissingScreenStateFixturesException$stableprop // dev.keliver.nav/dev_keliver_nav_MissingScreenStateFixturesException$stableprop|#static{}dev_keliver_nav_MissingScreenStateFixturesException$stableprop[0]
 final val dev.keliver.nav/dev_keliver_nav_NamedState$stableprop // dev.keliver.nav/dev_keliver_nav_NamedState$stableprop|#static{}dev_keliver_nav_NamedState$stableprop[0]
 final val dev.keliver.nav/dev_keliver_nav_ScreenStateEntry$stableprop // dev.keliver.nav/dev_keliver_nav_ScreenStateEntry$stableprop|#static{}dev_keliver_nav_ScreenStateEntry$stableprop[0]
+final val dev.keliver.nav/dev_keliver_nav_ScreenStateException$stableprop // dev.keliver.nav/dev_keliver_nav_ScreenStateException$stableprop|#static{}dev_keliver_nav_ScreenStateException$stableprop[0]
 final val dev.keliver.nav/dev_keliver_nav_ScreenStateRegistry$stableprop // dev.keliver.nav/dev_keliver_nav_ScreenStateRegistry$stableprop|#static{}dev_keliver_nav_ScreenStateRegistry$stableprop[0]
+final val dev.keliver.nav/dev_keliver_nav_StaleScreenStateRegistryException$stableprop // dev.keliver.nav/dev_keliver_nav_StaleScreenStateRegistryException$stableprop|#static{}dev_keliver_nav_StaleScreenStateRegistryException$stableprop[0]
 final val dev.keliver.nav/dev_keliver_nav_UnknownScreenStateException$stableprop // dev.keliver.nav/dev_keliver_nav_UnknownScreenStateException$stableprop|#static{}dev_keliver_nav_UnknownScreenStateException$stableprop[0]
 
 final fun <#A: kotlin/Any> (dev.keliver/Modifier).dev.keliver.nav/prepareOnPress(dev.keliver.nav/KeliverNavController<#A>, #A, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver/Modifier // dev.keliver.nav/prepareOnPress|prepareOnPress@dev.keliver.Modifier(dev.keliver.nav.KeliverNavController<0:0>;0:0;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]
@@ -249,7 +256,9 @@ final fun dev.keliver.nav/dev_keliver_nav_KeliverNavRetention$stableprop_getter(
 final fun dev.keliver.nav/dev_keliver_nav_MissingScreenStateFixturesException$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_MissingScreenStateFixturesException$stableprop_getter|dev_keliver_nav_MissingScreenStateFixturesException$stableprop_getter(){}[0]
 final fun dev.keliver.nav/dev_keliver_nav_NamedState$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_NamedState$stableprop_getter|dev_keliver_nav_NamedState$stableprop_getter(){}[0]
 final fun dev.keliver.nav/dev_keliver_nav_ScreenStateEntry$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_ScreenStateEntry$stableprop_getter|dev_keliver_nav_ScreenStateEntry$stableprop_getter(){}[0]
+final fun dev.keliver.nav/dev_keliver_nav_ScreenStateException$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_ScreenStateException$stableprop_getter|dev_keliver_nav_ScreenStateException$stableprop_getter(){}[0]
 final fun dev.keliver.nav/dev_keliver_nav_ScreenStateRegistry$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_ScreenStateRegistry$stableprop_getter|dev_keliver_nav_ScreenStateRegistry$stableprop_getter(){}[0]
+final fun dev.keliver.nav/dev_keliver_nav_StaleScreenStateRegistryException$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_StaleScreenStateRegistryException$stableprop_getter|dev_keliver_nav_StaleScreenStateRegistryException$stableprop_getter(){}[0]
 final fun dev.keliver.nav/dev_keliver_nav_UnknownScreenStateException$stableprop_getter(): kotlin/Int // dev.keliver.nav/dev_keliver_nav_UnknownScreenStateException$stableprop_getter|dev_keliver_nav_UnknownScreenStateException$stableprop_getter(){}[0]
 final fun dev.keliver.nav/keliverNavEntryLifecycle(androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.runtime/State<dev.keliver.nav/KeliverNavEntryLifecycle> // dev.keliver.nav/keliverNavEntryLifecycle|keliverNavEntryLifecycle(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.nav/trimKeliverNavRetention() // dev.keliver.nav/trimKeliverNavRetention|trimKeliverNavRetention(){}[0]

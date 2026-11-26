@@ -23,7 +23,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalKeliverScreenStateApi::class)
+@OptIn(ExperimentalKeliverNavScreenStateApi::class)
 class ScreenStateRegistryTest {
   private sealed interface Route {
     data object Home : Route
@@ -105,11 +105,43 @@ class ScreenStateRegistryTest {
 
   @Test fun aRegistryOlderThanItsScreenFileSaysSo() {
     val stale = entry("home", "signed-in", "home", Route.Home, returns = "home-v2")
-    val e = assertFailsWith<IllegalStateException> { stale.state() }
+    val e = assertFailsWith<StaleScreenStateRegistryException> { stale.state() }
+    assertEquals("home", e.screen)
+    assertEquals("signed-in", e.state)
+    assertEquals("home", e.registryFixtures)
+    assertEquals("home-v2", e.declaredFixtures)
     assertEquals(
       "home/signed-in: home_signed-in() replays 'home-v2' but the registry says 'home'; " +
         "the registry is older than the screen file: regenerate it",
       e.message,
+    )
+    // Opening it fails the same way, once the host has the set.
+    assertFailsWith<StaleScreenStateRegistryException> { stale.open(setOf("home")) }
+  }
+
+  /** A host catches one type: which case it was is the subtype, and every case names the state. */
+  @Test fun everyFailureToOpenIsAScreenStateException() {
+    val stale = ScreenStateRegistry(listOf(entry("home", "signed-in", "home", Route.Home, returns = "home-v2")))
+    fun failure(open: () -> Unit): ScreenStateException = assertFailsWith<ScreenStateException> { open() }
+    val failures = listOf(
+      failure { registry.open("item", "gone", setOf("item-42")) },
+      failure { registry.open("item", "detail", emptySet()) },
+      failure { stale.open("home", "signed-in", setOf("home")) },
+    )
+    assertEquals(
+      listOf(
+        "UnknownScreenStateException item/gone",
+        "MissingScreenStateFixturesException item/detail",
+        "StaleScreenStateRegistryException home/signed-in",
+      ),
+      failures.map {
+        val kind = when (it) {
+          is UnknownScreenStateException -> "UnknownScreenStateException"
+          is MissingScreenStateFixturesException -> "MissingScreenStateFixturesException"
+          is StaleScreenStateRegistryException -> "StaleScreenStateRegistryException"
+        }
+        "$kind ${it.screen}/${it.state}"
+      },
     )
   }
 

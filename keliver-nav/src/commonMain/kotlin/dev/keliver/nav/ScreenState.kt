@@ -29,8 +29,10 @@ package dev.keliver.nav
  * ```
  *
  * [name] must be unique within the screen file. The function must not be
- * private, suspending or generic: the generated registry calls it from another
- * file.
+ * private, suspending, generic or `@Composable`, may declare no return type but
+ * [NamedState], and may carry no other annotation but `@Suppress`, `@OptIn`,
+ * `@JvmName`, `@JsName` and `@Throws` (another might ask callers to opt in): the
+ * generated registry calls it from another file, outside composition.
  *
  * **What exists today:** the portal reads these declarations from source and
  * lists them per screen (`GET /states`); a declaration it can't read is listed

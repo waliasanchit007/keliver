@@ -23,7 +23,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.http.asHostHttp
 import dev.keliver.http.replay.debug.DebugHttpReplay
 import dev.keliver.http.replay.debug.DebugHttpReplayMiss
-import dev.keliver.nav.ExperimentalKeliverScreenStateApi
+import dev.keliver.nav.ExperimentalKeliverNavScreenStateApi
 import dev.keliver.nav.MissingScreenStateFixturesException
 import dev.keliver.nav.ScreenStateEntry
 import dev.keliver.screenstates.fixture.generated.FixtureScreenStates
@@ -49,7 +49,7 @@ import kotlinx.coroutines.test.runTest
  * ([DebugHttpReplay], the relay's matching rules, no network). Each state's first frame (loading)
  * and the frame once its data arrived are asserted.
  */
-@OptIn(ExperimentalKeliverScreenStateApi::class)
+@OptIn(ExperimentalKeliverNavScreenStateApi::class)
 class OpenScreenStatesTest {
   /** The app's fixture sets as a debug host embeds them: id (file name without `.json`) to text. */
   private val fixtureFiles: Map<String, String> =
@@ -109,15 +109,24 @@ class OpenScreenStatesTest {
     )
   }
 
+  @Test fun anInvalidSetIsNotOneTheHostHas() = runTest {
+    val e = assertFailsWith<MissingScreenStateFixturesException> {
+      open(FixtureScreenStates["item", "detail"], fixtureFiles + ("item-42" to "{ not a fixture set"))
+    }
+    assertEquals("item-42", e.fixtures)
+  }
+
   /**
-   * Opens [entry] as a debug device would: fail by name if the host lacks its fixture set, then
-   * start the app at the state's route with `HostHttp` replaying the set.
+   * Opens [entry] as a debug device would: fail by name if the host lacks its fixture set (only a
+   * valid, unexpired set counts, as docs/PORTAL_USAGE.md says), then start the app at the state's
+   * route with `HostHttp` replaying the set.
    */
   private fun TestScope.open(entry: ScreenStateEntry, fixtures: Map<String, String>): Opened {
-    val state = entry.open(fixtures.keys)
+    val replay = DebugHttpReplay(fixtures, now = { NOW })
+    val state = entry.open(replay.catalog().filter { it.valid && !it.expired }.map { it.id })
     val route = state.route as AppRoute
     val misses = mutableListOf<DebugHttpReplayMiss>()
-    val http = DebugHttpReplay(fixtures, now = { NOW }).provider(state.fixtures, onMiss = { misses += it }).asHostHttp()
+    val http = replay.provider(state.fixtures, onMiss = { misses += it }).asHostHttp()
 
     val clock = BroadcastFrameClock()
     val recomposer = Recomposer(coroutineContext + clock)

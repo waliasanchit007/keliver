@@ -2,7 +2,7 @@
 // Written by the Keliver relay before each preview build (keliver.portal.json screenStateRegistry); check it with `ScreenStateRegistryKt <app-dir> --check`.
 package dev.keliver.screenstates.fixture.generated
 
-import dev.keliver.nav.ExperimentalKeliverScreenStateApi
+import dev.keliver.nav.ExperimentalKeliverNavScreenStateApi
 import dev.keliver.nav.ScreenStateEntry
 import dev.keliver.nav.ScreenStateRegistry
 import dev.keliver.screenstates.fixture.screens.catalogEmpty as catalog__catalogEmpty
@@ -14,7 +14,7 @@ import dev.keliver.screenstates.fixture.screens.itemNotFound as item__itemNotFou
  * Every `@ScreenState` of the app's screens: the same states, in the same order and with the
  * same problems, as the portal's `GET /states` lists from the same files.
  */
-@ExperimentalKeliverScreenStateApi
+@ExperimentalKeliverNavScreenStateApi
 public val FixtureScreenStates: ScreenStateRegistry = ScreenStateRegistry(
   entries = listOf(
     ScreenStateEntry(

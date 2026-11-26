@@ -15,7 +15,7 @@
  */
 package dev.keliver.screenstates.fixture
 
-import dev.keliver.nav.ExperimentalKeliverScreenStateApi
+import dev.keliver.nav.ExperimentalKeliverNavScreenStateApi
 import dev.keliver.nav.NamedState
 import dev.keliver.nav.UnknownScreenStateException
 import dev.keliver.screenstates.fixture.generated.FixtureScreenStates
@@ -28,7 +28,7 @@ import kotlin.test.assertFailsWith
  * MS4-28: the generated registry is ordinary code, so it lists and runs states on every target,
  * Kotlin/JS (a guest) and wasm (the editor) included, where there is no annotation reflection.
  */
-@OptIn(ExperimentalKeliverScreenStateApi::class)
+@OptIn(ExperimentalKeliverNavScreenStateApi::class)
 class FixtureScreenStatesTest {
   @Test fun theRegistryListsTheScreensStatesInSourceOrder() {
     assertEquals(listOf("catalog", "item"), FixtureScreenStates.screens)
