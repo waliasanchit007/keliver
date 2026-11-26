@@ -21,12 +21,30 @@
 --   row_end the app's actual frame-timeline row for the doFrame's vsync, when it is not zero-length
 --           (about the buffer queued, R0);
 --   sf_end  SurfaceFlinger's display frame that row points to (the display's "presented"; R0
---           checked it on one open only: about 45 ms after the row).
+--           checked it on one open only: about 45 ms after the row);
+--   q_vs    q_drew in vsyncs: how many of the app's vsyncs fell between the UP and that buffer's
+--           queueing (0: queued before the first vsync after the UP). The app's vsync grid is its
+--           expected frame-timeline starts (one per app frame, all on the grid), with the period
+--           from their steps (vsync.period_ms in q2). The bar's per-open reading compares it with
+--           native's (README, "The bar").
 -- Also: rec_ms, the `Record View#draw()` that recorded the frame (for `reveal`: the one holding the
 -- r1:revealDrawn marker; for `drawn`: the first in that doFrame ending after the marker), and
 -- ml_ms, Compose's measure and layout inside it (`*measureAndLayout*`).
 
 create perfetto table sfu as select upid from process where name glob '*surfaceflinger*';
+
+-- The app's vsync grid: its expected frame-timeline starts. The period is the mean of the steps
+-- between consecutive starts that are at least the shortest step over 5 ms and under 1.5 times it
+-- (consecutive vsyncs: the guest form draws one frame per vsync after each open).
+create perfetto table ev as
+select distinct e.ts from expected_frame_timeline_slice e where e.upid in (select upid from app_upid);
+
+create perfetto table evd as
+select ts - lag(ts) over (order by ts) as d from ev;
+
+create perfetto table vper as
+select avg(d) as p from evd
+where d >= (select min(d) from evd where d > 5000000) and d < 1.5 * (select min(d) from evd where d > 5000000);
 
 -- The RenderThread's draws, each with the end of its first queueBuffer (null: it queued none).
 create perfetto table rtd as
@@ -43,6 +61,7 @@ select r.i, r.kind, r.u_ts, r.m_ts, r.f_ts, r.f_dur, r.vsync,
   ds.dur as ds_dur, ds.q_end as qs_end,
   dw.vsync as dw_vsync, dw.dur as dw_dur, dw.q_end as qw_end,
   d0.q_end as q0_end,
+  (select max(v.ts) from ev v where v.ts <= r.u_ts) as g0,
   (select max(a.ts + a.dur) from actual_frame_timeline_slice a where a.upid in (select upid from app_upid)
      and a.name = cast(r.vsync as text) and a.dur > 0) as row_end,
   (select max(d.ts + d.dur) from actual_frame_timeline_slice d where d.upid in (select upid from sfu)
@@ -96,7 +115,12 @@ select o.i, k.kind,
   (g.g_ts - g.e_ts - g.e_dur) / 1e6 as e_wait,
   case when g.k_ts is null then null
     when g.k_ts = (select r2.f_ts from rd r2 where r2.i = o.i and r2.kind = 'reveal') then 1 else 0 end as k_reveal,
-  g.k_dur / 1e6 as k_ms
+  g.k_dur / 1e6 as k_ms,
+  -- Whole vsyncs from the grid point g0 (the last at or before the UP; both differences >= 0, so
+  -- the casts are floors): the buffer's vsync interval minus the UP's.
+  case when r.qw_end is null or r.g0 is null or (select p from vper) is null then null
+    else cast((r.qw_end - r.g0) / (select p from vper) as int) - cast((r.u_ts - r.g0) / (select p from vper) as int)
+  end as q_vs
 from opens o
 join (select 'reveal' as kind union all select 'drawn') k
 left join rd r on r.i = o.i and r.kind = k.kind

@@ -68,9 +68,15 @@ reveal arms; each native arm runs just before its size's guest arms.
 From section 7's R1 row (B-1f's bar on the same arm, round 3's M5), medians over opens 3–14, ms
 from the UP:
 
-1. **First draw.** For each size, simple and heavy, the reveal's first draw (the bench's
-   `revealDrawn`) must be at most native's first draw (the bench's `drawn` on `native-<size>`) +
-   16.7 ms.
+1. **Within one frame of native, on two readings.** For each size, simple and heavy, bar 1 is
+   **met only if both hold**:
+   - (a) **first draw**: the reveal's first draw (the bench's `revealDrawn`) is at most native's first
+     draw (the bench's `drawn` on `native-<size>`) + 16.7 ms; **and**
+   - (b) **buffer queued**: the buffer queued by the draw that drew the reveal (trace, `reveal.q_drew`)
+     is at most native's (`drawn.q_drew` on `native-<size>`) + 16.7 ms.
+
+   If (a) holds and (b) does not, the verdict is **"NOT MET (no buffer in the reveal's frame)"**,
+   never a pass. (If (a) fails, it is "NOT MET (first draw)", or "NOT MET (first draw and buffer)".)
 2. **The reveal's draw.** With the idle measure, the reveal frame's `Record View#draw()` (trace,
    `reveal.rec_ms`: the one that holds `r1:revealDrawn`) must be under 10 ms, simple and heavy.
 
@@ -78,11 +84,24 @@ from the UP:
 without the idle measure are judged against bar 1 and reported; they say whether the idle measure
 is needed. If a bar is missed, the shell's first layout is the cost to cut before B4 (section 7).
 
-**Which "first draw".** Both sides use the same mark: the start of the window's draw of the frame
-that drew the content (an `OnDrawListener`), so the comparison is like for like. Compose measures,
-lays out and records inside `Record View#draw()`, after that mark, so bar 2 bounds what the mark
-leaves out. The frame's later readings come from the trace (below) and are reported beside native's,
-with the reading named. R0 showed that "presented" is ambiguous on this phone (caveat 1 of
+**Why two readings** (the maintainer's ruling of 2026-11-26, after the emulator dry run and its
+review; written before any phone run, and **the owner may still change it before the A12 run**).
+The first-draw mark is the start of the window's draw of the frame that drew the content (an
+`OnDrawListener`), on both sides, so (a) is like for like. But the driver's tap blocks the main
+thread for 40 ms, so on both sides that mark lands in the first frame after the UP: (a) only checks
+that the reveal fired in that frame. It cannot see whether that frame put anything on the screen.
+The dry run found that it did not: in 47 of 48 reveal opens the reveal's own frame queued no buffer,
+and the next frame showed it ("Dry run", below). (b) sees that, and it is the reading R0 recorded.
+Compose measures, lays out and records inside `Record View#draw()`, after the first-draw mark, so bar
+2 bounds what (a) leaves out.
+
+**Also printed beside bar 1, per arm, not a condition: the per-open reading in vsyncs.** In how many
+of opens 3–14 the reveal's buffer was queued no later than the vsync after native's own: the reveal's
+`q_vs` (the app's vsyncs between the UP and the buffer's queueing; measure.sql) at most native's
+median `q_vs` + 1. A one-vsync slip then reads as one frame late, not as a coin flip at 16.7 ms.
+
+The frame's later readings (`row_end`, `sf_end`) come from the trace and are reported beside
+native's, with the reading named. R0 showed that "presented" is ambiguous on this phone (caveat 1 of
 THREE_WAY_BENCHMARK.md's "NF5 R0"). No verdict rests on them.
 
 **When an arm counts.** All of these must hold:
@@ -93,8 +112,13 @@ THREE_WAY_BENCHMARK.md's "NF5 R0"). No verdict rests on them.
 - the identity check passes: on at least 10 of opens 3–14, the trace's click → composed (`ec`) is
   within 2 ms of the bench's (`composed_click`; `analyse.sh`'s "check").
 
-An arm that fails is rerun once (`run.sh <arm>`, then `analyse.sh <arm>` and `analyse.sh bar`); if it
-fails again it is reported as it is, with no verdict.
+`analyse.sh bar` prints each arm's validity beside its verdict: the results file's opens, `done` and
+timeouts, `count.opens`, on the reveal arms `count.reveal` and the bench's reveals, on the guest arms
+the lowest `nextHit` and the identity check's result. An arm that fails any of them prints
+**"INVALID"** and the failed condition instead of a verdict (and so does a reveal arm whose native arm
+fails). An arm that fails is rerun once (`run.sh <arm>`, then `analyse.sh <arm>` and `analyse.sh
+bar`); if it fails again it is reported as it is, with no verdict. The last line is R1's: PASSES,
+DOES NOT PASS, or NO VERDICT when an arm it rests on does not count.
 
 **Also reported, not judged:**
 - click → composed with the reveal off, on, and on with the idle measure (the bench's
@@ -103,12 +127,11 @@ fails again it is reported as it is, with no verdict.
   `count.k_reveal` says in how many opens the reveal's frame was the one that ticked the guest.
 - the guest's own detail drawn (`drawn`) on each guest arm.
 - the reveal frame's readings beside native's frame: `f_end`, the main thread's frame end;
-  `q_drew`, the buffer queued by the draw that drew it (and `q_r0`, R0's rule for it);
-  `row_end`, the app's frame-timeline row; `sf_end`, the display frame; and in how many opens the
-  frame's own vsync queued the buffer (`drew_own`).
-- bar 1 read on the buffer queued instead of the first draw: the reveal's `q_drew` against native's
-  `q_drew` + 16.7 ms ("within" or "beyond"). The dry run (below) is why: there, the reveal's own
-  frame queued no buffer, and the next frame showed it.
+  `q_r0`, R0's rule for the buffer; `row_end`, the app's frame-timeline row; `sf_end`, the display
+  frame; and in how many opens the frame's own vsync queued the buffer (`drew_own`).
+- per arm, from q4 over all 14 opens: in how many a RenderThread-only buffer came in the 200 ms
+  before the DOWN and in the tap's hold, and in how many the first frame after the UP queued no
+  buffer (the dry run's lost frame; "What the run shows", below).
 
 Prediction (written before any phone run): the reveal's first draw 13–30 ms after the UP, as the
 retained back's first draw on the A12 (13–17 ms after the press, appendix B); `Record View#draw()`
@@ -140,6 +163,7 @@ and name the reading):
 | `q_r0` | R0's rule (`frame-end.sql`): the first `DrawFrames` of at least 2 ms from the doFrame on. It passes over a short draw that did queue the buffer, so it can read a later frame (the dry run, below) |
 | `row_end` | the end of the app's actual frame-timeline row for the vsync, when not zero-length |
 | `sf_end` | the end of SurfaceFlinger's display frame that row points to |
+| `q_vs` | `q_drew` in vsyncs: how many of the app's vsyncs fell between the UP and that buffer's queueing (the grid: the app's expected frame-timeline starts; the period: `vsync.period_ms` in q2) |
 
 The frame's vsync id is the one in its own `Choreographer#doFrame <id>` slice, which its
 `DrawFrames <id>` and its frame-timeline row carry. A late frame on Android 13 or later also has a
@@ -152,9 +176,12 @@ composed it; `k_reveal`/`k_ms`, whether the last doFrame before that frame (whos
 guest's frame clock) was the reveal's frame, and its length.
 
 [`q1.sql`](q1.sql) prints every open; [`q2.sql`](q2.sql) the medians over opens 3–14 with their `n`
-and the counts; [`q3.sql`](q3.sql) the main thread's and RenderThread's frames and the app's rows
-around opens 3–5, to see which frame drew what (R0's ripple). `analyse.sh` also prints the
-identity check and, last, `bar`: the bar's verdicts from the arms' medians.
+and the counts; [`q3.sql`](q3.sql) the main thread's and RenderThread's frames and the app's rows of
+every open, from 20 ms before its DOWN to 150 ms after its UP, to see which frame drew what (R0's
+ripple); [`q4.sql`](q4.sql) counts that per open: RenderThread-only buffers (an outermost
+`queueBuffer` with no `DrawFrames` around it) before the DOWN, in the hold and after the UP, and
+whether the first frame after the UP queued a buffer. `analyse.sh` also prints the identity check
+and, last, `bar`: each arm's validity and the bar's verdicts.
 
 ## Steps
 
@@ -251,10 +278,12 @@ adb -s SERIAL shell '(nohup sh /data/local/tmp/nf5r1/analyse.sh all < /dev/null 
 ```
 
 Done when `analyse-done.txt` exists; then `adb -s SERIAL shell cat /data/local/tmp/nf5r1/analyse-all.txt`.
-Per arm, in order: the bench's opens and medians; the identity check; q1, q2 and q3. Last comes the
-bar. Read the arm's validity ("When an arm counts") before any of its numbers. Then read q3 for opens
-3–5 of each reveal arm: the reveal's doFrame, its `DrawFrames`, and whether a RenderThread-only frame
-(the press's ripple) pushed it a vsync later.
+Per arm, in order: the bench's opens and medians; the identity check; q1, q2, q3 and q4. Last comes
+the bar. Read each arm's validity (the bar prints it; "When an arm counts") before any of its
+numbers. Then read q4 for **every open of every arm** (native and off too), and q3 for every open
+where q4 shows a RenderThread-only buffer in the hold or a first frame after the UP that queued
+nothing: the reveal's doFrame, its `DrawFrames`, and whether a RenderThread-only frame took that
+vsync and pushed the reveal's buffer a vsync later.
 
 **7. Keep everything, then clean the phone.**
 

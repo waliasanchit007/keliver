@@ -2,9 +2,10 @@
 # NF5 R1: the analysis, ON THE PHONE, in /data/local/tmp/nf5r1 with trace_processor_shell beside it
 # (docs/nf5-r1/README.md, step 6).
 #   sh analyse.sh <arm>   the bench's own marks per open and their medians (from <arm>.results.txt),
-#                         then the trace: q1 (per open), the identity check, q2 (medians), q3
-#                         (frames around opens 3-5)
-#   sh analyse.sh bar     the pre-registered bar, from the arms' medians (run after every arm)
+#                         then the trace: q1 (per open), the identity check, q2 (medians), q3 (every
+#                         open's frames, from its DOWN) and q4 (q3 counted, per open)
+#   sh analyse.sh bar     the pre-registered bar, from the arms' files (run after every arm): each
+#                         arm's validity, then the verdicts
 #   sh analyse.sh all     every arm, then bar, into analyse-all.txt, then analyse-done.txt; detached:
 #     adb shell '(nohup sh /data/local/tmp/nf5r1/analyse.sh all < /dev/null > /dev/null 2>&1 &)'
 # Only the last statement of a file prints, so each query runs as the prelude, measure.sql and that
@@ -44,14 +45,14 @@ bench() {
   echo "== $L bench, medians over opens 3-14 (col median n)"; cat $L.bench-med.txt
 }
 
-# The identity check (after bench and q1): per open, the trace's click -> composed (q1's `ec`, the
-# `drawn` rows) against the bench's (`composed_click`, the guest's own clock in whole ms). It passes
-# when at least 10 of opens 3-14 agree within 2 ms; otherwise the trace's click or composed is not the
-# open's, and the arm's guest columns are not read. Native arms have no guest step ("of 0").
+# The identity check (after bench and q1), into <arm>.check.txt: per open, the trace's click ->
+# composed (q1's `ec`, the `drawn` rows) against the bench's (`composed_click`, the guest's own clock
+# in whole ms). It passes when at least 10 of opens 3-14 agree within 2 ms; otherwise the trace's
+# click or composed is not the open's, and the arm does not count. Native arms have no guest step.
 check() {
   L=$1
   grep '"drawn"' $L.q1.txt | tr -d '"' | tr ',' ' ' > $L.ec.tmp
-  echo "== $L check (i trace_ec bench_composed_click diff ok)"
+  { echo "== $L check (i trace_ec bench_composed_click diff ok)"
   awk 'FNR == NR { if (FNR > 1) cc[$1] = $8; next }
     {
       i = $1; ec = $16; b = cc[i]
@@ -63,7 +64,8 @@ check() {
     END {
       if (n == 0) print "pass n/a (no guest step: a native arm)"
       else print "pass", (k >= 10) ? 1 : 0, "(" k + 0, "of", n + 0, "opens 3-14 within 2 ms)"
-    }' $L.bench.txt $L.ec.tmp
+    }' $L.bench.txt $L.ec.tmp; } > $L.check.txt
+  cat $L.check.txt
 }
 
 q() { # $1 arm, $2 query name
@@ -73,49 +75,122 @@ q() { # $1 arm, $2 query name
   echo "== $1 $2"; grep -v '^$' $1.$2.txt
 }
 
-# A median from <arm>.bench-med.txt ($2: the column) or <arm>.q2.txt ($2: "reveal.rec_ms", ...).
+# A median from <arm>.bench-med.txt ($2: the column, bmed; its n, bn) or <arm>.q2.txt ($2:
+# "reveal.rec_ms", ...; tmed). A value the file does not have prints as nothing.
 bmed() { awk -v c="$2" '$1 == c { print $2 }' $1.bench-med.txt 2>/dev/null; }
 bn() { awk -v c="$2" '$1 == c { print $3 }' $1.bench-med.txt 2>/dev/null; }
-tmed() { grep "\"$2\"" $1.q2.txt 2>/dev/null | head -1 | awk -F, '{ gsub(/"/, "", $2); print $2 }'; }
+tmed() {
+  grep "^\"$2\"," $1.q2.txt 2>/dev/null | head -1 \
+    | awk -F, '{ gsub(/"/, "", $2); if ($2 != "[NULL]" && $2 != "") printf "%g\n", $2 }'
+}
+# x <= y + 16.7: "yes", "no", or "no data".
+within() { awk -v r="$1" -v n="$2" 'BEGIN { if (r == "" || n == "") print "no data"; else if (r + 0 <= n + 16.7) print "yes"; else print "no" }'; }
+
+# An arm's validity (README, "When an arm counts"). Sets OK (1: the arm counts) and VAL (the readings
+# it rests on, or "INVALID (<what failed>; ...)").
+validity() { # $1 arm, $2 native|reveal|off
+  a=$1; why=""
+  ro=$(grep -c '"bench":"open"' $a.results.txt 2>/dev/null); ro=${ro:-0}
+  rd=$(grep -c '"done":true' $a.results.txt 2>/dev/null); rd=${rd:-0}
+  rt=$(grep -c '"timeout":true' $a.results.txt 2>/dev/null); rt=${rt:-0}
+  to=$(tmed $a count.opens)
+  [ "$ro" = 14 ] || why="$why results opens $ro;"
+  [ "$rd" -ge 1 ] || why="$why no done line;"
+  [ "$rt" = 0 ] || why="$why $rt timeouts;"
+  [ "$to" = 14 ] || why="$why trace opens ${to:-none};"
+  info="results opens $ro, done $rd, timeouts $rt; trace opens (count.opens) ${to:--}"
+  if [ "$2" = reveal ]; then
+    cr=$(tmed $a count.reveal); br=$(bn $a revealed)
+    [ "${cr:-0}" -ge 10 ] || why="$why trace reveals ${cr:-none} of 12;"
+    [ "${br:-0}" -ge 10 ] || why="$why bench reveals ${br:-none} of 12;"
+    info="$info; reveals of opens 3-14: trace (count.reveal) ${cr:--}, bench (revealed) ${br:--}"
+  fi
+  if [ "$2" != native ]; then
+    # The lowest nextHit over all 14 opens ("-": an open without it).
+    nh=$(awk 'NR > 1 { if ($10 == "-") miss = 1; else if (m == "" || $10 + 0 < m + 0) m = $10 }
+      END { print (miss || m == "") ? "-" : m }' $a.bench.txt 2>/dev/null)
+    ck=$(grep '^pass' $a.check.txt 2>/dev/null | head -1)
+    [ "$nh" = 1 ] || why="$why lowest nextHit ${nh:-none};"
+    [ "$(echo "$ck" | awk '{ print $2 }')" = 1 ] || why="$why identity check ${ck:-not run};"
+    info="$info; lowest nextHit ${nh:--}; identity check: ${ck:-not run}"
+  fi
+  if [ -z "$why" ]; then OK=1; VAL="valid ($info)"; else OK=0; VAL="INVALID ($why ) ($info)"; fi
+}
+
+# q4's per-open counts over ALL 14 opens (q4: rt_pre $3, rt_hold $4, f1_q $8).
+q4count() {
+  tr -d '"' < $1.q4.txt 2>/dev/null | tr ',' ' ' | awk '
+    $1 ~ /^[0-9]+$/ { n++; if ($3 + 0 > 0) p++; if ($4 + 0 > 0) h++; if ($8 == "0") z++ }
+    END { printf "q4, all %d opens: a RenderThread-only buffer in the 200 ms before the DOWN in %d, in the tap'"'"'s hold in %d; the first frame after the UP queued no buffer in %d\n", n, p, h, z }'
+}
 
 bar() {
-  echo "== bar (pre-registered, docs/nf5-r1/README.md): medians over opens 3-14, ms from the UP"
+  echo "== bar (pre-registered, docs/nf5-r1/README.md; bar 1 read on both readings, the maintainer's ruling of"
+  echo "   2026-11-26, which the owner may still change before the run): medians over opens 3-14, ms from the UP"
+  R1OK=1; R1VALID=1
   for s in simple heavy; do
-    nd=$(bmed native-$s drawn)
-    echo "-- $s: native's first draw (native-$s drawn) = $nd (n=$(bn native-$s drawn)); bar 1 = $nd + 16.7"
+    validity native-$s native; nok=$OK
+    nd=$(bmed native-$s drawn); nq=$(tmed native-$s drawn.q_drew); nv=$(tmed native-$s drawn.q_vs)
+    echo "-- $s: native-$s: $VAL"
+    echo "   native-$s: first draw (drawn) $nd (n=$(bn native-$s drawn)); buffer queued (drawn.q_drew) $nq;" \
+      "q_vs (vsyncs, UP -> its buffer) median $nv; $(q4count native-$s)"
+    echo "   native-$s frame: main-thread end $(tmed native-$s drawn.f_end), R0's rule $(tmed native-$s drawn.q_r0)," \
+      "row end $(tmed native-$s drawn.row_end), display frame end $(tmed native-$s drawn.sf_end)," \
+      "Record View#draw() $(tmed native-$s drawn.rec_ms); queued by its own vsync $(tmed native-$s count.drawn.drew_own) of 12"
     for a in $s-reveal-idle $s-reveal; do
-      rd=$(bmed $a revealDrawn); rec=$(tmed $a reveal.rec_ms)
-      v1=$(awk -v r="$rd" -v n="$nd" 'BEGIN { if (r == "" || n == "") print "no data"; else if (r + 0 <= n + 16.7) print "MET"; else print "MISSED" }')
-      v2=$(awk -v r="$rec" 'BEGIN { if (r == "") print "no data"; else if (r + 0 < 10) print "MET"; else print "MISSED" }')
-      echo "   $a: reveal's first draw (revealDrawn) = $rd (n=$(bn $a revealDrawn)): bar 1 $v1;" \
-        "its Record View#draw() (trace reveal.rec_ms) = $rec: bar 2 (< 10) $v2"
-      echo "   $a: reveal's frame: main-thread end $(tmed $a reveal.f_end), buffer queued $(tmed $a reveal.q_drew)" \
-        "(R0's rule $(tmed $a reveal.q_r0)), row end $(tmed $a reveal.row_end), display frame end $(tmed $a reveal.sf_end);" \
-        "trace opens with a reveal $(tmed $a count.reveal) of 12; queued by its own vsync $(tmed $a count.reveal.drew_own)"
-      # Reported, not judged: bar 1 read on the buffer queued instead of the first draw.
-      qr=$(tmed $a reveal.q_drew); qn=$(tmed native-$s drawn.q_drew)
-      echo "   $a: on the buffer queued (reported, not judged): $qr against native's $qn + 16.7:" \
-        "$(awk -v r="$qr" -v n="$qn" 'BEGIN { if (r == "" || n == "") print "no data"; else if (r + 0 <= n + 16.7) print "within"; else print "beyond" }')"
+      validity $a reveal; aok=$OK
+      rd=$(bmed $a revealDrawn); rq=$(tmed $a reveal.q_drew); rec=$(tmed $a reveal.rec_ms)
+      ia=$(within "$rd" "$nd"); ib=$(within "$rq" "$nq")
+      if [ "$aok" != 1 ] || [ "$nok" != 1 ]; then
+        v1="INVALID (no verdict: $( [ "$aok" != 1 ] && echo "$a" ) $( [ "$nok" != 1 ] && echo "native-$s" ) does not count)"
+        v2=INVALID
+      else
+        if [ "$ia" = "no data" ] || [ "$ib" = "no data" ]; then v1="no data"
+        elif [ "$ia" = yes ] && [ "$ib" = yes ]; then v1=MET
+        elif [ "$ia" = yes ]; then v1="NOT MET (no buffer in the reveal's frame)"
+        elif [ "$ib" = yes ]; then v1="NOT MET (first draw)"
+        else v1="NOT MET (first draw and buffer)"; fi
+        v2=$(awk -v r="$rec" 'BEGIN { if (r == "") print "no data"; else if (r + 0 < 10) print "MET"; else print "NOT MET" }')
+      fi
+      echo "   $a: $VAL"
+      echo "   $a: bar 1 $v1: (a) first draw (revealDrawn) $rd <= native's $nd + 16.7: $ia;" \
+        "(b) buffer queued (reveal.q_drew) $rq <= native's $nq + 16.7: $ib"
+      if [ "$a" = $s-reveal-idle ]; then
+        echo "   $a: bar 2 $v2: the reveal's Record View#draw() (reveal.rec_ms) $rec < 10"
+        { [ "$v1" = MET ] && [ "$v2" = MET ]; } || R1OK=0
+        [ "$aok" = 1 ] && [ "$nok" = 1 ] || R1VALID=0
+      else
+        echo "   $a: Record View#draw() (reveal.rec_ms) $rec (bar 2 judges the idle arm; reported)"
+      fi
+      # The per-open reading in vsyncs (reported, not a condition): opens 3-14 whose reveal buffer was
+      # queued no later than the vsync after native's own (q_vs <= native's median q_vs + 1).
+      tr -d '"' < $a.q1.txt 2>/dev/null | tr ',' ' ' | awk -v a="$a" -v nv="$nv" '
+        $2 == "reveal" && $1 > 2 { all = all " " ($20 == "[NULL]" ? "-" : $20); if ($20 != "[NULL]" && $20 != "") { n++; if (nv != "" && $20 + 0 <= nv + 1) k++ } }
+        END { if (nv == "") print "   " a ": per open, in vsyncs: no native q_vs";
+          else printf "   %s: per open, in vsyncs: the reveal'"'"'s buffer queued no later than the vsync after native'"'"'s own (q_vs <= %g + 1) in %d of %d opens; q_vs, opens 3-14:%s\n", a, nv, k, n, all }'
+      echo "   $a: reveal's frame: main-thread end $(tmed $a reveal.f_end), R0's rule $(tmed $a reveal.q_r0)," \
+        "row end $(tmed $a reveal.row_end), display frame end $(tmed $a reveal.sf_end);" \
+        "queued by its own vsync $(tmed $a count.reveal.drew_own) of 12; $(q4count $a)"
     done
-    echo "   native-$s frame: main-thread end $(tmed native-$s drawn.f_end), buffer queued $(tmed native-$s drawn.q_drew)" \
-      "(R0's rule $(tmed native-$s drawn.q_r0)), row end $(tmed native-$s drawn.row_end), display frame end" \
-      "$(tmed native-$s drawn.sf_end), Record View#draw() $(tmed native-$s drawn.rec_ms);" \
-      "queued by its own vsync $(tmed native-$s count.drawn.drew_own)"
+    validity $s-off off
+    echo "   $s-off: $VAL; $(q4count $s-off)"
     echo "   click -> composed (bench composed_click; trace guest.ec), reveal off / on / on with the idle measure:" \
       "$(bmed $s-off composed_click) / $(bmed $s-reveal composed_click) / $(bmed $s-reveal-idle composed_click);" \
       "trace $(tmed $s-off guest.ec) / $(tmed $s-reveal guest.ec) / $(tmed $s-reveal-idle guest.ec)"
     echo "   the guest's detail drawn (bench drawn), off / on / idle: $(bmed $s-off drawn) / $(bmed $s-reveal drawn) / $(bmed $s-reveal-idle drawn)"
   done
-  echo "-- R1 passes only if simple-reveal-idle and heavy-reveal-idle each meet bars 1 and 2 (README);" \
-    "the arms without the idle measure say whether that measure is needed."
+  if [ "$R1VALID" != 1 ]; then echo "-- R1: NO VERDICT (an arm the verdict rests on does not count; README: rerun it once)"
+  elif [ "$R1OK" = 1 ]; then echo "-- R1: PASSES (simple-reveal-idle and heavy-reveal-idle each meet bars 1 and 2)"
+  else echo "-- R1: DOES NOT PASS (simple-reveal-idle or heavy-reveal-idle misses bar 1 or bar 2)"; fi
+  echo "   The arms without the idle measure say whether that measure is needed (README)."
 }
+
+arm() { bench $1; q $1 q1 && check $1; q $1 q2; q $1 q3; q $1 q4; }
 
 case "$1" in
   all)
     rm -f analyse-done.txt
-    for a in $ARMS; do
-      bench $a; q $a q1 && check $a; q $a q2; q $a q3
-    done > analyse-all.txt 2>&1
+    for a in $ARMS; do arm $a; done > analyse-all.txt 2>&1
     bar >> analyse-all.txt 2>&1
     echo done > analyse-done.txt ;;
   bar) bar ;;
@@ -123,5 +198,5 @@ case "$1" in
   *)
     [ -f $1.results.txt ] || { echo "analyse.sh: no $1.results.txt" >&2; exit 1; }
     [ -f /data/misc/perfetto-traces/nf5r1-$1.pftrace ] || { echo "analyse.sh: no trace for $1" >&2; exit 1; }
-    bench $1; q $1 q1 && check $1; q $1 q2; q $1 q3 ;;
+    arm $1 ;;
 esac
