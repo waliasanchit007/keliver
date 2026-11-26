@@ -40,7 +40,10 @@ and the three-way sample. No library outside the prototype changes.
 - **`x=trace`** adds the driver's own trace sections: `bench:up open <i>` (its start is the tap,
   the UP), `bench:drawn <screen> <seq>` (the window draw the bench takes as `drawn`), and the
   reveal's `r1:reveal`, `r1:revealDrawn` and `r1:revealLive`. The queries find every open by these
-  markers, so no R8 lambda name is needed (R0's `upname.txt`).
+  markers, so no R8 lambda name is needed. **R0's `upname.txt` is not valid on this build:** the
+  driver's UP is now a different lambda (`heldTap` gained the trace section), so R8 may renumber
+  `ThreewayActivity$$ExternalSyntheticLambda5`. R0's queries on an APK from this branch need it
+  regenerated (R0's step); R1's do not use it.
 
 ## The arms (`run.sh`)
 
@@ -202,7 +205,11 @@ adb -s SERIAL shell ls -la /data/local/tmp/nf5r1 /data/misc/perfetto-traces/
 If `/data/local/tmp/nf5r1` exists from an earlier session, clean it first (step 7). Record the power
 state: R0 and the C11 reference ran on the charger, and comparisons across power states are not
 valid (THREE_WAY_BENCHMARK.md, "A12 reference for 0.5.0"). Native's arms run in the same session, so
-the bar does not cross power states.
+the bar does not cross power states. **`run.sh` stops before any arm when the battery is below 30%
+and neither AC nor USB powers the phone** (the C11 reference's stop,
+`docs/a12-reference-2026-11-26/lib.sh`): it exits 3 and `done.txt` says `stopped: battery … before
+<arm>`. Charge the phone, then run the remaining arms one by one (`run.sh <arm>`, step 4). Each arm's
+`<arm>.state.txt` records the battery level and power source it ran on.
 
 **1. The build: the APK and the commit it is built from** (MS4_PLAN.md: every NF5 measurement records
 the commit it was built from). From `R`, JDK 17, with no local changes (`git status --porcelain`
@@ -210,7 +217,7 @@ prints nothing):
 
 ```
 git -C R rev-parse HEAD
-M2=N/m2
+M2=$(cd N && pwd)/m2    # absolute: the sample's build runs from sample/, where a relative path means another directory
 ./gradlew publishToMavenLocal -Dmaven.repo.local=$M2 -PkeliverVersion=0.0.0-gateb \
   -PkeliverComposePrototype -DRELEASE_SIGNING_ENABLED=false
 (cd sample && ./gradlew --no-daemon :host-android:assembleBenchmark \
@@ -257,8 +264,8 @@ adb -s SERIAL push R/docs/nf5-r1/. /data/local/tmp/nf5r1/
 adb -s SERIAL shell '(nohup sh /data/local/tmp/nf5r1/run.sh < /dev/null > /data/local/tmp/nf5r1/log.txt 2>&1 &)'
 ```
 
-Done when `adb -s SERIAL shell cat /data/local/tmp/nf5r1/done.txt` prints `done`. `run.sh <arm>`
-runs one arm. If Perfetto rejects `symbolize_ksyms` (no trace, or a tiny one, and the error in
+Done when `adb -s SERIAL shell cat /data/local/tmp/nf5r1/done.txt` prints `done`; if it prints
+`stopped: battery …`, see step 0. `run.sh <arm>` runs one arm. If Perfetto rejects `symbolize_ksyms` (no trace, or a tiny one, and the error in
 `log.txt`), delete that line from the phone's `cfg.txt` and run again (R0's note; R1 does not use
 the kernel symbols).
 

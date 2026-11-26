@@ -2,14 +2,22 @@
 # NF5 R1: the reveal-only arm and native's arm of the same detail, simple and heavy, each in a fresh
 # process under its own Perfetto trace (docs/nf5-r1/README.md). Runs ON THE PHONE:
 #   adb shell '(nohup sh /data/local/tmp/nf5r1/run.sh < /dev/null > /data/local/tmp/nf5r1/log.txt 2>&1 &)'
-# then poll for /data/local/tmp/nf5r1/done.txt (about 10 minutes). `run.sh <arm>` runs one arm.
+# then poll for /data/local/tmp/nf5r1/done.txt (about 10 minutes): `done`, or `stopped: battery ...`
+# when the battery stop ended the run before an arm (exit 3). `run.sh <arm>` runs one arm.
 # Every am/pm call names dev.keliver.sample; nothing changes a setting.
 D=/data/local/tmp/nf5r1
 P=dev.keliver.sample
 A=$P/dev.keliver.sample.host.threeway.ThreewayActivity
 R=/sdcard/Android/data/$P/files/threeway-results.txt
 ARMS="native-simple simple-reveal-idle simple-reveal simple-off native-heavy heavy-reveal-idle heavy-reveal heavy-off"
+# The C11 reference's battery stop (docs/a12-reference-2026-11-26/lib.sh): true when the battery is
+# at 30% or more, or a charger (AC or USB) powers the phone.
+batteryok() {
+  dumpsys battery | awk '/level:/{l=$2}/AC powered/{a=$3}/USB powered/{u=$3}END{exit !(l>=30 || a=="true" || u=="true")}'
+}
 arm() { # $1 label, $2 form, $3 experiments (x=), $4 trace length in seconds
+  # Before each arm: below 30% and not charging, stop with the reason in done.txt (README, step 0).
+  batteryok || { echo "stopped: battery below 30% and not charging, before $1 ($(date))" | tee $D/done.txt; exit 3; }
   am force-stop $P
   sleep 5
   input keyevent KEYCODE_WAKEUP
