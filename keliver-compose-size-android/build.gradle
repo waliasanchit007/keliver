@@ -1,5 +1,5 @@
-// MS4-03's size harness (docs/MS4_PLAN.md, Q11 and C9): one Android activity in three flavors, each a
-// release APK minified by R8 (proguard-android-optimize.txt):
+// MS4-03's size harness (docs/MS4_PLAN.md, Q11 and C9): one Android activity in three flavors, each
+// release APKs minified by R8 (proguard-android-optimize.txt), universal and arm64-v8a:
 //  - nativeOnly: the same-source samples drawn by native Compose (Material 3, icons): the baseline;
 //  - product: the same, plus the guest route on the generated root (TreehouseApp, the root's host
 //    protocol, keliverComposeWidgetSystem() with core's renderers) and the guest bundle
@@ -39,8 +39,32 @@ def sizeKey = tasks.register('generateSizeKey') {
   }
 }
 
+// build-support turns release off for sample applications and keeps native symbols; sizes are the
+// release APK's, with native libraries stripped as an app's are (AGP strips only when an NDK is
+// installed; without one it packages them as they are, and the report says how much is debug info).
+androidComponents {
+  beforeVariants(selector().all()) { it.enable = it.buildType == 'release' }
+}
+
 android {
   namespace 'dev.keliver.compose.size.android'
+
+  packaging {
+    jniLibs {
+      keepDebugSymbols.remove('**/*.so')
+    }
+  }
+
+  // A universal APK (all four ABIs, as an app built without splits ships) and an arm64-v8a one (what
+  // a phone downloads from an app bundle).
+  splits {
+    abi {
+      enable true
+      reset()
+      include 'arm64-v8a'
+      universalApk true
+    }
+  }
 
   defaultConfig {
     applicationId 'dev.keliver.compose.size'
@@ -68,22 +92,22 @@ android {
     productCoil { dimension 'route' }
   }
 
+  // Directories, not providers (AGP 9 refuses those here): the tasks below make them first.
+  def keyDir = keySource.get().asFile
+  def assetsDir = layout.buildDirectory.dir('generated/sizeAssets').get().asFile
   sourceSets {
     main {
       kotlin.srcDir(samples)
     }
-    nativeOnly {
-      kotlin.srcDir('src/nativeOnly/kotlin')
-    }
     product {
       kotlin.srcDir('src/route/kotlin')
-      kotlin.srcDir(keySource)
-      assets.srcDir(layout.buildDirectory.dir('generated/sizeAssets'))
+      kotlin.srcDir(keyDir)
+      assets.srcDir(assetsDir)
     }
     productCoil {
       kotlin.srcDir('src/route/kotlin')
-      kotlin.srcDir(keySource)
-      assets.srcDir(layout.buildDirectory.dir('generated/sizeAssets'))
+      kotlin.srcDir(keyDir)
+      assets.srcDir(assetsDir)
     }
   }
 }
