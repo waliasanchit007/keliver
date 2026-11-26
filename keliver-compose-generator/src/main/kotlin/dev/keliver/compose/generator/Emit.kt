@@ -548,11 +548,23 @@ class Emitter(
       imports += "$schemaPkg.modifier.Extra$e"
       body.append("  override fun Extra$e(value: @Composable (Modifier) -> Unit, modifier: Extra$e) {}\n")
     }
-    body.append("}\n\n")
+    body.append("}\n")
+    // A group with a base (MS4-03: coil on core) has widgets only: its renderers use the base's
+    // applier, converters and widget runtime, imported from the base's host package.
+    if (config.base == null) body.append(hostRuntime(imports))
+    return hostFile(hostPkg, imports, body)
+  }
+
+  /** The group's own applier, scoped applier, `*Defaults` and icons: the runtime a based group shares. */
+  private fun hostRuntime(imports: MutableSet<String>): String = buildString {
+    val body = this
+    body.append("\n")
     // Modifiers.
     val anyAnimated = config.animated.isNotEmpty()
+    // A runtime shared with based groups (MS4-03) makes its applier public, for generated code only.
+    val applierVisibility = if (config.sharedRuntime) "@dev.keliver.RedwoodCodegenApi\npublic" else "internal"
     body.append("/** Applies a generated widget's own (unscoped) generated modifiers, in the guest's order. */\n")
-    body.append("@Composable\ninternal fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWidget?): Modifier {\n")
+    body.append("@Composable\n$applierVisibility fun Modifier.applyGenerated(chain: KeliverModifier, owner: GeneratedWidget?): Modifier {\n")
     body.append("  val elements = ArrayList<KeliverModifier.UnscopedElement>()\n  chain.forEachUnscoped { elements += it }\n  var m = this\n")
     if (anyAnimated) {
       // Gate B-e: `ExtraAnimated` elements name parameters of the element that follows them.
@@ -607,12 +619,21 @@ class Emitter(
       imports += "androidx.compose.material.icons.${theme.split('.').joinToString(".") { it.lowercase() }}.$n"
     }
     body.append("  else -> null\n}\n")
+  }
 
+  private fun hostFile(hostPkg: String, imports: MutableSet<String>, body: CharSequence): Pair<String, String> {
+    if (config.base != null) imports += "${config.base}.composeui.*"
+    val optIns = buildList {
+      // Generated renderers call experimental Compose API (TopAppBar) on the guest's behalf; a based
+      // group's renderers call only its own library (coil), which need not depend on material3.
+      if (config.base == null) add("androidx.compose.material3.ExperimentalMaterial3Api::class")
+      // The shared runtime's applier and converters (MS4-03), in the group that owns them and its users.
+      if (config.base != null || config.sharedRuntime) add("dev.keliver.RedwoodCodegenApi::class")
+    }
     val text = buildString {
       append(header(config.group))
       append("@file:Suppress(\"ktlint\", \"UNCHECKED_CAST\", \"RedundantVisibilityModifier\", \"DEPRECATION\")\n")
-      // Generated renderers call experimental Compose API (TopAppBar) on the guest's behalf.
-      append("@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)\n\n")
+      append("@file:OptIn(${optIns.joinToString(", ")})\n\n")
       append("package $hostPkg\n\n")
       val fixed = listOf(
         "androidx.compose.runtime.Composable",

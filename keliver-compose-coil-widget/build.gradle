@@ -1,0 +1,27 @@
+// The product's generated coil group (docs/MS4_PLAN.md, MS4-03): the host widget interfaces, from the
+// schema by keliver-tooling-codegen. The group has no modifiers, so it has no -modifiers module.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common + WasmJs.Browser) // wasmJs: the editor canvas (ED0)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeValues
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeCoilSchema
+  type = 'dev.keliver.compose.coil.KeliverComposeCoil'
+}

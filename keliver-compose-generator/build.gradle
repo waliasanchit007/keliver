@@ -55,9 +55,13 @@ def composeInputVersions = "Compose Multiplatform ${libs.versions.jbCompose.get(
 
 // The generated groups, one config and one lock each (docs/MS4_PLAN.md, MS4-01), in generation order.
 // - `core` is the product's group (Q1: foundation-layout, foundation, ui, material3, animation and the
-//   extras; coil and the icons stay in it until their own groups, MS4-03 and MS4-19). It owns
-//   keliver-compose-values and the `*Defaults` factory tags. Its lock started from the prototype's
-//   (`--seed-lock`, read only while core.lock.json does not exist) until MS4-06's fresh locks.
+//   extras; the icons stay in it until their own groups, MS4-19). It owns keliver-compose-values and
+//   the `*Defaults` factory tags, and shares its host runtime with `coil` (`sharedRuntime`). Its lock
+//   started from the prototype's (`--seed-lock`, read only while core.lock.json does not exist) until
+//   MS4-06's fresh locks; it keeps the two AsyncImage entries coil took (tags 8 and 11, now unused).
+// - `coil` (MS4-03; Q1: optional) is `AsyncImage` alone, on core's host runtime (`base`), so a host
+//   built without keliver-compose-coil-composeui links no Coil. It reads core's factory tags and
+//   writes no values. Its lock is its own, from level 1.
 // - `gatea` is the Gate A/B prototype, kept beside the product for NF5's measurements until MS4-40.
 //   It reads the factory tags from core's lock and writes no values.
 def groups = [
@@ -70,6 +74,16 @@ def groups = [
       '--out-host', rootProject.file('keliver-compose-core-composeui/src/commonMain/kotlin').absolutePath,
       '--out-values', rootProject.file('keliver-compose-values/src/commonMain/kotlin').absolutePath,
       '--out-editor', rootProject.file('keliver-compose-core-schema/core.editor.json').absolutePath,
+    ],
+  ],
+  [
+    name: 'coil',
+    args: [
+      '--factories-lock', file('core.lock.json').absolutePath,
+      '--out-schema', rootProject.file('keliver-compose-coil-schema/src/main/kotlin').absolutePath,
+      '--out-guest', rootProject.file('keliver-compose-coil-compose/src/commonMain/kotlin').absolutePath,
+      '--out-host', rootProject.file('keliver-compose-coil-composeui/src/commonMain/kotlin').absolutePath,
+      '--out-editor', rootProject.file('keliver-compose-coil-schema/coil.editor.json').absolutePath,
     ],
   ],
   [
@@ -120,7 +134,7 @@ generateTasks.eachWithIndex { task, i -> if (i > 0) task.configure { mustRunAfte
 
 tasks.register('generateComposeApi') {
   group = 'build'
-  description = 'Regenerate every generated group (the product core and the prototype) and the root schema from Compose'
+  description = 'Regenerate every generated group (the product\'s core and coil, and the prototype) and the root schema from Compose'
   dependsOn(generateTasks + [generateRoot])
 }
 

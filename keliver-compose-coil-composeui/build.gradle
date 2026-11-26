@@ -1,0 +1,43 @@
+// The product's generated coil group (docs/MS4_PLAN.md, MS4-03; Q1: optional): the host renderers on
+// Compose UI. src/commonMain/…/Generated.kt is generated: each renderer calls Coil's real
+// `AsyncImage`, with core's applier and converters (core shares its runtime, coil.json's `base`).
+// A host that ships Coil depends on this module and passes keliverComposeCoilWidgetFactory() to
+// keliverComposeWidgetSystem(); one that does not links no Coil, and the group's widgets report as
+// unknown there.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
+
+redwoodBuild {
+  // wasmJs: the editor canvas draws with these renderers in the browser (ED0).
+  targets(ToolkitComposeUi + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeCoilWidget
+        // Core's host runtime: the applier, the converters and the generated widget's base.
+        implementation projects.keliverComposeCoreComposeui
+        implementation libs.coil.compose.full
+        implementation libs.jetbrains.compose.ui
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.keliver.compose.coil.composeui'
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

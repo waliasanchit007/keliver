@@ -84,6 +84,11 @@ include ':keliver-compose-core-widget'
 include ':keliver-compose-core-modifiers'
 include ':keliver-compose-core-compose'
 include ':keliver-compose-core-composeui'
+// The coil group (MS4-03; Q1: optional): Coil's AsyncImage on core's runtime.
+include ':keliver-compose-coil-schema'
+include ':keliver-compose-coil-widget'
+include ':keliver-compose-coil-compose'
+include ':keliver-compose-coil-composeui'
 // Gate B part c: the same-source samples as a signed guest bundle and a Kotlin-only iOS simulator
 // app that loads it. Only with -Pkeliver.gatebIos (scripts/keliver-gateb-ios-sim.sh), so CI's
 // full graph neither links the app nor compiles the bundle.

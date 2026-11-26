@@ -15,6 +15,7 @@ import dev.keliver.schema.Schema.Dependency
   members = [],
   dependencies = [
     Dependency(10, dev.keliver.compose.core.KeliverComposeCore::class),
+    Dependency(17, dev.keliver.compose.coil.KeliverComposeCoil::class),
   ],
 )
 public interface KeliverCompose
