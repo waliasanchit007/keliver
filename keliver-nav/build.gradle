@@ -3,10 +3,14 @@
 // RPC-per-route boilerplate with a guest-owned typed back stack that
 // mirrors Compose Navigation ergonomics. See issue #25.
 
+import dev.keliver.buildsupport.WasmJs
+
 import static dev.keliver.buildsupport.TargetGroup.TreehouseGuest
 
 redwoodBuild {
-  targets(TreehouseGuest)
+  // wasmJs: the browser editor's device route (ED2) runs keliver-nav in the editor. Everything it
+  // uses (keliver-runtime, keliver-compose, Compose runtime, coroutines) has a wasm target.
+  targets(TreehouseGuest + WasmJs.Browser)
   publishing()
 }
 
