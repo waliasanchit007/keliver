@@ -693,6 +693,8 @@ private val previewBuilder = PreviewBuilder(
   PreviewDistributionRunner(repoDir, config, prepare = {
     // Compiled component preview: the editor's adapters follow the components' signatures.
     CompiledAdapters.emit(repoDir, config, File(repoDir, config.resolvedComponentsDir()), Tokens.table("default"))
+      // MS4-28: the app's @ScreenState registry follows the screens' state declarations.
+      ?: ScreenStateRegistryFile.emit(repoDir, config)
   }),
   enabled = config.previewBuildTask.isNotBlank(),
 )

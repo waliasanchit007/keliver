@@ -122,6 +122,31 @@ class ScreenStateRecognizerTest {
     assertTrue(r.problems[0].contains("already declared by a()"), r.problems[0])
   }
 
+  @Test fun aStateFunctionTheRegistryCannotCallIsReported() {
+    val src = """
+      package app.screens
+
+      import dev.keliver.nav.NamedState
+      import dev.keliver.nav.ScreenState
+
+      @ScreenState("hidden") private fun hidden() = NamedState(route = Home, fixtures = "h")
+      @ScreenState("later") suspend fun later() = NamedState(route = Home, fixtures = "l")
+      @ScreenState("generic") fun <T> generic() = NamedState(route = Home, fixtures = "g")
+      @ScreenState("internal") internal fun inModule() = NamedState(route = Home, fixtures = "i")
+    """.trimIndent()
+    val r = ScreenStateRecognizer.recognize("S.kt", src)
+    assertEquals(listOf(ScreenStateSpec("internal", "inModule", "Home", "Home", "i")), r.states)
+    assertEquals(
+      listOf(
+        "hidden: a state function must not be private (the generated registry calls it from another file)",
+        "later: a state function must not be suspend",
+        "generic: a state function takes no type parameters",
+      ),
+      r.problems,
+    )
+    assertEquals("app.screens", r.packageName)
+  }
+
   @Test fun aFileWithoutStatesHasNone() {
     assertEquals(ScreenStates(emptyList()), ScreenStateRecognizer.recognize("S.kt", "fun x() = 1\n"))
   }

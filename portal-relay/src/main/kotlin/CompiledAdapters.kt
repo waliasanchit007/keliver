@@ -102,15 +102,16 @@ object CompiledAdapters {
   /**
    * [rel] inside [repoDir]: it must stay inside the repo once resolved, and
    * neither it nor a directory on its way may be a symbolic link (the relay
-   * would otherwise write wherever the link points).
+   * would otherwise write wherever the link points). [what] names the setting
+   * in errors (the screen-state registry's writer shares this).
    */
-  private fun outFile(repoDir: File, rel: String): File {
+  internal fun outFile(repoDir: File, rel: String, what: String = "compiledComponents.out"): File {
     val repo = repoDir.canonicalFile
     val out = File(repo, rel)
-    require(out.canonicalFile.toPath().startsWith(repo.toPath())) { "compiledComponents.out must stay inside the app repository: $rel" }
+    require(out.canonicalFile.toPath().startsWith(repo.toPath())) { "$what must stay inside the app repository: $rel" }
     var p: File? = out
     while (p != null && p.absolutePath != repo.absolutePath) {
-      require(!Files.isSymbolicLink(p.toPath())) { "compiledComponents.out must not go through a symbolic link: $p" }
+      require(!Files.isSymbolicLink(p.toPath())) { "$what must not go through a symbolic link: $p" }
       p = p.parentFile
     }
     return out
@@ -122,7 +123,7 @@ object CompiledAdapters {
    * random name (never a fixed one a planted link could sit at), and the move
    * does not follow links.
    */
-  private fun writeAtomically(out: File, text: String) {
+  internal fun writeAtomically(out: File, text: String, what: String = "compiledComponents.out") {
     out.parentFile.mkdirs()
     val tmp = Files.createTempFile(out.parentFile.toPath(), ".${out.name}.", ".tmp")
     try {
@@ -146,7 +147,7 @@ object CompiledAdapters {
       Files.deleteIfExists(tmp)
     }
     check(!Files.isSymbolicLink(out.toPath()) && Files.isRegularFile(out.toPath(), LinkOption.NOFOLLOW_LINKS)) {
-      "compiledComponents.out is not a regular file after the write: $out"
+      "$what is not a regular file after the write: $out"
     }
   }
 }

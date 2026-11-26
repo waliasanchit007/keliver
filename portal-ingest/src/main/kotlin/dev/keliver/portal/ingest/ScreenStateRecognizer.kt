@@ -15,6 +15,7 @@
  */
 package dev.keliver.portal.ingest
 
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -53,10 +54,15 @@ data class ScreenStateSpec(
   val fixtures: String,
 )
 
-/** The states a screen file declares, and why any `@ScreenState` function was not read. */
+/**
+ * The states a screen file declares, and why any `@ScreenState` function was not read.
+ * [packageName] is the file's package ("" for the root package), where the generated
+ * registry finds the state functions; `GET /states` does not show it.
+ */
 data class ScreenStates(
   val states: List<ScreenStateSpec>,
   val problems: List<String> = emptyList(),
+  val packageName: String = "",
 )
 
 /**
@@ -80,12 +86,15 @@ data class ScreenStates(
  * The state's name and fixture set must be plain string literals (the portal
  * lists them without running code); the body is a `NamedState(...)` call
  * (also written `dev.keliver.nav.NamedState(...)`), as an expression body or a
- * single `return`; the function is top-level and takes no parameters or
- * receiver. A declaration outside that shape — a state inside an object or a
- * class included — is not a state and is reported in [ScreenStates.problems],
- * never skipped silently, as is a repeated name (the first declaration wins).
- * These functions are not `@Composable`, so the screen grammar never reads
- * them: they cost the screen no RawCode.
+ * single `return`; the function is top-level, takes no parameters, receiver or
+ * type parameters, and is neither private nor `suspend` (the generated registry,
+ * [ScreenStateRegistryGenerator], calls it from another file). A declaration
+ * outside that shape — a state inside an object or a class included — is not a
+ * state and is reported in [ScreenStates.problems], never skipped silently, as
+ * is a repeated name (the first declaration wins). The portal's `GET /states`
+ * and the generated registry both read states through here, so they list the
+ * same ones. These functions are not `@Composable`, so the screen grammar never
+ * reads them: they cost the screen no RawCode.
  */
 object ScreenStateRecognizer {
   const val ANNOTATION = "ScreenState"
@@ -129,7 +138,7 @@ object ScreenStateRecognizer {
         is Read.Bad -> problems += "$fnName: ${r.why}"
       }
     }
-    return ScreenStates(states, problems)
+    return ScreenStates(states, problems, file.packageFqName.asString())
   }
 
   private sealed interface Read {
@@ -144,6 +153,12 @@ object ScreenStateRecognizer {
     if (name.isBlank()) return Read.Bad("@$ANNOTATION name is empty")
     if (fn.valueParameters.isNotEmpty()) return Read.Bad("a state function takes no parameters")
     if (fn.receiverTypeReference != null) return Read.Bad("a state function takes no receiver")
+    if (fn.typeParameters.isNotEmpty()) return Read.Bad("a state function takes no type parameters")
+    // The generated registry calls the function from its own file, outside a coroutine.
+    if (fn.hasModifier(KtTokens.PRIVATE_KEYWORD)) {
+      return Read.Bad("a state function must not be private (the generated registry calls it from another file)")
+    }
+    if (fn.hasModifier(KtTokens.SUSPEND_KEYWORD)) return Read.Bad("a state function must not be suspend")
     val body = when (val b = fn.bodyExpression) {
       is KtBlockExpression -> (b.statements.singleOrNull() as? KtReturnExpression)?.returnedExpression
       else -> b

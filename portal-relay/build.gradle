@@ -135,6 +135,17 @@ sourceSets.test.kotlin.srcDir(legacyHostTestSource)
 // per-app editor's adapters file without a relay, or `-Pcheck` that the
 // checked-in one is current. Same generator and design-token table as the
 // relay's pre-build step. -PappDir=<dir> targets another app (default: this repo).
+// MS4-28: an app's generated @ScreenState registry (keliver.portal.json screenStateRegistry).
+// Without -PappDir it is the in-repo fixture app's; with -Pcheck it fails when the file is stale.
+tasks.register('screenStateRegistry', JavaExec) {
+  group = 'keliver'
+  description = 'Generate (or -Pcheck) the @ScreenState registry for keliver.portal.json screenStateRegistry.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'ScreenStateRegistryFileKt'
+  def appDir = providers.gradleProperty('appDir').getOrElse(rootProject.file('keliver-screen-states-fixture').absolutePath)
+  args = [appDir] + (providers.gradleProperty('check').isPresent() ? ['--check'] : [])
+}
+
 tasks.register('compiledComponentAdapters', JavaExec) {
   group = 'keliver'
   description = 'Generate (or -Pcheck) the compiled component preview adapters for keliver.portal.json compiledComponents.'
