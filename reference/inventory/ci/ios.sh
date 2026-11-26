@@ -132,6 +132,10 @@ KELIVER_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]
 export KELIVER_VERSION
 ( cd "$WORK" && "$KP/keliver-init" Inventory ) > "$EV/init.log" 2>&1 || { bad "keliver-init failed"; exit 1; }
 APP="$WORK/inventory"
+# Whose keliver-new-publish-target.sh wires the publishing (below): the zip's, or this checkout's on
+# the local-maven route.
+PUB_TARGET_FROM="tools $LABEL"
+[ "$LIBRARIES" = local-maven ] && PUB_TARGET_FROM="this checkout's scripts/ (local-maven)"
 (
   set -e
   cd "$APP"
@@ -154,7 +158,7 @@ APP="$WORK/inventory"
   python3 -c 'import json,sys; p=sys.argv[1]; c=json.load(open(p)); c["port"]=int(sys.argv[2]); open(p,"w").write(json.dumps(c,indent=2)+"\n")' \
     keliver.portal.json "$RELAY_PORT"
   git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $LABEL"
-) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $LABEL" \
+) > "$EV/app.log" 2>&1 && ok "the app: keliver-init and device target from tools $LABEL, publish target from $PUB_TARGET_FROM" \
   || { bad "recreating the app failed"; tail -20 "$EV/app.log"; exit 1; }
 # The relay: the zip's, or on the local-maven route this checkout's (lm_relay_kit: the published
 # one writes no engine into its index, and a host on the fork's line would load nothing).
@@ -168,6 +172,12 @@ fi
 if [ "$LIBRARIES" = local-maven ]; then
   cp "$APP/settings.gradle" "$EV/local-maven-app-settings.gradle"; cp "$APP/build.gradle" "$EV/local-maven-app-build.gradle"
   ok "local-maven: the app is on Keliver $KELIVER_LOCAL_VERSION (the $KELIVER_LINE line: Kotlin $TOOLCHAIN_KOTLIN, $ZIPLINE_GROUP $TOOLCHAIN_ZIPLINE, Gradle $TOOLCHAIN_GRADLE), dev.keliver only from $KELIVER_LOCAL_MAVEN"
+  # Where every Keliver artifact of the GUEST came from, as for the host below.
+  ( cd "$APP" && ./gradlew --console=plain -q dependencies --configuration jsRuntimeClasspath ) \
+    > "$EV/guest-dependencies.txt" 2>&1
+  lm_check_artifacts "$EV/guest-dependencies.txt" "$EV/guest-keliver-artifacts.txt" \
+    && ok "local-maven: all $(grep -c . "$EV/guest-keliver-artifacts.txt") dev.keliver artifacts of the guest (jsRuntimeClasspath) are $KELIVER_LOCAL_VERSION" \
+    || bad "local-maven: the guest's dev.keliver artifacts (jsRuntimeClasspath): $LM_ERROR"
 fi
 
 # --- 2. a relay for this app, isolated -----------------------------------------

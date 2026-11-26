@@ -6,20 +6,29 @@
 #
 # Whose scripts depends on the trigger (KELIVER_SCAFFOLD_FROM below):
 # - run by hand: the release's own, so the run is a published-only proof;
-# - a pull request: this checkout's scripts/, the change under review.
+# - a pull request: this checkout's scripts/, the change under review (and so
+#   do a push to main and the nightly run).
 # Always this checkout's: ci/ and the isolation guard (the harness), and the
 # app's overlay files (bootstrap.sh's hand edits).
 #
 # Whose LIBRARIES (the matrix's `libraries`): Maven Central, at the app's own
 # version (central: the two routes above), or this checkout's (local-maven, MS4-35:
-# reference/inventory/ci/local-maven). On a pull request both legs run; the
-# local-maven leg publishes this checkout's libraries into a fresh repository in
-# the runner's temp space (never ~/.m2), moves the app to their version and line,
-# builds its guest and its production host against them, and checks on the
-# emulator that the host logged this checkout's keliver-treehouse-host version.
-# It scaffolds with this checkout's scripts/ and runs the production rows (P1-P7);
-# the rest stay on the central leg for now, listed as SKIP. A run started by hand
-# picks one leg (input `libraries`). Each results file names its route.
+# reference/inventory/ci/local-maven). The local-maven leg publishes this
+# checkout's libraries into a fresh repository in the runner's temp space (never
+# ~/.m2), moves the app to their version and line, builds its guest and its
+# production host against them, and checks on the emulator that the host logged
+# this checkout's keliver-treehouse-host version. Its scaffolders, publish wiring
+# and relay are this checkout's too. It runs the production rows (P1-P7); the
+# rest stay on the central leg for now, listed as SKIP. When it runs:
+# - a pull request that triggers this workflow (the paths below: the harness and
+#   the route's own files) runs both legs. A library-only pull request does not
+#   trigger it (the maintainer's decision, for runner capacity);
+# - the nightly run, on main, runs both legs, so a library regression shows
+#   within a day; a push to main runs the central leg only;
+# - by hand, one leg (input `libraries`): `gh workflow run reference-app.yml
+#   --ref <branch> -f libraries=local-maven`. A reviewer of a library pull
+#   request that changes host-facing behaviour dispatches it.
+# Each results file names its route.
 #
 # Checked on an emulator:
 # - the development route and a D14 layout edit;
@@ -35,9 +44,11 @@
 name: reference-app
 # Runs on a pull request that touches the reference app or this workflow, on a
 # push to main that touches the same paths (so main's state is checked and the
-# Gradle cache below is written from main), and on demand. A newer push to the
-# same pull request cancels the older run; runs on main never cancel each other
-# (docs/PLAN_2026-11.md section 14).
+# Gradle cache below is written from main), nightly on main (both legs: the only
+# run that checks main's libraries, and the one that saves the local-maven
+# leg's cache), and on demand. A newer push to the same pull request cancels the
+# older run; runs on main never cancel each other (docs/PLAN_2026-11.md
+# section 14).
 on:
   pull_request:
     # The production host's templates, the publishing route and keliver-publish
@@ -54,10 +65,12 @@ on:
       - "scripts/keliver-publish"
       - "scripts/keliver-publish-selftest.sh"
       - "scripts/keliver-run-android.sh"
-      - "portal-relay/src/main/kotlin/StaticIndex.kt"
-      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
-      - "portal-relay/src/main/kotlin/PublishSignature.kt"
-      - "portal-relay/src/main/kotlin/KeyRotation.kt"
+      # The local-maven leg (MS4-35) also runs keliver-portal and the WHOLE relay
+      # from this checkout (lm_relay_kit builds portal-relay; the central legs run
+      # the zip's); its harness is under reference/ above.
+      - "scripts/keliver-portal"
+      - "scripts/keliver-store-path.sh"
+      - "portal-relay/**"
   push:
     branches: [main]
     # The production host's templates, the publishing route and keliver-publish
@@ -74,14 +87,20 @@ on:
       - "scripts/keliver-publish"
       - "scripts/keliver-publish-selftest.sh"
       - "scripts/keliver-run-android.sh"
-      - "portal-relay/src/main/kotlin/StaticIndex.kt"
-      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
-      - "portal-relay/src/main/kotlin/PublishSignature.kt"
-      - "portal-relay/src/main/kotlin/KeyRotation.kt"
+      # The local-maven leg (MS4-35) also runs keliver-portal and the WHOLE relay
+      # from this checkout (lm_relay_kit builds portal-relay; the central legs run
+      # the zip's); its harness is under reference/ above.
+      - "scripts/keliver-portal"
+      - "scripts/keliver-store-path.sh"
+      - "portal-relay/**"
+  # With ios-host.yml's nightly run, so the two reports land together.
+  schedule:
+    - cron: "37 1 * * *"
   workflow_dispatch:
     inputs:
       # local-maven: check a branch's LIBRARY change on the reference app by hand
-      # (a pull request runs both legs).
+      # (a pull request this workflow's paths trigger, and the nightly run, run
+      # both legs; a library-only pull request does not trigger it).
       libraries:
         description: "central (the published-only proof), or local-maven: this checkout's libraries, from a local Maven repository"
         type: choice
@@ -119,11 +138,13 @@ concurrency:
 jobs:
   reference-app:
     # The central leg keeps the job's name (reference-app); the other is named for its route.
+    # Both legs on a pull request and on the nightly run; one on a push to main
+    # (central) and by hand (input libraries).
     name: ${{ matrix.libraries == 'local-maven' && 'reference-app (local-maven)' || 'reference-app' }}
     strategy:
       fail-fast: false
       matrix:
-        libraries: ${{ fromJSON(github.event_name == 'pull_request' && '["central","local-maven"]' || (github.event_name == 'workflow_dispatch' && inputs.libraries == 'local-maven') && '["local-maven"]' || '["central"]') }}
+        libraries: ${{ fromJSON((github.event_name == 'pull_request' || github.event_name == 'schedule') && '["central","local-maven"]' || (github.event_name == 'workflow_dispatch' && inputs.libraries == 'local-maven') && '["local-maven"]' || '["central"]') }}
     runs-on: ubuntu-latest
     # local-maven: the publish adds about a cold build of 35 modules; it skips the rows after P7.
     timeout-minutes: ${{ matrix.libraries == 'local-maven' && 130 || 100 }}
@@ -146,13 +167,16 @@ jobs:
           distribution: temurin
           java-version: 17
       # local-maven: route.sh's own cases first (no Gradle, no network), so a
-      # broken harness fails in seconds rather than after the publish.
+      # broken harness fails in seconds rather than after the publish. A failure
+      # is also an annotation (escaped by annotate-failures.sh: the output can
+      # run to several lines).
       - name: local-maven — the route's self-test
         if: matrix.libraries == 'local-maven'
         run: |
-          out="$(bash reference/inventory/ci/local-maven/route-test.sh 2>&1)" \
-            || { echo "::error title=local-maven route-test::$out"; exit 1; }
+          if out="$(bash reference/inventory/ci/local-maven/route-test.sh 2>&1)"; then echo "$out"; exit 0; fi
           echo "$out"
+          printf '%s\n' "$out" | bash reference/inventory/ci/annotate-failures.sh --stdin "local-maven route-test"
+          exit 1
       # Gradle's downloads only (dependencies and the wrapper), never build
       # outputs. A restore that hangs (ci.yml's build job saw that on Linux with
       # a whole Gradle home) is cut at 10 minutes and the run goes on cold. A run
@@ -161,7 +185,7 @@ jobs:
       # explicitly, or the cache would never be read. Saved from main only.
       - name: Restore Gradle downloads
         id: cache
-        if: github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'workflow_dispatch' && matrix.libraries != 'local-maven'
         uses: actions/cache/restore@v4
         timeout-minutes: 10
         continue-on-error: true
@@ -171,13 +195,38 @@ jobs:
             ~/ci-cache/gradle-home/wrapper
           key: reference-app-gradle-${{ runner.os }}-${{ hashFiles('reference/inventory/bootstrap.sh', 'scripts/templates/production-host/build.gradle', 'scripts/templates/production-host-embed/**/*.gradle') }}
           restore-keys: reference-app-gradle-${{ runner.os }}-
+      # local-maven: a cache of its own, the 0.5 line's downloads (Kotlin/Native
+      # if this checkout's build fetches it, AGP, Gradle and the libraries'
+      # dependencies: this checkout's catalog and wrapper, and the line table the
+      # moved app follows). The central key holds the 0.4 line's. Saved by the
+      # nightly run (below); restored on a pull request and in a run started by hand.
+      - name: local-maven — restore the 0.5 line's Gradle downloads
+        id: cache-lm
+        if: matrix.libraries == 'local-maven'
+        uses: actions/cache/restore@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ~/ci-cache/konan
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
+          key: reference-app-local-maven-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'scripts/keliver-runtime-line.sh') }}
+          restore-keys: reference-app-local-maven-${{ runner.os }}-
       # local-maven: in a run started by hand too, so the publish and the app's
-      # builds (whose user.home the harness moves) share one Gradle home.
+      # builds (whose user.home the harness moves) share one Gradle home (and one
+      # Kotlin/Native dir, in the leg's cache).
       - name: Use the cache
         if: github.event_name != 'workflow_dispatch' || matrix.libraries == 'local-maven'
+        env:
+          LEG: ${{ matrix.libraries }}
         run: |
           mkdir -p "$HOME/ci-cache/gradle-home"
           echo "GRADLE_USER_HOME=$HOME/ci-cache/gradle-home" >> "$GITHUB_ENV"
+          if [ "$LEG" = local-maven ]; then
+            mkdir -p "$HOME/ci-cache/konan"
+            echo "KONAN_DATA_DIR=$HOME/ci-cache/konan" >> "$GITHUB_ENV"
+          fi
 
       - name: Download the PUBLIC tools 0.3.18 release, as the adopter guide does
         run: |
@@ -262,7 +311,7 @@ jobs:
           bash reference/inventory/ci/annotate-failures.sh "$GITHUB_WORKSPACE/evidence" "reference-app, $LEG leg"
 
       - name: Save Gradle downloads
-        if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && steps.cache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && matrix.libraries != 'local-maven' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         continue-on-error: true
         with:
@@ -270,6 +319,18 @@ jobs:
             ~/ci-cache/gradle-home/caches/modules-2
             ~/ci-cache/gradle-home/wrapper
           key: ${{ steps.cache.outputs.cache-primary-key }}
+      # local-maven: from the nightly run only (the one local-maven leg on main
+      # that is not started by hand).
+      - name: local-maven — save the 0.5 line's Gradle downloads
+        if: github.ref == 'refs/heads/main' && github.event_name == 'schedule' && matrix.libraries == 'local-maven' && steps.cache-lm.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: |
+            ~/ci-cache/konan
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
+          key: ${{ steps.cache-lm.outputs.cache-primary-key }}
 
       - name: Keep the evidence
         if: always()

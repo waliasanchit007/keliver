@@ -40,15 +40,33 @@ apart from the CI harness.**
   `keliver-store-path.sh` it calls), which are not in the tools bundle.
 * **A third route, local-maven (MS4-35), checks a LIBRARY change.** The two
   routes above take the libraries from Maven Central at the app's own version
-  (0.3.3), so no change to a Keliver library can show on them. On a pull request
+  (0.3.3), so no change to a Keliver library can show on them.
   `reference-app.yml` and `ios-host.yml` also run a `local-maven` leg (the
-  matrix's `libraries`; by hand, the `libraries` input):
+  matrix's `libraries`). When it runs:
+  - on a pull request that triggers those workflows, i.e. one that touches the
+    harness or the route's own files (their `paths`: `reference/`, the
+    scaffolders and templates, `scripts/keliver-portal`,
+    `scripts/keliver-store-path.sh`, `portal-relay/`, ...), beside the central leg.
+    A library-only pull request does **not** trigger them: the maintainer's
+    decision (2026-11-26), for runner capacity and speed;
+  - nightly on `main` (both workflows' scheduled runs), beside the central leg,
+    so a library regression merged to `main` shows within a day. These runs also
+    save the leg's own download cache (the 0.5 line's Kotlin/Native, AGP and
+    Gradle), which pull requests and runs started by hand restore;
+  - by hand, on any branch: `gh workflow run reference-app.yml --ref <branch> -f
+    libraries=local-maven` (the emulator) and `gh workflow run ios-host.yml --ref
+    <branch> -f libraries=local-maven` (the simulator). **A reviewer of a library
+    pull request that changes host-facing behaviour dispatches both.**
+
+  What the leg does:
   - `ci/local-maven/publish.sh` publishes this checkout's libraries that the app
     and its hosts use (35 modules: the ones the app's `build.gradle` and the host
     templates name, plus `keliver-image`, and what their published variants depend
     on), unsigned and without Dokka, only the publications the platform needs,
     into a fresh directory in the runner's temp space (never `~/.m2`), at
-    `<next version>-local.<commit>`: `0.5.0-local.<commit>` on today's `main`;
+    `<KELIVER_VERSION on this checkout's line>-local.<commit>`:
+    `0.5.0-local.<commit>` on today's `main`, where `KELIVER_VERSION` is still the
+    0.4.1 release and the catalog builds the 0.5 line (`lm_publish_version`);
   - `ci/local-maven/route.sh` moves the bootstrapped app to that version and its
     line (Kotlin 2.4.21, Compose 1.12.2, the Zipline fork, `-Xes-long-as-bigint`,
     Gradle 9.7.1, from `keliver-runtime-line.sh`), and makes the app and the
@@ -59,10 +77,12 @@ apart from the CI harness.**
     relay predates NF2 and names no engine in `bundles/index.json`, which a host
     on the fork's line reads as `quickjs-2021` and skips, so nothing would load.
     The hosts build against the repository and run P1–P7 on the emulator and the
-    simulator. `keliver-treehouse-host` logs one
-    line naming its build when a host creates its `TreehouseApp.Factory`
-    (`keliver-treehouse-host <version>`: logcat tag `Keliver` at debug level on
-    Android, standard output on iOS); P2 fails without this checkout's version.
+    simulator. Every `dev.keliver` artifact the guest (`jsRuntimeClasspath`) and
+    the hosts resolve must be at the local version. `keliver-treehouse-host` logs
+    one line naming its build when a host creates its `TreehouseApp.Factory`
+    (`keliver-treehouse-host <version>`: on Android `Log.d` with the logcat tag
+    `Keliver`, which release builds print too; on iOS standard output); P2 fails
+    without this checkout's version.
   The rows after P7, the development route (the zip's generic host is on the 0.4
   line) and W2 (`reference/embed/android` is on AGP 8.12) stay on the central leg
   for now, listed as SKIP; MS4-32 ports the app. Each results file has a `ROUTE`

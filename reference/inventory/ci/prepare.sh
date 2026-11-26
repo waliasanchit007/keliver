@@ -153,6 +153,14 @@ fi
 ( cd "$APP" && ./gradlew compileKotlinJs --console=plain ) > "$EV/compile.log" 2>&1 \
   && ok "compile: ./gradlew compileKotlinJs against $LIBS_FROM (Keliver $APP_KV)" \
   || { bad "compile failed"; tail -30 "$EV/compile.log"; exit 1; }
+# local-maven: where every Keliver artifact of the GUEST came from, as for the host below.
+if [ "$LIBRARIES" = local-maven ]; then
+  ( cd "$APP" && ./gradlew --console=plain -q dependencies --configuration jsRuntimeClasspath ) \
+    > "$EV/guest-dependencies.txt" 2>&1
+  lm_check_artifacts "$EV/guest-dependencies.txt" "$EV/guest-keliver-artifacts.txt" \
+    && ok "local-maven: all $(grep -c . "$EV/guest-keliver-artifacts.txt") dev.keliver artifacts of the guest (jsRuntimeClasspath) are $KELIVER_LOCAL_VERSION" \
+    || bad "local-maven: the guest's dev.keliver artifacts (jsRuntimeClasspath): $LM_ERROR"
+fi
 
 # publishTask/publishOutput and the signing block. The bootstrap no longer
 # overlays a hand-written block; this is the scaffolder an adopter would run.
@@ -296,7 +304,7 @@ echo "APK=$EV/production-host.apk" >> "$WORK/env"
 # app; MS4-04, -17 and -23 add their own rows here). Listed, never counted as passes.
 if [ "$LIBRARIES" = local-maven ]; then
   skip "W3, W5, U0, T0 and W8 (the static route's, update, timing and rotation builds): not on the local-maven route yet; the repo-scaffold job runs them"
-  skip "W2 (the embedded host): reference/embed/android is on the 0.4 line (AGP 8.12, upstream Zipline), and this route's libraries need AGP 9.1"
+  skip "W2 (the embedded host): reference/embed/android is on the 0.4 line (AGP 8.12, upstream Zipline), and this route's libraries need AGP $TOOLCHAIN_AGP_MIN or newer (the $KELIVER_LINE line builds with AGP $TOOLCHAIN_AGP)"
   skip "the development bundle: the development route's generic host (the tools zip's) is on the 0.4 line"
   echo "prepare: passed $pass, failed $fail"
   [ "$fail" -eq 0 ]; exit $?

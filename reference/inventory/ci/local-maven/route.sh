@@ -3,7 +3,8 @@
 #
 # The reference app's local-maven route: SOURCED (never run) by ci/prepare.sh and ci/ios.sh when
 # KELIVER_LOCAL_MAVEN names the repository ci/local-maven/publish.sh wrote (this checkout's
-# libraries). The other two routes take the libraries from Maven Central, at the app's own version
+# libraries), and by publish.sh for the version it publishes them at (lm_publish_version). The
+# other two routes take the libraries from Maven Central, at the app's own version
 # (reference/inventory/app/keliver.portal.json):
 #  - published-only (KELIVER_SCAFFOLD_FROM=zip): the tools zip's scaffolders;
 #  - repo-scaffold (KELIVER_SCAFFOLD_FROM=repo): this checkout's scaffolders.
@@ -14,6 +15,10 @@
 # toolchain (keliver-runtime-line.sh): Kotlin, Compose, Keliver's Zipline fork, -Xes-long-as-bigint
 # and the Gradle wrapper. The edits themselves are local_maven.py's.
 #
+#   lm_publish_version <checkout> <commit>
+#                                   sets LM_PUBLISH_VERSION, the version publish.sh gives the libraries:
+#                                   KELIVER_VERSION (RedwoodBuildPlugin.kt) on the line this checkout
+#                                   builds, then -local.<commit's first 12>; 1 with LM_ERROR set
 #   lm_load                         reads $KELIVER_LOCAL_MAVEN/keliver-ref-app.env (KELIVER_LOCAL_VERSION,
 #                                   KELIVER_LOCAL_COMMIT, KELIVER_LOCAL_SECONDS) and the line's
 #                                   toolchain; 1 with LM_ERROR set when it cannot
@@ -35,6 +40,47 @@ LM_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 LM_REPO="$(cd "$LM_HERE/../../../.." && pwd -P)"
 LM_ERROR=""
 
+# The version is KELIVER_VERSION, the build's own default (RedwoodBuildPlugin.kt; no CHANGELOG
+# heading is read), without a suffix. Its number is only a label; its LINE is what matters, since
+# the scaffolders and lm_load give the app that line's toolchain (keliver-runtime-line.sh). So the
+# line must be the one this checkout's libraries are built with: the one whose Kotlin and Zipline
+# are gradle/libs.versions.toml's. KELIVER_VERSION is the LAST release until a release bumps it
+# (0.4.1, on the 0.4 line, while main builds the 0.5 line), so when its line's toolchain is not the
+# catalog's the version is the first of the newest line that has it: 0.5.0-local.<commit> today.
+lm_publish_version() {
+  local root="${1:?checkout}" commit="${2:?commit}" kv kotlin zipline base="" i
+  local -a lines
+  LM_ERROR=""; LM_PUBLISH_VERSION=""
+  kv="$(sed -nE 's/^private const val KELIVER_VERSION = "([^"]+)".*/\1/p' \
+    "$root/build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt" 2>/dev/null | head -1)"
+  kv="${kv%%[-+]*}"
+  kotlin="$(sed -nE 's/^kotlin = "([^"]+)".*/\1/p' "$root/gradle/libs.versions.toml" 2>/dev/null | head -1)"
+  zipline="$(sed -nE 's/^zipline = "([^"]+)".*/\1/p' "$root/gradle/libs.versions.toml" 2>/dev/null | head -1)"
+  if [ -z "$kv" ]; then LM_ERROR="$root names no KELIVER_VERSION in build-support's RedwoodBuildPlugin.kt"; return 1; fi
+  if [ -z "$kotlin" ] || [ -z "$zipline" ]; then
+    LM_ERROR="$root/gradle/libs.versions.toml names no kotlin or zipline version"; return 1
+  fi
+  # shellcheck source=../../../../scripts/keliver-runtime-line.sh
+  . "$LM_REPO/scripts/keliver-runtime-line.sh"
+  if keliver_zipline_line "$kv" 2>/dev/null && [ "$TOOLCHAIN_KOTLIN" = "$kotlin" ] && [ "$TOOLCHAIN_ZIPLINE" = "$zipline" ]; then
+    base="$kv"
+  else
+    read -r -a lines <<< "$KELIVER_LINES"
+    for (( i = ${#lines[@]} - 1; i >= 0; i-- )); do
+      if keliver_zipline_line "${lines[$i]}.0" 2>/dev/null && [ "$TOOLCHAIN_KOTLIN" = "$kotlin" ] \
+          && [ "$TOOLCHAIN_ZIPLINE" = "$zipline" ]; then
+        base="${lines[$i]}.0"; break
+      fi
+    done
+  fi
+  if [ -z "$base" ]; then
+    LM_ERROR="this checkout builds with Kotlin $kotlin and Zipline $zipline, and no line of scripts/keliver-runtime-line.sh ($KELIVER_LINES) has them: add the next line's column"
+    return 1
+  fi
+  LM_PUBLISH_VERSION="$base-local.${commit:0:12}"
+  return 0
+}
+
 lm_load() {
   local env="${KELIVER_LOCAL_MAVEN:-}/keliver-ref-app.env"
   LM_ERROR=""
@@ -53,7 +99,7 @@ lm_load() {
 }
 
 lm_route_label() {
-  echo "local-maven: this checkout's scripts/ and libraries (dev.keliver:*:$KELIVER_LOCAL_VERSION from $KELIVER_LOCAL_MAVEN; the $KELIVER_LINE line: $ZIPLINE_GROUP $TOOLCHAIN_ZIPLINE, Kotlin $TOOLCHAIN_KOTLIN)"
+  echo "local-maven: this checkout's scripts/, relay (portal-relay) and libraries (dev.keliver:*:$KELIVER_LOCAL_VERSION from $KELIVER_LOCAL_MAVEN; the $KELIVER_LINE line: $ZIPLINE_GROUP $TOOLCHAIN_ZIPLINE, Kotlin $TOOLCHAIN_KOTLIN)"
 }
 
 lm_marker() {
@@ -96,7 +142,8 @@ lm_move_app() {
       "$KELIVER_ZIPLINE_FORK" "$ZIPLINE_GROUP" "$ZIPLINE_PLUGIN_ID" "$TOOLCHAIN_ZIPLINE" "$TOOLCHAIN_KOTLIN" \
       "$TOOLCHAIN_COMPOSE" "$TOOLCHAIN_COROUTINES" "$TOOLCHAIN_SERIALIZATION" 2>&1)" \
     || { LM_ERROR="${out:-local_maven.py move-app failed}"; return 1; }
-  # The line's Gradle: AGP 9.3 refuses a Gradle older than 9.5.0.
+  # The line's Gradle: the line's AGP (TOOLCHAIN_AGP, 9.3.3 on 0.5) refuses a Gradle older than
+  # TOOLCHAIN_GRADLE_MIN (9.5.0).
   keliver_line_wrapper_properties "$app/gradle/wrapper/gradle-wrapper.properties" \
     || { LM_ERROR="could not point the app's wrapper at Gradle $TOOLCHAIN_GRADLE"; return 1; }
   return 0

@@ -15,8 +15,11 @@
 #  - every module of this build their published variants depend on (publish.init.gradle);
 #  - only the publications the platform needs: the root (kotlinMultiplatform), js (the guest),
 #    and androidRelease and jvm (android) or iosSimulatorArm64 (ios).
-# The version is CHANGELOG.md's next version (its "Unreleased (X.Y.Z)"), "-local.", and this
-# checkout's commit: a version Maven Central never has, on the line the scaffolders pick for X.Y.Z.
+# The version is KELIVER_VERSION (RedwoodBuildPlugin.kt) on the line this checkout builds,
+# "-local.", and this checkout's commit (route.sh's lm_publish_version): a version Maven Central
+# never has, on the line whose Kotlin and Zipline this checkout's libraries are built with, so the
+# scaffolders give the app that toolchain. 0.5.0-local.<commit> while KELIVER_VERSION is the 0.4.1
+# release and main builds the 0.5 line. No CHANGELOG heading is read.
 # The repository gets keliver-ref-app.env (KELIVER_LOCAL_VERSION, KELIVER_LOCAL_COMMIT,
 # KELIVER_LOCAL_PLATFORM, KELIVER_LOCAL_SECONDS); route.sh reads it.
 set -euo pipefail
@@ -36,10 +39,11 @@ case "$DIR/" in "$HOME/.m2/"*) echo "publish.sh: never ~/.m2" >&2; exit 2 ;; esa
 mkdir -p "$DIR" "$EV"
 EV="$(cd "$EV" && pwd -P)"
 
-NEXT="$(sed -n 's/^## Unreleased (\([0-9][0-9.]*\))$/\1/p' "$REPO/CHANGELOG.md" | head -1)"
-[ -n "$NEXT" ] || { echo "publish.sh: CHANGELOG.md has no '## Unreleased (X.Y.Z)' heading" >&2; exit 1; }
 COMMIT="$(git -C "$REPO" rev-parse HEAD)"
-VERSION="$NEXT-local.${COMMIT:0:12}"
+# shellcheck source=route.sh
+. "$HERE/route.sh"
+lm_publish_version "$REPO" "$COMMIT" || { echo "publish.sh: $LM_ERROR" >&2; exit 1; }
+VERSION="$LM_PUBLISH_VERSION"
 
 # The artifacts the app and its hosts name, as this checkout's project paths.
 MODULES="$(

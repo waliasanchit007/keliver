@@ -22,15 +22,23 @@
 #    hand, and this checkout's scripts/ otherwise (pull requests, pushes to main,
 #    the nightly run; KELIVER_SCAFFOLD_FROM).
 #      Screens are read by macOS Vision.
-# 3. The same, on the local-maven route (MS4-35, the matrix's `libraries`): on a
-#    pull request the OTA job also runs with THIS checkout's libraries, published
-#    into a fresh repository in the runner's temp space (never ~/.m2;
-#    reference/inventory/ci/local-maven). The app moves to their version and
-#    line, its guest and the iOS host build against them, P1-P7 run, and P2
-#    checks that the host printed this checkout's keliver-treehouse-host
-#    version. The rows after P7 stay on the central leg (Maven Central) for now.
-#    A run started by hand picks one leg (input `libraries`). Each results file
-#    names its route.
+# 3. The same, on the local-maven route (MS4-35, the matrix's `libraries`): the
+#    OTA job also runs with THIS checkout's libraries, published into a fresh
+#    repository in the runner's temp space (never ~/.m2;
+#    reference/inventory/ci/local-maven), and this checkout's scaffolders,
+#    publish wiring and relay. The app moves to their version and line, its
+#    guest and the iOS host build against them, P1-P7 run, and P2 checks that
+#    the host printed this checkout's keliver-treehouse-host version. The rows
+#    after P7 stay on the central leg (Maven Central) for now. When it runs:
+#    - a pull request that triggers this workflow (the paths below: the harness
+#      and the route's own files) runs both legs. A library-only pull request
+#      does not trigger it (the maintainer's decision, for runner capacity);
+#    - the nightly run, on main, runs both legs, so a library regression shows
+#      within a day; a push to main runs the central leg only;
+#    - by hand, one leg (input `libraries`): `gh workflow run ios-host.yml
+#      --ref <branch> -f libraries=local-maven`. A reviewer of a library pull
+#      request that changes host-facing behaviour dispatches it.
+#    Each results file names its route.
 #
 # Read-only: no secrets, no publishing. The keys are disposable and generated
 # inside the run. A workflow can't be dispatched until it is on the default
@@ -46,7 +54,10 @@
 # GRADLE_USER_HOME and KONAN_DATA_DIR at the cache, which the harness's
 # user.home isolation would otherwise move into its work dir); only runs on
 # main save them, and a run started by hand (the published-only proof) never
-# restores them.
+# restores them. The local-maven leg keeps a cache of its own (the 0.5 line's
+# Kotlin/Native, AGP and Gradle, which this checkout's build and the moved app
+# download): the nightly run saves it, and pull requests and runs started by
+# hand restore it.
 #
 # The repository variable IOS_RUNNER routes both jobs to another runner label
 # (unset: macos-15); since 2026-11-10 it is the self-hosted Mac (the owner's
@@ -89,11 +100,16 @@ on:
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
       - "scripts/keliver-publish"
-      - "portal-relay/src/main/kotlin/StaticIndex.kt"
-      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
-      - "portal-relay/src/main/kotlin/PublishSignature.kt"
-      - "portal-relay/src/main/kotlin/KeyRotation.kt"
       - "scripts/templates/publish/**"
+      # The local-maven leg (MS4-35) also runs these: its own harness, this
+      # checkout's publish wiring, keliver-portal and the WHOLE relay (lm_relay_kit
+      # builds portal-relay; the central legs run the zip's).
+      - "reference/inventory/ci/local-maven/**"
+      - "reference/inventory/ci/annotate-failures.sh"
+      - "scripts/keliver-new-publish-target.sh"
+      - "scripts/keliver-portal"
+      - "scripts/keliver-store-path.sh"
+      - "portal-relay/**"
       - ".github/workflows/ios-host.yml"
   push:
     branches: [main]
@@ -120,18 +136,24 @@ on:
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
       - "scripts/keliver-publish"
-      - "portal-relay/src/main/kotlin/StaticIndex.kt"
-      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
-      - "portal-relay/src/main/kotlin/PublishSignature.kt"
-      - "portal-relay/src/main/kotlin/KeyRotation.kt"
       - "scripts/templates/publish/**"
+      # The local-maven leg (MS4-35) also runs these: its own harness, this
+      # checkout's publish wiring, keliver-portal and the WHOLE relay (lm_relay_kit
+      # builds portal-relay; the central legs run the zip's).
+      - "reference/inventory/ci/local-maven/**"
+      - "reference/inventory/ci/annotate-failures.sh"
+      - "scripts/keliver-new-publish-target.sh"
+      - "scripts/keliver-portal"
+      - "scripts/keliver-store-path.sh"
+      - "portal-relay/**"
       - ".github/workflows/ios-host.yml"
   schedule:
     - cron: "37 1 * * *"
   workflow_dispatch:
     inputs:
       # local-maven: check a branch's LIBRARY change on the iOS host by hand (a
-      # pull request runs both legs of the OTA job).
+      # pull request this workflow's paths trigger, and the nightly run, run both
+      # legs of the OTA job; a library-only pull request does not trigger it).
       libraries:
         description: "central (the published-only proof), or local-maven: this checkout's libraries, from a local Maven repository"
         type: choice
@@ -229,11 +251,13 @@ jobs:
 
   ios-host:
     # The central leg keeps the job's name (ios-host); the other is named for its route.
+    # Both legs on a pull request and on the nightly run; one on a push to main
+    # (central) and by hand (input libraries).
     name: ${{ matrix.libraries == 'local-maven' && 'ios-host (local-maven)' || 'ios-host' }}
     strategy:
       fail-fast: false
       matrix:
-        libraries: ${{ fromJSON(github.event_name == 'pull_request' && '["central","local-maven"]' || (github.event_name == 'workflow_dispatch' && inputs.libraries == 'local-maven') && '["local-maven"]' || '["central"]') }}
+        libraries: ${{ fromJSON((github.event_name == 'pull_request' || github.event_name == 'schedule') && '["central","local-maven"]' || (github.event_name == 'workflow_dispatch' && inputs.libraries == 'local-maven') && '["local-maven"]' || '["central"]') }}
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.IOS_RUNNER || 'macos-15' }}
     # Observed 99-175 minutes with M0 and T2 (runner speed varies: one run took
     # 366, and run 42691755854 was cut off at 200 minutes, every phase about 1.6x
@@ -259,13 +283,16 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # local-maven: route.sh's own cases first (no Gradle, no network).
+      # local-maven: route.sh's own cases first (no Gradle, no network). A failure
+      # is also an annotation (escaped by annotate-failures.sh: the output can
+      # run to several lines).
       - name: local-maven — the route's self-test
         if: matrix.libraries == 'local-maven'
         run: |
-          out="$(bash reference/inventory/ci/local-maven/route-test.sh 2>&1)" \
-            || { echo "::error title=local-maven route-test::$out"; exit 1; }
+          if out="$(bash reference/inventory/ci/local-maven/route-test.sh 2>&1)"; then echo "$out"; exit 0; fi
           echo "$out"
+          printf '%s\n' "$out" | bash reference/inventory/ci/annotate-failures.sh --stdin "local-maven route-test"
+          exit 1
 
       # T2 (m0/ios-timing.sh) on a pull request only when it touches what T2
       # checks: the host's Kotlin (timing, no-timing, the debug link (ED3: its
@@ -295,7 +322,7 @@ jobs:
       # KONAN_DATA_DIR are set explicitly, or the cache would never be read.
       - name: Restore the Kotlin/Native toolchain and Gradle downloads
         id: cache
-        if: runner.environment == 'github-hosted' && github.event_name != 'workflow_dispatch'
+        if: runner.environment == 'github-hosted' && github.event_name != 'workflow_dispatch' && matrix.libraries != 'local-maven'
         uses: actions/cache/restore@v4
         timeout-minutes: 10
         continue-on-error: true
@@ -306,6 +333,24 @@ jobs:
             ~/ci-cache/gradle-home/wrapper
           key: ios-host-${{ runner.os }}-${{ hashFiles('scripts/templates/ios-host/build.gradle', 'scripts/templates/ios-host/settings.gradle', 'scripts/templates/ios-host/gradle.properties', 'reference/inventory/bootstrap.sh') }}
           restore-keys: ios-host-${{ runner.os }}-
+      # local-maven: a cache of its own, the 0.5 line's downloads (Kotlin/Native,
+      # AGP, Gradle and the libraries' dependencies: this checkout's catalog and
+      # wrapper, and the line table the moved app follows). The central key holds
+      # the 0.4 line's. Saved by the nightly run (below); restored on a pull
+      # request and in a run started by hand.
+      - name: local-maven — restore the 0.5 line's Kotlin/Native toolchain and Gradle downloads
+        id: cache-lm
+        if: runner.environment == 'github-hosted' && matrix.libraries == 'local-maven'
+        uses: actions/cache/restore@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ~/ci-cache/konan
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
+          key: ios-host-local-maven-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', 'scripts/keliver-runtime-line.sh') }}
+          restore-keys: ios-host-local-maven-${{ runner.os }}-
       # local-maven: in a run started by hand too, so the publish and the app's
       # builds (whose user.home the harness moves) share one Gradle home and Konan dir.
       - name: Use the cache
@@ -402,7 +447,7 @@ jobs:
           bash reference/inventory/ci/annotate-failures.sh "$GITHUB_WORKSPACE/ios-evidence" "ios-host, $LEG leg"
 
       - name: Save the Kotlin/Native toolchain and Gradle downloads
-        if: runner.environment == 'github-hosted' && github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && steps.cache.outputs.cache-hit != 'true'
+        if: runner.environment == 'github-hosted' && github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch' && matrix.libraries != 'local-maven' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         continue-on-error: true
         with:
@@ -411,6 +456,18 @@ jobs:
             ~/ci-cache/gradle-home/caches/modules-2
             ~/ci-cache/gradle-home/wrapper
           key: ${{ steps.cache.outputs.cache-primary-key }}
+      # local-maven: from the nightly run only (the one local-maven leg on main
+      # that is not started by hand).
+      - name: local-maven — save the 0.5 line's Kotlin/Native toolchain and Gradle downloads
+        if: runner.environment == 'github-hosted' && github.ref == 'refs/heads/main' && github.event_name == 'schedule' && matrix.libraries == 'local-maven' && steps.cache-lm.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: |
+            ~/ci-cache/konan
+            ~/ci-cache/gradle-home/caches/modules-2
+            ~/ci-cache/gradle-home/wrapper
+          key: ${{ steps.cache-lm.outputs.cache-primary-key }}
 
       - name: Keep the evidence
         if: always()
