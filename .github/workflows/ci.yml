@@ -104,6 +104,47 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
+      # Kotlin/Native's compiler caches for the iOS simulator test links (MS4-52). Every debug
+      # test executable links against a static cache of each external library it uses (Compose,
+      # skiko, Ktor, Coil, kotlinx, the Zipline fork …). A fresh runner has no ~/.konan, so each
+      # run built all of them again before linking: the prototype's linkDebugTestIosSimulatorArm64
+      # took about 11 minutes in #319's run, against seconds with warm caches. setup-gradle keeps
+      # the Gradle home only, so these two directories are kept here: user-pl (one directory per
+      # external library) and system (the stdlib's). Project modules are never cached there.
+      # Each library's cache lives in <library>/<fingerprint>/, the fingerprint hashing the
+      # klib's bytes and its transitive dependencies' (never paths or times), so a cache restored
+      # through restore-keys after a catalog change is safe: a changed library misses and gets a
+      # new directory beside the old one. Kotlin's version is in the key and in the path, so a
+      # Kotlin upgrade starts again from nothing. Restoring before Gradle provisions Kotlin/Native
+      # is fine: without its provisioned.ok marker the Kotlin plugin unpacks the distribution over
+      # the directory (it warns "Kotlin/Native bundle directory … is not empty") and deletes
+      # nothing. Saved whenever the exact key missed and the job passed (main's copy serves every
+      # pull request). A self-hosted Mac keeps its own ~/.konan, so only hosted runners use this.
+      - name: Kotlin/Native cache location
+        id: kn
+        if: runner.environment == 'github-hosted'
+        run: |
+          set -euo pipefail
+          kotlin="$(sed -nE 's/^kotlin = "([^"]+)"$/\1/p' gradle/libs.versions.toml)"
+          case "$(uname -m)" in arm64) host=macos-aarch64 ;; x86_64) host=macos-x86_64 ;; *) host= ;; esac
+          if [ -z "$kotlin" ] || [ -z "$host" ]; then
+            echo "::warning::no Kotlin/Native cache: Kotlin version '$kotlin', host '$(uname -m)'"
+            exit 0
+          fi
+          echo "kotlin=$kotlin" >> "$GITHUB_OUTPUT"
+          echo "dir=${KONAN_DATA_DIR:-$HOME/.konan}/kotlin-native-prebuilt-$host-$kotlin/klib/cache" >> "$GITHUB_OUTPUT"
+      - name: Kotlin/Native compiler caches (iOS simulator)
+        if: steps.kn.outputs.dir != ''
+        uses: actions/cache@v4
+        timeout-minutes: 10
+        continue-on-error: true
+        with:
+          path: |
+            ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-user-pl
+            ${{ steps.kn.outputs.dir }}/ios_simulator_arm64-gSTATIC-system
+          key: kn-caches-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: kn-caches-ios-sim-${{ runner.os }}-${{ runner.arch }}-kotlin-${{ steps.kn.outputs.kotlin }}-
+
       - name: Build + publishToMavenLocal (no signing)
         run: >
           ./gradlew
