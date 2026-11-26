@@ -17,17 +17,26 @@ package dev.keliver.compose.core.composeui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import dev.keliver.Modifier as KeliverModifier
 import dev.keliver.compose.root.widget.KeliverComposeWidgetFactory
 import dev.keliver.compose.root.widget.KeliverComposeWidgetSystem
+import dev.keliver.widget.Widget
 
 /**
  * The generated root's widget system with only this group's renderers: the tests' own, so core's
  * tests never depend on keliver-compose-root-composeui, which depends on core (MS4-03).
- * keliverComposeWidgetSystem() there is the one a host uses.
+ * keliverComposeWidgetSystem() there is the one a host uses. No sample here uses another group.
  */
 internal fun coreWidgetSystem(): KeliverComposeWidgetSystem<@Composable (Modifier) -> Unit> = KeliverComposeWidgetSystem(
   KeliverCompose = TestRootWidgetFactory,
   KeliverComposeCore = ComposeUiKeliverComposeCoreWidgetFactory(),
+  KeliverComposeCoil = null,
+  absentWidget = {
+    object : Widget<@Composable (Modifier) -> Unit> {
+      override val value: @Composable (Modifier) -> Unit = {}
+      override var modifier: KeliverModifier = KeliverModifier
+    }
+  },
 )
 
 /** The root has no widgets of its own: each group is a dependency. */

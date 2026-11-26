@@ -17,19 +17,40 @@ package dev.keliver.compose.root.composeui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import dev.keliver.Modifier as KeliverModifier
+import dev.keliver.compose.coil.widget.KeliverComposeCoilWidgetFactory
 import dev.keliver.compose.core.composeui.ComposeUiKeliverComposeCoreWidgetFactory
 import dev.keliver.compose.root.widget.KeliverComposeWidgetFactory
 import dev.keliver.compose.root.widget.KeliverComposeWidgetSystem
+import dev.keliver.widget.Widget
 
 /**
- * The generated root's widget system on Compose UI: the core group's generated renderers. Unlike the
- * prototype's, it takes no legacy keliver-material system: the generated root does not depend on the
- * legacy schemas (docs/MS4_PLAN.md, MS4-01 and MS4-03).
+ * The generated root's widget system on Compose UI: the core group's generated renderers, and each
+ * optional group a host ships (docs/MS4_PLAN.md, MS4-03; Q1).
+ *
+ * [coil] is the coil group's renderers, `ComposeUiKeliverComposeCoilWidgetFactory()` from
+ * keliver-compose-coil-composeui, or null for a host built without Coil. A group left out is
+ * absent: a guest's widget from it is reported as unknown once per tag (the host protocol's
+ * [ProtocolMismatchHandler][dev.keliver.protocol.host.ProtocolMismatchHandler], which a Treehouse
+ * app passes to its EventListener), draws nothing, and the rest of the tree renders.
+ *
+ * Unlike the prototype's, it takes no legacy keliver-material system: the generated root does not
+ * depend on the legacy schemas (MS4-01).
  */
-public fun keliverComposeWidgetSystem(): KeliverComposeWidgetSystem<@Composable (Modifier) -> Unit> = KeliverComposeWidgetSystem(
+public fun keliverComposeWidgetSystem(
+  coil: KeliverComposeCoilWidgetFactory<@Composable (Modifier) -> Unit>? = null,
+): KeliverComposeWidgetSystem<@Composable (Modifier) -> Unit> = KeliverComposeWidgetSystem(
   KeliverCompose = RootWidgetFactory,
   KeliverComposeCore = ComposeUiKeliverComposeCoreWidgetFactory(),
+  KeliverComposeCoil = coil,
+  absentWidget = ::AbsentWidget,
 )
 
 /** The root has no widgets of its own: each group is a dependency. */
 private object RootWidgetFactory : KeliverComposeWidgetFactory<@Composable (Modifier) -> Unit>
+
+/** Stands in for a widget of an absent group: it draws nothing. */
+private class AbsentWidget : Widget<@Composable (Modifier) -> Unit> {
+  override val value: @Composable (Modifier) -> Unit = {}
+  override var modifier: KeliverModifier = KeliverModifier
+}

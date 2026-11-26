@@ -49,6 +49,7 @@ internal object ProtocolGuest {
 }
 
 internal object ProtocolHost {
+  val AbsentProtocolNode = ClassName("dev.keliver.protocol.host", "AbsentProtocolNode")
   val GeneratedHostProtocol = ClassName("dev.keliver.protocol.host", "GeneratedHostProtocol")
   val GeneratedUiEvent = ClassName("dev.keliver.protocol.host", "GeneratedUiEvent")
   val HostProtocol = ClassName("dev.keliver.protocol.host", "HostProtocol")
