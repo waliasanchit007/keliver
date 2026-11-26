@@ -383,9 +383,13 @@ fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review"
 
 - The name and `fixtures` must be plain string literals; the body is one
   `NamedState(...)` call (expression body or a single `return`); the function
-  is top-level, takes no parameters, receiver or type parameters, and is neither
-  `private` nor `suspend` (the generated registry calls it from another file;
-  `internal` is fine). Anything else — a state declared inside an object, a
+  is top-level, takes no parameters, receiver or type parameters, is neither
+  `private`, `suspend` nor `@Composable`, declares no return type but
+  `NamedState` (or none), and carries no annotation but `@Suppress`, `@OptIn`,
+  `@JvmName`, `@JsName` and `@Throws` — any other might ask its callers to opt
+  in (to use an opt-in API inside the function, opt in there with `@OptIn`).
+  The generated registry calls it from another file, outside composition;
+  `internal` is fine. Anything else — a state declared inside an object, a
   class or another function included — is listed under `problems` with the
   reason, not as a state, and never skipped silently.
 - `@ScreenState` and `NamedState` are recognized by what the file's imports bind
@@ -416,7 +420,7 @@ fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review"
 Guest code is Kotlin/JS, which can't find annotations at run time, so a device,
 the editor or a test finds an app's states through a **generated registry**:
 `dev.keliver.nav.ScreenStateRegistry` (experimental:
-`@OptIn(ExperimentalKeliverScreenStateApi::class)`), written as ordinary Kotlin
+`@OptIn(ExperimentalKeliverNavScreenStateApi::class)`), written as ordinary Kotlin
 from the same screen files with the same reader as `GET /states`, so the two
 list the same states, in the same order, with the same problems.
 
@@ -429,21 +433,32 @@ list the same states, in the same order, with the same problems.
 ```
 
 - `out` is relative to the app, in the module that compiles the screens (so an
-  `internal` state function can be called), and not in the screens directory.
-  The relay rewrites it before each preview build, only when its text changes;
-  a file it did not write is never overwritten.
-- `ScreenStateRegistryKt <app-dir> --check` (in this repository:
-  `./gradlew :portal-relay:screenStateRegistry -Pcheck [-PappDir=…]`) fails when
-  the checked-in file is stale; without `--check` it writes the file. CI checks
-  `keliver-screen-states-fixture`'s.
+  `internal` state function can be called), and outside every directory the
+  relay watches (screens, components, flows, tokens, logic: a write there would
+  start another preview build). `packageName` is required. The relay rewrites
+  the file before each preview build, only when its text changes; a file it did
+  not write is never overwritten. A screen file it cannot read is listed under
+  the screen's problems (`cannot read …`), as in `GET /states`. Without a
+  `previewBuildTask` the relay never builds, so it never writes the file, and
+  says so at startup: run the command below yourself.
+- `ScreenStateRegistryKt <app-dir> --check` (portal-relay's main class; in this
+  repository: `./gradlew :portal-relay:screenStateRegistry -Pcheck [-PappDir=…]`)
+  fails when the checked-in file is stale; without `--check` it writes the file.
+  CI checks `keliver-screen-states-fixture`'s.
 - Each entry has the fields `GET /states` shows (`screen`, `name`, `function`,
-  `routeSource`, `routeType`, `fixtures`) and a `state()` that runs the state
-  function. A host opens a state with `registry.open(screen, name, fixtureSets)`:
-  it fails with `UnknownScreenStateException` for a state the registry lacks and
-  with `MissingScreenStateFixturesException` when `fixtureSets` (the sets the host
-  can replay, for example a debug host's `DebugHttpReplay.catalog()` ids) lacks
-  the state's set, before any presenter runs. Then it binds `HostHttp` to a replay
-  of `NamedState.fixtures` and starts the app at `NamedState.route`, as
+  `routeSource` — `/states`' `route` text — `routeType`, `fixtures`) and a
+  `state()` that runs the state function. A host opens a state with
+  `registry.open(screen, name, fixtureSets)`. `fixtureSets` are the sets the
+  host can replay: pass only valid, unexpired ones, or `open` succeeds and the
+  replay fails later. On a debug host, from its `DebugHttpReplay`:
+  `replay.catalog().filter { it.valid && !it.expired }.map { it.id }`.
+- Every failure to open is a `ScreenStateException` (sealed; each names the
+  `screen` and `state`): `UnknownScreenStateException` for a state the registry
+  lacks, `MissingScreenStateFixturesException` when `fixtureSets` lacks the
+  state's set, and `StaleScreenStateRegistryException` when the state function
+  now names another fixture set than the registry (regenerate it) — all before
+  any presenter runs. Then the host binds `HostHttp` to a replay of
+  `NamedState.fixtures` and starts the app at `NamedState.route`, as
   `keliver-screen-states-fixture`'s `OpenScreenStatesTest` does.
 
 ## Conditions and conditional values
