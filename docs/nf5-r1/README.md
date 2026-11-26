@@ -103,13 +103,12 @@ fails again it is reported as it is, with no verdict.
   `count.k_reveal` says in how many opens the reveal's frame was the one that ticked the guest.
 - the guest's own detail drawn (`drawn`) on each guest arm.
 - the reveal frame's readings beside native's frame: `f_end`, the main thread's frame end;
-  `q_drew`, the buffer queued (R0's recorded reading); `row_end`, the app's frame-timeline row;
-  `sf_end`, the display frame.
+  `q_drew`, the buffer queued by the draw that drew it (and `q_r0`, R0's rule for it);
+  `row_end`, the app's frame-timeline row; `sf_end`, the display frame.
 
-Prediction (written before any phone run): the reveal's first draw about 13–17 ms after the UP plus
-the 40 ms tap is not in it, so about 15–30 ms, as the retained back's first draw on the A12
-(appendix B); `Record View#draw()` about 8.5 ms with the idle measure (series C's host back, 8.5–9.0),
-more without it.
+Prediction (written before any phone run): the reveal's first draw 13–30 ms after the UP, as the
+retained back's first draw on the A12 (13–17 ms after the press, appendix B); `Record View#draw()`
+about 8.5 ms with the idle measure (series C's heavy host back: 8.5–9.0 ms), more without it.
 
 ## What is measured
 
@@ -132,10 +131,16 @@ and name the reading):
 | `marker` | the marker |
 | `f_start`, `f_end` | that doFrame's start and end: `f_end` is the main thread's frame end |
 | `rec_ms`, `ml_ms` | its `Record View#draw()` (for `reveal`, the one that holds the marker), and Compose's measure and layout inside it |
-| `q_same`, `ds_ms` | the end of the first `queueBuffer` in the RenderThread's `DrawFrames <its vsync>`, and that DrawFrames' length |
-| `q_drew`, `dw_ms`, `drew_lag` | the same for the first `DrawFrames` of at least 2 ms from the doFrame on (R0's `frame-end.sql`: the draw that drew it), and the vsyncs between the two (0: drawn in its own vsync) |
+| `q_same`, `ds_ms` | the end of the first `queueBuffer` in the RenderThread's `DrawFrames <its vsync>` (empty when that draw queued nothing), and that DrawFrames' length |
+| `q_drew`, `dw_ms`, `drew_own` | **the buffer queued by the draw that drew it**: the first `DrawFrames` from the doFrame on that queues a buffer, the end of that `queueBuffer`; its length; 1 when it is the doFrame's own vsync's, 0 when a later frame's. `count.<kind>.drew_own` in q2 counts the 1s |
+| `q_r0` | R0's rule (`frame-end.sql`): the first `DrawFrames` of at least 2 ms from the doFrame on. It passes over a short draw that did queue the buffer, so it can read a later frame (the dry run, below) |
 | `row_end` | the end of the app's actual frame-timeline row for the vsync, when not zero-length |
 | `sf_end` | the end of SurfaceFlinger's display frame that row points to |
+
+The frame's vsync id is the one in its own `Choreographer#doFrame <id>` slice, which its
+`DrawFrames <id>` and its frame-timeline row carry. A late frame on Android 13 or later also has a
+nested `Choreographer#doFrame - resynced to <id> in <ms>` slice with the same start; the queries
+never take it. Vsync ids are tokens, not counts: they step by more than 1 per vsync.
 
 The guest's step after the click (guest arms): `ec`, the first `zl:sendEvent` in the window (the
 click) → the first `zl:composed` after it; `e_wait`, the event's end → the `zl:sendFrame` that

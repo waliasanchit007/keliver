@@ -4245,6 +4245,13 @@ adb logcat -s Threeway:I        # one JSON line per iteration, marks in ms from 
 #                            guest's GateAPress provided: a touch-down on a row composes its detail
 #   --ei hold 100            taps hold the finger down 100 ms without blocking the main thread, and the
 #                            series' times are from the DOWN (the press series; see "A12 checkpoint")
+#   -e x r1prep              guest (NF5 R1, docs/nf5-r1/): the list and detail in the host's retained
+#                            container; the next open's detail is composed and hidden 300 ms after a back
+#   -e x r1prep,reveal       the same; the host shows the hidden detail on the click, before the guest
+#                            runs (the reveal; its marks: revealed, revealDrawn, revealRecorded, revealLive)
+#   -e x r1prep,reveal,idlemeasure   the same; the hidden detail is measured whenever it changes, while idle
+#   -e x trace               also: the driver's own sections, `bench:up <step> <i>` at each UP and
+#                            `bench:drawn <screen> <seq>` in the draw the bench takes as `drawn`
 # Every process logs one {"cold":"<form>",...} line when the list's data is first drawn: its marks in ms
 # from the process start (see "Cold start (NF0)"), logged as the data frame's main-thread work ends
 # (its `dataFrameEnd` mark; `drawn`/`dataDrawn` fire as that frame starts drawing: see "NF4: composed to drawn").

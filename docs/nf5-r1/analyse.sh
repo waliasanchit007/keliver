@@ -60,7 +60,10 @@ check() {
       if (i > 2) { n++; k += ok }
       print i, ec, b, d, ok
     }
-    END { print "pass", (k >= 10) ? 1 : 0, "(" k + 0, "of", n + 0, "opens 3-14 within 2 ms)" }' $L.bench.txt $L.ec.tmp
+    END {
+      if (n == 0) print "pass n/a (no guest step: a native arm)"
+      else print "pass", (k >= 10) ? 1 : 0, "(" k + 0, "of", n + 0, "opens 3-14 within 2 ms)"
+    }' $L.bench.txt $L.ec.tmp
 }
 
 q() { # $1 arm, $2 query name

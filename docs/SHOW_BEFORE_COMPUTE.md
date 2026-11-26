@@ -123,7 +123,9 @@ declines it (3.2).
      most, still under 25 (inferred; the idle arm was not run on battery).
    - **The heavy arm's G** (for B1's slice budget): 43.6 ms.
 3. **R1, a reveal-only arm on the A12**: the shell's first frame on the pixels, with and without
-   measuring the shell while idle (3.5).
+   measuring the shell while idle (3.5). Its arm (`-e x r1prep`, with `reveal` and `idlemeasure`), the
+   phone session's scripts and queries, and the bar fixed before the run are in
+   [`docs/nf5-r1/`](nf5-r1/README.md). They were run end to end on an emulator on 2026-11-26.
 
 **Items that differ in structure** cost (B) more. On the Mac, rebinding the heavy detail to an item
 with other sections cost 16.0 ms, against 8.6 for the same structure and 46.3 fresh (appendix C,

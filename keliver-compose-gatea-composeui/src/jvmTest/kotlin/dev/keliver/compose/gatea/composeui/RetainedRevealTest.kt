@@ -306,6 +306,32 @@ class RetainedRevealTest {
   }
 
   @Test
+  fun aRevealedEntryThatLeavesTheStackEndsTheReveal() = runComposeUiTest {
+    val policy = Policy()
+    val probe = Probe()
+    val stack = hostStack(null, probe)
+    setContent { CompositionLocalProvider(LocalRetainedReveal provides policy) { stack.value(Modifier.fillMaxSize()) } }
+    waitForIdle()
+    runOnIdle { assertTrue(stack.revealOnClick()) }
+    waitForIdle()
+    assertEquals(1, stack.shownIndex)
+
+    // The guest removes the revealed entry before it ever shows it: the list again, and no "live".
+    runOnIdle { stack.entries.remove(1, 1) }
+    waitForIdle()
+    assertEquals(0, stack.shownIndex)
+    assertEquals(listOf("reveal prep:detail", "drawn prep:detail"), policy.events)
+
+    // A new prepared entry is revealable again: the ended reveal holds nothing back.
+    runOnIdle { stack.entries.insert(1, entry("prep:next", Probe())) }
+    waitForIdle()
+    runOnIdle { assertTrue(stack.revealOnClick()) }
+    waitForIdle()
+    assertEquals(1, stack.shownIndex)
+    assertEquals("reveal prep:next", policy.events[2])
+  }
+
+  @Test
   fun aClickBelowRevealsAndAScrollDoesNot() = runComposeUiTest {
     val policy = Policy()
     val row = ScrollingRow()
