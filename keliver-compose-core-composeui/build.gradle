@@ -71,6 +71,9 @@ kotlin {
         implementation projects.keliverProtocolHost
         implementation projects.keliverCompose
         implementation projects.keliverLeakDetector
+        // RetainedHostBackTest, PressSignalTest: keliver-nav's retained stack on the host container
+        // (keliver-nav has jvm and js targets only, so not in sameSourceTest).
+        implementation projects.keliverNav
       }
     }
   }
