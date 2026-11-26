@@ -3749,6 +3749,369 @@ files. What changed:
   main not excluded from BigInt's gain (L4); which recipe built which APK (L5). The possible prestart
   double load (L6) is a follow-up above.
 
+## NF5 R0: the floor step under Perfetto (A12, 2026-11-26)
+
+NF5's R0 ([`SHOW_BEFORE_COMPUTE.md`, appendix D](SHOW_BEFORE_COMPUTE.md#appendix-d-the-floor-step-under-perfetto-r0-a12)),
+a day after its planned date. It reran series H's three arms and one new arm, `simple-on-idle`, each
+in a fresh process under a Perfetto trace. It then split the floor step (click → composed, for a
+detail already composed with the right item) into its parts, and applied the rule fixed in advance
+to the new arm. The session followed its command list (steps 0–7) as written, except the power
+state: it ran on the charger, where step 0 says on battery (caveat 3, below). The queries are
+[`docs/nf5-r0/`](nf5-r0/), unchanged. Three diagnostic queries written during the session are in
+[`docs/nf5-r0/a12-2026-11-26/`](nf5-r0/a12-2026-11-26/); `analyse.sh` does not run them.
+
+**Verdict: reachable in principle**, with a small margin and the three caveats below it. The rule
+was applied to `simple-on-idle`'s opens 3–14; all 12 were idle at the UP.
+- G = 22.4 ms, under the limit of 25.
+- W = 8.1 ms, the median of the per-open values, and every part of it has a named mechanism.
+- P = 65.0 ms on q2's printed `total` (59.1). That `total` is too short in 9 of the 12 opens
+  (below). Measured to the frame that actually drew the detail, `total` is 82.0 and **P = 87.9 ms**,
+  under 100.
+- At a ratio of 30 (+36 instead of +14), P is 87.0 printed and 109.9 corrected.
+- The margins are 2.6 ms on G and 12.1 ms on P. The pre-run prediction was G ≈ 21.
+
+**The caveats beside the verdict** (added after the review of the record; no measured number
+changed):
+1. **Which "frame end".** Appendix D wrote T as UP → "presented". But the 100 ms target, and
+   native's 28 ms that it is set against, are **frame end**: the end of the main thread's work for
+   the frame that shows the content (the bench's `frameEnd`, "Method" above; SHOW_BEFORE_COMPUTE
+   section 1, "All are frame end"). Native's 28 ms is not measured to the display, so the
+   like-for-like T is a frame end too. The idle arm's trace gives three readings of T (medians over
+   opens 3–14, ms):
+
+   | T runs to | T | P (ratio 12) | Verdict |
+   |---|---|---|---|
+   | the main thread's frame end, as the targets and native's 28 ms (per open, `total − j`: the end of the `doFrame` after the apply) | 71.2 | about 77.1 | reachable |
+   | **the frame's buffer queued** (`frame-end.sql`, below): **the one recorded** | **82.0** | **87.9** | reachable |
+   | the display, "presented" (appendix D's pre-registered word): SurfaceFlinger's display frame ends about 45 ms after the buffer, in the one open checked | about 127 | about 133 | **not reachable** |
+
+   87.9 is recorded because it is the most conservative of the frame-end readings: the RenderThread
+   queues the buffer after the main thread's work ends. On the "presented" reading the verdict is
+   the opposite. The target was not set on that reading, so the owner confirms which reading R0 uses.
+2. **The margin is less than one frame** (inferred from the per-open columns and the 60 Hz
+   vsync, not measured). P's 12.1 ms margin is smaller than one frame (16.7 ms), and the app draws
+   only at vsyncs. In all 12 opens the apply came 1.1–3.5 ms (`h`) before the `doFrame` that drew
+   it, and `h` + W stays under 16.7 ms (at most 13.8), so removing W moves no open's frame. The
+   rebind's 14 ms is more than `h` + W in every open, so every open would slip one vsync. Quantized
+   to vsyncs, P ≈ 82.0 + 16.7 ≈ 98.7, a margin of about 1.3 ms; at a ratio of 30, about 115. For
+   the same reason **the frame-clock change named for c1 (below) would not, alone, bring the simple
+   open's frame forward on the A12**: the guest's chain from the frame tick to the apply (c2 + d + e
+   + f + g, about 31 ms) is just under two frames, and starting it W earlier moves the apply earlier
+   within the same vsync period, so the same `doFrame` draws it. This matters for R1 and for (B): on
+   this phone a change shortens the open only if it moves the apply across a vsync.
+3. **The charger.** Appendix D's step 0 says on battery, as series H. The run was on the charger
+   (below), so it deviates there. On series H's three arms the guest's step (`composed − click`)
+   on the charger is within −4% to +8% of series H's on battery (step 5's table). If the charger
+   made the guest up to 4% faster, G on battery would be about 23.4, still under 25. That is
+   inferred from series H's arms: the idle arm was not run on battery.
+
+**Build.** The dry run's APKs, kept in the session's scratch directory, matched their sha256 at
+04:00 and again before the install:
+- `host-android-benchmark.apk`: 26,057,387 bytes, `8bd7ecef…c7ee76243`;
+- the trace processor: `ae2f18ff…68a0e7d`, Perfetto v45.
+
+The APK was built from `316abd41a`'s code: the three-way sample as on main, with `Long` as BigInt,
+on the fork's engine built locally as `1.28.0-q20260604` through `use-fork.init.gradle`. Main itself
+now resolves the published `dev.keliver.zipline:*:1.28.0-keliver.1` (#294, merged after that
+commit). The two engines were not compared in this session. Install: `install -r -d`, then
+profileinstaller's broadcast (result 1), then `speed-profile`.
+
+**Phone state.** The Galaxy A12, Android 12 (API 31), 04:41–04:46 IST. Up 4 d 2 h 29 min – 2 h 33 min.
+**Plugged in and charging (AC), 50% → 52%, unlike series H (on battery, 87%)**: the owner was asleep
+and the phone could not be unplugged. The session waited from 25% (04:00) until it read 50% (04:41)
+before the first arm. Temperature 34.6 °C (series H: 25.6–25.7), thermal status 0, CPU idle 96–97%
+(`top`, before each arm), load average 20.4–20.9.
+
+**The runs (step 5).** Every arm had 14 opens, 14 backs, `done` and no timeout; the traces were
+14.0–20.0 MB. Against series H, per-iteration medians over opens 3–14:
+
+| Arm | `click` | `composed − click` |
+|---|---|---|
+| simple-on | 191 (H: 198.5–201) | 55.5 (H: 57.5–58) |
+| simple-off | 112 (H: 113) | 113 (H: 112–116.5) |
+| heavy-on | 496 (H: 488.5–494) | 120 (H: 111–114.5) |
+
+All are within 15%; heavy-on's `composed − click` is the farthest, at +5% to +8%. The idle arm:
+`click` 412 (the 400 ms hold + 12), click → composed 42, click → drawn 56.
+
+**The checks (step 6).**
+- **q0a**: after the start group come 28 groups alternating open and back, with `is_open` on every
+  open. The event, frame and `composed` counts are those appendix D expects: press on 3, 2, 2; press
+  off 1, 1, 1; a back 1, 1, 1. No override was needed.
+- **q0b**: the UP is `ThreewayActivity$$ExternalSyntheticLambda5` in every arm (`upname.txt`). It
+  comes 3–10 ms before E on the idle and press-off arms. On the press-on arms the click waits behind
+  the preparation.
+- **qc**: passes on every arm, 12 of 12 opens. On the idle arm 12 of 12 opens were idle at the UP,
+  207–224 ms after the guest's last call.
+- **The CPUs**: the cpufreq rows show two maxima, 2.301 GHz on cpu0–3 (`fast`) and 1.8 GHz on
+  cpu4–7, so the clusters were separated. `d_running_fast` = `d_running` on every arm: the guest
+  composed only on the fast cluster.
+- **q3**: empty on every arm, because `d_other` was 0 in every open: the Zipline thread never
+  blocked while composing. Perfetto accepted `symbolize_ksyms`, but whether this user build gives
+  it kernel symbols was not exercised.
+
+**The table** (q2: medians over opens 3–14, ms):
+
+| Column | simple-on-idle | simple-on | simple-off | heavy-on |
+|---|---|---|---|---|
+| idle at the UP | 210.9 | −84.1 | 814.2 | −387.9 |
+| a UP → E0 | 4.9 | 84.5 | 4.8 | 388.3 |
+| b the event(s) | 7.7 | 5.1 | 5.2 | 5.9 |
+| c E → F | 15.1 | 28.2 | 16.9 | 74.3 |
+| c1 E → frame callback | 14.2 | 27.3 | 15.4 | 73.8 |
+| c2 callback → F | 0.8 | 1.0 | 1.2 | 0.8 |
+| c_zl_run | 6.6 | 7.6 | 4.7 | 8.4 |
+| d F → C | 22.4 | 24.8 | 95.8 | 43.6 |
+| **d_running (G)**; of it fast, slow | **22.4**; 22.4, 0 | 24.8; 24.8, 0 | 95.8; 95.8, 0 | 43.6; 43.6, 0 |
+| d_runnable | 0.0 | 0.0 | 0.0 | 0.0 |
+| d_other | 0.0 | 0.0 | 0.0 | 0.0 |
+| **W** | **8.1** | 21.1 | 10.3 | 66.2 |
+| e C → sent | 5.9 | 6.8 | 14.9 | 5.6 |
+| f, g sent → apply; apply | 1.0, 1.3 | 0.7, 0.9 | 0.8, 5.0 | 0.7, 1.0 |
+| h apply → doFrame | 1.7 | 5.1 | 1.4 | 13.4 |
+| i the frame (layout) | 8.7 (1.2) | 6.7 (1.1) | 28.2 (15.3) | 9.4 (1.1) |
+| j frame → the row's end | −10.5 | 6.2 | −5.4 (n = 8) | 9.5 |
+| **total** UP → the row's end (q2) | **59.1** | 169.6 | 164.2 (n = 8) | 546.7 |
+| total to the frame that drew the detail (`frame-end.sql`) | **82.0** | 172.1 | not derived | 545.9 |
+| P_allW_r12, P_allW_r30 (q2) | 65.0, 87.0 | 162.7, 184.7 | 166.8, 188.8 (n = 8) | 498.6, 520.6 |
+
+**What `total` measures, and where q2's is wrong.** The traces show two things that the emulator's
+dry run did not.
+1. **The row's end is the frame's buffer queued, not the display's present.** The end of the app's
+   actual frame-timeline row comes 0.6–1.8 ms after the RenderThread's `queueBuffer` for that frame
+   (idle arm, opens 4 and 8). The SurfaceFlinger display frame the row points to
+   (`display_frame_token`) ends later. That was checked on one valid row only, open 4's, while the
+   press's ripple was animating: relative to the apply, the row ends at 19.7 ms, and the display
+   frame runs from 32.6 to 65.3 ms, about 45 ms after the row. Other opens, and frames without the
+   ripple, were not checked. So appendix D's `j` and `total` run to the buffer queued: later than
+   the targets' frame end (the main thread's, caveat 1 above), and earlier than light on the screen.
+   Series I reads "present" from the same row (its query takes the end of the app's actual
+   frame-timeline row), so its "presented" is probably this buffer-queued end too; that was not
+   re-checked. Series K's headline numbers, and the C11 reference's K below, do not use that row:
+   `q-px.sql` takes the end of SurfaceFlinger's display frame that spans the recorder's buffer. Only
+   its `app_first_present` column reads the app's row.
+2. **In 9 of the idle arm's 12 opens, `measure.sql` matched a frame that did not draw the detail.**
+   It takes the first `doFrame` after the apply, and that vsync's row. Inferred from the trace:
+   - **What runs at the UP.** After a 400 ms hold, the press's ripple is still animating on the
+     RenderThread: there are `RenderNodeAnimator` and `RippleHostView` messages, and the
+     RenderThread queues a buffer at every vsync with no frame on the main thread. In these opens
+     the detail's frame collides with that animation.
+   - **The matched row is zero-length.** Its end equals its start, so `j` is negative.
+   - **The detail is drawn elsewhere.** The RenderThread's draw of the new content (`DrawFrames`,
+     6.5–16.5 ms long) ran one vsync later in 3 opens. In 3 more it waited 22 ms behind the
+     animation's `queueBuffer` in the same vsync. In the other 3 it ran at the normal time, but its
+     row was still zero-length.
+
+   [`frame-end.sql`](nf5-r0/a12-2026-11-26/frame-end.sql) measures to the frame that drew instead:
+   - **Which frame.** It takes the first `DrawFrames` of at least 2 ms from the matched `doFrame`
+     on, and the end of the `queueBuffer` inside it.
+   - **The idle arm.** Per open, UP → that end is 65.5–98.6 ms, median **82.0**, against q2's 59.1.
+     The 3 opens with a usable row agree with q2 within 2.6 ms.
+   - **The other arms.** In 5 of simple-on's 12 opens the next vsync drew too, adding 12–15 ms to
+     each (median 172.1 against 169.6); in 1 of heavy-on's, 17.5 ms. Simple-off has no row at all
+     for 4 opens, and the supplement does not work there: in 4 of its opens 3–14 no `DrawFrames` of
+     2 ms or more follows before the next tap. Its frame-end columns (h to total) are not reliable; its guest columns
+     (a to d, W) are.
+
+**The rule, applied to `simple-on-idle`.**
+- **Count.** 12 of 12 opens were idle at the UP (206.9–223.9 ms after the last guest call), which
+  is at least 10, so the rule applies.
+- **G** = `d_running` = **22.4 ms**, all of it on the 2.301 GHz cluster.
+- **W** = **8.1 ms**. Every part of it has a named mechanism:
+  - **c1** (median 14.2, E's end → the main thread's frame callback). The guest's frame tick is a
+    Choreographer frame callback (`AndroidChoreographerFrameClock`), so after the click the guest
+    waits for the next vsync on the main thread. Meanwhile the Zipline thread runs the click's own
+    coroutine for 6.6 ms (`c_zl_run`, not counted in W). The change that would remove it is in the
+    runtime: a frame clock that runs the guest's next frame right after an input event instead of at
+    the next vsync.
+  - **c2** (0.8): the hop from that callback to the Zipline thread. It goes with c1.
+  - **d_runnable and d_other** are 0.0: the guest was neither preempted nor blocked while it
+    composed. There is nothing to name.
+  - So **W_named = 8.1**.
+- **P = T − W_named + 14**, at a ratio of 30 (+36) in brackets:
+
+  | T | P | P_allW_r12, per open |
+  |---|---|---|
+  | q2's, 59.1 | **65.0** (87.0) | 65.0 |
+  | the frame that drew the detail (its buffer queued), 82.0 | **87.9** (109.9) | 87.4 |
+
+- **Reachable in principle** (P ≤ 100 and G ≤ 25): **yes, on both T's.** Not reachable
+  (`P_allW_r12` > 100, or G ≥ 40): no.
+- **With the caveats above:** reachable on both frame-end readings of T (P about 77.1 and 87.9),
+  with a margin under one frame once quantized to vsyncs (about 98.7); not reachable on the
+  display's "presented" reading (about 133).
+
+**Also reported** (appendix D):
+- **The press's preparation costs the click.** On simple-on the click waits 84.5 ms in `a` behind
+  the preparation. c1 doubles, to 27.3 against the idle arm's 14.2, and W is 21.1 against 8.1. The
+  prediction was W of about 30–36 on the press-on arm and less on the idle arm: the direction was
+  right and the size too high.
+- **Press off against press on.** W is 10.3 against 21.1. Simple-off's G of 95.8 is the detail
+  composed fresh at the click; with the press it is 24.8, the prepared detail recomposing.
+- **The heavy arm, for B1's slice budget.** G = 43.6 ms. W = 66.2, nearly all of it c1 (73.8): the
+  frame callback comes 74 ms after the click's event ends. Inferred: the main thread is busy with the
+  press's prepared heavy detail. Its 8–11 ms `sendChanges` apply message comes just before E (q0b),
+  but the window was not split further, and the mechanism is not named.
+- **Outside W, on the idle arm.** In 9 of 12 opens the ripple collision (above) puts the detail's
+  buffer 15–40 ms after q2's `total`. It is a host mechanism, and the rule does not subtract it. It
+  matters to (B): the reveal's shell would be drawn while the press's ripple is running (R1).
+
+**Kept** in the session's scratch directory (`keliver-scratch/nf5/r0/`; not in the repository): the
+four traces, the phone's directory (the output of every `analyse.sh` query and of `frame-end.sql`
+on each arm, the results and state files) and the session log. The two diagnostic queries'
+outputs (`frames-around-apply.sql`, `row-vs-display.sql`) were not kept; they can be regenerated
+from the kept idle-arm trace. The traces' sha256:
+
+| Trace | sha256 |
+|---|---|
+| `nf5-simple-on-idle.pftrace` | `03c555d7…86c75c9f` |
+| `nf5-simple-on.pftrace` | `532d322b…0587aa38` |
+| `nf5-simple-off.pftrace` | `41ccdc03…3b0a8356` |
+| `nf5-heavy-on.pftrace` | `348b1f60…3138237a` |
+
+They were then deleted from the phone, with `/data/local/tmp/nf5floor`.
+
+## A12 reference for 0.5.0, 2026-11-26
+
+The A12 reference for [`MS4_PLAN.md`](MS4_PLAN.md) section 3's C11: "open, back, cold start and
+scrolling no worse than the 2026-11-25 re-measure on the same harness". It ran a day late, so it is
+dated 2026-11-26. It is the baseline the 0.5.0 candidate's C11 run is compared with. It used
+checkpoint 2's harness and method:
+- **G**: the cold start, against a same-session native reference;
+- **H**: the depth-1 open, simple and heavy, timed from the touch-down, and the back;
+- **the retained back**: series A's `sysback` with `x=retainhost`;
+- **K**: the tap's first visibly changed frame, against native Compose's own button.
+
+The phone scripts are checkpoint 2's, copied, in
+[`docs/a12-reference-2026-11-26/`](a12-reference-2026-11-26/). The run order is in `lib.sh`, and
+`an.sh` gives the medians, on the phone. Its output for this run,
+[`an.txt`](a12-reference-2026-11-26/an.txt), lists every iteration's value (sorted) for G, H and
+the retained back. K's per-touch values are in the tables below. The C11 run should use the same
+scripts.
+
+Three script changes came after the run, from its review. `k.sh`'s `arm()` regained the
+battery-level check of checkpoint 2's `px.sh` (it stops below 30% off the charger; this run was on
+the charger, where it passes). `lib.sh` lost checkpoint 2's unused `taps()`. `an.sh` now prints `dataFrameEnd`, so
+`an.txt`, written before that, has no frame-end line; G's "Its frame end" column comes from the
+raw results files (each launch's value is listed below the table).
+
+**Build.** The same install as NF5 R0 (above): the three-way sample's benchmark build from
+`316abd41a`'s code, on the fork's engine built locally as `1.28.0-q20260604`, with `Long` as BigInt.
+It is not main's own build (which resolves the published `1.28.0-keliver.1`), and it holds no MS4
+code: nothing of MS4 had merged.
+
+**Phone state.** 05:02–05:22 IST, up 4 d 2 h 50 min – 3 h 10 min. **Plugged in and charging, 62% →
+73%, unlike checkpoint 2 (on battery, 83–90%).** Temperature 34.4–34.6 °C (checkpoint 2:
+25.5–25.8). Thermal status 0, CPU idle 95–99% before each arm, load average 20.6–22.5.
+- **The power state differs from checkpoint 2's.** Native was faster than in checkpoint 2: data
+  drawn 508 against 618 on a cold start, first frame 296 against 378.5. Whether the charger caused
+  that is not separated (G, below). The C11 run must be on the charger too, or this reference must
+  be re-run on battery. Comparisons across power states are not valid.
+- **Iterations.** G: two rounds of 1 unmeasured and 4 measured launches, so 8 per arm. H and the
+  retained back: two rounds of 14 iterations, the first 2 dropped, so 24 per arm. K: 9 rounds, the
+  first dropped, so 8 per touch.
+- **Runs.** No run timed out, and every bench run ended `done`.
+
+### G: cold start
+
+Data drawn, ms from the process start; the other columns are medians of the marks or of each
+launch's difference:
+
+| Arm | Data drawn: median / p90 / min–max | − native | Its frame end (`dataFrameEnd`) | First frame | Code load starts → succeeds | Request → response | Parsed → composed | Composed → data drawn |
+|---|---|---|---|---|---|---|---|---|
+| native | **508** / 513 / 500–513 | — | 583 | 296 | — | 138.5 | 23.5 | 2 |
+| guest, as shipped | **1,568.5** / 1,593 / 1,552–1,593 | +1,060.5 | 1,655 | 281.5 | 309 → 740 | 136 | 441 | 84.5 |
+| guest, `prestart,prefetch` | **1,368.5** / 1,391 / 1,362–1,391 | +860.5 | 1,453.5 | 289 | 211.5 → 651 | 9.5 | 454.5 | 84 |
+
+Data drawn, each launch (sorted): native 500, 501, 504, 507, 509, 510, 512, 513; as shipped 1,552,
+1,558, 1,563, 1,566, 1,571, 1,573, 1,583, 1,593; `prestart,prefetch` 1,362, 1,364, 1,366, 1,366,
+1,371, 1,372, 1,388, 1,391.
+
+Its frame end (`dataFrameEnd`), each launch (sorted; from the raw results files): native 576, 580,
+580, 581, 585, 587, 587, 589; as shipped 1,635, 1,641, 1,649, 1,650, 1,660, 1,665, 1,666, 1,677;
+`prestart,prefetch` 1,445, 1,449, 1,449, 1,452, 1,455, 1,457, 1,472, 1,474.
+
+Against series G (checkpoint 2, on battery): native 618, as shipped 2,143 (+1,525), `prestart,
+prefetch` 1,866 (+1,248). Native gained 110 ms. This run changed the power state (and the phone's
+temperature) and the build together, so the data does not say how much of it is the charger. The
+guest gained more (−574.5 as shipped), in the code load (309 → 740, against 486.5 → 1,106.5) and in
+composed → drawn (84.5 against 241.5). Those are the steps NF4's host baseline profile acts on
+("NF4: composed to drawn", above), merged since. The charger and the code changes since `338a02f81`
+are not separated here.
+
+### H: open and back (header back)
+
+From the touch-down, with a 100 ms hold; the last three columns are medians of each iteration's
+difference:
+
+| Arm | Open drawn: median / p90 / min–max | `click` | Click → composed | Click → drawn | Back drawn: median / p90 / min–max | Back: click → drawn |
+|---|---|---|---|---|---|---|
+| guest, press off | **247.5** / 261 / 240–262 | 111 | 103.5 | 136 | **166** / 169 / 155–171 | 56 |
+| guest, press on | 260.5 / 269 / 239–271 | 190 | 53.5 | 69.5 | 158 / 170 / 152–173 | 49 |
+| guest heavy, press off | **563.5** / 573 / 537–581 | 111 | 366.5 | 452.5 | **181.5** / 187 / 172–189 | 72 |
+| guest heavy, press on | 602.5 / 635 / 582–636 | 483.5 | 104.5 | 125 | 175 / 190 / 170–192 | 66.5 |
+| native | **127** / 130 / 116–132 | 105 | 20.5 | 21 | **120** / 127 / 114–131 | 15 |
+| native heavy | **132** / 136 / 122–141 | 105 | 26 | 27 | **123.5** / 128 / 116–130 | 16.5 |
+
+- Press off is 0.5.0's default (the owner, 2026-11-22). The guest opens 120.5 ms after native
+  (simple) and 431.5 ms after it (heavy), from the touch-down.
+- Against series H (battery): press off 247.5 against 278–280.5, heavy 563.5 against 583–590.
+  Within this section the press is again neutral to worse: simple +13, heavy +39.
+
+### The retained back (`bench=sysback`, `x=retainhost`)
+
+From the press (no hold). First draw is the host showing the retained list; drawn is the guest's
+confirming frame:
+
+| Arm | Back, first draw | Back, drawn (guest) | Open (warm), drawn |
+|---|---|---|---|
+| simple | **21** / 24 / 15–27 | 69 / 81 / 64–97 | 156 / 173 / 138–182 |
+| heavy | **13.5** / 22 / 6–24 | 92.5 / 99 / 81–100 | 461.5 / 470 / 440–483 |
+
+Series A (BigInt, battery) had 16 and 12 for the first draw, and 97 and 95 for drawn.
+
+### K: the tap's first visible change, on the pixels
+
+DOWN → the first visibly changed frame presented (ms; median / p90 / min–max; n = 8 per touch,
+round 1 dropped):
+
+| Touch | Guest (BigInt) | Native |
+|---|---|---|
+| Row, quick tap | **63.7** / 69.7 / 57.8–69.7: the ripple | 95.9 / 105.4 / 79.8–105.4: the detail |
+| Back (header) | **62.6** / 69.2 / 60.4–69.2: the ripple | 138.8 / 151.0 / 105.9–151.0: the list |
+| Load 20 | **58.6** / 64.4 / 53.8–64.4: the ripple | **65.5** / 81.0 / 56.3–81.0: the ripple |
+
+Each touch's value (rounds 2–9, in order):
+
+| Touch | Guest | Native |
+|---|---|---|
+| Row | 61.4, 62.7, 57.8, 62.1, 67.0, 69.7, 64.6, 64.7 | 105.4, 98.2, 80.0, 79.8, 101.1, 98.6, 93.6, 88.8 |
+| Back | 63.3, 61.0, 62.8, 60.4, 62.3, 69.2, 67.2, 61.9 | 122.5, 136.4, 131.7, 144.5, 144.5, 151.0, 141.2, 105.9 |
+| Load 20 | 64.4, 55.7, 61.0, 55.8, 56.2, 53.8, 63.5, 62.7 | 56.3, 64.8, 66.2, 64.5, 81.0, 78.7, 56.8, 69.7 |
+
+- **As in series K, every guest touch's first frame after the DOWN is pixel-identical to the one
+  before it** (24 of 24), and so is native's Load 20 (8 of 8). The first change is the next frame
+  (in 2 guest touches, the one after), the ripple's first step, with a largest channel change of 5–6
+  of 255.
+- **The tap bar (C11: at parity with native Compose's own button): met in this reference.** The
+  guest's first visible change, 58.6–63.7 ms (medians), is at or below native's own button, 65.5,
+  and the ranges overlap.
+- **The absolute times are later than series K's (2026-11-22), in both forms.** The ripple comes
+  17–21 ms later (then: guest 39.3–46.8, native button 44.2), and native's row and back 39 and
+  21 ms later. Compare within this section only; the cause is not established. The guest arm was
+  1.28.0 then and is BigInt now, but the ripple is the host's.
+- **Script fix.** Native's recorder process kept the name `sh` in this trace. `q-px.sql` now finds
+  the recorder by its thread's name; it had found no frames for native.
+
+### What is not in this reference
+
+- **Scrolling** (in C11's list) was not run.
+- **The iPhone** half of C11 was not run.
+- **The 1.28.0 anchor** was not run (no such build).
+- **The engine.** The engine is the locally built `1.28.0-q20260604`, not the published
+  `1.28.0-keliver.1` that main and the candidate use. Whether the two differ in speed is not
+  measured.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
