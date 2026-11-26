@@ -320,6 +320,7 @@ jobs:
           ./gradlew --continue
           :keliver-bridge-annotations:jsTest :keliver-bridge-fixture:jsTest
           :keliver-bridge-fixture-guest:jsTest :keliver-capabilities:jsTest :keliver-compose:jsTest
+          :keliver-compose-core-compose:jsTest
           :keliver-composeui:jsTest :keliver-console:jsTest :keliver-guest:jsTest :keliver-http:jsTest
           :keliver-http-annotations:jsTest :keliver-layout-api:jsTest :keliver-layout-compose:jsTest
           :keliver-layout-composeui:jsTest :keliver-layout-modifiers:jsTest
@@ -341,6 +342,7 @@ jobs:
           :portal-core:jsTest :portal-device-guest:jsTest
           :portal-flow:jsTest :portal-published-guest:jsTest :portal-sql:jsTest :portal-sql-spike:jsTest
           :portal-app-lib:jsTest
+          :keliver-compose-core-compose:wasmJsTest
           :keliver-capabilities:wasmJsTest :keliver-compose:wasmJsTest :keliver-composeui:wasmJsTest
           :keliver-layout-api:wasmJsTest :keliver-layout-compose:wasmJsTest
           :keliver-layout-composeui:wasmJsTest :keliver-layout-modifiers:wasmJsTest

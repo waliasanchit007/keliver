@@ -21,9 +21,13 @@ kotlin {
     commonMain {
       dependencies {
         api projects.keliverComposeCoreWidget
-        // The lazy lists' guest window (LazyDsl.kt) reuses the legacy lazy layout's loading strategy.
-        // A library dependency only: the generated root has no legacy schema. MS4-03's follow-up.
-        api projects.keliverLazylayoutCompose
+        // The lazy lists' guest window (LazyDsl.kt) reuses the legacy lazy layout's loading strategy,
+        // internally only: implementation, so the legacy dev.keliver.lazylayout.compose.LazyColumn/LazyRow
+        // stay off a guest's compile classpath beside the generated ones (review of #313, M2). A library
+        // dependency only: the generated root has no legacy schema.
+        // No module may depend on both this module and the prototype keliver-compose-gatea-compose until
+        // MS4-40: both declare the same dev.keliver.compose.* names (review of #313, L6).
+        implementation projects.keliverLazylayoutCompose
       }
     }
     commonTest {
