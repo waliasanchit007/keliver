@@ -28,23 +28,25 @@ package dev.keliver.nav
  * fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review")
  * ```
  *
- * [name] must be unique within the screen file.
+ * [name] must be unique within the screen file. The function must not be
+ * private, suspending or generic: the generated registry calls it from another
+ * file.
  *
  * **What exists today:** the portal reads these declarations from source and
  * lists them per screen (`GET /states`); a declaration it can't read is listed
- * as a problem, not skipped.
- *
- * **Planned (not built yet):** opening a state, in the editor or on a debug
- * device, will run the screen's real presenter for [NamedState.route] with only
+ * as a problem, not skipped. The same reader writes the app's
+ * [ScreenStateRegistry] (experimental), which a host, the editor or a test uses
+ * to open a state: the screen's real presenter for [NamedState.route], with only
  * the `HostHttp` capability replaced, by replay of [NamedState.fixtures].
+ *
+ * **Planned (not built yet):** opening a state from a link on a debug device
+ * (docs/PLAN_2026-11.md ED3) and in the browser (CAP6).
  *
  * **Retention is [AnnotationRetention.BINARY], on purpose.** Guest code runs as
  * Kotlin/JS, which has no runtime annotation reflection, so `RUNTIME` would give
- * a device nothing to look states up with. The route for a device is a
- * generated registry: a later codegen step reads these annotations (from source,
- * or from compiled class files and klibs, which `BINARY` keeps them in) and
- * emits the list of states as ordinary code. Changing to `RUNTIME` later would
- * not break callers; the reverse would.
+ * a device nothing to look states up with. A device finds states through the
+ * generated registry instead, which lists them as ordinary code. Changing to
+ * `RUNTIME` later would not break callers; the reverse would.
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)

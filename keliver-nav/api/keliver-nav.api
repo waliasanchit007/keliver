@@ -1,6 +1,9 @@
 public abstract interface annotation class dev/keliver/nav/ExperimentalKeliverNavRetentionApi : java/lang/annotation/Annotation {
 }
 
+public abstract interface annotation class dev/keliver/nav/ExperimentalKeliverScreenStateApi : java/lang/annotation/Annotation {
+}
+
 public final class dev/keliver/nav/KeliverNavController {
 	public static final field $stable I
 	public final fun cancelPreparation (Ljava/lang/Object;)V
@@ -143,6 +146,13 @@ public final class dev/keliver/nav/KeliverNavRetentionKt {
 	public static final fun keliverNavEntryLifecycle (Landroidx/compose/runtime/Composer;I)Landroidx/compose/runtime/State;
 }
 
+public final class dev/keliver/nav/MissingScreenStateFixturesException : java/lang/IllegalStateException {
+	public static final field $stable I
+	public final fun getFixtures ()Ljava/lang/String;
+	public final fun getScreen ()Ljava/lang/String;
+	public final fun getState ()Ljava/lang/String;
+}
+
 public final class dev/keliver/nav/NamedState {
 	public static final field $stable I
 	public fun <init> (Ljava/lang/Object;Ljava/lang/String;)V
@@ -155,5 +165,39 @@ public final class dev/keliver/nav/NamedState {
 
 public abstract interface annotation class dev/keliver/nav/ScreenState : java/lang/annotation/Annotation {
 	public abstract fun name ()Ljava/lang/String;
+}
+
+public final class dev/keliver/nav/ScreenStateEntry {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public final fun getFixtures ()Ljava/lang/String;
+	public final fun getFunction ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getRouteSource ()Ljava/lang/String;
+	public final fun getRouteType ()Ljava/lang/String;
+	public final fun getScreen ()Ljava/lang/String;
+	public final fun open (Ljava/util/Collection;)Ldev/keliver/nav/NamedState;
+	public final fun state ()Ldev/keliver/nav/NamedState;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/nav/ScreenStateRegistry {
+	public static final field $stable I
+	public fun <init> (Ljava/util/List;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun find (Ljava/lang/String;Ljava/lang/String;)Ldev/keliver/nav/ScreenStateEntry;
+	public final fun get (Ljava/lang/String;Ljava/lang/String;)Ldev/keliver/nav/ScreenStateEntry;
+	public final fun getEntries ()Ljava/util/List;
+	public final fun getProblems ()Ljava/util/Map;
+	public final fun getScreens ()Ljava/util/List;
+	public final fun open (Ljava/lang/String;Ljava/lang/String;Ljava/util/Collection;)Ldev/keliver/nav/NamedState;
+	public final fun states (Ljava/lang/String;)Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/nav/UnknownScreenStateException : java/util/NoSuchElementException {
+	public static final field $stable I
+	public final fun getScreen ()Ljava/lang/String;
+	public final fun getState ()Ljava/lang/String;
 }
 
