@@ -156,6 +156,15 @@ APP="$WORK/inventory"
   git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $LABEL"
 ) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $LABEL" \
   || { bad "recreating the app failed"; tail -20 "$EV/app.log"; exit 1; }
+# The relay: the zip's, or on the local-maven route this checkout's (lm_relay_kit: the published
+# one writes no engine into its index, and a host on the fork's line would load nothing).
+PORTAL="$KP/keliver-portal"
+if [ "$LIBRARIES" = local-maven ]; then
+  lm_relay_kit "$WORK/relay-kit" "$EV/local-maven-relay-build.log" \
+    && PORTAL="$WORK/relay-kit/bin/keliver-portal" \
+    && ok "local-maven: the relay is this checkout's (keliver-portal and portal-relay), which names each bundle's engine in its index" \
+    || { bad "local-maven: $LM_ERROR"; tail -20 "$EV/local-maven-relay-build.log"; exit 1; }
+fi
 if [ "$LIBRARIES" = local-maven ]; then
   cp "$APP/settings.gradle" "$EV/local-maven-app-settings.gradle"; cp "$APP/build.gradle" "$EV/local-maven-app-build.gradle"
   ok "local-maven: the app is on Keliver $KELIVER_LOCAL_VERSION (the $KELIVER_LINE line: Kotlin $TOOLCHAIN_KOTLIN, $ZIPLINE_GROUP $TOOLCHAIN_ZIPLINE, Gradle $TOOLCHAIN_GRADLE), dev.keliver only from $KELIVER_LOCAL_MAVEN"
@@ -170,11 +179,11 @@ portal_up(){  # $1 = app dir, $2 = log
   local free=0
   for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate || { free=1; break; }; sleep 2; done
   [ "$free" = 1 ] || { echo ":$RELAY_PORT already answers: a relay this run did not start" >&2; return 1; }
-  ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
+  ( cd "$1" && nohup "$PORTAL" --no-editor-build . > "$2" 2>&1 & )
   for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate && return 0; sleep 3; done
   return 1
 }
-portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 2; }
+portal_down(){ ( cd "$1" && "$PORTAL" stop . >/dev/null 2>&1 ); sleep 2; }
 # Installed before anything is started, so every exit stops what this run started.
 UDID=""; FAPP=""; SPID=""
 cleanup(){

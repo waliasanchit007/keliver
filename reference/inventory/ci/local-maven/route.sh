@@ -21,6 +21,8 @@
 #   lm_marker                       the line keliver-treehouse-host logs when a host starts
 #                                   (HostBuild.kt): what the device checks look for
 #   lm_publish_target               the publish wiring's scaffolder on this route (this checkout's)
+#   lm_relay_kit <dir> <log>        this checkout's keliver-portal and relay, laid out in <dir> (its
+#                                   bin/keliver-portal is the route's portal); 1 with LM_ERROR set
 #   lm_move_app <app-dir>           moves a bootstrapped app onto KELIVER_LOCAL_VERSION and its line,
 #                                   dev.keliver from the local repository only; 1 with LM_ERROR set
 #   lm_add_repository <settings.gradle>
@@ -63,6 +65,28 @@ lm_marker() {
 # refuses an app on the fork's line.
 lm_publish_target() {
   echo "$LM_REPO/scripts/keliver-new-publish-target.sh"
+}
+
+# The relay on this route: this checkout's keliver-portal and portal-relay, laid out as the tools
+# bundle lays them out (bin/, relay/, editor/) in <dir>. The published 0.3.18 relay predates NF2:
+# its bundles/index.json names no engine, which a host on the fork's line (quickjs-2026) reads as
+# quickjs-2021 and skips (BundleIndex.kt's DEFAULT_ENGINE), so nothing would load. This relay
+# copies the signed keliver.engine into the index. No editor is built: editor/ holds a placeholder
+# page (the harness starts the portal with --no-editor-build). Gradle runs without a daemon, so
+# nothing of it stays in memory for the emulator or the simulator.
+lm_relay_kit() {
+  local d="${1:?dir}" log="${2:?log}"
+  LM_ERROR=""
+  ( cd "$LM_REPO" && ./gradlew --console=plain --no-daemon -q :portal-relay:installDist ) > "$log" 2>&1 \
+    || { LM_ERROR="this checkout's portal-relay did not build (:portal-relay:installDist, $log)"; return 1; }
+  rm -rf "$d" && mkdir -p "$d/bin" "$d/editor" \
+    && cp -R "$LM_REPO/portal-relay/build/install/portal-relay" "$d/relay" \
+    && cp "$LM_REPO/scripts/keliver-portal" "$LM_REPO/scripts/keliver-store-path.sh" "$LM_REPO/scripts/keliver-publish" "$d/bin/" \
+    && chmod +x "$d/bin/keliver-portal" "$d/bin/keliver-store-path.sh" "$d/bin/keliver-publish" \
+    && printf '<!doctype html><title>keliver</title><p>No editor on the local-maven route.</p>\n' > "$d/editor/index.html" \
+    || { LM_ERROR="could not lay out the relay kit in $d"; return 1; }
+  [ -x "$d/relay/bin/portal-relay" ] || { LM_ERROR="$d has no relay/bin/portal-relay"; return 1; }
+  return 0
 }
 
 lm_move_app() {

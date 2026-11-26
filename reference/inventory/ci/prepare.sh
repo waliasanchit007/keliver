@@ -27,7 +27,8 @@
 # repo-scaffold), and the libraries come from Maven Central at the app's own version. With
 # KELIVER_LOCAL_MAVEN set (local-maven, ci/local-maven/route.sh), the libraries are THIS checkout's,
 # published by ci/local-maven/publish.sh into that repository: the app moves to their version and
-# line, and its guest and production host build against them. That route runs sections 1-5 (the
+# line, and its guest and production host build against them; the publish wiring and the relay are
+# this checkout's too (the 0.3.18 zip's predate the fork's line). That route runs sections 1-5 (the
 # app, the relay, D1, a signed v1 and the production host); the rows after them stay on the other
 # two routes for now, and are listed as SKIP.
 set -uo pipefail
@@ -131,6 +132,16 @@ if [ "$LIBRARIES" = local-maven ]; then
   fi
   echo "LOCAL_VERSION=$KELIVER_LOCAL_VERSION" >> "$WORK/env"
 fi
+# The relay: the zip's, or on the local-maven route this checkout's (lm_relay_kit: the published
+# one writes no engine into its index, and a host on the fork's line would load nothing).
+PORTAL="$KP/keliver-portal"
+if [ "$LIBRARIES" = local-maven ]; then
+  lm_relay_kit "$WORK/relay-kit" "$EV/local-maven-relay-build.log" \
+    && PORTAL="$WORK/relay-kit/bin/keliver-portal" \
+    && ok "local-maven: the relay is this checkout's (keliver-portal and portal-relay), which names each bundle's engine in its index" \
+    || { bad "local-maven: $LM_ERROR"; tail -20 "$EV/local-maven-relay-build.log"; exit 1; }
+fi
+echo "PORTAL=$PORTAL" >> "$WORK/env"
 APP_KV="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"])' "$APP/keliver.portal.json")"
 if [ "$RELAY_PORT" != 8077 ]; then
   python3 -c 'import json,sys; p=sys.argv[1]; c=json.load(open(p)); c["port"]=int(sys.argv[2]); open(p,"w").write(json.dumps(c,indent=2)+"\n")' \
@@ -173,11 +184,11 @@ portal_up(){  # $1 = app dir, $2 = log
   local free=0
   for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" || { free=1; break; }; sleep 2; done
   [ "$free" = 1 ] || { bad ":$RELAY_PORT already answers: a relay this run did not start (stop it, or set another KELIVER_RELAY_PORT)"; echo "prepare: passed $pass, failed $fail"; exit 1; }
-  ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
+  ( cd "$1" && nohup "$PORTAL" --no-editor-build . > "$2" 2>&1 & )
   for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" && return 0; sleep 3; done
   return 1
 }
-portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 2; }
+portal_down(){ ( cd "$1" && "$PORTAL" stop . >/dev/null 2>&1 ); sleep 2; }
 
 portal_up "$APP" "$EV/relay-prepare.log" && ok "the relay for this app answered on :$RELAY_PORT" \
   || { bad "the relay never answered"; tail -30 "$EV/relay-prepare.log"; exit 1; }

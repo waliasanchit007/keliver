@@ -54,8 +54,12 @@ apart from the CI harness.**
     Gradle 9.7.1, from `keliver-runtime-line.sh`), and makes the app and the
     scaffolded hosts resolve `dev.keliver` **only** from that repository (Gradle's
     `exclusiveContent`), so a module the route did not publish fails the build;
-  - the hosts are scaffolded by this checkout's `scripts/`, build against it, and
-    run P1–P7 on the emulator and the simulator. `keliver-treehouse-host` logs one
+  - the hosts and the publish wiring are scaffolded by this checkout's `scripts/`,
+    and the relay is this checkout's too (`lm_relay_kit`): the published 0.3.18
+    relay predates NF2 and names no engine in `bundles/index.json`, which a host
+    on the fork's line reads as `quickjs-2021` and skips, so nothing would load.
+    The hosts build against the repository and run P1–P7 on the emulator and the
+    simulator. `keliver-treehouse-host` logs one
     line naming its build when a host creates its `TreehouseApp.Factory`
     (`keliver-treehouse-host <version>`: logcat tag `Keliver` at debug level on
     Android, standard output on iOS); P2 fails without this checkout's version.

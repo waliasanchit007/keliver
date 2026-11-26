@@ -41,12 +41,14 @@ EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
 SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
-unset RELAY_PORT LIBRARIES LOCAL_VERSION   # only the work dir says which port and libraries its app was built for
-. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, W3_BRIDGED, DEVICE_KIND, HOST_ADDR, RELAY_PORT, LIBRARIES, LOCAL_VERSION
+unset RELAY_PORT LIBRARIES LOCAL_VERSION PORTAL   # only the work dir says which port, libraries and relay its app was built for
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, W3_BRIDGED, DEVICE_KIND, HOST_ADDR, RELAY_PORT, LIBRARIES, LOCAL_VERSION, PORTAL
 # prepare.sh's route: the libraries from Maven Central, or (local-maven) this checkout's at
 # LOCAL_VERSION, whose keliver-treehouse-host logs one line naming that version when a host starts
 # (HostBuild.kt). A work dir from before the route has no LIBRARIES line: Maven Central.
 LIBRARIES="${LIBRARIES:-central}"
+# The relay prepare.sh used: the zip's keliver-portal, or this checkout's on the local-maven route.
+PORTAL="${PORTAL:-$KP/keliver-portal}"
 # W7: what prepare.sh built the hosts for (KELIVER_DEVICE there). A work dir
 # from before W7 has neither line: it was built for the emulator.
 DEVICE_KIND="${DEVICE_KIND:-emulator}"; HOST_ADDR="${HOST_ADDR:-10.0.2.2}"
@@ -112,7 +114,7 @@ cleanup(){ [ -n "$SERVE_PID" ] && kill "$SERVE_PID" 2>/dev/null
   [ -n "$ROTATION" ] && adb -s "$SERIAL" shell settings put system accelerometer_rotation "$ROTATION" >/dev/null 2>&1
   [ -n "$STAY_ON" ] && adb -s "$SERIAL" shell settings put global stay_on_while_plugged_in "$STAY_ON" >/dev/null 2>&1
   for a in "$APP" "$WORK/foreign/inventory"; do
-  [ -d "$a" ] && ( cd "$a" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); done; return 0; }
+  [ -d "$a" ] && ( cd "$a" && "$PORTAL" stop . >/dev/null 2>&1 ); done; return 0; }
 trap cleanup EXIT
 
 portal_up(){  # $1 app, $2 log
@@ -123,11 +125,11 @@ portal_up(){  # $1 app, $2 log
   for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null "http://localhost:$RELAY_PORT/devstate" || { free=1; break; }; sleep 2; done
   # Stop the run: every check after this would edit and publish through it.
   [ "$free" = 1 ] || { bad ":$RELAY_PORT already answers: a relay this run did not start (stop it, or run prepare.sh again with another KELIVER_RELAY_PORT)"; echo "device: passed $pass, failed $fail"; exit 1; }
-  ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
+  ( cd "$1" && nohup "$PORTAL" --no-editor-build . > "$2" 2>&1 & )
   for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null http://localhost:$RELAY_PORT/devstate && return 0; sleep 3; done
   return 1
 }
-portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 3; }
+portal_down(){ ( cd "$1" && "$PORTAL" stop . >/dev/null 2>&1 ); sleep 3; }
 launch(){  # $1 = dev|prod ; $2 = logcat file
   adb -s "$SERIAL" logcat -c || true
   adb -s "$SERIAL" shell am force-stop "$PKGID"
