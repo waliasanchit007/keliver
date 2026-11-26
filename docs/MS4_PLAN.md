@@ -21,7 +21,15 @@ prototype's lock and NF5's measurements, MS4-36's scope, staffing). **Revision 4
   levers, and three review notes. Each lands in a PR row of section 2.1, a lane and an estimate;
 - **a recommendation on the legacy library** (Q17, section 6.1), for one owner confirmation;
 - **the lanes and the calendar recomputed** from day 0 = 2026-11-26 (section 2.3), when H0, MS4-01 and
-  MS4-35 started.
+  MS4-35 started;
+- **the review of revision 4** (review-314, "merge after fixes"), with the maintainer's rulings:
+  MS4-20 and MS4-51 move to L1 early, and Track A's tail after NF5's B5 is fixed-size PRs (H1); NF5's
+  A1 and A4a classify and hook the prototype's generated widgets instead of legacy's, as part of Q17
+  (H2); MS4-51's design space and size (M1); the published editor without legacy's grammar, MS4-53
+  (M2); a mapping of every legacy member in MS4-31 (M3); the calendar's high end, the year-end break
+  and the ≈10% hedge (M4, L6); and the low items;
+- **R0's result** (the A12, 2026-11-26, PR #317): reachable in principle, so NF5's B1 now waits for R1
+  only; and C11's A12 reference of the same night.
 
 **Binding inputs.**
 - **PD4 (the owner, 2026-11-24):** **one** 0.5.0 libraries release carries:
@@ -73,7 +81,7 @@ B0–B5. This note always writes them as "NF5's B1", and so on. The efficiency r
 | NF4's library changes | `keliver-treehouse-host`'s baseline profile (#286); the opt-in plugin for generated host code (#290) | The generated groups' host code covered by #290's plugin (MS4-14) |
 | MS6's library pieces | `@ScreenState`/`NamedState` in `keliver-nav` (#226), `keliver-http-fixtures` (#224), `keliver-http-replay-debug` (#232) | `keliver-nav` on wasmJs (ED2; its targets are js and jvm only, `TreehouseGuest` in `RedwoodBuildPlugin.kt:484`); a generated `@ScreenState` registry (#233 left it unbuilt) |
 | **NF5 (A), the cached first frame: library changes** | **Design on `main`**, revision 6 ([`SHOW_BEFORE_COMPUTE.md`](SHOW_BEFORE_COMPUTE.md); #308 merged at `4f0e08d88`; owner's decisions 2026-11-24). H0 started on 2026-11-26. No production code yet | The library side, by NF5's PRs: <br>- `session()` and `CachedFrames(accounts = NONE)`, with `discardPrefetched()` deprecated (NF5's decision 3; A5); <br>- `FrameCacheTags` in `keliver-protocol`, with a lock test (A2); <br>- the frame-rule annotations in `keliver-schema` and `FrameRules` from `keliver-tooling-codegen` (A1); <br>- the fold, store and recorder in `keliver-treehouse-host` (A3a–c); <br>- the hooks in the legacy renderer modules (A4a); <br>- `CachedFrameContent` and `FrameHandOff` in `keliver-treehouse-host-composeui` (A4b). <br>The generated groups get the same rules and hooks in MS4-36 |
-| **NF5 (B), pre-composed destinations: library changes** | Approved after fixes, with decision 7 = (b). R0 (the A12 floor trace) was scheduled for 2026-11-25; its reading is NF5's record. (B)'s PRs wait for it and for R1 | The library side, by NF5's PRs: <br>- `keliver-nav`'s behaviour changes (NF5's decision 5: held effects for every prepared entry, parked pops for declared kinds, per-visit show counts, loads at the show) and `KeliverNavKind(dataArrives)` (B2, B3); <br>- the container's `keliver.nav.retainedContainer@2` (B0, on MS4-02's production container); <br>- `keliver.nav.reveal@1` (B4) |
+| **NF5 (B), pre-composed destinations: library changes** | Approved after fixes, with decision 7 = (b). **R0 (the A12 floor trace) ran on 2026-11-26** (PR #317, open): by its pre-registered rule the simple open is **reachable in principle**, G 22.4 ms against 25 and P 87.9 ms against 100 (section 2.2). (B)'s PRs now wait for R1 only | The library side, by NF5's PRs: <br>- `keliver-nav`'s behaviour changes (NF5's decision 5: held effects for every prepared entry, parked pops for declared kinds, per-visit show counts, loads at the show) and `KeliverNavKind(dataArrives)` (B2, B3); <br>- the container's `keliver.nav.retainedContainer@2` (B0, on MS4-02's production container); <br>- `keliver.nav.reveal@1` (B4) |
 | **The legacy library**: `keliver-material` (9 modules: the 76-widget schema and its renderers) | Published at 0.4.1. The prototype's root requires it (`keliver-compose-gatea-composeui/…/WidgetSystem.kt:27-34`). The published editor modules depend on it (`portal-editor/build.gradle:29-35`, `portal-render/build.gradle:51-54`), and so do the reference app's screens | Under Q17's recommendation (section 6.1): **not published at 0.5.0** (0.4.1 stays on Maven Central); kept in the repository, unpublished, while the editor's own routes need it; removed by one PR after MS6's ED3, with a tag on the last commit that has it |
 
 NF5's PRs are Track A's and are not counted in MS4's agent-days. Section 2 counts them as Track A's load
@@ -265,10 +273,14 @@ Together that is about **235 agent-days before the go** (228–244 on the provis
 
 NF5 (Track A) is designed and approved ([`SHOW_BEFORE_COMPUTE.md`](SHOW_BEFORE_COMPUTE.md), revision 6,
 on `main` since #308 merged at `4f0e08d88`). Its H0 started on day 0 (2026-11-26) and its (A) follows.
-Its (B) waits for two steps:
-- **R0**, the A12 trace of one floor step, scheduled for **2026-11-25**. Its build comes from #308's
-  head, and it **runs no MS4 code**: nothing of MS4 was merged by then.
-- **R1**, a reveal-only arm on the prototype.
+Its (B) waited for two steps:
+- **R0**, the A12 trace of one floor step, **ran on 2026-11-26** (PR #317, open; `THREE_WAY_BENCHMARK.md`,
+  "NF5 R0: the floor step under Perfetto (A12, 2026-11-26)", on that branch). Its verdict by the
+  pre-registered rule: NF5 (B)'s simple open is **reachable in principle**. G is 22.4 ms against 25.
+  P is 87.9 ms against 100, measured to the frame that drew the detail; the maintainer records that,
+  the more conservative value, as R0's P (q2's printed total gives 65.0). Its build came from #308's
+  branch (`316abd41a`), so it ran no MS4 code. **B1's dependency on R0 is met.**
+- **R1**, a reveal-only arm on the prototype: **still to run** (Track A, days 2–4). B1 waits for it.
 
 Decision 7 is already answered, (b). **#308 merged before MS4-01 opened.**
 
@@ -283,7 +295,7 @@ Decision 7 is already answered, (b). **#308 merged before MS4-01 opened.**
 | The protocol | NF5's A2: `FrameCacheTags` in `keliver-protocol` (lock test); B0: `retainedContainer@2`; B4: `reveal@1` | MS4-01 and MS4-06: product tags, free until the freeze | NF5's protocol changes are additive, under their own lock tests and host features. A2's `FrameCacheTags` does not touch the generated groups' lock. **B0's `retainedContainer@2` (and B4's `reveal@1`, if it touches the schema) does**: it lands in the product group's config and lock under the row above, and is a Track A edit of the product group's extras. **The generated lock freezes at the `v0.5.0` tag (Q2), and NF5's A2, B0 and B4 land before the candidate**, so 0.5.0 carries both. A stored frame is keyed by the release (sequence, manifest sha256, module digest), so a tag change before the freeze never replays a stale tree |
 | The reference-app workflows | H0's and A5's gates | MS4-04, -17, -23, -32; C7, C8 | Library changes are checked on **MS4-35's route** (L2, days 0–3). H0's workflow gate runs on that route once it merges |
 | API dumps (`keliver-nav.api`, `keliver-treehouse-host.api`, `keliver-protocol.api`, klib dumps) | New experimental API | New API | Merge `origin/main`, then run `apiDump`. Never hand-merge a dump |
-| Phone sessions | R0 (2026-11-25), R1, A6 (A-1…A-8), B5 (B-1…B-10) | The candidate's A12 and iPhone runs (C11, C14, C15) | One session at a time (PD7). MS4f's runs share NF5's next scheduled session where the timing allows |
+| Phone sessions | R0 (run 2026-11-26), R1, A6 (A-1…A-8), B5 (B-1…B-10) | The candidate's A12 and iPhone runs (C11, C14, C15) | One session at a time (PD7). MS4f's runs share NF5's next scheduled session where the timing allows |
 
 ### 2.3 Lanes, load and duration
 
@@ -374,7 +386,7 @@ report. The candidate waits for NF5's A6 and B5.
 | C8 | The adopter path | `publishToMavenLocal -PkeliverVersion=0.5.0 -DRELEASE_SIGNING_ENABLED=false`. A new app built from this checkout's scaffolders against that repository builds, publishes and renders on the emulator and the simulator, with the generated root as its only widget system |
 | C9 | Size (Q11) | Against 0.4.1, for the reference app: the release APK's **increase** is at most +2.5 MB; the **bundle in total** is at most 2.5 MB (C1-lite's +30 KB included); the iOS app's **increase** (thinned arm64 build) is at most Q11's budget. Measured once: there is no legacy group (Q17). NF5's halves are each under 50 KB of dex (NF5's decision 17) |
 | C10 | Compile time | Guest compile, Android host build and iOS host link, each **at most 1.5× 0.4.1's** on the same runner. A breach names its cause in the report, and the owner accepts it or not |
-| C11 | Speed on phones (PD7, batched) | **A12:** open, back, cold start and scrolling no worse than the 2026-11-25 re-measure on the same harness. **The tap:** the first visible change after the touch-down at parity with native Compose's own button (series K's method; the owner's bar of 2026-11-22). **iPhone 13:** first frame and pixels (`keliver-gateb-ios-device.sh`). If signing is not available, the iPhone half is recorded as not run, and the go then needs the owner's explicit acceptance of simulator-only iOS evidence (with A-8 and B-7) |
+| C11 | Speed on phones (PD7, batched) | **A12:** open, back, cold start and scrolling no worse than **the A12 reference for 0.5.0, 2026-11-26** (`THREE_WAY_BENCHMARK.md`'s section of that name, PR #317), on the same harness. That reference was taken on the charger, so **the candidate's run is taken on the charger too** (the maintainer's ruling), and the report records the power state of both. The reference did not run scrolling (PR #317), so the candidate's session measures scrolling on the reference's build and on the candidate's, one after the other, on the charger. **The tap:** the first visible change after the touch-down at parity with native Compose's own button (series K's method; the owner's bar of 2026-11-22). **iPhone 13:** first frame and pixels (`keliver-gateb-ios-device.sh`). If signing is not available, the iPhone half is recorded as not run, and the go then needs the owner's explicit acceptance of simulator-only iOS evidence (with A-8 and B-7) |
 | C12 | U14's tripwire (WS1) | The two ignored `ProtocolTest`s are re-run on the candidate (Kotlin 2.4.21 and CMP 1.12.2 since 0.4.1), and the result is written down |
 | C13 | Docs | `docs-check` clean. CHANGELOG's 0.5.0 section is complete and written for a new adopter (the owner's 2026-11-23 rule): the generated API, `session()` replacing `discardPrefetched()`, `keliver-nav`'s behaviour changes (NF5's decision 5), and the legacy library's status (not in 0.5.0, 0.4.1 on Maven Central, the migration tool) included |
 | C14 | **NF5 (A)**: A-1…A-8 | A-1…A-8 pass as run by NF5's A6 on the A12 and the iOS simulator. Re-run on the candidate commit: A-7's correctness checks and (A)'s host tests in CI; A-1, A-3, A-4 and A-5 in the candidate's phone session. MS4-36's pixel test on the corpus passes |
@@ -415,7 +427,7 @@ switching to the fork and to the generated root for 0.5.0 apps.
 | **The expression binding's mechanism** (MS4-51) | Kotlin's `Float` arithmetic cannot be recorded at run time; a compile-time transform is a narrow compiler plugin that must follow each Kotlin version, and its errors may not show in the IDE | The design note first; (b) error stubs from MS4-09 on, so nothing ships wrong in the meantime | The narrow form (bare reads only), with (b) for the rest: those overloads then miss bar 2 in 0.5.0, an owner call with the evidence (Q7's path) |
 | **The legacy split** (Q17) | The published editor depends on legacy today (`portal-editor/build.gradle:29-35`) | MS4-30 moves the legacy canvas into an unpublished module; the in-repo dogfood keeps it until MS6 | If MS4-30's split slips, 0.5.0 publishes legacy unchanged, as option (i): an owner call |
 | NF5 and MS4 collide | Section 2.2 | Area ownership, the order (H0 first; MS4-27/28 before NF5's B1; MS4-02 before NF5's B0; MS4-23 after A5; MS4-48 on Track A after B5), and the prototype copied rather than moved | NF5's protocol changes are additive under their own lock tests and host features, and land before the candidate; the generated lock freezes at the tag (Q2) either way |
-| NF5 (B)'s gates miss | NF5's appendix B expects B-1 at 120–150 ms against about 100, and B-2 at 225–275 against 150 or less | R0 and R1 first; decision 7's split (b) | The owner rules on the parked fallbacks (PLAN section 12) with NF5's evidence; the candidate waits for that ruling (C15) |
+| NF5 (B)'s gates miss | NF5's appendix B expects B-1 at 120–150 ms against about 100, and B-2 at 225–275 against 150 or less. R0 (2026-11-26): the simple open is reachable in principle (P 87.9 ms against 100, a 12.1 ms margin) | R0 done, R1 before B1; decision 7's split (b) | The owner rules on the parked fallbacks (PLAN section 12) with NF5's evidence; the candidate waits for that ruling (C15) |
 | The prototype and product copies drift | MS4-02 copies NF1's host pieces; generator and values changes regenerate the prototype under NF5's measurements | Fixes go to the product copy only. The prototype changes only by regeneration (its lock may be reset) and by NF5's measurement code; each NF5 measurement records its commit and never compares across a regeneration (section 2.2) | MS4-40 retires the prototype by day 40.5 |
 | Old 0.4 bundles | One engine since NF2: every 0.5 bundle is `quickjs-2026`, and hosts take only their engine's bundles (#275) | None needed: the 0.4 wire is not served to 0.5 hosts, so MS4 may reset tags before the freeze | — |
 
