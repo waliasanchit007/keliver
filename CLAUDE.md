@@ -33,7 +33,16 @@ them visually in a web portal that round-trips to the .kt files in git.
   Maven Central, and `keliver-publish` comes from the zip too. On a pull request
   the same harness scaffolds from this checkout's `scripts/` instead
   (`KELIVER_SCAFFOLD_FROM=repo`, labelled in the results), because there the
-  templates are the change under review. Either way the CI harness (`ci/`, the
+  templates are the change under review. A third leg, `local-maven` (MS4-35,
+  `reference/inventory/ci/local-maven`), publishes this checkout's LIBRARIES into
+  a disposable local Maven repository and builds the app, its Android host and
+  its iOS host against them (with this checkout's scaffolders, publish wiring and
+  relay; P1–P7 only for now). It runs on pull requests that touch the harness or
+  the route's own files (the workflows' paths; a library-only pull request does
+  NOT trigger it), nightly on main, and by hand (`gh workflow run
+  reference-app.yml --ref <branch> -f libraries=local-maven`, and the same for
+  `ios-host.yml`). A reviewer of a library pull request that changes host-facing
+  behaviour dispatches it. Either way the CI harness (`ci/`, the
   isolation guard) and the app's recorded overlay files (`hand-edits.diff`) are
   this checkout's. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).

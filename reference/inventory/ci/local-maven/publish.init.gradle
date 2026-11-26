@@ -1,0 +1,72 @@
+// The local-Maven route's publisher (ci/local-maven/publish.sh applies it with -I; it is not part
+// of Keliver's build). It adds one Maven repository, KeliverRefApp, at -PkeliverRefMavenDir to
+// every published module, and one task to the root project, keliverRefAppPublish, which publishes
+// into it:
+//  - the modules named in -PkeliverRefModules (project paths, comma-separated),
+//  - and every module of this build that their PUBLISHED variants depend on (the project
+//    dependencies of each *ApiElements and *RuntimeElements configuration, followed to the end),
+//  - only the publications named in -PkeliverRefPublications (kotlinMultiplatform, js, jvm,
+//    androidRelease, iosSimulatorArm64, maven, ...), so an Android run compiles no iOS target and an
+//    iOS run compiles no Android one.
+// Dokka is off for the run (the javadoc jars are empty) and so is signing (publish.sh passes
+// -DRELEASE_SIGNING_ENABLED=false). Nothing is written outside -PkeliverRefMavenDir: never ~/.m2.
+// Gradle applies an init script to every build of the composite; only Keliver's own (the root
+// build) is published. build-support and the other included builds have a parent.
+if (gradle.parent != null) {
+  return
+}
+def props = gradle.startParameter.projectProperties
+def mavenDir = props.get('keliverRefMavenDir')
+def roots = (props.get('keliverRefModules') ?: '').split(',').findAll { it }
+def wanted = ((props.get('keliverRefPublications') ?: '').split(',').findAll { it }) as Set
+if (!mavenDir || roots.isEmpty() || wanted.isEmpty()) {
+  throw new GradleException('publish.init.gradle needs -PkeliverRefMavenDir, -PkeliverRefModules and -PkeliverRefPublications')
+}
+def mavenUri = new File(mavenDir).toURI()
+
+gradle.allprojects { p ->
+  p.plugins.withId('maven-publish') {
+    p.extensions.getByType(PublishingExtension).repositories.maven { r ->
+      r.name = 'KeliverRefApp'
+      r.url = mavenUri
+    }
+  }
+  p.tasks.matching { it.name.startsWith('dokka') }.configureEach { it.enabled = false }
+}
+
+gradle.projectsEvaluated {
+  def root = gradle.rootProject
+  def closure = [] as LinkedHashSet<Project>
+  def queue = roots.collect { root.project(it) }
+  while (!queue.isEmpty()) {
+    def p = queue.remove(0)
+    if (!closure.add(p)) continue
+    p.configurations
+      .findAll { c -> (c.name.endsWith('ApiElements') || c.name.endsWith('RuntimeElements')) && !c.name.toLowerCase().contains('test') }
+      .each { c -> c.allDependencies.withType(ProjectDependency).each { d -> queue.add(root.project(d.path)) } }
+  }
+  def publishTasks = []
+  def unpublished = []
+  closure.each { p ->
+    def found = p.tasks.withType(PublishToMavenRepository).findAll { t ->
+      t.repository?.name == 'KeliverRefApp' && wanted.contains(t.publication?.name)
+    }
+    if (found.isEmpty()) unpublished.add(p.path) else publishTasks.addAll(found)
+  }
+  if (!unpublished.isEmpty()) {
+    throw new GradleException("keliverRefAppPublish: these modules are needed but publish none of ${wanted.sort()}: ${unpublished.sort()}")
+  }
+  def modulesFile = new File(mavenDir, 'keliver-ref-app-modules.txt')
+  def names = closure.collect { it.path }.sort()
+  println "keliverRefAppPublish: ${names.size()} modules, ${publishTasks.size()} publications: ${names.join(' ')}"
+  root.tasks.register('keliverRefAppPublish') { t ->
+    t.group = 'publishing'
+    t.description = 'Publishes the reference app\'s Keliver modules into -PkeliverRefMavenDir (ci/local-maven).'
+    t.dependsOn(publishTasks)
+    t.doLast {
+      modulesFile.parentFile.mkdirs()
+      modulesFile.text = names.join('\n') + '\n'
+      println "keliverRefAppPublish: ${names.size()} modules, ${publishTasks.size()} publications into ${mavenDir}"
+    }
+  }
+}
