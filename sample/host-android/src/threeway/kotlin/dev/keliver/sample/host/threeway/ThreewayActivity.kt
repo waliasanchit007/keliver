@@ -30,6 +30,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -137,6 +138,9 @@ class ThreewayActivity : ComponentActivity() {
    * tap's time), and `bench:drawn <screen> <seq>` in the window draw that the bench takes as `drawn`.
    */
   private val traceMarks: Boolean get() = "trace" in experimentSet
+
+  /** NF5 R1 `noripple`: the form's content gets no press indication (R1Reveal.kt's NoIndication). */
+  private val noRipple: Boolean get() = "noripple" in experimentSet
 
   /**
    * Guest only: QuickJS's memory is read before each tap and after each drawn result, and at the
@@ -279,7 +283,12 @@ class ThreewayActivity : ComponentActivity() {
     }
     setContent {
       MaterialTheme {
-        Surface(Modifier.fillMaxSize().scrollProbe()) { NativeThreewayApp(api, marks) }
+        Surface(Modifier.fillMaxSize().scrollProbe()) {
+          // NF5 R1 `noripple`: no press indication (NoIndication), as in the guest form's arm.
+          CompositionLocalProvider(LocalIndication provides if (noRipple) NoIndication else LocalIndication.current) {
+            NativeThreewayApp(api, marks)
+          }
+        }
       }
     }
   }
@@ -333,7 +342,12 @@ class ThreewayActivity : ComponentActivity() {
           // activity's dispatcher (where the guest's BackHandlers are too). Unused by other forms.
           val hostBack = remember { AndroidHostBackDispatcher(onBackPressedDispatcher) }
           // NF5 R1 `r1prep`: the reveal policy (R1Reveal); null, the container's default, otherwise.
-          CompositionLocalProvider(LocalHostBackDispatcher provides hostBack, LocalRetainedReveal provides r1Reveal) {
+          // `noripple`: no press indication over the guest's content (NoIndication).
+          CompositionLocalProvider(
+            LocalHostBackDispatcher provides hostBack,
+            LocalRetainedReveal provides r1Reveal,
+            LocalIndication provides if (noRipple) NoIndication else LocalIndication.current,
+          ) {
             TreehouseContent(treehouseApp = app, widgetSystem = widgetSystem, contentSource = contentSource, modifier = Modifier.fillMaxSize())
           }
         }

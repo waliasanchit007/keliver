@@ -5,8 +5,27 @@
 package dev.keliver.sample.host.threeway
 
 import android.os.Trace
+import androidx.compose.foundation.IndicationNodeFactory
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.node.DelegatableNode
 import dev.keliver.compose.gatea.composeui.RetainedReveal
 import dev.keliver.sample.threeway.R1Keys
+
+/**
+ * NF5 R1, `noripple` (README, "What the run shows"): an indication that draws nothing, provided as
+ * `LocalIndication` over a form's content instead of the theme's ripple. The emulator dry run found a
+ * RenderThread animation in every guest arm (inferred: the ripple of a tapped row in an entry the
+ * retained container hid) that takes the vsync of the first frame after the driver's blocking tap;
+ * this arm shows whether the ripple is its source.
+ */
+internal object NoIndication : IndicationNodeFactory {
+  override fun create(interactionSource: InteractionSource): DelegatableNode = object : Modifier.Node() {}
+
+  override fun equals(other: Any?): Boolean = other === this
+
+  override fun hashCode(): Int = 0
+}
 
 /**
  * NF5 R1 (docs/nf5-r1/README.md), benchmark-only: the host's reveal policy for the guest's `r1prep`
