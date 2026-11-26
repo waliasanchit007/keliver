@@ -1,0 +1,9 @@
+{
+  "screensDir": "src/commonMain/kotlin/dev/keliver/screenstates/fixture/screens",
+  "httpFixturesDir": "fixtures/http",
+  "screenStateRegistry": {
+    "out": "src/commonMain/kotlin/dev/keliver/screenstates/fixture/generated/FixtureScreenStates.kt",
+    "packageName": "dev.keliver.screenstates.fixture.generated",
+    "valName": "FixtureScreenStates"
+  }
+}

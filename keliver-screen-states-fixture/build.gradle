@@ -1,0 +1,71 @@
+// MS4-28: a small app with routes, Style B presenters on HostHttp, @ScreenState declarations and
+// HTTP fixture sets, standing in for an adopter's app (portal-app-lib has no routes). Not published.
+//
+// Its keliver.portal.json points the portal at its screens and fixtures, and names where the
+// generated @ScreenState registry goes. Regenerate the registry with
+// `./gradlew :portal-relay:screenStateRegistry`; CI checks it with `-Pcheck`.
+//
+// The tests open each state as a debug device would: the route the state function returns, its
+// presenter, and HostHttp replayed from the state's fixture set (keliver-http-replay-debug).
+import dev.keliver.buildsupport.WasmJs
+
+import static dev.keliver.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  // JS: a Kotlin/JS guest has no annotation reflection, so the registry must work there as code.
+  // wasmJs: the browser editor opens states too (CAP6). JVM: the tests that open each state.
+  targets(TreehouseGuest + WasmJs.Browser)
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        implementation projects.keliverNav
+        implementation projects.keliverCapabilities
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.kotlinx.coroutines.core
+        implementation libs.kotlinx.serialization.json
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+    jvmTest {
+      dependencies {
+        // The debug device's in-process replay, and the adapter from its HostHttpProvider to
+        // the HostHttp the presenters take.
+        implementation projects.keliverHttpReplayDebug
+        implementation projects.keliverHttp
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
+
+tasks.named('jvmTest') {
+  def fixtures = layout.projectDirectory.dir('fixtures/http')
+  inputs.dir(fixtures).withPropertyName('httpFixtures').withPathSensitivity(PathSensitivity.RELATIVE)
+  systemProperty('keliver.httpFixturesDir', fixtures.asFile.absolutePath)
+}
+
+// The app's own code (screens/, logic/) stands in for an adopter's, whose sources Keliver's style
+// rules never see (as in portal-app-lib): Style B presenters are capitalised composables that
+// return a model, which the Compose naming rule rejects. The generated registry is compared byte
+// for byte by `:portal-relay:screenStateRegistry -Pcheck`. The tests are checked.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude(
+        "src/commonMain/kotlin/dev/keliver/screenstates/fixture/screens/**",
+        "src/commonMain/kotlin/dev/keliver/screenstates/fixture/logic/**",
+        "src/commonMain/kotlin/dev/keliver/screenstates/fixture/generated/**",
+      )
+    }
+  }
+}
