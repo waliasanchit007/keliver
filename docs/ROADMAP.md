@@ -187,7 +187,7 @@ run alongside item 2.
      `xLive { … }` helper per Bindings interface, emitted by PSI the way
      `CompiledAdapterGenerator` emits compiled-component adapters. It also
      needed:
-     - `keliver-nav` with a wasmJs target (it has none);
+     - `keliver-nav` with a wasmJs target (added 2026-11-26, MS4-27);
      - the serialization plugin in the scaffolded editor;
      - in the app, a plain capability interface in front of its
        Zipline-typed bridge, and named presenter functions where routes built

@@ -202,6 +202,10 @@ internal class RealTreehouseApp<A : AppService> private constructor(
     private val leakDetector: LeakDetector,
     private val hostProtocolFactory: HostProtocol.Factory,
   ) : TreehouseApp.Factory {
+    init {
+      platform.logDebug(HOST_BUILD_LINE)
+    }
+
     /** This is lazy to avoid initializing the cache on the thread that creates this launcher. */
     internal val cache = lazy {
       platform.newCache(

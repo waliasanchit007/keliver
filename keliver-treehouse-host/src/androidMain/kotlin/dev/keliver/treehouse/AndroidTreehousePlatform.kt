@@ -17,6 +17,7 @@ package dev.keliver.treehouse
 
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
+import android.util.Log
 import app.cash.zipline.loader.LoaderEventListener
 import app.cash.zipline.loader.ZiplineCache
 import okio.FileSystem
@@ -48,4 +49,13 @@ internal class AndroidTreehousePlatform(
 
   override fun newDispatchers(applicationName: String): TreehouseDispatchers =
     AndroidTreehouseDispatchers(applicationName)
+
+  override fun logDebug(line: String) {
+    Log.d(LOG_TAG, line)
+  }
+
+  internal companion object {
+    /** The logcat tag of the host library's own lines ([logDebug]). */
+    const val LOG_TAG: String = "Keliver"
+  }
 }
