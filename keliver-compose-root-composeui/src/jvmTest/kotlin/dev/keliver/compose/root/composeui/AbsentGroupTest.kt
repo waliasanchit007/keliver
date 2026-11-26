@@ -145,7 +145,8 @@ class AbsentGroupTest {
   }
 
   @OptIn(RedwoodCodegenApi::class)
-  @Test fun theRootSystemNamesEachGroupAndItsAbsence() {
+  @Test
+  fun theRootSystemNamesEachGroupAndItsAbsence() {
     val withoutCoil = keliverComposeWidgetSystem()
     assertEquals(null, withoutCoil.KeliverComposeCoilOrNull)
     assertTrue(withoutCoil.KeliverComposeCoreOrNull != null)
