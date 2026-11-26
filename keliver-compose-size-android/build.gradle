@@ -1,0 +1,120 @@
+// MS4-03's size harness (docs/MS4_PLAN.md, Q11 and C9): one Android activity in three flavors, each a
+// release APK minified by R8 (proguard-android-optimize.txt):
+//  - nativeOnly: the same-source samples drawn by native Compose (Material 3, icons): the baseline;
+//  - product: the same, plus the guest route on the generated root (TreehouseApp, the root's host
+//    protocol, keliverComposeWidgetSystem() with core's renderers) and the guest bundle
+//    (keliver-compose-size-guest) in its assets. No legacy keliver-material, no Coil;
+//  - productCoil: the product route with the optional coil group (keliver-compose-coil-composeui).
+// product − nativeOnly is what the product route adds to an app (Q11's APK budget).
+// scripts/keliver-compose-size.sh builds the three and reports. Included only with
+// -Pkeliver.composeSize (settings.gradle); never published, never shipped.
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.zipline' // rewrites the host's zipline.take
+
+def samples = rootProject.file('keliver-compose-core-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/core/composeui/samples/native')
+def guest = project(':keliver-compose-size-guest')
+
+// The guest's production bundle as assets/size/*, and its scratch public key as a Kotlin constant.
+def bundleAssets = tasks.register('sizeBundleAssets', Sync) {
+  dependsOn(':keliver-compose-size-guest:compileProductionExecutableKotlinJsZipline')
+  from(guest.layout.buildDirectory.dir('zipline/Production'))
+  into(layout.buildDirectory.dir('generated/sizeAssets/size'))
+}
+def keySource = layout.buildDirectory.dir('generated/sizeKey/kotlin')
+def sizeKey = tasks.register('generateSizeKey') {
+  dependsOn(':keliver-compose-size-guest:sizeKeys')
+  def pub = guest.layout.buildDirectory.file('size-keys/ed25519.pub')
+  inputs.file(pub)
+  outputs.dir(keySource)
+  doLast {
+    def hex = pub.get().asFile.text.trim()
+    if (!(hex ==~ /[0-9a-f]{64}/)) throw new GradleException("size: the scratch public key is not 64 hex digits")
+    def dir = keySource.get().asFile
+    dir.deleteDir()
+    dir.mkdirs()
+    new File(dir, 'SizeKey.kt').text =
+      "package dev.keliver.compose.size.android\n\n// GENERATED (generateSizeKey).\ninternal const val SIZE_PUBLIC_KEY_HEX: String = \"$hex\"\n"
+  }
+}
+
+android {
+  namespace 'dev.keliver.compose.size.android'
+
+  defaultConfig {
+    applicationId 'dev.keliver.compose.size'
+    versionCode 1
+    versionName '1.0'
+  }
+
+  buildFeatures {
+    compose true
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled true
+      // Installable for a look, never shipped.
+      signingConfig signingConfigs.debug
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'size-rules.pro'
+    }
+  }
+
+  flavorDimensions = ['route']
+  productFlavors {
+    nativeOnly { dimension 'route' }
+    product { dimension 'route' }
+    productCoil { dimension 'route' }
+  }
+
+  sourceSets {
+    main {
+      kotlin.srcDir(samples)
+    }
+    nativeOnly {
+      kotlin.srcDir('src/nativeOnly/kotlin')
+    }
+    product {
+      kotlin.srcDir('src/route/kotlin')
+      kotlin.srcDir(keySource)
+      assets.srcDir(layout.buildDirectory.dir('generated/sizeAssets'))
+    }
+    productCoil {
+      kotlin.srcDir('src/route/kotlin')
+      kotlin.srcDir(keySource)
+      assets.srcDir(layout.buildDirectory.dir('generated/sizeAssets'))
+    }
+  }
+}
+
+tasks.configureEach { t ->
+  if (t.name.startsWith('compileProduct') && t.name.endsWith('Kotlin')) t.dependsOn(sizeKey)
+  if (t.name.startsWith('mergeProduct') && t.name.endsWith('Assets')) t.dependsOn(bundleAssets)
+  if (t.name.toLowerCase().contains('lint')) t.dependsOn(bundleAssets, sizeKey)
+}
+
+dependencies {
+  implementation libs.androidx.activity.compose
+  implementation libs.jetbrains.compose.runtime
+  implementation libs.jetbrains.compose.foundation
+  implementation libs.jetbrains.compose.animation
+  implementation libs.jetbrains.compose.material3
+  implementation libs.jetbrains.compose.material.icons.core
+  implementation libs.jetbrains.compose.material.icons.extended
+  implementation libs.jetbrains.compose.ui
+
+  for (route in ['product', 'productCoil']) {
+    add("${route}Implementation", projects.keliverComposeSizeGuest)
+    add("${route}Implementation", projects.keliverTreehouseHost)
+    add("${route}Implementation", projects.keliverTreehouseHostComposeui)
+    add("${route}Implementation", projects.keliverComposeRootComposeui)
+    add("${route}Implementation", projects.keliverComposeRootProtocolHost)
+    add("${route}Implementation", projects.keliverLeakDetector)
+    add("${route}Implementation", libs.zipline)
+    add("${route}Implementation", libs.zipline.loader)
+    add("${route}Implementation", libs.okio)
+    add("${route}Implementation", libs.kotlinx.coroutines.core)
+  }
+  productCoilImplementation projects.keliverComposeCoilComposeui
+}

@@ -89,6 +89,13 @@ include ':keliver-compose-coil-schema'
 include ':keliver-compose-coil-widget'
 include ':keliver-compose-coil-compose'
 include ':keliver-compose-coil-composeui'
+// MS4-03's size harness (Q11, C9): the product route's cost in a release APK, an iOS binary and the
+// guest bundle. Only with -Pkeliver.composeSize (scripts/keliver-compose-size.sh); never published.
+if (providers.gradleProperty('keliver.composeSize').present) {
+  include ':keliver-compose-size-guest'
+  include ':keliver-compose-size-android'
+  include ':keliver-compose-size-ios'
+}
 // Gate B part c: the same-source samples as a signed guest bundle and a Kotlin-only iOS simulator
 // app that loads it. Only with -Pkeliver.gatebIos (scripts/keliver-gateb-ios-sim.sh), so CI's
 // full graph neither links the app nor compiles the bundle.

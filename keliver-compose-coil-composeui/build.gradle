@@ -1,9 +1,9 @@
 // The product's generated coil group (docs/MS4_PLAN.md, MS4-03; Q1: optional): the host renderers on
 // Compose UI. src/commonMain/…/Generated.kt is generated: each renderer calls Coil's real
 // `AsyncImage`, with core's applier and converters (core shares its runtime, coil.json's `base`).
-// A host that ships Coil depends on this module and passes keliverComposeCoilWidgetFactory() to
-// keliverComposeWidgetSystem(); one that does not links no Coil, and the group's widgets report as
-// unknown there.
+// A host that ships Coil depends on this module and passes ComposeUiKeliverComposeCoilWidgetFactory()
+// to keliverComposeWidgetSystem(coil = …); one that does not links no Coil, and the group's widgets
+// report as unknown there (once per tag) and draw nothing.
 import dev.keliver.buildsupport.WasmJs
 import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
 
