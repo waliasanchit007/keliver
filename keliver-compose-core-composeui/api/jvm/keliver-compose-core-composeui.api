@@ -20,8 +20,6 @@ public final class dev/keliver/compose/core/composeui/ComposeUiKeliverComposeCor
 	public synthetic fun GenAnimateContentSize2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenAnimateContentSize2;)V
 	public fun GenAnimateContentSize2 (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/GenAnimateContentSize2;)V
 	public fun GenAnimatedVisibility1 ()Ldev/keliver/compose/core/widget/GenAnimatedVisibility1;
-	public fun GenAsyncImage1 ()Ldev/keliver/compose/core/widget/GenAsyncImage1;
-	public fun GenAsyncImage2 ()Ldev/keliver/compose/core/widget/GenAsyncImage2;
 	public synthetic fun GenBackground1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBackground1;)V
 	public fun GenBackground1 (Lkotlin/jvm/functions/Function3;Ldev/keliver/compose/core/modifier/GenBackground1;)V
 	public synthetic fun GenBorder1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBorder1;)V
@@ -141,9 +139,5 @@ public final class dev/keliver/compose/core/composeui/ScopedChildren : dev/keliv
 	public fun move (III)V
 	public fun onModifierUpdated (ILdev/keliver/widget/Widget;)V
 	public fun remove (II)V
-}
-
-public final class dev/keliver/compose/core/composeui/WidgetSystemKt {
-	public static final fun keliverComposeWidgetSystem ()Ldev/keliver/compose/root/widget/KeliverComposeWidgetSystem;
 }
 

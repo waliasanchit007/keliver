@@ -1,0 +1,26 @@
+<schema version="1" type="dev.keliver.compose.coil.KeliverComposeCoil">
+  <widget tag="1" type="dev.keliver.compose.coil.GenAsyncImage1">
+    <property tag="1" name="model" type="kotlin.String?" />
+    <property tag="2" name="contentDescription" type="kotlin.String?" />
+    <property tag="6" name="alignment" type="dev.keliver.compose.ui.Alignment" />
+    <property tag="7" name="contentScale" type="dev.keliver.compose.ui.layout.ContentScale" />
+    <property tag="8" name="alpha" type="kotlin.Float?" />
+    <property tag="9" name="colorFilter" type="dev.keliver.compose.ui.graphics.ColorFilter?" />
+    <property tag="10" name="filterQuality" type="dev.keliver.compose.ui.graphics.FilterQuality?" />
+    <property tag="11" name="clipToBounds" type="kotlin.Boolean" />
+    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
+  </widget>
+  <widget tag="2" type="dev.keliver.compose.coil.GenAsyncImage2">
+    <property tag="1" name="model" type="kotlin.String?" />
+    <property tag="2" name="contentDescription" type="kotlin.String?" />
+    <property tag="4" name="placeholder" type="dev.keliver.compose.ui.graphics.painter.Painter?" />
+    <property tag="5" name="error" type="dev.keliver.compose.ui.graphics.painter.Painter?" />
+    <property tag="10" name="alignment" type="dev.keliver.compose.ui.Alignment" />
+    <property tag="11" name="contentScale" type="dev.keliver.compose.ui.layout.ContentScale" />
+    <property tag="12" name="alpha" type="kotlin.Float?" />
+    <property tag="13" name="colorFilter" type="dev.keliver.compose.ui.graphics.ColorFilter?" />
+    <property tag="14" name="filterQuality" type="dev.keliver.compose.ui.graphics.FilterQuality?" />
+    <property tag="15" name="clipToBounds" type="kotlin.Boolean" />
+    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
+  </widget>
+</schema>

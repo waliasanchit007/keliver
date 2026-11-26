@@ -1,0 +1,7 @@
+public final class dev/keliver/compose/coil/composeui/ComposeUiKeliverComposeCoilWidgetFactory : dev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun GenAsyncImage1 ()Ldev/keliver/compose/coil/widget/GenAsyncImage1;
+	public fun GenAsyncImage2 ()Ldev/keliver/compose/coil/widget/GenAsyncImage2;
+}
+

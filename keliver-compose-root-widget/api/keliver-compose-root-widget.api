@@ -1,12 +1,16 @@
 public abstract interface class dev/keliver/compose/root/widget/KeliverComposeWidgetFactory {
 }
 
-public final class dev/keliver/compose/root/widget/KeliverComposeWidgetSystem : dev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactoryOwner, dev/keliver/compose/root/widget/KeliverComposeWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
+public final class dev/keliver/compose/root/widget/KeliverComposeWidgetSystem : dev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactoryOwner, dev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactoryOwner, dev/keliver/compose/root/widget/KeliverComposeWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
 	public static final field Companion Ldev/keliver/compose/root/widget/KeliverComposeWidgetSystem$Companion;
-	public fun <init> (Ldev/keliver/compose/root/widget/KeliverComposeWidgetFactory;Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;)V
+	public fun <init> (Ldev/keliver/compose/root/widget/KeliverComposeWidgetFactory;Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory;Lkotlin/jvm/functions/Function0;)V
 	public fun apply (Ljava/lang/Object;Ldev/keliver/Modifier$UnscopedElement;)V
+	public final fun getAbsentWidget ()Lkotlin/jvm/functions/Function0;
 	public fun getKeliverCompose ()Ldev/keliver/compose/root/widget/KeliverComposeWidgetFactory;
+	public fun getKeliverComposeCoil ()Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory;
+	public final fun getKeliverComposeCoilOrNull ()Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory;
 	public fun getKeliverComposeCore ()Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;
+	public final fun getKeliverComposeCoreOrNull ()Ldev/keliver/compose/core/widget/KeliverComposeCoreWidgetFactory;
 }
 
 public final class dev/keliver/compose/root/widget/KeliverComposeWidgetSystem$Companion {

@@ -142,8 +142,9 @@ jobs:
           :portal-schema-codegen:checkPortalCode
           -DRELEASE_SIGNING_ENABLED=false
 
-      # The generated groups (docs/COMPOSE_GENERATOR_DESIGN.md): the product's root and core group
-      # (docs/MS4_PLAN.md, MS4-01) and the Gate A/B prototype beside them. Each group's checked-in
+      # The generated groups (docs/COMPOSE_GENERATOR_DESIGN.md): the product's root, core and coil
+      # groups (docs/MS4_PLAN.md, MS4-01 and MS4-03; keliver-compose-root-composeui's jvmTest runs a
+      # host built without coil) and the Gate A/B prototype beside them. Each group's checked-in
       # sources and lock must match a fresh generation from Compose, and each lock may only grow.
       # Regenerate with `./gradlew :keliver-compose-generator:generateComposeApi` and commit.
       # portal-compose-render is the ED0 spike's canvas (docs/ED0_SPIKE.md): its golden document
@@ -157,6 +158,7 @@ jobs:
           :keliver-compose-values:jsTest
           :keliver-compose-core-compose:jvmTest
           :keliver-compose-core-composeui:jvmTest
+          :keliver-compose-root-composeui:jvmTest
           :keliver-compose-gatea-compose:jvmTest
           :keliver-compose-gatea-composeui:jvmTest
           :portal-compose-render:jvmTest
@@ -273,7 +275,9 @@ jobs:
       # keliver-compose-gatea-composeui's iOS test is Gate B part c's same-source pixel test
       # (SameSourceTest, shared with its jvmTest): native Compose against the generated guest
       # through the real protocol, 0 differing pixels, on the simulator. keliver-compose-core-composeui
-      # runs the product's copy (MS4-01); the prototype's goes with the prototype (MS4-40).
+      # runs the product's copy (MS4-01) and NF1's host tests shared with its jvmTest (LazyScrollTest,
+      # OneStatePerWidgetTest, PressHostTest; MS4-02), on a root system of its own test source set
+      # (MS4-03); the prototype's goes with the prototype (MS4-40).
       # keliver-http-fixtures (the HTTP fixture matcher) has no Android target, so no `test`
       # task: it and the debug replay provider built on it (item 5, S2) run here, by name, on
       # every target they have. List them once; the JS and wasm step below leaves them out.

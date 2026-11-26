@@ -45,32 +45,6 @@ abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenAnimatedV
     abstract fun visible(kotlin/Boolean) // dev.keliver.compose.core.widget/GenAnimatedVisibility1.visible|visible(kotlin.Boolean){}[0]
 }
 
-abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenAsyncImage1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenAsyncImage1|null[0]
-    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.core.widget/GenAsyncImage1.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
-    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.core.widget/GenAsyncImage1.alpha|alpha(kotlin.Float?){}[0]
-    abstract fun clipToBounds(kotlin/Boolean) // dev.keliver.compose.core.widget/GenAsyncImage1.clipToBounds|clipToBounds(kotlin.Boolean){}[0]
-    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.core.widget/GenAsyncImage1.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
-    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage1.contentDescription|contentDescription(kotlin.String?){}[0]
-    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.core.widget/GenAsyncImage1.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
-    abstract fun filterQuality(dev.keliver.compose.ui.graphics/FilterQuality?) // dev.keliver.compose.core.widget/GenAsyncImage1.filterQuality|filterQuality(dev.keliver.compose.ui.graphics.FilterQuality?){}[0]
-    abstract fun model(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage1.model|model(kotlin.String?){}[0]
-    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenAsyncImage1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
-}
-
-abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenAsyncImage2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenAsyncImage2|null[0]
-    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.core.widget/GenAsyncImage2.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
-    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.core.widget/GenAsyncImage2.alpha|alpha(kotlin.Float?){}[0]
-    abstract fun clipToBounds(kotlin/Boolean) // dev.keliver.compose.core.widget/GenAsyncImage2.clipToBounds|clipToBounds(kotlin.Boolean){}[0]
-    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.core.widget/GenAsyncImage2.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
-    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage2.contentDescription|contentDescription(kotlin.String?){}[0]
-    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.core.widget/GenAsyncImage2.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
-    abstract fun error(dev.keliver.compose.ui.graphics.painter/Painter?) // dev.keliver.compose.core.widget/GenAsyncImage2.error|error(dev.keliver.compose.ui.graphics.painter.Painter?){}[0]
-    abstract fun filterQuality(dev.keliver.compose.ui.graphics/FilterQuality?) // dev.keliver.compose.core.widget/GenAsyncImage2.filterQuality|filterQuality(dev.keliver.compose.ui.graphics.FilterQuality?){}[0]
-    abstract fun model(kotlin/String?) // dev.keliver.compose.core.widget/GenAsyncImage2.model|model(kotlin.String?){}[0]
-    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.core.widget/GenAsyncImage2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
-    abstract fun placeholder(dev.keliver.compose.ui.graphics.painter/Painter?) // dev.keliver.compose.core.widget/GenAsyncImage2.placeholder|placeholder(dev.keliver.compose.ui.graphics.painter.Painter?){}[0]
-}
-
 abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/GenBox1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.core.widget/GenBox1|null[0]
     abstract val content // dev.keliver.compose.core.widget/GenBox1.content|{}content[0]
         abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.compose.core.widget/GenBox1.content.<get-content>|<get-content>(){}[0]
@@ -379,8 +353,6 @@ abstract interface <#A: kotlin/Any> dev.keliver.compose.core.widget/KeliverCompo
     abstract fun GenAnimateContentSize1(#A, dev.keliver.compose.core.modifier/GenAnimateContentSize1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAnimateContentSize1|GenAnimateContentSize1(1:0;dev.keliver.compose.core.modifier.GenAnimateContentSize1){}[0]
     abstract fun GenAnimateContentSize2(#A, dev.keliver.compose.core.modifier/GenAnimateContentSize2) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAnimateContentSize2|GenAnimateContentSize2(1:0;dev.keliver.compose.core.modifier.GenAnimateContentSize2){}[0]
     abstract fun GenAnimatedVisibility1(): dev.keliver.compose.core.widget/GenAnimatedVisibility1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAnimatedVisibility1|GenAnimatedVisibility1(){}[0]
-    abstract fun GenAsyncImage1(): dev.keliver.compose.core.widget/GenAsyncImage1<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAsyncImage1|GenAsyncImage1(){}[0]
-    abstract fun GenAsyncImage2(): dev.keliver.compose.core.widget/GenAsyncImage2<#A> // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenAsyncImage2|GenAsyncImage2(){}[0]
     abstract fun GenBackground1(#A, dev.keliver.compose.core.modifier/GenBackground1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBackground1|GenBackground1(1:0;dev.keliver.compose.core.modifier.GenBackground1){}[0]
     abstract fun GenBorder1(#A, dev.keliver.compose.core.modifier/GenBorder1) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBorder1|GenBorder1(1:0;dev.keliver.compose.core.modifier.GenBorder1){}[0]
     abstract fun GenBorder2(#A, dev.keliver.compose.core.modifier/GenBorder2) // dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory.GenBorder2|GenBorder2(1:0;dev.keliver.compose.core.modifier.GenBorder2){}[0]
