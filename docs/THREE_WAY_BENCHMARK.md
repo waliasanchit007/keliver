@@ -3925,6 +3925,131 @@ log. Their sha256:
 
 They were then deleted from the phone, with `/data/local/tmp/nf5floor`.
 
+## A12 reference for 0.5.0, 2026-11-26
+
+The A12 reference for [`MS4_PLAN.md`](MS4_PLAN.md) section 3's C11: "open, back, cold start and
+scrolling no worse than the 2026-11-25 re-measure on the same harness". It ran a day late, so it is
+dated 2026-11-26. It is the baseline the 0.5.0 candidate's C11 run is compared with. It used
+checkpoint 2's harness and method:
+- **G**: the cold start, against a same-session native reference;
+- **H**: the depth-1 open, simple and heavy, timed from the touch-down, and the back;
+- **the retained back**: series A's `sysback` with `x=retainhost`;
+- **K**: the tap's first visibly changed frame, against native Compose's own button.
+
+The phone scripts are checkpoint 2's, copied, in
+[`docs/a12-reference-2026-11-26/`](a12-reference-2026-11-26/). The run order is in `lib.sh`, and
+`an.sh` gives the medians, on the phone. The C11 run should use the same scripts.
+
+**Build.** The same install as NF5 R0 (above): the three-way sample's benchmark build from
+`316abd41a`'s code, on the fork's engine built locally as `1.28.0-q20260604`, with `Long` as BigInt.
+It is not main's own build (which resolves the published `1.28.0-keliver.1`), and it holds no MS4
+code: nothing of MS4 had merged.
+
+**Phone state.** 05:02–05:22 IST, up 4 d 2 h 50 min – 3 h 10 min. **Plugged in and charging, 62% →
+73%, unlike checkpoint 2 (on battery, 83–90%).** Temperature 34.4–34.6 °C (checkpoint 2:
+25.5–25.8). Thermal status 0, CPU idle 95–99% before each arm, load average 20.6–22.5.
+- **The charger matters.** Native was faster than in checkpoint 2: data drawn 508 against 618 on a
+  cold start, first frame 296 against 378.5. The C11 run must be on the charger too, or this
+  reference must be re-run on battery. Comparisons across power states are not valid.
+- **Iterations.** G: two rounds of 1 unmeasured and 4 measured launches, so 8 per arm. H and the
+  retained back: two rounds of 14 iterations, the first 2 dropped, so 24 per arm. K: 9 rounds, the
+  first dropped, so 8 per touch.
+- **Runs.** No run timed out, and every bench run ended `done`.
+
+### G: cold start
+
+Data drawn, ms from the process start; the other columns are medians of the marks or of each
+launch's difference:
+
+| Arm | Data drawn: median / p90 / min–max | − native | Its frame end (`dataFrameEnd`) | First frame | Code load starts → succeeds | Request → response | Parsed → composed | Composed → data drawn |
+|---|---|---|---|---|---|---|---|---|
+| native | **508** / 513 / 500–513 | — | 583 | 296 | — | 138.5 | 23.5 | 2 |
+| guest, as shipped | **1,568.5** / 1,593 / 1,552–1,593 | +1,060.5 | 1,655 | 281.5 | 309 → 740 | 136 | 441 | 84.5 |
+| guest, `prestart,prefetch` | **1,368.5** / 1,391 / 1,362–1,391 | +860.5 | 1,453.5 | 289 | 211.5 → 651 | 9.5 | 454.5 | 84 |
+
+Data drawn, each launch (sorted): native 500, 501, 504, 507, 509, 510, 512, 513; as shipped 1,552,
+1,558, 1,563, 1,566, 1,571, 1,573, 1,583, 1,593; `prestart,prefetch` 1,362, 1,364, 1,366, 1,366,
+1,371, 1,372, 1,388, 1,391.
+
+Against series G (checkpoint 2, on battery): native 618, as shipped 2,143 (+1,525), `prestart,
+prefetch` 1,866 (+1,248). Native's 110 ms is most likely the charger. The guest gained more (−574.5
+as shipped), in the code load (309 → 740, against 486.5 → 1,106.5) and in composed → drawn (84.5
+against 241.5). Those are the steps NF4's host baseline profile acts on ("NF4: composed to drawn",
+above), merged since. The charger and the code changes since `338a02f81` are not separated here.
+
+### H: open and back (header back)
+
+From the touch-down, with a 100 ms hold; the last three columns are medians of each iteration's
+difference:
+
+| Arm | Open drawn: median / p90 / min–max | `click` | Click → composed | Click → drawn | Back drawn: median / p90 / min–max | Back: click → drawn |
+|---|---|---|---|---|---|---|
+| guest, press off | **247.5** / 261 / 240–262 | 111 | 103.5 | 136 | **166** / 169 / 155–171 | 56 |
+| guest, press on | 260.5 / 269 / 239–271 | 190 | 53.5 | 69.5 | 158 / 170 / 152–173 | 49 |
+| guest heavy, press off | **563.5** / 573 / 537–581 | 111 | 366.5 | 452.5 | **181.5** / 187 / 172–189 | 72 |
+| guest heavy, press on | 602.5 / 635 / 582–636 | 483.5 | 104.5 | 125 | 175 / 190 / 170–192 | 66.5 |
+| native | **127** / 130 / 116–132 | 105 | 20.5 | 21 | **120** / 127 / 114–131 | 15 |
+| native heavy | **132** / 136 / 122–141 | 105 | 26 | 27 | **123.5** / 128 / 116–130 | 16.5 |
+
+- Press off is 0.5.0's default (the owner, 2026-11-22). The guest opens 120.5 ms after native
+  (simple) and 431.5 ms after it (heavy), from the touch-down.
+- Against series H (battery): press off 247.5 against 278–280.5, heavy 563.5 against 583–590.
+  Within this section the press is again neutral to worse: simple +13, heavy +39.
+
+### The retained back (`bench=sysback`, `x=retainhost`)
+
+From the press (no hold). First draw is the host showing the retained list; drawn is the guest's
+confirming frame:
+
+| Arm | Back, first draw | Back, drawn (guest) | Open (warm), drawn |
+|---|---|---|---|
+| simple | **21** / 24 / 15–27 | 69 / 81 / 64–97 | 156 / 173 / 138–182 |
+| heavy | **13.5** / 22 / 6–24 | 92.5 / 99 / 81–100 | 461.5 / 470 / 440–483 |
+
+Series A (BigInt, battery) had 16 and 12 for the first draw, and 97 and 95 for drawn.
+
+### K: the tap's first visible change, on the pixels
+
+DOWN → the first visibly changed frame presented (ms; median / p90 / min–max; n = 8 per touch,
+round 1 dropped):
+
+| Touch | Guest (BigInt) | Native |
+|---|---|---|
+| Row, quick tap | **63.7** / 69.7 / 57.8–69.7: the ripple | 95.9 / 105.4 / 79.8–105.4: the detail |
+| Back (header) | **62.6** / 69.2 / 60.4–69.2: the ripple | 138.8 / 151.0 / 105.9–151.0: the list |
+| Load 20 | **58.6** / 64.4 / 53.8–64.4: the ripple | **65.5** / 81.0 / 56.3–81.0: the ripple |
+
+Each touch's value (rounds 2–9, in order):
+
+| Touch | Guest | Native |
+|---|---|---|
+| Row | 61.4, 62.7, 57.8, 62.1, 67.0, 69.7, 64.6, 64.7 | 105.4, 98.2, 80.0, 79.8, 101.1, 98.6, 93.6, 88.8 |
+| Back | 63.3, 61.0, 62.8, 60.4, 62.3, 69.2, 67.2, 61.9 | 122.5, 136.4, 131.7, 144.5, 144.5, 151.0, 141.2, 105.9 |
+| Load 20 | 64.4, 55.7, 61.0, 55.8, 56.2, 53.8, 63.5, 62.7 | 56.3, 64.8, 66.2, 64.5, 81.0, 78.7, 56.8, 69.7 |
+
+- **As in series K, every guest touch's first frame after the DOWN is pixel-identical to the one
+  before it** (24 of 24), and so is native's Load 20 (8 of 8). The first change is the next frame
+  (in 2 guest touches, the one after), the ripple's first step, with a largest channel change of 5–6
+  of 255.
+- **The tap bar (C11: at parity with native Compose's own button): met in this reference.** The
+  guest's first visible change, 58.6–63.7 ms (medians), is at or below native's own button, 65.5,
+  and the ranges overlap.
+- **The absolute times are later than series K's (2026-11-22), in both forms.** The ripple comes
+  17–21 ms later (then: guest 39.3–46.8, native button 44.2), and native's row and back 39 and
+  21 ms later. Compare within this section only; the cause is not established. The guest arm was
+  1.28.0 then and is BigInt now, but the ripple is the host's.
+- **Script fix.** Native's recorder process kept the name `sh` in this trace. `q-px.sql` now finds
+  the recorder by its thread's name; it had found no frames for native.
+
+### What is not in this reference
+
+- **Scrolling** (in C11's list) was not run.
+- **The iPhone** half of C11 was not run.
+- **The 1.28.0 anchor** was not run (no such build).
+- **The engine.** The engine is the locally built `1.28.0-q20260604`, not the published
+  `1.28.0-keliver.1` that main and the candidate use. Whether the two differ in speed is not
+  measured.
+
 ## For an iOS run (follow-up)
 
 The guest bundle and the web page are shared as they are: the iOS host would load the same bundle
