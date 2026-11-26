@@ -85,6 +85,9 @@ on:
       - "scripts/templates/ios-host/**"
       - "scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt"
       - "scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt"
+      - "scripts/templates/production-host/src/line-*/**"
+      - "scripts/templates/production-host/src/main/kotlin/ReleaseIdentity.kt"
+      - "scripts/templates/production-host/src/test/kotlin/HostFeaturesTest.kt"
       - "scripts/templates/app-wrapper/**"
       - "scripts/keliver-app-wrapper.sh"
       - "reference/inventory/ci/ios.sh"
@@ -121,6 +124,9 @@ on:
       - "scripts/templates/ios-host/**"
       - "scripts/templates/production-host/src/debug/kotlin/DebugBundleLink.kt"
       - "scripts/templates/production-host/src/testDebug/kotlin/DebugBundleLinkTest.kt"
+      - "scripts/templates/production-host/src/line-*/**"
+      - "scripts/templates/production-host/src/main/kotlin/ReleaseIdentity.kt"
+      - "scripts/templates/production-host/src/test/kotlin/HostFeaturesTest.kt"
       - "scripts/templates/app-wrapper/**"
       - "scripts/keliver-app-wrapper.sh"
       - "reference/inventory/ci/ios.sh"
@@ -313,7 +319,7 @@ jobs:
             while IFS= read -r f; do echo "  $f"; done <<<"$changed"
             # A here-string, not a pipe: `echo | grep -q` under pipefail reads a
             # SIGPIPE'd echo as no match on a long list, and would skip T2.
-            grep -Eq '^scripts/templates/ios-host[^/]*/(src/(timing|notiming|debuglink|nodebuglink|iosMain)/|iosApp/|Configuration/|iosApp\.xcodeproj/|build\.gradle|settings\.gradle|gradle\.properties)|^reference/inventory/ci/(m0/|ios\.sh$)|^scripts/templates/production-host/src/debug/kotlin/DebugBundleLink\.kt$|^scripts/keliver-new-ios-host\.sh$|^\.github/workflows/ios-host\.yml$' <<<"$changed" || t2=skip
+            grep -Eq '^scripts/templates/ios-host[^/]*/(src/(timing|notiming|debuglink|nodebuglink|iosMain)/|iosApp/|Configuration/|iosApp\.xcodeproj/|build\.gradle|settings\.gradle|gradle\.properties)|^reference/inventory/ci/(m0/|ios\.sh$)|^scripts/templates/production-host/src/(debug/kotlin/DebugBundleLink\.kt$|main/kotlin/ReleaseIdentity\.kt$|line-)|^scripts/keliver-new-ios-host\.sh$|^\.github/workflows/ios-host\.yml$' <<<"$changed" || t2=skip
           fi
           echo "KELIVER_IOS_T2=$t2" | tee -a "$GITHUB_ENV"
 

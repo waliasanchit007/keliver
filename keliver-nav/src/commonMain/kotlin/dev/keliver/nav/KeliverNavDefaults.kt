@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.KeliverHostFeatures
 import dev.keliver.compose.LocalHostFeatures
 
 /**
@@ -91,9 +92,11 @@ public class KeliverNavDefaults(
     /**
      * The host feature of a container that implements [KeliverNavHostFrame]'s protocol (gate A's
      * `ExtraRetained`). A host declares it (`TreehouseApp.Spec.hostFeatures`) when its widget system
-     * renders that container and its back dispatcher is wired.
+     * renders that container and its back dispatcher is wired. The name is Keliver's
+     * `KeliverHostFeatures.NAV_RETAINED_CONTAINER_1` (`dev.keliver.compose`), its one place.
      */
-    public const val RETAINED_CONTAINER_FEATURE: String = "keliver.nav.retainedContainer@1"
+    @OptIn(ExperimentalKeliverHostFeaturesApi::class)
+    public const val RETAINED_CONTAINER_FEATURE: String = KeliverHostFeatures.NAV_RETAINED_CONTAINER_1
   }
 }
 

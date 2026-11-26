@@ -124,7 +124,6 @@ import dev.keliver.treehouse.MemoryStateStore
 import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
-import dev.keliver.treehouse.composeui.TreehouseContent
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -184,6 +183,10 @@ private fun lastGoodKey(trust: ProductionTrust.Verified) = "keliver.lastGoodMani
 private fun lastGoodShaKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestSha256-${cacheName(trust)}"
 /** NF2: the engine of the host that loaded that last good bundle (absent: quickjs-2021, every host before NF2). */
 private fun lastGoodEngineKey(trust: ProductionTrust.Verified) = "keliver.lastGoodEngine-${cacheName(trust)}"
+/** NF5 H0: the signed sequence of that last good bundle, from its own load (absent: none recorded, or none signed). */
+private fun lastGoodSequenceKey(trust: ProductionTrust.Verified) = "keliver.lastGoodSequence-${cacheName(trust)}"
+/** NF5 H0: the digest of that last good bundle's modules, from its own load (ReleaseIdentity.kt; absent: none recorded). */
+private fun lastGoodModuleDigestKey(trust: ProductionTrust.Verified) = "keliver.lastGoodModuleDigest-${cacheName(trust)}"
 /** The highest signed sequence this host has run, per key (the rollback floor); [publicKeyHex]: any trusted key. */
 private fun floorKey(publicKeyHex: String) = "keliver.highestSequence-keliver-production-${publicKeyHex.lowercase().take(16)}"
 /** W8: the floor across every trusted key's own floor, so a rotation never lowers it. */
@@ -1390,7 +1393,8 @@ public object Keliver {
       }
     }
     // Hidden: out of hardware-keyboard reach too (focus does not move into it). (Back: Treehouse's
-    // iOS back dispatcher registers nothing, so a hidden guest's back handlers never run here.)
+    // iOS back dispatcher registers nothing, so a hidden guest's back handlers never run here; from
+    // the 0.5 line its back is also gated off until it is shown, as on Android: NF5 H0, KeliverLine.kt.)
     Box(
       if (hidden) {
         Modifier.focusProperties {
@@ -1401,12 +1405,13 @@ public object Keliver {
         Modifier
       },
     ) {
-      TreehouseContent(
+      KeliverTreehouseContent(
         treehouseApp = app,
         widgetSystem = widgetSystem,
         contentSource = contentSource,
         modifier = if (hidden) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics { } else Modifier,
         dynamicContentWidgetFactory = failureWidgets,
+        backEnabled = !hidden,
       )
       // Unseen, and out of reach: a touch that falls through the app on top stops here.
       if (hidden) {
@@ -1860,7 +1865,8 @@ private fun createApp(
   val http = shared.http?.let { if (held != null) GatedHostHttp(it, fence.calls) else it }
   val bridgeContext = if (held != null) GatedDispatcher(Dispatchers.Main, fence.calls) else Dispatchers.Main
   val bridges = Keliver.startedBridges // B5: as the host started with them
-  val spec = object : TreehouseApp.Spec<PortalPresenter>() {
+  // KeliverSpec (KeliverLine.kt): from the 0.5 line it hands the guest this host's features (HostFeatures.kt).
+  val spec = object : KeliverSpec<PortalPresenter>() {
     override val name = "keliver-production"
     override val manifestUrl = flow
     override val serializersModule = EmptySerializersModule()
@@ -1987,7 +1993,7 @@ private fun createApp(
         }
       },
       crash = crash,
-      onLoaded = { url ->
+      onLoaded = { url, release ->
         val defaults = NSUserDefaults.standardUserDefaults
         // With the sha256 of the very manifest bytes Zipline verified and loaded (none served: none kept).
         val sha256 = pinning.servedSha256(url)
@@ -1995,11 +2001,19 @@ private fun createApp(
         // (the floor only, as before one was recorded), never a URL with another release's.
         // NF2: the engine likewise: a kill between writes leaves it absent (quickjs-2021), so a host on
         // another engine counts nothing cached; never this URL named with another host's engine.
+        // NF5 H0: the release's identity as this load saw it (its sequence and module digest,
+        // ReleaseIdentity.kt) likewise: absent after a kill between writes, never another release's.
         defaults.removeObjectForKey(lastGoodShaKey(trust))
         defaults.removeObjectForKey(lastGoodEngineKey(trust))
+        defaults.removeObjectForKey(lastGoodSequenceKey(trust))
+        defaults.removeObjectForKey(lastGoodModuleDigestKey(trust))
         defaults.setObject(url, forKey = lastGoodKey(trust))
         if (sha256 != null) defaults.setObject(sha256, forKey = lastGoodShaKey(trust))
         defaults.setObject(hostEngine, forKey = lastGoodEngineKey(trust))
+        release.sequence?.let { defaults.setInteger(it, forKey = lastGoodSequenceKey(trust)) }
+        defaults.setObject(release.moduleDigest, forKey = lastGoodModuleDigestKey(trust))
+        // Written through before this returns, as the crash ledger is (docs/SHOW_BEFORE_COMPUTE.md 2.8).
+        if (!defaults.synchronize()) log("the last good bundle's record was not written (sequence ${release.sequence ?: "none"})")
       },
       onSequence = { sequence ->
         val current = floorOf(trust)
@@ -2119,7 +2133,8 @@ private class LoggingEventListenerFactory(
   private val onFailed: (reason: String, count: () -> CrashStep) -> Unit,
   private val onUncaught: (CrashStep) -> Unit,
   private val crash: CrashGuard,
-  private val onLoaded: (String) -> Unit,
+  /** A load from the network succeeded: its manifest URL, and the release it loaded (NF5 H0). */
+  private val onLoaded: (manifestUrl: String, release: LoadedRelease) -> Unit,
   private val onSequence: (Long) -> Unit,
   private val bridgeBinds: BridgeBindRecorder,
   private val fence: LoadFence,
@@ -2139,7 +2154,7 @@ private class LoggingEventListener(
   private val onFailed: (String, () -> CrashStep) -> Unit,
   private val onUncaught: (CrashStep) -> Unit,
   private val crash: CrashGuard,
-  private val onLoaded: (String) -> Unit,
+  private val onLoaded: (manifestUrl: String, release: LoadedRelease) -> Unit,
   private val onSequence: (Long) -> Unit,
   private val bridgeBinds: BridgeBindRecorder,
   private val fence: LoadFence,
@@ -2200,8 +2215,10 @@ private class LoggingEventListener(
     onSuccess(sequence, manifestUrl)
     // The host's app: before this returns. A held app's when it shows, on the main thread, where it
     // is dropped: a dropped app raises no floor and names no last good bundle.
+    // NF5 H0: the release as this load saw it, from the manifest it verified (ReleaseIdentity.kt).
+    val release = loadedRelease(manifest)
     fence.run {
-      manifestUrl?.let(onLoaded)
+      manifestUrl?.let { onLoaded(it, release) }
       sequence?.let(onSequence)
     }
   }

@@ -136,10 +136,38 @@ find the app's line and **refuses** any line but 0.4 ("the editor supports 0.4
 apps until the 0.5 editor ships"). It has to take its versions from the table
 before the 0.5.0 libraries are released, whose release preflight builds an
 editor at the release version (`docs/PORTAL_TOOLS_RELEASE.md`, step 0).
-Before 0.5.0 nothing changed: the 0.4
-line's output is byte-identical to what the scaffolders wrote before the table,
+Before 0.5.0 the table changed nothing: the 0.4
+line's output was byte-identical to what the scaffolders wrote before the table,
 and the host selftests compare it with recorded sha256 manifests
-(`scripts/fixtures/host-0.4.1/`).
+(`scripts/fixtures/host-0.4.1/`). A deliberate change to it rewrites them, and
+their README says why (so far: comments, and NF5 H0's line file and last good
+record, below).
+
+**What a line's libraries add, in the line's own files.** The host Kotlin is the
+same on every line except two files, which the scaffolders copy from
+`templates/production-host/src/line-<line>/kotlin/` into both hosts:
+`KeliverLine.kt` holds what needs that line's libraries (the 0.5 line's copy
+hands Treehouse the host features the host declares and passes
+`TreehouseContent`'s back gate through; the 0.4 line's copy does neither, as
+0.4.x hosts never did), and `HostFeatures.kt` is the line's host features
+(below). Keliver's build compiles the newest line's copies against its own
+libraries (`keliver-treehouse-host-composeui`'s JVM tests); the 0.4 copies are
+built by the reference-app and ios-host workflows against the published 0.4.x
+libraries.
+
+**Host features.** A host declares the optional features it implements in one
+place, its line's `HostFeatures.kt` (`HostFeatures.implemented`; the same file in
+the Android and iOS hosts), with the names Keliver defines in
+`dev.keliver.compose.KeliverHostFeatures`. A guest uses a feature only where its
+host declares it (D2), and everything in the host that asks what it implements
+reads that set. The 0.4 line's copy declares none, because its Treehouse hands a
+guest none, so declaring a feature for the 0.5 line never changes a 0.4.x app's
+host. Adding a feature takes its constant and its `requirements` row in
+`KeliverHostFeatures`, then one line in `line-0.5/kotlin/HostFeatures.kt` once
+the templates implement it. Keliver's `HostFeaturesTemplateTest` (portal-relay)
+holds every line's declaration to Keliver's list and to what each feature
+requires; names outside `keliver.` are an app's own, which Keliver neither
+defines nor checks.
 
 The lines are named (0.4, 0.5): a version takes the newest line whose
 `<major>.<minor>` is not newer than its own (0.3.x takes 0.4). A version past
@@ -320,10 +348,14 @@ What the swap does and does not promise:
   blank or partly drawn. A route change during the hidden window rebinds the new content, which
   then comes to the front before its first changes (rare).
 - The hidden content is out of reach: unseen, not hit by touches, hidden from screen readers, and
-  unfocusable (a hardware keyboard or D-pad does not move into it). On Android, though, the hidden
-  guest's back handlers register with the activity at once, and a later handler wins: a back press
-  during the swap window goes to the new app's enabled root `BackHandler`, if it has one. iOS
-  hands guest back handlers to no system dispatcher, so it has no such case.
+  unfocusable (a hardware keyboard or D-pad does not move into it). From the 0.5 line it is out of
+  reach of back too (NF5 H0): the host passes `TreehouseContent(backEnabled = false)` for it, so its
+  guest's back handlers are registered with the activity disabled until it is shown, and a back
+  press during the swap window goes to the app on show. On the 0.4 line (whose `TreehouseContent`
+  has no such gate) the hidden guest's back handlers register with the activity at once, and a
+  later handler wins: a back press during the swap window goes to the new app's enabled root
+  `BackHandler`, if it has one. iOS hands guest back handlers to no system dispatcher, so it has no
+  such case on either line.
 
 Set it with `keliver.startPolicy` in `gradle.properties` (Android; `KeliverConfig(startPolicy = …)`
 in code) or `START_POLICY` in `HostConfig.kt` (iOS), to `network-first`, `parallel` or
