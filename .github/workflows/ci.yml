@@ -288,6 +288,8 @@ jobs:
           :portal-sql:jvmTest
           :keliver-material-composeui:jvmTest
           :keliver-lazylayout-composeui:jvmTest
+          :keliver-treehouse-host-composeui:jvmTest
+          :keliver-nav:jvmTest
           :keliver-bridge:jvmTest
           :keliver-bridge:jsTest
           :keliver-bridge:iosSimulatorArm64Test
