@@ -266,7 +266,8 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
      * (`dev.keliver.compose.LocalHostFeatures`) to use a feature only where it exists. Declare a
      * feature only when this host renders it: for example `"keliver.nav.retainedContainer@1"` when
      * the host's widget system has the retained container and wires its back dispatcher, which turns
-     * on keliver-nav's host-backed retained back stack by default. Empty by default.
+     * on keliver-nav's host-backed retained back stack by default. Keliver's feature names, and what
+     * each requires, are in one place: `dev.keliver.compose.KeliverHostFeatures`. Empty by default.
      *
      * Experimental, as `LocalHostFeatures` and the feature names it carries are.
      */

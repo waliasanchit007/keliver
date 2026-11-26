@@ -7,5 +7,6 @@ public final class dev/keliver/treehouse/composeui/ComposableSingletons$EmptyDyn
 
 public final class dev/keliver/treehouse/composeui/TreehouseContentKt {
 	public static final fun TreehouseContent (Ldev/keliver/treehouse/TreehouseApp;Ldev/keliver/widget/WidgetSystem;Ldev/keliver/treehouse/TreehouseContentSource;Landroidx/compose/ui/Modifier;Ldev/keliver/treehouse/DynamicContentWidgetFactory;Landroidx/compose/runtime/Composer;II)V
+	public static final fun TreehouseContent (Ldev/keliver/treehouse/TreehouseApp;Ldev/keliver/widget/WidgetSystem;Ldev/keliver/treehouse/TreehouseContentSource;ZLandroidx/compose/ui/Modifier;Ldev/keliver/treehouse/DynamicContentWidgetFactory;Landroidx/compose/runtime/Composer;II)V
 }
 

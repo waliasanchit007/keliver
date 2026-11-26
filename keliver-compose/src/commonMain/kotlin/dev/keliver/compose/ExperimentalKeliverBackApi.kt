@@ -16,9 +16,10 @@
 package dev.keliver.compose
 
 /**
- * Back-handling API that serves keliver-nav's retained back stack ([LocalBackHandlersEnabled]).
- * Its shape follows that stack's needs, which are still open in docs/PLAN_2026-11.md (NF1), so it
- * may be changed or removed in any release.
+ * Back-handling API that serves keliver-nav's retained back stack ([LocalBackHandlersEnabled]) and
+ * NF5's hidden content (`TreehouseContent(backEnabled)`, keliver-treehouse-host-composeui). Its
+ * shape follows their needs, which are still open in docs/PLAN_2026-11.md (NF1, NF5), so it may be
+ * changed or removed in any release.
  */
 @RequiresOptIn("Keliver's back-handler gate is experimental and may change in any release.")
 @Retention(AnnotationRetention.BINARY)
