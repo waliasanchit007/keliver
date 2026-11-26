@@ -383,9 +383,11 @@ fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review"
 
 - The name and `fixtures` must be plain string literals; the body is one
   `NamedState(...)` call (expression body or a single `return`); the function
-  is top-level and takes no parameters or receiver. Anything else — a state
-  declared inside an object, a class or another function included — is listed
-  under `problems` with the reason, not as a state, and never skipped silently.
+  is top-level, takes no parameters, receiver or type parameters, and is neither
+  `private` nor `suspend` (the generated registry calls it from another file;
+  `internal` is fine). Anything else — a state declared inside an object, a
+  class or another function included — is listed under `problems` with the
+  reason, not as a state, and never skipped silently.
 - `@ScreenState` and `NamedState` are recognized by what the file's imports bind
   them to: `import dev.keliver.nav.ScreenState` (or an alias of it, or
   `import dev.keliver.nav.*`), or written out in full
@@ -406,9 +408,43 @@ fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review"
   size changes, so a request re-reads only the screens edited since the last one.
 - Previewing a state is meant to use `fixtures` as the persona's
   `httpFixtureSet` (D7: only `HostHttp` is substituted). Planned, not built yet:
-  the editor's state list and preview, and opening a state on a debug device
-  (through a generated registry: guest code is Kotlin/JS, which can't find
-  annotations at run time).
+  the editor's state list and preview, and opening a state from a link on a
+  debug device (ED3) or in the browser (CAP6).
+
+### The generated registry (MS4-28)
+
+Guest code is Kotlin/JS, which can't find annotations at run time, so a device,
+the editor or a test finds an app's states through a **generated registry**:
+`dev.keliver.nav.ScreenStateRegistry` (experimental:
+`@OptIn(ExperimentalKeliverScreenStateApi::class)`), written as ordinary Kotlin
+from the same screen files with the same reader as `GET /states`, so the two
+list the same states, in the same order, with the same problems.
+
+```json
+"screenStateRegistry": {
+  "out": "shared/src/commonMain/kotlin/app/generated/AppScreenStates.kt",
+  "packageName": "app.generated",
+  "valName": "AppScreenStates"
+}
+```
+
+- `out` is relative to the app, in the module that compiles the screens (so an
+  `internal` state function can be called), and not in the screens directory.
+  The relay rewrites it before each preview build, only when its text changes;
+  a file it did not write is never overwritten.
+- `ScreenStateRegistryKt <app-dir> --check` (in this repository:
+  `./gradlew :portal-relay:screenStateRegistry -Pcheck [-PappDir=…]`) fails when
+  the checked-in file is stale; without `--check` it writes the file. CI checks
+  `keliver-screen-states-fixture`'s.
+- Each entry has the fields `GET /states` shows (`screen`, `name`, `function`,
+  `routeSource`, `routeType`, `fixtures`) and a `state()` that runs the state
+  function. A host opens a state with `registry.open(screen, name, fixtureSets)`:
+  it fails with `UnknownScreenStateException` for a state the registry lacks and
+  with `MissingScreenStateFixturesException` when `fixtureSets` (the sets the host
+  can replay, for example a debug host's `DebugHttpReplay.catalog()` ids) lacks
+  the state's set, before any presenter runs. Then it binds `HostHttp` to a replay
+  of `NamedState.fixtures` and starts the app at `NamedState.route`, as
+  `keliver-screen-states-fixture`'s `OpenScreenStatesTest` does.
 
 ## Conditions and conditional values
 

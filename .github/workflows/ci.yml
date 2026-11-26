@@ -172,6 +172,16 @@ jobs:
           -Pcheck
           -DRELEASE_SIGNING_ENABLED=false
 
+      # MS4-28: keliver-screen-states-fixture's generated @ScreenState registry must be what the
+      # relay writes from its screens, with the reader GET /states uses. Regenerate with
+      # `./gradlew :portal-relay:screenStateRegistry` and commit.
+      - name: Screen-state registry is fresh
+        run: >
+          ./gradlew
+          :portal-relay:screenStateRegistry
+          -Pcheck
+          -DRELEASE_SIGNING_ENABLED=false
+
       # The bundled screen/component scaffolders write into the app they are
       # run from, never beside the script (they once wrote into the tools
       # bundle). Shell only; a few seconds.
@@ -277,6 +287,9 @@ jobs:
       # keliver-http-fixtures (the HTTP fixture matcher) has no Android target, so no `test`
       # task: it and the debug replay provider built on it (item 5, S2) run here, by name, on
       # every target they have. List them once; the JS and wasm step below leaves them out.
+      # keliver-screen-states-fixture's jvmTest opens each state of its generated @ScreenState
+      # registry with the debug device's replay of the state's fixtures (MS4-28); it has no Android
+      # target, so no `test` task.
       # keliver-image's iOS test loads an image through Coil's ktor3 fetcher, which is compiled
       # against an older Ktor than iOS resolves (Kotlin/Native reports a missing symbol only when
       # it is reached), and sends a request through the real Darwin engine.
@@ -294,6 +307,7 @@ jobs:
           :keliver-lazylayout-composeui:jvmTest
           :keliver-treehouse-host-composeui:jvmTest
           :keliver-nav:jvmTest
+          :keliver-screen-states-fixture:jvmTest
           :keliver-bridge:jvmTest
           :keliver-bridge:jsTest
           :keliver-bridge:iosSimulatorArm64Test
@@ -333,7 +347,8 @@ jobs:
           :keliver-material-api:jsTest :keliver-material-compose:jsTest :keliver-material-composeui:jsTest
           :keliver-material-modifiers:jsTest :keliver-material-protocol-guest-web:jsTest
           :keliver-material-protocol-host-web:jsTest :keliver-material-testing:jsTest
-          :keliver-material-widget:jsTest :keliver-nav:jsTest :keliver-protocol:jsTest
+          :keliver-material-widget:jsTest :keliver-nav:jsTest :keliver-screen-states-fixture:jsTest
+          :keliver-protocol:jsTest
           :keliver-protocol-guest:jsTest :keliver-protocol-host:jsTest :keliver-runtime:jsTest
           :keliver-snapshot-testing:jsTest :keliver-storage:jsTest :keliver-testing:jsTest
           :keliver-treehouse:jsTest :keliver-treehouse-guest:jsTest :keliver-treehouse-guest-compose:jsTest
@@ -357,7 +372,8 @@ jobs:
           :keliver-material-composeui:wasmJsTest
           :keliver-material-modifiers:wasmJsTest :keliver-material-protocol-guest-web:wasmJsTest
           :keliver-material-protocol-host-web:wasmJsTest :keliver-material-testing:wasmJsTest
-          :keliver-material-widget:wasmJsTest :keliver-nav:wasmJsTest :keliver-protocol:wasmJsTest
+          :keliver-material-widget:wasmJsTest :keliver-nav:wasmJsTest
+          :keliver-screen-states-fixture:wasmJsTest :keliver-protocol:wasmJsTest
           :keliver-protocol-guest:wasmJsTest
           :keliver-protocol-host:wasmJsTest :keliver-runtime:wasmJsTest :keliver-snapshot-testing:wasmJsTest
           :keliver-testing:wasmJsTest :keliver-ui-basic-api:wasmJsTest :keliver-ui-basic-compose:wasmJsTest

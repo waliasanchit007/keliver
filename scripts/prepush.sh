@@ -10,7 +10,9 @@
 #   - for every changed Gradle module: its JVM/JS/Wasm test tasks and apiCheck,
 #     whichever it has (iOS simulator tests only with --ios);
 #   - :portal-schema-codegen:checkPortalCode when a schema or the codegen
-#     changed (CI's "Portal generated code is fresh").
+#     changed (CI's "Portal generated code is fresh");
+#   - :portal-relay:screenStateRegistry -Pcheck when the screen-state fixture
+#     app, the ingest or the relay changed (CI's "Screen-state registry is fresh").
 # It does not replace CI's full graph, device jobs or the scaffolder self-tests;
 # it prints which of those the change will trigger.
 #
@@ -26,7 +28,7 @@ while [ $# -gt 0 ]; do
     --base) base="$2"; shift 2 ;;
     --ios) ios=1; shift ;;
     --dry-run) dry=1; shift ;;
-    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
     *) echo "prepush: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -94,6 +96,10 @@ fi
 # Here-strings, not `echo | grep -q`: under pipefail a SIGPIPE'd echo reads as no match.
 if grep -Eq '^(keliver-[^/]*schema[^/]*|portal-schema-codegen)/' <<<"$changed"; then
   tasks+=(":portal-schema-codegen:checkPortalCode")
+fi
+# MS4-28: the fixture app's generated @ScreenState registry (CI's "Screen-state registry is fresh").
+if grep -Eq '^(keliver-screen-states-fixture|portal-ingest|portal-relay)/' <<<"$changed"; then
+  tasks+=(":portal-relay:screenStateRegistry" "-Pcheck")
 fi
 if grep -Eq '^(build-support[^/]*/|gradle/|build\.gradle$|settings\.gradle$|gradle\.properties$)' <<<"$changed"; then
   echo; echo "NOTE: the root build changed (build-support/, gradle/ or the root build files): run the full build"
