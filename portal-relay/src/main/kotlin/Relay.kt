@@ -689,10 +689,18 @@ private fun flowsDirFor(project: String): File =
 /** Compiled component preview: say so when the adapters block cannot take effect. */
 private val compiledAdaptersWarning: String? = CompiledAdapters.configWarning(config)?.also(::println)
 
+/** MS4-28: the same, when the screen-state registry block cannot take effect. */
+private val screenStateRegistryWarning: String? = ScreenStateRegistryFile.configWarning(config)?.also(::println)
+
+/** S1: GET /states' parses of the screen files, which the generated registry reads too (MS4-28). */
+private val screenStatesIndex = ScreenStatesIndex()
+
 private val previewBuilder = PreviewBuilder(
   PreviewDistributionRunner(repoDir, config, prepare = {
     // Compiled component preview: the editor's adapters follow the components' signatures.
     CompiledAdapters.emit(repoDir, config, File(repoDir, config.resolvedComponentsDir()), Tokens.table("default"))
+      // MS4-28: the app's @ScreenState registry follows the screens' state declarations.
+      ?: ScreenStateRegistryFile.emit(repoDir, config, screenStatesIndex)
   }),
   enabled = config.previewBuildTask.isNotBlank(),
 )
@@ -1388,10 +1396,11 @@ fun main(args: Array<String>) {
   // S1 (ADOPTION_PLAN item 5): the @ScreenState declarations next to each
   // screen, GET only. `?screen=` names one screen (404 when the app has no
   // such screen); without it, every screen that declares states. Each file's
-  // parse is kept until it changes (ScreenStatesIndex).
+  // parse is kept until it changes (ScreenStatesIndex). The generated registry is read through the
+  // same index (MS4-28).
   ScreenStatesIndex.register(
     server,
-    ScreenStatesIndex(),
+    screenStatesIndex,
     object : ScreenStatesIndex.Screens {
       override fun dir(project: String) = screensDirFor(project)
       override fun known(project: String, screen: String) = knownScreen(project, screen)

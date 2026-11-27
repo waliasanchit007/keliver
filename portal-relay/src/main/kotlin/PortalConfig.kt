@@ -172,6 +172,32 @@ data class CompiledComponentsConfig(
 }
 
 /**
+ * MS4-28: the app's generated `@ScreenState` registry (`dev.keliver.nav.ScreenStateRegistry`).
+ * [out] is a `.kt` path relative to the repo (it must stay inside it), in the module that
+ * compiles the screens, so `internal` state functions can be called, and outside every directory
+ * the relay watches (screens, components, flows, tokens, logic); [packageName] its package,
+ * required (a public registry in the root package would clash with any other); [valName] the
+ * registry's name.
+ */
+@Serializable
+data class ScreenStateRegistryConfig(
+  val out: String,
+  val packageName: String,
+  val valName: String = "AppScreenStates",
+) {
+  init {
+    require(out.endsWith(".kt")) { "screenStateRegistry.out must be a .kt file: $out" }
+    require(valName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*"))) { "screenStateRegistry.valName must be a Kotlin identifier: $valName" }
+    require(packageName.isNotBlank()) {
+      "screenStateRegistry.packageName is required: the generated registry's package (for example \"app.generated\")"
+    }
+    require(packageName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*"))) {
+      "screenStateRegistry.packageName must be a Kotlin package name: $packageName"
+    }
+  }
+}
+
+/**
  * NF2: one more engine's compile of the app's bundle ([PortalConfig.engineTargets]): the Gradle
  * task that compiles and signs it (with the same signing block, which names the engine in the
  * signed manifest from the modules' bytecode), and the directory it writes, relative to the repo.
@@ -295,6 +321,12 @@ data class PortalConfig(
    * each preview build. Null = off (opaque components preview as placeholders).
    */
   val compiledComponents: CompiledComponentsConfig? = null,
+  /**
+   * MS4-28 (docs/PORTAL_USAGE.md, "Named states"): where the relay writes the app's generated
+   * `@ScreenState` registry before each preview build; `ScreenStateRegistryKt <app-dir> --check`
+   * fails when the checked-in file is stale. Null = off.
+   */
+  val screenStateRegistry: ScreenStateRegistryConfig? = null,
   /**
    * NF2 (docs/DEVICE_HOST.md, "Engines"): more compile outputs for each release, one per QuickJS
    * engine other than the one [publishTask] compiles for (QuickJS bytecode loads only on the engine

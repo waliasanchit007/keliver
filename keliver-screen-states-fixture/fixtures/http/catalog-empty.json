@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "recordedAt": "2026-11-26T00:00:00Z",
+  "matchHeaders": [
+    "accept",
+    "content-type"
+  ],
+  "entries": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/catalog",
+        "query": {},
+        "headers": {
+          "accept": "application/json"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": "[]",
+        "headers": {
+          "content-type": "application/json"
+        }
+      },
+      "reuse": true
+    }
+  ]
+}
