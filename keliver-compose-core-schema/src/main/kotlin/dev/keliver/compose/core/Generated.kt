@@ -24,8 +24,6 @@ import dev.keliver.schema.Widget
     GenText1::class,
     GenText2::class,
     GenIcon1::class,
-    GenAsyncImage1::class,
-    GenAsyncImage2::class,
     GenImage1::class,
     GenImage2::class,
     GenLazyColumn1::class,
@@ -209,36 +207,6 @@ public data class GenIcon1(
   @Property(1) val imageVector: dev.keliver.compose.ui.graphics.vector.ImageVector,
   @Property(2) val contentDescription: kotlin.String?,
   @Property(4) val tint: dev.keliver.compose.ui.graphics.Color?,
-  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
-)
-
-/** `coil3.compose.AsyncImage`: A composable that executes an [ImageRequest] asynchronously and renders the result. */
-@Widget(8)
-public data class GenAsyncImage1(
-  @Property(1) val model: kotlin.String?,
-  @Property(2) val contentDescription: kotlin.String?,
-  @Property(6) val alignment: dev.keliver.compose.ui.Alignment,
-  @Property(7) val contentScale: dev.keliver.compose.ui.layout.ContentScale,
-  @Property(8) val alpha: kotlin.Float?,
-  @Property(9) val colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?,
-  @Property(10) val filterQuality: dev.keliver.compose.ui.graphics.FilterQuality?,
-  @Property(11) val clipToBounds: kotlin.Boolean,
-  @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
-)
-
-/** `coil3.compose.AsyncImage`: A composable that executes an [ImageRequest] asynchronously and renders the result. */
-@Widget(11)
-public data class GenAsyncImage2(
-  @Property(1) val model: kotlin.String?,
-  @Property(2) val contentDescription: kotlin.String?,
-  @Property(4) val placeholder: dev.keliver.compose.ui.graphics.painter.Painter?,
-  @Property(5) val error: dev.keliver.compose.ui.graphics.painter.Painter?,
-  @Property(10) val alignment: dev.keliver.compose.ui.Alignment,
-  @Property(11) val contentScale: dev.keliver.compose.ui.layout.ContentScale,
-  @Property(12) val alpha: kotlin.Float?,
-  @Property(13) val colorFilter: dev.keliver.compose.ui.graphics.ColorFilter?,
-  @Property(14) val filterQuality: dev.keliver.compose.ui.graphics.FilterQuality?,
-  @Property(15) val clipToBounds: kotlin.Boolean,
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )
 

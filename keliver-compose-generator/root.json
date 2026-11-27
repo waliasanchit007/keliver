@@ -3,6 +3,7 @@
   "schemaPackage": "dev.keliver.compose.root",
   "schemaName": "KeliverCompose",
   "dependencies": [
-    {"tag": 10, "type": "dev.keliver.compose.core.KeliverComposeCore"}
+    {"tag": 10, "type": "dev.keliver.compose.core.KeliverComposeCore"},
+    {"tag": 17, "type": "dev.keliver.compose.coil.KeliverComposeCoil"}
   ]
 }

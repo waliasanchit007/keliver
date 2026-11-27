@@ -1,0 +1,82 @@
+// MS4-03's size harness (docs/MS4_PLAN.md, Q11 and C9): the product's same-source samples as a signed
+// Zipline guest on the generated root (core group only: no coil, no legacy). Its Kotlin/JS sources
+// are the guest copies core's SameSourceTest compares (a srcDir, not a copy). The hosts that load
+// it are keliver-compose-size-android and keliver-compose-size-ios; scripts/keliver-compose-size.sh
+// builds all three and reports the sizes.
+//
+// Included only with -Pkeliver.composeSize (settings.gradle), never published. The signing key is a
+// scratch Ed25519 pair generated into this module's build dir.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.zipline'
+
+def samples = rootProject.file('keliver-compose-core-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/core/composeui/samples/guest')
+
+kotlin {
+  jvm() // the Android host takes the SizeSamples interface
+  iosSimulatorArm64() // … and the iOS host
+  iosArm64()
+  js {
+    outputModuleName = 'keliver-compose-size-guest'
+    browser()
+    binaries.executable()
+  }
+
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverTreehouse
+        api libs.zipline
+      }
+    }
+    jsMain {
+      kotlin.srcDir(samples)
+      dependencies {
+        api projects.keliverTreehouseGuest
+        implementation projects.keliverComposeCoreCompose
+        implementation projects.keliverComposeRootProtocolGuest
+        implementation libs.jetbrains.compose.runtime
+      }
+    }
+  }
+}
+
+zipline {
+  apiTracking = false
+}
+
+// A scratch Ed25519 pair (raw 32-byte seed and public key, hex), made once per build dir with the
+// JDK, as keliver-compose-gatea-sample-guest does. The hosts embed the public half.
+def keyDir = layout.buildDirectory.dir('size-keys')
+def sizeKeys = tasks.register('sizeKeys') {
+  outputs.dir(keyDir)
+  doLast {
+    def dir = keyDir.get().asFile
+    def priv = new File(dir, 'ed25519.priv')
+    def pub = new File(dir, 'ed25519.pub')
+    if (priv.isFile() && pub.isFile()) return
+    dir.mkdirs()
+    def pair = java.security.KeyPairGenerator.getInstance('Ed25519').generateKeyPair()
+    // PKCS#8 and X.509 encodings of Ed25519 end with the raw 32 bytes.
+    def raw = { byte[] encoded -> encoded[(encoded.length - 32)..<encoded.length] as byte[] }
+    priv.text = raw(pair.private.encoded).encodeHex().toString()
+    pub.text = raw(pair.public.encoded).encodeHex().toString()
+    priv.setReadable(false, false)
+    priv.setReadable(true, true)
+  }
+}
+
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compileTask ->
+  compileTask.dependsOn(sizeKeys)
+  compileTask.inputs.files(sizeKeys)
+  compileTask.doLast {
+    def manifestFile = new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json')
+    def hex = new File(keyDir.get().asFile, 'ed25519.priv').text.trim()
+    if (!(hex ==~ /[0-9a-f]{64}/)) throw new GradleException("size: the scratch key is not 64 hex digits")
+    def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
+      .addEd25519('size-ed25519', okio.ByteString.decodeHex(hex))
+      .build()
+    def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
+    manifestFile.text = signer.sign(manifest).encodeJson()
+  }
+}

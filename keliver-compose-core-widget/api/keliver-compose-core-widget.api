@@ -29,32 +29,6 @@ public abstract interface class dev/keliver/compose/core/widget/GenAnimatedVisib
 	public abstract fun visible (Z)V
 }
 
-public abstract interface class dev/keliver/compose/core/widget/GenAsyncImage1 : dev/keliver/widget/Widget {
-	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
-	public abstract fun alpha (Ljava/lang/Float;)V
-	public abstract fun clipToBounds (Z)V
-	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
-	public abstract fun contentDescription (Ljava/lang/String;)V
-	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
-	public abstract fun filterQuality-8lTfoU4 (Ldev/keliver/compose/ui/graphics/FilterQuality;)V
-	public abstract fun model (Ljava/lang/String;)V
-	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
-}
-
-public abstract interface class dev/keliver/compose/core/widget/GenAsyncImage2 : dev/keliver/widget/Widget {
-	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
-	public abstract fun alpha (Ljava/lang/Float;)V
-	public abstract fun clipToBounds (Z)V
-	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
-	public abstract fun contentDescription (Ljava/lang/String;)V
-	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
-	public abstract fun error (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
-	public abstract fun filterQuality-8lTfoU4 (Ldev/keliver/compose/ui/graphics/FilterQuality;)V
-	public abstract fun model (Ljava/lang/String;)V
-	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
-	public abstract fun placeholder (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
-}
-
 public abstract interface class dev/keliver/compose/core/widget/GenBox1 : dev/keliver/widget/Widget {
 	public abstract fun contentAlignment (Ldev/keliver/compose/ui/Alignment;)V
 	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
@@ -327,8 +301,6 @@ public abstract interface class dev/keliver/compose/core/widget/KeliverComposeCo
 	public abstract fun GenAnimateContentSize1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenAnimateContentSize1;)V
 	public abstract fun GenAnimateContentSize2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenAnimateContentSize2;)V
 	public abstract fun GenAnimatedVisibility1 ()Ldev/keliver/compose/core/widget/GenAnimatedVisibility1;
-	public abstract fun GenAsyncImage1 ()Ldev/keliver/compose/core/widget/GenAsyncImage1;
-	public abstract fun GenAsyncImage2 ()Ldev/keliver/compose/core/widget/GenAsyncImage2;
 	public abstract fun GenBackground1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBackground1;)V
 	public abstract fun GenBorder1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBorder1;)V
 	public abstract fun GenBorder2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenBorder2;)V

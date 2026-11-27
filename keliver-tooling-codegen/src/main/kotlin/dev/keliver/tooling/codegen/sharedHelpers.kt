@@ -67,6 +67,15 @@ internal val Event.lambdaType: TypeName
 
 internal val Schema.unscopedModifiers get() = modifiers.filter { it.scopes.isEmpty() }
 
+/**
+ * A root whose dependencies are groups a host may leave out (MS4-03, Keliver's generated root): a
+ * schema with no widgets or modifiers of its own. Its widget system takes each group's factory as
+ * nullable, and its host protocol reports an absent group's widgets as unknown, once per tag, and
+ * stands an absent widget in for each. Every other schema's generated code is unchanged.
+ */
+internal val Schema.acceptsAbsentGroups: Boolean
+  get() = widgets.isEmpty() && modifiers.isEmpty() && dependencies.isNotEmpty()
+
 internal fun Schema.composePackage() = type.names[0] + ".compose"
 internal fun Schema.modifierPackage() = type.names[0] + ".modifier"
 internal fun Schema.testingPackage() = type.names[0] + ".testing"

@@ -1,0 +1,50 @@
+// The product's generated root (docs/MS4_PLAN.md, MS4-03) on Compose UI: keliverComposeWidgetSystem(),
+// the root's widget system with one factory per group. It lives here, not in a group's host module,
+// so no group's host module depends on another's (review of #313, M1): core's renderers are
+// keliver-compose-core-composeui, and an optional group (coil) is passed in by a host that ships it.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
+
+redwoodBuild {
+  // wasmJs: the editor canvas draws with these renderers in the browser (ED0).
+  targets(ToolkitComposeUi + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeRootWidget
+        api projects.keliverComposeCoreComposeui
+        implementation projects.keliverWidgetComposeui
+        implementation libs.jetbrains.compose.ui
+      }
+    }
+    // AbsentGroupTest: a guest through the real protocol into hosts built with and without Coil.
+    jvmTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.jetbrains.compose.ui.test
+        implementation libs.jetbrains.compose.foundation
+        implementation rootProject.ext.skikoHostRuntime()
+        implementation projects.keliverComposeCoreCompose
+        implementation projects.keliverComposeCoilCompose
+        implementation projects.keliverComposeCoilComposeui
+        implementation projects.keliverComposeRootProtocolGuest
+        implementation projects.keliverComposeRootProtocolHost
+        implementation projects.keliverProtocolGuest
+        implementation projects.keliverProtocolHost
+        implementation projects.keliverCompose
+        implementation projects.keliverLeakDetector
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.keliver.compose.root.composeui'
+}

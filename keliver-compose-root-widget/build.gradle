@@ -16,6 +16,9 @@ kotlin {
     commonMain {
       dependencies {
         api projects.keliverComposeCoreWidget
+        // The coil group's widget interfaces (small, no Coil): the root lists every group, and a
+        // host without keliver-compose-coil-composeui leaves the group absent (MS4-03).
+        api projects.keliverComposeCoilWidget
       }
     }
   }

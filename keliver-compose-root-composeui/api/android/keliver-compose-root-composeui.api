@@ -1,0 +1,11 @@
+public final class dev/keliver/compose/root/composeui/ComposableSingletons$WidgetSystemKt {
+	public static final field INSTANCE Ldev/keliver/compose/root/composeui/ComposableSingletons$WidgetSystemKt;
+	public fun <init> ()V
+	public final fun getLambda$-1271176047$dev_keliver_keliver_compose_root_composeui_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class dev/keliver/compose/root/composeui/WidgetSystemKt {
+	public static final fun keliverComposeWidgetSystem (Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory;)Ldev/keliver/compose/root/widget/KeliverComposeWidgetSystem;
+	public static synthetic fun keliverComposeWidgetSystem$default (Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory;ILjava/lang/Object;)Ldev/keliver/compose/root/widget/KeliverComposeWidgetSystem;
+}
+

@@ -1,0 +1,42 @@
+public abstract interface class dev/keliver/compose/coil/widget/GenAsyncImage1 : dev/keliver/widget/Widget {
+	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
+	public abstract fun alpha (Ljava/lang/Float;)V
+	public abstract fun clipToBounds (Z)V
+	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
+	public abstract fun filterQuality-8lTfoU4 (Ldev/keliver/compose/ui/graphics/FilterQuality;)V
+	public abstract fun model (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/compose/coil/widget/GenAsyncImage2 : dev/keliver/widget/Widget {
+	public abstract fun alignment (Ldev/keliver/compose/ui/Alignment;)V
+	public abstract fun alpha (Ljava/lang/Float;)V
+	public abstract fun clipToBounds (Z)V
+	public abstract fun colorFilter (Ldev/keliver/compose/ui/graphics/ColorFilter;)V
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun contentScale (Ldev/keliver/compose/ui/layout/ContentScale;)V
+	public abstract fun error (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
+	public abstract fun filterQuality-8lTfoU4 (Ldev/keliver/compose/ui/graphics/FilterQuality;)V
+	public abstract fun model (Ljava/lang/String;)V
+	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun placeholder (Ldev/keliver/compose/ui/graphics/painter/Painter;)V
+}
+
+public abstract interface class dev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory {
+	public abstract fun GenAsyncImage1 ()Ldev/keliver/compose/coil/widget/GenAsyncImage1;
+	public abstract fun GenAsyncImage2 ()Ldev/keliver/compose/coil/widget/GenAsyncImage2;
+}
+
+public final class dev/keliver/compose/coil/widget/KeliverComposeCoilWidgetSystem : dev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
+	public static final field Companion Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetSystem$Companion;
+	public fun <init> (Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory;)V
+	public fun apply (Ljava/lang/Object;Ldev/keliver/Modifier$UnscopedElement;)V
+	public fun getKeliverComposeCoil ()Ldev/keliver/compose/coil/widget/KeliverComposeCoilWidgetFactory;
+}
+
+public final class dev/keliver/compose/coil/widget/KeliverComposeCoilWidgetSystem$Companion {
+	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+

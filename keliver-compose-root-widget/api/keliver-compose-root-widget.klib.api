@@ -8,13 +8,21 @@
 // Library unique name: <dev.keliver:keliver-compose-root-widget>
 abstract interface <#A: kotlin/Any> dev.keliver.compose.root.widget/KeliverComposeWidgetFactory // dev.keliver.compose.root.widget/KeliverComposeWidgetFactory|null[0]
 
-final class <#A: kotlin/Any> dev.keliver.compose.root.widget/KeliverComposeWidgetSystem : dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactoryOwner<#A>, dev.keliver.compose.root.widget/KeliverComposeWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem|null[0]
-    constructor <init>(dev.keliver.compose.root.widget/KeliverComposeWidgetFactory<#A>, dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A>) // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.<init>|<init>(dev.keliver.compose.root.widget.KeliverComposeWidgetFactory<1:0>;dev.keliver.compose.core.widget.KeliverComposeCoreWidgetFactory<1:0>){}[0]
+final class <#A: kotlin/Any> dev.keliver.compose.root.widget/KeliverComposeWidgetSystem : dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactoryOwner<#A>, dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactoryOwner<#A>, dev.keliver.compose.root.widget/KeliverComposeWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem|null[0]
+    constructor <init>(dev.keliver.compose.root.widget/KeliverComposeWidgetFactory<#A>, dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A>?, dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory<#A>?, kotlin/Function0<dev.keliver.widget/Widget<#A>>) // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.<init>|<init>(dev.keliver.compose.root.widget.KeliverComposeWidgetFactory<1:0>;dev.keliver.compose.core.widget.KeliverComposeCoreWidgetFactory<1:0>?;dev.keliver.compose.coil.widget.KeliverComposeCoilWidgetFactory<1:0>?;kotlin.Function0<dev.keliver.widget.Widget<1:0>>){}[0]
 
     final val KeliverCompose // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverCompose|{}KeliverCompose[0]
         final fun <get-KeliverCompose>(): dev.keliver.compose.root.widget/KeliverComposeWidgetFactory<#A> // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverCompose.<get-KeliverCompose>|<get-KeliverCompose>(){}[0]
+    final val KeliverComposeCoil // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCoil|{}KeliverComposeCoil[0]
+        final fun <get-KeliverComposeCoil>(): dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory<#A> // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCoil.<get-KeliverComposeCoil>|<get-KeliverComposeCoil>(){}[0]
+    final val KeliverComposeCoilOrNull // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCoilOrNull|{}KeliverComposeCoilOrNull[0]
+        final fun <get-KeliverComposeCoilOrNull>(): dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory<#A>? // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCoilOrNull.<get-KeliverComposeCoilOrNull>|<get-KeliverComposeCoilOrNull>(){}[0]
     final val KeliverComposeCore // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCore|{}KeliverComposeCore[0]
         final fun <get-KeliverComposeCore>(): dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A> // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCore.<get-KeliverComposeCore>|<get-KeliverComposeCore>(){}[0]
+    final val KeliverComposeCoreOrNull // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCoreOrNull|{}KeliverComposeCoreOrNull[0]
+        final fun <get-KeliverComposeCoreOrNull>(): dev.keliver.compose.core.widget/KeliverComposeCoreWidgetFactory<#A>? // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.KeliverComposeCoreOrNull.<get-KeliverComposeCoreOrNull>|<get-KeliverComposeCoreOrNull>(){}[0]
+    final val absentWidget // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.absentWidget|{}absentWidget[0]
+        final fun <get-absentWidget>(): kotlin/Function0<dev.keliver.widget/Widget<#A>> // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.absentWidget.<get-absentWidget>|<get-absentWidget>(){}[0]
 
     final fun apply(#A, dev.keliver/Modifier.UnscopedElement) // dev.keliver.compose.root.widget/KeliverComposeWidgetSystem.apply|apply(1:0;dev.keliver.Modifier.UnscopedElement){}[0]
 

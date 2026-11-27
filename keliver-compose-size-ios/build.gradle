@@ -1,0 +1,88 @@
+// MS4-03's size harness (docs/MS4_PLAN.md, Q11 and C9): a minimal iOS app written in Kotlin only (no
+// Xcode project), as keliver-compose-gatea-sample-ios, linked as three release executables from one
+// source set. Kotlin/Native keeps only the code an executable's entry point reaches:
+//  - Native (mainNative): the same-source samples drawn by native Compose: the baseline;
+//  - Product (mainProduct): the same, plus the guest route on the generated root (TreehouseApp,
+//    the root's host protocol, keliverComposeWidgetSystem() with core's renderers). No legacy
+//    keliver-material, no Coil;
+//  - ProductCoil (mainProductCoil): the product route with the optional coil group.
+// Product − Native is what the product route adds to an app's binary (Q11's iOS budget); the guest
+// bundle (keliver-compose-size-guest) is measured on its own. scripts/keliver-compose-size.sh links
+// them for a phone (iosArm64, unsigned: no profile needed to link) and reports.
+// Included only with -Pkeliver.composeSize (settings.gradle); never published, never shipped.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.zipline' // rewrites the host's zipline.take
+
+def samples = rootProject.file('keliver-compose-core-composeui/src/sameSourceTest/kotlin/dev/keliver/compose/core/composeui/samples/native')
+
+def entryPoints = [Native: 'mainNative', Product: 'mainProduct', ProductCoil: 'mainProductCoil']
+
+// The guest's scratch public key as a Kotlin constant (the product routes verify the bundle with it).
+def keySource = layout.buildDirectory.dir('generated/sizeKey/kotlin')
+def sizeKey = tasks.register('generateSizeKey') {
+  dependsOn(':keliver-compose-size-guest:sizeKeys')
+  def pub = project(':keliver-compose-size-guest').layout.buildDirectory.file('size-keys/ed25519.pub')
+  inputs.file(pub)
+  outputs.dir(keySource)
+  doLast {
+    def hex = pub.get().asFile.text.trim()
+    if (!(hex ==~ /[0-9a-f]{64}/)) throw new GradleException("size: the scratch public key is not 64 hex digits")
+    def dir = keySource.get().asFile
+    dir.deleteDir()
+    dir.mkdirs()
+    new File(dir, 'SizeKey.kt').text =
+      "package dev.keliver.compose.size.ios\n\n// GENERATED (generateSizeKey).\ninternal const val SIZE_PUBLIC_KEY_HEX: String = \"$hex\"\n"
+  }
+}
+tasks.configureEach { t ->
+  if (t.name.startsWith('compileKotlinIos')) t.dependsOn(sizeKey)
+}
+
+kotlin {
+  [iosSimulatorArm64(), iosArm64()].each { target ->
+    entryPoints.each { name, entry ->
+      target.binaries.executable(name) {
+        entryPoint = "dev.keliver.compose.size.ios.$entry"
+        binaryOption('bundleId', 'dev.keliver.compose.size')
+        linkerOpts.add('-lsqlite3') // Zipline's bundle cache
+      }
+    }
+  }
+
+  sourceSets {
+    iosMain {
+      kotlin.srcDir(samples)
+      kotlin.srcDir(keySource)
+      dependencies {
+        implementation projects.keliverComposeSizeGuest
+        implementation projects.keliverTreehouseHost
+        implementation projects.keliverTreehouseHostComposeui
+        implementation projects.keliverComposeRootComposeui
+        implementation projects.keliverComposeRootProtocolHost
+        implementation projects.keliverComposeCoilComposeui
+        implementation projects.keliverLeakDetector
+        implementation libs.zipline
+        implementation libs.zipline.loader
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.animation
+        implementation libs.jetbrains.compose.material3
+        implementation libs.jetbrains.compose.material.icons.core
+        implementation libs.jetbrains.compose.material.icons.extended
+        implementation libs.jetbrains.compose.ui
+        implementation libs.kotlinx.coroutines.core
+        implementation libs.okio
+      }
+    }
+  }
+}
+
+// build-support disables every iOS release link (sample apps never needed one); the sizes are the
+// release binaries', so this app's are turned back on.
+afterEvaluate {
+  entryPoints.keySet().each { name ->
+    tasks.named("link${name}ReleaseExecutableIosSimulatorArm64").configure { enabled = true }
+    tasks.named("link${name}ReleaseExecutableIosArm64").configure { enabled = true }
+  }
+}

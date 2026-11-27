@@ -192,12 +192,14 @@ class GeneratorTest {
   }
 
   @Test fun theProductCoreGroupIsGeneratedBesideThePrototype() {
-    // MS4-01: every prototype declaration is in core, so the prototype keeps building on core's values.
+    // MS4-01: every prototype declaration is in the product's groups (core, and coil since MS4-03), so
+    // the prototype keeps building on core's values.
     val core = loadConfig(File("core.json"))
+    val coil = loadConfig(File("coil.json"))
     val gatea = loadConfig(File("gatea.json"))
     assertEquals("core", core.group)
     assertEquals("dev.keliver.compose.core", core.schemaPackage)
-    assertEquals(emptyList(), gatea.declarations - core.declarations.toSet(), "prototype declarations missing from core")
+    assertEquals(emptyList(), gatea.declarations - (core.declarations + coil.declarations).toSet(), "prototype declarations missing from the product")
     assertEquals(emptyList(), gatea.errors.map { it.first } - core.errors.map { it.first }.toSet())
     assertEquals(gatea.extras, core.extras)
     assertEquals(gatea.extraModifiers, core.extraModifiers)
@@ -221,6 +223,8 @@ class GeneratorTest {
     assertEquals("dev/keliver/compose/root/Generated.kt", path)
     assertTrue("  members = [],\n" in text, text)
     assertTrue("    Dependency(10, dev.keliver.compose.core.KeliverComposeCore::class),\n" in text, text)
+    // MS4-03: coil at design §14's tag 17 (Q1: optional; a host may leave it out).
+    assertTrue("    Dependency(17, dev.keliver.compose.coil.KeliverComposeCoil::class),\n" in text, text)
     assertTrue("public interface KeliverCompose\n" in text, text)
     for (legacy in listOf("dev.keliver.material.", "dev.keliver.layout.", "dev.keliver.lazylayout.")) {
       assertFalse(legacy in text, "the generated root depends on $legacy")
@@ -560,5 +564,80 @@ class GeneratorTest {
       // Gate A's entries all travelled from their own level: filling `wire` appended nothing.
       assertTrue(kept.wire.orEmpty().values.all { it >= entry.since }, key)
     }
+  }
+
+  @Test fun coilIsItsOwnGroupOnCoresRuntime() {
+    // MS4-03 (Q1: coil is optional): AsyncImage left core for its own group, which uses core's runtime.
+    val core = loadConfig(File("core.json"))
+    val coil = loadConfig(File("coil.json"))
+    assertTrue(core.sharedRuntime)
+    assertEquals("dev.keliver.compose.core", coil.base)
+    assertTrue(coil.declarations.isNotEmpty() && coil.declarations.all { it.startsWith("coil3.") }, "${coil.declarations}")
+    assertTrue(core.declarations.none { it.startsWith("coil3.") }, "core declares no Coil")
+    // Coil's lock is its own, from level 1; core keeps its two AsyncImage entries (unused tags 8 and
+    // 11) until MS4-06's fresh locks, so core's lock only ever appended.
+    val coilLock = lockJson.decodeFromString(Lock.serializer(), File("coil.lock.json").readText())
+    assertEquals("coil", coilLock.group)
+    assertEquals(1, coilLock.level)
+    assertEquals(listOf(1, 2), coilLock.widgets.values.map { it.tag }.sorted())
+    assertEquals(emptyMap(), coilLock.factories, "coil reads core's factory tags and owns none")
+    val coreLock = lockJson.decodeFromString(Lock.serializer(), File("core.lock.json").readText())
+    assertEquals(listOf(8, 11), coreLock.widgets.filterKeys { it.startsWith("coil3.compose/AsyncImage(") }.values.map { it.tag }.sorted())
+  }
+
+  @Test fun aSharedRuntimesApplierIsPublicForGeneratedCodeOnly() {
+    val shared = Config("g", "dev.example.schema", "S", emptyList(), emptyList(), emptyList(), emptyMap(), emptyList(), emptyList(), sharedRuntime = true)
+    val host = Emitter(shared, plan(shared, listOf(alphaDecl), LockBuilder(Lock("g")))).host().second
+    assertTrue("@dev.keliver.RedwoodCodegenApi\npublic fun Modifier.applyGenerated(" in host, host)
+    assertTrue("@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, dev.keliver.RedwoodCodegenApi::class)\n" in host)
+    // Without it (the prototype), the applier stays internal and the header as it was.
+    val own = animationConfig(emptyList(), emptyList())
+    val ownHost = Emitter(own, plan(own, listOf(alphaDecl), LockBuilder(Lock("g")))).host().second
+    assertTrue("@Composable\ninternal fun Modifier.applyGenerated(" in ownHost)
+    assertTrue("@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)\n" in ownHost)
+  }
+
+  @Test fun aBasedGroupsRenderersUseItsBasesRuntime() {
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+    val api = ApiReader(classpath.split(File.pathSeparator).map(::File))
+    val src = SourceReader(sources.split(File.pathSeparator).map(::File))
+    val config = loadConfig(File("coil.json"))
+    val decls = config.declarations.map { api.find(it).also(src::complete) }
+    val host = Emitter(config, plan(config, decls, LockBuilder(Lock("coil")))).host().second
+    assertTrue("import dev.keliver.compose.core.composeui.*\n" in host, "core's applier, converters and widget runtime")
+    assertTrue("@file:OptIn(dev.keliver.RedwoodCodegenApi::class)\n" in host, "no material3 opt-in: coil's module does not depend on it")
+    assertTrue("modifier = incoming.applyGenerated(modifier, this@ComposeUiGenAsyncImage1)," in host)
+    assertTrue("public class ComposeUiKeliverComposeCoilWidgetFactory : KeliverComposeCoilWidgetFactory<" in host)
+    // None of the runtime of its own: those would shadow core's.
+    for (own in listOf("fun Modifier.applyGenerated(", "fun Modifier.applyScoped(", "fun iconByName(", "fun defaultsColor(")) {
+      assertFalse(own in host, "a based group emits no $own")
+    }
+    // The checked-in coil host is this generation's.
+    val checkedIn = File("../keliver-compose-coil-composeui/src/commonMain/kotlin/dev/keliver/compose/coil/composeui/Generated.kt").readText()
+    assertTrue(checkedIn.startsWith(header("coil")))
+  }
+
+  @Test fun aBasedGroupHasWidgetsOnly() {
+    fun configWith(extra: String): Result<Config> {
+      val file = File.createTempFile("based", ".json").apply {
+        deleteOnExit()
+        writeText("""{"group": "b", "schemaPackage": "p", "schemaName": "B", "base": "dev.keliver.compose.core", $extra}""")
+      }
+      return runCatching { loadConfig(file) }
+    }
+    assertTrue(configWith(""""declarations": []""").isSuccess)
+    for (own in listOf(""""icons": ["Filled.Info"]""", """"extras": ["Shimmer"]""", """"extraModifiers": ["Press"]""", """"sharedRuntime": true""")) {
+      val failure = configWith(own).exceptionOrNull()?.message.orEmpty()
+      assertTrue("a group with a base" in failure, "$own: $failure")
+    }
+    // A modifier needs the base to dispatch to this group: refused when the group is generated.
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+    val based = Config("b", "p", "B", emptyList(), listOf(alphaDecl.spec), emptyList(), emptyMap(), emptyList(), emptyList(), base = "dev.keliver.compose.core")
+    val failure = runCatching {
+      generate(based, Lock("b"), classpath.split(File.pathSeparator).map(::File), sources.split(File.pathSeparator).map(::File))
+    }.exceptionOrNull()?.message.orEmpty()
+    assertTrue("has widgets only; it declares modifiers" in failure, failure)
   }
 }

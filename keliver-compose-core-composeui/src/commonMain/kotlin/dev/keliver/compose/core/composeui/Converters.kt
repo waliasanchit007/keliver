@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import dev.keliver.RedwoodCodegenApi
 import dev.keliver.compose.foundation.BorderStroke as K_BorderStroke
 import dev.keliver.compose.foundation.ScrollState as K_ScrollState
 import dev.keliver.compose.foundation.layout.Arrangement as K_Arrangement
@@ -260,7 +261,9 @@ internal fun K_TextDecoration.toCompose(): TextDecoration = TextDecoration.combi
   },
 )
 
-internal fun K_Alignment.toCompose(): Alignment = BiasAlignment(horizontalBias, verticalBias)
+// The converters a based group's renderers call (coil's, MS4-03) are public for generated code only.
+@RedwoodCodegenApi
+public fun K_Alignment.toCompose(): Alignment = BiasAlignment(horizontalBias, verticalBias)
 internal fun K_Alignment.Horizontal.toCompose(): Alignment.Horizontal = BiasAlignment.Horizontal(bias)
 internal fun K_Alignment.Vertical.toCompose(): Alignment.Vertical = BiasAlignment.Vertical(bias)
 
@@ -290,7 +293,8 @@ internal fun K_Arrangement.Vertical.toCompose(): Arrangement.Vertical = when (co
 
 internal fun K_PaddingValues.toCompose(): PaddingValues = PaddingValues(start.toCompose(), top.toCompose(), end.toCompose(), bottom.toCompose())
 
-internal fun K_ContentScale.toCompose(): ContentScale = when (name) {
+@RedwoodCodegenApi
+public fun K_ContentScale.toCompose(): ContentScale = when (name) {
   "Crop" -> ContentScale.Crop
   "FillHeight" -> ContentScale.FillHeight
   "FillWidth" -> ContentScale.FillWidth
@@ -300,7 +304,8 @@ internal fun K_ContentScale.toCompose(): ContentScale = when (name) {
   else -> ContentScale.Fit
 }
 
-internal fun K_FilterQuality.toCompose(): FilterQuality = when (this) {
+@RedwoodCodegenApi
+public fun K_FilterQuality.toCompose(): FilterQuality = when (this) {
   K_FilterQuality.None -> FilterQuality.None
   K_FilterQuality.Medium -> FilterQuality.Medium
   K_FilterQuality.High -> FilterQuality.High
@@ -372,14 +377,16 @@ internal fun K_BorderStroke.toCompose(): BorderStroke =
 
 /** An icon's vector painter or a colour painter (the painters a guest can describe, §6). */
 @Composable
-internal fun K_Painter.toCompose(): Painter = when (this) {
+@RedwoodCodegenApi
+public fun K_Painter.toCompose(): Painter = when (this) {
   is K_VectorPainter -> rememberVectorPainter(image.toCompose())
   is K_ColorPainter -> ColorPainter(color.toCompose())
   else -> ColorPainter(Color.Unspecified)
 }
 
 @Composable
-internal fun K_ColorFilter.toCompose(): ColorFilter = ColorFilter.tint(color.toCompose(), blendMode.toCompose())
+@RedwoodCodegenApi
+public fun K_ColorFilter.toCompose(): ColorFilter = ColorFilter.tint(color.toCompose(), blendMode.toCompose())
 
 internal fun K_BlendMode.toCompose(): BlendMode = when (this) {
   K_BlendMode.Clear -> BlendMode.Clear

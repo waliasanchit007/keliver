@@ -324,10 +324,9 @@ one naming its category. First entries:
 | `extras` (18) | Keliver-only, imported from `dev.keliver.compose.extras` so a reader sees it is not Compose | A: the shimmer, the one hand-written renderer |
 | app components (100+) | an app's own composables, exported by explicit opt-in | after Gate B |
 
-- **Groups and app size:** a host ships only the groups it includes. Today the generated host
-  factory requires an implementation for every dependency; an absent group would need a codegen
-  change (its widgets reported as unknown). Gate A ships every group it uses; Gate B measures
-  app size and decides.
+- **Groups and app size:** a host ships only the groups it includes. Gate A shipped every group
+  it used; Gate B measured app size, and #244's decision 3 asked for absent groups. Built by
+  MS4-03 (below).
 - **Migration:** a tool that rewrites legacy calls (`Background(colorArgb)` to
   `Modifier.background(Color(…))`) is MS4's.
 - **The product's layout, as built (MS4-01, [`MS4_PLAN.md`](MS4_PLAN.md)).** It differs from the
@@ -337,14 +336,35 @@ one naming its category. First entries:
     The root has **no legacy schema**: a tree cannot mix legacy and generated widgets, and a
     legacy screen stays on the legacy root.
   - **One core group** (dependency tag 10). `core.json` covers foundation-layout, foundation, ui,
-    material3, animation and the extras (Q1). For now it also holds coil and the icons; MS4-03
-    and MS4-19 move them out.
+    material3, animation and the extras (Q1). For now it also holds the icons; MS4-19 moves them
+    out.
+  - **The coil group** (dependency tag 17, MS4-03; Q1: optional). `coil.json` is Coil's
+    `AsyncImage` alone. It names core as its `base`: its renderers use core's applier, converters
+    and widget runtime, which core shares (`sharedRuntime`: public behind `@RedwoodCodegenApi`).
+    A group with a base has widgets only; its own modifiers, extras or `*Defaults` factories would
+    need the base to dispatch to it (Q1's cross-group dispatch), and the generator refuses them.
+    Core's lock keeps the two AsyncImage entries it had (tags 8 and 11, unused) until MS4-06.
+  - **Absent groups** (MS4-03, #244 decision 3). keliver-tooling-codegen treats a schema with no
+    members of its own (the generated root) as a list of groups a host may leave out: its widget
+    system takes each group's factory as nullable (`KeliverComposeCoilOrNull`), plus an
+    `absentWidget`. A guest's widget from an absent group is reported once per tag
+    (`ProtocolMismatchHandler.onUnknownWidget`, which a Treehouse app passes to its EventListener)
+    and an `AbsentProtocolNode` keeps its place: it draws nothing, ignores properties and keeps its
+    children undrawn, so the guest's later changes still find their nodes. A guest always has every
+    group. Every other schema's generated code is unchanged. `keliverComposeWidgetSystem(coil = …)`
+    (keliver-compose-root-composeui) builds the root's system on Compose UI; without `coil` the
+    host links no Coil.
   - **The core group owns `keliver-compose-values`.** It writes the `*Defaults` mirrors, and its
-    lock holds their factory tags. The prototype (`gatea`), generated beside it until MS4-40, reads
-    those tags (`--factories-lock`) and writes no values.
+    lock holds their factory tags. The prototype (`gatea`) and coil read those tags
+    (`--factories-lock`) and write no values.
+  - **No legacy module.** The guest's lazy lists keep their own copy of the legacy window's loading
+    strategy (MS4-03), so no product module depends on a `keliver-lazylayout-*` or
+    `keliver-material-*` module.
   - **Modules and artifacts:** `keliver-compose-<group>-<role>` (Q14). The root's roles are
-    `-schema`, `-widget`, `-protocol-guest` and `-protocol-host`. The core group's roles are
-    `-schema`, `-widget`, `-modifiers`, `-compose` and `-composeui`.
+    `-schema`, `-widget`, `-protocol-guest`, `-protocol-host` and `-composeui` (the widget system on
+    Compose UI, so no group's host module depends on another's). The core group's roles are
+    `-schema`, `-widget`, `-modifiers`, `-compose` and `-composeui`; the coil group has no
+    modifiers, so no `-modifiers`.
 
 ## 15. A worked example
 

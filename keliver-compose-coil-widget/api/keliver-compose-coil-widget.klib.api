@@ -1,0 +1,51 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-coil-widget>
+abstract interface <#A: kotlin/Any> dev.keliver.compose.coil.widget/GenAsyncImage1 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.coil.widget/GenAsyncImage1|null[0]
+    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.coil.widget/GenAsyncImage1.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
+    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.coil.widget/GenAsyncImage1.alpha|alpha(kotlin.Float?){}[0]
+    abstract fun clipToBounds(kotlin/Boolean) // dev.keliver.compose.coil.widget/GenAsyncImage1.clipToBounds|clipToBounds(kotlin.Boolean){}[0]
+    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.coil.widget/GenAsyncImage1.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.coil.widget/GenAsyncImage1.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.coil.widget/GenAsyncImage1.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
+    abstract fun filterQuality(dev.keliver.compose.ui.graphics/FilterQuality?) // dev.keliver.compose.coil.widget/GenAsyncImage1.filterQuality|filterQuality(dev.keliver.compose.ui.graphics.FilterQuality?){}[0]
+    abstract fun model(kotlin/String?) // dev.keliver.compose.coil.widget/GenAsyncImage1.model|model(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.coil.widget/GenAsyncImage1.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.coil.widget/GenAsyncImage2 : dev.keliver.widget/Widget<#A> { // dev.keliver.compose.coil.widget/GenAsyncImage2|null[0]
+    abstract fun alignment(dev.keliver.compose.ui/Alignment) // dev.keliver.compose.coil.widget/GenAsyncImage2.alignment|alignment(dev.keliver.compose.ui.Alignment){}[0]
+    abstract fun alpha(kotlin/Float?) // dev.keliver.compose.coil.widget/GenAsyncImage2.alpha|alpha(kotlin.Float?){}[0]
+    abstract fun clipToBounds(kotlin/Boolean) // dev.keliver.compose.coil.widget/GenAsyncImage2.clipToBounds|clipToBounds(kotlin.Boolean){}[0]
+    abstract fun colorFilter(dev.keliver.compose.ui.graphics/ColorFilter?) // dev.keliver.compose.coil.widget/GenAsyncImage2.colorFilter|colorFilter(dev.keliver.compose.ui.graphics.ColorFilter?){}[0]
+    abstract fun contentDescription(kotlin/String?) // dev.keliver.compose.coil.widget/GenAsyncImage2.contentDescription|contentDescription(kotlin.String?){}[0]
+    abstract fun contentScale(dev.keliver.compose.ui.layout/ContentScale) // dev.keliver.compose.coil.widget/GenAsyncImage2.contentScale|contentScale(dev.keliver.compose.ui.layout.ContentScale){}[0]
+    abstract fun error(dev.keliver.compose.ui.graphics.painter/Painter?) // dev.keliver.compose.coil.widget/GenAsyncImage2.error|error(dev.keliver.compose.ui.graphics.painter.Painter?){}[0]
+    abstract fun filterQuality(dev.keliver.compose.ui.graphics/FilterQuality?) // dev.keliver.compose.coil.widget/GenAsyncImage2.filterQuality|filterQuality(dev.keliver.compose.ui.graphics.FilterQuality?){}[0]
+    abstract fun model(kotlin/String?) // dev.keliver.compose.coil.widget/GenAsyncImage2.model|model(kotlin.String?){}[0]
+    abstract fun modifierEvent(kotlin/Function1<kotlin/Int, kotlin/Unit>?) // dev.keliver.compose.coil.widget/GenAsyncImage2.modifierEvent|modifierEvent(kotlin.Function1<kotlin.Int,kotlin.Unit>?){}[0]
+    abstract fun placeholder(dev.keliver.compose.ui.graphics.painter/Painter?) // dev.keliver.compose.coil.widget/GenAsyncImage2.placeholder|placeholder(dev.keliver.compose.ui.graphics.painter.Painter?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory { // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory|null[0]
+    abstract fun GenAsyncImage1(): dev.keliver.compose.coil.widget/GenAsyncImage1<#A> // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory.GenAsyncImage1|GenAsyncImage1(){}[0]
+    abstract fun GenAsyncImage2(): dev.keliver.compose.coil.widget/GenAsyncImage2<#A> // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory.GenAsyncImage2|GenAsyncImage2(){}[0]
+}
+
+final class <#A: kotlin/Any> dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem : dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem|null[0]
+    constructor <init>(dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory<#A>) // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem.<init>|<init>(dev.keliver.compose.coil.widget.KeliverComposeCoilWidgetFactory<1:0>){}[0]
+
+    final val KeliverComposeCoil // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem.KeliverComposeCoil|{}KeliverComposeCoil[0]
+        final fun <get-KeliverComposeCoil>(): dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory<#A> // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem.KeliverComposeCoil.<get-KeliverComposeCoil>|<get-KeliverComposeCoil>(){}[0]
+
+    final fun apply(#A, dev.keliver/Modifier.UnscopedElement) // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem.apply|apply(1:0;dev.keliver.Modifier.UnscopedElement){}[0]
+
+    final object Companion { // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem.Companion|null[0]
+        final fun <#A2: kotlin/Any> allChildren(dev.keliver.widget/Widget<#A2>): kotlin.collections/List<dev.keliver.widget/Widget<#A2>> // dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetSystem.Companion.allChildren|allChildren(dev.keliver.widget.Widget<0:0>){0§<kotlin.Any>}[0]
+    }
+}

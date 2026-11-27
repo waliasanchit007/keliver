@@ -13,6 +13,7 @@ apply plugin: 'dev.keliver.schema'
 
 dependencies {
   api projects.keliverComposeCoreSchema
+  api projects.keliverComposeCoilSchema
 }
 
 redwoodSchema {

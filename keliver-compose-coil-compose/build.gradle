@@ -1,0 +1,42 @@
+// The product's generated coil group (docs/MS4_PLAN.md, MS4-03): the guest API.
+// src/commonMain/kotlin/dev/keliver/**/Generated.kt are the generated stubs (Coil's `AsyncImage` in
+// dev.keliver.coil3.compose); the internal composables come from the Redwood generator. The stubs use
+// core's guest runtime (the modifier-event split, the image model) and its values.
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  // wasmJs: the editor's canvas calls these stubs in the browser (ED0).
+  targets(Common + WasmJs.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'dev.keliver.generator.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverComposeCoilWidget
+        // dev.keliver.compose.ui.Modifier and the guest runtime the stubs call.
+        api projects.keliverComposeCoreCompose
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverComposeCoilSchema
+  type = 'dev.keliver.compose.coil.KeliverComposeCoil'
+}
+
+// The generator writes Generated.kt and the staleness guard compares it byte for byte: no spotless.
+afterEvaluate {
+  spotless {
+    kotlin {
+      targetExclude("src/**/Generated.kt")
+    }
+  }
+}

@@ -73,6 +73,18 @@ class Config(
    * Each takes a `state` and may take `enabled` or `userScrollEnabled`.
    */
   val scrollContainers: List<String> = emptyList(),
+  /**
+   * MS4-03: the schema package of the group whose hand-written host runtime this group's renderers
+   * use (`dev.keliver.compose.core`): its applier ([sharedRuntime]), converters and widget base. A
+   * group with a base is a set of widgets only (coil's `AsyncImage`): its own modifiers, extras and
+   * icons would need a dispatch across groups, which the generator does not have.
+   */
+  val base: String? = null,
+  /**
+   * MS4-03: this group's applier (`applyGenerated`) is public, behind `@RedwoodCodegenApi`, so the
+   * renderers of a group based on it ([base]) apply the guest's modifiers as this group's own do.
+   */
+  val sharedRuntime: Boolean = false,
 ) {
   /** The Compose versions read (for the schema's header), or null. */
   var input: String? = null

@@ -1,0 +1,18 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-coil-composeui>
+final class dev.keliver.compose.coil.composeui/ComposeUiKeliverComposeCoilWidgetFactory : dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> { // dev.keliver.compose.coil.composeui/ComposeUiKeliverComposeCoilWidgetFactory|null[0]
+    constructor <init>() // dev.keliver.compose.coil.composeui/ComposeUiKeliverComposeCoilWidgetFactory.<init>|<init>(){}[0]
+
+    final fun GenAsyncImage1(): dev.keliver.compose.coil.widget/GenAsyncImage1<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.keliver.compose.coil.composeui/ComposeUiKeliverComposeCoilWidgetFactory.GenAsyncImage1|GenAsyncImage1(){}[0]
+    final fun GenAsyncImage2(): dev.keliver.compose.coil.widget/GenAsyncImage2<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.keliver.compose.coil.composeui/ComposeUiKeliverComposeCoilWidgetFactory.GenAsyncImage2|GenAsyncImage2(){}[0]
+}
+
+final val dev.keliver.compose.coil.composeui/dev_keliver_compose_coil_composeui_ComposeUiKeliverComposeCoilWidgetFactory$stableprop // dev.keliver.compose.coil.composeui/dev_keliver_compose_coil_composeui_ComposeUiKeliverComposeCoilWidgetFactory$stableprop|#static{}dev_keliver_compose_coil_composeui_ComposeUiKeliverComposeCoilWidgetFactory$stableprop[0]
+
+final fun dev.keliver.compose.coil.composeui/dev_keliver_compose_coil_composeui_ComposeUiKeliverComposeCoilWidgetFactory$stableprop_getter(): kotlin/Int // dev.keliver.compose.coil.composeui/dev_keliver_compose_coil_composeui_ComposeUiKeliverComposeCoilWidgetFactory$stableprop_getter|dev_keliver_compose_coil_composeui_ComposeUiKeliverComposeCoilWidgetFactory$stableprop_getter(){}[0]

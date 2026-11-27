@@ -18,6 +18,7 @@ package dev.keliver.compose.generator
 import java.io.File
 import kotlin.system.exitProcess
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -43,11 +44,26 @@ fun loadConfig(file: File): Config {
     animated = strings("animated"),
     extraModifiers = strings("extraModifiers"),
     scrollContainers = strings("scrollContainers"),
+    base = o["base"]?.jsonPrimitive?.content,
+    sharedRuntime = o["sharedRuntime"]?.jsonPrimitive?.boolean ?: false,
   ).also { c ->
     val unknown = c.animated.filter { it !in c.declarations }
     require(unknown.isEmpty()) { "animated: not in declarations: $unknown" }
     val unknownScroll = c.scrollContainers.filter { it !in c.declarations }
     require(unknownScroll.isEmpty()) { "scrollContainers: not in declarations: $unknownScroll" }
+    if (c.base != null) {
+      // A based group's renderers use its base's runtime; anything that runtime would have to
+      // dispatch to this group's own code (modifiers, extras, icons) is not supported yet.
+      val own = listOfNotNull(
+        "extras".takeIf { c.extras.isNotEmpty() },
+        "extraModifiers".takeIf { c.extraModifiers.isNotEmpty() },
+        "icons".takeIf { c.icons.isNotEmpty() },
+        "animated".takeIf { c.animated.isNotEmpty() },
+        "scrollContainers".takeIf { c.scrollContainers.isNotEmpty() },
+      )
+      require(own.isEmpty()) { "${c.group}: a group with a base (${c.base}) has widgets only; it may not have $own" }
+      require(!c.sharedRuntime) { "${c.group}: a group with a base cannot share a runtime of its own" }
+    }
   }
 }
 
@@ -92,6 +108,14 @@ fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List
   val lock = LockBuilder(oldLock, factoryOwner)
   val plans = plan(config, decls, lock, defaults) + errorDecls.map { (d, message) -> Plan.ErrorStub(d, classify(d), "Keliver: $message") }
   val factories = planFactories(config, defaults, lock)
+  if (config.base != null) {
+    // The base's applier and converters serve this group's renderers; its modifiers and `*Defaults`
+    // factories would need the base to dispatch to this group (Q1's cross-group dispatch), so not yet.
+    val modifiers = plans.filterIsInstance<Plan.Generated>().filter { it.decl.kind != DeclKind.WIDGET }.map { it.decl.spec }
+    require(modifiers.isEmpty()) { "${config.group}: a group with a base has widgets only; it declares modifiers $modifiers" }
+    val made = factories.filter { it.error == null }.map { "${it.decl.owner}.${it.decl.name}" }.distinct()
+    require(made.isEmpty()) { "${config.group}: a group with a base cannot name *Defaults factories yet: $made" }
+  }
   val e = Emitter(config, plans, factories, defaults, api::supertypes)
   return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)))
 }

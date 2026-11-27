@@ -624,8 +624,8 @@ internal fun guestOnHost(
     guestVersion = guestRedwoodVersion,
     container = root,
     protocol = protocol,
-    // The generated root alone: no legacy keliver-material system (MS4-01).
-    widgetSystem = keliverComposeWidgetSystem(),
+    // The generated root alone: no legacy keliver-material system (MS4-01), core's renderers only.
+    widgetSystem = coreWidgetSystem(),
     eventSink = { event -> tap?.send(event.toProtocol()) ?: guestAdapter.sendEvent(event.toProtocol()) },
     leakDetector = LeakDetector.none(),
   )

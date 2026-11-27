@@ -1,0 +1,13 @@
+{
+  "group": "coil",
+  "schemaPackage": "dev.keliver.compose.coil",
+  "schemaName": "KeliverComposeCoil",
+  "base": "dev.keliver.compose.core",
+  "declarations": [
+    "coil3.compose.AsyncImage(model,contentDescription,modifier,transform,onState,alignment,contentScale,alpha,colorFilter,filterQuality,clipToBounds)",
+    "coil3.compose.AsyncImage(model,contentDescription,modifier,placeholder,error,fallback,onLoading,onSuccess,onError,alignment,contentScale,alpha,colorFilter,filterQuality,clipToBounds)"
+  ],
+  "typeMessages": {
+    "coil3.compose.AsyncImagePainter.State": "image-loading state callbacks are Gate B."
+  }
+}

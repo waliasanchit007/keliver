@@ -96,6 +96,10 @@ internal fun generateProtocolWidgetSystemFactory(
                 for (dependency in schemaSet.all) {
                   add(CodeBlock.of("%N = %T(guestAdapter, mismatchHandler)", dependency.type.flatName, schema.protocolWidgetFactoryType(dependency)))
                 }
+                // A root with optional groups (MS4-03): a guest has every group, so no widget is absent.
+                if (schema.acceptsAbsentGroups) {
+                  add(CodeBlock.of("absentWidget = { throw %T(%S) }", Stdlib.AssertionError, "a guest has every group"))
+                }
               }
               addStatement("return %T(\n%L)", schema.getWidgetSystemType(), arguments.joinToCode(separator = ",\n"))
             }

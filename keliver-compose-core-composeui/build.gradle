@@ -19,8 +19,8 @@ kotlin {
     commonMain {
       dependencies {
         api projects.keliverComposeCoreWidget
-        // keliverComposeWidgetSystem(): the generated root's widget system.
-        api projects.keliverComposeRootWidget
+        // No root here: keliverComposeWidgetSystem() is keliver-compose-root-composeui's, so a
+        // group's host module never depends on another group's (review of #313, M1).
         implementation projects.keliverWidgetComposeui
         implementation libs.jetbrains.compose.foundation
         // Animated references and AnimatedVisibility call the real animation API.
@@ -28,9 +28,14 @@ kotlin {
         implementation libs.jetbrains.compose.material3
         implementation libs.jetbrains.compose.material.icons.core
         implementation libs.jetbrains.compose.material.icons.extended
-        implementation libs.coil.compose.full
+        // No Coil: AsyncImage is the coil group's (keliver-compose-coil-composeui, MS4-03).
         implementation libs.jetbrains.compose.ui
       }
+    }
+    // The applier and converters that core shares with a based group's renderers (coil's) are
+    // public for generated code only (@RedwoodCodegenApi); core's own code uses them throughout.
+    configureEach {
+      languageSettings.optIn('dev.keliver.RedwoodCodegenApi')
     }
     // The same-source samples, harness and pixel tests (SameSourceTest), and NF1's host tests
     // (LazyScrollTest; OneStatePerWidgetTest and PressHostTest, which are JVM-only in the
@@ -46,8 +51,10 @@ kotlin {
         implementation libs.jetbrains.compose.material3
         implementation libs.jetbrains.compose.material.icons.core
         implementation libs.jetbrains.compose.material.icons.extended
-        implementation libs.coil.compose.full
         implementation projects.keliverComposeCoreCompose
+        // The tests' own root system (TestRoot.kt): the root's widget system with core's renderers.
+        // On the test classpath only, so core's main code never depends on the root.
+        implementation projects.keliverComposeRootWidget
         implementation projects.keliverComposeRootProtocolGuest
         implementation projects.keliverComposeRootProtocolHost
         implementation projects.keliverProtocolGuest
@@ -67,6 +74,7 @@ kotlin {
         implementation libs.jetbrains.compose.ui.test
         implementation rootProject.ext.skikoHostRuntime()
         implementation projects.keliverComposeCoreCompose
+        implementation projects.keliverComposeRootWidget
         implementation projects.keliverComposeRootProtocolGuest
         implementation projects.keliverComposeRootProtocolHost
         implementation projects.keliverProtocolGuest

@@ -1,0 +1,9 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-compose-root-composeui>
+final fun dev.keliver.compose.root.composeui/keliverComposeWidgetSystem(dev.keliver.compose.coil.widget/KeliverComposeCoilWidgetFactory<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>>? = ...): dev.keliver.compose.root.widget/KeliverComposeWidgetSystem<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.keliver.compose.root.composeui/keliverComposeWidgetSystem|keliverComposeWidgetSystem(dev.keliver.compose.coil.widget.KeliverComposeCoilWidgetFactory<kotlin.Function3<androidx.compose.ui.Modifier,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>>?){}[0]

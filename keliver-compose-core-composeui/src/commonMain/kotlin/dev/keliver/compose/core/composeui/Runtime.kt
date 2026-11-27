@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import dev.keliver.Modifier as KeliverModifier
+import dev.keliver.RedwoodCodegenApi
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.keliverVisualModifierApplier
 
@@ -31,8 +32,12 @@ public interface GeneratedWidget {
   public var modifierEventSink: ((Int) -> Unit)?
 }
 
-/** A property the guest has not sent yet (Redwood sends every property before the first frame). */
-internal object Unset
+/**
+ * A property the guest has not sent yet (Redwood sends every property before the first frame).
+ * Public for generated code only: a based group's renderers (coil's, MS4-03) use it too.
+ */
+@RedwoodCodegenApi
+public object Unset
 
 /**
  * A generated container's children (docs/COMPOSE_GENERATOR_DESIGN.md §9). Each child's scoped

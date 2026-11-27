@@ -26,17 +26,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.keliver.compose.core.compose.ExtraLazyItem
 import dev.keliver.compose.wire.KeliverGeneratedApi
-import dev.keliver.lazylayout.compose.LazyListState as WindowState
-import dev.keliver.lazylayout.compose.LoadingStrategy
-import dev.keliver.lazylayout.compose.ScrollOptimizedLoadingStrategy
 
 /*
  * The guest's `LazyListScope` (docs/COMPOSE_GENERATOR_DESIGN.md §16), written by hand: Compose's
  * DSL, with Compose's signatures, behind which the generated `LazyColumn` and `LazyRow` compose only
- * a window of items through the existing lazy-layout windowing (keliver-lazylayout-compose's
- * loading strategy). Each composed item travels as one `ExtraLazyItem` node whose children the host
- * renders inside the real `LazyListScope.items` lambda, so several root composables in one item
- * and `LazyItemScope` modifiers (`fillParentMaxWidth`, `animateItem`) behave as in Compose.
+ * a window of items through the lazy-layout windowing (the loading strategy in LoadingStrategy.kt,
+ * copied from keliver-lazylayout-compose by MS4-03). Each composed item travels as one
+ * `ExtraLazyItem` node whose children the host renders inside the real `LazyListScope.items`
+ * lambda, so several root composables in one item and `LazyItemScope` modifiers
+ * (`fillParentMaxWidth`, `animateItem`) behave as in Compose.
  */
 
 /** The receiver scope of `LazyColumn` and `LazyRow`'s content, as `androidx.compose.foundation.lazy.LazyListScope`. */
@@ -162,8 +160,8 @@ public class LazyWindow internal constructor(
     ScrollOptimizedLoadingStrategy(),
     if (LazyWindowSizing.viewportSized) viewports.rows(site) else null,
   )
-  private val window = WindowState(strategy).apply {
-    if (state.firstVisibleItemIndex > 0) programmaticScroll(state.firstVisibleItemIndex, animated = false, clobberUserScroll = false)
+  private val window = LazyWindowState(strategy).apply {
+    if (state.firstVisibleItemIndex > 0) programmaticScroll(state.firstVisibleItemIndex, clobberUserScroll = false)
   }
   private var count = 0
   private var range: IntRange = IntRange.EMPTY
@@ -183,7 +181,7 @@ public class LazyWindow internal constructor(
     state.pendingScroll?.let { c ->
       if (c.id != lastCommand) {
         lastCommand = c.id
-        window.programmaticScroll(c.index, c.animated)
+        window.programmaticScroll(c.index)
       }
     }
     val range = window.loadRange(intervals.count)

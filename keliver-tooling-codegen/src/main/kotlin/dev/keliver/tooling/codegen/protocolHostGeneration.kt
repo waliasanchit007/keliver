@@ -276,6 +276,8 @@ internal fun generateProtocolNode(
   val widgetSystem = generatingSchema.getWidgetSystemType().parameterizedBy(typeVariableW)
   val widgetProtocolType = generatingSchema.widgetHostProtocolType(widget, widgetSchema)
   val widgetNodeType = widgetProtocolType.peerClass("${widget.type.flatName}ProtocolNode")
+  // A widget of a group the generating root's host may leave out (MS4-03).
+  val absentable = generatingSchema.acceptsAbsentGroups && widgetSchema.type != generatingSchema.type
 
   var nextSerializerId = 0
   val serializerIds = mutableMapOf<TypeName, Int>()
@@ -362,6 +364,16 @@ internal fun generateProtocolNode(
             )
           }
         }
+        .apply {
+          if (absentable) {
+            addProperty(
+              PropertySpec.builder("absentReported", BOOLEAN, PRIVATE)
+                .mutable(true)
+                .initializer("false")
+                .build(),
+            )
+          }
+        }
         .addFunction(
           FunSpec.builder("createNode")
             .addModifiers(OVERRIDE)
@@ -370,7 +382,30 @@ internal fun generateProtocolNode(
             .addParameter("widgetSystem", RedwoodWidget.WidgetSystem.parameterizedBy(typeVariableW))
             .returns(ProtocolHost.ProtocolNode.parameterizedBy(typeVariableW))
             .addStatement("val schemaWidgetSystem = widgetSystem as %T", widgetSystem)
-            .addStatement("val widget = schemaWidgetSystem.%L.%L()", widgetSchema.type.flatName, widget.type.flatName)
+            .apply {
+              if (absentable) {
+                // MS4-03: a host built without this widget's group reports the tag as unknown once
+                // (per protocol, so once per code session) and keeps an absent node in its place,
+                // so the guest's later changes to it, and its children, still find a node.
+                addStatement("val factory = schemaWidgetSystem.%LOrNull", widgetSchema.type.flatName)
+                beginControlFlow("if (factory == null)")
+                beginControlFlow("if (!absentReported)")
+                addStatement("absentReported = true")
+                addStatement("mismatchHandler.onUnknownWidget(%T(%L))", Protocol.WidgetTag, widget.tag)
+                endControlFlow()
+                addStatement(
+                  "return %T(id, %T(%L), %S, schemaWidgetSystem.absentWidget(), childrenTags)",
+                  ProtocolHost.AbsentProtocolNode,
+                  Protocol.WidgetTag,
+                  widget.tag,
+                  widget.type.flatName,
+                )
+                endControlFlow()
+                addStatement("val widget = factory.%L()", widget.type.flatName)
+              } else {
+                addStatement("val widget = schemaWidgetSystem.%L.%L()", widgetSchema.type.flatName, widget.type.flatName)
+              }
+            }
             .addStatement("return %T(id, widget, this)", widgetNodeType)
             .build(),
         )
