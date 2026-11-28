@@ -41,12 +41,23 @@ if grep -qx "$MS4_PROBE_ON" "$MS4_MAIN"; then
       [ "$MS4_N" = 1 ] && printf '%s' "$MS4_LINES" | grep -q "report: schema-mismatch sequence=$MS4_SEQ reason=schema-mismatch\$" \
         && ok "S3: one unknown modifier tag on two widgets, one schema-mismatch report on the device (sequence $MS4_SEQ)" \
         || bad "S3: $MS4_N schema-mismatch reports in the host's log, expected one for sequence $MS4_SEQ: $(printf '%s' "$MS4_LINES" | head -3 | tr '\n' ' ')"
-      # S4: the relay received exactly that one (POSTed after the log line; give it a moment).
-      sleep 5
-      curl -s -m 5 "http://localhost:$RELAY_PORT/reports" > "$EV/relay-reports-mismatch.json"
-      python3 "$HERE/ms4-04/mismatch_reports.py" "$EV/relay-reports-mismatch.json" android "$MS4_SEQ" > "$EV/relay-reports-mismatch.txt" 2>&1 \
-        && ok "S4: the relay's /report took exactly one schema-mismatch report, for v$MS4_SEQ (GET /reports)" \
-        || bad "S4: $(tail -1 "$EV/relay-reports-mismatch.txt")"
+      # S4: the relay received exactly that one. The host POSTs it in the background after the log
+      # line, best effort, so the relay is asked for up to 30 s.
+      MS4_RELAY=1
+      for _ in $(seq 1 10); do
+        MS4_HTTP="$(curl -s -m 5 -o "$EV/relay-reports-mismatch.json" -w '%{http_code}' "http://localhost:$RELAY_PORT/reports")"
+        # Only a 200 is a summary (a refusal or a failure is JSON too, and would read as "no reports").
+        [ "$MS4_HTTP" = 200 ] && python3 "$HERE/ms4-04/mismatch_reports.py" "$EV/relay-reports-mismatch.json" android "$MS4_SEQ" > "$EV/relay-reports-mismatch.txt" 2>&1 \
+          && { MS4_RELAY=0; break; }
+        sleep 3
+      done
+      if [ "$MS4_RELAY" = 0 ]; then
+        ok "S4: the relay's /report took exactly one schema-mismatch report, for v$MS4_SEQ (GET /reports)"
+      else
+        # Why not: the host logs a report it could not send (KeliverHost.postReport's notSent).
+        adb -s "$SERIAL" logcat -d -v threadtime > "$EV/logcat-prod-mismatch-after.txt"
+        bad "S4: GET /reports answered ${MS4_HTTP:-none}: $(head -c 300 "$EV/relay-reports-mismatch.json" | tr '\n' ' '); $(tail -1 "$EV/relay-reports-mismatch.txt" 2>/dev/null); the relay's log: $(tail -3 "$EV/relay-A-ms4-04.log" | tr '\n' ' '); the host:$(tr -d '\r' < "$EV/logcat-prod-mismatch-after.txt" | grep -E "$HOST_TAG: report( not sent)?:" | sed 's/^.*'"$HOST_TAG"': //' | tr '\n' ';')"
+      fi
     else
       bad "S1: the probe's bundle did not publish: $(tail -2 "$EV/publish-mismatch.log" | tr '\n' ' ')"
     fi

@@ -21,6 +21,7 @@ import com.example.redwood.testapp.treehouse.HostApi
 import dev.keliver.treehouse.EventLog
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
@@ -77,6 +78,10 @@ internal object JvmHeap : Heap {
       }
       instance is StateFlow<*> -> listOf(
         Edge("value", instance.value),
+      )
+      // An atomic reference (SchemaMismatches' set) holds only its current value.
+      instance is AtomicReference<*> -> listOf(
+        Edge("value", instance.get()),
       )
 
       // Don't traverse further on types that are unlikely to contain application-scoped data.
