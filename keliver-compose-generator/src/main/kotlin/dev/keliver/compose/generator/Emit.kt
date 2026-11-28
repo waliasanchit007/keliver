@@ -112,7 +112,19 @@ class Emitter(
   private val defaults: DefaultsMirror? = null,
   /** A scope's Compose supertypes (`FlowRowScope` → `RowScope`), so the guest's has them too. */
   private val supertypes: (String) -> List<String> = { emptyList() },
+  /** MS4-07: the Compose index the generic error stubs of [Config.includePackages] read, or null for none. */
+  private val index: GenericIndex? = null,
 ) {
+  /** MS4-07: mirror package → names the guest declares outside this generation (hand-written files, the values module). */
+  var declaredElsewhere: Map<String, Set<String>> = emptyMap()
+
+  /** MS4-07: the generic and curated error stubs of the last [guest] call, for the counts. */
+  var errorStubs: List<ErrorStubs.Stub> = emptyList()
+
+  /** The generic stubs not written (no guest receiver type, or the standard library has the name): `pkg.name (why)`. */
+  var skippedStubs: List<String> = emptyList()
+    private set
+
   private val generated = plans.filterIsInstance<Plan.Generated>()
   private val widgets = generated.filter { it.decl.kind == DeclKind.WIDGET }
   private val modifiers = generated.filter { it.decl.kind != DeclKind.WIDGET }
@@ -219,6 +231,24 @@ class Emitter(
     fun out(pkg: String): StringBuilder = files.getOrPut(pkg) { StringBuilder() }
     fun imports(pkg: String): MutableSet<String> = importsByPkg.getOrPut(pkg) { mutableSetOf() }
 
+    // Placeholders for the types only error stubs name (§11).
+    val placeholders = plans.flatMap { p ->
+      val names = when (p) {
+        is Plan.ErrorStub -> p.params
+        is Plan.Generated -> p.dropped
+      }.flatMap { unmappedTypes(it.param.type) }
+      names
+    }.distinct().sorted()
+    // MS4-07: the generic stubs' own list of names this guest already declares: the scopes, the placeholders and what is elsewhere.
+    val generic = if (index != null && (config.includePackages.isNotEmpty() || config.extraStubs.isNotEmpty())) {
+      val taken = declaredElsewhere.mapValues { it.value.toMutableSet() }.toMutableMap()
+      for (s in scopes) taken.getOrPut(mirrorPackage(packageOf(s))) { mutableSetOf() }.add(s.substringAfterLast('.'))
+      for (n in placeholders) taken.getOrPut(mirrorPackage(packageOf(n))) { mutableSetOf() }.add(n.removePrefix(packageOf(n) + ".").substringBefore('.'))
+      ErrorStubs(config, index, plans, taken, scopes)
+    } else {
+      null
+    }
+
     for (p in plans) {
       val d = p.decl
       if (d.kind == DeclKind.SCOPED_MODIFIER) continue // emitted inside the scope interfaces below
@@ -237,6 +267,7 @@ class Emitter(
         is Plan.ErrorStub -> sb.append(errorStub(d, p.params, p.message, imports(d.mirrorPkg)))
       }
     }
+    val memberStubs = mutableListOf<ErrorStubs.Stub>()
     // Scope interfaces, with their member modifiers (RowScope.weight …).
     for (scope in scopes) {
       val pkg = mirrorPackage(packageOf(scope))
@@ -258,21 +289,24 @@ class Emitter(
           is Plan.ErrorStub -> sb.append(errorStub(p.decl, p.params, p.message, imports(pkg), member = true).prependIndent("  ")).append('\n')
         }
       }
+      val members = generic?.scopeMembers(scope).orEmpty()
+      members.forEach { sb.append(it.text.trimEnd().prependIndent("  ")).append("\n\n") }
+      memberStubs += members
       sb.append("}\n\n@PublishedApi\ninternal object ${simple}Instance : $simple\n\n")
     }
-    // Placeholders for the types only error stubs name (§11).
-    val placeholders = plans.flatMap { p ->
-      val names = when (p) {
-        is Plan.ErrorStub -> p.params
-        is Plan.Generated -> p.dropped
-      }.flatMap { unmappedTypes(it.param.type) }
-      names
-    }.distinct().sorted()
     for ((pkg, group) in placeholders.groupBy { packageOf(it) }) {
       val sb = out(mirrorPackage(pkg))
       val roots = group.map { it.removePrefix("$pkg.") }
       sb.append(placeholderClasses(roots))
     }
+    // MS4-07: a stub for every public declaration of an included package the group does not generate (design §11).
+    val topStubs = generic?.stubs().orEmpty()
+    for ((pkg, group) in topStubs.groupBy { it.pkg }) {
+      val sb = out(pkg)
+      group.forEach { sb.append(it.text) }
+    }
+    errorStubs = topStubs + memberStubs
+    skippedStubs = generic?.skipped.orEmpty().distinct()
     // Icons (the icon group's allowlist).
     for (icon in config.icons) {
       val theme = icon.substringBeforeLast('.')

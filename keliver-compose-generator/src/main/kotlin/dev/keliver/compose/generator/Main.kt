@@ -47,6 +47,25 @@ fun loadConfig(file: File): Config {
     base = o["base"]?.jsonPrimitive?.content,
     sharedRuntime = o["sharedRuntime"]?.jsonPrimitive?.boolean ?: false,
     frameRules = o["frameRules"]?.jsonObject?.let(::loadFrameRules),
+    includePackages = strings("includePackages"),
+    stubMessages = o["stubMessages"]?.jsonArray?.map {
+      val m = it.jsonObject
+      StubMessage(
+        match = m["match"]?.jsonArray?.map { s -> s.jsonPrimitive.content }.orEmpty(),
+        types = m["types"]?.jsonArray?.map { s -> s.jsonPrimitive.content }.orEmpty(),
+        message = m.getValue("message").jsonPrimitive.content,
+        kind = m["kind"]?.jsonPrimitive?.content ?: "curated",
+      ).also { s -> require(s.match.isNotEmpty() || s.types.isNotEmpty()) { "stubMessages: an entry needs match or types: ${s.message}" } }
+    }.orEmpty(),
+    extraStubs = o["extraStubs"]?.jsonArray?.map {
+      val e = it.jsonObject
+      ExtraStub(
+        name = e.getValue("name").jsonPrimitive.content,
+        kind = e["kind"]?.jsonPrimitive?.content ?: "fun",
+        params = e["params"]?.jsonArray?.map { s -> s.jsonPrimitive.content }.orEmpty(),
+        message = e.getValue("message").jsonPrimitive.content,
+      )
+    }.orEmpty(),
   ).also { c ->
     val unknown = c.animated.filter { it !in c.declarations }
     require(unknown.isEmpty()) { "animated: not in declarations: $unknown" }
@@ -78,12 +97,25 @@ class Output(
   val lock: Lock,
   /** ED0: the editor canvas's interpreter (portal-compose-render), relative path → text. */
   val editorRender: Map<String, String> = emptyMap(),
+  /** MS4-07: the error stubs written into the guest for included packages (counts by class), for the report. */
+  val errorStubs: List<ErrorStubs.Stub> = emptyList(),
+  /** The generic stubs not written, and why (no guest receiver type; the standard library has the name). */
+  val skippedStubs: List<String> = emptyList(),
 )
 
 /** The package of the editor canvas's generated interpreter (ED0, docs/ED0_SPIKE.md). */
 const val EDITOR_RENDER_PACKAGE = "dev.keliver.portal.compose.render"
 
-fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List<File>, factoryOwner: Lock? = null): Output {
+fun generate(
+  config: Config,
+  oldLock: Lock,
+  classpath: List<File>,
+  sources: List<File>,
+  factoryOwner: Lock? = null,
+  /** MS4-07: the guest module's source roots (for names it declares by hand), and the values module's. */
+  guestRoots: List<File> = emptyList(),
+  valuesRoots: List<File> = emptyList(),
+): Output {
   val api = ApiReader(classpath)
   val src = SourceReader(sources)
   val decls = config.declarations.map { api.find(it).also(src::complete) }
@@ -118,8 +150,20 @@ fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List
     require(made.isEmpty()) { "${config.group}: a group with a base cannot name *Defaults factories yet: $made" }
   }
   FrameRuleEmitter(config, plans.filterIsInstance<Plan.Generated>()).checkExceptions()
-  val e = Emitter(config, plans, factories, defaults, api::supertypes)
-  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)))
+  // MS4-07: the generic error stubs read the whole Compose index, and skip names the guest already declares
+  // (the hand-written files beside the generated ones, and the values this run writes).
+  val wantsStubs = config.includePackages.isNotEmpty() || config.extraStubs.isNotEmpty()
+  val e = Emitter(config, plans, factories, defaults, api::supertypes, if (wantsStubs) GenericIndex(classpath) else null)
+  val values = e.values()
+  if (wantsStubs) {
+    val names = scanDeclaredNames(guestRoots, setOf("Generated.kt", GENERATED_DEFAULTS)).mapValues { it.value.toMutableSet() }.toMutableMap()
+    for ((path, text) in values) if (path.substringAfterLast('/') == GENERATED_DEFAULTS) declaredNames(text, names)
+    // The values module's other files (hand-written) are on disk beside it.
+    for ((pkg, n) in scanDeclaredNames(valuesRoots, setOf(GENERATED_DEFAULTS))) names.getOrPut(pkg) { mutableSetOf() }.addAll(n)
+    e.declaredElsewhere = names
+  }
+  val guest = e.guest()
+  return Output(mapOf(e.schema()), guest, mapOf(e.host()), values, e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)), e.errorStubs, e.skippedStubs)
 }
 
 fun main(argv: Array<String>) {
@@ -165,7 +209,15 @@ fun runGroup(args: List<String>): List<String> {
   require(factoryOwner == null || "--out-values" !in args) { "--factories-lock: only the group that owns the factory tags writes keliver-compose-values" }
   val classpath = arg("--classpath").split(File.pathSeparator).map(::File)
   val sources = arg("--sources").split(File.pathSeparator).map(::File)
-  val out = generate(config, oldLock, classpath, sources, factoryOwner)
+  val out = generate(
+    config,
+    oldLock,
+    classpath,
+    sources,
+    factoryOwner,
+    guestRoots = listOf(File(arg("--out-guest"))),
+    valuesRoots = if ("--out-values" in args) listOf(File(arg("--out-values"))) else emptyList(),
+  )
 
   // A group's generation and check touch only that group's own files (MS4-41, G0). Each root names
   // the file it holds of this group's: the schema, guest and host roots are the group's own modules
@@ -200,6 +252,7 @@ fun runGroup(args: List<String>): List<String> {
       file.writeText(text)
     }
     println("generated group ${config.group}: level ${out.lock.level}, ${out.lock.widgets.size} widgets, ${out.lock.modifiers.size} modifiers")
+    if (out.errorStubs.isNotEmpty()) println("  error stubs: ${stubCounts(out.errorStubs)}; ${out.skippedStubs.size} skipped (no guest receiver type, or a standard-library name)")
   }
   return problems
 }

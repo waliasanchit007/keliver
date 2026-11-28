@@ -157,3 +157,51 @@ public interface LazyItemScope {
 @PublishedApi
 internal object LazyItemScopeInstance : LazyItemScope
 
+@Deprecated("Keliver: `LazyLayoutScrollScope` (function in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun LazyLayoutScrollScope(state: Any?, scrollScope: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LazyListPrefetchStrategy` (function in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun LazyListPrefetchStrategy(nestedPrefetchItemCount: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `items` (function in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.lazy.LazyListScope.items(items: Any?, key: Any? = null, contentType: Any? = null, itemContent: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `itemsIndexed` (function in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.lazy.LazyListScope.itemsIndexed(items: Any?, key: Any? = null, contentType: Any? = null, itemContent: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberLazyListState` (composable function in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun rememberLazyListState(initialFirstVisibleItemIndex: Any?, initialFirstVisibleItemScrollOffset: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `rememberLazyListState` (composable function in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun rememberLazyListState(initialFirstVisibleItemIndex: Any?, initialFirstVisibleItemScrollOffset: Any? = null, prefetchStrategy: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `LazyListItemInfo` (class in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface LazyListItemInfo
+
+@Deprecated("Keliver: `LazyListLayoutInfo` (class in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface LazyListLayoutInfo
+
+@Deprecated("Keliver: `LazyListPrefetchResultScope` (class in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface LazyListPrefetchResultScope
+
+@Deprecated("Keliver: `LazyListPrefetchScope` (class in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface LazyListPrefetchScope
+
+@Deprecated("Keliver: `LazyListPrefetchStrategy` (class in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface LazyListPrefetchStrategy
+
+@Deprecated("Keliver: `LazyScopeMarker` (class in `androidx.compose.foundation.lazy`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public annotation class LazyScopeMarker
+

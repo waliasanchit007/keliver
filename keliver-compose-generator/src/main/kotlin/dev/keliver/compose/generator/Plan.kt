@@ -87,6 +87,16 @@ class Config(
   val sharedRuntime: Boolean = false,
   /** NF5 A1: the group's frame rules, or null for none (FrameRules.kt). */
   val frameRules: FrameRulesConfig? = null,
+  /**
+   * MS4-07: Compose packages the group includes whole. Each public declaration of one that the group
+   * does not generate becomes an error stub (ErrorStubs.kt), so no public name there is an
+   * "unresolved reference" in a guest.
+   */
+  val includePackages: List<String> = emptyList(),
+  /** MS4-07: curated messages for those stubs, first match wins (by name, or by a type in the signature). */
+  val stubMessages: List<StubMessage> = emptyList(),
+  /** MS4-07: declarations the desktop jars lack (Android-only) that still fail with a message. */
+  val extraStubs: List<ExtraStub> = emptyList(),
 ) {
   /** The Compose versions read (for the schema's header), or null. */
   var input: String? = null

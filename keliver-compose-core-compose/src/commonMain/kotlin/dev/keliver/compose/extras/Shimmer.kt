@@ -16,6 +16,7 @@
 package dev.keliver.compose.extras
 
 import androidx.compose.runtime.Composable
+import dev.keliver.compose.KeliverExperimentalApi
 import dev.keliver.compose.core.compose.ExtraShimmer
 import dev.keliver.compose.internal.splitModifierEvents
 import dev.keliver.compose.ui.Modifier
@@ -26,6 +27,7 @@ import dev.keliver.compose.ui.graphics.Shape
  * A Keliver extra, not Compose API: an animated skeleton placeholder the host draws with an
  * infinite transition. Size it with modifiers, as a Box.
  */
+@KeliverExperimentalApi
 @Composable
 public fun Shimmer(modifier: Modifier = Modifier, shape: Shape = RectangleShape) {
   val split = splitModifierEvents(modifier)

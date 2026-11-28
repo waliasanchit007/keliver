@@ -8,3 +8,27 @@ package dev.keliver.compose.foundation.interaction
 /** Placeholder: Compose's `MutableInteractionSource` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class MutableInteractionSource private constructor()
 
+@Deprecated("Keliver: `DragInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface DragInteraction
+
+@Deprecated("Keliver: `FocusInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FocusInteraction
+
+@Deprecated("Keliver: `HoverInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface HoverInteraction
+
+@Deprecated("Keliver: `Interaction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface Interaction
+
+@Deprecated("Keliver: `InteractionSource` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface InteractionSource
+
+@Deprecated("Keliver: `PressInteraction` (class in `androidx.compose.foundation.interaction`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface PressInteraction
+

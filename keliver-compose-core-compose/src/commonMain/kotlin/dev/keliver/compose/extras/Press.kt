@@ -15,6 +15,7 @@
  */
 package dev.keliver.compose.extras
 
+import dev.keliver.compose.KeliverExperimentalApi
 import dev.keliver.compose.core.compose.ExtraPressImpl
 import dev.keliver.compose.internal.ModifierEventPairElement
 import dev.keliver.compose.ui.Modifier
@@ -40,5 +41,6 @@ public const val PRESS_HOST_FEATURE: String = "keliver.press@1"
  * keep `clickable` for the action, and use this to start work the click is likely to need
  * (keliver-nav's pre-composition of the screen the click opens).
  */
+@KeliverExperimentalApi
 public fun Modifier.pressSignal(onPress: () -> Unit, onCancel: () -> Unit): Modifier =
   then(ModifierEventPairElement(onPress, onCancel) { press, cancel -> ExtraPressImpl(onPress = press, onCancel = cancel) })

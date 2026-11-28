@@ -296,6 +296,10 @@ public interface ColumnScope {
     return then(GenColumnScopeAlign1Impl(alignment = alignment))
   }
   
+  @Deprecated("Keliver: `alignBy` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+  @dev.keliver.compose.KeliverErrorStub
+  public fun dev.keliver.compose.ui.Modifier.alignBy(alignmentLine: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
 }
 
 @PublishedApi
@@ -304,6 +308,10 @@ internal object ColumnScopeInstance : ColumnScope
 /** The guest's `androidx.compose.foundation.layout.FlowRowScope`. */
 @androidx.compose.runtime.Immutable
 public interface FlowRowScope : dev.keliver.compose.foundation.layout.RowScope {
+  @Deprecated("Keliver: `fillMaxRowHeight` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+  @dev.keliver.compose.KeliverErrorStub
+  public fun dev.keliver.compose.ui.Modifier.fillMaxRowHeight(fraction: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
 }
 
 @PublishedApi
@@ -329,6 +337,14 @@ public interface RowScope {
     return then(GenRowScopeAlign1Impl(alignment = alignment))
   }
   
+  @Deprecated("Keliver: `alignBy` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+  @dev.keliver.compose.KeliverErrorStub
+  public fun dev.keliver.compose.ui.Modifier.alignBy(alignmentLine: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+  @Deprecated("Keliver: `alignByBaseline` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+  @dev.keliver.compose.KeliverErrorStub
+  public fun dev.keliver.compose.ui.Modifier.alignByBaseline(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
 }
 
 @PublishedApi
@@ -339,4 +355,452 @@ public class FlowRowOverflow private constructor()
 
 /** Placeholder: Compose's `WindowInsets` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class WindowInsets private constructor()
+
+@Deprecated("Keliver: `BoxWithConstraints` (composable function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun BoxWithConstraints(modifier: Any? = null, contentAlignment: Any? = null, propagateMinConstraints: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ContextualFlowColumn` (composable function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun ContextualFlowColumn(itemCount: Any?, modifier: Any? = null, verticalArrangement: Any? = null, horizontalArrangement: Any? = null, itemHorizontalAlignment: Any? = null, maxItemsInEachColumn: Any? = null, maxLines: Any? = null, overflow: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `ContextualFlowRow` (composable function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun ContextualFlowRow(itemCount: Any?, modifier: Any? = null, horizontalArrangement: Any? = null, verticalArrangement: Any? = null, itemVerticalAlignment: Any? = null, maxItemsInEachRow: Any? = null, maxLines: Any? = null, overflow: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlexBox(modifier: Any? = null, config: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlexBoxConfig(first: Any?, second: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlexBoxConfig(first: Any?, second: Any?, third: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlexBoxConfig(vararg configs: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlexConfig(first: Any?, second: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlexConfig(first: Any?, second: Any?, third: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlexConfig(vararg configs: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FlowColumn` (composable function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlowColumn(modifier: Any? = null, verticalArrangement: Any? = null, horizontalArrangement: Any? = null, itemHorizontalAlignment: Any? = null, maxItemsInEachColumn: Any? = null, maxLines: Any? = null, overflow: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FlowColumn` (composable function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlowColumn(modifier: Any? = null, verticalArrangement: Any? = null, horizontalArrangement: Any? = null, itemHorizontalAlignment: Any? = null, maxItemsInEachColumn: Any? = null, maxLines: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `FlowRow` (composable function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun FlowRow(modifier: Any?, horizontalArrangement: Any? = null, verticalArrangement: Any? = null, itemVerticalAlignment: Any? = null, maxItemsInEachRow: Any? = null, maxLines: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun Grid(config: Any?, modifier: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PaddingValues` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun PaddingValues(all: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PaddingValues` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun PaddingValues(horizontal: Any?, vertical: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `PaddingValues` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun PaddingValues(start: Any?, top: Any? = null, end: Any? = null, bottom: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `WindowInsets` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun WindowInsets(left: Any?, top: Any? = null, right: Any? = null, bottom: Any? = null): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `absoluteOffset` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.absoluteOffset(x: Any? = null, y: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.absoluteOffset(offset: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `absolutePadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.absolutePadding(left: Any? = null, top: Any? = null, right: Any? = null, bottom: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `add` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.WindowInsets.add(insets: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `asPaddingValues` (composable function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.WindowInsets.asPaddingValues(): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.WindowInsets.asPaddingValues(density: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `aspectRatio` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.aspectRatio(ratio: Any?, matchHeightConstraintsFirst: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `calculateEndPadding` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.PaddingValues.calculateEndPadding(layoutDirection: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `calculateStartPadding` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.PaddingValues.calculateStartPadding(layoutDirection: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `captionBarPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.captionBarPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `consumeWindowInsets` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.consumeWindowInsets(insets: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `defaultMinSize` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.defaultMinSize(minWidth: Any? = null, minHeight: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `displayCutoutPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.displayCutoutPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `exclude` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.WindowInsets.exclude(insets: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `fitInside` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.fitInside(rulers: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `fitOutside` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.fitOutside(rulers: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `height` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.height(intrinsicSize: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `heightIn` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.heightIn(min: Any? = null, max: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `imePadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.imePadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `mandatorySystemGesturesPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.mandatorySystemGesturesPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `minus` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.PaddingValues.minus(other: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `navigationBarsPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.navigationBarsPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.offset(offset: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `onConsumedWindowInsetsChanged` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.onConsumedWindowInsetsChanged(block: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `only` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.WindowInsets.only(sides: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `paddingFrom` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.paddingFrom(alignmentLine: Any?, before: Any? = null, after: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `paddingFromBaseline` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.paddingFromBaseline(top: Any? = null, bottom: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `plus` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.PaddingValues.plus(other: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `recalculateWindowInsets` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.recalculateWindowInsets(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `requiredHeight` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.requiredHeight(intrinsicSize: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `requiredHeightIn` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.requiredHeightIn(min: Any? = null, max: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `requiredSize` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.requiredSize(size: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `requiredSize` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.requiredSize(width: Any?, height: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `requiredSizeIn` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.requiredSizeIn(minWidth: Any? = null, minHeight: Any? = null, maxWidth: Any? = null, maxHeight: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `requiredWidth` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.requiredWidth(intrinsicSize: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `requiredWidthIn` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.requiredWidthIn(min: Any? = null, max: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `safeContentPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.safeContentPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `safeDrawingPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.safeDrawingPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `safeGesturesPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.safeGesturesPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `sizeIn` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.sizeIn(minWidth: Any? = null, minHeight: Any? = null, maxWidth: Any? = null, maxHeight: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `statusBarsPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.statusBarsPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `systemBarsPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.systemBarsPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `systemGesturesPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.systemGesturesPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `union` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.foundation.layout.WindowInsets.union(insets: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `visible` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.visible(visible: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `waterfallPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.waterfallPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `width` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.width(intrinsicSize: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `widthIn` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.widthIn(min: Any? = null, max: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `windowInsetsBottomHeight` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.windowInsetsBottomHeight(insets: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `windowInsetsEndWidth` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.windowInsetsEndWidth(insets: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `windowInsetsPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.windowInsetsPadding(insets: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `windowInsetsStartWidth` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.windowInsetsStartWidth(insets: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `windowInsetsTopHeight` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.windowInsetsTopHeight(insets: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `wrapContentHeight` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.wrapContentHeight(align: Any? = null, unbounded: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `wrapContentSize` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.wrapContentSize(align: Any? = null, unbounded: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `wrapContentWidth` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.Modifier.wrapContentWidth(align: Any? = null, unbounded: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `BoxWithConstraintsScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface BoxWithConstraintsScope
+
+@Deprecated("Keliver: `ComposeFoundationLayoutFlags` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public object ComposeFoundationLayoutFlags
+
+@Deprecated("Keliver: `ContextualFlowColumnOverflow` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class ContextualFlowColumnOverflow private constructor()
+
+@Deprecated("Keliver: `ContextualFlowColumnOverflowScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface ContextualFlowColumnOverflowScope
+
+@Deprecated("Keliver: `ContextualFlowColumnScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface ContextualFlowColumnScope
+
+@Deprecated("Keliver: `ContextualFlowRowOverflow` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class ContextualFlowRowOverflow private constructor()
+
+@Deprecated("Keliver: `ContextualFlowRowOverflowScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface ContextualFlowRowOverflowScope
+
+@Deprecated("Keliver: `ContextualFlowRowScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface ContextualFlowRowScope
+
+@Deprecated("Keliver: `ExperimentalFlexBoxApi` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public annotation class ExperimentalFlexBoxApi
+
+@Deprecated("Keliver: `ExperimentalGridApi` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public annotation class ExperimentalGridApi
+
+@Deprecated("Keliver: `ExperimentalLayoutApi` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public annotation class ExperimentalLayoutApi
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlexAlignContent private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlexAlignItems private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlexAlignSelf private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlexBasis private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlexBoxConfig
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlexBoxConfigScope
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlexBoxScope
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlexConfig
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlexConfigScope
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlexDirection private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlexJustifyContent private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlexWrap private constructor()
+
+@Deprecated("Keliver: `FlowColumnOverflow` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlowColumnOverflow private constructor()
+
+@Deprecated("Keliver: `FlowColumnOverflowScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlowColumnOverflowScope
+
+@Deprecated("Keliver: `FlowColumnScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlowColumnScope
+
+@Deprecated("Keliver: `FlowLayoutOverflow` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class FlowLayoutOverflow private constructor()
+
+@Deprecated("Keliver: `FlowRowOverflowScope` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface FlowRowOverflowScope
+
+@Deprecated("Keliver: `Fr` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class Fr private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface GridConfigurationScope
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class GridFlow private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface GridScope
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class GridTrackSize private constructor()
+
+@Deprecated("Keliver: not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x once Compose stabilises them. For now use Row, Column, Box or FlowRow.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public interface GridTrackSpec
+
+@Deprecated("Keliver: `IntrinsicSize` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class IntrinsicSize private constructor()
+
+@Deprecated("Keliver: `LayoutScopeMarker` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public annotation class LayoutScopeMarker
+
+@Deprecated("Keliver: `MutableWindowInsets` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class MutableWindowInsets private constructor()
+
+@Deprecated("Keliver: `WindowInsetsSides` (class in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public class WindowInsetsSides private constructor()
 

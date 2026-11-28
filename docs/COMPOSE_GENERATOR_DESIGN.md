@@ -541,8 +541,34 @@ a Gate B item. Results: [`GATE_A_VERDICT.md`](GATE_A_VERDICT.md).
   serializers cannot take one); an expression default in a modifier travels as the value plus an
   `…IsDefault` flag rather than as `null`.
 - **Defaults.** Case 3 (§5, the presence split) is not implemented; no Gate A parameter needed it.
-- **Not generated yet:** error stubs for every other declaration of an included package (only a
-  curated two, plus those the classifier produces), optional slots, the D2 gate's metadata (the
+- **Error stubs for the rest of an included package (MS4-07, done for `core`).** A group's config
+  lists `includePackages`; `ErrorStubs.kt` writes a stub for every public declaration of those
+  packages that the group does not generate (functions, properties, classes; the members of a
+  generated scope), so no public Compose name there is an "unresolved reference". Differences
+  from §11's first sketch: a function stub keeps Compose's parameter *names* and defaults but widens
+  every parameter type to `Any?` (many Compose types have no mirror, and the message is what matters);
+  **its receiver is never `Any?`** (review of #338, H1): an extension imported by `*` outranks the
+  standard library's and the real functions', so an `Any?` receiver would break `count.coerceAtLeast(0)`
+  or `error("…")` wherever its package is imported. The receiver is the guest's `Modifier`, a generated
+  scope, the guest's mirror of the receiver's class (`Dp`, `Color`, `TextRange`: whatever the values
+  module, the hand-written files, the scopes or the placeholders declare) or a non-generic Kotlin
+  built-in; a stub with no such receiver is skipped (a class that is itself a stub cannot be a receiver:
+  it is `DeprecationLevel.ERROR`), and so is a stub on a built-in or no receiver whose name the standard
+  library's file facades also carry (read from its jar). The skipped names are counted in the generator's
+  report. A stub on a name the guest already has requires its first parameter, so a call with no
+  arguments still picks the real overload. **The trade-off:** a named call that fits only the
+  non-generated overload (`FlowRow(maxLines = 2) {}` against a stub whose first parameter is required)
+  gets Kotlin's own error, not the stub's message. Two overloads that differ only in parameter names
+  keep the first (one Kotlin signature); a class stub is skipped where the guest declares the name
+  (hand-written files, the values module, placeholders, scopes). Every stub carries
+  `@KeliverErrorStub`, a non-public marker (`apiValidation.nonPublicMarkers`), so the stubs stay out
+  of the API dumps. Messages come from the config: `stubMessages`
+  (by name glob or by a type in the signature; kinds `never`, `notYet`, `curated`), else a generic
+  one naming the category; `extraStubs` names the Android-only declarations the desktop jars lack
+  (`LocalContext`, `stringResource`, `AndroidView`, …; every parameter has a default and Compose's
+  `vararg` is kept, so `BackHandler { }` and `stringResource(id, a, b)` reach the message). Keliver-only API (`Shimmer`, `pressSignal`)
+  needs `@OptIn(KeliverExperimentalApi::class)` (Q10).
+- **Not generated yet:** optional slots, the D2 gate's metadata (the
   level is in the lock; nothing reads it yet), widget groups. (Scope supertypes and `*Defaults`
   mirrors: Gate B part a, §20.)
 

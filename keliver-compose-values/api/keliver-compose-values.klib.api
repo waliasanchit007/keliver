@@ -14,6 +14,14 @@ open annotation class dev.keliver.compose.wire/KeliverGeneratedApi : kotlin/Anno
     constructor <init>() // dev.keliver.compose.wire/KeliverGeneratedApi.<init>|<init>(){}[0]
 }
 
+open annotation class dev.keliver.compose/KeliverErrorStub : kotlin/Annotation { // dev.keliver.compose/KeliverErrorStub|null[0]
+    constructor <init>() // dev.keliver.compose/KeliverErrorStub.<init>|<init>(){}[0]
+}
+
+open annotation class dev.keliver.compose/KeliverExperimentalApi : kotlin/Annotation { // dev.keliver.compose/KeliverExperimentalApi|null[0]
+    constructor <init>() // dev.keliver.compose/KeliverExperimentalApi.<init>|<init>(){}[0]
+}
+
 final enum class dev.keliver.compose.animation.core/AnimationEndReason : kotlin/Enum<dev.keliver.compose.animation.core/AnimationEndReason> { // dev.keliver.compose.animation.core/AnimationEndReason|null[0]
     enum entry BoundReached // dev.keliver.compose.animation.core/AnimationEndReason.BoundReached|null[0]
     enum entry Finished // dev.keliver.compose.animation.core/AnimationEndReason.Finished|null[0]
