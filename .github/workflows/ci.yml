@@ -304,6 +304,9 @@ jobs:
       # ZiplineService surface) and redwoodApiCheck (each schema's keliver-api.xml:
       # widget and modifier tags) are on `check` too, and drifted there unseen
       # until both were named here. Regenerate with ziplineApiDump / redwoodApiGenerate.
+      # redwoodFrameRulesCheck (NF5 A1: each protocol-host module's checked-in frame-rules review
+      # list; strict for the prototype's group) is on `check` too. Regenerate with
+      # redwoodFrameRulesGenerate after classifying the values it names.
       # spotlessCheck (format and license header) and the Gradle plugin's validatePlugins
       # are on `check` as well, for the same reason. Fix the first with spotlessApply.
       - name: Test + API check
@@ -313,6 +316,7 @@ jobs:
           apiCheck
           ziplineApiCheck
           redwoodApiCheck
+          redwoodFrameRulesCheck
           spotlessCheck
           :keliver-gradle-plugin:validatePlugins
           :keliver-treehouse-host:checkBaselineProfilePackaged

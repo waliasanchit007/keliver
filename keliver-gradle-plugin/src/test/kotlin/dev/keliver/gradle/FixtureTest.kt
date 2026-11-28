@@ -19,6 +19,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsAtLeast
 import assertk.assertions.containsExactly
+import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
@@ -171,6 +172,29 @@ class FixtureTest {
     // Ensure that it does not produce warnings (which are set to error in this build).
     val fixtureDir = File("src/test/fixture/protocol-no-modifiers")
     fixtureGradleRunner(fixtureDir).build()
+  }
+
+  @Test fun frameRulesStrict() {
+    // NF5 A1 (docs/SHOW_BEFORE_COMPUTE.md 2.4): with `frameRules { strict = true }`, the check fails
+    // until the review list (the values a Shell frame keeps) is checked in, then passes in `build`.
+    val fixtureDir = File("src/test/fixture/frame-rules-strict")
+    val review = File(fixtureDir, "widget-protocol/FramesFrameRules.review.txt")
+    review.delete()
+    try {
+      val failed = fixtureGradleRunner(fixtureDir, ":widget-protocol:redwoodFrameRulesCheck").buildAndFail()
+      assertThat(failed.output).contains("e: FramesFrameRules (strict): the review list")
+      assertThat(failed.output).contains("    widget Label (1) enabled (3): kotlin.Boolean")
+
+      fixtureGradleRunner(fixtureDir, ":widget-protocol:redwoodFrameRulesGenerate").build()
+      assertThat(review.readLines()).contains("widget Label (1) enabled (3): kotlin.Boolean")
+      assertThat(review.readText()).doesNotContain("size")
+
+      // `build` runs the check, now passing, and compiles the generated FrameRules without warnings.
+      val built = fixtureGradleRunner(fixtureDir).build()
+      assertThat(built.task(":widget-protocol:redwoodFrameRulesCheck")?.outcome).isEqualTo(SUCCESS)
+    } finally {
+      review.delete()
+    }
   }
 
   @Test fun hostBaselineProfile() {

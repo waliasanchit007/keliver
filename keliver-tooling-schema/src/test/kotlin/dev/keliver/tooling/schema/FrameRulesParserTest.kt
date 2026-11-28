@@ -205,7 +205,6 @@ class FrameRulesParserTest {
       .isInstanceOf<IllegalArgumentException>()
       .message().isNotNull().contains("frame-rule annotations go on a value @Property only")
   }
-
 }
 
 typealias FrameRulesTitle = String
