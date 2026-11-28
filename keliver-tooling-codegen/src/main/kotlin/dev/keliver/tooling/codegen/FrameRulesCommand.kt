@@ -110,7 +110,8 @@ internal fun checkFrameRulesReview(
   val added = expected - recorded.orEmpty().toSet()
   val removed = recorded.orEmpty() - expected.toSet()
   val name = "${schemaSet.schema.type.flatName}FrameRules"
-  val upToDate = recorded != null && added.isEmpty() && removed.isEmpty()
+  // A schema set without frame rules has no list, so no file is the right state for it.
+  val upToDate = (recorded != null || expected.isEmpty()) && added.isEmpty() && removed.isEmpty()
   if (strict) {
     if (upToDate) return FrameRulesReviewReport("", failed = false)
     val message = buildString {

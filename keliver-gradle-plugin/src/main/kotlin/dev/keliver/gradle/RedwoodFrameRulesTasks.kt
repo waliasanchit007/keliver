@@ -89,7 +89,9 @@ internal fun Project.registerFrameRulesTasks(
     it.classpath.from(schemaClasspath)
     it.schemaType.set(extension.type)
     it.reviewFile.set(reviewFile)
-    it.fixWith.set(generate.map { g -> "${g.path}" })
+    // A plain string, not `generate.map { it.path }`: a provider derived from the task would make the
+    // check depend on the generate task, which would then rewrite the list the check is to verify.
+    it.fixWith.set(if (path == ":") ":$FRAME_RULES_GENERATE_TASK_NAME" else "$path:$FRAME_RULES_GENERATE_TASK_NAME")
     it.strict.set(extension.frameRules.strict)
     it.dummyOutputFile.set(layout.buildDirectory.file("tmp/redwoodFrameRulesCheckDummy.txt"))
     // Checks what a regeneration in the same build wrote.

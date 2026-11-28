@@ -183,10 +183,12 @@ class FixtureTest {
     try {
       val failed = fixtureGradleRunner(fixtureDir, ":widget-protocol:redwoodFrameRulesCheck").buildAndFail()
       assertThat(failed.output).contains("e: FramesFrameRules (strict): the review list")
-      assertThat(failed.output).contains("    widget Label (1) enabled (3): kotlin.Boolean")
+      assertThat(failed.output).contains("    Frames: widget Label.enabled: kotlin.Boolean")
+      // The failure names the project's own generate task, not the bare name.
+      assertThat(failed.output).contains(":widget-protocol:redwoodFrameRulesGenerate")
 
       fixtureGradleRunner(fixtureDir, ":widget-protocol:redwoodFrameRulesGenerate").build()
-      assertThat(review.readLines()).contains("widget Label (1) enabled (3): kotlin.Boolean")
+      assertThat(review.readLines()).containsAtLeast("Frames: widget Label", "Frames: widget Label.enabled: kotlin.Boolean")
       assertThat(review.readText()).doesNotContain("size")
 
       // `build` runs the check, now passing, and compiles the generated FrameRules without warnings.

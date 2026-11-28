@@ -317,7 +317,8 @@ jobs:
       # until both were named here. Regenerate with ziplineApiDump / redwoodApiGenerate.
       # redwoodFrameRulesCheck (NF5 A1: each protocol-host module's checked-in frame-rules review
       # list; strict for the prototype's group) is on `check` too. Regenerate with
-      # redwoodFrameRulesGenerate after classifying the values it names.
+      # `:<project>:redwoodFrameRulesGenerate` (the failure message names it; never the bare name,
+      # which writes into every module) after classifying the values it names.
       # spotlessCheck (format and license header) and the Gradle plugin's validatePlugins
       # are on `check` as well, for the same reason. Fix the first with spotlessApply.
       - name: Test + API check
