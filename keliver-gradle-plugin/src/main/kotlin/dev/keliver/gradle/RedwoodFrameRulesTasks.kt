@@ -31,6 +31,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.api.tasks.TaskAction
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.gradle.language.base.plugins.LifecycleBasePlugin.CHECK_TASK_NAME
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
@@ -93,7 +94,9 @@ internal fun Project.registerFrameRulesTasks(
     // Checks what a regeneration in the same build wrote.
     it.mustRunAfter(generate)
   }
-  tasks.matching { it.name == CHECK_TASK_NAME }.configureEach { it.dependsOn(check) }
+  plugins.withType(LifecycleBasePlugin::class.java) {
+    tasks.named(CHECK_TASK_NAME).configure { it.dependsOn(check) }
+  }
 }
 
 /** `KeliverComposeGateA` for `dev.keliver.compose.gatea.KeliverComposeGateA`, as codegen names it. */
