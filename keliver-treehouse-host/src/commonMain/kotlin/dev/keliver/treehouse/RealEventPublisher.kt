@@ -28,6 +28,7 @@ import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.WidgetTag
 import dev.keliver.protocol.host.ProtocolMismatchHandler
 
+@OptIn(ExperimentalKeliverSchemaMismatchApi::class)
 internal class RealEventPublisher(
   listener: EventListener,
 ) : EventPublisher {
@@ -184,26 +185,43 @@ internal class RealEventPublisher(
 
   override val widgetProtocolMismatchHandler = RealProtocolMismatchHandler()
 
+  /** MS4-04: this code session's mismatches, each passed to [EventListener.schemaMismatch] once. */
+  private val mismatches = SchemaMismatches()
+
+  private fun EventListener.firstTime(mismatch: SchemaMismatch) {
+    if (mismatches.add(mismatch)) schemaMismatch(mismatch)
+  }
+
   inner class RealProtocolMismatchHandler : ProtocolMismatchHandler {
     override fun onUnknownWidget(tag: WidgetTag) {
-      listener!!.unknownWidget(tag)
+      val listener = listener!!
+      listener.unknownWidget(tag)
+      listener.firstTime(SchemaMismatch.Widget(tag))
     }
 
     override fun onUnknownModifier(tag: ModifierTag) {
-      listener!!.unknownModifier(tag)
+      val listener = listener!!
+      listener.unknownModifier(tag)
+      listener.firstTime(SchemaMismatch.Modifier(tag))
     }
 
     override fun onUnknownChildren(widgetTag: WidgetTag, tag: ChildrenTag) {
-      listener!!.unknownChildren(widgetTag, tag)
+      val listener = listener!!
+      listener.unknownChildren(widgetTag, tag)
+      listener.firstTime(SchemaMismatch.Children(widgetTag, tag))
     }
 
     override fun onUnknownProperty(widgetTag: WidgetTag, tag: PropertyTag) {
-      listener!!.unknownProperty(widgetTag, tag)
+      val listener = listener!!
+      listener.unknownProperty(widgetTag, tag)
+      listener.firstTime(SchemaMismatch.Property(widgetTag, tag))
     }
   }
 
   override fun onUnknownEvent(widgetTag: WidgetTag, tag: EventTag) {
-    listener!!.unknownEvent(widgetTag, tag)
+    val listener = listener!!
+    listener.unknownEvent(widgetTag, tag)
+    listener.firstTime(SchemaMismatch.Event(widgetTag, tag))
   }
 
   override fun onUnknownEventNode(id: Id, tag: EventTag) {

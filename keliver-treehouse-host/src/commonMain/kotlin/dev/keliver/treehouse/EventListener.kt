@@ -151,6 +151,23 @@ public open class EventListener {
   }
 
   /**
+   * Invoked the first time this code session meets [mismatch]: an unknown widget, modifier,
+   * property, children or event tag (MS4-04). [unknownWidget], [unknownModifier],
+   * [unknownProperty], [unknownChildren] and [unknownEvent] still run for every occurrence; this
+   * runs once for each distinct mismatch, however many contents (screens) of the session meet it.
+   * A new code session (a new bundle, or the same one loaded again) starts afresh, so each loaded
+   * bundle's mismatches are reported once each. [unknownEventNode] is not a mismatch.
+   *
+   * Mismatches arrive on any thread (Zipline's or the UI thread); move to the UI thread before
+   * touching UI. Experimental: new kinds of [SchemaMismatch] may be added.
+   */
+  @ExperimentalKeliverSchemaMismatchApi
+  public open fun schemaMismatch(
+    mismatch: SchemaMismatch,
+  ) {
+  }
+
+  /**
    * Invoked when an event is received on a widget that no longer exists.
    *
    * This is a normal artifact of the asynchronous event processing used by Treehouse. For example,

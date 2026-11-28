@@ -321,12 +321,15 @@ public data class KeliverUpdateCheck(val outcome: String, val sequence: Long, va
 /**
  * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
  * update-applied, update-failed, not-loaded, no-bundle, refused, screen-failed
- * or crash-rollback (WS6: [sequence] was set aside for failing on this install);
+ * or crash-rollback (WS6: [sequence] was set aside for failing on this install),
+ * or schema-mismatch (MS4-04: [sequence] used a tag this host's schema lacks, once
+ * per tag; the host ignored it);
  * [source] is "network", "cache" or ""; [sequence] -1 when there is none;
  * [hostVersion] -1 when CFBundleVersion is not an integer. [reason] is a fixed
  * category (sha256-mismatch, below-floor, set-aside, bridge-missing, bridge-shape,
  * bridge-bind, engine, signature, lookup-failed, network, config, exception, other; for
- * crash-rollback what runs instead: previous-good, newer-bundle or app-view); [detail] is
+ * crash-rollback what runs instead: previous-good, newer-bundle or app-view; for
+ * schema-mismatch, schema-mismatch, with the tag in [detail]); [detail] is
  * the full message, for the app only: it can hold addresses, paths or URLs, so
  * [toJson], what REPORT_URL receives, leaves it out. [installId] is the random
  * id made on the device for rollouts.
@@ -2024,6 +2027,10 @@ private fun createApp(
       },
       bridgeBinds = bridgeBinds,
       fence = fence,
+      // MS4-04: on the main thread, as the host's other reports are made.
+      reportMismatch = { sequence, source, detail ->
+        appScope.launch { if (fence.live) Keliver.report(SCHEMA_MISMATCH_OUTCOME, sequence, source, detail) }
+      },
     ),
   )
   // After a first load that failed (Keliver.loadAgain): from the network this time, into the same
@@ -2138,9 +2145,11 @@ private class LoggingEventListenerFactory(
   private val onSequence: (Long) -> Unit,
   private val bridgeBinds: BridgeBindRecorder,
   private val fence: LoadFence,
+  /** MS4-04: a schema mismatch of the bundle a load runs, once per tag: its sequence, source and detail. */
+  private val reportMismatch: (sequence: Long?, source: String, detail: String) -> Unit,
 ) : EventListener.Factory {
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = LoggingEventListener(
-    manifestUrl, onReady, onSuccess, onSkipped, onFailed, onUncaught, crash, onLoaded, onSequence, bridgeBinds, fence,
+    manifestUrl, onReady, onSuccess, onSkipped, onFailed, onUncaught, crash, onLoaded, onSequence, bridgeBinds, fence, reportMismatch,
   )
   override fun close() {}
 }
@@ -2158,7 +2167,8 @@ private class LoggingEventListener(
   private val onSequence: (Long) -> Unit,
   private val bridgeBinds: BridgeBindRecorder,
   private val fence: LoadFence,
-) : EventListener() {
+  private val reportMismatch: (sequence: Long?, source: String, detail: String) -> Unit,
+) : KeliverEventListener() {
   /** WS6: the verified sequence this load runs (null until its manifest is ready, or without one). */
   @Volatile private var sequence: Long? = null
   @Volatile private var counted = false
@@ -2175,6 +2185,15 @@ private class LoggingEventListener(
   // B5: Zipline reports every bind here, inside bind(): what an app's bridge binding bound.
   override fun bindService(name: String, service: ZiplineService) {
     if (fence.live) bridgeBinds.bound(name)
+  }
+
+  // MS4-04: the bundle this load runs used a tag the host's schema lacks, which the host ignores.
+  // Named once per tag (KeliverLine.kt, from the 0.5 line); a held app's waits until it shows, a
+  // dropped app's is never reported.
+  override fun onSchemaMismatch(detail: String) {
+    val sequence = sequence
+    val source = if (manifestUrl == null) "cache" else "network"
+    fence.run { reportMismatch(sequence, source, detail) }
   }
 
   // WS6: the manifest verified; its modules download next, and then evaluate.

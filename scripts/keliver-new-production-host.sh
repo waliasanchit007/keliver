@@ -722,6 +722,12 @@ if ! $EMBED; then
   for f in "$TEMPLATES"/src/testDebug/kotlin/*.kt; do
     subst "$f" "$STAGE/src/testDebug/kotlin/$PKG_PATH/$(basename "$f")"
   done
+  # MS4-04: the behavioural checks of the host features the app's line declares, in that line's
+  # own test files (src/line-<line>/test/kotlin/; the 0.4 line has none).
+  for f in "$TEMPLATES/src/line-$KELIVER_LINE/test/kotlin"/*.kt; do
+    [ -f "$f" ] || continue
+    subst "$f" "$STAGE/src/test/kotlin/$PKG_PATH/$(basename "$f")"
+  done
 fi
 mkdir -p "$STAGE/src/main/assets/keliver"
 printf '%s\n' "$KEY_HEX" > "$STAGE/src/main/assets/keliver/portal_ed25519.pub"
