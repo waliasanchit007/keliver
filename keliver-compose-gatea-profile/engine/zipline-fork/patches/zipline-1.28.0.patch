@@ -22,12 +22,16 @@ index f3ffcb7..aa02e1c 100644
  cmake_minimum_required(VERSION 3.4.1)
  
  set(CMAKE_C_STANDARD 99)
-@@ -9,4 +10,7 @@ add_library(quickjs SHARED ${sources})
- 
+@@ -9,4 +10,11 @@ add_library(quickjs SHARED ${sources})
+
  target_link_libraries(quickjs)
- 
+
 +# QuickJS 2026 relies on signed overflow wrapping (its Makefile builds with -fwrapv).
 +target_compile_options(quickjs PRIVATE -fwrapv)
++
++# The AAR ships without debug information (.debug_*) or a static symbol table (.symtab); the
++# dynamic symbols JNI needs stay. AGP adds -g to every CMake compile, and an AAR is not stripped.
++target_link_options(quickjs PRIVATE "-Wl,--strip-all")
 +
  target_link_options(quickjs PRIVATE "-Wl,-z,max-page-size=16384")
 diff --git a/zipline-bytecode/build.gradle.kts b/zipline-bytecode/build.gradle.kts

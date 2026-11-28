@@ -7,6 +7,11 @@ vendored QuickJS 2021-03-27 replaced by Bellard's **QuickJS 2026-06-04** (SHA-25
 and "NF2: the Zipline fork, step 1". Step 4 builds it for Maven Central as
 `dev.keliver.zipline:<upstream artifact name>:1.28.0-keliver.1` ("Publishing the fork" below). **Published
 2026-11-24:** `dev.keliver.zipline:*:1.28.0-keliver.1` (`zipline-fork.yml` run 45176623004).
+**The next release, `1.28.0-keliver.2`** (approved by the owner 2026-11-28, not yet published), is the
+same fork with `libquickjs.so` stripped: `-Wl,--strip-all` in the CMakeLists patch removes the
+`.debug_*` sections and the static `.symtab`/`.strtab` that AGP's `-g` left in the AAR (about 1.6 MB
+per ABI in the APK; the library is 50-63% smaller). `apply.sh android` fails if any ABI regresses.
+Patch count unchanged (2). Keliver's own dependency stays on `.1` until `.2` is on Maven Central.
 
 ## Licences
 
@@ -340,7 +345,7 @@ no emulator).
 **Publishing** (the owner's decision, 2026-11-22: review mode for the first release; this is the
 third release line, beside the libraries and the tools bundle, CLAUDE.md "Releases"):
 
-1. Tag the commit on `main`: `zipline-fork-v<RELEASE_VERSION>` (`zipline-fork-v1.28.0-keliver.1`;
+1. Tag the commit on `main`: `zipline-fork-v<RELEASE_VERSION>` (`zipline-fork-v1.28.0-keliver.2` for the next release;
    it matches neither `v*` nor `portal-tools-v*`, so no other workflow fires).
 2. Dispatch `zipline-fork.yml` from `main` with that tag, `publish` ticked and the version typed
    out. The `guard` job refuses a run not from `main`, a tag that is not
