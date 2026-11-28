@@ -54,50 +54,60 @@ class ErrorStubsTest {
 
   private class Snippet(val code: String, val imports: List<String>, val message: String)
 
-  /** Each snippet's compiler errors (one line each), after checking that the generated stubs compile on their own. */
-  private fun compileFail(snippets: List<Snippet>): Map<Snippet, List<String>> {
+  private val stubMarker = "package dev.keliver.compose\n@Retention(AnnotationRetention.BINARY)\nannotation class KeliverErrorStub\n"
+
+  /**
+   * Compiles every stub as the generator wrote it (one file per guest package) with the fixtures: the guest's `Modifier`, the marker,
+   * an empty class for each guest type a stub's receiver names that no stub declares (the mirrors, `Dp`, `Color`, a scope, …), and the
+   * [fixtures] of the test (`package → text`; a name they declare is not faked). Returns the compiler's errors, one line each, and
+   * the files' directory's snippet file `snippets.kt` is [snippetText]; the caller deletes nothing (the directory is removed here).
+   */
+  private fun <T> withStubsCompiled(snippetText: String, fixtures: Map<String, String> = emptyMap(), reserved: Set<String> = emptySet(), then: (errors: List<String>, snippetFile: File) -> T): T {
     val dir = Files.createTempDirectory("keliver-stubs").toFile()
     try {
       val files = mutableListOf<File>()
-      // Every stub as the generator wrote it, one file per guest package.
-      for ((pkg, group) in core.errorStubs.filter { !it.member }.groupBy { it.pkg }) {
+      val stubs = core.errorStubs.filter { !it.member }
+      for ((pkg, group) in stubs.groupBy { it.pkg }) {
         val f = File(dir, "stubs_${pkg.replace('.', '_')}.kt")
         f.writeText("@file:Suppress(\"UNUSED_PARAMETER\")\npackage $pkg\n\n" + group.joinToString("") { it.text })
         files += f
       }
-      // The guest types a stub's signature names: the guest's Modifier, and the scopes its receivers use.
-      val fixture = File(dir, "fixture.kt")
-      val scopes = core.errorStubs.flatMap { Regex("""dev\.keliver\.[\w.]+Scope(?=\.)""").findAll(it.text).map { m -> m.value }.toList() }.toSet()
-      fixture.writeText("package dev.keliver.compose.ui\ninterface Modifier { companion object : Modifier }\n")
-      for (s in scopes) {
-        File(dir, "scope_${s.replace('.', '_')}.kt").also { files += it }.writeText("package ${s.substringBeforeLast('.')}\ninterface ${s.substringAfterLast('.')}\n")
+      val declared = stubs.flatMap { s -> Regex("""public (?:annotation class|class|interface|object) (\w+)""").findAll(s.text).map { s.pkg + "." + it.groupValues[1] }.toList() }.toSet()
+      val receivers = stubs.flatMap { s ->
+        Regex("""public (?:fun|val) (dev\.keliver\.(?:[a-z0-9_]+\.)*[A-Z]\w*)\??\.""").findAll(s.text).map { it.groupValues[1] }.toList()
+      }.toSet() - "dev.keliver.compose.ui.Modifier"
+      File(dir, "fixture.kt").also { files += it }.writeText("package dev.keliver.compose.ui\ninterface Modifier { companion object : Modifier }\n")
+      File(dir, "marker.kt").also { files += it }.writeText(stubMarker)
+      for (r in receivers - declared - reserved) {
+        File(dir, "type_${r.replace('.', '_')}.kt").also { files += it }.writeText("package ${r.substringBeforeLast('.')}\ninterface ${r.substringAfterLast('.')}\n")
       }
-      files += fixture
-      val snippetFile = File(dir, "snippets.kt")
-      val imports = snippets.flatMap { it.imports }.toSortedSet()
-      snippetFile.writeText(
-        "@file:Suppress(\"UNUSED_VARIABLE\", \"UNUSED_PARAMETER\")\npackage snippets\n\n" +
-          imports.joinToString("\n") { "import $it" } + "\nimport dev.keliver.compose.ui.Modifier\n\n" +
-          snippets.joinToString("\n") { "fun s${snippets.indexOf(it)}(m: Modifier) { ${it.code} }" } + "\n",
-      )
-      files += snippetFile
+      for ((pkg, text) in fixtures) File(dir, "fix_${pkg.replace('.', '_')}.kt").also { files += it }.writeText("package $pkg\n$text\n")
+      val snippetFile = File(dir, "snippets.kt").also { files += it }
+      snippetFile.writeText(snippetText)
       val stdlib = kotlin.Unit::class.java.protectionDomain.codeSource.location.path
       val err = ByteArrayOutputStream()
       K2JVMCompiler().exec(
         PrintStream(err), "-no-stdlib", "-no-reflect", "-nowarn", "-classpath", stdlib, "-d", File(dir, "out").path,
         *files.map { it.path }.toTypedArray(),
       )
-      val lines = err.toString().lines().filter { ": error: " in it }
-      // No error may come from the stubs themselves: they must compile.
-      val own = lines.filter { "snippets.kt" !in it }
-      assertEquals(emptyList(), own.take(10), "the generated stubs must compile")
-      val headerLines = snippetFile.readText().lines().indexOfFirst { it.startsWith("fun s0(") } + 1
-      return snippets.associateWith { s ->
-        val line = headerLines + snippets.indexOf(s)
-        lines.filter { it.contains("snippets.kt:$line:") }
-      }
+      return then(err.toString().lines().filter { ": error: " in it }, snippetFile)
     } finally {
       dir.deleteRecursively()
+    }
+  }
+
+  /** Each snippet's compiler errors (one line each), after checking that the generated stubs compile on their own. */
+  private fun compileFail(snippets: List<Snippet>): Map<Snippet, List<String>> {
+    val imports = snippets.flatMap { it.imports }.toSortedSet()
+    // `ptr` stands for the pointer scope an extension like `detectTapGestures` reads from.
+    val text = "@file:Suppress(\"UNUSED_VARIABLE\", \"UNUSED_PARAMETER\")\npackage snippets\n\n" +
+      imports.joinToString("\n") { "import $it" } + "\nimport dev.keliver.compose.ui.Modifier\nimport dev.keliver.compose.ui.input.pointer.PointerInputScope\n\n" +
+      snippets.joinToString("\n") { "fun s${snippets.indexOf(it)}(m: Modifier, ptr: PointerInputScope) { ${it.code} }" } + "\n"
+    return withStubsCompiled(text) { lines, snippetFile ->
+      // No error may come from the stubs themselves: they must compile.
+      assertEquals(emptyList(), lines.filter { "snippets.kt" !in it }.take(10), "the generated stubs must compile")
+      val headerLines = snippetFile.readText().lines().indexOfFirst { it.startsWith("fun s0(") } + 1
+      snippets.associateWith { s -> lines.filter { it.contains("snippets.kt:${headerLines + snippets.indexOf(s)}:") } }
     }
   }
 
@@ -108,8 +118,8 @@ class ErrorStubsTest {
   }
 
   private val layout = "custom measuring runs per frame on the host. Use Row, Column or Box with weight and align, FlowRow, or an app component."
-  private val pointer = "raw pointer handlers run per event on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable."
-  private val gestures = "gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable."
+  private val pointer = "raw pointer handlers run per event on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47."
+  private val gestures = "gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47."
   private val android = "and a guest has no Android. Reach the platform through a generated bridge (docs/BRIDGE_CODEGEN_DESIGN.md)."
   private val resources = "and a guest has none."
 
@@ -120,9 +130,9 @@ class ErrorStubsTest {
       Snippet("SubcomposeLayout(modifier = null, measurePolicy = 1)", listOf("$ui.layout.SubcomposeLayout"), layout),
       Snippet("m.layout(measure = 1)", listOf("$ui.layout.layout"), "Modifier.layout, layoutId and onPlaced belong to custom layouts"),
       Snippet("m.pointerInput(Unit) { }", listOf("$ui.input.pointer.pointerInput"), pointer),
-      Snippet("Unit.detectTapGestures(onTap = null)", listOf("dev.keliver.compose.foundation.gestures.detectTapGestures"), gestures),
-      Snippet("Unit.detectDragGestures(onDrag = 1)", listOf("dev.keliver.compose.foundation.gestures.detectDragGestures"), gestures),
-      Snippet("Unit.detectTransformGestures(onGesture = 1)", listOf("dev.keliver.compose.foundation.gestures.detectTransformGestures"), gestures),
+      Snippet("ptr.detectTapGestures(onTap = null)", listOf("dev.keliver.compose.foundation.gestures.detectTapGestures"), gestures),
+      Snippet("ptr.detectDragGestures(onDrag = 1)", listOf("dev.keliver.compose.foundation.gestures.detectDragGestures"), gestures),
+      Snippet("ptr.detectTransformGestures(onGesture = 1)", listOf("dev.keliver.compose.foundation.gestures.detectTransformGestures"), gestures),
       Snippet("val c = LocalContext", listOf("$ui.platform.LocalContext"), "LocalContext is an Android Context, $android"),
       Snippet("val c = LocalView", listOf("$ui.platform.LocalView"), "LocalView is an Android View, $android"),
       Snippet("val c = LocalConfiguration", listOf("$ui.platform.LocalConfiguration"), "LocalConfiguration is Android's, $android"),
@@ -135,7 +145,13 @@ class ErrorStubsTest {
       Snippet("FlexBox(config = null, content = 1)", listOf("dev.keliver.compose.foundation.layout.FlexBox"), "not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x"),
       Snippet("Grid(config = 1, content = 1)", listOf("dev.keliver.compose.foundation.layout.Grid"), "not yet: FlexBox and Grid are Compose 1.12's experimental API. Keliver generates them in a 0.5.x"),
       Snippet("val s = Style(1, 2)", listOf("dev.keliver.compose.foundation.style.Style"), "not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x"),
-      Snippet("SelectionContainer(content = 1)", listOf("dev.keliver.compose.foundation.text.selection.SelectionContainer"), "text selection state is the host's"),
+      Snippet("SelectionContainer(content = 1)", listOf("dev.keliver.compose.foundation.text.selection.SelectionContainer"), "text selection is not available in the guest"),
+      // L1: the Android-only calls keep their message with no arguments, a trailing lambda, or Compose's vararg.
+      Snippet("BackHandler { }", listOf("dev.keliver.activity.compose.BackHandler"), "use dev.keliver.compose.BackHandler, which the host routes"),
+      Snippet("BackHandler()", listOf("dev.keliver.activity.compose.BackHandler"), "use dev.keliver.compose.BackHandler, which the host routes"),
+      Snippet("stringResource(1, 2, 3)", listOf("$ui.res.stringResource"), "stringResource reads Android resources, $resources"),
+      Snippet("pluralStringResource(1, 2, 3, 4)", listOf("$ui.res.pluralStringResource"), "pluralStringResource reads Android resources, $resources"),
+      Snippet("AndroidView()", listOf("$ui.viewinterop.AndroidView"), "AndroidView embeds a native View"),
       Snippet("val i: IndicationNodeFactory? = null", listOf("dev.keliver.compose.foundation.IndicationNodeFactory"), "a custom Indication runs per frame on the host. Leave it out: the theme's ripple applies."),
     )
     assertFailsWith(compileFail(snippets))
@@ -154,12 +170,12 @@ class ErrorStubsTest {
       Snippet("m.onPlaced(onPlaced = 1)", listOf("$ui.layout.onPlaced"), "belong to custom layouts"),
       Snippet("m.pointerInput(Unit, Unit) { }", listOf("$ui.input.pointer.pointerInput"), pointer),
       Snippet("m.pointerInput(Unit, Unit, Unit) { }", listOf("$ui.input.pointer.pointerInput"), pointer),
-      Snippet("Unit.detectTapGestures(onTap = null)", listOf("$g.gestures.detectTapGestures"), gestures),
-      Snippet("Unit.detectDragGestures(onDrag = 1)", listOf("$g.gestures.detectDragGestures"), gestures),
-      Snippet("Unit.detectHorizontalDragGestures(onHorizontalDrag = 1)", listOf("$g.gestures.detectHorizontalDragGestures"), gestures),
-      Snippet("Unit.detectVerticalDragGestures(onVerticalDrag = 1)", listOf("$g.gestures.detectVerticalDragGestures"), gestures),
-      Snippet("Unit.detectTransformGestures(onGesture = 1)", listOf("$g.gestures.detectTransformGestures"), gestures),
-      Snippet("Unit.awaitEachGesture(block = 1)", listOf("$g.gestures.awaitEachGesture"), gestures),
+      Snippet("ptr.detectTapGestures(onTap = null)", listOf("$g.gestures.detectTapGestures"), gestures),
+      Snippet("ptr.detectDragGestures(onDrag = 1)", listOf("$g.gestures.detectDragGestures"), gestures),
+      Snippet("ptr.detectHorizontalDragGestures(onHorizontalDrag = 1)", listOf("$g.gestures.detectHorizontalDragGestures"), gestures),
+      Snippet("ptr.detectVerticalDragGestures(onVerticalDrag = 1)", listOf("$g.gestures.detectVerticalDragGestures"), gestures),
+      Snippet("ptr.detectTransformGestures(onGesture = 1)", listOf("$g.gestures.detectTransformGestures"), gestures),
+      Snippet("ptr.awaitEachGesture(block = 1)", listOf("$g.gestures.awaitEachGesture"), gestures),
       Snippet("m.onGloballyPositioned(onGloballyPositioned = 1)", listOf("$ui.layout.onGloballyPositioned"), "reads host measurements synchronously"),
       Snippet("val p: Placeable? = null", listOf("$ui.layout.Placeable"), "custom layouts measure and place per frame on the host"),
       Snippet("val p: ModifierNodeElement<*>? = null", listOf("$ui.node.ModifierNodeElement"), "a Modifier.Node runs inside the host's layout and draw passes"),
@@ -189,7 +205,7 @@ class ErrorStubsTest {
     for (s in core.errorStubs) {
       assertTrue(s.message.startsWith("Keliver: "), "${s.name}: ${s.message}")
       when (s.kind) {
-        "never" -> assertTrue(Regex("Use |Compose the generated|a generated bridge|host-owned").containsMatchIn(s.message), "a never-by-design stub names the alternative: ${s.name}: ${s.message}")
+        "never" -> assertTrue(Regex("Use |use an app|Compose the generated|a generated bridge|host-owned|come in MS4-").containsMatchIn(s.message), "a never-by-design stub names the alternative: ${s.name}: ${s.message}")
         "notYet" -> assertTrue("not yet" in s.message && "0.5.x" in s.message, "${s.name}: ${s.message}")
         "generic" -> assertTrue("is not in the generated API" in s.message, "${s.name}: ${s.message}")
       }
@@ -210,13 +226,13 @@ class ErrorStubsTest {
         if (name.contains('$') || name.contains('-')) return
         if (name !in here) missing += "$pkg.$name ($what)"
       }
+      // A name whose every overload was skipped (no guest receiver type, or the standard library owns the name) is not a stub.
+      val skipped = core.skippedStubs.map { it.substringBefore(' ') }.toSet()
       for (pf in index.packageFunctions[pkg].orEmpty()) {
-        if (index.isHidden(pf.facade, pf.fn)) continue
-        // An extension on an unmapped receiver named like the standard library's resolves to the standard library's.
-        if (pf.fn.name in stdlibNames && (pf.fn.receiverParameterType?.classifier as? kotlin.metadata.KmClassifier.Class)?.name != "androidx/compose/ui/Modifier") continue
+        if (index.isHidden(pf.facade, pf.fn) || "$pkg.${pf.fn.name}" in skipped) continue
         check(pf.fn.name, "function")
       }
-      for (p in index.packageProperties[pkg].orEmpty()) check(p.name, "property")
+      for (p in index.packageProperties[pkg].orEmpty()) if ("$pkg.${p.name}" !in skipped) check(p.name, "property")
       for ((fq, c) in index.classes) {
         if (c.name.substringBeforeLast('/', "") != pkg.replace('.', '/') || '.' in c.name.substringAfterLast('/')) continue
         if (c.visibility != Visibility.PUBLIC || c.kind == ClassKind.COMPANION_OBJECT || '$' in fq) continue
@@ -225,6 +241,59 @@ class ErrorStubsTest {
       }
     }
     assertEquals(emptyList(), missing.take(50), "public names with no declaration in the guest (${missing.size})")
+  }
+
+  @Test fun noStubIsOnAnAnyReceiverAndEveryStubCarriesTheMarker() {
+    val any = core.errorStubs.filter { Regex("""(?:fun|val) Any\??\.""").containsMatchIn(it.text) }
+    assertEquals(emptyList(), any.map { it.pkg + "." + it.name }.take(10), "a stub on an Any? receiver outranks the standard library's and the real functions")
+    assertTrue(core.errorStubs.all { "@$STUB_MARKER\n" in it.text }, "every stub carries the marker the API dump leaves out")
+    println("MS4-07 stubs skipped: ${core.skippedStubs.size}")
+    assertTrue(core.skippedStubs.isNotEmpty())
+  }
+
+  @Test fun theStandardLibraryAndTheRealFunctionsStillResolveWithEveryMirrorPackageImportedByStar() {
+    // H1 (review of #338): extensions imported by `*` outrank the standard library's, so none may apply to everything.
+    val stubPackages = core.errorStubs.filter { !it.member }.map { it.pkg }.toSortedSet()
+    val color = "dev.keliver.compose.ui.graphics.Color"
+    val fixtures = mapOf(
+      // The real names, with their real signatures: the values module's `contentColorFor`, the layout scopes and a scoped composable.
+      "dev.keliver.compose.material3" to "fun contentColorFor(backgroundColor: $color): $color = TODO()",
+      "dev.keliver.compose.foundation.layout" to
+        "interface ColumnScope\nfun Column(modifier: dev.keliver.compose.ui.Modifier = dev.keliver.compose.ui.Modifier, content: ColumnScope.() -> Unit) {}",
+      "dev.keliver.compose.animation" to "interface AnimatedVisibilityScope\nfun dev.keliver.compose.foundation.layout.ColumnScope.AnimatedVisibility(visible: Boolean, content: AnimatedVisibilityScope.() -> Unit) {}",
+      "dev.keliver.compose.ui.graphics" to "class Color",
+    )
+    val reserved = setOf("dev.keliver.compose.foundation.layout.ColumnScope", "dev.keliver.compose.animation.AnimatedVisibilityScope", color)
+    val imports = (stubPackages + fixtures.keys).toSortedSet().joinToString("\n") { "import $it.*" }
+    val text = """
+      @file:Suppress("UNUSED_VARIABLE", "UNUSED_PARAMETER", "UNREACHABLE_CODE")
+      package positive
+      $imports
+      import dev.keliver.compose.ui.Modifier
+
+      class Holder { fun boom(): Nothing = error("boom") }
+      fun stdlib(count: Int, a: Set<Int>, b: Set<Int>, l: List<Int>, m: Map<String, Int>, s: String, c: java.io.Closeable, f: Float, bg: $color) {
+        count.coerceAtLeast(0)
+        f.coerceIn(0f, 1f)
+        a.union(b)
+        l.getOrNull(0)
+        l.forEach { }
+        m.forEach { (k, v) -> }
+        s.substring(1..2)
+        s.trim().lowercase()
+        c.use { }
+        "x".apply { }
+        if (count > 0) error("no")
+        Column {
+          val on = contentColorFor(bg)
+          AnimatedVisibility(true) { }
+          error("inside a Column lambda")
+        }
+      }
+    """.trimIndent() + "\n"
+    withStubsCompiled(text, fixtures, reserved) { errors, _ ->
+      assertEquals(emptyList(), errors.take(15), "valid guest code must still compile with every mirror package imported by `*` (${errors.size} errors)")
+    }
   }
 
   @Test fun theStubCountsByClass() {
@@ -254,7 +323,8 @@ class ErrorStubsTest {
       ),
       index,
       emptyList(),
-      emptyMap(),
+      // The guest's placeholder for the receiver (a stub takes the mirror of its receiver, or is skipped).
+      mapOf("dev.keliver.compose.ui.input.pointer" to setOf("PointerInputScope")),
       emptyList(),
     ).stubs().filter { !it.member }
     assertEquals("Keliver: gestures", stubs.first { it.name == "detectTapGestures" }.message)

@@ -120,6 +120,9 @@ class Emitter(
 
   /** MS4-07: the generic and curated error stubs of the last [guest] call, for the counts. */
   var errorStubs: List<ErrorStubs.Stub> = emptyList()
+
+  /** The generic stubs not written (no guest receiver type, or the standard library has the name): `pkg.name (why)`. */
+  var skippedStubs: List<String> = emptyList()
     private set
 
   private val generated = plans.filterIsInstance<Plan.Generated>()
@@ -303,6 +306,7 @@ class Emitter(
       group.forEach { sb.append(it.text) }
     }
     errorStubs = topStubs + memberStubs
+    skippedStubs = generic?.skipped.orEmpty().distinct()
     // Icons (the icon group's allowlist).
     for (icon in config.icons) {
       val theme = icon.substringBeforeLast('.')

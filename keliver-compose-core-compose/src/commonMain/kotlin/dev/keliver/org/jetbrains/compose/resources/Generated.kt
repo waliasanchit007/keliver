@@ -6,8 +6,10 @@ package dev.keliver.org.jetbrains.compose.resources
 
 
 @Deprecated("Keliver: Compose resources are packaged with the app, and a guest has none. Keep strings in the guest's Kotlin, or register them on the host.", level = DeprecationLevel.ERROR)
-public fun stringResource(resource: Any?, formatArgs: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun stringResource(resource: Any? = null, vararg formatArgs: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: Compose resources are packaged with the app, and a guest has none. Use AsyncImage, an icon from the icon group, or an image the host registers.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun painterResource(resource: Any? = null): Nothing = throw UnsupportedOperationException()
 

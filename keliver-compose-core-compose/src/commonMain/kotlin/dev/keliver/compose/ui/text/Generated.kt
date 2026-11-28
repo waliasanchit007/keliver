@@ -9,176 +9,202 @@ package dev.keliver.compose.ui.text
 public class TextLayoutResult private constructor()
 
 @Deprecated("Keliver: `AnnotatedString` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnnotatedString(text: Any?, spanStyle: Any?, paragraphStyle: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnnotatedString` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnnotatedString(text: Any?, paragraphStyle: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Paragraph(text: Any?, style: Any?, spanStyles: Any? = null, placeholders: Any? = null, maxLines: Any? = null, ellipsis: Any? = null, width: Any?, density: Any?, resourceLoader: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Paragraph` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Paragraph(paragraphIntrinsics: Any?, maxLines: Any? = null, ellipsis: Any? = null, width: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun ParagraphIntrinsics(text: Any?, style: Any?, spanStyles: Any? = null, placeholders: Any? = null, density: Any?, resourceLoader: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun ParagraphIntrinsics(text: Any?, style: Any?, annotations: Any?, density: Any?, fontFamilyResolver: Any?, placeholders: Any?, softWrap: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TextRange` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TextRange(start: Any?, end: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TextRange` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TextRange(index: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `buildAnnotatedString` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun buildAnnotatedString(builder: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `capitalize` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.capitalize(localeList: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `coerceIn` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.coerceIn(minimumValue: Any?, maximumValue: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `decapitalize` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.decapitalize(localeList: Any? = null): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: `drawText` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.drawscope.DrawScope.drawText(textMeasurer: Any?, text: Any?, topLeft: Any? = null, style: Any? = null, overflow: Any? = null, softWrap: Any? = null, maxLines: Any? = null, placeholders: Any? = null, size: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `drawText` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.drawText(textMeasurer: Any?, text: Any?, topLeft: Any? = null, style: Any? = null, overflow: Any? = null, softWrap: Any? = null, maxLines: Any? = null, placeholders: Any? = null, size: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.drawscope.DrawScope.drawText(textMeasurer: Any?, text: Any?, topLeft: Any? = null, style: Any? = null, overflow: Any? = null, softWrap: Any? = null, maxLines: Any? = null, size: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `drawText` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.drawText(textMeasurer: Any?, text: Any?, topLeft: Any? = null, style: Any? = null, overflow: Any? = null, softWrap: Any? = null, maxLines: Any? = null, size: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `drawText` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.drawText(textLayoutResult: Any?, color: Any? = null, topLeft: Any? = null, alpha: Any? = null, shadow: Any? = null, textDecoration: Any? = null, drawStyle: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.drawscope.DrawScope.drawText(textLayoutResult: Any?, color: Any? = null, topLeft: Any? = null, alpha: Any? = null, shadow: Any? = null, textDecoration: Any? = null, drawStyle: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `lerp` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun lerp(start: Any?, stop: Any?, fraction: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberTextMeasurer` (composable function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberTextMeasurer(cacheSize: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `resolveDefaults` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun resolveDefaults(style: Any?, direction: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `substring` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.substring(range: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `toLowerCase` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toLowerCase(localeList: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun kotlin.String.toLowerCase(locale: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toUpperCase` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toUpperCase(localeList: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `withAnnotation` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.withAnnotation(tag: Any?, annotation: Any?, block: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `withAnnotation` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.withAnnotation(ttsAnnotation: Any?, block: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `withLink` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.withLink(link: Any?, block: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `withStyle` (function in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.withStyle(style: Any?, block: Any?): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun kotlin.String.toUpperCase(locale: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnnotatedString` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class AnnotatedString private constructor()
 
 @Deprecated("Keliver: `Bullet` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Bullet private constructor()
 
 @Deprecated("Keliver: `ExperimentalTextApi` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalTextApi
 
 @Deprecated("Keliver: `FontHinting` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FontHinting private constructor()
 
 @Deprecated("Keliver: `FontRasterizationSettings` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FontRasterizationSettings private constructor()
 
 @Deprecated("Keliver: `FontSmoothing` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FontSmoothing private constructor()
 
 @Deprecated("Keliver: `InternalTextApi` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class InternalTextApi
 
 @Deprecated("Keliver: `LinkAnnotation` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LinkAnnotation private constructor()
 
 @Deprecated("Keliver: `LinkInteractionListener` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LinkInteractionListener
 
 @Deprecated("Keliver: `MultiParagraph` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class MultiParagraph private constructor()
 
 @Deprecated("Keliver: `MultiParagraphIntrinsics` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class MultiParagraphIntrinsics private constructor()
 
 @Deprecated("Keliver: `Paragraph` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Paragraph
 
 @Deprecated("Keliver: `ParagraphIntrinsics` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ParagraphIntrinsics
 
 @Deprecated("Keliver: `ParagraphStyle` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ParagraphStyle private constructor()
 
 @Deprecated("Keliver: `Placeholder` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Placeholder private constructor()
 
 @Deprecated("Keliver: `PlaceholderVerticalAlign` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PlaceholderVerticalAlign private constructor()
 
 @Deprecated("Keliver: `PlatformParagraphStyle` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PlatformParagraphStyle private constructor()
 
 @Deprecated("Keliver: `PlatformSpanStyle` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PlatformSpanStyle private constructor()
 
 @Deprecated("Keliver: `PlatformTextStyle` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PlatformTextStyle private constructor()
 
 @Deprecated("Keliver: `SpanStyle` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SpanStyle private constructor()
 
 @Deprecated("Keliver: `StringAnnotation` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StringAnnotation private constructor()
 
 @Deprecated("Keliver: `TextDecorationLineStyle` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextDecorationLineStyle private constructor()
 
 @Deprecated("Keliver: `TextGranularity` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextGranularity private constructor()
 
 @Deprecated("Keliver: `TextInclusionStrategy` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextInclusionStrategy
 
 @Deprecated("Keliver: `TextLayoutInput` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextLayoutInput private constructor()
 
 @Deprecated("Keliver: `TextLinkStyles` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextLinkStyles private constructor()
 
 @Deprecated("Keliver: `TextMeasurer` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextMeasurer private constructor()
 
 @Deprecated("Keliver: `TextPainter` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object TextPainter
 
 @Deprecated("Keliver: `TextRange` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextRange private constructor()
 
 @Deprecated("Keliver: `TtsAnnotation` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TtsAnnotation private constructor()
 
 @Deprecated("Keliver: `UnresolvedSymbolsRegistry` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class UnresolvedSymbolsRegistry private constructor()
 
 @Deprecated("Keliver: `UrlAnnotation` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class UrlAnnotation private constructor()
 
 @Deprecated("Keliver: `VerbatimTtsAnnotation` (class in `androidx.compose.ui.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VerbatimTtsAnnotation private constructor()
 

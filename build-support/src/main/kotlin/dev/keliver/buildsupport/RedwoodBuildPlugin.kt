@@ -688,6 +688,8 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
           "dev.keliver.RedwoodCodegenApi",
           // The yoga module is an implementation detail of our layouts.
           "dev.keliver.yoga.RedwoodYogaApi",
+          // MS4-07's generated error stubs: DeprecationLevel.ERROR, so nothing compiled can call them.
+          "dev.keliver.compose.KeliverErrorStub",
         )
       }
     }

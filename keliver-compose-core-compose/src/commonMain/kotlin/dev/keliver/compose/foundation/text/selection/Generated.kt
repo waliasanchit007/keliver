@@ -5,25 +5,32 @@
 package dev.keliver.compose.foundation.text.selection
 
 
-@Deprecated("Keliver: text selection state is the host's. Leave selection to the platform's default text selection.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: text selection is not available in the guest: selection state is the host's. Leave it out.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun DisableSelection(content: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: text selection state is the host's. Leave selection to the platform's default text selection.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: text selection is not available in the guest: selection state is the host's. Leave it out.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun SelectionContainer(modifier: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: text selection state is the host's. Leave selection to the platform's default text selection.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: text selection is not available in the guest: selection state is the host's. Leave it out.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun SelectionContainer(state: Any?, modifier: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: text selection state is the host's. Leave selection to the platform's default text selection.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: text selection is not available in the guest: selection state is the host's. Leave it out.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberSelectionState(): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: text selection state is the host's. Leave selection to the platform's default text selection.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: text selection is not available in the guest: selection state is the host's. Leave it out.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalTextSelectionColors: Any?
   get() = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: text selection state is the host's. Leave selection to the platform's default text selection.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: text selection is not available in the guest: selection state is the host's. Leave it out.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SelectionState private constructor()
 
-@Deprecated("Keliver: text selection state is the host's. Leave selection to the platform's default text selection.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: text selection is not available in the guest: selection state is the host's. Leave it out.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextSelectionColors private constructor()
 

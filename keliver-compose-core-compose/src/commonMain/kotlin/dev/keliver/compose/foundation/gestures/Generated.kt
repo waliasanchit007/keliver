@@ -9,277 +9,227 @@ package dev.keliver.compose.foundation.gestures
 public class FlingBehavior private constructor()
 
 @Deprecated("Keliver: `AnchoredDraggableState` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnchoredDraggableState(initialValue: Any?, positionalThreshold: Any?, velocityThreshold: Any?, snapAnimationSpec: Any?, decayAnimationSpec: Any?, confirmValueChange: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnchoredDraggableState` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnchoredDraggableState(initialValue: Any?, anchors: Any?, positionalThreshold: Any?, velocityThreshold: Any?, snapAnimationSpec: Any?, decayAnimationSpec: Any?, confirmValueChange: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Draggable2DState` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Draggable2DState(onDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `DraggableAnchors` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun DraggableAnchors(builder: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `DraggableState` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun DraggableState(onDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Scrollable2DState` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Scrollable2DState(consumeScrollDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `ScrollableState` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun ScrollableState(consumeScrollDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TransformableState` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TransformableState(onTransformation: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `anchoredDraggable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.anchoredDraggable(state: Any?, reverseDirection: Any?, orientation: Any?, enabled: Any? = null, interactionSource: Any? = null, overscrollEffect: Any? = null, flingBehavior: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `anchoredDraggable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.anchoredDraggable(state: Any?, reverseDirection: Any?, orientation: Any?, enabled: Any? = null, interactionSource: Any? = null, overscrollEffect: Any? = null, startDragImmediately: Any? = null, flingBehavior: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `anchoredDraggable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.anchoredDraggable(state: Any?, orientation: Any?, enabled: Any? = null, interactionSource: Any? = null, overscrollEffect: Any? = null, flingBehavior: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateBy(zoomFactor: Any?, panOffset: Any?, rotationDegrees: Any?, zoomAnimationSpec: Any? = null, panAnimationSpec: Any? = null, rotationAnimationSpec: Any? = null, centroid: Any? = null): Unit = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.awaitEachGesture(block: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animatePanBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animatePanBy(offset: Any?, animationSpec: Any? = null, centroid: Any? = null): Unit = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectDragGestures(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateRotateBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateRotateBy(degrees: Any?, animationSpec: Any? = null, centroid: Any? = null): Unit = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectDragGestures(orientationLock: Any?, onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, shouldAwaitTouchSlop: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateScrollBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateScrollBy(value: Any?, animationSpec: Any? = null): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectDragGestures(matcher: Any? = null, onDragStart: Any? = null, onDragCancel: Any? = null, onDragEnd: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateTo` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateTo(targetValue: Any?, animationSpec: Any? = null): Unit = throw UnsupportedOperationException()
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectDragGesturesAfterLongPress(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateToWithDecay` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateToWithDecay(targetValue: Any?, velocity: Any?, snapAnimationSpec: Any? = null, decayAnimationSpec: Any? = null): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectHorizontalDragGestures(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onHorizontalDrag: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateZoomBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateZoomBy(zoomFactor: Any?, animationSpec: Any? = null, centroid: Any? = null): Unit = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectTapGestures(onDoubleTap: Any? = null, onLongPress: Any? = null, onPress: Any? = null, onTap: Any? = null): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitDragOrCancellation(pointerId: Any?): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectTapGestures(matcher: Any? = null, keyboardModifiers: Any? = null, onDoubleTap: Any? = null, onLongPress: Any? = null, onPress: Any? = null, onTap: Any? = null): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitEachGesture(block: Any?): Unit = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectTransformGestures(panZoomLock: Any? = null, onGesture: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitFirstDown(requireUnconsumed: Any? = null, pass: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitHorizontalDragOrCancellation(pointerId: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitHorizontalPointerSlopOrCancellation(pointerId: Any?, pointerType: Any?, onPointerSlopReached: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitHorizontalTouchSlopOrCancellation(pointerId: Any?, onTouchSlopReached: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitLongPressOrCancellation(pointerId: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitTouchSlopOrCancellation(pointerId: Any?, onTouchSlopReached: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitVerticalDragOrCancellation(pointerId: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitVerticalPointerSlopOrCancellation(pointerId: Any?, pointerType: Any?, onPointerSlopReached: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.awaitVerticalTouchSlopOrCancellation(pointerId: Any?, onTouchSlopReached: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.calculateCentroid(useCurrent: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.calculateCentroidSize(useCurrent: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.calculatePan(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.calculateRotation(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.calculateZoom(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectDragGestures(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectDragGestures(orientationLock: Any?, onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, shouldAwaitTouchSlop: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectDragGestures(matcher: Any? = null, onDragStart: Any? = null, onDragCancel: Any? = null, onDragEnd: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectDragGesturesAfterLongPress(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onDrag: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectHorizontalDragGestures(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onHorizontalDrag: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectTapGestures(onDoubleTap: Any? = null, onLongPress: Any? = null, onPress: Any? = null, onTap: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectTapGestures(matcher: Any? = null, keyboardModifiers: Any? = null, onDoubleTap: Any? = null, onLongPress: Any? = null, onPress: Any? = null, onTap: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectTransformGestures(panZoomLock: Any? = null, onGesture: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.detectVerticalDragGestures(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onVerticalDrag: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.drag(pointerId: Any?, onDrag: Any?): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: gesture detectors read raw pointer events on the host. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.detectVerticalDragGestures(onDragStart: Any? = null, onDragEnd: Any? = null, onDragCancel: Any? = null, onVerticalDrag: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `draggable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.draggable(state: Any?, orientation: Any?, enabled: Any? = null, interactionSource: Any? = null, startDragImmediately: Any? = null, onDragStarted: Any? = null, onDragStopped: Any? = null, reverseDirection: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `draggable2D` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.draggable2D(state: Any?, enabled: Any? = null, interactionSource: Any? = null, startDragImmediately: Any? = null, onDragStarted: Any? = null, onDragStopped: Any? = null, reverseDirection: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `forEach` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.forEach(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.forEachGesture(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.horizontalDrag(pointerId: Any?, onDrag: Any?): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable; draggable and anchoredDraggable come in MS4-47.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.input.pointer.PointerInputScope.forEachGesture(block: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `onDrag` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.onDrag(enabled: Any? = null, matcher: Any? = null, onDragStart: Any? = null, onDragCancel: Any? = null, onDragEnd: Any? = null, onDrag: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `panBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.panBy(offset: Any?, centroid: Any? = null): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `rememberDraggable2DState` (composable function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberDraggable2DState(onDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberDraggableState` (composable function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberDraggableState(onDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberScrollable2DState` (composable function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberScrollable2DState(consumeScrollDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberScrollableState` (composable function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberScrollableState(consumeScrollDelta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberTransformableState` (composable function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberTransformableState(onTransformation: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `rotateBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.rotateBy(degrees: Any?, centroid: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `scrollBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.scrollBy(value: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `scrollable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.scrollable(state: Any?, orientation: Any?, enabled: Any? = null, reverseDirection: Any? = null, flingBehavior: Any? = null, interactionSource: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `scrollable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.scrollable(state: Any?, orientation: Any?, overscrollEffect: Any?, enabled: Any? = null, reverseDirection: Any? = null, flingBehavior: Any? = null, interactionSource: Any? = null, bringIntoViewSpec: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `scrollable2D` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.scrollable2D(state: Any?, enabled: Any? = null, overscrollEffect: Any? = null, flingBehavior: Any? = null, interactionSource: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `snapTo` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.snapTo(targetValue: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `stopScroll` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.stopScroll(scrollPriority: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `stopTransformation` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.stopTransformation(terminationPriority: Any? = null): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `transformable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.transformable(state: Any?, lockRotationOnZoomPan: Any? = null, enabled: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `transformable` (modifier in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.transformable(state: Any?, canPan: Any?, lockRotationOnZoomPan: Any? = null, enabled: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.verticalDrag(pointerId: Any?, onDrag: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public fun Any?.waitForUpOrCancellation(pass: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `zoomBy` (function in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.zoomBy(zoomFactor: Any?, centroid: Any? = null): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `LocalBringIntoViewSpec` (property in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalBringIntoViewSpec: Any?
   get() = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
-public val Any?.isDeepPress: Any?
-  get() = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `AnchoredDragScope` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface AnchoredDragScope
 
 @Deprecated("Keliver: `AnchoredDraggableDefaults` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object AnchoredDraggableDefaults
 
 @Deprecated("Keliver: `AnchoredDraggableState` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class AnchoredDraggableState<T> private constructor()
 
 @Deprecated("Keliver: `BringIntoViewSpec` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface BringIntoViewSpec
 
 @Deprecated("Keliver: `Drag2DScope` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Drag2DScope
 
 @Deprecated("Keliver: `DragScope` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface DragScope
 
 @Deprecated("Keliver: `Draggable2DState` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Draggable2DState
 
 @Deprecated("Keliver: `DraggableAnchors` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface DraggableAnchors<T>
 
 @Deprecated("Keliver: `DraggableAnchorsConfig` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DraggableAnchorsConfig<T> private constructor()
 
 @Deprecated("Keliver: `DraggableState` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface DraggableState
 
 @Deprecated("Keliver: `GestureCancellationException` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class GestureCancellationException private constructor()
 
 @Deprecated("Keliver: `Orientation` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Orientation private constructor()
 
 @Deprecated("Keliver: `PressGestureScope` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PressGestureScope
 
 @Deprecated("Keliver: `Scroll2DScope` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Scroll2DScope
 
 @Deprecated("Keliver: `ScrollScope` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ScrollScope
 
 @Deprecated("Keliver: `Scrollable2DState` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Scrollable2DState
 
 @Deprecated("Keliver: `ScrollableState` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ScrollableState
 
 @Deprecated("Keliver: `TargetedFlingBehavior` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TargetedFlingBehavior
 
 @Deprecated("Keliver: `TransformScope` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TransformScope
 
 @Deprecated("Keliver: `TransformableState` (class in `androidx.compose.foundation.gestures`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TransformableState
 

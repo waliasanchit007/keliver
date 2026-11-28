@@ -8,85 +8,102 @@ package dev.keliver.compose.foundation.text
 /** Placeholder: Compose's `TextAutoSize` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class TextAutoSize private constructor()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun BasicSecureTextField(state: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, inputTransformation: Any? = null, textStyle: Any? = null, keyboardOptions: Any? = null, onKeyboardAction: Any? = null, onTextLayout: Any? = null, interactionSource: Any? = null, cursorBrush: Any? = null, decorator: Any? = null, textObfuscationMode: Any? = null, textObfuscationCharacter: Any? = null, scrollState: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `BasicText` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun BasicText(text: Any?, modifier: Any? = null, style: Any? = null, onTextLayout: Any? = null, overflow: Any? = null, softWrap: Any? = null, maxLines: Any? = null, minLines: Any? = null, color: Any? = null, autoSize: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `BasicText` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun BasicText(text: Any?, modifier: Any? = null, style: Any? = null, onTextLayout: Any? = null, overflow: Any? = null, softWrap: Any? = null, maxLines: Any? = null, minLines: Any? = null, inlineContent: Any? = null, color: Any? = null, autoSize: Any? = null): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun BasicTextField(state: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, inputTransformation: Any? = null, textStyle: Any? = null, keyboardOptions: Any? = null, onKeyboardAction: Any? = null, lineLimits: Any? = null, onTextLayout: Any? = null, interactionSource: Any? = null, cursorBrush: Any? = null, outputTransformation: Any? = null, decorator: Any? = null, scrollState: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `BasicTextField` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun BasicTextField(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, textStyle: Any? = null, keyboardOptions: Any? = null, keyboardActions: Any? = null, singleLine: Any? = null, maxLines: Any? = null, minLines: Any? = null, visualTransformation: Any? = null, onTextLayout: Any? = null, interactionSource: Any? = null, cursorBrush: Any? = null, decorationBox: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `BasicTextField` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun BasicTextField(value: Any?, onValueChange: Any?, modifier: Any? = null, enabled: Any? = null, readOnly: Any? = null, textStyle: Any? = null, keyboardOptions: Any? = null, keyboardActions: Any? = null, singleLine: Any? = null, maxLines: Any? = null, minLines: Any? = null, visualTransformation: Any? = null, onTextLayout: Any? = null, interactionSource: Any? = null, cursorBrush: Any? = null, decorationBox: Any? = null, scrollState: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `ClickableText` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun ClickableText(text: Any?, modifier: Any? = null, style: Any? = null, softWrap: Any? = null, overflow: Any? = null, maxLines: Any? = null, onTextLayout: Any? = null, onClick: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `KeyboardActions` (function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun KeyboardActions(onAny: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TextContextMenuArea` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TextContextMenuArea(textManager: Any?, items: Any?, state: Any?, content: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `appendInlineContent` (function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.appendInlineContent(id: Any?, alternateText: Any? = null): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `rememberTextFieldHorizontalScrollState` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberTextFieldHorizontalScrollState(initial: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberTextFieldScrollState` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberTextFieldScrollState(orientation: Any?, initial: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberTextFieldVerticalScrollState` (composable function in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberTextFieldVerticalScrollState(initial: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LocalAutofillHighlightBrush` (property in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalAutofillHighlightBrush: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LocalAutofillHighlightColor` (property in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalAutofillHighlightColor: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LocalTextContextMenu` (property in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalTextContextMenu: Any?
   get() = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `isTypedEvent` (property in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isTypedEvent: Any?
-  get() = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `InlineTextContent` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class InlineTextContent private constructor()
 
 @Deprecated("Keliver: `InternalFoundationTextApi` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class InternalFoundationTextApi
 
 @Deprecated("Keliver: `JPopupTextMenu` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class JPopupTextMenu private constructor()
 
 @Deprecated("Keliver: `KeyboardActionScope` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface KeyboardActionScope
 
 @Deprecated("Keliver: `KeyboardActions` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class KeyboardActions private constructor()
 
 @Deprecated("Keliver: `KeyboardOptions` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class KeyboardOptions private constructor()
 
 @Deprecated("Keliver: `TextAutoSizeDefaults` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object TextAutoSizeDefaults
 
 @Deprecated("Keliver: `TextContextMenu` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextContextMenu
 
 @Deprecated("Keliver: `TextFieldScrollState` (class in `androidx.compose.foundation.text`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TextFieldScrollState private constructor()
 

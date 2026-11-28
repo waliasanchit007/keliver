@@ -6,145 +6,140 @@ package dev.keliver.compose.ui.unit
 
 
 @Deprecated("Keliver: `Constraints` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Constraints(minWidth: Any? = null, maxWidth: Any? = null, minHeight: Any? = null, maxHeight: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Density(density: Any?, fontScale: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `DpOffset` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun DpOffset(x: Any?, y: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `DpSize` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun DpSize(width: Any?, height: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `IntOffset` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun IntOffset(x: Any?, y: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `IntRect` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun IntRect(offset: Any?, size: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `IntSize` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun IntSize(width: Any?, height: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TextUnit` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TextUnit(value: Any?, type: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Velocity` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Velocity(x: Any?, y: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `coerceAtLeast` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.coerceAtLeast(minimumValue: Any?): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.Dp.coerceAtLeast(minimumValue: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `coerceAtMost` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.coerceAtMost(maximumValue: Any?): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.Dp.coerceAtMost(maximumValue: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `coerceIn` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.coerceIn(minimumValue: Any?, maximumValue: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `constrain` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.constrain(otherConstraints: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `constrainHeight` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.constrainHeight(height: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `constrainWidth` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.constrainWidth(width: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isSatisfiedBy` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.isSatisfiedBy(size: Any?): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.Dp.coerceIn(minimumValue: Any?, maximumValue: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `lerp` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun lerp(start: Any?, stop: Any?, fraction: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `max` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun max(a: Any?, b: Any?): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: `minus` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.IntOffset.minus(offset: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `min` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun min(a: Any?, b: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `offset` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.offset(horizontal: Any? = null, vertical: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `round` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.round(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `roundToIntRect` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.roundToIntRect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `roundToIntSize` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.roundToIntSize(): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: `plus` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.IntOffset.plus(offset: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `takeOrElse` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.takeOrElse(block: Any?): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.Dp.takeOrElse(block: Any?): Nothing = throw UnsupportedOperationException()
+
+@Deprecated("Keliver: `takeOrElse` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.TextUnit.takeOrElse(block: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toIntRect` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toIntRect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toIntSize` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toIntSize(): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.IntSize.toIntRect(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toOffset` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toOffset(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toRect` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toRect(): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.IntOffset.toOffset(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toSize` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toSize(): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.unit.IntSize.toSize(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `center` (property in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.center: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `height` (property in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.height: Any?
+@dev.keliver.compose.KeliverErrorStub
+public val dev.keliver.compose.ui.unit.IntSize.center: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `isFinite` (property in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isFinite: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `size` (property in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.size: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `width` (property in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.width: Any?
+@dev.keliver.compose.KeliverErrorStub
+public val dev.keliver.compose.ui.unit.Dp.isFinite: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `ComposeUiUnitFlags` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object ComposeUiUnitFlags
 
 @Deprecated("Keliver: `Constraints` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Constraints private constructor()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Density
 
 @Deprecated("Keliver: `DpInsets` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DpInsets private constructor()
 
 @Deprecated("Keliver: `DpOffset` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DpOffset private constructor()
 
 @Deprecated("Keliver: `DpRect` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DpRect private constructor()
 
 @Deprecated("Keliver: `DpSize` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DpSize private constructor()
 
 @Deprecated("Keliver: `ExperimentalUnitApi` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalUnitApi
 
 @Deprecated("Keliver: `FontScalingLinear` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FontScalingLinear
 
 @Deprecated("Keliver: `IntRect` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class IntRect private constructor()
 
 @Deprecated("Keliver: `LayoutDirection` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LayoutDirection private constructor()
 
 @Deprecated("Keliver: `Velocity` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Velocity private constructor()
 

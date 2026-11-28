@@ -6,101 +6,102 @@ package dev.keliver.compose.ui.focus
 
 
 @Deprecated("Keliver: `FocusTargetModifierNode` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun FocusTargetModifierNode(focusability: Any? = null, onFocusChange: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `captureFocus` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.captureFocus(): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `focusModifier` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.focusModifier(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `focusOrder` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.focusOrder(focusOrderReceiver: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `focusOrder` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.focusOrder(focusRequester: Any?, focusOrderReceiver: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `focusProperties` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.focusProperties(scope: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `focusRequester` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.focusRequester(focusRequester: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `focusRestorer` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.focusRestorer(fallback: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `focusTarget` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.focusTarget(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `freeFocus` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.freeFocus(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `getFocusedRect` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.getFocusedRect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `invalidateFocusProperties` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateFocusProperties(): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `onFocusChanged` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.onFocusChanged(onFocusChanged: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `onFocusEvent` (modifier in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.onFocusEvent(onFocusEvent: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `requestFocus` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.requestFocus(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.requestFocusForChildInRootBounds(left: Any?, top: Any?, right: Any?, bottom: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `restoreFocusedChild` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.restoreFocusedChild(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `saveFocusedChild` (function in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.saveFocusedChild(): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `FocusDirection` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FocusDirection private constructor()
 
 @Deprecated("Keliver: `FocusEnterExitScope` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusEnterExitScope
 
 @Deprecated("Keliver: `FocusEventModifier` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusEventModifier
 
 @Deprecated("Keliver: `FocusEventModifierNode` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusEventModifierNode
 
 @Deprecated("Keliver: `FocusManager` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusManager
 
 @Deprecated("Keliver: `FocusOrder` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FocusOrder private constructor()
 
 @Deprecated("Keliver: `FocusOrderModifier` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusOrderModifier
 
 @Deprecated("Keliver: `FocusProperties` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusProperties
 
 @Deprecated("Keliver: `FocusPropertiesModifierNode` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusPropertiesModifierNode
 
 @Deprecated("Keliver: `FocusRequester` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FocusRequester private constructor()
 
 @Deprecated("Keliver: `FocusRequesterModifier` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusRequesterModifier
 
 @Deprecated("Keliver: `FocusRequesterModifierNode` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusRequesterModifierNode
 
 @Deprecated("Keliver: `FocusState` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusState
 
 @Deprecated("Keliver: `FocusTargetModifierNode` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FocusTargetModifierNode
 
 @Deprecated("Keliver: `Focusability` (class in `androidx.compose.ui.focus`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Focusability private constructor()
 

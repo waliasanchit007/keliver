@@ -99,6 +99,8 @@ class Output(
   val editorRender: Map<String, String> = emptyMap(),
   /** MS4-07: the error stubs written into the guest for included packages (counts by class), for the report. */
   val errorStubs: List<ErrorStubs.Stub> = emptyList(),
+  /** The generic stubs not written, and why (no guest receiver type; the standard library has the name). */
+  val skippedStubs: List<String> = emptyList(),
 )
 
 /** The package of the editor canvas's generated interpreter (ED0, docs/ED0_SPIKE.md). */
@@ -161,7 +163,7 @@ fun generate(
     e.declaredElsewhere = names
   }
   val guest = e.guest()
-  return Output(mapOf(e.schema()), guest, mapOf(e.host()), values, e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)), e.errorStubs)
+  return Output(mapOf(e.schema()), guest, mapOf(e.host()), values, e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)), e.errorStubs, e.skippedStubs)
 }
 
 fun main(argv: Array<String>) {
@@ -250,7 +252,7 @@ fun runGroup(args: List<String>): List<String> {
       file.writeText(text)
     }
     println("generated group ${config.group}: level ${out.lock.level}, ${out.lock.widgets.size} widgets, ${out.lock.modifiers.size} modifiers")
-    if (out.errorStubs.isNotEmpty()) println("  error stubs: ${stubCounts(out.errorStubs)}")
+    if (out.errorStubs.isNotEmpty()) println("  error stubs: ${stubCounts(out.errorStubs)}; ${out.skippedStubs.size} skipped (no guest receiver type, or a standard-library name)")
   }
   return problems
 }

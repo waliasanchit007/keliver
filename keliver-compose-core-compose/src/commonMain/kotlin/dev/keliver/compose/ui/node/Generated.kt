@@ -6,158 +6,94 @@ package dev.keliver.compose.ui.node
 
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun DpTouchBoundsExpansion(start: Any? = null, top: Any? = null, end: Any? = null, bottom: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TouchBoundsExpansion(start: Any? = null, top: Any? = null, end: Any? = null, bottom: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.currentValueOf(local: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.dispatchDraw(scope: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.dispatchOnScrollChanged(delta: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.findNearestAncestor(key: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.findNearestAncestor(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.findNearestBeyondBoundsLayoutAncestor(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateDraw(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateDrawForSubtree(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateLayer(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateMeasurement(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateMeasurementForSubtree(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateParentData(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidatePlacement(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateSemantics(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.invalidateSubtree(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.observeReads(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.remeasureSync(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.requestAutofill(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.requireDensity(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.requireGraphicsContext(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.requireLayoutCoordinates(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.requireLayoutDirection(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.traverseAncestors(key: Any?, block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.traverseAncestors(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.traverseChildren(key: Any?, block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.traverseChildren(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.traverseDescendants(key: Any?, block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.traverseDescendants(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.updateLayerBlock(layerBlock: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface CompositionLocalConsumerModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface DelegatableNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DelegatingNode private constructor()
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DpTouchBoundsExpansion private constructor()
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface DrawModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface GlobalPositionAwareModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class InternalCoreApi
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface InteroperableComposeUiNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LayoutAwareModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LayoutModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface MeasuredSizeAwareModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ModifierNodeElement<N> private constructor()
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ObserverModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ParentDataModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PointerInputModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Ref<T> private constructor()
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface RootForTest
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface SemanticsModifierNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TouchBoundsExpansion private constructor()
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TraversableNode
 
 @Deprecated("Keliver: a Modifier.Node runs inside the host's layout and draw passes and can never run in the guest. Compose the generated modifiers, or write the modifier in an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface UnplacedAwareModifierNode
 

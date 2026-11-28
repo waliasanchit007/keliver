@@ -6,6 +6,7 @@ package dev.keliver.lifecycle.compose
 
 
 @Deprecated("Keliver: LocalLifecycleOwner is Android's, and a guest has no Android. Reach the platform through a generated bridge (docs/BRIDGE_CODEGEN_DESIGN.md).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalLifecycleOwner: Any?
   get() = throw UnsupportedOperationException()
 

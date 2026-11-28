@@ -6,23 +6,30 @@ package dev.keliver.compose.foundation.selection
 
 
 @Deprecated("Keliver: `selectable` (modifier in `androidx.compose.foundation.selection`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.selectable(selected: Any?, enabled: Any? = null, role: Any? = null, interactionSource: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `selectable` (modifier in `androidx.compose.foundation.selection`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.selectable(selected: Any?, interactionSource: Any?, indication: Any?, enabled: Any? = null, role: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `selectableGroup` (modifier in `androidx.compose.foundation.selection`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.selectableGroup(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toggleable` (modifier in `androidx.compose.foundation.selection`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.toggleable(value: Any?, enabled: Any? = null, role: Any? = null, interactionSource: Any? = null, onValueChange: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toggleable` (modifier in `androidx.compose.foundation.selection`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.toggleable(value: Any?, interactionSource: Any?, indication: Any?, enabled: Any? = null, role: Any? = null, onValueChange: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `triStateToggleable` (modifier in `androidx.compose.foundation.selection`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.triStateToggleable(state: Any?, enabled: Any? = null, role: Any? = null, interactionSource: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `triStateToggleable` (modifier in `androidx.compose.foundation.selection`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.triStateToggleable(state: Any?, interactionSource: Any?, indication: Any?, enabled: Any? = null, role: Any? = null, onClick: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 

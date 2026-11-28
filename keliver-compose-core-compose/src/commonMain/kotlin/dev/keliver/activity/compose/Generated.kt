@@ -6,9 +6,11 @@ package dev.keliver.activity.compose
 
 
 @Deprecated("Keliver: LocalActivity is Android's, and a guest has no Android. Reach the platform through a generated bridge (docs/BRIDGE_CODEGEN_DESIGN.md).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalActivity: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: use dev.keliver.compose.BackHandler, which the host routes. androidx.activity's runs on the Android back dispatcher.", level = DeprecationLevel.ERROR)
-public fun BackHandler(enabled: Any?, onBack: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun BackHandler(enabled: Any? = null, onBack: Any? = null): Nothing = throw UnsupportedOperationException()
 

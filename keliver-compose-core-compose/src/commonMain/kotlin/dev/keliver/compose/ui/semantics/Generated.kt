@@ -6,322 +6,74 @@ package dev.keliver.compose.ui.semantics
 
 
 @Deprecated("Keliver: `clearAndSetSemantics` (modifier in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.clearAndSetSemantics(properties: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `clearTextSubstitution` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.clearTextSubstitution(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `collapse` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.collapse(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `copyText` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.copyText(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `cutText` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.cutText(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `dialog` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.dialog(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `disabled` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.disabled(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `dismiss` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.dismiss(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `error` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.error(description: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `expand` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.expand(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `getAllSemanticsNodes` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.getAllSemanticsNodes(mergingEnabled: Any?, skipDeactivatedNodes: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `getOrNull` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.getOrNull(key: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `getScrollViewportLength` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.getScrollViewportLength(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `getTextLayoutResult` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.getTextLayoutResult(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `heading` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.heading(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `hideFromAccessibility` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.hideFromAccessibility(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `indexForKey` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.indexForKey(mapping: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `insertTextAtCursor` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.insertTextAtCursor(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `invisibleToUser` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.invisibleToUser(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `onAutofillText` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.onAutofillText(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `onClick` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.onClick(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `onFillData` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.onFillData(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `onImeAction` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.onImeAction(imeActionType: Any?, label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `onLongClick` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.onLongClick(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `pageDown` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.pageDown(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `pageLeft` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.pageLeft(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `pageRight` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.pageRight(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `pageUp` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.pageUp(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `password` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.password(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `pasteText` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.pasteText(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `performImeAction` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.performImeAction(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `popup` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.popup(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `requestFocus` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.requestFocus(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `scrollBy` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.scrollBy(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `scrollByOffset` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.scrollByOffset(action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `scrollToIndex` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.scrollToIndex(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `selectableGroup` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.selectableGroup(): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `semantics` (modifier in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.semantics(mergeDescendants: Any? = null, properties: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `setProgress` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.setProgress(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `setSelection` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.setSelection(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `setText` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.setText(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `setTextSubstitution` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.setTextSubstitution(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `showTextSubstitution` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.showTextSubstitution(label: Any? = null, action: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `textEntryKey` (function in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.textEntryKey(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `awtRole` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.awtRole: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `collectionInfo` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.collectionInfo: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `collectionItemInfo` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.collectionItemInfo: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `contentDataType` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.contentDataType: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `contentDescription` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.contentDescription: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `contentType` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.contentType: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `customActions` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.customActions: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `editableText` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.editableText: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `fillableData` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.fillableData: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `focused` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.focused: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `horizontalScrollAxisRange` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.horizontalScrollAxisRange: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `imeAction` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.imeAction: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `inputText` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.inputText: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `inputTextSuggestionState` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.inputTextSuggestionState: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isContainer` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isContainer: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isEditable` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isEditable: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isSensitiveData` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isSensitiveData: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isShowingTextSubstitution` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isShowingTextSubstitution: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isTraversalGroup` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isTraversalGroup: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `liveRegion` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.liveRegion: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `maxTextLength` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.maxTextLength: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `paneTitle` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.paneTitle: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `progressBarRangeInfo` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.progressBarRangeInfo: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `role` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.role: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `selected` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.selected: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `shape` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.shape: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `stateDescription` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.stateDescription: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `testTag` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.testTag: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `text` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.text: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `textCompositionRange` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.textCompositionRange: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `textSelectionRange` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.textSelectionRange: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `textSubstitution` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.textSubstitution: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toggleableState` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.toggleableState: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `traversalIndex` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.traversalIndex: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `verticalScrollAxisRange` (property in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.verticalScrollAxisRange: Any?
-  get() = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `AccessibilityAction` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class AccessibilityAction<T> private constructor()
 
 @Deprecated("Keliver: `CollectionInfo` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class CollectionInfo private constructor()
 
 @Deprecated("Keliver: `CollectionItemInfo` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class CollectionItemInfo private constructor()
 
 @Deprecated("Keliver: `CustomAccessibilityAction` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class CustomAccessibilityAction private constructor()
 
 @Deprecated("Keliver: `InputTextSuggestionState` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class InputTextSuggestionState private constructor()
 
 @Deprecated("Keliver: `LiveRegionMode` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LiveRegionMode private constructor()
 
 @Deprecated("Keliver: `ProgressBarRangeInfo` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ProgressBarRangeInfo private constructor()
 
 @Deprecated("Keliver: `ScrollAxisRange` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ScrollAxisRange private constructor()
 
 @Deprecated("Keliver: `SemanticsActions` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object SemanticsActions
 
 @Deprecated("Keliver: `SemanticsConfiguration` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SemanticsConfiguration private constructor()
 
 @Deprecated("Keliver: `SemanticsModifier` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface SemanticsModifier
 
 @Deprecated("Keliver: `SemanticsNode` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SemanticsNode private constructor()
 
 @Deprecated("Keliver: `SemanticsOwner` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SemanticsOwner private constructor()
 
 @Deprecated("Keliver: `SemanticsProperties` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object SemanticsProperties
 
 @Deprecated("Keliver: `SemanticsPropertyKey` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SemanticsPropertyKey<T> private constructor()
 
 @Deprecated("Keliver: `SemanticsPropertyReceiver` (class in `androidx.compose.ui.semantics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface SemanticsPropertyReceiver
 

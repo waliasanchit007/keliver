@@ -24,6 +24,7 @@ import kotlin.metadata.KmProperty
 import kotlin.metadata.KmType
 import kotlin.metadata.Visibility
 import kotlin.metadata.declaresDefaultValue
+import kotlin.metadata.isNullable
 import kotlin.metadata.jvm.signature
 import kotlin.metadata.kind
 import kotlin.metadata.visibility
@@ -118,13 +119,36 @@ class ErrorStubs(
 
   private fun classNameOf(t: KmType?): String? = (t?.classifier as? KmClassifier.Class)?.name?.replace('/', '.')
 
-  /** The guest type a stub's receiver keeps: the guest's `Modifier`, a generated scope's mirror, else `Any?`. */
-  private fun receiverText(t: KmType?): String? {
-    val fq = classNameOf(t ?: return null)
+  /** Stubs not written because no guest type stands for their receiver (or the standard library owns the name): `pkg.name (why)`. */
+  val skipped: MutableList<String> = mutableListOf()
+
+  /**
+   * Does the guest declare a type for the Compose class [fq] (the values module, hand-written code, a generated scope or a
+   * placeholder)? A class that is itself an error stub does not count: it is `DeprecationLevel.ERROR`, so naming it in
+   * another stub's signature would not compile.
+   */
+  private fun hasMirror(fq: String): Boolean {
+    val pkg = packageOf(fq)
+    val simple = fq.removePrefix("$pkg.")
+    return '.' !in simple && simple in existing[mirrorPackage(pkg)].orEmpty()
+  }
+
+  /**
+   * The guest type a stub's receiver keeps: the guest's `Modifier`, a generated scope's mirror, the guest's mirror
+   * of the receiver's class (`Dp`, `Color`, `TextRange`, a stub class), a Kotlin built-in as it is; `null` when none
+   * stands for it. Never `Any?`: an always-applicable extension imported by `*` outranks the standard library's
+   * (and the real function's) wherever its package is imported (review of #338, H1).
+   */
+  private fun receiverOf(t: KmType): String? {
+    val fq = classNameOf(t) ?: return null
     return when {
       fq == MODIFIER -> "dev.keliver.compose.ui.Modifier"
-      fq != null && fq in scopes -> mirrorFq(fq)
-      else -> "Any?"
+      fq in scopes -> mirrorFq(fq)
+      t.arguments.isNotEmpty() -> null
+      fq == "kotlin.Any" || fq == "kotlin.Nothing" || fq == "kotlin.Unit" -> null
+      fq.startsWith("kotlin.") -> "$fq" + if (t.isNullable) "?" else ""
+      hasMirror(fq) -> mirrorFq(fq) + if (t.isNullable) "?" else ""
+      else -> null
     }
   }
 
@@ -161,7 +185,7 @@ class ErrorStubs(
   }
 
   private fun render(message: String, decl: String): String =
-    "@Deprecated(${kotlinString(message)}, level = DeprecationLevel.ERROR)\n$decl\n\n"
+    "@Deprecated(${kotlinString(message)}, level = DeprecationLevel.ERROR)\n@$STUB_MARKER\n$decl\n\n"
 
   private fun functionStub(f: KmFunction, pkg: String, owner: String?, member: Boolean): Stub? {
     val params = f.valueParameters.map { it.name }
@@ -173,9 +197,19 @@ class ErrorStubs(
     val nameTaken = f.name in existing[mirrorPackage(pkg)].orEmpty() || "$pkg|${f.name}" in handledNames
     if (nameTaken && f.valueParameters.isEmpty()) return null
     val (msg, kind) = messageFor(pkg, f.name, category(f, receiverSimple), typeNames(f))
-    val receiver = receiverText(f.receiverParameterType)?.let { "$it." } ?: ""
-    // An `Any?` extension named like the standard library's would take over `x.apply {}` wherever its package is imported.
-    if (receiver == "Any?." && f.name in stdlibNames) return null
+    val receiverType = f.receiverParameterType
+    val receiverName = receiverType?.let { receiverOf(it) }
+    if (receiverType != null && receiverName == null) {
+      skipped += "$pkg.${f.name} (no guest type for the receiver ${classNameOf(receiverType)})"
+      return null
+    }
+    // A stub on a built-in receiver, or on none, named like a standard-library function would outrank it wherever its package is
+    // imported by `*` (`count.coerceAtLeast(0)`, `error("…")`).
+    if ((receiverName == null || receiverName.startsWith("kotlin.")) && f.name in stdlibFunctionNames) {
+      skipped += "$pkg.${f.name} (the standard library has the name)"
+      return null
+    }
+    val receiver = receiverName?.let { "$it." } ?: ""
     val ret = returnText(f)
     val text = render(msg, "public fun $receiver${id(f.name)}(${paramList(f, requireFirst = nameTaken)}): $ret = ${body()}")
     // Two overloads that differ only in parameter names have one signature in Kotlin: the first stays.
@@ -198,7 +232,17 @@ class ErrorStubs(
         collect(p.returnType, this)
       },
     )
-    val receiver = receiverText(p.receiverParameterType)?.let { "$it." } ?: ""
+    val receiverType = p.receiverParameterType
+    val receiverName = receiverType?.let { receiverOf(it) }
+    if (receiverType != null && receiverName == null) {
+      skipped += "$pkg.${p.name} (no guest type for the receiver ${classNameOf(receiverType)})"
+      return null
+    }
+    if (receiverName != null && receiverName.startsWith("kotlin.") && p.name in stdlibFunctionNames) {
+      skipped += "$pkg.${p.name} (the standard library has the name)"
+      return null
+    }
+    val receiver = receiverName?.let { "$it." } ?: ""
     val text = render(msg, "public val $receiver${id(p.name)}: Any?\n  get() = ${body()}")
     return Stub(mirrorPackage(pkg), p.name, text, kind, msg, null, member)
   }
@@ -260,7 +304,9 @@ class ErrorStubs(
       val decl = if (e.kind == "val") {
         render(msg, "public val ${id(name)}: Any?\n  get() = ${body()}")
       } else {
-        val params = e.params.mapIndexed { i, p -> "${id(p)}: Any?" + if (i > 0 || e.params.size == 1) " = null" else "" }
+        // Android-only names do not exist in the guest, so nothing ties with them: every parameter has a default, and a
+        // `vararg ` prefix in the config keeps Compose's vararg, so `BackHandler { }` and `stringResource(id, a, b)` reach the message.
+        val params = e.params.map { p -> if (p.startsWith("vararg ")) "vararg ${id(p.removePrefix("vararg "))}: Any?" else "${id(p)}: Any? = null" }
         render(msg, "public fun ${id(name)}(${params.joinToString(", ")}): Nothing = ${body()}")
       }
       add(Stub(mirrorPackage(pkg), name, decl, "curated", msg))
@@ -284,11 +330,40 @@ class ErrorStubs(
   }
 }
 
-/** Names of the standard library's extensions, which a stub on an unmapped (`Any?`) receiver must not shadow. */
+/**
+ * The marker every stub carries. It is not an opt-in marker (a call must reach the stub's own message); the build lists it
+ * in `apiValidation.nonPublicMarkers`, so the stubs, which no compiled code can call, stay out of the API dumps (review of #338, M3).
+ */
+const val STUB_MARKER = "dev.keliver.compose.KeliverErrorStub"
+
+/** Names the standard library's top-level functions and extensions carry, which a stub on a built-in or no receiver must not shadow. */
 val stdlibNames: Set<String> = setOf(
   "apply", "let", "also", "run", "with", "takeIf", "takeUnless", "to", "plus", "minus", "times", "div", "rem",
   "equals", "toString", "hashCode", "copy", "invoke", "get", "set", "compareTo", "contains", "iterator",
 )
+
+/** [stdlibNames] plus every public static name in the standard library's file facades (`StringsKt`, `CollectionsKt`, …), read from its jar. */
+val stdlibFunctionNames: Set<String> by lazy {
+  val names = stdlibNames.toMutableSet()
+  runCatching {
+    val location = kotlin.Unit::class.java.protectionDomain.codeSource.location
+    java.util.jar.JarFile(File(location.toURI())).use { jar ->
+      for (e in jar.entries()) {
+        val n = e.name
+        if (!n.startsWith("kotlin/") || !n.endsWith("Kt.class") || '$' in n.substringAfterLast('/')) continue
+        val cls = runCatching { Class.forName(n.removeSuffix(".class").replace('/', '.'), false, ErrorStubs::class.java.classLoader) }.getOrNull() ?: continue
+        for (m in runCatching { cls.declaredMethods }.getOrDefault(emptyArray())) {
+          if (!java.lang.reflect.Modifier.isPublic(m.modifiers) || !java.lang.reflect.Modifier.isStatic(m.modifiers)) continue
+          val name = m.name.substringBefore('-').substringBefore('$')
+          names += name
+          // A property's getter: `getIndices` is `indices`.
+          if ((name.startsWith("get") || name.startsWith("is")) && name.length > 3) names += name.removePrefix("get").replaceFirstChar { it.lowercase() }
+        }
+      }
+    }
+  }
+  names
+}
 
 /** The stub counts by message class: `1234 (curated 40, never 136, notYet 3, generic 1055)`. */
 fun stubCounts(stubs: List<ErrorStubs.Stub>): String {

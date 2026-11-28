@@ -6,290 +6,230 @@ package dev.keliver.compose.foundation.style
 
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Style(style1: Any?, style2: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Style(style1: Any?, style2: Any?, style3: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Style(vararg styles: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.animate(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.animate(spec: Any?, block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.border(width: Any?, color: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.checked(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.contentPadding(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.contentPadding(start: Any?, top: Any?, end: Any?, bottom: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.contentPadding(horizontal: Any?, vertical: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.contentPaddingHorizontal(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.contentPaddingVertical(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.disabled(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.externalPadding(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.externalPadding(start: Any?, top: Any?, end: Any?, bottom: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.externalPadding(horizontal: Any?, vertical: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.externalPaddingHorizontal(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.externalPaddingVertical(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.fillHeight(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.fillSize(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.fillWidth(): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.focused(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.hovered(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.maxSize(size: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.maxSize(width: Any?, height: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.minSize(size: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.minSize(width: Any?, height: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.pressed(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberUpdatedStyleState(interactionSource: Any?, block: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.rotation(x: Any?, y: Any?, z: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.scale(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.scale(x: Any?, y: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.selected(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.size(width: Any?, height: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.size(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.state(key: Any?, block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.styleable(styleState: Any? = null, style: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.styleable(styleState: Any?, vararg styles: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.styleable(styleState: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.then(other: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.transformOrigin(value: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.translation(x: Any?, y: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.translation(offset: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.triStateToggleIndeterminate(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.triStateToggleOff(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.triStateToggleOn(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface AlphaScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface AnimateStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface BackgroundScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface BaselineShiftScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface BorderScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ClipScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ColorFilterScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ContentColorScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ContentPaddingScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface CustomStyle<ScopeT>
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface CustomStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface DrawStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalFoundationStyleApi
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ExternalPaddingScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FontFamilyScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FontSizeScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FontStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FontSynthesisScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FontWeightScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ForegroundScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface HyphensScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LayerStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LayoutStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LetterSpacingScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LineBreakScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LineHeightScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface MaxSizeScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface MinSizeScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class MutableStyleState private constructor()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PositionScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface RotationScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ScaleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ShadowScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ShapeScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface SizeScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Style
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface StyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StyleState private constructor()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StyleStateKey<T> private constructor()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface StyleStateScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextAlignScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextDecorationScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextDirectionScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextIndentScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextMotionScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TextStyleStyleScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TransformOriginScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface TranslationScope
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ZIndexScope
 

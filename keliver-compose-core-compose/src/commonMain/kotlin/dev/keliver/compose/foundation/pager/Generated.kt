@@ -6,38 +6,50 @@ package dev.keliver.compose.foundation.pager
 
 
 @Deprecated("Keliver: `HorizontalPager` (composable function in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun HorizontalPager(state: Any?, modifier: Any? = null, contentPadding: Any? = null, pageSize: Any? = null, beyondViewportPageCount: Any? = null, pageSpacing: Any? = null, verticalAlignment: Any? = null, flingBehavior: Any? = null, userScrollEnabled: Any? = null, reverseLayout: Any? = null, key: Any? = null, pageNestedScrollConnection: Any? = null, snapPosition: Any? = null, overscrollEffect: Any? = null, pageContent: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyLayoutScrollScope` (function in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyLayoutScrollScope(state: Any?, scrollScope: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `PagerState` (function in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun PagerState(currentPage: Any? = null, currentPageOffsetFraction: Any? = null, pageCount: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `VerticalPager` (composable function in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun VerticalPager(state: Any?, modifier: Any? = null, contentPadding: Any? = null, pageSize: Any? = null, beyondViewportPageCount: Any? = null, pageSpacing: Any? = null, horizontalAlignment: Any? = null, flingBehavior: Any? = null, userScrollEnabled: Any? = null, reverseLayout: Any? = null, key: Any? = null, pageNestedScrollConnection: Any? = null, snapPosition: Any? = null, overscrollEffect: Any? = null, pageContent: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberPagerState` (composable function in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberPagerState(initialPage: Any? = null, initialPageOffsetFraction: Any? = null, pageCount: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `PageInfo` (class in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PageInfo
 
 @Deprecated("Keliver: `PageSize` (class in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PageSize
 
 @Deprecated("Keliver: `PagerDefaults` (class in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object PagerDefaults
 
 @Deprecated("Keliver: `PagerLayoutInfo` (class in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PagerLayoutInfo
 
 @Deprecated("Keliver: `PagerScope` (class in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PagerScope
 
 @Deprecated("Keliver: `PagerSnapDistance` (class in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PagerSnapDistance
 
 @Deprecated("Keliver: `PagerState` (class in `androidx.compose.foundation.pager`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PagerState private constructor()
 

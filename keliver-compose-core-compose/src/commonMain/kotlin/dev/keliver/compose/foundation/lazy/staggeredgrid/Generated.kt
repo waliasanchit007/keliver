@@ -6,41 +6,46 @@ package dev.keliver.compose.foundation.lazy.staggeredgrid
 
 
 @Deprecated("Keliver: `LazyHorizontalStaggeredGrid` (composable function in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyHorizontalStaggeredGrid(rows: Any?, modifier: Any? = null, state: Any? = null, contentPadding: Any? = null, reverseLayout: Any? = null, verticalArrangement: Any? = null, horizontalItemSpacing: Any? = null, flingBehavior: Any? = null, userScrollEnabled: Any? = null, overscrollEffect: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyLayoutScrollScope` (function in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyLayoutScrollScope(state: Any?, scrollScope: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyVerticalStaggeredGrid` (composable function in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyVerticalStaggeredGrid(columns: Any?, modifier: Any? = null, state: Any? = null, contentPadding: Any? = null, reverseLayout: Any? = null, verticalItemSpacing: Any? = null, horizontalArrangement: Any? = null, flingBehavior: Any? = null, userScrollEnabled: Any? = null, overscrollEffect: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `items` (function in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.items(items: Any?, key: Any? = null, contentType: Any? = null, span: Any? = null, itemContent: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `itemsIndexed` (function in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.itemsIndexed(items: Any?, key: Any? = null, contentType: Any? = null, span: Any? = null, itemContent: Any?): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `rememberLazyStaggeredGridState` (composable function in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberLazyStaggeredGridState(initialFirstVisibleItemIndex: Any? = null, initialFirstVisibleItemScrollOffset: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyStaggeredGridItemInfo` (class in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyStaggeredGridItemInfo
 
 @Deprecated("Keliver: `LazyStaggeredGridItemScope` (class in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyStaggeredGridItemScope
 
 @Deprecated("Keliver: `LazyStaggeredGridLayoutInfo` (class in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyStaggeredGridLayoutInfo
 
 @Deprecated("Keliver: `LazyStaggeredGridScope` (class in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyStaggeredGridScope
 
 @Deprecated("Keliver: `LazyStaggeredGridState` (class in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LazyStaggeredGridState private constructor()
 
 @Deprecated("Keliver: `StaggeredGridCells` (class in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface StaggeredGridCells
 
 @Deprecated("Keliver: `StaggeredGridItemSpan` (class in `androidx.compose.foundation.lazy.staggeredgrid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StaggeredGridItemSpan private constructor()
 

@@ -6,457 +6,512 @@ package dev.keliver.compose.animation.core
 
 
 @Deprecated("Keliver: `Animatable` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Animatable(initialValue: Any?, visibilityThreshold: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnimationState` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnimationState(initialValue: Any?, initialVelocity: Any? = null, lastFrameTimeNanos: Any? = null, finishedTimeNanos: Any? = null, isRunning: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnimationState` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnimationState(typeConverter: Any?, initialValue: Any?, initialVelocity: Any?, lastFrameTimeNanos: Any? = null, finishedTimeNanos: Any? = null, isRunning: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnimationVector` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnimationVector(v1: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnimationVector` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnimationVector(v1: Any?, v2: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnimationVector` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnimationVector(v1: Any?, v2: Any?, v3: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `AnimationVector` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun AnimationVector(v1: Any?, v2: Any?, v3: Any?, v4: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `DecayAnimation` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun DecayAnimation(animationSpec: Any?, initialValue: Any?, initialVelocity: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TargetBasedAnimation` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TargetBasedAnimation(animationSpec: Any?, typeConverter: Any?, initialValue: Any?, targetValue: Any?, initialVelocity: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TwoWayConverter` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TwoWayConverter(convertToVector: Any?, convertFromVector: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `animate` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animate(initialValue: Any?, targetValue: Any?, initialVelocity: Any? = null, animationSpec: Any? = null, block: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `animate` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animate(typeConverter: Any?, initialValue: Any?, targetValue: Any?, initialVelocity: Any? = null, animationSpec: Any? = null, block: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `animateDecay` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateDecay(initialValue: Any?, initialVelocity: Any?, animationSpec: Any?, block: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateDp` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateDp(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateDpAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateDpAsState(targetValue: Any?, animationSpec: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateFloat` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateFloat(initialValue: Any?, targetValue: Any?, animationSpec: Any?, label: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `animateFloat` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateFloat(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateFloatAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateFloatAsState(targetValue: Any?, animationSpec: Any? = null, visibilityThreshold: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateInt` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateInt(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateIntAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateIntAsState(targetValue: Any?, animationSpec: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateIntOffset` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateIntOffset(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateIntOffsetAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateIntOffsetAsState(targetValue: Any?, animationSpec: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateIntSize` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateIntSize(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateIntSizeAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateIntSizeAsState(targetValue: Any?, animationSpec: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateOffset` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateOffset(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateOffsetAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateOffsetAsState(targetValue: Any?, animationSpec: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateRect` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateRect(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateRectAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateRectAsState(targetValue: Any?, animationSpec: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateSize` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateSize(transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateSizeAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateSizeAsState(targetValue: Any?, animationSpec: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `animateTo` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateTo(targetValue: Any?, animationSpec: Any? = null, sequentialAnimation: Any? = null, block: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `animateValue` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateValue(initialValue: Any?, targetValue: Any?, typeConverter: Any?, animationSpec: Any?, label: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `animateValue` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.animateValue(typeConverter: Any?, transitionSpec: Any? = null, label: Any? = null, targetValueByState: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `animateValueAsState` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun animateValueAsState(targetValue: Any?, typeConverter: Any?, animationSpec: Any? = null, visibilityThreshold: Any? = null, label: Any? = null, finishedListener: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `calculateTargetValue` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.calculateTargetValue(typeConverter: Any?, initialValue: Any?, initialVelocity: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `calculateTargetValue` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.calculateTargetValue(initialValue: Any?, initialVelocity: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `createAnimation` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.createAnimation(initialValue: Any?, targetValue: Any?, initialVelocity: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `createChildTransition` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.createChildTransition(label: Any? = null, transformToChildState: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `createDeferredAnimation` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.createDeferredAnimation(typeConverter: Any?, label: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `createZeroVectorFrom` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.createZeroVectorFrom(value: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `estimateAnimationDurationMillis` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun estimateAnimationDurationMillis(stiffness: Any?, dampingRatio: Any?, initialVelocity: Any?, initialDisplacement: Any?, delta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `estimateAnimationDurationMillis` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun estimateAnimationDurationMillis(springConstant: Any?, dampingCoefficient: Any?, mass: Any?, initialVelocity: Any?, initialDisplacement: Any?, delta: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `exponentialDecay` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun exponentialDecay(frictionMultiplier: Any? = null, absVelocityThreshold: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `generateDecayAnimationSpec` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.generateDecayAnimationSpec(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `getVelocityFromNanos` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.getVelocityFromNanos(playTimeNanos: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `infiniteRepeatable` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun infiniteRepeatable(animation: Any?, repeatMode: Any? = null, initialStartOffset: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `keyframes` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun keyframes(init: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `keyframesWithSpline` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun keyframesWithSpline(init: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `keyframesWithSpline` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun keyframesWithSpline(periodicBias: Any?, init: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberInfiniteTransition` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberInfiniteTransition(label: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberTransition` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberTransition(transitionState: Any?, label: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `repeatable` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun repeatable(iterations: Any?, animation: Any?, repeatMode: Any? = null, initialStartOffset: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `snap` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun snap(delayMillis: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `spring` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun spring(dampingRatio: Any?, stiffness: Any? = null, visibilityThreshold: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `tween` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun tween(durationMillis: Any?, delayMillis: Any? = null, easing: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `updateTransition` (composable function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun updateTransition(targetState: Any?, label: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `withInfiniteAnimationFrameMillis` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun withInfiniteAnimationFrameMillis(onFrame: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `withInfiniteAnimationFrameNanos` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun withInfiniteAnimationFrameNanos(onFrame: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Ease` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val Ease: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseIn` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseIn: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInBack` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInBack: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInBounce` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInBounce: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInCirc` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInCirc: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInCubic` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInCubic: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInElastic` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInElastic: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInExpo` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInExpo: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOut` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOut: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutBack` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutBack: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutBounce` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutBounce: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutCirc` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutCirc: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutCubic` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutCubic: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutElastic` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutElastic: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutExpo` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutExpo: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutQuad` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutQuad: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutQuart` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutQuart: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutQuint` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutQuint: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInOutSine` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInOutSine: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInQuad` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInQuad: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInQuart` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInQuart: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInQuint` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInQuint: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseInSine` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseInSine: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOut` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOut: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutBack` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutBack: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutBounce` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutBounce: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutCirc` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutCirc: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutCubic` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutCubic: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutElastic` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutElastic: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutExpo` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutExpo: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutQuad` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutQuad: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutQuart` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutQuart: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutQuint` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutQuint: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `EaseOutSine` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val EaseOutSine: Any?
   get() = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `isFinished` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isFinished: Any?
-  get() = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `Animation` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Animation<T, V>
 
 @Deprecated("Keliver: `AnimationScope` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class AnimationScope<T, V> private constructor()
 
 @Deprecated("Keliver: `AnimationState` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class AnimationState<T, V> private constructor()
 
 @Deprecated("Keliver: `AnimationVector3D` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class AnimationVector3D private constructor()
 
 @Deprecated("Keliver: `ArcAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ArcAnimationSpec<T> private constructor()
 
 @Deprecated("Keliver: `ArcMode` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ArcMode private constructor()
 
 @Deprecated("Keliver: `DecayAnimation` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DecayAnimation<T, V> private constructor()
 
 @Deprecated("Keliver: `DecayAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface DecayAnimationSpec<T>
 
 @Deprecated("Keliver: `DeferredTargetAnimation` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DeferredTargetAnimation<T, V> private constructor()
 
 @Deprecated("Keliver: `DeferredTransition` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DeferredTransition<S> private constructor()
 
 @Deprecated("Keliver: `DeferredTransitionState` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class DeferredTransitionState<S> private constructor()
 
 @Deprecated("Keliver: `ExperimentalAnimationSpecApi` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalAnimationSpecApi
 
 @Deprecated("Keliver: `ExperimentalDeferredTransitionApi` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalDeferredTransitionApi
 
 @Deprecated("Keliver: `ExperimentalTransitionApi` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalTransitionApi
 
 @Deprecated("Keliver: `FloatAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FloatAnimationSpec
 
 @Deprecated("Keliver: `FloatDecayAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface FloatDecayAnimationSpec
 
 @Deprecated("Keliver: `FloatExponentialDecaySpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FloatExponentialDecaySpec private constructor()
 
 @Deprecated("Keliver: `FloatSpringSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FloatSpringSpec private constructor()
 
 @Deprecated("Keliver: `FloatTweenSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FloatTweenSpec private constructor()
 
 @Deprecated("Keliver: `InfiniteRepeatableSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class InfiniteRepeatableSpec<T> private constructor()
 
 @Deprecated("Keliver: `InfiniteTransition` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class InfiniteTransition private constructor()
 
 @Deprecated("Keliver: `InternalAnimationApi` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class InternalAnimationApi
 
 @Deprecated("Keliver: `KeyframeBaseEntity` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class KeyframeBaseEntity<T> private constructor()
 
 @Deprecated("Keliver: `KeyframesSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class KeyframesSpec<T> private constructor()
 
 @Deprecated("Keliver: `KeyframesSpecBaseConfig` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class KeyframesSpecBaseConfig<T, E> private constructor()
 
 @Deprecated("Keliver: `KeyframesWithSplineSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class KeyframesWithSplineSpec<T> private constructor()
 
 @Deprecated("Keliver: `MutableTransitionState` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class MutableTransitionState<S> private constructor()
 
 @Deprecated("Keliver: `PathEasing` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PathEasing private constructor()
 
 @Deprecated("Keliver: `RepeatMode` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class RepeatMode private constructor()
 
 @Deprecated("Keliver: `RepeatableSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class RepeatableSpec<T> private constructor()
 
 @Deprecated("Keliver: `SeekableTransitionState` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SeekableTransitionState<S> private constructor()
 
 @Deprecated("Keliver: `StartOffset` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StartOffset private constructor()
 
 @Deprecated("Keliver: `StartOffsetType` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StartOffsetType private constructor()
 
 @Deprecated("Keliver: `TargetBasedAnimation` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TargetBasedAnimation<T, V> private constructor()
 
 @Deprecated("Keliver: `Transition` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Transition<S> private constructor()
 
 @Deprecated("Keliver: `TransitionState` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TransitionState<S> private constructor()
 
 @Deprecated("Keliver: `VectorizedAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface VectorizedAnimationSpec<V>
 
 @Deprecated("Keliver: `VectorizedDecayAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface VectorizedDecayAnimationSpec<V>
 
 @Deprecated("Keliver: `VectorizedDurationBasedAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface VectorizedDurationBasedAnimationSpec<V>
 
 @Deprecated("Keliver: `VectorizedFiniteAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface VectorizedFiniteAnimationSpec<V>
 
 @Deprecated("Keliver: `VectorizedFloatAnimationSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VectorizedFloatAnimationSpec<V> private constructor()
 
 @Deprecated("Keliver: `VectorizedInfiniteRepeatableSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VectorizedInfiniteRepeatableSpec<V> private constructor()
 
 @Deprecated("Keliver: `VectorizedKeyframesSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VectorizedKeyframesSpec<V> private constructor()
 
 @Deprecated("Keliver: `VectorizedRepeatableSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VectorizedRepeatableSpec<V> private constructor()
 
 @Deprecated("Keliver: `VectorizedSnapSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VectorizedSnapSpec<V> private constructor()
 
 @Deprecated("Keliver: `VectorizedSpringSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VectorizedSpringSpec<V> private constructor()
 
 @Deprecated("Keliver: `VectorizedTweenSpec` (class in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VectorizedTweenSpec<V> private constructor()
 

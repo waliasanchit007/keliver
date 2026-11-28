@@ -6,65 +6,78 @@ package dev.keliver.compose.foundation.lazy.grid
 
 
 @Deprecated("Keliver: `GridItemSpan` (function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun GridItemSpan(currentLineSpan: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyGridPrefetchStrategy` (function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyGridPrefetchStrategy(nestedPrefetchItemCount: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyHorizontalGrid` (composable function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyHorizontalGrid(rows: Any?, modifier: Any? = null, state: Any? = null, contentPadding: Any? = null, reverseLayout: Any? = null, horizontalArrangement: Any? = null, verticalArrangement: Any? = null, flingBehavior: Any? = null, userScrollEnabled: Any? = null, overscrollEffect: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyLayoutScrollScope` (function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyLayoutScrollScope(state: Any?, scrollScope: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LazyVerticalGrid` (composable function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LazyVerticalGrid(columns: Any?, modifier: Any? = null, state: Any? = null, contentPadding: Any? = null, reverseLayout: Any? = null, verticalArrangement: Any? = null, horizontalArrangement: Any? = null, flingBehavior: Any? = null, userScrollEnabled: Any? = null, overscrollEffect: Any? = null, content: Any?): Unit = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `items` (function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.items(items: Any?, key: Any? = null, span: Any? = null, contentType: Any? = null, itemContent: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `itemsIndexed` (function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.itemsIndexed(items: Any?, key: Any? = null, span: Any? = null, contentType: Any? = null, itemContent: Any?): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `rememberLazyGridState` (composable function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberLazyGridState(initialFirstVisibleItemIndex: Any? = null, initialFirstVisibleItemScrollOffset: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberLazyGridState` (composable function in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberLazyGridState(initialFirstVisibleItemIndex: Any? = null, initialFirstVisibleItemScrollOffset: Any? = null, prefetchStrategy: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `GridCells` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface GridCells
 
 @Deprecated("Keliver: `GridItemSpan` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class GridItemSpan private constructor()
 
 @Deprecated("Keliver: `LazyGridItemInfo` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridItemInfo
 
 @Deprecated("Keliver: `LazyGridItemScope` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridItemScope
 
 @Deprecated("Keliver: `LazyGridItemSpanScope` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridItemSpanScope
 
 @Deprecated("Keliver: `LazyGridLayoutInfo` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridLayoutInfo
 
 @Deprecated("Keliver: `LazyGridPrefetchResultScope` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridPrefetchResultScope
 
 @Deprecated("Keliver: `LazyGridPrefetchScope` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridPrefetchScope
 
 @Deprecated("Keliver: `LazyGridPrefetchStrategy` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridPrefetchStrategy
 
 @Deprecated("Keliver: `LazyGridScope` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface LazyGridScope
 
 @Deprecated("Keliver: `LazyGridScopeMarker` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class LazyGridScopeMarker
 
 @Deprecated("Keliver: `LazyGridState` (class in `androidx.compose.foundation.lazy.grid`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LazyGridState private constructor()
 

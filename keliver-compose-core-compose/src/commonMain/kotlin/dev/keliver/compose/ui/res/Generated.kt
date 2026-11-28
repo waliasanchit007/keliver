@@ -6,20 +6,26 @@ package dev.keliver.compose.ui.res
 
 
 @Deprecated("Keliver: stringResource reads Android resources, and a guest has none. Keep strings in the guest's Kotlin, or register them on the host.", level = DeprecationLevel.ERROR)
-public fun stringResource(id: Any?, formatArgs: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun stringResource(id: Any? = null, vararg formatArgs: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: pluralStringResource reads Android resources, and a guest has none. Keep strings in the guest's Kotlin, or register them on the host.", level = DeprecationLevel.ERROR)
-public fun pluralStringResource(id: Any?, count: Any? = null, formatArgs: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun pluralStringResource(id: Any? = null, count: Any? = null, vararg formatArgs: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: painterResource reads Android resources, and a guest has none. Use AsyncImage, an icon from the icon group, or an image the host registers.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun painterResource(id: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: vectorResource reads Android resources, and a guest has none. Use an icon from the icon group, or an image the host registers.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun vectorResource(id: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: colorResource reads Android resources, and a guest has none. Use a Color in the guest, or a MaterialTheme colour.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun colorResource(id: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: dimensionResource reads Android resources, and a guest has none. Use a Dp in the guest.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dimensionResource(id: Any? = null): Nothing = throw UnsupportedOperationException()
 

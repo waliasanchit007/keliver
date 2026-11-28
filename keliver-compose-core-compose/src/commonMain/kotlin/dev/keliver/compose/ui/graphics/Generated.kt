@@ -9,442 +9,393 @@ package dev.keliver.compose.ui.graphics
 public class Brush private constructor()
 
 @Deprecated("Keliver: `BlurEffect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun BlurEffect(radiusX: Any?, radiusY: Any?, edgeTreatment: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Canvas` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Canvas(image: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Color` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Color(red: Any?, green: Any?, blue: Any?, alpha: Any? = null, colorSpace: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Color` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Color(color: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Color` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Color(red: Any?, green: Any?, blue: Any?, alpha: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `CompositeShader` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun CompositeShader(dst: Any?, src: Any?, blendMode: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `GraphicsLayerScope` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun GraphicsLayerScope(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `ImageBitmap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun ImageBitmap(width: Any?, height: Any?, config: Any? = null, hasAlpha: Any? = null, colorSpace: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `ImageShader` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun ImageShader(image: Any?, tileModeX: Any? = null, tileModeY: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LayerOutsets` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LayerOutsets(all: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LayerOutsets` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LayerOutsets(vertical: Any?, horizontal: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LinearGradientShader` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun LinearGradientShader(from: Any?, to: Any?, colors: Any?, colorStops: Any? = null, tileMode: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `OffsetEffect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun OffsetEffect(offsetX: Any?, offsetY: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Paint` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Paint(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `Path` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun Path(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `PathHitTester` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun PathHitTester(path: Any?, tolerance: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `PathIterator` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun PathIterator(path: Any?, conicEvaluation: Any? = null, tolerance: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `PathMeasure` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun PathMeasure(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `RadialGradientShader` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun RadialGradientShader(center: Any?, radius: Any?, colors: Any?, colorStops: Any? = null, tileMode: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `ShaderBrush` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun ShaderBrush(shader: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `SweepGradientShader` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun SweepGradientShader(center: Any?, colors: Any?, colorStops: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `TransformOrigin` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun TransformOrigin(pivotFractionX: Any?, pivotFractionY: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `addOutline` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.addOutline(outline: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `addSvg` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.addSvg(pathData: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposeCanvas` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposeCanvas(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposeColorFilter` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposeColorFilter(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposeImageBitmap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposeImageBitmap(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposePaint` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposePaint(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposePath` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposePath(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposePathEffect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposePathEffect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposeRenderEffect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposeRenderEffect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asComposeShader` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asComposeShader(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asSkiaBitmap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asSkiaBitmap(): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `asSkiaColorFilter` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asSkiaColorFilter(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asSkiaPath` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asSkiaPath(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asSkiaPathEffect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asSkiaPathEffect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `asSkiaPathMeasure` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.asSkiaPathMeasure(): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.ColorFilter.asSkiaColorFilter(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `compositeOver` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.compositeOver(background: Any?): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.Color.compositeOver(background: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `computeCubicVerticalBounds` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun computeCubicVerticalBounds(p0y: Any?, p1y: Any?, p2y: Any?, p3y: Any?, roots: Any?, index: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `computeDirection` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.computeDirection(): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `computeHorizontalBounds` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun computeHorizontalBounds(segment: Any?, roots: Any?, index: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `decodeToImageBitmap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.decodeToImageBitmap(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `divide` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.divide(contours: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun kotlin.ByteArray.decodeToImageBitmap(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `drawOutline` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.drawOutline(outline: Any?, color: Any?, alpha: Any? = null, style: Any? = null, colorFilter: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `drawOutline` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.drawOutline(outline: Any?, paint: Any?): Unit = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.drawscope.DrawScope.drawOutline(outline: Any?, color: Any?, alpha: Any? = null, style: Any? = null, colorFilter: Any? = null, blendMode: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `evaluateCubic` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun evaluateCubic(p1: Any?, p2: Any?, t: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `evaluateY` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun evaluateY(segment: Any?, t: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `findFirstCubicRoot` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun findFirstCubicRoot(p0: Any?, p1: Any?, p2: Any?, p3: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `findFirstRoot` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun findFirstRoot(segment: Any?, fraction: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `graphicsLayer` (modifier in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.graphicsLayer(scaleX: Any? = null, scaleY: Any? = null, alpha: Any? = null, translationX: Any? = null, translationY: Any? = null, shadowElevation: Any? = null, rotationX: Any? = null, rotationY: Any? = null, rotationZ: Any? = null, cameraDistance: Any? = null, transformOrigin: Any? = null, shape: Any? = null, clip: Any? = null, renderEffect: Any? = null, ambientShadowColor: Any? = null, spotShadowColor: Any? = null, compositingStrategy: Any? = null, blendMode: Any? = null, colorFilter: Any? = null, outsets: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `graphicsLayer` (modifier in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.graphicsLayer(block: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `isIdentity` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.isIdentity(): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `isSupported` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.isSupported(): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.BlendMode.isSupported(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `lerp` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun lerp(start: Any?, stop: Any?, fraction: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `luminance` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.luminance(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `materializeSkiaPath` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.materializeSkiaPath(): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.Color.luminance(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `prepareTransformationMatrix` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun prepareTransformationMatrix(matrix: Any?, pivotX: Any?, pivotY: Any?, translationX: Any?, translationY: Any?, rotationX: Any?, rotationY: Any?, rotationZ: Any?, scaleX: Any?, scaleY: Any?, cameraDistance: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `rememberGraphicsLayer` (composable function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun rememberGraphicsLayer(): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `reverse` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.reverse(destination: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `rotate` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.rotate(degrees: Any?, pivotX: Any?, pivotY: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `rotateRad` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.rotateRad(radians: Any?, pivotX: Any? = null, pivotY: Any? = null): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `scale` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.scale(sx: Any?, sy: Any? = null, pivotX: Any?, pivotY: Any?): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `takeOrElse` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.takeOrElse(block: Any?): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.Color.takeOrElse(block: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toArgb` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toArgb(): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.Color.toArgb(): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
-public fun Any?.toAwtImage(density: Any?, layoutDirection: Any?, size: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toAwtImage` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toAwtImage(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toComposeBitmap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toComposeBitmap(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toComposeImageBitmap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toComposeImageBitmap(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toComposeRect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toComposeRect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toPainter` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toPainter(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toPixelMap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toPixelMap(startX: Any? = null, startY: Any? = null, width: Any? = null, height: Any? = null, buffer: Any? = null, bufferOffset: Any? = null, stride: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toSkiaRRect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toSkiaRRect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toSkiaRect` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toSkiaRect(): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `toSvg` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.toSvg(asDocument: Any? = null): Nothing = throw UnsupportedOperationException()
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
+public fun dev.keliver.compose.ui.graphics.painter.Painter.toAwtImage(density: Any?, layoutDirection: Any?, size: Any? = null): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toolingGraphicsLayer` (modifier in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.toolingGraphicsLayer(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `withSave` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.withSave(block: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `withSaveLayer` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.withSaveLayer(bounds: Any?, paint: Any?, block: Any?): Unit = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `CloseSegment` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val CloseSegment: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `DefaultCameraDistance` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val DefaultCameraDistance: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `DoneSegment` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val DoneSegment: Any?
   get() = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `alphaMultiplier` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.alphaMultiplier: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `difference` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.difference: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `intersect` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.intersect: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `nativeCanvas` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.nativeCanvas: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `reverseDifference` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.reverseDifference: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `skiaCanvas` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.skiaCanvas: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `skiaImageFilter` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.skiaImageFilter: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `skiaPaint` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.skiaPaint: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `skiaShader` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.skiaShader: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `union` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.union: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `xor` (property in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.xor: Any?
-  get() = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `BlendModeColorFilter` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class BlendModeColorFilter private constructor()
 
 @Deprecated("Keliver: `BlurEffect` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class BlurEffect private constructor()
 
 @Deprecated("Keliver: `Canvas` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Canvas
 
 @Deprecated("Keliver: `ClipOp` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ClipOp private constructor()
 
 @Deprecated("Keliver: `ColorMatrix` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ColorMatrix private constructor()
 
 @Deprecated("Keliver: `ColorMatrixColorFilter` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ColorMatrixColorFilter private constructor()
 
 @Deprecated("Keliver: `ColorProducer` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ColorProducer
 
 @Deprecated("Keliver: `CompositingStrategy` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class CompositingStrategy private constructor()
 
 @Deprecated("Keliver: `ExperimentalGraphicsApi` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalGraphicsApi
 
 @Deprecated("Keliver: `GraphicsContext` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface GraphicsContext
 
 @Deprecated("Keliver: `GraphicsLayerScope` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface GraphicsLayerScope
 
 @Deprecated("Keliver: `ImageBitmap` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ImageBitmap
 
 @Deprecated("Keliver: `ImageBitmapConfig` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ImageBitmapConfig private constructor()
 
 @Deprecated("Keliver: `Interpolatable` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Interpolatable
 
 @Deprecated("Keliver: `Interval` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Interval<T> private constructor()
 
 @Deprecated("Keliver: `IntervalTree` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class IntervalTree<T> private constructor()
 
 @Deprecated("Keliver: `LayerOutsets` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LayerOutsets private constructor()
 
 @Deprecated("Keliver: `LightingColorFilter` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LightingColorFilter private constructor()
 
 @Deprecated("Keliver: `LinearGradient` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class LinearGradient private constructor()
 
 @Deprecated("Keliver: `Matrix` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Matrix private constructor()
 
 @Deprecated("Keliver: `MeshGradientPainter` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class MeshGradientPainter private constructor()
 
 @Deprecated("Keliver: `MeshGradientScope` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface MeshGradientScope
 
 @Deprecated("Keliver: `OffsetEffect` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class OffsetEffect private constructor()
 
 @Deprecated("Keliver: `Outline` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Outline private constructor()
 
 @Deprecated("Keliver: `Paint` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Paint
 
 @Deprecated("Keliver: `PaintingStyle` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PaintingStyle private constructor()
 
 @Deprecated("Keliver: `Path` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface Path
 
 @Deprecated("Keliver: `PathEffect` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PathEffect
 
 @Deprecated("Keliver: `PathFillType` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PathFillType private constructor()
 
 @Deprecated("Keliver: `PathHitTester` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PathHitTester private constructor()
 
 @Deprecated("Keliver: `PathIterator` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PathIterator
 
 @Deprecated("Keliver: `PathMeasure` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface PathMeasure
 
 @Deprecated("Keliver: `PathOperation` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PathOperation private constructor()
 
 @Deprecated("Keliver: `PathSegment` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PathSegment private constructor()
 
 @Deprecated("Keliver: `PixelMap` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PixelMap private constructor()
 
 @Deprecated("Keliver: `PointMode` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class PointMode private constructor()
 
 @Deprecated("Keliver: `RadialGradient` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class RadialGradient private constructor()
 
 @Deprecated("Keliver: `RenderEffect` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class RenderEffect private constructor()
 
 @Deprecated("Keliver: `Shader` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Shader private constructor()
 
 @Deprecated("Keliver: `ShaderBrush` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ShaderBrush private constructor()
 
 @Deprecated("Keliver: `Shadow` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Shadow private constructor()
 
 @Deprecated("Keliver: `SkiaGraphicsContext` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SkiaGraphicsContext private constructor()
 
 @Deprecated("Keliver: `SolidColor` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SolidColor private constructor()
 
 @Deprecated("Keliver: `StampedPathEffectStyle` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StampedPathEffectStyle private constructor()
 
 @Deprecated("Keliver: `StrokeCap` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StrokeCap private constructor()
 
 @Deprecated("Keliver: `StrokeJoin` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class StrokeJoin private constructor()
 
 @Deprecated("Keliver: `SweepGradient` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SweepGradient private constructor()
 
 @Deprecated("Keliver: `TileMode` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TileMode private constructor()
 
 @Deprecated("Keliver: `TransformOrigin` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class TransformOrigin private constructor()
 
 @Deprecated("Keliver: `VertexMode` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class VertexMode private constructor()
 
 @Deprecated("Keliver: `Vertices` (class in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class Vertices private constructor()
 

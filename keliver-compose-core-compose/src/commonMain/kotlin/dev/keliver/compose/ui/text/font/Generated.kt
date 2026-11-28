@@ -6,5 +6,6 @@ package dev.keliver.compose.ui.text.font
 
 
 @Deprecated("Keliver: Font(R.font...) reads Android resources, and a guest has none. Use the theme's typography, or a font the host registers.", level = DeprecationLevel.ERROR)
-public fun Font(resId: Any?, weight: Any? = null, style: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun Font(resId: Any? = null, weight: Any? = null, style: Any? = null): Nothing = throw UnsupportedOperationException()
 

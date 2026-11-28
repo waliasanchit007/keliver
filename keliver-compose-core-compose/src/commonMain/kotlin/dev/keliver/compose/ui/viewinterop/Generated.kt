@@ -6,5 +6,6 @@ package dev.keliver.compose.ui.viewinterop
 
 
 @Deprecated("Keliver: AndroidView embeds a native View, and a guest has no Android. Use an app component (a widget the host registers) instead.", level = DeprecationLevel.ERROR)
-public fun AndroidView(factory: Any?, modifier: Any? = null, update: Any? = null, onReset: Any? = null, onRelease: Any? = null): Nothing = throw UnsupportedOperationException()
+@dev.keliver.compose.KeliverErrorStub
+public fun AndroidView(factory: Any? = null, modifier: Any? = null, update: Any? = null, onReset: Any? = null, onRelease: Any? = null): Nothing = throw UnsupportedOperationException()
 

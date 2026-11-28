@@ -6,129 +6,132 @@ package dev.keliver.compose.ui
 
 
 @Deprecated("Keliver: `composed` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.composed(inspectorInfo: Any? = null, factory: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `composed` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.composed(fullyQualifiedName: Any?, key1: Any?, inspectorInfo: Any? = null, factory: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `composed` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.composed(fullyQualifiedName: Any?, key1: Any?, key2: Any?, inspectorInfo: Any? = null, factory: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `composed` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.composed(fullyQualifiedName: Any?, key1: Any?, key2: Any?, key3: Any?, inspectorInfo: Any? = null, factory: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `composed` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.composed(fullyQualifiedName: Any?, vararg keys: Any?, inspectorInfo: Any? = null, factory: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `configureSwingGlobalsForCompose` (function in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun configureSwingGlobalsForCompose(overrideLookAndFeel: Any? = null, useScreenMenuBarOnMacOs: Any? = null, useAutoDpiOnLinux: Any? = null): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `derivedMediaQuery` (composable function in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun derivedMediaQuery(query: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `isUiSystemInDarkTheme` (composable function in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun isUiSystemInDarkTheme(): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `keepScreenOn` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.keepScreenOn(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `materialize` (composable function in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.materialize(modifier: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `mediaQuery` (composable function in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun mediaQuery(query: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `mediaQuery` (function in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.mediaQuery(query: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `preferredFrameRate` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.preferredFrameRate(frameRate: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Size and position callbacks (onSizeChanged, onGloballyPositioned) come in MS4-46 as events with host values. Until then use an app component.", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun renderComposeScene(width: Any?, height: Any?, density: Any? = null, content: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `sensitiveContent` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.sensitiveContent(isContentSensitive: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `use` (function in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.use(block: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `zIndex` (modifier in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public fun dev.keliver.compose.ui.Modifier.zIndex(zIndex: Any?): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LocalSystemTheme` (property in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalSystemTheme: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `LocalUiMediaScope` (property in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public val LocalUiMediaScope: Any?
   get() = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `areWindowInsetsRulersEnabled` (property in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.areWindowInsetsRulersEnabled: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isClearFocusOnMouseDownEnabled` (property in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isClearFocusOnMouseDownEnabled: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `isDialogAnimationEnabled` (property in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.isDialogAnimationEnabled: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `pollSystemTheme` (property in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.pollSystemTheme: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `useLegacyRenderNodeLayers` (property in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.useLegacyRenderNodeLayers: Any?
-  get() = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `AbsoluteAlignment` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object AbsoluteAlignment
 
 @Deprecated("Keliver: `BiasAbsoluteAlignment` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class BiasAbsoluteAlignment private constructor()
 
 @Deprecated("Keliver: `CombinedModifier` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class CombinedModifier private constructor()
 
 @Deprecated("Keliver: `ComposeDesktopEntryPoint` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface ComposeDesktopEntryPoint
 
 @Deprecated("Keliver: `ComposeUiFlags` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public object ComposeUiFlags
 
 @Deprecated("Keliver: `ExperimentalComposeUiApi` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalComposeUiApi
 
 @Deprecated("Keliver: `ExperimentalIndirectPointerApi` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalIndirectPointerApi
 
 @Deprecated("Keliver: `ExperimentalMediaQueryApi` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class ExperimentalMediaQueryApi
 
 @Deprecated("Keliver: `FrameRateCategory` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class FrameRateCategory private constructor()
 
 @Deprecated("Keliver: `ImageComposeScene` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class ImageComposeScene private constructor()
 
 @Deprecated("Keliver: `InternalComposeUiApi` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class InternalComposeUiApi
 
 @Deprecated("Keliver: `MotionDurationScale` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface MotionDurationScale
 
 @Deprecated("Keliver: `SessionMutex` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SessionMutex<T> private constructor()
 
 @Deprecated("Keliver: `SystemTheme` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public class SystemTheme private constructor()
 
 @Deprecated("Keliver: `UiComposable` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public annotation class UiComposable
 
 @Deprecated("Keliver: `UiMediaScope` (class in `androidx.compose.ui`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@dev.keliver.compose.KeliverErrorStub
 public interface UiMediaScope
 
