@@ -1,0 +1,9 @@
+built: 2026-11-28 17:56:23 by the maintainer, sample's own wrapper (Gradle 9.0.0), --no-daemon -PkeliverComposePrototype -Dmaven.repo.local=<scratch>/m2
+commit: e9dcfc7d6163bee900f8544478374d6ceb212e7f (origin/main e9dcfc7d6; m2 published from this worktree)
+local change for the build only: sample/settings.gradle.kts without the two maven.pkg.jetbrains.space lines (host gone, NXDOMAIN; PR #335). Restored after the build.
+host-android-benchmark.apk: 26078199 bytes, sha256 06226f540dc263633d5822a98a1658137fd2f4a6182eec0574d14175b4486a01
+  lib/arm64-v8a/libquickjs.so: 2618992 bytes
+  lib/armeabi-v7a/libquickjs.so: 1903900 bytes
+  lib/x86/libquickjs.so: 2097092 bytes
+  lib/x86_64/libquickjs.so: 2465256 bytes
+tp (trace_processor_shell_aarch64 from benchmarks APK): sha256 ae2f18ff9cbcad67edc28b5d6ac4364f696afbcc1364680752c2159b668a0e7d
