@@ -1,3 +1,6 @@
+public abstract interface annotation class dev/keliver/compose/KeliverErrorStub : java/lang/annotation/Annotation {
+}
+
 public abstract interface annotation class dev/keliver/compose/KeliverExperimentalApi : java/lang/annotation/Annotation {
 }
 

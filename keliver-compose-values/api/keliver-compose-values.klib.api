@@ -14,6 +14,10 @@ open annotation class dev.keliver.compose.wire/KeliverGeneratedApi : kotlin/Anno
     constructor <init>() // dev.keliver.compose.wire/KeliverGeneratedApi.<init>|<init>(){}[0]
 }
 
+open annotation class dev.keliver.compose/KeliverErrorStub : kotlin/Annotation { // dev.keliver.compose/KeliverErrorStub|null[0]
+    constructor <init>() // dev.keliver.compose/KeliverErrorStub.<init>|<init>(){}[0]
+}
+
 open annotation class dev.keliver.compose/KeliverExperimentalApi : kotlin/Annotation { // dev.keliver.compose/KeliverExperimentalApi|null[0]
     constructor <init>() // dev.keliver.compose/KeliverExperimentalApi.<init>|<init>(){}[0]
 }
