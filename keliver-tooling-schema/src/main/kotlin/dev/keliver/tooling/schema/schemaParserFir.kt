@@ -440,12 +440,13 @@ private fun FirContext.parseWidget(
           )
         } else {
           val containsString = (replayable || frameRule != null) && firSession.containsString(type)
-          checkFrameRule(frameRule, type, containsString, "$memberType#$name")
+          val fqType = type.toFqType()
+          checkFrameRule(frameRule, type, fqType.toString(), containsString, "$memberType#$name")
           ParsedProtocolProperty(
             tag = propertyAnnotation.tag,
             name = name,
             documentation = documentation,
-            type = type.toFqType(),
+            type = fqType,
             defaultExpression = defaultExpression,
             deprecation = deprecation,
             frameRule = frameRule,
@@ -631,7 +632,7 @@ private fun FirContext.parseModifier(
 
       val frameRule = property.annotations.findFrameRule(firSession, "$memberType#$name")
       val containsString = (replayable || frameRule != null) && firSession.containsString(resolvedType)
-      checkFrameRule(frameRule, resolvedType, containsString, "$memberType#$name")
+      checkFrameRule(frameRule, resolvedType, parameterType.toString(), containsString, "$memberType#$name")
 
       ParsedProtocolModifierProperty(
         name = name,

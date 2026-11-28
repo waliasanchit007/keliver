@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.declaredProperties
 import org.jetbrains.kotlin.fir.declarations.getSealedClassInheritors
+import org.jetbrains.kotlin.fir.declarations.primaryConstructorIfAny
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.resolve.fqName
 import org.jetbrains.kotlin.fir.resolve.providers.symbolProvider
@@ -36,7 +37,6 @@ import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.ConeTypeParameterType
 import org.jetbrains.kotlin.fir.types.coneType
 import org.jetbrains.kotlin.fir.types.isMarkedNullable
-import org.jetbrains.kotlin.fir.types.renderReadable
 import org.jetbrains.kotlin.fir.types.type
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
@@ -76,11 +76,13 @@ internal fun List<FirAnnotation>.findFrameRule(session: FirSession, where: Strin
 
 /**
  * Checks that [rule] fits the property's [type]: `@BlocksFrameWhenTrue` on a non-null Boolean,
- * `@StyleToken` only where the type carries a String, `@NotData` only where it does not.
+ * `@StyleToken` only where the type carries a String, `@NotData` only where it does not. [typeName]
+ * is the type as messages name it.
  */
 internal fun checkFrameRule(
   rule: FramePropertyRule?,
   type: ConeKotlinType,
+  typeName: String,
   containsString: Boolean,
   where: String,
 ) {
@@ -88,14 +90,14 @@ internal fun checkFrameRule(
     FramePropertyRule.BlocksFrameWhenTrue -> require(
       (type as? ConeClassLikeType)?.lookupTag?.classId == BOOLEAN && !type.isMarkedNullable,
     ) {
-      "@BlocksFrameWhenTrue $where must be a non-null Boolean. Found: ${type.renderReadable()}"
+      "@BlocksFrameWhenTrue $where must be a non-null Boolean. Found: $typeName"
     }
     FramePropertyRule.StyleToken -> require(containsString) {
-      "@StyleToken $where: ${type.renderReadable()} contains no String. " +
+      "@StyleToken $where: $typeName contains no String. " +
         "Use @NotData for a layout or style value without strings."
     }
     FramePropertyRule.NotData -> require(!containsString) {
-      "@NotData $where: ${type.renderReadable()} is or may contain a String, so it is text " +
+      "@NotData $where: $typeName is or may contain a String, so it is text " +
         "(replaced in Shell) or, if its strings are style or asset codes, @StyleToken."
     }
     FramePropertyRule.NeverCached, null -> Unit
@@ -112,8 +114,8 @@ internal fun checkFrameRule(
  *   projection counts as one that does.
  * - An enum or an object does not: its values are a fixed set of names, not text.
  * - A final class does when any of its properties does (stored or computed), or a superclass's; a
- *   value class looks at its one property only. A sealed class or interface does when any of its
- *   subclasses does.
+ *   value class looks at its constructor's one property only (the others are computed from it). A
+ *   sealed class or interface does when any of its subclasses does.
  * - Any other class or interface does: its subclasses cannot be known (an abstract `Painter` may be
  *   one that loads a URL).
  */
@@ -155,9 +157,13 @@ private fun FirSession.classContainsString(classId: ClassId, seen: MutableSet<Cl
 
 /** Whether [klass]'s own properties, or its superclasses', may carry a String. */
 private fun FirSession.stateContainsString(klass: FirRegularClass, seen: MutableSet<ClassId>): Boolean {
+  if (klass.status.isInline || klass.annotations.any { it.fqName(this) == JVM_INLINE }) {
+    // A value class is its one constructor property; its other properties are computed from it.
+    val underlying = klass.primaryConstructorIfAny(this)?.valueParameterSymbols?.singleOrNull() ?: return true
+    return containsString(underlying.resolvedReturnType, seen)
+  }
   val properties = klass.symbol.declaredProperties(this).filter { it.fir.receiverParameter == null }
-  val state = if (klass.status.isInline) properties.take(1) else properties
-  if (state.any { containsString(it.resolvedReturnType, seen) }) return true
+  if (properties.any { containsString(it.resolvedReturnType, seen) }) return true
   for (superType in klass.superTypeRefs) {
     val superClass = (superType.coneType.toSymbol(this) as? FirRegularClassSymbol)?.fir ?: continue
     if (superClass.classKind != ClassKind.CLASS || superClass.symbol.classId == ANY) continue
@@ -170,6 +176,7 @@ private fun classIdOf(fqName: String) = ClassId.topLevel(FqName(fqName))
 
 private val BOOLEAN = classIdOf("kotlin.Boolean")
 private val ANY = classIdOf("kotlin.Any")
+private val JVM_INLINE = FqName("kotlin.jvm.JvmInline")
 private val JSON_PACKAGE = FqName("kotlinx.serialization.json")
 
 private val STRING_TYPES = listOf("kotlin.String", "kotlin.CharSequence", "kotlin.Char", "kotlin.CharArray")
