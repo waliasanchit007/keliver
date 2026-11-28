@@ -17,6 +17,7 @@ package dev.keliver.compose.generator
 
 import java.io.File
 import java.nio.file.Files
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -63,7 +64,14 @@ class PerGroupTest {
   private fun run(tree: Tree, group: String, check: Boolean = false): List<String> =
     runGroup(tree.args(group, check) + listOf("--classpath", classpath, "--sources", sources, "--input", input))
 
-  private fun newTree() = Tree(Files.createTempDirectory("per-group").toFile().also { it.deleteOnExit() })
+  private val trees = mutableListOf<Tree>()
+
+  private fun newTree() = Tree(Files.createTempDirectory("per-group").toFile()).also { trees += it }
+
+  @AfterTest fun deleteTrees() {
+    trees.forEach { it.dir.deleteRecursively() }
+    trees.clear()
+  }
 
   @Test fun theProductGroupsGiveTheSameFilesWhicheverRunsFirst() {
     val a = newTree()
@@ -87,13 +95,19 @@ class PerGroupTest {
     assertEquals(emptyList(), run(t, "core", check = true))
 
     // A Generated.kt the coil group no longer writes: coil's check names it; core's does not.
-    val coilStale = t.file("coil/guest/dev/keliver/compose/gone/Generated.kt").apply { parentFile.mkdirs(); writeText("// stale") }
+    val coilStale = t.file("coil/guest/dev/keliver/compose/gone/Generated.kt").apply {
+      parentFile.mkdirs()
+      writeText("// stale")
+    }
     assertEquals(listOf("$coilStale is stale"), run(t, "coil", check = true))
     assertEquals(emptyList(), run(t, "core", check = true))
     coilStale.delete()
 
     // And the other way round, including the values file only core owns.
-    val coreStale = t.file("values/dev/keliver/compose/gone/GeneratedDefaults.kt").apply { parentFile.mkdirs(); writeText("// stale") }
+    val coreStale = t.file("values/dev/keliver/compose/gone/GeneratedDefaults.kt").apply {
+      parentFile.mkdirs()
+      writeText("// stale")
+    }
     assertEquals(listOf("$coreStale is stale"), run(t, "core", check = true))
     assertEquals(emptyList(), run(t, "coil", check = true))
   }
@@ -104,12 +118,18 @@ class PerGroupTest {
     val values = t.file("values/dev/keliver/compose/material3/GeneratedDefaults.kt")
     val coreText = values.readText()
     // A stale file of coil's own is deleted by coil's run; core's files (values included) stay.
-    val coilStale = t.file("coil/host/dev/keliver/compose/gone/Generated.kt").apply { parentFile.mkdirs(); writeText("// stale") }
+    val coilStale = t.file("coil/host/dev/keliver/compose/gone/Generated.kt").apply {
+      parentFile.mkdirs()
+      writeText("// stale")
+    }
     assertEquals(emptyList(), run(t, "coil"))
     assertFalse(coilStale.exists())
     assertEquals(coreText, values.readText())
     // A stale `GeneratedDefaults.kt` is not coil's to judge or delete: coil writes no values.
-    val strayDefaults = t.file("coil/guest/dev/keliver/compose/gone/GeneratedDefaults.kt").apply { parentFile.mkdirs(); writeText("// not coil's") }
+    val strayDefaults = t.file("coil/guest/dev/keliver/compose/gone/GeneratedDefaults.kt").apply {
+      parentFile.mkdirs()
+      writeText("// not coil's")
+    }
     assertEquals(emptyList(), run(t, "coil"))
     assertTrue(strayDefaults.exists())
   }
@@ -127,7 +147,10 @@ class PerGroupTest {
     assertFalse("internal fun renderGenerated(" in text, "the group's file names the group; the dispatcher has the plain names")
 
     // The dispatcher is not the group's: the group's run and check leave it alone.
-    val dispatcher = t.file("$render/$EDITOR_DISPATCHER").apply { parentFile.mkdirs(); writeText("// the dispatcher") }
+    val dispatcher = t.file("$render/$EDITOR_DISPATCHER").apply {
+      parentFile.mkdirs()
+      writeText("// the dispatcher")
+    }
     assertEquals(emptyList(), run(t, "gatea", check = true))
     assertEquals(emptyList(), run(t, "gatea"))
     assertEquals("// the dispatcher", dispatcher.readText())
@@ -138,10 +161,47 @@ class PerGroupTest {
     assertTrue("applyGeneratedGatea(m, key, a, scope) ?:\n  applyGeneratedCore(m, key, a, scope)" in generated, generated)
   }
 
-  @Test fun theCheckedInEditorInterpreterIsPerGroup() {
-    val dir = File("../portal-compose-render/src/commonMain/kotlin/dev/keliver/portal/compose/render")
-    assertTrue(File(dir, editorRenderFile("gatea")).exists())
-    val (_, text) = editorDispatcher(listOf("gatea"), EDITOR_RENDER_PACKAGE)
-    assertEquals(text, File(dir, EDITOR_DISPATCHER).readText())
+  @Test fun anotherGroupsFileInTheSharedEditorRenderRootIsNeitherTouchedNorReportedByGatea() {
+    val t = newTree()
+    assertEquals(emptyList(), run(t, "core"))
+    val render = "render/${EDITOR_RENDER_PACKAGE.replace('.', '/')}"
+    val other = t.file("$render/${editorRenderFile("core")}").apply {
+      parentFile.mkdirs()
+      writeText("// core's interpreter")
+    }
+    assertEquals(emptyList(), run(t, "gatea"))
+    assertEquals("// core's interpreter", other.readText())
+    assertEquals(emptyList(), run(t, "gatea", check = true))
+    assertEquals("// core's interpreter", other.readText())
+    assertTrue(t.file("$render/${editorRenderFile("gatea")}").exists())
+  }
+
+  @Test fun theDispatcherCheckReportsAnInterpreterNoListedGroupWrites() {
+    val t = newTree()
+    val render = t.file("render")
+    val dir = File(render, EDITOR_RENDER_PACKAGE.replace('.', '/')).apply { mkdirs() }
+    val (path, text) = editorDispatcher(listOf("gatea"), EDITOR_RENDER_PACKAGE)
+    val dispatcher = File(render, path).apply { writeText(text) }
+    File(dir, editorRenderFile("gatea")).writeText("// gatea")
+    assertEquals(emptyList(), editorDispatcherProblems(listOf("gatea"), render, dispatcher, text))
+    val leftover = File(dir, editorRenderFile("gone")).apply { writeText("// left behind") }
+    assertEquals(listOf("$leftover is stale (no listed group writes it)"), editorDispatcherProblems(listOf("gatea"), render, dispatcher, text))
+    // Listing that group makes the file its own.
+    val (_, both) = editorDispatcher(listOf("gatea", "gone"), EDITOR_RENDER_PACKAGE)
+    dispatcher.writeText(both)
+    assertEquals(emptyList(), editorDispatcherProblems(listOf("gatea", "gone"), render, dispatcher, both))
+  }
+
+  @Test fun aKeyTwoGroupsBothAnswerIsAnErrorNotAFirstWins() {
+    val t = newTree()
+    val dir = File(t.file("render"), EDITOR_RENDER_PACKAGE.replace('.', '/')).apply { mkdirs() }
+    File(dir, editorRenderFile("gatea")).writeText("  when (type) {\n    \"a.B#1\" -> {\n    }\n    \"a.C#2\" -> {\n    }\n  }\n")
+    File(dir, editorRenderFile("core")).writeText("  when (type) {\n    \"a.C#2\" -> {\n    }\n    \"x.Y#1\" -> {\n    }\n  }\n")
+    assertEquals(listOf("a.C#2: gatea, core"), editorRenderDuplicateKeys(listOf("gatea", "core"), dir))
+    assertEquals(emptyList(), editorRenderDuplicateKeys(listOf("gatea"), dir))
+    // The checked-in interpreter has none of its own.
+    val checkedIn = File("../portal-compose-render/src/commonMain/kotlin/dev/keliver/portal/compose/render")
+    assertTrue(File(checkedIn, editorRenderFile("gatea")).exists())
+    assertEquals(emptyList(), editorRenderDuplicateKeys(listOf("gatea"), checkedIn))
   }
 }

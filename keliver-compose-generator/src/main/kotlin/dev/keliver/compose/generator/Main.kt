@@ -129,8 +129,11 @@ fun main(argv: Array<String>) {
   val problems = runGroup(args)
   if (problems.isNotEmpty()) {
     System.err.println(
-      if (check) "checkComposeApi failed (run :keliver-compose-generator:generateComposeApi):\n  " + problems.joinToString("\n  ")
-      else "refusing to write: the lock would change other than by appends:\n  " + problems.joinToString("\n  "),
+      if (check) {
+        "checkComposeApi failed (run :keliver-compose-generator:generateComposeApi):\n  " + problems.joinToString("\n  ")
+      } else {
+        "refusing to write: the lock would change other than by appends:\n  " + problems.joinToString("\n  ")
+      },
     )
     exitProcess(1)
   }
@@ -199,13 +202,43 @@ fun runGroup(args: List<String>): List<String> {
   return problems
 }
 
+/** What the dispatcher's check reports: its own text, and any group interpreter in the shared root that no listed group writes. */
+fun editorDispatcherProblems(groups: List<String>, outRender: File, dispatcher: File, text: String): List<String> {
+  val problems = mutableListOf<String>()
+  if (!dispatcher.exists() || dispatcher.readText() != text) problems += "$dispatcher is out of date"
+  val listed = groups.map(::editorRenderFile).toSet()
+  val dir = File(outRender, EDITOR_RENDER_PACKAGE.replace('.', '/'))
+  dir.listFiles { f -> f.name.startsWith("GeneratedEditorRender_") && f.name.endsWith(".kt") && f.name !in listed }
+    ?.sortedBy { it.name }?.forEach { problems += "$it is stale (no listed group writes it)" }
+  return problems
+}
+
+private val editorKey = Regex("""^\s+"([^"]+#\d+)" ->""", RegexOption.MULTILINE)
+
+/** Keys (`<guest fq>#<tag>` or `<name>#<tag>`) that more than one listed group's interpreter answers. */
+fun editorRenderDuplicateKeys(groups: List<String>, dir: File): List<String> {
+  val owners = linkedMapOf<String, MutableList<String>>()
+  for (g in groups) {
+    val f = File(dir, editorRenderFile(g))
+    if (!f.exists()) continue
+    for (key in editorKey.findAll(f.readText()).map { it.groupValues[1] }.toSet()) owners.getOrPut(key) { mutableListOf() } += g
+  }
+  return owners.filter { it.value.size > 1 }.map { "${it.key}: ${it.value.joinToString()}" }
+}
+
 /** `--editor-dispatcher <group,group> --out-editor-render <dir> [--check]`: writes (or checks) the editor interpreter's dispatcher. */
 fun editorDispatcherMain(groups: List<String>, outRender: File, check: Boolean) {
   val (path, text) = editorDispatcher(groups, EDITOR_RENDER_PACKAGE)
   val file = File(outRender, path)
+  val duplicates = editorRenderDuplicateKeys(groups, File(outRender, EDITOR_RENDER_PACKAGE.replace('.', '/')))
+  if (duplicates.isNotEmpty()) {
+    System.err.println("the editor dispatcher cannot tell these apart (a key two groups both answer; the first would win silently):\n  " + duplicates.joinToString("\n  "))
+    exitProcess(1)
+  }
   if (check) {
-    if (!file.exists() || file.readText() != text) {
-      System.err.println("checkComposeApi failed (run :keliver-compose-generator:generateComposeApiEditorRender):\n  $file is out of date")
+    val problems = editorDispatcherProblems(groups, outRender, file, text)
+    if (problems.isNotEmpty()) {
+      System.err.println("checkComposeApi failed (run :keliver-compose-generator:generateComposeApiEditorRender):\n  " + problems.joinToString("\n  "))
       exitProcess(1)
     }
     println("checkComposeApi: up to date (editor dispatcher over ${groups.joinToString()})")
