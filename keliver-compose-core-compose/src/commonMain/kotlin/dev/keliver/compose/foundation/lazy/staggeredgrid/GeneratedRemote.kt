@@ -23,7 +23,7 @@ import kotlinx.serialization.json.longOrNull
 
 /**
  * The guest's proxy of the host's `androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 5.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 3.
  */
 @Stable
 public class LazyStaggeredGridState(public val remote: RemoteObject) {
@@ -106,7 +106,7 @@ public class LazyStaggeredGridState(public val remote: RemoteObject) {
 public fun rememberLazyStaggeredGridState(initialFirstVisibleItemIndex: kotlin.Int = 0, initialFirstVisibleItemScrollOffset: kotlin.Int = 0): LazyStaggeredGridState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 5) {
+    RemoteObject(RemoteObject.nextId(), 3) {
       kotlinx.serialization.json.buildJsonObject {
         put("initialFirstVisibleItemIndex", restore.saved?.get("initialFirstVisibleItemIndex") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemIndex))
         put("initialFirstVisibleItemScrollOffset", restore.saved?.get("initialFirstVisibleItemScrollOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemScrollOffset))

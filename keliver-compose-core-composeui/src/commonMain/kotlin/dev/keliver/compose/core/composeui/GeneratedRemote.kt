@@ -59,60 +59,6 @@ internal object PagerStateRemote : RemoteDispatcher<androidx.compose.foundation.
   }
 }
 
-/** Host dispatcher for `androidx.compose.foundation.lazy.LazyListState`: reads a field and runs a command on the real state, by tag. */
-internal object LazyListStateRemote : RemoteDispatcher<androidx.compose.foundation.lazy.LazyListState> {
-  override fun read(state: androidx.compose.foundation.lazy.LazyListState, member: Int): JsonElement = when (member) {
-    1 -> kotlinx.serialization.json.JsonPrimitive(state.firstVisibleItemIndex)
-    2 -> kotlinx.serialization.json.JsonPrimitive(state.firstVisibleItemScrollOffset)
-    3 -> kotlinx.serialization.json.JsonPrimitive(state.isScrollInProgress)
-    4 -> kotlinx.serialization.json.JsonPrimitive(state.canScrollForward)
-    5 -> kotlinx.serialization.json.JsonPrimitive(state.canScrollBackward)
-    6 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledForward)
-    7 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledBackward)
-    else -> error("unknown field $member")
-  }
-
-  override suspend fun invoke(state: androidx.compose.foundation.lazy.LazyListState, member: Int, args: JsonObject): JsonElement = when (member) {
-    8 -> {
-      state.scrollToItem(index = args.getValue("index").jsonPrimitive.int, scrollOffset = args.getValue("scrollOffset").jsonPrimitive.int)
-      JsonNull
-    }
-    9 -> {
-      state.requestScrollToItem(index = args.getValue("index").jsonPrimitive.int, scrollOffset = args.getValue("scrollOffset").jsonPrimitive.int)
-      JsonNull
-    }
-    10 -> {
-      state.animateScrollToItem(index = args.getValue("index").jsonPrimitive.int, scrollOffset = args.getValue("scrollOffset").jsonPrimitive.int)
-      JsonNull
-    }
-    else -> error("unknown command $member")
-  }
-}
-
-/** Host dispatcher for `androidx.compose.foundation.ScrollState`: reads a field and runs a command on the real state, by tag. */
-internal object ScrollStateRemote : RemoteDispatcher<androidx.compose.foundation.ScrollState> {
-  override fun read(state: androidx.compose.foundation.ScrollState, member: Int): JsonElement = when (member) {
-    1 -> kotlinx.serialization.json.JsonPrimitive(state.value)
-    2 -> kotlinx.serialization.json.JsonPrimitive(state.maxValue)
-    3 -> kotlinx.serialization.json.JsonPrimitive(state.viewportSize)
-    4 -> kotlinx.serialization.json.JsonPrimitive(state.isScrollInProgress)
-    5 -> kotlinx.serialization.json.JsonPrimitive(state.canScrollForward)
-    6 -> kotlinx.serialization.json.JsonPrimitive(state.canScrollBackward)
-    7 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledForward)
-    8 -> kotlinx.serialization.json.JsonPrimitive(state.lastScrolledBackward)
-    else -> error("unknown field $member")
-  }
-
-  override suspend fun invoke(state: androidx.compose.foundation.ScrollState, member: Int, args: JsonObject): JsonElement = when (member) {
-    9 -> {
-      state.animateScrollTo(value = args.getValue("value").jsonPrimitive.int)
-      JsonNull
-    }
-    10 -> kotlinx.serialization.json.JsonPrimitive(state.scrollTo(value = args.getValue("value").jsonPrimitive.int))
-    else -> error("unknown command $member")
-  }
-}
-
 /** Host dispatcher for `androidx.compose.foundation.lazy.grid.LazyGridState`: reads a field and runs a command on the real state, by tag. */
 internal object LazyGridStateRemote : RemoteDispatcher<androidx.compose.foundation.lazy.grid.LazyGridState> {
   override fun read(state: androidx.compose.foundation.lazy.grid.LazyGridState, member: Int): JsonElement = when (member) {
@@ -357,23 +303,6 @@ internal object GeneratedRemoteObjects {
     }
     2 -> {
       val init = rememberUpdatedState(wire.init)
-      val state = androidx.compose.foundation.lazy.rememberLazyListState(
-          initialFirstVisibleItemIndex = wire.init.getValue("initialFirstVisibleItemIndex").jsonPrimitive.int,
-          initialFirstVisibleItemScrollOffset = wire.init.getValue("initialFirstVisibleItemScrollOffset").jsonPrimitive.int
-      )
-      RemoteHost(wire, state, LazyListStateRemote, report)
-      state
-    }
-    3 -> {
-      val init = rememberUpdatedState(wire.init)
-      val state = androidx.compose.foundation.rememberScrollState(
-          initial = wire.init.getValue("initial").jsonPrimitive.int
-      )
-      RemoteHost(wire, state, ScrollStateRemote, report)
-      state
-    }
-    4 -> {
-      val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
           initialFirstVisibleItemIndex = wire.init.getValue("initialFirstVisibleItemIndex").jsonPrimitive.int,
           initialFirstVisibleItemScrollOffset = wire.init.getValue("initialFirstVisibleItemScrollOffset").jsonPrimitive.int
@@ -381,7 +310,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, LazyGridStateRemote, report)
       state
     }
-    5 -> {
+    3 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState(
           initialFirstVisibleItemIndex = wire.init.getValue("initialFirstVisibleItemIndex").jsonPrimitive.int,
@@ -390,7 +319,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, LazyStaggeredGridStateRemote, report)
       state
     }
-    6 -> {
+    4 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberModalBottomSheetState(
           skipPartiallyExpanded = wire.init.getValue("skipPartiallyExpanded").jsonPrimitive.boolean
@@ -398,7 +327,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, SheetStateRemote, report)
       state
     }
-    7 -> {
+    5 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberDatePickerState(
           initialSelectedDateMillis = wire.init.getValue("initialSelectedDateMillis").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull
@@ -406,7 +335,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, DatePickerStateRemote, report)
       state
     }
-    8 -> {
+    6 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberDateRangePickerState(
           initialSelectedStartDateMillis = wire.init.getValue("initialSelectedStartDateMillis").takeUnless { it is kotlinx.serialization.json.JsonNull }?.jsonPrimitive?.longOrNull,
@@ -415,7 +344,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, DateRangePickerStateRemote, report)
       state
     }
-    9 -> {
+    7 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberTimePickerState(
           initialHour = wire.init.getValue("initialHour").jsonPrimitive.int,
@@ -424,7 +353,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, TimePickerStateRemote, report)
       state
     }
-    10 -> {
+    8 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberTooltipState(
           initialIsVisible = wire.init.getValue("initialIsVisible").jsonPrimitive.boolean,
@@ -433,7 +362,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, TooltipStateRemote, report)
       state
     }
-    11 -> {
+    9 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
           
@@ -441,7 +370,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, SwipeToDismissBoxStateRemote, report)
       state
     }
-    12 -> {
+    10 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberSliderState(
           value = wire.init.getValue("value").jsonPrimitive.float,
@@ -450,7 +379,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, SliderStateRemote, report)
       state
     }
-    13 -> {
+    11 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberRangeSliderState(
           activeRangeStart = wire.init.getValue("activeRangeStart").jsonPrimitive.float,
@@ -460,7 +389,7 @@ internal object GeneratedRemoteObjects {
       RemoteHost(wire, state, RangeSliderStateRemote, report)
       state
     }
-    14 -> {
+    12 -> {
       val init = rememberUpdatedState(wire.init)
       val state = androidx.compose.material3.rememberTopAppBarState(
           initialHeightOffset = wire.init.getValue("initialHeightOffset").jsonPrimitive.float,

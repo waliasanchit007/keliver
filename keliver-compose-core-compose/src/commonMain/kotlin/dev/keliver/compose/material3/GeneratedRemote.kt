@@ -23,7 +23,7 @@ import kotlinx.serialization.json.longOrNull
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.SheetState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 6.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 4.
  */
 @Stable
 public class SheetState(public val remote: RemoteObject) {
@@ -92,7 +92,7 @@ public class SheetState(public val remote: RemoteObject) {
 @Composable
 public fun rememberModalBottomSheetState(skipPartiallyExpanded: kotlin.Boolean = false): SheetState {
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 6) {
+    RemoteObject(RemoteObject.nextId(), 4) {
       kotlinx.serialization.json.buildJsonObject {
         put("skipPartiallyExpanded", kotlinx.serialization.json.JsonPrimitive(skipPartiallyExpanded))
       }
@@ -103,7 +103,7 @@ public fun rememberModalBottomSheetState(skipPartiallyExpanded: kotlin.Boolean =
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.DatePickerState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 7.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 5.
  */
 @Stable
 public class DatePickerState(public val remote: RemoteObject) {
@@ -144,7 +144,7 @@ public class DatePickerState(public val remote: RemoteObject) {
 public fun rememberDatePickerState(initialSelectedDateMillis: kotlin.Long? = null): DatePickerState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 7) {
+    RemoteObject(RemoteObject.nextId(), 5) {
       kotlinx.serialization.json.buildJsonObject {
         put("initialSelectedDateMillis", restore.saved?.get("initialSelectedDateMillis") ?: if (initialSelectedDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedDateMillis))
       }
@@ -162,7 +162,7 @@ public fun rememberDatePickerState(initialSelectedDateMillis: kotlin.Long? = nul
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.DateRangePickerState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 8.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 6.
  */
 @Stable
 public class DateRangePickerState(public val remote: RemoteObject) {
@@ -211,7 +211,7 @@ public class DateRangePickerState(public val remote: RemoteObject) {
 @Composable
 public fun rememberDateRangePickerState(initialSelectedStartDateMillis: kotlin.Long? = null, initialSelectedEndDateMillis: kotlin.Long? = null): DateRangePickerState {
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 8) {
+    RemoteObject(RemoteObject.nextId(), 6) {
       kotlinx.serialization.json.buildJsonObject {
         put("initialSelectedStartDateMillis", if (initialSelectedStartDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedStartDateMillis))
         put("initialSelectedEndDateMillis", if (initialSelectedEndDateMillis == null) kotlinx.serialization.json.JsonNull else kotlinx.serialization.json.JsonPrimitive(initialSelectedEndDateMillis))
@@ -223,7 +223,7 @@ public fun rememberDateRangePickerState(initialSelectedStartDateMillis: kotlin.L
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.TimePickerState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 9.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 7.
  */
 @Stable
 public class TimePickerState(public val remote: RemoteObject) {
@@ -258,7 +258,7 @@ public class TimePickerState(public val remote: RemoteObject) {
 public fun rememberTimePickerState(initialHour: kotlin.Int = 0, initialMinute: kotlin.Int = 0): TimePickerState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 9) {
+    RemoteObject(RemoteObject.nextId(), 7) {
       kotlinx.serialization.json.buildJsonObject {
         put("initialHour", restore.saved?.get("initialHour") ?: kotlinx.serialization.json.JsonPrimitive(initialHour))
         put("initialMinute", restore.saved?.get("initialMinute") ?: kotlinx.serialization.json.JsonPrimitive(initialMinute))
@@ -279,7 +279,7 @@ public fun rememberTimePickerState(initialHour: kotlin.Int = 0, initialMinute: k
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.TooltipState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 10.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 8.
  */
 @Stable
 public class TooltipState(public val remote: RemoteObject) {
@@ -332,7 +332,7 @@ public class TooltipState(public val remote: RemoteObject) {
 public fun rememberTooltipState(initialIsVisible: kotlin.Boolean = false, isPersistent: kotlin.Boolean = false): TooltipState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 10) {
+    RemoteObject(RemoteObject.nextId(), 8) {
       kotlinx.serialization.json.buildJsonObject {
         put("initialIsVisible", restore.saved?.get("initialIsVisible") ?: kotlinx.serialization.json.JsonPrimitive(initialIsVisible))
         put("isPersistent", kotlinx.serialization.json.JsonPrimitive(isPersistent))
@@ -351,7 +351,7 @@ public fun rememberTooltipState(initialIsVisible: kotlin.Boolean = false, isPers
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.SwipeToDismissBoxState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 11.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 9.
  */
 @Stable
 public class SwipeToDismissBoxState(public val remote: RemoteObject) {
@@ -402,7 +402,7 @@ public class SwipeToDismissBoxState(public val remote: RemoteObject) {
 @Composable
 public fun rememberSwipeToDismissBoxState(): SwipeToDismissBoxState {
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 11) {
+    RemoteObject(RemoteObject.nextId(), 9) {
       kotlinx.serialization.json.buildJsonObject {
       }
     }
@@ -412,7 +412,7 @@ public fun rememberSwipeToDismissBoxState(): SwipeToDismissBoxState {
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.SliderState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 12.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 10.
  */
 @Stable
 public class SliderState(public val remote: RemoteObject) {
@@ -469,7 +469,7 @@ public class SliderState(public val remote: RemoteObject) {
 public fun rememberSliderState(value: kotlin.Float = 0f, steps: kotlin.Int = 0): SliderState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 12) {
+    RemoteObject(RemoteObject.nextId(), 10) {
       kotlinx.serialization.json.buildJsonObject {
         put("value", restore.saved?.get("value") ?: kotlinx.serialization.json.JsonPrimitive(value))
         put("steps", kotlinx.serialization.json.JsonPrimitive(steps))
@@ -488,7 +488,7 @@ public fun rememberSliderState(value: kotlin.Float = 0f, steps: kotlin.Int = 0):
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.RangeSliderState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 13.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 11.
  */
 @Stable
 public class RangeSliderState(public val remote: RemoteObject) {
@@ -526,7 +526,7 @@ public class RangeSliderState(public val remote: RemoteObject) {
 public fun rememberRangeSliderState(activeRangeStart: kotlin.Float = 0f, activeRangeEnd: kotlin.Float = 1f, steps: kotlin.Int = 0): RangeSliderState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 13) {
+    RemoteObject(RemoteObject.nextId(), 11) {
       kotlinx.serialization.json.buildJsonObject {
         put("activeRangeStart", restore.saved?.get("activeRangeStart") ?: kotlinx.serialization.json.JsonPrimitive(activeRangeStart))
         put("activeRangeEnd", restore.saved?.get("activeRangeEnd") ?: kotlinx.serialization.json.JsonPrimitive(activeRangeEnd))
@@ -548,7 +548,7 @@ public fun rememberRangeSliderState(activeRangeStart: kotlin.Float = 0f, activeR
 
 /**
  * The guest's proxy of the host's `androidx.compose.material3.TopAppBarState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 14.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 12.
  */
 @Stable
 public class TopAppBarState(public val remote: RemoteObject) {
@@ -586,7 +586,7 @@ public class TopAppBarState(public val remote: RemoteObject) {
 public fun rememberTopAppBarState(initialHeightOffset: kotlin.Float = 0f, initialContentOffset: kotlin.Float = 0f): TopAppBarState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 14) {
+    RemoteObject(RemoteObject.nextId(), 12) {
       kotlinx.serialization.json.buildJsonObject {
         put("initialHeightOffset", restore.saved?.get("initialHeightOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialHeightOffset))
         put("initialContentOffset", restore.saved?.get("initialContentOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialContentOffset))

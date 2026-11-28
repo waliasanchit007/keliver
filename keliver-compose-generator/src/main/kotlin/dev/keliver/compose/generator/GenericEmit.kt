@@ -24,7 +24,6 @@ import kotlin.metadata.Modality
 import kotlin.metadata.Visibility
 import kotlin.metadata.declaresDefaultValue
 import kotlin.metadata.isNullable
-import kotlin.metadata.isSuspend
 import kotlin.metadata.kind
 import kotlin.metadata.modality
 import kotlin.metadata.visibility

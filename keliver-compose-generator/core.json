@@ -113,8 +113,6 @@
   "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry", "RemoteObject"],
   "remoteObjects": [
     "androidx.compose.foundation.pager.PagerState|initialPage=currentPage,initialPageOffsetFraction=currentPageOffsetFraction",
-    "androidx.compose.foundation.lazy.LazyListState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
-    "androidx.compose.foundation.ScrollState|initial=value",
     "androidx.compose.foundation.lazy.grid.LazyGridState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
     "androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
     "androidx.compose.material3.SheetState#rememberModalBottomSheetState",

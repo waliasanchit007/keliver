@@ -23,7 +23,7 @@ import kotlinx.serialization.json.longOrNull
 
 /**
  * The guest's proxy of the host's `androidx.compose.foundation.lazy.grid.LazyGridState`: a field is read from the host's last report (and observed from its
- * first read), a command is sent to the host. Created by the factory below. Class tag 4.
+ * first read), a command is sent to the host. Created by the factory below. Class tag 2.
  */
 @Stable
 public class LazyGridState(public val remote: RemoteObject) {
@@ -106,7 +106,7 @@ public class LazyGridState(public val remote: RemoteObject) {
 public fun rememberLazyGridState(initialFirstVisibleItemIndex: kotlin.Int = 0, initialFirstVisibleItemScrollOffset: kotlin.Int = 0): LazyGridState {
   val restore = rememberSaveable(saver = RemoteRestore.Saver) { RemoteRestore() }
   val remote = remember {
-    RemoteObject(RemoteObject.nextId(), 4) {
+    RemoteObject(RemoteObject.nextId(), 2) {
       kotlinx.serialization.json.buildJsonObject {
         put("initialFirstVisibleItemIndex", restore.saved?.get("initialFirstVisibleItemIndex") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemIndex))
         put("initialFirstVisibleItemScrollOffset", restore.saved?.get("initialFirstVisibleItemScrollOffset") ?: kotlinx.serialization.json.JsonPrimitive(initialFirstVisibleItemScrollOffset))

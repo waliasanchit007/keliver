@@ -1336,68 +1336,10 @@
       }
     }
   },
-  "nextRemoteTag": 15,
+  "nextRemoteTag": 13,
   "remotes": {
-    "androidx.compose.foundation.ScrollState": {
-      "tag": 3,
-      "name": "ScrollState",
-      "params": {
-        "value": 1,
-        "maxValue": 2,
-        "viewportSize": 3,
-        "isScrollInProgress": 4,
-        "canScrollForward": 5,
-        "canScrollBackward": 6,
-        "lastScrolledForward": 7,
-        "lastScrolledBackward": 8,
-        "animateScrollTo(value:kotlin.Int,animationSpec:androidx.compose.animation.core.AnimationSpec<kotlin.Float>)": 9,
-        "scrollTo(value:kotlin.Int)": 10
-      },
-      "since": 7,
-      "wire": {
-        "value": 7,
-        "maxValue": 7,
-        "viewportSize": 7,
-        "isScrollInProgress": 7,
-        "canScrollForward": 7,
-        "canScrollBackward": 7,
-        "lastScrolledForward": 7,
-        "lastScrolledBackward": 7,
-        "animateScrollTo(value:kotlin.Int,animationSpec:androidx.compose.animation.core.AnimationSpec<kotlin.Float>)": 7,
-        "scrollTo(value:kotlin.Int)": 7
-      }
-    },
-    "androidx.compose.foundation.lazy.LazyListState": {
-      "tag": 2,
-      "name": "LazyListState",
-      "params": {
-        "firstVisibleItemIndex": 1,
-        "firstVisibleItemScrollOffset": 2,
-        "isScrollInProgress": 3,
-        "canScrollForward": 4,
-        "canScrollBackward": 5,
-        "lastScrolledForward": 6,
-        "lastScrolledBackward": 7,
-        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 8,
-        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 9,
-        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 10
-      },
-      "since": 7,
-      "wire": {
-        "firstVisibleItemIndex": 7,
-        "firstVisibleItemScrollOffset": 7,
-        "isScrollInProgress": 7,
-        "canScrollForward": 7,
-        "canScrollBackward": 7,
-        "lastScrolledForward": 7,
-        "lastScrolledBackward": 7,
-        "scrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 7,
-        "requestScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 7,
-        "animateScrollToItem(index:kotlin.Int,scrollOffset:kotlin.Int)": 7
-      }
-    },
     "androidx.compose.foundation.lazy.grid.LazyGridState": {
-      "tag": 4,
+      "tag": 2,
       "name": "LazyGridState",
       "params": {
         "firstVisibleItemIndex": 1,
@@ -1426,7 +1368,7 @@
       }
     },
     "androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState": {
-      "tag": 5,
+      "tag": 3,
       "name": "LazyStaggeredGridState",
       "params": {
         "firstVisibleItemIndex": 1,
@@ -1490,7 +1432,7 @@
       }
     },
     "androidx.compose.material3.DatePickerState": {
-      "tag": 7,
+      "tag": 5,
       "name": "DatePickerState",
       "params": {
         "selectedDateMillis": 1,
@@ -1503,7 +1445,7 @@
       }
     },
     "androidx.compose.material3.DateRangePickerState": {
-      "tag": 8,
+      "tag": 6,
       "name": "DateRangePickerState",
       "params": {
         "selectedStartDateMillis": 1,
@@ -1520,7 +1462,7 @@
       }
     },
     "androidx.compose.material3.RangeSliderState": {
-      "tag": 13,
+      "tag": 11,
       "name": "RangeSliderState",
       "params": {
         "steps": 1,
@@ -1535,7 +1477,7 @@
       }
     },
     "androidx.compose.material3.SheetState": {
-      "tag": 6,
+      "tag": 4,
       "name": "SheetState",
       "params": {
         "isVisible": 1,
@@ -1560,7 +1502,7 @@
       }
     },
     "androidx.compose.material3.SliderState": {
-      "tag": 12,
+      "tag": 10,
       "name": "SliderState",
       "params": {
         "steps": 1,
@@ -1581,7 +1523,7 @@
       }
     },
     "androidx.compose.material3.SwipeToDismissBoxState": {
-      "tag": 11,
+      "tag": 9,
       "name": "SwipeToDismissBoxState",
       "params": {
         "progress": 1,
@@ -1594,7 +1536,7 @@
       }
     },
     "androidx.compose.material3.TimePickerState": {
-      "tag": 9,
+      "tag": 7,
       "name": "TimePickerState",
       "params": {
         "minute": 1,
@@ -1609,7 +1551,7 @@
       }
     },
     "androidx.compose.material3.TooltipState": {
-      "tag": 10,
+      "tag": 8,
       "name": "TooltipState",
       "params": {
         "isVisible": 1,
@@ -1628,7 +1570,7 @@
       }
     },
     "androidx.compose.material3.TopAppBarState": {
-      "tag": 14,
+      "tag": 12,
       "name": "TopAppBarState",
       "params": {
         "heightOffsetLimit": 1,
