@@ -66,6 +66,8 @@ kotlin {
         implementation projects.keliverLayoutTesting
         implementation projects.keliverLazylayoutTesting
         implementation projects.keliverWidget
+        // NF5 A3c: the recorder is tested with the generated FrameRules of the prototype's group.
+        implementation projects.keliverComposeGateaProtocolHost
       }
     }
     androidUnitTest {

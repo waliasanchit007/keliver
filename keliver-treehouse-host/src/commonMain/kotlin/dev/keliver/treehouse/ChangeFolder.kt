@@ -179,6 +179,58 @@ public class ChangeFolder(
     }
   }
 
+  /** True once a batch could not be followed: [fold] blocks from then on. */
+  public val isInconsistent: Boolean get() = inconsistent
+
+  /**
+   * Every node that carries the `cachedFrame` marker in the tree the guest has attached, hidden entries included, in tree order. The recorder (A3c) reads the `ready` edge and the
+   * "exactly one, and a direct child of the root" rule from it.
+   */
+  public fun marks(): List<MarkedNode> {
+    val out = mutableListOf<MarkedNode>()
+    collectMarks(root, shown = true, out)
+    return out
+  }
+
+  /**
+   * [id]'s node and every node under it that the fold would write, in the order the fold visits
+   * them: hidden entries and `notCached` subtrees are left out. Empty when [id] is unknown.
+   */
+  public fun shownSubtree(id: Id): List<FoldNode> {
+    val top = nodes[id.value] ?: return emptyList()
+    val out = mutableListOf<FoldNode>()
+    collectShown(top, out)
+    return out
+  }
+
+  /** The widget tag of the node [id], or null when the fold has no such node. */
+  public fun widgetTagOf(id: Id): WidgetTag? = nodes[id.value]?.widgetTag
+
+  private fun collectMarks(node: Node, shown: Boolean, into: MutableList<MarkedNode>) {
+    for ((tag, list) in node.children) {
+      for ((index, child) in list.withIndex()) {
+        val childShown = shown && !entryPolicy.isHidden(node, tag, child, index)
+        val marks = marksOf(child)
+        val mark = marks?.cachedFrame
+        if (mark != null) {
+          into += MarkedNode(child.id, child.widgetTag, mark.ready, childShown, rootChild = node === root)
+        }
+        collectMarks(child, childShown, into)
+      }
+    }
+  }
+
+  private fun collectShown(node: Node, into: MutableList<FoldNode>) {
+    into += node
+    for ((tag, list) in node.children) {
+      for ((index, child) in list.withIndex()) {
+        if (entryPolicy.isHidden(node, tag, child, index)) continue
+        if (marksOf(child)?.notCached == true) continue
+        collectShown(child, into)
+      }
+    }
+  }
+
   /** The marked subtree as a snapshot, or why nothing may be recorded. */
   public fun fold(): FoldResult {
     if (inconsistent) return FoldResult.Blocked("inconsistent")
@@ -308,6 +360,12 @@ public class ChangeFolder(
     val children = mutableMapOf<Int, MutableList<Node>>()
 
     override fun property(tag: Int): JsonElement? = properties[tag]
+
+    override val modifierElements: List<ModifierElement> get() = modifier
+
+    override val childrenTags: Set<Int> get() = children.filterValues { it.isNotEmpty() }.keys
+
+    override fun children(tag: Int): List<FoldNode> = children[tag].orEmpty()
   }
 }
 

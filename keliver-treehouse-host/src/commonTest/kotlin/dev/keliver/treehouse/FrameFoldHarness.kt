@@ -23,11 +23,14 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChildrenTag
 import dev.keliver.protocol.Id
+import dev.keliver.protocol.KeliverFrameMarksApi
 import dev.keliver.protocol.ModifierElement
 import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.WidgetTag
 import dev.keliver.protocol.host.GeneratedHostProtocol
 import dev.keliver.protocol.host.HostProtocolAdapter
+import dev.keliver.protocol.host.HostedWidget
+import dev.keliver.protocol.host.IdVisitor
 import dev.keliver.protocol.host.ProtocolChildren
 import dev.keliver.protocol.host.ProtocolMismatchHandler
 import dev.keliver.protocol.host.ProtocolNode
@@ -149,6 +152,11 @@ private class TestNode(id: Id, override val widgetTag: WidgetTag) : ProtocolNode
     }
   }
 
+  override fun visitIds(visitor: IdVisitor) {
+    visitor.visit(id)
+    for (children in protocolChildren.values) children.visitIds(visitor)
+  }
+
   override fun detach() = Unit
 }
 
@@ -196,6 +204,10 @@ class TestHost {
   }
 
   fun top(): List<TestWidget> = root.widgets.map { it as TestWidget }
+
+  /** A3c: the host widgets of a node and everything under it, as the recorder asks for them. */
+  @OptIn(KeliverFrameMarksApi::class)
+  fun widgetsUnder(id: Id): List<HostedWidget<TestWidget>> = adapter.widgetsUnder(id)
 }
 
 /** What the dump of a raw tree must leave out or change, as I2 and 2.4 say. */

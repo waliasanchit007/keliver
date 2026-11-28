@@ -27,6 +27,7 @@ import dev.keliver.protocol.ChildrenChange.Move
 import dev.keliver.protocol.ChildrenChange.Remove
 import dev.keliver.protocol.ChildrenTag
 import dev.keliver.protocol.Id
+import dev.keliver.protocol.KeliverFrameMarksApi
 import dev.keliver.protocol.RedwoodVersion
 import dev.keliver.protocol.WidgetTag
 import dev.keliver.widget.ChangeListener
@@ -194,6 +195,25 @@ public class HostProtocolAdapter<W : Any>(
         "Unknown widget ID ${id.value}"
       }
     }
+  }
+
+  /**
+   * The host widgets of the node [id] and everything under it, the node's own first, then each
+   * descendant in the order the tree visits them. A node the adapter did not create (an unknown widget
+   * tag it skipped) is absent. Empty when [id] is not a node of this adapter. It is what NF5's
+   * recorder asks at the `ready` edge: which scrollers are at their origin and how each text laid out
+   * (docs/SHOW_BEFORE_COMPUTE.md 2.3, 5.2). It reads, and changes nothing.
+   */
+  @KeliverFrameMarksApi
+  public fun widgetsUnder(id: Id): List<HostedWidget<W>> {
+    if (closed) return emptyList()
+    val top = nodes[id.value] ?: return emptyList()
+    val out = mutableListOf<HostedWidget<W>>()
+    top.visitIds { visited ->
+      val node = nodes[visited.value]
+      if (node != null) out += HostedWidget(visited, node.widgetTag, node.widget)
+    }
+    return out
   }
 
   /**
@@ -466,6 +486,14 @@ private class RootProtocolNode<W : Any>(
     // Do nothing because 'children' is owned by the host's RedwoodView.
   }
 }
+
+/** A node's id and widget tag with the host widget it drew, as [HostProtocolAdapter.widgetsUnder] returns it. */
+@KeliverFrameMarksApi
+public class HostedWidget<W : Any>(
+  public val id: Id,
+  public val widgetTag: WidgetTag,
+  public val widget: Widget<W>,
+)
 
 /**
  * Cache a fixed number of recently removed widgets with the 'reuse' modifier. This number balances

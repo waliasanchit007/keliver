@@ -16,6 +16,7 @@
 package dev.keliver.treehouse
 
 import dev.keliver.protocol.Id
+import dev.keliver.protocol.ModifierElement
 import dev.keliver.protocol.SnapshotChangeList
 import dev.keliver.protocol.WidgetTag
 import kotlinx.serialization.json.JsonElement
@@ -64,6 +65,15 @@ public interface FoldNode {
 
   /** The latest value the guest sent for this property, or null if none was sent. */
   public fun property(tag: Int): JsonElement?
+
+  /** The node's current modifier elements, as the guest sent them (markers included). */
+  public val modifierElements: List<ModifierElement>
+
+  /** The tags of the node's children groups that hold at least one child. */
+  public val childrenTags: Set<Int>
+
+  /** The children of group [tag], in order, hidden entries included. */
+  public fun children(tag: Int): List<FoldNode>
 }
 
 /**
@@ -97,6 +107,19 @@ public fun interface TextLineShapes {
    */
   public fun lineLengths(nodeId: Id, propertyTag: Int, text: String): List<Int>?
 }
+
+/** A node that carries the `cachedFrame` marker, as [ChangeFolder.marks] reports it. */
+@KeliverFrameFoldApi
+public class MarkedNode(
+  public val id: Id,
+  public val widgetTag: WidgetTag,
+  /** The marker's current `ready`. */
+  public val ready: Boolean,
+  /** False when the node is inside a hidden entry (a retained entry below the top, a prepared one). */
+  public val shown: Boolean,
+  /** The node is a direct child of the content's root. */
+  public val rootChild: Boolean,
+)
 
 /** How much of the strings the fold keeps. */
 @KeliverFrameFoldApi
