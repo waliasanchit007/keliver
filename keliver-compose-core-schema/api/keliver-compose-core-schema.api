@@ -327,20 +327,6 @@ public final class dev/keliver/compose/core/GenClickable1 {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class dev/keliver/compose/core/GenClickable2 {
-	public fun <init> (ZI)V
-	public synthetic fun <init> (ZIILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Z
-	public final fun component2 ()I
-	public final fun copy (ZI)Ldev/keliver/compose/core/GenClickable2;
-	public static synthetic fun copy$default (Ldev/keliver/compose/core/GenClickable2;ZIILjava/lang/Object;)Ldev/keliver/compose/core/GenClickable2;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getEnabled ()Z
-	public final fun getOnClick ()I
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
 public final class dev/keliver/compose/core/GenClip1 {
 	public fun <init> (Ldev/keliver/compose/ui/graphics/Shape;)V
 	public final fun component1 ()Ldev/keliver/compose/ui/graphics/Shape;
@@ -1059,48 +1045,6 @@ public final class dev/keliver/compose/core/GenText1 {
 	public final fun component9-1CihQzA ()Ldev/keliver/compose/ui/text/style/TextAlign;
 	public final fun copy-fKwJnmg (Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;)Ldev/keliver/compose/core/GenText1;
 	public static synthetic fun copy-fKwJnmg$default (Ldev/keliver/compose/core/GenText1;Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/compose/core/GenText1;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getColor-G4xQfSE ()J
-	public final fun getFontFamily ()Ldev/keliver/compose/ui/text/font/FontFamily;
-	public final fun getFontSize-AVA18sc ()J
-	public final fun getFontStyle-myZOwXQ ()Ldev/keliver/compose/ui/text/font/FontStyle;
-	public final fun getFontWeight ()Ldev/keliver/compose/ui/text/font/FontWeight;
-	public final fun getLetterSpacing-AVA18sc ()J
-	public final fun getLineHeight-AVA18sc ()J
-	public final fun getMaxLines ()I
-	public final fun getMinLines ()I
-	public final fun getModifierEvent ()Lkotlin/jvm/functions/Function1;
-	public final fun getOverflow-vMczOZc ()I
-	public final fun getSoftWrap ()Z
-	public final fun getStyle ()Ldev/keliver/compose/ui/text/TextStyle;
-	public final fun getText ()Ljava/lang/String;
-	public final fun getTextAlign-1CihQzA ()Ldev/keliver/compose/ui/text/style/TextAlign;
-	public final fun getTextDecoration ()Ldev/keliver/compose/ui/text/style/TextDecoration;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class dev/keliver/compose/core/GenText2 {
-	public synthetic fun <init> (Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component10-AVA18sc ()J
-	public final fun component11-vMczOZc ()I
-	public final fun component12 ()Z
-	public final fun component13 ()I
-	public final fun component14 ()I
-	public final fun component15 ()Ldev/keliver/compose/ui/text/TextStyle;
-	public final fun component16 ()Lkotlin/jvm/functions/Function1;
-	public final fun component2-G4xQfSE ()J
-	public final fun component3-AVA18sc ()J
-	public final fun component4-myZOwXQ ()Ldev/keliver/compose/ui/text/font/FontStyle;
-	public final fun component5 ()Ldev/keliver/compose/ui/text/font/FontWeight;
-	public final fun component6 ()Ldev/keliver/compose/ui/text/font/FontFamily;
-	public final fun component7-AVA18sc ()J
-	public final fun component8 ()Ldev/keliver/compose/ui/text/style/TextDecoration;
-	public final fun component9-1CihQzA ()Ldev/keliver/compose/ui/text/style/TextAlign;
-	public final fun copy-fKwJnmg (Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;)Ldev/keliver/compose/core/GenText2;
-	public static synthetic fun copy-fKwJnmg$default (Ldev/keliver/compose/core/GenText2;Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/compose/core/GenText2;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getColor-G4xQfSE ()J
 	public final fun getFontFamily ()Ldev/keliver/compose/ui/text/font/FontFamily;

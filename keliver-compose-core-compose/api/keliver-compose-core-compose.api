@@ -162,10 +162,6 @@ public final class dev/keliver/compose/core/compose/GenText1Kt {
 	public static final fun GenText1-3lY5SM8 (Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;III)V
 }
 
-public final class dev/keliver/compose/core/compose/GenText2Kt {
-	public static final fun GenText2-3lY5SM8 (Ljava/lang/String;JJLdev/keliver/compose/ui/text/font/FontStyle;Ldev/keliver/compose/ui/text/font/FontWeight;Ldev/keliver/compose/ui/text/font/FontFamily;JLdev/keliver/compose/ui/text/style/TextDecoration;Ldev/keliver/compose/ui/text/style/TextAlign;JIZIILdev/keliver/compose/ui/text/TextStyle;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;III)V
-}
-
 public final class dev/keliver/compose/core/compose/GenTextButton1Kt {
 	public static final fun GenTextButton1 (Lkotlin/jvm/functions/Function0;ZLdev/keliver/compose/ui/graphics/Shape;Ldev/keliver/compose/material3/ButtonColors;Ldev/keliver/compose/material3/ButtonElevation;Ldev/keliver/compose/foundation/BorderStroke;Ldev/keliver/compose/foundation/layout/PaddingValues;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -185,8 +181,6 @@ public final class dev/keliver/compose/core/compose/UnscopedKt {
 	public static final fun genBorder2 (Ldev/keliver/Modifier;Ldev/keliver/compose/foundation/BorderStroke;Ldev/keliver/compose/ui/graphics/Shape;)Ldev/keliver/Modifier;
 	public static final fun genClickable1 (Ldev/keliver/Modifier;ZI)Ldev/keliver/Modifier;
 	public static synthetic fun genClickable1$default (Ldev/keliver/Modifier;ZIILjava/lang/Object;)Ldev/keliver/Modifier;
-	public static final fun genClickable2 (Ldev/keliver/Modifier;ZI)Ldev/keliver/Modifier;
-	public static synthetic fun genClickable2$default (Ldev/keliver/Modifier;ZIILjava/lang/Object;)Ldev/keliver/Modifier;
 	public static final fun genClip1 (Ldev/keliver/Modifier;Ldev/keliver/compose/ui/graphics/Shape;)Ldev/keliver/Modifier;
 	public static final fun genFillMaxHeight1 (Ldev/keliver/Modifier;F)Ldev/keliver/Modifier;
 	public static final fun genFillMaxSize1 (Ldev/keliver/Modifier;F)Ldev/keliver/Modifier;

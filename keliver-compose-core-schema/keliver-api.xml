@@ -23,31 +23,7 @@
   <widget tag="5" type="dev.keliver.compose.core.GenSpacer1">
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
   </widget>
-  <widget tag="6" type="dev.keliver.compose.core.GenText1">
-    <property tag="1" name="text" type="kotlin.String" />
-    <property tag="3" name="color" type="dev.keliver.compose.ui.graphics.Color" />
-    <property tag="4" name="fontSize" type="dev.keliver.compose.ui.unit.TextUnit" />
-    <property tag="5" name="fontStyle" type="dev.keliver.compose.ui.text.font.FontStyle?" />
-    <property tag="6" name="fontWeight" type="dev.keliver.compose.ui.text.font.FontWeight?" />
-    <property tag="7" name="fontFamily" type="dev.keliver.compose.ui.text.font.FontFamily?" />
-    <property tag="8" name="letterSpacing" type="dev.keliver.compose.ui.unit.TextUnit" />
-    <property tag="9" name="textDecoration" type="dev.keliver.compose.ui.text.style.TextDecoration?" />
-    <property tag="10" name="textAlign" type="dev.keliver.compose.ui.text.style.TextAlign?" />
-    <property tag="11" name="lineHeight" type="dev.keliver.compose.ui.unit.TextUnit" />
-    <property tag="12" name="overflow" type="dev.keliver.compose.ui.text.style.TextOverflow" />
-    <property tag="13" name="softWrap" type="kotlin.Boolean" />
-    <property tag="14" name="maxLines" type="kotlin.Int" />
-    <property tag="15" name="minLines" type="kotlin.Int" />
-    <property tag="17" name="style" type="dev.keliver.compose.ui.text.TextStyle?" />
-    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
-  </widget>
-  <widget tag="7" type="dev.keliver.compose.core.GenIcon1">
-    <property tag="1" name="imageVector" type="dev.keliver.compose.ui.graphics.vector.ImageVector" />
-    <property tag="2" name="contentDescription" type="kotlin.String?" />
-    <property tag="4" name="tint" type="dev.keliver.compose.ui.graphics.Color?" />
-    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
-  </widget>
-  <widget tag="9" type="dev.keliver.compose.core.GenFlowRow1">
+  <widget tag="6" type="dev.keliver.compose.core.GenFlowRow1">
     <property tag="2" name="horizontalArrangement" type="dev.keliver.compose.foundation.layout.Arrangement.Horizontal" />
     <property tag="3" name="verticalArrangement" type="dev.keliver.compose.foundation.layout.Arrangement.Vertical" />
     <property tag="4" name="itemVerticalAlignment" type="dev.keliver.compose.ui.Alignment.Vertical" />
@@ -56,7 +32,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="8" name="content" />
   </widget>
-  <widget tag="10" type="dev.keliver.compose.core.GenText2">
+  <widget tag="7" type="dev.keliver.compose.core.GenText1">
     <property tag="1" name="text" type="kotlin.String" />
     <property tag="3" name="color" type="dev.keliver.compose.ui.graphics.Color" />
     <property tag="5" name="fontSize" type="dev.keliver.compose.ui.unit.TextUnit" />
@@ -74,7 +50,13 @@
     <property tag="18" name="style" type="dev.keliver.compose.ui.text.TextStyle?" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
   </widget>
-  <widget tag="12" type="dev.keliver.compose.core.GenImage1">
+  <widget tag="8" type="dev.keliver.compose.core.GenIcon1">
+    <property tag="1" name="imageVector" type="dev.keliver.compose.ui.graphics.vector.ImageVector" />
+    <property tag="2" name="contentDescription" type="kotlin.String?" />
+    <property tag="4" name="tint" type="dev.keliver.compose.ui.graphics.Color?" />
+    <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
+  </widget>
+  <widget tag="9" type="dev.keliver.compose.core.GenImage1">
     <property tag="1" name="painter" type="dev.keliver.compose.ui.graphics.painter.Painter" />
     <property tag="2" name="contentDescription" type="kotlin.String?" />
     <property tag="4" name="alignment" type="dev.keliver.compose.ui.Alignment" />
@@ -83,7 +65,7 @@
     <property tag="7" name="colorFilter" type="dev.keliver.compose.ui.graphics.ColorFilter?" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
   </widget>
-  <widget tag="13" type="dev.keliver.compose.core.GenImage2">
+  <widget tag="10" type="dev.keliver.compose.core.GenImage2">
     <property tag="1" name="imageVector" type="dev.keliver.compose.ui.graphics.vector.ImageVector" />
     <property tag="2" name="contentDescription" type="kotlin.String?" />
     <property tag="4" name="alignment" type="dev.keliver.compose.ui.Alignment" />
@@ -92,7 +74,7 @@
     <property tag="7" name="colorFilter" type="dev.keliver.compose.ui.graphics.ColorFilter?" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
   </widget>
-  <widget tag="14" type="dev.keliver.compose.core.GenLazyColumn1">
+  <widget tag="11" type="dev.keliver.compose.core.GenLazyColumn1">
     <property tag="2" name="state" type="dev.keliver.compose.foundation.lazy.LazyListStateWire" />
     <property tag="3" name="contentPadding" type="dev.keliver.compose.foundation.layout.PaddingValues?" />
     <property tag="4" name="reverseLayout" type="kotlin.Boolean" />
@@ -105,7 +87,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="10" name="content" />
   </widget>
-  <widget tag="15" type="dev.keliver.compose.core.GenLazyRow1">
+  <widget tag="12" type="dev.keliver.compose.core.GenLazyRow1">
     <property tag="2" name="state" type="dev.keliver.compose.foundation.lazy.LazyListStateWire" />
     <property tag="3" name="contentPadding" type="dev.keliver.compose.foundation.layout.PaddingValues?" />
     <property tag="4" name="reverseLayout" type="kotlin.Boolean" />
@@ -118,13 +100,13 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="10" name="content" />
   </widget>
-  <widget tag="16" type="dev.keliver.compose.core.GenIcon2">
+  <widget tag="13" type="dev.keliver.compose.core.GenIcon2">
     <property tag="1" name="painter" type="dev.keliver.compose.ui.graphics.painter.Painter" />
     <property tag="2" name="contentDescription" type="kotlin.String?" />
     <property tag="4" name="tint" type="dev.keliver.compose.ui.graphics.Color?" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
   </widget>
-  <widget tag="17" type="dev.keliver.compose.core.GenSurface1">
+  <widget tag="14" type="dev.keliver.compose.core.GenSurface1">
     <property tag="2" name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
     <property tag="3" name="color" type="dev.keliver.compose.ui.graphics.Color?" />
     <property tag="4" name="contentColor" type="dev.keliver.compose.ui.graphics.Color?" />
@@ -134,7 +116,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="8" name="content" />
   </widget>
-  <widget tag="18" type="dev.keliver.compose.core.GenSurface2">
+  <widget tag="15" type="dev.keliver.compose.core.GenSurface2">
     <property tag="3" name="enabled" type="kotlin.Boolean" />
     <property tag="4" name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
     <property tag="5" name="color" type="dev.keliver.compose.ui.graphics.Color?" />
@@ -146,7 +128,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="11" name="content" />
   </widget>
-  <widget tag="19" type="dev.keliver.compose.core.GenCard1">
+  <widget tag="16" type="dev.keliver.compose.core.GenCard1">
     <property tag="2" name="shape" type="dev.keliver.compose.ui.graphics.Shape?" />
     <property tag="3" name="colors" type="dev.keliver.compose.material3.CardColors?" />
     <property tag="4" name="elevation" type="dev.keliver.compose.material3.CardElevation?" />
@@ -154,7 +136,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="6" name="content" />
   </widget>
-  <widget tag="20" type="dev.keliver.compose.core.GenCard2">
+  <widget tag="17" type="dev.keliver.compose.core.GenCard2">
     <property tag="3" name="enabled" type="kotlin.Boolean" />
     <property tag="4" name="shape" type="dev.keliver.compose.ui.graphics.Shape?" />
     <property tag="5" name="colors" type="dev.keliver.compose.material3.CardColors?" />
@@ -164,7 +146,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="9" name="content" />
   </widget>
-  <widget tag="21" type="dev.keliver.compose.core.GenButton1">
+  <widget tag="18" type="dev.keliver.compose.core.GenButton1">
     <property tag="3" name="enabled" type="kotlin.Boolean" />
     <property tag="4" name="shape" type="dev.keliver.compose.ui.graphics.Shape?" />
     <property tag="5" name="colors" type="dev.keliver.compose.material3.ButtonColors?" />
@@ -175,7 +157,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="10" name="content" />
   </widget>
-  <widget tag="22" type="dev.keliver.compose.core.GenTextButton1">
+  <widget tag="19" type="dev.keliver.compose.core.GenTextButton1">
     <property tag="3" name="enabled" type="kotlin.Boolean" />
     <property tag="4" name="shape" type="dev.keliver.compose.ui.graphics.Shape?" />
     <property tag="5" name="colors" type="dev.keliver.compose.material3.ButtonColors?" />
@@ -186,7 +168,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="10" name="content" />
   </widget>
-  <widget tag="23" type="dev.keliver.compose.core.GenOutlinedButton1">
+  <widget tag="20" type="dev.keliver.compose.core.GenOutlinedButton1">
     <property tag="3" name="enabled" type="kotlin.Boolean" />
     <property tag="4" name="shape" type="dev.keliver.compose.ui.graphics.Shape?" />
     <property tag="5" name="colors" type="dev.keliver.compose.material3.ButtonColors?" />
@@ -197,7 +179,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="10" name="content" />
   </widget>
-  <widget tag="24" type="dev.keliver.compose.core.GenIconButton1">
+  <widget tag="21" type="dev.keliver.compose.core.GenIconButton1">
     <property tag="3" name="enabled" type="kotlin.Boolean" />
     <property tag="4" name="colors" type="dev.keliver.compose.material3.IconButtonColors?" />
     <property tag="6" name="shape" type="dev.keliver.compose.ui.graphics.Shape?" />
@@ -205,12 +187,12 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="7" name="content" />
   </widget>
-  <widget tag="25" type="dev.keliver.compose.core.GenHorizontalDivider1">
+  <widget tag="22" type="dev.keliver.compose.core.GenHorizontalDivider1">
     <property tag="2" name="thickness" type="dev.keliver.compose.ui.unit.Dp?" />
     <property tag="3" name="color" type="dev.keliver.compose.ui.graphics.Color?" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
   </widget>
-  <widget tag="26" type="dev.keliver.compose.core.GenTopAppBar1">
+  <widget tag="23" type="dev.keliver.compose.core.GenTopAppBar1">
     <property tag="5" name="expandedHeight" type="dev.keliver.compose.ui.unit.Dp?" />
     <property tag="7" name="colors" type="dev.keliver.compose.material3.TopAppBarColors?" />
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
@@ -218,7 +200,7 @@
     <children tag="3" name="navigationIcon" />
     <children tag="4" name="actions" />
   </widget>
-  <widget tag="27" type="dev.keliver.compose.core.GenAnimatedVisibility1">
+  <widget tag="24" type="dev.keliver.compose.core.GenAnimatedVisibility1">
     <property tag="1" name="visible" type="kotlin.Boolean" />
     <property tag="3" name="enter" type="dev.keliver.compose.animation.EnterTransition?" />
     <property tag="4" name="exit" type="dev.keliver.compose.animation.ExitTransition?" />
@@ -226,7 +208,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="6" name="content" />
   </widget>
-  <widget tag="28" type="dev.keliver.compose.core.GenColumnScopeAnimatedVisibility1">
+  <widget tag="25" type="dev.keliver.compose.core.GenColumnScopeAnimatedVisibility1">
     <property tag="1" name="visible" type="kotlin.Boolean" />
     <property tag="3" name="enter" type="dev.keliver.compose.animation.EnterTransition?" />
     <property tag="4" name="exit" type="dev.keliver.compose.animation.ExitTransition?" />
@@ -234,7 +216,7 @@
     <event tag="1000" name="modifierEvent" params="kotlin.Int" nullable="true" />
     <children tag="6" name="content" />
   </widget>
-  <widget tag="29" type="dev.keliver.compose.core.GenRowScopeAnimatedVisibility1">
+  <widget tag="26" type="dev.keliver.compose.core.GenRowScopeAnimatedVisibility1">
     <property tag="1" name="visible" type="kotlin.Boolean" />
     <property tag="3" name="enter" type="dev.keliver.compose.animation.EnterTransition?" />
     <property tag="4" name="exit" type="dev.keliver.compose.animation.ExitTransition?" />
@@ -325,27 +307,31 @@
     <property name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
     <property name="width" type="dev.keliver.compose.ui.unit.Dp" />
   </modifier>
-  <modifier tag="20" type="dev.keliver.compose.core.GenClickable1">
+  <modifier tag="20" type="dev.keliver.compose.core.GenBorder2">
+    <property name="border" type="dev.keliver.compose.foundation.BorderStroke" />
+    <property name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
+  </modifier>
+  <modifier tag="21" type="dev.keliver.compose.core.GenClickable1">
     <property name="enabled" type="kotlin.Boolean" />
     <property name="onClick" type="kotlin.Int" />
   </modifier>
-  <modifier tag="21" type="dev.keliver.compose.core.GenHorizontalScroll1">
+  <modifier tag="22" type="dev.keliver.compose.core.GenHorizontalScroll1">
     <property name="enabled" type="kotlin.Boolean" />
     <property name="reverseScrolling" type="kotlin.Boolean" />
     <property name="state" type="dev.keliver.compose.foundation.ScrollState" />
   </modifier>
-  <modifier tag="22" type="dev.keliver.compose.core.GenVerticalScroll1">
+  <modifier tag="23" type="dev.keliver.compose.core.GenVerticalScroll1">
     <property name="enabled" type="kotlin.Boolean" />
     <property name="reverseScrolling" type="kotlin.Boolean" />
     <property name="state" type="dev.keliver.compose.foundation.ScrollState" />
   </modifier>
-  <modifier tag="23" type="dev.keliver.compose.core.GenClip1">
+  <modifier tag="24" type="dev.keliver.compose.core.GenClip1">
     <property name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
   </modifier>
-  <modifier tag="24" type="dev.keliver.compose.core.GenAlpha1">
+  <modifier tag="25" type="dev.keliver.compose.core.GenAlpha1">
     <property name="alpha" type="kotlin.Float" />
   </modifier>
-  <modifier tag="25" type="dev.keliver.compose.core.GenShadow1">
+  <modifier tag="26" type="dev.keliver.compose.core.GenShadow1">
     <property name="ambientColor" type="dev.keliver.compose.ui.graphics.Color" />
     <property name="ambientColorIsDefault" type="kotlin.Boolean" />
     <property name="clip" type="kotlin.Boolean" />
@@ -355,39 +341,31 @@
     <property name="spotColor" type="dev.keliver.compose.ui.graphics.Color" />
     <property name="spotColorIsDefault" type="kotlin.Boolean" />
   </modifier>
-  <modifier tag="26" type="dev.keliver.compose.core.GenClickable2">
-    <property name="enabled" type="kotlin.Boolean" />
-    <property name="onClick" type="kotlin.Int" />
-  </modifier>
-  <modifier tag="27" type="dev.keliver.compose.core.GenBorder2">
-    <property name="border" type="dev.keliver.compose.foundation.BorderStroke" />
-    <property name="shape" type="dev.keliver.compose.ui.graphics.Shape" />
-  </modifier>
-  <modifier tag="28" type="dev.keliver.compose.core.GenLazyItemScopeFillParentMaxSize1">
+  <modifier tag="27" type="dev.keliver.compose.core.GenLazyItemScopeFillParentMaxSize1">
     <property name="fraction" type="kotlin.Float" />
   </modifier>
-  <modifier tag="29" type="dev.keliver.compose.core.GenLazyItemScopeFillParentMaxWidth1">
+  <modifier tag="28" type="dev.keliver.compose.core.GenLazyItemScopeFillParentMaxWidth1">
     <property name="fraction" type="kotlin.Float" />
   </modifier>
-  <modifier tag="30" type="dev.keliver.compose.core.GenLazyItemScopeFillParentMaxHeight1">
+  <modifier tag="29" type="dev.keliver.compose.core.GenLazyItemScopeFillParentMaxHeight1">
     <property name="fraction" type="kotlin.Float" />
   </modifier>
-  <modifier tag="31" type="dev.keliver.compose.core.GenLazyItemScopeAnimateItem1" />
-  <modifier tag="32" type="dev.keliver.compose.core.GenOffset1">
+  <modifier tag="30" type="dev.keliver.compose.core.GenLazyItemScopeAnimateItem1" />
+  <modifier tag="31" type="dev.keliver.compose.core.GenOffset1">
     <property name="x" type="dev.keliver.compose.ui.unit.Dp" />
     <property name="y" type="dev.keliver.compose.ui.unit.Dp" />
   </modifier>
-  <modifier tag="33" type="dev.keliver.compose.core.GenRotate1">
+  <modifier tag="32" type="dev.keliver.compose.core.GenRotate1">
     <property name="degrees" type="kotlin.Float" />
   </modifier>
-  <modifier tag="34" type="dev.keliver.compose.core.GenScale1">
+  <modifier tag="33" type="dev.keliver.compose.core.GenScale1">
     <property name="scale" type="kotlin.Float" />
   </modifier>
-  <modifier tag="35" type="dev.keliver.compose.core.GenAnimateContentSize1">
+  <modifier tag="34" type="dev.keliver.compose.core.GenAnimateContentSize1">
     <property name="animationSpec" type="dev.keliver.compose.animation.core.AnimationSpecWire" />
     <property name="animationSpecIsDefault" type="kotlin.Boolean" />
   </modifier>
-  <modifier tag="36" type="dev.keliver.compose.core.GenAnimateContentSize2">
+  <modifier tag="35" type="dev.keliver.compose.core.GenAnimateContentSize2">
     <property name="alignment" type="dev.keliver.compose.ui.Alignment" />
     <property name="animationSpec" type="dev.keliver.compose.animation.core.AnimationSpecWire" />
     <property name="animationSpecIsDefault" type="kotlin.Boolean" />

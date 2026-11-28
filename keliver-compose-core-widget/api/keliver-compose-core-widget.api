@@ -250,25 +250,6 @@ public abstract interface class dev/keliver/compose/core/widget/GenText1 : dev/k
 	public abstract fun textDecoration (Ldev/keliver/compose/ui/text/style/TextDecoration;)V
 }
 
-public abstract interface class dev/keliver/compose/core/widget/GenText2 : dev/keliver/widget/Widget {
-	public abstract fun color-s8iZJM4 (J)V
-	public abstract fun fontFamily (Ldev/keliver/compose/ui/text/font/FontFamily;)V
-	public abstract fun fontSize-P9ZER6I (J)V
-	public abstract fun fontStyle-pfpqKb4 (Ldev/keliver/compose/ui/text/font/FontStyle;)V
-	public abstract fun fontWeight (Ldev/keliver/compose/ui/text/font/FontWeight;)V
-	public abstract fun letterSpacing-P9ZER6I (J)V
-	public abstract fun lineHeight-P9ZER6I (J)V
-	public abstract fun maxLines (I)V
-	public abstract fun minLines (I)V
-	public abstract fun modifierEvent (Lkotlin/jvm/functions/Function1;)V
-	public abstract fun overflow-Q4kaCsI (I)V
-	public abstract fun softWrap (Z)V
-	public abstract fun style (Ldev/keliver/compose/ui/text/TextStyle;)V
-	public abstract fun text (Ljava/lang/String;)V
-	public abstract fun textAlign-9IWnRnw (Ldev/keliver/compose/ui/text/style/TextAlign;)V
-	public abstract fun textDecoration (Ldev/keliver/compose/ui/text/style/TextDecoration;)V
-}
-
 public abstract interface class dev/keliver/compose/core/widget/GenTextButton1 : dev/keliver/widget/Widget {
 	public abstract fun border (Ldev/keliver/compose/foundation/BorderStroke;)V
 	public abstract fun colors (Ldev/keliver/compose/material3/ButtonColors;)V
@@ -310,7 +291,6 @@ public abstract interface class dev/keliver/compose/core/widget/KeliverComposeCo
 	public abstract fun GenCard1 ()Ldev/keliver/compose/core/widget/GenCard1;
 	public abstract fun GenCard2 ()Ldev/keliver/compose/core/widget/GenCard2;
 	public abstract fun GenClickable1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClickable1;)V
-	public abstract fun GenClickable2 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClickable2;)V
 	public abstract fun GenClip1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenClip1;)V
 	public abstract fun GenColumn1 ()Ldev/keliver/compose/core/widget/GenColumn1;
 	public abstract fun GenColumnScopeAnimatedVisibility1 ()Ldev/keliver/compose/core/widget/GenColumnScopeAnimatedVisibility1;
@@ -345,7 +325,6 @@ public abstract interface class dev/keliver/compose/core/widget/KeliverComposeCo
 	public abstract fun GenSurface1 ()Ldev/keliver/compose/core/widget/GenSurface1;
 	public abstract fun GenSurface2 ()Ldev/keliver/compose/core/widget/GenSurface2;
 	public abstract fun GenText1 ()Ldev/keliver/compose/core/widget/GenText1;
-	public abstract fun GenText2 ()Ldev/keliver/compose/core/widget/GenText2;
 	public abstract fun GenTextButton1 ()Ldev/keliver/compose/core/widget/GenTextButton1;
 	public abstract fun GenTopAppBar1 ()Ldev/keliver/compose/core/widget/GenTopAppBar1;
 	public abstract fun GenVerticalScroll1 (Ljava/lang/Object;Ldev/keliver/compose/core/modifier/GenVerticalScroll1;)V

@@ -1,0 +1,73 @@
+{
+  "group": "coil",
+  "level": 1,
+  "nextWidgetTag": 3,
+  "nextModifierTag": 1,
+  "widgets": {
+    "coil3.compose/AsyncImage(model:kotlin.Any?,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,placeholder:androidx.compose.ui.graphics.painter.Painter?,error:androidx.compose.ui.graphics.painter.Painter?,fallback:androidx.compose.ui.graphics.painter.Painter?,onLoading:((coil3.compose.AsyncImagePainter.State.Loading)->kotlin.Unit)?,onSuccess:((coil3.compose.AsyncImagePainter.State.Success)->kotlin.Unit)?,onError:((coil3.compose.AsyncImagePainter.State.Error)->kotlin.Unit)?,alignment:androidx.compose.ui.Alignment,contentScale:androidx.compose.ui.layout.ContentScale,alpha:kotlin.Float,colorFilter:androidx.compose.ui.graphics.ColorFilter?,filterQuality:androidx.compose.ui.graphics.FilterQuality,clipToBounds:kotlin.Boolean)": {
+      "tag": 2,
+      "name": "GenAsyncImage2",
+      "params": {
+        "model": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "placeholder": 4,
+        "error": 5,
+        "fallback": 6,
+        "onLoading": 7,
+        "onSuccess": 8,
+        "onError": 9,
+        "alignment": 10,
+        "contentScale": 11,
+        "alpha": 12,
+        "colorFilter": 13,
+        "filterQuality": 14,
+        "clipToBounds": 15
+      },
+      "since": 1,
+      "wire": {
+        "model": 1,
+        "contentDescription": 1,
+        "placeholder": 1,
+        "error": 1,
+        "alignment": 1,
+        "contentScale": 1,
+        "alpha": 1,
+        "colorFilter": 1,
+        "filterQuality": 1,
+        "clipToBounds": 1
+      }
+    },
+    "coil3.compose/AsyncImage(model:kotlin.Any?,contentDescription:kotlin.String?,modifier:androidx.compose.ui.Modifier,transform:(coil3.compose.AsyncImagePainter.State)->coil3.compose.AsyncImagePainter.State,onState:((coil3.compose.AsyncImagePainter.State)->kotlin.Unit)?,alignment:androidx.compose.ui.Alignment,contentScale:androidx.compose.ui.layout.ContentScale,alpha:kotlin.Float,colorFilter:androidx.compose.ui.graphics.ColorFilter?,filterQuality:androidx.compose.ui.graphics.FilterQuality,clipToBounds:kotlin.Boolean)": {
+      "tag": 1,
+      "name": "GenAsyncImage1",
+      "params": {
+        "model": 1,
+        "contentDescription": 2,
+        "modifier": 3,
+        "transform": 4,
+        "onState": 5,
+        "alignment": 6,
+        "contentScale": 7,
+        "alpha": 8,
+        "colorFilter": 9,
+        "filterQuality": 10,
+        "clipToBounds": 11
+      },
+      "since": 1,
+      "wire": {
+        "model": 1,
+        "contentDescription": 1,
+        "alignment": 1,
+        "contentScale": 1,
+        "alpha": 1,
+        "colorFilter": 1,
+        "filterQuality": 1,
+        "clipToBounds": 1
+      }
+    }
+  },
+  "modifiers": {},
+  "nextFactoryTag": 1,
+  "factories": {}
+}

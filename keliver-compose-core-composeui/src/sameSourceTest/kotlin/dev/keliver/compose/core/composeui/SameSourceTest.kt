@@ -590,8 +590,9 @@ internal class EventTap {
 }
 
 /**
- * The core group's dependency tag in the generated root (keliver-compose-generator/root.json) times
- * Redwood's `MAX_MEMBER_TAG`: a core widget or modifier tag on the wire is this plus its lock tag.
+ * The core group's dependency tag in the generated root (keliver-compose-generator/root.json, recorded
+ * in root.lock.json; HostCompatibilityTest checks it against the lock) times Redwood's
+ * `MAX_MEMBER_TAG`: a core widget or modifier tag on the wire is this plus its lock tag.
  */
 internal const val CORE_WIRE_OFFSET = 10 * 1_000_000
 

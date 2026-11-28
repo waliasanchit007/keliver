@@ -16,6 +16,7 @@
 package dev.keliver.compose.generator
 
 import java.io.File
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -193,13 +194,22 @@ class GeneratorTest {
 
   @Test fun theProductCoreGroupIsGeneratedBesideThePrototype() {
     // MS4-01: every prototype declaration is in the product's groups (core, and coil since MS4-03), so
-    // the prototype keeps building on core's values.
+    // the prototype keeps building on core's values. MS4-06: except the overloads Compose now hides,
+    // which the prototype keeps because Gate A's guests send their tags; the product's fresh locks
+    // have no older guest, and a hidden overload needs an entry it already had.
     val core = loadConfig(File("core.json"))
     val coil = loadConfig(File("coil.json"))
     val gatea = loadConfig(File("gatea.json"))
     assertEquals("core", core.group)
     assertEquals("dev.keliver.compose.core", core.schemaPackage)
-    assertEquals(emptyList(), gatea.declarations - (core.declarations + coil.declarations).toSet(), "prototype declarations missing from the product")
+    assertEquals(
+      listOf(
+        "androidx.compose.foundation.clickable(enabled,onClickLabel,role,onClick)",
+        "androidx.compose.material3.Text(text,modifier,color,fontSize,fontStyle,fontWeight,fontFamily,letterSpacing,textDecoration,textAlign,lineHeight,overflow,softWrap,maxLines,minLines,onTextLayout,style)",
+      ),
+      gatea.declarations - (core.declarations + coil.declarations).toSet(),
+      "prototype declarations missing from the product",
+    )
     assertEquals(emptyList(), gatea.errors.map { it.first } - core.errors.map { it.first }.toSet())
     assertEquals(gatea.extras, core.extras)
     assertEquals(gatea.extraModifiers, core.extraModifiers)
@@ -208,13 +218,65 @@ class GeneratorTest {
     assertTrue(gatea.dependencies.any { it.second == "dev.keliver.material.KeliverMaterial" })
   }
 
-  @Test fun theProductCoreLockStartedFromThePrototypes() {
-    // Until MS4-06's fresh product locks, core's lock is the prototype's (seeded with --seed-lock), and
-    // only appends to it: same tags, names and levels, so the copied tests assert the same tags.
-    val gatea = lockJson.decodeFromString(Lock.serializer(), File("gatea.lock.json").readText())
-    val core = lockJson.decodeFromString(Lock.serializer(), File("core.lock.json").readText())
-    assertEquals("core", core.group)
-    assertEquals(emptyList(), checkAppendOnly(gatea.copy(group = "core"), core))
+  @Test fun theProductConfigsKeepNoHiddenOverload() {
+    // A hidden overload keeps only an entry its lock already has (an older guest sends its tag). The
+    // product's locks started fresh (MS4-06), so its configs list only what Compose shows.
+    val classpath = System.getProperty("keliver.composeApi") ?: error("the test task passes keliver.composeApi")
+    val sources = System.getProperty("keliver.composeSources") ?: error("the test task passes keliver.composeSources")
+    val api = ApiReader(classpath.split(File.pathSeparator).map(::File))
+    val src = SourceReader(sources.split(File.pathSeparator).map(::File))
+    fun hidden(config: Config) = config.declarations.filter { api.find(it).also(src::complete).isHidden }
+    assertEquals(emptyList(), hidden(loadConfig(File("core.json"))) + hidden(loadConfig(File("coil.json"))))
+    // The prototype keeps Gate A's two.
+    assertEquals(2, hidden(loadConfig(File("gatea.json"))).size)
+  }
+
+  private fun lockOf(path: String) = lockJson.decodeFromString(Lock.serializer(), File(path).readText())
+  private fun rootLockOf(path: String) = lockJson.decodeFromString(RootLock.serializer(), File(path).readText())
+
+  @Test fun theProductLocksStartedFreshAtLevelOne() {
+    // Q2 (MS4-06): the product's locks start at level 1, with none of the prototype's history: every
+    // tag from 1 with no gap (no reserved or retired tag), every first entry at level 1.
+    for (group in listOf("core", "coil")) {
+      val lock = lockOf("src/test/resources/product-level-1/$group.lock.json")
+      assertEquals(group, lock.group)
+      assertEquals(1, lock.level, group)
+      for ((kind, entries, next) in listOf(
+        Triple("widget", lock.widgets, lock.nextWidgetTag),
+        Triple("modifier", lock.modifiers, lock.nextModifierTag),
+        Triple("factory", lock.factories, lock.nextFactoryTag),
+      )) {
+        assertEquals((1 until next).toList(), entries.values.map { it.tag }.sorted(), "$group's $kind tags")
+        for ((key, entry) in entries) {
+          assertEquals(1, entry.since, key)
+          assertTrue(entry.wire.orEmpty().values.all { it == 1 }, key)
+        }
+      }
+    }
+    // Core keeps no Coil entry (coil is its own group, MS4-03), and no hidden overload's entry.
+    val core = lockOf("src/test/resources/product-level-1/core.lock.json")
+    assertTrue(core.widgets.keys.none { it.startsWith("coil3.") }, "core has no AsyncImage")
+    assertEquals(1, core.widgets.keys.count { it.startsWith("androidx.compose.material3/Text(") })
+    assertEquals(1, core.modifiers.keys.count { it.startsWith("androidx.compose.foundation/clickable(") })
+    val root = rootLockOf("src/test/resources/product-level-1/root.lock.json")
+    assertEquals(1, root.level)
+    assertEquals(
+      mapOf("dev.keliver.compose.coil.KeliverComposeCoil" to RootLockEntry(17, 1), "dev.keliver.compose.core.KeliverComposeCore" to RootLockEntry(10, 1)),
+      root.dependencies,
+    )
+  }
+
+  @Test fun theProductLocksOnlyAppendToLevelOne() {
+    // From MS4-06 on, the product's locks only append (Q2: frozen at the v0.5.0 tag). The level-1
+    // locks are kept as fixtures, as Gate A's is for the prototype: a generation that changes one of
+    // their entries fails here even if the checked-in lock was deleted and regenerated. Resetting a
+    // product lock before the freeze means replacing these fixtures, in the open.
+    for (group in listOf("core", "coil")) {
+      val levelOne = lockOf("src/test/resources/product-level-1/$group.lock.json")
+      val now = lockOf("$group.lock.json")
+      assertEquals(emptyList(), checkAppendOnly(levelOne, now), group)
+    }
+    assertEquals(emptyList(), checkRootAppendOnly(rootLockOf("src/test/resources/product-level-1/root.lock.json"), rootLockOf("root.lock.json")))
   }
 
   @Test fun theRootListsTheProductGroupsAndNoLegacySchema() {
@@ -242,6 +304,90 @@ class GeneratorTest {
     }
     val message = runCatching { loadRootConfig(file) }.exceptionOrNull()?.message.orEmpty()
     assertTrue("used twice" in message, message)
+  }
+
+  @Test fun theCheckedInRootAndItsLockAreUpToDate() {
+    // What :keliver-compose-generator:checkComposeApiRoot runs.
+    val run = runRoot(File("root.json"), File("root.lock.json"), File("../keliver-compose-root-schema/src/main/kotlin"), check = true)
+    assertEquals(emptyList(), run.problems)
+    assertTrue("level 1, KeliverComposeCore@10, KeliverComposeCoil@17" in run.summary, run.summary)
+  }
+
+  private val scratch = mutableListOf<File>()
+
+  @AfterTest fun deleteScratch() {
+    scratch.forEach { it.deleteRecursively() }
+  }
+
+  /** A scratch root: its config, lock and schema output, in a fresh directory. */
+  private inner class ScratchRoot {
+    val dir: File = kotlin.io.path.createTempDirectory("root").toFile().also { scratch += it }
+    val config = File(dir, "root.json")
+    val lock = File(dir, "root.lock.json")
+    val out = File(dir, "out")
+    val schema = File(out, "p/Generated.kt")
+
+    fun config(vararg groups: Pair<Int, String>) = config.writeText(
+      """{"group": "root", "schemaPackage": "p", "schemaName": "R", "dependencies": [""" +
+        groups.joinToString { (tag, type) -> """{"tag": $tag, "type": "$type"}""" } + "]}",
+    )
+
+    fun run(check: Boolean) = runRoot(config, lock, out, check)
+  }
+
+  @Test fun aChangedRootDependencyTagFailsTheGuard() {
+    // Review of #313, L1: the root's keliver-api.xml holds only the schema type, so Redwood's API
+    // check cannot see a group's dependency tag. The root's lock records it, append-only.
+    val root = ScratchRoot()
+    root.config(10 to "a.Core", 17 to "b.Coil")
+    assertEquals(emptyList(), root.run(check = false).problems)
+    assertEquals(emptyList(), root.run(check = true).problems)
+    val lockBefore = root.lock.readText()
+    val schemaBefore = root.schema.readText()
+    assertTrue("    Dependency(10, a.Core::class),\n" in schemaBefore, schemaBefore)
+
+    root.config(11 to "a.Core", 17 to "b.Coil")
+    val checked = root.run(check = true).problems
+    assertTrue(checked.any { "group a.Core changed its dependency tag from 10 to 11" in it }, "$checked")
+    val generated = root.run(check = false).problems
+    assertTrue(generated.any { "changed its dependency tag" in it }, "$generated")
+    assertEquals(lockBefore, root.lock.readText(), "a refused generation writes nothing")
+    assertEquals(schemaBefore, root.schema.readText(), "a refused generation writes nothing")
+  }
+
+  @Test fun aRemovedGroupFailsTheGuardAndANewGroupIsAppended() {
+    val root = ScratchRoot()
+    root.config(10 to "a.Core")
+    root.run(check = false)
+    // A new group is appended at the next level; the old one keeps its own.
+    root.config(10 to "a.Core", 12 to "c.Icons")
+    assertEquals(emptyList(), root.run(check = false).problems)
+    val lock = lockJson.decodeFromString(RootLock.serializer(), root.lock.readText())
+    assertEquals(2, lock.level)
+    assertEquals(mapOf("a.Core" to RootLockEntry(10, 1), "c.Icons" to RootLockEntry(12, 2)), lock.dependencies)
+    // Removing one is refused, as is giving a new group a tag that another had.
+    root.config(12 to "c.Icons")
+    assertTrue(root.run(check = true).problems.any { "group a.Core (dependency tag 10) was removed" in it })
+    assertTrue(root.run(check = false).problems.isNotEmpty())
+    val reused = checkRootAppendOnly(lock, RootLock("root", 3, mapOf("c.Icons" to RootLockEntry(12, 2), "d.Other" to RootLockEntry(10, 3))))
+    assertTrue(reused.any { "takes dependency tag 10, which another group had" in it }, "$reused")
+  }
+
+  @Test fun theRootCheckFindsAStaleGeneratedFile() {
+    // Review of #313: the root's check skipped the stale-file scan the groups' check has.
+    val root = ScratchRoot()
+    root.config(10 to "a.Core")
+    root.run(check = false)
+    val stale = File(root.out, "old/Generated.kt").apply {
+      parentFile.mkdirs()
+      writeText("// a root schema the root no longer writes\n")
+    }
+    val keep = File(root.out, "p/Hand.kt").apply { writeText("// not generated\n") }
+    assertTrue(root.run(check = true).problems.any { "$stale is stale" in it })
+    assertEquals(emptyList(), root.run(check = false).problems)
+    assertFalse(stale.exists(), "a generation deletes it")
+    assertTrue(keep.exists() && root.schema.exists())
+    assertEquals(emptyList(), root.run(check = true).problems)
   }
 
   @Test fun aHiddenOverloadKeepsItsEntryAndCallsItsSuccessor() {
@@ -574,15 +720,13 @@ class GeneratorTest {
     assertEquals("dev.keliver.compose.core", coil.base)
     assertTrue(coil.declarations.isNotEmpty() && coil.declarations.all { it.startsWith("coil3.") }, "${coil.declarations}")
     assertTrue(core.declarations.none { it.startsWith("coil3.") }, "core declares no Coil")
-    // Coil's lock is its own, from level 1; core keeps its two AsyncImage entries (unused tags 8 and
-    // 11) until MS4-06's fresh locks, so core's lock only ever appended.
+    // Coil's lock is its own; core's has no AsyncImage entry since its fresh lock (MS4-06).
     val coilLock = lockJson.decodeFromString(Lock.serializer(), File("coil.lock.json").readText())
     assertEquals("coil", coilLock.group)
-    assertEquals(1, coilLock.level)
-    assertEquals(listOf(1, 2), coilLock.widgets.values.map { it.tag }.sorted())
+    assertTrue(coilLock.widgets.keys.all { it.startsWith("coil3.compose/AsyncImage(") }, "${coilLock.widgets.keys}")
     assertEquals(emptyMap(), coilLock.factories, "coil reads core's factory tags and owns none")
     val coreLock = lockJson.decodeFromString(Lock.serializer(), File("core.lock.json").readText())
-    assertEquals(listOf(8, 11), coreLock.widgets.filterKeys { it.startsWith("coil3.compose/AsyncImage(") }.values.map { it.tag }.sorted())
+    assertTrue(coreLock.widgets.keys.none { it.startsWith("coil3.") })
   }
 
   @Test fun aSharedRuntimesApplierIsPublicForGeneratedCodeOnly() {
