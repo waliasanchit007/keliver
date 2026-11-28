@@ -21,9 +21,6 @@ public fun Any?.animate(block: Any?): Unit = throw UnsupportedOperationException
 public fun Any?.animate(spec: Any?, block: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
-public fun Any?.apply(style: Any?): Unit = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)
 public fun Any?.border(width: Any?, color: Any?): Unit = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: not yet: Style is Compose 1.12's experimental API. Keliver generates it in a 0.5.x once Compose stabilises it. For now use modifiers and the theme.", level = DeprecationLevel.ERROR)

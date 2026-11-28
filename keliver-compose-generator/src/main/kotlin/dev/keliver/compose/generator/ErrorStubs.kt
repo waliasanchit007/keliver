@@ -84,6 +84,8 @@ class ErrorStubs(
     val message: String,
     /** A function stub's signature as Kotlin tells overloads apart (receiver, name, arity), so two that collide keep one. */
     val erased: String? = null,
+    /** A member of a generated scope interface (its text is indented into the interface), not a top-level declaration. */
+    val member: Boolean = false,
   )
 
   private val messages: List<StubMessage> = config.stubMessages
@@ -172,12 +174,14 @@ class ErrorStubs(
     if (nameTaken && f.valueParameters.isEmpty()) return null
     val (msg, kind) = messageFor(pkg, f.name, category(f, receiverSimple), typeNames(f))
     val receiver = receiverText(f.receiverParameterType)?.let { "$it." } ?: ""
+    // An `Any?` extension named like the standard library's would take over `x.apply {}` wherever its package is imported.
+    if (receiver == "Any?." && f.name in stdlibNames) return null
     val ret = returnText(f)
     val text = render(msg, "public fun $receiver${id(f.name)}(${paramList(f, requireFirst = nameTaken)}): $ret = ${body()}")
     // Two overloads that differ only in parameter names have one signature in Kotlin: the first stays.
     // The receiver is a parameter on the JVM, so it is part of the signature, as an `Any?` one is `Object`.
     val erased = f.name + "(" + (listOfNotNull(receiver.removeSuffix(".").ifEmpty { null }) + f.valueParameters.map { if (it.varargElementType != null) "vararg" else "Any?" }).joinToString(",") + ")"
-    return Stub(mirrorPackage(pkg), f.name, text, kind, msg, erased)
+    return Stub(mirrorPackage(pkg), f.name, text, kind, msg, erased, member)
   }
 
   private fun body() = "throw UnsupportedOperationException()"
@@ -188,7 +192,7 @@ class ErrorStubs(
     val (msg, kind) = messageFor(pkg, p.name, "property", buildSet { classNameOf(p.receiverParameterType)?.let(::add); collect(p.returnType, this) })
     val receiver = receiverText(p.receiverParameterType)?.let { "$it." } ?: ""
     val text = render(msg, "public val $receiver${id(p.name)}: Any?\n  get() = ${body()}")
-    return Stub(mirrorPackage(pkg), p.name, text, kind, msg)
+    return Stub(mirrorPackage(pkg), p.name, text, kind, msg, null, member)
   }
 
   private fun classStub(fq: String, c: KmClass): Stub {
@@ -267,6 +271,12 @@ class ErrorStubs(
   }
 }
 
+/** Names of the standard library's extensions, which a stub on an unmapped (`Any?`) receiver must not shadow. */
+val stdlibNames: Set<String> = setOf(
+  "apply", "let", "also", "run", "with", "takeIf", "takeUnless", "to", "plus", "minus", "times", "div", "rem",
+  "equals", "toString", "hashCode", "copy", "invoke", "get", "set", "compareTo", "contains", "iterator",
+)
+
 /** The stub counts by message class: `1234 (curated 40, never 136, notYet 3, generic 1055)`. */
 fun stubCounts(stubs: List<ErrorStubs.Stub>): String {
   val by = stubs.groupingBy { it.kind }.eachCount()
@@ -287,7 +297,8 @@ fun scanDeclaredNames(roots: List<File>, skip: Set<String>): Map<String, Set<Str
 
 private val packageLine = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
 private val topLevel = Regex(
-  """^(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|internal|private|data|sealed|enum|value|annotation|abstract|open|inline|const|fun|expect|actual)\s+)*(?:class|interface|object|typealias|fun|val|var)\s+(?:<[^>]*>\s*)?(?:[\w.<>?, ]+?\.)?`?(\w+)`?""",
+  // The name is what follows the optional receiver (`dev.keliver.compose.ui.Modifier.width(`), and ends at a delimiter.
+  """^(?:@[\w.]+(?:\([^)]*\))?\s+)*(?:(?:public|internal|private|data|sealed|enum|value|annotation|abstract|open|inline|const|fun|expect|actual)\s+)*(?:class|interface|object|typealias|fun|val|var)\s+(?:<[^>]*>\s*)?(?:[\w.<>?, ]+?\.)?`?(\w+)`?(?=[\s(<:={]|$)""",
   RegexOption.MULTILINE,
 )
 

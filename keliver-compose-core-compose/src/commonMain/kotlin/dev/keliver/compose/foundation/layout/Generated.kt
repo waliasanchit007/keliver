@@ -469,9 +469,6 @@ public fun dev.keliver.compose.ui.Modifier.imePadding(): dev.keliver.compose.ui.
 @Deprecated("Keliver: `mandatorySystemGesturesPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.mandatorySystemGesturesPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `minus` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.minus(other: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `navigationBarsPadding` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.navigationBarsPadding(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
 
@@ -489,9 +486,6 @@ public fun dev.keliver.compose.ui.Modifier.paddingFrom(alignmentLine: Any?, befo
 
 @Deprecated("Keliver: `paddingFromBaseline` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.paddingFromBaseline(top: Any? = null, bottom: Any? = null): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `plus` (function in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.plus(other: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `recalculateWindowInsets` (modifier in `androidx.compose.foundation.layout`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.recalculateWindowInsets(): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException()

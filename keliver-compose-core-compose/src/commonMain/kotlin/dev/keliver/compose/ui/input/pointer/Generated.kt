@@ -5,11 +5,11 @@
 package dev.keliver.compose.ui.input.pointer
 
 
-@Deprecated("Keliver: raw pointer handlers run per event on the host. Use Modifier.clickable (or, in Gate B, combinedClickable, draggable, anchoredDraggable).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: raw pointer handlers run per event on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
 public fun dev.keliver.compose.ui.Modifier.pointerInput(
   key1: kotlin.Any?,
   block: suspend dev.keliver.compose.ui.input.pointer.PointerInputScope.() -> kotlin.Unit,
-): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: raw pointer handlers run per event on the host. Use Modifier.clickable (or, in Gate B, combinedClickable, draggable, anchoredDraggable).")
+): dev.keliver.compose.ui.Modifier = throw UnsupportedOperationException("Keliver: raw pointer handlers run per event on the host. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.")
 
 /** Placeholder: Compose's `PointerInputScope` cannot reach a guest yet (docs/COMPOSE_GENERATOR_DESIGN.md §11). */
 public class PointerInputScope private constructor()
@@ -185,7 +185,7 @@ public val Any?.isTertiary: Any?
 public val Any?.isTertiaryPressed: Any?
   get() = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `AwaitPointerEventScope` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
 public interface AwaitPointerEventScope
 
 @Deprecated("Keliver: `ConsumedData` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
@@ -200,7 +200,7 @@ public class PointerButton private constructor()
 @Deprecated("Keliver: `PointerButtons` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public class PointerButtons private constructor()
 
-@Deprecated("Keliver: `PointerEvent` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
 public class PointerEvent private constructor()
 
 @Deprecated("Keliver: `PointerEventPass` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
@@ -218,10 +218,10 @@ public interface PointerIcon
 @Deprecated("Keliver: `PointerId` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public class PointerId private constructor()
 
-@Deprecated("Keliver: `PointerInputChange` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
 public class PointerInputChange private constructor()
 
-@Deprecated("Keliver: `PointerInputEventHandler` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: raw pointer input runs per event on the host and can never run in the guest. Use Modifier.clickable, combinedClickable, draggable or anchoredDraggable.", level = DeprecationLevel.ERROR)
 public interface PointerInputEventHandler
 
 @Deprecated("Keliver: `PointerInputFilter` (class in `androidx.compose.ui.input.pointer`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)

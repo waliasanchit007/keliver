@@ -259,13 +259,6 @@ public fun unveilIn(animationSpec: Any? = null, initialColor: Any? = null, match
 @Deprecated("Keliver: `veilOut` (function in `androidx.compose.animation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun veilOut(animationSpec: Any? = null, targetColor: Any? = null, matchParentSize: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `with` (function in `androidx.compose.animation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.with(exit: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `VectorConverter` (property in `androidx.compose.animation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.VectorConverter: Any?
-  get() = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `AnimatedContentScope` (class in `androidx.compose.animation`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public interface AnimatedContentScope
 

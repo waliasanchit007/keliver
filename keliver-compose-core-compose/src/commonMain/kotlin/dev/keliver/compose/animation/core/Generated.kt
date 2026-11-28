@@ -113,9 +113,6 @@ public fun Any?.calculateTargetValue(typeConverter: Any?, initialValue: Any?, in
 @Deprecated("Keliver: `calculateTargetValue` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun Any?.calculateTargetValue(initialValue: Any?, initialVelocity: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `copy` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.copy(value: Any? = null, velocityVector: Any? = null, lastFrameTimeNanos: Any? = null, finishedTimeNanos: Any? = null, isRunning: Any? = null): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `createAnimation` (function in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun Any?.createAnimation(initialValue: Any?, targetValue: Any?, initialVelocity: Any?): Nothing = throw UnsupportedOperationException()
 
@@ -316,14 +313,6 @@ public val EaseOutQuint: Any?
 
 @Deprecated("Keliver: `EaseOutSine` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public val EaseOutSine: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `VectorConverter` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.VectorConverter: Any?
-  get() = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `VisibilityThreshold` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public val Any?.VisibilityThreshold: Any?
   get() = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `isFinished` (property in `androidx.compose.animation.core`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)

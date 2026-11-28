@@ -62,14 +62,8 @@ public fun max(a: Any?, b: Any?): Nothing = throw UnsupportedOperationException(
 @Deprecated("Keliver: `min` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun min(a: Any?, b: Any?): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `minus` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.minus(insets: Any?): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `offset` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun Any?.offset(horizontal: Any? = null, vertical: Any? = null): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `plus` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.plus(insets: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `round` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun Any?.round(): Nothing = throw UnsupportedOperationException()
@@ -82,9 +76,6 @@ public fun Any?.roundToIntSize(): Nothing = throw UnsupportedOperationException(
 
 @Deprecated("Keliver: `takeOrElse` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun Any?.takeOrElse(block: Any?): Nothing = throw UnsupportedOperationException()
-
-@Deprecated("Keliver: `times` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.times(other: Any?): Nothing = throw UnsupportedOperationException()
 
 @Deprecated("Keliver: `toIntRect` (function in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun Any?.toIntRect(): Nothing = throw UnsupportedOperationException()
@@ -127,7 +118,7 @@ public object ComposeUiUnitFlags
 @Deprecated("Keliver: `Constraints` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public class Constraints private constructor()
 
-@Deprecated("Keliver: `Density` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
 public interface Density
 
 @Deprecated("Keliver: `DpInsets` (class in `androidx.compose.ui.unit`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)

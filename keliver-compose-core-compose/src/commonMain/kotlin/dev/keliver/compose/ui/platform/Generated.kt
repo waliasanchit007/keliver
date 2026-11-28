@@ -299,10 +299,10 @@ public class ValueElement private constructor()
 @Deprecated("Keliver: `ValueElementSequence` (class in `androidx.compose.ui.platform`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public class ValueElementSequence private constructor()
 
-@Deprecated("Keliver: `ViewConfiguration` (class in `androidx.compose.ui.platform`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
 public interface ViewConfiguration
 
-@Deprecated("Keliver: `WindowInfo` (class in `androidx.compose.ui.platform`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
+@Deprecated("Keliver: this reads host measurements synchronously, which a guest cannot do. Use the host-owned values the generated API offers (an onSizeChanged-style event), or an app component.", level = DeprecationLevel.ERROR)
 public interface WindowInfo
 
 @Deprecated("Keliver: LocalContext is an Android Context, and a guest has no Android. Reach the platform through a generated bridge (docs/BRIDGE_CODEGEN_DESIGN.md).", level = DeprecationLevel.ERROR)

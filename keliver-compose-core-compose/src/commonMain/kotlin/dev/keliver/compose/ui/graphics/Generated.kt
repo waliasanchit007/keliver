@@ -131,9 +131,6 @@ public fun Any?.computeDirection(): Nothing = throw UnsupportedOperationExceptio
 @Deprecated("Keliver: `computeHorizontalBounds` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun computeHorizontalBounds(segment: Any?, roots: Any?, index: Any? = null): Nothing = throw UnsupportedOperationException()
 
-@Deprecated("Keliver: `copy` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
-public fun Any?.copy(): Nothing = throw UnsupportedOperationException()
-
 @Deprecated("Keliver: `decodeToImageBitmap` (function in `androidx.compose.ui.graphics`) is not in the generated API. Use a generated alternative, an app component or a bridge (docs/COMPOSE_GENERATOR_DESIGN.md §11).", level = DeprecationLevel.ERROR)
 public fun Any?.decodeToImageBitmap(): Nothing = throw UnsupportedOperationException()
 
