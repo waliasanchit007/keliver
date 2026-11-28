@@ -303,7 +303,7 @@ class ChangeFolderTest {
     val folded = folder.fold() as FoldResult.Folded
     val text = folded.snapshot.changes.filterIsInstance<PropertyChange>().first { it.id.value == 2 && it.propertyTag.value == 1 }
     val value = (text.value as JsonPrimitive).content
-    assertThat(value.split('\n').map { it.length }).isEqualTo(listOf(8, 3))
+    assertThat(value.split('\n').map { it.length }).isEqualTo(listOf(9, 3))
   }
 
   @Test fun anEmptyTextStaysEmptyAndLinesAreNeverLonger() {
@@ -324,7 +324,7 @@ class ChangeFolderTest {
     val folded = folder.fold() as FoldResult.Folded
     val values = folded.snapshot.changes.filterIsInstance<PropertyChange>().associate { it.id.value to (it.value as JsonPrimitive).content }
     assertThat(values.getValue(2)).isEqualTo("")
-    assertThat(values.getValue(3).split('\n').map { it.length }).isEqualTo(listOf(2, 0, 10))
+    assertThat(values.getValue(3).split('\n').map { it.length }).isEqualTo(listOf(2, 0, 9)) // A trailing group separator is trimmed, so never longer than the line.
   }
 
   @Test fun anUnlistedWidgetOrModifierBlocksTheFold() {

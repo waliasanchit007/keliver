@@ -206,6 +206,10 @@ class DumpRules(
   val hidden: (TestWidget) -> Boolean = { false },
 )
 
+/** The test's own statement of a position key (not the fold's code): the key's kind, the position. */
+private fun positionKey(original: JsonElement, position: Int): JsonElement =
+  if (original is JsonPrimitive && !original.isString) JsonPrimitive(position) else JsonPrimitive(position.toString())
+
 private fun lineCount(element: JsonElement): JsonElement = when (element) {
   is JsonArray -> JsonArray(element.map { lineCount(it) })
   is JsonObject -> JsonObject(element.mapValues { (_, v) -> lineCount(v) })
@@ -230,15 +234,16 @@ fun dump(widgets: List<TestWidget>, rules: DumpRules, raw: Boolean): String = bu
         if (raw && rules.shell && !cached && tag == 4) continue
         if (rules.shell && !cached && tag in setOf(1, 2, 4)) v = lineCount(v)
       }
-      if (raw && w.tag == TestSchema.BOX && tag == 1) v = JsonPrimitive(position.toString())
+      if (raw && w.tag == TestSchema.BOX && tag == 1) v = positionKey(v, position)
       append(pad).append("  p").append(tag).append('=').append(v).append('\n')
     }
     for (e in w.elements()) {
+      if (raw && e.tag == -4_543_827) continue // The adapter's reuse hint: not part of the drawn tree.
       var v = e.value
       if (e.tag == 7 && v is JsonObject) {
         val entries = v.entries.filterNot { raw && it.key == "secret" }.sortedBy { it.key }.associate { (k, x) ->
           k to when {
-            raw && k == "tag" -> JsonPrimitive(position.toString())
+            raw && k == "tag" -> positionKey(x, position)
             rules.shell && !cached && k == "desc" -> lineCount(x)
             else -> x
           }
@@ -250,6 +255,7 @@ fun dump(widgets: List<TestWidget>, rules: DumpRules, raw: Boolean): String = bu
     for (tag in w.children.keys.sorted()) {
       val kept = w.children.getValue(tag).widgets.map { it as TestWidget }
         .filterNot { raw && (it.id.value in rules.notCached || rules.hidden(it)) }
+      if (kept.isEmpty()) continue // A slot with no child is the same tree, created or not.
       append(pad).append("  children").append(tag).append(":\n")
       kept.forEachIndexed { i, child -> write(child, i, depth + 2) }
     }
