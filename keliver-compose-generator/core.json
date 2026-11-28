@@ -111,7 +111,22 @@
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
   "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry", "RemoteObject"],
-  "remoteObjects": ["androidx.compose.foundation.pager.PagerState|initialPage=currentPage,initialPageOffsetFraction=currentPageOffsetFraction"],
+  "remoteObjects": [
+    "androidx.compose.foundation.pager.PagerState|initialPage=currentPage,initialPageOffsetFraction=currentPageOffsetFraction",
+    "androidx.compose.foundation.lazy.LazyListState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
+    "androidx.compose.foundation.ScrollState|initial=value",
+    "androidx.compose.foundation.lazy.grid.LazyGridState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
+    "androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState|initialFirstVisibleItemIndex=firstVisibleItemIndex,initialFirstVisibleItemScrollOffset=firstVisibleItemScrollOffset",
+    "androidx.compose.material3.SheetState#rememberModalBottomSheetState",
+    "androidx.compose.material3.DatePickerState|initialSelectedDateMillis=selectedDateMillis",
+    "androidx.compose.material3.DateRangePickerState",
+    "androidx.compose.material3.TimePickerState|initialHour=hour,initialMinute=minute",
+    "androidx.compose.material3.TooltipState|initialIsVisible=isVisible",
+    "androidx.compose.material3.SwipeToDismissBoxState",
+    "androidx.compose.material3.SliderState|value=value",
+    "androidx.compose.material3.RangeSliderState|activeRangeStart=activeRangeStart,activeRangeEnd=activeRangeEnd",
+    "androidx.compose.material3.TopAppBarState|initialHeightOffset=heightOffset,initialContentOffset=contentOffset"
+  ],
   "scrollContainers": [
     "androidx.compose.foundation.horizontalScroll(state,enabled,flingBehavior,reverseScrolling)",
     "androidx.compose.foundation.horizontalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",

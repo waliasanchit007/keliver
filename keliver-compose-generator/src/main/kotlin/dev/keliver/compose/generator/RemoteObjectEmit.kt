@@ -102,7 +102,7 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
   /** The member text of the wire key: `name(p:Type,…)` for a command. */
   private fun commandKey(f: KmFunction) = f.name + "(" + f.valueParameters.joinToString(",") { it.name + ":" + typeKey(it.type) } + ")"
 
-  private val literal = Regex("""-?\d+(\.\d+)?[fFL]?|true|false|"[^"\\]*"""")
+  private val literal = Regex("""-?\d+(\.\d+)?[fFL]?|true|false|null|"[^"\\]*"""")
 
   /** The state's source-declared default of [p], when it is a literal the guest can copy. */
   private class Params(val sent: List<KmValueParameter>, val defaults: Map<String, String>, val dropped: List<String>, val unsupported: String?)
@@ -163,9 +163,18 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
     require(usable.isNotEmpty()) {
       "$fq: no composable `$fname` in $pkg whose parameters cross (found ${all.size}). Name the factory in ${config.group}.json: `$fq#<function>`"
     }
-    // Several overloads (a deprecated older one): the one with the most parameters.
-    return usable.maxByOrNull { it.fn.valueParameters.size }!!.fn
+    // Several overloads: the one that sends the most parameters, then the one with the most (a
+    // deprecated older one has fewer); a tie is the config author's to settle.
+    fun sent(pf: GenericIndex.PackageFunction) = paramsOf(pkg, null, fname, pf.fn.valueParameters, true).sent.size
+    val best = usable.sortedWith(compareByDescending<GenericIndex.PackageFunction> { sent(it) }.thenByDescending { it.fn.valueParameters.size })
+    require(best.size == 1 || sent(best[0]) != sent(best[1]) || best[0].fn.valueParameters.size != best[1].fn.valueParameters.size) {
+      "$fq: several `$fname` overloads cross equally: ${best.map { pf -> pf.fn.valueParameters.joinToString(",") { it.name } }}. Say which in ${config.group}.json"
+    }
+    return best.first().fn
   }
+
+  /** [fq]'s public members and its Compose supertypes', classified (what [generate] would write, without a factory). */
+  fun membersOf(fq: String): List<Member> = classify(fq)
 
   /** Classifies the public members of [fq] and its Compose supertypes. */
   private fun classify(fq: String): List<Member> {
@@ -391,7 +400,7 @@ class RemoteObjectEmitter(private val index: GenericIndex, private val src: Sour
 
   private fun hostHeader() = header(config.group) +
     "@file:Suppress(\"ktlint\", \"RedundantVisibilityModifier\", \"UNUSED_PARAMETER\", \"DEPRECATION\", \"UNCHECKED_CAST\")\n" +
-    "@file:OptIn(dev.keliver.RedwoodCodegenApi::class)\n"
+    "@file:OptIn(dev.keliver.RedwoodCodegenApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)\n"
 
   private fun hostDispatcher(fq: String, sn: String, members: List<Member>, tag: (Member) -> Int, commands: Map<String, Pair<String, KmFunction>>): String = buildString {
     append("/** Host dispatcher for `$fq`: reads a field and runs a command on the real state, by tag. */\n")

@@ -35,7 +35,8 @@ import kotlin.metadata.visibility
  *
  * - [callRecords]: for each configured producer (constructor, factory, constant), a guest mirror
  *   that records the call, and one host `replay` that makes the same call.
- * - [remoteObject]: a guest proxy of a host-owned state class and its host dispatcher.
+ * - remote objects (a guest proxy of a host-owned state class and its host dispatcher): moved to
+ *   `RemoteObjectEmitter` (MS4-43, G2), which writes into the product's modules.
  * - [recordedInterface]: a guest recording implementation of a scope interface and the host's
  *   replay onto the real scope.
  *
@@ -375,100 +376,7 @@ class GenericEmitter(private val index: GenericIndex, private val src: SourceRea
     return branch(split, emptySet(), indent)
   }
 
-  // ---------------------------------------------------------------- 2. remote objects
-
-  /**
-   * The guest proxy and host dispatcher of host-owned state class [fq]. Every public member is
-   * classified from metadata: properties of supported types are observed, suspend functions are
-   * awaited commands, Unit functions are commands, and the rest are error stubs.
-   */
-  fun remoteObject(fq: String): Pair<String, String> {
-    val k = index.classes.getValue(fq)
-    val name = fq.substringAfterLast('.')
-    val chain = listOf(fq) + index.allSupertypes(fq).filter { it.startsWith("androidx.") }
-    val g = StringBuilder(header())
-    val h = StringBuilder(header())
-    g.appendLine("package ${guestPkg(packageOf(fq))}")
-    g.appendLine()
-    g.appendLine("import kotlinx.serialization.json.boolean")
-    g.appendLine("import kotlinx.serialization.json.float")
-    g.appendLine("import kotlinx.serialization.json.int")
-    g.appendLine("import kotlinx.serialization.json.jsonPrimitive")
-    g.appendLine()
-    g.appendLine("/** Guest proxy of the host's `$fq` (spike, remote objects): fields observed on read, members as commands. */")
-    g.appendLine("public class $name(public val remote: dev.keliver.spike.wire.RemoteObject) {")
-    h.appendLine("package dev.keliver.spike.host")
-    h.appendLine()
-    h.appendLine("import kotlinx.serialization.json.JsonElement")
-    h.appendLine("import kotlinx.serialization.json.JsonNull")
-    h.appendLine("import kotlinx.serialization.json.JsonObject")
-    h.appendLine("import kotlinx.serialization.json.JsonPrimitive")
-    h.appendLine("import kotlinx.serialization.json.float")
-    h.appendLine("import kotlinx.serialization.json.int")
-    h.appendLine("import kotlinx.serialization.json.jsonPrimitive")
-    h.appendLine()
-    h.appendLine("/** Host dispatcher for `$fq` (spike, remote objects). */")
-    h.appendLine("public object ${name}Remote : RemoteDispatcher<$fq> {")
-    val reads = mutableListOf<String>()
-    val calls = mutableListOf<String>()
-    val seen = mutableSetOf<String>()
-    for (owner in chain) {
-      val km = index.classes[owner] ?: continue
-      for (p in km.properties.filter { it.visibility == Visibility.PUBLIC && it.receiverParameterType == null }) {
-        if (!seen.add("p:" + p.name)) continue
-        val t = p.returnType
-        if (supported(t) && (fqOf(t) in primitives)) {
-          val zero = when (fqOf(t)) {
-            "kotlin.Int" -> "0"
-            "kotlin.Float" -> "0f"
-            "kotlin.Boolean" -> "false"
-            "kotlin.Long" -> "0L"
-            else -> "\"\""
-          }
-          g.appendLine("  /** The host's `${p.name}`, as last reported (observed from the first read; at most once a frame). */")
-          g.appendLine("  public val ${p.name}: ${guestType(t)} get() = remote.read(\"${p.name}\")?.jsonPrimitive?.${primitives.getValue(fqOf(t)!!)} ?: $zero")
-          reads += "      \"${p.name}\" -> JsonPrimitive(state.${p.name})"
-        } else {
-          g.appendLine("  @Deprecated(\"Keliver: `$name.${p.name}` (${fqOf(t)?.substringAfterLast('.')}) does not cross to the guest.\", level = DeprecationLevel.ERROR)")
-          g.appendLine("  public val ${p.name}: Nothing get() = error(\"not remote\")")
-        }
-      }
-      for (f in km.functions.filter { it.visibility == Visibility.PUBLIC && it.receiverParameterType == null }) {
-        val key = f.name + "(" + f.valueParameters.joinToString(",") { it.name } + ")"
-        if (!seen.add("f:$key")) continue
-        val unit = fqOf(f.returnType) == "kotlin.Unit"
-        val requiredOk = f.valueParameters.all { supported(it.type) || it.declaresDefaultValue }
-        if (!requiredOk || !(f.isSuspend || unit) || (f.isSuspend && !unit)) {
-          g.appendLine("  @Deprecated(\"Keliver: `$name.$key` does not cross the bridge (${if (!requiredOk) "an argument type" else "a synchronous result"}).\", level = DeprecationLevel.ERROR)")
-          g.appendLine("  public fun ${f.name}(vararg args: Any?): Nothing = error(\"not remote\")")
-          continue
-        }
-        val (params, body) = guestParams("$fq#$key", f.valueParameters)
-        val (d, imp) = src.defaultsOf(packageOf(owner), owner.removePrefix(packageOf(owner) + "."), f.name, f.valueParameters.map { it.name }, f.valueParameters.map { it.type.toRef() }) ?: (emptyMap<String, String?>() to emptyMap())
-        g.appendLine("  /** `$key` on the host's state; ${if (f.isSuspend) "returns when the host's call returns" else "sent, not awaited"}. */")
-        g.appendLine("  public ${if (f.isSuspend) "suspend " else ""}fun ${f.name}(${params.joinToString()}) {")
-        g.appendLine("    val args = kotlinx.serialization.json.buildJsonObject {")
-        body.forEach { g.appendLine("      $it") }
-        g.appendLine("    }")
-        g.appendLine(if (f.isSuspend) "    remote.call(\"$key\", args)" else "    remote.send(\"$key\", args)")
-        g.appendLine("  }")
-        calls += "      \"$key\" -> {\n        " + hostCall("state.${f.name}", key, f.valueParameters, d, imp, packageOf(owner), owner, "        ") + "\n        JsonNull\n      }"
-      }
-    }
-    g.appendLine("}")
-    h.appendLine("  override fun read(state: $fq, name: String): JsonElement = when (name) {")
-    reads.forEach { h.appendLine(it) }
-    h.appendLine("    else -> error(\"unknown field \$name\")")
-    h.appendLine("  }")
-    h.appendLine()
-    h.appendLine("  override suspend fun invoke(state: $fq, member: String, a: JsonObject): JsonElement = when (member) {")
-    calls.forEach { h.appendLine(it) }
-    h.appendLine("    else -> error(\"unknown member \$member\")")
-    h.appendLine("  }")
-    h.appendLine("}")
-    if (k.visibility != Visibility.PUBLIC) error("$fq is not public")
-    return g.toString() to h.toString()
-  }
+  // ---------------------------------------------------------------- 2. remote objects: RemoteObjectEmit.kt (MS4-43, G2)
 
   // ---------------------------------------------------------------- 3. recorded interfaces
 
@@ -586,21 +494,17 @@ object GenericSpike {
     "androidx.compose.ui.graphics.StrokeCap.Companion#Round",
     "androidx.compose.ui.graphics.drawscope.Stroke#<init>(width,miter,cap,join,pathEffect)",
   )
-  const val REMOTE = "androidx.compose.foundation.pager.PagerState"
   const val SCOPE = "androidx.compose.ui.graphics.drawscope.DrawScope"
 
   /** Generated sources: guest and host files by path relative to the spike module's `src/main/kotlin`. */
   fun generate(classpath: List<File>, sources: List<File>): Pair<Map<String, String>, List<String>> {
     val e = GenericEmitter(GenericIndex(classpath), SourceReader(sources))
     val (guestCalls, hostReplay) = e.callRecords(calls)
-    val (guestRemote, hostRemote) = e.remoteObject(REMOTE)
     val (guestScope, hostScope) = e.recordedInterface(SCOPE, hostValues = setOf("size"))
     val out = linkedMapOf<String, String>()
     out += guestCalls
-    out[e.guestPkg(packageOf(REMOTE)).replace('.', '/') + "/GeneratedRemote.kt"] = guestRemote
     out[e.guestPkg(packageOf(SCOPE)).replace('.', '/') + "/GeneratedRecording.kt"] = guestScope
     out["dev/keliver/spike/host/GeneratedReplay.kt"] = hostReplay
-    out["dev/keliver/spike/host/GeneratedRemoteHost.kt"] = hostRemote
     out["dev/keliver/spike/host/GeneratedDrawReplay.kt"] = hostScope
     return out to e.omitted
   }
