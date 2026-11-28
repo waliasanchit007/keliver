@@ -158,8 +158,10 @@ public open class EventListener {
    * A new code session (a new bundle, or the same one loaded again) starts afresh, so each loaded
    * bundle's mismatches are reported once each. [unknownEventNode] is not a mismatch.
    *
-   * Widgets' mismatches arrive on the UI thread and events' on Zipline's.
+   * Mismatches arrive on any thread (Zipline's or the UI thread); move to the UI thread before
+   * touching UI. Experimental: new kinds of [SchemaMismatch] may be added.
    */
+  @ExperimentalKeliverSchemaMismatchApi
   public open fun schemaMismatch(
     mismatch: SchemaMismatch,
   ) {

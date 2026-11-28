@@ -5,7 +5,7 @@
  * other file of the host is the same Kotlin on every line. The Android and iOS hosts ship the same
  * file.
  */
-@file:OptIn(ExperimentalKeliverBackApi::class, ExperimentalKeliverHostFeaturesApi::class)
+@file:OptIn(ExperimentalKeliverBackApi::class, ExperimentalKeliverHostFeaturesApi::class, ExperimentalKeliverSchemaMismatchApi::class)
 
 package @@PACKAGE@@
 
@@ -17,6 +17,7 @@ import dev.keliver.compose.KeliverHostFeatures
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.DynamicContentWidgetFactory
 import dev.keliver.treehouse.EventListener
+import dev.keliver.treehouse.ExperimentalKeliverSchemaMismatchApi
 import dev.keliver.treehouse.SchemaMismatch
 import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseContentSource

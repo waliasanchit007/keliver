@@ -31,6 +31,7 @@ import kotlin.test.Test
  * MS4-04: a code session's unknown tags reach [EventListener.schemaMismatch] once per distinct
  * mismatch, while the per-occurrence callbacks keep running for each one.
  */
+@OptIn(ExperimentalKeliverSchemaMismatchApi::class)
 class SchemaMismatchTest {
   private class Recording : EventListener() {
     val mismatches = mutableListOf<String>()

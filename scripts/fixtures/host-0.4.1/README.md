@@ -56,7 +56,9 @@ Changes since:
   them, and it is written through before the load is reported. The reference-app and ios-host
   workflows build and run this output on a pull request.
   The host features are declared per line (review of #316, M2): a feature declared later goes
-  into `line-0.5/kotlin/HostFeatures.kt` only, so it changes none of these manifests. Rewritten
+  into `line-0.5/kotlin/HostFeatures.kt` only, so it changes none of these manifests (one
+  exception, MS4-04, below: a 0.4 host has no `schemaMismatch` to override, so the shared
+  listener and `reportReason` had to move once; the maintainer accepted it, 2026-11-28). Rewritten
   once more in that review round, for `HostFeatures.kt` and `HostFeaturesTest.kt` (above),
   `KeliverLine.kt` (its header names the line's two files) and `KeliverScreen.kt` (a comment that
   now says what back does on each line).

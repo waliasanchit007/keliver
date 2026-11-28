@@ -28,6 +28,7 @@ import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.WidgetTag
 import dev.keliver.protocol.host.ProtocolMismatchHandler
 
+@OptIn(ExperimentalKeliverSchemaMismatchApi::class)
 internal class RealEventPublisher(
   listener: EventListener,
 ) : EventPublisher {

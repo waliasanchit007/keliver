@@ -6,6 +6,10 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-treehouse-host>
+open annotation class dev.keliver.treehouse/ExperimentalKeliverSchemaMismatchApi : kotlin/Annotation { // dev.keliver.treehouse/ExperimentalKeliverSchemaMismatchApi|null[0]
+    constructor <init>() // dev.keliver.treehouse/ExperimentalKeliverSchemaMismatchApi.<init>|<init>(){}[0]
+}
+
 abstract fun interface <#A: dev.keliver.treehouse/AppService> dev.keliver.treehouse/TreehouseContentSource { // dev.keliver.treehouse/TreehouseContentSource|null[0]
     abstract fun get(#A): dev.keliver.treehouse/ZiplineTreehouseUi // dev.keliver.treehouse/TreehouseContentSource.get|get(1:0){}[0]
 }
