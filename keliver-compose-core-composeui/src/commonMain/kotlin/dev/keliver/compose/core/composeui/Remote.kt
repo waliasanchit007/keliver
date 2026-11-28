@@ -17,6 +17,7 @@ package dev.keliver.compose.core.composeui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -46,6 +47,9 @@ internal interface RemoteDispatcher<S> {
   suspend fun invoke(state: S, member: Int, args: JsonObject): JsonElement?
 }
 
+/** Tests only: told the real state of each bound remote object, by the guest's id. */
+internal var remoteStateProbe: ((id: String, state: Any?) -> Unit)? = null
+
 /** How long a restorable field stays still before the host reports it ([RemoteObjectWire.restore]). */
 internal const val SETTLE_MILLIS = 300L
 
@@ -61,6 +65,7 @@ internal const val SETTLE_MILLIS = 300L
 @Composable
 internal fun <S> RemoteHost(wire: RemoteObjectWire, state: S, dispatcher: RemoteDispatcher<S>, report: (RemoteReport) -> Unit) {
   val currentReport by rememberUpdatedState(report)
+  SideEffect { remoteStateProbe?.invoke(wire.id, state) }
   val started = remember { mutableSetOf<Int>() }
   started.retainAll(wire.commands.mapTo(HashSet()) { it.seq })
   for (command in wire.commands) {

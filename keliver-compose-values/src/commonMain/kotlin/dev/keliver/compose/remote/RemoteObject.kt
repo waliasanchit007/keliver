@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
@@ -191,7 +192,13 @@ public class RemoteObject(
     remember(this) { Binding() }
     LaunchedEffect(this) {
       flush()
-      for (u in signal) flush()
+      // A read signals from wherever it ran (a composition, a `snapshotFlow`'s read-only snapshot); the
+      // fields are recorded on the next frame, never inside the read, even if a dispatcher resumes this
+      // loop at once.
+      for (u in signal) {
+        withFrameNanos { }
+        flush()
+      }
     }
     return wire
   }

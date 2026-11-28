@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalTestApi::class)
+
 package dev.keliver.compose.core.composeui
 
 import androidx.compose.foundation.layout.Box
@@ -21,50 +23,102 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import dev.keliver.compose.extras.RemoteObjectBinding
 import dev.keliver.compose.foundation.pager.PagerState as GuestPagerState
 import dev.keliver.compose.foundation.pager.rememberPagerState as guestRememberPagerState
+import dev.keliver.compose.material3.TimeInput
+import dev.keliver.compose.material3.TimePickerState as GuestTimePickerState
+import dev.keliver.compose.material3.rememberTimePickerState as guestRememberTimePickerState
+import dev.keliver.compose.remote.RemoteCommandException
+import dev.keliver.compose.remote.RemoteObject
+import dev.keliver.compose.remote.RemoteObjectWire
+import dev.keliver.compose.remote.RemoteReport
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * G2, remote objects (MS4-43; docs/COMPOSE_GENERIC_MECHANISMS.md section 1.2): the generated guest
- * proxy of `PagerState` drives a real `HorizontalPager` on the host. Guest and host are joined by
- * the real protocol, as JSON text: the guest's composition emits `ExtraRemoteObject` (the proxy's
- * wire is its property), the host's reports come back as its event, through the same adapters a
- * Zipline guest uses. Nothing here reaches into the other side's memory except the assertions.
+ * G2, remote objects (MS4-43; docs/COMPOSE_GENERIC_MECHANISMS.md section 1.2).
+ *
+ * Part one drives the generated `TimePickerState` through its widget, `TimeInput`, over the real protocol:
+ * the guest's composition emits the widget (the proxy's wire is its property, the host's report its
+ * event), as JSON text through the same adapters a Zipline guest uses; the renderer makes the real state.
+ * Part two puts the generated `PagerState` proxy and dispatcher through the failure, cancellation and
+ * restore cases, with the guest's wire and the host's reports passed as JSON text in one composition
+ * (no generated product widget takes a pager yet: MS4-15).
  */
-@OptIn(ExperimentalTestApi::class)
 class RemoteObjectTest {
-  /** One guest, its proxy, and the host's events on their way back to it. */
-  private class Guest(val host: GuestOnHost, val tap: EventTap, val proxy: GuestPagerState)
+  @AfterTest fun resetProbe() {
+    remoteStateProbe = null
+  }
 
-  private fun startGuest(registry: SaveableStateRegistry? = null): Guest {
-    lateinit var proxy: GuestPagerState
+  // ---------------------------------------------------------------------------------------------
+  // Part one: through the widget, over the real protocol.
+
+  private class Guest(val host: GuestOnHost, val tap: EventTap, val states: List<GuestTimePickerState>)
+
+  private class Real {
+    val byId = mutableMapOf<String, TimePickerState>()
+    val created = mutableListOf<String>()
+  }
+
+  private fun probe(real: Real) {
+    remoteStateProbe = { id, s ->
+      if (s is TimePickerState) {
+        if (id !in real.byId) real.created += id
+        real.byId[id] = s
+      }
+    }
+  }
+
+  private fun startGuest(registry: SaveableStateRegistry? = null, body: @Composable (List<GuestTimePickerState>) -> Unit): Guest {
+    val states = mutableListOf<GuestTimePickerState>()
     val tap = EventTap()
     val host = guestOnHost(tap, saveableStateRegistry = registry) {
-      proxy = guestRememberPagerState(pageCount = { 5 })
-      RemoteObjectBinding(proxy.remote)
+      val s1 = guestRememberTimePickerState(initialHour = 3, initialMinute = 40)
+      val s2 = guestRememberTimePickerState(initialHour = 5, initialMinute = 10)
+      if (states.isEmpty()) {
+        states += s1
+        states += s2
+      }
+      body(listOf(s1, s2))
     }
-    return Guest(host, tap, proxy)
+    return Guest(host, tap, states)
+  }
+
+  private fun ComposeUiTest.hostContent(guest: () -> Guest) {
+    setContent { Box(Modifier.size(400.dp, 300.dp)) { guest().host.root.Render(null) } }
   }
 
   private fun ComposeUiTest.sync(guest: Guest) {
@@ -83,114 +137,283 @@ class RemoteObjectTest {
     assertTrue(done(), what)
   }
 
-  /** The host's side: the guest's tree, and a real pager on the state the guest's commands run on. */
-  private class HostSide(guest: Guest) {
-    var guest by mutableStateOf(guest)
-    var remoteObjects by mutableStateOf(RemoteObjects())
-    var real: PagerState? = null
+  private fun fieldKeys(events: List<dev.keliver.protocol.Event>, key: String = "fields"): Set<String> =
+    events.flatMap { e -> e.args.flatMap { a -> (a as? JsonObject)?.get(key)?.jsonObject?.keys.orEmpty() } }.toSet()
+
+  @Test fun theStateBindsThroughItsWidgetFromTheFirstFrame() = runComposeUiTest {
+    val real = Real().also(::probe)
+    val guest = startGuest { s -> TimeInput(s[0]) }
+    hostContent { guest }
+    // The binding is the widget's property: the real state exists after the first batch, with no effect a frame late.
+    sync(guest)
+    assertEquals(1, real.byId.size, "the renderer made the real state")
+    val wire = guest.host.wire.joinToString("\n")
+    assertTrue("\"initialHour\":3" in wire && "\"initialMinute\":40" in wire, "the factory's arguments crossed as JSON: $wire")
+    val real0 = real.byId.values.single()
+    assertEquals(3, real0.hour)
+    assertEquals(40, real0.minute)
+    // A field reads its initial value before the host's first report (L5), and is observed from its first read.
+    assertEquals(3, guest.states[0].hour)
+    assertEquals(0, guest.states[0].remote.wire.observed.size, "a read records the field outside the read; the binding's effect observes it")
+    syncUntil(guest, "the field is observed") { guest.states[0].remote.wire.observed.size == 1 }
+    real0.hour = 8
+    syncUntil(guest, "a host-side change reaches the guest") { guest.states[0].hour == 8 }
+    assertTrue("\"observed\"" in guest.host.wire.joinToString("\n"))
   }
 
-  private fun ComposeUiTest.setHostContent(side: HostSide) {
+  @Test fun aStateWithNoWidgetFailsItsCommandsWithAClearError() = runComposeUiTest {
+    val real = Real().also(::probe)
+    // s[1] is never passed to a widget.
+    val guest = startGuest { s -> TimeInput(s[0]) }
+    hostContent { guest }
+    sync(guest)
+    val e = assertFailsWith<RemoteCommandException> { guest.states[1].hour = 9 }
+    assertTrue("TimePickerState is not bound to a widget in this host" in e.message.orEmpty(), e.message)
+    assertEquals(1, real.byId.size, "only the bound state exists on the host")
+  }
+
+  @Test fun aSettablePrimitiveIsAVarThatCrossesAsACommandThatIsNotAwaited() = runComposeUiTest {
+    val real = Real().also(::probe)
+    val guest = startGuest { s -> TimeInput(s[0]) }
+    hostContent { guest }
+    sync(guest)
+    val real0 = real.byId.values.single()
+    guest.states[0].hour = 9
+    assertEquals(9, guest.states[0].hour, "the new value reads back at once")
+    assertEquals(1, guest.states[0].remote.wire.commands.size)
+    syncUntil(guest, "the host's state is set") { real0.hour == 9 }
+    syncUntil(guest, "the command was acknowledged") { guest.states[0].remote.wire.commands.isEmpty() }
+  }
+
+  @Test fun aFieldReadInsideSnapshotFlowIsObserved() = runComposeUiTest {
+    val real = Real().also(::probe)
+    val seen = mutableListOf<Int>()
+    val guest = startGuest { s ->
+      TimeInput(s[0])
+      // snapshotFlow runs its block in a read-only snapshot: the first read of a field writes no Compose state there.
+      LaunchedEffect(Unit) { snapshotFlow { s[0].minute }.collect { seen += it } }
+    }
+    hostContent { guest }
+    sync(guest)
+    assertEquals(listOf(40), seen, "the flow read the field's initial value without failing")
+    syncUntil(guest, "the field is observed") { guest.states[0].remote.wire.observed.isNotEmpty() }
+    real.byId.values.single().minute = 42
+    syncUntil(guest, "the flow sees the host's change") { seen.lastOrNull() == 42 }
+  }
+
+  @Test fun oneBindingNodeSwitchingBetweenTwoProxiesGetsTheirOwnStates() = runComposeUiTest {
+    val real = Real().also(::probe)
+    var which by mutableStateOf(0)
+    val guest = startGuest { s -> TimeInput(s[which]) }
+    hostContent { guest }
+    sync(guest)
+    assertEquals(1, real.byId.size)
+    which = 1
+    syncUntil(guest, "the second proxy has its own real state") { real.byId.size == 2 }
+    val (id0, id1) = real.created
+    assertEquals(3, real.byId.getValue(id0).hour)
+    assertEquals(5, real.byId.getValue(id1).hour, "a new state, made from the second proxy's arguments")
+    guest.states[1].hour = 11
+    syncUntil(guest, "the command ran on the second state") { real.byId.getValue(id1).hour == 11 }
+    assertEquals(3, real.byId.getValue(id0).hour, "and not on the first")
+  }
+
+  @Test fun aScrollWithNoReadsSendsNoFieldReports() = runComposeUiTest {
+    val real = Real().also(::probe)
+    val guest = startGuest { s -> TimeInput(s[0]) }
+    hostContent { guest }
+    sync(guest)
+    val real0 = real.byId.values.single()
+    val before = guest.tap.sent.size
+    // The host's state changes on every frame, as a fling does; the screen reads nothing.
+    for (h in 4..20) {
+      real0.hour = h % 24
+      sync(guest)
+    }
+    assertEquals(emptySet(), fieldKeys(guest.tap.sent.drop(before)), "no field is reported unless the screen reads it")
+    assertEquals(emptySet(), fieldKeys(guest.tap.sent.drop(before), "settled"), "and the restorable ones wait for the state to be still")
+    // Still for a while: one settled report, which carries the newest value for the saver.
+    mainClock.advanceTimeBy(SETTLE_MILLIS + 100)
+    syncUntil(guest, "the settled value arrives") { fieldKeys(guest.tap.sent.drop(before), "settled").isNotEmpty() }
+    assertEquals(emptySet(), fieldKeys(guest.tap.sent.drop(before)), "still no per-frame field reports")
+  }
+
+  @Test fun theStateRestoresAfterProcessDeath() = runComposeUiTest {
+    val real = Real().also(::probe)
+    val registry = SaveableStateRegistry(null) { true }
+    var guest by mutableStateOf(startGuest(registry) { s -> TimeInput(s[0]) })
+    setContent { Box(Modifier.size(400.dp, 300.dp)) { guest.host.root.Render(null) } }
+    sync(guest)
+    val real0 = real.byId.values.single()
+    real0.hour = 14
+    real0.minute = 25
+    // The screen reads nothing: the host reports the settled position once the state has been still.
+    mainClock.advanceTimeBy(SETTLE_MILLIS + 100)
+    syncUntil(guest, "the position settled") { "14" in registry.performSave().toString() }
+    val saved = registry.performSave()
+    assertTrue(saved.isNotEmpty(), "the guest saved the settled position")
+
+    // A new process: a new guest from what was saved, and a new host state from its arguments.
+    real.byId.clear()
+    val second = startGuest(SaveableStateRegistry(saved) { true }) { s -> TimeInput(s[0]) }
+    assertEquals(14, second.states[0].hour, "the field reads the restored value before the host's first report")
+    assertEquals("14", second.states[0].remote.wire.init.getValue("initialHour").jsonPrimitive.content)
+    guest = second
+    sync(second)
+    assertEquals(14, real.byId.values.single().hour, "the new host created its state on the restored position")
+    assertEquals(25, real.byId.values.single().minute)
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Part two: the pager proxy and dispatcher, failure, cancellation and unknown tags.
+
+  /** The guest's proxy and the host's real pager in one composition, joined by JSON text both ways. */
+  private class PagerHarness {
+    lateinit var proxy: GuestPagerState
+    var real: PagerState? = null
+    val reports = mutableListOf<RemoteReport>()
+    var pageCount = 5
+  }
+
+  private fun ComposeUiTest.pagerContent(h: PagerHarness, restore: SaveableStateRegistry? = null) {
     setContent {
-      CompositionLocalProvider(LocalRemoteObjects provides side.remoteObjects) {
-        Column {
-          Box(Modifier.size(1.dp)) { side.guest.host.root.Render(null) }
-          val state = side.remoteObjects[side.guest.proxy.remote.id] as? PagerState
-          if (state != null) {
-            side.real = state
-            HorizontalPager(state, Modifier.size(100.dp)) { Box(Modifier.fillMaxSize()) }
-          }
+      val proxy = guestRememberPagerState(pageCount = { h.pageCount })
+      h.proxy = proxy
+      val wire = Json.decodeFromString(RemoteObjectWire.serializer(), Json.encodeToString(RemoteObjectWire.serializer(), proxy.remote.bind()))
+      Column {
+        val state = rememberPagerState(
+          initialPage = wire.init["initialPage"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+          pageCount = { h.pageCount },
+        )
+        h.real = state
+        RemoteHost(wire, state, PagerStateRemote) { report ->
+          h.reports += report
+          proxy.remote.onHostReport(Json.decodeFromString(RemoteReport.serializer(), Json.encodeToString(RemoteReport.serializer(), report)))
         }
+        HorizontalPager(state, Modifier.size(100.dp)) { Box(Modifier.fillMaxSize()) }
       }
     }
   }
 
-  private fun fieldKeys(events: List<dev.keliver.protocol.Event>): Set<String> =
-    events.flatMap { e -> e.args.flatMap { a -> (a as? JsonObject)?.get("fields")?.jsonObject?.keys.orEmpty() } }.toSet()
-
-  @Test fun pagerStateDrivenThroughTheRealProtocol() = runComposeUiTest {
-    val guest = startGuest()
-    val side = HostSide(guest)
-    setHostContent(side)
-    sync(guest)
-
-    // A field is observed from its first read; the restorable fields (currentPage, its offset) from the start.
-    assertEquals(0, guest.proxy.currentPage)
-    syncUntil(guest, "the host binds a real PagerState and reports the observed fields") { side.real != null && guest.tap.sent.isNotEmpty() }
-    // The wire is JSON text: the property the guest sent carries the class tag, the arguments and the observed fields.
-    val sent = guest.host.wire.joinToString("\n")
-    assertTrue("\"observed\":[" in sent && "\"type\":1" in sent, "the observed fields crossed: $sent")
-    assertTrue("\"pageCount\":5" in sent, "the factory's lambda was sampled and sent: $sent")
-    assertEquals(5, side.real!!.pageCount)
-
-    // An awaited command returns when the host's animateScrollToPage returned.
-    val call = CoroutineScope(Dispatchers.Unconfined).async { guest.proxy.animateScrollToPage(3) }
-    syncUntil(guest, "animateScrollToPage(3) returns") { call.isCompleted }
-    sync(guest)
-    assertEquals(3, side.real!!.currentPage, "the host's pager is on page 3")
-    assertEquals(3, guest.proxy.currentPage, "the guest saw it")
-    assertEquals(0, guest.proxy.remote.wire.commands.size, "the acknowledged command left the wire")
-
-    // A command that is not awaited, and the same field read back.
-    guest.proxy.requestScrollToPage(1)
-    syncUntil(guest, "requestScrollToPage(1) reaches the guest") { guest.proxy.currentPage == 1 }
-    assertEquals(1, side.real!!.currentPage)
-
-    // Dirty observation: a field read later adds itself to the property, and is reported from then on.
-    val before = guest.proxy.remote.wire.observed.size
-    assertEquals(false, guest.proxy.canScrollForward, "no report of a field yet when it is first read")
-    syncUntil(guest, "the new field is observed") { guest.proxy.remote.wire.observed.size == before + 1 }
-    side.real!!.requestScrollToPage(4)
-    syncUntil(guest, "a host-side change reaches the guest") { guest.proxy.currentPage == 4 }
-
-    // Reports carried only observed fields, never every field of the state.
-    val observed = guest.proxy.remote.wire.observed.map { it.toString() }.toSet()
-    assertTrue(fieldKeys(guest.tap.sent).isNotEmpty() && observed.containsAll(fieldKeys(guest.tap.sent)), "reported ${fieldKeys(guest.tap.sent)} of observed $observed")
-    assertTrue(observed.size < 10, "only the fields read were observed: $observed")
+  private fun ComposeUiTest.idle() {
+    repeat(3) {
+      Snapshot.sendApplyNotifications()
+      waitForIdle()
+    }
   }
 
-  @Test fun eachCommandRunsOnceAndIsAcknowledged() = runComposeUiTest {
-    val guest = startGuest()
-    val side = HostSide(guest)
-    setHostContent(side)
-    sync(guest)
-    assertEquals(0, guest.proxy.currentPage)
-    syncUntil(guest, "the host binds a real PagerState") { side.real != null }
-    guest.proxy.requestScrollToPage(2)
-    guest.proxy.requestScrollToPage(3)
-    syncUntil(guest, "both commands were acknowledged") { guest.proxy.remote.wire.commands.isEmpty() }
-    syncUntil(guest, "the last one won") { guest.proxy.currentPage == 3 }
-    assertEquals(3, side.real!!.currentPage)
+  private fun ComposeUiTest.until(what: String, done: () -> Boolean) {
+    repeat(300) {
+      if (done()) return
+      idle()
+    }
+    assertTrue(done(), what)
   }
 
-  /**
-   * Process death: the host's state dies with the process, and so does the guest, but the guest's saved
-   * state (which the host app persists) does not. The factory saved the host's last reported page; the
-   * new guest sends it as the host factory's `initialPage`, and the new host creates its pager there.
-   */
-  @Test fun theStateRestoresAfterProcessDeath() = runComposeUiTest {
-    val registry = SaveableStateRegistry(null) { true }
-    val first = startGuest(registry)
-    val side = HostSide(first)
-    setHostContent(side)
-    sync(first)
-    syncUntil(first, "the host binds a real PagerState") { side.real != null }
-    val call = CoroutineScope(Dispatchers.Unconfined).async { first.proxy.animateScrollToPage(3) }
-    syncUntil(first, "animateScrollToPage(3) returns") { call.isCompleted }
-    syncUntil(first, "the guest saw page 3") { first.proxy.currentPage == 3 }
+  @Test fun aCommandThatThrowsOnTheHostFailsTheGuestsCallAndLeavesTheHostRunning() = runComposeUiTest {
+    val h = PagerHarness()
+    pagerContent(h)
+    idle()
+    // Compose's `require`: the offset fraction must be in -0.5..0.5.
+    val call = GlobalScope.async(Dispatchers.Unconfined) { runCatching { h.proxy.animateScrollToPage(1, 0.8f) } }
+    until("the failure came back") { call.isCompleted }
+    val failure = call.getCompleted().exceptionOrNull()
+    assertTrue(failure is RemoteCommandException, "the guest's call threw: $failure")
+    assertTrue(h.proxy.remote.wire.commands.isEmpty(), "a failed command left the wire")
+    // The host was not harmed: the next command runs.
+    val next = GlobalScope.async(Dispatchers.Unconfined) { h.proxy.animateScrollToPage(2) }
+    until("the next command returns") { next.isCompleted }
+    assertEquals(2, h.real!!.currentPage)
+  }
 
-    // Save the guest's state, and bring up a new guest and a new host from what was saved.
-    val saved = registry.performSave()
-    assertTrue(saved.isNotEmpty(), "the guest saved the pager's last reported position")
-    val second = startGuest(SaveableStateRegistry(saved) { true })
-    assertEquals("3", second.proxy.remote.wire.init.getValue("initialPage").jsonPrimitive.content, "the new guest sends the saved page as the factory's argument")
-    // The old process' UI is gone: the new guest's tree and a new host state replace it.
-    side.real = null
-    side.remoteObjects = RemoteObjects()
-    side.guest = second
-    sync(second)
-    syncUntil(second, "the new host binds a pager") { side.real != null }
-    assertEquals(3, side.real!!.currentPage, "the new host created its pager on page 3")
-    syncUntil(second, "the new guest reads the restored page") { second.proxy.currentPage == 3 }
+  @Test fun aCommandComposeCancelsIsReportedCancelledAndTheGuestsCallThrowsCancellation() = runComposeUiTest {
+    val h = PagerHarness()
+    pagerContent(h)
+    idle()
+    mainClock.autoAdvance = false
+    var outcome: Throwable? = null
+    val first = GlobalScope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+      try {
+        h.proxy.animateScrollToPage(4)
+      } catch (e: Throwable) {
+        outcome = e
+      }
+    }
+    // The animation is under way; a second scroll of the same priority interrupts it.
+    repeat(8) {
+      Snapshot.sendApplyNotifications()
+      mainClock.advanceTimeByFrame()
+    }
+    val second = GlobalScope.async(Dispatchers.Unconfined) { h.proxy.scrollToPage(1) }
+    mainClock.autoAdvance = true
+    until("the second command returns") { second.isCompleted }
+    until("the first was reported") { first.isCompleted }
+    assertTrue(outcome is CancellationException, "the guest's call threw CancellationException: $outcome")
+    assertTrue(h.reports.any { it.cancelled.isNotEmpty() }, "the host reported it as cancelled, not failed")
+    assertTrue(h.proxy.remote.wire.commands.isEmpty(), "neither command stays on the wire")
+  }
+
+  @Test fun aGuestSideCancelReachesTheHostAndFreesItsSlot() = runComposeUiTest {
+    val h = PagerHarness()
+    pagerContent(h)
+    idle()
+    mainClock.autoAdvance = false
+    val job: Job = GlobalScope.launch(Dispatchers.Unconfined) { h.proxy.animateScrollToPage(4) }
+    repeat(8) {
+      Snapshot.sendApplyNotifications()
+      mainClock.advanceTimeByFrame()
+    }
+    assertTrue(h.real!!.isScrollInProgress, "the host's animation is running")
+    job.cancel()
+    assertTrue(h.proxy.remote.wire.commands.isEmpty(), "the cancelled command left the wire")
+    mainClock.autoAdvance = true
+    until("the host's command was cancelled") { !h.real!!.isScrollInProgress }
+    assertTrue(h.reports.none { it.cancelled.isNotEmpty() || it.failed.isNotEmpty() }, "nobody waits, so nothing is reported")
+  }
+
+  @Test fun aFieldFirstReadInsideSnapshotFlowIsObservedOnThePager() = runComposeUiTest {
+    val h = PagerHarness()
+    val seen = mutableListOf<Int>()
+    pagerContent(h)
+    idle()
+    val flow = GlobalScope.launch(Dispatchers.Unconfined) { snapshotFlow { h.proxy.settledPage }.collect { seen += it } }
+    until("the field is observed") { h.proxy.remote.wire.observed.isNotEmpty() }
+    h.real!!.requestScrollToPage(3)
+    until("the flow sees the settled page") { seen.lastOrNull() == 3 }
+    flow.cancel()
+  }
+
+  @Test fun unknownTagsAreHarmless() = runComposeUiTest {
+    val h = PagerHarness()
+    pagerContent(h)
+    idle()
+    // A field this host does not know (a newer guest's) is ignored; the others are still reported.
+    val unknown = h.proxy.remote.read(999)
+    assertNull(unknown)
+    val page = h.proxy.currentPage
+    until("the known field is reported, the unknown one ignored") { h.proxy.remote.wire.observed.size == 2 && h.reports.any { it.fields.isNotEmpty() } }
+    assertTrue(h.reports.all { 999 !in it.fields })
+    // A command it does not know is answered with a failure, not a crash.
+    val call = GlobalScope.async(Dispatchers.Unconfined) { runCatching { h.proxy.remote.call(999, JsonObject(emptyMap())) } }
+    until("the unknown command failed") { call.isCompleted }
+    val e = call.getCompleted().exceptionOrNull()
+    assertTrue(e is RemoteCommandException && "unknown command 999" in e.message.orEmpty(), "$e")
+    assertEquals(0, page)
+    assertNotNull(h.real)
+  }
+
+  @Test fun aPagerScrollWithNoReadsReportsNoFieldsAndSettlesOnce() = runComposeUiTest {
+    val h = PagerHarness()
+    pagerContent(h)
+    idle()
+    val before = h.reports.size
+    for (p in listOf(1, 2, 3, 4)) {
+      h.real!!.requestScrollToPage(p)
+      idle()
+    }
+    assertTrue(h.reports.drop(before).none { it.fields.isNotEmpty() }, "no per-frame field reports: ${h.reports.drop(before)}")
+    mainClock.advanceTimeBy(SETTLE_MILLIS + 100)
+    until("the settled position was reported once") { h.reports.drop(before).any { it.settled.isNotEmpty() } }
+    assertEquals(JsonPrimitive(4), h.reports.drop(before).last { it.settled.isNotEmpty() }.settled.values.first())
   }
 }
