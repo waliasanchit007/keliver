@@ -32,8 +32,9 @@ import kotlin.annotation.AnnotationTarget.PROPERTY
 // - `Shell` also replaces every text- and URL-bearing value with a placeholder: every property whose
 //   type is or contains a String, except [StyleToken] ones (and texts the guest marks `cached()`).
 //   `Shell` removes strings only: the structure and every non-text value remain. Codegen therefore
-//   lists every non-String value of a replayable widget or modifier that is neither [NotData] nor
-//   [NeverCached] (`<Schema>FrameRules.review.txt`), so each one is a reviewed choice.
+//   lists every replayable widget and modifier, and every non-String value of one that is neither
+//   [NotData], [NeverCached] nor [BlocksFrameWhenTrue] (`<Schema>FrameRules.review.txt`, keyed by
+//   name), so each one is a reviewed choice.
 //
 // A property carries at most one of [NeverCached], [BlocksFrameWhenTrue], [StyleToken] and [NotData].
 
@@ -80,7 +81,7 @@ public annotation class Scrolls
 public annotation class NeverCached
 
 /**
- * Only on a `Boolean` property: while it is true, nothing is recorded (the recorder reports
+ * Only on a non-null `Boolean` property: while it is true, nothing is recorded (the recorder reports
  * `refreshing`). Use it for a transient state the stored frame must never show, such as a
  * pull-to-refresh in progress. A recorded value is therefore always `false`, so the property needs no
  * other classification.
@@ -93,6 +94,10 @@ public annotation class BlocksFrameWhenTrue
  * The property's strings name a style or an asset from a fixed set (an icon's name, a font family,
  * a shape or an arrangement written as a code), not text, so `Shell` keeps the value as it is. Only
  * on a property whose type is or contains a String.
+ *
+ * The parser checks the other direction only: on a type it cannot see into (an abstract class or an
+ * interface such as `Painter` or `Shape`) the annotation always passes, and `Shell` keeps whatever the
+ * type's codec writes. The mirror's author owns that its codec writes style, never text or a URL.
  *
  * Like every non-text value, a style token can still say something about the data (a status icon
  * chosen by the guest); a screen where that is sensitive keeps that part under `notCached()`.

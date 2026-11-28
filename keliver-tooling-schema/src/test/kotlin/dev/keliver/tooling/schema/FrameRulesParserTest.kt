@@ -62,6 +62,13 @@ class FrameRulesParserTest {
   open class Base(val note: String)
   class Derived(val n: Int) : Base("")
 
+  open class Holder<T>(val value: T)
+  class StringHolder : Holder<String>("")
+  class IntHolder : Holder<Int>(0)
+
+  /** A type the parser cannot see into: its subclasses are unknown (a `Painter`, a `Shape`). */
+  abstract class Opaque
+
   @Schema(members = [Card::class, Gap::class])
   interface Classified
 
@@ -84,6 +91,9 @@ class FrameRulesParserTest {
     @Property(13) @NeverCached val pin: String,
     @Property(14) val onClick: () -> Unit,
     @Property(15) val tint: Tint,
+    @Property(16) val stringHolder: StringHolder,
+    @Property(17) val intHolder: IntHolder,
+    @Property(18) @StyleToken val opaque: Opaque,
     @Children(1) val content: () -> Unit,
   )
 
@@ -109,6 +119,11 @@ class FrameRulesParserTest {
     assertThat(strings("chars")).isTrue()
     assertThat(strings("size")).isFalse()
     assertThat(strings("tint")).isFalse() // a value class: only its constructor property counts
+    assertThat(strings("stringHolder")).isTrue() // a String through a superclass's type argument
+    assertThat(strings("intHolder")).isFalse()
+    // L2, pinned: @StyleToken passes on a type the parser cannot see into (unknown counts as a String),
+    // so Shell keeps it. The writer of such a mirror owns its codec's being style, not text.
+    assertThat(properties.getValue("opaque").frameRule).isEqualTo(FramePropertyRule.StyleToken)
     assertThat(properties.getValue("size").frameRule).isEqualTo(FramePropertyRule.NotData)
     assertThat(properties.getValue("icon").frameRule).isEqualTo(FramePropertyRule.StyleToken)
     assertThat(properties.getValue("busy").frameRule).isEqualTo(FramePropertyRule.BlocksFrameWhenTrue)

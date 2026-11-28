@@ -163,13 +163,18 @@ class FrameRuleEmitterTest {
     assertNull(loadConfig(File("coil.json")).frameRules)
   }
 
-  @Test fun everyGeneratedMemberOfThePrototypeIsReplayable() {
+  @Test fun everyGeneratedMemberOfThePrototypeIsReplayableExceptWhatTheConfigTakesOff() {
     // The checked-in schema (its staleness guard is checkComposeApi): every generated member is
-    // replayable, so a gatea screen built from them can be recorded.
+    // replayable, so a gatea screen built from them can be recorded, except the declarations the
+    // config takes off (a dialog, a sheet, ...): a correct exclusion must not fail this test.
     val schema = File("../keliver-compose-gatea-schema/src/main/kotlin/dev/keliver/compose/gatea/Generated.kt").readText()
     val members = Regex("""^@(Widget|Modifier)\(""", RegexOption.MULTILINE).findAll(schema).count()
     val replayable = Regex("""^@Replayable\n(@Scrolls\n)?@(Widget|Modifier)\(""", RegexOption.MULTILINE).findAll(schema).count()
-    assertEquals(members, replayable, "a generated member of gatea is not @Replayable")
+    val takenOff = loadConfig(File("gatea.json")).frameRules!!.exceptions.filter { it.notReplayable }.map { it.spec }.toSet()
+    val generatedOff = members - replayable
+    // Each spec the config takes off is one generated member (or none, before it is in the lock).
+    assertTrue(generatedOff <= takenOff.size, "$generatedOff members are not @Replayable but the config takes off only ${takenOff.size}")
+    assertTrue(generatedOff >= takenOff.size, "the config takes off ${takenOff.size} declarations but only $generatedOff members are not @Replayable")
     assertEquals(4, Regex("""^@Scrolls$""", RegexOption.MULTILINE).findAll(schema).count(), "the lazy lists and the scroll modifiers")
   }
 }

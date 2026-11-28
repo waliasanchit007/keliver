@@ -118,6 +118,9 @@ internal fun checkFrameRule(
  *   sealed class or interface does when any of its subclasses does.
  * - Any other class or interface does: its subclasses cannot be known (an abstract `Painter` may be
  *   one that loads a URL).
+ *
+ * `@StyleToken` is checked against this, so on a type the parser cannot see into it always passes:
+ * `Shell` keeps what that type's codec writes (the review of #331, L2).
  */
 internal fun FirSession.containsString(type: ConeKotlinType): Boolean = containsString(type, mutableSetOf())
 
@@ -167,6 +170,11 @@ private fun FirSession.stateContainsString(klass: FirRegularClass, seen: Mutable
   for (superType in klass.superTypeRefs) {
     val superClass = (superType.coneType.toSymbol(this) as? FirRegularClassSymbol)?.fir ?: continue
     if (superClass.classKind != ClassKind.CLASS || superClass.symbol.classId == ANY) continue
+    // `Derived : Base<String>()`: the superclass's own properties are of type `T`, its argument is here.
+    for (argument in superType.coneType.typeArguments) {
+      val argumentType = argument.type ?: return true // `*`
+      if (containsString(argumentType, seen)) return true
+    }
     if (stateContainsString(superClass, seen)) return true
   }
   return false

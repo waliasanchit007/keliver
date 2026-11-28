@@ -89,6 +89,7 @@ internal fun Project.registerFrameRulesTasks(
     it.classpath.from(schemaClasspath)
     it.schemaType.set(extension.type)
     it.reviewFile.set(reviewFile)
+    it.fixWith.set(generate.map { g -> "${g.path}" })
     it.strict.set(extension.frameRules.strict)
     it.dummyOutputFile.set(layout.buildDirectory.file("tmp/redwoodFrameRulesCheckDummy.txt"))
     // Checks what a regeneration in the same build wrote.
@@ -119,6 +120,10 @@ internal abstract class RedwoodFrameRulesCheckTask @Inject constructor(
   @get:Input
   abstract val strict: Property<Boolean>
 
+  /** The path of this project's generate task, named in the failure message (`:app:redwoodFrameRulesGenerate`). */
+  @get:Input
+  abstract val fixWith: Property<String>
+
   @get:InputFiles
   @get:PathSensitive(RELATIVE)
   abstract val reviewFile: RegularFileProperty
@@ -133,7 +138,7 @@ internal abstract class RedwoodFrameRulesCheckTask @Inject constructor(
       parentFile.mkdirs()
       writeBytes(byteArrayOf())
     }
-    submit(workerExecutor, toolClasspath, classpath, schemaType, reviewFile, "check", strict.get())
+    submit(workerExecutor, toolClasspath, classpath, schemaType, reviewFile, "check", strict.get(), fixWith.get())
   }
 }
 
@@ -155,7 +160,7 @@ internal abstract class RedwoodFrameRulesGenerateTask @Inject constructor(
 
   @TaskAction
   fun run() {
-    submit(workerExecutor, toolClasspath, classpath, schemaType, reviewFile, "generate", strict = false)
+    submit(workerExecutor, toolClasspath, classpath, schemaType, reviewFile, "generate", strict = false, fixWith = "")
   }
 }
 
@@ -167,6 +172,7 @@ private fun submit(
   reviewFile: RegularFileProperty,
   mode: String,
   strict: Boolean,
+  fixWith: String,
 ) {
   workerExecutor.noIsolation().submit(RedwoodFrameRulesWorker::class.java) {
     it.toolClasspath.from(toolClasspath)
@@ -175,6 +181,7 @@ private fun submit(
     it.reviewFile.set(reviewFile)
     it.mode.set(mode)
     it.strict.set(strict)
+    it.fixWith.set(fixWith)
   }
 }
 
@@ -185,6 +192,7 @@ private interface RedwoodFrameRulesParameters : WorkParameters {
   val reviewFile: RegularFileProperty
   val mode: Property<String>
   val strict: Property<Boolean>
+  val fixWith: Property<String>
 }
 
 private abstract class RedwoodFrameRulesWorker @Inject constructor(
@@ -201,7 +209,7 @@ private abstract class RedwoodFrameRulesWorker @Inject constructor(
         add("--review")
         add(parameters.reviewFile.get().asFile.absolutePath)
         add("--fix-with")
-        add(FRAME_RULES_GENERATE_TASK_NAME)
+        add(parameters.fixWith.get().ifEmpty { FRAME_RULES_GENERATE_TASK_NAME })
         if (parameters.strict.get()) add("--strict")
         add("--class-path")
         add(parameters.classpath.files.joinToString(File.pathSeparator))

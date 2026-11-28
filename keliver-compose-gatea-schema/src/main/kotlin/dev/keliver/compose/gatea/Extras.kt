@@ -70,7 +70,11 @@ public data class ExtraLazyItem(
 public data class ExtraAnimated(
   /** A parameter's name: a code. */
   @StyleToken val param: String,
-  /** An id, a spec and a debug label: codes. */
+  /**
+   * An id, a spec and a debug label: codes. The label is a guest-chosen string that is never drawn,
+   * but it travels inside this one value, so a `Shell` frame keeps it; splitting it out is MS4-36's
+   * (the review of #331, L3).
+   */
   @StyleToken val ref: dev.keliver.compose.animation.core.AnimatedRef,
 )
 

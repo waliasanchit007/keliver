@@ -10,6 +10,7 @@ import dev.keliver.schema.Property
 import dev.keliver.schema.Schema
 import dev.keliver.schema.Schema.Dependency
 import dev.keliver.schema.Widget
+import dev.keliver.schema.NeverCached
 import dev.keliver.schema.NotData
 import dev.keliver.schema.Replayable
 import dev.keliver.schema.Scrolls
@@ -473,7 +474,7 @@ public data class GenAnimatedVisibility1(
   @Property(1) val visible: kotlin.Boolean,
   @Property(3) @StyleToken val enter: dev.keliver.compose.animation.EnterTransition?,
   @Property(4) @StyleToken val exit: dev.keliver.compose.animation.ExitTransition?,
-  @Property(5) @StyleToken val label: kotlin.String?,
+  @Property(5) @NeverCached val label: kotlin.String?,
   @Children(6) val content: GenAnimatedVisibilityScope.() -> Unit,
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )
@@ -485,7 +486,7 @@ public data class GenColumnScopeAnimatedVisibility1(
   @Property(1) val visible: kotlin.Boolean,
   @Property(3) @StyleToken val enter: dev.keliver.compose.animation.EnterTransition?,
   @Property(4) @StyleToken val exit: dev.keliver.compose.animation.ExitTransition?,
-  @Property(5) @StyleToken val label: kotlin.String?,
+  @Property(5) @NeverCached val label: kotlin.String?,
   @Children(6) val content: GenAnimatedVisibilityScope.() -> Unit,
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )
@@ -497,7 +498,7 @@ public data class GenRowScopeAnimatedVisibility1(
   @Property(1) val visible: kotlin.Boolean,
   @Property(3) @StyleToken val enter: dev.keliver.compose.animation.EnterTransition?,
   @Property(4) @StyleToken val exit: dev.keliver.compose.animation.ExitTransition?,
-  @Property(5) @StyleToken val label: kotlin.String?,
+  @Property(5) @NeverCached val label: kotlin.String?,
   @Children(6) val content: GenAnimatedVisibilityScope.() -> Unit,
   @Property(1000) val modifierEvent: ((kotlin.Int) -> Unit)? = null,
 )

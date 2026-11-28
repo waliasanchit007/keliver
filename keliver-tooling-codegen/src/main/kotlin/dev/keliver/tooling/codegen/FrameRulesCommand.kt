@@ -31,7 +31,6 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.path
 import dev.keliver.tooling.schema.FqType
-import dev.keliver.tooling.schema.ProtocolSchema
 import dev.keliver.tooling.schema.ProtocolSchemaSet
 import java.io.File
 import java.net.URLClassLoader
@@ -77,12 +76,13 @@ internal class FrameRulesCommand : CliktCommand(name = "frame-rules") {
 
   override fun run() {
     val classLoader = URLClassLoader(classpath.map { it.toURI().toURL() }.toTypedArray())
-    val schema = ProtocolSchemaSet.load(schemaType, classLoader).schema
+    val schemaSet = ProtocolSchemaSet.load(schemaType, classLoader)
     when (mode) {
-      "generate" -> review.writeText(frameRulesReviewText(schema))
+      // A schema set without frame rules has no review list: no file is written for it.
+      "generate" -> if (schemaSet.declaresFrameRules()) review.writeText(frameRulesReviewText(schemaSet))
       else -> {
         val recorded = if (review.exists()) parseFrameRulesReview(review.readText()) else null
-        val report = checkFrameRulesReview(schema, recorded, strict, review.toString(), fixWith)
+        val report = checkFrameRulesReview(schemaSet, recorded, strict, review.toString(), fixWith)
         if (report.failed) throw PrintMessage(report.message, statusCode = 1, printError = true)
         if (report.message.isNotEmpty()) echo(report.message)
       }
@@ -100,16 +100,16 @@ internal class FrameRulesReviewReport(val message: String, val failed: Boolean)
  * each value not yet reviewed and each entry no longer on the list.
  */
 internal fun checkFrameRulesReview(
-  schema: ProtocolSchema,
+  schemaSet: ProtocolSchemaSet,
   recorded: List<String>?,
   strict: Boolean,
   file: String,
   fixWith: String,
 ): FrameRulesReviewReport {
-  val expected = frameRulesReview(schema).map { it.toString() }
+  val expected = if (schemaSet.declaresFrameRules()) frameRulesReview(schemaSet) else emptyList()
   val added = expected - recorded.orEmpty().toSet()
   val removed = recorded.orEmpty() - expected.toSet()
-  val name = "${schema.type.flatName}FrameRules"
+  val name = "${schemaSet.schema.type.flatName}FrameRules"
   val upToDate = recorded != null && added.isEmpty() && removed.isEmpty()
   if (strict) {
     if (upToDate) return FrameRulesReviewReport("", failed = false)
@@ -117,7 +117,7 @@ internal fun checkFrameRulesReview(
       append("e: $name (strict): the review list $file ")
       appendLine(if (recorded == null) "does not exist." else "is out of date.")
       if (added.isNotEmpty()) {
-        appendLine("  Not reviewed: a Shell frame would keep these values as they are:")
+        appendLine("  Not reviewed: a new replayable member, or a value a Shell frame would keep as it is:")
         for (entry in added) appendLine("    $entry")
         appendLine(
           "  Classify each in the schema (@NotData for layout or style, @NeverCached for a value that must " +
@@ -133,12 +133,13 @@ internal fun checkFrameRulesReview(
     return FrameRulesReviewReport(message.trimEnd(), failed = true)
   }
   val message = buildString {
-    if (expected.isNotEmpty()) {
+    val values = expected.filter { it.substringAfter(": ").substringBefore(':').contains('.') }
+    if (values.isNotEmpty()) {
       appendLine(
-        "w: $name: ${expected.size} value(s) of replayable widgets and modifiers are neither @NotData nor " +
+        "w: $name: ${values.size} value(s) of replayable widgets and modifiers are neither @NotData nor " +
           "@NeverCached, so a Shell frame keeps them as they are:",
       )
-      for (entry in expected) appendLine("    $entry")
+      for (entry in values) appendLine("    $entry")
     }
     if (!upToDate && (recorded != null || expected.isNotEmpty())) {
       appendLine("w: $name: the review list $file is ${if (recorded == null) "missing" else "out of date"} (run $fixWith).")

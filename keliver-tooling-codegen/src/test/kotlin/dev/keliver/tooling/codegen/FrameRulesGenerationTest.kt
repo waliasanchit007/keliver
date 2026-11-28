@@ -160,75 +160,114 @@ class FrameRulesGenerationTest {
     assertThat(plain.generateFileSpecs(ProtocolCodegenType.Host).map { it.name }.filter { it.endsWith("FrameRules") }).isEmpty()
   }
 
-  @Test fun theReviewListNamesExactlyTheUnclassifiedNonStringValues() {
-    val schema = parseTestSchema(Frames::class).schema
-    assertThat(frameRulesReview(schema).map { it.toString() }).containsExactly(
-      "widget FrameRulesGenerationTestLabel (1) count (5): kotlin.Int",
-      "widget FrameRulesGenerationTestLabel (1) tone (6): dev.keliver.tooling.codegen.FrameRulesGenerationTest.Tone",
-      "widget FrameRulesGenerationTestFeed (2) position (3): kotlin.collections.Map<kotlin.Int, kotlin.Int>",
-      "modifier FrameRulesGenerationTestTap (2) enabled: kotlin.Boolean",
+  @Test fun theReviewListHasALinePerReplayableMemberAndPerUnclassifiedNonStringValue() {
+    val schemaSet = parseTestSchema(Frames::class)
+    val section = "FrameRulesGenerationTestFrames"
+    // Every replayable member (even Pad and ScrollY, which have nothing to review) is a line: adding
+    // one is a reviewed choice. Popup is not replayable. No wire tag appears.
+    assertThat(frameRulesReview(schemaSet).filter { it.startsWith("$section:") }).containsExactly(
+      "$section: widget FrameRulesGenerationTestFeed",
+      "$section: widget FrameRulesGenerationTestFeed.position: kotlin.collections.Map<kotlin.Int, kotlin.Int>",
+      "$section: widget FrameRulesGenerationTestLabel",
+      "$section: widget FrameRulesGenerationTestLabel.count: kotlin.Int",
+      "$section: widget FrameRulesGenerationTestLabel.tone: dev.keliver.tooling.codegen.FrameRulesGenerationTest.Tone",
+      "$section: modifier FrameRulesGenerationTestPad",
+      "$section: modifier FrameRulesGenerationTestScrollY",
+      "$section: modifier FrameRulesGenerationTestTap",
+      "$section: modifier FrameRulesGenerationTestTap.enabled: kotlin.Boolean",
     )
   }
 
+  @Test fun theListHasASectionPerSchemaOfTheSet() {
+    val lines = frameRulesReview(parseTestSchema(Frames::class))
+    // The layout dependency declares no replayable member, so it has no line; a dependency that does
+    // has its own lines, each starting with its own schema's name.
+    assertThat(lines.map { it.substringBefore(':') }.toSet()).isEqualTo(setOf("FrameRulesGenerationTestFrames"))
+  }
+
+  @Test fun aLockAssignedNumberAndNameDoNotReachTheList() {
+    assertThat(reviewName("GenSurface2")).isEqualTo("Surface")
+    assertThat(reviewName("GenColumnScopeAnimatedVisibility1")).isEqualTo("ColumnScopeAnimatedVisibility")
+    assertThat(reviewName("Heading1")).isEqualTo("Heading1")
+    assertThat(reviewName("Generic2")).isEqualTo("Generic2")
+  }
+
+  @Test fun theListNamesNoTag() {
+    assertThat(frameRulesReview(parseTestSchema(Frames::class)).none { it.contains(Regex("\\(\\d+\\)")) }).isTrue()
+  }
+
   @Test fun theReviewFileRoundTrips() {
-    val schema = parseTestSchema(Frames::class).schema
-    val text = frameRulesReviewText(schema)
+    val schemaSet = parseTestSchema(Frames::class)
+    val text = frameRulesReviewText(schemaSet)
     assertThat(text).contains("# FrameRulesGenerationTestFramesFrameRules review list")
-    assertThat(parseFrameRulesReview(text)).isEqualTo(frameRulesReview(schema).map { it.toString() })
+    assertThat(text).contains("@BlocksFrameWhenTrue")
+    assertThat(parseFrameRulesReview(text)).isEqualTo(frameRulesReview(schemaSet))
   }
 
   @Test fun strictModeFailsOnAnUnclassifiedValue() {
-    val schema = parseTestSchema(Frames::class).schema
-    val reviewed = frameRulesReview(schema).map { it.toString() }
+    val schemaSet = parseTestSchema(Frames::class)
+    val reviewed = frameRulesReview(schemaSet)
     // The checked-in list lacks `Tap.enabled`: a value added since the last review.
-    val enabled = "modifier FrameRulesGenerationTestTap (2) enabled: kotlin.Boolean"
+    val enabled = "FrameRulesGenerationTestFrames: modifier FrameRulesGenerationTestTap.enabled: kotlin.Boolean"
     assertThat(reviewed).contains(enabled)
-    val report = checkFrameRulesReview(schema, reviewed - enabled, strict = true, "Frames.review.txt", "fix")
+    val report = checkFrameRulesReview(schemaSet, reviewed - enabled, strict = true, "Frames.review.txt", ":app:fix")
     assertThat(report.failed).isTrue()
     assertThat(report.message).all {
       contains("e: FrameRulesGenerationTestFramesFrameRules (strict): the review list Frames.review.txt is out of date.")
       contains("    $enabled")
       contains("@NotData")
       contains("@NeverCached")
-      doesNotContain("count (5)")
+      contains("with :app:fix.")
+      doesNotContain("Label.count")
     }
   }
 
+  @Test fun strictModeFailsOnANewReplayableMember() {
+    val schemaSet = parseTestSchema(Frames::class)
+    val member = "FrameRulesGenerationTestFrames: modifier FrameRulesGenerationTestPad"
+    val reviewed = frameRulesReview(schemaSet)
+    assertThat(reviewed).contains(member)
+    val report = checkFrameRulesReview(schemaSet, reviewed - member, strict = true, "f", "fix")
+    assertThat(report.failed).isTrue()
+    assertThat(report.message).contains("    $member")
+  }
+
   @Test fun strictModeFailsWithoutAReviewFileAndOnAStaleEntry() {
-    val schema = parseTestSchema(Frames::class).schema
-    val reviewed = frameRulesReview(schema).map { it.toString() }
-    val missing = checkFrameRulesReview(schema, null, strict = true, "Frames.review.txt", "fix")
+    val schemaSet = parseTestSchema(Frames::class)
+    val reviewed = frameRulesReview(schemaSet)
+    val missing = checkFrameRulesReview(schemaSet, null, strict = true, "Frames.review.txt", "fix")
     assertThat(missing.failed).isTrue()
     assertThat(missing.message).contains("does not exist")
-    val stale = checkFrameRulesReview(schema, reviewed + "widget Gone (9) value (1): kotlin.Int", strict = true, "f", "fix")
+    val gone = "FrameRulesGenerationTestFrames: widget Gone.value: kotlin.Int"
+    val stale = checkFrameRulesReview(schemaSet, reviewed + gone, strict = true, "f", "fix")
     assertThat(stale.failed).isTrue()
     assertThat(stale.message).all {
       contains("No longer on the list (run fix):")
-      contains("    widget Gone (9) value (1): kotlin.Int")
+      contains("    $gone")
     }
   }
 
   @Test fun strictModePassesOnceEveryValueIsReviewed() {
-    val schema = parseTestSchema(Frames::class).schema
-    val report = checkFrameRulesReview(schema, frameRulesReview(schema).map { it.toString() }, strict = true, "f", "fix")
+    val schemaSet = parseTestSchema(Frames::class)
+    val report = checkFrameRulesReview(schemaSet, frameRulesReview(schemaSet), strict = true, "f", "fix")
     assertThat(report.failed).isFalse()
     assertThat(report.message).isEqualTo("")
   }
 
   @Test fun withoutStrictModeTheListIsAWarning() {
-    val schema = parseTestSchema(Frames::class).schema
-    val report = checkFrameRulesReview(schema, null, strict = false, "Frames.review.txt", "fix")
+    val report = checkFrameRulesReview(parseTestSchema(Frames::class), null, strict = false, "Frames.review.txt", "fix")
     assertThat(report.failed).isFalse()
     assertThat(report.message).all {
       contains("w: FrameRulesGenerationTestFramesFrameRules: 4 value(s) of replayable widgets and modifiers")
-      contains("    widget FrameRulesGenerationTestLabel (1) count (5): kotlin.Int")
+      contains("    FrameRulesGenerationTestFrames: widget FrameRulesGenerationTestLabel.count: kotlin.Int")
       contains("the review list Frames.review.txt is missing (run fix)")
     }
   }
 
-  @Test fun aSchemaWithNothingReplayableHasAnEmptyReviewAndNoWarning() {
-    val schema = parseTestSchema(Unannotated::class).schema
-    assertThat(frameRulesReview(schema)).isEmpty()
-    assertThat(checkFrameRulesReview(schema, null, strict = false, "f", "fix").message).isEqualTo("")
+  @Test fun aSchemaWithoutFrameRulesHasNoReviewAndNoWarning() {
+    val schemaSet = parseTestSchema(Unannotated::class)
+    assertThat(schemaSet.declaresFrameRules()).isFalse()
+    assertThat(checkFrameRulesReview(schemaSet, null, strict = false, "f", "fix").message).isEqualTo("")
+    assertThat(checkFrameRulesReview(schemaSet, null, strict = true, "f", "fix").failed).isFalse()
   }
 }
