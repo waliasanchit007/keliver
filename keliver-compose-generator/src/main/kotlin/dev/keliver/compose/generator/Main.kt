@@ -208,7 +208,11 @@ fun runGroup(args: List<String>): List<String> {
   val classpath = arg("--classpath").split(File.pathSeparator).map(::File)
   val sources = arg("--sources").split(File.pathSeparator).map(::File)
   val out = generate(
-    config, oldLock, classpath, sources, factoryOwner,
+    config,
+    oldLock,
+    classpath,
+    sources,
+    factoryOwner,
     guestRoots = listOf(File(arg("--out-guest"))),
     valuesRoots = if ("--out-values" in args) listOf(File(arg("--out-values"))) else emptyList(),
   )

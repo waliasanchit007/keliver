@@ -189,7 +189,15 @@ class ErrorStubs(
   private val handledNames: Set<String> = plans.map { "${it.decl.pkg}|${it.decl.name}" }.toSet()
 
   private fun propertyStub(p: KmProperty, pkg: String, member: Boolean): Stub? {
-    val (msg, kind) = messageFor(pkg, p.name, "property", buildSet { classNameOf(p.receiverParameterType)?.let(::add); collect(p.returnType, this) })
+    val (msg, kind) = messageFor(
+      pkg,
+      p.name,
+      "property",
+      buildSet {
+        classNameOf(p.receiverParameterType)?.let(::add)
+        collect(p.returnType, this)
+      },
+    )
     val receiver = receiverText(p.receiverParameterType)?.let { "$it." } ?: ""
     val text = render(msg, "public val $receiver${id(p.name)}: Any?\n  get() = ${body()}")
     return Stub(mirrorPackage(pkg), p.name, text, kind, msg, null, member)
@@ -231,8 +239,13 @@ class ErrorStubs(
       }
       val classes = index.classes.filter { (fq, c) ->
         // The package is what precedes the class's last '/', exactly (`packageOf` guesses from letter case).
-        c.name.substringBeforeLast('/', "") == pkg.replace('.', '/') && '.' !in c.name.substringAfterLast('/') && isPublic(c.visibility) &&
-          c.kind != ClassKind.COMPANION_OBJECT && c.kind != ClassKind.ENUM_ENTRY && !fq.contains('$') && fq.removePrefix("$pkg.").first().isUpperCase()
+        c.name.substringBeforeLast('/', "") == pkg.replace('.', '/') &&
+          '.' !in c.name.substringAfterLast('/') &&
+          isPublic(c.visibility) &&
+          c.kind != ClassKind.COMPANION_OBJECT &&
+          c.kind != ClassKind.ENUM_ENTRY &&
+          !fq.contains('$') &&
+          fq.removePrefix("$pkg.").first().isUpperCase()
       }
       for ((fq, c) in classes.toSortedMap()) {
         val simple = fq.removePrefix("$pkg.")

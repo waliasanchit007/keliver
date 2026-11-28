@@ -1,3 +1,6 @@
+public abstract interface annotation class dev/keliver/compose/KeliverExperimentalApi : java/lang/annotation/Annotation {
+}
+
 public final class dev/keliver/compose/animation/AnimationKt {
 	public static final fun Animatable-s8iZJM4 (J)Ldev/keliver/compose/animation/core/Animatable;
 	public static final fun animateColorAsState-XZz_M3w (JLdev/keliver/compose/animation/core/AnimationSpec;Ljava/lang/String;Landroidx/compose/runtime/Composer;II)Landroidx/compose/runtime/State;

@@ -247,10 +247,15 @@ class ErrorStubsTest {
 
   @Test fun globsMatchByNameAndAMessageNeedsAMatch() {
     val stubs = ErrorStubs(
-      Config("g", "p", "N", emptyList(), emptyList(), emptyList(), emptyMap(), emptyList(), emptyList(),
+      Config(
+        "g", "p", "N", emptyList(), emptyList(), emptyList(), emptyMap(), emptyList(), emptyList(),
         includePackages = listOf("androidx.compose.foundation.gestures"),
-        stubMessages = listOf(StubMessage(listOf("androidx.compose.foundation.gestures.detect*Gestures"), emptyList(), "gestures", "never"))),
-      index, emptyList(), emptyMap(), emptyList(),
+        stubMessages = listOf(StubMessage(listOf("androidx.compose.foundation.gestures.detect*Gestures"), emptyList(), "gestures", "never")),
+      ),
+      index,
+      emptyList(),
+      emptyMap(),
+      emptyList(),
     ).stubs().filter { !it.member }
     assertEquals("Keliver: gestures", stubs.first { it.name == "detectTapGestures" }.message)
     assertEquals("never", stubs.first { it.name == "detectTapGestures" }.kind)

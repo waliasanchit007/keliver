@@ -541,8 +541,21 @@ a Gate B item. Results: [`GATE_A_VERDICT.md`](GATE_A_VERDICT.md).
   serializers cannot take one); an expression default in a modifier travels as the value plus an
   `…IsDefault` flag rather than as `null`.
 - **Defaults.** Case 3 (§5, the presence split) is not implemented; no Gate A parameter needed it.
-- **Not generated yet:** error stubs for every other declaration of an included package (only a
-  curated two, plus those the classifier produces), optional slots, the D2 gate's metadata (the
+- **Error stubs for the rest of an included package (MS4-07, done for `core`).** A group's config
+  lists `includePackages`; `ErrorStubs.kt` writes a stub for every public declaration of those
+  packages that the group does not generate (functions, properties, classes; the members of a
+  generated scope), so no public Compose name there is an "unresolved reference". Differences
+  from §11's first sketch: a function stub keeps Compose's parameter *names* and defaults but widens
+  every type to `Any?` (many Compose types have no mirror, and the message is what matters); a stub
+  on a name the guest already has requires its first parameter, so a call with no arguments still
+  picks the real overload; two overloads that differ only in parameter names keep the first (one
+  Kotlin signature); a class stub is skipped where the guest declares the name (hand-written files,
+  the values module, placeholders, scopes). Messages come from the config: `stubMessages`
+  (by name glob or by a type in the signature; kinds `never`, `notYet`, `curated`), else a generic
+  one naming the category; `extraStubs` names the Android-only declarations the desktop jars lack
+  (`LocalContext`, `stringResource`, `AndroidView`, …). Keliver-only API (`Shimmer`, `pressSignal`)
+  needs `@OptIn(KeliverExperimentalApi::class)` (Q10).
+- **Not generated yet:** optional slots, the D2 gate's metadata (the
   level is in the lock; nothing reads it yet), widget groups. (Scope supertypes and `*Defaults`
   mirrors: Gate B part a, §20.)
 
