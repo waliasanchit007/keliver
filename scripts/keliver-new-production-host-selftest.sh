@@ -767,6 +767,14 @@ for v in 0.5.0 0.5.1-SNAPSHOT; do
     && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHL/src/line-0.5/kotlin/HostFeatures.kt" | cmp -s - "${KF%/*}/HostFeatures.kt" \
     && ok "NF5 H0: an app on $v gets the 0.5 line's KeliverLine.kt and HostFeatures.kt (host features handed over, the back gate passed through)" \
     || bad "NF5 H0: the KeliverLine.kt or HostFeatures.kt of an app on $v"
+  # MS4-04: the line declares schema-mismatch reports, and its own test file (not the shared
+  # HostFeaturesTest.kt, which the 0.4.1 manifests hold) checks what the feature does.
+  TF="$APPF/host-android/src/test/kotlin/com/example/demo/host/SchemaMismatchReportsTest.kt"
+  [ -n "$PHL" ] && grep -q '^    "keliver.schemaMismatchReports@1",$' "${KF%/*}/HostFeatures.kt" \
+    && sed 's/@@PACKAGE@@/com.example.demo.host/' "$PHL/src/line-0.5/test/kotlin/SchemaMismatchReportsTest.kt" | cmp -s - "$TF" \
+    && grep -q '^internal abstract class KeliverEventListener : EventListener() {$' "$KF" \
+    && ok "MS4-04: an app on $v declares schema-mismatch reports, with the 0.5 line's own test of them" \
+    || bad "MS4-04: the schema-mismatch declaration or its test, for an app on $v"
 done
 KELIVER_HOST_ZIPLINE_VERSION=1.28.0-keliver.9 KELIVER_HOST_KOTLIN_VERSION=2.4.99 bash -c 'cd "$1" && rm -rf host-android && "$2" --bundle-server "$3" --public-key-file "$4"' _ "$DISP/fork-0-5-0" "$SCAFFOLD" "$SERVER" "$KEY" > /dev/null 2>&1; rc=$?
 [ "$rc" = 0 ] && grep -q "^  id 'dev.keliver.zipline' version '1.28.0-keliver.9'$" "$DISP/fork-0-5-0/host-android/build.gradle" \

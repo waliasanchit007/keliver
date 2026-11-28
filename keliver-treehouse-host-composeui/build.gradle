@@ -12,10 +12,13 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 // checkout's libraries are on, compiled into the JVM tests against those libraries. So a template
 // change that does not compile against this TreehouseContent or TreehouseApp.Spec fails here, and
 // HostTemplateLineTest runs the templates' own hidden-content call. (The 0.4 line's copies build
-// against the published 0.4.x libraries, in the reference-app and ios-host workflows.)
+// against the published 0.4.x libraries, in the reference-app and ios-host workflows.) MS4-04: the
+// line's own behavioural checks of the host features it declares (src/line-0.5/test/kotlin/) run
+// here too, against this checkout's libraries.
 def hostTemplateLineSource = tasks.register('hostTemplateLineSource', Copy) {
   from(rootProject.file('scripts/templates/production-host/src/line-0.5/kotlin/KeliverLine.kt'))
   from(rootProject.file('scripts/templates/production-host/src/line-0.5/kotlin/HostFeatures.kt'))
+  from(rootProject.file('scripts/templates/production-host/src/line-0.5/test/kotlin'))
   filter { line -> line.replace('@@PACKAGE@@', 'hosttemplate') }
   into layout.buildDirectory.dir('generated/hostTemplateLine/kotlin')
 }

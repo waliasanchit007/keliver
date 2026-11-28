@@ -13,8 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.keliver.compose.ExperimentalKeliverBackApi
 import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
+import dev.keliver.compose.KeliverHostFeatures
 import dev.keliver.treehouse.AppService
 import dev.keliver.treehouse.DynamicContentWidgetFactory
+import dev.keliver.treehouse.EventListener
+import dev.keliver.treehouse.SchemaMismatch
 import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
@@ -27,6 +30,23 @@ internal const val KELIVER_LINE = "0.5"
 internal abstract class KeliverSpec<A : AppService> : TreehouseApp.Spec<A>() {
   override val hostFeatures: Set<String>
     get() = HostFeatures.implemented
+}
+
+/**
+ * The base of the host's code-load listener (KeliverHost.kt, MainViewController.kt). Treehouse
+ * names each schema mismatch of the bundle a load runs once (an unknown widget, modifier, property,
+ * children or event tag: `EventListener.schemaMismatch`, MS4-04), and this hands it to
+ * [onSchemaMismatch] while this line's HostFeatures.kt declares schema-mismatch reports
+ * (`KeliverHostFeatures.SCHEMA_MISMATCH_REPORTS_1`). Without the declaration, an unknown tag is
+ * ignored silently, as on the 0.4 line.
+ */
+internal abstract class KeliverEventListener : EventListener() {
+  /** One schema mismatch, once per tag for this load: [detail] names it by kind and tags only (`unknown widget 12`). */
+  open fun onSchemaMismatch(detail: String) {}
+
+  final override fun schemaMismatch(mismatch: SchemaMismatch) {
+    if (KeliverHostFeatures.SCHEMA_MISMATCH_REPORTS_1 in HostFeatures.implemented) onSchemaMismatch(mismatch.toString())
+  }
 }
 
 /**

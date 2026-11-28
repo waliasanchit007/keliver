@@ -67,6 +67,7 @@ public class dev/keliver/treehouse/EventListener {
 	public fun manifestVerified (Lapp/cash/zipline/ZiplineManifest;Ljava/lang/String;)V
 	public fun moduleLoadEnd (Ljava/lang/String;Ljava/lang/Object;)V
 	public fun moduleLoadStart (Ljava/lang/String;)Ljava/lang/Object;
+	public fun schemaMismatch (Ldev/keliver/treehouse/SchemaMismatch;)V
 	public fun serviceLeaked (Ljava/lang/String;)V
 	public fun takeService (Ljava/lang/String;Lapp/cash/zipline/ZiplineService;)V
 	public fun uncaughtException (Ljava/lang/Throwable;)V
@@ -99,6 +100,52 @@ public final class dev/keliver/treehouse/MemoryStateStore : dev/keliver/treehous
 public final class dev/keliver/treehouse/MissingSerializerException : java/lang/RuntimeException {
 	public fun <init> (Ljava/lang/String;Lkotlinx/serialization/SerializationException;)V
 	public fun <init> (Lkotlin/reflect/KClass;Lkotlinx/serialization/SerializationException;)V
+}
+
+public abstract class dev/keliver/treehouse/SchemaMismatch {
+}
+
+public final class dev/keliver/treehouse/SchemaMismatch$Children : dev/keliver/treehouse/SchemaMismatch {
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag-AYLLUqs ()I
+	public final fun getWidgetTag-j4hTL_I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/treehouse/SchemaMismatch$Event : dev/keliver/treehouse/SchemaMismatch {
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag-R3885io ()I
+	public final fun getWidgetTag-j4hTL_I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/treehouse/SchemaMismatch$Modifier : dev/keliver/treehouse/SchemaMismatch {
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag-ZQOBO0c ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/treehouse/SchemaMismatch$Property : dev/keliver/treehouse/SchemaMismatch {
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag-CVaCfG8 ()I
+	public final fun getWidgetTag-j4hTL_I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/treehouse/SchemaMismatch$Widget : dev/keliver/treehouse/SchemaMismatch {
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag-j4hTL_I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract interface class dev/keliver/treehouse/StateStore {

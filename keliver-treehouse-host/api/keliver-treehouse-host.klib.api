@@ -188,6 +188,7 @@ open class dev.keliver.treehouse/EventListener { // dev.keliver.treehouse/EventL
     open fun manifestVerified(app.cash.zipline/ZiplineManifest, kotlin/String) // dev.keliver.treehouse/EventListener.manifestVerified|manifestVerified(app.cash.zipline.ZiplineManifest;kotlin.String){}[0]
     open fun moduleLoadEnd(kotlin/String, kotlin/Any?) // dev.keliver.treehouse/EventListener.moduleLoadEnd|moduleLoadEnd(kotlin.String;kotlin.Any?){}[0]
     open fun moduleLoadStart(kotlin/String): kotlin/Any? // dev.keliver.treehouse/EventListener.moduleLoadStart|moduleLoadStart(kotlin.String){}[0]
+    open fun schemaMismatch(dev.keliver.treehouse/SchemaMismatch) // dev.keliver.treehouse/EventListener.schemaMismatch|schemaMismatch(dev.keliver.treehouse.SchemaMismatch){}[0]
     open fun serviceLeaked(kotlin/String) // dev.keliver.treehouse/EventListener.serviceLeaked|serviceLeaked(kotlin.String){}[0]
     open fun takeService(kotlin/String, app.cash.zipline/ZiplineService) // dev.keliver.treehouse/EventListener.takeService|takeService(kotlin.String;app.cash.zipline.ZiplineService){}[0]
     open fun uncaughtException(kotlin/Throwable) // dev.keliver.treehouse/EventListener.uncaughtException|uncaughtException(kotlin.Throwable){}[0]
@@ -231,6 +232,69 @@ open class dev.keliver.treehouse/TreehouseUIView : dev.keliver.treehouse/Treehou
         open fun <set-stateSnapshotId>(dev.keliver.treehouse/StateSnapshot.Id) // dev.keliver.treehouse/TreehouseUIView.stateSnapshotId.<set-stateSnapshotId>|<set-stateSnapshotId>(dev.keliver.treehouse.StateSnapshot.Id){}[0]
 
     open fun superviewChanged() // dev.keliver.treehouse/TreehouseUIView.superviewChanged|superviewChanged(){}[0]
+}
+
+sealed class dev.keliver.treehouse/SchemaMismatch { // dev.keliver.treehouse/SchemaMismatch|null[0]
+    final class Children : dev.keliver.treehouse/SchemaMismatch { // dev.keliver.treehouse/SchemaMismatch.Children|null[0]
+        constructor <init>(dev.keliver.protocol/WidgetTag, dev.keliver.protocol/ChildrenTag) // dev.keliver.treehouse/SchemaMismatch.Children.<init>|<init>(dev.keliver.protocol.WidgetTag;dev.keliver.protocol.ChildrenTag){}[0]
+
+        final val tag // dev.keliver.treehouse/SchemaMismatch.Children.tag|{}tag[0]
+            final fun <get-tag>(): dev.keliver.protocol/ChildrenTag // dev.keliver.treehouse/SchemaMismatch.Children.tag.<get-tag>|<get-tag>(){}[0]
+        final val widgetTag // dev.keliver.treehouse/SchemaMismatch.Children.widgetTag|{}widgetTag[0]
+            final fun <get-widgetTag>(): dev.keliver.protocol/WidgetTag // dev.keliver.treehouse/SchemaMismatch.Children.widgetTag.<get-widgetTag>|<get-widgetTag>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/SchemaMismatch.Children.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.treehouse/SchemaMismatch.Children.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.treehouse/SchemaMismatch.Children.toString|toString(){}[0]
+    }
+
+    final class Event : dev.keliver.treehouse/SchemaMismatch { // dev.keliver.treehouse/SchemaMismatch.Event|null[0]
+        constructor <init>(dev.keliver.protocol/WidgetTag, dev.keliver.protocol/EventTag) // dev.keliver.treehouse/SchemaMismatch.Event.<init>|<init>(dev.keliver.protocol.WidgetTag;dev.keliver.protocol.EventTag){}[0]
+
+        final val tag // dev.keliver.treehouse/SchemaMismatch.Event.tag|{}tag[0]
+            final fun <get-tag>(): dev.keliver.protocol/EventTag // dev.keliver.treehouse/SchemaMismatch.Event.tag.<get-tag>|<get-tag>(){}[0]
+        final val widgetTag // dev.keliver.treehouse/SchemaMismatch.Event.widgetTag|{}widgetTag[0]
+            final fun <get-widgetTag>(): dev.keliver.protocol/WidgetTag // dev.keliver.treehouse/SchemaMismatch.Event.widgetTag.<get-widgetTag>|<get-widgetTag>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/SchemaMismatch.Event.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.treehouse/SchemaMismatch.Event.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.treehouse/SchemaMismatch.Event.toString|toString(){}[0]
+    }
+
+    final class Modifier : dev.keliver.treehouse/SchemaMismatch { // dev.keliver.treehouse/SchemaMismatch.Modifier|null[0]
+        constructor <init>(dev.keliver.protocol/ModifierTag) // dev.keliver.treehouse/SchemaMismatch.Modifier.<init>|<init>(dev.keliver.protocol.ModifierTag){}[0]
+
+        final val tag // dev.keliver.treehouse/SchemaMismatch.Modifier.tag|{}tag[0]
+            final fun <get-tag>(): dev.keliver.protocol/ModifierTag // dev.keliver.treehouse/SchemaMismatch.Modifier.tag.<get-tag>|<get-tag>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/SchemaMismatch.Modifier.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.treehouse/SchemaMismatch.Modifier.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.treehouse/SchemaMismatch.Modifier.toString|toString(){}[0]
+    }
+
+    final class Property : dev.keliver.treehouse/SchemaMismatch { // dev.keliver.treehouse/SchemaMismatch.Property|null[0]
+        constructor <init>(dev.keliver.protocol/WidgetTag, dev.keliver.protocol/PropertyTag) // dev.keliver.treehouse/SchemaMismatch.Property.<init>|<init>(dev.keliver.protocol.WidgetTag;dev.keliver.protocol.PropertyTag){}[0]
+
+        final val tag // dev.keliver.treehouse/SchemaMismatch.Property.tag|{}tag[0]
+            final fun <get-tag>(): dev.keliver.protocol/PropertyTag // dev.keliver.treehouse/SchemaMismatch.Property.tag.<get-tag>|<get-tag>(){}[0]
+        final val widgetTag // dev.keliver.treehouse/SchemaMismatch.Property.widgetTag|{}widgetTag[0]
+            final fun <get-widgetTag>(): dev.keliver.protocol/WidgetTag // dev.keliver.treehouse/SchemaMismatch.Property.widgetTag.<get-widgetTag>|<get-widgetTag>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/SchemaMismatch.Property.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.treehouse/SchemaMismatch.Property.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.treehouse/SchemaMismatch.Property.toString|toString(){}[0]
+    }
+
+    final class Widget : dev.keliver.treehouse/SchemaMismatch { // dev.keliver.treehouse/SchemaMismatch.Widget|null[0]
+        constructor <init>(dev.keliver.protocol/WidgetTag) // dev.keliver.treehouse/SchemaMismatch.Widget.<init>|<init>(dev.keliver.protocol.WidgetTag){}[0]
+
+        final val tag // dev.keliver.treehouse/SchemaMismatch.Widget.tag|{}tag[0]
+            final fun <get-tag>(): dev.keliver.protocol/WidgetTag // dev.keliver.treehouse/SchemaMismatch.Widget.tag.<get-tag>|<get-tag>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.treehouse/SchemaMismatch.Widget.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.treehouse/SchemaMismatch.Widget.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.treehouse/SchemaMismatch.Widget.toString|toString(){}[0]
+    }
 }
 
 final fun <#A: dev.keliver.treehouse/AppService, #B: kotlin/Any> (dev.keliver.treehouse/TreehouseContentSource<#A>).dev.keliver.treehouse/bindWhenReady(dev.keliver.treehouse/TreehouseView<#B>, dev.keliver.treehouse/TreehouseApp<#A>): okio/Closeable // dev.keliver.treehouse/bindWhenReady|bindWhenReady@dev.keliver.treehouse.TreehouseContentSource<0:0>(dev.keliver.treehouse.TreehouseView<0:1>;dev.keliver.treehouse.TreehouseApp<0:0>){0§<dev.keliver.treehouse.AppService>;1§<kotlin.Any>}[0]

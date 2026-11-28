@@ -564,6 +564,15 @@ internal fun cachedBundleProblem(sequence: Long?, floor: Long, crash: CrashGuard
 }
 
 /**
+ * MS4-04: the outcome of a report that the bundle a load runs used a tag the host's schema lacks
+ * (an unknown widget, modifier, property, children or event tag), sent once per tag for that load.
+ * The host ignores the tag and shows the rest; the report's reason is `schema-mismatch`, and its
+ * detail (the app's only) names the tag, `unknown widget 12`. Only hosts that declare
+ * `keliver.schemaMismatchReports@1` (HostFeatures.kt, from the 0.5 line) send it.
+ */
+internal const val SCHEMA_MISMATCH_OUTCOME = "schema-mismatch"
+
+/**
  * The reason a report sends off the device (W6): a fixed category, never the
  * exception text, which can carry addresses, file paths or URLs. The full text
  * stays with the app (KeliverHost.reports / Keliver.onReport).
@@ -573,6 +582,8 @@ internal fun reportReason(outcome: String, detail: String): String {
   return when {
     outcome == "refused" -> "config"
     outcome == "screen-failed" -> "exception"
+    // MS4-04: the detail names the unknown tag; the report carries only the category.
+    outcome == SCHEMA_MISMATCH_OUTCOME -> "schema-mismatch"
     // WS6: what the host runs in place of the bundle it set aside.
     outcome == CRASH_ROLLBACK_OUTCOME -> when {
       CRASH_TO_APP_VIEW in detail -> "app-view"

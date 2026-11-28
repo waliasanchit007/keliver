@@ -25,6 +25,8 @@ final object dev.keliver.compose/KeliverHostFeatures { // dev.keliver.compose/Ke
         final fun <get-NAV_RETAINED_CONTAINER_1>(): kotlin/String // dev.keliver.compose/KeliverHostFeatures.NAV_RETAINED_CONTAINER_1.<get-NAV_RETAINED_CONTAINER_1>|<get-NAV_RETAINED_CONTAINER_1>(){}[0]
     final const val PRESS_1 // dev.keliver.compose/KeliverHostFeatures.PRESS_1|{}PRESS_1[0]
         final fun <get-PRESS_1>(): kotlin/String // dev.keliver.compose/KeliverHostFeatures.PRESS_1.<get-PRESS_1>|<get-PRESS_1>(){}[0]
+    final const val SCHEMA_MISMATCH_REPORTS_1 // dev.keliver.compose/KeliverHostFeatures.SCHEMA_MISMATCH_REPORTS_1|{}SCHEMA_MISMATCH_REPORTS_1[0]
+        final fun <get-SCHEMA_MISMATCH_REPORTS_1>(): kotlin/String // dev.keliver.compose/KeliverHostFeatures.SCHEMA_MISMATCH_REPORTS_1.<get-SCHEMA_MISMATCH_REPORTS_1>|<get-SCHEMA_MISMATCH_REPORTS_1>(){}[0]
 
     final val all // dev.keliver.compose/KeliverHostFeatures.all|{}all[0]
         final fun <get-all>(): kotlin.collections/Set<kotlin/String> // dev.keliver.compose/KeliverHostFeatures.all.<get-all>|<get-all>(){}[0]
