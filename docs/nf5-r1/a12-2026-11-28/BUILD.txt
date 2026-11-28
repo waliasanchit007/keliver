@@ -1,4 +1,4 @@
-built: 2026-11-28 17:56:23 by the maintainer, sample's own wrapper (Gradle 9.0.0), --no-daemon -PkeliverComposePrototype -Dmaven.repo.local=/Users/sanchit.walia/NonWork/keliver-scratch/nf5/r1-a12/m2
+built: 2026-11-28 17:56:23 by the maintainer, sample's own wrapper (Gradle 9.0.0), --no-daemon -PkeliverComposePrototype -Dmaven.repo.local=<scratch>/m2
 commit: e9dcfc7d6163bee900f8544478374d6ceb212e7f (origin/main e9dcfc7d6; m2 published from this worktree)
 local change for the build only: sample/settings.gradle.kts without the two maven.pkg.jetbrains.space lines (host gone, NXDOMAIN; PR #335). Restored after the build.
 host-android-benchmark.apk: 26078199 bytes, sha256 06226f540dc263633d5822a98a1658137fd2f4a6182eec0574d14175b4486a01

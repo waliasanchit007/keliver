@@ -4333,32 +4333,123 @@ Galaxy A12, following the kit's steps 0–7 in order: the eight arms of `run.sh`
 arms, `analyse.sh all`, and one rerun of the two judged arms. Medians over opens 3–14 (n = 12), ms from
 the UP, in one session on one build. Summaries are in
 [`docs/nf5-r1/a12-2026-11-28/`](nf5-r1/a12-2026-11-28/); the traces and the full `analyse-all.txt` stay
-in the session's scratch (sha256 not recorded for the 12 + 2 traces, below).
+in the session's scratch (their sha256 are recorded at the end of this section).
 
-**Verdict, by the bar the owner decided on 2026-11-28, applied as written:**
+**Readings: MET on both sizes by the owner's bar. Pre-registered kit: NO VERDICT (the identity check
+failed on every guest arm, rerun included). Owner's ruling pending.** Nothing below says "MET" without
+that context.
+
+**The readings, by the bar the owner decided on 2026-11-28 (they are what the arms measured; the kit's
+own rule, "When an arm counts", does not let the two idle arms count, see the next block):**
 
 | Size | Reveal first draw (`revealDrawn`) vs native's + 16.7 | Reveal buffer (`reveal.q_drew`) vs native's + 16.7 | Reveal `Record View#draw()` < 10 | Bar |
 |---|---|---|---|---|
-| **simple** | 13 against 19 + 16.7 = 35.7: in time | 26.5 against 39.2 + 16.7 = 55.9: in time | 4.5 ms | **MET** |
-| **heavy** | 12 against 24.5 + 16.7 = 41.2: in time | 32.4 against 82.1 + 16.7 = 98.8: in time | 8.2 ms | **MET** |
+| **simple** | 13 against 19 + 16.7 = 35.7: in time | 26.5 against 39.2 + 16.7 = 55.9: in time | 4.5 ms | reading met |
+| **heavy** | 12 against 24.5 + 16.7 = 41.2: in time | 32.4 against 82.1 + 16.7 = 98.8: in time | 8.2 ms | reading met |
 
 The rerun of the two idle arms gave the same: simple 12.5 / 26.7 / 4.7, heavy 13 / 32.1 / 8.1. In
 every reveal arm the reveal's own frame queued the buffer (`drew_own` 12 of 12, `q_rt` 0), and the
 reveal's buffer came *before* native's own (26.5 against 39.2 simple, 32.4 against 82.1 heavy).
 
-**But the kit's own validity gate prints "R1: NO VERDICT", and that is reported as it is.** On every
+**The kit's own validity gate prints "R1: NO VERDICT", and that is reported as it is.** On every
 guest arm, the identity check (the trace's click → composed within 2 ms of the bench's, on 10 of 12
 opens) failed: 0 of 12 on all but `heavy-reveal` (1 of 12), and again on the rerun of both judged arms
-(0 of 12). The difference is a constant 2.3–4.4 ms (the trace's is longer) on every open, **including
-the arms with the reveal off** (`simple-off` 2.8–4.4; `heavy-off`'s medians 56 against 52). So it does not come from the
-reveal, and a rerun cannot change it. What the bar reads (the reveal's own frame, its buffer, its
-`Record View#draw()`) is found by markers inside the open's window and does not use `ec`; but the gate
-exists so that the trace's open is the bench's, and by the kit's rule the two idle arms do not count.
-This is the dry run's emulator tolerance (0.6 ms offset there) meeting a slower phone: the trace's
-click is the start of the first `zl:sendEvent` slice, the bench's is the guest's own clock in whole ms.
-That explanation is **inferred, not shown**. **The owner decides** whether the verdict above stands
-with the gate waived for a method offset of this size, or the gate is re-based and the arms are
-re-judged (the stored traces allow that without another run).
+(0 of 12). The difference is always positive, **2.0–5.4 ms** over all opens of all guest arms (a
+constant of 2.3–4.4 on most; `heavy-reveal` has the 2.0 and the 5.4), **including the arms with the
+reveal off** (`simple-off` 2.8–4.2). So it does not come from the reveal, and a rerun cannot change it.
+What the bar reads (the reveal's own frame, its buffer, its `Record View#draw()`) is found by markers
+inside the open's window and does not use `ec`; but the gate exists so that the trace's open is the
+bench's, and by the kit's rule ("When an arm counts", README) the two idle arms do not count.
+
+**The cause is the check's definition, not the arms.** The two spans measure different things. The
+trace's `ec` runs from the start of the first `zl:sendEvent` slice to the start of the first
+`zl:composed` slice, so it **includes the bridge crossings**; the bench's `composed − click` is taken
+inside the guest and does not:
+- The trace's start is when the host begins the `sendEvent` call (`ThreewayActivity.kt:1083–1087`,
+  `callStart` opens the `zl:` slice). That is before the event is encoded, enters QuickJS, is decoded and
+  reaches the click lambda; the guest marks `click` only inside that lambda (`ThreewayScreens.kt:151`).
+- The trace's end is when the host receives the guest's `composed` call. The guest marks `composed`
+  earlier and then builds the JSON of pending marks and encodes the call (`Main.kt:170–177`).
+- The kit assumed the two agree "within about 1 ms" (`measure.sql:112–113`); that came from the emulator.
+
+So the offset is always positive and scales with QuickJS's speed (about 0.5 ms on the emulator, where
+`ec` is about 8 ms; about 3.3 ms on the A12, where `ec` is about 45 ms). It fits the data: positive on all
+guest opens (8 guest arms and the 2 rerun arms, 14 opens each; the review counted 168, the stored files give 140), the same with the reveal off, on or idle, with or
+without the ripple, and within an arm every open sits within about ±1.1 ms of the arm's own median
+offset while `ec` itself ranges from 35 to 164 ms (a wrongly matched event would be a frame or more
+away). **This is shown from the code and the pattern of the data, not confirmed by a trace query:** the
+stored summaries do not hold `zl:sendEvent`'s own duration per open, and the traces (kept in scratch)
+have not been queried for it. One query on them would confirm it. An earlier version of this record
+blamed the guest's whole-ms clock; that cannot be it, because truncating two whole-ms marks errs by −1
+to +1 ms around zero and cannot give an always-positive 3 ms.
+
+**The owner rules** on the check; a re-based check is proposed in the next subsection.
+
+#### Validity check re-based after the run (proposed; owner to accept or reject)
+
+This is a proposal made **after** the run, from the stored files. It changes the check only; no reading,
+threshold or arm is changed. The rule, stated before it is applied:
+
+1. Per open, the offset (trace `ec` − bench `composed_click`) minus the arm's median offset is within
+   ±2 ms on at least 10 of opens 3–14.
+2. The arm's median offset is between 0 and 8.3 ms (half a vsync).
+3. The host-side marker agreement: the trace's `bench:drawn` against the bench's `drawn` within about
+   0.5 ms, and the trace's `r1:revealDrawn` after the bench's `revealDrawn` by the measure-and-layout time.
+
+Computed from the stored `*.check.txt` (rules 1 and 2) and the stored `*.q3.txt` and `*.bench.txt`
+(rule 3), opens 3–14 (the review's figures re-derived, not copied):
+
+| Guest arm | (1) opens within ±2 of the median | median offset (ms) | offset range, opens 3–14 | (2) |
+|---|---|---|---|---|
+| `simple-off` | 12 / 12 | 3.7 | 2.8–4.2 | pass |
+| `simple-reveal` | 12 / 12 | 3.2 | 2.4–4.3 | pass |
+| `simple-reveal-idle` | 12 / 12 | 3.55 | 2.7–4.4 | pass |
+| `heavy-off` | 12 / 12 | 3.75 | 2.8–4.1 | pass |
+| `heavy-reveal` | **11 / 12** (open 4: 5.4, 2.1 from the median 3.3) | 3.3 | 2.0–5.4 | pass |
+| `heavy-reveal-idle` | 12 / 12 | 2.95 | 2.3–3.7 | pass |
+| `simple-reveal-idle-noripple` | 12 / 12 | 3.15 | 2.4–4.3 | pass |
+| `heavy-reveal-idle-noripple` | 12 / 12 | 3.25 | 2.3–4.1 | pass |
+| rerun `simple-reveal-idle` | 12 / 12 | 3.6 | 2.5–4.1 | pass |
+| rerun `heavy-reveal-idle` | 12 / 12 | 3.15 | 2.5–3.7 | pass |
+
+Every arm passes (1) and (2): all medians are 2.95–3.75 ms, all within 0–8.3. Only `heavy-reveal` (not a
+judged arm) is below 12 of 12. (The native arms have no guest step and are not checked.)
+
+Rule (3), on the six arms with the ripple (off, reveal, idle, both sizes; the rerun and the no-ripple
+arms were not computed here):
+- **`bench:drawn` against the bench's `drawn`:** read by eye on opens 3–14 of the six arms, the
+  differences are −0.7 to +1.3 ms; the largest are 1.3 (`simple-reveal` open 14) and 1.2
+  (`heavy-reveal` open 10); the rest are under 1 ms, in either sign. The bench's clock is whole-ms, so a per-open "within about 0.5" is too tight to
+  hold on every open; the review's "about 0.5 ms (one open 2.0)" was not reproduced as stated. If the
+  owner accepts this rule, the tolerance should read "within 1.5 ms" (the whole-ms quantum plus the
+  marker's own cost); **that is a second post-run choice and is flagged as one.**
+- **`r1:revealDrawn` after the bench's by the measure-and-layout time:** median gap against the
+  arm's `ml_ms` median: `simple-reveal-idle` 1.9 against 2.0; `simple-reveal` 10.7 against 10.6;
+  `heavy-reveal-idle` 3.25 against 3.3; `heavy-reveal` 24.55 against 24.8. It agrees on all four.
+
+So the trace's open is the bench's open on the markers the bar reads, and the offset is a constant that
+the check's definition adds.
+
+**Worst case: could the offset change either reading?** The bar never reads `ec` or the guest's clock.
+Even so, add the largest offset seen on any arm, **5.4 ms** (the judged arms' largest is 4.4), to the
+reveal (re-derived from the printed medians):
+
+| | Reading | Reveal + 5.4 | Limit (native + 16.7) | Margin (was) |
+|---|---|---|---|---|
+| simple | (a) first draw | 18.4 | 35.7 | 17.3 (22.7) |
+| simple | (b) `q_drew` | 31.9 | 55.9 | 24.0 (29.4) |
+| heavy | (a) first draw | 17.4 | 41.2 | 23.8 (29.2) |
+| heavy | (b) `q_drew` | 37.8 | 98.8 | 61.0 (66.4) |
+
+Doubled (+5.4 on the reveal **and** −5.4 on native) the margins are still 11.9, 18.6, 18.4 and 55.6 ms;
+the rerun also passes both sizes. The offset cannot get into bar 2 (`Record View#draw()` under 10 ms): it
+is one main-thread slice's duration. That bar's real exposure is the heavy margin, 8.2 against 10; every
+judged open is under 10 (heavy opens 3–14: 6.7–9.6, rerun 6.7–9.2; the review's figures, not re-derived here).
+
+**Under a validity check changed after the run, with no reading, threshold or arm changed, R1 passes.
+The owner rules.** The pre-registered kit's outcome stays NO VERDICT. Applying a re-based check is a
+change to a pre-registered gate, made after seeing the data; waiving the check would drop the guard the
+next arms (R2, the (B) arms) need, and a rerun with the same kit fails the same way.
 
 **What the run shows**
 
@@ -4372,12 +4463,18 @@ re-judged (the stored traces allow that without another run).
    the idle arm; the arms without it are reported). Bar 1's two readings hold with or without it
    (simple 34.5, heavy 54.7 for the buffer). Measure and layout inside that draw: 2.0 / 10.6 simple,
    3.3 / 24.8 heavy.
-3. **The emulator's lost frame did not happen on the A12.** q4 over all 14 opens of every one of the
-   12 arms: no RenderThread-only buffer in the 200 ms before the DOWN, none in the tap's hold, and the
-   first frame after the UP queued a buffer in every open, on native, `off`, reveal, and idle arms
-   alike, with the ripple on. The dry run's mechanism (a ripple animation holding the vsync) was found
-   on an Android 15 emulator and is not seen on this Android 12 phone. The no-ripple arms are therefore
-   close to their ripple twins (below).
+3. **The emulator's lost first frame did not appear on the A12, but its mechanism does show up, after
+   the UP, in the arms without the reveal.** q4 over all 14 opens of every arm: no RenderThread-only
+   buffer in the 200 ms before the DOWN, none in the tap's hold, and the first frame after the UP queued
+   a buffer in every open, on native, `off`, reveal and idle arms alike, with the ripple on. So the loss
+   of the *first frame after the UP*, which the dry run found on an Android 15 emulator, is not seen on
+   this Android 12 phone. But in `simple-off` and `heavy-off` the guest's live detail frame was queued
+   by its own vsync in only **2 of 12** opens (`drew_own`); a RenderThread-only frame queued it in
+   **5 of 12** (simple) and **9 of 12** (heavy) (`q_rt`), and q4's `rt_post` (RenderThread-only buffers
+   in the 50 ms after the UP) is 1–2 on every open of both off arms. (Re-derived from the stored
+   `*.q2.txt` and `*.q4.txt`.) The reveal arms and native are 12 of 12 own-vsync with `q_rt` 0, so the
+   readings and the bar are unaffected; the ripple's RenderThread frames after the UP are real on this
+   phone, in the arms the bar does not judge. The no-ripple arms are close to their ripple twins (below).
 4. **The reveal adds to the guest's own step after the click** (appendix B assumed nothing): click →
    composed, bench (trace `ec`), off / reveal / reveal + idle: simple 39.5 / 46 / 43.5 (43.5 / 49.2 /
    46.7), heavy 52 / 87 / 63.5 (56 / 89.6 / 66.6). With the idle measure that is +4 ms on simple and
@@ -4386,7 +4483,9 @@ re-judged (the stored traces allow that without another run).
    queue, not shown here. The rerun: 43 / 45.8 (simple), 63 / 66.2 (heavy). The guest's own detail
    drawn (bench `drawn`), off / reveal / idle: simple 62.5 / 66 / 66.5, heavy 114 / 111.5 / 90.5.
 
-**The tables.** `rv` is the reveal's frame, `nat` native's (`drawn`). Opens 3–14, n = 12 for every cell shown.
+**The tables.** `rv` is the reveal's frame, `nat` native's (`drawn`). Opens 3–14, n = 12 for every cell
+shown except `native-heavy`'s `sf_end` (n = 11: one open without a display frame; the same for
+`simple-off` and `heavy-off`).
 
 | Arm | first draw | `q_drew` | `rec_ms` (`ml_ms`) | `row_end` | `sf_end` | `q_vs` | main `f_end` |
 |---|---|---|---|---|---|---|---|
@@ -4402,8 +4501,9 @@ The guest's own live detail (`drawn` in the guest arms), `q_drew` / `sf_end`: `s
 `heavy-reveal` 129.7 / 163.7, `heavy-reveal-idle` 104.7 / 135.8. Per-open vsync reading, the reveal's
 buffer no later than the vsync after native's own (`q_vs` ≤ native's + 1): 12 of 12 in all four reveal
 arms. Counts: `count.opens` 14 everywhere, reveals 12 of 12 (trace and bench), lowest `nextHit` 1,
-every results file 14 opens, `{"done":true}`, no timeout; every guest arm's `drew_own` 12 of 12 and
-`q_rt` 0.
+every results file 14 opens, `{"done":true}`, no timeout; `drew_own` 12 of 12 and `q_rt` 0 in native,
+every reveal and idle arm (and the no-ripple ones and the rerun), **but not `simple-off` (`drew_own`
+2 of 12, `q_rt` 5) and `heavy-off` (2 of 12, `q_rt` 9)**: point 3.
 
 **The phone state per arm** (all 8 + 4 arms: **unplugged**, AC and USB off, thermal status 0; level %
 at the arm's start, battery temperature °C, CPU idle of the 800% in `top`, up 6 d 15 h–16 h). The
@@ -4418,16 +4518,21 @@ Galaxy A12, Android 12, 17:57–18:12 IST, 18:29–18:36 for the rerun:
 | `native-simple-noripple` | 56 | 23.4 | 556 | `native-heavy-noripple` | 56 | 23.5 | 551 |
 | `simple-reveal-idle-noripple` | 56 | 23.3 | 511 | `heavy-reveal-idle-noripple` | 55 | 23.5 | 457 |
 
-The rerun arms ran at 54%, 22.5–22.7 °C, thermal 0. The battery never fell below 54%. The first arm,
+The rerun arms ran at 54%, 22.5–22.7 °C, thermal 0. The battery never fell below 54%. **The phone was
+busy:** the state files show 436–565 of 800% idle (about 55–70% idle), against R0's recorded 96–97%. The
+bar compares arms within the one session, so the run stays valid, but the absolute numbers are not
+comparable with R0's or C11's. The first arm,
 `native-simple`, had the lowest idle (436 against 454–556 for the rest); its `q_drew` is within 1.1 ms
 of `native-simple-noripple`'s (38.1, idle 556), so that did not visibly move native's reading.
 
 **Step 4b, the no-ripple diagnostic** (it never changes the verdict). The reveal's frame without the
 theme ripple, against its native without it: simple first draw 12 against 17, `q_drew` 25.1 against
 38.1, `rec_ms` 4.3 (< 10), `q_vs` 1 against 2.5; heavy first draw 12 against 23.5, `q_drew` 29.9 against
-84, `rec_ms` 7.1, `q_vs` 2 against 5. Both would meet the bar by the same margins. The ripple's effect
-on the reveal's frame is 0.4–2.5 ms of `q_drew` (26.5 → 25.1, 32.4 → 29.9) and 0.1–1.1 ms of
-`rec_ms`; the first frame after the UP queued its buffer with or without it. The step-4b arms'
+84, `rec_ms` 7.1, `q_vs` 2 against 5. Both would meet the bar by the same margins. Without the ripple
+the reveal's frame is 1.4–2.5 ms earlier in `q_drew` (26.5 → 25.1, 32.4 → 29.9) and 0.2–1.1 ms shorter
+in `rec_ms` (4.5 → 4.3, 8.2 → 7.1). That is a difference between arms, not an isolated effect of the
+ripple: the no-ripple arms ran about 10 minutes later and native moved too (39.2 → 38.1, 82.1 → 84).
+The first frame after the UP queued its buffer with or without it. The step-4b arms'
 identity check fails like the others (0 of 12). The README's other controls (`simple-reveal-noripple`,
 `simple-off-noripple`, `simple-listen`) were not in the eight or in step 4b and were not run.
 
@@ -4435,7 +4540,7 @@ identity check fails like the others (0 of 12). The README's other controls (`si
 [`a12-2026-11-28/`](nf5-r1/a12-2026-11-28/), copied here):
 
 ```
-built: 2026-11-28 17:56:23 by the maintainer, sample's own wrapper (Gradle 9.0.0), --no-daemon -PkeliverComposePrototype -Dmaven.repo.local=<scratch m2>
+built: 2026-11-28 17:56:23 by the maintainer, sample's own wrapper (Gradle 9.0.0), --no-daemon -PkeliverComposePrototype -Dmaven.repo.local=<scratch>/m2
 commit: e9dcfc7d6163bee900f8544478374d6ceb212e7f (origin/main e9dcfc7d6; m2 published from this worktree)
 local change for the build only: sample/settings.gradle.kts without the two maven.pkg.jetbrains.space lines (host gone, NXDOMAIN; PR #335). Restored after the build.
 host-android-benchmark.apk: 26078199 bytes, sha256 06226f540dc263633d5822a98a1658137fd2f4a6182eec0574d14175b4486a01
@@ -4451,20 +4556,41 @@ root's 9.7.1), with the sample's two dead `maven.pkg.jetbrains.space` lines remo
 
 **Unverified, and caveats**
 - **The identity gate** (above): the two judged arms do not count by the kit's rule, twice. The bar's
-  readings are as printed. Whether the offset is the trace's slice start against the guest's whole-ms
-  clock is inferred.
+  readings are as printed. That the offset is the bridge crossings is shown from the code, not
+  confirmed by a trace query of `zl:sendEvent`'s duration.
 - **The idle reading is the driver's.** The driver's tap blocks the main thread for 40 ms and lifts in
-  one message, so the first frame after the UP starts 6–8 ms after it on both sides (q4's `f1_start`, 6–11 ms in the one arm read).
+  one message, so the first frame after the UP starts after it: 6.1–7.3 ms on native, 7.8–10.3 ms
+  (simple) and 6.8–9.4 ms (heavy) on the reveal-idle arms (q4's `f1_start`).
   With a finger the main thread is free; this is not measured here.
-- **One session, one phone, on battery** (54–57%), with no charger: R0 and the C11 reference ran on
-  the charger, so the numbers here are not comparable across those (native runs in the same session, so
-  the bar does not cross power states).
+- **One session, one phone, on battery** (54–57%), with no charger, **and a busy phone** (55–70% CPU
+  idle, against R0's 96–97%): R0 and the C11 reference ran on the charger and idle, so the numbers here
+  are not comparable across those (native runs in the same session, so the bar does not cross power
+  states or load).
 - **The prepared detail is the predicted item** (the driver's next row is known); a real tap on any
   other row is not R1. No shell, token, answer or cancel, no back handling.
 - **The rerun covers the two judged arms only.** The other arms that fail the gate were not rerun
   (the failure is constant across them).
-- The emulator's lost frame (point 3) is not reproduced on this phone; whether it appears with a
-  finger's tap or on Android 15 hardware is not measured.
-- The 12 traces' and 2 rerun traces' sha256 were not recorded (the shell does not allow `shasum`
-  over many paths); they sit in the scratch directory with their results.
+- The emulator's lost first frame after the UP (point 3) is not reproduced on this phone; whether it
+  appears with a finger's tap or on Android 15 hardware is not measured. The RenderThread-only frames
+  after the UP do appear, in the off arms.
 - `sf_end` has n = 11 (one open without a display frame) on `native-heavy`, `simple-off` and `heavy-off`.
+
+**Trace sha256** (`shasum -a 256`, recorded 2026-11-28 after the review; the traces sit in the session's
+scratch directory with their results; `r1/` = the 12 arms of steps 3 and 4b, `rerun/` = the rerun):
+
+```
+20be39cc61380f91e3f2894f7b41e7f7055671d85f031952a4f788cd0b213827  r1/nf5r1-heavy-off.pftrace
+f28632b20ff508a99f0a5d435ebe179347eeeb3d2a1b47338ec7b25dc4b6a140  r1/nf5r1-heavy-reveal-idle-noripple.pftrace
+207a20406f9eac71dc442cea1813b5f081ecaaa2c6957d66c9390a66992c4dee  r1/nf5r1-heavy-reveal-idle.pftrace
+1478b6fbe2d906ceda9613b84f68b2cc1d408266491000b8190e037739483e68  r1/nf5r1-heavy-reveal.pftrace
+401093c6b7a46302e8022be449acc41bcc632c0908aa6bbd3b55ae594a8538b9  r1/nf5r1-native-heavy-noripple.pftrace
+73f025915dadd0869292be68705fb73754b6b9d39978ea81d108f15de9c18e75  r1/nf5r1-native-heavy.pftrace
+975b9696394becace80b67a09761e3da2aa9138f62c824e5f6f4b30e85567c20  r1/nf5r1-native-simple-noripple.pftrace
+bafd47f8c98a82b8b45c2bab88e64c54e31841e40e5561eddc012cc5b7cd7833  r1/nf5r1-native-simple.pftrace
+6ef507cba2611a319b64419ab1d0a8e8a3c2573d3dd8f79e79aa5ed8d91fdf54  r1/nf5r1-simple-off.pftrace
+6561b705dac6fd4df4b5afbed86ceb272540583d3a4c9f0af0f2b857b4465184  r1/nf5r1-simple-reveal-idle-noripple.pftrace
+e9df4bd4d49e992df66e6b83eb8674867a65c563ea9f04ce3654e07e3e03f552  r1/nf5r1-simple-reveal-idle.pftrace
+8f4186e4f35f106a32b6c43a6aa0ef7f06012a1f3b4031add5050e83384c0476  r1/nf5r1-simple-reveal.pftrace
+7222c06457b97b83938c72e9d01f7fae2c9a0a23cec1403087858784aaacde8e  rerun/nf5r1-heavy-reveal-idle.pftrace
+214b9bbc21927c7dcb27119e4e65f2a3b8faed809356abc911d11ea9661a9d93  rerun/nf5r1-simple-reveal-idle.pftrace
+```
