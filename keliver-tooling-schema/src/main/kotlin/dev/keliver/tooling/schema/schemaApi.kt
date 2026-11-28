@@ -70,6 +70,12 @@ public interface Widget {
 
   public val internalComposable: Boolean
 
+  /** `@Replayable`: this widget may be drawn from a stored frame (NF5, [FramePropertyRule]). */
+  public val replayable: Boolean get() = false
+
+  /** `@Scrolls`: this widget scrolls, so a frame is recorded only at its origin (NF5). */
+  public val scrolls: Boolean get() = false
+
   public sealed interface Trait {
     public val name: String
     public val documentation: String?
@@ -81,6 +87,16 @@ public interface Widget {
 
   public interface Property : Trait {
     public val type: FqType
+
+    /** This property's frame-rule annotation, or null (NF5, [FramePropertyRule]). */
+    public val frameRule: FramePropertyRule? get() = null
+
+    /**
+     * Whether this property's value may carry a String (text or a URL): its type is or contains a
+     * String, as far as the parser could see. Set by the parser for the properties of a
+     * `@Replayable` widget and for every property with a [frameRule]; false otherwise.
+     */
+    public val containsString: Boolean get() = false
   }
 
   public interface Event : Trait {
@@ -112,6 +128,12 @@ public interface Modifier {
   /** Non-empty list for a 'data class' [type] or empty list for 'object' [type]. */
   public val properties: List<Property>
 
+  /** `@Replayable`: this modifier may be drawn from a stored frame (NF5, [FramePropertyRule]). */
+  public val replayable: Boolean get() = false
+
+  /** `@Scrolls`: this modifier makes its node scroll, so a frame is recorded only at its origin (NF5). */
+  public val scrolls: Boolean get() = false
+
   public interface Property {
     public val name: String
     public val documentation: String?
@@ -121,7 +143,31 @@ public interface Modifier {
 
     /** Non-null if this property is deprecated. */
     public val deprecation: Deprecation?
+
+    /** This property's frame-rule annotation, or null (NF5, [FramePropertyRule]). */
+    public val frameRule: FramePropertyRule? get() = null
+
+    /** As [Widget.Property.containsString], for the properties of a `@Replayable` modifier. */
+    public val containsString: Boolean get() = false
   }
+}
+
+/**
+ * NF5's property annotations (`dev.keliver.schema`, docs/SHOW_BEFORE_COMPUTE.md 2.4): what a stored
+ * first frame does with a property's value. A property carries at most one.
+ */
+public enum class FramePropertyRule {
+  /** `@NeverCached`: never stored, at either content level. */
+  NeverCached,
+
+  /** `@BlocksFrameWhenTrue` (a `Boolean`): nothing is recorded while it is true. */
+  BlocksFrameWhenTrue,
+
+  /** `@StyleToken` (a String-bearing type): its strings are style or asset codes, kept by `Shell`. */
+  StyleToken,
+
+  /** `@NotData` (a type without a String): layout or style, left off the review list. */
+  NotData,
 }
 
 /** A [ProtocolSchema] and its dependencies. */

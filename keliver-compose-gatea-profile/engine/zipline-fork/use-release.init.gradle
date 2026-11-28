@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Keliver contributors. Licensed under the Apache License, Version 2.0.
 //
-// NF2 step 4: points a Keliver build at the fork's release, dev.keliver.zipline:<name>:1.28.0-keliver.1
+// NF2 step 4: points a Keliver build at the fork's release, dev.keliver.zipline:<name>:<RELEASE_VERSION>
 // (RELEASE_GROUP and RELEASE_VERSION, read from apply.sh next to this script), without changing the
 // build, found in the Maven repository `apply.sh release` wrote. The plugin then resolves the fork's
 // Kotlin compiler plugin and CLI itself (by its own group), and keeps the id `app.cash.zipline`, so

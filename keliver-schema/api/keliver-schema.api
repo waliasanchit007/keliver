@@ -1,3 +1,6 @@
+public abstract interface annotation class dev/keliver/schema/BlocksFrameWhenTrue : java/lang/annotation/Annotation {
+}
+
 public abstract interface annotation class dev/keliver/schema/Children : java/lang/annotation/Annotation {
 	public abstract fun tag ()I
 }
@@ -7,8 +10,17 @@ public abstract interface annotation class dev/keliver/schema/Modifier : java/la
 	public abstract fun tag ()I
 }
 
+public abstract interface annotation class dev/keliver/schema/NeverCached : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/keliver/schema/NotData : java/lang/annotation/Annotation {
+}
+
 public abstract interface annotation class dev/keliver/schema/Property : java/lang/annotation/Annotation {
 	public abstract fun tag ()I
+}
+
+public abstract interface annotation class dev/keliver/schema/Replayable : java/lang/annotation/Annotation {
 }
 
 public abstract interface annotation class dev/keliver/schema/Schema : java/lang/annotation/Annotation {
@@ -21,6 +33,12 @@ public abstract interface annotation class dev/keliver/schema/Schema : java/lang
 public abstract interface annotation class dev/keliver/schema/Schema$Dependency : java/lang/annotation/Annotation {
 	public abstract fun schema ()Ljava/lang/Class;
 	public abstract fun tag ()I
+}
+
+public abstract interface annotation class dev/keliver/schema/Scrolls : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/keliver/schema/StyleToken : java/lang/annotation/Annotation {
 }
 
 public abstract interface annotation class dev/keliver/schema/Widget : java/lang/annotation/Annotation {

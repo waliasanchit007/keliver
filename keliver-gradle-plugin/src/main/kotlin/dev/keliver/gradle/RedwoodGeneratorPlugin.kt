@@ -113,6 +113,10 @@ public abstract class RedwoodGeneratorPlugin(
       it.schemaType.set(extension.type)
       it.classpath.from(project.files(schemaConfiguration))
     }
+    if (strategy == ProtocolHost) {
+      // NF5's frame rules: the review list of the values a Shell frame keeps (FrameRulesExtension).
+      project.registerFrameRulesTasks(extension, project.files(toolingConfiguration), project.files(schemaConfiguration))
+    }
 
     var hasMpp = false
     project.plugins.withId("org.jetbrains.kotlin.multiplatform") {

@@ -26,4 +26,7 @@ kotlin {
 redwoodSchema {
   source = projects.keliverComposeGateaSchema
   type = 'dev.keliver.compose.gatea.KeliverComposeGateA'
+  // NF5 A1: the review list (KeliverComposeGateAFrameRules.review.txt, the values a Shell frame
+  // keeps) is checked in and must match; regenerate it with redwoodFrameRulesGenerate.
+  frameRules { strict = true }
 }

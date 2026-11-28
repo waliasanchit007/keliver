@@ -1,0 +1,30 @@
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'dev.keliver.generator.protocol.host'
+
+kotlin {
+  jvm()
+
+  sourceSets {
+    commonMain {
+      dependencies {
+        api(project(':widget'))
+      }
+    }
+  }
+
+  targets.all {
+    compilations.all {
+      kotlinOptions {
+        // Ensure the generated FrameRules produce no warnings.
+        allWarningsAsErrors = true
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = project(':')
+  type = 'example.frames.Frames'
+  frameRules { strict = true }
+}
