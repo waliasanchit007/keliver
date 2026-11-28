@@ -46,6 +46,7 @@ import dev.keliver.schema.Widget
     ExtraLazyItem::class,
     ExtraRetained::class,
     ExtraRetainedEntry::class,
+    ExtraRemoteObject::class,
     GenPadding1::class,
     GenPadding2::class,
     GenPadding3::class,

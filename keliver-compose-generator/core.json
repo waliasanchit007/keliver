@@ -110,7 +110,8 @@
     "AutoMirrored.Filled.ArrowBack", "AutoMirrored.Filled.TrendingUp", "Filled.ChevronRight", "Filled.Close",
     "Filled.History", "Filled.Receipt", "Filled.Warning", "Filled.KeyboardArrowRight", "Filled.Search", "Filled.Info"
   ],
-  "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry"],
+  "extras": ["Shimmer", "LazyItem", "Retained", "RetainedEntry", "RemoteObject"],
+  "remoteObjects": ["androidx.compose.foundation.pager.PagerState"],
   "scrollContainers": [
     "androidx.compose.foundation.horizontalScroll(state,enabled,flingBehavior,reverseScrolling)",
     "androidx.compose.foundation.horizontalScroll(state,overscrollEffect,enabled,flingBehavior,reverseScrolling)",

@@ -47,7 +47,9 @@ fun loadConfig(file: File): Config {
     base = o["base"]?.jsonPrimitive?.content,
     sharedRuntime = o["sharedRuntime"]?.jsonPrimitive?.boolean ?: false,
     frameRules = o["frameRules"]?.jsonObject?.let(::loadFrameRules),
+    remoteObjects = strings("remoteObjects"),
   ).also { c ->
+    require(c.base == null || c.remoteObjects.isEmpty()) { "${c.group}: a group with a base has widgets only; it may not have remoteObjects" }
     val unknown = c.animated.filter { it !in c.declarations }
     require(unknown.isEmpty()) { "animated: not in declarations: $unknown" }
     val unknownScroll = c.scrollContainers.filter { it !in c.declarations }
@@ -78,7 +80,14 @@ class Output(
   val lock: Lock,
   /** ED0: the editor canvas's interpreter (portal-compose-render), relative path → text. */
   val editorRender: Map<String, String> = emptyMap(),
+  /** MS4-43 (G2): the remote objects' guest proxies and host dispatchers (`GeneratedRemote.kt`), and what each class got. */
+  val remoteGuest: Map<String, String> = emptyMap(),
+  val remoteHost: Map<String, String> = emptyMap(),
+  val remoteClasses: List<RemoteObjectEmitter.ClassReport> = emptyList(),
 )
+
+/** The file a group's remote objects are generated into, in its guest and host modules (MS4-43, G2). */
+const val REMOTE_FILE = "GeneratedRemote.kt"
 
 /** The package of the editor canvas's generated interpreter (ED0, docs/ED0_SPIKE.md). */
 const val EDITOR_RENDER_PACKAGE = "dev.keliver.portal.compose.render"
@@ -119,7 +128,12 @@ fun generate(config: Config, oldLock: Lock, classpath: List<File>, sources: List
   }
   FrameRuleEmitter(config, plans.filterIsInstance<Plan.Generated>()).checkExceptions()
   val e = Emitter(config, plans, factories, defaults, api::supertypes)
-  return Output(mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)))
+  // Remote objects (G2) have their own emitter, which appends its members to the same lock.
+  val remote = if (config.remoteObjects.isEmpty()) null else RemoteObjectEmitter(GenericIndex(classpath), src, config, lock).generate(config.remoteObjects)
+  return Output(
+    mapOf(e.schema()), e.guest(), mapOf(e.host()), e.values(), e.editor(), lock.build(), mapOf(e.editorRender(EDITOR_RENDER_PACKAGE)),
+    remote?.guest.orEmpty(), remote?.host.orEmpty(), remote?.classes.orEmpty(),
+  )
 }
 
 fun main(argv: Array<String>) {
@@ -172,20 +186,21 @@ fun runGroup(args: List<String>): List<String> {
   // (`Generated.kt`); the values root is the owner group's (`GeneratedDefaults.kt`, never written by
   // another group's run); the editor-render root is shared by every group, so a group owns only its
   // `GeneratedEditorRender_<Group>.kt` there (the dispatcher `Generated.kt` is the dispatcher's).
-  class GroupRoot(val root: File, val files: Map<String, String>, val ownFileName: String)
+  // A group's remote objects (G2) are `GeneratedRemote.kt` beside `Generated.kt` in its guest and host roots.
+  class GroupRoot(val root: File, val files: Map<String, String>, val ownFileNames: Set<String>)
   val roots = listOf(
-    GroupRoot(File(arg("--out-schema")), out.schema, "Generated.kt"),
-    GroupRoot(File(arg("--out-guest")), out.guest, "Generated.kt"),
-    GroupRoot(File(arg("--out-host")), out.host, "Generated.kt"),
-  ) + (if ("--out-values" in args) listOf(GroupRoot(File(arg("--out-values")), out.values, GENERATED_DEFAULTS)) else emptyList()) +
-    (if ("--out-editor-render" in args) listOf(GroupRoot(File(arg("--out-editor-render")), out.editorRender, editorRenderFile(config.group))) else emptyList())
+    GroupRoot(File(arg("--out-schema")), out.schema, setOf("Generated.kt")),
+    GroupRoot(File(arg("--out-guest")), out.guest + out.remoteGuest, setOf("Generated.kt", REMOTE_FILE)),
+    GroupRoot(File(arg("--out-host")), out.host + out.remoteHost, setOf("Generated.kt", REMOTE_FILE)),
+  ) + (if ("--out-values" in args) listOf(GroupRoot(File(arg("--out-values")), out.values, setOf(GENERATED_DEFAULTS))) else emptyList()) +
+    (if ("--out-editor-render" in args) listOf(GroupRoot(File(arg("--out-editor-render")), out.editorRender, setOf(editorRenderFile(config.group)))) else emptyList())
   val expected = buildMap {
     for (r in roots) for ((path, text) in r.files) put(File(r.root, path), text)
     put(File(arg("--out-editor")), out.editor)
     put(lockFile, lockJson.encodeToString(Lock.serializer(), out.lock) + "\n")
   }
   // One of this group's own files the generator no longer writes is stale; nothing else is looked at.
-  val stale = roots.flatMap { r -> r.root.walk().filter { it.name == r.ownFileName }.toList() }
+  val stale = roots.flatMap { r -> r.root.walk().filter { it.name in r.ownFileNames }.toList() }
     .filter { it !in expected }
 
   val problems = checkAppendOnly(oldLock, out.lock).toMutableList()

@@ -114,6 +114,7 @@ import dev.keliver.compose.core.modifier.GenSize2
 import dev.keliver.compose.core.modifier.GenVerticalScroll1
 import dev.keliver.compose.core.modifier.GenWidth1
 import dev.keliver.compose.core.widget.ExtraLazyItem
+import dev.keliver.compose.core.widget.ExtraRemoteObject
 import dev.keliver.compose.core.widget.ExtraRetained
 import dev.keliver.compose.core.widget.ExtraRetainedEntry
 import dev.keliver.compose.core.widget.ExtraShimmer
@@ -1241,6 +1242,7 @@ public class ComposeUiKeliverComposeCoreWidgetFactory : KeliverComposeCoreWidget
   override fun ExtraLazyItem(): ExtraLazyItem<@Composable (Modifier) -> Unit> = ComposeUiExtraLazyItem()
   override fun ExtraRetained(): ExtraRetained<@Composable (Modifier) -> Unit> = ComposeUiExtraRetained()
   override fun ExtraRetainedEntry(): ExtraRetainedEntry<@Composable (Modifier) -> Unit> = ComposeUiExtraRetainedEntry()
+  override fun ExtraRemoteObject(): ExtraRemoteObject<@Composable (Modifier) -> Unit> = ComposeUiExtraRemoteObject()
   override fun GenPadding1(value: @Composable (Modifier) -> Unit, modifier: GenPadding1) {}
   override fun GenPadding2(value: @Composable (Modifier) -> Unit, modifier: GenPadding2) {}
   override fun GenPadding3(value: @Composable (Modifier) -> Unit, modifier: GenPadding3) {}

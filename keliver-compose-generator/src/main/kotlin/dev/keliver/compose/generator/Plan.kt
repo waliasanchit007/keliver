@@ -87,6 +87,11 @@ class Config(
   val sharedRuntime: Boolean = false,
   /** NF5 A1: the group's frame rules, or null for none (FrameRules.kt). */
   val frameRules: FrameRulesConfig? = null,
+  /**
+   * MS4-43 (G2): host-owned state classes the group exposes as remote objects, each `fq` or
+   * `fq#<remember function>` (the factory defaults to `remember<Name>`). RemoteObjectEmit.kt.
+   */
+  val remoteObjects: List<String> = emptyList(),
 ) {
   /** The Compose versions read (for the schema's header), or null. */
   var input: String? = null

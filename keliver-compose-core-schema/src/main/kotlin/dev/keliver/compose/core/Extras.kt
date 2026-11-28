@@ -116,3 +116,18 @@ public data class ExtraRetainedEntry(
   @Property(2) val hostBack: Boolean,
   @Children(1) val content: GenBoxScope.() -> Unit,
 )
+
+/**
+ * The binding of one host-owned object to its guest proxy (MS4-43, G2; docs/COMPOSE_GENERIC_MECHANISMS.md
+ * section 1.2): [wire] is the proxy's property (its class, its factory arguments, the fields it has read
+ * and the commands it has sent), and the host answers with [onReport] (new field values, finished
+ * commands). The host creates the real state with its own `remember*` factory (so the state saves and
+ * restores itself), runs the commands on it and reports the observed fields from a `snapshotFlow`, at most
+ * once a frame. It draws nothing; the real state is published by the proxy's id to the host composition's
+ * `LocalRemoteObjects`, for the renderer of the widget that uses it. Structure only; screens never name it.
+ */
+@Widget(504)
+public data class ExtraRemoteObject(
+  @Property(1) val wire: dev.keliver.compose.remote.RemoteObjectWire,
+  @Property(2) val onReport: (dev.keliver.compose.remote.RemoteReport) -> Unit,
+)

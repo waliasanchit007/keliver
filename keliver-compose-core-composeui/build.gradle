@@ -108,7 +108,7 @@ tasks.withType(org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimu
 afterEvaluate {
   spotless {
     kotlin {
-      targetExclude("src/**/Generated.kt")
+      targetExclude("src/**/Generated.kt", "src/**/GeneratedRemote.kt")
     }
   }
 }

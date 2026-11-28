@@ -44,7 +44,7 @@ redwoodSchema {
 afterEvaluate {
   spotless {
     kotlin {
-      targetExclude("src/**/Generated.kt")
+      targetExclude("src/**/Generated.kt", "src/**/GeneratedRemote.kt")
     }
   }
 }

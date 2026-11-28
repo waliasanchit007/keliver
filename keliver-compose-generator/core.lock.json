@@ -1,6 +1,6 @@
 {
   "group": "core",
-  "level": 5,
+  "level": 6,
   "nextWidgetTag": 30,
   "nextModifierTag": 37,
   "widgets": {
@@ -1333,6 +1333,44 @@
         "titleContentColor": 4,
         "actionIconContentColor": 4,
         "subtitleContentColor": 4
+      }
+    }
+  },
+  "nextRemoteTag": 2,
+  "remotes": {
+    "androidx.compose.foundation.pager.PagerState": {
+      "tag": 1,
+      "name": "PagerState",
+      "params": {
+        "pageCount": 1,
+        "currentPage": 2,
+        "settledPage": 3,
+        "targetPage": 4,
+        "currentPageOffsetFraction": 5,
+        "isScrollInProgress": 6,
+        "canScrollForward": 7,
+        "canScrollBackward": 8,
+        "lastScrolledForward": 9,
+        "lastScrolledBackward": 10,
+        "scrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 11,
+        "requestScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 12,
+        "animateScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float,animationSpec:androidx.compose.animation.core.AnimationSpec<kotlin.Float>)": 13
+      },
+      "since": 6,
+      "wire": {
+        "pageCount": 6,
+        "currentPage": 6,
+        "settledPage": 6,
+        "targetPage": 6,
+        "currentPageOffsetFraction": 6,
+        "isScrollInProgress": 6,
+        "canScrollForward": 6,
+        "canScrollBackward": 6,
+        "lastScrolledForward": 6,
+        "lastScrolledBackward": 6,
+        "scrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 6,
+        "requestScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float)": 6,
+        "animateScrollToPage(page:kotlin.Int,pageOffsetFraction:kotlin.Float,animationSpec:androidx.compose.animation.core.AnimationSpec<kotlin.Float>)": 6
       }
     }
   }
