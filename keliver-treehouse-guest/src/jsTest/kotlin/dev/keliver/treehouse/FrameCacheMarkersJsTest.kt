@@ -14,27 +14,21 @@
  * limitations under the License.
  */
 @file:OptIn(RedwoodCodegenApi::class, ExperimentalKeliverHostFeaturesApi::class)
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 
 package dev.keliver.treehouse
 
-import androidx.compose.runtime.AbstractApplier
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Composition
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Recomposer
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.CachedFrameMarker
+import dev.keliver.compose.CachedMarker
 import dev.keliver.compose.ExperimentalKeliverHostFeaturesApi
 import dev.keliver.compose.FrameCachePolicy
 import dev.keliver.compose.FrameContent
-import dev.keliver.compose.KeliverHostFeatures
-import dev.keliver.compose.LocalHostFeatures
-import dev.keliver.compose.cached
-import dev.keliver.compose.cachedFrame
-import dev.keliver.compose.notCached
+import dev.keliver.compose.NotCachedMarker
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.FrameMarks
 import dev.keliver.protocol.Id
@@ -45,7 +39,6 @@ import dev.keliver.protocol.guest.GuestProtocolAdapter
 import dev.keliver.protocol.guest.ProtocolMismatchHandler
 import dev.keliver.protocol.guest.ProtocolWidgetSystemFactory
 import dev.keliver.widget.WidgetSystem
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.hours
 import kotlinx.serialization.SerializationStrategy
@@ -56,6 +49,9 @@ import kotlinx.serialization.json.decodeFromDynamic
  * H1 of review-334: on JavaScript the guest's adapter is [FastGuestProtocolAdapter], whose generated
  * modifier function throws for anything that is not a schema element. The markers must be written by
  * it, with the same JSON as `FrameCacheMarkersTest` asserts for the default adapter.
+ *
+ * The markers are built directly (their constructors are internal to keliver-compose): whether the
+ * `@Composable` modifiers emit them is that module's and keliver-protocol-guest's test.
  */
 class FrameCacheMarkersJsTest {
   private object Plain : Modifier.UnscopedElement {
@@ -80,26 +76,11 @@ class FrameCacheMarkersJsTest {
     } as Pair<ModifierTag, SerializationStrategy<T>?>
   }
 
-  private fun modifiers(features: Set<String>): List<Modifier> {
-    val result = mutableListOf<Modifier>()
-    val recomposer = Recomposer(EmptyCoroutineContext)
-    val composition = Composition(NoOpApplier, recomposer)
-    composition.setContent {
-      CompositionLocalProvider(LocalHostFeatures provides features) {
-        content(result)
-      }
-    }
-    composition.dispose()
-    recomposer.close()
-    return result
-  }
-
-  @Composable
-  private fun content(result: MutableList<Modifier>) {
-    result += Plain.cachedFrame(FrameCachePolicy(FrameContent.Shell, 12.hours), ready = true, paneTitle = "Orders")
-    result += Plain.cached()
-    result += Plain.notCached()
-  }
+  private val markers: List<Modifier> = listOf(
+    Plain.then(CachedFrameMarker(FrameCachePolicy(FrameContent.Shell, 12.hours), ready = true, paneTitle = "Orders")),
+    Plain.then(CachedMarker),
+    Plain.then(NotCachedMarker),
+  )
 
   /** The `elements` of each modifier change [FastGuestProtocolAdapter] sends, as JSON, and the decoded changes. */
   private fun send(modifiers: List<Modifier>): Pair<List<String>, List<Change>> {
@@ -130,8 +111,8 @@ class FrameCacheMarkersJsTest {
     return elements to decoded
   }
 
-  @Test fun withTheFeatureTheFastAdapterWritesTheSameMarkersAsTheDefaultOne() {
-    val (elements, _) = send(modifiers(setOf(KeliverHostFeatures.CACHED_FRAME_1)))
+  @Test fun theFastAdapterWritesTheSameMarkersAsTheDefaultOne() {
+    val (elements, _) = send(markers)
 
     // The strings of FrameCacheMarkersTest.withTheFeatureTheOnlyDifferenceIsTheMarkers.
     assertThat(elements[0]).isEqualTo(
@@ -142,7 +123,7 @@ class FrameCacheMarkersJsTest {
   }
 
   @Test fun theHostReadsWhatTheFastAdapterWrote() {
-    val (_, decoded) = send(modifiers(setOf(KeliverHostFeatures.CACHED_FRAME_1)))
+    val (_, decoded) = send(markers)
 
     val frame = FrameMarks.read((decoded[0] as ModifierChange).elements)?.cachedFrame
     assertThat(frame).isNotNull()
@@ -154,16 +135,8 @@ class FrameCacheMarkersJsTest {
     assertThat(FrameMarks.read((decoded[2] as ModifierChange).elements)?.notCached).isEqualTo(true)
   }
 
-  @Test fun withoutTheFeatureNothingIsWritten() {
-    val (elements, _) = send(modifiers(emptySet()))
-    assertThat(elements).isEqualTo(listOf("[[7]]", "[[7]]", "[[7]]"))
-  }
-
-  private object NoOpApplier : AbstractApplier<Unit>(Unit) {
-    override fun insertTopDown(index: Int, instance: Unit) = Unit
-    override fun insertBottomUp(index: Int, instance: Unit) = Unit
-    override fun remove(index: Int, count: Int) = Unit
-    override fun move(from: Int, to: Int, count: Int) = Unit
-    override fun onClear() = Unit
+  @Test fun schemaElementsAreUnchanged() {
+    val (elements, _) = send(listOf(Plain, Plain))
+    assertThat(elements).isEqualTo(listOf("[[7]]", "[[7]]"))
   }
 }

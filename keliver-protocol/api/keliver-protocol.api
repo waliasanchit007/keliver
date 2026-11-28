@@ -1,3 +1,17 @@
+public final class dev/keliver/protocol/CachedFrameMark {
+	public static final field Companion Ldev/keliver/protocol/CachedFrameMark$Companion;
+	public fun <init> (Ljava/lang/String;JZLjava/lang/String;)V
+	public final fun getContent ()Ljava/lang/String;
+	public final fun getMaxAgeMillis ()J
+	public final fun getPaneTitle ()Ljava/lang/String;
+	public final fun getReady ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/protocol/CachedFrameMark$Companion {
+	public final fun read (Lkotlinx/serialization/json/JsonElement;)Ldev/keliver/protocol/CachedFrameMark;
+}
+
 public abstract interface class dev/keliver/protocol/Change {
 	public static final field Companion Ldev/keliver/protocol/Change$Companion;
 	public abstract fun getId-dcWScHk ()I
@@ -227,6 +241,19 @@ public final class dev/keliver/protocol/FrameCacheTags {
 	public static final field RANGE_START I
 	public final fun getRange ()Lkotlin/ranges/IntRange;
 	public final fun isReserved (I)Z
+}
+
+public final class dev/keliver/protocol/FrameMarks {
+	public static final field Companion Ldev/keliver/protocol/FrameMarks$Companion;
+	public fun <init> (Ldev/keliver/protocol/CachedFrameMark;ZZ)V
+	public final fun getCached ()Z
+	public final fun getCachedFrame ()Ldev/keliver/protocol/CachedFrameMark;
+	public final fun getNotCached ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/protocol/FrameMarks$Companion {
+	public final fun read (Ljava/util/List;)Ldev/keliver/protocol/FrameMarks;
 }
 
 public final class dev/keliver/protocol/Id {
