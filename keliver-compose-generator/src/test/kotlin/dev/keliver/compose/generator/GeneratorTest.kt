@@ -355,6 +355,24 @@ class GeneratorTest {
     assertEquals(schemaBefore, root.schema.readText(), "a refused generation writes nothing")
   }
 
+  @Test fun swappedDependencyTagsFailTheGuard() {
+    // Review of #329, L1: core 10 and coil 17 swap; each side is a changed tag.
+    val root = ScratchRoot()
+    root.config(10 to "a.Core", 17 to "b.Coil")
+    assertEquals(emptyList(), root.run(check = false).problems)
+    val lockBefore = root.lock.readText()
+    val schemaBefore = root.schema.readText()
+
+    root.config(17 to "a.Core", 10 to "b.Coil")
+    val checked = root.run(check = true).problems
+    assertTrue(checked.any { "group a.Core changed its dependency tag from 10 to 17" in it }, "$checked")
+    assertTrue(checked.any { "group b.Coil changed its dependency tag from 17 to 10" in it }, "$checked")
+    val generated = root.run(check = false).problems
+    assertTrue(generated.any { "changed its dependency tag" in it }, "$generated")
+    assertEquals(lockBefore, root.lock.readText(), "a refused generation writes nothing")
+    assertEquals(schemaBefore, root.schema.readText(), "a refused generation writes nothing")
+  }
+
   @Test fun aRemovedGroupFailsTheGuardAndANewGroupIsAppended() {
     val root = ScratchRoot()
     root.config(10 to "a.Core")

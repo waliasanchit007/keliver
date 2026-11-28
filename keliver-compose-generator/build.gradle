@@ -148,6 +148,10 @@ tasks.register('generateComposeApi') {
 tasks.named('test') {
   inputs.files(configurations.composeApi).withPropertyName('composeApi').withNormalizer(ClasspathNormalizer)
   inputs.files(configurations.composeSources).withPropertyName('composeSources').withNormalizer(ClasspathNormalizer)
+  // ...and the checked-in configs and locks and the root's generated schema it compares against, read
+  // from the working directory: without these a cached pass could outlive a change to them.
+  inputs.files(fileTree(projectDir) { include '*.json' }).withPropertyName('configsAndLocks').withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.files(fileTree(rootProject.file('keliver-compose-root-schema/src/main/kotlin'))).withPropertyName('rootSchemaSources').withPathSensitivity(PathSensitivity.RELATIVE)
   doFirst {
     systemProperty 'keliver.composeApi', configurations.composeApi.asPath
     systemProperty 'keliver.composeSources', configurations.composeSources.asPath
